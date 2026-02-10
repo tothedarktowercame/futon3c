@@ -63,7 +63,7 @@ What was done:
 
 ### Part II: S-presence (first Codex handoff)
 
-**Status:** Ready for handoff
+**Status:** Complete (561da67)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        test/futon3c/social/test_fixtures.clj (READ-ONLY)
@@ -73,22 +73,18 @@ What was done:
        test/futon3c/social/presence_test.clj
 
 Criteria:
-- [ ] Shape-validated: input is AgentConnection, output is PresenceRecord|SocialError
-- [ ] R7 (rendezvous-handshake): connection + explicit readiness = presence
-- [ ] Connection → presence pipeline boundary validated
-- [ ] 5+ tests pass
-- [ ] No EXPECTED FAIL markers
+- [x] Shape-validated: input is AgentConnection, output is PresenceRecord|SocialError
+- [x] R7 (rendezvous-handshake): connection + explicit readiness = presence
+- [x] Connection → presence pipeline boundary validated
+- [x] 6 tests pass (5+ met)
+- [x] No EXPECTED FAIL markers
 
-Specification (from social-exotype.edn §S-presence):
-- Input: I-connections (:http-request) + I-registry (:config)
-- Output: :xtdb-entity (PresenceRecord) or :error-response (SocialError)
-- Function signature: `(verify connection registry) -> PresenceRecord|SocialError`
-- Must: check agent exists in registry, verify readiness handshake
-- Must NOT: modify registry or any :in file
+Scope compliance: clean — two :out files created, no :in files modified.
+Review note: registry-agent-exists? has a live-registry fallback to firm up in Part VI.
 
 ### Part III: S-authenticate (Codex)
 
-**Status:** Blocked on Part II
+**Status:** Ready for handoff
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/agency/registry.clj (READ-ONLY)
@@ -148,6 +144,13 @@ Criteria:
 - [ ] Pipeline integration test passes end-to-end
 - [ ] At least one proof-path from gate pipeline submission (bootstrap.clj pattern)
 - [ ] All R1-R11 invariant tests pass
+
+Note (from Part II review): `presence.clj` has a fallback in `registry-agent-exists?`
+that consults the live registry atom when the input is not an `AgentRegistryShape` map.
+In the integrated pipeline, the constraint input MUST always be the snapshot (I3:
+slow constrains fast, not the other way). Part VI integration should enforce this:
+`verify` receives the registry snapshot, never nil. Remove or gate the live-registry
+fallback so the pipeline boundary is clean.
 
 ## Exit Conditions
 
