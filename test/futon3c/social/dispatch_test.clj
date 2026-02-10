@@ -32,13 +32,13 @@
         (is (true? (:receipt/delivered? result)))))))
 
 (deftest missing-target-returns-social-error
-  (testing "missing :msg/to yields SocialError"
+  (testing "missing :msg/to yields SocialError :no-target"
     (let [registry (fix/mock-registry)
           msg (fix/make-classified-message)
           result (dispatch/dispatch msg registry)]
       (fix/assert-valid! shapes/SocialError result)
       (is (= :S-dispatch (:error/component result)))
-      (is (= :missing-target (:error/code result))))))
+      (is (= :no-target (:error/code result))))))
 
 (deftest unknown-agent-in-snapshot-returns-social-error
   (testing "unknown agent in registry snapshot yields :agent-not-found"
@@ -96,4 +96,3 @@
           (is (or (shapes/valid? shapes/DispatchReceipt r)
                   (shapes/valid? shapes/SocialError r))
               (str "Unexpected result shape: " r)))))))
-

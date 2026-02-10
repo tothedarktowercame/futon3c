@@ -51,7 +51,7 @@
     (let [target (:msg/to classified-message)]
       (cond
         (nil? target)
-        (social-error :missing-target
+        (social-error :no-target
                       "Missing :msg/to target"
                       :msg/id (:msg/id classified-message))
 
@@ -99,4 +99,3 @@
                               :target target
                               :msg/id (:msg/id classified-message)
                               :registry-error (:error resp))))))))))
-
