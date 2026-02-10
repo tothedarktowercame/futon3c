@@ -291,9 +291,9 @@ task validated through futon3b gates.
 ## Success Criteria
 
 ### Part I (Social Exotype)
-- [ ] social-exotype.edn written with ports, components, edges
-- [ ] Standalone validation: 8/8 ct/mission.clj checks pass
-- [ ] All ARGUMENT requirements (R1-R10) traceable to diagram elements
+- [x] social-exotype.edn written with ports, components, edges
+- [x] Standalone validation: 8/8 ct/mission.clj checks pass
+- [x] All ARGUMENT requirements (R1-R10) traceable to diagram elements
 - [ ] Reviewer sign-off
 
 ### Part II (Nested Composition)
@@ -305,9 +305,9 @@ task validated through futon3b gates.
 - [ ] Three-diagram composition test passes
 
 ### Part III (Prototype 0)
-- [ ] M-social-exotype registered in futon3b mission store
-- [ ] REPL helper submits a task and receives proof-path
-- [ ] Proof-path contains typed PSR, PUR, PAR records
+- [x] M-social-exotype registered in futon3b mission store
+- [x] REPL helper submits a task and receives proof-path
+- [x] Proof-path contains typed PSR, PUR, PAR records
 
 ### Derivation Requirements
 - [ ] Every diagram component cites its ARGUMENT requirement (R1-R10)
