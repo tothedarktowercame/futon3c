@@ -72,7 +72,7 @@ edge (`:xtdb-entity`), and mode guides both dispatch and validation.
 
 ### Part I: Mode Shapes + Peripheral Specs (Claude)
 
-**Status:** Ready
+**Status:** Complete (26e625b)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY, extend with new shapes)
        library/social/ARGUMENT.flexiarg (READ-ONLY, R10 spec)
@@ -97,7 +97,7 @@ What to do:
 
 ### Part II: S-mode Component (Codex handoff)
 
-**Status:** Blocked on Part I
+**Status:** Complete (f0a939f)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        test/futon3c/social/test_fixtures.clj (READ-ONLY)
@@ -107,33 +107,30 @@ What to do:
 :out — src/futon3c/social/mode.clj
        test/futon3c/social/mode_test.clj
 
-Function signature:
-```clojure
-(defn classify
-  "Classify a message into coordination or action mode.
-   Returns ClassifiedMessage on success, SocialError on failure."
-  [message patterns]
-  ...)
-
-(defn validate-transition
-  "Validate a mode transition. Returns ModeTransition or SocialError.
-   Enforces: DISCUSS → DIAGNOSE → EXECUTE (only valid forward path).
-   EXECUTE → DISCUSS (only valid exit)."
-  [current-mode requested-mode actor]
-  ...)
-```
-
 Criteria:
-- [ ] R10 (mode-gate): coordination and action are distinguishable
-- [ ] Mode transitions validated: DISCUSS → DIAGNOSE → EXECUTE
-- [ ] EXECUTE requires approval token or explicit approval
-- [ ] Input conforms to shapes, output is ClassifiedMessage|SocialError
-- [ ] 5+ tests pass
-- [ ] No EXPECTED FAIL markers
+- [x] R10 (mode-gate): coordination and action are distinguishable
+- [x] Mode transitions validated: DISCUSS → DIAGNOSE → EXECUTE
+- [x] EXECUTE requires approval token or explicit approval
+- [x] Input conforms to shapes, output is ClassifiedMessage|ModeTransition|SocialError
+- [x] 7 tests pass (5+ met)
+- [x] No EXPECTED FAIL markers
+
+Scope compliance: clean — two :out files created, no :in files modified.
+Review notes:
+- `patterns` argument in `classify` is validated but unused: classification uses a
+  hardcoded heuristic (coordination-types set), not pattern library rules. Correct
+  for now — the heuristic works — but pattern-informed classification is a future
+  enhancement. The parameter is a placeholder.
+- Signature extension: `validate-transition` takes keyword opts (`:approval-token`,
+  `:exit-criteria`, `:summary`) beyond the 3-arg spec. Reasonable — needed for
+  approval token enforcement.
+- EXECUTE → DISCUSS does not enforce mandatory summary: `:mode/summary` is optional.
+  The mission state machine says "exit: must include summary". Part IV integration
+  should decide whether to enforce this or keep it advisory.
 
 ### Part III: Peripheral Specs + Hop Protocol (Codex handoff)
 
-**Status:** Blocked on Part II
+**Status:** Ready for handoff
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        test/futon3c/social/test_fixtures.clj (READ-ONLY)
@@ -176,7 +173,7 @@ Criteria:
 
 ### Part IV: Integration (Claude)
 
-**Status:** Blocked on Parts II-III
+**Status:** Blocked on Part III
 
 :in  — All component files from Parts I-III
        src/futon3c/social/presence.clj (from M-agency-refactor Part II)
@@ -188,6 +185,10 @@ Criteria:
 - [ ] Peripheral hop preserves session-id end-to-end
 - [ ] Mode transition state machine prevents invalid paths
 - [ ] Integration with S-presence → S-authenticate → S-mode pipeline segment
+- [ ] Decide: enforce mandatory summary on EXECUTE → DISCUSS transitions?
+  (mode.clj makes :mode/summary optional; mission spec says "must include summary")
+- [ ] Decide: should classify use patterns for heuristic enrichment?
+  (currently patterns are validated-but-unused; hardcoded coordination-types set)
 
 ## Peripheral Definitions (for resources/peripherals.edn)
 

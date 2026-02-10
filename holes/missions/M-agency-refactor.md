@@ -84,7 +84,7 @@ Review note: registry-agent-exists? has a live-registry fallback to firm up in P
 
 ### Part III: S-authenticate (Codex)
 
-**Status:** Ready for handoff
+**Status:** Complete (1d533f0)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/agency/registry.clj (READ-ONLY)
@@ -93,15 +93,23 @@ Review note: registry-agent-exists? has a live-registry fallback to firm up in P
        test/futon3c/social/authenticate_test.clj
 
 Criteria:
-- [ ] R6 (typed identifiers): transport ID → typed agent identity
-- [ ] Identity → registry capability lookup
-- [ ] Input is PresenceRecord, output is AgentIdentity|SocialError
-- [ ] 5+ tests pass
-- [ ] No EXPECTED FAIL markers
+- [x] R6 (typed identifiers): transport ID → typed agent identity
+- [x] Identity → registry capability lookup
+- [x] Input is PresenceRecord, output is AgentIdentity|SocialError
+- [x] 6 tests pass (5+ met)
+- [x] No EXPECTED FAIL markers
+
+Scope compliance: clean — two :out files created, no :in files modified.
+Review notes:
+- No live-registry fallback (unlike S-presence): takes registry snapshot directly,
+  clean I3 boundary. No integration concern here.
+- `resolve-agent-id` cleanly handles R6: `:transport` → `:continuity`,
+  `:protocol` → unresolvable. Correct — only transport and continuity resolve.
+- Defensive output validation: constructed AgentIdentity validated before return.
 
 ### Part IV: S-dispatch (Codex)
 
-**Status:** Blocked on Part III
+**Status:** Ready for handoff
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/agency/registry.clj (READ-ONLY)
