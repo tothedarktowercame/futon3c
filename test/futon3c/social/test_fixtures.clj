@@ -148,6 +148,56 @@
           overrides)))
 
 ;; =============================================================================
+;; Mode + peripheral factories
+;; =============================================================================
+
+(defn make-mode-transition
+  "Create a valid ModeTransition."
+  ([]
+   (make-mode-transition {}))
+  ([overrides]
+   (merge {:mode/from :discuss
+           :mode/to :diagnose
+           :mode/actor "claude-1"
+           :mode/at (now-str)}
+          overrides)))
+
+(defn make-peripheral-spec
+  "Create a valid PeripheralSpec."
+  ([]
+   (make-peripheral-spec {}))
+  ([overrides]
+   (merge {:peripheral/id :explore
+           :peripheral/tools #{:read :glob :grep}
+           :peripheral/scope :full-codebase
+           :peripheral/entry #{:default}
+           :peripheral/exit #{:found-target :user-request}
+           :peripheral/context {:session-id :inherit}}
+          overrides)))
+
+(defn make-hop-request
+  "Create a valid HopRequest."
+  ([]
+   (make-hop-request {}))
+  ([overrides]
+   (merge {:hop/to :edit
+           :hop/reason "found target file"
+           :hop/session-id (str "sess-" (UUID/randomUUID))}
+          overrides)))
+
+(defn make-hop-result
+  "Create a valid HopResult."
+  ([]
+   (make-hop-result {}))
+  ([overrides]
+   (merge {:hop/from :explore
+           :hop/to :edit
+           :hop/session-id (str "sess-" (UUID/randomUUID))
+           :hop/at (now-str)
+           :hop/success? true}
+          overrides)))
+
+;; =============================================================================
 ;; Mock registries and patterns
 ;; =============================================================================
 

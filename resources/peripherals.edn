@@ -1,0 +1,49 @@
+;; Peripheral definitions — constrained capability envelopes.
+;;
+;; Each peripheral specifies the tools, scope, entry/exit conditions,
+;; and context that an agent operates within. Constraints are structural:
+;; agents cannot accidentally exceed scope.
+;;
+;; Derived from: futon3/docs/peripheral-spec.md
+;; Validated against: futon3c.social.shapes/PeripheralSpec
+
+{:peripherals
+ {:explore
+  {:peripheral/id :explore
+   :peripheral/tools #{:read :glob :grep :bash-readonly :web-fetch}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:default :from-reflect}
+   :peripheral/exit #{:found-target :ready-to-edit :user-request :hop-reflect}
+   :peripheral/context {:session-id :inherit}}
+
+  :edit
+  {:peripheral/id :edit
+   :peripheral/tools #{:read :edit :write :bash}
+   :peripheral/scope {:paths ["src/" "docs/" "scripts/"]}
+   :peripheral/entry #{:from-explore :user-request}
+   :peripheral/exit #{:tests-pass :ready-to-commit :blocked :hop-test :hop-reflect}
+   :peripheral/context {:session-id :inherit :target-files :from-explore}}
+
+  :test
+  {:peripheral/id :test
+   :peripheral/tools #{:read :bash-test}
+   :peripheral/scope :test-commands-only
+   :peripheral/entry #{:from-edit :user-request}
+   :peripheral/exit #{:pass :fail :flaky :hop-edit :hop-deploy :hop-reflect}
+   :peripheral/context {:session-id :inherit :changed-files :from-edit}}
+
+  :deploy
+  {:peripheral/id :deploy
+   :peripheral/tools #{:bash-git :bash-deploy}
+   :peripheral/scope :git-push-only
+   :peripheral/entry #{:from-test :tests-passed}
+   :peripheral/exit #{:deployed :blocked :hop-reflect}
+   :peripheral/context {:session-id :inherit :commit-message :from-edit}}
+
+  :reflect
+  {:peripheral/id :reflect
+   :peripheral/tools #{:read :musn-log}
+   :peripheral/scope :session-log-only
+   :peripheral/entry #{:session-close :user-request :agent-request :from-any}
+   :peripheral/exit #{:par-generated}
+   :peripheral/context {:session-id :inherit :session-log :fetch-from-musn}}}}

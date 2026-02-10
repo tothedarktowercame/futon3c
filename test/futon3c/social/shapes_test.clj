@@ -246,13 +246,160 @@
                                  :error/at now})))))
 
 ;; =============================================================================
+;; ModeTransition
+;; =============================================================================
+
+(deftest mode-transition-valid
+  (testing "valid mode transitions"
+    (is (shapes/valid? shapes/ModeTransition
+                       {:mode/from :discuss
+                        :mode/to :diagnose
+                        :mode/actor "claude-1"
+                        :mode/at now}))
+    (is (shapes/valid? shapes/ModeTransition
+                       {:mode/from :diagnose
+                        :mode/to :execute
+                        :mode/actor "claude-1"
+                        :mode/at now
+                        :mode/exit-criteria "tests pass"
+                        :mode/approval-token "tok-abc"}))
+    (is (shapes/valid? shapes/ModeTransition
+                       {:mode/from :execute
+                        :mode/to :discuss
+                        :mode/actor "claude-1"
+                        :mode/at now
+                        :mode/summary "implemented feature X"}))))
+
+(deftest mode-transition-invalid
+  (testing "invalid mode transition — bad mode value"
+    (is (some? (shapes/validate shapes/ModeTransition
+                                {:mode/from :thinking
+                                 :mode/to :discuss
+                                 :mode/actor "x"
+                                 :mode/at now}))))
+  (testing "invalid mode transition — missing actor"
+    (is (some? (shapes/validate shapes/ModeTransition
+                                {:mode/from :discuss
+                                 :mode/to :diagnose
+                                 :mode/at now})))))
+
+;; =============================================================================
+;; PeripheralSpec
+;; =============================================================================
+
+(deftest peripheral-spec-valid
+  (testing "valid peripheral spec — explore"
+    (is (shapes/valid? shapes/PeripheralSpec
+                       {:peripheral/id :explore
+                        :peripheral/tools #{:read :glob :grep :bash-readonly :web-fetch}
+                        :peripheral/scope :full-codebase
+                        :peripheral/entry #{:default :from-reflect}
+                        :peripheral/exit #{:found-target :ready-to-edit :user-request :hop-reflect}
+                        :peripheral/context {:session-id :inherit}})))
+  (testing "valid peripheral spec — edit with path scope"
+    (is (shapes/valid? shapes/PeripheralSpec
+                       {:peripheral/id :edit
+                        :peripheral/tools #{:read :edit :write :bash}
+                        :peripheral/scope {:paths ["src/" "docs/"]}
+                        :peripheral/entry #{:from-explore :user-request}
+                        :peripheral/exit #{:tests-pass :blocked}
+                        :peripheral/context {:session-id :inherit}}))))
+
+(deftest peripheral-spec-invalid
+  (testing "invalid peripheral spec — bad id"
+    (is (some? (shapes/validate shapes/PeripheralSpec
+                                {:peripheral/id :combat
+                                 :peripheral/tools #{:read}
+                                 :peripheral/scope :full-codebase
+                                 :peripheral/entry #{:default}
+                                 :peripheral/exit #{:done}
+                                 :peripheral/context {:session-id :inherit}}))))
+  (testing "invalid peripheral spec — bad scope"
+    (is (some? (shapes/validate shapes/PeripheralSpec
+                                {:peripheral/id :explore
+                                 :peripheral/tools #{:read}
+                                 :peripheral/scope "everything"
+                                 :peripheral/entry #{:default}
+                                 :peripheral/exit #{:done}
+                                 :peripheral/context {:session-id :inherit}})))))
+
+;; =============================================================================
+;; HopRequest
+;; =============================================================================
+
+(deftest hop-request-valid
+  (testing "valid hop request"
+    (is (shapes/valid? shapes/HopRequest
+                       {:hop/to :edit
+                        :hop/reason "found target file"
+                        :hop/session-id "sess-123"}))
+    (is (shapes/valid? shapes/HopRequest
+                       {:hop/to :reflect
+                        :hop/reason "natural close point"
+                        :hop/session-id "sess-456"
+                        :hop/context {:files-changed 3 :summary "done"}}))))
+
+(deftest hop-request-invalid
+  (testing "invalid hop request — bad peripheral id"
+    (is (some? (shapes/validate shapes/HopRequest
+                                {:hop/to :combat
+                                 :hop/reason "x"
+                                 :hop/session-id "s1"}))))
+  (testing "invalid hop request — missing session-id"
+    (is (some? (shapes/validate shapes/HopRequest
+                                {:hop/to :edit
+                                 :hop/reason "x"})))))
+
+;; =============================================================================
+;; HopResult
+;; =============================================================================
+
+(deftest hop-result-valid
+  (testing "valid hop result"
+    (is (shapes/valid? shapes/HopResult
+                       {:hop/from :explore
+                        :hop/to :edit
+                        :hop/session-id "sess-123"
+                        :hop/at now
+                        :hop/success? true}))
+    (is (shapes/valid? shapes/HopResult
+                       {:hop/from :edit
+                        :hop/to :test
+                        :hop/session-id "sess-123"
+                        :hop/at now
+                        :hop/success? false
+                        :hop/context {:reason "entry condition not met"}}))))
+
+(deftest hop-result-invalid
+  (testing "invalid hop result — missing success flag"
+    (is (some? (shapes/validate shapes/HopResult
+                                {:hop/from :explore
+                                 :hop/to :edit
+                                 :hop/session-id "s1"
+                                 :hop/at now})))))
+
+;; =============================================================================
+;; SocialError — peripheral component
+;; =============================================================================
+
+(deftest social-error-peripheral-component
+  (testing "SocialError accepts :peripheral component"
+    (is (shapes/valid? shapes/SocialError
+                       {:error/component :peripheral
+                        :error/code :invalid-hop
+                        :error/message "Cannot hop from deploy to explore"
+                        :error/at now}))))
+
+;; =============================================================================
 ;; Shape registry completeness
 ;; =============================================================================
 
 (deftest all-shapes-registered
   (testing "shapes map contains all expected shapes"
     (let [expected #{:AgentConnection :PresenceRecord :AgentIdentity
-                     :ClassifiedMessage :DispatchReceipt :CoordinationOutcome
+                     :ClassifiedMessage :ModeTransition :PeripheralSpec
+                     :HopRequest :HopResult
+                     :DispatchReceipt :CoordinationOutcome
                      :SessionRecord :PatternLibrary :AgentRegistryShape
                      :SocialError :TypedAgentId}]
       (is (= expected (set (keys shapes/shapes)))))))

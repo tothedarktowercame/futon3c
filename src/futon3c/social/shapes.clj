@@ -109,6 +109,86 @@
    [:msg/at Timestamp]])
 
 ;; =============================================================================
+;; Mode transition — DISCUSS → DIAGNOSE → EXECUTE state machine (R10)
+;; =============================================================================
+
+(def OperationalMode
+  "Operational mode — the three-phase gate from mode-gate.flexiarg.
+   DISCUSS: data gathering, information review (read-only).
+   DIAGNOSE: analysis, pattern matching (read-only).
+   EXECUTE: code changes, deployment (write-capable, requires approval)."
+  [:enum :discuss :diagnose :execute])
+
+(def ModeTransition
+  "A validated mode transition event.
+   R10 (mode-gate): transitions must be explicit with exit criteria.
+   Valid paths: DISCUSS→DIAGNOSE, DIAGNOSE→EXECUTE (needs approval),
+   EXECUTE→DISCUSS (exit with summary), Any→DISCUSS (reset/timeout)."
+  [:map
+   [:mode/from OperationalMode]
+   [:mode/to OperationalMode]
+   [:mode/actor :string]
+   [:mode/at Timestamp]
+   [:mode/exit-criteria {:optional true} :string]
+   [:mode/approval-token {:optional true} :string]
+   [:mode/summary {:optional true} :string]])
+
+;; =============================================================================
+;; Peripheral specs — capability envelopes (structural constraints)
+;; =============================================================================
+
+(def PeripheralId
+  "Peripheral identifier — the five core peripherals."
+  [:enum :explore :edit :test :deploy :reflect])
+
+(def ToolSet
+  "Set of tools available to a peripheral."
+  [:set :keyword])
+
+(def PeripheralScope
+  "Scope constraint for a peripheral — what it can access."
+  [:or
+   [:enum :full-codebase :test-commands-only :git-push-only :session-log-only]
+   [:map [:paths [:vector :string]]]])
+
+(def PeripheralSpec
+  "Definition of a peripheral — a constrained capability envelope.
+   Constraints are structural, not behavioral: agents cannot accidentally
+   exceed scope. Memory travels with session-id across hops.
+
+   Derived from: futon3/docs/peripheral-spec.md"
+  [:map
+   [:peripheral/id PeripheralId]
+   [:peripheral/tools ToolSet]
+   [:peripheral/scope PeripheralScope]
+   [:peripheral/entry [:set :keyword]]
+   [:peripheral/exit [:set :keyword]]
+   [:peripheral/context [:map-of :keyword :keyword]]])
+
+;; =============================================================================
+;; Hop protocol — session-id transfer across peripheral boundaries
+;; =============================================================================
+
+(def HopRequest
+  "Agent's request to hop from one peripheral to another.
+   Session-id is preserved across hops (futon3/docs/peripheral-spec.md §Hop Mechanics)."
+  [:map
+   [:hop/to PeripheralId]
+   [:hop/reason :string]
+   [:hop/session-id :string]
+   [:hop/context {:optional true} [:map-of :keyword :any]]])
+
+(def HopResult
+  "Result of a hop attempt — success means context was transferred."
+  [:map
+   [:hop/from PeripheralId]
+   [:hop/to PeripheralId]
+   [:hop/session-id :string]
+   [:hop/at Timestamp]
+   [:hop/success? :boolean]
+   [:hop/context {:optional true} [:map-of :keyword :any]]])
+
+;; =============================================================================
 ;; S-dispatch output — routed message with receipt (R1, R2)
 ;; =============================================================================
 
@@ -190,7 +270,7 @@
    Maps to :error-response outputs in social-exotype.edn."
   [:map
    [:error/component [:enum :S-presence :S-authenticate :S-mode
-                       :S-dispatch :S-validate :S-persist :registry]]
+                       :S-dispatch :S-validate :S-persist :registry :peripheral]]
    [:error/code :keyword]
    [:error/message :string]
    [:error/at Timestamp]
@@ -222,6 +302,10 @@
    :PresenceRecord      PresenceRecord
    :AgentIdentity       AgentIdentity
    :ClassifiedMessage   ClassifiedMessage
+   :ModeTransition      ModeTransition
+   :PeripheralSpec      PeripheralSpec
+   :HopRequest          HopRequest
+   :HopResult           HopResult
    :DispatchReceipt     DispatchReceipt
    :CoordinationOutcome CoordinationOutcome
    :SessionRecord       SessionRecord
