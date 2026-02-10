@@ -198,6 +198,41 @@
           overrides)))
 
 ;; =============================================================================
+;; Evidence factories
+;; =============================================================================
+
+(defn make-artifact-ref
+  "Create a valid ArtifactRef."
+  ([]
+   (make-artifact-ref :mission "M-agency-refactor"))
+  ([ref-type ref-id]
+   {:ref/type ref-type
+    :ref/id (str ref-id)}))
+
+(defn make-evidence-entry
+  "Create a valid EvidenceEntry."
+  ([]
+   (make-evidence-entry {}))
+  ([overrides]
+   (merge {:evidence/id (str "e-" (UUID/randomUUID))
+           :evidence/subject (make-artifact-ref)
+           :evidence/type :reflection
+           :evidence/claim-type :observation
+           :evidence/author "claude-1"
+           :evidence/at (now-str)
+           :evidence/body {:text "hello"}
+           :evidence/tags [:test]}
+          overrides)))
+
+(defn make-evidence-query
+  "Create a valid EvidenceQuery."
+  ([]
+   (make-evidence-query {}))
+  ([overrides]
+   (merge {}
+          overrides)))
+
+;; =============================================================================
 ;; Mock registries and patterns
 ;; =============================================================================
 

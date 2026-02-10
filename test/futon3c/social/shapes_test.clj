@@ -390,6 +390,66 @@
                         :error/message "Cannot hop from deploy to explore"
                         :error/at now}))))
 
+(deftest social-error-evidence-components
+  (testing "SocialError accepts evidence components"
+    (is (shapes/valid? shapes/SocialError
+                       {:error/component :E-store
+                        :error/code :invalid-entry
+                        :error/message "bad"
+                        :error/at now}))
+    (is (shapes/valid? shapes/SocialError
+                       {:error/component :E-validate
+                        :error/code :missing-evidence
+                        :error/message "bad"
+                        :error/at now}))))
+
+;; =============================================================================
+;; Evidence shapes
+;; =============================================================================
+
+(deftest artifact-ref-valid
+  (testing "valid artifact ref"
+    (is (shapes/valid? shapes/ArtifactRef
+                       {:ref/type :mission
+                        :ref/id "M-agency-refactor"}))))
+
+(deftest artifact-ref-invalid
+  (testing "invalid artifact ref — bad type"
+    (is (some? (shapes/validate shapes/ArtifactRef
+                                {:ref/type :nope
+                                 :ref/id "x"})))))
+
+(deftest evidence-entry-valid
+  (testing "valid evidence entry"
+    (is (shapes/valid? shapes/EvidenceEntry
+                       {:evidence/id "e-1"
+                        :evidence/subject {:ref/type :mission :ref/id "M1"}
+                        :evidence/type :reflection
+                        :evidence/claim-type :observation
+                        :evidence/author "claude-1"
+                        :evidence/at now
+                        :evidence/body {:text "hi"}
+                        :evidence/tags [:test]}))))
+
+(deftest evidence-entry-invalid
+  (testing "invalid evidence entry — missing tags"
+    (is (some? (shapes/validate shapes/EvidenceEntry
+                                {:evidence/id "e-1"
+                                 :evidence/subject {:ref/type :mission :ref/id "M1"}
+                                 :evidence/type :reflection
+                                 :evidence/claim-type :observation
+                                 :evidence/author "claude-1"
+                                 :evidence/at now
+                                 :evidence/body {:text "hi"}})))))
+
+(deftest evidence-query-valid
+  (testing "valid evidence query"
+    (is (shapes/valid? shapes/EvidenceQuery
+                       {:query/subject {:ref/type :mission :ref/id "M1"}
+                        :query/type :reflection
+                        :query/limit 10
+                        :query/include-ephemeral? true}))))
+
 ;; =============================================================================
 ;; Shape registry completeness
 ;; =============================================================================
@@ -401,6 +461,8 @@
                      :HopRequest :HopResult
                      :DispatchReceipt :CoordinationOutcome
                      :SessionRecord :PatternLibrary :AgentRegistryShape
+                     :ClaimType :ArtifactRefType :ArtifactRef
+                     :EvidenceType :EvidenceEntry :EvidenceQuery
                      :SocialError :TypedAgentId}]
       (is (= expected (set (keys shapes/shapes)))))))
 

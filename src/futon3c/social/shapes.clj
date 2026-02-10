@@ -260,6 +260,62 @@
               [:type {:optional true} AgentType]]]]])
 
 ;; =============================================================================
+;; Evidence landscape (R8, R9) — shared medium across timescales
+;; =============================================================================
+
+(def ClaimType
+  "Type of claim made by an evidence entry.
+   Extended beyond futon3's 5-type set to cover Corneli (2014) Table 24 entities."
+  [:enum :goal :step :evidence :conclusion :question :observation
+   :tension :correction :conjecture])
+
+(def ArtifactRefType
+  "Universal reference types for any artifact that can accumulate evidence."
+  [:enum :pattern :mission :component :gate :session :agent :thread :evidence])
+
+(def ArtifactRef
+  "Universal reference to any artifact (Table 24's overloaded X)."
+  [:map
+   [:ref/type ArtifactRefType]
+   [:ref/id :string]])
+
+(def EvidenceType
+  "Typed evidence event category (distinguishes timescale/function provenance)."
+  [:enum :coordination :gate-traversal :pattern-selection :pattern-outcome
+   :reflection :forum-post :mode-transition :presence-event :correction :conjecture])
+
+(def EvidenceEntry
+  "Primary evidence shape — all other evidence projections are derived from this.
+   Entries are structured events (R9) attached to an ArtifactRef subject.
+   Optional fields support reply-chains, forks, conjectures, and ephemera."
+  [:map
+   [:evidence/id :string]
+   [:evidence/subject ArtifactRef]
+   [:evidence/type EvidenceType]
+   [:evidence/claim-type ClaimType]
+   [:evidence/author :string]
+   [:evidence/at Timestamp]
+   [:evidence/body :any]
+   [:evidence/tags [:vector :keyword]]
+   [:evidence/pattern-id {:optional true} :keyword]
+   [:evidence/session-id {:optional true} :string]
+   [:evidence/in-reply-to {:optional true} :string]
+   [:evidence/fork-of {:optional true} :string]
+   [:evidence/conjecture? {:optional true} :boolean]
+   [:evidence/ephemeral? {:optional true} :boolean]])
+
+(def EvidenceQuery
+  "Evidence store query parameters. All fields optional.
+   include-ephemeral? defaults to false at the store layer."
+  [:map
+   [:query/subject {:optional true} ArtifactRef]
+   [:query/type {:optional true} EvidenceType]
+   [:query/claim-type {:optional true} ClaimType]
+   [:query/since {:optional true} Timestamp]
+   [:query/limit {:optional true} :int]
+   [:query/include-ephemeral? {:optional true} :boolean]])
+
+;; =============================================================================
 ;; Error shape (R4: loud failure)
 ;; =============================================================================
 
@@ -270,7 +326,8 @@
    Maps to :error-response outputs in social-exotype.edn."
   [:map
    [:error/component [:enum :S-presence :S-authenticate :S-mode
-                       :S-dispatch :S-validate :S-persist :registry :peripheral]]
+                       :S-dispatch :S-validate :S-persist :registry :peripheral
+                       :E-store :E-threads :E-validate :E-compact :E-default]]
    [:error/code :keyword]
    [:error/message :string]
    [:error/at Timestamp]
@@ -311,5 +368,11 @@
    :SessionRecord       SessionRecord
    :PatternLibrary      PatternLibrary
    :AgentRegistryShape  AgentRegistryShape
+   :ClaimType           ClaimType
+   :ArtifactRefType     ArtifactRefType
+   :ArtifactRef         ArtifactRef
+   :EvidenceType        EvidenceType
+   :EvidenceEntry       EvidenceEntry
+   :EvidenceQuery       EvidenceQuery
    :SocialError         SocialError
    :TypedAgentId        TypedAgentId})
