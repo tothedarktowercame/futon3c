@@ -166,7 +166,7 @@ Review notes:
 
 ### Part IV: Integration (Claude)
 
-**Status:** Ready
+**Status:** Complete
 
 :in  — All component files from Parts I-III
        src/futon3c/social/presence.clj (from M-agency-refactor Part II)
@@ -174,14 +174,28 @@ Review notes:
 :out — test/futon3c/social/mode_integration_test.clj
 
 Criteria:
-- [ ] Mode classification feeds into dispatch pipeline (ClassifiedMessage shape)
-- [ ] Peripheral hop preserves session-id end-to-end
-- [ ] Mode transition state machine prevents invalid paths
-- [ ] Integration with S-presence → S-authenticate → S-mode pipeline segment
-- [ ] Decide: enforce mandatory summary on EXECUTE → DISCUSS transitions?
-  (mode.clj makes :mode/summary optional; mission spec says "must include summary")
-- [ ] Decide: should classify use patterns for heuristic enrichment?
-  (currently patterns are validated-but-unused; hardcoded coordination-types set)
+- [x] Mode classification feeds into dispatch pipeline (ClassifiedMessage shape)
+- [x] Peripheral hop preserves session-id end-to-end
+- [x] Mode transition state machine prevents invalid paths
+- [x] Integration with S-presence → S-authenticate → S-mode pipeline segment
+- [x] Decide: enforce mandatory summary on EXECUTE → DISCUSS transitions?
+  Decision: keep optional for now. The transition machine enforces the path
+  (DISCUSS→DIAGNOSE→EXECUTE); summary enforcement is a policy concern that
+  belongs at the coordination layer (S-validate, M-forum-refactor).
+- [x] Decide: should classify use patterns for heuristic enrichment?
+  Decision: keep hardcoded heuristic for now. Pattern-informed classification
+  is a future enhancement when the pattern library has mode-specific rules.
+  The parameter placeholder is correct.
+
+Integration tests (9 tests in mode_integration_test.clj):
+- Pipeline segment: presence → authenticate → classify (coordination + action)
+- Mode transition full cycle: DISCUSS → DIAGNOSE → EXECUTE → DISCUSS
+- Invalid mode transitions blocked (skip-diagnose, no-approval, no-op)
+- Peripheral hop: explore → edit with session-id + context transfer
+- Hop chain: edit → test → deploy
+- Invalid hop blocked: deploy → edit
+- Reflect accepts hops from any peripheral (:from-any)
+- Combined: pipeline segment + mode transition + peripheral hop
 
 ## Peripheral Definitions (for resources/peripherals.edn)
 
