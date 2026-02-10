@@ -11,6 +11,7 @@ Prior:
 - realtime/authoritative-transcript.flexiarg: single authoritative event log
 - realtime/structured-events-only.flexiarg: structured events, not free-text
 - **social/evidence-landscape.flexiarg**: evidence landscape as durée
+- **Corneli (2014), Table 24**: PlanetMath 3.0 entity relation diagram (VERIFY source)
 - futon3/forum/ (3 files, 776 lines): source material with known defects
 
 ## Why This Mission Exists
@@ -26,27 +27,32 @@ The evidence-landscape.flexiarg identifies a structural reframe: the evidence
 landscape is the shared medium through which all three AIF timescales accumulate
 experience. It provides durée — continuous lived duration — not just event storage.
 
-The forum is NOT just chat. It is the evolutionary landscape where all evidence
-lives: PSRs record selections, PURs record outcomes, PARs record reflections,
-gate traversals record validations, coordination records capture real-time events.
-Every artifact has a biography. Threads are projections (groupings of entries
-sharing a goal), not the primary structure.
+The evidence landscape design is verified against four years of research on
+PlanetMath (Corneli, 2014): field work, implementation of the Planetary system,
+stakeholder interviews, and user evaluation. Table 24 of that thesis presents the
+entity relation diagram for "PlanetMath 3.0" — a grammar of mathematical
+behavior organized into five dimensions (Context, Feedback, Quality, Structure,
+Heuristic). The futon3c evidence landscape is the computational realization of
+that design, with agents as participants alongside humans.
 
 ## What This Mission Produces
 
-1. **Evidence shapes** — Malli schemas for EvidenceEntry, ArtifactRef, EvidenceQuery
-2. **Evidence store** — CRUD for evidence entries with invariants, tested
-3. **Thread projection** — proof-tree views on evidence (grouping entries by goal/subject)
+1. **Evidence shapes** — Malli schemas for EvidenceEntry, ArtifactRef, EvidenceQuery, ConjectureEntry
+2. **Evidence store** — append/query for evidence entries with invariants, tested
+3. **Thread projection** — proof-tree views on evidence (grouping entries by goal/subject), fork support
 4. **S-validate integration** — coordination outcomes validated against accumulated evidence
 5. **Evidence emission** — all timescale events as typed evidence entries
 
 ## Scope In
 
 - Evidence data model: EvidenceEntry as primary shape, ArtifactRef for universal subject references
-- Evidence store: create/read/query evidence entries with claim-type validation
+- Evidence store: append/query evidence entries with claim-type validation
 - Thread projection: group evidence entries into proof trees by shared goal
 - Proof-tree invariants: tree structure validity, claim-type ordering (on projections)
 - Evidence query: by subject, by type, by time range, by pattern linkage
+- Conjectures: evidence entries that model expected outcomes (Table 24: X ⊧ X⋆)
+- Forks: artifact biographies that branch into alternatives (Table 24: X → X′)
+- Ephemeral evidence: intermediate computations with compaction strategy (Table 24: G ↪ E)
 - S-validate wiring: accumulated evidence feeds coordination outcome validation
 - Front page query: aggregated recent activity across subjects (what L1 observer reads)
 
@@ -58,24 +64,44 @@ sharing a goal), not the primary structure.
 - Agency dispatch endpoint: POST /forum/thread/:id/dispatch — needs agency HTTP
 - Persistence backend: in-memory atoms for now; XTDB or EDN files decided later
 - L1 observer logic: reads from evidence landscape, but scanning/mining is glacial timescale
+- Ephemeral compaction implementation: design the flag now, implement compaction later
 
 ## Conceptual Model
 
-From evidence-landscape.flexiarg:
+### By timescale (from evidence-landscape.flexiarg):
 
-**Structural model:**
 - Social timescale writes: coordination events, delivery receipts, presence records, mode transitions
 - Task timescale writes: gate traversals, task submissions, validation outcomes
 - Glacial timescale writes: pattern canonizations, tension records, library evolution events
 - L1 observer reads: scans accumulated evidence for recurring tensions and successful patterns
 - The loop closes through the medium, not through direct connections between timescales
 
-**Design principles (PlanetMath + Stack Exchange precedent):**
+### By function (from Corneli 2014, Table 24 — PlanetMath 3.0):
+
+| Dimension | Relations | futon3c mapping |
+|-----------|-----------|-----------------|
+| **Context** | `A ← A` (attachment), `A ←ℓ A` (link), `X ↪ X` (project embeds project) | ArtifactRef links; evidence entries reference subjects |
+| **Feedback** | `X ← T` (post on object), `S ← R` (review), `X → X♯` (update) | EvidenceEntry with :evidence/subject; PAR; PUR |
+| **Quality** | `X ← Q` (question), `A ← C` (correction), `X → X′` (fork), `X ⊧ X⋆` (outcome model) | :claim-type :question; :claim-type :correction; :evidence/fork-of; :evidence/conjecture? |
+| **Structure** | `A ← P ← J ← S` (article ← problem ← conjecture ← solution), `L ← A,P` (collection), `M ← A` (classification) | Proof tree: :goal → :step → :evidence → :conclusion; thread projections; tagging |
+| **Heuristic** | `G ↩ U` (group ← user), `S ↩ H` (heuristic in solution), `Q,T ⇀ C,W,P` (spawning), `G ↪ E` (ephemera) | Agent registry; :evidence/pattern-id; in-reply-to spawning; :evidence/ephemeral? |
+
+Key insight from Corneli (2014): "Any object, or activity, that takes place within
+the system should be thought of as being part of some project. This carries over to
+the 'micro' level, so that individual proof steps or computations are to be thought
+of as small projects." This is exactly ArtifactRef — every entity in the system is a
+subject that accumulates evidence.
+
+### Design principles:
+
 - The primary shape is EvidenceEntry (typed event with subject, provenance, claim-type, pattern linkage)
 - Every artifact gets evidence attached (PlanetMath model: every object has a discussion)
 - Threads/proof-trees are projections (groupings of entries sharing a goal), not the primary structure
 - The "front page" is aggregated recent activity across subjects
 - Surface structures (Q&A, proof trees, timelines) are views on the same evidence
+- Conjectures are first-class: an evidence entry can model an expected outcome, not just record one
+- Forks mean artifact biographies can branch — a proof attempt or mission forks into alternatives (evidence graph is a DAG, not strictly a tree)
+- Ephemera are practical, not psychological: agents don't need scratch paper for comfort, but not every intermediate computation needs to persist forever. Evidence entries carry an :ephemeral? flag; the store can compact or summarize ephemeral evidence over time without losing the durable record.
 
 ## Source Material (futon3 → futon3c mapping)
 
@@ -85,18 +111,25 @@ From evidence-landscape.flexiarg:
 | forum/http.clj | 295 | Deferred | HTTP layer, not in scope |
 | forum/ws.clj | 138 | Deferred | WS transport, not in scope |
 
+| External source | Maps to | Notes |
+|-----------------|---------|-------|
+| Corneli (2014) Table 10 | Initial grammar | 5-dimension decomposition of PlanetMath activities |
+| Corneli (2014) Table 24 | Revised grammar | PlanetMath 3.0: adds forks, conjectures, ephemera, outcome models |
+| Corneli (2014) §10.2 | Design rationale | "everything is a project at every scale" |
+
 The 343-line service.clj contains the thread/post model. The reframe keeps the
 proof-tree logic but makes EvidenceEntry the primary shape, with threads as a
-projection layer on top.
+projection layer on top. Table 24 supplies three entity types absent from futon3:
+conjectures (J), forks (X′), and ephemera (E).
 
 ## Key Design Decision: Evidence-First, Not Forum-First
 
 futon3 built the forum as a service. futon3c recognizes the evidence landscape
 as the connective tissue of the entire AIF loop. The sequence:
 
-1. Evidence shapes (EvidenceEntry as primary, ArtifactRef for universal subject references)
+1. Evidence shapes (EvidenceEntry as primary, ArtifactRef, conjectures, forks, ephemera)
 2. Evidence store with invariant tests
-3. Thread projection layer (proof-tree views on evidence entries)
+3. Thread projection layer (proof-tree views on evidence entries) + fork navigation
 4. S-validate integration
 5. Then HTTP (later mission)
 6. Then WS (later mission)
@@ -118,26 +151,33 @@ is the foundation, not the forum surface.
        test/futon3c/social/shapes_test.clj (ADD evidence shape tests)
 
 New shapes:
-- `ClaimType`: enum [:goal :step :evidence :conclusion :question :observation :tension]
-- `ArtifactRef`: {:ref/type [:pattern :mission :component :gate :session :agent :thread],
-   :ref/id :string}
-  (universal reference to any artifact in the system)
-- `EvidenceEntry`: {:evidence/id, :evidence/subject ArtifactRef, :evidence/type keyword,
+- `ClaimType`: enum [:goal :step :evidence :conclusion :question :observation
+   :tension :correction :conjecture]
+  (extended from futon3 5-type to cover Table 24 entities)
+- `ArtifactRef`: {:ref/type [:pattern :mission :component :gate :session :agent
+   :thread :evidence], :ref/id :string}
+  (universal reference to any artifact — Table 24's overloaded X)
+- `EvidenceEntry`: {:evidence/id, :evidence/subject ArtifactRef, :evidence/type EvidenceType,
    :evidence/claim-type ClaimType, :evidence/author, :evidence/at,
    :evidence/pattern-id (optional), :evidence/session-id (optional),
-   :evidence/body, :evidence/in-reply-to (optional), :evidence/tags}
+   :evidence/body, :evidence/in-reply-to (optional),
+   :evidence/fork-of (optional), :evidence/conjecture? (optional),
+   :evidence/ephemeral? (optional), :evidence/tags}
   (primary shape — all other evidence types are subtypes or projections)
 - `EvidenceQuery`: {:query/subject (optional), :query/type (optional),
-   :query/claim-type (optional), :query/since (optional), :query/limit (optional)}
+   :query/claim-type (optional), :query/since (optional), :query/limit (optional),
+   :query/include-ephemeral? (optional, default false)}
 - `EvidenceType`: enum [:coordination :gate-traversal :pattern-selection :pattern-outcome
-   :reflection :forum-post :mode-transition :presence-event]
-  (distinguishes evidence from different timescales)
+   :reflection :forum-post :mode-transition :presence-event :correction :conjecture]
+  (distinguishes evidence from different timescales and functions)
 
 Relationship to existing shapes:
 - ForumPost is an EvidenceEntry with :evidence/type :forum-post
 - ProofPathEntry is a projection of EvidenceEntry for MUSN compatibility
 - PSR/PUR/PAR are EvidenceEntry subtypes (:pattern-selection, :pattern-outcome, :reflection)
 - GateTraversal events are EvidenceEntry with :evidence/type :gate-traversal
+- Conjectures (Table 24: J) are EvidenceEntry with :evidence/conjecture? true
+- Corrections (Table 24: C) are EvidenceEntry with :evidence/type :correction
 
 ### Part II: Evidence Store (Codex handoff)
 
@@ -152,21 +192,24 @@ Relationship to existing shapes:
 
 Evidence store with:
 - Shape-validated inputs/outputs on all operations
-- Append-only evidence entries (evidence accumulates, never deleted)
+- Append-only for durable evidence entries; ephemeral entries appendable and compactable
 - Query by subject (ArtifactRef), by type, by time range, by claim-type
+- Query excludes ephemeral entries by default (opt-in via :include-ephemeral?)
 - Claim-type validation (structural rules on what can reply to what)
+- Fork support: :evidence/fork-of references the entry being forked from
 - Event emission as typed maps for subscriber notification
 - In-reply-to chain integrity (no orphan replies, referenced entry must exist)
 - No persistence to disk yet (in-memory atoms) — persistence strategy decided later
 
 Function signatures:
 ```clojure
-(defn append! [{:keys [subject type claim-type author body pattern-id session-id in-reply-to tags]}]
+(defn append! [{:keys [subject type claim-type author body pattern-id session-id
+                       in-reply-to fork-of conjecture? ephemeral? tags]}]
   ;; -> {:ok true :entry EvidenceEntry} | SocialError
   )
 
 (defn query [evidence-query]
-  ;; -> [EvidenceEntry]
+  ;; -> [EvidenceEntry] (excludes ephemeral by default)
   )
 
 (defn get-entry [evidence-id]
@@ -177,8 +220,16 @@ Function signatures:
   ;; -> [EvidenceEntry] (ordered ancestor chain)
   )
 
+(defn get-forks [evidence-id]
+  ;; -> [EvidenceEntry] (all entries forked from this one)
+  )
+
 (defn recent-activity [{:keys [limit since]}]
-  ;; -> [EvidenceEntry] — the "front page"
+  ;; -> [EvidenceEntry] — the "front page" (excludes ephemeral)
+  )
+
+(defn compact-ephemeral! [{:keys [older-than]}]
+  ;; -> {:compacted n} — remove or summarize ephemeral entries older than threshold
   )
 ```
 
@@ -187,9 +238,10 @@ Criteria:
 - [ ] R8 (authoritative-transcript): evidence store is the authority
 - [ ] R9 (structured-events): entries have mandatory type + claim-type, events are typed maps
 - [ ] R4 (loud failure): no silent nil returns, SocialError on all failures
-- [ ] Append-only: evidence entries cannot be modified or deleted
+- [ ] Append-only for durable entries; ephemeral entries compactable
 - [ ] Reply-chain integrity: in-reply-to references valid existing entries
-- [ ] 8+ tests pass (CRUD + query + invariants + events)
+- [ ] Fork integrity: fork-of references valid existing entry
+- [ ] 10+ tests pass (CRUD + query + fork + ephemeral + invariants + events)
 - [ ] No EXPECTED FAIL markers
 
 ### Part III: Thread Projection + S-validate (Codex handoff)
@@ -211,7 +263,10 @@ Two components, sharing evidence as the foundation:
 - Proof-tree invariants (tree validity, root invariant, claim ordering) operate on projections
 - Thread is a view: {:thread/id, :thread/subject ArtifactRef, :thread/goal EvidenceEntry,
   :thread/entries [EvidenceEntry], :thread/participants, :thread/status}
+- Fork navigation: when an entry has forks, the projection can show alternative branches
 - Pattern mining: extract patterns from completed threads (closed goals with conclusions)
+- Conjecture tracking: conjectural entries (J) are visible in the projection; resolved when
+  a :conclusion or :correction references them
 
 Function signatures:
 ```clojure
@@ -220,7 +275,15 @@ Function signatures:
   )
 
 (defn thread-status [thread-projection]
-  ;; -> :open | :closed | :stalled
+  ;; -> :open | :closed | :stalled | :forked
+  )
+
+(defn thread-forks [thread-projection]
+  ;; -> [ThreadProjection] — alternative branches from fork points
+  )
+
+(defn thread-conjectures [thread-projection]
+  ;; -> [{:conjecture EvidenceEntry :status :open|:confirmed|:refuted}]
   )
 
 (defn thread-patterns [thread-projection]
@@ -246,10 +309,12 @@ Function signature:
 Criteria:
 - [ ] Thread projection groups evidence entries correctly
 - [ ] Proof-tree invariants hold on projections (all 7 below)
+- [ ] Fork navigation works (thread-forks returns alternative branches)
+- [ ] Conjecture tracking works (open/confirmed/refuted)
 - [ ] R5 (bounded-lifecycle): validates coordination completeness
 - [ ] Uses accumulated evidence (not just thread state) for validation
 - [ ] Output conforms to CoordinationOutcome shape
-- [ ] 10+ tests pass (5+ threads, 5+ validate)
+- [ ] 12+ tests pass (5+ threads, 2+ fork, 2+ conjecture, 5+ validate)
 - [ ] No EXPECTED FAIL markers
 
 ### Part IV: Integration (Claude)
@@ -262,7 +327,10 @@ Criteria:
 Criteria:
 - [ ] Append evidence → project thread → post proof steps → validate outcome end-to-end
 - [ ] Evidence entries from different timescales coexist (coordination + gate traversal + reflection)
-- [ ] Front page query returns recent activity across subjects
+- [ ] Front page query returns recent activity across subjects (excludes ephemeral)
+- [ ] Fork scenario: proof attempt branches, both branches accumulate evidence
+- [ ] Conjecture scenario: conjecture posted, evidence accumulated, conclusion confirms or refutes
+- [ ] Ephemeral compaction: intermediate computations compact without losing durable record
 - [ ] Pattern mining extracts patterns from threads with conclusions
 - [ ] Evidence events notify subscribers (in-memory, no transport)
 - [ ] Wire into pipeline_test.clj if S-dispatch exists
@@ -279,6 +347,10 @@ A thread projection groups entries sharing a subject into a proof tree.
 5. **Author tracking**: `:thread/participants` is the union of all entry authors
 6. **Monotonic timestamps**: Entry timestamps within a projection are non-decreasing
 7. **Entry count consistency**: `:thread/entry-count` equals actual entry count for that projection
+
+Note: forks relax invariant 1 — a forked entry's `:fork-of` references the branch
+point, creating a DAG. The projection handles this by treating each fork as a
+sub-thread that shares the common prefix.
 
 ## Relationship to Other Missions
 
@@ -304,11 +376,18 @@ A thread projection groups entries sharing a subject into a proof tree.
   landscape to detect recurring tensions and successful patterns. The front page
   query is what both the L1 observer and humans see.
 
+- **Corneli (2014)**: The evidence landscape is the computational realization of the
+  PlanetMath 3.0 entity relation diagram (Table 24), verified against four years
+  of field work, implementation, and user evaluation. The five dimensions (Context,
+  Feedback, Quality, Structure, Heuristic) are modes of evidence accumulation.
+
 ## Exit Conditions
 
 - Evidence shapes validate all entry/query/artifact-ref types
-- Evidence store passes invariant tests (append-only, reply-chain integrity)
-- Thread projections pass proof-tree invariant tests (all 7 above)
+- Evidence store passes invariant tests (append-only, reply-chain integrity, fork integrity)
+- Thread projections pass proof-tree invariant tests (all 7 above + fork relaxation)
+- Conjectures trackable through their lifecycle (open → confirmed/refuted)
+- Ephemeral entries excluded from queries by default, compactable
 - Front page query works (recent activity across subjects)
 - Pattern mining works on closed threads
 - All new tests pass, existing tests unaffected

@@ -13,12 +13,40 @@
   + THEN:
     Recognize the evidence landscape as the shared medium all timescales write to and the L1 observer reads from. Every artifact (pattern, mission, component, gate) accumulates evidence: PSRs record selections, PURs record outcomes, PARs record reflections, coordination records capture real-time events. Artifacts don't just exist — they have biographies. The evidence landscape provides durée: the past persists into the present as a growing whole, giving the system memory.
 
-    Structural model:
+    Structural model (by timescale):
     - Social timescale writes: coordination events, delivery receipts, presence records, mode transitions
     - Task timescale writes: gate traversals, task submissions, validation outcomes
     - Glacial timescale writes: pattern canonizations, tension records, library evolution events
     - L1 observer reads: scans accumulated evidence for recurring tensions and successful patterns
     - The loop closes through the medium, not through direct connections between timescales
+
+    Structural model (by function — from Corneli 2014, Table 24):
+    The PlanetMath 3.0 entity relation diagram organizes the same territory into five
+    dimensions of accumulation, derived from four years of field work, implementation,
+    and user evaluation:
+
+    Context:    A ← A (attachment), A ←ℓ A (link), X ↪ X (project embeds project)
+    Feedback:   X ← T (post on object), S ← R (review), X → X♯ (update)
+    Quality:    X ← Q (question), A ← C (correction), X → X′ (fork), X ⊧ X⋆ (outcome model)
+    Structure:  A ← P ← J ← S (article ← problem ← conjecture ← solution), L ← A,P (collection), M ← A (classification)
+    Heuristic:  G ↩ U (group ← user), S ↩ H (solution embeds heuristic), Q,T ⇀ C,W,P (spawning), G ↪ E (ephemera)
+
+    Key insight: X is overloaded — it is both "object" (any artifact) and "project"
+    (everything is a project at some scale). "Individual proof steps or computations
+    are to be thought of as small projects." This is the same insight as ArtifactRef:
+    every entity in the system is a subject that accumulates evidence.
+
+    Mapping Table 24 → futon3c evidence landscape:
+    - X (object/project)        → ArtifactRef (universal subject reference)
+    - X ← T (post on object)   → EvidenceEntry with :evidence/subject
+    - S ← R (review)           → EvidenceEntry :reflection (PAR)
+    - X → X♯ (update)          → EvidenceEntry :pattern-outcome (PUR)
+    - X ⊧ X⋆ (outcome model)  → Conjecture: evidence entry that models expected outcome
+    - A ← P ← J ← S           → Proof tree: claim-type ordering :goal → :step → :evidence → :conclusion
+    - X → X′ (fork)            → Fork relation: artifact biography branches (DAG, not just tree)
+    - S ↩ H (heuristic)        → :evidence/pattern-id links evidence to the pattern that informed it
+    - Q,T ⇀ C,W,P (spawning)  → in-reply-to chains that spawn new evidence
+    - G ↪ E (ephemera)         → Ephemeral evidence: intermediate computations that need not persist
 
     Design implications:
     - The primary shape is EvidenceEntry (typed event with subject, provenance, claim-type, pattern linkage), not ForumThread/ForumPost
@@ -26,13 +54,23 @@
     - Threads/proof-trees are projections (groupings of entries sharing a goal), not the primary structure
     - The "front page" is aggregated recent activity across subjects — what the L1 observer and humans both see
     - Surface structures (Q&A, proof trees, timelines) are views on the same evidence — like Stack Exchange is a surface on a forum
+    - Conjectures (J) are first-class: an evidence entry can model an expected outcome, not just record one
+    - Forks (X → X′) mean artifact biographies can branch — a proof attempt or mission can fork into alternatives. The evidence graph is a DAG, not strictly a tree.
+    - Ephemera (G ↪ E) are practical, not psychological: agents don't need scratch paper for comfort, but not every intermediate computation needs to persist. Evidence entries can carry an :ephemeral? flag; the store can compact or summarize ephemeral evidence over time without losing the durable record.
   + BECAUSE:
     Bergson's durée is the lived experience of time as continuous accumulation, not discrete snapshots. Clock-time (fast/slow timescales) produces events; durée is the memory that connects them. Without a shared medium where evidence accumulates, the AIF loop has no memory: social events vanish, task validations are forgotten, and the glacial loop has nothing to scan. The evidence landscape IS the system's durée — the continuous experience that makes learning possible.
 
-    Prior art: PlanetMath attached a discussion to every mathematical object. The forum was the front page — the primary interface, not a secondary service. Stack Exchange refined the surface (Q&A, voting, accepted answers) but the structural insight is the same: every artifact lives in a community of evidence, and the system evolves through that accumulation.
+    Prior art: Corneli (2014) studied PlanetMath over four years — field work, implementation of the Planetary system, stakeholder interviews, and user evaluation. Table 24 of that thesis presents the entity relation diagram for "PlanetMath 3.0": a grammar of mathematical behavior organized into five dimensions (Context, Feedback, Quality, Structure, Heuristic). The key finding: "any object, or activity, that takes place within the system should be thought of as being part of some project" — and projects accumulate evidence at every scale.
+
+    PlanetMath attached a discussion to every mathematical object. The forum was the front page — the primary interface, not a secondary service. Stack Exchange refined the surface (Q&A, voting, accepted answers) but the structural insight is the same: every artifact lives in a community of evidence, and the system evolves through that accumulation.
+
+    The futon3c evidence landscape is the computational realization of the PlanetMath 3.0 design, with agents as participants alongside humans. The five dimensions from Table 24 are now modes of evidence accumulation; the timescale model (social/task/glacial) provides the temporal structure; and durée is what emerges when both are working.
   + NEXT-STEPS:
-    - Revise M-forum-refactor: Part I becomes evidence shapes (EvidenceEntry, EvidenceQuery), Part II becomes evidence store, Part III becomes thread projection layer
+    - Revise M-forum-refactor: Part I becomes evidence shapes (EvidenceEntry, EvidenceQuery, ArtifactRef, ConjectureEntry), Part II becomes evidence store, Part III becomes thread projection + fork support
     - Trace EvidenceEntry shape to existing shapes: PSR/PUR/PAR + ForumPost + GateTraversal + SocialError should all be subtypes or projections of EvidenceEntry
     - Design the "front page" query: what does the L1 observer read? What does the human see?
-    - Consider: if every artifact has evidence attached, the subject field of EvidenceEntry needs a universal artifact reference (pattern-id, mission-id, component-id, gate-id)
-    - evidence-shape: {:evidence/id :string, :evidence/subject :string, :evidence/type :keyword, :evidence/claim-type :keyword, :evidence/author :string, :evidence/at :string, :evidence/pattern-id :keyword, :evidence/session-id :string, :evidence/body :any, :evidence/in-reply-to :string, :evidence/tags [:keyword]}
+    - ArtifactRef needs to cover: pattern-id, mission-id, component-id, gate-id, session-id, agent-id, thread-id, evidence-id (for self-reference / forks)
+    - Add :evidence/conjecture? flag for entries that model expected outcomes (X ⊧ X⋆)
+    - Add :evidence/fork-of field for entries that branch from an existing artifact (X → X′)
+    - Add :evidence/ephemeral? flag for intermediate computations; design compaction strategy
+    - evidence-shape: {:evidence/id :string, :evidence/subject ArtifactRef, :evidence/type :keyword, :evidence/claim-type ClaimType, :evidence/author :string, :evidence/at :string, :evidence/pattern-id :keyword, :evidence/session-id :string, :evidence/body :any, :evidence/in-reply-to :string, :evidence/fork-of :string, :evidence/conjecture? :boolean, :evidence/ephemeral? :boolean, :evidence/tags [:keyword]}
