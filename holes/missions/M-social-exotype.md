@@ -297,12 +297,14 @@ task validated through futon3b gates.
 - [ ] Reviewer sign-off
 
 ### Part II (Nested Composition)
-- [ ] `compose-parallel` (or equivalent) implemented in ct/mission.clj
-- [ ] Cross-diagram I3 check implemented and passes
-- [ ] Cross-diagram I4 check implemented and passes
-- [ ] Cross-diagram I6 check implemented and passes
-- [ ] Shared-port consistency validated (I-patterns same across diagrams)
-- [ ] Three-diagram composition test passes
+- [x] `compose-parallel` (or equivalent) implemented in ct/mission.clj
+- [x] Cross-diagram I3 check implemented and passes
+- [x] Cross-diagram I4 check implemented and passes
+- [x] Cross-diagram I6 check implemented and passes
+- [x] Shared-port consistency validated (I-patterns same across diagrams)
+- [x] Three-diagram composition test passes (6 tests, 12 assertions)
+- Composed: 5 inputs, 7 outputs, 16 components, 69 edges, 8/8 checks
+- Merged to futon5 main (d5ae681, 2026-02-10)
 
 ### Part III (Prototype 0)
 - [x] M-social-exotype registered in futon3b mission store
