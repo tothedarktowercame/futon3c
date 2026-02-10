@@ -130,7 +130,7 @@ Review notes:
 
 ### Part III: Peripheral Specs + Hop Protocol (Codex handoff)
 
-**Status:** Ready for handoff
+**Status:** Complete (fac6b3b)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        test/futon3c/social/test_fixtures.clj (READ-ONLY)
@@ -139,41 +139,34 @@ Review notes:
 :out — src/futon3c/social/peripheral.clj
        test/futon3c/social/peripheral_test.clj
 
-Function signatures:
-```clojure
-(defn load-peripherals
-  "Load and validate peripheral specs from EDN."
-  [path]
-  ...)
-
-(defn get-peripheral
-  "Look up a peripheral by ID. Returns PeripheralSpec or SocialError."
-  [peripherals peripheral-id]
-  ...)
-
-(defn validate-hop
-  "Validate a hop request: is this transition allowed from the current peripheral?
-   Returns HopResult or SocialError."
-  [current-peripheral hop-request]
-  ...)
-
-(defn transfer-context
-  "Build context for the target peripheral, carrying session-id and relevant state."
-  [hop-result source-context]
-  ...)
-```
-
 Criteria:
-- [ ] Five core peripherals load and validate against PeripheralSpec shape
-- [ ] Hop validation: only allowed transitions succeed (explore → edit, edit → test, etc.)
-- [ ] Session-id preserved across hops
-- [ ] Entry conditions checked before allowing peripheral entry
-- [ ] 5+ tests pass
-- [ ] No EXPECTED FAIL markers
+- [x] Five core peripherals load and validate against PeripheralSpec shape
+- [x] Hop validation: only allowed transitions succeed (explore → edit, edit → test, etc.)
+- [x] Session-id preserved across hops
+- [x] Entry conditions checked before allowing peripheral entry
+- [x] 7 tests pass (5+ met)
+- [x] No EXPECTED FAIL markers
+
+Scope compliance: clean — two :out files created, no :in files modified.
+Review notes:
+- `infer-exit-condition` (lines 85-107) infers exit keywords from hop reason text
+  via substring matching. Pragmatic but fragile — ordering-dependent, and two
+  matching substrings only returns the first. The explicit escape hatch
+  (`(:hop/exit-condition ctx)` in hop context) takes priority. **Eventually exit
+  conditions should be explicit keywords in the hop request, not inferred from
+  reason text.** Track for Part IV or a follow-up.
+- Exit validation is lenient for `:user-request` and `:from-any` hops — these
+  bypass exit condition checks entirely. Reasonable as a safety valve (users
+  can always redirect), but means exit conditions aren't enforced for
+  user-initiated hops.
+- `transfer-context` only carries keys declared in target peripheral's
+  `:peripheral/context` map. Verify in Part IV that `:target-files` actually
+  transfers from explore to edit (edit declares it, but test only checks
+  `:session-id`).
 
 ### Part IV: Integration (Claude)
 
-**Status:** Blocked on Part III
+**Status:** Ready
 
 :in  — All component files from Parts I-III
        src/futon3c/social/presence.clj (from M-agency-refactor Part II)
