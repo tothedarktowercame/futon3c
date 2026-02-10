@@ -109,7 +109,7 @@ Review notes:
 
 ### Part IV: S-dispatch (Codex)
 
-**Status:** Ready for handoff
+**Status:** Complete (d86df0f + 40acbce)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/agency/registry.clj (READ-ONLY)
@@ -118,15 +118,31 @@ Review notes:
        test/futon3c/social/dispatch_test.clj
 
 Criteria:
-- [ ] R1 (delivery receipt): every message produces receipt or explicit failure
-- [ ] R2 (single routing authority): one authority per agent-id
-- [ ] Input includes ClassifiedMessage, output is DispatchReceipt|SocialError
-- [ ] 5+ tests pass
-- [ ] No EXPECTED FAIL markers
+- [x] R1 (delivery receipt): every message produces receipt or explicit failure
+- [x] R2 (single routing authority): one authority per agent-id
+- [x] Input includes ClassifiedMessage, output is DispatchReceipt|SocialError
+- [x] 7 tests pass (5+ met)
+- [x] No EXPECTED FAIL markers
+
+Scope compliance: clean — two :out files created, no :in files modified.
+Review notes:
+- Dual registry check (snapshot + live): dispatch.clj lines 64 and 71 check the
+  agent in both the registry snapshot AND the live registry (`reg/get-agent`),
+  producing two distinct error codes (:agent-not-found vs :agent-not-registered).
+  This is the same I3 boundary issue as S-presence. Part VI integration must
+  resolve this: the snapshot should be authoritative, the live-registry check
+  should be removed or gated. **This is now the second component with this
+  pattern — fix consistently across S-presence and S-dispatch in Part VI.**
+- `coerce-prompt` (lines 23-29) converts all non-string payloads to string via
+  `pr-str`. Pragmatic for now — agents receive string prompts. But a structured
+  map payload like {:type "standup"} becomes the string "{:type \"standup\"}",
+  which is lossy. **When dispatch routes to agents that can handle structured
+  payloads (e.g., Codex task specs), coerce-prompt must be replaced with a
+  protocol that preserves payload structure.** Not blocking, but track it.
 
 ### Part V: S-persist (Codex)
 
-**Status:** Blocked on Part IV
+**Status:** Ready for handoff
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/social/dispatch.clj (READ-ONLY, output shape)
@@ -153,12 +169,24 @@ Criteria:
 - [ ] At least one proof-path from gate pipeline submission (bootstrap.clj pattern)
 - [ ] All R1-R11 invariant tests pass
 
-Note (from Part II review): `presence.clj` has a fallback in `registry-agent-exists?`
-that consults the live registry atom when the input is not an `AgentRegistryShape` map.
-In the integrated pipeline, the constraint input MUST always be the snapshot (I3:
-slow constrains fast, not the other way). Part VI integration should enforce this:
-`verify` receives the registry snapshot, never nil. Remove or gate the live-registry
-fallback so the pipeline boundary is clean.
+Integration clean-up (from Part II + Part IV reviews):
+
+1. **I3 snapshot enforcement (S-presence + S-dispatch)**: Both components consult
+   the live registry alongside the snapshot. `presence.clj` has a fallback in
+   `registry-agent-exists?` that consults the live atom when input is not an
+   `AgentRegistryShape` map. `dispatch.clj` checks the agent in both the snapshot
+   (line 64) and the live registry via `reg/get-agent` (line 71). In the integrated
+   pipeline, the constraint input MUST always be the snapshot (I3: slow constrains
+   fast). Part VI should: (a) ensure `verify` and `dispatch` receive the registry
+   snapshot, never nil; (b) remove or gate the live-registry fallbacks so the
+   pipeline boundary is clean; (c) resolve consistently — don't fix one and leave
+   the other.
+
+2. **`coerce-prompt` in S-dispatch**: `dispatch.clj` converts all non-string
+   payloads to string via `pr-str` (lines 23-29). This is lossy for structured
+   payloads. When the pipeline evolves to support structured agent communication
+   (e.g., Codex task specs, evidence entries), replace `coerce-prompt` with a
+   protocol that preserves payload structure. Not blocking for Part VI, but track.
 
 ## Exit Conditions
 
