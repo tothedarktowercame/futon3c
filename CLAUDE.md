@@ -85,10 +85,26 @@ Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):
    autonomous), it emits a PAR. When it reattaches, the autonomous work
    becomes evidence in the proof path. This bridges social and task timescales.
 
+## Codex Handoff Protocol
+
+Use **GitHub issues** for Codex handoffs, not copy-paste. The issue becomes the
+canonical task description, is linkable, and Codex can commit against it. Each
+issue follows the scope-bounded-handoff pattern (R11):
+
+- Title: what to implement
+- `:in` files (READ-ONLY) and `:out` files (create these)
+- Function signatures
+- Shapes reference (relevant types from shapes.clj)
+- Test expectations (specific test cases)
+- Criteria checklist
+- `clojure -X:test` must pass
+
+This is a temporary ergonomic — once futon3c's own real-time coordination
+layer is operational, handoffs flow through the evidence landscape instead.
+
 ## Current State
 
-This repo is freshly created. Code will be ported from futon3 as it's
-refactored. The source material is in:
+Code is being ported from futon3 via scoped missions. The source material is in:
 
 - `/home/joe/code/futon3/src/futon3/agency/` (6 files)
 - `/home/joe/code/futon3/src/futon3/forum/` (3 files)
