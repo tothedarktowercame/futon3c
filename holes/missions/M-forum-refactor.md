@@ -1,4 +1,4 @@
-# Mission: Forum Refactor
+# Mission: Evidence Landscape
 
 ## Derivation
 
@@ -10,6 +10,7 @@ Prior:
 - social-exotype.edn O-coordination-evidence: typed proof-path entries
 - realtime/authoritative-transcript.flexiarg: single authoritative event log
 - realtime/structured-events-only.flexiarg: structured events, not free-text
+- **social/evidence-landscape.flexiarg**: evidence landscape as durée
 - futon3/forum/ (3 files, 776 lines): source material with known defects
 
 ## Why This Mission Exists
@@ -20,140 +21,215 @@ The forum in futon3 was abandoned after 8 commits (4846339 through a346d27) with
 - ClassCastException on first WS test, no exit recorded (S3: explicit-exit violated)
 - M-forum-organization.md created but never evaluated against success criteria
 
-The forum is NOT just chat. Posts are proof steps, threads are proof trees,
-claim-types (:goal, :step, :evidence, :conclusion) are the inference structure,
-and pattern-applied fields record which patterns were used. This is the
-mechanism by which social-timescale coordination becomes task-timescale evidence.
+The deeper problem: futon3 treated the forum as a service bolted onto agency.
+The evidence-landscape.flexiarg identifies a structural reframe: the evidence
+landscape is the shared medium through which all three AIF timescales accumulate
+experience. It provides durée — continuous lived duration — not just event storage.
+
+The forum is NOT just chat. It is the evolutionary landscape where all evidence
+lives: PSRs record selections, PURs record outcomes, PARs record reflections,
+gate traversals record validations, coordination records capture real-time events.
+Every artifact has a biography. Threads are projections (groupings of entries
+sharing a goal), not the primary structure.
 
 ## What This Mission Produces
 
-1. **Forum shapes** — Malli schemas for Thread, Post, PostTree, ForumEvent
-2. **Forum service** — thread/post CRUD with proof-tree invariants, tested
-3. **S-validate integration** — coordination outcomes validated against forum evidence
-4. **Proof-path emission** — forum events as typed O-coordination-evidence entries
-5. **Forum event streaming** — subscriber notification (data layer, not transport)
+1. **Evidence shapes** — Malli schemas for EvidenceEntry, ArtifactRef, EvidenceQuery
+2. **Evidence store** — CRUD for evidence entries with invariants, tested
+3. **Thread projection** — proof-tree views on evidence (grouping entries by goal/subject)
+4. **S-validate integration** — coordination outcomes validated against accumulated evidence
+5. **Evidence emission** — all timescale events as typed evidence entries
 
 ## Scope In
 
-- Forum data model: Thread, Post, PostTree (proof tree structure)
-- Forum service: create/read threads and posts with claim-type validation
-- Proof-tree invariants: tree structure validity, claim-type ordering
-- Event emission: typed forum events for subscriber notification
-- MUSN event conversion: post → proof-path-compatible event
-- Pattern mining: extract patterns from completed threads
-- S-validate wiring: forum evidence feeds coordination outcome validation
+- Evidence data model: EvidenceEntry as primary shape, ArtifactRef for universal subject references
+- Evidence store: create/read/query evidence entries with claim-type validation
+- Thread projection: group evidence entries into proof trees by shared goal
+- Proof-tree invariants: tree structure validity, claim-type ordering (on projections)
+- Evidence query: by subject, by type, by time range, by pattern linkage
+- S-validate wiring: accumulated evidence feeds coordination outcome validation
+- Front page query: aggregated recent activity across subjects (what L1 observer reads)
 
 ## Scope Out
 
-- HTTP API: REST endpoints for forum — subsequent mission after data layer works
+- HTTP API: REST endpoints — subsequent mission after data layer works
 - WebSocket transport: Java-WebSocket or http-kit WS — subsequent mission
 - Forum bridges: Babashka/TypeScript bridges — separate concern (peripheral)
 - Agency dispatch endpoint: POST /forum/thread/:id/dispatch — needs agency HTTP
-- Pin/frontpage: UI concerns, add when HTTP layer exists
-- Forum client CLI: scripts/forum-client.clj — separate tool
+- Persistence backend: in-memory atoms for now; XTDB or EDN files decided later
+- L1 observer logic: reads from evidence landscape, but scanning/mining is glacial timescale
+
+## Conceptual Model
+
+From evidence-landscape.flexiarg:
+
+**Structural model:**
+- Social timescale writes: coordination events, delivery receipts, presence records, mode transitions
+- Task timescale writes: gate traversals, task submissions, validation outcomes
+- Glacial timescale writes: pattern canonizations, tension records, library evolution events
+- L1 observer reads: scans accumulated evidence for recurring tensions and successful patterns
+- The loop closes through the medium, not through direct connections between timescales
+
+**Design principles (PlanetMath + Stack Exchange precedent):**
+- The primary shape is EvidenceEntry (typed event with subject, provenance, claim-type, pattern linkage)
+- Every artifact gets evidence attached (PlanetMath model: every object has a discussion)
+- Threads/proof-trees are projections (groupings of entries sharing a goal), not the primary structure
+- The "front page" is aggregated recent activity across subjects
+- Surface structures (Q&A, proof trees, timelines) are views on the same evidence
 
 ## Source Material (futon3 → futon3c mapping)
 
 | futon3 file | Lines | Maps to | Notes |
 |-------------|-------|---------|-------|
-| forum/service.clj | 343 | futon3c/forum/service.clj | Core: CRUD, proof-tree, events, patterns |
+| forum/service.clj | 343 | futon3c/evidence/store.clj | Reframed: evidence store, not forum service |
 | forum/http.clj | 295 | Deferred | HTTP layer, not in scope |
 | forum/ws.clj | 138 | Deferred | WS transport, not in scope |
 
-The 343-line service.clj contains the data model. The 433 lines of HTTP + WS
-are transport — they should be built on top of tested data layer, not alongside.
+The 343-line service.clj contains the thread/post model. The reframe keeps the
+proof-tree logic but makes EvidenceEntry the primary shape, with threads as a
+projection layer on top.
 
-## Key Design Decision: Data Layer First
+## Key Design Decision: Evidence-First, Not Forum-First
 
-futon3 built service + HTTP + WS simultaneously with no tests. The
-ClassCastException happened because WS was composed before the data layer
-was verified. futon3c reverses this:
+futon3 built the forum as a service. futon3c recognizes the evidence landscape
+as the connective tissue of the entire AIF loop. The sequence:
 
-1. Forum shapes (Malli contracts)
-2. Forum service with invariant tests
-3. S-validate integration
-4. Then HTTP (later mission)
-5. Then WS (later mission)
+1. Evidence shapes (EvidenceEntry as primary, ArtifactRef for universal subject references)
+2. Evidence store with invariant tests
+3. Thread projection layer (proof-tree views on evidence entries)
+4. S-validate integration
+5. Then HTTP (later mission)
+6. Then WS (later mission)
 
-This follows verify-before-compose: each layer tested before the next is added.
+This follows verify-before-compose AND the durée insight: the evidence store
+is the foundation, not the forum surface.
 
 ## Parts
 
-### Part I: Forum Shapes (Claude)
+### Part I: Evidence Shapes (Claude)
 
 **Status:** Ready
 
-:in  — src/futon3c/social/shapes.clj (extend with forum shapes)
+:in  — src/futon3c/social/shapes.clj (extend with evidence shapes)
+       library/social/evidence-landscape.flexiarg (READ-ONLY, design reference)
        futon3/src/futon3/forum/service.clj (READ-ONLY, source reference)
        futon5/data/missions/social-exotype.edn (READ-ONLY, §S-validate)
-:out — src/futon3c/social/shapes.clj (ADD forum shapes, preserve existing)
-       test/futon3c/social/shapes_test.clj (ADD forum shape tests)
+:out — src/futon3c/social/shapes.clj (ADD evidence shapes, preserve existing)
+       test/futon3c/social/shapes_test.clj (ADD evidence shape tests)
 
 New shapes:
-- `ClaimType`: enum [:goal :step :evidence :conclusion :question]
-- `ThreadStatus`: enum [:open :closed]
-- `ForumPost`: {:post/id, :post/thread-id, :post/author, :post/timestamp,
-   :post/body, :post/claim-type, :post/pattern-applied, :post/in-reply-to, :post/tags}
-- `ForumThread`: {:thread/id, :thread/title, :thread/author, :thread/created,
-   :thread/updated, :thread/goal, :thread/root-post-id, :thread/post-count,
-   :thread/participants, :thread/tags, :thread/status}
-- `ForumEvent`: {:event/type, :thread-id, :post ForumPost}
-  (used by subscriber notification and proof-path emission)
-- `ProofPathEntry`: {:event/type :forum/post, :post/id, :post/thread-id,
-   :post/author, :post/claim-type, :post/pattern-applied, :timestamp}
-  (MUSN-compatible event for O-coordination-evidence)
+- `ClaimType`: enum [:goal :step :evidence :conclusion :question :observation :tension]
+- `ArtifactRef`: {:ref/type [:pattern :mission :component :gate :session :agent :thread],
+   :ref/id :string}
+  (universal reference to any artifact in the system)
+- `EvidenceEntry`: {:evidence/id, :evidence/subject ArtifactRef, :evidence/type keyword,
+   :evidence/claim-type ClaimType, :evidence/author, :evidence/at,
+   :evidence/pattern-id (optional), :evidence/session-id (optional),
+   :evidence/body, :evidence/in-reply-to (optional), :evidence/tags}
+  (primary shape — all other evidence types are subtypes or projections)
+- `EvidenceQuery`: {:query/subject (optional), :query/type (optional),
+   :query/claim-type (optional), :query/since (optional), :query/limit (optional)}
+- `EvidenceType`: enum [:coordination :gate-traversal :pattern-selection :pattern-outcome
+   :reflection :forum-post :mode-transition :presence-event]
+  (distinguishes evidence from different timescales)
 
-### Part II: Forum Service (Codex handoff)
+Relationship to existing shapes:
+- ForumPost is an EvidenceEntry with :evidence/type :forum-post
+- ProofPathEntry is a projection of EvidenceEntry for MUSN compatibility
+- PSR/PUR/PAR are EvidenceEntry subtypes (:pattern-selection, :pattern-outcome, :reflection)
+- GateTraversal events are EvidenceEntry with :evidence/type :gate-traversal
+
+### Part II: Evidence Store (Codex handoff)
 
 **Status:** Blocked on Part I
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        test/futon3c/social/test_fixtures.clj (READ-ONLY)
+       library/social/evidence-landscape.flexiarg (READ-ONLY, design reference)
        futon3/src/futon3/forum/service.clj (READ-ONLY, source reference)
-:out — src/futon3c/forum/service.clj
-       test/futon3c/forum/service_test.clj
+:out — src/futon3c/evidence/store.clj
+       test/futon3c/evidence/store_test.clj
 
-Rewrite service.clj with:
+Evidence store with:
 - Shape-validated inputs/outputs on all operations
-- Proof-tree structure invariants (tree is valid, no orphan posts)
-- Claim-type ordering validation (:goal must be root, :conclusion only in reply-to)
-- Event emission as typed ForumEvent maps
-- MUSN event conversion (post→musn-event) as ProofPathEntry
-- Pattern mining (thread-patterns, successful-thread-patterns)
-- No persistence to disk yet (in-memory atoms, same as futon3) — persistence
-  strategy decided when we know if it's XTDB or EDN files
+- Append-only evidence entries (evidence accumulates, never deleted)
+- Query by subject (ArtifactRef), by type, by time range, by claim-type
+- Claim-type validation (structural rules on what can reply to what)
+- Event emission as typed maps for subscriber notification
+- In-reply-to chain integrity (no orphan replies, referenced entry must exist)
+- No persistence to disk yet (in-memory atoms) — persistence strategy decided later
 
 Function signatures:
 ```clojure
-(defn create-thread! [{:keys [title author body goal tags]}] -> {:ok true :thread :post} | SocialError)
-(defn create-post! [{:keys [thread-id author body in-reply-to claim-type pattern-applied tags]}] -> {:ok true :post} | SocialError)
-(defn get-thread [thread-id] -> ForumThread | nil)
-(defn get-thread-posts [thread-id] -> [ForumPost])
-(defn get-post-tree [thread-id] -> PostTree | nil)
-(defn post->proof-path-entry [post] -> ProofPathEntry)
+(defn append! [{:keys [subject type claim-type author body pattern-id session-id in-reply-to tags]}]
+  ;; -> {:ok true :entry EvidenceEntry} | SocialError
+  )
+
+(defn query [evidence-query]
+  ;; -> [EvidenceEntry]
+  )
+
+(defn get-entry [evidence-id]
+  ;; -> EvidenceEntry | nil
+  )
+
+(defn get-reply-chain [evidence-id]
+  ;; -> [EvidenceEntry] (ordered ancestor chain)
+  )
+
+(defn recent-activity [{:keys [limit since]}]
+  ;; -> [EvidenceEntry] — the "front page"
+  )
 ```
 
 Criteria:
-- [ ] Shape-validated: all inputs/outputs checked against forum shapes
-- [ ] R8 (authoritative-transcript): thread state is the authority, no projections
-- [ ] R9 (structured-events): posts have mandatory claim-type, events are typed maps
+- [ ] Shape-validated: all inputs/outputs checked against evidence shapes
+- [ ] R8 (authoritative-transcript): evidence store is the authority
+- [ ] R9 (structured-events): entries have mandatory type + claim-type, events are typed maps
 - [ ] R4 (loud failure): no silent nil returns, SocialError on all failures
-- [ ] Proof-tree invariants: tree structure valid, no orphans, claim ordering
-- [ ] 8+ tests pass (CRUD + tree + invariants + events)
+- [ ] Append-only: evidence entries cannot be modified or deleted
+- [ ] Reply-chain integrity: in-reply-to references valid existing entries
+- [ ] 8+ tests pass (CRUD + query + invariants + events)
 - [ ] No EXPECTED FAIL markers
 
-### Part III: S-validate Integration (Codex handoff)
+### Part III: Thread Projection + S-validate (Codex handoff)
 
 **Status:** Blocked on Part II + M-agency-refactor Part IV (S-dispatch)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
-       src/futon3c/forum/service.clj (READ-ONLY)
+       src/futon3c/evidence/store.clj (READ-ONLY)
        src/futon3c/social/dispatch.clj (READ-ONLY, from M-agency-refactor)
-:out — src/futon3c/social/validate.clj
+:out — src/futon3c/evidence/threads.clj
+       src/futon3c/social/validate.clj
+       test/futon3c/evidence/threads_test.clj
        test/futon3c/social/validate_test.clj
 
-S-validate component from social-exotype.edn:
-- Input: S-dispatch output + I-patterns (config)
+Two components, sharing evidence as the foundation:
+
+**Thread projection (threads.clj):**
+- Group evidence entries into proof trees by shared subject/goal
+- Proof-tree invariants (tree validity, root invariant, claim ordering) operate on projections
+- Thread is a view: {:thread/id, :thread/subject ArtifactRef, :thread/goal EvidenceEntry,
+  :thread/entries [EvidenceEntry], :thread/participants, :thread/status}
+- Pattern mining: extract patterns from completed threads (closed goals with conclusions)
+
+Function signatures:
+```clojure
+(defn project-thread [store subject-ref]
+  ;; -> ThreadProjection | nil — group all entries for a subject into a tree
+  )
+
+(defn thread-status [thread-projection]
+  ;; -> :open | :closed | :stalled
+  )
+
+(defn thread-patterns [thread-projection]
+  ;; -> [{:pattern-id :keyword :applied-count :int :success? :boolean}]
+  )
+```
+
+**S-validate (validate.clj):**
+- Input: S-dispatch output + I-patterns (config) + evidence query results
 - Validates coordination produced a well-formed outcome
 - Output: CoordinationOutcome (already in shapes.clj) or SocialError
 - R5 (bounded-lifecycle): transient resources have deterministic bounds
@@ -161,17 +237,19 @@ S-validate component from social-exotype.edn:
 Function signature:
 ```clojure
 (defn validate-outcome
-  "Validate a coordination outcome against forum evidence and patterns.
+  "Validate a coordination outcome against accumulated evidence and patterns.
    Returns CoordinationOutcome on success, SocialError on failure."
-  [dispatch-result patterns forum-evidence]
+  [dispatch-result patterns evidence-store]
   ...)
 ```
 
 Criteria:
+- [ ] Thread projection groups evidence entries correctly
+- [ ] Proof-tree invariants hold on projections (all 7 below)
 - [ ] R5 (bounded-lifecycle): validates coordination completeness
-- [ ] Uses forum thread state as evidence for validation
+- [ ] Uses accumulated evidence (not just thread state) for validation
 - [ ] Output conforms to CoordinationOutcome shape
-- [ ] 5+ tests pass
+- [ ] 10+ tests pass (5+ threads, 5+ validate)
 - [ ] No EXPECTED FAIL markers
 
 ### Part IV: Integration (Claude)
@@ -179,46 +257,59 @@ Criteria:
 **Status:** Blocked on Parts II-III
 
 :in  — All component files from Parts I-III
-:out — test/futon3c/forum/integration_test.clj
+:out — test/futon3c/evidence/integration_test.clj
 
 Criteria:
-- [ ] Create thread → post proof steps → validate outcome end-to-end
-- [ ] Proof-path entries emitted for all forum operations
-- [ ] Pattern mining extracts patterns from closed threads
-- [ ] Forum events notify subscribers (in-memory, no transport)
+- [ ] Append evidence → project thread → post proof steps → validate outcome end-to-end
+- [ ] Evidence entries from different timescales coexist (coordination + gate traversal + reflection)
+- [ ] Front page query returns recent activity across subjects
+- [ ] Pattern mining extracts patterns from threads with conclusions
+- [ ] Evidence events notify subscribers (in-memory, no transport)
 - [ ] Wire into pipeline_test.clj if S-dispatch exists
 
-## Proof-Tree Invariants (New — futon3 had none)
+## Proof-Tree Invariants (Applied to Thread Projections)
 
-These are the invariants that should have existed before the WS layer:
+These invariants apply to thread projections, not to evidence entries directly.
+A thread projection groups entries sharing a subject into a proof tree.
 
-1. **Tree validity**: Every post's `:in-reply-to` references an existing post in the same thread
-2. **Root invariant**: Thread's `:root-post-id` exists and has `:claim-type :goal`
-3. **No orphans**: Every post belongs to exactly one thread
+1. **Tree validity**: Every entry's `:in-reply-to` references an existing entry in the same projection
+2. **Root invariant**: Thread's goal entry exists and has `:claim-type :goal`
+3. **No orphans**: Every entry in a projection belongs to exactly one thread
 4. **Claim ordering**: `:conclusion` can only reply to `:step` or `:evidence`, not to another `:conclusion`
-5. **Author tracking**: `:thread/participants` is the union of all post authors
-6. **Monotonic timestamps**: Post timestamps within a thread are non-decreasing
-7. **Post count consistency**: `:thread/post-count` equals actual post count for that thread
+5. **Author tracking**: `:thread/participants` is the union of all entry authors
+6. **Monotonic timestamps**: Entry timestamps within a projection are non-decreasing
+7. **Entry count consistency**: `:thread/entry-count` equals actual entry count for that projection
 
 ## Relationship to Other Missions
 
 - **M-agency-refactor**: S-dispatch output feeds S-validate input. S-validate is
   Part III of this mission but depends on S-dispatch from M-agency-refactor Part IV.
-  Both share shapes.clj as the contract boundary.
+  Both share shapes.clj as the contract boundary. Social pipeline components
+  (S-presence, S-authenticate, S-dispatch) write evidence entries to the landscape.
 
-- **M-peripheral-model**: Forum bridges are peripherals. A forum-agent peripheral
-  operates within the forum data model. The peripheral spec defines the
-  structural constraints; the forum service provides the data operations.
+- **M-peripheral-model**: Peripheral hops and mode transitions write evidence entries.
+  A forum-agent peripheral operates within the evidence landscape. The peripheral
+  spec defines the structural constraints; the evidence store provides the data operations.
 
 - **social-exotype.edn**: S-validate has edges from I-patterns and S-mode output,
   produces O-coordination-evidence. This mission implements the S-validate node
-  and the O-coordination-evidence output.
+  and the O-coordination-evidence output. The evidence landscape is WHERE
+  O-coordination-evidence lives — not a separate store, but the shared medium.
+
+- **futon3b gate pipeline**: Gate traversals write evidence entries. The evidence
+  landscape is the bridge between social (futon3c) and task (futon3b) timescales.
+  PSRs, PURs, PARs are all evidence entries.
+
+- **Glacial timescale (L1 observer)**: The L1 observer reads from the evidence
+  landscape to detect recurring tensions and successful patterns. The front page
+  query is what both the L1 observer and humans see.
 
 ## Exit Conditions
 
-- Forum shapes validate all thread/post/event types
-- Forum service passes proof-tree invariant tests (all 7 above)
-- Proof-path entries conform to ProofPathEntry shape
+- Evidence shapes validate all entry/query/artifact-ref types
+- Evidence store passes invariant tests (append-only, reply-chain integrity)
+- Thread projections pass proof-tree invariant tests (all 7 above)
+- Front page query works (recent activity across subjects)
 - Pattern mining works on closed threads
 - All new tests pass, existing tests unaffected
 - `clojure -X:test` passes cleanly

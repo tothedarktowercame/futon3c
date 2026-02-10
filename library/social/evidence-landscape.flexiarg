@@ -1,0 +1,38 @@
+@flexiarg social/evidence-landscape
+@title The Evidence Landscape Is Durée, Not a Service
+@audience futon3c architecture
+@tone theoretical
+@style pattern
+
+! conclusion: The evidence landscape (forum + proof-path store) is the shared medium through which all three AIF timescales accumulate experience; it provides durée — continuous lived duration — not just event storage.
+  + context: futon3 built the forum as a service alongside agency. It was abandoned after 8 commits. futon3c initially scoped M-forum-refactor as a data layer port.
+  + IF:
+    You want the three AIF timescales (social/seconds, task/minutes, glacial/weeks) to form a genuine learning loop rather than three disconnected systems.
+  + HOWEVER:
+    Treating the evidence store as a "forum service" makes it an afterthought — something bolted on rather than the connective tissue. Events flash and vanish (IRC logs nobody reads), gate traversals are isolated (pass/fail, forgotten), and library patterns are static until manually updated. The loop doesn't close.
+  + THEN:
+    Recognize the evidence landscape as the shared medium all timescales write to and the L1 observer reads from. Every artifact (pattern, mission, component, gate) accumulates evidence: PSRs record selections, PURs record outcomes, PARs record reflections, coordination records capture real-time events. Artifacts don't just exist — they have biographies. The evidence landscape provides durée: the past persists into the present as a growing whole, giving the system memory.
+
+    Structural model:
+    - Social timescale writes: coordination events, delivery receipts, presence records, mode transitions
+    - Task timescale writes: gate traversals, task submissions, validation outcomes
+    - Glacial timescale writes: pattern canonizations, tension records, library evolution events
+    - L1 observer reads: scans accumulated evidence for recurring tensions and successful patterns
+    - The loop closes through the medium, not through direct connections between timescales
+
+    Design implications:
+    - The primary shape is EvidenceEntry (typed event with subject, provenance, claim-type, pattern linkage), not ForumThread/ForumPost
+    - Every artifact gets evidence attached (PlanetMath model: every object has a discussion)
+    - Threads/proof-trees are projections (groupings of entries sharing a goal), not the primary structure
+    - The "front page" is aggregated recent activity across subjects — what the L1 observer and humans both see
+    - Surface structures (Q&A, proof trees, timelines) are views on the same evidence — like Stack Exchange is a surface on a forum
+  + BECAUSE:
+    Bergson's durée is the lived experience of time as continuous accumulation, not discrete snapshots. Clock-time (fast/slow timescales) produces events; durée is the memory that connects them. Without a shared medium where evidence accumulates, the AIF loop has no memory: social events vanish, task validations are forgotten, and the glacial loop has nothing to scan. The evidence landscape IS the system's durée — the continuous experience that makes learning possible.
+
+    Prior art: PlanetMath attached a discussion to every mathematical object. The forum was the front page — the primary interface, not a secondary service. Stack Exchange refined the surface (Q&A, voting, accepted answers) but the structural insight is the same: every artifact lives in a community of evidence, and the system evolves through that accumulation.
+  + NEXT-STEPS:
+    - Revise M-forum-refactor: Part I becomes evidence shapes (EvidenceEntry, EvidenceQuery), Part II becomes evidence store, Part III becomes thread projection layer
+    - Trace EvidenceEntry shape to existing shapes: PSR/PUR/PAR + ForumPost + GateTraversal + SocialError should all be subtypes or projections of EvidenceEntry
+    - Design the "front page" query: what does the L1 observer read? What does the human see?
+    - Consider: if every artifact has evidence attached, the subject field of EvidenceEntry needs a universal artifact reference (pattern-id, mission-id, component-id, gate-id)
+    - evidence-shape: {:evidence/id :string, :evidence/subject :string, :evidence/type :keyword, :evidence/claim-type :keyword, :evidence/author :string, :evidence/at :string, :evidence/pattern-id :keyword, :evidence/session-id :string, :evidence/body :any, :evidence/in-reply-to :string, :evidence/tags [:keyword]}
