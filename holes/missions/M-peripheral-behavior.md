@@ -116,7 +116,7 @@ evidence entries that threads can project, validate can assess, and L1 can mine.
 
 ## Parts
 
-### Structure: Diamond with Parallel Branches
+### Structure: Diamond with Wiring Step
 
 ```
               Part I: Foundation (Claude)
@@ -124,17 +124,20 @@ evidence entries that threads can project, validate can assess, and L1 can mine.
 Part IIa: ← Verification          Part IIb: 5 Peripherals
 (Claude — theory + scaffold)       (Codex — implementations)
              \                            /
-              Part III: Integration (Claude)
+         Part IIc: Claude Wiring (Claude)
+                       |
+         Part III: Integration (Claude)
 ```
 
-Parts IIa and IIb run **in parallel** after Part I completes. Part III is
-blocked on both. This exploits the natural division: Claude handles theory-to-code
-bridging (← verification, evidence emission design); Codex handles well-scoped,
-implementation-heavy peripheral work.
+Parts IIa and IIb run **in parallel** after Part I completes. Part IIc is
+blocked on IIb — it builds the Claude-specific adaptations that let Claude
+operate within the peripherals (registry, prompt construction, chain
+orchestration). Part III is blocked on IIa + IIc and brings everything
+together with end-to-end integration tests.
 
 ### Part I: Foundation — PeripheralRunner + Tool Dispatch + Evidence Emission (Claude)
 
-**Status:** Ready
+**Status:** Complete (b69ede4)
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/social/peripheral.clj (READ-ONLY, hop protocol)
@@ -198,7 +201,7 @@ Criteria:
 
 ### Part IIa: ← Verification Framework (Claude — parallel with IIb)
 
-**Status:** Blocked on Part I
+**Status:** Complete (a6d56ef)
 
 :in  — src/futon3c/peripheral/runner.clj (READ-ONLY, from Part I)
        src/futon3c/peripheral/tools.clj (READ-ONLY, from Part I)
@@ -239,7 +242,7 @@ Criteria:
 
 ### Part IIb: Five Peripheral Implementations (Codex — parallel with IIa)
 
-**Status:** Blocked on Part I
+**Status:** Complete (e721e9e)
 
 :in  — src/futon3c/peripheral/runner.clj (READ-ONLY, from Part I)
        src/futon3c/peripheral/tools.clj (READ-ONLY, from Part I)
@@ -247,7 +250,8 @@ Criteria:
        src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/evidence/store.clj (READ-ONLY)
        resources/peripherals.edn (READ-ONLY)
-:out — src/futon3c/peripheral/explore.clj
+:out — src/futon3c/peripheral/common.clj
+       src/futon3c/peripheral/explore.clj
        src/futon3c/peripheral/edit.clj
        src/futon3c/peripheral/test_runner.clj
        src/futon3c/peripheral/deploy.clj
@@ -288,11 +292,112 @@ Criteria:
 - [ ] Reflect emits :reflection type evidence (others emit :coordination)
 - [ ] 22+ tests (4+ per peripheral, 2+ scope violation tests)
 
+### Part IIc: Claude Wiring — Registry + Adapter + Chain Orchestration (Claude)
+
+**Status:** Ready (IIa + IIb complete)
+
+:in  — src/futon3c/peripheral/explore.clj (READ-ONLY, from Part IIb)
+       src/futon3c/peripheral/edit.clj (READ-ONLY, from Part IIb)
+       src/futon3c/peripheral/test_runner.clj (READ-ONLY, from Part IIb)
+       src/futon3c/peripheral/deploy.clj (READ-ONLY, from Part IIb)
+       src/futon3c/peripheral/reflect.clj (READ-ONLY, from Part IIb)
+       src/futon3c/peripheral/common.clj (READ-ONLY, from Part IIb)
+       src/futon3c/peripheral/runner.clj (READ-ONLY, from Part I)
+       src/futon3c/peripheral/tools.clj (READ-ONLY, from Part I)
+       src/futon3c/peripheral/evidence.clj (READ-ONLY, from Part I)
+       src/futon3c/social/peripheral.clj (READ-ONLY, hop protocol)
+       src/futon3c/evidence/store.clj (READ-ONLY)
+       resources/peripherals.edn (READ-ONLY)
+:out — src/futon3c/peripheral/registry.clj
+       src/futon3c/peripheral/adapter.clj
+       test/futon3c/peripheral/registry_test.clj
+       test/futon3c/peripheral/adapter_test.clj
+
+Codex built abstract PeripheralRunner implementations; this Part wires them
+for Claude. Three concerns:
+
+**1. Peripheral Registry** (`registry.clj`):
+
+Unified factory that maps peripheral-id to concrete PeripheralRunner:
+
+```clojure
+(make-peripheral :explore backend) ;; → ExplorePeripheral
+(make-peripheral :edit backend)    ;; → EditPeripheral
+;; etc.
+```
+
+Plus chain orchestration — runs a sequence of peripherals with hop
+validation and context transfer between each:
+
+```clojure
+(run-chain backend peripherals-map context
+  [{:peripheral-id :explore :actions [...] :stop-reason "found target"}
+   {:peripheral-id :edit    :actions [...] :stop-reason "ready to test"}
+   {:peripheral-id :test    :actions [...] :stop-reason "tests pass"}])
+;; → {:ok true :evidence [...] :fruits [...] :final-context {...}}
+```
+
+run-chain uses social/peripheral.clj's validate-hop + transfer-context to
+enforce hop validity at each transition. Each peripheral's stop context
+feeds the next peripheral's start context. Evidence accumulates in an
+optional evidence store.
+
+**2. Claude Adapter** (`adapter.clj`):
+
+Claude-specific translation layer — pure functions, no Claude invocation:
+
+- `tool-mapping [peripheral-spec]` → `{"Read" :read, "Glob" :glob, ...}`
+  Maps Claude Code tool names to peripheral tool keywords. Only includes
+  tools in the peripheral's tool set (explore won't map "Edit").
+
+- `tool-call->action [peripheral-spec tool-call]` → `{:tool :read :args ["src/a.clj"]}`
+  Translates a Claude Code tool-use result into the action format that
+  PeripheralRunner.step expects. Validates the tool is allowed.
+
+- `peripheral-prompt-section [peripheral-spec context]` → string
+  Generates the system prompt section that expresses constraints to Claude:
+  available tools, scope boundaries, what's forbidden, exit conditions.
+  This is the prompt engineering that makes Claude operate within the
+  peripheral's envelope.
+
+- `describe-constraints [peripheral-spec]` → constraint map
+  Structured representation: `{:allowed-tools [...], :scope "...",
+  :forbidden [...], :exit-conditions [...]}`. Used by prompt construction
+  and potentially by hooks.
+
+- `detect-exit [peripheral-spec text]` → nil | `{:exit-condition :kw :reason "..."}`
+  Analyzes Claude's non-tool output for signals that it wants to hop or
+  has completed the peripheral's goal. Maps to exit conditions from spec.
+
+**3. Why this is Claude-specific:**
+
+Codex doesn't need prompt sections, tool-call translation, or exit
+detection — Codex receives explicit instructions via GitHub issues and
+operates on code directly. Claude operates interactively within
+constraint envelopes, so it needs: (a) to be told its constraints via
+prompt, (b) its tool calls translated to the protocol, (c) its natural
+language output parsed for hop signals.
+
+Criteria:
+- [ ] make-peripheral dispatches to all 5 peripheral factories
+- [ ] run-chain orchestrates multi-peripheral sessions with hop validation
+- [ ] run-chain transfers context via social/peripheral.clj transfer-context
+- [ ] run-chain collects evidence across all peripherals in session
+- [ ] tool-mapping produces correct mapping for each peripheral's tool set
+- [ ] tool-call->action translates Claude tool calls to PeripheralRunner actions
+- [ ] peripheral-prompt-section generates constraint-expressing prompts
+- [ ] detect-exit identifies hop signals from output text
+- [ ] Invalid hops produce SocialError (via validate-hop)
+- [ ] 10+ tests (registry dispatch, chain orchestration, tool mapping, prompt, exit detection)
+
 ### Part III: Integration — Hop Chain + Evidence Flow + ← Verification (Claude)
 
-**Status:** Blocked on Parts IIa + IIb
+**Status:** Blocked on Parts IIa + IIc
 
-:in  — All files from Parts I, IIa, IIb
+:in  — All files from Parts I, IIa, IIb, IIc
+       src/futon3c/peripheral/registry.clj (from Part IIc — chain orchestration)
+       src/futon3c/peripheral/adapter.clj (from Part IIc — Claude adapter)
+       src/futon3c/peripheral/round_trip.clj (from Part IIa — ← verification)
        src/futon3c/social/peripheral.clj (hop protocol)
        src/futon3c/evidence/store.clj
        src/futon3c/evidence/threads.clj
@@ -370,6 +475,8 @@ The same 7 invariants from M-forum-refactor apply to peripheral evidence threads
 - ← violations are specific and actionable (which tool, which arg, which constraint)
 - Full hop chain works end-to-end with evidence accumulation
 - Peripheral evidence threads satisfy proof-tree invariants
+- Part IIc wiring: registry dispatches to all peripherals, chain orchestration works
+- Claude adapter: prompt generation, tool mapping, exit detection
 - Parts IIa and IIb completed independently (no cross-dependency)
-- All new tests pass, existing 167 tests unaffected
+- All new tests pass, existing 167 tests unaffected (currently at 244)
 - `clojure -X:test` passes cleanly
