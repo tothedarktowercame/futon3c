@@ -294,7 +294,7 @@ Criteria:
 
 ### Part IIc: Claude Wiring — Registry + Adapter + Chain Orchestration (Claude)
 
-**Status:** Ready (IIa + IIb complete)
+**Status:** Complete (fbd5f63)
 
 :in  — src/futon3c/peripheral/explore.clj (READ-ONLY, from Part IIb)
        src/futon3c/peripheral/edit.clj (READ-ONLY, from Part IIb)
@@ -392,7 +392,7 @@ Criteria:
 
 ### Part III: Integration — Hop Chain + Evidence Flow + ← Verification (Claude)
 
-**Status:** Blocked on Parts IIa + IIc
+**Status:** Complete (7c84650)
 
 :in  — All files from Parts I, IIa, IIb, IIc
        src/futon3c/peripheral/registry.clj (from Part IIc — chain orchestration)
@@ -478,5 +478,5 @@ The same 7 invariants from M-forum-refactor apply to peripheral evidence threads
 - Part IIc wiring: registry dispatches to all peripherals, chain orchestration works
 - Claude adapter: prompt generation, tool mapping, exit detection
 - Parts IIa and IIb completed independently (no cross-dependency)
-- All new tests pass, existing 167 tests unaffected (currently at 244)
-- `clojure -X:test` passes cleanly
+- All new tests pass, existing 167 tests unaffected (currently at 254)
+- `clojure -X:test` passes cleanly (254 tests, 751 assertions)
