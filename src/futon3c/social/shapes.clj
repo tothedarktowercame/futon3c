@@ -171,11 +171,14 @@
 
 (def HopRequest
   "Agent's request to hop from one peripheral to another.
-   Session-id is preserved across hops (futon3/docs/peripheral-spec.md §Hop Mechanics)."
+   Session-id is preserved across hops (futon3/docs/peripheral-spec.md §Hop Mechanics).
+   :hop/exit-condition is the preferred way to specify why a peripheral is being exited.
+   Falls back to :hop/context {:hop/exit-condition ...} for backwards compatibility."
   [:map
    [:hop/to PeripheralId]
    [:hop/reason :string]
    [:hop/session-id :string]
+   [:hop/exit-condition {:optional true} :keyword]
    [:hop/context {:optional true} [:map-of :keyword :any]]])
 
 (def HopResult

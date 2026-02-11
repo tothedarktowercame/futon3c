@@ -83,15 +83,20 @@
       (and user-request? (contains? entry-set :user-request))))
 
 (defn- infer-exit-condition
-  "Infer an exit condition keyword from a hop request.
-   If :hop/context includes :hop/exit-condition keyword, prefer that.
-   Otherwise, infer a small set from :hop/reason text (best-effort)."
+  "Resolve exit condition from a hop request.
+   Priority: 1) :hop/exit-condition (top-level, preferred)
+             2) :hop/context {:hop/exit-condition ...} (nested, backwards compat)
+             3) substring inference from :hop/reason (deprecated fallback)"
   [hop-request]
-  (let [ctx (:hop/context hop-request)
-        explicit (when (map? ctx) (:hop/exit-condition ctx))]
+  (let [top-level (:hop/exit-condition hop-request)
+        ctx (:hop/context hop-request)
+        nested (when (map? ctx) (:hop/exit-condition ctx))]
     (cond
-      (keyword? explicit) explicit
+      (keyword? top-level) top-level
+      (keyword? nested) nested
       :else
+      ;; Deprecated fallback: substring inference from :hop/reason.
+      ;; Callers should migrate to :hop/exit-condition.
       (let [r (str/lower-case (or (:hop/reason hop-request) ""))]
         (cond
           (str/includes? r "user request") :user-request

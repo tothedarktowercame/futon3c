@@ -50,15 +50,15 @@
       (is (= :S-dispatch (:error/component result)))
       (is (= :agent-not-found (:error/code result))))))
 
-(deftest agent-not-registered-live-registry-returns-social-error
-  (testing "agent present in snapshot but not registered live yields :agent-not-registered"
+(deftest agent-in-snapshot-but-not-live-returns-invoke-failed
+  (testing "agent present in snapshot but not registered live yields :invoke-failed (I3: snapshot authorizes, invocation handles runtime)"
     (let [registry (fix/mock-registry)
           to (fix/make-agent-id "claude-1" :continuity)
           msg (assoc (fix/make-classified-message) :msg/to to)
           result (dispatch/dispatch msg registry)]
       (fix/assert-valid! shapes/SocialError result)
       (is (= :S-dispatch (:error/component result)))
-      (is (= :agent-not-registered (:error/code result))))))
+      (is (= :invoke-failed (:error/code result))))))
 
 (deftest invalid-message-input-returns-social-error
   (testing "invalid ClassifiedMessage yields :invalid-message SocialError"

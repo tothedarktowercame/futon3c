@@ -132,6 +132,7 @@
           hop-req (fix/make-hop-request
                    {:hop/to :edit
                     :hop/reason "found target file"
+                    :hop/exit-condition :found-target
                     :hop/session-id session-id})
           hop-result (periph/validate-hop peripherals :explore hop-req)]
       (fix/assert-valid! shapes/HopResult hop-result)
@@ -254,6 +255,7 @@
                (fix/make-hop-request
                 {:hop/to :edit
                  :hop/reason "found target file"
+                 :hop/exit-condition :found-target
                  :hop/session-id "sess-combined-1"}))]
       (fix/assert-valid! shapes/HopResult hop)
       ;; Verify the whole chain produced valid shapes at every boundary

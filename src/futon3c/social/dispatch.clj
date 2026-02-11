@@ -21,12 +21,10 @@
     (seq context) (assoc :error/context context)))
 
 (defn- coerce-prompt
-  "Best-effort: turn payload into something invoke-fn can accept."
+  "Normalize payload for invoke-fn. Passes structured data through;
+   only converts nil to empty string. No lossy pr-str conversion."
   [payload]
-  (cond
-    (string? payload) payload
-    (nil? payload) ""
-    :else (pr-str payload)))
+  (if (nil? payload) "" payload))
 
 (defn dispatch
   "Route a classified message to its target agent.
@@ -68,34 +66,25 @@
                       :msg/id (:msg/id classified-message))
 
         :else
-        (let [agent-record (reg/get-agent target)]
+        (let [resp (reg/invoke-agent! target (coerce-prompt (:msg/payload classified-message)))
+              receipt (when (= true (:ok resp))
+                        {:receipt/msg-id (:msg/id classified-message)
+                         :receipt/to target
+                         :receipt/delivered? true
+                         :receipt/at (now-str)
+                         :receipt/route "registry/invoke"})]
           (cond
-            (nil? agent-record)
-            (social-error :agent-not-registered
-                          "Target agent not registered in live registry"
-                          :target target
-                          :msg/id (:msg/id classified-message))
+            (= true (:ok resp))
+            (if (shapes/valid? shapes/DispatchReceipt receipt)
+              receipt
+              (social-error :invalid-receipt
+                            "Internal error: DispatchReceipt did not conform to shape"
+                            :receipt receipt
+                            :validation (or (:error (shapes/validate shapes/DispatchReceipt receipt)) {})))
 
             :else
-            (let [resp (reg/invoke-agent! target (coerce-prompt (:msg/payload classified-message)))
-                  receipt (when (= true (:ok resp))
-                            {:receipt/msg-id (:msg/id classified-message)
-                             :receipt/to target
-                             :receipt/delivered? true
-                             :receipt/at (now-str)
-                             :receipt/route "registry/invoke"})]
-              (cond
-                (= true (:ok resp))
-                (if (shapes/valid? shapes/DispatchReceipt receipt)
-                  receipt
-                  (social-error :invalid-receipt
-                                "Internal error: DispatchReceipt did not conform to shape"
-                                :receipt receipt
-                                :validation (or (:error (shapes/validate shapes/DispatchReceipt receipt)) {})))
-
-                :else
-                (social-error :invoke-failed
-                              "Agent invocation failed"
-                              :target target
-                              :msg/id (:msg/id classified-message)
-                              :registry-error (:error resp))))))))))
+            (social-error :invoke-failed
+                          "Agent invocation failed"
+                          :target target
+                          :msg/id (:msg/id classified-message)
+                          :registry-error (:error resp))))))))

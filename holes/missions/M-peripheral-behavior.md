@@ -116,16 +116,33 @@ evidence entries that threads can project, validate can assess, and L1 can mine.
 
 ## Parts
 
-### Part I: PeripheralRunner Protocol + Tool Dispatch (Claude)
+### Structure: Diamond with Parallel Branches
+
+```
+              Part I: Foundation (Claude)
+             /                            \
+Part IIa: ← Verification          Part IIb: 5 Peripherals
+(Claude — theory + scaffold)       (Codex — implementations)
+             \                            /
+              Part III: Integration (Claude)
+```
+
+Parts IIa and IIb run **in parallel** after Part I completes. Part III is
+blocked on both. This exploits the natural division: Claude handles theory-to-code
+bridging (← verification, evidence emission design); Codex handles well-scoped,
+implementation-heavy peripheral work.
+
+### Part I: Foundation — PeripheralRunner + Tool Dispatch + Evidence Emission (Claude)
 
 **Status:** Ready
 
 :in  — src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/social/peripheral.clj (READ-ONLY, hop protocol)
-       src/futon3c/evidence/store.clj (READ-ONLY, evidence emission)
+       src/futon3c/evidence/store.clj (READ-ONLY, evidence API)
        resources/peripherals.edn (READ-ONLY, peripheral specs)
 :out — src/futon3c/peripheral/runner.clj
        src/futon3c/peripheral/tools.clj
+       src/futon3c/peripheral/evidence.clj
        test/futon3c/peripheral/runner_test.clj
 
 PeripheralRunner protocol:
@@ -157,108 +174,125 @@ Tool dispatch (`tools.clj`):
     ;; Execute tool, return result or error.))
 ```
 
+Evidence emission (`evidence.clj`):
+- `make-start-evidence [peripheral-id session-ref author]` → EvidenceEntry with :claim-type :goal
+- `make-step-evidence [peripheral-id session-ref author tool args result]` → EvidenceEntry with :claim-type :step
+- `make-stop-evidence [peripheral-id session-ref author fruit reason]` → EvidenceEntry with :claim-type :conclusion
+
+Evidence emission is in Part I (not IIa) because both branches need it:
+Codex's peripherals call it during step/stop, Claude's ← framework reads it.
+
+Mock backend (`tools.clj`):
+- Returns canned results per tool-id
+- Records all calls (tool-id + args) for ← verification
+- Implements ToolBackend
+
 Criteria:
 - [ ] PeripheralRunner protocol defined with start/step/stop lifecycle
+- [ ] ToolBackend protocol with execute-tool
 - [ ] Tool dispatch routes keywords to backend, respects tool set
 - [ ] Scope enforcement: tools reject out-of-scope args structurally
-- [ ] Mock backend for tests (returns canned results)
-- [ ] Evidence emission: each step produces shape-valid EvidenceEntry
+- [ ] Mock backend for tests (returns canned results, records calls)
+- [ ] Evidence emission: helpers produce shape-valid EvidenceEntry
 - [ ] 8+ tests (lifecycle + dispatch + scope + evidence)
 
-### Part II: Explore + Edit Peripherals (Codex handoff)
+### Part IIa: ← Verification Framework (Claude — parallel with IIb)
 
 **Status:** Blocked on Part I
 
 :in  — src/futon3c/peripheral/runner.clj (READ-ONLY, from Part I)
        src/futon3c/peripheral/tools.clj (READ-ONLY, from Part I)
+       src/futon3c/peripheral/evidence.clj (READ-ONLY, from Part I)
+       src/futon3c/social/shapes.clj (READ-ONLY)
+       resources/peripherals.edn (READ-ONLY)
+:out — src/futon3c/peripheral/round_trip.clj
+       test/futon3c/peripheral/round_trip_test.clj
+
+This is the theory-to-code bridge. The ← operator from reverse-morphogenesis
+(A11) says: run a peripheral, observe the fruit, apply ← backwards. Do the
+inferred constraints match the spec? If yes, the behavior is correct.
+
+`verify-constraints [peripheral-spec evidence-entries]` → {:ok true} | {:violations [...]}
+- Checks every tool invocation was in the spec's tool set
+- Checks every tool arg was within scope
+- Checks evidence entries have correct :evidence/type for the peripheral
+- Checks the fruit (stop evidence) matches the peripheral's intended output shape
+
+`run-and-verify [peripheral mock-actions]` → {:ok true :fruit ... :evidence [...]} | {:violations [...]}
+- Convenience: runs start→step*→stop with mock actions, then verify-constraints
+- This is the full ← round-trip in one call
+
+← test pattern (used by Part III integration):
+```clojure
+(let [result (round-trip/run-and-verify explore-peripheral mock-explore-actions)]
+  (is (:ok result))
+  ;; ← reading: inferred constraints match spec
+  (is (empty? (:violations result))))
+```
+
+Criteria:
+- [ ] verify-constraints checks tool set, scope, evidence type, fruit shape
+- [ ] run-and-verify executes full lifecycle and verifies
+- [ ] Violations are specific: which tool, which arg, which constraint
+- [ ] Works with any peripheral (not hardcoded to specific implementations)
+- [ ] 6+ tests (tool violation, scope violation, evidence violation, clean run)
+
+### Part IIb: Five Peripheral Implementations (Codex — parallel with IIa)
+
+**Status:** Blocked on Part I
+
+:in  — src/futon3c/peripheral/runner.clj (READ-ONLY, from Part I)
+       src/futon3c/peripheral/tools.clj (READ-ONLY, from Part I)
+       src/futon3c/peripheral/evidence.clj (READ-ONLY, from Part I)
        src/futon3c/social/shapes.clj (READ-ONLY)
        src/futon3c/evidence/store.clj (READ-ONLY)
        resources/peripherals.edn (READ-ONLY)
 :out — src/futon3c/peripheral/explore.clj
        src/futon3c/peripheral/edit.clj
-       test/futon3c/peripheral/explore_test.clj
-       test/futon3c/peripheral/edit_test.clj
-
-Explore peripheral (`explore.clj`):
-- Implements PeripheralRunner
-- Tools: :read, :glob, :grep, :bash-readonly, :web-fetch
-- Scope: :full-codebase (no path restrictions for reading)
-- Fruit: `{:found <files/patterns>, :summary <what-was-found>}`
-- Exit context: `:target-files` for edit peripheral
-
-Edit peripheral (`edit.clj`):
-- Implements PeripheralRunner
-- Tools: :read, :edit, :write, :bash
-- Scope: `{:paths ["src/" "docs/" "scripts/"]}` — structural enforcement
-- Fruit: `{:changes <file-list>, :ready-to-test? <bool>}`
-- Exit context: `:changed-files` for test peripheral
-
-← round-trip test for each:
-- Run peripheral with mock backend
-- Observe output (fruit)
-- Verify constraints were respected (no writes in explore, no out-of-scope in edit)
-- Verify evidence entries emitted for each step
-
-Criteria:
-- [ ] Explore: read-only operations, full-codebase scope, produces target context
-- [ ] Edit: write operations scoped to declared paths, rejects out-of-scope writes
-- [ ] Both emit evidence entries for each tool invocation
-- [ ] ← test: inferred constraints from output match spec
-- [ ] 10+ tests (5+ explore, 5+ edit)
-
-### Part III: Test + Deploy + Reflect Peripherals (Codex handoff)
-
-**Status:** Blocked on Part I
-
-:in  — src/futon3c/peripheral/runner.clj (READ-ONLY, from Part I)
-       src/futon3c/peripheral/tools.clj (READ-ONLY, from Part I)
-       src/futon3c/social/shapes.clj (READ-ONLY)
-       src/futon3c/evidence/store.clj (READ-ONLY)
-       resources/peripherals.edn (READ-ONLY)
-:out — src/futon3c/peripheral/test_runner.clj
+       src/futon3c/peripheral/test_runner.clj
        src/futon3c/peripheral/deploy.clj
        src/futon3c/peripheral/reflect.clj
+       test/futon3c/peripheral/explore_test.clj
+       test/futon3c/peripheral/edit_test.clj
        test/futon3c/peripheral/test_runner_test.clj
        test/futon3c/peripheral/deploy_test.clj
        test/futon3c/peripheral/reflect_test.clj
 
-Test peripheral (`test_runner.clj`):
-- Tools: :read, :bash-test
-- Scope: :test-commands-only
-- Fruit: `{:result :pass|:fail|:flaky, :test-count <n>, :failures <details>}`
-- Receives `:changed-files` from edit context
+Each peripheral implements PeripheralRunner with its spec from peripherals.edn:
 
-Deploy peripheral (`deploy.clj`):
-- Tools: :bash-git, :bash-deploy
-- Scope: :git-push-only
-- Fruit: `{:committed? <bool>, :pushed? <bool>, :sha <commit-sha>}`
-- Receives `:commit-message` from edit context
+| Peripheral | Tools | Scope | Fruit | Exit context |
+|------------|-------|-------|-------|-------------|
+| explore | :read :glob :grep :bash-readonly :web-fetch | :full-codebase | {:found, :summary} | :target-files |
+| edit | :read :edit :write :bash | {:paths [...]} | {:changes, :ready-to-test?} | :changed-files |
+| test | :read :bash-test | :test-commands-only | {:result :pass/:fail/:flaky, :test-count, :failures} | — |
+| deploy | :bash-git :bash-deploy | :git-push-only | {:committed?, :pushed?, :sha} | — |
+| reflect | :read :musn-log | :session-log-only | {:par EvidenceEntry} | — |
 
-Reflect peripheral (`reflect.clj`):
-- Tools: :read, :musn-log
-- Scope: :session-log-only
-- Fruit: `{:par EvidenceEntry}` — a PAR-shaped evidence entry
-- Receives `:session-log` context; produces :reflection type evidence
-- Entry from any peripheral (:from-any)
+Each peripheral's lifecycle:
+- **start**: validates context, initializes state, emits :goal evidence via evidence.clj
+- **step**: dispatches tool through tools.clj, emits :step evidence per action
+- **stop**: produces fruit, emits :conclusion evidence, returns context for next peripheral
 
-← round-trip test for each:
-- Verify constraint adherence (test can't edit, deploy can't test, reflect can't edit)
-- Verify evidence emission
-- Verify fruit shape matches intended output
+Scope enforcement per peripheral:
+- explore: rejects any write tool (:edit, :write, :bash)
+- edit: rejects paths outside {:paths [...]} scope
+- test: rejects any tool except :read and :bash-test
+- deploy: rejects any tool except :bash-git and :bash-deploy
+- reflect: rejects any tool except :read and :musn-log
 
 Criteria:
-- [ ] Test: produces pass/fail/flaky result, reads only, runs tests only
-- [ ] Deploy: git operations only, scoped to git-push-only
-- [ ] Reflect: produces PAR-shaped evidence, read-only, session-log scope
-- [ ] All three emit evidence entries
-- [ ] ← test for each: output matches constraint spec
-- [ ] 12+ tests (4+ each)
+- [ ] All 5 peripherals implement PeripheralRunner
+- [ ] Each peripheral's start/step/stop produces shape-valid results
+- [ ] Each step emits evidence via evidence.clj helpers
+- [ ] Scope enforcement: edit rejects out-of-scope writes, test rejects edit tools, etc.
+- [ ] Reflect emits :reflection type evidence (others emit :coordination)
+- [ ] 22+ tests (4+ per peripheral, 2+ scope violation tests)
 
-### Part IV: Integration — Hop Chain + Evidence Flow (Claude)
+### Part III: Integration — Hop Chain + Evidence Flow + ← Verification (Claude)
 
-**Status:** Blocked on Parts II-III
+**Status:** Blocked on Parts IIa + IIb
 
-:in  — All component files from Parts I-III
+:in  — All files from Parts I, IIa, IIb
        src/futon3c/social/peripheral.clj (hop protocol)
        src/futon3c/evidence/store.clj
        src/futon3c/evidence/threads.clj
@@ -271,23 +305,28 @@ End-to-end scenarios:
    - Session-id preserved throughout
    - Evidence entries accumulate in store
 
-2. **Evidence thread**: project a thread from the full chain's evidence
+2. **← round-trip on every peripheral**: run each through run-and-verify
+   - Confirms all 5 peripherals pass the constraint check
+   - This is the ← operator applied as a test method (A11 in code)
+
+3. **Evidence thread**: project a thread from the full chain's evidence
    - Thread has goal (explore started), steps (edits, tests), conclusion (deployed)
    - thread-patterns extracts patterns used across the chain
    - Proof-tree invariants hold
 
-3. **Scope violation rejected**: edit attempts out-of-scope write → SocialError
+4. **Scope violation rejected**: edit attempts out-of-scope write → SocialError
    - ← test: the error IS the evidence that constraints are working
 
-4. **Reframe scenario**: test fails → hop back to edit → fix → re-test → deploy
+5. **Reframe scenario**: test fails → hop back to edit → fix → re-test → deploy
    - The hop-back is a reframe (A10): the expected exit (tests-pass) was wrong,
      so the agent returns to edit with new information
 
-5. **Reflect produces mineable PAR**: reflect's output is an evidence entry
+6. **Reflect produces mineable PAR**: reflect's output is an evidence entry
    that thread-patterns can read — patterns used, outcomes observed
 
 Criteria:
 - [ ] Full hop chain preserves session-id and context across 5 peripherals
+- [ ] ← round-trip passes for all 5 peripherals (via run-and-verify)
 - [ ] Evidence entries from all peripherals form a projectable thread
 - [ ] Proof-tree invariants hold on the peripheral evidence thread
 - [ ] Scope violation produces SocialError, not silent failure
@@ -321,12 +360,16 @@ The same 7 invariants from M-forum-refactor apply to peripheral evidence threads
 ## Exit Conditions
 
 - PeripheralRunner protocol with start/step/stop lifecycle
+- ToolBackend protocol with pluggable mock/real backends
+- Evidence emission helpers produce shape-valid EvidenceEntry for start/step/stop
 - All five peripherals implement the protocol with correct tool/scope constraints
 - Tool dispatch is pluggable (mock backend for tests, real backend deferred)
 - Each peripheral step emits shape-valid EvidenceEntry
 - Scope enforcement is structural (rejected by dispatch, not by convention)
-- ← round-trip: for each peripheral, running it produces output consistent with its spec
+- ← round-trip: `run-and-verify` passes for all 5 peripherals (verify-constraints clean)
+- ← violations are specific and actionable (which tool, which arg, which constraint)
 - Full hop chain works end-to-end with evidence accumulation
 - Peripheral evidence threads satisfy proof-tree invariants
-- All new tests pass, existing 157 tests unaffected
+- Parts IIa and IIb completed independently (no cross-dependency)
+- All new tests pass, existing 167 tests unaffected
 - `clojure -X:test` passes cleanly

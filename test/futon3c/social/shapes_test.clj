@@ -208,6 +208,13 @@
     (is (shapes/valid? shapes/PatternLibrary
                        {:patterns/ids [:rendezvous-handshake :delivery-receipt]}))))
 
+(deftest pattern-library-invalid
+  (testing "invalid pattern library — ids must be keywords"
+    (is (some? (shapes/validate shapes/PatternLibrary
+                                {:patterns/ids ["not-a-keyword"]}))))
+  (testing "invalid pattern library — missing :patterns/ids"
+    (is (some? (shapes/validate shapes/PatternLibrary {})))))
+
 ;; =============================================================================
 ;; AgentRegistryShape
 ;; =============================================================================
@@ -218,6 +225,13 @@
                        {:agents {"claude-1" {:capabilities [:explore :edit :test]
                                              :type :claude}
                                  "codex-1"  {:capabilities [:edit]}}}))))
+
+(deftest agent-registry-shape-invalid
+  (testing "invalid agent registry — missing :agents"
+    (is (some? (shapes/validate shapes/AgentRegistryShape {}))))
+  (testing "invalid agent registry — agent missing :capabilities"
+    (is (some? (shapes/validate shapes/AgentRegistryShape
+                                {:agents {"claude-1" {:type :claude}}})))))
 
 ;; =============================================================================
 ;; SocialError
@@ -449,6 +463,63 @@
                         :query/type :reflection
                         :query/limit 10
                         :query/include-ephemeral? true}))))
+
+(deftest evidence-query-invalid
+  (testing "invalid evidence query — bad subject ref type"
+    (is (some? (shapes/validate shapes/EvidenceQuery
+                                {:query/subject {:ref/type :nope :ref/id "x"}}))))
+  (testing "invalid evidence query — bad evidence type"
+    (is (some? (shapes/validate shapes/EvidenceQuery
+                                {:query/type :bogus})))))
+
+;; =============================================================================
+;; Enum shapes — direct validation
+;; =============================================================================
+
+(deftest claim-type-valid
+  (testing "all ClaimType values validate"
+    (doseq [ct [:goal :step :evidence :conclusion :question
+                :observation :tension :correction :conjecture]]
+      (is (shapes/valid? shapes/ClaimType ct) (str ct " should be valid")))))
+
+(deftest claim-type-invalid
+  (testing "invalid ClaimType values rejected"
+    (is (some? (shapes/validate shapes/ClaimType :bogus)))
+    (is (some? (shapes/validate shapes/ClaimType "goal")))))
+
+(deftest artifact-ref-type-valid
+  (testing "all ArtifactRefType values validate"
+    (doseq [rt [:pattern :mission :component :gate :session :agent :thread :evidence]]
+      (is (shapes/valid? shapes/ArtifactRefType rt) (str rt " should be valid")))))
+
+(deftest artifact-ref-type-invalid
+  (testing "invalid ArtifactRefType values rejected"
+    (is (some? (shapes/validate shapes/ArtifactRefType :bogus)))
+    (is (some? (shapes/validate shapes/ArtifactRefType "pattern")))))
+
+(deftest evidence-type-valid
+  (testing "all EvidenceType values validate"
+    (doseq [et [:coordination :gate-traversal :pattern-selection :pattern-outcome
+                :reflection :forum-post :mode-transition :presence-event
+                :correction :conjecture]]
+      (is (shapes/valid? shapes/EvidenceType et) (str et " should be valid")))))
+
+(deftest evidence-type-invalid
+  (testing "invalid EvidenceType values rejected"
+    (is (some? (shapes/validate shapes/EvidenceType :bogus)))
+    (is (some? (shapes/validate shapes/EvidenceType "coordination")))))
+
+;; =============================================================================
+;; HopRequest — exit-condition field
+;; =============================================================================
+
+(deftest hop-request-with-exit-condition
+  (testing "HopRequest accepts :hop/exit-condition keyword"
+    (is (shapes/valid? shapes/HopRequest
+                       {:hop/to :edit
+                        :hop/reason "found target file"
+                        :hop/session-id "sess-123"
+                        :hop/exit-condition :found-target}))))
 
 ;; =============================================================================
 ;; Shape registry completeness

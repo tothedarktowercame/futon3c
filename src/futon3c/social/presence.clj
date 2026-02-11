@@ -7,8 +7,7 @@
    2) connection includes explicit readiness signal (:conn/metadata {:ready true})
 
    R4 (loud failure): always returns a PresenceRecord or SocialError, never nil."
-  (:require [futon3c.social.shapes :as shapes]
-            [futon3c.agency.registry :as reg])
+  (:require [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]))
 
 (defn- now-str []
@@ -24,11 +23,10 @@
 
 (defn- registry-agent-exists?
   "Return true if the agent-id is present in the provided registry snapshot
-   (AgentRegistryShape), or in the live registry (futon3c.agency.registry).
+   (AgentRegistryShape). The snapshot is the authoritative constraint input (I3).
 
-   registry-or-nil is expected to be the constraint input (a plain map), but we
-   also support nil (treated as missing) and any other value meaning: consult
-   the live registry."
+   registry-or-nil must be nil or a valid AgentRegistryShape. Any other value
+   returns false (verify rejects invalid registries before reaching this point)."
   [registry-or-nil typed-agent-id]
   (cond
     (nil? registry-or-nil)
@@ -38,8 +36,7 @@
     (contains? (:agents registry-or-nil) (:id/value typed-agent-id))
 
     :else
-    (and (reg/agent-registered? typed-agent-id)
-         (some? (reg/get-agent typed-agent-id)))))
+    false))
 
 (defn verify
   "Verify agent presence from a connection event.

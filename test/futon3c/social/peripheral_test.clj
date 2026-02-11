@@ -27,7 +27,8 @@
   (testing "explore -> edit succeeds (edit has :from-explore entry)"
     (let [peripherals (p/load-peripherals "resources/peripherals.edn")
           hop-req (fix/make-hop-request {:hop/to :edit
-                                         :hop/reason "found target file"})
+                                         :hop/reason "found target file"
+                                         :hop/exit-condition :found-target})
           result (p/validate-hop peripherals :explore hop-req)]
       (fix/assert-valid! shapes/HopResult result)
       (is (= :explore (:hop/from result)))
@@ -58,7 +59,8 @@
   (testing "target peripheral with :user-request entry accepts hop (edit entry includes :user-request)"
     (let [peripherals (p/load-peripherals "resources/peripherals.edn")
           hop-req (fix/make-hop-request {:hop/to :edit
-                                         :hop/reason "user request"})
+                                         :hop/reason "user request"
+                                         :hop/exit-condition :user-request})
           result (p/validate-hop peripherals :test hop-req)]
       (fix/assert-valid! shapes/HopResult result)
       (is (= :test (:hop/from result)))
@@ -68,7 +70,8 @@
   (testing "validate-hop returns HopResult or SocialError"
     (let [peripherals (p/load-peripherals "resources/peripherals.edn")
           good (p/validate-hop peripherals :explore (fix/make-hop-request {:hop/to :edit
-                                                                          :hop/reason "found target file"}))
+                                                                          :hop/reason "found target file"
+                                                                          :hop/exit-condition :found-target}))
           bad (p/validate-hop peripherals :deploy (fix/make-hop-request {:hop/to :edit
                                                                          :hop/reason "deploy complete"}))
           invalid (p/validate-hop peripherals :explore {:hop/to :edit})]
