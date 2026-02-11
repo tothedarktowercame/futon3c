@@ -10,7 +10,6 @@
    appended directly to the evidence store via store/append! or store/append*.
 
    Evidence types: :coordination for most peripherals, :reflection for reflect."
-  (:require [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]
            [java.util UUID]))
 

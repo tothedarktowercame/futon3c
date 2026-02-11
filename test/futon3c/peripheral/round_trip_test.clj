@@ -9,8 +9,7 @@
             [futon3c.peripheral.round-trip :as rt]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
-            [futon3c.social.shapes :as shapes]
-            [futon3c.social.test-fixtures :as fix]))
+            [futon3c.social.shapes :as shapes]))
 
 ;; =============================================================================
 ;; Test peripheral specs

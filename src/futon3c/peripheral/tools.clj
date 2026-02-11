@@ -9,8 +9,7 @@
    physically cannot call :edit because dispatch rejects it before the backend
    ever sees it."
   (:require [clojure.string :as str]
-            [futon3c.peripheral.runner :as runner]
-            [futon3c.social.shapes :as shapes]))
+            [futon3c.peripheral.runner :as runner]))
 
 ;; =============================================================================
 ;; ToolBackend protocol — pluggable execution
@@ -46,7 +45,7 @@
      :git-push-only — no restrictions on git commands
      :session-log-only — no restrictions on session log access
      {:paths [...]} — file paths must start with one of the allowed paths"
-  [tool-id args peripheral-spec]
+  [_tool-id args peripheral-spec]
   (let [scope (:peripheral/scope peripheral-spec)]
     (cond
       ;; Keyword scopes are unrestricted for their allowed tools

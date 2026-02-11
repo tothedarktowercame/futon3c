@@ -12,8 +12,7 @@
    evidence, then calls verify-constraints. The full ← round-trip in one call.
 
    Violations are specific and actionable: which tool, which arg, which constraint."
-  (:require [futon3c.peripheral.evidence :as evidence]
-            [futon3c.peripheral.runner :as runner]
+  (:require [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.social.shapes :as shapes]))
 

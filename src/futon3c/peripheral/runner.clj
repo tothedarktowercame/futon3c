@@ -9,8 +9,7 @@
      → do the inferred constraints match the spec?
 
    Peripherals are pure state machines. Side effects (tool execution, evidence
-   emission) flow through injected backends and helpers."
-  (:require [futon3c.social.shapes :as shapes]))
+   emission) flow through injected backends and helpers.")
 
 ;; =============================================================================
 ;; PeripheralRunner protocol
