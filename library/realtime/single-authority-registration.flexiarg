@@ -1,0 +1,36 @@
+@flexiarg realtime/single-authority-registration
+@title Enforce Single Routing Authority at Registration Time
+@keywords routing, authority, registration, agent-id, eviction, R2, A1
+@audience futon3c transport implementers, agency architects
+@tone technical
+@style pattern
+@references [realtime/rendezvous-handshake realtime/transport-pivot]
+
+! conclusion: When multiple transport paths exist for the same agent-id, enforce single routing authority at registration time, not through post-hoc eviction watches. Configuration must express which path is authoritative.
+  + context: You are building a coordination system where agents can connect through multiple transports (HTTP, WebSocket, IRC) and each agent-id must have exactly one routing authority at a time (R2).
+  + IF:
+    You allow an agent to register through multiple transports simultaneously and rely on eviction watches to resolve conflicts after the fact.
+  + HOWEVER:
+    Asynchronous eviction watches create a window where the agent exists in two routing stores. During this window, messages can be delivered to both, producing duplicates. The eviction callback fires after the registration, not before, so any code that runs between registration and eviction sees inconsistent state. Multiple transports can race: WS registration evicts HTTP, then HTTP re-registers and evicts WS, creating a flip-flop loop.
+  + THEN:
+    Enforce authority at registration time: if agent-id is already registered via transport A, reject registration via transport B (or require explicit de-registration first). Make the authoritative transport a configuration-level decision, not a runtime race. When a WS URL is configured, skip local handler registration entirely. Test this as an invariant: assert that at no point does an agent-id appear in more than one routing store.
+  + BECAUSE:
+    The single-routing-authority invariant (R2/A1) is a distributed-systems property: exactly one component is responsible for delivering messages to a given agent at any time. Post-hoc enforcement through watches is reactive and racy. Pre-hoc enforcement through registration guards is deterministic and testable.
+
+  + EVIDENCE:
+    futon3 git log, agency routing:
+    - a2e7b60: "Phase 3: agent fixes (Drawbridge WS authority, fubar reconnect)" — Drawbridge registers both locally and remotely; A1 watch evicts local handler on WS connect, but window of ambiguity exists; solution: skip local registration when agency-ws-url is configured
+    - c5b5929: "Phase 2: A1 — enforce single routing authority across stores" — invariant test asserting no agent appears in multiple stores; 3 violations found and fixed
+    - 84ac0e0: "Add unified agent registry for Agency" — introduced unified registry but allowed parallel registration paths, creating the dual-authority problem
+
+  + FAILURE-MODES:
+    - Message duplication: agent receives the same bell/whistle from two transports
+    - Flip-flop eviction: two transports repeatedly evict each other in a tight loop
+    - Stale routing: evicted handler's cleanup races with new handler's setup, leaving agent unreachable
+    - Silent authority confusion: agent appears connected on one transport but messages are delivered via another
+
+  + NEXT-STEPS:
+    - evidence: assert agent-id uniqueness across all routing stores as an invariant test
+    - evidence: track registration rejections (second transport attempted while first is active)
+    - evidence: record eviction events and their latency
+    - evidence-shape: {:agent/id :string, :registration/transport :keyword, :registration/rejected? :boolean, :registration/reason :keyword, :eviction/occurred? :boolean, :eviction/latency-ms :int, :authority/transport :keyword, :ts :string}

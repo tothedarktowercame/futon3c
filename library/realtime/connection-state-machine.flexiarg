@@ -1,0 +1,31 @@
+@flexiarg realtime/connection-state-machine
+@title Track Connection State via Data Flow, Not Callbacks
+@keywords websocket, connection, state-machine, handshake, spurious-close, TLS, SSL
+@audience futon3c transport implementers
+@tone technical
+@style pattern
+@references [realtime/rendezvous-handshake futon-theory/structural-tension-as-observation]
+
+! conclusion: Connection state must be confirmed by successful data exchange, not by open/close callbacks. Callbacks can fire out of order during TLS handshakes, producing phantom disconnects that cascade into reconnection storms.
+  + context: You are building a WebSocket adapter that must track whether an agent is truly connected and ready for message dispatch.
+  + IF:
+    You use on-open to mark a connection as established and on-close to mark it as terminated.
+  + HOWEVER:
+    During WSS through proxies (nginx TLS termination), on-close can fire before on-open completes. The SSL handshake generates intermediate protocol events that client/server libraries interpret as close signals. Treating these as real disconnects triggers premature reconnection, which generates more spurious closes, cascading into a storm.
+  + THEN:
+    Implement a three-state machine: :connecting (after on-open), :connected (after first successful message exchange, e.g. readiness handshake ack), :disconnected (after on-close when previously :connected). Only run disconnect cleanup when transitioning from :connected to :disconnected. Ignore on-close events that arrive while still in :connecting state — they are handshake artifacts.
+  + BECAUSE:
+    The on-open callback reports intent to connect; only a completed data round-trip confirms the connection is usable. TLS negotiation is a multi-step process that can generate intermediate events indistinguishable from real failures at the callback level.
+
+  + EVIDENCE:
+    futon3 git log, Emacs 31 + websocket.el + nginx WSS:
+    - 4e93fb4: "Fix WebSocket spurious disconnect during SSL handshake" — on-close fires before on-open during WSS through nginx; solution: --connected flag set on first on-message, not on-open
+    - 58b80a6: "Ignore spurious 400 errors during WSS handshake" — proxy returns HTTP 400 during upgrade negotiation but connection succeeds; solution: suppress error callback for handshake-phase 400s
+    - 97243f2: "Add Emacs 31 websocket.el bug report draft" — comprehensive isolation test proving curl/Java/raw-TLS all work; only websocket.el fires spurious close
+    - d525461: "Phase 3a: merge reconnect implementations" — two agents had different reconnect strategies because neither handled all failure modes; merged into shared state machine
+
+  + NEXT-STEPS:
+    - evidence: count spurious on-close events (close while in :connecting state) per session
+    - evidence: track time from on-open to :connected (first successful data exchange)
+    - evidence: record reconnection storms (>2 reconnects within 10 seconds)
+    - evidence-shape: {:conn/id :string, :conn/state :keyword, :conn/transport :keyword, :conn/opened-at :string, :conn/confirmed-at :string, :conn/closed-at :string, :conn/spurious-close-count :int, :conn/reconnect-count :int, :conn/agent-id :string}

@@ -1,0 +1,31 @@
+@flexiarg realtime/request-param-resilience
+@title Extract Request Parameters Defensively Across Protocol Boundaries
+@keywords http-kit, websocket, query-string, request-uri, session-id, parsing
+@audience futon3c transport implementers
+@tone technical
+@style pattern
+@references [realtime/rendezvous-handshake]
+
+! conclusion: Never trust a single source for request parameters at the HTTP/WebSocket boundary. Extract from query string, fall back to request-uri parsing, and accept overrides in message payload.
+  + context: You are building a transport adapter that needs to identify agents and sessions from incoming HTTP and WebSocket requests using a Clojure HTTP server library.
+  + IF:
+    You extract session-id and agent-id from the standard :query-string field of the HTTP request map.
+  + HOWEVER:
+    HTTP server libraries (http-kit in particular) populate request fields inconsistently across request types. WebSocket upgrade requests may have nil :query-string even when the URL contained query parameters. Client libraries may format URLs incorrectly (missing leading "/" on paths). Proxies may strip or rewrite query strings during TLS termination.
+  + THEN:
+    Implement a three-tier parameter extraction: (1) :query-string from the request map (standard HTTP), (2) parse :request-uri directly as fallback (handles WS upgrade where query-string is nil), (3) accept parameters in the first message payload (handles clients that cannot send query params at all). Always validate extracted values against expected shapes before use.
+  + BECAUSE:
+    The HTTP request map is an abstraction over a raw TCP stream. Different request types (GET, POST, WS upgrade) and different intermediaries (proxies, TLS terminators) produce different abstractions from the same URL. A single extraction path works only when the full request chain is known and stable — which it never is in multi-transport systems.
+
+  + EVIDENCE:
+    futon3 git log, session tracking and URL formatting:
+    - bb2e3a7: "Fix Agency session tracking for WebSocket connections" — http-kit :query-string is nil for WS upgrade; solution: parse :request-uri as fallback
+    - 15672d3: "Fix websocket.el missing leading slash bug" — client sends GET ?query=... instead of GET /?query=...; server receives malformed request-uri
+    - 31ab65f: "Parse WS query params from request-uri for session-id" — explicit fallback parser for WS session tracking
+    - 37869d8: "feat(drawbridge): Auto-derive session ID from filesystem" — when URL params fail entirely, derive session-id from agent context
+
+  + NEXT-STEPS:
+    - evidence: track which extraction tier succeeded per request (query-string vs request-uri vs payload)
+    - evidence: count requests where :query-string was nil but :request-uri had params
+    - evidence: record malformed request-uri incidents
+    - evidence-shape: {:request/id :string, :extraction/tier :keyword, :extraction/agent-id :string, :extraction/session-id :string, :extraction/source :keyword, :request/type :keyword, :ts :string}

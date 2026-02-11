@@ -1,0 +1,30 @@
+@flexiarg realtime/verify-after-start
+@title Verify Resource Availability After Async Startup
+@keywords server, startup, port, binding, async, verification, supervisor
+@audience futon3c transport implementers
+@tone technical
+@style pattern
+@references [realtime/liveness-heartbeats futon-theory/stop-the-line]
+
+! conclusion: After starting an async resource (server, connection, subprocess), actively verify it is functioning before declaring it ready. Async start methods return before the resource is usable — or even before it has failed.
+  + context: You are starting an HTTP/WebSocket server that binds to a port, and you need to know whether it is actually serving requests.
+  + IF:
+    You call server.start() or (run-server handler {:port p}) and treat a non-exception return as success.
+  + HOWEVER:
+    Async server startup returns immediately. Binding failures (port in use, permission denied) happen in a background thread. The start call "succeeds" but the port is never listening. Quick restarts during development hit TIME_WAIT on the port, producing intermittent binding failures that look like application bugs. Library objects (http-kit AsyncChannel, Java-WebSocket Server) may not support Clojure metadata attachment (IObj), so wrapping state requires explicit maps, not with-meta.
+  + THEN:
+    After start, sleep briefly (100ms), then probe the port by attempting a TCP connection to localhost:port with a short timeout. Enable SO_REUSEADDR for development quick-restarts. Wrap library objects in plain maps {:server s :port p :started-at t} rather than attaching metadata. If the probe fails, stop the server and report the failure immediately.
+  + BECAUSE:
+    A server that reports "started" but isn't listening is worse than one that fails loudly — downstream components assume connectivity and produce confusing errors. Verifying the resource is actually available converts a silent failure into a loud one at the earliest possible moment.
+
+  + EVIDENCE:
+    futon3 git log, server startup and library interop:
+    - d897174: "Add lab-ws supervisor for auto-restart" — lab-ws server dies silently; supervisor probes port every 10s, auto-restarts on failure
+    - 02b5257: AsyncChannel metadata fix — with-meta on http-kit channel throws ClassCastException; solution: wrap in plain map {:channel ch :send-fn f}
+    - bb28d44: "Add WSS debugging tools" — when startup appears to succeed but connections fail, needed lower-level diagnostic tools to detect the gap
+
+  + NEXT-STEPS:
+    - evidence: track startup verification outcomes (port-listening vs port-not-listening after start)
+    - evidence: record TIME_WAIT binding failures during development
+    - evidence: measure time between start() and port-verified
+    - evidence-shape: {:server/port :int, :server/started-at :string, :server/verified-at :string, :server/verified? :boolean, :server/reuse-addr? :boolean, :server/probe-latency-ms :int}

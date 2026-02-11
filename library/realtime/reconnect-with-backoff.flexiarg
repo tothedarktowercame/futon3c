@@ -1,0 +1,31 @@
+@flexiarg realtime/reconnect-with-backoff
+@title Reconnect with Exponential Backoff and Failure Mode Coverage
+@keywords reconnection, backoff, jitter, websocket, failure-modes, thundering-herd
+@audience futon3c transport implementers, peripheral wrappers
+@tone technical
+@style pattern
+@references [realtime/connection-state-machine realtime/liveness-heartbeats]
+
+! conclusion: Handle both synchronous and asynchronous connection failures with a single reconnect scheduler using exponential backoff and jitter. Distinguish manual disconnect from network failure.
+  + context: You are implementing reconnection logic for agents connecting to a coordination server over WebSocket, where network partitions and server restarts are expected.
+  + IF:
+    You want automatic reconnection when an agent loses its WebSocket connection to the coordination server.
+  + HOWEVER:
+    Network operations fail in two distinct modes: synchronous (connect call throws immediately) and asynchronous (connection succeeds then on-close fires later). A callback-only reconnect strategy misses synchronous failures entirely because the callback never fires. A fixed-delay reconnect hammers the server on partition, and N agents reconnecting simultaneously after a blip creates thundering herd.
+  + THEN:
+    Implement a shared reconnect scheduler called from both the on-close callback AND the connect error handler. Use exponential backoff (initial 100ms, doubling, cap at 30s) with random jitter (0-25% of delay). Reset delay to initial on successful connect. Track a manual-disconnect flag: when set, suppress all reconnection. Cancel any pending reconnect timer when a new connection succeeds or when manually disconnecting.
+  + BECAUSE:
+    futon3 had two independent reconnect implementations (Codex: exponential backoff in on-close; Claude/Emacs: catch synchronous open failure) that each handled half the failure space. Neither covered both modes. Merging them required acknowledging that connection establishment is not a pure callback operation — it can fail before callbacks are registered.
+
+  + EVIDENCE:
+    futon3 git log, reconnection across two agent types:
+    - d525461: "Phase 3a: merge reconnect implementations for fubar-agency.el" — extracted shared schedule-reconnect with backoff from two divergent implementations
+    - a2e7b60: "Phase 3: agent fixes (Drawbridge WS authority, fubar reconnect)" — fixed websocket-open throwing synchronously, bypassing on-close entirely
+    - d897174: "Add lab-ws supervisor for auto-restart" — server-side: port monitoring every 10s, auto-restart on silent death; complementary to client-side reconnect
+
+  + NEXT-STEPS:
+    - evidence: track reconnect delay distribution (are backoffs reaching cap?)
+    - evidence: count synchronous vs asynchronous failures per agent
+    - evidence: measure time-to-reconnect after server restart
+    - evidence: record thundering-herd incidents (>3 agents reconnecting within 1 second)
+    - evidence-shape: {:reconnect/agent-id :string, :reconnect/attempt :int, :reconnect/delay-ms :int, :reconnect/failure-mode :keyword, :reconnect/succeeded? :boolean, :reconnect/manual-disconnect? :boolean, :reconnect/ts :string}
