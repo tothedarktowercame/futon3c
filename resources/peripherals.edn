@@ -20,7 +20,7 @@
   {:peripheral/id :edit
    :peripheral/tools #{:read :edit :write :bash}
    :peripheral/scope {:paths ["src/" "docs/" "scripts/"]}
-   :peripheral/entry #{:from-explore :user-request}
+   :peripheral/entry #{:from-explore :from-test :user-request}
    :peripheral/exit #{:tests-pass :ready-to-commit :blocked :hop-test :hop-reflect}
    :peripheral/context {:session-id :inherit :target-files :from-explore}}
 
