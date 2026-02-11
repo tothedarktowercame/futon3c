@@ -1,14 +1,17 @@
 (ns futon3c.social.dispatch-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
+            [futon3c.peripheral.registry :as preg]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.shapes :as shapes]
+            [futon3c.social.persist :as persist]
             [futon3c.social.test-fixtures :as fix]))
 
 (use-fixtures
   :each
   (fn [f]
     (reg/reset-registry!)
+    (persist/reset-sessions!)
     (f)))
 
 (defn- register-test-agent!
@@ -96,3 +99,176 @@
           (is (or (shapes/valid? shapes/DispatchReceipt r)
                   (shapes/valid? shapes/SocialError r))
               (str "Unexpected result shape: " r)))))))
+
+;; =============================================================================
+;; Route selection tests (Part I: peripheral bridge)
+;; =============================================================================
+
+(deftest select-peripheral-claude-defaults-to-explore
+  (testing ":claude agent defaults to :explore peripheral"
+    (is (= :explore (dispatch/select-peripheral :claude "some prompt")))))
+
+(deftest select-peripheral-codex-defaults-to-edit
+  (testing ":codex agent defaults to :edit peripheral"
+    (is (= :edit (dispatch/select-peripheral :codex "some prompt")))))
+
+(deftest select-peripheral-mock-defaults-to-explore
+  (testing ":mock agent defaults to :explore peripheral"
+    (is (= :explore (dispatch/select-peripheral :mock "some prompt")))))
+
+(deftest select-peripheral-payload-override
+  (testing "payload {:peripheral :deploy} overrides default"
+    (is (= :deploy (dispatch/select-peripheral :claude {:peripheral :deploy})))))
+
+(deftest select-peripheral-invalid-override-uses-default
+  (testing "payload {:peripheral :bogus} falls back to agent-type default"
+    (is (= :explore (dispatch/select-peripheral :claude {:peripheral :bogus})))))
+
+(deftest select-route-coordination-is-direct
+  (testing ":coordination mode → {:route :direct}"
+    (let [msg (fix/make-classified-message)
+          agent {:agent/type :claude}]
+      (is (= {:route :direct} (dispatch/select-route msg agent))))))
+
+(deftest select-route-action-is-peripheral
+  (testing ":action mode → {:route :peripheral ...}"
+    (let [msg (fix/make-action-message)
+          agent {:agent/type :claude}
+          result (dispatch/select-route msg agent)]
+      (is (= :peripheral (:route result)))
+      (is (contains? result :peripheral-id)))))
+
+(deftest select-route-action-uses-agent-type
+  (testing "Claude agent action → :explore, Codex agent action → :edit"
+    (let [msg (fix/make-action-message)]
+      (is (= :explore (:peripheral-id (dispatch/select-route msg {:agent/type :claude}))))
+      (is (= :edit (:peripheral-id (dispatch/select-route msg {:agent/type :codex})))))))
+
+(deftest select-route-action-with-payload-override
+  (testing "payload :peripheral key overrides agent-type default"
+    (let [msg (fix/make-action-message {:msg/payload {:peripheral :test}})
+          agent {:agent/type :claude}
+          result (dispatch/select-route msg agent)]
+      (is (= :peripheral (:route result)))
+      (is (= :test (:peripheral-id result))))))
+
+(deftest existing-dispatch-still-works
+  (testing "regression: existing happy-path dispatch unchanged after Part I additions"
+    (let [registry (fix/mock-registry)
+          to (fix/make-agent-id "claude-1" :continuity)]
+      (register-test-agent! to)
+      (let [msg (assoc (fix/make-classified-message {:msg/payload "ping"}) :msg/to to)
+            result (dispatch/dispatch msg registry)]
+        (fix/assert-valid! shapes/DispatchReceipt result)
+        (is (true? (:receipt/delivered? result)))))))
+
+;; =============================================================================
+;; Peripheral dispatch tests (Part II)
+;; =============================================================================
+
+(deftest peripheral-dispatch-happy-path
+  (testing "action message with peripheral-config → enriched DispatchReceipt"
+    (let [config (fix/make-peripheral-config)
+          registry (fix/mock-registry {:peripheral-config config})
+          to (fix/make-agent-id "claude-1" :continuity)
+          msg (assoc (fix/make-action-message {:msg/payload "implement feature X"})
+                     :msg/to to)
+          result (dispatch/dispatch msg registry)]
+      (is (true? (:receipt/delivered? result))
+          (str "Expected delivered receipt, got: " (pr-str result)))
+      (is (string? (:receipt/session-id result)))
+      (is (some? (:receipt/peripheral-id result)))
+      (is (= "peripheral/run-chain" (:receipt/route result))))))
+
+(deftest peripheral-dispatch-receipt-is-shape-valid
+  (testing "peripheral dispatch result validates against DispatchReceipt shape"
+    (let [config (fix/make-peripheral-config)
+          registry (fix/mock-registry {:peripheral-config config})
+          to (fix/make-agent-id "claude-1" :continuity)
+          msg (assoc (fix/make-action-message) :msg/to to)
+          result (dispatch/dispatch msg registry)]
+      (fix/assert-valid! shapes/DispatchReceipt result))))
+
+(deftest peripheral-dispatch-emits-root-evidence
+  (testing "evidence store contains dispatch root entry with [:dispatch :session-start] tags"
+    (let [evidence-store (atom {:entries {} :order []})
+          config (fix/make-peripheral-config {:evidence-store evidence-store})
+          registry (fix/mock-registry {:peripheral-config config})
+          to (fix/make-agent-id "claude-1" :continuity)
+          msg (assoc (fix/make-action-message) :msg/to to)
+          _result (dispatch/dispatch msg registry)
+          entries (vals (:entries @evidence-store))
+          root-entries (filter #(= [:dispatch :session-start] (:evidence/tags %)) entries)]
+      (is (= 1 (count root-entries))
+          (str "Expected exactly one root evidence entry, got " (count root-entries)))
+      (when (seq root-entries)
+        (let [root (first root-entries)]
+          (is (= :coordination (:evidence/type root)))
+          (is (= :goal (:evidence/claim-type root)))
+          (is (= :dispatch (get-in root [:evidence/body :event]))))))))
+
+(deftest peripheral-dispatch-coordination-unchanged
+  (testing "coordination message still goes through direct invoke (no session-id in receipt)"
+    (let [config (fix/make-peripheral-config)
+          registry (fix/mock-registry {:peripheral-config config})
+          to (fix/make-agent-id "claude-1" :continuity)]
+      (register-test-agent! to)
+      (let [msg (assoc (fix/make-classified-message {:msg/payload "standup"}) :msg/to to)
+            result (dispatch/dispatch msg registry)]
+        (fix/assert-valid! shapes/DispatchReceipt result)
+        (is (nil? (:receipt/session-id result)))
+        (is (nil? (:receipt/peripheral-id result)))
+        (is (= "registry/invoke" (:receipt/route result)))))))
+
+(deftest peripheral-dispatch-no-config-falls-back
+  (testing "action message WITHOUT :peripheral-config in registry → falls back to direct invoke"
+    (let [registry (fix/mock-registry) ;; no :peripheral-config
+          to (fix/make-agent-id "claude-1" :continuity)]
+      (register-test-agent! to)
+      (let [msg (assoc (fix/make-action-message {:msg/payload "do something"}) :msg/to to)
+            result (dispatch/dispatch msg registry)]
+        (fix/assert-valid! shapes/DispatchReceipt result)
+        (is (true? (:receipt/delivered? result)))
+        (is (= "registry/invoke" (:receipt/route result)))
+        (is (nil? (:receipt/session-id result)))))))
+
+(deftest peripheral-dispatch-uses-select-peripheral
+  (testing "Claude agent action → :explore, Codex agent action → :edit"
+    (let [config (fix/make-peripheral-config)
+          registry (fix/mock-registry {:peripheral-config config})]
+      ;; Claude agent → :explore
+      (let [to (fix/make-agent-id "claude-1" :continuity)
+            msg (assoc (fix/make-action-message) :msg/to to)
+            result (dispatch/dispatch msg registry)]
+        (is (= :explore (:receipt/peripheral-id result))
+            (str "Expected :explore for claude, got: " (pr-str result))))
+      ;; Codex agent → :edit
+      (let [to (fix/make-agent-id "codex-1" :continuity)
+            msg (assoc (fix/make-action-message) :msg/to to)
+            result (dispatch/dispatch msg registry)]
+        (is (= :edit (:receipt/peripheral-id result))
+            (str "Expected :edit for codex, got: " (pr-str result)))))))
+
+(deftest peripheral-dispatch-error-returns-social-error
+  (testing "if run-chain throws, dispatch returns SocialError with :peripheral-failed"
+    (with-redefs [futon3c.peripheral.registry/run-chain
+                  (fn [_ _ _] (throw (ex-info "chain exploded" {:reason :test})))]
+      (let [config (fix/make-peripheral-config)
+            registry (fix/mock-registry {:peripheral-config config})
+            to (fix/make-agent-id "claude-1" :continuity)
+            msg (assoc (fix/make-action-message {:msg/payload "do X"}) :msg/to to)
+            result (dispatch/dispatch msg registry)]
+        (fix/assert-valid! shapes/SocialError result)
+        (is (= :peripheral-failed (:error/code result)))))))
+
+(deftest peripheral-dispatch-existing-direct-path-regression
+  (testing "explicit regression: direct path still works with peripheral-config present"
+    (let [config (fix/make-peripheral-config)
+          registry (fix/mock-registry {:peripheral-config config})
+          to (fix/make-agent-id "claude-1" :continuity)]
+      (register-test-agent! to)
+      ;; Coordination message should still use direct invoke
+      (let [msg (assoc (fix/make-classified-message {:msg/payload "status"}) :msg/to to)
+            result (dispatch/dispatch msg registry)]
+        (fix/assert-valid! shapes/DispatchReceipt result)
+        (is (= "registry/invoke" (:receipt/route result)))))))

@@ -4,7 +4,9 @@
    Provides factories for all shape-conforming test data, hermetic temp
    directories, and mock registries. Pattern from futon3b: test data
    factories produce shape-validated instances."
-  (:require [futon3c.social.shapes :as shapes])
+  (:require [futon3c.social.shapes :as shapes]
+            [futon3c.peripheral.tools :as ptools]
+            [futon3c.peripheral.registry :as preg])
   (:import [java.util UUID]
            [java.io File]
            [java.time Instant]))
@@ -232,6 +234,15 @@
    (merge {}
           overrides)))
 
+(defn make-action-message
+  "Create a valid ClassifiedMessage with :action mode."
+  ([] (make-action-message {}))
+  ([overrides]
+   (make-classified-message
+    (merge {:msg/mode :action
+            :msg/payload "implement feature X"}
+           overrides))))
+
 ;; =============================================================================
 ;; Mock registries and patterns
 ;; =============================================================================
@@ -258,6 +269,19 @@
                           :delivery-receipt
                           :single-routing-authority
                           :mode-gate]}
+          overrides)))
+
+;; =============================================================================
+;; Peripheral dispatch config factory
+;; =============================================================================
+
+(defn make-peripheral-config
+  "Create a minimal peripheral dispatch config for tests."
+  ([] (make-peripheral-config {}))
+  ([overrides]
+   (merge {:backend (ptools/make-mock-backend)
+           :peripherals (preg/load-peripherals)
+           :evidence-store (atom {:entries {} :order []})}
           overrides)))
 
 ;; =============================================================================

@@ -206,7 +206,10 @@
    [:receipt/to TypedAgentId]
    [:receipt/delivered? :boolean]
    [:receipt/at Timestamp]
-   [:receipt/route {:optional true} :string]])
+   [:receipt/route {:optional true} :string]
+   [:receipt/session-id {:optional true} :string]
+   [:receipt/peripheral-id {:optional true} PeripheralId]
+   [:receipt/fruit {:optional true} :any]])
 
 ;; =============================================================================
 ;; S-validate output — validated coordination outcome (R5)
