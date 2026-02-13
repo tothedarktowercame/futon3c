@@ -333,7 +333,8 @@
   [:map
    [:error/component [:enum :S-presence :S-authenticate :S-mode
                        :S-dispatch :S-validate :S-persist :registry :peripheral
-                       :E-store :E-threads :E-validate :E-compact :E-default]]
+                       :E-store :E-threads :E-validate :E-compact :E-default
+                       :transport]]
    [:error/code :keyword]
    [:error/message :string]
    [:error/at Timestamp]

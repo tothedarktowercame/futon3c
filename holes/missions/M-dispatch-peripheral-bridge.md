@@ -200,7 +200,7 @@ Part III: Integration + Existing Test Preservation (Claude)
 
 ### Part I: Route Selection + Session Lifecycle
 
-**Status:** Ready
+**Status:** Complete
 
 :in  — src/futon3c/social/dispatch.clj (MODIFY — add mode-aware routing)
        src/futon3c/social/shapes.clj (MODIFY — extend DispatchReceipt, add SessionRecord fields)
@@ -261,18 +261,18 @@ Part III: Integration + Existing Test Preservation (Claude)
 ```
 
 Criteria:
-- [ ] create-session produces shape-valid session records
-- [ ] session-context builds correct peripheral start context
-- [ ] close-session records fruit and evidence summary
-- [ ] select-route uses `:msg/mode` to choose direct vs peripheral
-- [ ] select-peripheral uses agent type with metadata override
-- [ ] DispatchReceipt shape extended with optional session/peripheral/fruit fields
-- [ ] Existing dispatch tests still pass (shape extension is additive)
-- [ ] 8+ tests (session CRUD, route selection, peripheral selection)
+- [x] create-session produces shape-valid session records
+- [x] session-context builds correct peripheral start context
+- [x] close-session records fruit and evidence summary
+- [x] select-route uses `:msg/mode` to choose direct vs peripheral
+- [x] select-peripheral uses agent type with metadata override
+- [x] DispatchReceipt shape extended with optional session/peripheral/fruit fields
+- [x] Existing dispatch tests still pass (shape extension is additive)
+- [x] 8+ tests (session CRUD, route selection, peripheral selection)
 
 ### Part II: Peripheral Dispatch + Evidence Linkage
 
-**Status:** Blocked on Part I
+**Status:** Complete
 
 :in  — src/futon3c/social/dispatch.clj (MODIFY — wire peripheral path)
        src/futon3c/social/session.clj (READ-ONLY, from Part I)
@@ -326,19 +326,19 @@ The existing coordination path is untouched. The new peripheral path
 produces the same DispatchReceipt shape (with optional extra fields).
 
 Criteria:
-- [ ] peripheral-dispatch creates session, runs peripheral, returns enriched receipt
-- [ ] Root evidence entry emitted before peripheral starts
-- [ ] Peripheral's start evidence has :in-reply-to pointing to dispatch root
-- [ ] DispatchReceipt for action messages includes :receipt/session-id and :receipt/fruit
-- [ ] DispatchReceipt for coordination messages unchanged (backwards compatible)
-- [ ] Evidence store accumulates dispatch root + all peripheral evidence
-- [ ] SocialError from peripheral propagates correctly through dispatch
-- [ ] 8+ tests (peripheral dispatch happy path, error propagation, evidence linkage,
+- [x] peripheral-dispatch creates session, runs peripheral, returns enriched receipt
+- [x] Root evidence entry emitted before peripheral starts
+- [x] Peripheral's start evidence has :in-reply-to pointing to dispatch root
+- [x] DispatchReceipt for action messages includes :receipt/session-id and :receipt/fruit
+- [x] DispatchReceipt for coordination messages unchanged (backwards compatible)
+- [x] Evidence store accumulates dispatch root + all peripheral evidence
+- [x] SocialError from peripheral propagates correctly through dispatch
+- [x] 8+ tests (peripheral dispatch happy path, error propagation, evidence linkage,
       coordination-mode still works, receipt shape validation)
 
 ### Part III: Integration + Existing Test Preservation
 
-**Status:** Blocked on Part II
+**Status:** Complete
 
 :in  — All files from Parts I, II
        src/futon3c/social/pipeline.clj (READ-ONLY — understand full pipeline)
@@ -373,15 +373,15 @@ End-to-end scenarios:
    from a dispatched session passes constraint check
 
 Criteria:
-- [ ] Full pipeline → peripheral → receipt works end-to-end
-- [ ] Coordination mode unchanged (regression test)
-- [ ] Evidence thread spans dispatch + peripheral boundaries
-- [ ] Proof-tree invariants hold on dispatch+peripheral thread
-- [ ] Peripheral errors surface as dispatch SocialErrors
-- [ ] ← round-trip passes on dispatched peripheral sessions
-- [ ] All 254 existing tests still pass
-- [ ] 6+ integration tests
-- [ ] `clojure -X:test` passes cleanly
+- [x] Full pipeline → peripheral → receipt works end-to-end
+- [x] Coordination mode unchanged (regression test)
+- [x] Evidence thread spans dispatch + peripheral boundaries
+- [x] Proof-tree invariants hold on dispatch+peripheral thread
+- [x] Peripheral errors surface as dispatch SocialErrors
+- [x] ← round-trip passes on dispatched peripheral sessions
+- [x] All 254 existing tests still pass (342 total now)
+- [x] 8 integration tests (36 assertions)
+- [x] `clojure -X:test` passes cleanly (342 tests, 976 assertions, 0 failures)
 
 ## Relationship to Other Missions
 
