@@ -5,13 +5,13 @@
    hop validation → context transfer → evidence emission → ← verification →
    thread projection → proof-tree invariants."
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.string :as str]
             [futon3c.evidence.store :as store]
             [futon3c.evidence.threads :as threads]
             [futon3c.peripheral.adapter :as adapter]
             [futon3c.peripheral.common :as common]
             [futon3c.peripheral.registry :as reg]
             [futon3c.peripheral.round-trip :as rt]
-            [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]))
@@ -386,17 +386,21 @@
       (let [spec (common/load-spec pid)
             prompt (adapter/peripheral-prompt-section spec {:session-id "s-adapt"})
             constraints (adapter/describe-constraints spec)
-            mapping (adapter/tool-mapping spec)]
+            claude-mapping (adapter/tool-mapping spec)
+            codex-mapping (adapter/codex-tool-mapping spec)]
         ;; Prompt mentions the peripheral name
-        (is (clojure.string/includes? prompt (clojure.string/upper-case (name pid)))
+        (is (str/includes? prompt (str/upper-case (name pid)))
             (str "prompt missing name for " pid))
         ;; Constraints have allowed tools
         (is (seq (:allowed-tools constraints))
             (str "no allowed tools for " pid))
         ;; Mapping has at least one entry (except reflect which has :musn-log with no Claude equivalent)
         (when (not= pid :reflect)
-          (is (seq mapping)
-              (str "empty mapping for " pid)))))))
+          (is (seq claude-mapping)
+              (str "empty Claude mapping for " pid)))
+        ;; Codex parity: codex mapping should exist for every peripheral, including reflect.
+        (is (seq codex-mapping)
+            (str "empty Codex mapping for " pid))))))
 
 ;; =============================================================================
 ;; 10. ← verification detects violations on real peripherals

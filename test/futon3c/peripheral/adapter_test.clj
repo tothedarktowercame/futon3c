@@ -52,6 +52,20 @@
       (is (not (contains? tools "Edit")))
       (is (not (contains? tools "Write"))))))
 
+(deftest codex-tool-mapping-edit
+  (testing "codex-tool-mapping supports codex aliases"
+    (let [m (adapter/codex-tool-mapping edit-spec)]
+      (is (= :read (get m "read_file")))
+      (is (= :edit (get m "edit_file")))
+      (is (= :write (get m "write_file")))
+      (is (= :bash (get m "run_shell_command"))))))
+
+(deftest codex-tools-test
+  (testing "codex-tools exposes test-shell alias"
+    (let [tools (adapter/codex-tools test-spec)]
+      (is (contains? tools "run_shell_command"))
+      (is (contains? tools "Bash")))))
+
 ;; =============================================================================
 ;; Tool call translation
 ;; =============================================================================
@@ -88,6 +102,33 @@
       (is (= :read (:tool action)))
       (is (= [] (:args action))))))
 
+(deftest codex-tool-call->action-input-map
+  (testing "translates codex-style input map"
+    (let [action (adapter/codex-tool-call->action edit-spec
+                   {:name "edit_file" :input {:path "src/a.clj"}})]
+      (is (= {:tool :edit :args ["src/a.clj"]} action)))))
+
+(deftest codex-tool-call->action-tool-params
+  (testing "translates codex-style tool-params with command"
+    (let [action (adapter/codex-tool-call->action test-spec
+                   {:tool-name "run_shell_command"
+                    :tool-params {:command "clojure -X:test"}})]
+      (is (= {:tool :bash-test :args ["clojure -X:test"]} action)))))
+
+(deftest codex-tool-call->action-json-arguments
+  (testing "parses JSON string arguments from codex events"
+    (let [action (adapter/codex-tool-call->action explore-spec
+                   {:name "read_file"
+                    :arguments "{\"path\":\"src/futon3c/core.clj\"}"})]
+      (is (= {:tool :read :args ["src/futon3c/core.clj"]} action)))))
+
+(deftest codex-tool-call->action-unmapped-tool
+  (testing "returns SocialError when codex tool is not in peripheral mapping"
+    (let [result (adapter/codex-tool-call->action explore-spec
+                   {:name "edit_file" :input {:path "src/a.clj"}})]
+      (is (shapes/valid? shapes/SocialError result))
+      (is (= :unmapped-tool (:error/code result))))))
+
 ;; =============================================================================
 ;; Constraint description
 ;; =============================================================================
@@ -115,6 +156,14 @@
       (is (str/includes? prompt "s1"))
       ;; Contains forbidden tools
       (is (str/includes? prompt "edit")))))
+
+(deftest codex-instruction-section-generates-text
+  (testing "codex-instruction-section includes codex heading and constraints"
+    (let [prompt (adapter/codex-instruction-section edit-spec {:session-id "s-codex"})]
+      (is (string? prompt))
+      (is (str/includes? prompt "Codex Peripheral Constraints"))
+      (is (str/includes? prompt "EDIT"))
+      (is (str/includes? prompt "s-codex")))))
 
 ;; =============================================================================
 ;; Exit detection
@@ -145,3 +194,9 @@
   (testing "detect-exit returns nil for nil or empty text"
     (is (nil? (adapter/detect-exit explore-spec nil)))
     (is (nil? (adapter/detect-exit explore-spec "")))))
+
+(deftest codex-detect-exit-alias
+  (testing "codex-detect-exit mirrors detect-exit behavior"
+    (let [result (adapter/codex-detect-exit explore-spec "Found target and ready to edit")]
+      (is (some? result))
+      (is (= :found-target (:exit-condition result))))))

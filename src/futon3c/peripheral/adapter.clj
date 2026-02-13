@@ -1,15 +1,16 @@
 (ns futon3c.peripheral.adapter
-  "Claude ↔ Peripheral translation layer.
+  "Agent ↔ Peripheral translation layer (Claude + Codex).
 
-   Pure functions that bridge between Claude Code's tool system and the
+   Pure functions that bridge agent tool systems and the
    PeripheralRunner protocol. No Claude invocation — this is data
    transformation and prompt construction.
 
    Three concerns:
-   1. Tool mapping: Claude tool names ↔ peripheral tool keywords
+   1. Tool mapping: agent tool names ↔ peripheral tool keywords
    2. Prompt generation: express peripheral constraints as system prompt text
-   3. Exit detection: parse Claude's output for hop/exit signals"
+   3. Exit detection: parse agent output for hop/exit signals"
   (:require [clojure.string :as str]
+            [clojure.data.json :as json]
             [futon3c.peripheral.runner :as runner]))
 
 ;; =============================================================================
@@ -27,71 +28,151 @@
    "Bash"     [:bash :bash-readonly :bash-test :bash-git :bash-deploy]
    "WebFetch" [:web-fetch]})
 
-(def ^:private peripheral-to-claude
-  "Forward mapping: peripheral tool keyword → Claude tool name."
-  {:read         "Read"
-   :glob         "Glob"
-   :grep         "Grep"
-   :edit         "Edit"
-   :write        "Write"
-   :bash         "Bash"
-   :bash-readonly "Bash"
-   :bash-test    "Bash"
-   :bash-git     "Bash"
-   :bash-deploy  "Bash"
-   :web-fetch    "WebFetch"
-   :musn-log     nil})
+(def ^:private codex-to-peripheral
+  "Reverse mapping: Codex tool name → candidate peripheral tool keywords.
+   Includes both CLI event names and normalized aliases."
+  {"Read"              [:read]
+   "read"              [:read]
+   "read_file"         [:read]
+   "Glob"              [:glob]
+   "glob"              [:glob]
+   "Grep"              [:grep]
+   "grep"              [:grep]
+   "Edit"              [:edit]
+   "edit"              [:edit]
+   "edit_file"         [:edit]
+   "Write"             [:write]
+   "write"             [:write]
+   "write_file"        [:write]
+   "Bash"              [:bash :bash-readonly :bash-test :bash-git :bash-deploy]
+   "bash"              [:bash :bash-readonly :bash-test :bash-git :bash-deploy]
+   "run_shell_command" [:bash :bash-readonly :bash-test :bash-git :bash-deploy]
+   "WebFetch"          [:web-fetch]
+   "web_fetch"         [:web-fetch]
+   "musn_log"          [:musn-log]})
+
+(defn- mapping-for
+  [catalog peripheral-spec]
+  (let [tools (:peripheral/tools peripheral-spec)]
+    (->> catalog
+         (keep (fn [[agent-tool-name candidates]]
+                 (when-let [match (first (filter tools candidates))]
+                   [agent-tool-name match])))
+         (into {}))))
 
 (defn tool-mapping
   "For a peripheral spec, return {\"Claude-tool-name\" :peripheral-tool-keyword}.
    When multiple peripheral tools map to the same Claude tool (e.g. Bash variants),
    picks the first matching tool from the peripheral's tool set."
   [peripheral-spec]
-  (let [tools (:peripheral/tools peripheral-spec)]
-    (->> claude-to-peripheral
-         (keep (fn [[claude-name candidates]]
-                 (when-let [match (first (filter tools candidates))]
-                   [claude-name match])))
-         (into {}))))
+  (mapping-for claude-to-peripheral peripheral-spec))
 
 (defn claude-tools
   "Return the set of Claude Code tool names available for this peripheral."
   [peripheral-spec]
   (set (keys (tool-mapping peripheral-spec))))
 
+(defn codex-tool-mapping
+  "For a peripheral spec, return {\"Codex-tool-name\" :peripheral-tool-keyword}."
+  [peripheral-spec]
+  (mapping-for codex-to-peripheral peripheral-spec))
+
+(defn codex-tools
+  "Return the set of Codex tool names available for this peripheral."
+  [peripheral-spec]
+  (set (keys (codex-tool-mapping peripheral-spec))))
+
 ;; =============================================================================
 ;; Tool call translation — Claude tool-use → PeripheralRunner action
 ;; =============================================================================
 
-(def ^:private arg-extractors
-  "Extract the primary argument(s) from a Claude tool call's input map."
-  {"Read"     (fn [input] [(:file_path input)])
-   "Glob"     (fn [input] [(:pattern input)])
-   "Grep"     (fn [input] [(:pattern input)])
-   "Edit"     (fn [input] [(:file_path input)])
-   "Write"    (fn [input] [(:file_path input)])
-   "Bash"     (fn [input] [(:command input)])
-   "WebFetch" (fn [input] [(:url input)])})
+(defn- parse-json-map
+  [s]
+  (if (string? s)
+    (try
+      (json/read-str s :key-fn keyword)
+      (catch Exception _ nil))
+    nil))
+
+(defn- call-name
+  [tool-call]
+  (or (:name tool-call)
+      (:tool-name tool-call)
+      (:tool_name tool-call)
+      (:tool/name tool-call)))
+
+(defn- call-input
+  [tool-call]
+  (let [input (or (:input tool-call)
+                  (:arguments tool-call)
+                  (:tool-params tool-call)
+                  (:tool_params tool-call)
+                  (:tool/params tool-call))]
+    (cond
+      (map? input) input
+      (string? input) (or (parse-json-map input) {})
+      :else {})))
+
+(defn- first-val
+  [m ks]
+  (first (keep #(get m %) ks)))
+
+(defn- args-for-tool
+  [peripheral-tool input]
+  (let [file-path (first-val input [:file_path :file-path :path :file])
+        pattern (first-val input [:pattern :query :regex])
+        target (first-val input [:target :path :file_path :file-path :file])
+        command (first-val input [:command :cmd :shell])
+        url (first-val input [:url])]
+    (vec
+     (remove nil?
+             (case peripheral-tool
+               :read [file-path]
+               :glob [pattern]
+               :grep [pattern target]
+               :edit [file-path]
+               :write [file-path]
+               (:bash :bash-readonly :bash-test :bash-git :bash-deploy) [command]
+               :web-fetch [url]
+               :musn-log [file-path]
+               [])))))
 
 (defn tool-call->action
   "Translate a Claude Code tool-use result into a PeripheralRunner action.
 
    tool-call: {:name \"Read\" :input {:file_path \"src/a.clj\"}}
    Returns {:tool :read :args [\"src/a.clj\"]}
-   or SocialError if the tool is not available in this peripheral."
+  or SocialError if the tool is not available in this peripheral."
   [peripheral-spec tool-call]
   (let [mapping (tool-mapping peripheral-spec)
-        claude-name (:name tool-call)
+        claude-name (call-name tool-call)
         peripheral-tool (get mapping claude-name)]
     (if-not peripheral-tool
       (runner/runner-error (:peripheral/id peripheral-spec) :unmapped-tool
                            (str "Claude tool " claude-name " not available in this peripheral")
                            :claude-tool claude-name
                            :peripheral (:peripheral/id peripheral-spec))
-      (let [extractor (get arg-extractors claude-name)
-            args (if (and extractor (:input tool-call))
-                   (vec (remove nil? (extractor (:input tool-call))))
-                   [])]
+      (let [args (args-for-tool peripheral-tool (call-input tool-call))]
+        {:tool peripheral-tool
+         :args args}))))
+
+(defn codex-tool-call->action
+  "Translate a Codex tool-call event into a PeripheralRunner action.
+
+   Accepts several Codex event shapes:
+   - {:name \"edit_file\" :input {:path \"src/a.clj\"}}
+   - {:tool-name \"Bash\" :tool-params {:command \"clojure -X:test\"}}
+   - {:name \"function_call\" :arguments \"{...json...}\"}"
+  [peripheral-spec tool-call]
+  (let [mapping (codex-tool-mapping peripheral-spec)
+        codex-name (call-name tool-call)
+        peripheral-tool (get mapping codex-name)]
+    (if-not peripheral-tool
+      (runner/runner-error (:peripheral/id peripheral-spec) :unmapped-tool
+                           (str "Codex tool " codex-name " not available in this peripheral")
+                           :codex-tool codex-name
+                           :peripheral (:peripheral/id peripheral-spec))
+      (let [args (args-for-tool peripheral-tool (call-input tool-call))]
         {:tool peripheral-tool
          :args args}))))
 
@@ -166,6 +247,12 @@
          (when sid (str "\n\n### Session\n" "session-id: " sid))
          "\n")))
 
+(defn codex-instruction-section
+  "Generate a Codex-friendly instruction section for peripheral constraints."
+  [peripheral-spec context]
+  (str "## Codex Peripheral Constraints\n\n"
+       (peripheral-prompt-section peripheral-spec context)))
+
 ;; =============================================================================
 ;; Exit detection — parse Claude's output for hop/exit signals
 ;; =============================================================================
@@ -200,3 +287,8 @@
                      {:exit-condition condition
                       :reason (str (re-find pattern text))})))
            first))))
+
+(defn codex-detect-exit
+  "Alias of detect-exit for Codex output processing."
+  [peripheral-spec text]
+  (detect-exit peripheral-spec text))
