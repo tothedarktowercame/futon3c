@@ -138,8 +138,8 @@
 ;; =============================================================================
 
 (def PeripheralId
-  "Peripheral identifier — the five core peripherals."
-  [:enum :explore :edit :test :deploy :reflect])
+  "Peripheral identifier — the six core peripherals."
+  [:enum :explore :edit :test :deploy :reflect :proof])
 
 (def ToolSet
   "Set of tools available to a peripheral."

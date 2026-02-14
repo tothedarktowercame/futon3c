@@ -60,6 +60,39 @@
                    [agent-tool-name match])))
          (into {}))))
 
+(def ^:private peripheral-to-claude
+  "Forward mapping: peripheral tool keyword → Claude tool name.
+   Proof-domain tools map to nil (no Claude tool equivalent — they are
+   invoked via peripheral actions, not Claude tool_use blocks)."
+  {:read         "Read"
+   :glob         "Glob"
+   :grep         "Grep"
+   :edit         "Edit"
+   :write        "Write"
+   :bash         "Bash"
+   :bash-readonly "Bash"
+   :bash-test    "Bash"
+   :bash-git     "Bash"
+   :bash-deploy  "Bash"
+   :web-fetch    "WebFetch"
+   :musn-log     nil
+   ;; Proof-domain tools — no Claude mapping
+   :proof-load       nil
+   :proof-save       nil
+   :ledger-query     nil
+   :ledger-upsert    nil
+   :dag-check        nil
+   :dag-impact       nil
+   :canonical-get    nil
+   :canonical-update nil
+   :cycle-begin      nil
+   :cycle-advance    nil
+   :cycle-get        nil
+   :cycle-list       nil
+   :failed-route-add nil
+   :status-validate  nil
+   :gate-check       nil})
+
 (defn tool-mapping
   "For a peripheral spec, return {\"Claude-tool-name\" :peripheral-tool-keyword}.
    When multiple peripheral tools map to the same Claude tool (e.g. Bash variants),
@@ -192,7 +225,23 @@
    :bash-git     "Execute git commands (commit, log, etc.)"
    :bash-deploy  "Execute deployment commands (push, deploy)"
    :web-fetch    "Fetch web content"
-   :musn-log     "Access MUSN session logs"})
+   :musn-log     "Access MUSN session logs"
+   ;; Proof-domain tools
+   :proof-load       "Load proof state from disk"
+   :proof-save       "Save proof state (atomic write, version bump)"
+   :ledger-query     "Query the proof ledger"
+   :ledger-upsert    "Update a ledger item (enforces status policy)"
+   :dag-check        "Check DAG acyclicity"
+   :dag-impact       "Rank blockers by transitive unlock count"
+   :canonical-get    "Get canonical problem statement"
+   :canonical-update "Update canonical statement (versioned)"
+   :cycle-begin      "Begin a new proof cycle"
+   :cycle-advance    "Advance cycle to next phase"
+   :cycle-get        "Read a cycle record"
+   :cycle-list       "List all cycles"
+   :failed-route-add "Record a failed route (append-only)"
+   :status-validate  "Validate a status transition"
+   :gate-check       "Run G5-G0 gate checklist"})
 
 (def ^:private all-peripheral-tools
   (set (keys tool-descriptions)))

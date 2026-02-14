@@ -51,14 +51,15 @@
       ;; Keyword scopes are unrestricted for their allowed tools
       (keyword? scope) true
 
-      ;; Path-scoped: check that any file path args are within allowed paths
+      ;; Path-scoped: check the first arg (file path) against allowed paths.
+      ;; File tools always take the path as the first arg; subsequent string
+      ;; args are content (e.g. old-string/new-string for :edit).
       (and (map? scope) (:paths scope))
-      (let [scope-paths (:paths scope)]
-        (every? (fn [arg]
-                  (if (string? arg)
-                    (path-in-scope? arg scope-paths)
-                    true))
-                args))
+      (let [scope-paths (:paths scope)
+            path-arg (first args)]
+        (if (string? path-arg)
+          (boolean (path-in-scope? path-arg scope-paths))
+          true))
 
       :else true)))
 

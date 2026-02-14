@@ -30,15 +30,15 @@
   (testing "make-peripheral throws for unknown peripheral-id"
     (is (thrown? clojure.lang.ExceptionInfo (reg/make-peripheral :nonexistent)))))
 
-(deftest peripheral-ids-covers-all-five
+(deftest peripheral-ids-covers-all-six
   (testing "peripheral-ids contains all known IDs"
-    (is (= #{:explore :edit :test :deploy :reflect} reg/peripheral-ids))))
+    (is (= #{:explore :edit :test :deploy :reflect :proof} reg/peripheral-ids))))
 
 (deftest load-peripherals-returns-correct-format
   (testing "load-peripherals loads from classpath and returns expected format"
     (let [p (reg/load-peripherals)]
       (is (map? (:peripherals p)))
-      (is (= #{:explore :edit :test :deploy :reflect}
+      (is (= #{:explore :edit :test :deploy :reflect :proof}
              (set (keys (:peripherals p))))))))
 
 ;; =============================================================================

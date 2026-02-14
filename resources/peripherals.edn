@@ -46,4 +46,18 @@
    :peripheral/scope :session-log-only
    :peripheral/entry #{:session-close :user-request :agent-request :from-any}
    :peripheral/exit #{:par-generated}
-   :peripheral/context {:session-id :inherit :session-log :fetch-from-musn}}}}
+   :peripheral/context {:session-id :inherit :session-log :fetch-from-musn}}
+
+  :proof
+  {:peripheral/id :proof
+   :peripheral/tools #{:read :glob :grep :write :bash :bash-readonly
+                       :proof-load :proof-save
+                       :ledger-query :ledger-upsert
+                       :dag-check :dag-impact
+                       :canonical-get :canonical-update
+                       :cycle-begin :cycle-advance :cycle-get :cycle-list
+                       :failed-route-add :status-validate :gate-check}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:from-explore :user-request :from-any}
+   :peripheral/exit #{:cycle-completed :blocked :hop-reflect :hop-explore :user-request}
+   :peripheral/context {:session-id :inherit :problem-id :from-explore}}}}

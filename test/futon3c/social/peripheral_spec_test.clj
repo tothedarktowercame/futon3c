@@ -15,10 +15,10 @@
       :peripherals))
 
 (deftest peripherals-edn-loads
-  (testing "peripherals.edn is loadable and has five peripherals"
+  (testing "peripherals.edn is loadable and has six peripherals"
     (let [peripherals (load-peripherals)]
-      (is (= 5 (count peripherals)))
-      (is (= #{:explore :edit :test :deploy :reflect} (set (keys peripherals)))))))
+      (is (= 6 (count peripherals)))
+      (is (= #{:explore :edit :test :deploy :reflect :proof} (set (keys peripherals)))))))
 
 (deftest all-peripherals-validate-against-shape
   (testing "every peripheral in peripherals.edn conforms to PeripheralSpec"

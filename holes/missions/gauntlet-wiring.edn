@@ -1,0 +1,260 @@
+;; M-peripheral-gauntlet as a futon5 mission wiring diagram
+;;
+;; Validates against futon5.ct.mission/validate:
+;;   Structural: completeness, coverage, no-orphan-inputs, type-safety, spec-coverage
+;;   Invariants: I3 (timescale ordering), I4 (exogeneity), I6 (compositional closure)
+;;
+;; Port types extend the standard set for agent coordination:
+;;   :irc-stream       — bidirectional IRC message flow
+;;   :musn-state       — queryable MUSN world state (hypergraph)
+;;   :observation      — agent sensory input (peripheral observation)
+;;   :action-stream    — agent action output (tool calls, commits, messages)
+;;   :aif-state        — AIF modeline state (G, τ, mana, pattern-sigil)
+;;   :pattern-catalog  — searchable pattern library (futon3a)
+;;   :par-record       — post-action review (structured reflection)
+;;   :presence-state   — co-presence data (who, where, doing what)
+;;   :discovery        — agent→human insight with evidence
+;;   :preference       — human slow-timescale guidance
+;;   :umwelt-diagram   — agent's-eye sensory/active/dark surface map
+
+{:mission/id :peripheral-gauntlet
+ :mission/state :argue
+
+ ;; ============================================================
+ ;; INPUTS — what enters the system from outside
+ ;; ============================================================
+ :ports
+ {:input
+  [;; Human preferences — glacial timescale, CONSTRAINT (exogenous)
+   ;; This is what the human wants. It must not be writable by agents.
+   {:id :I-preferences
+    :name "Human preferences"
+    :type :preference
+    :source "human"
+    :timescale :glacial
+    :constraint true}
+
+   ;; Pattern catalog — slow timescale, CONSTRAINT
+   ;; Patterns guide work but must be changed through deliberate
+   ;; refinement (slow), not by agent fast-dynamics rewriting them.
+   {:id :I-patterns
+    :name "Pattern catalog"
+    :type :pattern-catalog
+    :source "futon3a"
+    :timescale :slow
+    :constraint true}
+
+   ;; Codebase — the futon stack repos as environment
+   {:id :I-codebase
+    :name "Futon stack repos"
+    :type :edn-document
+    :source "filesystem"
+    :timescale :medium}
+
+   ;; MUSN world state — persistent, queryable, backed by futon1
+   {:id :I-musn
+    :name "MUSN world state"
+    :type :musn-state
+    :source "futon1"
+    :timescale :medium}
+
+   ;; IRC — social timescale, real-time
+   {:id :I-irc
+    :name "IRC channel"
+    :type :irc-stream
+    :source "irc-bridge"
+    :timescale :social}]
+
+  ;; ============================================================
+  ;; OUTPUTS — what the system produces
+  ;; ============================================================
+  :output
+  [{:id :O-artifacts
+    :name "Code, proofs, patterns written"
+    :type :action-stream
+    :consumer "codebase"
+    :spec-ref "gauntlet/success-criteria"}
+
+   {:id :O-musn-updated
+    :name "Updated MUSN world state"
+    :type :musn-state
+    :consumer "futon1"
+    :spec-ref "gate-2/acceptance"}
+
+   {:id :O-discoveries
+    :name "Agent→human insights"
+    :type :discovery
+    :consumer "human"
+    :spec-ref "gate-7/acceptance"}
+
+   {:id :O-pars
+    :name "Post-action reviews"
+    :type :par-record
+    :consumer "musn"
+    :spec-ref "session-continuity/acceptance"}
+
+   {:id :O-pattern-refinements
+    :name "Pattern quality updates"
+    :type :pattern-catalog
+    :consumer "futon3a"
+    :spec-ref "patterns-as-landscape/acceptance"}
+
+   {:id :O-irc-out
+    :name "IRC messages from agents"
+    :type :irc-stream
+    :consumer "human + agents"
+    :spec-ref "gate-0/acceptance"}]}
+
+ ;; ============================================================
+ ;; COMPONENTS — the gates and invariants as processing stages
+ ;; ============================================================
+ :components
+ [;; Gate 0: Arena — IRC bridge, agent registration
+  ;; Social timescale: enables all communication
+  {:id :C-arena
+   :name "Gate 0: Arena"
+   :accepts #{:irc-stream :preference}
+   :produces #{:irc-stream :observation}
+   :timescale :social}
+
+  ;; Gate 1: Umwelt — draw what agents perceive
+  ;; Medium timescale: umwelt design is task-level work
+  {:id :C-umwelt
+   :name "Gate 1: Umwelt"
+   :accepts #{:observation :edn-document}
+   :produces #{:observation :umwelt-diagram}
+   :timescale :medium}
+
+  ;; Gate 2: World/MUSN — make the world accessible
+  ;; Medium timescale: MUSN reads/writes during agent turns
+  {:id :C-musn
+   :name "Gate 2: World/MUSN"
+   :accepts #{:observation :musn-state :edn-document :pattern-catalog}
+   :produces #{:musn-state :observation :presence-state}
+   :timescale :medium}
+
+  ;; Gate 3: Co-Presence — project presence into observations
+  ;; Social timescale: presence changes in real time
+  {:id :C-copresence
+   :name "Gate 3: Co-Presence"
+   :accepts #{:presence-state :observation}
+   :produces #{:observation}
+   :timescale :social}
+
+  ;; Gate 4: AIF as Environment — embed AIF in observation
+  ;; Fast timescale: AIF updates within agent turns
+  {:id :C-aif-env
+   :name "Gate 4: AIF as Environment"
+   :accepts #{:observation :musn-state}
+   :produces #{:aif-state :observation}
+   :timescale :fast}
+
+  ;; Gate 5: Modeline — persist AIF across hops and context resets
+  ;; Fast timescale: modeline updates every turn
+  {:id :C-modeline
+   :name "Gate 5: Modeline"
+   :accepts #{:aif-state :observation :par-record}
+   :produces #{:observation :aif-state}
+   :timescale :fast}
+
+  ;; Gate 6: Placenta Transfer — hand off human functions to infra
+  ;; Slow timescale: transfer decisions are deliberate
+  {:id :C-placenta
+   :name "Gate 6: Placenta Transfer"
+   :accepts #{:observation :aif-state :preference}
+   :produces #{:action-stream :par-record}
+   :timescale :slow}
+
+  ;; Gate 7: Teaching Inversion — agents teach human
+  ;; Slow timescale: discoveries emerge over extended autonomous periods
+  {:id :C-teaching
+   :name "Gate 7: Teaching Inversion"
+   :accepts #{:action-stream :par-record :observation}
+   :produces #{:discovery :pattern-catalog :par-record}
+   :timescale :slow}
+
+  ;; Tickle — stall detection watchdog
+  ;; Social timescale: heartbeat checks, parallel path (I6 closure)
+  ;; This is the DEFAULT MODE component — the pre-deliberative path
+  ;; that sustains the system when deliberative gates stall.
+  {:id :C-tickle
+   :name "Tickle (watchdog)"
+   :accepts #{:irc-stream :musn-state :aif-state}
+   :produces #{:irc-stream :action-stream :par-record}
+   :timescale :social}]
+
+ ;; ============================================================
+ ;; EDGES — typed wires connecting the diagram
+ ;; ============================================================
+ :edges
+ [;; === Input → Gate 0 (Arena) ===
+  {:from :I-irc         :to :C-arena      :type :irc-stream}
+  {:from :I-preferences :to :C-arena      :type :preference}
+
+  ;; === Gate 0 → Gate 1 (Umwelt) ===
+  {:from :C-arena       :to :C-umwelt     :type :observation}
+
+  ;; === Input → Gate 1 (codebase feeds umwelt) ===
+  {:from :I-codebase    :to :C-umwelt     :type :edn-document}
+
+  ;; === Gate 1 → Gate 2 (MUSN) ===
+  {:from :C-umwelt      :to :C-musn       :type :observation}
+
+  ;; === Input → Gate 2 (MUSN state + patterns) ===
+  {:from :I-musn        :to :C-musn       :type :musn-state}
+  {:from :I-patterns    :to :C-musn       :type :pattern-catalog}
+  {:from :I-codebase    :to :C-musn       :type :edn-document}
+
+  ;; === Gate 2 → Gate 3 (Co-Presence) ===
+  {:from :C-musn        :to :C-copresence :type :presence-state}
+  {:from :C-musn        :to :C-copresence :type :observation}
+
+  ;; === Gate 3 → Gate 4 (AIF as Environment) ===
+  {:from :C-copresence  :to :C-aif-env    :type :observation}
+
+  ;; === Gate 2 → Gate 4 (MUSN state feeds AIF) ===
+  {:from :C-musn        :to :C-aif-env    :type :musn-state}
+
+  ;; === Gate 4 → Gate 5 (Modeline) ===
+  {:from :C-aif-env     :to :C-modeline   :type :aif-state}
+  {:from :C-aif-env     :to :C-modeline   :type :observation}
+
+  ;; === Gate 5 → Gate 6 (Placenta) ===
+  {:from :C-modeline    :to :C-placenta   :type :observation}
+  {:from :C-modeline    :to :C-placenta   :type :aif-state}
+
+  ;; === Input → Gate 6 (preferences constrain transfer decisions) ===
+  {:from :I-preferences :to :C-placenta   :type :preference}
+
+  ;; === Gate 6 → Gate 7 (Teaching) ===
+  {:from :C-placenta    :to :C-teaching   :type :action-stream}
+  {:from :C-placenta    :to :C-teaching   :type :par-record}
+
+  ;; === Gate 5 → Gate 7 (modeline observation feeds teaching) ===
+  {:from :C-modeline    :to :C-teaching   :type :observation}
+
+  ;; === Gate 7 → Outputs ===
+  {:from :C-teaching    :to :O-discoveries         :type :discovery}
+  {:from :C-teaching    :to :O-pattern-refinements  :type :pattern-catalog}
+  {:from :C-teaching    :to :O-pars                 :type :par-record}
+
+  ;; === Gate 6 → Output (artifacts) ===
+  {:from :C-placenta    :to :O-artifacts  :type :action-stream}
+
+  ;; === Gate 2 → Output (updated MUSN) ===
+  {:from :C-musn        :to :O-musn-updated :type :musn-state}
+
+  ;; === Gate 0 → Output (IRC messages) ===
+  {:from :C-arena       :to :O-irc-out    :type :irc-stream}
+
+  ;; === TICKLE: Parallel path for I6 compositional closure ===
+  ;; Tickle reads IRC, MUSN, and AIF state (when available)
+  ;; and can produce wake-up messages + emergency PARs.
+  ;; This is the DEFAULT MODE path — when the deliberative chain
+  ;; (Gates 1-7) stalls, Tickle keeps the system alive.
+  {:from :I-irc         :to :C-tickle     :type :irc-stream}
+  {:from :I-musn        :to :C-tickle     :type :musn-state}
+  {:from :C-aif-env     :to :C-tickle     :type :aif-state}
+  {:from :C-tickle      :to :O-irc-out    :type :irc-stream}
+  {:from :C-tickle      :to :O-artifacts  :type :action-stream}
+  {:from :C-tickle      :to :O-pars       :type :par-record}]}

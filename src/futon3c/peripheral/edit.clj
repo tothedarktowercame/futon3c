@@ -12,8 +12,10 @@
 
 (defn- arg-files
   [tool args]
-  (if (#{:edit :write} tool)
-    (->> args (filter string?))
+  (case tool
+    ;; :edit takes [file-path old-string new-string] — only first is a file
+    ;; :write takes [file-path content] — only first is a file
+    (:edit :write) (when (string? (first args)) [(first args)])
     []))
 
 (defn- result-files

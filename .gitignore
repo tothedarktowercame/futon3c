@@ -2,3 +2,6 @@
 .nrepl-port
 target/
 *.class
+.venv-*/
+log/
+.alleycat-drop/
