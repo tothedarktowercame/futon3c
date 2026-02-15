@@ -131,8 +131,66 @@ From live-gate output:
 4. Port bind failure:
    - Switch to `47070` and update both bind port and public WS base.
 
+## Topology B: Agency on Linode, Codex External (Laptop)
+
+Inverted topology for when Codex runs on the laptop and connects to Agency
+on Linode. Claude connects locally on Linode.
+
+### Runner
+
+`scripts/dual_agent_ws_live_gate_codex_external.clj`
+
+### Launch (Linode)
+
+```bash
+FUTON3C_BIND_HOST=0.0.0.0 \
+FUTON3C_PORT=7070 \
+FUTON3C_PUBLIC_WS_BASE=ws://172-236-28-208.ip.linodeusercontent.com:7070 \
+FUTON3C_SESSION_ID=sess-alleycat-live \
+FUTON3C_WAIT_MS=300000 \
+clojure -M scripts/dual_agent_ws_live_gate_codex_external.clj
+```
+
+Claude passes locally. Gate prints Codex connect URL and waits.
+
+### Codex Join Protocol (Laptop)
+
+Connect as `codex-1` to:
+
+```text
+ws://172-236-28-208.ip.linodeusercontent.com:7070/agency/ws?agent-id=codex-1&session-id=sess-alleycat-live
+```
+
+Then send two frames:
+
+1. Ready:
+
+```json
+{"type":"ready","agent_id":"codex-1","session_id":"sess-alleycat-live"}
+```
+
+2. Action:
+
+```json
+{"type":"message","msg_id":"alleycat-codex-live-1","payload":"fix failing integration test","to":"codex-1"}
+```
+
+### Expected Pass Signals
+
+1. Claude receipt: `route=peripheral/run-chain`, `peripheral_id=explore`
+2. Codex connected (observed in roster)
+3. Codex receipt: `route=peripheral/run-chain`, `peripheral_id=edit`
+4. Final line: `PASS: live dual-agent gate complete (Claude local, Codex external).`
+
+### Gate Pass Record
+
+- PASS on 2026-02-15 (first cross-host dual-agent gate on futon3c).
+- Invariant: `I-crosshost-dual-agent` (see `holes/missions/M-futon3c-codex.md`).
+
 ## Notes
 
 - `futon3c` currently has no local `Makefile`/`make dev` entrypoint.
-- This manifest treats `scripts/dual_agent_ws_live_gate.clj` as the canonical
-  practical gate until a repo-native dev launcher is added.
+- This manifest treats `scripts/dual_agent_ws_live_gate.clj` (Topology A: Claude
+  external) and `scripts/dual_agent_ws_live_gate_codex_external.clj` (Topology B:
+  Codex external) as canonical practical gates until a repo-native dev launcher
+  is added.

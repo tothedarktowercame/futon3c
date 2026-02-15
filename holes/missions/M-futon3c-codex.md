@@ -297,3 +297,92 @@ Date: 2026-02-14
    - string payload
    - `to=claude-1`
 5. Gate passes only after observing Claude explore-route receipt.
+
+## Cross-Host Dual-Agent Gate Pass (Agency on Linode, Codex on Laptop)
+
+Date: 2026-02-15
+
+### Topology
+
+```
+┌──────────────────────────────────┐
+│  AGENCY (Linode:7070)            │
+│  single routing authority        │
+│  0.0.0.0:7070 /agency/ws        │
+└──────┬───────────────┬───────────┘
+       │               │
+       │ ws local      │ ws inbound
+       │               │
+ ┌─────▼─────┐   ┌────▼──────┐
+ │  Claude    │   │  Codex    │
+ │  (Linode)  │   │  (Laptop) │
+ └────────────┘   └───────────┘
+```
+
+- Agency runs on Linode as the single routing authority.
+- Claude connects locally on Linode (`ws://127.0.0.1:7070`).
+- Codex connects from the laptop over the wire (`ws://172-236-28-208.ip.linodeusercontent.com:7070`).
+- Both agents share session `sess-alleycat-live`.
+
+### Runner
+
+- Script: `scripts/dual_agent_ws_live_gate_codex_external.clj`
+- Inverts the original live-gate topology (which had Codex local, Claude external).
+
+### Reproduction
+
+On the Linode:
+
+```bash
+cd ~/code/futon3c
+FUTON3C_BIND_HOST=0.0.0.0 \
+FUTON3C_PORT=7070 \
+FUTON3C_PUBLIC_WS_BASE=ws://172-236-28-208.ip.linodeusercontent.com:7070 \
+FUTON3C_SESSION_ID=sess-alleycat-live \
+FUTON3C_WAIT_MS=300000 \
+clojure -M scripts/dual_agent_ws_live_gate_codex_external.clj
+```
+
+Claude connects locally and passes immediately. Gate then prints the Codex
+connect URL and waits up to 5 minutes.
+
+On the laptop, connect Codex as `codex-1` to the printed URL and send:
+
+1. Ready frame:
+
+```json
+{"type":"ready","agent_id":"codex-1","session_id":"sess-alleycat-live"}
+```
+
+2. Action frame:
+
+```json
+{"type":"message","msg_id":"alleycat-codex-live-1","payload":"fix failing integration test","to":"codex-1"}
+```
+
+### Pass Signals
+
+1. Claude receipt: `route=peripheral/run-chain`, `peripheral_id=explore`
+2. Codex connected (observed in roster)
+3. Codex receipt: `route=peripheral/run-chain`, `peripheral_id=edit`
+4. Final line: `PASS: live dual-agent gate complete (Claude local, Codex external).`
+
+### Result
+
+- PASS on 2026-02-15.
+- First confirmed cross-host dual-agent gate on futon3c.
+- Both agents route through correct default peripherals under the same session.
+
+### Invariant
+
+This gate pass establishes a reproducible invariant:
+
+> **I-crosshost-dual-agent**: Agency on Linode accepts inbound Codex from a
+> remote host and local Claude simultaneously. Both agents complete the
+> readiness handshake and action routing through their default peripherals
+> (`codex→edit`, `claude→explore`) under a shared session. The gate script
+> is deterministic and self-verifying — it either prints PASS or throws with
+> structured diagnostics.
+
+Regression: re-run the reproduction steps above. Any failure is a regression
+against this invariant.
