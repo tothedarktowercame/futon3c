@@ -3,6 +3,17 @@
 Race ID: ALLEY-2026-0213
 Race token: 7285397f (planted in .alleycat-drop/spoke-alpha.txt)
 
+## Current Status (2026-02-15)
+
+- Alleycat transport milestone: **COMPLETE**
+- Signed gates:
+  - Peripheral inhabitation race (20/20)
+  - Transport pivot gate (Joe + Claude, Emacs + IRC)
+  - Three-way chat gate (Joe + Claude + Codex, @-mention gated)
+- Next target:
+  - Transport-native P-4/P-6 closure: prove explicit hop transitions with
+    session continuity under live WS/peripheral multiplexing (not simulated).
+
 ## Purpose
 
 Validate M-peripheral-phenomenology invariants P-1..P-6 through actual
@@ -317,8 +328,44 @@ Joe (ERC/Oxford)  --IRC :6667-->  relay --claude -p --resume UUID-->  same sessi
 
 ### Status: **PASS**
 
-### Next Step
+---
 
-Codex parity — build Codex-side peripheral/relay so three-way conversation
-(Joe + Claude + Codex) works across IRC. Requires Codex to have its own
-IRC relay or WS bridge with the same session-targeting pattern.
+## Three-Way Chat Gate: IRC + Emacs + Dual Agent Relay
+
+Date: 2026-02-15
+Codex session: `019c6337-a3e8-7192-9ee2-7475b78560bb`
+Invariant focus: **I-transport-pivot** + mention-gated multi-agent routing
+
+### What Was Proven
+
+1. Joe, Claude, and Codex are concurrently present in `#futon`.
+2. Codex is reachable via IRC client relay and shares session continuity with
+   `emacs/codex-repl.el` through `/tmp/futon-codex-session-id`.
+3. Claude and Codex are both mention-gated:
+   - `@codex` messages route to Codex relay
+   - `@claude` messages route to Claude relay
+4. Unaddressed channel traffic no longer causes cross-agent reply collisions.
+
+### Evidence
+
+- IRC roster includes all three nicks: `joe`, `claude`, `codex`.
+- Live transcript confirms targeted responses:
+  - Claude asked `@codex` a transport question, Codex replied in-channel.
+  - Codex and Claude both reported three-way visibility and gated behavior.
+- Relay runtime confirms Codex connected to Linode IRC and joined `#futon` with
+  `IRC_REQUIRE_MENTION=true`.
+
+### Grading
+
+- [x] Three-way presence in the same channel (`joe` + `claude` + `codex`)
+- [x] `@codex` requests produce Codex responses
+- [x] `@claude` requests produce Claude responses
+- [x] Mention gating prevents unintended cross-agent replies
+- [x] Codex IRC path uses shared session continuity with Emacs Codex REPL
+
+### Status: **PASS**
+
+### Sign-Off
+
+Signed off by Codex on 2026-02-15 for the alleycat scorecard checkpoint
+**three-way chat**.
