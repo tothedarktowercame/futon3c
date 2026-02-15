@@ -11,26 +11,43 @@
    Usage: clojure -M scripts/irc_claude_relay.clj"
   (:require [clojure.java.shell :as sh]
             [clojure.string :as str]
-            [futon3c.evidence.store :as estore]
             [futon3c.transport.irc :as irc])
   (:import [java.io File]
-           [java.time Instant]
-           [java.util UUID]))
+           [java.util UUID]
+           [java.util.regex Pattern]))
 
 ;; =============================================================================
 ;; Helpers
 ;; =============================================================================
 
-(defn- now-str [] (str (Instant/now)))
 (defn- env [k default] (or (System/getenv k) default))
 (defn- parse-int [s default]
   (try (Integer/parseInt (str s)) (catch Exception _ default)))
+(defn- parse-bool [s default]
+  (if (nil? s)
+    default
+    (let [v (str/lower-case (str/trim s))]
+      (not (contains? #{"0" "false" "no" "off"} v)))))
 
 ;; =============================================================================
 ;; Session ID (shared with Emacs chat)
 ;; =============================================================================
 
 (def session-file "/tmp/futon-session-id")
+(def claude-nick (env "FUTON3C_IRC_NICK" "claude"))
+(def require-mention? (parse-bool (System/getenv "FUTON3C_IRC_REQUIRE_MENTION") true))
+
+(defn- mention-pattern [nick]
+  (re-pattern (str "(?i)@" (Pattern/quote nick) "\\b")))
+
+(defn- addressed-to-agent? [text nick]
+  (boolean (and (string? text)
+                (re-find (mention-pattern nick) text))))
+
+(defn- strip-agent-mention [text nick]
+  (let [p (re-pattern (str "(?i)@" (Pattern/quote nick) "\\b[:;,]?\\s*"))
+        stripped (str/trim (str/replace text p ""))]
+    (if (str/blank? stripped) text stripped)))
 
 (defn- ensure-session-id! []
   (let [f (File. session-file)]
@@ -111,25 +128,33 @@
 
   (println "=== futon3c IRC <-> Claude Relay ===")
   (println "  irc-port:" irc-port)
+  (println "  nick:" claude-nick)
+  (println "  require-mention:" require-mention?)
   (println "  session:" session-id)
   (println "  claude:" claude-cmd)
   (println)
 
   (let [relay-fn
         (fn [channel from text]
-          ;; Enqueue for serial processing via Clojure agent
-          (send-off !processor
-            (fn [_]
-              (println (format "[%s -> %s] %s" from channel text))
-              (flush)
-              (let [response (call-claude! text claude-cmd channel from)]
-                (when (and response @!send-to-channel)
-                  ;; Split multi-line responses into individual PRIVMSGs
-                  (doseq [line (str/split-lines response)
-                          :when (not (str/blank? line))]
-                    (@!send-to-channel channel "claude" line))
-                  (println (format "[claude -> %s] %s" channel response))
-                  (flush))))))
+          (let [targeted? (or (not require-mention?)
+                              (addressed-to-agent? text claude-nick))
+                text* (if require-mention?
+                        (strip-agent-mention text claude-nick)
+                        text)]
+            ;; Enqueue for serial processing via Clojure agent
+            (when targeted?
+              (send-off !processor
+                (fn [_]
+                  (println (format "[%s -> %s] %s" from channel text))
+                  (flush)
+                  (let [response (call-claude! text* claude-cmd channel from)]
+                    (when (and response @!send-to-channel)
+                      ;; Split multi-line responses into individual PRIVMSGs
+                      (doseq [line (str/split-lines response)
+                              :when (not (str/blank? line))]
+                        (@!send-to-channel channel claude-nick line))
+                      (println (format "[%s -> %s] %s" claude-nick channel response))
+                      (flush))))))))
 
         irc-server (irc/start-irc-server!
                     {:port irc-port
@@ -141,10 +166,10 @@
     (reset! !send-to-channel (:send-to-channel! irc-server))
 
     ;; Add Claude as a virtual nick in #futon so IRC clients see it in NAMES
-    ((:join-virtual-nick! irc-server) "#futon" "claude")
+    ((:join-virtual-nick! irc-server) "#futon" claude-nick)
 
     (println "IRC server started on port" irc-port)
-    (println "Claude appears as 'claude' in #futon")
+    (println (format "Claude appears as '%s' in #futon" claude-nick))
     (println)
     (println "READY — Connect via IRC client and start chatting.")
     (println "Messages in #futon are relayed to Claude via `claude -p --continue`.")

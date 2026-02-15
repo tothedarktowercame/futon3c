@@ -41,6 +41,10 @@ Fallback if `7070` is in use:
   - `scripts/dual_agent_ws_live_gate.env.example`
 - Linode env prefill:
   - `scripts/dual_agent_ws_live_gate.env.linode`
+- Codex IRC relay:
+  - `scripts/irc_codex_relay.clj`
+- Codex Emacs REPL:
+  - `emacs/codex-repl.el`
 
 ## Preflight
 
@@ -186,6 +190,44 @@ Then send two frames:
 
 - PASS on 2026-02-15 (first cross-host dual-agent gate on futon3c).
 - Invariant: `I-crosshost-dual-agent` (see `holes/missions/M-futon3c-codex.md`).
+
+## Codex Parity: Emacs + IRC
+
+This path gives practical Codex parity with the Claude transport pivot:
+
+1. `codex-repl.el` for direct Emacs chat.
+2. `irc_codex_relay.clj` for IRC participation.
+3. Shared session continuity through `/tmp/futon-codex-session-id`.
+
+### Start Codex IRC Relay
+
+From `futon3c/`:
+
+```bash
+clj-kondo --lint scripts/irc_codex_relay.clj
+clojure -M scripts/irc_codex_relay.clj
+```
+
+Optional environment overrides:
+
+- `FUTON3C_IRC_PORT` (default `6667`)
+- `FUTON3C_BIND_HOST` (default `0.0.0.0`)
+- `FUTON3C_CODEX_BIN` (default `codex`)
+- `FUTON3C_CODEX_SANDBOX` (default `workspace-write`)
+- `FUTON3C_CODEX_APPROVAL` (default `never`)
+- `FUTON3C_CODEX_SESSION_FILE` (default `/tmp/futon-codex-session-id`)
+
+### Start Codex Emacs REPL
+
+In Emacs:
+
+```elisp
+(load "/home/joe/code/futon3c/emacs/codex-repl.el")
+M-x codex-repl
+```
+
+The REPL and IRC relay share `/tmp/futon-codex-session-id`, so context can
+pivot across transports.
 
 ## Notes
 
