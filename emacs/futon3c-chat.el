@@ -99,13 +99,7 @@ If nil, one is generated and written to `futon3c-chat-session-file'."
                                           "chat interface (futon3c-chat.el). "
                                           "The user is Joe. Transport: emacs-chat. "
                                           "Responses display in an Emacs buffer. "
-                                          (futon3c-chat--build-modeline)))))
-         (process-environment
-          ;; Remove CLAUDECODE to avoid nesting check
-          (cl-remove-if (lambda (s)
-                          (or (string-prefix-p "CLAUDECODE=" s)
-                              (string-prefix-p "CLAUDE_CODE_ENTRYPOINT=" s)))
-                        process-environment))
+                                          (futon3c-chat--build-modeline))))))
     args))
 
 (defun futon3c-chat--call-claude-async (text callback)
@@ -146,7 +140,7 @@ If nil, one is generated and written to `futon3c-chat-session-file'."
                      (when (= exit-code 0)
                        ;; After first successful call, use --resume for rest.
                        (setq futon3c-chat--continued t))
-                     (funcall callback response)))))))))
+                     (funcall callback response))))))))
     proc))
 
 ;;; Display
