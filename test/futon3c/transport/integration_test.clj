@@ -223,6 +223,47 @@
             "claude agent → :explore peripheral")))))
 
 ;; =============================================================================
+;; 5b. HTTP codex action message → :edit peripheral
+;; =============================================================================
+
+(deftest http-codex-action-message-to-edit-peripheral
+  (testing "POST /dispatch codex action payload → :edit peripheral route"
+    (register-mock-agent! "codex-1" :codex)
+    (let [handler (make-http-handler)
+          body (json/generate-string {"msg_id" "int-msg-codex-http-1"
+                                      "payload" "fix failing test"
+                                      "from" "codex-1"
+                                      "to" "codex-1"})
+          response (post handler "/dispatch" body)
+          receipt (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:delivered receipt)))
+      (is (= "peripheral/run-chain" (:route receipt)))
+      (is (= "edit" (:peripheral_id receipt))
+          "codex action should route to :edit by default"))))
+
+;; =============================================================================
+;; 5c. WS codex action message → :edit peripheral
+;; =============================================================================
+
+(deftest ws-codex-action-message-to-edit-peripheral
+  (testing "WS ready codex → action payload → :edit peripheral receipt"
+    (register-mock-agent! "codex-1" :codex)
+    (let [{:keys [on-open on-receive sent]} (make-test-ws)
+          ch :int-ch-codex-1
+          request {:request-method :get :uri "/ws" :request-uri "/ws"}]
+      (on-open ch request)
+      (on-receive ch (ready-frame "codex-1"))
+      (reset! sent [])
+      (on-receive ch (message-frame "int-msg-codex-ws-1" "fix auth bug" "codex-1"))
+      (let [receipt (last-sent sent)]
+        (is (= "receipt" (:type receipt)))
+        (is (true? (:delivered receipt)))
+        (is (= "peripheral/run-chain" (:route receipt)))
+        (is (= "edit" (:peripheral_id receipt))
+            "codex action should route to :edit by default")))))
+
+;; =============================================================================
 ;; 6. WS handshake failure
 ;; =============================================================================
 
