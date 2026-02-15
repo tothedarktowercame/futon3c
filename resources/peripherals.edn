@@ -62,6 +62,14 @@
    :peripheral/exit #{:cycle-completed :blocked :hop-reflect :hop-explore :user-request}
    :peripheral/context {:session-id :inherit :problem-id :from-explore}}
 
+  :discipline
+  {:peripheral/id :discipline
+   :peripheral/tools #{:psr-search :psr-select :pur-update :pur-mark-pivot :par-punctuate}
+   :peripheral/scope :discipline-records
+   :peripheral/entry #{:from-any :from-reflect :user-request}
+   :peripheral/exit #{:par-generated :hop-reflect :user-request}
+   :peripheral/context {:session-id :inherit :pattern-id :inherit}}
+
   :chat
   {:peripheral/id :chat
    :peripheral/tools #{}

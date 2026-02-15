@@ -77,3 +77,34 @@
         (is (= "ready_ack" (:type ack)))
         (is (= "receipt" (:type receipt)))
         (is (= "edit" (:peripheral_id receipt)))))))
+
+(deftest runtime-config-defaults-to-real-peripheral-config
+  (testing "action messages route through peripheral bridge even without explicit peripheral-config"
+    (runtime/register-codex! {:agent-id "codex-rt-5" :invoke-fn ok-invoke})
+    (let [cfg (runtime/runtime-config {:patterns (fix/mock-patterns)})
+          msg {:msg/id "msg-rt-codex-5"
+               :msg/payload "make the patch"
+               :msg/from (fix/make-agent-id "codex-rt-5" :continuity)
+               :msg/to (fix/make-agent-id "codex-rt-5" :continuity)
+               :msg/at (fix/now-str)}
+          classified (mode/classify msg (:patterns cfg))
+          result (dispatch/dispatch classified (:registry cfg))]
+      (is (shapes/valid? shapes/DispatchReceipt result))
+      (is (= "peripheral/run-chain" (:receipt/route result)))
+      (is (= :edit (:receipt/peripheral-id result))))))
+
+(deftest runtime-config-can-disable-peripheral-auto-wire
+  (testing "enable-peripherals? false preserves direct invoke fallback"
+    (runtime/register-codex! {:agent-id "codex-rt-6" :invoke-fn ok-invoke})
+    (let [cfg (runtime/runtime-config {:patterns (fix/mock-patterns)
+                                       :enable-peripherals? false})
+          msg {:msg/id "msg-rt-codex-6"
+               :msg/payload "please respond directly"
+               :msg/from (fix/make-agent-id "codex-rt-6" :continuity)
+               :msg/to (fix/make-agent-id "codex-rt-6" :continuity)
+               :msg/at (fix/now-str)}
+          classified (mode/classify msg (:patterns cfg))
+          result (dispatch/dispatch classified (:registry cfg))]
+      (is (shapes/valid? shapes/DispatchReceipt result))
+      (is (= "registry/invoke" (:receipt/route result)))
+      (is (nil? (:receipt/peripheral-id result))))))

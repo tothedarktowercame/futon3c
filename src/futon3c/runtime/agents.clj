@@ -5,6 +5,8 @@
    peripheral logic; it only helps wire live agent registry state into the
    existing social/transport pipeline."
   (:require [futon3c.agency.registry :as reg]
+            [futon3c.peripheral.real-backend :as rb]
+            [futon3c.peripheral.registry :as preg]
             [futon3c.social.shapes :as shapes]
             [futon3c.transport.http :as http]
             [futon3c.transport.ws :as ws]))
@@ -13,6 +15,38 @@
   {:claude [:explore :edit :test :coordination/execute]
    :codex  [:edit :test :coordination/execute]
    :mock   [:explore]})
+
+(defonce ^:private !default-evidence-store
+  (atom {:entries {} :order []}))
+
+(defonce ^:private !default-discipline-state
+  (atom {:psr/by-pattern {}
+         :pur/history []
+         :pivot/history []
+         :par/history []}))
+
+(defn make-default-peripheral-config
+  "Build a live peripheral config with a real backend.
+
+   opts:
+   - :cwd working directory for tool execution (default: user.dir)
+   - :timeout-ms command timeout for shell tools
+   - :evidence-store atom used for evidence append/read
+   - :discipline-state atom for PSR/PUR/PAR continuity
+   - :notions-index-path explicit futon3a notions TSV index path"
+  ([]
+   (make-default-peripheral-config {}))
+  ([{:keys [cwd timeout-ms evidence-store discipline-state notions-index-path]}]
+   (let [e-store (or evidence-store !default-evidence-store)
+         d-state (or discipline-state !default-discipline-state)
+         backend-config (cond-> {:cwd (or cwd (System/getProperty "user.dir"))
+                                 :evidence-store e-store
+                                 :discipline-state d-state}
+                          timeout-ms (assoc :timeout-ms timeout-ms)
+                          notions-index-path (assoc :notions-index-path notions-index-path))]
+     {:backend (rb/make-real-backend backend-config)
+      :peripherals (preg/load-peripherals)
+      :evidence-store e-store})))
 
 (defn register-agent!
   "Register an agent in the live unified registry.
@@ -79,9 +113,23 @@
 
    opts:
    - :patterns PatternLibrary
-   - :peripheral-config optional (passed through into registry snapshot)"
-  [{:keys [patterns peripheral-config]}]
-  (let [cfg {:registry (registry-snapshot {:peripheral-config peripheral-config})
+   - :peripheral-config optional (passed through into registry snapshot)
+   - :enable-peripherals? default true; when false, skip auto peripheral config
+   - :cwd/:timeout-ms/:evidence-store/:discipline-state/:notions-index-path
+     optional inputs for default peripheral backend wiring"
+  [{:keys [patterns peripheral-config enable-peripherals?
+           cwd timeout-ms evidence-store discipline-state notions-index-path]
+    :or {enable-peripherals? true}}]
+  (let [resolved-peripheral-config
+        (or peripheral-config
+            (when enable-peripherals?
+              (make-default-peripheral-config
+               {:cwd cwd
+                :timeout-ms timeout-ms
+                :evidence-store evidence-store
+                :discipline-state discipline-state
+                :notions-index-path notions-index-path})))
+        cfg {:registry (registry-snapshot {:peripheral-config resolved-peripheral-config})
              :patterns patterns}]
     (when-not (shapes/valid? shapes/PatternLibrary (:patterns cfg))
       (throw (ex-info "Invalid PatternLibrary for runtime-config"

@@ -26,7 +26,13 @@
    "Edit"     [:edit]
    "Write"    [:write]
    "Bash"     [:bash :bash-readonly :bash-test :bash-git :bash-deploy]
-   "WebFetch" [:web-fetch]})
+   "WebFetch" [:web-fetch]
+   ;; Discipline pseudo-tools (for future wrappers; not native Claude tools)
+   "PSRSearch"    [:psr-search]
+   "PSRSelect"    [:psr-select]
+   "PURUpdate"    [:pur-update]
+   "PURMarkPivot" [:pur-mark-pivot]
+   "PARPunctuate" [:par-punctuate]})
 
 (def ^:private codex-to-peripheral
   "Reverse mapping: Codex tool name → candidate peripheral tool keywords.
@@ -49,7 +55,13 @@
    "run_shell_command" [:bash :bash-readonly :bash-test :bash-git :bash-deploy]
    "WebFetch"          [:web-fetch]
    "web_fetch"         [:web-fetch]
-   "musn_log"          [:musn-log]})
+   "musn_log"          [:musn-log]
+   ;; Discipline pseudo-tools (for codex wrappers)
+   "psr_search"        [:psr-search]
+   "psr_select"        [:psr-select]
+   "pur_update"        [:pur-update]
+   "pur_mark_pivot"    [:pur-mark-pivot]
+   "par_punctuate"     [:par-punctuate]})
 
 (defn- mapping-for
   [catalog peripheral-spec]
@@ -154,8 +166,11 @@
   [peripheral-tool input]
   (let [file-path (first-val input [:file_path :file-path :path :file])
         pattern (first-val input [:pattern :query :regex])
+        pattern-id (first-val input [:pattern_id :pattern-id :id])
         target (first-val input [:target :path :file_path :file-path :file])
         command (first-val input [:command :cmd :shell])
+        status (first-val input [:status :outcome :result])
+        reason (first-val input [:reason :note :summary :text])
         url (first-val input [:url])]
     (vec
      (remove nil?
@@ -168,6 +183,11 @@
                (:bash :bash-readonly :bash-test :bash-git :bash-deploy) [command]
                :web-fetch [url]
                :musn-log [file-path]
+               :psr-search [pattern]
+               :psr-select [pattern-id]
+               :pur-update [pattern-id status]
+               :pur-mark-pivot [pattern-id reason]
+               :par-punctuate [reason]
                [])))))
 
 (defn tool-call->action
@@ -226,6 +246,12 @@
    :bash-deploy  "Execute deployment commands (push, deploy)"
    :web-fetch    "Fetch web content"
    :musn-log     "Access MUSN session logs"
+   ;; Discipline-domain tools
+   :psr-search     "Search candidate patterns (PSR step)"
+   :psr-select     "Select an active pattern for current context"
+   :pur-update     "Record post-use result for a selected pattern (PUR step)"
+   :pur-mark-pivot "Record a pattern pivot with rationale"
+   :par-punctuate  "Emit session punctuation summary for handoff"
    ;; Proof-domain tools
    :proof-load       "Load proof state from disk"
    :proof-save       "Save proof state (atomic write, version bump)"
@@ -250,7 +276,8 @@
   {:full-codebase      "Full codebase — no path restrictions"
    :test-commands-only "Test commands only — no file modifications"
    :git-push-only      "Git operations only — commit and push"
-   :session-log-only   "Session log access only — read and analyze"})
+   :session-log-only   "Session log access only — read and analyze"
+   :discipline-records "Discipline records only — PSR/PUR/PAR operations"})
 
 (defn describe-constraints
   "Structured representation of a peripheral's constraints.

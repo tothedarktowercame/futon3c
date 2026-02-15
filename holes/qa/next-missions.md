@@ -72,3 +72,13 @@ Scope:
 Dependencies:
 - Social pipeline components (presence/auth/mode/dispatch/persist), plus evidence emission decisions (what gets appended to the evidence store).
 
+### Mission D: PSR/PUR Mesh Peripheral (futon3a + futon3b)
+
+Scope:
+- Add a dedicated discipline peripheral for PSR/PUR operations so agents can select patterns (PSR), update outcomes (PUR), and emit PAR-compatible punctuation records inside a constrained capability envelope.
+- Validate transport-native P-4 (explicit hop transition) and P-6 (interleaved streams) with live Emacs+IRC runs, including ALFWorld-informed scenarios.
+
+Dependencies:
+- `holes/missions/M-psr-pur-mesh-peripheral.md`
+- futon3a query/search boundary (pattern retrieval)
+- futon3b gate/evidence boundary (pattern usage updates)

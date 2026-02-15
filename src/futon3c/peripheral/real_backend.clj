@@ -15,10 +15,16 @@
      :timeout-ms — default command timeout in milliseconds (default: 30000)
      :evidence-store — atom for :musn-log tool (optional)"
   (:require [clojure.java.io :as io]
+            [clojure.set :as cset]
             [clojure.string :as str]
+            [futon.notions :as notions]
+            [futon3.gate.shapes :as gate-shapes]
+            [futon3b.query.relations :as relations]
             [futon3c.peripheral.tools :as tools])
   (:import [java.io File]
-           [java.nio.file FileSystems Files Path]
+           [java.nio.file FileSystems Path]
+           [java.time Instant]
+           [java.util UUID]
            [java.util.concurrent TimeUnit]))
 
 ;; =============================================================================
@@ -248,10 +254,272 @@
       {:ok true :result entries})))
 
 ;; =============================================================================
+;; Discipline tools (futon3a + futon3b adapters)
+;; =============================================================================
+
+(defn- now-str [] (str (Instant/now)))
+
+(defn- gen-id [prefix]
+  (str prefix "-" (UUID/randomUUID)))
+
+(defn- parse-int
+  [x default]
+  (try
+    (let [n (Integer/parseInt (str x))]
+      (if (pos? n) n default))
+    (catch Exception _ default)))
+
+(defn- normalize-pattern-id
+  "Normalize input to canonical string pattern-id (no leading colon)."
+  [x]
+  (cond
+    (keyword? x) (subs (str x) 1)
+    (string? x)
+    (let [s (str/trim x)
+          s (if (str/starts-with? s ":") (subs s 1) s)]
+      (when-not (str/blank? s) s))
+    :else nil))
+
+(defn- tokenize-query
+  [text]
+  (->> (str/split (str/lower-case (or text "")) #"[^a-z0-9._-]+")
+       (remove str/blank?)
+       (remove #(< (count %) 3))
+       set))
+
+(defn- score-index-entry
+  [tokens entry]
+  (let [hotwords (->> (:hotwords entry)
+                      (map str/lower-case)
+                      set)
+        rationale-tokens (tokenize-query (:rationale entry))
+        overlap (count (cset/intersection tokens hotwords))
+        rationale-overlap (count (cset/intersection tokens rationale-tokens))]
+    (+ (* 2.0 overlap) (* 0.5 rationale-overlap))))
+
+(defn- default-notions-index-path
+  [cwd]
+  (let [candidates [(str (io/file cwd "../futon3a/resources/notions/patterns-index.tsv"))
+                    (str (io/file cwd "futon3a/resources/notions/patterns-index.tsv"))
+                    (str (io/file (System/getProperty "user.home")
+                                  "code/futon3a/resources/notions/patterns-index.tsv"))]]
+    (some (fn [p]
+            (let [f (io/file p)]
+              (when (.exists f) (.getPath f))))
+          candidates)))
+
+(defn- notions-index-path
+  [cwd config]
+  (let [configured (or (:notions-index-path config)
+                       (System/getenv "FUTON3A_NOTIONS_INDEX"))]
+    (or (when (and configured (.exists (io/file configured)))
+          configured)
+        (default-notions-index-path cwd))))
+
+(defn- normalize-pur-outcome
+  [outcome-or-status]
+  (let [v (if (keyword? outcome-or-status)
+            (name outcome-or-status)
+            (str/lower-case (str (or outcome-or-status ""))))]
+    (if (contains? #{"pass" "ok" "success" "true" "1"} v)
+      :pass
+      :fail)))
+
+(defn- persist-proof-path!
+  [events evidence]
+  (let [proof-path {:path/id (gen-id "path")
+                    :events (vec events)}
+        persisted (relations/append-proof-path! {:proof-path proof-path
+                                                 :evidence evidence})]
+    {:proof-path/id (:path/id proof-path)
+     :proof-path/file (:file persisted)}))
+
+(defn- tool-psr-search
+  [cwd config args]
+  (let [query (some-> (first args) str str/trim)
+        opts (if (map? (second args)) (second args) {})
+        top-k (parse-int (:top-k opts) 5)
+        include-details? (true? (:include-details opts))
+        idx-path (notions-index-path cwd config)]
+    (cond
+      (str/blank? query)
+      {:ok false :error "psr-search requires a non-blank query"}
+
+      (nil? idx-path)
+      {:ok false :error "Could not locate futon3a notions index (set FUTON3A_NOTIONS_INDEX)"}
+
+      :else
+      (try
+        (let [tokens (tokenize-query query)
+              index (notions/load-pattern-index idx-path)
+              candidate->result
+              (fn [entry]
+                (let [score (score-index-entry tokens entry)
+                      pid (:id entry)]
+                  (cond-> {:pattern-id pid
+                           :score score
+                           :rationale (:rationale entry)
+                           :sigil (:sigil entry)
+                           :hotwords (vec (:hotwords entry))
+                           :exists-in-library? (relations/pattern-exists? pid)
+                           :source :futon3a/notions-index}
+                    include-details?
+                    (assoc :details (notions/get-pattern-details pid)))))
+              candidates (->> index
+                              (map candidate->result)
+                              (filter #(pos? (:score %)))
+                              (sort-by :score >)
+                              (take top-k)
+                              vec)]
+          {:ok true
+           :result {:query query
+                    :top-k top-k
+                    :candidates candidates}})
+        (catch Exception e
+          {:ok false :error (str "psr-search failed: " (.getMessage e))})))))
+
+(defn- tool-psr-select
+  [discipline-state args]
+  (let [pattern-id (normalize-pattern-id (first args))
+        opts (if (map? (second args)) (second args) {})
+        task-id (or (:task-id opts) (gen-id "task"))
+        rationale (or (:rationale opts)
+                      (some-> (nth args 2 nil) str))]
+    (cond
+      (str/blank? pattern-id)
+      {:ok false :error "psr-select requires a pattern-id"}
+
+      (not (relations/pattern-exists? pattern-id))
+      {:ok false :error (str "Pattern not found in futon3b library: " pattern-id)}
+
+      :else
+      (try
+        (let [psr {:psr/id (gen-id "psr")
+                   :psr/task-id task-id
+                   :psr/type :selection
+                   :psr/pattern-ref pattern-id
+                   :psr/candidates (vec (or (:candidates opts) []))
+                   :psr/rationale rationale}
+              _ (gate-shapes/validate! gate-shapes/PSR psr)]
+          (swap! discipline-state assoc-in [:psr/by-pattern pattern-id] psr)
+          {:ok true
+           :result {:pattern-id pattern-id
+                    :psr psr
+                    :selected? true}})
+        (catch Exception e
+          {:ok false :error (str "psr-select failed: " (.getMessage e))})))))
+
+(defn- tool-pur-update
+  [discipline-state args]
+  (let [pattern-id (normalize-pattern-id (first args))
+        second-arg (second args)
+        third-arg (nth args 2 nil)
+        opts (cond
+               (map? second-arg) second-arg
+               (map? third-arg) third-arg
+               :else {})
+        status (if (map? second-arg) (:status second-arg) second-arg)
+        outcome (or (:outcome opts) (normalize-pur-outcome status))
+        psr (get-in @discipline-state [:psr/by-pattern pattern-id])
+        psr-ref (or (:psr/id psr) (:psr-ref opts))]
+    (cond
+      (str/blank? pattern-id)
+      {:ok false :error "pur-update requires a pattern-id"}
+
+      (str/blank? psr-ref)
+      {:ok false :error "pur-update requires prior psr-select (missing psr-ref)"}
+
+      :else
+      (try
+        (let [criteria-eval (or (:criteria-eval opts)
+                                {:status status
+                                 :pattern-id pattern-id})
+              pur (cond-> {:pur/id (gen-id "pur")
+                           :pur/psr-ref psr-ref
+                           :pur/outcome outcome
+                           :pur/criteria-eval criteria-eval}
+                    (contains? opts :prediction-error)
+                    (assoc :pur/prediction-error (:prediction-error opts)))
+              _ (gate-shapes/validate! gate-shapes/PUR pur)
+              events (cond-> []
+                       psr (conj {:gate/id :g3 :gate/record psr :gate/at (now-str)})
+                       true (conj {:gate/id :g1 :gate/record pur :gate/at (now-str)}))
+              persisted (persist-proof-path! events {:pattern-id pattern-id
+                                                     :psr psr
+                                                     :pur pur})]
+          (swap! discipline-state update :pur/history
+                 (fnil conj []) {:pattern-id pattern-id :pur pur :proof persisted})
+          {:ok true
+           :result {:pattern-id pattern-id
+                    :outcome outcome
+                    :pur pur
+                    :proof persisted}})
+        (catch Exception e
+          {:ok false :error (str "pur-update failed: " (.getMessage e))})))))
+
+(defn- tool-pur-mark-pivot
+  [discipline-state args]
+  (let [pattern-id (normalize-pattern-id (first args))
+        second-arg (second args)
+        opts (if (map? second-arg) second-arg {})
+        rationale (or (:rationale opts)
+                      (when (string? second-arg) second-arg)
+                      "pivot")
+        task-id (or (:task-id opts) (gen-id "task"))
+        gap-psr {:psr/id (gen-id "psr")
+                 :psr/task-id task-id
+                 :psr/type :gap
+                 :psr/rationale rationale
+                 :psr/candidates (cond-> []
+                                   pattern-id (conj {:pattern-id pattern-id :event :pivot}))}]
+    (try
+      (gate-shapes/validate! gate-shapes/PSR gap-psr)
+      (let [persisted (persist-proof-path!
+                        [{:gate/id :g3 :gate/record gap-psr :gate/at (now-str)}]
+                        {:pattern-id pattern-id :gap-psr gap-psr})]
+        (swap! discipline-state update :pivot/history
+               (fnil conj []) {:pattern-id pattern-id :psr gap-psr :proof persisted})
+        {:ok true
+         :result {:pattern-id pattern-id
+                  :pivoted? true
+                  :psr gap-psr
+                  :proof persisted}})
+      (catch Exception e
+        {:ok false :error (str "pur-mark-pivot failed: " (.getMessage e))}))))
+
+(defn- tool-par-punctuate
+  [discipline-state args]
+  (let [first-arg (first args)
+        opts (cond
+               (map? first-arg) first-arg
+               (map? (second args)) (second args)
+               :else {})
+        par {:par/id (gen-id "par")
+             :par/session-ref (or (:session-ref opts)
+                                  (:session-id opts)
+                                  (gen-id "discipline-session"))
+             :par/what-worked (or (:what-worked opts)
+                                  (when (string? first-arg) first-arg))
+             :par/what-didnt (:what-didnt opts)
+             :par/prediction-errors (vec (or (:prediction-errors opts) []))
+             :par/suggestions (vec (map str (or (:suggestions opts) [])))}]
+    (try
+      (gate-shapes/validate! gate-shapes/PAR par)
+      (let [persisted (persist-proof-path!
+                        [{:gate/id :g0 :gate/record par :gate/at (now-str)}]
+                        {:par par})]
+        (swap! discipline-state update :par/history (fnil conj []) {:par par :proof persisted})
+        {:ok true
+         :result {:par par
+                  :proof persisted}})
+      (catch Exception e
+        {:ok false :error (str "par-punctuate failed: " (.getMessage e))}))))
+
+;; =============================================================================
 ;; RealBackend
 ;; =============================================================================
 
-(defrecord RealBackend [config]
+(defrecord RealBackend [config discipline-state]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (let [cwd (or (:cwd config) (System/getProperty "user.dir"))
@@ -278,17 +546,30 @@
         ;; Evidence tools
         :musn-log       (tool-musn-log evidence-store args)
 
+        ;; Discipline-domain tools
+        :psr-search     (tool-psr-search cwd config args)
+        :psr-select     (tool-psr-select discipline-state args)
+        :pur-update     (tool-pur-update discipline-state args)
+        :pur-mark-pivot (tool-pur-mark-pivot discipline-state args)
+        :par-punctuate  (tool-par-punctuate discipline-state args)
+
         ;; Unknown
         {:ok false :error (str "Unknown tool: " tool-id)}))))
 
 (defn make-real-backend
   "Create a real backend that executes tools against the filesystem and system.
 
-   config:
+  config:
      :cwd            — working directory (default: user.dir)
      :timeout-ms     — default command timeout (default: 30000)
-     :evidence-store — atom for :musn-log tool (optional)"
+     :evidence-store — atom for :musn-log tool (optional)
+     :notions-index-path — futon3a patterns index path for :psr-search (optional)
+     :discipline-state — atom for PSR/PUR/PAR continuity (optional)"
   ([]
    (make-real-backend {}))
   ([config]
-   (->RealBackend config)))
+   (->RealBackend config (or (:discipline-state config)
+                             (atom {:psr/by-pattern {}
+                                    :pur/history []
+                                    :pivot/history []
+                                    :par/history []})))))

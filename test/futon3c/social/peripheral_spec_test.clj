@@ -5,6 +5,7 @@
    envelope permits. This test ensures the EDN is well-formed."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as cset]
             [clojure.test :refer [deftest is testing]]
             [futon3c.social.shapes :as shapes]))
 
@@ -15,10 +16,11 @@
       :peripherals))
 
 (deftest peripherals-edn-loads
-  (testing "peripherals.edn is loadable and has seven peripherals"
+  (testing "peripherals.edn is loadable and has eight peripherals"
     (let [peripherals (load-peripherals)]
-      (is (= 7 (count peripherals)))
-      (is (= #{:explore :edit :test :deploy :reflect :proof :chat} (set (keys peripherals)))))))
+      (is (= 8 (count peripherals)))
+      (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :chat}
+             (set (keys peripherals)))))))
 
 (deftest all-peripherals-validate-against-shape
   (testing "every peripheral in peripherals.edn conforms to PeripheralSpec"
@@ -44,16 +46,16 @@
   (testing "explore peripheral has no write tools"
     (let [explore (get (load-peripherals) :explore)
           write-tools #{:edit :write :bash-git :bash-deploy}]
-      (is (empty? (clojure.set/intersection (:peripheral/tools explore) write-tools))))))
+      (is (empty? (cset/intersection (:peripheral/tools explore) write-tools))))))
 
 (deftest deploy-cannot-edit
   (testing "deploy peripheral cannot edit files"
     (let [deploy (get (load-peripherals) :deploy)
           edit-tools #{:edit :write}]
-      (is (empty? (clojure.set/intersection (:peripheral/tools deploy) edit-tools))))))
+      (is (empty? (cset/intersection (:peripheral/tools deploy) edit-tools))))))
 
 (deftest reflect-is-read-only
   (testing "reflect peripheral is read-only"
     (let [reflect (get (load-peripherals) :reflect)
           write-tools #{:edit :write :bash :bash-git :bash-deploy}]
-      (is (empty? (clojure.set/intersection (:peripheral/tools reflect) write-tools))))))
+      (is (empty? (cset/intersection (:peripheral/tools reflect) write-tools))))))

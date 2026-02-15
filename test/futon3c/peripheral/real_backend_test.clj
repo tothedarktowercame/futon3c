@@ -5,8 +5,10 @@
    tools execute against the real filesystem, but the peripheral spec's
    structural enforcement still governs what's allowed."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3b.query.relations :as relations]
             [futon3c.peripheral.real-backend :as rb]
             [futon3c.peripheral.tools :as tools]
             [futon3c.peripheral.explore :as explore]
@@ -212,7 +214,70 @@
       (is (= "e-1" (:evidence/id (first (:result result))))))))
 
 ;; =============================================================================
-;; 8. Explore peripheral with RealBackend — full lifecycle
+;; 8. Discipline tools — futon3a/futon3b adapters
+;; =============================================================================
+
+(deftest discipline-psr-search-queries-futon3a-index
+  (testing ":psr-search returns scored candidates from futon3a notions index"
+    (let [idx "../futon3a/resources/notions/patterns-index.tsv"
+          backend (rb/make-real-backend {:cwd "/home/joe/code/futon3c"
+                                         :notions-index-path idx})
+          result (tools/execute-tool backend :psr-search
+                                     ["mandatory psr" {:top-k 5}])]
+      (is (true? (:ok result)))
+      (is (seq (get-in result [:result :candidates])))
+      (is (every? #(= :futon3a/notions-index (:source %))
+                  (get-in result [:result :candidates])))
+      (is (every? string? (map :pattern-id (get-in result [:result :candidates])))))))
+
+(deftest discipline-psr-select-and-pur-update-persist-proof-path
+  (testing ":psr-select followed by :pur-update emits typed futon3b records and persists proof-path"
+    (with-temp-dir dir
+      (with-redefs [relations/proof-path-dir (fn [] (.getPath dir))]
+        (let [backend (rb/make-real-backend {:cwd "/home/joe/code/futon3c"})
+              select-result (tools/execute-tool backend :psr-select
+                                                ["coordination/mandatory-psr"
+                                                 {:task-id "task-discipline-1"
+                                                  :rationale "integration test"}])
+              pur-result (tools/execute-tool backend :pur-update
+                                             ["coordination/mandatory-psr"
+                                              :ok
+                                              {:criteria-eval {:tests-pass? true}}])
+              proof-file (get-in pur-result [:result :proof :proof-path/file])
+              persisted (edn/read-string (slurp proof-file))
+              gate-ids (mapv :gate/id (get-in persisted [:proof-path :events]))]
+          (is (true? (:ok select-result)))
+          (is (true? (:ok pur-result)))
+          (is (= :pass (get-in pur-result [:result :outcome])))
+          (is (.exists (io/file proof-file)))
+          (is (= [:g3 :g1] gate-ids)))))))
+
+(deftest discipline-par-punctuate-persists-g0-event
+  (testing ":par-punctuate writes a PAR-shaped g0 proof-path event"
+    (with-temp-dir dir
+      (with-redefs [relations/proof-path-dir (fn [] (.getPath dir))]
+        (let [backend (rb/make-real-backend {:cwd "/home/joe/code/futon3c"})
+              result (tools/execute-tool backend :par-punctuate
+                                         ["handoff summary"
+                                          {:session-id "sess-discipline-9"
+                                           :suggestions ["next hop: reflect"]}])
+              proof-file (get-in result [:result :proof :proof-path/file])
+              persisted (edn/read-string (slurp proof-file))]
+          (is (true? (:ok result)))
+          (is (= "sess-discipline-9"
+                 (get-in result [:result :par :par/session-ref])))
+          (is (= :g0 (get-in persisted [:proof-path :events 0 :gate/id]))))))))
+
+(deftest discipline-pur-update-requires-prior-psr
+  (testing ":pur-update returns explicit error when no prior :psr-select exists"
+    (let [backend (rb/make-real-backend {:cwd "/home/joe/code/futon3c"})
+          result (tools/execute-tool backend :pur-update
+                                     ["coordination/mandatory-psr" :ok])]
+      (is (false? (:ok result)))
+      (is (str/includes? (:error result) "missing psr-ref")))))
+
+;; =============================================================================
+;; 9. Explore peripheral with RealBackend — full lifecycle
 ;; =============================================================================
 
 (deftest explore-peripheral-with-real-backend

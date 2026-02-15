@@ -138,8 +138,8 @@
 ;; =============================================================================
 
 (def PeripheralId
-  "Peripheral identifier — the seven core peripherals."
-  [:enum :explore :edit :test :deploy :reflect :proof :chat])
+  "Peripheral identifier — the core peripherals."
+  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat])
 
 (def ToolSet
   "Set of tools available to a peripheral."
@@ -148,7 +148,7 @@
 (def PeripheralScope
   "Scope constraint for a peripheral — what it can access."
   [:or
-   [:enum :full-codebase :test-commands-only :git-push-only :session-log-only :irc-rooms]
+   [:enum :full-codebase :test-commands-only :git-push-only :session-log-only :discipline-records :irc-rooms]
    [:map [:paths [:vector :string]]]])
 
 (def PeripheralSpec
