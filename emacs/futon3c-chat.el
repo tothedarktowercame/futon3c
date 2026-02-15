@@ -2,7 +2,7 @@
 
 ;; Author: Claude + Joe
 ;; Description: Emacs chat buffer backed by `claude -p`.
-;; Synchronous: type, RET, Claude responds. No polling.
+;; Asynchronous: type, RET, Claude responds without blocking Emacs UI.
 ;; Session continuity via --session-id and --continue.
 ;;
 ;; Usage:
@@ -75,11 +75,13 @@ If nil, one is generated and written to `futon3c-chat-session-file'."
   "Marker at start of the separator line above prompt.")
 (defvar-local futon3c-chat--continued nil
   "Non-nil after first exchange (use --continue for subsequent).")
+(defvar-local futon3c-chat--pending-process nil
+  "Current in-flight Claude subprocess for this chat buffer.")
 
 ;;; Claude CLI call
 
-(defun futon3c-chat--call-claude (text)
-  "Call claude -p with TEXT. Return response string."
+(defun futon3c-chat--build-claude-args (text)
+  "Build argv for `claude` with TEXT."
   (let* ((args (list "-p" text
                      "--permission-mode" "bypassPermissions"))
          ;; First message: use --session-id to create session
@@ -104,20 +106,48 @@ If nil, one is generated and written to `futon3c-chat-session-file'."
                           (or (string-prefix-p "CLAUDECODE=" s)
                               (string-prefix-p "CLAUDE_CODE_ENTRYPOINT=" s)))
                         process-environment))
-         (output (with-temp-buffer
-                   (let ((exit-code
-                          (apply #'call-process
-                                 futon3c-chat-claude-command
-                                 nil t nil args)))
-                     (if (= exit-code 0)
-                         (string-trim (buffer-string))
-                       (format "[Error (exit %d): %s]"
-                               exit-code
-                               (string-trim (buffer-string))))))))
-    ;; After first successful call, use --continue for the rest
-    (unless futon3c-chat--continued
-      (setq futon3c-chat--continued t))
-    output))
+    args))
+
+(defun futon3c-chat--call-claude-async (text callback)
+  "Call Claude with TEXT and invoke CALLBACK with response string."
+  (let* ((args (futon3c-chat--build-claude-args text))
+         (chat-buffer (current-buffer))
+         (outbuf (generate-new-buffer " *futon3c-chat-claude*"))
+         (process-environment
+          (cl-remove-if (lambda (s)
+                          (or (string-prefix-p "CLAUDECODE=" s)
+                              (string-prefix-p "CLAUDE_CODE_ENTRYPOINT=" s)))
+                        process-environment))
+         (proc nil))
+    (setq proc
+          (make-process
+           :name "futon3c-chat-claude"
+           :buffer outbuf
+           :command (cons futon3c-chat-claude-command args)
+           :noquery t
+           :connection-type 'pipe
+           :sentinel
+           (lambda (p _event)
+             (when (memq (process-status p) '(exit signal))
+               (let* ((exit-code (process-exit-status p))
+                      (raw (with-current-buffer (process-buffer p)
+                             (buffer-string)))
+                      (response (if (= exit-code 0)
+                                    (string-trim raw)
+                                  (format "[Error (exit %d): %s]"
+                                          exit-code
+                                          (string-trim raw)))))
+                 (when (buffer-live-p (process-buffer p))
+                   (kill-buffer (process-buffer p)))
+                 (when (buffer-live-p chat-buffer)
+                   (with-current-buffer chat-buffer
+                     (when (eq futon3c-chat--pending-process p)
+                       (setq futon3c-chat--pending-process nil))
+                     (when (= exit-code 0)
+                       ;; After first successful call, use --resume for rest.
+                       (setq futon3c-chat--continued t))
+                     (funcall callback response)))))))))
+    proc))
 
 ;;; Display
 
@@ -154,32 +184,40 @@ If nil, one is generated and written to `futon3c-chat-session-file'."
 (defun futon3c-chat-send-input ()
   "Send input to Claude and display response."
   (interactive)
+  (when (process-live-p futon3c-chat--pending-process)
+    (user-error "Claude is still responding; wait for current turn to finish"))
   (let ((text (buffer-substring-no-properties
                (marker-position futon3c-chat--input-start)
                (point-max))))
     (when (not (string-empty-p (string-trim text)))
-      (let ((trimmed (string-trim text)))
-        ;; Clear input
+      (let ((trimmed (string-trim text))
+            (chat-buffer (current-buffer)))
         (delete-region (marker-position futon3c-chat--input-start) (point-max))
-        ;; Display user message
         (futon3c-chat--insert-message "joe" trimmed)
-        ;; Show thinking, call Claude, always clean up thinking
-        (unwind-protect
-            (progn
-              (save-excursion
-                (goto-char (marker-position futon3c-chat--prompt-marker))
-                (insert (propertize "claude is thinking...\n"
-                                    'face 'futon3c-chat-thinking-face
-                                    'futon3c-thinking t)))
-              (redisplay)
-              (let ((response (futon3c-chat--call-claude trimmed)))
-                (futon3c-chat--remove-thinking)
-                (futon3c-chat--insert-message "claude" response)))
-          ;; ALWAYS: remove stale thinking indicator
-          (futon3c-chat--remove-thinking))
-        ;; ALWAYS: cursor at input, pinned at bottom
-        (goto-char (point-max))
-        (futon3c-chat--scroll-to-bottom)))))
+        (save-excursion
+          (goto-char (marker-position futon3c-chat--prompt-marker))
+          (insert (propertize "claude is thinking...\n"
+                              'face 'futon3c-chat-thinking-face
+                              'futon3c-thinking t)))
+        (redisplay)
+        (condition-case err
+            (setq futon3c-chat--pending-process
+                  (futon3c-chat--call-claude-async
+                   trimmed
+                   (lambda (response)
+                     (when (buffer-live-p chat-buffer)
+                       (with-current-buffer chat-buffer
+                         (futon3c-chat--remove-thinking)
+                         (futon3c-chat--insert-message "claude" response)
+                         (goto-char (point-max))
+                         (futon3c-chat--scroll-to-bottom))))))
+          (error
+           (setq futon3c-chat--pending-process nil)
+           (futon3c-chat--remove-thinking)
+           (futon3c-chat--insert-message
+            "claude"
+            (format "[Error launching claude process: %s]"
+                    (error-message-string err)))))))))
 
 ;;; Mode
 
@@ -201,6 +239,9 @@ Type after the prompt, RET to send.
 (defun futon3c-chat-clear ()
   "Clear display and re-draw header. Session continues."
   (interactive)
+  (when (process-live-p futon3c-chat--pending-process)
+    (kill-process futon3c-chat--pending-process)
+    (setq futon3c-chat--pending-process nil))
   (erase-buffer)
   (futon3c-chat--init))
 

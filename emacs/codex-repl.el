@@ -2,7 +2,7 @@
 
 ;; Author: Codex + Joe
 ;; Description: Emacs chat buffer backed by `codex exec --json`.
-;; Synchronous: type, RET, Codex responds. No polling.
+;; Asynchronous: type, RET, Codex responds without blocking Emacs UI.
 ;; Session continuity via Codex thread id + `codex exec resume <id>`.
 ;;
 ;; Usage:
@@ -86,6 +86,8 @@ Set to nil to use the Codex CLI/user config default."
 (defvar-local codex-repl--input-start nil)
 (defvar-local codex-repl--separator-start nil
   "Marker at start of the separator line above prompt.")
+(defvar-local codex-repl--pending-process nil
+  "Current in-flight Codex subprocess for this REPL buffer.")
 
 (defun codex-repl--refresh-session-header (&optional buffer)
   "Refresh session text in BUFFER header (defaults to current buffer)."
@@ -225,6 +227,50 @@ Returns plist: (:session-id sid :text response :error err)."
                     exit-code
                     (string-trim (or err response)))))))))
 
+(defun codex-repl--call-codex-async (text callback)
+  "Call `codex exec --json` with TEXT asynchronously.
+Invoke CALLBACK with the final response text."
+  (let* ((args (codex-repl--build-codex-args codex-repl-session-id))
+         (repl-buffer (current-buffer))
+         (outbuf (generate-new-buffer " *codex-repl-codex*"))
+         (process-environment process-environment)
+         (proc nil)
+         (payload (if (string-suffix-p "\n" text) text (concat text "\n"))))
+    (setq proc
+          (make-process
+           :name "codex-repl-codex"
+           :buffer outbuf
+           :command (cons codex-repl-codex-command args)
+           :noquery t
+           :connection-type 'pipe
+           :sentinel
+           (lambda (p _event)
+             (when (memq (process-status p) '(exit signal))
+               (let* ((exit-code (process-exit-status p))
+                      (raw (with-current-buffer (process-buffer p)
+                             (buffer-string)))
+                      (parsed (codex-repl--parse-codex-json-output raw))
+                      (sid (plist-get parsed :session-id))
+                      (response (plist-get parsed :text))
+                      (err (plist-get parsed :error))
+                      (final-text (if (= exit-code 0)
+                                      (string-trim response)
+                                    (format "[Error (exit %d): %s]"
+                                            exit-code
+                                            (string-trim (or err response))))))
+                 (when (and (stringp sid) (not (string-empty-p sid)))
+                   (codex-repl--persist-session-id! sid))
+                 (when (buffer-live-p (process-buffer p))
+                   (kill-buffer (process-buffer p)))
+                 (when (buffer-live-p repl-buffer)
+                   (with-current-buffer repl-buffer
+                     (when (eq codex-repl--pending-process p)
+                       (setq codex-repl--pending-process nil))
+                     (funcall callback final-text))))))))
+    (process-send-string proc payload)
+    (process-send-eof proc)
+    proc))
+
 ;;; Display
 
 (defun codex-repl--insert-message (name text)
@@ -269,27 +315,40 @@ Returns plist: (:session-id sid :text response :error err)."
 (defun codex-repl-send-input ()
   "Send input to Codex and display response."
   (interactive)
+  (when (process-live-p codex-repl--pending-process)
+    (user-error "Codex is still responding; wait for current turn to finish"))
   (let ((text (buffer-substring-no-properties
                (marker-position codex-repl--input-start)
                (point-max))))
     (when (not (string-empty-p (string-trim text)))
-      (let ((trimmed (string-trim text)))
+      (let ((trimmed (string-trim text))
+            (repl-buffer (current-buffer)))
         (delete-region (marker-position codex-repl--input-start) (point-max))
         (codex-repl--insert-message "joe" trimmed)
-        (unwind-protect
-            (progn
-              (save-excursion
-                (goto-char (marker-position codex-repl--prompt-marker))
-                (insert (propertize "codex is thinking...\n"
-                                    'face 'codex-repl-thinking-face
-                                    'codex-repl-thinking t)))
-              (redisplay)
-              (let ((response (codex-repl--call-codex trimmed)))
-                (codex-repl--remove-thinking)
-                (codex-repl--insert-message "codex" response)))
-          (codex-repl--remove-thinking))
-        (goto-char (point-max))
-        (codex-repl--scroll-to-bottom)))))
+        (save-excursion
+          (goto-char (marker-position codex-repl--prompt-marker))
+          (insert (propertize "codex is thinking...\n"
+                              'face 'codex-repl-thinking-face
+                              'codex-repl-thinking t)))
+        (redisplay)
+        (condition-case err
+            (setq codex-repl--pending-process
+                  (codex-repl--call-codex-async
+                   trimmed
+                   (lambda (response)
+                     (when (buffer-live-p repl-buffer)
+                       (with-current-buffer repl-buffer
+                         (codex-repl--remove-thinking)
+                         (codex-repl--insert-message "codex" response)
+                         (goto-char (point-max))
+                         (codex-repl--scroll-to-bottom))))))
+          (error
+           (setq codex-repl--pending-process nil)
+           (codex-repl--remove-thinking)
+           (codex-repl--insert-message
+            "codex"
+            (format "[Error launching codex process: %s]"
+                    (error-message-string err)))))))))
 
 ;;; Mode
 
@@ -311,6 +370,9 @@ Type after the prompt, RET to send.
 (defun codex-repl-clear ()
   "Clear display and re-draw header. Session continues."
   (interactive)
+  (when (process-live-p codex-repl--pending-process)
+    (kill-process codex-repl--pending-process)
+    (setq codex-repl--pending-process nil))
   (erase-buffer)
   (codex-repl--init))
 
