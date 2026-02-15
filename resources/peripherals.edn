@@ -60,4 +60,12 @@
    :peripheral/scope :full-codebase
    :peripheral/entry #{:from-explore :user-request :from-any}
    :peripheral/exit #{:cycle-completed :blocked :hop-reflect :hop-explore :user-request}
-   :peripheral/context {:session-id :inherit :problem-id :from-explore}}}}
+   :peripheral/context {:session-id :inherit :problem-id :from-explore}}
+
+  :chat
+  {:peripheral/id :chat
+   :peripheral/tools #{}
+   :peripheral/scope :irc-rooms
+   :peripheral/entry #{:default :from-any :user-request}
+   :peripheral/exit #{:user-request :hop-explore :hop-edit :hop-reflect}
+   :peripheral/context {:session-id :inherit :channel :from-irc}}}}

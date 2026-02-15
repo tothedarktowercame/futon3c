@@ -243,3 +243,82 @@ Checkpoints 1+4 ran in parallel, then 2+3 in parallel.
 These limitations map to M-transport-adapters and M-dispatch-peripheral-bridge
 dependencies — the phenomenological behavior is demonstrated, but full
 structural enforcement requires the transport layer that futon3c is building.
+
+---
+
+## Transport Pivot Gate: IRC + Emacs Chat
+
+Date: 2026-02-15
+Session: db112a88-2170-45c6-9071-d32a7f14a308
+Invariant: **I-transport-pivot** (joe+claude, bidirectional, shared session)
+
+### What Was Proven
+
+Joe and Claude maintained a single conversation across two transports:
+
+1. **Emacs chat** (`futon3c-chat.el`) — custom Emacs buffer backed by
+   `claude -p --session-id <uuid>` / `claude -p --resume <uuid>`
+2. **IRC** (`irc_claude_relay.clj`) — futon3c IRC server on :6667,
+   relay calls `claude -p --resume <uuid>` with transport-aware system prompt
+
+Both transports target the same Claude session via `--resume <session-id>`.
+Claude responds on whichever transport the message arrives on. The session
+ID is persisted to `/tmp/futon-session-id` and shared between transports.
+
+### Evidence
+
+- **Emacs → Claude**: Joe chatted with Claude in `*futon3c-chat*`. Claude
+  correctly identified the Emacs transport and discussed the codebase.
+- **IRC → Claude**: Joe connected via ERC from Oxford laptop to Linode IRC
+  server in London. Claude responded on IRC with awareness of the transport
+  switch ("Your message came through clearly").
+- **Session continuity**: Claude on IRC referenced the Emacs conversation
+  context. Same session ID confirmed on both sides.
+- **Bidirectional IRC**: Joe's messages relayed to Claude, Claude's responses
+  delivered back to `#futon` as PRIVMSG lines.
+- **Claude self-diagnosed a bug**: The IRC Claude identified that multi-line
+  responses needed to be split into individual PRIVMSG lines (ERC home buffer
+  leak). Fix applied to relay.
+
+### Architecture
+
+```
+Joe (Emacs chat)  --claude -p --resume UUID-->  Claude session db112a88
+Joe (ERC/Oxford)  --IRC :6667-->  relay --claude -p --resume UUID-->  same session
+```
+
+- `emacs/futon3c-chat.el`: synchronous `call-process` to `claude -p`
+- `scripts/irc_claude_relay.clj`: IRC server + `clojure.java.shell/sh` to
+  `claude -p`, serial processing via Clojure agent
+- Transport metadata: `--append-system-prompt` injects transport context
+  (emacs-chat vs irc) so Claude knows which interface is active
+- Dynamic modeline: Emacs chat probes port 6667 to report IRC availability
+
+### Fixes Applied During Gate
+
+1. Marker insertion type bug — `prompt-marker` advancing past separator during
+   init (set type `t` after init inserts, not before)
+2. `--continue` vs `--resume` — `--continue` targets most recent session
+   (wrong Claude); `--resume <uuid>` targets the specific shared session
+3. `--permission-mode bypassPermissions` — required for non-interactive
+   `claude -p` invocation
+4. ProcessBuilder stdio deadlock — switched to `clojure.java.shell/sh` for
+   proper stream gobbling
+5. Multi-line PRIVMSG split — IRC requires one line per PRIVMSG
+
+### Grading
+
+- [x] Joe sends message from Emacs, Claude responds in Emacs
+- [x] Joe sends message from IRC, Claude responds on IRC
+- [x] Same Claude session across both transports (shared session ID)
+- [x] Claude aware of which transport is active (system prompt injection)
+- [x] Transport switch is transparent to Claude (drawbridge pattern)
+- [x] Virtual nick "claude" visible in IRC NAMES/WHO
+
+### Status: **PASS**
+
+### Next Step
+
+Codex parity — build Codex-side peripheral/relay so three-way conversation
+(Joe + Claude + Codex) works across IRC. Requires Codex to have its own
+IRC relay or WS bridge with the same session-targeting pattern.

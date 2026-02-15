@@ -38,7 +38,7 @@
   (testing "load-peripherals loads from classpath and returns expected format"
     (let [p (reg/load-peripherals)]
       (is (map? (:peripherals p)))
-      (is (= #{:explore :edit :test :deploy :reflect :proof}
+      (is (= #{:explore :edit :test :deploy :reflect :proof :chat}
              (set (keys (:peripherals p))))))))
 
 ;; =============================================================================

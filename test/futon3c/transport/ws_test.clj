@@ -92,6 +92,7 @@
         (is (some? conn))
         (is (false? (:connected? conn)))
         (is (= ch (:channel conn)))
+        (is (= :websocket (:transport conn)) "connection records transport type")
         (is (string? (:opened-at conn)))))))
 
 (deftest ws-open-extracts-params-from-request-uri

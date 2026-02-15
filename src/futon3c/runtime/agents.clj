@@ -99,11 +99,11 @@
   [opts]
   (ws/make-ws-callbacks
    (merge (runtime-config opts)
-          (select-keys opts [:send-fn :close-fn :on-connect :on-disconnect]))))
+          (select-keys opts [:send-fn :close-fn :on-connect :on-disconnect :irc-interceptor]))))
 
 (defn make-ws-handler
   "Create an http-kit WS handler from live runtime state."
   [opts]
   (ws/make-ws-handler
    (merge (runtime-config opts)
-          (select-keys opts [:send-fn :close-fn :on-connect :on-disconnect]))))
+          (select-keys opts [:send-fn :close-fn :on-connect :on-disconnect :irc-interceptor]))))

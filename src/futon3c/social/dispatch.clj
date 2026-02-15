@@ -30,7 +30,7 @@
 
 (def ^:private valid-peripheral-ids
   "Set of valid PeripheralId values."
-  #{:explore :edit :test :deploy :reflect})
+  #{:explore :edit :test :deploy :reflect :proof :chat})
 
 (defn select-peripheral
   "Given agent type and message payload, choose starting peripheral.

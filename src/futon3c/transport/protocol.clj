@@ -259,6 +259,21 @@
                :msg/to to-id
                :msg/at (now-str)}))
 
+          (= "irc_response" (str frame-type))
+          (let [channel (:channel parsed)
+                text (:text parsed)]
+            (cond
+              (or (nil? channel) (not (string? channel)))
+              (transport-error :invalid-frame "irc_response frame missing 'channel'")
+
+              (or (nil? text) (not (string? text)))
+              (transport-error :invalid-frame "irc_response frame missing 'text'")
+
+              :else
+              {:ws/type :irc-response
+               :irc/channel channel
+               :irc/text text}))
+
           :else
           (transport-error :invalid-frame
                            (str "Unknown WS frame type: " frame-type)
@@ -373,3 +388,13 @@
    Sent by the server after successful readiness handshake (R7)."
   []
   (json/generate-string {"type" "ready_ack"}))
+
+(defn render-irc-message
+  "Render an IRC message as a WS frame for relay to an agent.
+   Sent when a human posts a PRIVMSG in an IRC channel the agent is in."
+  [channel from text]
+  (json/generate-string {"type" "irc_message"
+                          "channel" channel
+                          "from" from
+                          "text" text
+                          "transport" "irc"}))

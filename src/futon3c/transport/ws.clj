@@ -81,6 +81,8 @@
      :close-fn      — (fn [ch]) for closing connection (default: hk/close)
      :on-connect    — (fn [agent-id]) optional hook after successful handshake
      :on-disconnect — (fn [agent-id]) optional hook after close of connected session
+     :irc-interceptor — (fn [ch conn parsed]) optional hook for IRC relay frames;
+                        if it returns truthy, normal dispatch is skipped
 
    Returns:
      {:on-open    (fn [ch request])  — call on WebSocket upgrade
@@ -94,7 +96,8 @@
         registry (:registry config)
         patterns (:patterns config)
         on-connect-hook (:on-connect config)
-        on-disconnect-hook (:on-disconnect config)]
+        on-disconnect-hook (:on-disconnect config)
+        irc-interceptor (:irc-interceptor config)]
 
     {:connections !connections
 
@@ -108,6 +111,7 @@
                     :agent-id (:agent-id params)
                     :session-id (:session-id params)
                     :connected? false
+                    :transport :websocket
                     :opened-at (now-str)}]
          (swap! !connections assoc ch state)))
 
@@ -125,7 +129,15 @@
            (let [parsed (proto/parse-ws-message data)]
              (if (error? parsed)
                (send-fn ch (proto/render-ws-frame parsed))
-               (case (:ws/type parsed)
+               (cond
+                 ;; --- IRC interceptor (relay frames) ---
+                 (and irc-interceptor
+                      (= :irc-response (:ws/type parsed))
+                      (:connected? conn))
+                 (irc-interceptor ch conn parsed)
+
+                 :else
+                 (case (:ws/type parsed)
 
                  ;; --- Readiness handshake (R7) ---
                  :ready
@@ -180,7 +192,7 @@
                  (send-fn ch (proto/render-ws-frame
                               (transport-error :invalid-frame
                                                (str "Unexpected frame type: "
-                                                    (:ws/type parsed)))))))))))
+                                                    (:ws/type parsed))))))))))))
 
      ;; -- on-close --
      ;; L2: only run disconnect cleanup when transitioning from :connected
