@@ -5,7 +5,6 @@
    and transfers context across boundaries. Pure functions; no side effects."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.string :as str]
             [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]))
 
@@ -82,11 +81,12 @@
       (contains? entry-set (keyword (str "from-" (name current-id))))
       (and user-request? (contains? entry-set :user-request))))
 
-(defn- infer-exit-condition
+(defn- resolve-exit-condition
   "Resolve exit condition from a hop request.
+   Requires explicit :hop/exit-condition — no substring inference.
    Priority: 1) :hop/exit-condition (top-level, preferred)
              2) :hop/context {:hop/exit-condition ...} (nested, backwards compat)
-             3) substring inference from :hop/reason (deprecated fallback)"
+   Returns keyword or nil."
   [hop-request]
   (let [top-level (:hop/exit-condition hop-request)
         ctx (:hop/context hop-request)
@@ -94,22 +94,7 @@
     (cond
       (keyword? top-level) top-level
       (keyword? nested) nested
-      :else
-      ;; Deprecated fallback: substring inference from :hop/reason.
-      ;; Callers should migrate to :hop/exit-condition.
-      (let [r (str/lower-case (or (:hop/reason hop-request) ""))]
-        (cond
-          (str/includes? r "user request") :user-request
-          (str/includes? r "found target") :found-target
-          (str/includes? r "target file") :found-target
-          (str/includes? r "ready to edit") :ready-to-edit
-          (str/includes? r "tests pass") :tests-pass
-          (str/includes? r "tests passed") :tests-passed
-          (str/includes? r "reflect") :hop-reflect
-          (str/includes? r "deploy") :hop-deploy
-          (str/includes? r "test") :hop-test
-          (str/includes? r "edit") :hop-edit
-          :else nil)))))
+      :else nil)))
 
 (defn validate-hop
   "Validate a hop request: is this transition allowed?
@@ -141,7 +126,7 @@
         :else
         (let [entry (:peripheral/entry to-spec)
               exit (:peripheral/exit from-spec)
-              exit-cond (infer-exit-condition hop-request)
+              exit-cond (resolve-exit-condition hop-request)
               user-request? (= :user-request exit-cond)
               entry-ok? (and (set? entry) (entry-allows? entry current-peripheral-id user-request?))
               ;; Overrides are only active when the hop is actually a user-request hop.

@@ -59,6 +59,15 @@
                   (shapes/valid? shapes/SocialError result))
               (str "Unexpected result shape: " result)))))))
 
+(deftest nil-registry-returns-social-error
+  (testing "nil registry returns SocialError with :registry-missing (I3 enforcement)"
+    (let [conn (fix/make-connection {:conn/agent-id (fix/make-agent-id "claude-1" :continuity)
+                                     :conn/metadata {:ready true}})
+          result (presence/verify conn nil)]
+      (fix/assert-valid! shapes/SocialError result)
+      (is (= :S-presence (:error/component result)))
+      (is (= :registry-missing (:error/code result))))))
+
 (deftest verify-does-not-modify-registry
   (testing "verify reads registry but does not modify it"
     (let [registry (fix/mock-registry)

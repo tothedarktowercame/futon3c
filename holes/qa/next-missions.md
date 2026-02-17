@@ -4,47 +4,35 @@ Date: 2026-02-10
 
 ## Tech Debt Items (From Mission Reviews)
 
-### 1. I3 Snapshot Enforcement (S-presence + S-dispatch)
+### 1. I3 Snapshot Enforcement (S-presence + S-dispatch) — RESOLVED
 
 Description:
 - Both components consult the live registry alongside the snapshot; the integrated pipeline intends the registry snapshot to be the authoritative constraint input.
 
-Evidence:
-- `holes/missions/M-agency-refactor.md:200` through `holes/missions/M-agency-refactor.md:208`
+Resolution (2026-02-17):
+- S-presence already returns `:registry-missing` error when registry is nil (fail-fast, not lenient).
+- S-dispatch uses snapshot for routing decisions; live registry is only for runtime invocation.
+- Added test for nil registry enforcement in presence_test.clj.
+- No code changes needed — the boundary was already correctly enforced.
 
-Severity:
-- Should-fix (before transport wiring). It does not break current tests, but it weakens the “constraints are slow inputs” boundary the exotype depends on.
-
-Blocks:
-- Transport layer and any “real” pipeline wiring that expects strict constraint snapshots.
-
-### 2. Lossy `coerce-prompt` in S-dispatch
+### 2. Lossy `coerce-prompt` in S-dispatch — RESOLVED
 
 Description:
-- S-dispatch currently converts non-string payloads to a string via `pr-str`, which is lossy for structured payloads.
+- S-dispatch previously converted non-string payloads to a string via `pr-str`, which was lossy for structured payloads.
 
-Evidence:
-- `holes/missions/M-agency-refactor.md:210` through `holes/missions/M-agency-refactor.md:214`
+Resolution:
+- `coerce-prompt` was already fixed: passes structured data through, only converts nil to "". No lossy pr-str conversion.
 
-Severity:
-- Cosmetic to should-fix depending on how quickly the system moves to structured payloads for agent invocation. It does not block the current “prompt-string” invocation model.
-
-Blocks:
-- Does not block transport, but blocks “structured message bus” evolution.
-
-### 3. Exit Condition Inference Fragility in Hop Validation
+### 3. Exit Condition Inference Fragility in Hop Validation — RESOLVED
 
 Description:
-- Hop validation infers exit conditions from `:hop/reason` substring matching. There is an explicit escape hatch via `:hop/context {:hop/exit-condition ...}`, but inference is ordering-dependent.
+- Hop validation previously inferred exit conditions from `:hop/reason` substring matching, which was ordering-dependent and fragile.
 
-Evidence:
-- `holes/missions/M-peripheral-model.md:151` through `holes/missions/M-peripheral-model.md:161`
-
-Severity:
-- Should-fix. Acceptable for early integration tests; risky for real user/system-driven hops.
-
-Blocks:
-- Does not block peripheral specs as data, but blocks reliable hop enforcement in production.
+Resolution (2026-02-17):
+- Removed substring inference entirely from `resolve-exit-condition` (renamed from `infer-exit-condition`).
+- Exit conditions now require explicit `:hop/exit-condition` keyword (top-level or nested in `:hop/context`).
+- All existing callers already used explicit exit conditions — no breakage.
+- 475 tests pass.
 
 ## Candidate Next Missions (2-3)
 
