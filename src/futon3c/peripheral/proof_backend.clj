@@ -12,7 +12,8 @@
 
    Standard tools (:read, :glob, :grep, :bash, :bash-readonly, :write)
    are delegated to RealBackend."
-  (:require [clojure.edn :as edn]
+  (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set]
             [clojure.string :as str]
@@ -454,6 +455,66 @@
         (proof-error :cycle-not-found (str "Cycle " cycle-id " not found")))
       (proof-error :not-found (str "No proof state for " problem-id)))))
 
+(defn- tool-corpus-check
+  "Query futon3a's ANN index for structurally similar patterns/wiring diagrams.
+   Args: [query-text & {:keys [top-k method]}]
+     query-text — framing assumption, structural obstruction, or approach string
+     top-k — number of neighbors to return (default 5)
+     method — :embeddings, :keywords, or :auto (default :auto)
+   Returns: {:neighbors [...] :query query-text :method method}
+
+   Currently delegates to futon3a's notions_search.py (MiniLM text embeddings).
+   When superpod wiring diagram embeddings are available, this gains a
+   :wiring-diagrams method via the same futon3a search interface."
+  [_cache _cwd args config]
+  (let [query-text (first args)
+        opts (or (second args) {})
+        top-k (or (:top-k opts) 5)
+        method (or (:method opts) :auto)
+        ;; Resolve futon3a paths from config or defaults
+        futon3a-root (or (:futon3a-root config)
+                         (let [home (System/getProperty "user.home")]
+                           (str home "/code/futon3a")))
+        search-script (str futon3a-root "/scripts/notions_search.py")
+        embeddings-path (or (:futon3a-embeddings config)
+                            (str futon3a-root "/resources/notions/minilm_pattern_embeddings.json"))
+        python (or (:futon3a-python config) "python3")]
+    (cond
+      (or (nil? query-text) (str/blank? query-text))
+      (proof-error :invalid-query "corpus-check requires a non-empty query string")
+
+      (not (.exists (io/file search-script)))
+      (proof-error :corpus-unavailable
+                   (str "futon3a search script not found: " search-script
+                        ". Set :futon3a-root in proof backend config."))
+
+      :else
+      (try
+        (let [pb (ProcessBuilder.
+                   [python search-script
+                    "--query" (str query-text)
+                    "--top" (str top-k)
+                    "--embeddings" embeddings-path
+                    "--json"])
+              _ (.redirectErrorStream pb true)
+              proc (.start pb)
+              output (slurp (.getInputStream proc))
+              exit-code (.waitFor proc)]
+          (if (zero? exit-code)
+            (let [results (try (json/read-str output :key-fn keyword)
+                               (catch Exception _ []))]
+              {:ok true
+               :result {:neighbors (if (sequential? results) results [results])
+                        :query query-text
+                        :method method
+                        :top-k top-k
+                        :source :futon3a}})
+            (proof-error :corpus-search-failed
+                         (str "Search returned exit code " exit-code ": " output))))
+        (catch Exception e
+          (proof-error :corpus-search-failed
+                       (str "corpus-check failed: " (.getMessage e))))))))
+
 ;; =============================================================================
 ;; ProofBackend record
 ;; =============================================================================
@@ -465,7 +526,8 @@
     :dag-check :dag-impact
     :canonical-get :canonical-update
     :cycle-begin :cycle-advance :cycle-get :cycle-list
-    :failed-route-add :status-validate :gate-check})
+    :failed-route-add :status-validate :gate-check
+    :corpus-check})
 
 (def delegated-tools
   "Tools delegated to the wrapped RealBackend."
@@ -492,6 +554,7 @@
         (= tool-id :failed-route-add) (tool-failed-route-add cache cwd args)
         (= tool-id :status-validate)  (tool-status-validate cache cwd args)
         (= tool-id :gate-check)       (tool-gate-check cache cwd args)
+        (= tool-id :corpus-check)     (tool-corpus-check cache cwd args config)
 
         ;; Delegated tools
         (contains? delegated-tools tool-id)

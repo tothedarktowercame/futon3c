@@ -351,3 +351,29 @@
 (deftest dag-dangling-refs
   (let [ledger {"A" {:item/id "A" :item/depends-on #{"MISSING"} :item/unlocks #{}}}]
     (is (= #{"MISSING"} (dag/dangling-refs ledger)))))
+
+;; =============================================================================
+;; Corpus check
+;; =============================================================================
+
+(deftest corpus-check-rejects-empty-query
+  (let [{:keys [backend]} (make-test-backend)
+        result (tools/execute-tool backend :corpus-check [""])]
+    (is (not (:ok result)))
+    (is (= :invalid-query (get-in result [:error :code])))))
+
+(deftest corpus-check-rejects-nil-query
+  (let [{:keys [backend]} (make-test-backend)
+        result (tools/execute-tool backend :corpus-check [nil])]
+    (is (not (:ok result)))
+    (is (= :invalid-query (get-in result [:error :code])))))
+
+(deftest corpus-check-reports-missing-futon3a
+  (let [dir (fix/temp-dir!)
+        backend (pb/make-proof-backend {:cwd dir
+                                        :futon3a-root "/nonexistent/futon3a"}
+                                       (tools/make-mock-backend))
+        result (tools/execute-tool backend :corpus-check
+                 ["Cameron-Martin quasi-invariance for Phi^4_3 measure"])]
+    (is (not (:ok result)))
+    (is (= :corpus-unavailable (get-in result [:error :code])))))

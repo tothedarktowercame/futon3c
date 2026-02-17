@@ -66,6 +66,7 @@
    :failed-route-add :action
    :status-validate :observe
    :gate-check :observe
+   :corpus-check :observe
    :read :observe
    :glob :observe
    :grep :observe
@@ -175,10 +176,10 @@
    Enforcement is structural: tools outside this set are rejected.
    :cycle-advance and :cycle-get are available in all active phases
    (they are the mechanism for phase transitions and inspection)."
-  {:observe   #{:ledger-query :dag-impact :read :grep :glob :bash-readonly
-                :cycle-advance :cycle-get}
-   :propose   #{:ledger-query :dag-impact :read :grep :glob :bash-readonly
-                :cycle-advance :cycle-get}
+  {:observe   #{:ledger-query :dag-impact :corpus-check :read :grep :glob
+                :bash-readonly :cycle-advance :cycle-get}
+   :propose   #{:ledger-query :dag-impact :corpus-check :read :grep :glob
+                :bash-readonly :cycle-advance :cycle-get}
    :execute   #{:read :write :bash :glob :grep
                 :cycle-advance :cycle-get}
    :validate  #{:read :bash :bash-readonly :glob :grep
