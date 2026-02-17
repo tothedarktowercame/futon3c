@@ -77,9 +77,10 @@ Status categories:
 | Component | Source | Target | Blocking? |
 |---|---|---|---|
 | ~~Forum service~~ | ~~`futon3/src/futon3/forum/` (3 files, 776 LOC)~~ | ~~futon3c~~ | **OBSOLETE** — superseded by evidence landscape (store + threads + validate). See TN-forum-to-evidence-landscape.md |
-| ~~Drawbridge routing~~ | ~~`futon3/src/futon3/drawbridge/` (3 files, 1577 LOC)~~ | ~~futon3c~~ | **~80% OBSOLETE** — routing replaced by S-dispatch + transport adapters; IRC relay by `make-relay-bridge`; agent subprocess spawning now a peripheral concern. Genuine gaps: agency bell handlers (standup/PAR/test-bell), HTTP REST API. No MUSN drawbridge exists. |
-| Agent invokes | `futon3/src/futon3/agency/invokes.clj` (329 LOC) | futon3c | Depends on dispatch |
-| Disk persistence | N/A (new) | futon3c | XTDB/futon1a integration |
+| ~~Drawbridge routing~~ | ~~`futon3/src/futon3/drawbridge/` (3 files, 1577 LOC)~~ | ~~futon3c~~ | **~80% OBSOLETE** — routing replaced by S-dispatch + transport adapters; IRC relay by `make-relay-bridge`; agent subprocess spawning now a peripheral concern. Bell handler gap filled by `bells.clj`. Remaining gap: HTTP REST API (if needed). |
+| ~~Agent invokes~~ | ~~`futon3/src/futon3/agency/invokes.clj` (329 LOC)~~ | ~~futon3c~~ | **OBSOLETE FOR NOW** — subprocess spawning superseded by peripheral architecture. JSON streaming + timeout patterns already present in futon3c (`real_backend.clj`, `irc_codex_relay.clj`). May revisit if Codex subagent support needed, but that would be peripheral-aware, not naked subprocess spawn. |
+| Disk persistence | N/A (new) | futon3c | Evidence landscape durable backend. Needed to replace both Labs and Forums with a unified evidence medium integrating PSR/PUR/PAR. XTDB or futon1a. |
+| ~~MUSN~~ | ~~`futon3/src/futon3/musn/`~~ | ~~futon3c~~ | **LARGELY SUPERSEDED** by evidence landscape. Agent modelines (AIF stats display) still interesting — natural home for gate progress, pattern usage, session vitals. Fully superseded in the Gauntlet mission. |
 | L1 observer | Referenced in exotype | futon3c or futon3b | Glacial timescale |
 
 ## Test Summary
