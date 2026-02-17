@@ -74,8 +74,8 @@ Status categories:
 
 | Component | Source | Target | Blocking? |
 |---|---|---|---|
-| Forum service | `futon3/src/futon3/forum/` (3 files, 776 LOC) | futon3c | No blockers |
-| Drawbridge routing | `futon3/src/futon3/drawbridge/` (3 files, 1577 LOC) | futon3c | Depends on forum |
+| ~~Forum service~~ | ~~`futon3/src/futon3/forum/` (3 files, 776 LOC)~~ | ~~futon3c~~ | **OBSOLETE** — superseded by evidence landscape (store + threads + validate). See TN-forum-to-evidence-landscape.md |
+| ~~Drawbridge routing~~ | ~~`futon3/src/futon3/drawbridge/` (3 files, 1577 LOC)~~ | ~~futon3c~~ | **~80% OBSOLETE** — routing replaced by S-dispatch + transport adapters; IRC relay by `make-relay-bridge`; agent subprocess spawning now a peripheral concern. Genuine gaps: agency bell handlers (standup/PAR/test-bell), HTTP REST API. No MUSN drawbridge exists. |
 | Agent invokes | `futon3/src/futon3/agency/invokes.clj` (329 LOC) | futon3c | Depends on dispatch |
 | Disk persistence | N/A (new) | futon3c | XTDB/futon1a integration |
 | L1 observer | Referenced in exotype | futon3c or futon3b | Glacial timescale |
