@@ -61,7 +61,7 @@ Status categories:
 | Transport pivot (Emacs + IRC) | PASS | Bidirectional joe+claude, shared session |
 | Three-way chat (joe+claude+codex) | PASS | @-mention gated routing |
 | P-4/P-6 structural closure | PASS | Chain + relay tests; 479 tests, 1540 assertions |
-| IRC standup bell | PASS | On-demand multi-agent rendezvous; 494 tests, 1604 assertions |
+| IRC standup bell | STRUCTURAL | Wiring tested (12 tests); awaiting live demo to sign |
 
 ## Emacs UI Layer
 

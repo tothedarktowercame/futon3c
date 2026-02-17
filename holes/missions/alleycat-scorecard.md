@@ -11,7 +11,7 @@ Race token: 7285397f (planted in .alleycat-drop/spoke-alpha.txt)
   - Transport pivot gate (Joe + Claude, Emacs + IRC)
   - Three-way chat gate (Joe + Claude + Codex, @-mention gated)
   - Transport-native P-4/P-6 structural closure (479 tests, 1540 assertions)
-  - IRC standup bell — on-demand multi-agent rendezvous (494 tests, 1604 assertions)
+  - IRC standup bell — on-demand multi-agent rendezvous (AWAITING LIVE DEMO)
 
 ## Purpose
 
@@ -510,6 +510,19 @@ All agents present, conversation begins
   programmatically — the coordination primitive needed for daily standups,
   ad-hoc reviews, and any "everyone in the room" scenario.
 
-### Status: **PASS**
+### Status: **STRUCTURAL — AWAITING LIVE DEMO**
 
-494 tests, 1604 assertions, 0 failures.
+Unit tests prove the wiring: registry lookup, virtual nick join, relay bridge
+integration, evidence emission, error handling. But the gate is not signed until
+a real standup happens — Joe rings the bell, agents appear in an IRC room,
+and a co-present conversation takes place.
+
+**To sign this gate:**
+1. Start IRC server + relay bridges for Claude and Codex
+2. Register both agents in the registry
+3. Joe calls `ring-standup!` (or an Emacs command that wraps it)
+4. Verify: both agents appear in `#standup` (visible in ERC NAMES)
+5. Joe sends a message, agents respond in real time
+6. Evidence trail shows bell-ring + arrivals + conversation
+
+494 tests, 1604 assertions, 0 failures (structural).
