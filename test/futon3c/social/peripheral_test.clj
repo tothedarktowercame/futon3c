@@ -5,11 +5,11 @@
             [futon3c.social.test-fixtures :as fix]))
 
 (deftest load-peripherals-loads-all
-  (testing "load-peripherals loads 8 peripherals and all validate"
+  (testing "load-peripherals loads 9 peripherals and all validate"
     (let [result (p/load-peripherals "resources/peripherals.edn")]
       (is (map? result))
       (is (contains? result :peripherals))
-      (is (= 8 (count (:peripherals result))))
+      (is (= 9 (count (:peripherals result))))
       (doseq [[_ spec] (:peripherals result)]
         (fix/assert-valid! shapes/PeripheralSpec spec)))))
 

@@ -394,13 +394,13 @@
         ;; Constraints have allowed tools
         (is (seq (:allowed-tools constraints))
             (str "no allowed tools for " pid))
-        ;; Mapping has at least one entry (except reflect which has :musn-log with no Claude equivalent)
-        (when (not= pid :reflect)
+        ;; Mapping has at least one entry (except reflect/:alfworld which have tools with no Claude/Codex equivalent)
+        (when-not (#{:reflect :alfworld} pid)
           (is (seq claude-mapping)
               (str "empty Claude mapping for " pid)))
-        ;; Codex parity: codex mapping should exist for every peripheral, including reflect.
-        (is (seq codex-mapping)
-            (str "empty Codex mapping for " pid))))))
+        (when-not (#{:alfworld} pid)
+          (is (seq codex-mapping)
+              (str "empty Codex mapping for " pid)))))))
 
 ;; =============================================================================
 ;; 10. ← verification detects violations on real peripherals

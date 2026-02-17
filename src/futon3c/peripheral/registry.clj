@@ -10,6 +10,7 @@
    to the hop protocol that governs peripheral transitions."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [futon3c.peripheral.alfworld :as alfworld]
             [futon3c.peripheral.discipline :as discipline]
             [futon3c.peripheral.deploy :as deploy]
             [futon3c.peripheral.edit :as edit]
@@ -24,17 +25,18 @@
 
 (def peripheral-ids
   "Set of all known peripheral IDs."
-  #{:explore :edit :test :deploy :reflect :proof :discipline})
+  #{:explore :edit :test :deploy :reflect :proof :discipline :alfworld})
 
 (def ^:private factories
   "Maps peripheral-id to its factory function."
-  {:explore explore/make-explore
-   :edit    edit/make-edit
-   :test    test-runner/make-test-runner
-   :deploy  deploy/make-deploy
-   :reflect reflect/make-reflect
-   :proof   proof/make-proof
-   :discipline discipline/make-discipline})
+  {:explore    explore/make-explore
+   :edit       edit/make-edit
+   :test       test-runner/make-test-runner
+   :deploy     deploy/make-deploy
+   :reflect    reflect/make-reflect
+   :proof      proof/make-proof
+   :discipline discipline/make-discipline
+   :alfworld   alfworld/make-alfworld})
 
 (defn make-peripheral
   "Create a PeripheralRunner for the given peripheral-id.

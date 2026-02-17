@@ -76,4 +76,13 @@
    :peripheral/scope :irc-rooms
    :peripheral/entry #{:default :from-any :user-request}
    :peripheral/exit #{:user-request :hop-explore :hop-edit :hop-reflect}
-   :peripheral/context {:session-id :inherit :channel :from-irc}}}}
+   :peripheral/context {:session-id :inherit :channel :from-irc}}
+
+  :alfworld
+  {:peripheral/id :alfworld
+   :peripheral/tools #{:alfworld-action :bell :whistle}
+   :peripheral/scope :alfworld-simulation
+   :peripheral/entry #{:default :from-chat :user-request}
+   :peripheral/exit #{:won :stuck :user-request :hop-chat :hop-reflect}
+   :peripheral/context {:session-id :inherit :alfworld-state :resumable}
+   :peripheral/config {:alfworld-server "http://localhost:3456"}}}}

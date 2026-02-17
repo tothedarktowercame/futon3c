@@ -138,8 +138,8 @@
 ;; =============================================================================
 
 (def PeripheralId
-  "Peripheral identifier — the core peripherals."
-  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat])
+  "Peripheral identifier — the core peripherals plus extensions."
+  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld])
 
 (def ToolSet
   "Set of tools available to a peripheral."
@@ -148,7 +148,7 @@
 (def PeripheralScope
   "Scope constraint for a peripheral — what it can access."
   [:or
-   [:enum :full-codebase :test-commands-only :git-push-only :session-log-only :discipline-records :irc-rooms]
+   [:enum :full-codebase :test-commands-only :git-push-only :session-log-only :discipline-records :irc-rooms :alfworld-simulation]
    [:map [:paths [:vector :string]]]])
 
 (def PeripheralSpec
@@ -163,7 +163,8 @@
    [:peripheral/scope PeripheralScope]
    [:peripheral/entry [:set :keyword]]
    [:peripheral/exit [:set :keyword]]
-   [:peripheral/context [:map-of :keyword :keyword]]])
+   [:peripheral/context [:map-of :keyword :keyword]]
+   [:peripheral/config {:optional true} [:map-of :keyword :any]]])
 
 ;; =============================================================================
 ;; Hop protocol — session-id transfer across peripheral boundaries
