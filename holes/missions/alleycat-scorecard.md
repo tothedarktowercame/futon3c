@@ -11,6 +11,7 @@ Race token: 7285397f (planted in .alleycat-drop/spoke-alpha.txt)
   - Transport pivot gate (Joe + Claude, Emacs + IRC)
   - Three-way chat gate (Joe + Claude + Codex, @-mention gated)
   - Transport-native P-4/P-6 structural closure (479 tests, 1540 assertions)
+  - IRC standup bell — on-demand multi-agent rendezvous (494 tests, 1604 assertions)
 
 ## Purpose
 
@@ -432,3 +433,83 @@ Invariant focus: **I-transport-pivot** + mention-gated multi-agent routing
 
 Signed off by Codex on 2026-02-15 for the alleycat scorecard checkpoint
 **three-way chat**.
+
+---
+
+## IRC Standup Bell Gate: On-Demand Multi-Agent Rendezvous
+
+Date: 2026-02-17
+Invariant focus: **I-bell-rendezvous** — agents join a shared IRC room on demand
+
+### What Was Proven
+
+The three-way chat gate proved "agents can be in IRC together." This gate
+proves "...and that can happen on demand, at the press of a button."
+
+`ring-standup!` (bells.clj) takes a room name and opening prompt, queries the
+agent registry for all registered agents, and joins each into the IRC room —
+no subprocess spawning, no manual wiring, no interactive setup.
+
+### Architecture
+
+```
+Joe rings bell
+  ↓
+bells/ring-standup!
+  ↓
+registry/registered-agents → [claude-1, codex-1, codex-2]
+  ↓
+For each agent:
+  1. join-virtual-nick! (IRC room visibility)
+  2. join-agent! (relay bridge routing)
+  3. emit arrival evidence
+  ↓
+send-to-channel! opening prompt
+  ↓
+All agents present, conversation begins
+```
+
+### Key Properties
+
+1. **Registry-driven**: Bell consults the live agent registry — no hardcoded
+   agent list. New agents registered after deployment are automatically included.
+2. **No subprocess spawning**: Agents are already running. The bell routes them
+   to a venue, it doesn't create them. This preserves the peripheral memory model
+   (agents retain context across the standup, unlike futon3's invokes.clj which
+   spawned fresh subprocesses per bell).
+3. **Evidence trail**: Bell ring, per-agent arrival, and opening prompt are all
+   recorded in the evidence store with a shared bell session-id.
+4. **Selective targeting**: Can ring for `:all` agents or a specific subset
+   (e.g. `["claude-1" "codex-1"]` for a pair standup).
+5. **Custom registry support**: Accepts either the global registry or a custom
+   atom, enabling isolated standups without affecting the shared registry.
+
+### Structural Tests (12 tests)
+
+| Test | What It Proves |
+|------|---------------|
+| `standup-bell-joins-all-agents` | 3 agents registered → all 3 join room with virtual nicks, prompt sent |
+| `standup-bell-emits-evidence` | 1 bell-ring + 2 arrival evidence entries emitted |
+| `standup-bell-specific-agents` | Targeting 2 of 3 agents → only those 2 join |
+| `standup-bell-no-agents-registered` | Empty registry → empty room, prompt still sent |
+| `standup-bell-missing-room-errors` | Missing room → error (not silent failure) |
+| `standup-bell-no-prompt-skips-message` | No prompt → agents join but no message sent |
+| `standup-bell-with-relay-bridge` | Agents join both IRC virtual nicks AND relay bridge |
+| `standup-bell-with-custom-registry` | Custom registry atom works (isolation) |
+| `test-bell-returns-secret` | Test-bell issues secret for liveness ack |
+| `test-bell-unregistered-agent-errors` | Unknown agent → error |
+| `test-bell-emits-evidence` | Test-bell emits coordination evidence |
+| `standup-bell-with-irc-callbacks` | Integration with real IRC callback infrastructure |
+
+### Relationship to Previous Gates
+
+- **Transport pivot**: Proved Joe + Claude can share a session across Emacs + IRC.
+- **Three-way chat**: Proved Joe + Claude + Codex can be co-present in IRC.
+- **P-4/P-6 structural closure**: Proved hop transitions and interleaved streams.
+- **This gate**: Proves that multi-agent IRC co-presence can be triggered
+  programmatically — the coordination primitive needed for daily standups,
+  ad-hoc reviews, and any "everyone in the room" scenario.
+
+### Status: **PASS**
+
+494 tests, 1604 assertions, 0 failures.

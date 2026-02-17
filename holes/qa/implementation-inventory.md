@@ -21,6 +21,7 @@ Status categories:
 | Evidence store | Wired | `src/futon3c/evidence/store.clj`; in-memory atom-backed |
 | Thread projection | Wired | `src/futon3c/evidence/threads.clj` |
 | Malli shapes | Wired | `src/futon3c/social/shapes.clj`; 9 peripheral IDs, all validated |
+| Bell dispatcher | Wired | `src/futon3c/social/bells.clj`; standup bell + test-bell; 12 tests |
 
 ## Peripheral Runtime
 
@@ -60,6 +61,7 @@ Status categories:
 | Transport pivot (Emacs + IRC) | PASS | Bidirectional joe+claude, shared session |
 | Three-way chat (joe+claude+codex) | PASS | @-mention gated routing |
 | P-4/P-6 structural closure | PASS | Chain + relay tests; 479 tests, 1540 assertions |
+| IRC standup bell | PASS | On-demand multi-agent rendezvous; 494 tests, 1604 assertions |
 
 ## Emacs UI Layer
 
@@ -82,7 +84,7 @@ Status categories:
 
 ## Test Summary
 
-479 tests, 1540 assertions, 0 failures, 0 errors.
+494 tests, 1604 assertions, 0 failures, 0 errors.
 
 ## Tech Debt (All Resolved)
 
