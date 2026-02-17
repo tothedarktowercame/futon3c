@@ -599,3 +599,70 @@
             "Should have :last-activity-at timestamp")
         (is (false? (:ping-pending? client))
             "Should have :ping-pending? false initially")))))
+
+;; =============================================================================
+;; 16. P-6 structural proof: interleaved streams from multiple IRC sources
+;; =============================================================================
+
+(deftest p6-multiple-senders-interleaved-to-single-agent
+  (testing "P-6: messages from multiple IRC users are relayed to a single agent interleaved"
+    (let [agent-received (atom [])
+          bridge (irc/make-relay-bridge {:evidence-store estore/!store})
+          {:keys [relay-fn join-agent!]} bridge]
+
+      ;; Register one agent listening on #futon
+      (join-agent! "claude-1" "claude" "#futon"
+                   (fn [data] (swap! agent-received conj data)))
+
+      ;; Simulate three different IRC users sending messages
+      (relay-fn "#futon" "joe" "First message from Joe")
+      (relay-fn "#futon" "alice" "Alice chiming in")
+      (relay-fn "#futon" "joe" "Second from Joe")
+      (relay-fn "#futon" "bob" "Bob here too")
+      (relay-fn "#futon" "alice" "Alice again")
+
+      ;; Agent should have received all 5 messages in order
+      (is (= 5 (count @agent-received))
+          "Agent should receive all messages from all senders")
+
+      ;; Verify interleaved ordering and source identification
+      (let [msgs (mapv #(json/parse-string % true) @agent-received)]
+        (is (= "joe" (:from (nth msgs 0))))
+        (is (= "alice" (:from (nth msgs 1))))
+        (is (= "joe" (:from (nth msgs 2))))
+        (is (= "bob" (:from (nth msgs 3))))
+        (is (= "alice" (:from (nth msgs 4))))
+
+        ;; All messages include source attribution (P-6 requirement)
+        (doseq [msg msgs]
+          (is (contains? msg :from) "Each message must identify its source")
+          (is (= "#futon" (:channel msg)) "All from same channel"))))))
+
+(deftest p6-multi-channel-routing-to-agents
+  (testing "P-6: agent receives messages from multiple channels it's joined"
+    (let [agent-received (atom [])
+          bridge (irc/make-relay-bridge {:evidence-store estore/!store})
+          {:keys [relay-fn join-agent!]} bridge]
+
+      ;; Agent joins two channels
+      (join-agent! "claude-1" "claude" "#futon"
+                   (fn [data] (swap! agent-received conj data)))
+      ;; The relay bridge tracks channels per agent — need to add second channel
+      ;; For this test, register a second agent entry for the same logical agent
+      (swap! (:agents bridge) update "claude-1"
+             update :channels conj "#standup")
+
+      ;; Messages from different channels
+      (relay-fn "#futon" "joe" "Futon discussion")
+      (relay-fn "#standup" "joe" "Standup update")
+      (relay-fn "#futon" "alice" "Futon followup")
+
+      ;; Agent receives all three, interleaved by channel
+      (is (= 3 (count @agent-received)))
+      (let [msgs (mapv #(json/parse-string % true) @agent-received)]
+        (is (= "#futon" (:channel (nth msgs 0))))
+        (is (= "#standup" (:channel (nth msgs 1))))
+        (is (= "#futon" (:channel (nth msgs 2))))
+        ;; Each message includes channel for stream identification
+        (doseq [msg msgs]
+          (is (contains? msg :channel) "Must include channel for stream disambiguation"))))))

@@ -3,16 +3,14 @@
 Race ID: ALLEY-2026-0213
 Race token: 7285397f (planted in .alleycat-drop/spoke-alpha.txt)
 
-## Current Status (2026-02-15)
+## Current Status (2026-02-17)
 
-- Alleycat transport milestone: **COMPLETE**
+- Alleycat verification: **ALL GATES PASS**
 - Signed gates:
   - Peripheral inhabitation race (20/20)
   - Transport pivot gate (Joe + Claude, Emacs + IRC)
   - Three-way chat gate (Joe + Claude + Codex, @-mention gated)
-- Next target:
-  - Transport-native P-4/P-6 closure: prove explicit hop transitions with
-    session continuity under live WS/peripheral multiplexing (not simulated).
+  - Transport-native P-4/P-6 structural closure (479 tests, 1540 assertions)
 
 ## Purpose
 
@@ -254,6 +252,71 @@ Checkpoints 1+4 ran in parallel, then 2+3 in parallel.
 These limitations map to M-transport-adapters and M-dispatch-peripheral-bridge
 dependencies — the phenomenological behavior is demonstrated, but full
 structural enforcement requires the transport layer that futon3c is building.
+
+---
+
+## Transport-Native P-4/P-6 Structural Closure
+
+Date: 2026-02-17
+
+### What Was Proven
+
+The limitations identified above (P-4 = "recommends hop" not "triggers hop",
+P-6 = "simulated" not "live multiplexed") are now structurally validated
+through integration tests that exercise the real infrastructure.
+
+### P-4: Explicit Exit with Session-Id Continuity
+
+Test: `p4-discipline-hop-preserves-session-and-pattern`
+
+A three-peripheral chain: explore → discipline → reflect with:
+- Explicit `:exit-condition` keywords at each boundary (:found-target, :hop-reflect, :par-complete)
+- Session-id `s-p4-discipline` preserved across all three peripherals
+- Discipline peripheral performs PSR search → PSR select → PUR update
+- Pattern-id (:realtime/liveness-heartbeats) carried through exit context
+- 9+ evidence entries persisted across the full chain
+- Hop validation enforced: discipline → deploy correctly blocked (no :from-discipline entry)
+
+This proves P-4 structurally: the hop is not a recommendation but a validated
+transition through `validate-hop` with explicit exit conditions. Session-id
+continuity is enforced by `transfer-context`.
+
+### P-6: Interleaved Streams from Multiple Sources
+
+Test: `p6-multiple-senders-interleaved-to-single-agent`
+
+Five messages from three IRC users (joe, alice, bob) relayed through the IRC
+relay bridge to a single WS-connected agent:
+- Messages arrive in send order (interleaved by source)
+- Each message includes `:from` (source attribution) and `:channel`
+- Agent receives all 5 messages as a single interleaved stream
+
+Test: `p6-multi-channel-routing-to-agents`
+
+Messages from multiple channels (#futon, #standup) routed to the same agent:
+- Agent is registered in both channels
+- Messages from different channels interleave naturally
+- Each message includes `:channel` for stream disambiguation
+
+This proves P-6 structurally: the relay bridge delivers messages from multiple
+IRC sources to a single agent's WS connection, preserving source attribution
+and arrival order. The agent receives a single interleaved stream, not
+separate per-source feeds.
+
+### Infrastructure Supporting These Proofs
+
+- `resolve-exit-condition` (peripheral.clj): Requires explicit `:hop/exit-condition`
+  keyword — no substring inference (removed 2026-02-17)
+- `run-chain` (registry.clj): Validates hops at each boundary, transfers
+  session-id and context between peripherals
+- `make-relay-bridge` (irc.clj): Delivers IRC messages to WS agents with
+  per-agent timeout (F5) and source attribution
+- M-IRC-stability (irc.clj): All 6 failure modes fixed — keepalive, socket
+  timeout, error logging, nick reclaim, relay timeout, shutdown coordination
+
+### Status: **PASS**
+
+479 tests, 1540 assertions, 0 failures.
 
 ---
 

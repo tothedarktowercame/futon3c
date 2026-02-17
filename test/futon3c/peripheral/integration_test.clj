@@ -418,3 +418,69 @@
                    "done")]
       (is (false? (:ok result)))
       (is (shapes/valid? shapes/SocialError (:error result))))))
+
+;; =============================================================================
+;; 11. P-4 structural proof: explicit hop with session-id through discipline
+;; =============================================================================
+
+(deftest p4-discipline-hop-preserves-session-and-pattern
+  (testing "P-4: explore → discipline → reflect chain with explicit exit conditions and session continuity"
+    (let [evidence-store (atom {:entries {} :order []})
+          backend (tools/make-mock-backend
+                    {:glob {:found ["src/futon3c/core.clj"]}
+                     :psr-search {:patterns ["realtime/liveness-heartbeats"]}
+                     :psr-select {:pattern-id "realtime/liveness-heartbeats"}
+                     :pur-update {:status :ok}
+                     :read {:content "(ns futon3c.core)"}
+                     :musn-log {:lines 50}})
+          result (reg/run-chain
+                   {:backend backend :peripherals peripherals
+                    :evidence-store evidence-store}
+                   {:session-id "s-p4-discipline"}
+                   [{:peripheral-id :explore
+                     :actions [{:tool :glob :args ["**/*.clj"]}]
+                     :stop-reason "found pattern to select"
+                     :exit-condition :found-target}
+                    {:peripheral-id :discipline
+                     :actions [{:tool :psr-search :args ["liveness"]}
+                               {:tool :psr-select :args ["realtime/liveness-heartbeats"]}
+                               {:tool :pur-update :args ["realtime/liveness-heartbeats" :ok]}]
+                     :stop-reason "PAR generated"
+                     :exit-condition :hop-reflect}
+                    {:peripheral-id :reflect
+                     :actions [{:tool :read :args ["session.log"]}]
+                     :stop-reason "session close"
+                     :exit-condition :par-complete}])]
+      ;; Chain completed successfully
+      (is (true? (:ok result)))
+      (is (= 3 (count (:fruits result))))
+
+      ;; Session-id preserved across all three peripherals
+      (is (= "s-p4-discipline" (get-in result [:final-context :session-id])))
+
+      ;; Discipline fruit contains PSR/PUR records
+      (let [disc-fruit (second (:fruits result))]
+        (is (= 3 (count (:records disc-fruit))) "3 discipline actions")
+        (is (= :realtime/liveness-heartbeats (:selected-pattern disc-fruit))))
+
+      ;; Evidence was persisted across all three peripherals
+      (let [entries (vals (:entries @evidence-store))]
+        ;; 3 per peripheral (start/step/stop) × 3 peripherals + 2 extra steps in discipline = 11
+        (is (>= (count entries) 9) "at least 9 evidence entries across 3 peripherals")))))
+
+(deftest p4-exit-condition-blocks-invalid-discipline-exit
+  (testing "P-4: discipline → deploy hop is blocked (deploy requires :tests-passed exit)"
+    (let [backend (tools/make-mock-backend {:psr-select {:pattern-id "patterns/x"}})
+          result (reg/run-chain
+                   {:backend backend :peripherals peripherals}
+                   {:session-id "s-p4-blocked"}
+                   [{:peripheral-id :discipline
+                     :actions [{:tool :psr-select :args ["patterns/x"]}]
+                     :stop-reason "want to deploy"
+                     :exit-condition :par-generated}
+                    {:peripheral-id :deploy
+                     :actions []
+                     :stop-reason "ship"
+                     :exit-condition :deployed}])]
+      (is (false? (:ok result)) "discipline → deploy should be blocked")
+      (is (shapes/valid? shapes/SocialError (:error result))))))
