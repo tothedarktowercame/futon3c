@@ -2,6 +2,7 @@
   "Shared helpers for concrete peripheral implementations."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [futon3c.evidence.backend :as backend]
             [futon3c.evidence.store :as store]
             [futon3c.peripheral.runner :as runner]
             [futon3c.social.shapes :as shapes]))
@@ -65,7 +66,8 @@
    Returns nil on success/no-op, or SocialError on append failure."
   [state evidence-entry]
   (let [evidence-store (:evidence-store state)]
-    (when (instance? clojure.lang.IAtom evidence-store)
+    (when (or (instance? clojure.lang.IAtom evidence-store)
+              (satisfies? backend/EvidenceBackend evidence-store))
       (let [result (store/append* evidence-store evidence-entry)]
         (when (social-error? result)
           result)))))

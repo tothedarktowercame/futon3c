@@ -1,16 +1,19 @@
 (ns futon3c.evidence.store
-  "In-memory evidence store (append/query) for the evidence landscape.
+  "Evidence store — append/query for the evidence landscape.
+
+   Supports pluggable backends via the EvidenceBackend protocol (backend.clj).
+   Default backend: in-memory atom (AtomBackend). Production: XTDB (XtdbBackend).
 
    R8 (authoritative transcript): the store is the authority for EvidenceEntry.
    R9 (structured events): entries are typed maps (EvidenceEntry), not free text.
    R4 (loud failure): operations return typed results; no silent failures."
-  (:require [clojure.string :as str]
+  (:require [futon3c.evidence.backend :as backend]
             [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]
-           [java.time.format DateTimeParseException]
            [java.util UUID]))
 
 ;; Store model: {:entries {id EvidenceEntry} :order [id ...]} in an atom.
+;; This atom is the default backend; callers can pass an EvidenceBackend instead.
 (defonce ^{:doc "Default evidence store atom."} !store
   (atom {:entries {} :order []}))
 
@@ -30,24 +33,16 @@
            :error/at (now-str)}
     (seq context) (assoc :error/context context)))
 
-(defn- store-atom
+(defn- resolve-backend
+  "Resolve a store argument to an EvidenceBackend.
+   - If it satisfies EvidenceBackend, return it directly.
+   - If it's an atom, wrap in AtomBackend.
+   - Otherwise, wrap the default !store atom."
   [maybe-store]
-  (if (instance? clojure.lang.IAtom maybe-store) maybe-store !store))
-
-(defn- parse-instant
-  [t]
   (cond
-    (instance? Instant t) t
-    (string? t) (Instant/parse t)
-    :else (throw (ex-info "bad-timestamp" {:t t}))))
-
-(defn- entry-at
-  [entry]
-  (try
-    (parse-instant (:evidence/at entry))
-    (catch Exception _
-      ;; If a bad timestamp slipped in, treat as epoch so ordering is stable.
-      (Instant/ofEpochMilli 0))))
+    (satisfies? backend/EvidenceBackend maybe-store) maybe-store
+    (instance? clojure.lang.IAtom maybe-store) (backend/->AtomBackend maybe-store)
+    :else (backend/->AtomBackend !store)))
 
 (defn- gen-id []
   (str "e-" (UUID/randomUUID)))
@@ -61,57 +56,27 @@
                   :entry entry
                   :validation (or (:error (shapes/validate shapes/EvidenceEntry entry)) {}))))
 
-(defn- exists-id?
-  [st evidence-id]
-  (contains? (:entries st) evidence-id))
+;; =============================================================================
+;; Public API — parameterised by store (atom or EvidenceBackend)
+;; =============================================================================
 
 (defn get-entry
   "Get an entry by id from the default store.
    Returns EvidenceEntry or nil."
   [evidence-id]
-  (get-in @!store [:entries evidence-id]))
+  (backend/-get (resolve-backend !store) evidence-id))
 
 (defn get-entry*
-  "Get an entry by id from a specific store atom.
+  "Get an entry by id from a specific store.
    Returns EvidenceEntry or nil."
   [store evidence-id]
-  (get-in @(store-atom store) [:entries evidence-id]))
-
-(defn- append-entry!
-  [s validated]
-  (let [eid (:evidence/id validated)]
-    (loop []
-      (let [st @s]
-        (cond
-          (exists-id? st eid)
-          (social-error :duplicate-id "Evidence id already exists" :evidence-id eid)
-
-          (and (:evidence/in-reply-to validated)
-               (not (exists-id? st (:evidence/in-reply-to validated))))
-          (social-error :reply-not-found
-                        "in-reply-to references missing entry"
-                        :in-reply-to (:evidence/in-reply-to validated)
-                        :evidence-id eid)
-
-          (and (:evidence/fork-of validated)
-               (not (exists-id? st (:evidence/fork-of validated))))
-          (social-error :fork-not-found
-                        "fork-of references missing entry"
-                        :fork-of (:evidence/fork-of validated)
-                        :evidence-id eid)
-
-          :else
-          (let [next-st (-> st
-                            (assoc-in [:entries eid] validated)
-                            (update :order conj eid))]
-            (if (compare-and-set! s st next-st)
-              {:ok true :entry validated}
-              (recur))))))))
+  (backend/-get (resolve-backend store) evidence-id))
 
 (defn append*
-  "Append to a specific store atom. Same semantics as append!."
+  "Append to a specific store. Same semantics as append!.
+   Accepts either a full EvidenceEntry or an unqualified args map."
   [store m]
-  (let [s (store-atom store)
+  (let [b (resolve-backend store)
         validated (if (shapes/valid? shapes/EvidenceEntry m)
                     m
                     (let [{:keys [evidence-id subject type claim-type author body pattern-id session-id
@@ -134,7 +99,7 @@
                       (ensure-entry entry)))]
     (if (shapes/valid? shapes/SocialError validated)
       validated
-      (append-entry! s validated))))
+      (backend/-append b validated))))
 
 (defn append!
   "Append an evidence entry to the default store.
@@ -145,26 +110,12 @@
   (append* !store m))
 
 (defn query*
-  "Query a specific store atom.
+  "Query a specific store.
    Returns [EvidenceEntry], excluding ephemeral entries by default."
   [store evidence-query]
   (if-not (shapes/valid? shapes/EvidenceQuery evidence-query)
     []
-    (let [{:query/keys [subject type claim-type since limit include-ephemeral?]} evidence-query
-          include-ephemeral? (true? include-ephemeral?)
-          since-inst (when since
-                       (try (parse-instant since)
-                            (catch DateTimeParseException _ nil)
-                            (catch Exception _ nil)))
-          entries (vals (:entries @(store-atom store)))
-          entries (remove #(and (not include-ephemeral?) (true? (:evidence/ephemeral? %))) entries)
-          entries (if subject (filter #(= subject (:evidence/subject %)) entries) entries)
-          entries (if type (filter #(= type (:evidence/type %)) entries) entries)
-          entries (if claim-type (filter #(= claim-type (:evidence/claim-type %)) entries) entries)
-          entries (if since-inst (filter #(not (.isBefore (entry-at %) since-inst)) entries) entries)
-          entries (sort-by entry-at #(compare %2 %1) entries) ; newest first
-          entries (if (and (int? limit) (pos? limit)) (take limit entries) entries)]
-      (vec entries))))
+    (backend/-query (resolve-backend store) evidence-query)))
 
 (defn query
   "Query the default store. Returns [EvidenceEntry] (excludes ephemeral by default)."
@@ -175,11 +126,11 @@
   "Return the ordered ancestor chain for evidence-id, including the entry itself.
    Missing evidence-id returns []."
   [store evidence-id]
-  (let [st @(store-atom store)]
+  (let [b (resolve-backend store)]
     (loop [eid evidence-id acc [] seen #{}]
       (if (or (nil? eid) (contains? seen eid))
         (vec (reverse acc))
-        (if-let [e (get-in st [:entries eid])]
+        (if-let [e (backend/-get b eid)]
           (recur (:evidence/in-reply-to e) (conj acc e) (conj seen eid))
           (vec (reverse acc)))))))
 
@@ -192,9 +143,7 @@
 (defn get-forks*
   "Return all entries forked from evidence-id."
   [store evidence-id]
-  (let [entries (vals (:entries @(store-atom store)))
-        forks (filter #(= evidence-id (:evidence/fork-of %)) entries)]
-    (->> forks (sort-by entry-at) vec)))
+  (backend/-forks-of (resolve-backend store) evidence-id))
 
 (defn get-forks
   "Return all entries forked from evidence-id."
@@ -211,28 +160,25 @@
     (query q)))
 
 (defn compact-ephemeral!*
-  "Remove ephemeral entries older than threshold from a specific store atom.
+  "Remove ephemeral entries older than threshold from a specific store.
    older-than must be ISO string or Instant."
   [store {:keys [older-than]}]
   (let [cutoff (try
-                 (parse-instant older-than)
+                 (backend/parse-instant older-than)
                  (catch Exception _ ::bad))]
     (if (= ::bad cutoff)
       (social-error :invalid-input "older-than must be an ISO timestamp string or Instant" :older-than older-than)
-      (let [s (store-atom store)
-            {:keys [entries order]} @s
-            to-drop (->> entries
-                         (keep (fn [[eid e]]
+      (let [b (resolve-backend store)
+            all-entries (backend/-all b)
+            to-drop (->> all-entries
+                         (keep (fn [e]
                                  (when (and (true? (:evidence/ephemeral? e))
-                                            (.isBefore (entry-at e) cutoff))
-                                   eid)))
-                         set)
-            n (count to-drop)]
-        (swap! s (fn [{:keys [entries order] :as st}]
-                   (-> st
-                       (assoc :entries (apply dissoc entries to-drop))
-                       (assoc :order (vec (remove to-drop order))))))
-        {:compacted n}))))
+                                            (.isBefore (backend/entry-at e) cutoff))
+                                   (:evidence/id e))))
+                         set)]
+        (if (empty? to-drop)
+          {:compacted 0}
+          (backend/-delete! b to-drop))))))
 
 (defn compact-ephemeral!
   "Remove ephemeral entries older than threshold from the default store.

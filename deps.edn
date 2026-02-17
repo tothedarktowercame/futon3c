@@ -8,7 +8,10 @@
   org.clojure/data.json     {:mvn/version "2.5.0"}
 
   ;; futon3b gate pipeline — social loop submits tasks through gates
-  futon3b/futon3b           {:local/root "../futon3b"}}
+  futon3b/futon3b           {:local/root "../futon3b"}
+
+  ;; futon1a durable store — XTDB persistence for evidence landscape
+  futon1a/futon1a           {:local/root "../futon1a"}}
 
  :aliases
  {:test {:extra-paths ["test"]

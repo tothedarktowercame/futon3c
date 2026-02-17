@@ -13,13 +13,14 @@
    Config:
      :cwd        — working directory for relative paths (default: user.dir)
      :timeout-ms — default command timeout in milliseconds (default: 30000)
-     :evidence-store — atom for :musn-log tool (optional)"
+     :evidence-store — atom or EvidenceBackend for :musn-log tool (optional)"
   (:require [clojure.java.io :as io]
             [clojure.set :as cset]
             [clojure.string :as str]
             [futon.notions :as notions]
             [futon3.gate.shapes :as gate-shapes]
             [futon3b.query.relations :as relations]
+            [futon3c.evidence.store :as estore]
             [futon3c.peripheral.tools :as tools])
   (:import [java.io File]
            [java.nio.file FileSystems Path]
@@ -239,16 +240,13 @@
   (if (nil? evidence-store)
     {:ok false :error "No evidence store configured for musn-log"}
     (let [query-arg (first args)
+          all (estore/query* evidence-store {:query/include-ephemeral? true})
           entries (if (string? query-arg)
-                    ;; Query by session-id
-                    (->> (:entries @evidence-store)
-                         vals
+                    (->> all
                          (filter #(= query-arg (:evidence/session-id %)))
                          (sort-by :evidence/at)
                          vec)
-                    ;; Query by map
-                    (->> (:entries @evidence-store)
-                         vals
+                    (->> all
                          (sort-by :evidence/at)
                          vec))]
       {:ok true :result entries})))
