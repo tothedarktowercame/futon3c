@@ -18,6 +18,7 @@
    - realtime/request-param-resilience (L1, L3): delegates param extraction
      to protocol/extract-params for consistency across HTTP and WS."
   (:require [futon3c.transport.protocol :as proto]
+            [futon3c.transport.encyclopedia :as enc]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -57,6 +58,26 @@
     {:status status
      :headers {"Content-Type" "application/json"}
      :body body}))
+
+(defn- parse-query-params
+  "Parse request query string into map of string -> string."
+  [request]
+  (let [query (:query-string request)]
+    (if (or (nil? query) (str/blank? query))
+      {}
+      (->> (str/split query #"&")
+           (remove str/blank?)
+           (map (fn [pair]
+                  (let [[k v] (str/split pair #"=" 2)]
+                    [(enc/decode-uri-component k)
+                     (enc/decode-uri-component (or v ""))])))
+           (into {})))))
+
+(defn- encyclopedia-opts
+  "Resolve encyclopedia config options for handlers."
+  [config]
+  {:corpus-root (or (get-in config [:encyclopedia :corpus-root])
+                    (System/getenv "FUTON3C_PLANETMATH_ROOT"))})
 
 ;; =============================================================================
 ;; Route handlers
@@ -120,6 +141,34 @@
                        "agents" (count (get-in config [:registry :agents]))
                        "sessions" (count (persist/list-sessions {}))}))
 
+(defn- handle-encyclopedia-corpuses
+  "GET /fulab/encyclopedia/corpuses — list available corpuses."
+  [config]
+  (json-response 200 {:ok true
+                      :corpuses (enc/list-corpuses (encyclopedia-opts config))}))
+
+(defn- handle-encyclopedia-entries
+  "GET /fulab/encyclopedia/:corpus/entries — list paginated entry summaries."
+  [request config corpus-name]
+  (let [params (parse-query-params request)
+        limit (enc/parse-int (get params "limit") 100)
+        offset (enc/parse-int (get params "offset") 0)
+        opts (encyclopedia-opts config)]
+    (if-let [page (enc/page-entries opts corpus-name limit offset)]
+      (json-response 200 (assoc page :ok true))
+      (json-response 404 {:ok false :err "corpus-not-found" :corpus corpus-name}))))
+
+(defn- handle-encyclopedia-entry
+  "GET /fulab/encyclopedia/:corpus/entry/:id — fetch full entry."
+  [config corpus-name entry-id]
+  (let [opts (encyclopedia-opts config)]
+    (if-let [entry (enc/find-entry opts corpus-name entry-id)]
+      (json-response 200 {:ok true :entry entry})
+      (json-response 404 {:ok false
+                          :err "entry-not-found"
+                          :corpus corpus-name
+                          :entry-id entry-id}))))
+
 ;; =============================================================================
 ;; Public API
 ;; =============================================================================
@@ -148,6 +197,20 @@
 
         (and (= :get method) (= "/health" uri))
         (handle-health config)
+
+        (and (= :get method) (= "/fulab/encyclopedia/corpuses" uri))
+        (handle-encyclopedia-corpuses config)
+
+        (and (= :get method) (re-matches #"/fulab/encyclopedia/([^/]+)/entries" uri))
+        (let [[_ corpus] (re-find #"/fulab/encyclopedia/([^/]+)/entries" uri)
+              corpus-name (enc/decode-uri-component corpus)]
+          (handle-encyclopedia-entries request config corpus-name))
+
+        (and (= :get method) (re-matches #"/fulab/encyclopedia/([^/]+)/entry/(.+)" uri))
+        (let [[_ corpus raw-entry-id] (re-find #"/fulab/encyclopedia/([^/]+)/entry/(.+)" uri)
+              corpus-name (enc/decode-uri-component corpus)
+              entry-id (enc/decode-uri-component raw-entry-id)]
+          (handle-encyclopedia-entry config corpus-name entry-id))
 
         :else
         (json-response 404 {"error" true

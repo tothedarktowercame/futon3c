@@ -7,11 +7,11 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [futon3c.transport.http :as http]
-            [futon3c.transport.protocol :as proto]
-            [futon3c.social.shapes :as shapes]
+            [futon3c.transport.encyclopedia :as enc]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
-            [futon3c.agency.registry :as reg]))
+            [futon3c.agency.registry :as reg]
+            [clojure.java.io :as io]))
 
 ;; =============================================================================
 ;; Fixtures
@@ -22,6 +22,7 @@
   (fn [f]
     (reg/reset-registry!)
     (persist/reset-sessions!)
+    (enc/clear-cache!)
     (f)))
 
 ;; =============================================================================
@@ -52,10 +53,29 @@
 (defn- get-req [handler uri]
   (handler {:request-method :get :uri uri}))
 
+(defn- get-req-with-query [handler uri query-string]
+  (handler {:request-method :get
+            :uri uri
+            :query-string query-string}))
+
 (defn- parse-body
   "Parse the JSON body string from a Ring response."
   [response]
   (json/parse-string (:body response) true))
+
+(defn- with-temp-dir
+  [f]
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory "futon3c-http-test-"
+                                                               (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (f dir)
+      (finally
+        (doseq [file (reverse (file-seq dir))]
+          (.delete ^java.io.File file))))))
+
+(defn- write-corpus!
+  [dir corpus-name entries]
+  (spit (io/file dir (str corpus-name ".edn")) (pr-str entries)))
 
 ;; =============================================================================
 ;; POST /dispatch tests
@@ -69,8 +89,7 @@
                                       "payload" {"type" "standup"}
                                       "from" "claude-1"
                                       "to" "claude-1"})
-          response (post handler "/dispatch" body)
-          parsed (parse-body response)]
+          response (post handler "/dispatch" body)]
       (is (= 200 (:status response)))
       (is (= "application/json" (get-in response [:headers "Content-Type"])))
       ;; Body is a rendered receipt JSON (double-encoded as string)
@@ -192,6 +211,100 @@
         (is (= "ok" (:status parsed)))
         (is (= 3 (:agents parsed)))
         (is (= 0 (:sessions parsed)))))))
+
+;; =============================================================================
+;; Encyclopedia route tests
+;; =============================================================================
+
+(deftest encyclopedia-corpuses-lists-local-corpora
+  (testing "GET /fulab/encyclopedia/corpuses lists corpus ids + counts"
+    (with-temp-dir
+      (fn [dir]
+        (write-corpus! dir "11a"
+                       [{:entry/id "e1" :entry/title "Entry One"}
+                        {:entry/id "e2" :entry/title "Entry Two"}])
+        (write-corpus! dir "14x"
+                       [{:entry/id "e3" :entry/title "Entry Three"}])
+        (spit (io/file dir "README.txt") "ignore me")
+        (let [handler (make-handler {:encyclopedia {:corpus-root (.getAbsolutePath dir)}})
+              response (get-req handler "/fulab/encyclopedia/corpuses")
+              parsed (parse-body response)
+              by-id (->> (:corpuses parsed)
+                         (map (juxt :corpus/id identity))
+                         (into {}))]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= 2 (count (:corpuses parsed))))
+          (is (= 2 (:corpus/count (get by-id "11a"))))
+          (is (= 1 (:corpus/count (get by-id "14x"))))
+          (is (= "planetmath" (:corpus/source (get by-id "11a")))))))))
+
+(deftest encyclopedia-entries-supports-pagination
+  (testing "GET /fulab/encyclopedia/:corpus/entries returns paginated summaries"
+    (with-temp-dir
+      (fn [dir]
+        (write-corpus! dir "11a"
+                       [{:entry/id "e1" :entry/title "Entry One" :entry/type :def
+                         :entry/msc-codes ["11A"] :entry/related ["e2"]
+                         :entry/body "full-text-1"}
+                        {:entry/id "e2" :entry/title "Entry Two" :entry/type :theorem
+                         :entry/msc-codes ["11B"] :entry/related ["e1"]
+                         :entry/body "full-text-2"}])
+        (let [handler (make-handler {:encyclopedia {:corpus-root (.getAbsolutePath dir)}})
+              response (get-req-with-query handler
+                                           "/fulab/encyclopedia/11a/entries"
+                                           "limit=1&offset=1")
+              parsed (parse-body response)
+              first-entry (first (:entries parsed))]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "11a" (:corpus parsed)))
+          (is (= 2 (:total parsed)))
+          (is (= 1 (:limit parsed)))
+          (is (= 1 (:offset parsed)))
+          (is (= 1 (count (:entries parsed))))
+          (is (= "e2" (:entry/id first-entry)))
+          (is (nil? (:entry/body first-entry))))))))
+
+(deftest encyclopedia-entries-missing-corpus-returns-404
+  (testing "GET /fulab/encyclopedia/:corpus/entries missing corpus -> 404"
+    (with-temp-dir
+      (fn [dir]
+        (let [handler (make-handler {:encyclopedia {:corpus-root (.getAbsolutePath dir)}})
+              response (get-req handler "/fulab/encyclopedia/missing/entries")
+              parsed (parse-body response)]
+          (is (= 404 (:status response)))
+          (is (false? (:ok parsed)))
+          (is (= "corpus-not-found" (:err parsed))))))))
+
+(deftest encyclopedia-entry-route-handles-url-encoded-id
+  (testing "GET /fulab/encyclopedia/:corpus/entry/:id decodes %2F in entry id"
+    (with-temp-dir
+      (fn [dir]
+        (write-corpus! dir "11a"
+                       [{:entry/id "id/with/slash"
+                         :entry/title "Slash ID"
+                         :entry/body "full text"}])
+        (let [handler (make-handler {:encyclopedia {:corpus-root (.getAbsolutePath dir)}})
+              response (get-req handler "/fulab/encyclopedia/11a/entry/id%2Fwith%2Fslash")
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "id/with/slash" (get-in parsed [:entry :entry/id])))
+          (is (= "full text" (get-in parsed [:entry :entry/body]))))))))
+
+(deftest encyclopedia-entry-missing-returns-404
+  (testing "GET /fulab/encyclopedia/:corpus/entry/:id missing entry -> 404"
+    (with-temp-dir
+      (fn [dir]
+        (write-corpus! dir "11a"
+                       [{:entry/id "e1" :entry/title "Entry One"}])
+        (let [handler (make-handler {:encyclopedia {:corpus-root (.getAbsolutePath dir)}})
+              response (get-req handler "/fulab/encyclopedia/11a/entry/nope")
+              parsed (parse-body response)]
+          (is (= 404 (:status response)))
+          (is (false? (:ok parsed)))
+          (is (= "entry-not-found" (:err parsed))))))))
 
 ;; =============================================================================
 ;; Content-Type and unknown endpoint tests
