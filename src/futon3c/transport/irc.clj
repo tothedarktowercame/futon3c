@@ -7,21 +7,27 @@
 
    Architecture:
    - TCP server on port 6667 (configurable)
-   - Per-client state: nick, user, registered?, channels, writer
+   - Per-client state: nick, user, registered?, channels, writer, liveness
    - Per-room state: channel → #{nicks}
    - Relay bridge: IRC PRIVMSG → WS frame to agents, agent response → IRC PRIVMSG
    - Evidence emission per message for transcript persistence
+   - Server-initiated PING/PONG keepalive (M-IRC-stability F1)
+   - Socket read timeout (F2), error logging (F3)
+   - Nick reclaim on reconnect (F4), relay timeout (F5)
+   - Reader thread tracking and coordinated shutdown (F6)
 
    Commands: NICK, USER, JOIN, PART, PRIVMSG, PING, PONG, QUIT, WHO, MODE
 
    Pattern references:
+   - realtime/liveness-heartbeats (F1): server-initiated probes
    - realtime/connection-state-machine (L2): client registration lifecycle
+   - realtime/loop-failure-signals (F3): errors surface, not swallowed
    - realtime/structured-events-only (R9): evidence entries are typed maps"
   (:require [futon3c.evidence.store :as estore]
             [futon3c.transport.protocol :as proto]
             [clojure.string :as str])
   (:import [java.io BufferedReader BufferedWriter InputStreamReader OutputStreamWriter]
-           [java.net ServerSocket Socket]
+           [java.net ServerSocket Socket SocketTimeoutException]
            [java.time Instant]
            [java.util UUID]))
 
@@ -31,7 +37,27 @@
 
 (defn- now-str [] (str (Instant/now)))
 
+(defn- now-ms [] (System/currentTimeMillis))
+
 (def ^:private server-name "futon3c")
+
+(defn- emit-error-evidence!
+  "Emit a tension evidence entry for an IRC transport error."
+  [evidence-store client-id context error-msg]
+  (when evidence-store
+    (try
+      (estore/append* evidence-store
+                      {:evidence/id (str "e-" (UUID/randomUUID))
+                       :evidence/subject {:ref/type :component :ref/id "irc-server"}
+                       :evidence/type :coordination
+                       :evidence/claim-type :tension
+                       :evidence/author "irc-server"
+                       :evidence/at (now-str)
+                       :evidence/body {:error error-msg
+                                       :client-id (str client-id)
+                                       :context context}
+                       :evidence/tags [:irc :error :transport/irc]})
+      (catch Exception _ nil))))
 
 ;; =============================================================================
 ;; IRC line parsing
@@ -99,12 +125,16 @@
      :close-fn      — (fn [client-id]) for closing client connection
      :relay-fn      — (fn [channel from text]) relay PRIVMSG to WS-connected agents
      :evidence-store — atom for evidence persistence (optional)
+     :ping-interval-ms — server PING interval (default 30000)
+     :ping-timeout-ms  — reap after no PONG for this long (default 90000)
 
    Returns:
      {:on-connect    (fn [client-id])
       :on-line       (fn [client-id line])
       :on-disconnect (fn [client-id])
-      :clients       atom  — {client-id → {:nick :user :registered? :channels}}
+      :reap-dead!    (fn []) — check and reap dead clients
+      :clients       atom  — {client-id → {:nick :user :registered? :channels
+                                           :last-activity-at :ping-pending?}}
       :rooms         atom  — {channel → #{nicks}}}"
   [config]
   (let [!clients (atom {})
@@ -113,6 +143,7 @@
         close-fn (or (:close-fn config) (fn [_]))
         relay-fn (or (:relay-fn config) (fn [_ _ _]))
         evidence-store (:evidence-store config)
+        ping-timeout-ms (or (:ping-timeout-ms config) 90000)
 
         emit-evidence!
         (fn [channel from text]
@@ -131,6 +162,10 @@
                              :evidence/tags [:irc :chat :transport/irc (keyword "channel" channel)]
                              :evidence/session-id (str "irc-sess-" channel)})))
 
+        touch!
+        (fn [client-id]
+          (swap! !clients update client-id assoc :last-activity-at (now-ms)))
+
         broadcast!
         (fn [channel from text & {:keys [exclude]}]
           (let [nicks (get @!rooms channel #{})
@@ -146,7 +181,32 @@
             (send-numeric! (partial send-fn client-id) nick "353"
                            (str "= " channel " :" (str/join " " nicks)))
             (send-numeric! (partial send-fn client-id) nick "366"
-                           (str channel " :End of /NAMES list"))))]
+                           (str channel " :End of /NAMES list"))))
+
+        ;; F4: Check if a nick is held by a ghost (dead connection)
+        nick-ghost?
+        (fn [nick]
+          (let [clients @!clients]
+            (some (fn [[cid client]]
+                    (when (= nick (:nick client))
+                      (let [last-act (:last-activity-at client 0)
+                            elapsed (- (now-ms) last-act)]
+                        (when (or (:ping-pending? client)
+                                  (> elapsed ping-timeout-ms))
+                          cid))))
+                  clients)))
+
+        ;; F4: Kill a ghost connection
+        kill-ghost!
+        (fn [ghost-cid]
+          (let [client (get @!clients ghost-cid)
+                nick (:nick client)]
+            (when nick
+              (doseq [channel (:channels client)]
+                (swap! !rooms update channel disj nick)
+                (broadcast! channel nick (str "QUIT :ghost killed (nick reclaim)"))))
+            (swap! !clients dissoc ghost-cid)
+            (close-fn ghost-cid)))]
 
     {:clients !clients
      :rooms !rooms
@@ -154,10 +214,13 @@
      :on-connect
      (fn [client-id]
        (swap! !clients assoc client-id
-              {:nick nil :user nil :registered? false :channels #{}}))
+              {:nick nil :user nil :registered? false :channels #{}
+               :last-activity-at (now-ms) :ping-pending? false}))
 
      :on-line
      (fn [client-id line]
+       ;; Any received line proves liveness (F1)
+       (touch! client-id)
        (let [parsed (parse-irc-line line)]
          (when parsed
            (let [client (get @!clients client-id)
@@ -167,13 +230,29 @@
                "NICK"
                (let [new-nick (first (:params parsed))]
                  (when new-nick
-                   (swap! !clients update client-id assoc :nick new-nick)
+                   ;; F4: Check for ghost nick and reclaim
+                   (let [existing-cid (some (fn [[cid c]]
+                                              (when (and (= new-nick (:nick c))
+                                                         (not= cid client-id))
+                                                cid))
+                                            @!clients)]
+                     (if existing-cid
+                       ;; Nick in use — ghost or live?
+                       (if (nick-ghost? new-nick)
+                         (do (kill-ghost! existing-cid)
+                             (swap! !clients update client-id assoc :nick new-nick))
+                         ;; Not a ghost — ERR_NICKNAMEINUSE (433)
+                         (send-numeric! (partial send-fn client-id)
+                                        (or nick "*") "433"
+                                        (str new-nick " :Nickname is already in use")))
+                       ;; Nick is free
+                       (swap! !clients update client-id assoc :nick new-nick)))
                    ;; Check if registration complete (have both NICK and USER)
                    (let [updated (get @!clients client-id)]
                      (when (and (not (:registered? updated))
                                 (:nick updated) (:user updated))
                        (swap! !clients update client-id assoc :registered? true)
-                       (send-welcome! (partial send-fn client-id) new-nick)))))
+                       (send-welcome! (partial send-fn client-id) (:nick updated))))))
 
                "USER"
                (let [user-str (first (:params parsed))]
@@ -222,7 +301,8 @@
                  (send-fn client-id (str ":" server-name " PONG " server-name " :" token)))
 
                "PONG"
-               nil ;; Ignore
+               ;; Clear ping-pending flag (F1)
+               (swap! !clients update client-id assoc :ping-pending? false)
 
                "QUIT"
                (do
@@ -260,7 +340,42 @@
            (doseq [channel (:channels client)]
              (swap! !rooms update channel disj nick)
              (broadcast! channel nick (str "QUIT :connection lost"))))
-         (swap! !clients dissoc client-id)))}))
+         (swap! !clients dissoc client-id)))
+
+     ;; F1: Reap dead clients — called by keepalive loop
+     :reap-dead!
+     (fn []
+       (let [now (now-ms)
+             clients @!clients
+             dead (for [[cid client] clients
+                        :let [elapsed (- now (:last-activity-at client 0))]
+                        :when (> elapsed ping-timeout-ms)]
+                    cid)]
+         (doseq [cid dead]
+           (let [client (get @!clients cid)
+                 nick (:nick client)]
+             (when nick
+               (emit-error-evidence! evidence-store cid "keepalive-reap"
+                                     (str "Reaped dead connection for nick " nick
+                                          " (no activity for " ping-timeout-ms "ms)"))
+               (doseq [channel (:channels client)]
+                 (swap! !rooms update channel disj nick)
+                 (broadcast! channel nick (str "QUIT :ping timeout"))))
+             (swap! !clients dissoc cid)
+             (close-fn cid)))
+         (count dead)))
+
+     ;; F1: Send PINGs to clients that haven't sent anything recently
+     :ping-idle!
+     (fn [ping-interval-ms]
+       (let [now (now-ms)
+             clients @!clients]
+         (doseq [[cid client] clients
+                 :let [elapsed (- now (:last-activity-at client 0))]
+                 :when (and (> elapsed ping-interval-ms)
+                            (not (:ping-pending? client)))]
+           (swap! !clients update cid assoc :ping-pending? true)
+           (send-fn cid (str "PING :" server-name)))))}))
 
 ;; =============================================================================
 ;; Agent relay bridge
@@ -274,9 +389,11 @@
    - Relays IRC PRIVMSG to agents via their WS send-fn
    - Provides an IRC interceptor for WS (handles irc_response frames)
    - Emits evidence for agent responses
+   - F5: Per-agent relay timeout (5s default)
 
    config:
      :evidence-store — atom (optional)
+     :relay-timeout-ms — per-agent send timeout (default 5000)
 
    Returns:
      {:relay-fn       (fn [channel from text]) — call from IRC on PRIVMSG
@@ -288,6 +405,7 @@
   (let [!agents (atom {})
         ;; {agent-id → {:nick str :channels #{str} :ws-send-fn fn}}
         evidence-store (:evidence-store config)
+        relay-timeout-ms (or (:relay-timeout-ms config) 5000)
         !irc-send-fn (atom nil)
 
         emit-evidence!
@@ -326,10 +444,21 @@
 
      :relay-fn
      (fn [channel from text]
-       ;; Relay IRC message to all agents in the channel
-       (doseq [[_agent-id {:keys [channels ws-send-fn]}] @!agents
+       ;; F5: Relay IRC message to all agents in the channel with timeout
+       (doseq [[agent-id {:keys [channels ws-send-fn]}] @!agents
                :when (contains? channels channel)]
-         (ws-send-fn (proto/render-irc-message channel from text))))
+         (let [f (future (ws-send-fn (proto/render-irc-message channel from text)))]
+           (try
+             (deref f relay-timeout-ms ::timeout)
+             (when (= ::timeout (deref f 0 ::timeout))
+               (future-cancel f)
+               (emit-error-evidence! evidence-store agent-id "relay-timeout"
+                                     (str "Relay timeout for agent " agent-id
+                                          " in " channel " after " relay-timeout-ms "ms")))
+             (catch Exception e
+               (emit-error-evidence! evidence-store agent-id "relay-error"
+                                     (str "Relay error for agent " agent-id
+                                          ": " (.getMessage e))))))))
 
      :irc-interceptor
      (fn [_ch conn parsed]
@@ -355,10 +484,13 @@
   "Start an IRC server on the given port.
 
    config:
-     :port           — TCP port (default 6667)
-     :bind-host      — bind address (default \"0.0.0.0\")
-     :relay-fn       — (fn [channel from text]) for relaying to agents
-     :evidence-store — atom for evidence persistence (optional)
+     :port              — TCP port (default 6667)
+     :bind-host         — bind address (default \"0.0.0.0\")
+     :relay-fn          — (fn [channel from text]) for relaying to agents
+     :evidence-store    — atom for evidence persistence (optional)
+     :ping-interval-ms  — server PING interval (default 30000)
+     :ping-timeout-ms   — reap after no activity for this long (default 90000)
+     :socket-timeout-ms — SO_TIMEOUT for client sockets (default 120000)
 
    Returns:
      {:server ServerSocket
@@ -370,24 +502,33 @@
   [config]
   (let [port (or (:port config) 6667)
         bind-host (or (:bind-host config) "0.0.0.0")
+        ping-interval-ms (or (:ping-interval-ms config) 30000)
+        ping-timeout-ms (or (:ping-timeout-ms config) 90000)
+        socket-timeout-ms (or (:socket-timeout-ms config) 120000)
+        evidence-store (:evidence-store config)
         !running (atom true)
         !writers (atom {}) ;; {client-id → BufferedWriter}
+        !reader-futures (atom {}) ;; F6: {client-id → future}
         send-fn (fn [client-id line]
                   (when-let [writer (get @!writers client-id)]
                     (try
                       (send-line! writer line)
-                      (catch Exception _
-                        ;; Client disconnected — will be cleaned up
+                      (catch Exception e
+                        ;; F3: Log send errors
+                        (emit-error-evidence! evidence-store client-id "send-error"
+                                              (.getMessage e))
                         nil))))
         close-fn (fn [client-id]
                    (when-let [writer (get @!writers client-id)]
                      (try (.close writer) (catch Exception _))
                      (swap! !writers dissoc client-id)))
-        {:keys [on-connect on-line on-disconnect clients rooms]}
+        {:keys [on-connect on-line on-disconnect reap-dead! ping-idle! clients rooms]}
         (make-irc-callbacks {:send-fn send-fn
                              :close-fn close-fn
                              :relay-fn (or (:relay-fn config) (fn [_ _ _]))
-                             :evidence-store (:evidence-store config)})
+                             :evidence-store evidence-store
+                             :ping-interval-ms ping-interval-ms
+                             :ping-timeout-ms ping-timeout-ms})
         server-socket (ServerSocket. port 50
                                      (java.net.InetAddress/getByName bind-host))
 
@@ -400,6 +541,20 @@
                      :when (contains? nicks (:nick client))]
               (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text)))))
 
+        ;; F1: Keepalive loop — single future for all clients
+        keepalive-loop
+        (future
+          (try
+            (while @!running
+              (Thread/sleep (min ping-interval-ms 5000))
+              (when @!running
+                (reap-dead!)
+                (ping-idle! ping-interval-ms)))
+            (catch InterruptedException _)
+            (catch Exception e
+              (emit-error-evidence! evidence-store nil "keepalive-error"
+                                    (.getMessage e)))))
+
         accept-loop
         (future
           (try
@@ -409,6 +564,8 @@
                                      (catch Exception _
                                        nil))]
                 (when socket
+                  ;; F2: Set socket read timeout
+                  (.setSoTimeout socket (int socket-timeout-ms))
                   (let [client-id (str "irc-" (UUID/randomUUID))
                         reader (BufferedReader.
                                 (InputStreamReader. (.getInputStream socket) "UTF-8"))
@@ -416,18 +573,29 @@
                                 (OutputStreamWriter. (.getOutputStream socket) "UTF-8"))]
                     (swap! !writers assoc client-id writer)
                     (on-connect client-id)
-                    ;; Spawn reader thread per client
-                    (future
-                      (try
-                        (loop []
-                          (when-let [line (.readLine reader)]
-                            (on-line client-id line)
-                            (recur)))
-                        (catch Exception _))
-                      (on-disconnect client-id)
-                      (close-fn client-id)
-                      (try (.close socket) (catch Exception _)))))))
-            (catch Exception _)))]
+                    ;; F6: Track reader future
+                    (let [reader-future
+                          (future
+                            (try
+                              (loop []
+                                (when-let [line (.readLine reader)]
+                                  (on-line client-id line)
+                                  (recur)))
+                              (catch SocketTimeoutException _
+                                ;; F2: Timeout — keepalive will handle reaping
+                                nil)
+                              (catch Exception e
+                                ;; F3: Log reader errors
+                                (emit-error-evidence! evidence-store client-id "reader-error"
+                                                      (.getMessage e))))
+                            (on-disconnect client-id)
+                            (close-fn client-id)
+                            (swap! !reader-futures dissoc client-id)
+                            (try (.close socket) (catch Exception _)))]
+                      (swap! !reader-futures assoc client-id reader-future))))))
+            (catch Exception e
+              (emit-error-evidence! evidence-store nil "accept-error"
+                                    (.getMessage e)))))]
 
     {:server server-socket
      :clients clients
@@ -443,6 +611,12 @@
      :stop-fn (fn []
                 (reset! !running false)
                 (try (.close server-socket) (catch Exception _))
+                ;; F6: Cancel all reader futures
+                (doseq [[_ f] @!reader-futures]
+                  (future-cancel f))
+                ;; Stop keepalive
+                (future-cancel keepalive-loop)
+                ;; Close all writers
                 (doseq [[cid _] @!writers]
                   (close-fn cid))
                 (future-cancel accept-loop))}))

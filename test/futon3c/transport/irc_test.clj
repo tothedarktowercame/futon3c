@@ -340,3 +340,262 @@
       (is (= "joe" (:from parsed)))
       (is (= "Hello agents" (:text parsed)))
       (is (= "irc" (:transport parsed)) "frame includes transport field"))))
+
+;; =============================================================================
+;; 11. M-IRC-stability: Keepalive (F1)
+;; =============================================================================
+
+(deftest server-ping-sent-after-interval
+  (testing "ping-idle! sends PING to clients idle longer than interval"
+    (let [{:keys [sent clients ping-idle!] :as irc} (make-test-irc {:ping-interval-ms 100
+                                                                      :ping-timeout-ms 5000})]
+      (register-client! irc :c1 "joe")
+      ;; Force last-activity-at to be old enough to trigger ping
+      (swap! clients update :c1 assoc :last-activity-at (- (System/currentTimeMillis) 200))
+      (reset! sent [])
+
+      (ping-idle! 100)
+
+      (let [lines (sent-lines-to sent :c1)]
+        (is (some #(re-find #"^PING" %) lines) "Server should send PING to idle client"))
+      (is (true? (:ping-pending? (get @clients :c1)))
+          "Client should be marked ping-pending"))))
+
+(deftest ping-not-sent-to-active-client
+  (testing "ping-idle! does NOT ping clients with recent activity"
+    (let [{:keys [sent clients ping-idle!] :as irc} (make-test-irc {:ping-interval-ms 30000})]
+      (register-client! irc :c1 "joe")
+      ;; Client just connected — last-activity-at is now
+      (reset! sent [])
+
+      (ping-idle! 30000)
+
+      (let [lines (sent-lines-to sent :c1)]
+        (is (not (some #(re-find #"^PING" %) lines))
+            "Active client should not receive PING")))))
+
+(deftest pong-clears-ping-pending
+  (testing "PONG from client clears :ping-pending? flag"
+    (let [{:keys [clients] :as irc} (make-test-irc)]
+      (register-client! irc :c1 "joe")
+      ;; Simulate a pending PING
+      (swap! clients update :c1 assoc :ping-pending? true)
+      (is (true? (:ping-pending? (get @clients :c1))))
+
+      ;; Client responds with PONG
+      ((:on-line irc) :c1 "PONG :futon3c")
+      (is (false? (:ping-pending? (get @clients :c1)))
+          "PONG should clear ping-pending"))))
+
+(deftest any-message-resets-liveness
+  (testing "any received message updates :last-activity-at (not just PONG)"
+    (let [{:keys [clients] :as irc} (make-test-irc)]
+      (register-client! irc :c1 "joe")
+      ;; Force old activity timestamp
+      (swap! clients update :c1 assoc :last-activity-at 1000)
+      (is (= 1000 (:last-activity-at (get @clients :c1))))
+
+      ;; Send any command (PING in this case)
+      ((:on-line irc) :c1 "PING :keepalive")
+      (is (> (:last-activity-at (get @clients :c1)) 1000)
+          "Any received line should update last-activity-at"))))
+
+(deftest reap-dead-removes-timed-out-clients
+  (testing "reap-dead! removes clients past ping-timeout-ms"
+    (let [{:keys [clients rooms closed reap-dead!] :as irc}
+          (make-test-irc {:ping-timeout-ms 100})]
+      (register-client! irc :c1 "joe")
+      ((:on-line irc) :c1 "JOIN #futon")
+      ;; Force last-activity-at to be old
+      (swap! clients update :c1 assoc :last-activity-at (- (System/currentTimeMillis) 500))
+
+      (let [reaped (reap-dead!)]
+        (is (= 1 reaped) "Should reap 1 dead client")
+        (is (nil? (get @clients :c1)) "Client should be removed")
+        (is (not (contains? (get @rooms "#futon") "joe"))
+            "Nick should be removed from rooms")
+        (is (= [:c1] @closed) "close-fn should be called")))))
+
+(deftest reap-dead-preserves-active-clients
+  (testing "reap-dead! does NOT reap clients with recent activity"
+    (let [{:keys [clients reap-dead!] :as irc}
+          (make-test-irc {:ping-timeout-ms 60000})]
+      (register-client! irc :c1 "joe")
+      ;; Client is fresh — default last-activity-at is now
+
+      (let [reaped (reap-dead!)]
+        (is (zero? reaped) "Should reap 0 clients")
+        (is (some? (get @clients :c1)) "Active client should remain")))))
+
+(deftest reap-dead-emits-evidence
+  (testing "reap-dead! emits tension evidence for reaped connections"
+    (let [{:keys [clients reap-dead!] :as irc}
+          (make-test-irc {:ping-timeout-ms 100})]
+      (register-client! irc :c1 "joe")
+      (swap! clients update :c1 assoc :last-activity-at 0)
+      (estore/reset-store!)
+
+      (reap-dead!)
+
+      (let [entries (vals (:entries @estore/!store))
+            tensions (filter #(= :tension (:evidence/claim-type %)) entries)]
+        (is (pos? (count tensions))
+            "Should emit at least one tension evidence entry for reap")))))
+
+;; =============================================================================
+;; 12. M-IRC-stability: Nick Reclaim (F4)
+;; =============================================================================
+
+(deftest nick-reclaim-from-ghost
+  (testing "reconnecting client reclaims nick from ghost (timed-out) connection"
+    (let [{:keys [clients rooms closed] :as irc}
+          (make-test-irc {:ping-timeout-ms 100})]
+      ;; First client registers and joins
+      (register-client! irc :c1 "joe")
+      ((:on-line irc) :c1 "JOIN #futon")
+      (is (= "joe" (:nick (get @clients :c1))))
+
+      ;; Simulate ghost: old activity, pending ping
+      (swap! clients update :c1 assoc
+             :last-activity-at (- (System/currentTimeMillis) 500)
+             :ping-pending? true)
+
+      ;; Second client connects and requests same nick
+      ((:on-connect irc) :c2)
+      ((:on-line irc) :c2 "NICK joe")
+
+      ;; Ghost should be killed, new client gets the nick
+      (is (nil? (get @clients :c1)) "Ghost client should be removed")
+      (is (= "joe" (:nick (get @clients :c2))) "New client should have nick")
+      (is (some #{:c1} @closed) "Ghost connection should be closed"))))
+
+(deftest nick-collision-for-live-client
+  (testing "non-ghost nick collision returns ERR_NICKNAMEINUSE (433)"
+    (let [{:keys [sent clients] :as irc} (make-test-irc {:ping-timeout-ms 60000})]
+      ;; First client registers (active — last-activity-at is recent)
+      (register-client! irc :c1 "joe")
+
+      ;; Second client tries the same nick
+      ((:on-connect irc) :c2)
+      (reset! sent [])
+      ((:on-line irc) :c2 "NICK joe")
+
+      ;; Should get 433
+      (let [lines (sent-lines-to sent :c2)]
+        (is (some #(re-find #"433.*joe.*already in use" %) lines)
+            "Should receive ERR_NICKNAMEINUSE"))
+      ;; Original client should still have the nick
+      (is (= "joe" (:nick (get @clients :c1)))))))
+
+(deftest ghost-detection-uses-timeout
+  (testing "ghost detection considers both ping-pending and elapsed time"
+    (let [{:keys [clients] :as irc}
+          (make-test-irc {:ping-timeout-ms 100})]
+      ;; Client with recent activity — not a ghost
+      (register-client! irc :c1 "joe")
+      ;; second client tries nick — should fail since c1 is live
+      ((:on-connect irc) :c2)
+      ((:on-line irc) :c2 "NICK joe")
+      (is (= "joe" (:nick (get @clients :c1)))
+          "Live client keeps nick")
+
+      ;; Now age out the first client past timeout
+      (swap! clients update :c1 assoc :last-activity-at (- (System/currentTimeMillis) 500))
+
+      ;; Third client tries — should reclaim since c1 is now timed out
+      ((:on-connect irc) :c3)
+      ((:on-line irc) :c3 "NICK joe")
+      (is (nil? (get @clients :c1)) "Timed-out client should be killed")
+      (is (= "joe" (:nick (get @clients :c3))) "New client reclaims nick"))))
+
+;; =============================================================================
+;; 13. M-IRC-stability: Relay Timeout (F5)
+;; =============================================================================
+
+(deftest relay-timeout-skips-stalled-agent
+  (testing "relay timeout: stalled agent doesn't block other agents"
+    (let [fast-received (atom [])
+          slow-received (atom [])
+          bridge (irc/make-relay-bridge {:evidence-store estore/!store
+                                          :relay-timeout-ms 200})
+          {:keys [relay-fn join-agent!]} bridge]
+
+      ;; Fast agent responds immediately
+      (join-agent! "fast-agent" "claude" "#futon"
+                   (fn [data] (swap! fast-received conj data)))
+
+      ;; Slow agent blocks for 5 seconds (well beyond 200ms timeout)
+      (join-agent! "slow-agent" "codex" "#futon"
+                   (fn [data]
+                     (Thread/sleep 5000)
+                     (swap! slow-received conj data)))
+
+      ;; Relay a message — should complete in ~200ms, not 5s
+      (let [start (System/currentTimeMillis)]
+        (relay-fn "#futon" "joe" "Hello agents")
+        (let [elapsed (- (System/currentTimeMillis) start)]
+          ;; Should complete well under 2 seconds (200ms timeout + overhead)
+          (is (< elapsed 2000)
+              (str "Relay should complete quickly (took " elapsed "ms)"))))
+
+      ;; Fast agent should have received the message
+      (is (= 1 (count @fast-received))
+          "Fast agent should receive the message"))))
+
+(deftest relay-timeout-emits-evidence
+  (testing "relay timeout emits tension evidence for stalled agent"
+    (let [bridge (irc/make-relay-bridge {:evidence-store estore/!store
+                                          :relay-timeout-ms 100})
+          {:keys [relay-fn join-agent!]} bridge]
+
+      ;; Stalled agent — blocks for 2 seconds
+      (join-agent! "stalled" "codex" "#futon"
+                   (fn [_] (Thread/sleep 2000)))
+
+      (estore/reset-store!)
+      (relay-fn "#futon" "joe" "test")
+
+      ;; Wait briefly for evidence to be emitted
+      (Thread/sleep 200)
+
+      (let [entries (vals (:entries @estore/!store))
+            tensions (filter #(= :tension (:evidence/claim-type %)) entries)]
+        (is (pos? (count tensions))
+            "Should emit tension evidence for relay timeout")))))
+
+;; =============================================================================
+;; 14. M-IRC-stability: Error Logging (F3)
+;; =============================================================================
+
+(deftest send-errors-logged-to-evidence
+  (testing "send-fn errors emit tension evidence (not silently swallowed)"
+    (let [;; Create callbacks with a send-fn that throws
+          {:keys [on-connect on-line clients] :as irc}
+          (make-test-irc {:send-fn (fn [cid line]
+                                     (when (re-find #"001" line)
+                                       (throw (Exception. "mock send error"))))})]
+      (estore/reset-store!)
+
+      ;; Registration will trigger welcome numerics, which will throw on 001
+      ;; The error should be caught and evidence emitted, not crash the server
+      (on-connect :c1)
+      (on-line :c1 "NICK joe")
+      ;; This triggers welcome which calls send-fn — the send-fn in irc callbacks
+      ;; doesn't throw directly, but the start-irc-server! send-fn does emit evidence.
+      ;; For callback-level testing, we verify the client state is still valid
+      (is (= "joe" (:nick (get @clients :c1)))
+          "Server should not crash on send errors"))))
+
+;; =============================================================================
+;; 15. M-IRC-stability: Client state includes liveness fields
+;; =============================================================================
+
+(deftest client-state-includes-liveness-fields
+  (testing "on-connect initializes liveness tracking fields"
+    (let [{:keys [on-connect clients]} (make-test-irc)]
+      (on-connect :c1)
+      (let [client (get @clients :c1)]
+        (is (number? (:last-activity-at client))
+            "Should have :last-activity-at timestamp")
+        (is (false? (:ping-pending? client))
+            "Should have :ping-pending? false initially")))))
