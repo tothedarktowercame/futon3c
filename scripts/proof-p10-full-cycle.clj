@@ -151,6 +151,7 @@
 (tools/execute-tool be :failed-route-add
   ["P10" {:route/blocker-id "L-verifier"
           :route/approach "Codex o3 model node verification (15 prompts)"
+          :route/structural-obstruction "Model availability mismatch prevents execution of the intended verifier protocol"
           :route/failure-reason "Model mismatch: o3 not supported with ChatGPT account; all 15 nodes returned parse_error"
           :route/evidence-refs ["data/first-proof/problem10-codex-results.jsonl"]}])
 
@@ -403,6 +404,7 @@
   :args ["P10"
          {:route/blocker-id "L-convergence"
           :route/approach "Spectral equivalence (1-δ)P ≤ A ≤ (1+δ)P with δ < 1"
+          :route/structural-obstruction "Empirical spectrum violates the small-δ regime required for strong convergence guarantees"
           :route/failure-reason (str "Empirical falsification: δ ranges 5.2-22.7 across uniform/adversarial "
                                      "sampling (n=4-10, r=2, q/N=0.1-0.9). Adversarial row-concentrated "
                                      "sampling gives κ up to 575. High coherence worsens δ (18.1 vs 12.1). "

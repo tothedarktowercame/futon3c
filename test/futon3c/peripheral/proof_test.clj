@@ -1,8 +1,8 @@
 (ns futon3c.peripheral.proof-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.set :as set]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.evidence.store :as store]
             [futon3c.peripheral.proof :as proof]
-            [futon3c.peripheral.proof-backend :as pb]
             [futon3c.peripheral.proof-shapes :as ps]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
@@ -151,7 +151,7 @@
                                 :cycle/phase-data {}
                                 :cycle/started-at "t"
                                 :cycle/updated-at "t"}
-                  :cycle-advance (fn [_tool args]
+                  :cycle-advance (fn [_tool _args]
                                    {:ok true
                                     :result {:cycle/id "C1"
                                              :cycle/blocker-id "L-b"
@@ -191,7 +191,18 @@
     (is (:ok stop))
     (is (= 3 (count entries)))
     (is (= [:goal :step :conclusion]
-           (mapv :evidence/claim-type (sort-by :evidence/at entries))))))
+           (mapv :evidence/claim-type (sort-by :evidence/at entries))))
+    (let [step-entry (first (filter #(= :step (:evidence/claim-type %)) entries))]
+      (is (= :ledger-query (get-in step-entry [:evidence/body :tool])))
+      (is (= :observe (get-in step-entry [:evidence/body :proof/operation-kind]))))))
+
+(deftest proof-step-evidence-tags-action-tools
+  (let [p (proof/make-proof (make-proof-mock))
+        start (runner/start p {:session-id "sess-ev-action-1"})
+        cycle-step (runner/step p (:state start) {:tool :cycle-begin :args ["P-test" "L-main"]})]
+    (is (:ok cycle-step))
+    (is (= :cycle-begin (get-in cycle-step [:evidence :evidence/body :tool])))
+    (is (= :action (get-in cycle-step [:evidence :evidence/body :proof/operation-kind])))))
 
 ;; =============================================================================
 ;; Rejects tools outside peripheral spec
@@ -246,6 +257,21 @@
   (doseq [phase ps/phase-order]
     (is (contains? ps/phase-allowed-tools phase)
         (str "Missing tool set for phase: " phase))))
+
+(deftest proof-tool-operation-classification-covers-runtime-tools
+  (let [setup-tools #{:proof-load :proof-save :ledger-query :ledger-upsert
+                      :dag-check :dag-impact :canonical-get :canonical-update
+                      :cycle-begin :cycle-list :cycle-get :failed-route-add
+                      :read :glob :grep :bash-readonly}
+        phase-tools (apply set/union #{} (vals ps/phase-allowed-tools))
+        runtime-tools (set/union setup-tools phase-tools)
+        unclassified (remove ps/tool-operation-kind runtime-tools)
+        invalid-kinds (remove #{:observe :action}
+                              (map ps/tool-operation-kind runtime-tools))]
+    (is (empty? unclassified)
+        (str "Every proof runtime tool must be classified: " (vec unclassified)))
+    (is (empty? invalid-kinds)
+        (str "Classification must be :observe or :action: " (vec invalid-kinds)))))
 
 (deftest status-validation-rules
   (testing "valid transitions"

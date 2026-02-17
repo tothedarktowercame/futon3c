@@ -15,6 +15,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set]
+            [clojure.string :as str]
             [futon3c.peripheral.proof-dag :as dag]
             [futon3c.peripheral.proof-shapes :as ps]
             [futon3c.peripheral.tools :as tools])
@@ -347,16 +348,23 @@
   (let [problem-id (first args)
         route-data (second args)]
     (if-let [state (get-state cache cwd problem-id)]
-      (let [route (merge {:route/id (gen-id "FR")
-                          :route/recorded-at (now-str)}
-                         route-data)
-            ;; Validate the route
-            err (ps/validate ps/FailedRoute route)]
-        (if err
-          (proof-error :invalid-route (str "Invalid route data: " (:error err)))
-          (let [new-state (update state :proof/failed-routes conj route)]
-            (put-state! cache new-state)
-            {:ok true :result route})))
+      (let [obstruction (:route/structural-obstruction route-data)]
+        (cond
+          (or (nil? obstruction) (str/blank? obstruction))
+          (proof-error :missing-structural-obstruction
+                       "Failed route requires :route/structural-obstruction")
+
+          :else
+          (let [route (merge {:route/id (gen-id "FR")
+                              :route/recorded-at (now-str)}
+                             route-data)
+                ;; Validate the route
+                err (ps/validate ps/FailedRoute route)]
+            (if err
+              (proof-error :invalid-route (str "Invalid route data: " (:error err)))
+              (let [new-state (update state :proof/failed-routes conj route)]
+                (put-state! cache new-state)
+                {:ok true :result route})))))
       (proof-error :not-found (str "No proof state for " problem-id)))))
 
 (defn- tool-status-validate
@@ -364,27 +372,27 @@
   [_cache _cwd args]
   (let [from (first args)
         to (second args)
-        evidence-type (nth args 2)]
-    (let [valid? (ps/valid-status-transition? from to evidence-type)]
-      {:ok true :result {:valid? valid?
-                         :from from
-                         :to to
-                         :evidence-type evidence-type
-                         :reason (when-not valid?
-                                   (cond
-                                     (and (= to :proved) (= evidence-type :numerical))
-                                     "Cannot claim :proved with only :numerical evidence"
+        evidence-type (nth args 2)
+        valid? (ps/valid-status-transition? from to evidence-type)]
+    {:ok true :result {:valid? valid?
+                       :from from
+                       :to to
+                       :evidence-type evidence-type
+                       :reason (when-not valid?
+                                 (cond
+                                   (and (= to :proved) (= evidence-type :numerical))
+                                   "Cannot claim :proved with only :numerical evidence"
 
-                                     (= from :false)
-                                     "Cannot transition away from :false status"
+                                   (= from :false)
+                                   "Cannot transition away from :false status"
 
-                                     (not (ps/valid-status? from))
-                                     (str "Invalid source status: " from)
+                                   (not (ps/valid-status? from))
+                                   (str "Invalid source status: " from)
 
-                                     (not (ps/valid-status? to))
-                                     (str "Invalid target status: " to)
+                                   (not (ps/valid-status? to))
+                                   (str "Invalid target status: " to)
 
-                                     :else "Unknown validation failure"))}})))
+                                   :else "Unknown validation failure"))}}))
 
 (defn- tool-gate-check
   "Run the G5-G0 gate checklist (CR-8)."

@@ -202,15 +202,15 @@
         _ (tools/execute-tool backend :ledger-upsert
             ["P-test" "L-blocker" {:item/label "Main blocker" :item/status :open}])
         ;; Begin cycle
-        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-blocker"])]
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-blocker"])
+        cycle-id (get-in begin [:result :cycle/id])
+        ;; Advance through observe
+        adv (tools/execute-tool backend :cycle-advance
+                                ["P-test" cycle-id {:blocker-id "L-blocker"}])]
     (is (:ok begin))
     (is (= :observe (get-in begin [:result :cycle/phase])))
-    (let [cycle-id (get-in begin [:result :cycle/id])]
-      ;; Advance through observe
-      (let [adv (tools/execute-tool backend :cycle-advance
-                  ["P-test" cycle-id {:blocker-id "L-blocker"}])]
-        (is (:ok adv))
-        (is (= :propose (get-in adv [:result :cycle/phase])))))))
+    (is (:ok adv))
+    (is (= :propose (get-in adv [:result :cycle/phase])))))
 
 (deftest cycle-begin-rejects-nonexistent-blocker
   (let [{:keys [backend] :as ctx} (make-test-backend)
@@ -258,10 +258,24 @@
         add-result (tools/execute-tool backend :failed-route-add
                      ["P-test" {:route/blocker-id "L-b"
                                 :route/approach "Direct proof by induction"
+                                :route/structural-obstruction "Induction schema cannot close under dependency cycle"
                                 :route/failure-reason "Induction hypothesis too weak"
                                 :route/evidence-refs ["artifact-001"]}])]
     (is (:ok add-result))
     (is (string? (get-in add-result [:result :route/id])))))
+
+(deftest failed-route-requires-structural-obstruction
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "B" :item/status :open}])
+        add-result (tools/execute-tool backend :failed-route-add
+                     ["P-test" {:route/blocker-id "L-b"
+                                :route/approach "Direct proof by induction"
+                                :route/failure-reason "Induction hypothesis too weak"
+                                :route/evidence-refs ["artifact-001"]}])]
+    (is (not (:ok add-result)))
+    (is (= :missing-structural-obstruction (get-in add-result [:error :code])))))
 
 (deftest honesty-cannot-erase-failure-point
   (let [{:keys [backend] :as ctx} (make-test-backend)

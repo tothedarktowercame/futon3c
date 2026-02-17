@@ -39,6 +39,46 @@
   [:enum :proved :partial :numerically-verified :falsified :inconclusive])
 
 ;; =============================================================================
+;; Tool operation kinds (observe vs action)
+;; =============================================================================
+
+(def OperationKind
+  "Proof tool operation category.
+   :observe tools inspect state/evidence without changing proof state.
+   :action tools mutate proof state or execute side-effecting commands."
+  [:enum :observe :action])
+
+(def proof-tool-operation-kinds
+  "Classification for tools used by the proof peripheral.
+   This is used for evidence tagging and invariant checks."
+  {:proof-load :observe
+   :proof-save :action
+   :ledger-query :observe
+   :ledger-upsert :action
+   :dag-check :observe
+   :dag-impact :observe
+   :canonical-get :observe
+   :canonical-update :action
+   :cycle-begin :action
+   :cycle-advance :action
+   :cycle-get :observe
+   :cycle-list :observe
+   :failed-route-add :action
+   :status-validate :observe
+   :gate-check :observe
+   :read :observe
+   :glob :observe
+   :grep :observe
+   :bash :action
+   :bash-readonly :observe
+   :write :action})
+
+(defn tool-operation-kind
+  "Return the operation kind (:observe | :action) for TOOL, or nil if unknown."
+  [tool]
+  (get proof-tool-operation-kinds tool))
+
+;; =============================================================================
 ;; Ledger item — a single proof obligation (SR-2, SR-3, SR-5, SR-8)
 ;; =============================================================================
 
@@ -105,6 +145,7 @@
    [:route/id :string]
    [:route/blocker-id :string]
    [:route/approach :string]
+   [:route/structural-obstruction :string]
    [:route/failure-reason :string]
    [:route/evidence-refs [:vector :string]]
    [:route/recorded-at :string]])

@@ -156,30 +156,35 @@
 (tools/execute-tool be :failed-route-add
   ["P4" {:route/blocker-id "L-n4-case3c"
          :route/approach "Perturbation from symmetric case"
+         :route/structural-obstruction "Indefinite Hessian in perturbation coordinates blocks monotone local argument"
          :route/failure-reason "Hessian in (a3,b3) NOT PSD: H11<0 for 24%, det(H)<0 for 40% of (a4,b4)"
          :route/evidence-refs ["scripts/verify-p4-n4-perturbation.py"]}])
 
 (tools/execute-tool be :failed-route-add
   ["P4" {:route/blocker-id "L-n4"
          :route/approach "4-variable SOS/Putinar at degrees 10, 12, 14"
+         :route/structural-obstruction "Interior zero with strict constraints violates Putinar certificate preconditions"
          :route/failure-reason "Fundamentally infeasible: interior zero forces sigma_0(x0)=0, contradicts SOS"
          :route/evidence-refs ["scripts/verify-p4-n4-sos-d12-scs.py"]}])
 
 (tools/execute-tool be :failed-route-add
   ["P4" {:route/blocker-id "L-n4-case3c"
          :route/approach "Direct resultant elimination of 4D gradient system"
+         :route/structural-obstruction "Elimination degree growth is super-polynomial for the chosen elimination order"
          :route/failure-reason "res(g1,g2,a3) ~2000 terms, timed out; second elim would be degree ~5000"
          :route/evidence-refs ["scripts/verify-p4-n4-case3c.py"]}])
 
 (tools/execute-tool be :failed-route-add
   ["P4" {:route/blocker-id "L-n4-case3c"
          :route/approach "Interval arithmetic (naive + centered form)"
+         :route/structural-obstruction "Wrapping-error explosion blocks sign certification on the required domain"
          :route/failure-reason "Wrapping error: 6.7% certified; Hessian Frobenius ~96M; -N not non-neg on bounding box"
          :route/evidence-refs ["data/first-proof/case3c-handoff.md"]}])
 
 (tools/execute-tool be :failed-route-add
   ["P4" {:route/blocker-id "L-n4"
          :route/approach "Lipschitz grid certification"
+         :route/structural-obstruction "Global Lipschitz bound implies combinatorial grid size beyond feasible computation"
          :route/failure-reason "max|grad(-N)|=70768; would need n~3.1M per dimension"
          :route/evidence-refs ["scripts/verify-p4-n4-lipschitz.py"]}])
 

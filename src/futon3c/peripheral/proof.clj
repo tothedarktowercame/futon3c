@@ -57,8 +57,15 @@
                              :phase (or (:current-phase state) :setup)
                              :allowed (vec (current-phase-tools state)))
 
+        ;; Observe/action classification must be total for allowed proof tools.
+        (nil? (ps/tool-operation-kind tool))
+        (runner/runner-error :proof :unclassified-proof-tool
+                             (str "Tool " tool " has no observe/action classification")
+                             :tool tool)
+
         :else
-        (let [dispatch-result (tools/dispatch-tool tool args spec backend)]
+        (let [operation-kind (ps/tool-operation-kind tool)
+              dispatch-result (tools/dispatch-tool tool args spec backend)]
           (cond
             (common/social-error? dispatch-result)
             dispatch-result
@@ -72,9 +79,12 @@
 
             :else
             (let [result (:result dispatch-result)
-                  ev (evidence/make-step-evidence
-                      :proof (:session-id state) (:author state)
-                      tool args result (:last-evidence-id state))
+                  ev (assoc-in
+                      (evidence/make-step-evidence
+                       :proof (:session-id state) (:author state)
+                       tool args result (:last-evidence-id state))
+                      [:evidence/body :proof/operation-kind]
+                      operation-kind)
                   ;; Track phase transitions from cycle-advance results
                   new-phase (when (= tool :cycle-advance)
                               (:cycle/phase result))
