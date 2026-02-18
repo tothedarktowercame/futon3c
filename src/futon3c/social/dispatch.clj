@@ -47,6 +47,57 @@
         (keyword s)))
     :else nil))
 
+(defn- normalize-tool-id
+  [x]
+  (cond
+    (keyword? x) x
+    (string? x)
+    (let [s (str/trim x)
+          s (if (str/starts-with? s ":") (subs s 1) s)]
+      (when-not (str/blank? s)
+        (keyword s)))
+    :else nil))
+
+(defn- normalize-action
+  [action]
+  (when (map? action)
+    (let [tool (or (normalize-tool-id (:tool action))
+                   (normalize-tool-id (get action "tool")))
+          args (or (:args action) (get action "args") [])]
+      (when (and tool (sequential? args))
+        {:tool tool :args (vec args)}))))
+
+(defn- payload-actions
+  "Extract explicit action list from a message payload map.
+   Supports:
+   - {:actions [{:tool ... :args [...]} ...]}
+   - {:tool ... :args [...]}"
+  [payload]
+  (when (map? payload)
+    (cond
+      (or (:actions payload) (get payload "actions"))
+      (->> (or (:actions payload) (get payload "actions"))
+           (keep normalize-action)
+           vec
+           not-empty)
+
+      (or (:tool payload) (get payload "tool"))
+      (some-> payload normalize-action vector)
+
+      :else nil)))
+
+(defn- default-actions
+  "Default tool actions when payload does not specify explicit actions."
+  [peripheral-id]
+  (case peripheral-id
+    :mission-control [{:tool :mc-review :args []}]
+    []))
+
+(defn- resolve-actions
+  [payload peripheral-id]
+  (or (payload-actions payload)
+      (default-actions peripheral-id)))
+
 (defn select-peripheral
   "Given agent type and message payload, choose starting peripheral.
    Returns PeripheralId (:explore, :edit, etc.).
@@ -126,6 +177,8 @@
   (let [session-id (str "sess-" (UUID/randomUUID))
         msg-id (:msg/id classified-message)
         agent-id (:msg/from classified-message)
+        payload (:msg/payload classified-message)
+        actions (resolve-actions payload peripheral-id)
         {:keys [backend peripherals evidence-store]} config]
     ;; Emit root evidence entry
     (emit-dispatch-evidence evidence-store session-id msg-id peripheral-id agent-id)
@@ -133,7 +186,7 @@
     (let [context (cond-> {:session-id session-id}
                     evidence-store (assoc :evidence-store evidence-store))
           steps [{:peripheral-id peripheral-id
-                  :actions []
+                  :actions actions
                   :stop-reason "dispatch-initiated"
                   :exit-condition :session-close}]
           result (try

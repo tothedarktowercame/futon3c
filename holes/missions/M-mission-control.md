@@ -164,6 +164,9 @@ determine what's affordable and surfaces gated missions.
 - Modifying the mana/sospeso system itself — that stays in futon5
 - Automatic mission execution — mission control prioritizes, agents execute
 - Visualization (Arxana/futon4) — mission control produces data, viewers render
+- Emacs-side mission-control operator UX (session picker/thread browser in
+  `fubar.el` / `codex-repl`) — deferred follow-up after core substrate
+  stabilization
 - Cross-mission learning queries — future evidence landscape feature
 - Automated devmap generation — devmaps are authored in futon5
 - Multi-agent resource negotiation — future Agency concern

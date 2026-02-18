@@ -23,9 +23,20 @@ Starts a single JVM with:
   durable storage with HTTP API for the evidence landscape
 - **futon3c transport** on port 7070 (configurable via `FUTON3C_PORT`) —
   dispatch, presence, and health endpoints
+- **Drawbridge** on port 6768 (configurable via `FUTON3C_DRAWBRIDGE_PORT`) —
+  nREPL-over-HTTP for low-latency mission-control queries and admin eval
 
 No agents are registered at startup. They come alive when you launch a
 Claude or Codex session, or register them via REPL.
+
+Mission control is initialized at startup and stays hot in the same JVM.
+From Drawbridge eval:
+
+```clojure
+(require '[futon3c.mission-control.service :as mcs])
+(mcs/list-sessions)
+(mcs/run-review! {:author "joe"})
+```
 
 ### `make claude`
 
@@ -181,6 +192,10 @@ and sessions.
 | `FUTON1A_PORT` | 7071 | futon1a HTTP port |
 | `FUTON1A_DATA_DIR` | `~/code/storage/futon1a/default` | XTDB data directory |
 | `FUTON3C_PORT` | 7070 | futon3c transport HTTP port (0 = disable) |
+| `FUTON3C_DRAWBRIDGE_PORT` | 6768 | Drawbridge HTTP port (0 = disable) |
+| `FUTON3C_DRAWBRIDGE_BIND` | `127.0.0.1` | Drawbridge bind interface |
+| `FUTON3C_DRAWBRIDGE_ALLOW` | `127.0.0.1,::1` | Comma-separated allowlist of remote addrs |
+| `FUTON3C_ADMIN_TOKEN` | (falls back to `ADMIN_TOKEN`/`.admintoken`) | Drawbridge auth token |
 | `FUTON3C_PATTERNS` | (none) | Comma-separated pattern IDs |
 | `CLAUDE_PERMISSION_MODE` | `bypassPermissions` | Permission mode for claude CLI |
 | `CLAUDE_PICKER_MAX` | 12 | Max sessions shown in picker |

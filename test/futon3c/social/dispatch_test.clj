@@ -274,6 +274,53 @@
         (fix/assert-valid! shapes/SocialError result)
         (is (= :peripheral-failed (:error/code result)))))))
 
+(deftest peripheral-dispatch-mission-control-default-action
+  (testing "tickle action dispatch defaults to :mc-review when payload has no explicit actions"
+    (let [captured-steps (atom nil)
+          config (fix/make-peripheral-config)
+          registry (fix/mock-registry
+                    {:peripheral-config config
+                     :agents {"tickle-1" {:capabilities [:mission-control :coordination/execute]
+                                          :type :tickle}}})
+          to (fix/make-agent-id "tickle-1" :continuity)
+          msg (assoc (fix/make-action-message {:msg/payload "scan portfolio"})
+                     :msg/to to
+                     :msg/from to)]
+      (with-redefs [futon3c.peripheral.registry/run-chain
+                    (fn [_ _ steps]
+                      (reset! captured-steps steps)
+                      {:ok true :fruits [{:review {:portfolio/summary "ok"}}]})]
+        (let [result (dispatch/dispatch msg registry)]
+          (fix/assert-valid! shapes/DispatchReceipt result)
+          (is (= :mission-control (:receipt/peripheral-id result)))
+          (is (= [{:tool :mc-review :args []}]
+                 (get-in (first @captured-steps) [:actions]))))))))
+
+(deftest peripheral-dispatch-mission-control-payload-actions
+  (testing "payload :actions overrides mission-control defaults and normalizes tool ids"
+    (let [captured-steps (atom nil)
+          config (fix/make-peripheral-config)
+          registry (fix/mock-registry
+                    {:peripheral-config config
+                     :agents {"tickle-2" {:capabilities [:mission-control :coordination/execute]
+                                          :type :tickle}}})
+          to (fix/make-agent-id "tickle-2" :continuity)
+          msg (assoc (fix/make-action-message
+                      {:msg/payload {:actions [{:tool "mc-inventory"}
+                                               {:tool ":mc-bulletin"
+                                                :args ["focus: unblock M-gauntlet"]}]}})
+                     :msg/to to
+                     :msg/from to)]
+      (with-redefs [futon3c.peripheral.registry/run-chain
+                    (fn [_ _ steps]
+                      (reset! captured-steps steps)
+                      {:ok true :fruits [{:review {:portfolio/summary "ok"}}]})]
+        (let [result (dispatch/dispatch msg registry)]
+          (fix/assert-valid! shapes/DispatchReceipt result)
+          (is (= [{:tool :mc-inventory :args []}
+                  {:tool :mc-bulletin :args ["focus: unblock M-gauntlet"]}]
+                 (get-in (first @captured-steps) [:actions]))))))))
+
 (deftest peripheral-dispatch-existing-direct-path-regression
   (testing "explicit regression: direct path still works with peripheral-config present"
     (let [config (fix/make-peripheral-config)

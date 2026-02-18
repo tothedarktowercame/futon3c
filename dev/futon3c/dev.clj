@@ -8,10 +8,19 @@
      FUTON1A_PORT       — HTTP port for futon1a (default 7071)
      FUTON1A_DATA_DIR   — XTDB storage directory
      FUTON3C_PORT       — futon3c transport HTTP port (default 7070, 0 = disable)
+     FUTON3C_DRAWBRIDGE_PORT  — Drawbridge HTTP port (default 6768, 0 = disable)
+     FUTON3C_DRAWBRIDGE_BIND  — Drawbridge bind interface (default 127.0.0.1)
+     FUTON3C_DRAWBRIDGE_ALLOW — Drawbridge allowlist CSV (default 127.0.0.1,::1)
+     FUTON3C_ADMIN_TOKEN / ADMIN_TOKEN / .admintoken — Drawbridge auth token
      FUTON3C_PATTERNS   — comma-separated pattern IDs (default: none)"
   (:require [futon1a.system :as f1]
+            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.mission-control.service :as mcs]
             [futon3c.runtime.agents :as rt]
-            [futon3c.transport.http :as http]))
+            [futon3c.transport.http :as http]
+            [repl.http :as drawbridge]
+            [clojure.string :as str]
+            [clojure.java.io :as io]))
 
 (defn env
   "Read an env var with optional default."
@@ -21,6 +30,22 @@
 (defn env-int [k default]
   (if-let [s (env k)]
     (parse-long s)
+    default))
+
+(defn read-admin-token []
+  (or (some-> (env "FUTON3C_ADMIN_TOKEN") str/trim not-empty)
+      (some-> (env "ADMIN_TOKEN") str/trim not-empty)
+      (let [f (io/file ".admintoken")]
+        (when (.exists f)
+          (some-> (slurp f) str/trim not-empty)))
+      "change-me"))
+
+(defn env-list [k default]
+  (if-let [s (env k)]
+    (->> (str/split s #",")
+         (map str/trim)
+         (remove str/blank?)
+         vec)
     default))
 
 (defn start-futon1a!
@@ -51,9 +76,29 @@
                       " (patterns: " (if (seq pattern-ids) pattern-ids "none") ")"))
         result))))
 
+(defn start-drawbridge!
+  "Start Drawbridge endpoint used by fubar/portal style tooling.
+   Returns {:stop stop-fn :port p} or nil when disabled."
+  []
+  (let [port (env-int "FUTON3C_DRAWBRIDGE_PORT" 6768)]
+    (when (pos? port)
+      (let [bind (env "FUTON3C_DRAWBRIDGE_BIND" "127.0.0.1")
+            allow (env-list "FUTON3C_DRAWBRIDGE_ALLOW" ["127.0.0.1" "::1"])
+            token (read-admin-token)
+            stop-fn (drawbridge/start! {:port port
+                                        :bind bind
+                                        :allow allow
+                                        :token token})]
+        {:stop stop-fn
+         :port port
+         :bind bind}))))
+
 (defn -main [& _args]
   (let [f1-sys (start-futon1a!)
-        f3c-sys (start-futon3c! (:node f1-sys))]
+        evidence-store (xb/make-xtdb-backend (:node f1-sys))
+        _ (mcs/configure! {:evidence-store evidence-store})
+        f3c-sys (start-futon3c! (:node f1-sys))
+        bridge-sys (start-drawbridge!)]
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   GET  /api/alpha/evidence          — query entries")
@@ -67,6 +112,11 @@
     (println "[dev]   (rt/register-codex!  {:agent-id \"codex-1\"  :invoke-fn ...})")
     (println "[dev]   (rt/register-tickle! {:agent-id \"tickle-1\" :invoke-fn ...})")
     (println)
+    (println "[dev] Mission control service (Drawbridge, no cold-start per query)")
+    (println "[dev]   (require '[futon3c.mission-control.service :as mcs])")
+    (println "[dev]   (mcs/list-sessions)")
+    (println "[dev]   (mcs/run-review! {:author \"joe\"})")
+    (println)
     (println "[dev] Press Ctrl-C to stop.")
 
     (.addShutdownHook
@@ -75,6 +125,7 @@
       ^Runnable
       (fn []
         (println "\n[dev] Shutting down...")
+        (when-let [stop (:stop bridge-sys)] (stop))
         (when-let [stop (:server f3c-sys)] (stop))
         ((:stop! f1-sys))
         (println "[dev] Stopped."))))
