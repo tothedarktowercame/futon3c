@@ -161,7 +161,29 @@
                   append-err (common/maybe-append-evidence! new-state ev)]
               (if append-err
                 append-err
-                {:ok true :state new-state :result result :evidence ev}))))))))
+                ;; Emit state snapshot if snapshot-fn returns non-nil
+                (let [snapshot-fn (:state-snapshot-fn config)
+                      snapshot (when snapshot-fn
+                                 (snapshot-fn new-state tool result))
+                      snap-ev (when snapshot
+                                (evidence/make-snapshot-evidence
+                                 (:domain-id config)
+                                 (:session-id new-state)
+                                 (:author new-state)
+                                 (:snapshot/subject snapshot)
+                                 (:snapshot/body snapshot)
+                                 (:snapshot/tags snapshot)
+                                 (:evidence/id ev)))
+                      snap-err (when snap-ev
+                                 (common/maybe-append-evidence! new-state snap-ev))
+                      new-state (if snap-ev
+                                  (assoc new-state :last-evidence-id (:evidence/id snap-ev))
+                                  new-state)]
+                  (if snap-err
+                    snap-err
+                    {:ok true :state new-state :result result
+                     :evidence ev
+                     :snapshot-evidence snap-ev}))))))))))
 
 ;; =============================================================================
 ;; CyclePeripheral record (generic)

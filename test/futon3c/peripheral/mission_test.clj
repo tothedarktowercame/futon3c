@@ -204,6 +204,68 @@
       (is (some #{:sigil/perception} tags)))))
 
 ;; =============================================================================
+;; Evidence landscape — state snapshots
+;; =============================================================================
+
+(deftest mission-save-emits-snapshot-evidence
+  (testing "mission-save produces a snapshot evidence entry in the store"
+    (let [evidence-store (atom {:entries {} :order []})
+          save-result {:mission/id "M-test"
+                       :mission/version 2
+                       :mission/obligations {"O-main" {:item/id "O-main"
+                                                        :item/label "Main task"
+                                                        :item/status :partial
+                                                        :item/depends-on #{}
+                                                        :item/unlocks #{}
+                                                        :item/artifact-paths []}}
+                       :mission/cycles [{:cycle/id "C001"}]
+                       :mission/failed-approaches []
+                       :mission/updated-at "2024-01-01T01:00:00Z"}
+          backend (tools/make-mock-backend
+                   {:mission-load {:mission/id "M-test"
+                                   :mission/version 1
+                                   :mission/obligations {}
+                                   :mission/cycles []
+                                   :mission/failed-approaches []
+                                   :mission/updated-at "t"}
+                    :mission-save save-result})
+          p (mission/make-mission backend)
+          start (runner/start p {:session-id "sess-snap-1"
+                                 :mission-id "M-test"
+                                 :evidence-store evidence-store})
+          load-step (runner/step p (:state start) {:tool :mission-load :args ["M-test"]})
+          save-step (runner/step p (:state load-step) {:tool :mission-save :args ["M-test"]})
+          entries (store/query* evidence-store {})]
+      (is (:ok save-step))
+      ;; Should have: start-evidence, load-step-evidence, save-step-evidence, snapshot-evidence
+      (is (= 4 (count entries)))
+      ;; The save step should have produced a snapshot evidence entry
+      (is (some? (:snapshot-evidence save-step)))
+      (let [snap (:snapshot-evidence save-step)]
+        (fix/assert-valid! shapes/EvidenceEntry snap)
+        (is (= :observation (:evidence/claim-type snap)))
+        (is (= {:ref/type :mission :ref/id "M-test"} (:evidence/subject snap)))
+        (is (= "M-test" (get-in snap [:evidence/body :mission/id])))
+        (is (= 2 (get-in snap [:evidence/body :mission/version])))
+        (is (= 1 (get-in snap [:evidence/body :obligations :total])))
+        (is (= {:partial 1} (get-in snap [:evidence/body :obligations :by-status])))
+        (is (= 1 (get-in snap [:evidence/body :cycles-count])))
+        (is (some #{:snapshot} (:evidence/tags snap)))
+        (is (some #{:mission/M-test} (:evidence/tags snap)))))))
+
+(deftest non-save-tools-produce-no-snapshot
+  (testing "tools other than mission-save do not produce snapshot evidence"
+    (let [evidence-store (atom {:entries {} :order []})
+          p (mission/make-mission (make-mission-mock))
+          start (runner/start p {:session-id "sess-snap-2"
+                                 :evidence-store evidence-store})
+          step (runner/step p (:state start) {:tool :obligation-query :args ["M-test"]})]
+      (is (:ok step))
+      (is (nil? (:snapshot-evidence step)))
+      ;; Only 2 entries: start + step (no snapshot)
+      (is (= 2 (count (store/query* evidence-store {})))))))
+
+;; =============================================================================
 ;; Mission shapes validation
 ;; =============================================================================
 

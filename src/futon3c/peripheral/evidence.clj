@@ -66,6 +66,27 @@
            :evidence/session-id session-id}
     in-reply-to (assoc :evidence/in-reply-to in-reply-to)))
 
+(defn make-snapshot-evidence
+  "Create an EvidenceEntry for a domain state snapshot (claim-type :observation).
+   Emitted when a save tool fires, making domain state inspectable from the
+   evidence landscape without loading the operational state file.
+
+   subject: ArtifactRef for the domain entity (e.g. {:ref/type :mission :ref/id id})
+   snapshot-body: summary map of the current domain state
+   extra-tags: domain-specific tags (e.g. [:mission/M-test :snapshot])"
+  [peripheral-id session-id author subject snapshot-body extra-tags in-reply-to]
+  (cond-> {:evidence/id (gen-id)
+           :evidence/subject subject
+           :evidence/type (evidence-type-for peripheral-id)
+           :evidence/claim-type :observation
+           :evidence/author author
+           :evidence/at (now-str)
+           :evidence/body snapshot-body
+           :evidence/tags (into [:peripheral (keyword (name peripheral-id)) :snapshot]
+                                extra-tags)
+           :evidence/session-id session-id}
+    in-reply-to (assoc :evidence/in-reply-to in-reply-to)))
+
 (defn make-stop-evidence
   "Create an EvidenceEntry for peripheral stop (claim-type :conclusion).
    fruit: the peripheral's output (what the constrained session produced).

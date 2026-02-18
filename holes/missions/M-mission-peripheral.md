@@ -1,7 +1,7 @@
 # Mission: General Mission Peripheral
 
 **Date:** 2026-02-18
-**Status:** ARGUE complete, VERIFY next
+**Status:** ARGUE complete, VERIFY next (evidence landscape integration complete)
 **Blocked by:** None (proof peripheral is operational; evidence landscape
 is persistent; futonic logic is specified)
 
@@ -569,7 +569,7 @@ The `CycleDomainConfig` requires:
 :fruit-fn, :exit-context-fn
 ```
 
-Optional: `:state-init-fn`, `:phase-tags-fn`, `:autoconf-fn`
+Optional: `:state-init-fn`, `:phase-tags-fn`, `:autoconf-fn`, `:state-snapshot-fn`
 
 #### `mission_shapes.clj` — Domain Shapes for Code Missions
 
@@ -653,16 +653,69 @@ tags that are automatically applied to evidence entries during that phase.
 This makes the Table 25 dimensions queryable on evidence entries without
 manual annotation.
 
+### Evidence Landscape Integration — State Snapshots
+
+**Implemented:** The cycle machine and mission peripheral now emit state
+snapshots as evidence entries, making mission state inspectable from the
+evidence landscape without loading EDN files or being inside a peripheral
+session.
+
+#### Changes
+
+**`evidence.clj`** — Added `make-snapshot-evidence` helper. Creates
+`:claim-type :observation` entries with domain-specific subject, body,
+and tags. The generic cycle machine calls this when `:state-snapshot-fn`
+returns non-nil.
+
+**`cycle.clj`** — `dispatch-step` extended with snapshot emission after
+successful tool execution. When the domain's `:state-snapshot-fn` returns
+a snapshot map `{:snapshot/subject ... :snapshot/body ... :snapshot/tags ...}`,
+the cycle machine:
+1. Creates snapshot evidence via `make-snapshot-evidence`
+2. Appends it to the evidence store
+3. Chains it to the step evidence via `:evidence/in-reply-to`
+4. Returns `:snapshot-evidence` alongside `:evidence` in the step result
+
+**`mission.clj`** — Added `state-snapshot` function that fires on
+`:mission-save` only. Returns:
+- `:snapshot/subject` → `{:ref/type :mission :ref/id <mission-id>}`
+- `:snapshot/body` → summary: mission ID, version, obligation counts
+  by status, cycles count, failed approaches count, current phase/cycle
+- `:snapshot/tags` → `[:mission/<id> :snapshot]`
+
+**`shapes.clj`** — Added `:mission` to `PeripheralId` enum. This was
+required for `:mission` peripheral spec validation in peripherals.edn.
+
+#### Why `:mission-save` is the Right Trigger
+
+The snapshot fires when state hits disk, not on every tool call. This is
+the moment the operational state becomes durable — the snapshot captures
+a consistent, persisted view. Other tools modify in-memory cache only;
+snapshotting those intermediate states would produce noise.
+
+#### Inspectability Patterns Enabled
+
+**Pattern A (implemented):** Query `?claim-type=observation&subject-type=mission`
+returns the latest state snapshots for all missions. The Arxana viewer
+can render obligation status, cycle progress, and current phase.
+
+**Pattern B (future):** Obligation-level evidence trails. Each obligation
+becomes a subject that work evidence references. Not yet implemented.
+
+**Pattern C (implemented):** Session-to-mission correlation via
+`:evidence/tags [:mission/M-test]` on snapshot entries.
+
 ### Test Results
 
-- **33 tests, 84 assertions, 0 failures, 0 errors** across cycle_test.clj
+- **37 tests, 99 assertions, 0 failures, 0 errors** across cycle_test.clj
   and mission_test.clj
 - **18 existing proof tests still pass** (regression confirmed)
 - Tests cover: lifecycle (start/stop), phase gating, phase transitions,
   cycle completion, evidence enrichment with operation-kind tagging,
   Table 25 sigil tag propagation, autoconf hook invocation, unclassified
   tool rejection, full cycle walk, domain config validation, shapes
-  validation, tool classification coverage
+  validation, tool classification coverage, state snapshot emission on
+  mission-save, snapshot absence on non-save tools
 
 ### DERIVE Assessment
 
@@ -992,10 +1045,12 @@ inspectable and resumable.
 - [x] **From ARGUE:** Table 25 auto-tag assignment justification.
   **RESOLVED in ARGUE:** Hardcoded per phase. Assignments follow
   Table 25 semantics. Phase-level is right starting granularity.
-- [ ] **From ARGUE:** Evidence landscape integration — emit mission
-  state snapshots as evidence entries at lifecycle points (mission-save,
-  cycle completion). Requires `:state-snapshot-fn` config key and ~20
-  lines in cycle machine.
+- [x] **From ARGUE:** Evidence landscape integration — emit mission
+  state snapshots as evidence entries at lifecycle points (mission-save).
+  **RESOLVED in DERIVE:** `:state-snapshot-fn` config key added to
+  CycleDomainConfig. Mission snapshot fires on `:mission-save`, emitting
+  `:claim-type :observation` entries with obligation summary. Tested:
+  snapshot appears in evidence store with correct subject/body/tags.
 - [ ] **From ARGUE:** Obligation-level evidence — obligations as
   evidence entries with `{:ref/type :mission}` subject, enabling
   per-obligation evidence trails queryable from outside.

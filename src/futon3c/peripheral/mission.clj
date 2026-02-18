@@ -90,6 +90,40 @@
    :mission-id (:mission-id state)})
 
 ;; =============================================================================
+;; State snapshots — evidence landscape integration
+;; =============================================================================
+
+(defn- summarize-obligations
+  "Summarize obligations by status for snapshot body."
+  [obligations]
+  (let [items (vals obligations)]
+    {:total (count items)
+     :by-status (frequencies (map :item/status items))}))
+
+(defn- state-snapshot
+  "Produce an evidence-landscape snapshot when mission state is saved.
+   Fires on :mission-save only — the moment state hits disk is when a
+   snapshot becomes meaningful (the operational state is now durable).
+
+   Returns nil for other tools (no snapshot emitted)."
+  [state tool result]
+  (when (= tool :mission-save)
+    (let [mission-id (or (:mission/id result) (:mission-id state))
+          obligations (:mission/obligations result)
+          cycles (:mission/cycles result)
+          failed (:mission/failed-approaches result)]
+      {:snapshot/subject {:ref/type :mission :ref/id mission-id}
+       :snapshot/body {:mission/id mission-id
+                       :mission/version (:mission/version result)
+                       :obligations (when obligations (summarize-obligations obligations))
+                       :cycles-count (count (or cycles []))
+                       :failed-approaches-count (count (or failed []))
+                       :current-phase (:current-phase state)
+                       :current-cycle-id (:current-cycle-id state)
+                       :cycles-completed (:cycles-completed state)}
+       :snapshot/tags [(keyword "mission" (str mission-id)) :snapshot]})))
+
+;; =============================================================================
 ;; Table 25 phase tags
 ;; =============================================================================
 
@@ -119,7 +153,8 @@
    :fruit-fn fruit
    :exit-context-fn exit-context
    :phase-tags-fn phase-tags
-   :autoconf-fn autoconf})
+   :autoconf-fn autoconf
+   :state-snapshot-fn state-snapshot})
 
 ;; =============================================================================
 ;; Factory
