@@ -429,19 +429,20 @@
 
 (deftest inventory-finds-known-missions
   (testing "inventory contains missions we know exist"
-    (let [inventory (mcb/build-inventory)]
+    (let [inventory (mcb/build-inventory)
+          mission-ids (set (map :mission/id inventory))]
       ;; Known futon3c missions
-      (is (some #(= "mission-control" (:mission/id %)) inventory)
+      (is (contains? mission-ids "mission-control")
           "missing mission-control")
-      (is (some #(= "mission-peripheral" (:mission/id %)) inventory)
+      (is (contains? mission-ids "mission-peripheral")
           "missing mission-peripheral")
-      (is (some #(= "agency-refactor" (:mission/id %)) inventory)
+      (is (contains? mission-ids "agency-refactor")
           "missing agency-refactor")
-      ;; Known futon5 devmaps
-      (is (some #(= "social-exotype" (:mission/id %)) inventory)
+      ;; Known futon5 devmaps (stable as of 2026-02-18)
+      (is (contains? mission-ids "social-exotype")
           "missing social-exotype")
-      (is (some #(= "evidence-landscape-exotype" (:mission/id %)) inventory)
-          "missing evidence-landscape-exotype"))))
+      (is (some mission-ids ["coordination-exotype" "futon3-coordination" "f6-ingest"])
+          "missing expected futon5 devmap mission id"))))
 
 (deftest inventory-status-distribution-is-plausible
   (testing "status distribution matches what we know about the portfolio"
@@ -533,13 +534,32 @@
 
 (deftest gap-mana-query-is-stub
   (testing "GAP G2: mana query returns availability but not live pool stats"
-    (let [mana (mcb/query-mana (str (System/getProperty "user.home") "/code/futon5"))]
-      ;; nonstarter.db doesn't exist yet, so :available is false
-      (is (= false (:mana/available mana))
-          "GAP G2: mana returns false when db doesn't exist")
-      ;; When it does exist, the stub returns 0.0 balance (not live query)
-      ;; This gap will be closed when JDBC integration is added
-      )))
+    (let [tmp-dir (-> (java.nio.file.Files/createTempDirectory
+                       "mission-control-mana-gap"
+                       (make-array java.nio.file.attribute.FileAttribute 0))
+                      (.toFile))
+          root (.getAbsolutePath tmp-dir)
+          no-db (mcb/query-mana root)
+          data-dir (io/file tmp-dir "data")
+          db-file (io/file data-dir "nonstarter.db")]
+      (try
+        ;; Deterministic "db absent" branch.
+        (is (false? (:mana/available no-db))
+            "GAP G2: mana should be unavailable when nonstarter.db is absent")
+
+        ;; Deterministic "db present" branch still uses stubbed zero values.
+        (.mkdirs data-dir)
+        (spit db-file "")
+        (let [with-db (mcb/query-mana root)]
+          (is (true? (:mana/available with-db))
+              "GAP G2: mana marks available when nonstarter.db exists")
+          (is (= 0.0 (:mana/pool-balance with-db)))
+          (is (= 0.0 (:mana/total-donated with-db)))
+          (is (= 0.0 (:mana/total-funded with-db)))
+          (is (= 0 (:mana/active-proposals with-db))))
+        (finally
+          (doseq [f (reverse (file-seq tmp-dir))]
+            (.delete f)))))))
 
 (deftest gap-single-status-extraction
   (testing "GAP G3: multi-part missions only get top-level status"

@@ -112,6 +112,10 @@
   (testing ":codex agent defaults to :edit peripheral"
     (is (= :edit (dispatch/select-peripheral :codex "some prompt")))))
 
+(deftest select-peripheral-tickle-defaults-to-mission-control
+  (testing ":tickle agent defaults to :mission-control peripheral"
+    (is (= :mission-control (dispatch/select-peripheral :tickle "keep work moving")))))
+
 (deftest select-peripheral-mock-defaults-to-explore
   (testing ":mock agent defaults to :explore peripheral"
     (is (= :explore (dispatch/select-peripheral :mock "some prompt")))))
@@ -147,10 +151,11 @@
       (is (contains? result :peripheral-id)))))
 
 (deftest select-route-action-uses-agent-type
-  (testing "Claude agent action → :explore, Codex agent action → :edit"
+  (testing "Claude action → :explore, Codex action → :edit, Tickle action → :mission-control"
     (let [msg (fix/make-action-message)]
       (is (= :explore (:peripheral-id (dispatch/select-route msg {:agent/type :claude}))))
-      (is (= :edit (:peripheral-id (dispatch/select-route msg {:agent/type :codex})))))))
+      (is (= :edit (:peripheral-id (dispatch/select-route msg {:agent/type :codex}))))
+      (is (= :mission-control (:peripheral-id (dispatch/select-route msg {:agent/type :tickle})))))))
 
 (deftest select-route-action-with-payload-override
   (testing "payload :peripheral key overrides agent-type default"

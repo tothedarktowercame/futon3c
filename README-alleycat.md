@@ -46,6 +46,16 @@ Fallback if `7070` is in use:
 - Codex Emacs REPL:
   - `emacs/codex-repl.el`
 
+## Local Smoke Checks
+
+Use these quick local readiness scripts before cross-host runs:
+
+```bash
+clojure -M scripts/codex_ws_alleycat_smoke.clj
+clojure -M scripts/dual_agent_ws_alleycat_smoke.clj
+clojure -M scripts/tri_agent_ws_alleycat_smoke.clj
+```
+
 ## Preflight
 
 From `futon3c/`:

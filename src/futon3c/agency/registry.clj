@@ -30,7 +30,7 @@
 
    Agent record:
    {:agent/id         TypedAgentId
-    :agent/type       :claude | :codex | :mock | :peripheral
+    :agent/type       :claude | :codex | :tickle | :mock | :peripheral
     :agent/invoke-fn  (fn [prompt session-id] -> result-map)
     :agent/capabilities [:keyword ...]
     :agent/session-id string (may be updated by invoke)
@@ -89,7 +89,7 @@
 
    Options:
      :agent-id      - Required. TypedAgentId map.
-     :type          - Required. :claude, :codex, :mock, or :peripheral.
+     :type          - Required. :claude, :codex, :tickle, :mock, or :peripheral.
      :invoke-fn     - Required. Function (fn [prompt session-id] -> result-map).
      :capabilities  - Required. Vector of keyword capabilities.
      :session-id    - Optional. Initial session ID.

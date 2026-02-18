@@ -25,13 +25,16 @@
   "Default peripheral per agent type.
    :claude → :explore (understand before changing)
    :codex  → :edit (receives specific instructions)
+   :tickle → :mission-control (portfolio pacing / coordination nudges)
    All others → :explore (safe default)"
   {:claude :explore
-   :codex  :edit})
+   :codex  :edit
+   :tickle :mission-control})
 
 (def ^:private valid-peripheral-ids
   "Set of valid PeripheralId values."
-  #{:explore :edit :test :deploy :reflect :proof :discipline :chat})
+  #{:explore :edit :test :deploy :reflect :proof :discipline :chat
+    :alfworld :mission :mission-control})
 
 (defn- normalize-peripheral-id
   [x]
@@ -51,6 +54,7 @@
    Default mapping:
      :claude → :explore (understand before changing)
      :codex  → :edit (receives specific instructions)
+     :tickle → :mission-control (portfolio pacing / coordination nudges)
      :mock   → :explore (safe default)
 
    Override via {:peripheral :edit} in payload."

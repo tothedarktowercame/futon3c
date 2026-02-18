@@ -15,6 +15,7 @@
 (def ^:private default-capabilities
   {:claude [:explore :edit :test :coordination/execute]
    :codex  [:edit :test :coordination/execute]
+   :tickle [:mission-control :discipline :coordination/execute]
    :mock   [:explore]})
 
 (defonce ^:private !default-evidence-store
@@ -70,7 +71,7 @@
 
    opts:
    - :agent-id (string)
-   - :type (:claude | :codex | :mock | :peripheral)
+   - :type (:claude | :codex | :tickle | :mock | :peripheral)
    - :invoke-fn ((fn [prompt session-id] ...))
    - :capabilities (optional vector, defaults by type)
    - :ttl-ms, :metadata (optional passthrough)"
@@ -100,6 +101,17 @@
     :or {agent-id "claude-1"}}]
   (register-agent! {:agent-id agent-id
                     :type :claude
+                    :invoke-fn invoke-fn
+                    :capabilities capabilities
+                    :ttl-ms ttl-ms
+                    :metadata metadata}))
+
+(defn register-tickle!
+  "Convenience wrapper for registering a Tickle agent."
+  [{:keys [agent-id invoke-fn capabilities ttl-ms metadata]
+    :or {agent-id "tickle-1"}}]
+  (register-agent! {:agent-id agent-id
+                    :type :tickle
                     :invoke-fn invoke-fn
                     :capabilities capabilities
                     :ttl-ms ttl-ms

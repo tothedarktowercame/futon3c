@@ -35,7 +35,7 @@
 
 (def AgentType
   "Agent type — what kind of agent this is."
-  [:enum :claude :codex :mock :peripheral])
+  [:enum :claude :codex :tickle :mock :peripheral])
 
 ;; =============================================================================
 ;; Pipeline input — agent connection event

@@ -61,9 +61,11 @@
     (println "[dev]   GET  /api/alpha/evidence/:id/chain — reply chain")
     (println "[dev]   POST /api/alpha/evidence          — append entry")
     (println)
-    (println "[dev] No agents registered. Use `make claude` or REPL:")
+    (println "[dev] No agents registered. Use `make claude`, `make codex`, or REPL:")
     (println "[dev]   (require '[futon3c.runtime.agents :as rt])")
     (println "[dev]   (rt/register-claude! {:agent-id \"claude-1\" :invoke-fn ...})")
+    (println "[dev]   (rt/register-codex!  {:agent-id \"codex-1\"  :invoke-fn ...})")
+    (println "[dev]   (rt/register-tickle! {:agent-id \"tickle-1\" :invoke-fn ...})")
     (println)
     (println "[dev] Press Ctrl-C to stop.")
 

@@ -476,6 +476,16 @@
 ;; Enum shapes — direct validation
 ;; =============================================================================
 
+(deftest agent-type-valid
+  (testing "all AgentType values validate"
+    (doseq [at [:claude :codex :tickle :mock :peripheral]]
+      (is (shapes/valid? shapes/AgentType at) (str at " should be valid")))))
+
+(deftest agent-type-invalid
+  (testing "invalid AgentType values rejected"
+    (is (some? (shapes/validate shapes/AgentType :bogus)))
+    (is (some? (shapes/validate shapes/AgentType "claude")))))
+
 (deftest claim-type-valid
   (testing "all ClaimType values validate"
     (doseq [ct [:goal :step :evidence :conclusion :question

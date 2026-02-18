@@ -28,6 +28,16 @@
       (is (= :continuity (get-in result [:agent/id :id/type])))
       (is (some #{:edit} (:agent/capabilities result))))))
 
+(deftest register-tickle-defaults
+  (testing "register-tickle! uses tickle defaults and registers continuity ID"
+    (let [result (runtime/register-tickle! {:agent-id "tickle-rt-1"
+                                            :invoke-fn ok-invoke})]
+      (is (map? result))
+      (is (= :tickle (:agent/type result)))
+      (is (= "tickle-rt-1" (get-in result [:agent/id :id/value])))
+      (is (= :continuity (get-in result [:agent/id :id/type])))
+      (is (some #{:mission-control} (:agent/capabilities result))))))
+
 (deftest registry-snapshot-shape-valid
   (testing "registry-snapshot conforms to AgentRegistryShape and keeps agent type"
     (runtime/register-codex! {:agent-id "codex-rt-2" :invoke-fn ok-invoke})
@@ -53,6 +63,23 @@
       (is (shapes/valid? shapes/DispatchReceipt result))
       (is (= "peripheral/run-chain" (:receipt/route result)))
       (is (= :edit (:receipt/peripheral-id result))))))
+
+(deftest runtime-config-tickle-routes-to-mission-control
+  (testing "runtime-config snapshot drives tickle action messages to :mission-control peripheral"
+    (runtime/register-tickle! {:agent-id "tickle-rt-2" :invoke-fn ok-invoke})
+    (let [cfg (runtime/runtime-config
+               {:patterns (fix/mock-patterns)
+                :peripheral-config (fix/make-peripheral-config)})
+          msg {:msg/id "msg-rt-tickle-1"
+               :msg/payload "scan portfolio and nudge next best action"
+               :msg/from (fix/make-agent-id "tickle-rt-2" :continuity)
+               :msg/to (fix/make-agent-id "tickle-rt-2" :continuity)
+               :msg/at (fix/now-str)}
+          classified (mode/classify msg (:patterns cfg))
+          result (dispatch/dispatch classified (:registry cfg))]
+      (is (shapes/valid? shapes/DispatchReceipt result))
+      (is (= "peripheral/run-chain" (:receipt/route result)))
+      (is (= :mission-control (:receipt/peripheral-id result))))))
 
 (deftest ws-codex-ready-and-action
   (testing "WS ready handshake + action message works for codex runtime config"
