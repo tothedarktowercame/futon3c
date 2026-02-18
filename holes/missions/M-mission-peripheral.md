@@ -1,7 +1,7 @@
 # Mission: General Mission Peripheral
 
 **Date:** 2026-02-18
-**Status:** VERIFY complete, INSTANTIATE next
+**Status:** INSTANTIATE complete — derivation xenotype finished
 **Blocked by:** None (proof peripheral is operational; evidence landscape
 is persistent; futonic logic is specified)
 
@@ -1120,6 +1120,136 @@ integration + social, 456 assertions, 0 failures.
 - Wire mission peripheral into Agency routing
 - Build the autoconf function that reads mission spec documents
 - End-to-end test with real backend (file I/O, not mock)
+
+## INSTANTIATE — Build It
+
+*Derivation xenotype step 6. Make it real: refactor the ancestor to use
+the extracted engine, confirming the extraction works in practice.*
+
+### Instantiation 1: Proof Refactored to Cycle Machine
+
+**The crown jewel.** proof.clj was rewritten from a 173-line standalone
+`ProofPeripheral` record with its own `dispatch-step`, phase gating,
+evidence enrichment, and state tracking, to an 87-line config wrapper
+around the generic cycle machine:
+
+```
+Before (proof.clj):
+  - ProofPeripheral record implementing PeripheralRunner
+  - dispatch-step (45 lines) with inline phase gating
+  - current-phase-tools, phase-allows-tool? helpers
+  - Evidence enrichment with :proof/operation-kind
+  - Cycle state tracking (begin, advance, complete)
+  - State initialization with :problem-id
+  - Fruit/exit-context extraction
+
+After (proof.clj):
+  - proof-domain-config map (12 keys)
+  - state-init, fruit, exit-context functions (3 lines each)
+  - make-proof factory delegating to cycle/make-cycle-peripheral
+```
+
+**All 18 existing proof tests pass without modification.** This is the
+definitive validation that the extraction preserved behavior — the same
+tests, the same assertions, the same mock backends, the same evidence
+shapes, all passing through the generic cycle machine instead of
+proof-specific code.
+
+**What was eliminated:** 86 lines of dispatch logic that are now shared
+between proof and mission via cycle.clj. The phase gating, operation
+classification, evidence enrichment, cycle tracking, and evidence
+append error handling are written once and parameterized by domain config.
+
+### Instantiation 2: Mission Peripheral Is Operational
+
+The mission peripheral (built in DERIVE) is fully operational:
+
+- **Registered** in peripherals.edn with 23 tools and `:full-codebase` scope
+- **Registered** in the peripheral registry (registry.clj)
+- **Added** to the `PeripheralId` enum in social shapes
+- **Passes** ← backward verification (round-trip.clj)
+- **Satisfies** all 7 proof-tree invariants
+- **Emits** state snapshots to the evidence landscape on `:mission-save`
+- **Handles** edge cases: mission parking (味→未@0), multi-cycle sessions
+
+### Instantiation 3: Agency Wiring
+
+The mission peripheral is already wired into the peripheral dispatch layer:
+
+- `registry.clj`: `:mission` in `peripheral-ids`, `mission/make-mission`
+  in `factories` map
+- `peripherals.edn`: `:mission` spec with entry/exit conditions and
+  context transfer rules
+- `shapes.clj`: `:mission` in `PeripheralId` enum
+
+Agents can use the mission peripheral through the standard chain
+orchestration (`run-chain`) with hop validation. The mission peripheral
+accepts hops from `:explore` and `:from-any`, and can hop to `:reflect`
+and `:explore`.
+
+### What Remains (Future Work)
+
+These items are outside the scope of this derivation but are natural
+next steps:
+
+1. **Autoconf from mission spec documents** — currently a pass-through.
+   When `:mission-spec-path` is in context, parse the spec document
+   and derive obligations/scope automatically.
+
+2. **End-to-end test with real backend** — the mission_backend.clj has
+   file I/O code (cache-over-disk persistence), but tests use mock
+   backends. A real integration test that writes/reads EDN files would
+   exercise the full stack.
+
+3. **Obligation-level evidence trails** — obligations as individual
+   evidence entries with `{:ref/type :mission}` subject, enabling
+   per-obligation queries from the evidence landscape.
+
+4. **Refactor proof.clj's ProofBackend tests** — proof_backend_test.clj
+   exercises the proof backend directly. Now that proof.clj uses the
+   cycle machine, some of those tests could be generalized.
+
+5. **PSR/PUR skill integration** — PSR in propose phase, PUR in classify
+   phase, as phase-specific actions rather than standalone commands.
+
+### INSTANTIATE Assessment
+
+**Test results:** 144 tests, 534 assertions, 0 failures across all
+affected suites (proof, mission, cycle, registry, integration,
+round-trip, social).
+
+**The derivation xenotype is complete:**
+
+| Step | Status | Key Deliverable |
+|------|--------|----------------|
+| IDENTIFY | Complete | Mission proposal document |
+| MAP | Complete | Ancestral evidence survey, traceability table |
+| DERIVE | Complete | cycle.clj, mission_shapes.clj, mission_backend.clj, mission.clj, evidence landscape integration |
+| ARGUE | Complete | 5 formal arguments (config vs protocol, 9 phases, Table 25, evidence landscape, bootstrapping) |
+| VERIFY | Complete | Proof expressibility, ← verification, 7 invariants, edge cases |
+| INSTANTIATE | Complete | proof.clj refactored, mission peripheral operational, all tests green |
+
+**Files created or modified in this derivation:**
+
+| File | Action | Lines |
+|------|--------|-------|
+| `cycle.clj` | Created | 259 |
+| `mission_shapes.clj` | Created | ~200 |
+| `mission_backend.clj` | Created | ~550 |
+| `mission.clj` | Created | 170 |
+| `evidence.clj` | Modified | +21 (snapshot helper) |
+| `proof.clj` | Rewritten | 87 (was 173) |
+| `peripherals.edn` | Modified | +14 (mission spec) |
+| `registry.clj` | Modified | +3 (mission factory) |
+| `shapes.clj` | Modified | +1 (PeripheralId enum) |
+| `cycle_test.clj` | Created | ~250 |
+| `mission_test.clj` | Created | ~500 |
+| `registry_test.clj` | Modified | +2 |
+| `peripheral_spec_test.clj` | Modified | +2 |
+| `peripheral_test.clj` | Modified | +1 |
+
+**Net: ~2000 lines of new code, 86 lines of eliminated duplication,
+37 new tests (28 mission + 9 cycle), all 144 affected tests green.**
 
 ## Decision Log
 
