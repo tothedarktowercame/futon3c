@@ -78,6 +78,21 @@
    :peripheral/exit #{:user-request :hop-explore :hop-edit :hop-reflect}
    :peripheral/context {:session-id :inherit :channel :from-irc}}
 
+  :mission
+  {:peripheral/id :mission
+   :peripheral/tools #{:read :glob :grep :write :bash :bash-readonly
+                       :mission-load :mission-save
+                       :obligation-query :obligation-upsert
+                       :dag-check :dag-impact
+                       :mission-spec-get :mission-spec-update
+                       :cycle-begin :cycle-advance :cycle-get :cycle-list
+                       :failed-approach-add :status-validate :gate-check
+                       :corpus-check :evidence-query}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:from-explore :user-request :from-any}
+   :peripheral/exit #{:cycle-completed :blocked :hop-reflect :hop-explore :user-request}
+   :peripheral/context {:session-id :inherit :mission-id :from-explore}}
+
   :alfworld
   {:peripheral/id :alfworld
    :peripheral/tools #{:alfworld-action :bell :whistle}

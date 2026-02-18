@@ -15,6 +15,7 @@
             [futon3c.peripheral.deploy :as deploy]
             [futon3c.peripheral.edit :as edit]
             [futon3c.peripheral.explore :as explore]
+            [futon3c.peripheral.mission :as mission]
             [futon3c.peripheral.proof :as proof]
             [futon3c.peripheral.reflect :as reflect]
             [futon3c.peripheral.runner :as runner]
@@ -25,7 +26,7 @@
 
 (def peripheral-ids
   "Set of all known peripheral IDs."
-  #{:explore :edit :test :deploy :reflect :proof :discipline :alfworld})
+  #{:explore :edit :test :deploy :reflect :proof :discipline :mission :alfworld})
 
 (def ^:private factories
   "Maps peripheral-id to its factory function."
@@ -35,6 +36,7 @@
    :deploy     deploy/make-deploy
    :reflect    reflect/make-reflect
    :proof      proof/make-proof
+   :mission    mission/make-mission
    :discipline discipline/make-discipline
    :alfworld   alfworld/make-alfworld})
 

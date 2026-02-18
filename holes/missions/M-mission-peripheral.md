@@ -1,7 +1,7 @@
 # Mission: General Mission Peripheral
 
 **Date:** 2026-02-18
-**Status:** IDENTIFY complete, MAP in progress
+**Status:** DERIVE complete, ARGUE next
 **Blocked by:** None (proof peripheral is operational; evidence landscape
 is persistent; futonic logic is specified)
 
@@ -532,6 +532,160 @@ current implementation is closer to "protocol" (hard-coded phases in
 proof.clj), but the structure already resembles configuration (phase
 tables in proof_shapes.clj).
 
+## DERIVE — Extraction and Construction
+
+### Approach: Configuration-Driven Cycle Machine
+
+**Decision:** Configuration route, not protocol. The cycle machine is a
+single generic engine (`cycle.clj`) parameterized by a `CycleDomainConfig`
+map. Both proof and mission peripherals instantiate the same engine with
+different domain configurations. This was the user's preference and
+matches the existing structure — proof_shapes.clj already contains the
+phase tables that become configuration data.
+
+**Autoconf hook:** The `CycleDomainConfig` includes an optional
+`:autoconf-fn` that is called during `start`, allowing domain-specific
+configuration refinement from context. For missions, this is currently
+a pass-through but reserves the slot for future auto-scoping from
+mission spec documents.
+
+### Files Created
+
+#### `cycle.clj` — Generic Cycle Machine (extracted from proof.clj)
+
+The cycle machine implements `PeripheralRunner` and provides:
+- Phase-gated tool dispatch (structural enforcement)
+- Operation classification (`:observe` / `:action` tagging)
+- Evidence enrichment with Table 25 auto-tags via `:phase-tags-fn`
+- Cycle state tracking (current phase, cycle ID, cycles completed)
+- Domain state initialization via `:state-init-fn`
+- Fruit extraction via `:fruit-fn` and exit context via `:exit-context-fn`
+- Autoconf hook called on start
+
+The `CycleDomainConfig` requires:
+```
+:domain-id, :phase-order, :phase-tools, :setup-tools, :tool-ops,
+:required-outputs, :cycle-begin-tool, :cycle-advance-tool,
+:fruit-fn, :exit-context-fn
+```
+
+Optional: `:state-init-fn`, `:phase-tags-fn`, `:autoconf-fn`
+
+#### `mission_shapes.clj` — Domain Shapes for Code Missions
+
+Defines Malli shapes and phase configuration:
+- `ObligationStatus` — `[:enum :done :partial :open :blocked :abandoned]`
+- `EvidenceClass` — `[:enum :test :review :assertion :mixed]`
+- `Obligation` — reuses DAG structure from proof (`item/depends-on`, `item/unlocks`)
+- `MissionSpec` — versioned mission specification with scope-in/scope-out
+- `CycleRecord`, `FailedApproach`, `MissionState` — composite shapes
+- `phase-allowed-tools` — tool gates per phase (adapted from proof)
+- `phase-required-outputs` — mandatory outputs before phase advance
+- `phase-sigil-tags` — Table 25 auto-tags per phase
+- `mission-tool-operation-kinds` — observe/action classification
+
+Key difference from proof: `:assertion` evidence alone cannot yield `:done`
+(vs proof's `:numerical` evidence cannot yield `:proved`).
+
+#### `mission_backend.clj` — Tool Implementations
+
+Mirrors proof_backend.clj structure with mission-domain tools:
+- 17 mission tools: mission-load/save, obligation-query/upsert,
+  dag-check/impact, mission-spec-get/update, cycle-begin/advance/get/list,
+  failed-approach-add, status-validate, gate-check, corpus-check,
+  evidence-query
+- 6 delegated tools: read, glob, grep, bash, bash-readonly, write
+- Same cache-over-disk persistence pattern as proof backend
+- Reuses `proof_dag.clj` algorithms unchanged for DAG operations
+
+#### `mission.clj` — Domain Config and Factory
+
+Wires mission_shapes into the cycle machine:
+- `mission-domain-config` — the `CycleDomainConfig` map
+- `setup-tools` — tools available between cycles
+- `autoconf` — context-dependent config refinement (currently pass-through)
+- `state-init` — adds `:mission-id` to cycle state
+- `fruit` / `exit-context` — session output extraction
+- `phase-tags` — delegates to `ms/phase-sigil-tags` for Table 25 auto-tags
+- `make-mission` — factory function (1-arity mock, 2-arity with backend)
+
+#### `peripherals.edn` — Added `:mission` Spec
+
+The mission peripheral is registered alongside proof with 23 tools
+and `:full-codebase` scope.
+
+### Phase Resolution
+
+**Decision:** The 9-phase cycle is retained for code missions.
+IF the proof cycle's 9 phases (observe → propose → execute → validate →
+classify → integrate → commit → gate-review → completed) map naturally
+to code development workflows,
+HOWEVER some phases might seem proof-specific (e.g., "classify"),
+THEN we adapt the semantics while keeping the phase names:
+- `:observe` — examine codebase, identify blockers, query evidence
+- `:propose` — design approach, check pattern library
+- `:execute` — write code, run commands
+- `:validate` — run tests, check build
+- `:classify` — assess result (done/partial/blocked), validate status transition
+- `:integrate` — update obligations DAG, record failed approaches
+- `:commit` — save mission state
+- `:gate-review` — run G5→G0 gate checklist
+BECAUSE the phases represent a general development cycle that applies
+to any structured work, and keeping the same phases simplifies the
+generic cycle machine.
+
+### Table 25 Auto-Tagging Scheme
+
+**Decision:** Hardcoded per phase. Each phase gets fixed Table 25 sigil
+tags that are automatically applied to evidence entries during that phase.
+
+| Phase | Sigil Tags |
+|-------|-----------|
+| observe | `:sigil/getting-information`, `:sigil/perception` |
+| propose | `:sigil/argumentation`, `:sigil/intuition` |
+| execute | `:sigil/software`, `:sigil/written-language` |
+| validate | `:sigil/logic-deduction`, `:sigil/concrete-applications` |
+| classify | `:sigil/personal-comprehension`, `:sigil/self-discovery` |
+| integrate | `:sigil/collaborative-knowledge`, `:sigil/organization` |
+| commit | `:sigil/consistency`, `:sigil/gradual-accumulation` |
+| gate-review | `:sigil/quality`, `:sigil/constructive-feedback` |
+
+This makes the Table 25 dimensions queryable on evidence entries without
+manual annotation.
+
+### Test Results
+
+- **33 tests, 84 assertions, 0 failures, 0 errors** across cycle_test.clj
+  and mission_test.clj
+- **18 existing proof tests still pass** (regression confirmed)
+- Tests cover: lifecycle (start/stop), phase gating, phase transitions,
+  cycle completion, evidence enrichment with operation-kind tagging,
+  Table 25 sigil tag propagation, autoconf hook invocation, unclassified
+  tool rejection, full cycle walk, domain config validation, shapes
+  validation, tool classification coverage
+
+### DERIVE Assessment
+
+**Status:** Complete. The generic cycle machine is extracted and both
+the test domain and mission domain instantiate it successfully. The
+code compiles and all tests pass.
+
+**What remains for ARGUE:**
+- Argue that configuration-driven approach is better than protocol
+- Argue that the 9 phases are sufficient for code missions
+- Argue the Table 25 tag assignments against Table 25 semantics
+
+**What remains for VERIFY:**
+- Integration test with real backend (not mock)
+- Verify that proof.clj could be refactored to use cycle.clj
+  (proving the extraction preserved behavior)
+- Test evidence persistence through XTDB backend
+
+**What remains for INSTANTIATE:**
+- Refactor proof.clj to use the generic cycle machine
+- Wire mission peripheral into Agency routing
+- Build the autoconf function that reads mission spec documents
+
 ## Decision Log
 
 - [x] Confirm that proof_dag.clj algorithms generalize to code missions
@@ -539,26 +693,40 @@ tables in proof_shapes.clj).
   **RESOLVED in MAP:** Yes. All 7 functions are pure, domain-agnostic
   graph algorithms. They work with any `:item/depends-on` / `:item/unlocks`
   DAG structure.
-- [ ] Design code mission tool gates (what tools are available per phase)
+- [x] Design code mission tool gates (what tools are available per phase)
+  **RESOLVED in DERIVE:** Adapted from proof. Key differences:
+  `:observe` adds `:evidence-query`; `:execute` adds `:bash`;
+  `:classify` adds `:obligation-query`; `:integrate` adds `:obligation-upsert`;
+  `:commit` uses `:mission-save`.
 - [ ] Decide whether PSR/PUR skills become phase-specific or remain
   standalone (both? PSR in propose phase, PUR in classify phase, but
   also callable independently?)
-- [ ] Design the auto-tagging scheme for Table 25 sigils (hardcoded
+- [x] Design the auto-tagging scheme for Table 25 sigils (hardcoded
   per phase or configurable per mission type?)
+  **RESOLVED in DERIVE:** Hardcoded per phase via `phase-sigil-tags` map.
+  Future: configurable per mission type via autoconf.
 - [ ] Decide granularity: one cycle per mission step, or one cycle
   per mission with sub-cycles per step?
-- [ ] Evaluate whether mission peripheral should be a 7th peripheral
+- [x] Evaluate whether mission peripheral should be a 7th peripheral
   type alongside explore/edit/test/deploy/reflect/proof, or a
   meta-peripheral that orchestrates the others
-- [ ] **From MAP:** Protocol vs configuration for cycle machine
-  generalization. Protocol = each domain implements PeripheralRunner.
-  Configuration = one generic runner parameterized by domain config.
-  Current proof.clj is closer to protocol but structured like config.
-- [ ] **From MAP:** Are the 9 phases the right decomposition for code
-  missions? Resolve in DERIVE by examining actual code mission workflows.
-- [ ] **From MAP:** Code mission ItemStatus values. Proposal:
-  `[:enum :done :partial :open :blocked :abandoned]` — need to validate
-  against actual mission lifecycle states.
-- [ ] **From MAP:** Code mission EvidenceClass. Proposal:
-  `[:enum :test :review :assertion :mixed]` — captures how evidence
-  was obtained.
+  **RESOLVED in DERIVE:** 8th peripheral type (alongside alfworld).
+  Registered in peripherals.edn with own spec and tool set.
+- [x] **From MAP:** Protocol vs configuration for cycle machine
+  generalization.
+  **RESOLVED in DERIVE:** Configuration route. CycleDomainConfig
+  parameterizes a single generic CyclePeripheral. Autoconf hook
+  for context-dependent refinement.
+- [x] **From MAP:** Are the 9 phases the right decomposition for code
+  missions?
+  **RESOLVED in DERIVE:** Yes. Same 9 phases with adapted semantics.
+  Phase names are general enough. The key insight is that "classify"
+  maps to "assess the outcome" and "integrate" maps to "update the
+  obligation DAG" — both are meaningful for code development.
+- [x] **From MAP:** Code mission ItemStatus values.
+  **RESOLVED in DERIVE:** `[:enum :done :partial :open :blocked :abandoned]`
+  Implemented in mission_shapes.clj.
+- [x] **From MAP:** Code mission EvidenceClass.
+  **RESOLVED in DERIVE:** `[:enum :test :review :assertion :mixed]`
+  Implemented in mission_shapes.clj. `:assertion` evidence cannot
+  yield `:done` (structural enforcement).
