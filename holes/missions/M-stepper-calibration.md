@@ -1,7 +1,7 @@
 # Mission: Stepper Calibration on First Proof Problems
 
 **Date:** 2026-02-18
-**Status:** IN PROGRESS — P1 complete (RED), P7 next
+**Status:** IN PROGRESS — P1 complete (RED), P7 golden path written (awaiting calibration)
 **Depends on:** proof peripheral (operational), `:corpus-check` tool (landed)
 
 ## Motivation
