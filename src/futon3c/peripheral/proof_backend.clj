@@ -525,40 +525,293 @@
       (parse-text-neighbors output)
       []))
 
-(defn- tool-corpus-check
-  "Query futon3a's ANN index for structurally similar patterns/wiring diagrams.
-   Args: [query-text & {:keys [top-k method]}]
-     query-text — framing assumption, structural obstruction, or approach string
-     top-k — number of neighbors to return (default 5)
-     method — :embeddings, :keywords, or :auto (default :auto)
-   Returns: {:neighbors [...] :query query-text :method method}
+(def ^:private token-re #"[a-z0-9]+")
 
-   Currently delegates to futon3a's notions_search.py (MiniLM text embeddings).
-   When superpod wiring diagram embeddings are available, this gains a
-   :wiring-diagrams method via the same futon3a search interface."
-  [_cache _cwd args config]
-  (let [query-text (first args)
-        opts (or (second args) {})
-        top-k (or (:top-k opts) 5)
-        method (or (:method opts) :auto)
-        ;; Resolve futon3a paths from config or defaults
-        futon3a-root (or (:futon3a-root config)
+;; In-memory cache for parsed StackExchange JSONL corpora keyed by
+;; deterministic file fingerprint vectors.
+(defonce ^:private stackexchange-doc-cache (atom {}))
+
+(defn- tokenize
+  "Lowercase tokenization for simple lexical retrieval."
+  [s]
+  (->> (re-seq token-re (str/lower-case (or s "")))
+       (remove #(< (count %) 2))
+       vec))
+
+(defn- canonical-path [path]
+  (try
+    (.getCanonicalPath (io/file path))
+    (catch Exception _
+      (str path))))
+
+(defn- default-stackexchange-jsonl-paths []
+  (let [home (System/getProperty "user.home")
+        sample-dir (io/file home "code" "futon6" "data" "stackexchange-samples")]
+    (if (.exists sample-dir)
+      (->> (.listFiles sample-dir)
+           (filter (fn [^File f]
+                     (and (.isFile f)
+                          (str/ends-with? (.getName f) ".jsonl"))))
+           (map (fn [^File f] (.getPath f)))
+           sort
+           vec)
+      [])))
+
+(defn- resolve-stackexchange-jsonl-paths
+  [opts config]
+  (let [configured (or (:stackexchange-jsonl-paths opts)
+                       (:stackexchange-jsonl-paths config)
+                       (default-stackexchange-jsonl-paths))]
+    (->> configured
+         (filter string?)
+         (map io/file)
+         (filter (fn [^File f] (.exists f)))
+         (map (fn [^File f] (.getPath f)))
+         distinct
+         sort
+         vec)))
+
+(defn- path-fingerprint [path]
+  (let [f (io/file path)]
+    [(canonical-path path)
+     (.lastModified f)
+     (.length f)]))
+
+(defn- answer-snippets
+  "Take up to top 3 answer snippets by score for retrieval text."
+  [answers]
+  (->> (or answers [])
+       (sort-by (fn [a] (- (long (or (:score a) 0)))))
+       (take 3)
+       (map :body_text)
+       (remove str/blank?)
+       (str/join " ")))
+
+(defn- stackexchange-thread->doc [thread]
+  (let [question (:question thread)
+        site (or (:site thread) "")
+        topic (or (:topic thread) "")
+        raw-thread-id (or (:thread_id thread)
+                          (get-in thread [:question :id]))
+        thread-id (if (and (string? raw-thread-id)
+                           (not (str/blank? raw-thread-id)))
+                    raw-thread-id
+                    (str site ":" raw-thread-id))
+        title (or (:title question) "")
+        body (or (:body_text question) "")
+        tags (or (:tags question) [])
+        answers (answer-snippets (:answers thread))
+        search-text (str/lower-case
+                     (str/join " " [title body answers (str/join " " tags)]))
+        token-freq (frequencies (tokenize search-text))]
+    (when (and (string? thread-id) (not (str/blank? thread-id)))
+      {:id thread-id
+       :title title
+       :url (:url question)
+       :site site
+       :topic topic
+       :search-text search-text
+       :token-freq token-freq})))
+
+(defn- load-stackexchange-docs [jsonl-paths]
+  (let [fingerprint (mapv path-fingerprint jsonl-paths)]
+    (if-let [cached (get @stackexchange-doc-cache fingerprint)]
+      cached
+      (let [docs (->> jsonl-paths
+                      (mapcat (fn [path]
+                                (with-open [r (io/reader path)]
+                                  (doall
+                                    (keep (fn [line]
+                                            (when-not (str/blank? line)
+                                              (try
+                                                (some-> line
+                                                        (json/read-str :key-fn keyword)
+                                                        stackexchange-thread->doc)
+                                                (catch Exception _
+                                                  nil))))
+                                          (line-seq r)))))
+                      )
+                      vec)]
+        (swap! stackexchange-doc-cache assoc fingerprint docs)
+        docs))))
+
+(defn- stackexchange-neighbor
+  [query-lc query-tokens doc]
+  (let [q-uniq (vec (distinct query-tokens))
+        q-count (count q-uniq)]
+    (when (pos? q-count)
+      (let [tf (:token-freq doc)
+            matched (->> q-uniq (filter #(contains? tf %)) vec)
+            match-count (count matched)]
+        (when (pos? match-count)
+          (let [coverage (/ (double match-count) (double q-count))
+                tf-hit (reduce + (map #(min 4 (long (get tf % 0))) q-uniq))
+                tf-score (/ (double tf-hit) (* 4.0 (double q-count)))
+                phrase? (str/includes? (:search-text doc) query-lc)
+                score (min 0.9999 (+ (* 0.70 coverage)
+                                     (* 0.25 tf-score)
+                                     (if phrase? 0.05 0.0)))]
+            {:id (:id doc)
+             :title (:title doc)
+             :score score
+             :source :stackexchange-local
+             :site (:site doc)
+             :topic (:topic doc)
+             :url (:url doc)
+             :matched-terms matched}))))))
+
+(defn- search-stackexchange-local
+  [query-text top-k jsonl-paths]
+  (if (empty? jsonl-paths)
+    {:source :stackexchange-local
+     :available? false
+     :neighbors []
+     :error "No local StackExchange JSONL files found."}
+    (try
+      (let [docs (load-stackexchange-docs jsonl-paths)
+            query-lc (str/lower-case query-text)
+            query-tokens (tokenize query-lc)
+            neighbors (->> docs
+                           (keep (fn [doc]
+                                   (stackexchange-neighbor query-lc query-tokens doc)))
+                           (sort-by (juxt (comp - :score) :id))
+                           (take top-k)
+                           vec)]
+        {:source :stackexchange-local
+         :available? true
+         :doc-count (count docs)
+         :paths jsonl-paths
+         :neighbors neighbors})
+      (catch Exception e
+        {:source :stackexchange-local
+         :available? true
+         :neighbors []
+         :error (str "Local StackExchange search failed: " (.getMessage e))}))))
+
+(def ^:private arxiv-entry-re #"(?s)<entry>(.*?)</entry>")
+
+(defn- xml-unescape [s]
+  (-> (or s "")
+      (str/replace "&lt;" "<")
+      (str/replace "&gt;" ">")
+      (str/replace "&amp;" "&")
+      (str/replace "&quot;" "\"")
+      (str/replace "&apos;" "'")))
+
+(defn- extract-xml-tag
+  [entry tag]
+  (some-> (re-find (re-pattern (str "(?s)<" tag "[^>]*>(.*?)</" tag ">")) entry)
+          second
+          xml-unescape
+          str/trim))
+
+(defn- strip-xml-tags [s]
+  (-> (or s "")
+      (str/replace #"(?s)<[^>]+>" " ")
+      xml-unescape
+      (str/replace #"\s+" " ")
+      str/trim))
+
+(defn- arxiv-doc->neighbor
+  [query-lc query-tokens doc]
+  (let [q-uniq (vec (distinct query-tokens))
+        q-count (count q-uniq)]
+    (when (pos? q-count)
+      (let [tf (:token-freq doc)
+            matched (->> q-uniq (filter #(contains? tf %)) vec)
+            match-count (count matched)]
+        (when (pos? match-count)
+          (let [coverage (/ (double match-count) (double q-count))
+                tf-hit (reduce + (map #(min 4 (long (get tf % 0))) q-uniq))
+                tf-score (/ (double tf-hit) (* 4.0 (double q-count)))
+                phrase? (str/includes? (:search-text doc) query-lc)
+                score (min 0.9999 (+ (* 0.70 coverage)
+                                     (* 0.25 tf-score)
+                                     (if phrase? 0.05 0.0)))]
+            {:id (:id doc)
+             :title (:title doc)
+             :score score
+             :source :arxiv-live
+             :url (:url doc)
+             :matched-terms matched}))))))
+
+(defn- parse-arxiv-entries
+  [xml]
+  (->> (re-seq arxiv-entry-re (or xml ""))
+       (map second)
+       (keep (fn [entry]
+               (let [id-url (extract-xml-tag entry "id")
+                     title (strip-xml-tags (extract-xml-tag entry "title"))
+                     summary (strip-xml-tags (extract-xml-tag entry "summary"))
+                     arxiv-id (some-> (re-find #"/abs/([^?\s<]+)" (or id-url ""))
+                                      second)
+                     id (when arxiv-id (str "arxiv:" arxiv-id))
+                     cats (->> (re-seq #"<category\s+term=\"([^\"]+)\"" entry)
+                               (map second)
+                               distinct
+                               vec)
+                     search-text (str/lower-case
+                                  (str/join " " [title summary (str/join " " cats)]))
+                     token-freq (frequencies (tokenize search-text))]
+                 (when (and id (not (str/blank? id)))
+                   {:id id
+                    :title title
+                    :url id-url
+                    :search-text search-text
+                    :token-freq token-freq}))))
+       vec))
+
+(defn- make-arxiv-query-url [query-text top-k api-base]
+  (let [encoded (java.net.URLEncoder/encode (str query-text) "UTF-8")
+        joiner (if (str/includes? api-base "?") "&" "?")]
+    (str api-base joiner
+         "search_query=all:" encoded
+         "&start=0"
+         "&max_results=" top-k)))
+
+(defn- search-arxiv-live
+  [query-text top-k opts config]
+  (let [api-base (or (:arxiv-api-base opts)
+                     (:arxiv-api-base config)
+                     "https://export.arxiv.org/api/query")
+        url (make-arxiv-query-url query-text top-k api-base)]
+    (try
+      (let [xml (slurp url)
+            docs (parse-arxiv-entries xml)
+            query-lc (str/lower-case query-text)
+            query-tokens (tokenize query-lc)
+            neighbors (->> docs
+                           (keep (fn [doc]
+                                   (arxiv-doc->neighbor query-lc query-tokens doc)))
+                           (sort-by (juxt (comp - :score) :id))
+                           (take top-k)
+                           vec)]
+        {:source :arxiv-live
+         :available? true
+         :doc-count (count docs)
+         :request-url url
+         :neighbors neighbors})
+      (catch Exception e
+        {:source :arxiv-live
+         :available? false
+         :neighbors []
+         :error (str "arXiv query failed: " (.getMessage e))
+         :request-url url}))))
+
+(defn- search-futon3a
+  [query-text top-k config]
+  (let [futon3a-root (or (:futon3a-root config)
                          (let [home (System/getProperty "user.home")]
                            (str home "/code/futon3a")))
         search-script (str futon3a-root "/scripts/notions_search.py")
         embeddings-path (or (:futon3a-embeddings config)
                             (str futon3a-root "/resources/notions/minilm_pattern_embeddings.json"))
         python (or (:futon3a-python config) "python3")]
-    (cond
-      (or (nil? query-text) (str/blank? query-text))
-      (proof-error :invalid-query "corpus-check requires a non-empty query string")
-
-      (not (.exists (io/file search-script)))
-      (proof-error :corpus-unavailable
-                   (str "futon3a search script not found: " search-script
-                        ". Set :futon3a-root in proof backend config."))
-
-      :else
+    (if-not (.exists (io/file search-script))
+      {:source :futon3a
+       :available? false
+       :neighbors []
+       :error (str "futon3a search script not found: " search-script)}
       (try
         (let [pb (ProcessBuilder.
                    [python search-script
@@ -570,18 +823,121 @@
               output (slurp (.getInputStream proc))
               exit-code (.waitFor proc)]
           (if (zero? exit-code)
-            (let [results (parse-corpus-output output)]
-              {:ok true
-               :result {:neighbors results
-                        :query query-text
-                        :method method
-                        :top-k top-k
-                        :source :futon3a}})
-            (proof-error :corpus-search-failed
-                         (str "Search returned exit code " exit-code ": " output))))
+            {:source :futon3a
+             :available? true
+             :neighbors (->> (parse-corpus-output output)
+                             (map #(assoc % :source :futon3a))
+                             vec)}
+            {:source :futon3a
+             :available? true
+             :neighbors []
+             :error (str "Search returned exit code " exit-code ": " output)}))
         (catch Exception e
-          (proof-error :corpus-search-failed
-                       (str "corpus-check failed: " (.getMessage e))))))))
+          {:source :futon3a
+           :available? true
+           :neighbors []
+           :error (str "futon3a search failed: " (.getMessage e))})))))
+
+(defn- normalize-sources [source-spec]
+  (let [raw (cond
+              (nil? source-spec) [:futon3a :stackexchange-local]
+              (= source-spec :auto) [:futon3a :stackexchange-local]
+              (keyword? source-spec) [source-spec]
+              (sequential? source-spec) (vec source-spec)
+              :else [:futon3a :stackexchange-local])
+        normalized (->> raw
+                        (map #(cond
+                                (keyword? %) %
+                                (string? %) (keyword %)
+                                :else nil))
+                        (filter #{:futon3a :stackexchange-local :arxiv-live})
+                        distinct
+                        vec)]
+    (if (seq normalized)
+      normalized
+      [:futon3a :stackexchange-local])))
+
+(defn- merge-neighbors
+  [source-results top-k]
+  (->> source-results
+       (mapcat :neighbors)
+       (sort-by (juxt (comp - :score) :id))
+       (take top-k)
+       (map-indexed (fn [idx n]
+                      (assoc n :rank (inc idx))))
+       vec))
+
+(defn- tool-corpus-check
+  "Query configured corpus sources for structurally similar evidence.
+   Args: [query-text & {:keys [top-k method sources stackexchange-jsonl-paths arxiv-api-base]}]
+     query-text — framing assumption, structural obstruction, or approach string
+     top-k — number of neighbors to return (default 5)
+     method — :embeddings, :keywords, or :auto (default :auto)
+     sources — :auto | keyword | [keywords], default :auto => [:futon3a :stackexchange-local]
+     stackexchange-jsonl-paths — optional local JSONL override paths
+     arxiv-api-base — optional arXiv API base URL override
+   Returns: {:neighbors [...] :query query-text :method method}
+
+   This is fail-closed on source availability: if no requested source is
+   available, returns :corpus-unavailable."
+  [_cache _cwd args config]
+  (let [query-text (first args)
+        opts (or (second args) {})
+        top-k (or (:top-k opts) 5)
+        method (or (:method opts) :auto)]
+    (cond
+      (or (nil? query-text) (str/blank? query-text))
+      (proof-error :invalid-query "corpus-check requires a non-empty query string")
+
+      :else
+      (let [sources (normalize-sources (:sources opts))
+            jsonl-paths (resolve-stackexchange-jsonl-paths opts config)
+            source-results (->> sources
+                                (mapv (fn [source]
+                                        (case source
+                                          :futon3a
+                                          (search-futon3a query-text top-k config)
+
+                                          :stackexchange-local
+                                          (search-stackexchange-local query-text top-k jsonl-paths)
+
+                                          :arxiv-live
+                                          (search-arxiv-live query-text top-k opts config)
+
+                                          {:source source
+                                           :available? false
+                                           :neighbors []
+                                           :error "Unsupported corpus source"}))))
+            available-sources (->> source-results
+                                   (filter :available?)
+                                   (map :source)
+                                   vec)]
+        (if (empty? available-sources)
+          (proof-error :corpus-unavailable
+                       (str "No requested corpus sources available. statuses="
+                            (pr-str (mapv #(select-keys % [:source :available? :error])
+                                          source-results))))
+          (let [neighbors (merge-neighbors source-results top-k)
+                source-key (if (= 1 (count available-sources))
+                             (first available-sources)
+                             :multi)]
+            {:ok true
+             :result {:neighbors neighbors
+                      :query query-text
+                      :method method
+                      :top-k top-k
+                      :source source-key
+                      :sources available-sources
+                      :source-status
+                      (mapv (fn [r]
+                              (cond-> {:source (:source r)
+                                       :available? (:available? r)
+                                       :neighbor-count (count (:neighbors r))}
+                                (:doc-count r) (assoc :doc-count (:doc-count r))
+                                (:paths r) (assoc :paths (:paths r))
+                                (:request-url r) (assoc :request-url (:request-url r))
+                                (:error r) (assoc :error (:error r))))
+                            source-results)}}))))))
 
 ;; =============================================================================
 ;; ProofBackend record

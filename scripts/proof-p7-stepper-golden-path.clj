@@ -53,9 +53,12 @@
       (println (format "  %s [%s] %s"
                        id (name (:item/status item)) (:item/label item))))))
 
-(defn run-corpus-query! [q]
+(defn run-corpus-query!
+  ([q] (run-corpus-query! q {:top-k 5
+                             :sources [:futon3a :stackexchange-local]}))
+  ([q opts]
   (println "\n  [corpus-check] Query:" (pr-str q))
-  (let [result (tools/execute-tool be :corpus-check [q {:top-k 5}])]
+  (let [result (tools/execute-tool be :corpus-check [q opts])]
     (if (:ok result)
       (let [neighbors (get-in result [:result :neighbors])]
         (if (seq neighbors)
@@ -68,7 +71,7 @@
           (do (println "  [no neighbors]") [])))
       (do
         (println "  [corpus-check unavailable:" (get-in result [:error :message]) "]")
-        []))))
+        [])))))
 
 (defn framing-signal-hit? [neighbor]
   (let [s (str/lower-case (str (:id neighbor) " " (:title neighbor "")))]
@@ -237,10 +240,25 @@
   (do
     (println "  status: UNRESOLVED — no corpus signal")
     (println "  action: keep L-preconditions open; do not promote L-bridge.")
-    (println "  next: acquire topology/surgery corpus. Minimum seed:")
-    (println "    - Novikov conjecture survey (e.g., Luck 2002, arXiv:math/0504564)")
-    (println "    - Davis-Luck 2024 (arXiv:2303.15765) — Z/2 exclusion")
-    (println "    - Bartels-Farrell-Luck (arXiv:1101.0469) — Farrell-Jones for lattices")))
+    (println "  escalation: query arXiv directly for domain-specific signal")
+    (let [arxiv-domain-neighbors
+          (vec (mapcat #(run-corpus-query! % {:top-k 5 :sources [:arxiv-live]})
+                       domain-queries))
+          arxiv-domain-signal (framing-signal-summary arxiv-domain-neighbors)]
+      (println (format "  arXiv domain signal: %d/%d hits (%.2f)"
+                       (:hit-count arxiv-domain-signal)
+                       (:total-neighbors arxiv-domain-signal)
+                       (:hit-rate arxiv-domain-signal)))
+      (if (pos? (:hit-count arxiv-domain-signal))
+        (do
+          (println "  escalation result: ARXIV SIGNAL — obstruction evidence now visible")
+          (println "  action: reframe to NO-obstruction argument and keep bridge gated until cited."))
+        (do
+          (println "  escalation result: still unresolved after arXiv")
+          (println "  next: acquire topology/surgery corpus. Minimum seed:")
+          (println "    - Novikov conjecture survey (e.g., Luck 2002, arXiv:math/0504564)")
+          (println "    - Davis-Luck 2024 (arXiv:2303.15765) — Z/2 exclusion")
+          (println "    - Bartels-Farrell-Luck (arXiv:1101.0469) — Farrell-Jones for lattices"))))))
 
 ;; ============================================================
 ;; 5. Record failed route (our wrong approach)

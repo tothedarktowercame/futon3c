@@ -372,10 +372,12 @@
 (deftest corpus-check-reports-missing-futon3a
   (let [dir (fix/temp-dir!)
         backend (pb/make-proof-backend {:cwd dir
-                                        :futon3a-root "/nonexistent/futon3a"}
+                                        :futon3a-root "/nonexistent/futon3a"
+                                        :stackexchange-jsonl-paths []}
                                        (tools/make-mock-backend))
         result (tools/execute-tool backend :corpus-check
-                 ["Cameron-Martin quasi-invariance for Phi^4_3 measure"])]
+                 ["Cameron-Martin quasi-invariance for Phi^4_3 measure"
+                  {:sources [:futon3a]}])]
     (is (not (:ok result)))
     (is (= :corpus-unavailable (get-in result [:error :code])))))
 
@@ -396,6 +398,27 @@
             :score 0.7721}
            (second parsed)))))
 
+(deftest arxiv-parser-parses-atom-entries
+  (let [xml (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                 "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n"
+                 "  <entry>\n"
+                 "    <id>http://arxiv.org/abs/1101.0469v1</id>\n"
+                 "    <title>On the Farrell-Jones Conjecture and its applications</title>\n"
+                 "    <summary>We discuss assembly map injectivity and consequences.</summary>\n"
+                 "    <category term=\"math.GT\"/>\n"
+                 "  </entry>\n"
+                 "  <entry>\n"
+                 "    <id>http://arxiv.org/abs/2303.15765v2</id>\n"
+                 "    <title>Exclusion phenomena for Z/2 in manifold settings</title>\n"
+                 "    <summary>Surgery obstructions for lattice groups.</summary>\n"
+                 "    <category term=\"math.AT\"/>\n"
+                 "  </entry>\n"
+                 "</feed>\n")
+        parsed (#'pb/parse-arxiv-entries xml)]
+    (is (= 2 (count parsed)))
+    (is (= "arxiv:1101.0469v1" (get-in parsed [0 :id])))
+    (is (re-find #"Farrell-Jones" (get-in parsed [0 :title])))))
+
 (deftest corpus-check-parses-live-style-futon3a-output
   (let [dir (fix/temp-dir!)
         futon3a-root (io/file dir "futon3a")
@@ -412,13 +435,62 @@
                      "print(' 2. theorem/equivalence-guard (0.7721)')\n"))
         backend (pb/make-proof-backend {:cwd dir
                                         :futon3a-root (.getPath futon3a-root)
-                                        :futon3a-python "python3"}
+                                        :futon3a-python "python3"
+                                        :stackexchange-jsonl-paths []}
                                        (tools/make-mock-backend))
         result (tools/execute-tool backend :corpus-check
                  ["Phi^4_3 measure equivalent to Gaussian free field measure"
-                  {:top-k 2}])]
+                  {:top-k 2 :sources [:futon3a]}])]
     (is (:ok result))
     (is (= :futon3a (get-in result [:result :source])))
     (is (= 2 (count (get-in result [:result :neighbors]))))
     (is (= "reasoning/check-preconditions"
            (get-in result [:result :neighbors 0 :id])))))
+
+(deftest corpus-check-queries-local-stackexchange-jsonl
+  (let [dir (fix/temp-dir!)
+        se-file (io/file dir "mse-mo-sample.jsonl")
+        _ (spit se-file
+                (str
+                  "{\"thread_id\":\"mathoverflow.net:111\",\"site\":\"mathoverflow.net\",\"topic\":\"geometric-topology\",\"question\":{\"id\":111,\"url\":\"https://mathoverflow.net/questions/111\",\"title\":\"Novikov obstruction for lattice manifolds\",\"body_text\":\"Does Novikov conjecture obstruct manifold realization for lattices with torsion?\",\"tags\":[\"novikov-conjecture\",\"geometric-topology\"]},\"answers\":[{\"id\":112,\"score\":7,\"body_text\":\"Assembly map injectivity gives the obstruction in surgery.\"}]}\n"
+                  "{\"thread_id\":\"math.stackexchange.com:222\",\"site\":\"math.stackexchange.com\",\"topic\":\"algebra\",\"question\":{\"id\":222,\"url\":\"https://math.stackexchange.com/questions/222\",\"title\":\"Simple groups and commutators\",\"body_text\":\"An unrelated algebra thread.\",\"tags\":[\"group-theory\"]},\"answers\":[{\"id\":223,\"score\":2,\"body_text\":\"No topology content.\"}]}\n"))
+        backend (pb/make-proof-backend {:cwd dir
+                                        :futon3a-root "/nonexistent/futon3a"
+                                        :stackexchange-jsonl-paths [(.getPath se-file)]}
+                                       (tools/make-mock-backend))
+        result (tools/execute-tool backend :corpus-check
+                 ["Novikov conjecture obstruction for manifold realization of lattices"
+                  {:top-k 2 :sources [:stackexchange-local]}])]
+    (is (:ok result))
+    (is (= :stackexchange-local (get-in result [:result :source])))
+    (is (= "mathoverflow.net:111"
+           (get-in result [:result :neighbors 0 :id])))
+    (is (= :stackexchange-local
+           (get-in result [:result :neighbors 0 :source])))))
+
+(deftest corpus-check-merges-futon3a-and-local-sources
+  (let [dir (fix/temp-dir!)
+        futon3a-root (io/file dir "futon3a")
+        scripts-dir (io/file futon3a-root "scripts")
+        notions-dir (io/file futon3a-root "resources" "notions")
+        se-file (io/file dir "mse-mo-sample.jsonl")
+        _ (.mkdirs scripts-dir)
+        _ (.mkdirs notions-dir)
+        _ (spit (io/file notions-dir "minilm_pattern_embeddings.json") "[]")
+        _ (spit (io/file scripts-dir "notions_search.py")
+                "print(' 1. reasoning/check-preconditions (0.4000) - Verify assumptions first')\n")
+        _ (spit se-file
+                "{\"thread_id\":\"mathoverflow.net:333\",\"site\":\"mathoverflow.net\",\"topic\":\"geometric-topology\",\"question\":{\"id\":333,\"url\":\"https://mathoverflow.net/questions/333\",\"title\":\"Assembly map and Novikov conjecture\",\"body_text\":\"Assembly injectivity obstructs manifold realization.\",\"tags\":[\"novikov-conjecture\"]},\"answers\":[{\"id\":334,\"score\":5,\"body_text\":\"This is a surgery-theoretic obstruction.\"}]}\n")
+        backend (pb/make-proof-backend {:cwd dir
+                                        :futon3a-root (.getPath futon3a-root)
+                                        :futon3a-python "python3"
+                                        :stackexchange-jsonl-paths [(.getPath se-file)]}
+                                       (tools/make-mock-backend))
+        result (tools/execute-tool backend :corpus-check
+                 ["Novikov assembly obstruction to manifold realization"
+                  {:top-k 2 :sources [:futon3a :stackexchange-local]}])
+        neighbor-sources (set (map :source (get-in result [:result :neighbors])))]
+    (is (:ok result))
+    (is (= :multi (get-in result [:result :source])))
+    (is (contains? neighbor-sources :futon3a))
+    (is (contains? neighbor-sources :stackexchange-local))))
