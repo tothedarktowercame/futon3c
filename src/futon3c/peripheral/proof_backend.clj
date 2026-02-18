@@ -455,6 +455,76 @@
         (proof-error :cycle-not-found (str "Cycle " cycle-id " not found")))
       (proof-error :not-found (str "No proof state for " problem-id)))))
 
+(def ^:private corpus-neighbor-line-re
+  #"^\s*(\d+)\.\s+(.+?)\s+\(([-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?)\)(?:\s+-\s+(.*))?\s*$")
+
+(defn- parse-long-safe [x]
+  (cond
+    (integer? x) (long x)
+    (number? x) (long x)
+    (string? x) (try (Long/parseLong x)
+                     (catch Exception _ nil))
+    :else nil))
+
+(defn- parse-double-safe [x]
+  (cond
+    (number? x) (double x)
+    (string? x) (try (Double/parseDouble x)
+                     (catch Exception _ nil))
+    :else nil))
+
+(defn- normalize-neighbor
+  "Normalize neighbor maps from either JSON or text parsing."
+  [fallback-rank m]
+  (let [id (or (:id m) (get m "id"))
+        score (parse-double-safe (or (:score m) (get m "score")))
+        rank (or (parse-long-safe (:rank m))
+                 (parse-long-safe (get m "rank"))
+                 fallback-rank)
+        title (or (:title m) (get m "title"))]
+    (when (and (string? id) (not (str/blank? id)) (number? score))
+      (cond-> {:rank rank
+               :id id
+               :score score}
+        (and (string? title) (not (str/blank? title)))
+        (assoc :title title)))))
+
+(defn- parse-text-neighbors [output]
+  (->> (str/split-lines (or output ""))
+       (keep (fn [line]
+               (when-let [[_ rank id score title] (re-matches corpus-neighbor-line-re line)]
+                 (normalize-neighbor (parse-long-safe rank)
+                                     {:rank rank
+                                      :id (str/trim id)
+                                      :score score
+                                      :title (some-> title str/trim)}))))
+       vec))
+
+(defn- parse-json-neighbors [output]
+  (let [payload (json/read-str output :key-fn keyword)
+        neighbors (cond
+                    (sequential? payload) payload
+                    (map? payload) (if (sequential? (:neighbors payload))
+                                     (:neighbors payload)
+                                     [payload])
+                    :else [])]
+    (->> neighbors
+         (map-indexed (fn [idx m]
+                        (normalize-neighbor (inc idx) m)))
+         (remove nil?)
+         vec)))
+
+(defn- parse-corpus-output
+  "Parse futon3a neighbor output.
+   Supports both future JSON output and current line-based output."
+  [output]
+  (or (not-empty
+       (try
+         (parse-json-neighbors output)
+         (catch Exception _ [])))
+      (parse-text-neighbors output)
+      []))
+
 (defn- tool-corpus-check
   "Query futon3a's ANN index for structurally similar patterns/wiring diagrams.
    Args: [query-text & {:keys [top-k method]}]
@@ -494,17 +564,15 @@
                    [python search-script
                     "--query" (str query-text)
                     "--top" (str top-k)
-                    "--embeddings" embeddings-path
-                    "--json"])
+                    "--embeddings" embeddings-path])
               _ (.redirectErrorStream pb true)
               proc (.start pb)
               output (slurp (.getInputStream proc))
               exit-code (.waitFor proc)]
           (if (zero? exit-code)
-            (let [results (try (json/read-str output :key-fn keyword)
-                               (catch Exception _ []))]
+            (let [results (parse-corpus-output output)]
               {:ok true
-               :result {:neighbors (if (sequential? results) results [results])
+               :result {:neighbors results
                         :query query-text
                         :method method
                         :top-k top-k

@@ -1,5 +1,6 @@
 (ns futon3c.peripheral.proof-backend-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.peripheral.proof-backend :as pb]
             [futon3c.peripheral.proof-dag :as dag]
             [futon3c.peripheral.proof-shapes :as ps]
@@ -377,3 +378,47 @@
                  ["Cameron-Martin quasi-invariance for Phi^4_3 measure"])]
     (is (not (:ok result)))
     (is (= :corpus-unavailable (get-in result [:error :code])))))
+
+(deftest corpus-output-parser-parses-text-lines
+  (let [output (str "Some transformer log noise\n"
+                    " 1. reasoning/check-preconditions (0.8842) - Verify assumptions first\n"
+                    " 2. theorem/equivalence-guard (0.7721)\n"
+                    "unrelated info line")
+        parsed (#'pb/parse-corpus-output output)]
+    (is (= 2 (count parsed)))
+    (is (= {:rank 1
+            :id "reasoning/check-preconditions"
+            :score 0.8842
+            :title "Verify assumptions first"}
+           (first parsed)))
+    (is (= {:rank 2
+            :id "theorem/equivalence-guard"
+            :score 0.7721}
+           (second parsed)))))
+
+(deftest corpus-check-parses-live-style-futon3a-output
+  (let [dir (fix/temp-dir!)
+        futon3a-root (io/file dir "futon3a")
+        scripts-dir (io/file futon3a-root "scripts")
+        notions-dir (io/file futon3a-root "resources" "notions")
+        _ (.mkdirs scripts-dir)
+        _ (.mkdirs notions-dir)
+        search-script (io/file scripts-dir "notions_search.py")
+        embeddings-file (io/file notions-dir "minilm_pattern_embeddings.json")
+        _ (spit embeddings-file "[]")
+        _ (spit search-script
+                (str "print('loader log line')\n"
+                     "print(' 1. reasoning/check-preconditions (0.8842) - Verify assumptions first')\n"
+                     "print(' 2. theorem/equivalence-guard (0.7721)')\n"))
+        backend (pb/make-proof-backend {:cwd dir
+                                        :futon3a-root (.getPath futon3a-root)
+                                        :futon3a-python "python3"}
+                                       (tools/make-mock-backend))
+        result (tools/execute-tool backend :corpus-check
+                 ["Phi^4_3 measure equivalent to Gaussian free field measure"
+                  {:top-k 2}])]
+    (is (:ok result))
+    (is (= :futon3a (get-in result [:result :source])))
+    (is (= 2 (count (get-in result [:result :neighbors]))))
+    (is (= "reasoning/check-preconditions"
+           (get-in result [:result :neighbors 0 :id])))))
