@@ -146,7 +146,7 @@
    (let [md-missions (into []
                            (mapcat (fn [[repo-name root]]
                                      (scan-mission-files root repo-name)))
-                           (dissoc repos :futon5))
+                           repos)
          devmap-missions (if-let [f5 (:futon5 repos)]
                            (scan-devmap-files f5)
                            [])]
