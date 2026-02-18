@@ -494,108 +494,122 @@ whichever dimensions applied.
 
 The same approach applies to futonic commits and issues. Below is a
 feature grid mapping each Table 25 dimension to what we already have
-and what's missing.
+and what's missing. Sigil codes use the original symbols from the
+thesis where available; modernized emoji alternatives (via ChatGPT
+reading) are shown in brackets.
 
-### Layer 1: Experience Dimensions
+### Anchoring Principle
+
+🌟 *System design must mesh site activity with participants'
+phenomenal experience of the domain.*
+
+This is the overarching design constraint — not just a framing
+statement but a testable criterion. Every layer below serves this
+principle. For futonic development: does the evidence landscape
+make the *experience* of multi-agent code development legible and
+navigable, or does it just log events?
+
+### Layer 1: System–Experience Alignment
 
 How participants engage with the system. These are modes of
 interaction that the platform must support:
 
-| Dimension | Futonic Coverage | Gaps |
-|-----------|-----------------|------|
-| Human language | CLAUDE.md, commit messages, PAR narratives, forum posts | Covered implicitly but not instrumentable — we don't track *how* language is used, only that it is. |
-| Sensory perception | Arxana viewer (visual rendering of evidence), futon4 faces/colors | **Narrow.** Only visual. No sonification, no spatial navigation of evidence. |
-| Logic and deduction | Proof stepper, gate pipeline, obligation DAGs | **Strong.** Core strength of the evidence landscape. |
-| Intuition, association, and metaphor | `iching/*` (64 patterns), `iiching/*` (256 exotypes), pattern search by hotword/association | **Present but undertheorized.** The I Ching patterns and exotypes are associative/metaphorical. Corpus search by hotword is intuition-adjacent. |
-| Stimulus/response | PSR/PUR loop (stimulus: context → response: pattern selection), AIF sense-deliberate-act cycle | **Strong.** The entire AIF architecture is a structured stimulus/response loop. |
-| Process and time | Evidence timestamps, session boundaries, `evidence/at`, temporal ordering | **Moderate.** Time is recorded but not richly modeled. No duration tracking, no "how long did this step take?" |
-| Socialization [ν] | Forum, IRC bridge, multi-agent standups, agency registry | **Moderate.** Socialization exists but isn't tracked *as* socialization. |
+| Sigil | Dimension | Futonic Coverage | Gaps |
+|-------|-----------|-----------------|------|
+| 🗣️ | Human language | CLAUDE.md, commit messages, PAR narratives, forum posts | Covered implicitly but not instrumentable — we don't track *how* language is used, only that it is. |
+| 👁️ | Sensory perception | Arxana viewer (visual rendering of evidence), futon4 faces/colors | **Narrow.** Only visual. No sonification, no spatial navigation of evidence. |
+| 🔺 | Logic and deduction | Proof stepper, gate pipeline, obligation DAGs | **Strong.** Core strength of the evidence landscape. |
+| 🔀 | Intuition, association, metaphor | `iching/*` (64 patterns), `iiching/*` (256 exotypes), pattern search by hotword/association | **Present but undertheorized.** The I Ching patterns and exotypes are associative/metaphorical. Corpus search by hotword is intuition-adjacent. |
+| 🔁 | Stimulus/response | PSR/PUR loop (stimulus: context → response: pattern selection), AIF sense-deliberate-act cycle | **Strong.** The entire AIF architecture is a structured stimulus/response loop. |
+| ⏳ | Process and time | Evidence timestamps, session boundaries, `evidence/at`, temporal ordering | **Moderate.** Time is recorded but not richly modeled. No duration tracking, no "how long did this step take?" |
+| 🔷 | Socialization [ν] | Forum, IRC bridge, multi-agent standups, agency registry | **Moderate.** Socialization exists but isn't tracked *as* socialization. |
+| 📄 | Content | Evidence entries, pattern library (852 patterns), proof trees | **Strong.** The evidence landscape *is* the content layer. |
+| ☕ | Community [η] | Forum, IRC bridge, multi-agent coordination, agency registry | **Moderate.** Community dynamics aren't evidence-tracked. Who participated, how often, in what capacity — all implicit. |
+| 🗂️ | Catalog [η] | Pattern library index, evidence query API, Arxana browser | **Strong.** Multiple catalog/browse interfaces exist. |
+| 🛠️ | Organization | Project/step/zone faceting (this technote), `devmap-coherence/*` | **In design.** This technote is literally designing the organization layer. |
+| 💾 | Software [ι] | The futon stack itself | Meta-level: the system *is* the software. |
 
-### Layer 2: Platform Dimensions
+### Layer 2: Participation & Learning Boosters
 
-What the system provides as infrastructure:
+| Sigil | Proposition | Futonic Coverage | Gaps |
+|-------|-------------|-----------------|------|
+| 📝 | Written language boosts participation | CLAUDE.md, markdown command specs, natural language prompts | **Assumed.** The entire agent interface is written language. Not measured. |
+| 🎨 | Graphics/interactive features boost participation [μ] | Arxana browser, futon4 face rendering | **Weak.** Minimal interactivity beyond tabulated lists. No evidence visualization (graphs, timelines, dependency diagrams). |
+| 📊 | Projects modeled as progressive problem solving [δ] | Proof stepper cycles, mission steps, gate pipeline progression | **Strong.** The core workflow model. |
 
-| Dimension | Futonic Coverage | Gaps |
-|-----------|-----------------|------|
-| Content | Evidence entries, pattern library (852 patterns), proof trees | **Strong.** The evidence landscape *is* the content layer. |
-| ☕ Community [η] | Forum, IRC bridge, multi-agent coordination, agency registry | **Moderate.** Community dynamics aren't evidence-tracked. Who participated, how often, in what capacity — all implicit. |
-| Catalog [η] | Pattern library index, evidence query API, Arxana browser | **Strong.** Multiple catalog/browse interfaces exist. |
-| Organization | Project/step/zone faceting (this technote), `devmap-coherence/*` | **In design.** This technote is literally designing the organization layer. |
-| Software [ι] | The futon stack itself | Meta-level: the system *is* the software. |
-
-### Layer 3: Knowledge Dimensions
+### Layer 3: Dimensions of Progressive Problem Solving
 
 Types of knowledge that the system should surface and support:
 
-| Dimension | Futonic Coverage | Gaps |
-|-----------|-----------------|------|
-| Personal attention | Agent-to-agent dispatch, detach/reattach model | **Weak.** No mechanism for directed mentoring or focused review between specific agents. |
-| Public statements | Forum posts, evidence entries (all queryable) | **Strong.** Everything in the evidence landscape is a public statement. |
-| Argumentation and rationale | PSR rationale field, ARGUE step in derivation xenotype, `corps/five-arrows-fit` | **Strong.** Core methodology. IF/HOWEVER/THEN/BECAUSE argument form. |
-| Shared understanding | CLAUDE.md files, README documentation, pattern descriptions | **Moderate.** Shared understanding is encoded in static docs. No dynamic "do we agree?" mechanism. |
-| Collaborative knowledge | Forum proof trees, evidence chains (in-reply-to) | **Moderate.** Chains exist but collaborative *synthesis* (merging two agents' evidence into shared conclusion) is absent. |
-| Cultural artifacts | Pattern library, proof trees, evidence landscape itself | **Strong.** The pattern library is explicitly a cultural artifact — accumulated wisdom from development practice. |
-| Personal comprehension | PAR "what did I learn?" field | **Moderate.** Captured in PARs but not queryable as a distinct dimension. "What has this agent learned across sessions?" requires chain-walking. |
+| Sigil | Dimension | Futonic Coverage | Gaps |
+|-------|-----------|-----------------|------|
+| ☀️ | Personal attention | Agent-to-agent dispatch, detach/reattach model | **Weak.** No mechanism for directed mentoring or focused review between specific agents. |
+| 💬 | Public statements | Forum posts, evidence entries (all queryable) | **Strong.** Everything in the evidence landscape is a public statement. |
+| 🗨️ | Argumentation and rationale | PSR rationale field, ARGUE step in derivation xenotype, `corps/five-arrows-fit` | **Strong.** Core methodology. IF/HOWEVER/THEN/BECAUSE argument form. |
+| 🔲 | Shared understanding | CLAUDE.md files, README documentation, pattern descriptions | **Moderate.** Shared understanding is encoded in static docs. No dynamic "do we agree?" mechanism. |
+| 🔑 | Collaborative knowledge | Forum proof trees, evidence chains (in-reply-to) | **Moderate.** Chains exist but collaborative *synthesis* (merging two agents' evidence into shared conclusion) is absent. |
+| 🏺 | Cultural artifacts | Pattern library, proof trees, evidence landscape itself | **Strong.** The pattern library is explicitly a cultural artifact — accumulated wisdom from development practice. |
+| 🧠 | Personal comprehension | PAR "what did I learn?" field | **Moderate.** Captured in PARs but not queryable as a distinct dimension. "What has this agent learned across sessions?" requires chain-walking. |
 
-### Layer 4: Process Insights
+### Layer 4: Roles & Open Production
 
-| Insight | Futonic Coverage | Gaps |
-|---------|-----------------|------|
-| Progressive problem solving [δ] | Proof stepper cycles, mission steps, gate pipeline progression | **Strong.** The core workflow model. |
-| Ephemeral roles | Agent types (:claude, :codex, :mock, :peripheral), capabilities vector | **Partial.** Roles exist but aren't ephemeral — they're set at registration. No "I'm taking on reviewer role for this step" mechanism. |
-| Collections from use tracking | Evidence tag queries, session grouping, `/rap` retrieval | **Moderate.** Collections are manual (tag assignment). No automatic collection from usage patterns. |
-| Gradual localized accumulation [λ] | Evidence landscape growth over time, pattern library evolution | **Strong in design, weak in practice.** The architecture supports this but we haven't yet seen enough accumulated evidence to test it. |
+| Sigil | Insight | Futonic Coverage | Gaps |
+|-------|---------|-----------------|------|
+| 🔢 | Progressive problem solving maps to interaction history & curation [γ, ζ] | Evidence timeline, session history, `/rap` retrieval | **Moderate.** History is stored and queryable. Curation (selecting what matters) is manual. |
+| 🔖 | Roles regulate behavior but are often ephemeral | Agent types (:claude, :codex, :mock, :peripheral), capabilities vector | **Partial.** Roles exist but aren't ephemeral — they're set at registration. No "I'm taking on reviewer role for this step" mechanism. |
+| 📥 | Gradual localized accumulation of information [λ] | Evidence landscape growth over time, pattern library evolution | **Strong in design, weak in practice.** The architecture supports this but we haven't yet seen enough accumulated evidence to test it. |
+| 🎯 | Focused on the end user (⁂) | — | **Missing.** Developer-tool-for-developers doesn't naturally surface this, but it matters for futon4/Arxana UX decisions. |
+| ⚫ | Supporting purpose-based use [ο] | Mission/step structure, `agent/scope-before-action` | **Moderate.** Missions define purpose but "why is this agent using the system right now?" isn't tracked. |
+| 📦 | Open production introduces new coordination problems | Multi-agent coordination, agency registry, evidence landscape as shared state | **Core concern.** This is literally what futon3c exists to address. The evidence landscape is the coordination substrate for open multi-agent production. |
 
-### Layer 5: Engagement Propositions
-
-| Proposition | Futonic Coverage | Gaps |
-|-------------|-----------------|------|
-| Written language boosts participation | CLAUDE.md, markdown command specs, natural language prompts | **Assumed.** The entire agent interface is written language. Not measured. |
-| Graphics/interactive features boost participation [μ] | Arxana browser, futon4 face rendering | **Weak.** Minimal interactivity beyond tabulated lists. No evidence visualization (graphs, timelines, dependency diagrams). |
-| Feedback and follow-through [β, κ] | PUR (feedback on patterns), gate pipeline (follow-through on quality) | **Moderate.** Feedback exists but "did the agent follow through on what the feedback suggested?" is untracked. |
-| Literacies enable sustained effort | Pattern library as teachable vocabulary, PSR as practiced skill | **Implicit.** Agents develop "literacy" in the pattern language but this isn't measured or tracked. |
-
-### Layer 6: Quality Dimensions
+### Layer 5: Quality & Sustainability Factors
 
 | Sigil | Dimension | Futonic Coverage | Gaps |
 |-------|-----------|-----------------|------|
 | ✋ | Relevance | Pattern search relevance scores, `agent/scope-before-action` | Relevance of evidence entries isn't scored. A PAR from 6 months ago and one from yesterday have equal weight. |
-| ❦ | Quality [α] | Gate pipeline (G5→G0), `code-coherence/*` patterns, `stack-coherence/*` | Quality is binary (pass/fail gates). No graded quality signal on evidence entries themselves. |
+| 🎖️ | Quality [α] (❦) | Gate pipeline (G5→G0), `code-coherence/*` patterns, `stack-coherence/*` | Quality is binary (pass/fail gates). No graded quality signal on evidence entries themselves. |
 | ✨ | Scalability | Architecture patterns, `exotic/live-sync-source-truth` | Scalability as a *tag* on decisions isn't captured. "This design decision was made for scalability reasons" isn't faceted. |
 | ❖ | Consistency | `stack-coherence/*`, `devmap-coherence/*`, 17 IFR patterns (f0-f7 sati through upekkha) | Best-covered quality dimension. The IFR stack is essentially a consistency framework. |
 | ✺ | Motivation [α] | Not explicitly tracked | **Missing.** "Why are we doing this?" is captured in PSR rationale but not queryable as a dimension. The ✺ sigil in Planetary #381 marks "this helps contributors get started" — a motivational concern, not a technical one. |
+| ⏩ | Feedback & follow-through [β, κ] | PUR (feedback on patterns), gate pipeline (follow-through on quality) | **Moderate.** Feedback exists but "did the agent follow through on what the feedback suggested?" is untracked. Consistency matters in social interactions, not just expository content. |
 | ⚓ | Concrete applications [ε, ξ] | `agent/evidence-over-assertion`, test discipline, proof stepper | Good in spirit but not tagged. "This evidence demonstrates a concrete application" vs "this is theoretical" isn't distinguished. |
-| ⁂ | End-user focus [ο] | — | **Missing.** Developer-tool-for-developers doesn't naturally surface this, but it matters for futon4/Arxana UX decisions. |
+| 📚 | Literacies enable sustained effort | Pattern library as teachable vocabulary, PSR as practiced skill | **Implicit.** Agents develop "literacy" in the pattern language but this isn't measured or tracked. |
 
-### Layer 7: Participant Activities (Chess Pieces)
+### Layer 6: Literacy-Building Motivations (Chess Pieces)
 
-| Sigil | Activity | Futonic Coverage | Gaps |
-|-------|----------|-----------------|------|
-| ♟ | Getting information | `/rap`, `/psr` (corpus search), `corpus-check` tool, `ants/white-space-scout`, `agent/scope-before-action`, evidence GET queries | Well covered. The discipline/domain signal split (§ above) refines this further. |
+These are the motivations that drive participants to build the
+literacies they need. The chess piece mnemonics indicate the *kind*
+of engagement, not just the activity:
+
+| Sigil | Motivation | Futonic Coverage | Gaps |
+|-------|------------|-----------------|------|
+| ♟ [♟️] | Getting information | `/rap`, `/psr` (corpus search), `corpus-check` tool, `ants/white-space-scout`, `agent/scope-before-action`, evidence GET queries | Well covered. The discipline/domain signal split (§ above) refines this further. |
 | ♙ | Giving information | `/par`, PUR records, evidence POST, `contributing/*` patterns, `corps/working-where-others-can-see`, README/CLAUDE.md authoring | Well covered. Not explicitly *tagged* as information-giving though. |
-| ♗ | Reputation building | `agent/commitment-varies-with-confidence`, gate pipeline (quality assurance), pattern library maturity levels | **Weak.** No agent reputation/credibility tracking. No way to ask "which agent's PURs have the highest success rate?" |
-| ♖ | Relationship development [θ] | Forum participation, IRC bridge, agency registry, detach/reattach model | **Moderate.** Relationships are implicit in session co-participation. Not tracked as evidence. |
-| ♘ | Recreation | `iching/*` (64 patterns), `iiching/*` (256 exotype patterns) | **Absent as explicit concern.** The I Ching patterns serve an associative/generative function but aren't framed as recreation. |
-| ♕ | Self-discovery | PAR (explicitly this), `agent/state-is-hypothesis`, `corps/carrying-ones-own-question`, `corps/letting-the-trace-teach` | **Strong.** PAR is the primary self-discovery mechanism. Could be enriched by cross-session PAR queries. |
-| ♔ | Constructive feedback | PUR (outcome evaluation), gate pipeline rejection, forum corrections, `agent/escalation-cost-vs-risk` | **Moderate.** Feedback exists but isn't structured for easy retrieval. "Show me all feedback on my design decisions" is hard. |
+| ♗ [🏆] | Reputation building | `agent/commitment-varies-with-confidence`, gate pipeline (quality assurance), pattern library maturity levels | **Weak.** No agent reputation/credibility tracking. No way to ask "which agent's PURs have the highest success rate?" |
+| ♖ [🧱] | Relationship development [θ] | Forum participation, IRC bridge, agency registry, detach/reattach model | **Moderate.** Relationships are implicit in session co-participation. Not tracked as evidence. |
+| ♘ [🎠] | Recreation | `iching/*` (64 patterns), `iiching/*` (256 exotype patterns) | **Absent as explicit concern.** The I Ching patterns serve an associative/generative function but aren't framed as recreation. |
+| ♕ [🪞] | Self-discovery | PAR (explicitly this), `agent/state-is-hypothesis`, `corps/carrying-ones-own-question`, `corps/letting-the-trace-teach` | **Strong.** PAR is the primary self-discovery mechanism. Could be enriched by cross-session PAR queries. |
+| ♔ [👑] | Constructive feedback | PUR (outcome evaluation), gate pipeline rejection, forum corrections, `agent/escalation-cost-vs-risk` | **Moderate.** Feedback exists but isn't structured for easy retrieval. "Show me all feedback on my design decisions" is hard. |
 
 ### Coverage Summary
 
-**Strong** (core methodology aligns): logic and deduction,
-stimulus/response, content, catalog, public statements, argumentation
-and rationale, cultural artifacts, progressive problem solving, ♟♙♕,
-❖ consistency.
+**Strong** (core methodology aligns): 🔺 logic/deduction,
+🔁 stimulus/response, 📄 content, 🗂️ catalog, 💬 public statements,
+🗨️ argumentation, 🏺 cultural artifacts, 📊 progressive problem
+solving, 📦 open production coordination, ♟ getting info,
+♙ giving info, ♕ self-discovery, ❖ consistency.
 
-**Moderate** (mechanisms exist, not faceted): process and time,
-socialization, ☕ community, shared understanding, collaborative
-knowledge, personal comprehension, collections, ♖ relationships,
-♔ feedback, ❦ quality.
+**Moderate** (mechanisms exist, not faceted): ⏳ process/time,
+🔷 socialization, ☕ community, 🔲 shared understanding,
+🔑 collaborative knowledge, 🧠 personal comprehension,
+📥 gradual accumulation, 🔢 history→curation, ⏩ follow-through,
+♖ relationships, ♔ feedback, 🎖️ quality.
 
-**Weak/absent** (Table 25 surfaces what we miss): sensory perception,
-intuition/association/metaphor, personal attention, ephemeral roles,
-graphics/interactivity, follow-through tracking, ♗ reputation,
-♘ recreation, ✋ relevance, ✨ scalability, ✺ motivation,
-⚓ concrete applications, ⁂ end-user focus.
+**Weak/absent** (Table 25 surfaces what we miss): 👁️ sensory
+perception, 🔀 intuition/metaphor, ☀️ personal attention,
+🔖 ephemeral roles, 🎨 graphics/interactivity, 🎯 end-user focus,
+♗ reputation, ♘ recreation, ✋ relevance, ✨ scalability,
+✺ motivation, ⚓ concrete applications, 📚 literacy tracking.
 
 The weak/absent dimensions are the "para-development" layer — what
 makes a development project a *living community* rather than just a
