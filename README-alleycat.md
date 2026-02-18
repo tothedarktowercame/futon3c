@@ -229,6 +229,14 @@ M-x codex-repl
 The REPL and IRC relay share `/tmp/futon-codex-session-id`, so context can
 pivot across transports.
 
+While the REPL is running you can query the transport modeline explicitly:
+
+- `M-x codex-repl-describe-modeline` — print the current modeline string.
+- `M-x codex-repl-copy-modeline` — copy the rendered modeline to the kill ring.
+
+This makes the gate-visible transport state explicit for logs, chat, or
+handoffs without relying on the header string alone.
+
 ## Notes
 
 - `futon3c` currently has no local `Makefile`/`make dev` entrypoint.
