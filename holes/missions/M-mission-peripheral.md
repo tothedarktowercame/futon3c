@@ -1,7 +1,7 @@
 # Mission: General Mission Peripheral
 
 **Date:** 2026-02-18
-**Status:** PROPOSED
+**Status:** IDENTIFY complete, MAP in progress
 **Blocked by:** None (proof peripheral is operational; evidence landscape
 is persistent; futonic logic is specified)
 
@@ -298,10 +298,247 @@ GitHub issues become one possible rendering of items 1-3. The evidence
 landscape is the canonical store. `gh issue create` becomes an optional
 downstream projection, not the source of truth.
 
+## MAP: Ancestral Evidence and Traceability
+
+*Derivation xenotype step 2. Survey existing implementations as
+ancestral patterns. Identify what generalizes, what's domain-specific,
+and where the seams are.*
+
+### Ancestral Implementation: Proof Peripheral
+
+The proof peripheral (4 source files, 1 test file) is the primary
+ancestor. Analysis separates generalizable mechanism from proof-specific
+content.
+
+#### proof.clj — Cycle State Machine (GENERALIZABLE)
+
+The `ProofPeripheral` record implements `PeripheralRunner` with three
+lifecycle methods: `start`, `step`, `stop`. The cycle state machine is:
+
+```
+Setup (nil phase)
+  ↓ cycle-begin
+:observe → :propose → :execute → :validate → :classify →
+:integrate → :commit → :gate-review → :completed
+  ↓
+cycles-completed++ → phase back to nil
+```
+
+**Generalizable mechanism:**
+- Phase gating: `current-phase-tools` → tool containment check → reject or dispatch
+- Evidence creation per step: every tool invocation produces an evidence entry
+- Operation classification: every tool tagged `:observe` or `:action`
+- State threading: state flows through start → step* → stop
+- Cycle counting: tracks completed cycles per session
+
+**What changes for code missions:**
+- Phase names and order (9 phases may not be the right decomposition)
+- The setup phase tool set (code missions need different bootstrap tools)
+- Evidence tagging (`:proof/operation-kind` → `:mission/operation-kind`)
+
+#### proof_backend.clj — Tool Implementations (MIXED)
+
+The `ProofBackend` record implements `ToolBackend` with 15 proof tools
+plus 6 delegated tools (read, write, bash, bash-readonly, glob, grep).
+
+**Generalizable patterns:**
+- Cache-over-disk persistence: atom-backed in-memory cache with disk save/load
+- Tool dispatcher: `cond` dispatch on tool-id, delegating unknown tools to real-backend
+- Delegated tools: the 6 generic tools (read/write/bash/glob/grep/bash-readonly) pass through to the real backend unchanged
+
+**Proof-specific tools (need code mission equivalents):**
+
+| Proof Tool | Purpose | Code Mission Equivalent |
+|---|---|---|
+| proof-load / proof-save | State persistence | mission-load / mission-save |
+| ledger-query / ledger-upsert | Obligation tracking | Same (obligations generalize) |
+| dag-check / dag-impact | Dependency analysis | Same (DAG algorithms are generic) |
+| canonical-get / canonical-update | Problem statement versioning | mission-spec-get / mission-spec-update |
+| cycle-begin / cycle-advance | Cycle control | Same (generalize names) |
+| cycle-get / cycle-list | Cycle query | Same |
+| failed-route-add | Dead end recording | Same (code missions have dead ends too) |
+| status-validate | Status transition checking | Same (different status values) |
+| gate-check | G5→G0 checklist | Same (different gate criteria) |
+| corpus-check | futon3a pattern search | Same (useful for code missions) |
+
+**Observation:** Most tools generalize with only their domain content
+changing. The dispatcher pattern, persistence pattern, and delegation
+pattern are all reusable.
+
+#### proof_dag.clj — DAG Algorithms (FULLY GENERALIZABLE)
+
+Seven pure functions over immutable ledger data:
+
+| Function | Algorithm | Domain-Agnostic? |
+|---|---|---|
+| `acyclic?` | Kahn's algorithm | YES |
+| `impact-scores` | BFS transitive closure | YES |
+| `impact-score` | Single-item BFS | YES |
+| `reachable-from` | BFS via `:item/unlocks` | YES |
+| `depends-chain` | BFS via `:item/depends-on` | YES |
+| `dangling-refs` | Set difference | YES |
+| `edge-consistency?` | Symmetric edge check | YES |
+
+**No changes needed.** These work for any DAG with `:item/depends-on`
+and `:item/unlocks` edges. Code mission obligations use the same
+structure.
+
+**Decision resolved:** proof_dag.clj generalizes to code missions
+without modification.
+
+#### proof_shapes.clj — Malli Schemas (MIXED)
+
+**Generalizable shapes:**
+- `OperationKind` = `[:enum :observe :action]` — applies to all peripherals
+- `phase-allowed-tools` dispatch table pattern — any phase-gated workflow
+- `phase-transitions` ordering pattern — any linear state machine
+- `phase-required-outputs` enforcement — any phase with mandatory deliverables
+- `tool-operation-kind` classification map — any tool set
+
+**Proof-specific shapes (need code mission equivalents):**
+
+| Proof Shape | Code Mission Shape |
+|---|---|
+| `ItemStatus` = `[:enum :proved :partial :open :false :numerically-verified]` | `[:enum :done :partial :open :blocked :abandoned]` |
+| `EvidenceClass` = `[:enum :analytical :numerical :mixed]` | `[:enum :test :review :assertion :mixed]` |
+| `CyclePhase` (9 phases) | TBD (same 9 or different?) |
+| `LedgerItem` (proof obligation fields) | Mission obligation fields |
+| `CanonicalStatement` (problem + closure criterion) | Mission spec (success criteria + scope) |
+| `CycleRecord` (proof cycle tracking) | Mission cycle tracking |
+| `FailedRoute` (structural obstruction) | Failed approach (with rationale) |
+| `ProofState` (top-level container) | MissionState (top-level container) |
+
+### Ancestral Patterns: Coordination Library
+
+12 coordination patterns from futon3b/library/coordination/ map onto
+the mission cycle:
+
+| Pattern | Gate | Cycle Phase Mapping |
+|---|---|---|
+| `task-shape-validation` | G5 | **observe** — validate mission spec shape |
+| `intent-to-mission-binding` | G5 | **observe** — bind intent to success criteria |
+| `capability-gate` | G4 | **observe** — check agent is authorized |
+| `assignment-binding` | G4 | **observe** — ensure explicit assignment |
+| `mandatory-psr` | G3 | **propose** — require PSR before execution |
+| `pattern-search-protocol` | G3 | **propose** — how to query pattern library |
+| `bounded-execution` | G2 | **execute** — stay within budget |
+| `artifact-registration` | G2 | **execute/commit** — register outputs |
+| `mandatory-pur` | G1 | **classify** — evaluate outcome against criteria |
+| `cross-validation-protocol` | G1 | **validate** — coordinate critical checks |
+| `session-durability-check` | G0 | **commit** — ensure session reconstructable |
+| `par-as-obligation` | G0 | **gate-review** — require PAR before close |
+
+All 12 patterns apply to code missions without modification. They are
+*coordination* patterns, not proof patterns — they constrain the process,
+not the domain.
+
+### Ancestral Patterns: Futon Theory
+
+| Pattern | What It Provides | Cycle Mapping |
+|---|---|---|
+| `proof-path` | 8-phase audit trail (CLOCK_IN → PROOF_COMMIT) | The granular work unit within a cycle phase |
+| `agent-contract` | 5 agent behavior requirements | Structural contract for any agent running cycles |
+| `mission-scoping` | Boundary definition (criteria, scope, owner, deps) | Pre-cycle: defines what the cycle machine operates on |
+| `mission-lifecycle` | State machine (:greenfield → :done) | Meta-cycle: mission state across multiple cycles |
+| `futonic-logic` | Abstract loop + vocabulary (象/部/咅/鹽/香/味/🔮/捨) | The theoretical form that both proof and code cycles instantiate |
+| `retroactive-canonicalization` | NAMING → SELECTION → CANALIZATION | How tensions from mission evidence feed the glacial loop |
+| `structural-tension-as-observation` | Three tension signals | What the glacial loop observes in accumulated mission evidence |
+| `xenotype-portability` | IDENTIFY → MAP → DERIVE → ARGUE → VERIFY → INSTANTIATE | The methodology we're using *right now* to build this mission |
+
+### Traceability Table: What We Take From Where
+
+| Component to Build | Ancestor Source | Relationship | Changes Needed |
+|---|---|---|---|
+| Phase gating mechanism | proof.clj `current-phase-tools` + `phase-allows-tool?` | EXTRACT + GENERALIZE | Remove proof-specific phase names; make phases configurable |
+| Cycle state machine | proof.clj `step` method | EXTRACT + GENERALIZE | Phase order becomes a parameter, not a constant |
+| Tool dispatch | proof_backend.clj `execute-tool` | REUSE | Same cond pattern, different tool IDs |
+| Delegated tools | proof_backend.clj (6 tools to real-backend) | REUSE UNCHANGED | read/write/bash/glob/grep/bash-readonly |
+| State persistence | proof_backend.clj cache-over-disk | EXTRACT + GENERALIZE | Different file paths, same mechanism |
+| DAG algorithms | proof_dag.clj (all 7 functions) | REUSE UNCHANGED | Domain-agnostic already |
+| Operation classification | proof_shapes.clj `tool-operation-kind` | REUSE + EXTEND | Add mission-specific tools to the map |
+| Phase-required-outputs | proof_shapes.clj `phase-required-outputs` | REUSE PATTERN | Different output keys per phase |
+| Gate checklist | proof_backend.clj `tool-gate-check` | ADAPT | Same G5→G0 structure, different gate criteria |
+| Evidence emission | proof.clj (per-step evidence) | REUSE + EXTEND | Add Table 25 auto-tagging |
+| Obligation shapes | proof_shapes.clj `LedgerItem` | DERIVE NEW | Different status values, different fields |
+| Mission state shape | proof_shapes.clj `ProofState` | DERIVE NEW | MissionState with obligations + cycles |
+| Corpus search | proof_backend.clj `tool-corpus-check` | REUSE UNCHANGED | Same futon3a integration |
+| PSR emission | mandatory-psr.flexiarg | WIRE INTO propose phase | PSR becomes a phase action, not standalone |
+| PUR emission | mandatory-pur.flexiarg | WIRE INTO classify phase | PUR becomes a phase action, not standalone |
+| PAR emission | par-as-obligation.flexiarg | WIRE INTO gate-review | PAR becomes a gate-review obligation |
+| Budget enforcement | bounded-execution.flexiarg | WIRE INTO execute phase | Same constraint, different budget units |
+| Table 25 auto-tagging | evidence-facets.md feature grid | NEW | Phase → sigil mapping table |
+| Futonic loop annotations | futonic-logic.flexiarg §3 | NEW | Phase → vocabulary mapping |
+| 味→未@0 parking | futonic-logic.flexiarg §8 | NEW | Boundary detection + containment |
+
+### The Generalization Seam
+
+The key architectural insight: the proof peripheral is already
+**two things bolted together**:
+
+1. **A generic cycle machine** — phase gating, tool dispatch, evidence
+   emission, state threading, cycle counting
+2. **A proof domain layer** — ledger items, canonical statements,
+   failure routes, status policies
+
+The generalization separates these layers:
+
+```
+┌─────────────────────────────────┐
+│     Domain Layer (pluggable)    │
+│  ┌────────┐  ┌───────────────┐  │
+│  │ Proof  │  │ Code Mission  │  │
+│  │ Domain │  │    Domain     │  │
+│  └────┬───┘  └──────┬────────┘  │
+│       │              │          │
+├───────┴──────────────┴──────────┤
+│     Cycle Machine (shared)      │
+│  Phase gating, tool dispatch,   │
+│  evidence emission, DAG ops,    │
+│  state persistence, gate check  │
+└─────────────────────────────────┘
+```
+
+The cycle machine becomes a protocol or configuration-driven engine.
+The domain layer provides:
+- Phase names and order
+- Tool restrictions per phase
+- Required outputs per phase
+- Domain shapes (obligation structure, state container)
+- Gate criteria (what G5→G0 check for this domain)
+- Auto-tagging rules (Table 25 sigils, futonic loop vocabulary)
+
+The proof peripheral becomes: `(make-proof proof-domain-config)`.
+The mission peripheral becomes: `(make-mission code-mission-domain-config)`.
+Both use the same cycle machine underneath.
+
+### MAP Assessment
+
+**Readiness:** High. The proof peripheral's implementation is clean
+and the generalization seam is clear. The DAG algorithms need no
+changes. The coordination patterns apply directly. The theoretical
+anchoring (futonic logic, Table 24/25) provides the design vocabulary.
+
+**Risk:** The 9-phase cycle may not be the right decomposition for
+code missions. The proof cycle's phases (observe → propose → execute →
+validate → classify → integrate → commit → gate-review) might need
+splitting or merging. This should be resolved in DERIVE.
+
+**Open question from MAP:** Should the cycle machine be a *protocol*
+(each domain implements its own runner) or a *configuration* (one
+generic runner parameterized by domain config)? The configuration
+approach is simpler but less flexible. The protocol approach allows
+domains to override individual phase behaviors. The proof peripheral's
+current implementation is closer to "protocol" (hard-coded phases in
+proof.clj), but the structure already resembles configuration (phase
+tables in proof_shapes.clj).
+
 ## Decision Log
 
-- [ ] Confirm that proof_dag.clj algorithms generalize to code missions
+- [x] Confirm that proof_dag.clj algorithms generalize to code missions
   without modification (acyclicity, impact scoring work the same way)
+  **RESOLVED in MAP:** Yes. All 7 functions are pure, domain-agnostic
+  graph algorithms. They work with any `:item/depends-on` / `:item/unlocks`
+  DAG structure.
 - [ ] Design code mission tool gates (what tools are available per phase)
 - [ ] Decide whether PSR/PUR skills become phase-specific or remain
   standalone (both? PSR in propose phase, PUR in classify phase, but
@@ -313,3 +550,15 @@ downstream projection, not the source of truth.
 - [ ] Evaluate whether mission peripheral should be a 7th peripheral
   type alongside explore/edit/test/deploy/reflect/proof, or a
   meta-peripheral that orchestrates the others
+- [ ] **From MAP:** Protocol vs configuration for cycle machine
+  generalization. Protocol = each domain implements PeripheralRunner.
+  Configuration = one generic runner parameterized by domain config.
+  Current proof.clj is closer to protocol but structured like config.
+- [ ] **From MAP:** Are the 9 phases the right decomposition for code
+  missions? Resolve in DERIVE by examining actual code mission workflows.
+- [ ] **From MAP:** Code mission ItemStatus values. Proposal:
+  `[:enum :done :partial :open :blocked :abandoned]` — need to validate
+  against actual mission lifecycle states.
+- [ ] **From MAP:** Code mission EvidenceClass. Proposal:
+  `[:enum :test :review :assertion :mixed]` — captures how evidence
+  was obtained.
