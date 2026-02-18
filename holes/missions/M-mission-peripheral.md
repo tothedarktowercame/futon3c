@@ -1,7 +1,7 @@
 # Mission: General Mission Peripheral
 
 **Date:** 2026-02-18
-**Status:** DERIVE complete, ARGUE next
+**Status:** ARGUE complete, VERIFY next
 **Blocked by:** None (proof peripheral is operational; evidence landscape
 is persistent; futonic logic is specified)
 
@@ -686,6 +686,257 @@ code compiles and all tests pass.
 - Wire mission peripheral into Agency routing
 - Build the autoconf function that reads mission spec documents
 
+## ARGUE — Justification of Design Decisions
+
+### Argument 1: Configuration over Protocol
+
+**IF** the proof peripheral and mission peripheral share the same lifecycle
+(start → step* → stop), the same phase-gated tool dispatch, the same
+evidence enrichment, and the same cycle tracking,
+
+**HOWEVER** the two domains differ in their tool sets, status enumerations,
+phase semantics, gate criteria, and auto-tagging rules,
+
+**THEN** the cycle machine should be *configuration-driven* (one generic
+`CyclePeripheral` parameterized by a `CycleDomainConfig` map) rather than
+*protocol-driven* (each domain implementing `PeripheralRunner` directly),
+
+**BECAUSE:**
+
+1. **The shared logic is substantial.** `dispatch-step` (phase gating →
+   operation classification → tool dispatch → evidence emission → state
+   update) is ~60 lines that would be duplicated verbatim in each domain.
+   The proof.clj and cycle.clj implementations are structurally identical —
+   every line in proof.clj's `dispatch-step` maps to a line in cycle.clj's,
+   with configuration lookups replacing hard-coded references.
+
+2. **Domain differences are purely data.** Phase order, tool gates, required
+   outputs, operation kinds, and sigil tags are all maps and sets — data, not
+   behavior. The only behavioral hooks (fruit-fn, exit-context-fn, state-init-fn,
+   phase-tags-fn, autoconf-fn) are narrow functions passed in the config.
+
+3. **Autoconf provides the flexibility that protocol would.** If a domain
+   needs runtime configuration refinement (e.g., adjusting tool gates based
+   on the mission spec), the `:autoconf-fn` hook is called during `start`.
+   This is equivalent to overriding `start` in a protocol implementation but
+   scoped to configuration rather than the full lifecycle.
+
+4. **Testing becomes combinatorial.** The generic cycle machine can be tested
+   once with a synthetic domain (test-config in cycle_test.clj), and each
+   real domain only needs to test its configuration data (does the config
+   validate? are tools classified? do phases cover all tools?). This is
+   33 tests covering both the engine and the mission domain, vs what would
+   be 33 tests × N domains if each implemented the protocol independently.
+
+5. **New domains are declarative.** Adding a new cycle-based peripheral
+   (e.g., a research peripheral, a deployment peripheral) requires writing
+   a config map and a backend — no new `PeripheralRunner` implementation.
+
+**Counter-argument addressed:** "Configuration is less flexible than
+protocol — what if a domain needs to override phase transition logic?"
+The cycle machine's phase transitions are linear (configurable via
+`:phase-order`). If a domain needs non-linear transitions (branching,
+looping), that would require a different engine, not a configuration
+override. The futonic loop explicitly specifies linear phase traversal
+(部 = decomposition regime, traversed in order). Non-linear cycles
+would be a different 象 (configuration) entirely.
+
+### Argument 2: Retaining 9 Phases for Code Missions
+
+**IF** the proof peripheral's 9 phases (observe → propose → execute →
+validate → classify → integrate → commit → gate-review → completed)
+were designed for mathematical proof development,
+
+**HOWEVER** code development missions have different activities (reading
+code, writing code, running tests, updating DAGs, saving state),
+
+**THEN** the same 9 phases should be retained for code missions with
+adapted semantics,
+
+**BECAUSE:**
+
+1. **The phases describe a general development cycle, not a proof-specific
+   one.** Observe (understand the problem) → propose (design an approach) →
+   execute (do the work) → validate (check it worked) → classify (assess
+   the outcome) → integrate (update the knowledge base) → commit (persist) →
+   gate-review (quality check) is the natural rhythm of any deliberate
+   structured work. Corneli (2014) Table 24 maps the same structure:
+   W (request) → H (heuristic) → S (solution) → E (ephemera, evidence).
+
+2. **The futonic loop mandates this structure.** The futonic-logic.flexiarg
+   specifies 部 (decomposition regime) as a linear phase sequence with
+   味 (evaluation) at each transition. The 9 phases instantiate this:
+   each phase has required outputs (味) that must be satisfied before
+   the next phase begins. Reducing to fewer phases would lose evaluation
+   points; adding more would add friction without adding signal.
+
+3. **Empirical evidence from proof.** The proof peripheral has been used
+   for real work (First Proof Problem 1, corpus calibration). The phase
+   structure forced useful discipline: observe caught a framing failure
+   that unstructured work missed; classify forced explicit status assessment
+   rather than implicit "it seems done." These benefits transfer directly
+   to code missions.
+
+4. **Phase names are intentionally abstract.** "Classify" doesn't mean
+   "classify a mathematical result" — it means "assess the outcome of
+   execution against the obligation." For code: "did the tests pass?
+   is the obligation done, partial, or blocked?" "Integrate" doesn't
+   mean "integrate a proof step" — it means "update the obligation DAG
+   and record any failed approaches." The semantics are general.
+
+5. **Tool gates map naturally.** The phase-allowed-tools for code missions
+   (mission_shapes.clj) restrict tools in ways that prevent real errors:
+   you can't write code during observe (forces understanding first), you
+   can't modify obligations during execute (prevents mid-stream scope
+   changes), you must save before gate-review (ensures persistence).
+
+### Argument 3: Table 25 Auto-Tag Assignments
+
+**IF** Table 25 (Corneli 2014) defines 7 layers of para-development
+activity dimensions across phase-like transitions,
+
+**HOWEVER** the mapping from our 9 phases to Table 25's dimensions is
+not one-to-one (Table 25 has different phase granularity),
+
+**THEN** each phase should receive fixed sigil tags from the most
+relevant Table 25 dimensions,
+
+**BECAUSE:**
+
+1. **Auto-tagging makes dimensions queryable without manual effort.** An
+   agent working in the `:observe` phase automatically gets
+   `:sigil/getting-information` and `:sigil/perception` tags on every
+   evidence entry. These tags become query facets: "show me all evidence
+   tagged with getting-information" surfaces the observation work across
+   all missions.
+
+2. **The assignments follow Table 25's semantics.** Layer 1 (system-experience
+   alignment) maps observe→getting-information because observe is where
+   the agent gathers data about the system. Layer 5 (quality & sustainability)
+   maps gate-review→quality because gate-review is where quality checks
+   run. The mappings are not arbitrary — they reflect what actually happens
+   in each phase.
+
+3. **Hardcoded-per-phase is the right starting granularity.** Future
+   refinement (per-tool tags, per-mission-type tags) can be added via the
+   autoconf hook without changing the engine. Starting with phase-level
+   tags provides immediate value with zero configuration burden.
+
+### Argument 4: Evidence Landscape as Mission Inspectability Layer
+
+**IF** mission state currently lives in two places — operational state in
+`data/mission-state/{id}.edn` (for tool execution) and evidence entries
+in the evidence store (as side-effect exhaust from peripheral sessions),
+
+**HOWEVER** a user or agent wanting to "jump into a mission and know
+exactly what state it was in" must currently load the EDN file, which is
+invisible to the evidence landscape and not queryable from outside,
+
+**THEN** the mission peripheral should emit *mission state snapshots*
+as evidence entries at key lifecycle points, making mission state fully
+inspectable through the evidence landscape,
+
+**BECAUSE:**
+
+1. **The evidence landscape is already the canonical query surface.** The
+   HTTP endpoints (`GET /api/alpha/evidence`), the store API (`query*`),
+   and the viewer (Arxana Labs) all read from the evidence store. Mission
+   state that only exists in EDN files is invisible to all of these.
+
+2. **The evidence facets technote already describes this pattern.** The
+   "self-referential faceting" section (evidence-facets.md lines 55-78)
+   shows projects and steps as evidence entries, with work evidence
+   referencing them via `:evidence/subject`. Mission obligations are
+   exactly this: structured sub-goals that should be evidence entries
+   themselves, so that work done on each obligation links back to it.
+
+3. **The dual persistence is complementary, not redundant.**
+   - **EDN state** is *operational* — compact, fast to read, structured
+     for tool implementations. The backend reads it to answer queries,
+     check DAG acyclicity, validate transitions.
+   - **Evidence entries** are *historical* — each state change is recorded
+     with timestamp, author, and causal chain. They support "what happened
+     when" queries that the current-state EDN cannot answer.
+   - **State snapshots** bridge the two: periodic evidence entries (emitted
+     on `:mission-save`) capture the full MissionState, making the latest
+     snapshot queryable as evidence without replacing the operational store.
+
+4. **This enables three concrete inspectability patterns:**
+
+   **Pattern A: Mission overview from outside.**
+   Query `?subject-type=mission&subject-id=M-test&claim-type=observation`
+   returns the latest state snapshot. The viewer renders obligations,
+   cycles completed, current phase, failed approaches — without loading
+   the EDN file or being inside a peripheral session.
+
+   **Pattern B: Obligation-level evidence trail.**
+   Each obligation becomes an evidence entry (`claim-type :goal`, subject
+   referencing the mission). Work evidence uses `:evidence/subject` →
+   `{:ref/type :evidence, :ref/id "O-main"}` to link to the obligation.
+   Query `?subject-id=O-main` returns all evidence about that obligation:
+   which cycles targeted it, what approaches were tried, what failed.
+
+   **Pattern C: Session-to-mission correlation.**
+   The `:evidence/session-id` field already links evidence to peripheral
+   sessions. The `:evidence/tags` field can carry `:mission/M-test` and
+   `:obligation/O-main`. Cross-referencing session evidence with mission
+   state shows "which sessions worked on which obligations" — the missing
+   link between transient sessions and persistent missions.
+
+5. **Implementation is minimal.** The cycle machine already emits start,
+   step, and stop evidence. Adding state snapshots requires:
+   - A new `:state-snapshot-fn` in `CycleDomainConfig` (optional, called
+     on mission-save steps)
+   - An evidence entry with `:claim-type :observation` and `:evidence/body`
+     containing a summary of the current MissionState (not the full state,
+     which is large — a summary: obligation counts by status, current cycle,
+     phase, failed approach count)
+   - Tags: `:mission/{id}` for mission-level queries
+   - Subject: `{:ref/type :mission, :ref/id "M-test"}`
+
+   This is ~20 lines of code in the cycle machine, one new optional
+   config key, and immediate queryability of mission state from the
+   evidence landscape.
+
+6. **The futonic loop supports this interpretation.** The 捨 (set-down)
+   vocabulary describes the moment a cycle boundary is reached and the
+   system must decide whether to continue or park. The state snapshot
+   at each `:commit` phase is precisely this: a record of where the
+   mission stands at the moment of set-down, enabling informed resumption.
+
+### Argument 5: How DERIVE Artifacts Relate to the Evidence Landscape
+
+The DERIVE step itself should have been evidence. The four files created
+(cycle.clj, mission_shapes.clj, mission_backend.clj, mission.clj)
+represent four `:step` evidence entries under the mission
+`M-mission-peripheral`, with the DERIVE section of this document as
+a `:conclusion`. The fact that we are *describing* this connection
+rather than *using* it demonstrates the gap: the mission peripheral
+doesn't yet exist operationally, so this mission is being executed
+with ad hoc PSR/PUR discipline rather than structural enforcement.
+
+This is exactly the bootstrapping problem the mission proposal
+identified: "code missions are tracked in markdown files, coordinated
+via the war room, and executed with ad hoc PSR/PUR discipline."
+
+When the mission peripheral is operational (INSTANTIATE step), the
+derivation of the *next* peripheral (e.g., a research peripheral,
+a deployment peripheral) will be trackable through the evidence
+landscape:
+
+```
+Query: ?subject-type=mission&subject-id=M-research-peripheral
+→ Evidence chain: IDENTIFY goal → MAP steps → DERIVE steps →
+  ARGUE observations → VERIFY steps → INSTANTIATE conclusion
+→ Each step linked to obligations, phase tags, sigil tags
+→ Failed approaches recorded and queryable
+→ State snapshot shows current phase and obligation status
+```
+
+This is the self-improving loop: each mission executed through the
+peripheral generates the evidence that makes future missions more
+inspectable and resumable.
+
 ## Decision Log
 
 - [x] Confirm that proof_dag.clj algorithms generalize to code missions
@@ -730,3 +981,21 @@ code compiles and all tests pass.
   **RESOLVED in DERIVE:** `[:enum :test :review :assertion :mixed]`
   Implemented in mission_shapes.clj. `:assertion` evidence cannot
   yield `:done` (structural enforcement).
+- [x] **From ARGUE:** Configuration vs protocol justification.
+  **RESOLVED in ARGUE:** Configuration is correct. Shared logic is
+  substantial (~60 lines dispatch-step), domain differences are purely
+  data, autoconf provides flexibility, testing is combinatorial.
+- [x] **From ARGUE:** 9-phase retention justification.
+  **RESOLVED in ARGUE:** Phases describe general development cycle.
+  Empirical evidence from proof confirms discipline value. Phase names
+  are intentionally abstract. Tool gates map naturally.
+- [x] **From ARGUE:** Table 25 auto-tag assignment justification.
+  **RESOLVED in ARGUE:** Hardcoded per phase. Assignments follow
+  Table 25 semantics. Phase-level is right starting granularity.
+- [ ] **From ARGUE:** Evidence landscape integration — emit mission
+  state snapshots as evidence entries at lifecycle points (mission-save,
+  cycle completion). Requires `:state-snapshot-fn` config key and ~20
+  lines in cycle machine.
+- [ ] **From ARGUE:** Obligation-level evidence — obligations as
+  evidence entries with `{:ref/type :mission}` subject, enabling
+  per-obligation evidence trails queryable from outside.
