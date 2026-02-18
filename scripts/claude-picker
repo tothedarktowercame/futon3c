@@ -1,0 +1,261 @@
+#!/usr/bin/env bash
+set -euo pipefail
+#
+# Claude session picker for futon dev workflow.
+#
+# Lists recent Claude Code sessions for the current project (or all futon
+# projects with --all), lets you pick one to resume, or start fresh.
+#
+# Usage:
+#   ./scripts/claude-picker            # sessions for CWD project
+#   ./scripts/claude-picker --all      # sessions across all futon projects
+#   ./scripts/claude-picker --new      # skip picker, start fresh
+#   ./scripts/claude-picker SEARCH     # filter sessions by search term
+
+CLAUDE_DIR="${HOME}/.claude/projects"
+PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-bypassPermissions}"
+MAX_SESSIONS="${CLAUDE_PICKER_MAX:-12}"
+# Use pipe as field delimiter (tab causes bash read to collapse empty fields)
+D='|'
+
+# Colors
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+  DIM="\033[2m"
+  BOLD="\033[1m"
+  CYAN="\033[36m"
+  GREEN="\033[32m"
+  YELLOW="\033[33m"
+  RESET="\033[0m"
+else
+  DIM="" BOLD="" CYAN="" GREEN="" YELLOW="" RESET=""
+fi
+
+# --- Check infra -----------------------------------------------------------
+
+check_infra() {
+  local f1a_port="${FUTON1A_PORT:-7071}"
+  if (echo > "/dev/tcp/127.0.0.1/${f1a_port}") >/dev/null 2>&1; then
+    printf "${GREEN}futon1a${RESET} running on port %s\n" "$f1a_port"
+  else
+    printf "${YELLOW}futon1a${RESET} not running (port %s). Start with: ${BOLD}make dev${RESET}\n" "$f1a_port"
+  fi
+  echo
+}
+
+# --- Encode CWD to Claude project dir name ---------------------------------
+
+encode_project_path() {
+  echo "$1" | sed 's|/|-|g'
+}
+
+# --- Collect sessions -------------------------------------------------------
+#
+# Output format (pipe-separated, 6 fields):
+#   timestamp | session_id | first_prompt | summary | msg_count | project
+
+collect_sessions_from_index() {
+  local dir="$1" project_label="$2"
+  local index="${dir}/sessions-index.json"
+  [[ -f "$index" ]] || return 0
+  jq -r --arg proj "$project_label" --arg d "|" '
+    .entries[]
+    | [(.modified // .created // "-"),
+       .sessionId,
+       (.firstPrompt // "-" | gsub("\n"; " ") | gsub("\\|"; "/") | .[:80]),
+       (.summary // "-" | gsub("\n"; " ") | gsub("\\|"; "/") | .[:60]),
+       (.messageCount // 0 | tostring),
+       $proj]
+    | join($d)
+  ' "$index" 2>/dev/null || true
+}
+
+collect_sessions_from_jsonl() {
+  local dir="$1" project_label="$2"
+  # Only files modified in last 7 days, newest first, max 15
+  local files
+  files=$(find "$dir" -maxdepth 1 -name '*.jsonl' -mtime -7 -printf '%T@\t%p\n' 2>/dev/null \
+    | sort -rn | head -15 | cut -f2) || true
+  [[ -z "$files" ]] && return 0
+
+  # Build set of already-indexed session IDs to skip
+  local index="${dir}/sessions-index.json"
+  local indexed_ids=""
+  if [[ -f "$index" ]]; then
+    indexed_ids=$(jq -r '.entries[].sessionId' "$index" 2>/dev/null | tr '\n' ' ')
+  fi
+
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    local sid
+    sid=$(basename "$f" .jsonl)
+    # Skip if already in index
+    if [[ -n "$indexed_ids" ]] && [[ " $indexed_ids " == *" $sid "* ]]; then
+      continue
+    fi
+    # Extract first user message (line 2) metadata
+    local line2
+    line2=$(sed -n '2p' "$f" 2>/dev/null) || continue
+    [[ -z "$line2" ]] && continue
+    echo "$line2" | jq -r --arg proj "$project_label" --arg d "|" '
+      [(.timestamp // "-"),
+       (.sessionId // ""),
+       ((.message.content // "-")
+         | if type == "string" then . else "(structured)" end
+         | gsub("\n"; " ") | gsub("\\|"; "/") | .[:80]),
+       "-",
+       "?",
+       $proj]
+      | join($d)
+    ' 2>/dev/null || true
+  done <<< "$files"
+}
+
+collect_all() {
+  local mode="$1"
+  if [[ "$mode" == "all" ]]; then
+    for d in "${CLAUDE_DIR}"/-home-joe-code-futon*; do
+      [[ -d "$d" ]] || continue
+      local label
+      label=$(basename "$d" | sed 's/^-home-joe-code-//')
+      collect_sessions_from_index "$d" "$label"
+      collect_sessions_from_jsonl "$d" "$label"
+    done
+    if [[ -d "${CLAUDE_DIR}/-home-joe" ]]; then
+      collect_sessions_from_index "${CLAUDE_DIR}/-home-joe" "~"
+      collect_sessions_from_jsonl "${CLAUDE_DIR}/-home-joe" "~"
+    fi
+  else
+    local encoded
+    encoded=$(encode_project_path "$(pwd)")
+    local d="${CLAUDE_DIR}/${encoded}"
+    if [[ -d "$d" ]]; then
+      collect_sessions_from_index "$d" "."
+      collect_sessions_from_jsonl "$d" "."
+    fi
+    if [[ -d "${CLAUDE_DIR}/-home-joe" ]]; then
+      collect_sessions_from_index "${CLAUDE_DIR}/-home-joe" "~"
+      collect_sessions_from_jsonl "${CLAUDE_DIR}/-home-joe" "~"
+    fi
+  fi
+}
+
+# --- Time formatting -------------------------------------------------------
+
+relative_time() {
+  local ts="$1"
+  [[ -z "$ts" || "$ts" == "-" || "$ts" == "null" ]] && echo "?" && return
+  local epoch_ts epoch_now diff
+  epoch_ts=$(date -d "$ts" +%s 2>/dev/null) || { echo "?"; return; }
+  epoch_now=$(date +%s)
+  diff=$(( epoch_now - epoch_ts ))
+  if (( diff < 0 )); then
+    echo "future?"
+  elif (( diff < 3600 )); then
+    echo "$((diff / 60))m ago"
+  elif (( diff < 86400 )); then
+    echo "$((diff / 3600))h ago"
+  elif (( diff < 604800 )); then
+    echo "$((diff / 86400))d ago"
+  else
+    echo "$((diff / 604800))w ago"
+  fi
+}
+
+# --- Main -------------------------------------------------------------------
+
+mode="cwd"
+search=""
+start_new=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all) mode="all"; shift ;;
+    --new) start_new=true; shift ;;
+    *) search="$1"; shift ;;
+  esac
+done
+
+check_infra
+
+if $start_new; then
+  exec claude --permission-mode "$PERMISSION_MODE"
+fi
+
+# Collect, sort newest-first, deduplicate by session ID, filter empty/malformed
+sessions=$(collect_all "$mode" \
+  | grep -v '^|' \
+  | sort -t"$D" -k1 -r \
+  | awk -F'|' '!seen[$2]++' \
+  | head -n "$MAX_SESSIONS")
+
+# Apply search filter
+if [[ -n "$search" ]]; then
+  sessions=$(echo "$sessions" | grep -i "$search" || true)
+fi
+
+# Remove empty lines
+sessions=$(echo "$sessions" | grep -v '^$' || true)
+
+if [[ -z "$sessions" ]]; then
+  echo "No sessions found."
+  echo
+  printf "  ${BOLD}1${RESET}) New session\n"
+  echo
+  read -rp "Pick [1]: " choice
+  exec claude --permission-mode "$PERMISSION_MODE"
+fi
+
+# Display
+echo "Recent sessions:"
+echo
+i=0
+while IFS="$D" read -r ts sid prompt summary msgcount project; do
+  [[ -z "$sid" ]] && continue
+  i=$((i + 1))
+  age=$(relative_time "$ts")
+
+  # Prefer summary over raw first prompt
+  label="${prompt}"
+  if [[ -n "$summary" && "$summary" != "-" ]]; then
+    label="${summary}"
+  fi
+  # Truncate long labels for display
+  if [[ ${#label} -gt 70 ]]; then
+    label="${label:0:67}..."
+  fi
+
+  proj_tag=""
+  if [[ -n "$project" && "$project" != "." ]]; then
+    proj_tag=" ${DIM}[${project}]${RESET}"
+  fi
+
+  msg_tag=""
+  if [[ -n "$msgcount" && "$msgcount" != "?" && "$msgcount" != "0" ]]; then
+    msg_tag=" ${DIM}(${msgcount} msgs)${RESET}"
+  fi
+
+  printf "  ${BOLD}%2d${RESET}) ${CYAN}%-8s${RESET} %s%s%s\n" "$i" "$age" "$label" "$msg_tag" "$proj_tag"
+done <<< "$sessions"
+
+echo
+printf "  ${BOLD}%2d${RESET}) ${GREEN}New session${RESET}\n" "$((i + 1))"
+echo
+
+read -rp "Pick [1-$((i + 1))]: " choice
+choice="${choice:-1}"
+
+if [[ "$choice" -eq $((i + 1)) ]] 2>/dev/null; then
+  exec claude --permission-mode "$PERMISSION_MODE"
+fi
+
+# Extract session ID from chosen line
+sid=$(echo "$sessions" | sed -n "${choice}p" | cut -d"$D" -f2)
+
+if [[ -z "$sid" ]]; then
+  echo "Invalid choice."
+  exit 1
+fi
+
+echo
+printf "Resuming session ${CYAN}%s${RESET}...\n" "${sid:0:8}"
+exec claude --resume "$sid" --permission-mode "$PERMISSION_MODE"

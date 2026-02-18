@@ -5,6 +5,7 @@
    peripheral logic; it only helps wire live agent registry state into the
    existing social/transport pipeline."
   (:require [futon3c.agency.registry :as reg]
+            [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.peripheral.real-backend :as rb]
             [futon3c.peripheral.registry :as preg]
             [futon3c.social.shapes :as shapes]
@@ -31,7 +32,7 @@
    opts:
    - :cwd working directory for tool execution (default: user.dir)
    - :timeout-ms command timeout for shell tools
-   - :evidence-store atom used for evidence append/read
+   - :evidence-store atom or EvidenceBackend used for evidence append/read
    - :discipline-state atom for PSR/PUR/PAR continuity
    - :notions-index-path explicit futon3a notions TSV index path"
   ([]
@@ -47,6 +48,22 @@
      {:backend (rb/make-real-backend backend-config)
       :peripherals (preg/load-peripherals)
       :evidence-store e-store})))
+
+(defn make-persistent-peripheral-config
+  "Build a peripheral config backed by XTDB for durable evidence persistence.
+
+   Wraps the given XTDB node (or XtdbStore) in an XtdbBackend and passes it
+   as the evidence store.  All peripheral evidence emission (PSR, PUR, PAR,
+   gate traversals, etc.) will persist to XTDB automatically.
+
+   Accepts the same opts as make-default-peripheral-config plus:
+   - :xtdb-node  an XTDB node or XtdbStore (required)"
+  [{:keys [xtdb-node] :as opts}]
+  (when-not xtdb-node
+    (throw (ex-info "make-persistent-peripheral-config requires :xtdb-node" {})))
+  (make-default-peripheral-config
+   (assoc (dissoc opts :xtdb-node)
+          :evidence-store (xb/make-xtdb-backend xtdb-node))))
 
 (defn register-agent!
   "Register an agent in the live unified registry.
@@ -115,20 +132,24 @@
    - :patterns PatternLibrary
    - :peripheral-config optional (passed through into registry snapshot)
    - :enable-peripherals? default true; when false, skip auto peripheral config
+   - :xtdb-node optional XTDB node/store for durable evidence persistence
    - :cwd/:timeout-ms/:evidence-store/:discipline-state/:notions-index-path
      optional inputs for default peripheral backend wiring"
   [{:keys [patterns peripheral-config enable-peripherals?
-           cwd timeout-ms evidence-store discipline-state notions-index-path]
+           xtdb-node cwd timeout-ms evidence-store discipline-state notions-index-path]
     :or {enable-peripherals? true}}]
-  (let [resolved-peripheral-config
+  (let [periph-opts {:cwd cwd
+                     :timeout-ms timeout-ms
+                     :evidence-store evidence-store
+                     :discipline-state discipline-state
+                     :notions-index-path notions-index-path}
+        resolved-peripheral-config
         (or peripheral-config
             (when enable-peripherals?
-              (make-default-peripheral-config
-               {:cwd cwd
-                :timeout-ms timeout-ms
-                :evidence-store evidence-store
-                :discipline-state discipline-state
-                :notions-index-path notions-index-path})))
+              (if xtdb-node
+                (make-persistent-peripheral-config
+                 (assoc periph-opts :xtdb-node xtdb-node))
+                (make-default-peripheral-config periph-opts))))
         cfg {:registry (registry-snapshot {:peripheral-config resolved-peripheral-config})
              :patterns patterns}]
     (when-not (shapes/valid? shapes/PatternLibrary (:patterns cfg))
