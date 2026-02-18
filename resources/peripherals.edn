@@ -100,4 +100,14 @@
    :peripheral/entry #{:default :from-chat :user-request}
    :peripheral/exit #{:won :stuck :user-request :hop-chat :hop-reflect}
    :peripheral/context {:session-id :inherit :alfworld-state :resumable}
-   :peripheral/config {:alfworld-server "http://localhost:3456"}}}}
+   :peripheral/config {:alfworld-server "http://localhost:3456"}}
+
+  :mission-control
+  {:peripheral/id :mission-control
+   :peripheral/tools #{:read :glob :grep :bash-readonly
+                       :mc-inventory :mc-devmaps :mc-coverage
+                       :mc-mana :mc-review :mc-bulletin}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:from-any :user-request}
+   :peripheral/exit #{:review-complete :hop-reflect :hop-explore :user-request}
+   :peripheral/context {:session-id :inherit}}}}

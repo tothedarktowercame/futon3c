@@ -139,7 +139,7 @@
 
 (def PeripheralId
   "Peripheral identifier — the core peripherals plus extensions."
-  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission])
+  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission :mission-control])
 
 (def ToolSet
   "Set of tools available to a peripheral."

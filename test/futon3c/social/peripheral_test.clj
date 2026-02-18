@@ -9,7 +9,7 @@
     (let [result (p/load-peripherals "resources/peripherals.edn")]
       (is (map? result))
       (is (contains? result :peripherals))
-      (is (= 10 (count (:peripherals result))))
+      (is (= 11 (count (:peripherals result))))
       (doseq [[_ spec] (:peripherals result)]
         (fix/assert-valid! shapes/PeripheralSpec spec)))))
 
