@@ -1,7 +1,7 @@
 # Mission: General Mission Peripheral
 
 **Date:** 2026-02-18
-**Status:** ARGUE complete, VERIFY next (evidence landscape integration complete)
+**Status:** VERIFY complete, INSTANTIATE next
 **Blocked by:** None (proof peripheral is operational; evidence landscape
 is persistent; futonic logic is specified)
 
@@ -989,6 +989,137 @@ Query: ?subject-type=mission&subject-id=M-research-peripheral
 This is the self-improving loop: each mission executed through the
 peripheral generates the evidence that makes future missions more
 inspectable and resumable.
+
+## VERIFY — Validation Against the Social Exotype
+
+*Derivation xenotype step 5. Validate the derived exotype against the
+social exotype and peripheral infrastructure. Confirm the extraction
+preserved behavior, the evidence protocol is sound, and edge cases
+(mission parking, multi-cycle sessions) are handled.*
+
+### Verification 1: Proof Expressibility as CycleDomainConfig
+
+**Claim:** The extraction from proof.clj to cycle.clj preserved all
+behavior. proof.clj's hardcoded logic is fully expressible as a
+`CycleDomainConfig` map.
+
+**Test:** `proof-is-expressible-as-cycle-domain-config` constructs a
+proof-domain config from `proof_shapes.clj` data:
+
+```clojure
+{:domain-id        :proof
+ :phase-order      ps/phase-order
+ :phase-tools      ps/phase-allowed-tools
+ :setup-tools      #{:proof-load :proof-save :ledger-query ...}
+ :tool-ops         ps/proof-tool-operation-kinds
+ :required-outputs ps/phase-required-outputs
+ :cycle-begin-tool :cycle-begin
+ :cycle-advance-tool :cycle-advance
+ :fruit-fn         (fn [state] {...})
+ :exit-context-fn  (fn [state] {...})}
+```
+
+This config passes `valid-domain-config?`, confirming that every piece of
+proof.clj's behavior maps to a configuration field. The proof peripheral
+*could* be refactored to use the cycle machine with zero behavioral change.
+
+**Structural comparison:** `proof-config-and-mission-config-share-structure`
+verifies both domains share 9 phases, start with `:observe`, end with
+`:completed`, and use the same `:cycle-begin` / `:cycle-advance` tools.
+
+### Verification 2: Round-trip (←) Backward Verification
+
+**Claim:** The mission peripheral's evidence passes the ← verification
+framework — every tool invocation, scope boundary, evidence type, and
+structural invariant checked against the peripheral spec.
+
+**Tests:**
+- `mission-passes-backward-verification` — setup tools (mission-load,
+  obligation-query) produce well-formed evidence: 4 entries (goal + 2
+  steps + conclusion), correct claim-type sequence.
+- `mission-backward-verification-with-cycle` — active cycle (cycle-begin
+  → obligation-query → cycle-advance) produces 6 entries with correct
+  claim-type sequence.
+
+The round-trip framework (`round_trip.clj`) checks:
+- Tool set adherence: every tool in evidence is in the spec's tool set
+- Scope boundaries: every arg respects the spec's scope
+- Evidence type: all entries are `:coordination` (correct for mission)
+- Structure: starts with `:goal`, ends with `:conclusion`, single session
+
+### Verification 3: Proof-Tree Invariants
+
+**Claim:** Mission evidence satisfies all 7 proof-tree invariants
+established in the integration test suite.
+
+**Test:** `mission-evidence-satisfies-proof-tree-invariants` runs a full
+mission session (start → load → query → cycle-begin → advance → stop)
+with an evidence store, then projects a thread and checks:
+
+1. **Tree validity** — every `:evidence/in-reply-to` references an
+   existing entry in the projection. ✓
+2. **Root invariant** — a `:goal` entry exists as the thread root. ✓
+3. **No orphans** — all entries share the session subject. ✓
+4. **Claim ordering** — no `:conclusion` replies to another
+   `:conclusion`. ✓
+5. **Author tracking** — `:thread/participants` is non-empty. ✓
+6. **Monotonic timestamps** — entries are non-decreasing by time. ✓
+7. **Count consistency** — `:thread/entry-count` matches actual count. ✓
+
+Thread status is `:closed` after stop.
+
+### Verification 4: Edge Cases
+
+**Mission parking (味→未@0):**
+`mid-cycle-stop-produces-valid-evidence` starts a cycle, enters
+`:observe` phase, then stops with reason "boundary reached: 味→未@0".
+Verifies:
+- Fruit records `{:final-phase :observe, :cycles-completed 0}` — the
+  exact state at parking time
+- Stop evidence captures the reason
+- Evidence entry validates against `EvidenceEntry` shape
+
+This confirms the cycle machine supports the futonic 捨 (set-down)
+gracefully — an agent can park a mission mid-cycle and the state is
+fully recoverable.
+
+**Multi-cycle sessions:**
+`multi-cycle-session-increments-counter` completes two full cycles in
+one session. Verifies:
+- First cycle: `cycles-completed` → 1, `current-phase` → nil (cleared)
+- Second cycle: enters `:observe` again, completes → `cycles-completed` → 2
+- Fruit captures final count
+
+This confirms the cycle machine resets correctly between cycles and
+supports the real mission pattern: multiple obligation cycles per session.
+
+**Snapshot evidence chaining:**
+`snapshot-evidence-chains-to-step-evidence` verifies that the snapshot
+evidence entry emitted on `:mission-save` chains to the step evidence
+via `:evidence/in-reply-to`, and that `get-reply-chain*` can reconstruct
+the ancestor chain. This confirms snapshots are first-class participants
+in the evidence thread, not orphaned side-emissions.
+
+### VERIFY Assessment
+
+**Test results:** 28 mission tests, 110 assertions, 0 failures.
+116 total tests across mission + cycle + proof + registry + round-trip +
+integration + social, 456 assertions, 0 failures.
+
+**What VERIFY confirmed:**
+- The generic cycle machine is a valid extraction of proof.clj
+- Mission evidence passes the ← backward verification framework
+- All 7 proof-tree invariants hold on mission evidence
+- Mission parking (味→未@0) is graceful and recoverable
+- Multi-cycle sessions work correctly
+- State snapshots chain properly in the evidence thread
+
+**What remains for INSTANTIATE:**
+- Refactor proof.clj to use the generic cycle machine (the VERIFY step
+  proved this is possible — the config passes `valid-domain-config?`)
+- Wire mission peripheral into Agency routing
+- Build the autoconf function that reads mission spec documents
+- End-to-end test with real backend (file I/O, not mock)
 
 ## Decision Log
 
