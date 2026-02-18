@@ -393,7 +393,8 @@ When FORCE is non-nil, refresh even when session is unchanged."
               (when (re-search-forward "emacs-codex-repl (active, session [^)]+)" nil t)
                 (replace-match (format "emacs-codex-repl (active, session %s)"
                                        (or codex-repl-session-id "pending"))
-                               t t)))))))))
+                               t t))))))))
+        (codex-repl-refresh-header-line nil buf))))
 
 (defun codex-repl--persist-session-id! (sid)
   "Persist SID to `codex-repl-session-file` and local state."
@@ -405,6 +406,7 @@ When FORCE is non-nil, refresh even when session is unchanged."
     (codex-repl--refresh-session-header (get-buffer codex-repl--buffer-name))
     (when codex-repl-session-file
       (write-region sid nil codex-repl-session-file nil 'silent))
+    (codex-repl-refresh-header-line t (get-buffer codex-repl--buffer-name))
     (codex-repl--emit-session-start-evidence! sid)))
 
 (defun codex-repl--emit-session-start-evidence! (sid)
@@ -655,6 +657,17 @@ With REFRESH non-nil, recompute the state even if cached."
     (format "Codex session %s | current=%s | %s | transports[%s]"
             session current irc transports)))
 
+(defun codex-repl-refresh-header-line (&optional refresh buffer)
+  "Refresh Codex modeline header.
+With REFRESH non-nil, recompute transport state. Optionally target BUFFER.
+Default buffer is current buffer."
+  (let ((buf (or buffer (current-buffer))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (when (eq major-mode 'codex-repl-mode)
+          (codex-repl-modeline-state refresh)
+          (force-mode-line-update t))))))
+
 (defun codex-repl--build-modeline ()
   "Build dynamic transport modeline for system prompt."
   (codex-repl--render-modeline (codex-repl-modeline-state t)))
@@ -705,7 +718,8 @@ Type after the prompt, RET to send.
   (setq-local word-wrap t)
   (setq-local scroll-conservatively 101)
   (setq-local scroll-margin 0)
-  (setq-local header-line-format '(:eval (codex-repl--header-line))))
+  (setq-local header-line-format '(:eval (codex-repl--header-line)))
+  (codex-repl-refresh-header-line t))
 
 (defun codex-repl-send-input ()
   "Send input to Codex and display response."

@@ -228,7 +228,8 @@ M-x codex-repl
 
 The REPL and IRC relay share `/tmp/futon-codex-session-id`, so context can
 pivot across transports. The buffer header line now mirrors the "Codex modeline"
-state at all times (session id, current transport, IRC availability).
+state at all times (session id, current transport, IRC availability) — no need
+to depend on the echo area.
 
 While the REPL is running you can query the transport modeline explicitly:
 
