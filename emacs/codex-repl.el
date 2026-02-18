@@ -90,12 +90,55 @@ Set to nil to use the Codex CLI/user config default."
   "Most recent evidence id in the active session chain.")
 (defvar codex-repl--evidence-session-id nil
   "Session id associated with `codex-repl--last-evidence-id`.")
+(defvar codex-repl--thinking-start-time nil
+  "Epoch seconds when the current Codex turn started.")
+(defvar codex-repl--last-progress-status nil
+  "Most recent short progress status from Codex stream events.")
+(defvar codex-repl--thinking-timer nil
+  "Timer used to refresh Codex liveness/progress while waiting.")
 
-(defun codex-repl--progress-line (status)
-  "Render STATUS as a codex thinking progress line."
+(defun codex-repl--progress-line (status &optional elapsed-seconds)
+  "Render STATUS as a codex thinking progress line.
+When ELAPSED-SECONDS is non-nil, include it in the display."
   (if (and (stringp status) (not (string-empty-p status)))
-      (format "codex is thinking... (%s)" status)
+      (if (numberp elapsed-seconds)
+          (format "codex is thinking... (%s, %ds)" status elapsed-seconds)
+        (format "codex is thinking... (%s)" status))
     "codex is thinking..."))
+
+(defun codex-repl--thinking-elapsed-seconds ()
+  "Return elapsed seconds for current Codex turn."
+  (if (numberp codex-repl--thinking-start-time)
+      (max 0 (floor (- (float-time) codex-repl--thinking-start-time)))
+    0))
+
+(defun codex-repl--set-progress-status (status)
+  "Update STATUS and return a formatted progress line."
+  (setq codex-repl--last-progress-status status)
+  (codex-repl--progress-line status (codex-repl--thinking-elapsed-seconds)))
+
+(defun codex-repl--stop-thinking-heartbeat ()
+  "Stop Codex liveness heartbeat timer."
+  (when (timerp codex-repl--thinking-timer)
+    (cancel-timer codex-repl--thinking-timer))
+  (setq codex-repl--thinking-timer nil))
+
+(defun codex-repl--start-thinking-heartbeat (chat-buffer)
+  "Start periodic liveness updates in CHAT-BUFFER while waiting on Codex."
+  (codex-repl--stop-thinking-heartbeat)
+  (setq codex-repl--thinking-timer
+        (run-at-time
+         1 1
+         (lambda ()
+           (if (not (buffer-live-p chat-buffer))
+               (codex-repl--stop-thinking-heartbeat)
+             (with-current-buffer chat-buffer
+               (if (not (process-live-p futon3c-ui--pending-process))
+                   (codex-repl--stop-thinking-heartbeat)
+                 (futon3c-ui-update-progress
+                  (codex-repl--progress-line
+                   (or codex-repl--last-progress-status "working")
+                   (codex-repl--thinking-elapsed-seconds))))))))))
 
 (defun codex-repl--ui-state-valid-p ()
   "Return non-nil when futon3c-ui markers/state are usable in this buffer."
@@ -154,31 +197,33 @@ Returns non-nil when prompt markers were restored."
                                      :null-object nil
                                      :false-object nil))
              (type (alist-get 'type evt)))
-        (cond
+         (cond
          ((string= type "thread.started")
-          (codex-repl--progress-line "thread started"))
+          (codex-repl--set-progress-status "thread started"))
          ((string= type "item.completed")
           (let* ((item (alist-get 'item evt))
                  (item-type (and (listp item) (alist-get 'type item))))
             (cond
              ((and (stringp item-type) (string= item-type "tool_call"))
               (let ((name (alist-get 'name item)))
-                (codex-repl--progress-line
+                (codex-repl--set-progress-status
                  (if (stringp name)
                      (format "ran: %s" name)
                    "tool call completed"))))
              ((and (stringp item-type) (string= item-type "agent_message"))
-              (codex-repl--progress-line "composing response..."))
+              (codex-repl--set-progress-status "composing response..."))
              (t nil))))
          ((string= type "turn.failed")
           (let* ((err (alist-get 'error evt))
                  (msg (and (listp err) (alist-get 'message err))))
             (when (stringp msg)
-              (format "error: %s" (truncate-string-to-width msg 60)))))
+              (codex-repl--set-progress-status
+               (format "error: %s" (truncate-string-to-width msg 60))))))
          ((string= type "error")
           (let ((msg (alist-get 'message evt)))
             (when (stringp msg)
-              (format "error: %s" (truncate-string-to-width msg 60)))))
+              (codex-repl--set-progress-status
+               (format "error: %s" (truncate-string-to-width msg 60))))))
          (t nil)))
     (error nil)))
 
@@ -486,6 +531,8 @@ Invoke CALLBACK with the final response text."
          (process-environment process-environment)
          (proc nil)
          (payload (if (string-suffix-p "\n" text) text (concat text "\n"))))
+    (setq codex-repl--thinking-start-time (float-time)
+          codex-repl--last-progress-status "starting")
     (setq proc
           (make-process
            :name "codex-repl-codex"
@@ -513,6 +560,9 @@ Invoke CALLBACK with the final response text."
                                             (string-trim (or err response))))))
                  (when (and (stringp sid) (not (string-empty-p sid)))
                    (codex-repl--persist-session-id! sid))
+                 (codex-repl--stop-thinking-heartbeat)
+                 (setq codex-repl--thinking-start-time nil
+                       codex-repl--last-progress-status nil)
                  (when (buffer-live-p (process-buffer p))
                    (kill-buffer (process-buffer p)))
                  (when (buffer-live-p repl-buffer)
@@ -520,6 +570,7 @@ Invoke CALLBACK with the final response text."
                      (when (eq futon3c-ui--pending-process p)
                        (setq futon3c-ui--pending-process nil))
                      (funcall callback final-text))))))))
+    (codex-repl--start-thinking-heartbeat repl-buffer)
     (process-send-string proc payload)
     (process-send-eof proc)
     proc))
@@ -549,6 +600,8 @@ Invoke CALLBACK with the final response text."
     (list :current 'codex-repl
           :current-label "emacs-codex-repl"
           :session-id session
+          :irc-available? irc-up
+          :timestamp (current-time)
           :transports transports)))
 
 (defun codex-repl-modeline-state (&optional refresh)
@@ -566,6 +619,41 @@ With REFRESH non-nil, recompute the state even if cached."
     (format "Available transports: [%s]. Current: %s."
             (string-join labels ", ")
             current)))
+
+(defun codex-repl--world-view-string (state)
+  "Return multi-line description of STATE plist."
+  (let* ((session (plist-get state :session-id))
+         (irc? (if (plist-get state :irc-available?) "up" "down"))
+         (timestamp (plist-get state :timestamp))
+         (time-str (format-time-string "%Y-%m-%d %H:%M:%S %Z" timestamp))
+         (current (plist-get state :current-label))
+         (lines (list (format "Codex REPL world @ %s" time-str)
+                      (format "  Session: %s" session)
+                      (format "  Current transport: %s" current)
+                      (format "  IRC relay: %s" irc?)
+                      "  Transports:")))
+    (dolist (entry (plist-get state :transports))
+      (setq lines
+            (append lines
+                    (list (format "    - %-8s status=%s"
+                                  (plist-get entry :key)
+                                  (plist-get entry :status))))))
+    (string-join lines "\n")))
+
+(defun codex-repl--header-line ()
+  "Return header line string summarizing Codex transport state."
+  (let* ((state (codex-repl-modeline-state))
+         (session (plist-get state :session-id))
+         (irc (if (plist-get state :irc-available?) "irc:up" "irc:down"))
+         (current (plist-get state :current-label))
+         (transports (mapconcat (lambda (entry)
+                                  (format "%s:%s"
+                                          (plist-get entry :key)
+                                          (plist-get entry :status)))
+                                (plist-get state :transports)
+                                ", ")))
+    (format "Codex session %s | current=%s | %s | transports[%s]"
+            session current irc transports)))
 
 (defun codex-repl--build-modeline ()
   "Build dynamic transport modeline for system prompt."
@@ -585,6 +673,22 @@ With REFRESH non-nil, recompute transport state before copying."
     (kill-new text)
     (message "Copied Codex modeline to kill ring.")))
 
+(defun codex-repl-describe-world (&optional refresh)
+  "Describe current Codex transport world in the echo area.
+With REFRESH non-nil, recompute state first."
+  (interactive "P")
+  (message "%s"
+           (codex-repl--world-view-string
+            (codex-repl-modeline-state refresh))))
+
+(defun codex-repl-insert-world-view (&optional refresh)
+  "Insert current Codex transport world description at point.
+With REFRESH non-nil, recompute state first."
+  (interactive "P")
+  (insert (codex-repl--world-view-string
+           (codex-repl-modeline-state refresh))
+          "\n"))
+
 ;;; Mode
 
 (defvar codex-repl-mode-map
@@ -600,7 +704,8 @@ Type after the prompt, RET to send.
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
   (setq-local scroll-conservatively 101)
-  (setq-local scroll-margin 0))
+  (setq-local scroll-margin 0)
+  (setq-local header-line-format '(:eval (codex-repl--header-line))))
 
 (defun codex-repl-send-input ()
   "Send input to Codex and display response."
@@ -615,6 +720,9 @@ Type after the prompt, RET to send.
 (defun codex-repl-clear ()
   "Clear display and re-draw header. Session continues."
   (interactive)
+  (codex-repl--stop-thinking-heartbeat)
+  (setq codex-repl--thinking-start-time nil
+        codex-repl--last-progress-status nil)
   (futon3c-ui-clear #'codex-repl--init))
 
 (defun codex-repl--init ()
