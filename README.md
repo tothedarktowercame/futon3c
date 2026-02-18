@@ -10,6 +10,7 @@ agents to each other and to persistent, queryable history.
 ```bash
 make dev       # Boot futon1a (XTDB) + futon3c transport
 make claude    # Pick a session or start fresh
+make codex     # Pick a Codex session or start fresh
 make test      # Run all tests (534 tests)
 make repl      # Start nREPL with CIDER middleware
 ```
@@ -24,7 +25,7 @@ Starts a single JVM with:
   dispatch, presence, and health endpoints
 
 No agents are registered at startup. They come alive when you launch a
-Claude session or register them via REPL.
+Claude or Codex session, or register them via REPL.
 
 ### `make claude`
 
@@ -37,12 +38,37 @@ Session picker that:
 
 Supports `--all` (sessions across all futon projects), `--new` (skip
 picker), and search terms.
+Use flags via make as: `make claude ARGS="--all"` (or call the script directly).
+
+### `make codex`
+
+Session picker for Codex that:
+
+1. Checks if `make dev` infrastructure is running
+2. Opens Codex's built-in resume picker (`codex resume`)
+3. Lets you pick a prior session/thread or start fresh
+
+Supports `--all` (show all sessions), `--new` (skip resume, start fresh),
+`--last` (resume most recent), explicit session/thread ID, and `--repl`
+(open `emacs/codex-repl.el`).
+Use flags via make as: `make codex ARGS="--all"` (or call the script directly).
+Examples:
+- `make codex ARGS="--repl --last"` — hop into Emacs REPL on your latest Codex session
+- `make codex ARGS="--repl <SESSION_ID>"` — hop into Emacs REPL for a specific session
+
+When using `--repl`, `codex-repl.el` logs evidence turn-by-turn:
+- session bootstrap (`claim-type: goal`, event `session-start`)
+- user and assistant chat turns (`claim-type: question` / `observation`)
+- chained via `in-reply-to`, so Arxana's Evidence Threads view shows a real thread.
 
 ## Evidence Landscape
 
 The evidence landscape is a typed, persistent store for everything agents
 do: pattern selections, outcomes, reflections, gate traversals, forum
 posts, and conjectures.
+
+Codex REPL turns are recorded as `type: coordination` entries on
+`subject: session/<sid>` with `body.event = "chat-turn"`.
 
 ### Architecture
 
@@ -69,12 +95,12 @@ Claude Code session
 | `forum-post` | Collaborative proof tree contributions | — |
 | `conjecture` | Hypotheses under investigation | — |
 
-### HTTP API (futon1a)
+### HTTP API (futon3c transport)
 
 **Write:**
 
 ```bash
-curl -X POST http://localhost:7071/api/alpha/evidence \
+curl -X POST http://localhost:7070/api/alpha/evidence \
   -H "Content-Type: application/json" \
   -d '{
     "type": "pattern-selection",
@@ -95,16 +121,16 @@ IDs, `400` on missing required fields.
 
 ```bash
 # All entries (newest first)
-curl http://localhost:7071/api/alpha/evidence
+curl http://localhost:7070/api/alpha/evidence
 
 # Filter by type, author, session, date
-curl "http://localhost:7071/api/alpha/evidence?type=reflection&author=claude&limit=10"
+curl "http://localhost:7070/api/alpha/evidence?type=reflection&author=claude&limit=10"
 
 # Single entry
-curl http://localhost:7071/api/alpha/evidence/<id>
+curl http://localhost:7070/api/alpha/evidence/<id>
 
 # Reply chain (root-first)
-curl http://localhost:7071/api/alpha/evidence/<id>/chain
+curl http://localhost:7070/api/alpha/evidence/<id>/chain
 ```
 
 ### Persistence Backends
@@ -140,8 +166,8 @@ endpoint walks these links to reconstruct the full decision history.
 With `make dev` running, the Arxana browser in Emacs can browse evidence:
 
 ```
-M-x arxana-browser → Lab → Evidence Timeline
-M-x arxana-browser → Lab → Evidence by Session
+M-x arxana-browser → Evidence → Evidence Timeline
+M-x arxana-browser → Evidence → Evidence by Session
 ```
 
 Entries are rendered with type-aware faces (PSR = pink, PUR = green,
@@ -175,6 +201,7 @@ dev/futon3c/
 
 scripts/
   claude-picker   Session picker for Claude Code
+  codex-picker    Session picker for Codex CLI
   *.clj           Demo and validation scripts
 
 library/

@@ -15,6 +15,7 @@ set -euo pipefail
 CLAUDE_DIR="${HOME}/.claude/projects"
 PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-bypassPermissions}"
 MAX_SESSIONS="${CLAUDE_PICKER_MAX:-12}"
+evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
 # Use pipe as field delimiter (tab causes bash read to collapse empty fields)
 D='|'
 
@@ -46,6 +47,31 @@ check_infra() {
 
 encode_project_path() {
   echo "$1" | sed 's|/|-|g'
+}
+
+json_escape() {
+  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "${1:-}"
+}
+
+emit_session_evidence() {
+  local sid="$1" source="$2" mode_value="$3"
+  [[ -n "${sid}" ]] || return 0
+  command -v curl >/dev/null 2>&1 || return 0
+  local sid_json user_json cwd_json source_json mode_json payload
+  sid_json="$(json_escape "${sid}")"
+  user_json="$(json_escape "${USER:-claude}")"
+  cwd_json="$(json_escape "$(pwd)")"
+  source_json="$(json_escape "${source}")"
+  mode_json="$(json_escape "${mode_value}")"
+  payload="$(cat <<EOF
+{"subject":{"ref/type":"session","ref/id":"${sid_json}"},"type":"coordination","claim-type":"goal","author":"${user_json}","session-id":"${sid_json}","body":{"event":"session-start","source":"${source_json}","mode":"${mode_json}","cwd":"${cwd_json}"},"tags":["claude","session-start","launcher"]}
+EOF
+)"
+  curl -sS --max-time 1 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "${payload}" \
+    "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
 }
 
 # --- Collect sessions -------------------------------------------------------
@@ -255,6 +281,8 @@ if [[ -z "$sid" ]]; then
   echo "Invalid choice."
   exit 1
 fi
+
+emit_session_evidence "$sid" "claude-picker-resume" "picked"
 
 echo
 printf "Resuming session ${CYAN}%s${RESET}...\n" "${sid:0:8}"

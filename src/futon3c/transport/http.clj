@@ -9,6 +9,9 @@
      POST /dispatch  — classify + dispatch, return receipt or error
      POST /presence  — verify presence, return record or error
      GET  /session/:id — retrieve session by ID
+     GET  /api/alpha/evidence — query evidence entries
+     GET  /api/alpha/evidence/:id — retrieve single evidence entry
+     GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      GET  /health    — liveness check with agent/session counts
 
    Pattern references:
@@ -19,6 +22,7 @@
      to protocol/extract-params for consistency across HTTP and WS."
   (:require [futon3c.transport.protocol :as proto]
             [futon3c.transport.encyclopedia :as enc]
+            [futon3c.evidence.store :as estore]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -78,6 +82,84 @@
   [config]
   {:corpus-root (or (get-in config [:encyclopedia :corpus-root])
                     (System/getenv "FUTON3C_PLANETMATH_ROOT"))})
+
+(defn- parse-int
+  "Parse integer string to int; return nil when invalid."
+  [s]
+  (when (and (string? s) (not (str/blank? s)))
+    (try
+      (int (Long/parseLong s))
+      (catch Exception _ nil))))
+
+(defn- parse-bool
+  "Parse boolean query values.
+   Accepts true/false, 1/0, yes/no."
+  [s]
+  (when (string? s)
+    (let [v (str/lower-case (str/trim s))]
+      (cond
+        (#{"true" "1" "yes"} v) true
+        (#{"false" "0" "no"} v) false
+        :else nil))))
+
+(defn- parse-keyword
+  "Parse an API parameter into a keyword (accepts optional leading :)."
+  [s]
+  (when (and (string? s) (not (str/blank? s)))
+    (let [v (str/trim s)
+          raw (if (str/starts-with? v ":") (subs v 1) v)]
+      (when (seq raw)
+        (keyword raw)))))
+
+(defn- parse-tags
+  "Parse comma-separated tag list to vector of keywords."
+  [s]
+  (when (and (string? s) (not (str/blank? s)))
+    (->> (str/split s #",")
+         (map str/trim)
+         (remove str/blank?)
+         (map parse-keyword)
+         (remove nil?)
+         vec)))
+
+(defn- parse-subject
+  "Parse subject params into ArtifactRef."
+  [params]
+  (let [subject-type (parse-keyword (get params "subject-type"))
+        subject-id (get params "subject-id")]
+    (when (and subject-type (string? subject-id) (not (str/blank? subject-id)))
+      {:ref/type subject-type
+       :ref/id (str subject-id)})))
+
+(defn- evidence-store-for-config
+  "Resolve configured evidence store from runtime config."
+  [config]
+  (or (:evidence-store config)
+      (get-in config [:registry :peripheral-config :evidence-store])))
+
+(defn- normalize-artifact-ref
+  "Normalize subject map (string or keyword :ref/type accepted)."
+  [subject]
+  (when (map? subject)
+    (let [subject-type (or (parse-keyword (get subject :ref/type))
+                           (parse-keyword (get subject "ref/type")))
+          subject-id (or (get subject :ref/id)
+                         (get subject "ref/id"))]
+      (when (and subject-type (some? subject-id) (not (str/blank? (str subject-id))))
+        {:ref/type subject-type
+         :ref/id (str subject-id)}))))
+
+(defn- normalize-tags
+  "Normalize vector/list of tags to keyword vector."
+  [tags]
+  (when (coll? tags)
+    (->> tags
+         (map #(cond
+                 (keyword? %) %
+                 (string? %) (parse-keyword %)
+                 :else nil))
+         (remove nil?)
+         vec)))
 
 ;; =============================================================================
 ;; Route handlers
@@ -169,6 +251,160 @@
                           :corpus corpus-name
                           :entry-id entry-id}))))
 
+(defn- handle-evidence-query
+  "GET /api/alpha/evidence — query evidence entries."
+  [request config]
+  (let [params (parse-query-params request)
+        limit (parse-int (get params "limit"))
+        subject (parse-subject params)
+        query (cond-> {}
+                subject (assoc :query/subject subject)
+                (parse-keyword (get params "type")) (assoc :query/type (parse-keyword (get params "type")))
+                (parse-keyword (get params "claim-type")) (assoc :query/claim-type (parse-keyword (get params "claim-type")))
+                (get params "since") (assoc :query/since (get params "since"))
+                (some? (parse-bool (get params "include-ephemeral?")))
+                (assoc :query/include-ephemeral? (parse-bool (get params "include-ephemeral?"))))
+        author (get params "author")
+        session-id (get params "session-id")
+        pattern-id (parse-keyword (get params "pattern-id"))
+        tags (parse-tags (get params "tag"))
+        evidence-store (evidence-store-for-config config)
+        entries (cond->> (estore/query* evidence-store query)
+                  true
+                  (filter (fn [entry]
+                            (and
+                             (or (not (string? author))
+                                 (str/blank? author)
+                                 (= author (:evidence/author entry)))
+                             (or (not (string? session-id))
+                                 (str/blank? session-id)
+                                 (= session-id (:evidence/session-id entry)))
+                             (or (nil? pattern-id)
+                                 (= pattern-id (:evidence/pattern-id entry)))
+                             (or (empty? tags)
+                                 (let [entry-tags (set (:evidence/tags entry))]
+                                   (every? entry-tags tags))))))
+                  (and (int? limit) (pos? limit))
+                  (take limit)
+                  true
+                  vec)]
+    (json-response 200 {:ok true
+                        :count (count entries)
+                        :entries entries})))
+
+(defn- handle-evidence-entry
+  "GET /api/alpha/evidence/:id — fetch one entry."
+  [config evidence-id]
+  (let [evidence-store (evidence-store-for-config config)
+        entry (estore/get-entry* evidence-store evidence-id)]
+    (if entry
+      (json-response 200 {:ok true
+                          :entry entry})
+      (json-response 404 {:ok false
+                          :err "evidence-not-found"
+                          :evidence-id evidence-id}))))
+
+(defn- handle-evidence-chain
+  "GET /api/alpha/evidence/:id/chain — fetch ordered ancestor chain."
+  [config evidence-id]
+  (let [evidence-store (evidence-store-for-config config)
+        entry (estore/get-entry* evidence-store evidence-id)]
+    (if (nil? entry)
+      (json-response 404 {:ok false
+                          :err "evidence-not-found"
+                          :evidence-id evidence-id})
+      (let [chain (estore/get-reply-chain* evidence-store evidence-id)]
+        (json-response 200 {:ok true
+                            :evidence-id evidence-id
+                            :chain chain})))))
+
+(defn- parse-json-map
+  "Parse BODY as JSON map; return nil on parse/shape failure."
+  [body]
+  (try
+    (let [parsed (json/parse-string (or body "") true)]
+      (when (map? parsed)
+        parsed))
+    (catch Exception _ nil)))
+
+(defn- append-error-status
+  "Map evidence append error codes to HTTP status."
+  [code]
+  (case code
+    :duplicate-id 409
+    :reply-not-found 409
+    :fork-not-found 409
+    :invalid-entry 400
+    :invalid-input 400
+    400))
+
+(defn- normalize-evidence-payload
+  "Normalize write payload (string fields to keywords where needed)."
+  [payload]
+  (let [subject (or (normalize-artifact-ref (:subject payload))
+                    (let [subject-type (parse-keyword (or (:subject-type payload) (get payload "subject-type")))
+                          subject-id (or (:subject-id payload) (get payload "subject-id"))]
+                      (when (and subject-type (some? subject-id) (not (str/blank? (str subject-id))))
+                        {:ref/type subject-type
+                         :ref/id (str subject-id)})))
+        entry {:evidence-id (or (:evidence-id payload) (get payload "evidence-id"))
+               :subject subject
+               :type (parse-keyword (or (:type payload) (get payload "type")))
+               :claim-type (parse-keyword (or (:claim-type payload) (get payload "claim-type")))
+               :author (or (:author payload) (get payload "author"))
+               :body (or (:body payload) (get payload "body"))
+               :pattern-id (parse-keyword (or (:pattern-id payload) (get payload "pattern-id")))
+               :session-id (or (:session-id payload) (get payload "session-id"))
+               :in-reply-to (or (:in-reply-to payload) (get payload "in-reply-to"))
+               :fork-of (or (:fork-of payload) (get payload "fork-of"))
+               :conjecture? (or (:conjecture? payload) (get payload "conjecture?"))
+               :ephemeral? (or (:ephemeral? payload) (get payload "ephemeral?"))
+               :tags (or (normalize-tags (:tags payload))
+                         (normalize-tags (get payload "tags")))}]
+    (-> entry
+        (cond-> (or (nil? (:evidence-id entry))
+                    (str/blank? (str (:evidence-id entry))))
+          (dissoc :evidence-id))
+        (cond-> (nil? (:subject entry))
+          (dissoc :subject))
+        (cond-> (nil? (:pattern-id entry))
+          (dissoc :pattern-id))
+        (cond-> (or (nil? (:session-id entry))
+                    (str/blank? (str (:session-id entry))))
+          (dissoc :session-id))
+        (cond-> (or (nil? (:in-reply-to entry))
+                    (str/blank? (str (:in-reply-to entry))))
+          (dissoc :in-reply-to))
+        (cond-> (or (nil? (:fork-of entry))
+                    (str/blank? (str (:fork-of entry))))
+          (dissoc :fork-of))
+        (cond-> (nil? (:conjecture? entry))
+          (dissoc :conjecture?))
+        (cond-> (nil? (:ephemeral? entry))
+          (dissoc :ephemeral?))
+        (cond-> (empty? (:tags entry))
+          (dissoc :tags)))))
+
+(defn- handle-evidence-create
+  "POST /api/alpha/evidence — append one evidence entry."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false
+                          :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [evidence-store (evidence-store-for-config config)
+            normalized (normalize-evidence-payload payload)
+            result (estore/append* evidence-store normalized)]
+        (if (:ok result)
+          (json-response 201 {:ok true
+                              :evidence/id (get-in result [:entry :evidence/id])
+                              :entry (:entry result)})
+          (json-response (append-error-status (:error/code result))
+                         {:ok false
+                          :err (name (:error/code result))
+                          :error result}))))))
+
 ;; =============================================================================
 ;; Public API
 ;; =============================================================================
@@ -194,6 +430,22 @@
 
         (and (= :get method) (string? uri) (str/starts-with? uri "/session/"))
         (handle-get-session request config)
+
+        (and (= :post method) (= "/api/alpha/evidence" uri))
+        (handle-evidence-create request config)
+
+        (and (= :get method) (= "/api/alpha/evidence" uri))
+        (handle-evidence-query request config)
+
+        (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)/chain" uri))
+        (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)/chain" uri)
+              evidence-id (enc/decode-uri-component raw-id)]
+          (handle-evidence-chain config evidence-id))
+
+        (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)" uri))
+        (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)" uri)
+              evidence-id (enc/decode-uri-component raw-id)]
+          (handle-evidence-entry config evidence-id))
 
         (and (= :get method) (= "/health" uri))
         (handle-health config)

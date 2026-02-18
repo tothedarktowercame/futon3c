@@ -8,6 +8,7 @@
             [cheshire.core :as json]
             [futon3c.transport.http :as http]
             [futon3c.transport.encyclopedia :as enc]
+            [futon3c.evidence.store :as estore]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
@@ -22,6 +23,7 @@
   (fn [f]
     (reg/reset-registry!)
     (persist/reset-sessions!)
+    (estore/reset-store!)
     (enc/clear-cache!)
     (f)))
 
@@ -211,6 +213,90 @@
         (is (= "ok" (:status parsed)))
         (is (= 3 (:agents parsed)))
         (is (= 0 (:sessions parsed)))))))
+
+;; =============================================================================
+;; GET/POST /api/alpha/evidence tests
+;; =============================================================================
+
+(deftest evidence-query-returns-entries
+  (testing "GET /api/alpha/evidence returns newest-first entries and supports filters"
+    (let [handler (make-handler)
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-1"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "claude"
+                             :session-id "sess-1"
+                             :body {:k "older"}
+                             :tags [:project/x]})
+          _ (Thread/sleep 5)
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-2"}
+                             :type :reflection
+                             :claim-type :conclusion
+                             :author "codex"
+                             :session-id "sess-2"
+                             :body {:k "newer"}
+                             :tags [:project/y]})
+          response (get-req-with-query handler "/api/alpha/evidence" "author=codex")
+          parsed (parse-body response)
+          entries (:entries parsed)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= 1 (:count parsed)))
+      (is (= 1 (count entries)))
+      (is (= "codex" (:evidence/author (first entries))))
+      (is (= "reflection" (:evidence/type (first entries)))))))
+
+(deftest evidence-get-by-id-and-chain
+  (testing "GET /api/alpha/evidence/:id and /chain return expected payload"
+    (let [root (-> (estore/append! {:subject {:ref/type :session :ref/id "sess-chain"}
+                                    :type :coordination
+                                    :claim-type :goal
+                                    :author "claude"
+                                    :session-id "sess-chain"
+                                    :body {:msg "root"}
+                                    :tags [:chain]})
+                   :entry)
+          child (-> (estore/append! {:subject {:ref/type :session :ref/id "sess-chain"}
+                                     :type :coordination
+                                     :claim-type :step
+                                     :author "claude"
+                                     :session-id "sess-chain"
+                                     :in-reply-to (:evidence/id root)
+                                     :body {:msg "child"}
+                                     :tags [:chain]})
+                    :entry)
+          handler (make-handler)
+          get-response (get-req handler (str "/api/alpha/evidence/" (:evidence/id child)))
+          get-parsed (parse-body get-response)
+          chain-response (get-req handler (str "/api/alpha/evidence/" (:evidence/id child) "/chain"))
+          chain-parsed (parse-body chain-response)]
+      (is (= 200 (:status get-response)))
+      (is (true? (:ok get-parsed)))
+      (is (= (:evidence/id child) (get-in get-parsed [:entry :evidence/id])))
+      (is (= 200 (:status chain-response)))
+      (is (true? (:ok chain-parsed)))
+      (is (= 2 (count (:chain chain-parsed))))
+      (is (= (:evidence/id root) (get-in chain-parsed [:chain 0 :evidence/id])))
+      (is (= (:evidence/id child) (get-in chain-parsed [:chain 1 :evidence/id]))))))
+
+(deftest evidence-create-route-accepts-json
+  (testing "POST /api/alpha/evidence appends an entry and returns 201"
+    (let [handler (make-handler)
+          body (json/generate-string
+                {"subject" {"ref/type" "session" "ref/id" "sess-post"}
+                 "type" "coordination"
+                 "claim-type" "step"
+                 "author" "codex"
+                 "session-id" "sess-post"
+                 "body" {"msg" "hello"}
+                 "tags" ["api" "write"]})
+          response (post handler "/api/alpha/evidence" body)
+          parsed (parse-body response)
+          entry-id (:evidence/id parsed)]
+      (is (= 201 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (string? entry-id))
+      (is (some? (estore/get-entry entry-id))))))
 
 ;; =============================================================================
 ;; Encyclopedia route tests

@@ -171,10 +171,14 @@ The filter also appends raw output to the process buffer for the sentinel."
 
 ;;; Send
 
-(defun futon3c-ui-send-input (call-async-fn agent-name)
+(defun futon3c-ui-send-input (call-async-fn agent-name &optional hooks)
   "Generic send: extract input, display it, call CALL-ASYNC-FN.
 CALL-ASYNC-FN: (text callback) -> process.
-AGENT-NAME: \"claude\" or \"codex\", used for display."
+AGENT-NAME: \"claude\" or \"codex\", used for display.
+Optional HOOKS plist supports:
+  :before-send   (fn text) called after user text is inserted.
+  :on-response   (fn text) called after agent response is inserted.
+  :on-launch-error (fn text) called when process launch fails."
   (when (process-live-p futon3c-ui--pending-process)
     (user-error "%s is still responding; wait for current turn to finish"
                 (capitalize agent-name)))
@@ -183,9 +187,14 @@ AGENT-NAME: \"claude\" or \"codex\", used for display."
                (point-max))))
     (when (not (string-empty-p (string-trim text)))
       (let ((trimmed (string-trim text))
-            (chat-buffer (current-buffer)))
+            (chat-buffer (current-buffer))
+            (before-send (plist-get hooks :before-send))
+            (on-response (plist-get hooks :on-response))
+            (on-launch-error (plist-get hooks :on-launch-error)))
         (delete-region (marker-position futon3c-ui--input-start) (point-max))
         (futon3c-ui-insert-message "joe" trimmed)
+        (when (functionp before-send)
+          (funcall before-send trimmed))
         (futon3c-ui-insert-thinking)
         (redisplay)
         (condition-case err
@@ -197,16 +206,19 @@ AGENT-NAME: \"claude\" or \"codex\", used for display."
                                (with-current-buffer chat-buffer
                                  (futon3c-ui-remove-thinking)
                                  (futon3c-ui-insert-message agent-name response)
+                                 (when (functionp on-response)
+                                   (funcall on-response response))
                                  (goto-char (point-max))
                                  (futon3c-ui-scroll-to-bottom))))))
           (error
            (setq futon3c-ui--pending-process nil)
            (futon3c-ui-remove-thinking)
-           (futon3c-ui-insert-message
-            agent-name
-            (format "[Error launching %s process: %s]"
-                    agent-name
-                    (error-message-string err)))))))))
+           (let ((msg (format "[Error launching %s process: %s]"
+                              agent-name
+                              (error-message-string err))))
+             (futon3c-ui-insert-message agent-name msg)
+             (when (functionp on-launch-error)
+               (funcall on-launch-error msg)))))))))
 
 ;;; Init / Clear
 

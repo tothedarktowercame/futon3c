@@ -393,8 +393,8 @@ When FORCE is non-nil, refresh even when session is unchanged."
               (when (re-search-forward "emacs-codex-repl (active, session [^)]+)" nil t)
                 (replace-match (format "emacs-codex-repl (active, session %s)"
                                        (or codex-repl-session-id "pending"))
-                               t t))))))))
-        (codex-repl-refresh-header-line nil buf))))
+                               t t))))
+          (codex-repl-refresh-header-line nil buf))))))
 
 (defun codex-repl--persist-session-id! (sid)
   "Persist SID to `codex-repl-session-file` and local state."
@@ -549,8 +549,10 @@ Invoke CALLBACK with the final response text."
            (lambda (p _event)
              (when (memq (process-status p) '(exit signal))
                (let* ((exit-code (process-exit-status p))
-                      (raw (with-current-buffer (process-buffer p)
-                             (buffer-string)))
+                      (raw (if (buffer-live-p (process-buffer p))
+                               (with-current-buffer (process-buffer p)
+                                 (buffer-string))
+                             ""))
                       (parsed (codex-repl--parse-codex-json-output raw))
                       (sid (plist-get parsed :session-id))
                       (response (plist-get parsed :text))
@@ -560,18 +562,28 @@ Invoke CALLBACK with the final response text."
                                     (format "[Error (exit %d): %s]"
                                             exit-code
                                             (string-trim (or err response))))))
-                 (when (and (stringp sid) (not (string-empty-p sid)))
-                   (codex-repl--persist-session-id! sid))
-                 (codex-repl--stop-thinking-heartbeat)
-                 (setq codex-repl--thinking-start-time nil
-                       codex-repl--last-progress-status nil)
-                 (when (buffer-live-p (process-buffer p))
-                   (kill-buffer (process-buffer p)))
-                 (when (buffer-live-p repl-buffer)
-                   (with-current-buffer repl-buffer
-                     (when (eq futon3c-ui--pending-process p)
-                       (setq futon3c-ui--pending-process nil))
-                     (funcall callback final-text))))))))
+                 (unwind-protect
+                     (progn
+                       (when (and (stringp sid) (not (string-empty-p sid)))
+                         (condition-case persist-err
+                             (codex-repl--persist-session-id! sid)
+                           (error
+                            (message "codex-repl persist warning: %s"
+                                     (error-message-string persist-err)))))
+                       (when (buffer-live-p repl-buffer)
+                         (with-current-buffer repl-buffer
+                           (when (eq futon3c-ui--pending-process p)
+                             (setq futon3c-ui--pending-process nil))
+                           (condition-case callback-err
+                               (funcall callback final-text)
+                             (error
+                              (message "codex-repl callback warning: %s"
+                                       (error-message-string callback-err)))))))
+                   (codex-repl--stop-thinking-heartbeat)
+                   (setq codex-repl--thinking-start-time nil
+                         codex-repl--last-progress-status nil)
+                   (when (buffer-live-p (process-buffer p))
+                     (kill-buffer (process-buffer p)))))))))
     (codex-repl--start-thinking-heartbeat repl-buffer)
     (process-send-string proc payload)
     (process-send-eof proc)
@@ -668,6 +680,12 @@ Default buffer is current buffer."
           (codex-repl-modeline-state refresh)
           (force-mode-line-update t))))))
 
+(defun codex-repl--ensure-header-line! ()
+  "Ensure Codex header-line is configured in current buffer."
+  (when (eq major-mode 'codex-repl-mode)
+    (setq-local header-line-format '(:eval (codex-repl--header-line)))
+    (codex-repl-refresh-header-line t (current-buffer))))
+
 (defun codex-repl--build-modeline ()
   "Build dynamic transport modeline for system prompt."
   (codex-repl--render-modeline (codex-repl-modeline-state t)))
@@ -718,8 +736,7 @@ Type after the prompt, RET to send.
   (setq-local word-wrap t)
   (setq-local scroll-conservatively 101)
   (setq-local scroll-margin 0)
-  (setq-local header-line-format '(:eval (codex-repl--header-line)))
-  (codex-repl-refresh-header-line t))
+  (codex-repl--ensure-header-line!))
 
 (defun codex-repl-send-input ()
   "Send input to Codex and display response."
@@ -749,7 +766,8 @@ Type after the prompt, RET to send.
          :face-alist `(("codex" . codex-repl-codex-face))
          :agent-name "codex"
          :thinking-text "codex is thinking..."
-         :thinking-prop 'codex-repl-thinking)))
+         :thinking-prop 'codex-repl-thinking))
+  (codex-repl--ensure-header-line!))
 
 ;;;###autoload
 (defun codex-repl ()
@@ -765,7 +783,8 @@ Type after the prompt, RET to send.
           (let ((inhibit-read-only t))
             (erase-buffer))
           (codex-repl--init))
-        (codex-repl--refresh-session-header (current-buffer))))
+        (codex-repl--refresh-session-header (current-buffer)))
+      (codex-repl--ensure-header-line!))
     (pop-to-buffer buf)
     (goto-char (point-max))))
 

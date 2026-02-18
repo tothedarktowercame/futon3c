@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+set -euo pipefail
+#
+# Codex session picker for futon dev workflow.
+#
+# Uses Codex's built-in resume picker by default, with convenience flags
+# that parallel the Claude picker workflow.
+#
+# Usage:
+#   ./scripts/codex-picker            # picker for CWD project
+#   ./scripts/codex-picker --all      # show all sessions
+#   ./scripts/codex-picker --new      # start fresh session
+#   ./scripts/codex-picker --last     # resume most recent
+#   ./scripts/codex-picker --repl     # open Emacs codex-repl (shared session)
+#   ./scripts/codex-picker <SESSION>  # resume explicit session/thread
+
+# Colors
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+  BOLD="\033[1m"
+  GREEN="\033[32m"
+  YELLOW="\033[33m"
+  RESET="\033[0m"
+else
+  BOLD="" GREEN="" YELLOW="" RESET=""
+fi
+
+check_infra() {
+  local f1a_port="${FUTON1A_PORT:-7071}"
+  if (echo > "/dev/tcp/127.0.0.1/${f1a_port}") >/dev/null 2>&1; then
+    printf "${GREEN}futon1a${RESET} running on port %s\n" "$f1a_port"
+  else
+    printf "${YELLOW}futon1a${RESET} not running (port %s). Start with: ${BOLD}make dev${RESET}\n" "$f1a_port"
+  fi
+  echo
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/codex-picker [--all] [--new] [--last] [--repl] [SESSION_ID]
+EOF
+}
+
+mode="cwd"
+start_new=false
+resume_last=false
+open_repl=false
+session_id=""
+session_hint=""
+session_file="${CODEX_SESSION_FILE:-/tmp/futon-codex-session-id}"
+emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
+evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
+
+elisp_escape() {
+  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "$1"
+}
+
+json_escape() {
+  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "${1:-}"
+}
+
+emit_session_evidence() {
+  local sid="$1" source="$2" mode_value="$3"
+  [[ -n "${sid}" ]] || return 0
+  command -v curl >/dev/null 2>&1 || return 0
+  local sid_json user_json cwd_json source_json mode_json payload
+  sid_json="$(json_escape "${sid}")"
+  user_json="$(json_escape "${USER:-codex}")"
+  cwd_json="$(json_escape "$(pwd)")"
+  source_json="$(json_escape "${source}")"
+  mode_json="$(json_escape "${mode_value}")"
+  payload="$(cat <<EOF
+{"subject":{"ref/type":"session","ref/id":"${sid_json}"},"type":"coordination","claim-type":"goal","author":"${user_json}","session-id":"${sid_json}","body":{"event":"session-start","source":"${source_json}","mode":"${mode_json}","cwd":"${cwd_json}"},"tags":["codex","session-start","launcher"]}
+EOF
+)"
+  curl -sS --max-time 1 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "${payload}" \
+    "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
+}
+
+latest_session_id() {
+  local latest_file base
+  [[ -d "${HOME}/.codex/sessions" ]] || return 1
+  latest_file="$(
+    find "${HOME}/.codex/sessions" -type f -name '*.jsonl' -printf '%T@\t%p\n' 2>/dev/null \
+      | sort -rn \
+      | head -n 1 \
+      | cut -f2
+  )"
+  [[ -n "${latest_file}" ]] || return 1
+  base="$(basename "${latest_file}" .jsonl)"
+  if [[ "${base}" =~ ([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$ ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+  return 1
+}
+
+launch_repl() {
+  local sid="${1:-}" sid_form escaped_session_file escaped_ui escaped_repl
+  if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
+    echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
+    exit 1
+  fi
+  escaped_session_file="$(elisp_escape "${session_file}")"
+  escaped_ui="$(elisp_escape "${emacs_dir}/futon3c-ui.el")"
+  escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
+  if [[ -n "${sid}" ]]; then
+    sid_form="\"$(elisp_escape "${sid}")\""
+  else
+    sid_form="nil"
+  fi
+  "${emacsclient_bin}" -e "(progn
+    (load \"${escaped_ui}\")
+    (load \"${escaped_repl}\")
+    (setq codex-repl-session-file \"${escaped_session_file}\")
+    (setq codex-repl-session-id ${sid_form})
+    (codex-repl))" >/dev/null
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all)
+      mode="all"
+      shift
+      ;;
+    --new)
+      start_new=true
+      shift
+      ;;
+    --last)
+      resume_last=true
+      shift
+      ;;
+    --repl)
+      open_repl=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      if [[ -n "$session_id" ]]; then
+        echo "Only one SESSION_ID is supported." >&2
+        usage >&2
+        exit 1
+      fi
+      session_id="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ $# -gt 0 ]]; then
+  echo "Unexpected extra arguments: $*" >&2
+  usage >&2
+  exit 1
+fi
+
+check_infra
+
+if [[ -f "${session_file}" ]]; then
+  session_hint="$(tr -d '\r\n' < "${session_file}")"
+fi
+
+if $open_repl; then
+  sid=""
+  if $start_new; then
+    rm -f "${session_file}"
+    echo "Opening Emacs Codex REPL (new session)."
+  else
+    if [[ -n "${session_id}" ]]; then
+      sid="${session_id}"
+    elif $resume_last; then
+      sid="$(latest_session_id || true)"
+      if [[ -z "${sid}" ]]; then
+        echo "Could not determine latest Codex session id from ~/.codex/sessions." >&2
+        exit 1
+      fi
+    elif [[ -f "${session_file}" ]]; then
+      sid="$(tr -d '\r\n' < "${session_file}")"
+    fi
+
+    if [[ -z "${sid}" ]]; then
+      sid="$(latest_session_id || true)"
+    fi
+
+    if [[ -n "${sid}" ]]; then
+      printf '%s' "${sid}" > "${session_file}"
+      echo "Opening Emacs Codex REPL (session ${sid})."
+      emit_session_evidence "${sid}" "codex-picker-repl" "repl"
+    else
+      echo "Opening Emacs Codex REPL (no prior session id found; new on first turn)."
+    fi
+  fi
+  launch_repl "${sid}"
+  exit 0
+fi
+
+if $start_new; then
+  exec codex
+fi
+
+cmd=(codex resume)
+if [[ "$mode" == "all" ]]; then
+  cmd+=(--all)
+fi
+if $resume_last; then
+  cmd+=(--last)
+fi
+if [[ -n "$session_id" ]]; then
+  cmd+=("$session_id")
+fi
+
+if [[ -n "${session_id}" ]]; then
+  emit_session_evidence "${session_id}" "codex-picker-resume" "explicit"
+elif $resume_last; then
+  sid="$(latest_session_id || true)"
+  if [[ -n "${sid}" ]]; then
+    emit_session_evidence "${sid}" "codex-picker-resume" "last"
+  fi
+elif [[ -n "${session_hint}" ]]; then
+  emit_session_evidence "${session_hint}" "codex-picker-resume" "hint"
+fi
+
+exec "${cmd[@]}"
