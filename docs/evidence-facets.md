@@ -311,6 +311,302 @@ tree but is critical for understanding *why* the stepper chose to
 investigate rather than derive. Without evidence facets, this context
 is lost between sessions.
 
+## Application: Code Development Missions
+
+The proof stepper application above shows evidence facets for *mathematical*
+proof work. But the same machinery applies to *code development* missions.
+Evidence when coding isn't just "unit tests pass" — it includes design
+decisions, pattern selections, framing checks, corpus queries, and the
+reasoning context around each step.
+
+### Table 24 as Entity Grammar
+
+Corneli (2014, §10.2, Table 24) presents an entity relation diagram for
+PlanetMath 3.0 that provides the anchoring grammar. Key entities:
+
+| Symbol | Entity | Evidence Analog |
+|--------|--------|-----------------|
+| X | project/object | Mission or step (`evidence/subject`) |
+| A | article | Component or module under development |
+| P | problem | Open question / obligation |
+| J | conjecture | Hypothesis (`claim-type :hypothesis`) |
+| S | solution | Proposed approach (`claim-type :goal`) |
+| Q | question | Tension or blocker (`claim-type :tension`) |
+| C | correction | Bug fix or design revision (`claim-type :correction`) |
+| R | review | PAR or code review (`type :reflection`) |
+| T | post | Forum post or coordination entry |
+| H | heuristic | Pattern from the library (`evidence/pattern-id`) |
+| G | group | Agent team / ad hoc collaboration |
+| U | user | Agent or human author (`evidence/author`) |
+| W | request | Task dispatch or handoff |
+| E | ephemera | Session-scoped working notes |
+
+Key relations map directly to evidence fields:
+
+- **X → X♯** (project update) → `evidence/in-reply-to` chains
+- **X → X′** (fork) → `evidence/fork-of`
+- **X ⊧ X⋆** (outcome) → PUR entries linked to PSR
+- **A ← P ← J ← S** (structure) → subject/tag hierarchy
+- **S ↩ H** (solution uses heuristic) → PSR recording pattern selection
+
+The thesis observes: "Any object, or activity, that takes place within the
+system should be thought of as being part of some project. This carries over
+to the 'micro' level, so that individual proof steps or computations are to
+be thought of as small projects." This is exactly the self-referential
+faceting described above — projects and steps as evidence entries, with
+work evidence referencing them via `subject` and `tags`.
+
+### Computational Agents and Table 24
+
+The thesis's future work section (§10.6) explicitly calls for
+"computational agents that are able to navigate the relevant mathematical
+structures (as outlined Table 24), able to apply 'standard' and 'social'
+problem solving heuristics, sufficiently metacognitively aware as to be
+able to set and solve problems by generating and applying new heuristics
+in the form of design patterns — and ideally able to annotate, reflect
+on, diagnose, and extend the overall process."
+
+This is precisely what the evidence landscape provides: agents navigate
+the entity grammar (via faceted evidence queries), apply patterns (via
+PSR), record outcomes (via PUR), and reflect on the process (via PAR).
+The evidence landscape is the instrumentation layer that makes Table 24's
+grammar *computational* rather than descriptive.
+
+### Concrete mapping: code mission evidence
+
+A code development mission (e.g., "implement XTDB backend for evidence")
+produces the same evidence structure as a proof step:
+
+```clojure
+;; Mission definition (self-referential)
+{:evidence/type :coordination
+ :evidence/claim-type :goal
+ :evidence/body {:title "Implement XTDB evidence backend"
+                 :ordinal 1}
+ :evidence/id "mission-xtdb-backend"}
+
+;; Design decision (not captured by tests)
+{:evidence/type :pattern-selection
+ :evidence/subject {:ref/type :evidence :ref/id "mission-xtdb-backend"}
+ :evidence/pattern-id :code-coherence/protocol-first
+ :evidence/body {:rationale "Define EvidenceBackend protocol before
+                             implementation — 7 operations, two backends"}
+ :evidence/tags [:project/evidence-landscape :step/1 :repo/futon3c]}
+
+;; Corpus check (what did the pattern library say?)
+{:evidence/type :coordination
+ :evidence/claim-type :observation
+ :evidence/subject {:ref/type :evidence :ref/id "mission-xtdb-backend"}
+ :evidence/body {:tool :corpus-check
+                 :query "protocol design for pluggable backends"
+                 :result {:patterns [:code-coherence/protocol-first
+                                     :agent/evidence-over-assertion]}}
+ :evidence/tags [:project/evidence-landscape :step/1
+                 :discipline/design-check]}
+
+;; Outcome (tests pass, but that's not the whole story)
+{:evidence/type :pattern-outcome
+ :evidence/in-reply-to "psr-protocol-first"
+ :evidence/subject {:ref/type :evidence :ref/id "mission-xtdb-backend"}
+ :evidence/body {:outcome :success
+                 :evidence "534 tests pass, AtomBackend + XtdbBackend
+                            both conform, persistence shim wired through
+                            runtime-config"}
+ :evidence/tags [:project/evidence-landscape :step/1 :repo/futon3c]}
+```
+
+The critical insight: "534 tests pass" is a fact, but the *design
+decision* to use a protocol with two backends, the *corpus check* that
+confirmed the pattern, and the *reasoning* about why this approach was
+chosen — these are evidence that tests alone don't capture. Faceted
+queries like `?tag=discipline/design-check&type=coordination` surface
+this reasoning context for future missions.
+
+## Appendix F: Critical Apparatus and Sigils
+
+Corneli (2014, Appendix F) introduces a "critical apparatus" — Table 25
+— with chess piece mnemonics for *para-mathematical* activities:
+
+| Sigil | Activity |
+|-------|----------|
+| ♟ | Getting information |
+| ♙ | Giving information |
+| ♗ | Reputation building |
+| ♖ | Relationship development |
+| ♘ | Recreation |
+| ♕ | Self-discovery |
+| ♔ | Constructive feedback |
+
+The thesis applies these sigils to code developer discussions, annotating
+11 Planetary GitHub tickets to demonstrate that "much in the same way in
+which the 'grammar' in Table 24 could be used to parse mathematical
+activities, Table 25 can be used as part of a working language that
+describes the 'para-mathematical' activities that are involved in
+building and improving PlanetMath."
+
+### Relevance to evidence facets
+
+The critical apparatus suggests a faceting dimension we don't yet
+capture: the *meta-activity* of each evidence entry. A PSR selecting
+`evidence-over-assertion` is ♟ (getting information) and ♔ (constructive
+feedback) simultaneously. A PAR is ♕ (self-discovery). A forum post
+answering a question is ♙ (giving information).
+
+These could map to evidence tags:
+
+```clojure
+:evidence/tags [:project/X :step/3
+                :sigil/getting-information
+                :sigil/constructive-feedback]
+```
+
+Or to a dedicated field if the vocabulary stabilizes:
+
+```clojure
+:evidence/sigils [:getting-information :constructive-feedback]
+```
+
+### The PlanetMath workforce problem, resolved
+
+The thesis notes that the critical apparatus was designed for a context
+with "too few people interested in software development." The futonic
+system inverts this constraint: AI agents provide the development
+workforce, while the critical apparatus provides the *legibility layer*
+that makes their work understandable and inspectable. The evidence
+landscape is the instrumentation that Corneli (2014) called for — agents
+that "annotate, reflect on, diagnose, and extend the overall process."
+
+The futonic rewrites demonstrate why this legibility matters. Getting
+architecture right early (futon1a being a good example) saves enormous
+rework. Evidence facets — especially design decisions, discipline
+checks, and corpus queries — provide the inspectable trail that helps
+both humans and agents judge whether an approach is sound *before*
+building on it.
+
+## Feature Grid: Table 25 vs Futonic Coverage
+
+Table 25 is richer than the chess piece mnemonics alone. It has three
+layers: participant activities (chess pieces), quality dimensions
+(emoji sigils), and system concerns. Each issue in the Planetary
+tracker was coded with whichever sigils applied — e.g., #381 (SQLite
+instead of MySQL) was coded ✺ motivation because it lowered the
+contributor onboarding barrier, not just because it was a database
+swap. #88 (developer docs) was coded ♙ giving information.
+
+The same approach applies to futonic commits and issues. Below is a
+feature grid mapping each Table 25 dimension to what we already have
+and what's missing.
+
+### Participant Activities (Chess Pieces)
+
+| Sigil | Activity | Futonic Coverage | Gaps |
+|-------|----------|-----------------|------|
+| ♟ | Getting information | `/rap`, `/psr` (corpus search), `corpus-check` tool, `ants/white-space-scout`, `agent/scope-before-action`, evidence GET queries | Well covered. The discipline/domain signal split (§ above) refines this further. |
+| ♙ | Giving information | `/par`, PUR records, evidence POST, `contributing/*` patterns, `corps/working-where-others-can-see`, README/CLAUDE.md authoring | Well covered. Not explicitly *tagged* as information-giving though. |
+| ♗ | Reputation building | `agent/commitment-varies-with-confidence`, gate pipeline (quality assurance), pattern library maturity levels | **Weak.** No agent reputation/credibility tracking. No way to ask "which agent's PURs have the highest success rate?" |
+| ♖ | Relationship development | Forum participation, IRC bridge, agency registry, detach/reattach model | **Moderate.** Relationships are implicit in session co-participation. Not tracked as evidence. |
+| ♘ | Recreation | `iching/*` (64 patterns), `iiching/*` (256 exotype patterns) | **Absent as explicit concern.** The I Ching patterns serve an associative/generative function but aren't framed as recreation. |
+| ♕ | Self-discovery | PAR (explicitly this), `agent/state-is-hypothesis`, `corps/carrying-ones-own-question`, `corps/letting-the-trace-teach` | **Strong.** PAR is the primary self-discovery mechanism. Could be enriched by cross-session PAR queries. |
+| ♔ | Constructive feedback | PUR (outcome evaluation), gate pipeline rejection, forum corrections, `agent/escalation-cost-vs-risk` | **Moderate.** Feedback exists but isn't structured for easy retrieval. "Show me all feedback on my design decisions" is hard. |
+
+### Quality Dimensions
+
+| Sigil | Dimension | Futonic Coverage | Gaps |
+|-------|-----------|-----------------|------|
+| ✋ | Relevance | Pattern search relevance scores, `agent/scope-before-action` | Relevance of evidence entries isn't scored. A PAR from 6 months ago and one from yesterday have equal weight. |
+| ❦ | Quality | Gate pipeline (G5→G0), `code-coherence/*` patterns, `stack-coherence/*` | Quality is binary (pass/fail gates). No graded quality signal on evidence entries themselves. |
+| ✨ | Scalability | Architecture patterns, `exotic/live-sync-source-truth` | Scalability as a *tag* on decisions isn't captured. "This design decision was made for scalability reasons" isn't faceted. |
+| ❖ | Consistency | `stack-coherence/*`, `devmap-coherence/*`, 17 IFR patterns (f0-f7 sati through upekkha) | Best-covered quality dimension. The IFR stack is essentially a consistency framework. |
+| ✺ | Motivation | Not explicitly tracked | **Missing.** "Why are we doing this?" is captured in PSR rationale but not queryable as a dimension. The ✺ sigil in Planetary #381 marks "this helps contributors get started" — a motivational concern, not a technical one. |
+
+### System Concerns
+
+| Sigil | Concern | Futonic Coverage | Gaps |
+|-------|---------|-----------------|------|
+| ☕ | Community | Forum, IRC bridge, multi-agent coordination, agency registry | Community dynamics aren't evidence-tracked. Who participated, how often, in what capacity — all implicit. |
+| ⚓ | Concrete applications | `agent/evidence-over-assertion`, test discipline, proof stepper | Good in spirit but not tagged. "This evidence demonstrates a concrete application" vs "this is theoretical" isn't distinguished. |
+| ⁂ | End-user focus | — | **Missing.** Developer-tool-for-developers doesn't naturally surface this, but it matters for futon4/Arxana UX decisions. |
+
+### Coverage Summary
+
+Strong coverage: ♟ ♙ ♕ ❖ — getting/giving information, self-discovery,
+consistency. These are the core PSR/PUR/PAR/RAP loop and the coherence
+patterns.
+
+Moderate coverage: ♖ ♔ ❦ ☕ — relationships, feedback, quality,
+community. The mechanisms exist but aren't faceted for retrieval.
+
+Weak/absent: ♗ ♘ ✋ ✨ ✺ ⚓ ⁂ — reputation, recreation, relevance,
+scalability, motivation, concrete applications, end-user focus. These
+are the "para-development" dimensions that Table 25 surfaces and that
+pure-technical tracking misses.
+
+## Applying the Apparatus to Commits and Issues
+
+The Appendix F approach — coding each issue with applicable sigils —
+translates directly to how we create and tag commits and issues.
+
+### Issue coding
+
+Each GitHub issue could carry sigil tags indicating which Table 25
+dimensions it engages:
+
+```
+## #42: Add evidence tag filtering to HTTP API
+
+Sigils: ♟ (enables getting information from evidence landscape)
+        ✨ (scalability — needed as evidence volume grows)
+        ❖ (consistency — aligns API capabilities with stored data)
+
+...issue body...
+```
+
+Or as GitHub labels: `sigil:getting-info`, `sigil:scalability`,
+`sigil:consistency`. This makes the para-development dimension
+searchable: "show me all issues motivated by scalability concerns"
+becomes a label filter.
+
+### Commit coding
+
+Commits are already tagged via evidence (PSR/PUR entries reference
+the work). Adding sigil tags to the evidence entry that accompanies
+a commit enriches the faceted view:
+
+```clojure
+{:evidence/type :coordination
+ :evidence/claim-type :step
+ :evidence/body {:commit "abc1234"
+                 :title "Add tag filtering to evidence GET endpoint"
+                 :sigils [:getting-information :scalability :consistency]}
+ :evidence/tags [:project/evidence-landscape :step/3
+                 :sigil/getting-information :sigil/scalability]}
+```
+
+The sigils become queryable tags. "What work has been done for
+motivation/onboarding reasons?" → `?tag=sigil/motivation`. "Which
+commits involved constructive feedback?" → `?tag=sigil/feedback`.
+
+### PAR as ♕ + ♔ generator
+
+PARs naturally produce ♕ (self-discovery: "what did I learn?") and ♔
+(constructive feedback: "what should change?"). Auto-tagging PARs with
+these sigils makes the apparatus self-populating — agents don't need to
+manually classify, the evidence type implies the sigil.
+
+| Evidence Type | Default Sigils |
+|---------------|---------------|
+| `pattern-selection` | ♟ (always), ♔ (when selecting a discipline pattern) |
+| `pattern-outcome` | ♔ (always), ♕ (when outcome was surprising) |
+| `reflection` | ♕ (always), ♔ (always) |
+| `coordination` | ♙ (always) |
+| `gate-traversal` | ❦ (always), ❖ (always) |
+| `forum-post` | ♙ or ♟ (depends on direction) |
+| `conjecture` | ♕ (always) |
+
+This auto-classification means the feature grid fills in progressively
+as agents do normal work, rather than requiring explicit annotation of
+every commit and issue.
+
 ## Decision Log
 
 *Decisions deferred. This technote captures the design space for future
@@ -330,3 +626,24 @@ reference.*
 - [ ] Add `:discipline/framing-check` and `:discipline/framing-gate`
   as standard tags for stepper sessions
 - [ ] Build facet query for cross-problem discipline pattern reuse
+- [ ] Map Table 24 entity types to EvidenceEntry claim-types formally
+  (some are 1:1, some need new claim-types like `:request`)
+- [ ] Evaluate sigils (Table 25) as evidence tags vs dedicated field
+- [ ] Define standard tags for code mission evidence
+  (`:discipline/design-check`, `:discipline/architecture-review`, etc.)
+- [ ] Build facet query for cross-mission design decision reuse
+  (`?tag=discipline/design-check&type=coordination`)
+- [ ] Implement sigil auto-classification for evidence types
+  (evidence type → default sigil tags, per table above)
+- [ ] Add GitHub label set for Table 25 sigils
+  (`sigil:getting-info`, `sigil:giving-info`, `sigil:reputation`,
+  `sigil:relationships`, `sigil:recreation`, `sigil:self-discovery`,
+  `sigil:feedback`, `sigil:relevance`, `sigil:quality`,
+  `sigil:scalability`, `sigil:consistency`, `sigil:motivation`)
+- [ ] Address ♗ reputation gap: agent credibility scoring from
+  PUR success/failure history
+- [ ] Address ✺ motivation gap: explicit "why" tagging for design
+  decisions that aren't technically motivated
+- [ ] Consider ♘ recreation dimension — is there a role for
+  associative/generative play in agent development? (The I Ching
+  and exotype patterns hint at this but aren't framed as such)
