@@ -196,6 +196,121 @@ To fully support facet queries, the HTTP API needs:
    are used most?" — not essential for facet browsing but useful for
    dashboards.
 
+## Application: Proof Stepper Ancillary Evidence
+
+The proof peripheral (futon3c) maintains a formal proof tree: ledger
+obligations, cycle phases, DAG dependencies, gate checks. But the
+*reasoning context* around each proof step is richer than the tree
+captures. Evidence facets provide this ancillary layer.
+
+### Two kinds of stepper output
+
+1. **Proof state** (the formal tree) — what's proved, what's open,
+   what's blocked. Lives in `data/proof-state/{problem-id}.edn`.
+
+2. **Evidence landscape** (ancillary context) — *why* each decision
+   was made, what patterns were applied, what the corpus said. Lives
+   in the evidence store, faceted and queryable.
+
+The proof tree says "L-preconditions is :open, L-bridge is blocked."
+The evidence landscape says *why*: "corpus-check returned no domain
+signal, but discipline pattern `evidence-over-assertion` fired, and
+we recorded a PSR documenting the decision to investigate rather than
+assume."
+
+### Facet mapping for proof steps
+
+| Facet | In the stepper | Example |
+|-------|---------------|---------|
+| `subject` | The proof obligation being worked on | `{:ref/type :evidence :ref/id "L-preconditions"}` |
+| `tags` | Cross-cutting context | `[:project/first-proof :step/1 :problem/P1 :discipline/framing-check]` |
+| `in-reply-to` | Causal chain within the cycle | corpus-check → reframe decision → new approach |
+| `evidence/type` | Coordination for corpus results, pattern-selection for discipline | PSR: "chose `evidence-over-assertion` because asserting mu ~ mu_0 without checking" |
+
+### Two layers of corpus signal
+
+The `:corpus-check` tool queries futon3a's ANN index during the
+observe/propose phases of a proof cycle. Calibration on First Proof
+Problem 1 (issue #11) revealed two independent signal layers:
+
+**Domain signal** — "Is Cameron-Martin valid for Phi^4_3?" Requires
+ArXiv-level content (Hairer 2014, Barashkov-Gubinelli 2020). Currently
+RED: the pattern index doesn't contain this. When the superpod wiring
+diagram embeddings are indexed, domain queries gain structural search.
+
+**Discipline signal** — "Are you checking preconditions before building
+on them?" This is a reasoning pattern already in the 852-pattern library.
+Queries like "evidence before assertion" or "verify preconditions before
+derivation" return useful patterns *today*.
+
+The discipline layer prevents false confidence even without domain data.
+It doesn't tell you the answer is NO, but it tells you to **stop and
+investigate** rather than TryHarder on an unresolved assumption. The
+domain layer, when available, tells you *what* the investigation finds.
+
+The two layers compose: discipline patterns prevent false confidence
+*now*, domain data catches specific errors *when available*. The stepper
+gets incrementally more powerful as the corpus grows, but it's already
+useful on day one.
+
+### Evidence as learning across problems
+
+When the stepper replays on a new problem, the evidence landscape from
+previous problems is searchable. "Last time we hit a framing failure,
+what discipline patterns helped?" becomes a facet query:
+
+```
+?tag=discipline/framing-check&type=pattern-selection
+```
+
+This returns PSRs from P1, P3, or any problem where a framing check
+was applied — along with the PURs recording whether it worked. The
+stepper learns from its own evidence trail.
+
+### Concrete example: First Proof P1
+
+Problem 1 asked whether the Phi^4_3 measure is equivalent to its
+smooth shift. We answered YES (wrong); the correct answer is NO
+(mutually singular). The error was a framing failure at Step 1.
+
+In the stepper with evidence facets, the session would produce:
+
+```clojure
+;; 1. Corpus-check fires during observe phase
+{:evidence/type :coordination
+ :evidence/claim-type :step
+ :evidence/subject {:ref/type :evidence :ref/id "L-preconditions"}
+ :evidence/body {:tool :corpus-check
+                 :args ["Phi^4_3 measure equivalent to Gaussian free field"]
+                 :result {:neighbors [...] :source :futon3a}
+                 :proof/operation-kind :observe}
+ :evidence/tags [:project/first-proof :problem/P1 :step/1
+                 :discipline/framing-check]}
+
+;; 2. Discipline pattern fires (even without domain signal)
+{:evidence/type :pattern-selection
+ :evidence/subject {:ref/type :evidence :ref/id "L-preconditions"}
+ :evidence/pattern-id :agent/evidence-over-assertion
+ :evidence/body {:rationale "Asserting mu ~ mu_0 without evidence;
+                             this is a precondition, not a given."}
+ :evidence/tags [:project/first-proof :problem/P1 :step/1 :psr]}
+
+;; 3. Decision: keep L-preconditions open, investigate
+{:evidence/type :coordination
+ :evidence/claim-type :step
+ :evidence/subject {:ref/type :evidence :ref/id "L-preconditions"}
+ :evidence/body {:decision :investigate-not-assume
+                 :framing-status :unresolved
+                 :blocked ["L-bridge"]}
+ :evidence/tags [:project/first-proof :problem/P1 :step/1
+                 :discipline/framing-gate]}
+```
+
+Steps 2 and 3 are ancillary evidence that doesn't live in the proof
+tree but is critical for understanding *why* the stepper chose to
+investigate rather than derive. Without evidence facets, this context
+is lost between sessions.
+
 ## Decision Log
 
 *Decisions deferred. This technote captures the design space for future
@@ -209,3 +324,9 @@ reference.*
 - [ ] Design `/project` command (or equivalent) for setting context
 - [ ] Consider Arxana viewer facet navigation (filter by project/step
   in the evidence timeline)
+- [ ] Wire `:corpus-check` evidence entries into the facet system
+  (currently recorded as step evidence in proof peripheral; needs
+  subject/tag population from cycle context)
+- [ ] Add `:discipline/framing-check` and `:discipline/framing-gate`
+  as standard tags for stepper sessions
+- [ ] Build facet query for cross-problem discipline pattern reuse
