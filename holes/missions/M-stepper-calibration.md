@@ -1,7 +1,7 @@
 # Mission: Stepper Calibration on First Proof Problems
 
 **Date:** 2026-02-18
-**Status:** IN PROGRESS — P1 complete (RED), P7 golden path written (awaiting calibration)
+**Status:** IN PROGRESS — P1 complete (RED), P7 complete (RED), P3 next
 **Depends on:** proof peripheral (operational), `:corpus-check` tool (landed)
 
 ## Motivation
@@ -26,7 +26,7 @@ pipeline — we'll know exactly what data is needed, not guess.
 | Problem | Result | Error type | Stepper target | Priority |
 |---------|--------|------------|----------------|----------|
 | **P1** | WRONG (YES→NO) | False premise (mu ~ mu_0) | Framing gate | **Done** |
-| **P7** | WRONG (YES→NO) | False premise (CW→manifold) | Framing gate | **Next** |
+| **P7** | WRONG (YES→NO) | False premise (CW→manifold) | Framing gate | **Done** |
 | **P3** | Wrong variant | Problem substitution (standard→interpolation) | Claim typing | High |
 | **P4** | Incomplete | Missing technique (hyperbolic poly Hessians) | Propose-phase search | Medium |
 | **P6** | Incomplete | Missing technique (modified barrier function) | Propose-phase search | Medium |
@@ -98,27 +98,19 @@ certification.
 - Commits: `11db0b2` (`:corpus-check` tool), `12005ba` / `9bbac22`
   (golden path + framing-first refactor), `8c21423` (calibration)
 
-## Planned work
-
 ### P7 — Lattice with 2-torsion (Class A)
 
-Same error pattern as P1: YES bias + missed deep obstruction. We
-correctly identified Fowler's criterion for finite CW complexes but
-assumed the manifold upgrade would work. The Novikov conjecture
-(assembly map injectivity for lattices in semisimple Lie groups)
-provides the definitive obstruction.
+- Golden path script: `scripts/proof-p7-stepper-golden-path.clj`
+- Calibration report: `holes/qa/p7-stepper-calibration.md`
+- Result: **RED** — current corpus has neither topology/surgery domain
+  signal (Novikov/assembly/surgery obstruction) nor enough generic
+  framing signal to distinguish CW realization from manifold realization.
+- Discipline behavior: framing gate correctly keeps `L-preconditions` open
+  and blocks bridge promotion when unresolved.
+- Minimum ArXiv seed: Lück 2002 (`math/0504564`), Bartels-Farrell-Lück 2011
+  (`1101.0469`), Davis-Lück 2024 (`2303.15765`).
 
-Steps:
-1. Write `scripts/proof-p7-stepper-golden-path.clj`
-2. Ledger: `L-claim-type` (CW complex vs manifold?), `L-preconditions`
-   (does Fowler extend to manifolds?), `L-obstruction-scan` (Novikov),
-   `L-bridge`, `L-conclusion`
-3. Corpus queries: "finite CW complex vs closed manifold upgrade",
-   "Novikov conjecture obstructs surgery realization", "lattice
-   rational acyclicity manifold existence"
-4. Record failed route (our wrong approach: treated surgery obstruction
-   as "possibly vanishing")
-5. Calibrate: GREEN/YELLOW/RED
+## Planned work
 
 ### P3 — ASEP polynomial Markov chain (Class B)
 
