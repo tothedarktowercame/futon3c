@@ -1,7 +1,28 @@
 # Mission: PSR/PUR Mesh Peripheral (futon3a + futon3b)
 
 Date: 2026-02-15  
-Status: Proposed
+Status: In progress (Codex-only live gate path landed)
+
+## Latest Validation (2026-02-15)
+
+Codex-only live validation is now runnable in one command:
+
+```bash
+./scripts/run_discipline_live_gate.sh
+```
+
+This performs:
+1. Live WS readiness + action routing to `:discipline`.
+2. Real-backend PSR->PUR->PAR cycle in `:discipline`.
+3. Explicit hop `:discipline -> :reflect` with session continuity checks.
+4. Artifact emission to `holes/qa/discipline-live-gate-*.edn`.
+5. Automatic scorecard update at `holes/missions/alleycat-scorecard.md`.
+
+Current state:
+1. Gate A (PSR/PUR round-trip): implemented and passing in live harness.
+2. Gate B (explicit transition): implemented and passing (`:discipline -> :reflect`).
+3. Gate C (transport-native interleaving): partially covered (live WS routing proven; full multi-source interleave still pending).
+4. Gate D (ALFWorld-triggered validation): pending.
 
 ## Why This Mission Exists
 

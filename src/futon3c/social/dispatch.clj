@@ -1,11 +1,12 @@
 (ns futon3c.social.dispatch
   "S-dispatch: route a classified message to an agent and emit a delivery receipt.
 
-   R1 (delivery-receipt): every call returns DispatchReceipt or SocialError.
+  R1 (delivery-receipt): every call returns DispatchReceipt or SocialError.
    R2 (single routing authority): agent lookup and invocation go through the
    unified agent registry (futon3c.agency.registry). No separate routing table.
    R4 (loud failure): never nil, errors are typed and component-scoped."
-  (:require [futon3c.social.shapes :as shapes]
+  (:require [clojure.string :as str]
+            [futon3c.social.shapes :as shapes]
             [futon3c.agency.registry :as reg]
             [futon3c.peripheral.registry :as preg]
             [futon3c.evidence.store :as estore]
@@ -32,6 +33,17 @@
   "Set of valid PeripheralId values."
   #{:explore :edit :test :deploy :reflect :proof :discipline :chat})
 
+(defn- normalize-peripheral-id
+  [x]
+  (cond
+    (keyword? x) x
+    (string? x)
+    (let [s (str/trim x)
+          s (if (str/starts-with? s ":") (subs s 1) s)]
+      (when-not (str/blank? s)
+        (keyword s)))
+    :else nil))
+
 (defn select-peripheral
   "Given agent type and message payload, choose starting peripheral.
    Returns PeripheralId (:explore, :edit, etc.).
@@ -43,7 +55,8 @@
 
    Override via {:peripheral :edit} in payload."
   [agent-type payload]
-  (let [override (when (map? payload) (:peripheral payload))]
+  (let [override (when (map? payload)
+                   (normalize-peripheral-id (:peripheral payload)))]
     (if (and override (valid-peripheral-ids override))
       override
       (get default-peripheral agent-type :explore))))
@@ -105,7 +118,7 @@
   "Dispatch an action-mode message through the peripheral system.
    Returns DispatchReceipt (with :receipt/session-id, :receipt/peripheral-id,
    :receipt/fruit) or SocialError."
-  [classified-message agent-entry peripheral-id config]
+  [classified-message _agent-entry peripheral-id config]
   (let [session-id (str "sess-" (UUID/randomUUID))
         msg-id (:msg/id classified-message)
         agent-id (:msg/from classified-message)

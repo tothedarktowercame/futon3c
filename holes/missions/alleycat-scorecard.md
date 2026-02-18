@@ -10,6 +10,7 @@ Race token: 7285397f (planted in .alleycat-drop/spoke-alpha.txt)
   - Peripheral inhabitation race (20/20)
   - Transport pivot gate (Joe + Claude, Emacs + IRC)
   - Three-way chat gate (Joe + Claude + Codex, @-mention gated)
+  - Discipline live gate (Evidence Landscape + :discipline)
   - Transport-native P-4/P-6 structural closure (479 tests, 1540 assertions)
   - IRC standup bell — on-demand multi-agent rendezvous (AWAITING LIVE DEMO)
 
@@ -526,3 +527,37 @@ and a co-present conversation takes place.
 6. Evidence trail shows bell-ring + arrivals + conversation
 
 494 tests, 1604 assertions, 0 failures (structural).
+
+<!-- discipline-live-gate:start -->
+## Discipline Live Gate: Evidence Landscape + :discipline
+
+Date: 2026-02-15
+Session: `sess-b3b521a7-e867-427e-968b-ee663f6a6af4`
+Invariant focus: **P-4 explicit transition** + **P-6 transport-backed discipline routing**
+
+### What Was Proven
+
+1. Codex and Claude both completed live WS readiness on Agency.
+2. Codex action dispatch routed through `peripheral/run-chain` with `peripheral_id=discipline`.
+3. A real-backend discipline cycle executed PSR->PUR->PAR for pattern `musn/intent-restatement`.
+4. Chain transitioned explicitly from `:discipline` to `:reflect` with stable session continuity.
+
+### Evidence
+
+- Artifact: `holes/qa/discipline-live-gate-2026-02-15T23-27-28-874513530Z.edn`
+- WS receipt route: `peripheral/run-chain` (`peripheral_id=discipline`)
+- Session continuity: receipt session `sess-b3b521a7-e867-427e-968b-ee663f6a6af4` equals chain final context session.
+- Evidence entries for session: 12
+- Pattern thread entry count: 2
+- Evidence type counts: `{:coordination 5, :pattern-outcome 1, :pattern-selection 2, :reflection 4}`
+
+### Grading
+
+- [x] Live WS readiness and discipline route receipt observed
+- [x] PSR/PUR round-trip produced typed `:pattern-selection` + `:pattern-outcome`
+- [x] PAR punctuation produced typed `:reflection`
+- [x] Explicit hop `:discipline -> :reflect` succeeded
+- [x] Session continuity preserved through hop
+
+### Status: **PASS**
+<!-- discipline-live-gate:end -->

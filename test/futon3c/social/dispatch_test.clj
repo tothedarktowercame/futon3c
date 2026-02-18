@@ -120,6 +120,14 @@
   (testing "payload {:peripheral :deploy} overrides default"
     (is (= :deploy (dispatch/select-peripheral :claude {:peripheral :deploy})))))
 
+(deftest select-peripheral-payload-string-override
+  (testing "payload {:peripheral \"discipline\"} (JSON-style) overrides default"
+    (is (= :discipline (dispatch/select-peripheral :codex {:peripheral "discipline"})))))
+
+(deftest select-peripheral-payload-colon-prefixed-string-override
+  (testing "payload {:peripheral \":reflect\"} normalizes and overrides default"
+    (is (= :reflect (dispatch/select-peripheral :codex {:peripheral ":reflect"})))))
+
 (deftest select-peripheral-invalid-override-uses-default
   (testing "payload {:peripheral :bogus} falls back to agent-type default"
     (is (= :explore (dispatch/select-peripheral :claude {:peripheral :bogus})))))
