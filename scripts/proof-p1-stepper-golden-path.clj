@@ -48,7 +48,9 @@
 
 (defn run-corpus-query! [q]
   (println "\n  [corpus-check] Query:" (pr-str q))
-  (let [result (tools/execute-tool be :corpus-check [q {:top-k 5}])]
+  (let [result (tools/execute-tool be :corpus-check
+                 [q {:top-k 5
+                     :sources [:futon3a :stackexchange-local]}])]
     (if (:ok result)
       (let [neighbors (get-in result [:result :neighbors])]
         (if (seq neighbors)
