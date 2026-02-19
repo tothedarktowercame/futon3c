@@ -214,6 +214,9 @@
    Expected frame types:
      {\"type\": \"ready\", \"agent_id\": \"...\", \"session_id\": \"...\"}
      {\"type\": \"message\", \"msg_id\": \"...\", \"payload\": ..., \"to\": ...}
+     {\"type\": \"peripheral_start\", \"peripheral_id\": \"explore\"}
+     {\"type\": \"tool_action\", \"tool\": \"read\", \"args\": [...]}
+     {\"type\": \"peripheral_stop\", \"reason\": \"done\"}
 
    Returns:
      {:ws/type :ready :agent-id \"...\" :session-id \"...\"}
@@ -273,6 +276,28 @@
               {:ws/type :irc-response
                :irc/channel channel
                :irc/text text}))
+
+          ;; --- Peripheral session frames (Seam 4) ---
+          (= "peripheral_start" (str frame-type))
+          (let [pid-raw (or (:peripheral_id parsed) (:peripheral-id parsed))]
+            {:ws/type :peripheral-start
+             :peripheral-id (when (string? pid-raw) (keyword pid-raw))})
+
+          (= "tool_action" (str frame-type))
+          (let [tool-raw (:tool parsed)
+                args-raw (:args parsed)]
+            (cond
+              (nil? tool-raw)
+              (transport-error :invalid-frame "tool_action frame missing 'tool'")
+
+              :else
+              {:ws/type :tool-action
+               :tool (if (keyword? tool-raw) tool-raw (keyword (str tool-raw)))
+               :args (if (sequential? args-raw) (vec args-raw) [])}))
+
+          (= "peripheral_stop" (str frame-type))
+          {:ws/type :peripheral-stop
+           :reason (or (:reason parsed) "client-requested")}
 
           :else
           (transport-error :invalid-frame
@@ -398,3 +423,32 @@
                           "from" from
                           "text" text
                           "transport" "irc"}))
+
+;; =============================================================================
+;; Peripheral session frames (Seam 4: WS ↔ peripheral lifecycle)
+;; =============================================================================
+
+(defn render-peripheral-started
+  "Render a peripheral_started ack frame."
+  [peripheral-id session-id]
+  (json/generate-string {"type" "peripheral_started"
+                          "peripheral_id" (name peripheral-id)
+                          "session_id" session-id}))
+
+(defn render-tool-result
+  "Render a tool_result frame from a peripheral step."
+  [tool ok? result]
+  (json/generate-string
+   (cond-> {"type" "tool_result"
+            "tool" (name tool)
+            "ok" ok?}
+     (some? result) (assoc "result" result))))
+
+(defn render-peripheral-stopped
+  "Render a peripheral_stopped frame with fruit."
+  [peripheral-id fruit reason]
+  (json/generate-string
+   (cond-> {"type" "peripheral_stopped"
+            "peripheral_id" (name peripheral-id)
+            "reason" reason}
+     (some? fruit) (assoc "fruit" fruit))))

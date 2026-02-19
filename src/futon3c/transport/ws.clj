@@ -24,6 +24,8 @@
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
+            [futon3c.peripheral.registry :as preg]
+            [futon3c.peripheral.runner :as runner]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -44,6 +46,24 @@
    :error/code code
    :error/message message
    :error/at (now-str)})
+
+(defn- resolve-peripheral-id
+  "Resolve which peripheral to start for a connection.
+   Uses explicit peripheral-id from frame, or falls back to agent type default."
+  [explicit-id agent-id registry]
+  (or explicit-id
+      (let [agent-entry (get-in registry [:agents agent-id])]
+        (dispatch/select-peripheral (:type agent-entry) nil))))
+
+(defn- stop-peripheral!
+  "Stop an active peripheral session. Returns the stop result.
+   Mutates !connections to clear peripheral state."
+  [!connections ch conn reason]
+  (when-let [peripheral (:peripheral conn)]
+    (let [result (runner/stop peripheral @(:peripheral-state conn) reason)]
+      (swap! !connections update ch dissoc
+             :peripheral :peripheral-state :peripheral-id)
+      result)))
 
 ;; =============================================================================
 ;; Connection state
@@ -188,6 +208,82 @@
                        (let [result (dispatch/dispatch classified registry)]
                          (send-fn ch (proto/render-ws-frame result))))))
 
+                 ;; --- Peripheral session: start (Seam 4) ---
+                 :peripheral-start
+                 (if-not (:connected? conn)
+                   (send-fn ch (proto/render-ws-frame
+                                (transport-error :not-ready
+                                                 "Readiness handshake required before starting peripheral")))
+                   (if (:peripheral conn)
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :peripheral-already-active
+                                                   "A peripheral session is already active on this connection")))
+                     (let [agent-id (:agent-id conn)
+                           pid (resolve-peripheral-id (:peripheral-id parsed) agent-id registry)
+                           periph-config (:peripheral-config registry)]
+                       (if-not periph-config
+                         (send-fn ch (proto/render-ws-frame
+                                      (transport-error :no-peripheral-config
+                                                       "Registry has no peripheral config")))
+                         (let [session-id (or (:session-id conn)
+                                             (str "sess-" (UUID/randomUUID)))
+                               {:keys [backend evidence-store]} periph-config
+                               peripheral (preg/make-peripheral pid backend)
+                               context (cond-> {:session-id session-id
+                                                :agent-id agent-id}
+                                         evidence-store (assoc :evidence-store evidence-store))
+                               start-result (runner/start peripheral context)]
+                           (if (error? start-result)
+                             (send-fn ch (proto/render-ws-frame start-result))
+                             (do
+                               (swap! !connections assoc ch
+                                      (assoc conn
+                                             :peripheral peripheral
+                                             :peripheral-state (atom (:state start-result))
+                                             :peripheral-id pid))
+                               (send-fn ch (proto/render-peripheral-started pid session-id)))))))))
+
+                 ;; --- Peripheral session: tool action (Seam 4) ---
+                 :tool-action
+                 (if-not (:connected? conn)
+                   (send-fn ch (proto/render-ws-frame
+                                (transport-error :not-ready
+                                                 "Readiness handshake required")))
+                   (if-not (:peripheral conn)
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :no-active-peripheral
+                                                   "No peripheral session active — send peripheral_start first")))
+                     (let [peripheral (:peripheral conn)
+                           state-atom (:peripheral-state conn)
+                           action {:tool (:tool parsed) :args (:args parsed)}
+                           step-result (runner/step peripheral @state-atom action)]
+                       (if (error? step-result)
+                         (send-fn ch (proto/render-ws-frame step-result))
+                         (do
+                           (reset! state-atom (:state step-result))
+                           (send-fn ch (proto/render-tool-result
+                                        (:tool parsed)
+                                        true
+                                        (:result step-result))))))))
+
+                 ;; --- Peripheral session: stop (Seam 4) ---
+                 :peripheral-stop
+                 (if-not (:connected? conn)
+                   (send-fn ch (proto/render-ws-frame
+                                (transport-error :not-ready
+                                                 "Readiness handshake required")))
+                   (if-not (:peripheral conn)
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :no-active-peripheral
+                                                   "No peripheral session active to stop")))
+                     (let [pid (:peripheral-id conn)
+                           reason (:reason parsed)
+                           stop-result (stop-peripheral! !connections ch conn reason)]
+                       (if (error? stop-result)
+                         (send-fn ch (proto/render-ws-frame stop-result))
+                         (send-fn ch (proto/render-peripheral-stopped
+                                      pid (:fruit stop-result) reason))))))
+
                  ;; --- Unknown frame type ---
                  (send-fn ch (proto/render-ws-frame
                               (transport-error :invalid-frame
@@ -198,9 +294,13 @@
      ;; L2: only run disconnect cleanup when transitioning from :connected
      ;; to :disconnected. Ignore close events while still :connecting
      ;; (spurious close during TLS handshake).
+     ;; Seam 4: if a peripheral session is active, stop it gracefully.
      :on-close
      (fn on-close [ch _status]
        (let [conn (get @!connections ch)]
+         ;; Seam 4: stop active peripheral before disconnect
+         (when (and conn (:peripheral conn))
+           (stop-peripheral! !connections ch conn "connection-closed"))
          ;; L2: only clean up if truly connected (handshake completed)
          (when (and conn (:connected? conn))
            (when on-disconnect-hook
