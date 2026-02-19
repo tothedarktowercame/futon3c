@@ -343,3 +343,71 @@
           ((:on-close ws) ch :normal)
           (is (nil? (get @(:connections ws) ch))))
         (finally (cleanup-temp-dir! dir))))))
+
+;; =============================================================================
+;; 6. Regression tests for Codex review findings
+;; =============================================================================
+
+(deftest ws-peripheral-start-unknown-id-returns-error
+  (testing "peripheral_start with unknown peripheral ID → typed error, not exception (Codex #2)"
+    (let [{:keys [dir]} (seed-temp-dir!)
+          evidence-store (atom {:entries {} :order []})]
+      (try
+        (register-mock-agent! "claude-1" :claude)
+        (let [ws (make-ws-with-peripherals dir evidence-store)
+              ch (connect-agent! ws :ch-unknown "claude-1")]
+          ((:on-receive ws) ch (peripheral-start-frame "nonexistent"))
+          (let [frame (last-sent (:sent ws))]
+            (is (= "error" (:type frame)))
+            (is (= "unknown-peripheral" (:code frame)))))
+        (finally (cleanup-temp-dir! dir))))))
+
+(deftest ws-concurrent-tool-actions-no-lost-updates
+  (testing "concurrent tool_action frames don't lose state updates (Codex #3)"
+    (let [{:keys [dir hello-path]} (seed-temp-dir!)
+          evidence-store (atom {:entries {} :order []})]
+      (try
+        (register-mock-agent! "claude-1" :claude)
+        (let [ws (make-ws-with-peripherals dir evidence-store)
+              ch (connect-agent! ws :ch-race "claude-1")]
+          ((:on-receive ws) ch (peripheral-start-frame))
+          (reset! (:sent ws) [])
+          ;; Fire two tool actions from parallel threads
+          (let [f1 (future ((:on-receive ws) ch (tool-action-frame "read" [hello-path])))
+                f2 (future ((:on-receive ws) ch (tool-action-frame "glob" ["*.txt"])))]
+            @f1 @f2)
+          ;; Both should have succeeded (no error frames)
+          (let [frames (mapv #(json/parse-string (:data %) true) @(:sent ws))]
+            (is (= 2 (count frames)))
+            (is (every? #(= "tool_result" (:type %)) frames)
+                "Both concurrent actions should produce tool_result, not error"))
+          ;; Evidence should have 2 step entries (not 1)
+          (let [entries (vals (:entries @evidence-store))
+                steps (filter #(= :step (:evidence/claim-type %)) entries)]
+            (is (>= (count steps) 2)
+                "Both actions should be recorded — no lost updates")))
+        (finally (cleanup-temp-dir! dir))))))
+
+(deftest ws-stop-idempotent-under-close-race
+  (testing "stop-peripheral! is idempotent — double stop produces only one conclusion (Codex #4)"
+    (let [{:keys [dir hello-path]} (seed-temp-dir!)
+          evidence-store (atom {:entries {} :order []})]
+      (try
+        (register-mock-agent! "claude-1" :claude)
+        (let [ws (make-ws-with-peripherals dir evidence-store)
+              ch :ch-idempotent]
+          ;; Connect, start, do an action
+          ((:on-open ws) ch (mock-request))
+          ((:on-receive ws) ch (ready-frame "claude-1"))
+          ((:on-receive ws) ch (peripheral-start-frame))
+          ((:on-receive ws) ch (tool-action-frame "read" [hello-path]))
+          ;; Race: explicit stop and on-close concurrently
+          (let [f1 (future ((:on-receive ws) ch (peripheral-stop-frame "explicit")))
+                f2 (future ((:on-close ws) ch :normal))]
+            @f1 @f2)
+          ;; Only one conclusion entry in evidence
+          (let [entries (vals (:entries @evidence-store))
+                conclusions (filter #(= :conclusion (:evidence/claim-type %)) entries)]
+            (is (= 1 (count conclusions))
+                (str "Expected exactly 1 conclusion, got " (count conclusions)))))
+        (finally (cleanup-temp-dir! dir))))))

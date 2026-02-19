@@ -348,7 +348,9 @@
                                    :path/file (:file persisted)
                                    :gate-events (mapv :gate/id events)}
                    :evidence/tags [:proof-path :gate-traversal]}]
-        (estore/append* evidence-store entry)))
+        (let [append-result (estore/append* evidence-store entry)]
+          (when (and (map? append-result) (contains? append-result :error/code))
+            (println "[WARN] proof-path evidence append failed:" (:error/message append-result))))))
     result))
 
 (defn- tool-psr-search

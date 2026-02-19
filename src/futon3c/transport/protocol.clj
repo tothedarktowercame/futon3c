@@ -37,6 +37,13 @@
            :error/at (now-str)}
     (seq context) (assoc :error/context context)))
 
+(defn- str->keyword
+  "Coerce a string to a keyword, stripping any leading colon.
+   Returns nil for nil/blank input."
+  [s]
+  (when (and (string? s) (not (str/blank? s)))
+    (keyword (cond-> s (str/starts-with? s ":") (subs 1)))))
+
 (defn- parse-json
   "Parse a JSON string, returning parsed map or SocialError."
   [json-str]
@@ -281,7 +288,7 @@
           (= "peripheral_start" (str frame-type))
           (let [pid-raw (or (:peripheral_id parsed) (:peripheral-id parsed))]
             {:ws/type :peripheral-start
-             :peripheral-id (when (string? pid-raw) (keyword pid-raw))})
+             :peripheral-id (when (string? pid-raw) (str->keyword pid-raw))})
 
           (= "tool_action" (str frame-type))
           (let [tool-raw (:tool parsed)
@@ -290,10 +297,14 @@
               (nil? tool-raw)
               (transport-error :invalid-frame "tool_action frame missing 'tool'")
 
+              (and (some? args-raw) (not (sequential? args-raw)))
+              (transport-error :invalid-frame
+                               "tool_action 'args' must be an array")
+
               :else
               {:ws/type :tool-action
-               :tool (if (keyword? tool-raw) tool-raw (keyword (str tool-raw)))
-               :args (if (sequential? args-raw) (vec args-raw) [])}))
+               :tool (if (keyword? tool-raw) tool-raw (str->keyword (str tool-raw)))
+               :args (vec (or args-raw []))}))
 
           (= "peripheral_stop" (str frame-type))
           {:ws/type :peripheral-stop

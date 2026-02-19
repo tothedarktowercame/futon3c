@@ -544,7 +544,8 @@
                      :SessionRecord :PatternLibrary :AgentRegistryShape
                      :ClaimType :ArtifactRefType :ArtifactRef
                      :EvidenceType :EvidenceEntry :EvidenceQuery
-                     :SocialError :TypedAgentId}]
+                     :SocialError :TypedAgentId
+                     :WsPeripheralStart :WsToolAction :WsPeripheralStop}]
       (is (= expected (set (keys shapes/shapes)))))))
 
 (deftest all-shapes-are-valid-malli-schemas

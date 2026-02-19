@@ -278,7 +278,7 @@
 
 (def ArtifactRefType
   "Universal reference types for any artifact that can accumulate evidence."
-  [:enum :pattern :mission :component :gate :session :agent :thread :evidence])
+  [:enum :pattern :mission :component :gate :session :agent :thread :evidence :proof-path])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
@@ -342,6 +342,29 @@
    [:error/context {:optional true} [:map-of :keyword :any]]])
 
 ;; =============================================================================
+;; WebSocket peripheral frames (Seam 4) — parsed representations
+;; =============================================================================
+
+(def WsPeripheralStart
+  "Parsed peripheral_start frame."
+  [:map
+   [:ws/type [:= :peripheral-start]]
+   [:peripheral-id {:optional true} [:maybe PeripheralId]]])
+
+(def WsToolAction
+  "Parsed tool_action frame."
+  [:map
+   [:ws/type [:= :tool-action]]
+   [:tool :keyword]
+   [:args [:vector :any]]])
+
+(def WsPeripheralStop
+  "Parsed peripheral_stop frame."
+  [:map
+   [:ws/type [:= :peripheral-stop]]
+   [:reason :string]])
+
+;; =============================================================================
 ;; Validation helpers
 ;; =============================================================================
 
@@ -383,4 +406,7 @@
    :EvidenceEntry       EvidenceEntry
    :EvidenceQuery       EvidenceQuery
    :SocialError         SocialError
-   :TypedAgentId        TypedAgentId})
+   :TypedAgentId        TypedAgentId
+   :WsPeripheralStart   WsPeripheralStart
+   :WsToolAction        WsToolAction
+   :WsPeripheralStop    WsPeripheralStop})

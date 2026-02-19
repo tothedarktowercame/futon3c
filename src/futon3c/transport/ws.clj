@@ -57,13 +57,22 @@
 
 (defn- stop-peripheral!
   "Stop an active peripheral session. Returns the stop result.
-   Mutates !connections to clear peripheral state."
-  [!connections ch conn reason]
-  (when-let [peripheral (:peripheral conn)]
-    (let [result (runner/stop peripheral @(:peripheral-state conn) reason)]
-      (swap! !connections update ch dissoc
-             :peripheral :peripheral-state :peripheral-id)
-      result)))
+   Mutates !connections to clear peripheral state.
+   Idempotent: atomically claims the peripheral via swap!, so only
+   one caller executes runner/stop even under close/stop races (Codex #4)."
+  [!connections ch _conn reason]
+  (let [claimed (atom nil)]
+    ;; Atomically grab and clear the peripheral — only winner gets non-nil
+    (swap! !connections
+           (fn [conns]
+             (let [current (get conns ch)]
+               (if (:peripheral current)
+                 (do (reset! claimed {:peripheral (:peripheral current)
+                                      :state-atom (:peripheral-state current)})
+                     (update conns ch dissoc :peripheral :peripheral-state :peripheral-id))
+                 conns))))
+    (when-let [{:keys [peripheral state-atom]} @claimed]
+      (runner/stop peripheral @state-atom reason))))
 
 ;; =============================================================================
 ;; Connection state
@@ -221,10 +230,20 @@
                      (let [agent-id (:agent-id conn)
                            pid (resolve-peripheral-id (:peripheral-id parsed) agent-id registry)
                            periph-config (:peripheral-config registry)]
-                       (if-not periph-config
+                       (cond
+                         (nil? periph-config)
                          (send-fn ch (proto/render-ws-frame
                                       (transport-error :no-peripheral-config
                                                        "Registry has no peripheral config")))
+                         (nil? pid)
+                         (send-fn ch (proto/render-ws-frame
+                                      (transport-error :unknown-peripheral
+                                                       "Could not resolve peripheral for agent")))
+                         (not (contains? preg/peripheral-ids pid))
+                         (send-fn ch (proto/render-ws-frame
+                                      (transport-error :unknown-peripheral
+                                                       (str "Unknown peripheral: " (name pid)))))
+                         :else
                          (let [session-id (or (:session-id conn)
                                              (str "sess-" (UUID/randomUUID)))
                                {:keys [backend evidence-store]} periph-config
@@ -256,15 +275,19 @@
                      (let [peripheral (:peripheral conn)
                            state-atom (:peripheral-state conn)
                            action {:tool (:tool parsed) :args (:args parsed)}
-                           step-result (runner/step peripheral @state-atom action)]
+                           ;; Serialize step+reset to prevent lost updates
+                           ;; under concurrent tool_action frames (Codex #3)
+                           step-result (locking state-atom
+                                         (let [result (runner/step peripheral @state-atom action)]
+                                           (when-not (error? result)
+                                             (reset! state-atom (:state result)))
+                                           result))]
                        (if (error? step-result)
                          (send-fn ch (proto/render-ws-frame step-result))
-                         (do
-                           (reset! state-atom (:state step-result))
-                           (send-fn ch (proto/render-tool-result
-                                        (:tool parsed)
-                                        true
-                                        (:result step-result))))))))
+                         (send-fn ch (proto/render-tool-result
+                                      (:tool parsed)
+                                      true
+                                      (:result step-result)))))))
 
                  ;; --- Peripheral session: stop (Seam 4) ---
                  :peripheral-stop

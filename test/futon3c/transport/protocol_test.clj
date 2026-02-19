@@ -351,3 +351,88 @@
       (doseq [err errors]
         (is (shapes/valid? shapes/SocialError err)
             (str "Expected valid SocialError: " (pr-str err)))))))
+
+;; =============================================================================
+;; Peripheral frame parsing (Seam 4) — per Codex review finding #6
+;; =============================================================================
+
+(deftest parse-ws-peripheral-start-basic
+  (testing "peripheral_start with explicit peripheral_id"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "peripheral_start"
+                                         "peripheral_id" "explore"}))]
+      (is (= :peripheral-start (:ws/type result)))
+      (is (= :explore (:peripheral-id result)))
+      (is (shapes/valid? shapes/WsPeripheralStart result)))))
+
+(deftest parse-ws-peripheral-start-no-id
+  (testing "peripheral_start without peripheral_id (agent default)"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "peripheral_start"}))]
+      (is (= :peripheral-start (:ws/type result)))
+      (is (nil? (:peripheral-id result)))
+      (is (shapes/valid? shapes/WsPeripheralStart result)))))
+
+(deftest parse-ws-peripheral-start-colon-prefixed
+  (testing "peripheral_start with colon-prefixed ID strips colon"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "peripheral_start"
+                                         "peripheral_id" ":explore"}))]
+      (is (= :explore (:peripheral-id result))))))
+
+(deftest parse-ws-tool-action-basic
+  (testing "tool_action with tool and args"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "tool_action"
+                                         "tool" "read"
+                                         "args" ["file.txt"]}))]
+      (is (= :tool-action (:ws/type result)))
+      (is (= :read (:tool result)))
+      (is (= ["file.txt"] (:args result)))
+      (is (shapes/valid? shapes/WsToolAction result)))))
+
+(deftest parse-ws-tool-action-colon-prefixed-tool
+  (testing "tool_action with colon-prefixed tool strips colon"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "tool_action"
+                                         "tool" ":read"
+                                         "args" []}))]
+      (is (= :read (:tool result))))))
+
+(deftest parse-ws-tool-action-missing-tool
+  (testing "tool_action without tool returns error"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "tool_action"
+                                         "args" ["x"]}))]
+      (is (= :invalid-frame (:error/code result))))))
+
+(deftest parse-ws-tool-action-non-array-args
+  (testing "tool_action with non-array args returns error"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "tool_action"
+                                         "tool" "read"
+                                         "args" "not-an-array"}))]
+      (is (= :invalid-frame (:error/code result))))))
+
+(deftest parse-ws-tool-action-no-args
+  (testing "tool_action without args defaults to empty vec"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "tool_action"
+                                         "tool" "glob"}))]
+      (is (= :tool-action (:ws/type result)))
+      (is (= [] (:args result))))))
+
+(deftest parse-ws-peripheral-stop-basic
+  (testing "peripheral_stop with reason"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "peripheral_stop"
+                                         "reason" "user-requested"}))]
+      (is (= :peripheral-stop (:ws/type result)))
+      (is (= "user-requested" (:reason result)))
+      (is (shapes/valid? shapes/WsPeripheralStop result)))))
+
+(deftest parse-ws-peripheral-stop-default-reason
+  (testing "peripheral_stop without reason defaults to client-requested"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "peripheral_stop"}))]
+      (is (= "client-requested" (:reason result))))))
