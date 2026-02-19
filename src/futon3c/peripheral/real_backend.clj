@@ -324,13 +324,32 @@
       :fail)))
 
 (defn- persist-proof-path!
-  [events evidence]
+  "Persist a proof-path to EDN and, when an evidence-store is available,
+   also append a synthetic evidence entry so the proof-path is queryable
+   from the evidence landscape (Seam 3: futon3b proof-paths → futon3c evidence)."
+  [events evidence evidence-store]
   (let [proof-path {:path/id (gen-id "path")
                     :events (vec events)}
         persisted (relations/append-proof-path! {:proof-path proof-path
-                                                 :evidence evidence})]
-    {:proof-path/id (:path/id proof-path)
-     :proof-path/file (:file persisted)}))
+                                                 :evidence evidence})
+        result {:proof-path/id (:path/id proof-path)
+                :proof-path/file (:file persisted)}]
+    ;; Bridge: append synthetic evidence entry to the evidence landscape
+    (when evidence-store
+      (let [entry {:evidence/id (str "e-pp-" (:path/id proof-path))
+                   :evidence/subject {:ref/type :proof-path
+                                      :ref/id (:path/id proof-path)}
+                   :evidence/type :coordination
+                   :evidence/claim-type :observation
+                   :evidence/author "gate-pipeline"
+                   :evidence/at (str (Instant/now))
+                   :evidence/body {:event :proof-path-persisted
+                                   :path/id (:path/id proof-path)
+                                   :path/file (:file persisted)
+                                   :gate-events (mapv :gate/id events)}
+                   :evidence/tags [:proof-path :gate-traversal]}]
+        (estore/append* evidence-store entry)))
+    result))
 
 (defn- tool-psr-search
   [cwd config args]
@@ -408,7 +427,7 @@
           {:ok false :error (str "psr-select failed: " (.getMessage e))})))))
 
 (defn- tool-pur-update
-  [discipline-state args]
+  [discipline-state evidence-store args]
   (let [pattern-id (normalize-pattern-id (first args))
         second-arg (second args)
         third-arg (nth args 2 nil)
@@ -444,7 +463,8 @@
                        true (conj {:gate/id :g1 :gate/record pur :gate/at (now-str)}))
               persisted (persist-proof-path! events {:pattern-id pattern-id
                                                      :psr psr
-                                                     :pur pur})]
+                                                     :pur pur}
+                                                   evidence-store)]
           (swap! discipline-state update :pur/history
                  (fnil conj []) {:pattern-id pattern-id :pur pur :proof persisted})
           {:ok true
@@ -456,7 +476,7 @@
           {:ok false :error (str "pur-update failed: " (.getMessage e))})))))
 
 (defn- tool-pur-mark-pivot
-  [discipline-state args]
+  [discipline-state evidence-store args]
   (let [pattern-id (normalize-pattern-id (first args))
         second-arg (second args)
         opts (if (map? second-arg) second-arg {})
@@ -474,7 +494,8 @@
       (gate-shapes/validate! gate-shapes/PSR gap-psr)
       (let [persisted (persist-proof-path!
                         [{:gate/id :g3 :gate/record gap-psr :gate/at (now-str)}]
-                        {:pattern-id pattern-id :gap-psr gap-psr})]
+                        {:pattern-id pattern-id :gap-psr gap-psr}
+                        evidence-store)]
         (swap! discipline-state update :pivot/history
                (fnil conj []) {:pattern-id pattern-id :psr gap-psr :proof persisted})
         {:ok true
@@ -486,7 +507,7 @@
         {:ok false :error (str "pur-mark-pivot failed: " (.getMessage e))}))))
 
 (defn- tool-par-punctuate
-  [discipline-state args]
+  [discipline-state evidence-store args]
   (let [first-arg (first args)
         opts (cond
                (map? first-arg) first-arg
@@ -505,7 +526,8 @@
       (gate-shapes/validate! gate-shapes/PAR par)
       (let [persisted (persist-proof-path!
                         [{:gate/id :g0 :gate/record par :gate/at (now-str)}]
-                        {:par par})]
+                        {:par par}
+                        evidence-store)]
         (swap! discipline-state update :par/history (fnil conj []) {:par par :proof persisted})
         {:ok true
          :result {:par par
@@ -547,9 +569,9 @@
         ;; Discipline-domain tools
         :psr-search     (tool-psr-search cwd config args)
         :psr-select     (tool-psr-select discipline-state args)
-        :pur-update     (tool-pur-update discipline-state args)
-        :pur-mark-pivot (tool-pur-mark-pivot discipline-state args)
-        :par-punctuate  (tool-par-punctuate discipline-state args)
+        :pur-update     (tool-pur-update discipline-state evidence-store args)
+        :pur-mark-pivot (tool-pur-mark-pivot discipline-state evidence-store args)
+        :par-punctuate  (tool-par-punctuate discipline-state evidence-store args)
 
         ;; Unknown
         {:ok false :error (str "Unknown tool: " tool-id)}))))

@@ -184,10 +184,12 @@
     (emit-dispatch-evidence evidence-store session-id msg-id peripheral-id agent-id)
     ;; Build context and run chain
     (let [context (cond-> {:session-id session-id}
-                    evidence-store (assoc :evidence-store evidence-store))
+                    evidence-store (assoc :evidence-store evidence-store)
+                    (map? payload) (merge (select-keys payload [:mission-id :problem-id])))
           steps [{:peripheral-id peripheral-id
                   :actions actions
-                  :stop-reason "dispatch-initiated"
+                  :stop-reason (or (when (map? payload) (:stop-reason payload))
+                                   "dispatch-initiated")
                   :exit-condition :session-close}]
           result (try
                    (preg/run-chain {:backend backend
