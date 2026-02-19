@@ -406,6 +406,19 @@
                                          "args" ["x"]}))]
       (is (= :invalid-frame (:error/code result))))))
 
+(deftest parse-ws-tool-action-blank-tool
+  (testing "tool_action with blank/invalid tool returns error"
+    (let [blank-result (proto/parse-ws-message
+                        (json/generate-string {"type" "tool_action"
+                                               "tool" ""
+                                               "args" []}))
+          colon-result (proto/parse-ws-message
+                        (json/generate-string {"type" "tool_action"
+                                               "tool" ":"
+                                               "args" []}))]
+      (is (= :invalid-frame (:error/code blank-result)))
+      (is (= :invalid-frame (:error/code colon-result))))))
+
 (deftest parse-ws-tool-action-non-array-args
   (testing "tool_action with non-array args returns error"
     (let [result (proto/parse-ws-message

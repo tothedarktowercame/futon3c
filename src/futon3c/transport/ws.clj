@@ -58,21 +58,20 @@
 (defn- stop-peripheral!
   "Stop an active peripheral session. Returns the stop result.
    Mutates !connections to clear peripheral state.
-   Idempotent: atomically claims the peripheral via swap!, so only
+   Idempotent: atomically claims the peripheral via compare-and-set!, so only
    one caller executes runner/stop even under close/stop races (Codex #4)."
   [!connections ch _conn reason]
-  (let [claimed (atom nil)]
-    ;; Atomically grab and clear the peripheral — only winner gets non-nil
-    (swap! !connections
-           (fn [conns]
-             (let [current (get conns ch)]
-               (if (:peripheral current)
-                 (do (reset! claimed {:peripheral (:peripheral current)
-                                      :state-atom (:peripheral-state current)})
-                     (update conns ch dissoc :peripheral :peripheral-state :peripheral-id))
-                 conns))))
-    (when-let [{:keys [peripheral state-atom]} @claimed]
-      (runner/stop peripheral @state-atom reason))))
+  (loop []
+    (let [before @!connections
+          current (get before ch)]
+      (if-not (:peripheral current)
+        nil
+        (let [claimed {:peripheral (:peripheral current)
+                       :state-atom (:peripheral-state current)}
+              after (update before ch dissoc :peripheral :peripheral-state :peripheral-id)]
+          (if (compare-and-set! !connections before after)
+            (runner/stop (:peripheral claimed) @(:state-atom claimed) reason)
+            (recur)))))))
 
 ;; =============================================================================
 ;; Connection state

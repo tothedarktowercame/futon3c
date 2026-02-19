@@ -51,7 +51,8 @@ sessions. Its key components:
 
 **Social pipeline.** Five stages (S-presence → S-authenticate → S-mode →
 S-dispatch → S-persist) classify and route messages. Malli shape validation
-at every boundary.
+is enforced across the core pipeline boundaries, with additional transport
+edge-case hardening still in progress.
 
 **Peripherals.** Constrained capability envelopes implementing the
 PeripheralRunner protocol (start → step* → stop). 11 peripheral types,
@@ -117,7 +118,8 @@ UI rendering — the primary consumer is a client that needs to display
 progress. Futon peripherals produce evidence entries that are themselves
 queryable data. The evidence landscape is not a log to be rendered; it is
 a store to be queried, threaded, and reasoned about. A proof-path from
-the gate pipeline appears as evidence. A portfolio review from mission
+the gate pipeline is intended to appear as evidence via a bridge adapter.
+A portfolio review from mission
 control appears as evidence. The output of work *is* the input for
 future work.
 
@@ -150,7 +152,7 @@ capability envelope changes.
 interaction between a user and an agent. Futon3c's evidence landscape
 bridges three timescales: social (real-time agent coordination), task
 (gate pipeline validation), and glacial (pattern library evolution). A
-proof-path from a gate traversal appears as evidence alongside a tool
+proof-path from a gate traversal is intended to appear as evidence alongside a tool
 invocation from a peripheral step. The evidence store doesn't distinguish
 these — it's all entries with subjects, tags, and reply chains.
 
@@ -204,6 +206,30 @@ evidence as a first-class output. Neither is complete without the other's
 strengths — and the fact that both arrived at typed event streams,
 session-scoped tool execution, and transport-decoupled protocols suggests
 these are load-bearing architectural choices for agentic systems.
+
+## Hardening Status (Updated 2026-02-19)
+
+The seam hardening review items are now mostly resolved in code and tests:
+
+1. **Proof-path evidence bridge:** resolved.
+   `:proof-path` is now a valid `ArtifactRefType`, and bridge append failures
+   are surfaced via warning logs.
+2. **WS peripheral start validation:** resolved.
+   Unknown/invalid peripheral IDs now return typed transport errors instead
+   of throwing.
+3. **WS frame parsing edge cases:** resolved.
+   Colon-prefixed IDs/tools are normalized, non-array `args` are rejected,
+   and blank/invalid `tool` values are rejected at parse time.
+4. **WS lifecycle concurrency:** resolved.
+   `tool_action` state updates are serialized, and stop logic uses an atomic
+   claim-and-clear CAS loop to make stop idempotent under close/stop races.
+5. **Shape/test completeness for Seam 4:** resolved.
+   Dedicated Malli shapes (`WsPeripheralStart`, `WsToolAction`,
+   `WsPeripheralStop`) and parser/lifecycle regression tests were added.
+
+**Remaining watchpoint (design, not a known defect):**
+dispatch context extraction still intentionally allowlists payload fields
+(`:mission-id`, `:problem-id`) for `run-chain` context injection.
 
 ## Sources
 

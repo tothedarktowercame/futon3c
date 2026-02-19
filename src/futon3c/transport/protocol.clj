@@ -41,8 +41,11 @@
   "Coerce a string to a keyword, stripping any leading colon.
    Returns nil for nil/blank input."
   [s]
-  (when (and (string? s) (not (str/blank? s)))
-    (keyword (cond-> s (str/starts-with? s ":") (subs 1)))))
+  (when (string? s)
+    (let [s (str/trim s)
+          s (cond-> s (str/starts-with? s ":") (subs 1))]
+      (when-not (str/blank? s)
+        (keyword s)))))
 
 (defn- parse-json
   "Parse a JSON string, returning parsed map or SocialError."
@@ -292,10 +295,15 @@
 
           (= "tool_action" (str frame-type))
           (let [tool-raw (:tool parsed)
-                args-raw (:args parsed)]
+                args-raw (:args parsed)
+                tool-kw (if (keyword? tool-raw) tool-raw (str->keyword (str tool-raw)))]
             (cond
               (nil? tool-raw)
               (transport-error :invalid-frame "tool_action frame missing 'tool'")
+
+              (nil? tool-kw)
+              (transport-error :invalid-frame
+                               "tool_action frame has invalid 'tool'")
 
               (and (some? args-raw) (not (sequential? args-raw)))
               (transport-error :invalid-frame
@@ -303,7 +311,7 @@
 
               :else
               {:ws/type :tool-action
-               :tool (if (keyword? tool-raw) tool-raw (str->keyword (str tool-raw)))
+               :tool tool-kw
                :args (vec (or args-raw []))}))
 
           (= "peripheral_stop" (str frame-type))
