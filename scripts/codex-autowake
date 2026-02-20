@@ -24,11 +24,11 @@ COOLDOWN="${AUTOWAKE_COOLDOWN:-60}"
 LABEL="${AUTOWAKE_LABEL:-codex}"
 evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
 
-# Codex command: exec subcommand for non-interactive, --full-auto for autonomous
+# Codex command: exec for non-interactive, no approval prompts, full sandbox access
 if [[ -n "${CODEX_CMD:-}" ]]; then
   CODEX=($CODEX_CMD)
 else
-  CODEX=(codex exec --full-auto)
+  CODEX=(codex exec -a never --sandbox danger-full-access)
 fi
 
 # Determine repo from git remote
