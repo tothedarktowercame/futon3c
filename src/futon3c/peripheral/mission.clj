@@ -26,7 +26,10 @@
   (:require [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.mission-backend :as mb]
             [futon3c.peripheral.mission-shapes :as ms]
-            [futon3c.peripheral.tools :as tools]))
+            [futon3c.peripheral.real-backend]
+            [futon3c.peripheral.tools :as tools])
+  (:import [futon3c.peripheral.mission_backend MissionBackend]
+           [futon3c.peripheral.real_backend RealBackend]))
 
 ;; =============================================================================
 ;; Setup tools — available when no cycle is active
@@ -160,13 +163,23 @@
 ;; Factory
 ;; =============================================================================
 
+(defn- ensure-mission-backend
+  "Wrap a RealBackend in a MissionBackend so mission-domain tools are available.
+   MissionBackend and MockBackend pass through unchanged."
+  [backend]
+  (if (instance? RealBackend backend)
+    (mb/make-mission-backend {:cwd (System/getProperty "user.dir")} backend)
+    backend))
+
 (defn make-mission
   "Create a mission peripheral from optional backend.
    Uses the generic cycle machine with mission-domain configuration.
 
-   Backend should be a MissionBackend (or MockBackend for tests)."
+   If a RealBackend is passed (e.g. from the dispatch router), it is
+   automatically wrapped in a MissionBackend so that mission-domain
+   tools (:mission-load, :cycle-begin, etc.) are available."
   ([] (make-mission (tools/make-mock-backend)))
   ([backend]
-   (cycle/make-cycle-peripheral mission-domain-config backend))
+   (cycle/make-cycle-peripheral mission-domain-config (ensure-mission-backend backend)))
   ([spec backend]
-   (cycle/make-cycle-peripheral mission-domain-config spec backend)))
+   (cycle/make-cycle-peripheral mission-domain-config spec (ensure-mission-backend backend))))

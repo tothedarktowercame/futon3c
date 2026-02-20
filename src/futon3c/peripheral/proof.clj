@@ -23,8 +23,12 @@
    dispatch-step, phase gating, evidence enrichment, and state tracking
    logic now live in cycle.clj and are parameterized by proof-domain-config."
   (:require [futon3c.peripheral.cycle :as cycle]
+            [futon3c.peripheral.proof-backend :as pb]
             [futon3c.peripheral.proof-shapes :as ps]
-            [futon3c.peripheral.tools :as tools]))
+            [futon3c.peripheral.real-backend]
+            [futon3c.peripheral.tools :as tools])
+  (:import [futon3c.peripheral.proof_backend ProofBackend]
+           [futon3c.peripheral.real_backend RealBackend]))
 
 ;; =============================================================================
 ;; Setup tools — available when no cycle is active
@@ -88,13 +92,23 @@
 ;; Factory
 ;; =============================================================================
 
+(defn- ensure-proof-backend
+  "Wrap a RealBackend in a ProofBackend so proof-domain tools are available.
+   ProofBackend and MockBackend pass through unchanged."
+  [backend]
+  (if (instance? RealBackend backend)
+    (pb/make-proof-backend {:cwd (System/getProperty "user.dir")} backend)
+    backend))
+
 (defn make-proof
   "Create a proof peripheral with injected backend.
    Uses the generic cycle machine with proof-domain configuration.
 
-   Backend should be a ProofBackend (or MockBackend for tests)."
+   If a RealBackend is passed (e.g. from the dispatch router), it is
+   automatically wrapped in a ProofBackend so that proof-domain
+   tools (:ledger-load, :cycle-begin, etc.) are available."
   ([] (make-proof (tools/make-mock-backend)))
   ([backend]
-   (cycle/make-cycle-peripheral proof-domain-config backend))
+   (cycle/make-cycle-peripheral proof-domain-config (ensure-proof-backend backend)))
   ([spec backend]
-   (cycle/make-cycle-peripheral proof-domain-config spec backend)))
+   (cycle/make-cycle-peripheral proof-domain-config spec (ensure-proof-backend backend))))
