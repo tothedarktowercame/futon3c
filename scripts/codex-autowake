@@ -119,9 +119,16 @@ Instructions:
   if "${CODEX[@]}" "$prompt" 2>&1; then
     echo "[autowake] Codex completed issue #${number}."
     emit_evidence "issue-done" "$number" "$title"
+    gh issue close "$number" --repo "$REPO" \
+      --comment "Completed by Codex autowake." 2>/dev/null || true
   else
     echo "[autowake] Codex exited with error on issue #${number}."
     emit_evidence "issue-error" "$number" "$title"
+    # Remove label so we don't retry the same issue; add codex-failed
+    gh issue edit "$number" --repo "$REPO" \
+      --remove-label "$LABEL" --add-label "codex-failed" 2>/dev/null || true
+    gh issue comment "$number" --repo "$REPO" \
+      --body "Codex autowake: exited with error. Removing from queue." 2>/dev/null || true
   fi
 
   register_agent
