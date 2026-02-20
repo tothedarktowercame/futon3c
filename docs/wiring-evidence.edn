@@ -1,0 +1,48 @@
+{:evidence/version 1
+ :entries
+ [{:evidence/id "WE-2026-02-10-IRC-ARENA-INITIAL"
+   :claim/id :transport/irc-arena
+   :commit "2b36fe6"
+   :tests ["test/futon3c/transport/irc_test.clj"
+           "test/futon3c/transport/ws_test.clj"]
+   :scripts ["scripts/irc_live_gate.clj"
+             "scripts/irc_chat_relay.clj"
+             "scripts/irc_claude_relay.clj"]
+   :artifacts ["holes/missions/alleycat-scorecard.md"]
+   :summary "Initial IRC transport + relay bridge + chat interface wiring landed."}
+
+  {:evidence/id "WE-2026-02-15-IRC-STABILITY"
+   :claim/id :transport/irc-arena
+   :commit "6ce7ad7"
+   :tests ["test/futon3c/transport/irc_test.clj"]
+   :summary "IRC stability fixes validated against failure-mode regression tests."}
+
+  {:evidence/id "WE-2026-02-10-EMACS-UI-LAYER"
+   :claim/id :ui/emacs-interfaces
+   :commit "c9de156"
+   :artifacts ["emacs/futon3c-ui.el"
+               "emacs/futon3c-chat.el"
+               "emacs/codex-repl.el"
+               "emacs/futon3c-code-blocks.el"]
+   :summary "Shared Emacs UI and chat/repl surfaces landed in a single wiring pass."}
+
+  {:evidence/id "WE-2026-02-14-ALLEYCAT-DUAL"
+   :claim/id :alleycat/dual-agent-ws
+   :commit "80674b6"
+   :tests ["test/futon3c/runtime/agents_test.clj"
+           "test/futon3c/transport/integration_test.clj"]
+   :scripts ["scripts/codex_ws_alleycat_smoke.clj"
+             "scripts/dual_agent_ws_alleycat_smoke.clj"
+             "scripts/dual_agent_ws_live_gate.clj"]
+   :artifacts ["README-alleycat.md"
+               "holes/missions/M-futon3c-codex.md"]
+   :summary "Dual-agent WS alleycat smoke and live-gate tooling added."}
+
+  {:evidence/id "WE-2026-02-14-ALLEYCAT-TRI"
+   :claim/id :alleycat/tri-agent-tickle
+   :commit "37354e0"
+   :tests ["test/futon3c/social/dispatch_test.clj"
+           "test/futon3c/runtime/agents_test.clj"]
+   :scripts ["scripts/tri_agent_ws_alleycat_smoke.clj"]
+   :artifacts ["README-alleycat.md"]
+   :summary "Tri-agent smoke and tickle path stabilization landed."}]}

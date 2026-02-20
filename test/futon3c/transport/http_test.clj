@@ -680,3 +680,21 @@
                            true)
                          (catch Exception _ false))]
         (is (not reachable?) "Port should be closed after shutdown")))))
+
+(deftest start-server-stop-is-idempotent
+  (testing "calling stop multiple times is safe and non-throwing"
+    (let [free-port (with-open [ss (java.net.ServerSocket. 0)]
+                      (.getLocalPort ss))
+          handler (make-handler)
+          server-info (http/start-server! handler free-port)
+          stop! (:server server-info)]
+      (is (fn? stop!))
+      (is (nil? (stop!)))
+      (is (nil? (stop!)))
+      (Thread/sleep 200)
+      (let [reachable? (try
+                         (with-open [sock (java.net.Socket.)]
+                           (.connect sock (java.net.InetSocketAddress. "localhost" (int free-port)) 500)
+                           true)
+                         (catch Exception _ false))]
+        (is (not reachable?) "Port should remain closed after repeated stop calls")))))

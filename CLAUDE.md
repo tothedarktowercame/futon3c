@@ -9,6 +9,23 @@ proof trees), and the bridges that connect agents to each other in real time.
 This is the "social" AIF loop — the fastest timescale in the futon system,
 where agents coordinate, hand off work, and maintain shared awareness.
 
+## Canonical Wiring Contract
+
+Before implementing architecture changes, read:
+
+- `docs/wiring-contract.md` (futon3c projection contract)
+- `docs/wiring-claims.edn` (machine-readable architectural claims)
+- `docs/wiring-evidence.edn` (commit-scoped evidence for each claim)
+- `docs/mission-contract.md` (Mission Peripheral / Mission Control / War Room contract)
+- `docs/mission-claims.edn` (mission-surface claims)
+- `docs/mission-evidence.edn` (commit-scoped mission-surface evidence)
+- `/home/joe/code/futon5/data/missions/social-exotype.edn` (social topology)
+- `/home/joe/code/futon5/data/missions/coordination-exotype.edn` (task/glacial topology)
+- `/home/joe/code/futon5/data/missions/futon3-coordination.edn` (concrete gate pipeline)
+
+Tests are necessary but not sufficient. Topology changes must update the
+wiring contract and projection mapping, not just test assertions.
+
 ## The Three-Futon Refactoring
 
 Futon3 was doing too much. It has been refactored into three focused repos:

@@ -1,0 +1,51 @@
+{:evidence/version 1
+ :entries
+ [{:evidence/id "ME-2026-02-18-MISSION-CYCLE-MACHINE"
+   :claim/id :mission-peripheral/cycle-machine
+   :commit "698eb64"
+   :tests ["test/futon3c/peripheral/cycle_test.clj"
+           "test/futon3c/peripheral/mission_test.clj"
+           "test/futon3c/peripheral/registry_test.clj"]
+   :artifacts ["holes/missions/M-mission-peripheral.md"]
+   :summary "Generic cycle machine + mission peripheral wiring landed."}
+
+  {:evidence/id "ME-2026-02-18-MISSION-SNAPSHOT-EVIDENCE"
+   :claim/id :mission-peripheral/snapshot-evidence
+   :commit "0a28936"
+   :tests ["test/futon3c/peripheral/mission_test.clj"
+           "test/futon3c/social/peripheral_spec_test.clj"
+           "test/futon3c/social/peripheral_test.clj"]
+   :summary "Mission-save snapshot evidence integration landed."}
+
+  {:evidence/id "ME-2026-02-18-MISSION-CONTROL-PORTFOLIO"
+   :claim/id :mission-control/portfolio-observer
+   :commit "7142856"
+   :tests ["test/futon3c/peripheral/mission_control_test.clj"
+           "test/futon3c/peripheral/registry_test.clj"]
+   :artifacts ["holes/missions/M-mission-control.md"]
+   :summary "Mission-control peripheral and backend tooling landed."}
+
+  {:evidence/id "ME-2026-02-19-WAR-ROOM-PERSISTENT-SERVICE"
+   :claim/id :war-room/bulletin-evidence
+   :commit "fcbba65"
+   :tests ["test/futon3c/mission_control/service_test.clj"
+           "test/futon3c/social/dispatch_test.clj"]
+   :artifacts ["holes/missions/M-mission-control.md"]
+   :summary "Persistent mission-control substrate and dispatch wiring landed."}
+
+  {:evidence/id "ME-2026-02-18-WAR-ROOM-BULLETIN-TOOLING"
+   :claim/id :war-room/bulletin-evidence
+   :commit "7142856"
+   :tests ["test/futon3c/peripheral/mission_control_test.clj"]
+   :artifacts ["holes/missions/M-mission-control.md"]
+   :summary "mc-bulletin + portfolio tools established in mission-control surface."}
+
+  {:evidence/id "ME-2026-02-20-WAR-ROOM-TRI-AGENT"
+   :claim/id :war-room/tri-agent-loop
+   :commit "37354e0"
+   :tests ["test/futon3c/runtime/agents_test.clj"
+           "test/futon3c/social/dispatch_test.clj"
+           "test/futon3c/peripheral/mission_control_test.clj"]
+   :scripts ["scripts/tri_agent_ws_alleycat_smoke.clj"]
+   :artifacts ["README-alleycat.md"]
+   :summary "Tri-agent runtime/tickle loop validated with executable smoke tooling."}]}

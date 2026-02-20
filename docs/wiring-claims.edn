@@ -1,0 +1,36 @@
+{:contract/version 1
+ :claims
+ [{:claim/id :transport/irc-arena
+   :claim/description "IRC transport and relay path are wired into the social loop."
+   :diagram/components [:S-presence :S-dispatch :S-persist]
+   :implementation/files ["src/futon3c/transport/irc.clj"
+                          "src/futon3c/transport/ws.clj"
+                          "src/futon3c/social/dispatch.clj"
+                          "src/futon3c/runtime/agents.clj"]
+   :verification/required #{:commit :test :script}}
+
+  {:claim/id :ui/emacs-interfaces
+   :claim/description "Emacs Claude chat + Codex REPL + shared UI are implemented."
+   :diagram/components [:S-dispatch :S-persist]
+   :implementation/files ["emacs/futon3c-chat.el"
+                          "emacs/codex-repl.el"
+                          "emacs/futon3c-ui.el"
+                          "emacs/futon3c-code-blocks.el"]
+   :verification/required #{:commit :artifact}}
+
+  {:claim/id :alleycat/dual-agent-ws
+   :claim/description "Dual-agent WebSocket alleycat smoke path is executable."
+   :diagram/components [:S-presence :S-authenticate :S-mode :S-dispatch :S-persist]
+   :implementation/files ["scripts/dual_agent_ws_alleycat_smoke.clj"
+                          "src/futon3c/runtime/agents.clj"
+                          "test/futon3c/transport/integration_test.clj"]
+   :verification/required #{:commit :script :test}}
+
+  {:claim/id :alleycat/tri-agent-tickle
+   :claim/description "Tri-agent alleycat smoke (claude + codex + tickle) is executable."
+   :diagram/components [:S-presence :S-mode :S-dispatch :S-persist :S-default]
+   :implementation/files ["scripts/tri_agent_ws_alleycat_smoke.clj"
+                          "src/futon3c/agents/tickle.clj"
+                          "src/futon3c/social/dispatch.clj"
+                          "test/futon3c/social/dispatch_test.clj"]
+   :verification/required #{:commit :script :test}}]}

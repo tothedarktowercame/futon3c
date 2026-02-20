@@ -1,0 +1,38 @@
+{:contract/version 1
+ :claims
+ [{:claim/id :mission-peripheral/cycle-machine
+   :claim/description "Mission Peripheral runs via the generic cycle machine with mission-domain tools."
+   :implementation/files ["src/futon3c/peripheral/cycle.clj"
+                          "src/futon3c/peripheral/mission.clj"
+                          "src/futon3c/peripheral/mission_backend.clj"
+                          "src/futon3c/peripheral/mission_shapes.clj"]
+   :verification/required #{:commit :test :artifact}}
+
+  {:claim/id :mission-peripheral/snapshot-evidence
+   :claim/description "Mission state snapshots are emitted as evidence on mission-save."
+   :implementation/files ["src/futon3c/peripheral/mission.clj"
+                          "src/futon3c/peripheral/evidence.clj"
+                          "src/futon3c/social/shapes.clj"]
+   :verification/required #{:commit :test}}
+
+  {:claim/id :mission-control/portfolio-observer
+   :claim/description "Mission Control provides inventory/devmap/coverage/mana/review tooling."
+   :implementation/files ["src/futon3c/peripheral/mission_control.clj"
+                          "src/futon3c/peripheral/mission_control_backend.clj"
+                          "src/futon3c/peripheral/mission_control_shapes.clj"]
+   :verification/required #{:commit :test :artifact}}
+
+  {:claim/id :war-room/bulletin-evidence
+   :claim/description "War room intent is implemented as evidence-backed bulletins and persistent mission-control sessions."
+   :implementation/files ["src/futon3c/peripheral/mission_control.clj"
+                          "src/futon3c/mission_control/service.clj"
+                          "src/futon3c/peripheral/mission_control_backend.clj"]
+   :verification/required #{:commit :test :artifact}}
+
+  {:claim/id :war-room/tri-agent-loop
+   :claim/description "Tri-agent (claude+codex+tickle) operational loop is executable and evidenced."
+   :implementation/files ["src/futon3c/agents/tickle.clj"
+                          "src/futon3c/social/dispatch.clj"
+                          "src/futon3c/runtime/agents.clj"
+                          "scripts/tri_agent_ws_alleycat_smoke.clj"]
+   :verification/required #{:commit :script :test :artifact}}]}

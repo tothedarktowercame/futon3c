@@ -150,6 +150,18 @@
            (instance? ClosedSelectorException ex)
            (instance? AsynchronousCloseException ex))))
 
+(defn- expected-http-kit-stop-race?
+  "True when `http-kit` stop hit the known JDK selector close race (NPE in removeKey)."
+  [ex]
+  (and (instance? NullPointerException ex)
+       (let [msg (some-> ex .getMessage)
+             top (first (.getStackTrace ex))]
+         (and (some? top)
+              (= "java.nio.channels.spi.AbstractSelectableChannel" (.getClassName ^StackTraceElement top))
+              (= "removeKey" (.getMethodName ^StackTraceElement top))
+              (or (nil? msg)
+                  (str/includes? msg "this.keys"))))))
+
 (defn- make-http-kit-error-logger
   "Create an error logger that suppresses expected shutdown close races only."
   [!server]
@@ -693,13 +705,21 @@
    Call (:server result) to stop the server (it's the stop function)."
   [handler port]
   (let [!server (atom nil)
+        !stopped? (atom false)
         server (hk/run-server handler {:port port
                                        :legacy-return-value? false
                                        :error-logger (make-http-kit-error-logger !server)})
         _ (reset! !server server)
         stop-fn (fn [& {:keys [timeout] :or {timeout 100}}]
                   ;; Keep `:server` return value as a callable stop fn.
-                  (hk/server-stop! server {:timeout timeout})
+                  ;; Stop is idempotent and suppresses the known http-kit/JDK
+                  ;; selector close race (NPE in AbstractSelectableChannel/removeKey).
+                  (when (compare-and-set! !stopped? false true)
+                    (try
+                      (hk/server-stop! server {:timeout timeout})
+                      (catch NullPointerException ex
+                        (when-not (expected-http-kit-stop-race? ex)
+                          (throw ex)))))
                   nil)
         _ (Thread/sleep 100)
         listening? (try

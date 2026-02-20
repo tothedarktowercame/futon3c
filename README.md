@@ -5,13 +5,22 @@ Futon3c is the **real-time coordination** layer of the futon stack: agency
 (collaborative proof trees), and the evidence landscape that connects
 agents to each other and to persistent, queryable history.
 
+For an agent-facing current-state map, see
+`docs/system-now-next.md` ("What exists / What's next").
+For the canonical system-building topology, see
+`docs/wiring-contract.md` ("diagram -> implementation projection").
+For commit-scoped architectural proof, see
+`docs/wiring-claims.edn` + `docs/wiring-evidence.edn`.
+For Mission Peripheral / Mission Control / War Room convergence, see
+`docs/mission-contract.md` + `docs/mission-claims.edn` + `docs/mission-evidence.edn`.
+
 ## Quick Start
 
 ```bash
 make dev       # Boot futon1a (XTDB) + futon3c transport
 make claude    # Pick a session or start fresh
 make codex     # Pick a Codex session or start fresh
-make test      # Run all tests (534 tests)
+make test      # Run all tests
 make repl      # Start nREPL with CIDER middleware
 ```
 
