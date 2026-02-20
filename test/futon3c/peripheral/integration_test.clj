@@ -391,14 +391,15 @@
         ;; Prompt mentions the peripheral name
         (is (str/includes? prompt (str/upper-case (name pid)))
             (str "prompt missing name for " pid))
-        ;; Constraints have allowed tools
-        (is (seq (:allowed-tools constraints))
-            (str "no allowed tools for " pid))
-        ;; Mapping has at least one entry (except reflect/:alfworld which have tools with no Claude/Codex equivalent)
-        (when-not (#{:reflect :alfworld} pid)
+        ;; Constraints have allowed tools (chat has tools=#{} — IRC relay is transport-level)
+        (when-not (#{:chat} pid)
+          (is (seq (:allowed-tools constraints))
+              (str "no allowed tools for " pid)))
+        ;; Mapping has at least one entry (except reflect/:alfworld/:chat which have tools with no Claude/Codex equivalent)
+        (when-not (#{:reflect :alfworld :chat} pid)
           (is (seq claude-mapping)
               (str "empty Claude mapping for " pid)))
-        (when-not (#{:alfworld} pid)
+        (when-not (#{:alfworld :chat} pid)
           (is (seq codex-mapping)
               (str "empty Codex mapping for " pid)))))))
 

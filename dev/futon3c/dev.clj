@@ -1,13 +1,16 @@
 (ns futon3c.dev
-  "Minimal dev server: boots futon1a (XTDB + HTTP) for evidence persistence.
+  "Dev server: boots futon1a (XTDB), futon3c (HTTP+WS), IRC, and Drawbridge.
 
    Agents are not registered at startup — they come alive when you launch
-   a claude session (via `make claude` or the REPL).
+   a claude session (via `make claude` or the REPL). When an agent connects
+   via WebSocket, it is automatically joined to the IRC #futon channel.
 
    Environment variables:
      FUTON1A_PORT       — HTTP port for futon1a (default 7071)
      FUTON1A_DATA_DIR   — XTDB storage directory
-     FUTON3C_PORT       — futon3c transport HTTP port (default 7070, 0 = disable)
+     FUTON3C_PORT       — futon3c transport HTTP+WS port (default 7070, 0 = disable)
+     FUTON3C_IRC_PORT   — IRC server port (default 6667, 0 = disable)
+     FUTON3C_BIND_HOST  — bind address for IRC server (default 0.0.0.0)
      FUTON3C_DRAWBRIDGE_PORT  — Drawbridge HTTP port (default 6768, 0 = disable)
      FUTON3C_DRAWBRIDGE_BIND  — Drawbridge bind interface (default 127.0.0.1)
      FUTON3C_DRAWBRIDGE_ALLOW — Drawbridge allowlist CSV (default 127.0.0.1,::1)
@@ -21,9 +24,11 @@
             [futon3c.agency.federation :as federation]
             [futon3c.runtime.agents :as rt]
             [futon3c.transport.http :as http]
+            [futon3c.transport.irc :as irc]
             [repl.http :as drawbridge]
             [clojure.string :as str]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [org.httpkit.server :as hk]))
 
 (defn env
   "Read an env var with optional default."
@@ -64,8 +69,12 @@
       sys)))
 
 (defn start-futon3c!
-  "Start futon3c transport HTTP. Returns {:server stop-fn :port p} or nil if disabled."
-  [xtdb-node]
+  "Start futon3c transport HTTP+WS. Returns system map or nil if disabled.
+
+   opts:
+     :xtdb-node        — XTDB node for persistent peripheral config
+     :irc-interceptor  — (fn [ch conn parsed]) for IRC relay (optional)"
+  [{:keys [xtdb-node irc-interceptor]}]
   (let [port (env-int "FUTON3C_PORT" 7070)]
     (when (pos? port)
       (let [pattern-ids (if-let [s (env "FUTON3C_PATTERNS")]
@@ -73,11 +82,57 @@
                           [])
             opts {:patterns {:patterns/ids pattern-ids}
                   :xtdb-node xtdb-node}
-            handler (rt/make-http-handler opts)
-            result (http/start-server! handler port)]
+            http-handler (rt/make-http-handler opts)
+            ws-opts (cond-> opts
+                      irc-interceptor (assoc :irc-interceptor irc-interceptor))
+            {:keys [handler connections]} (rt/make-ws-handler ws-opts)
+            app (fn [request]
+                  (if (:websocket? request)
+                    (handler request)
+                    (http-handler request)))
+            result (http/start-server! app port)]
         (println (str "[dev] futon3c: http://localhost:" (:port result)
                       " (patterns: " (if (seq pattern-ids) pattern-ids "none") ")"))
-        result))))
+        (assoc result :ws-connections connections)))))
+
+(defn start-irc!
+  "Start IRC server + relay bridge. Returns system map or nil if disabled.
+
+   The relay bridge connects IRC ↔ WS agents. When a human sends a PRIVMSG,
+   it's relayed to all WS-connected agents in that channel. When an agent
+   sends an irc_response WS frame, it's broadcast back to the IRC channel."
+  [evidence-store]
+  (let [irc-port (env-int "FUTON3C_IRC_PORT" 6667)]
+    (when (pos? irc-port)
+      (let [bind-host (env "FUTON3C_BIND_HOST" "0.0.0.0")
+            relay-bridge (irc/make-relay-bridge {:evidence-store evidence-store})
+            server (irc/start-irc-server!
+                    {:port irc-port
+                     :bind-host bind-host
+                     :relay-fn (:relay-fn relay-bridge)
+                     :evidence-store evidence-store})]
+        ((:set-irc-send-fn! relay-bridge) (:send-to-channel! server))
+        (println (str "[dev] IRC: localhost:" irc-port
+                      " (channel: #futon, auto-join on WS connect)"))
+        {:server server
+         :relay-bridge relay-bridge
+         :port irc-port}))))
+
+(defn- install-irc-auto-join!
+  "Watch WS connections atom; auto-join agents to #futon when they connect."
+  [ws-connections relay-bridge irc-server]
+  (add-watch ws-connections :irc-auto-join
+    (fn [_ _ old-conns new-conns]
+      (doseq [[ch conn] new-conns
+              :when (and (:connected? conn)
+                         (not (:connected? (get old-conns ch))))]
+        (let [agent-id (:agent-id conn)
+              send-fn (fn [msg] (hk/send! ch msg))]
+          (try
+            ((:join-agent! relay-bridge) agent-id agent-id "#futon" send-fn)
+            ((:join-virtual-nick! irc-server) "#futon" agent-id)
+            (catch Exception e
+              (println (str "[dev] IRC auto-join failed for " agent-id ": " (.getMessage e))))))))))
 
 (defn start-drawbridge!
   "Start Drawbridge endpoint used by fubar/portal style tooling.
@@ -100,7 +155,19 @@
   (let [f1-sys (start-futon1a!)
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
         _ (mcs/configure! {:evidence-store evidence-store})
-        f3c-sys (start-futon3c! (:node f1-sys))
+        ;; IRC relay bridge + server (before futon3c so interceptor is ready)
+        irc-sys (start-irc! evidence-store)
+        ;; futon3c HTTP + WS (with IRC interceptor if IRC is running)
+        f3c-sys (start-futon3c!
+                 {:xtdb-node (:node f1-sys)
+                  :irc-interceptor (when irc-sys
+                                     (:irc-interceptor (:relay-bridge irc-sys)))})
+        ;; Auto-join agents to #futon when they complete WS handshake
+        _ (when (and irc-sys (:ws-connections f3c-sys))
+            (install-irc-auto-join!
+             (:ws-connections f3c-sys)
+             (:relay-bridge irc-sys)
+             (:server irc-sys)))
         bridge-sys (start-drawbridge!)
         ;; Federation: configure peers and install announcement hook
         _ (federation/configure-from-env!)
@@ -116,6 +183,10 @@
     (println "[dev]   POST /api/alpha/agents            — register agent")
     (println "[dev]   GET  /api/alpha/agents            — list agents")
     (println)
+    (when irc-sys
+      (println (str "[dev]   Connect IRC: irssi -c localhost -p " (:port irc-sys) " -n joe"))
+      (println "[dev]   Agents auto-join #futon on WS connect")
+      (println))
     (if (seq fed-peers)
       (do (println (str "[dev] Federation: self=" fed-self " peers=" fed-peers))
           (println "[dev]   Agents registered locally will be announced to peers."))
@@ -132,6 +203,13 @@
     (println "[dev]   (mcs/list-sessions)")
     (println "[dev]   (mcs/run-review! {:author \"joe\"})")
     (println)
+    (when-let [port (env-int "FUTON3C_DRAWBRIDGE_PORT" 6768)]
+      (when (pos? port)
+        (println (str "[dev] drawbridge: http://"
+                      (env "FUTON3C_DRAWBRIDGE_BIND" "127.0.0.1")
+                      ":" port "/repl"
+                      " (allow: " (env-list "FUTON3C_DRAWBRIDGE_ALLOW" ["127.0.0.1" "::1"]) ")"))))
+    (println)
     (println "[dev] Press Ctrl-C to stop.")
 
     (.addShutdownHook
@@ -141,6 +219,7 @@
       (fn []
         (println "\n[dev] Shutting down...")
         (when-let [stop (:stop bridge-sys)] (stop))
+        (when-let [stop (:stop-fn (:server irc-sys))] (stop))
         (when-let [stop (:server f3c-sys)] (stop))
         ((:stop! f1-sys))
         (println "[dev] Stopped."))))

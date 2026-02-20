@@ -11,6 +11,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [futon3c.peripheral.alfworld :as alfworld]
+            [futon3c.peripheral.chat :as chat]
             [futon3c.peripheral.discipline :as discipline]
             [futon3c.peripheral.deploy :as deploy]
             [futon3c.peripheral.edit :as edit]
@@ -27,7 +28,7 @@
 
 (def peripheral-ids
   "Set of all known peripheral IDs."
-  #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :alfworld})
+  #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :alfworld :chat})
 
 (def ^:private factories
   "Maps peripheral-id to its factory function."
@@ -40,7 +41,8 @@
    :mission    mission/make-mission
    :discipline      discipline/make-discipline
    :mission-control mission-control/make-mission-control
-   :alfworld        alfworld/make-alfworld})
+   :alfworld        alfworld/make-alfworld
+   :chat            chat/make-chat})
 
 (defn make-peripheral
   "Create a PeripheralRunner for the given peripheral-id.

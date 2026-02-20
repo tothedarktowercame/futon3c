@@ -32,7 +32,7 @@
 
 (deftest peripheral-ids-covers-all-known
   (testing "peripheral-ids contains all known runtime IDs"
-    (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :alfworld}
+    (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :alfworld :chat}
            reg/peripheral-ids))))
 
 (deftest load-peripherals-returns-correct-format
