@@ -818,6 +818,7 @@
                     "--query" (str query-text)
                     "--top" (str top-k)
                     "--embeddings" embeddings-path])
+              _ (.directory pb (io/file futon3a-root))
               _ (.redirectErrorStream pb true)
               proc (.start pb)
               output (slurp (.getInputStream proc))

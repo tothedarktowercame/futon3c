@@ -97,7 +97,14 @@
    ProofBackend and MockBackend pass through unchanged."
   [backend]
   (if (instance? RealBackend backend)
-    (pb/make-proof-backend {:cwd (System/getProperty "user.dir")} backend)
+    (let [home (System/getProperty "user.home")
+          venv-python (str home "/code/futon3a/.venv/bin/python3")]
+      (pb/make-proof-backend
+        {:cwd (System/getProperty "user.dir")
+         :futon3a-python (if (.exists (java.io.File. venv-python))
+                           venv-python
+                           "python3")}
+        backend))
     backend))
 
 (defn make-proof
