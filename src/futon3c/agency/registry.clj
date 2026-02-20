@@ -171,6 +171,17 @@
                    m))))
     @result))
 
+(defn deregister-agent!
+  "Remove an agent from the registry. Returns {:ok true :agent-id id} or
+   {:ok false :error \"not-found\"} if the agent wasn't registered."
+  [agent-id]
+  (let [aid-val (agent-id-value agent-id)
+        existed? (contains? @!registry aid-val)]
+    (swap! !registry dissoc aid-val)
+    (if existed?
+      {:ok true :agent-id aid-val}
+      {:ok false :error "not-found"})))
+
 (defn update-agent!
   "Update fields in an agent record atomically.
 

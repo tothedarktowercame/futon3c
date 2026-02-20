@@ -120,6 +120,25 @@
       (is (= :agent-not-found (:error/code (:error result))))
       (is (shapes/valid? shapes/SocialError (:error result))))))
 
+(deftest deregister-agent-removes-from-registry
+  (testing "register, verify present, deregister, verify gone"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "remove-me")
+      :type :mock
+      :invoke-fn (fn [_p _s] {:result "ok"})
+      :capabilities []})
+    (is (true? (reg/agent-registered? (fix/make-agent-id "remove-me"))))
+    (is (= {:ok true :agent-id "remove-me"}
+           (reg/deregister-agent! "remove-me")))
+    (is (false? (reg/agent-registered? (fix/make-agent-id "remove-me"))))
+    (is (= 0 (:count (reg/registry-status))))))
+
+(deftest deregister-unknown-agent-returns-not-found
+  (testing "deregistering unknown agent returns {:ok false :error \"not-found\"}"
+    (is (= {:ok false :error "not-found"}
+           (reg/deregister-agent! "ghost-agent")))
+    (is (= 0 (:count (reg/registry-status))))))
+
 ;; =============================================================================
 ;; R5: Bounded lifecycle
 ;; =============================================================================

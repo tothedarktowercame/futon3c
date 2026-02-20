@@ -55,6 +55,9 @@
 (defn- get-req [handler uri]
   (handler {:request-method :get :uri uri}))
 
+(defn- delete-req [handler uri]
+  (handler {:request-method :delete :uri uri}))
+
 (defn- get-req-with-query [handler uri query-string]
   (handler {:request-method :get
             :uri uri
@@ -223,6 +226,34 @@
   (testing "GET /api/alpha/agents/:id returns 404 for unknown agent"
     (let [handler (make-handler)
           response (get-req handler "/api/alpha/agents/nonexistent")
+          parsed (parse-body response)]
+      (is (= 404 (:status response)))
+      (is (false? (:ok parsed)))
+      (is (= "Agent not found: nonexistent" (:error parsed))))))
+
+(deftest delete-agent-deregisters
+  (testing "DELETE /api/alpha/agents/:id deregisters and subsequent GET returns 404"
+    (let [handler (make-handler)
+          register-body (json/generate-string {"agent-id" "delete-agent-1"
+                                               "type" "codex"})
+          register-response (post handler "/api/alpha/agents" register-body)
+          delete-response (delete-req handler "/api/alpha/agents/delete-agent-1")
+          delete-parsed (parse-body delete-response)
+          get-response (get-req handler "/api/alpha/agents/delete-agent-1")
+          get-parsed (parse-body get-response)]
+      (is (= 201 (:status register-response)))
+      (is (= 200 (:status delete-response)))
+      (is (true? (:ok delete-parsed)))
+      (is (= "delete-agent-1" (:agent-id delete-parsed)))
+      (is (true? (:deregistered delete-parsed)))
+      (is (= 404 (:status get-response)))
+      (is (false? (:ok get-parsed)))
+      (is (= "Agent not found: delete-agent-1" (:error get-parsed))))))
+
+(deftest delete-unknown-agent-returns-404
+  (testing "DELETE /api/alpha/agents/nonexistent returns 404"
+    (let [handler (make-handler)
+          response (delete-req handler "/api/alpha/agents/nonexistent")
           parsed (parse-body response)]
       (is (= 404 (:status response)))
       (is (false? (:ok parsed)))

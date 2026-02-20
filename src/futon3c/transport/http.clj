@@ -527,6 +527,14 @@
       (json-response 200 {:ok true :agent-id agent-id :agent agent})
       (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
 
+(defn- handle-agent-delete
+  "DELETE /api/alpha/agents/:id — deregister an agent."
+  [_config agent-id]
+  (let [result (reg/deregister-agent! agent-id)]
+    (if (:ok result)
+      (json-response 200 {:ok true :agent-id agent-id :deregistered true})
+      (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
+
 ;; =============================================================================
 ;; Public API
 ;; =============================================================================
@@ -572,6 +580,10 @@
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)
+
+          (and (= :delete method) (re-matches #"/api/alpha/agents/(.+)" uri))
+          (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
+            (handle-agent-delete config agent-id))
 
           (and (= :get method) (re-matches #"/api/alpha/agents/(.+)" uri))
           (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
