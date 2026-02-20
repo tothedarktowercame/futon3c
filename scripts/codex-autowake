@@ -16,12 +16,15 @@ set -euo pipefail
 #   AUTOWAKE_MAX_CYCLES   — max issue cycles (default: 5)
 #   AUTOWAKE_COOLDOWN     — seconds between cycles (default: 60)
 #   AUTOWAKE_LABEL        — GitHub issue label to pick (default: codex)
+#   AUTOWAKE_MISSION      — mission-id for evidence traceability
 #   CODEX_CMD             — codex command + flags (default: auto-detected)
 #   FUTON3C_EVIDENCE_BASE — Agency URL (default: http://localhost:7070)
 
 MAX_CYCLES="${AUTOWAKE_MAX_CYCLES:-5}"
 COOLDOWN="${AUTOWAKE_COOLDOWN:-60}"
 LABEL="${AUTOWAKE_LABEL:-codex}"
+MISSION="${AUTOWAKE_MISSION:-M-unscoped}"
+PATTERN="R11"
 evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
 
 # Codex command: non-interactive, no approval prompts, full sandbox access
@@ -40,6 +43,8 @@ fi
 
 echo "[autowake] Starting autowake loop"
 echo "[autowake]   repo:       ${REPO}"
+echo "[autowake]   mission:    ${MISSION}"
+echo "[autowake]   pattern:    ${PATTERN}"
 echo "[autowake]   label:      ${LABEL}"
 echo "[autowake]   max_cycles: ${MAX_CYCLES}"
 echo "[autowake]   cooldown:   ${COOLDOWN}s"
@@ -61,14 +66,18 @@ register_agent() {
 }
 
 emit_evidence() {
-  local event="$1" issue_num="${2:-0}" title="${3:-}"
+  # Emit a futonic evidence entry with pattern + mission traceability.
+  # Usage: emit_evidence <event> [issue_num] [title] [extra_body_json]
+  local event="$1" issue_num="${2:-0}" title="${3:-}" extra="${4:-}"
   command -v curl >/dev/null 2>&1 || return 0
-  local escaped_title
+  local escaped_title commit_sha
   escaped_title="$(json_escape "$title")"
+  commit_sha="$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+  local body="{\"event\":\"${event}\",\"issue\":${issue_num},\"title\":\"${escaped_title}\",\"pattern-id\":\"${PATTERN}\",\"mission-id\":\"${MISSION}\",\"commit-sha\":\"${commit_sha}\"${extra:+,${extra}}}"
   curl -sS --max-time 2 \
     -H "Content-Type: application/json" \
     -X POST \
-    -d "{\"subject\":{\"ref/type\":\"session\",\"ref/id\":\"autowake\"},\"type\":\"coordination\",\"claim-type\":\"observation\",\"author\":\"codex-1\",\"body\":{\"event\":\"${event}\",\"issue\":${issue_num},\"title\":\"${escaped_title}\"},\"tags\":[\"codex\",\"autowake\",\"${event}\"]}" \
+    -d "{\"subject\":{\"ref/type\":\"mission\",\"ref/id\":\"${MISSION}\"},\"type\":\"coordination\",\"claim-type\":\"observation\",\"author\":\"codex-1\",\"pattern-id\":\"${PATTERN}\",\"session-id\":\"autowake/${MISSION}\",\"body\":${body},\"tags\":[\"codex\",\"autowake\",\"${event}\",\"${PATTERN}\",\"${MISSION}\"]}" \
     "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
 }
 
@@ -114,21 +123,30 @@ Instructions:
 4. Commit your changes referencing issue #${number}
 5. Push to origin/master when all criteria in the checklist are met"
 
+  # Capture pre-codex SHA for diff
+  pre_sha="$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+
   # Run codex
   echo "[autowake] Running ${CODEX[*]} ..."
   if "${CODEX[@]}" "$prompt" 2>&1; then
-    echo "[autowake] Codex completed issue #${number}."
-    emit_evidence "issue-done" "$number" "$title"
+    post_sha="$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+    echo "[autowake] Codex completed issue #${number}. (${pre_sha}..${post_sha})"
+    emit_evidence "issue-done" "$number" "$title" \
+      "\"pre-sha\":\"${pre_sha}\",\"post-sha\":\"${post_sha}\""
     gh issue close "$number" --repo "$REPO" \
-      --comment "Completed by Codex autowake." 2>/dev/null || true
+      --comment "Completed by Codex autowake (${MISSION}, pattern ${PATTERN}). Commits: ${pre_sha}..${post_sha}" \
+      2>/dev/null || true
   else
+    post_sha="$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
     echo "[autowake] Codex exited with error on issue #${number}."
-    emit_evidence "issue-error" "$number" "$title"
+    emit_evidence "issue-error" "$number" "$title" \
+      "\"pre-sha\":\"${pre_sha}\",\"post-sha\":\"${post_sha}\""
     # Remove label so we don't retry the same issue; add codex-failed
     gh issue edit "$number" --repo "$REPO" \
       --remove-label "$LABEL" --add-label "codex-failed" 2>/dev/null || true
     gh issue comment "$number" --repo "$REPO" \
-      --body "Codex autowake: exited with error. Removing from queue." 2>/dev/null || true
+      --body "Codex autowake (${MISSION}): exited with error. Removing from queue." \
+      2>/dev/null || true
   fi
 
   register_agent
