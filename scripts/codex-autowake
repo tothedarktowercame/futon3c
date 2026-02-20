@@ -16,12 +16,28 @@ set -euo pipefail
 #   AUTOWAKE_MAX_CYCLES   — max issue cycles (default: 5)
 #   AUTOWAKE_COOLDOWN     — seconds between cycles (default: 60)
 #   AUTOWAKE_LABEL        — GitHub issue label to pick (default: codex)
+#   CODEX_CMD             — codex command + flags (default: auto-detected)
 #   FUTON3C_EVIDENCE_BASE — Agency URL (default: http://localhost:7070)
 
 MAX_CYCLES="${AUTOWAKE_MAX_CYCLES:-5}"
 COOLDOWN="${AUTOWAKE_COOLDOWN:-60}"
 LABEL="${AUTOWAKE_LABEL:-codex}"
 evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
+
+# Auto-detect codex full-auto flag if not set
+if [[ -n "${CODEX_CMD:-}" ]]; then
+  CODEX=($CODEX_CMD)
+elif codex --help 2>&1 | grep -q -- '--full-auto'; then
+  CODEX=(codex --full-auto)
+elif codex --help 2>&1 | grep -q -- '--approval-mode'; then
+  CODEX=(codex --approval-mode full-auto)
+elif codex --help 2>&1 | grep -q -- '-a '; then
+  CODEX=(codex -a full-auto)
+else
+  # Fallback: just run codex with the prompt (interactive)
+  echo "[autowake] Warning: could not detect full-auto flag. Running codex interactively."
+  CODEX=(codex)
+fi
 
 # Determine repo from git remote
 REPO="$(git remote get-url origin 2>/dev/null | sed -E 's|.*github\.com[:/]||;s|\.git$||')"
@@ -36,6 +52,7 @@ echo "[autowake]   label:      ${LABEL}"
 echo "[autowake]   max_cycles: ${MAX_CYCLES}"
 echo "[autowake]   cooldown:   ${COOLDOWN}s"
 echo "[autowake]   agency:     ${evidence_base}"
+echo "[autowake]   codex_cmd:  ${CODEX[*]}"
 echo
 
 json_escape() {
@@ -105,9 +122,9 @@ Instructions:
 4. Commit your changes referencing issue #${number}
 5. Push to origin/master when all criteria in the checklist are met"
 
-  # Run codex in full-auto mode
-  echo "[autowake] Running codex --approval-mode full-auto ..."
-  if codex --approval-mode full-auto "$prompt" 2>&1; then
+  # Run codex
+  echo "[autowake] Running ${CODEX[*]} ..."
+  if "${CODEX[@]}" "$prompt" 2>&1; then
     echo "[autowake] Codex completed issue #${number}."
     emit_evidence "issue-done" "$number" "$title"
   else
