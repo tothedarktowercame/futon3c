@@ -24,19 +24,11 @@ COOLDOWN="${AUTOWAKE_COOLDOWN:-60}"
 LABEL="${AUTOWAKE_LABEL:-codex}"
 evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
 
-# Auto-detect codex full-auto flag if not set
+# Codex command: exec subcommand for non-interactive, --full-auto for autonomous
 if [[ -n "${CODEX_CMD:-}" ]]; then
   CODEX=($CODEX_CMD)
-elif codex --help 2>&1 | grep -q -- '--full-auto'; then
-  CODEX=(codex --full-auto)
-elif codex --help 2>&1 | grep -q -- '--approval-mode'; then
-  CODEX=(codex --approval-mode full-auto)
-elif codex --help 2>&1 | grep -q -- '-a '; then
-  CODEX=(codex -a full-auto)
 else
-  # Fallback: just run codex with the prompt (interactive)
-  echo "[autowake] Warning: could not detect full-auto flag. Running codex interactively."
-  CODEX=(codex)
+  CODEX=(codex exec --full-auto)
 fi
 
 # Determine repo from git remote
