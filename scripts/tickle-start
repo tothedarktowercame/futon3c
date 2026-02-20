@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+#
+# Start the Tickle watchdog agent.
+#
+# Registers tickle-1 on the local Agency, then starts the watchdog loop
+# that monitors agent activity via the evidence API and pages stalled agents.
+#
+# Usage:
+#   ./scripts/tickle-start                    # default: 60s interval, 300s threshold
+#   ./scripts/tickle-start --interval 30      # check every 30 seconds
+#   ./scripts/tickle-start --threshold 120    # stale after 2 minutes
+#   FUTON3C_EVIDENCE_BASE=http://linode:7070 ./scripts/tickle-start
+#
+# Environment:
+#   FUTON3C_EVIDENCE_BASE — Agency base URL (default: http://localhost:7070)
+#   TICKLE_INTERVAL_MS    — scan interval in ms (default: 60000)
+#   TICKLE_THRESHOLD_S    — stale threshold in seconds (default: 300)
+
+evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
+interval_ms="${TICKLE_INTERVAL_MS:-60000}"
+threshold_s="${TICKLE_THRESHOLD_S:-300}"
+
+# Parse CLI args
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --interval)  interval_ms=$(( $2 * 1000 )); shift 2 ;;
+    --threshold) threshold_s="$2"; shift 2 ;;
+    --base-url)  evidence_base="$2"; shift 2 ;;
+    *) echo "Unknown arg: $1"; exit 1 ;;
+  esac
+done
+
+echo "[tickle] Registering tickle-1 on ${evidence_base}..."
+curl -sS --max-time 3 \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{"agent-id":"tickle-1","type":"tickle"}' \
+  "${evidence_base%/}/api/alpha/agents" || echo "(registration may have failed — continuing)"
+
+echo "[tickle] Starting watchdog (interval=${interval_ms}ms, threshold=${threshold_s}s)"
+echo "[tickle] Agency: ${evidence_base}"
+echo "[tickle] Press Ctrl-C to stop."
+echo
+
+# Run the Clojure watchdog
+cd "$(dirname "$0")/.."
+exec clojure -M -e "
+(require '[futon3c.agents.tickle :as tickle])
+(require '[futon3c.evidence.http-backend :as http-backend])
+(require '[futon3c.evidence.store :as estore])
+(require '[futon3c.agency.registry :as reg])
+(require '[cheshire.core :as json])
+(require '[org.httpkit.client :as http])
+
+(def base-url \"${evidence_base}\")
+(def evidence-store (http-backend/make-http-backend base-url))
+
+(defn fetch-agents []
+  (try
+    (let [resp @(http/get (str base-url \"/api/alpha/agents\") {:timeout 5000})
+          parsed (json/parse-string (:body resp) true)]
+      (when (:ok parsed)
+        {:agents (:agents parsed)}))
+    (catch Exception _ nil)))
+
+(defn page-via-dispatch! [agent-id]
+  (try
+    @(http/post (str base-url \"/dispatch\")
+                {:headers {\"Content-Type\" \"application/json\"}
+                 :body (json/generate-string
+                        {\"msg_id\" (str \"tickle-page-\" (java.util.UUID/randomUUID))
+                         \"payload\" (str \"Tickle: you have been quiet for a while. Are you still working?\")
+                         \"from\" \"tickle-1\"
+                         \"to\" agent-id})
+                 :timeout 10000})
+    {:paged? true :agent-id agent-id :method :dispatch}
+    (catch Exception e
+      {:paged? false :agent-id agent-id :method :dispatch :error (.getMessage e)})))
+
+(println \"[tickle] Watchdog running.\")
+
+(let [{:keys [stop-fn started-at]}
+      (tickle/start-watchdog!
+       {:evidence-store evidence-store
+        :interval-ms ${interval_ms}
+        :threshold-seconds ${threshold_s}
+        :page-config {:ring-test-bell! (fn [{:keys [agent-id]}]
+                                         (println (str \"[tickle] Paging \" agent-id \" via dispatch\"))
+                                         (let [r (page-via-dispatch! agent-id)]
+                                           (println (str \"[tickle]   result: \" r))
+                                           r))}
+        :escalate-config {:notify-fn (fn [agent-id reason]
+                                       (println (str \"[tickle] ESCALATE: \" agent-id \" reason=\" reason)))}
+        :on-cycle (fn [{:keys [scanned stalled paged escalated]}]
+                    (println (str \"[tickle] cycle: scanned=\" scanned
+                                  \" stalled=\" (vec stalled)
+                                  \" paged=\" (vec paged)
+                                  \" escalated=\" (vec escalated)))
+                    (flush))
+        :registry-snapshot (or (fetch-agents) [])})]
+  (println (str \"[tickle] Started at \" started-at))
+  (.addShutdownHook (Runtime/getRuntime)
+                    (Thread. ^Runnable (fn []
+                                         (println \"\\n[tickle] Stopping...\")
+                                         (stop-fn)
+                                         (println \"[tickle] Stopped.\"))))
+  @(promise))
+"

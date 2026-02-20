@@ -1,6 +1,6 @@
 CLOJURE=clojure
 
-.PHONY: dev test claude codex repl
+.PHONY: dev test claude codex tickle repl
 
 dev:
 	$(CLOJURE) -M:dev
@@ -13,6 +13,9 @@ claude:
 
 codex:
 	./scripts/codex-picker $(ARGS)
+
+tickle:
+	./scripts/tickle-start $(ARGS)
 
 repl:
 	$(CLOJURE) -M:dev:repl
