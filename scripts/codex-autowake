@@ -81,6 +81,83 @@ emit_evidence() {
     "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
 }
 
+emit_pur() {
+  # Layer 2: Pattern Use Record — emitted after each Codex cycle.
+  # Records outcome, files changed, commit range, and any prediction errors.
+  local issue_num="$1" title="$2" outcome="$3" pre_sha="$4" post_sha="$5"
+  command -v curl >/dev/null 2>&1 || return 0
+  local escaped_title files_changed file_list
+  escaped_title="$(json_escape "$title")"
+  if [[ "$pre_sha" != "$post_sha" && "$pre_sha" != "unknown" ]]; then
+    files_changed="$(git diff --stat "${pre_sha}..${post_sha}" 2>/dev/null | tail -1 | sed 's/^ *//' | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+    file_list="$(git diff --name-only "${pre_sha}..${post_sha}" 2>/dev/null | head -20 | paste -sd',' | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+  else
+    files_changed="no changes detected"
+    file_list=""
+  fi
+  curl -sS --max-time 3 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "{
+      \"subject\":{\"ref/type\":\"mission\",\"ref/id\":\"${MISSION}\"},
+      \"type\":\"reflection\",
+      \"claim-type\":\"observation\",
+      \"author\":\"codex-1\",
+      \"pattern-id\":\"${PATTERN}\",
+      \"session-id\":\"pur/${MISSION}\",
+      \"body\":{
+        \"pur/pattern\":\"${PATTERN}\",
+        \"pur/pattern-name\":\"scope-bounded-handoff\",
+        \"pur/issue\":${issue_num},
+        \"pur/mission\":\"${MISSION}\",
+        \"pur/outcome\":\"${outcome}\",
+        \"pur/pre-sha\":\"${pre_sha}\",
+        \"pur/post-sha\":\"${post_sha}\",
+        \"pur/files-changed\":\"${files_changed}\",
+        \"pur/file-list\":\"${file_list}\",
+        \"pur/title\":\"${escaped_title}\"
+      },
+      \"tags\":[\"pur\",\"${PATTERN}\",\"${MISSION}\",\"mission-control\"]
+    }" \
+    "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
+}
+
+emit_checkpoint() {
+  # Layer 4: Gate checkpoint — snapshot of progress after each cycle.
+  # Captures test count, evidence count, agent count, commit position.
+  local cycle_num="$1" issue_num="$2" outcome="$3"
+  command -v curl >/dev/null 2>&1 || return 0
+  local commit_sha evidence_count agent_count
+  commit_sha="$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+  # Query health for counts (evidence count available if #22 is deployed)
+  local health_json
+  health_json="$(curl -sS --max-time 2 "${evidence_base%/}/health" 2>/dev/null || echo "{}")"
+  evidence_count="$(echo "$health_json" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("evidence",0))' 2>/dev/null || echo 0)"
+  agent_count="$(echo "$health_json" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("agents",0))' 2>/dev/null || echo 0)"
+  curl -sS --max-time 3 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "{
+      \"subject\":{\"ref/type\":\"mission\",\"ref/id\":\"${MISSION}\"},
+      \"type\":\"coordination\",
+      \"claim-type\":\"observation\",
+      \"author\":\"codex-1\",
+      \"pattern-id\":\"${PATTERN}\",
+      \"session-id\":\"checkpoint/${MISSION}\",
+      \"body\":{
+        \"checkpoint/cycle\":${cycle_num},
+        \"checkpoint/issue\":${issue_num},
+        \"checkpoint/outcome\":\"${outcome}\",
+        \"checkpoint/commit-sha\":\"${commit_sha}\",
+        \"checkpoint/evidence-count\":${evidence_count},
+        \"checkpoint/agent-count\":${agent_count},
+        \"checkpoint/mission\":\"${MISSION}\"
+      },
+      \"tags\":[\"checkpoint\",\"${PATTERN}\",\"${MISSION}\",\"mission-control\"]
+    }" \
+    "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
+}
+
 register_agent
 emit_evidence "autowake-start" 0 "starting ${MAX_CYCLES} cycles"
 
@@ -133,6 +210,8 @@ Instructions:
     echo "[autowake] Codex completed issue #${number}. (${pre_sha}..${post_sha})"
     emit_evidence "issue-done" "$number" "$title" \
       "\"pre-sha\":\"${pre_sha}\",\"post-sha\":\"${post_sha}\""
+    emit_pur "$number" "$title" "success" "$pre_sha" "$post_sha"
+    emit_checkpoint "$cycle" "$number" "success"
     gh issue close "$number" --repo "$REPO" \
       --comment "Completed by Codex autowake (${MISSION}, pattern ${PATTERN}). Commits: ${pre_sha}..${post_sha}" \
       2>/dev/null || true
@@ -141,6 +220,8 @@ Instructions:
     echo "[autowake] Codex exited with error on issue #${number}."
     emit_evidence "issue-error" "$number" "$title" \
       "\"pre-sha\":\"${pre_sha}\",\"post-sha\":\"${post_sha}\""
+    emit_pur "$number" "$title" "failure" "$pre_sha" "$post_sha"
+    emit_checkpoint "$cycle" "$number" "failure"
     # Remove label so we don't retry the same issue; add codex-failed
     gh issue edit "$number" --repo "$REPO" \
       --remove-label "$LABEL" --add-label "codex-failed" 2>/dev/null || true
