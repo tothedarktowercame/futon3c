@@ -1,0 +1,17 @@
+{:proof/problem-id "FM-003"
+ :proof/version 0
+ :proof/canonical {:statement "Determine the existence and explicit construction of large Steiner systems S(t, k, n) for t >= 3. A Steiner system S(t, k, n) is a collection of k-element subsets (blocks) of an n-element set such that every t-element subset is contained in exactly one block."
+                   :closure-criterion "Either (a) construct new Steiner systems for previously open parameter triples (t, k, n), (b) prove non-existence for specific parameters, or (c) improve asymptotic existence bounds."
+                   :statement-hash "sha256:pending-spec-lock"
+                   :version-history [{:version 0
+                                      :statement "Pending formal spec-lock. Source: epoch.ai/frontiermath/open-problems"
+                                      :hash "sha256:pending-spec-lock"
+                                      :changed-at "2026-02-20T00:00:00Z"
+                                      :reason "Initial bootstrap from futon6 FM-003 problem state"}]}
+ :proof/ledger {}
+ :proof/cycles []
+ :proof/failed-routes []
+ :proof/updated-at "2026-02-20T00:00:00Z"
+ :proof/current-mode :SPEC
+ :proof/falsify-completed? false
+ :proof/tryharder-log []}

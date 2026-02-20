@@ -1003,6 +1003,109 @@
   "Tools delegated to the wrapped RealBackend."
   #{:read :glob :grep :bash :bash-readonly :write})
 
+;; =============================================================================
+;; Proof mode and TryHarder tools
+;; =============================================================================
+
+(defn- tool-proof-mode-get
+  "Get current proof mode."
+  [cache cwd args]
+  (let [problem-id (first args)]
+    (if-let [state (get-state cache cwd problem-id)]
+      {:ok true :result {:mode (or (:proof/current-mode state) :SPEC)
+                         :falsify-completed? (boolean (:proof/falsify-completed? state))
+                         :active-license (:proof/active-license state)}}
+      (proof-error :not-found (str "No proof state for " problem-id)))))
+
+(defn- tool-proof-mode-set
+  "Transition proof mode. Enforces mode ordering and mandatory FALSIFY."
+  [cache cwd args]
+  (let [problem-id (first args)
+        target-mode (keyword (second args))]
+    (if-let [state (get-state cache cwd problem-id)]
+      (let [current-mode (or (:proof/current-mode state) :SPEC)]
+        (cond
+          (not (ps/valid-mode-transition? current-mode target-mode))
+          (proof-error :invalid-mode-transition
+                       (str "Cannot transition from " current-mode " to " target-mode
+                            ". Valid: " (get ps/proof-mode-transitions current-mode)))
+
+          ;; Block CONSTRUCT if FALSIFY not completed
+          (and (= target-mode :CONSTRUCT)
+               (not (:proof/falsify-completed? state)))
+          (proof-error :falsify-required
+                       "Cannot enter CONSTRUCT mode without completing FALSIFY first")
+
+          :else
+          (let [new-state (-> state
+                              (assoc :proof/current-mode target-mode)
+                              ;; Mark falsify completed when transitioning out of FALSIFY
+                              (cond-> (= current-mode :FALSIFY)
+                                (assoc :proof/falsify-completed? true)))
+                _ (put-state! cache new-state)]
+            {:ok true :result {:mode target-mode
+                               :previous-mode current-mode
+                               :falsify-completed? (boolean (:proof/falsify-completed? new-state))}})))
+      (proof-error :not-found (str "No proof state for " problem-id)))))
+
+(defn- tool-tryharder-license
+  "Create, close, or query TryHarder licenses.
+   Actions: :create, :close, :list, :active"
+  [cache cwd args]
+  (let [problem-id (first args)
+        action (keyword (or (second args) "list"))
+        params (nth args 2 nil)]
+    (if-let [state (get-state cache cwd problem-id)]
+      (case action
+        :create
+        (if (:proof/active-license state)
+          (proof-error :license-active
+                       (str "Active license already exists: "
+                            (:license/id (:proof/active-license state))
+                            ". Close it first."))
+          (let [license {:license/id (gen-id "TH")
+                         :license/problem-id problem-id
+                         :license/target-claim (or (:target-claim params) "unspecified")
+                         :license/bottleneck-type (keyword (or (:bottleneck-type params) "missing-lemma"))
+                         :license/new-lever (or (:new-lever params) "unspecified")
+                         :license/witness (or (:witness params) "unspecified")
+                         :license/kill-condition (or (:kill-condition params) "unspecified")
+                         :license/timebox-minutes (or (:timebox-minutes params) 30)
+                         :license/issued-at (now-str)}
+                new-state (-> state
+                              (assoc :proof/active-license license)
+                              (update :proof/tryharder-log (fnil conj []) license))]
+            (put-state! cache new-state)
+            {:ok true :result license}))
+
+        :close
+        (if-let [license (:proof/active-license state)]
+          (let [outcome {:witness-met (boolean (:witness-met params))
+                         :mode-after (:mode-after params)
+                         :notes (or (:notes params) "")}
+                closed (assoc license :license/outcome outcome)
+                new-state (-> state
+                              (assoc :proof/active-license nil)
+                              (update :proof/tryharder-log
+                                      (fn [log]
+                                        (mapv #(if (= (:license/id %) (:license/id license))
+                                                 closed %)
+                                              log))))]
+            (put-state! cache new-state)
+            {:ok true :result closed})
+          (proof-error :no-active-license "No active TryHarder license to close"))
+
+        :list
+        {:ok true :result {:log (or (:proof/tryharder-log state) [])
+                           :active (:proof/active-license state)}}
+
+        :active
+        {:ok true :result (:proof/active-license state)}
+
+        ;; unknown action
+        (proof-error :unknown-action (str "Unknown TryHarder action: " action)))
+      (proof-error :not-found (str "No proof state for " problem-id)))))
+
 (defrecord ProofBackend [real-backend cache config]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
@@ -1025,6 +1128,9 @@
         (= tool-id :status-validate)  (tool-status-validate cache cwd args)
         (= tool-id :gate-check)       (tool-gate-check cache cwd args)
         (= tool-id :corpus-check)     (tool-corpus-check cache cwd args config)
+        (= tool-id :proof-mode-get)   (tool-proof-mode-get cache cwd args)
+        (= tool-id :proof-mode-set)   (tool-proof-mode-set cache cwd args)
+        (= tool-id :tryharder-license) (tool-tryharder-license cache cwd args)
 
         ;; Delegated tools
         (contains? delegated-tools tool-id)

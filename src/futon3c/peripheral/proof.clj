@@ -39,6 +39,7 @@
   #{:proof-load :proof-save :ledger-query :ledger-upsert
     :dag-check :dag-impact :canonical-get :canonical-update
     :cycle-begin :cycle-list :cycle-get :failed-route-add
+    :tryharder-license :proof-mode-get :proof-mode-set
     :read :glob :grep :bash-readonly})
 
 ;; =============================================================================
@@ -47,9 +48,24 @@
 
 (defn- state-init
   "Initialize proof-specific state fields from context.
-   Adds :problem-id to the base cycle state."
+   Adds :problem-id and loads proof mode/license state from persisted EDN."
   [context]
-  {:problem-id (:problem-id context)})
+  (let [problem-id (:problem-id context)
+        base {:problem-id problem-id}]
+    (if problem-id
+      (let [state-file (java.io.File.
+                         (str "data/proof-state/" problem-id ".edn"))]
+        (if (.exists state-file)
+          (try
+            (let [pstate (read-string (slurp state-file))]
+              (merge base
+                     {:proof/current-mode (:proof/current-mode pstate :SPEC)
+                      :proof/falsify-completed? (:proof/falsify-completed? pstate false)
+                      :proof/tryharder-log (:proof/tryharder-log pstate [])
+                      :proof/active-license (:proof/active-license pstate)}))
+            (catch Throwable _ base))
+          base))
+      base)))
 
 ;; =============================================================================
 ;; Fruit and exit context
@@ -70,6 +86,35 @@
    :problem-id (:problem-id state)})
 
 ;; =============================================================================
+;; State snapshot — return snapshot map on :proof-save
+;; =============================================================================
+
+(defn- state-snapshot-fn
+  "Return a snapshot map when proof state is saved.
+   The cycle machine handles emitting this as evidence.
+   Returns {:snapshot/subject ... :snapshot/body ... :snapshot/tags ...} or nil."
+  [state tool result]
+  (when (and (= tool :proof-save) (:ok result))
+    {:snapshot/subject {:ref/type :peripheral :ref/id "proof"}
+     :snapshot/body {:snapshot :proof-save
+                     :problem-id (:problem-id state)
+                     :phase (:current-phase state)
+                     :cycles-completed (:cycles-completed state)
+                     :step-count (count (:steps state))
+                     :mode (:proof/current-mode state)}
+     :snapshot/tags [:proof :snapshot]}))
+
+;; =============================================================================
+;; Autoconf — refine domain config from problem context
+;; =============================================================================
+
+(defn- autoconf-fn
+  "Refine proof domain config from context.
+   Autoconf takes (context, config) and returns a refined config."
+  [context config]
+  config)
+
+;; =============================================================================
 ;; Domain config
 ;; =============================================================================
 
@@ -85,6 +130,8 @@
    :cycle-begin-tool :cycle-begin
    :cycle-advance-tool :cycle-advance
    :state-init-fn state-init
+   :state-snapshot-fn state-snapshot-fn
+   :autoconf-fn autoconf-fn
    :fruit-fn fruit
    :exit-context-fn exit-context})
 

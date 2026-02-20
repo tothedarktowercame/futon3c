@@ -233,6 +233,67 @@
 (defmethod render-blackboard :alfworld [_ state]
   (format-alfworld-state state))
 
+;; -----------------------------------------------------------------------------
+;; :proof — problem state, ledger summary, mode, cycle progress
+;; -----------------------------------------------------------------------------
+
+(defn- format-ledger-summary
+  "Summarize ledger items by status."
+  [steps]
+  (let [ledger-result (some (fn [{:keys [tool result]}]
+                              (when (and (= tool :ledger-query)
+                                         (map? result)
+                                         (:items result))
+                                (:items result)))
+                            (reverse steps))
+        items (when ledger-result
+                (if (map? ledger-result) (vals ledger-result) ledger-result))
+        by-status (when (seq items)
+                    (frequencies (map :item/status items)))]
+    (when by-status
+      (let [total (reduce + (vals by-status))]
+        (str total " items: "
+             (str/join ", "
+                       (keep (fn [[status n]]
+                               (when (pos? n) (str n " " (name status))))
+                             by-status)))))))
+
+(defn- format-proof-state
+  "Format proof peripheral state for blackboard."
+  [state]
+  (let [problem-id (or (:problem-id state) "unknown")
+        phase (or (:current-phase state) "setup")
+        cycles (:cycles-completed state 0)
+        steps (count (:steps state))
+        mode (or (:proof/current-mode state) "SPEC")
+        ;; Current cycle info
+        current-cycle (some (fn [{:keys [tool result]}]
+                              (when (and (= tool :cycle-get) (map? result))
+                                result))
+                            (reverse (:steps state)))
+        blocker (:cycle/blocker-id current-cycle)
+        ;; Ledger summary
+        ledger-str (format-ledger-summary (:steps state))
+        ;; TryHarder
+        license (:proof/active-license state)
+        falsify? (:proof/falsify-completed? state)]
+    (str "Proof: " problem-id "\n"
+         "Mode: " (name mode)
+         (when falsify? " [FALSIFY done]")
+         "  Phase: " (name phase)
+         "  Cycles: " cycles "  Steps: " steps "\n"
+         (when blocker
+           (str "Blocker: " blocker "\n"))
+         (when ledger-str
+           (str "Ledger: " ledger-str "\n"))
+         (when license
+           (str "TryHarder: " (:license/id license)
+                " target=" (:license/target-claim license)
+                " timebox=" (:license/timebox-minutes license) "min\n")))))
+
+(defmethod render-blackboard :proof [_ state]
+  (format-proof-state state))
+
 ;; =============================================================================
 ;; Evidence emission — blackboard "commits"
 ;; =============================================================================

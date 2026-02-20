@@ -144,6 +144,61 @@
       (is (str/includes? result "WON"))
       (is (str/includes? result "vase in the safe")))))
 
+;; -----------------------------------------------------------------------------
+;; :proof adaptor
+;; -----------------------------------------------------------------------------
+
+(deftest proof-basic-rendering
+  (testing "Proof peripheral renders problem ID, mode, and phase"
+    (let [state {:problem-id "FM-001"
+                 :proof/current-mode :SPEC
+                 :current-phase :observe
+                 :cycles-completed 0
+                 :steps []}
+          result (bb/render-blackboard :proof state)]
+      (is (string? result))
+      (is (str/includes? result "FM-001"))
+      (is (str/includes? result "SPEC"))
+      (is (str/includes? result "observe")))))
+
+(deftest proof-with-ledger-and-cycle
+  (testing "Proof peripheral renders ledger summary and blocker"
+    (let [state {:problem-id "FM-002"
+                 :proof/current-mode :CONSTRUCT
+                 :proof/falsify-completed? true
+                 :current-phase :execute
+                 :cycles-completed 2
+                 :steps [{:tool :ledger-query
+                          :args []
+                          :result {:items {"L-1" {:item/status :proved}
+                                           "L-2" {:item/status :open}
+                                           "L-3" {:item/status :open}
+                                           "L-4" {:item/status :partial}}}}
+                         {:tool :cycle-get
+                          :args []
+                          :result {:cycle/blocker-id "L-2"}}]}
+          result (bb/render-blackboard :proof state)]
+      (is (str/includes? result "FM-002"))
+      (is (str/includes? result "CONSTRUCT"))
+      (is (str/includes? result "FALSIFY done"))
+      (is (str/includes? result "Blocker: L-2"))
+      (is (str/includes? result "4 items")))))
+
+(deftest proof-with-tryharder-license
+  (testing "Proof peripheral shows active TryHarder license"
+    (let [state {:problem-id "FM-003"
+                 :proof/current-mode :CONSTRUCT
+                 :current-phase :observe
+                 :cycles-completed 1
+                 :steps []
+                 :proof/active-license {:license/id "TH-001"
+                                        :license/target-claim "L-5"
+                                        :license/timebox-minutes 30}}
+          result (bb/render-blackboard :proof state)]
+      (is (str/includes? result "TryHarder: TH-001"))
+      (is (str/includes? result "target=L-5"))
+      (is (str/includes? result "30min")))))
+
 ;; =============================================================================
 ;; blackboard! primitive — elisp construction
 ;; =============================================================================

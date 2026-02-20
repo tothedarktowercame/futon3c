@@ -66,6 +66,9 @@
    :failed-route-add :action
    :status-validate :observe
    :gate-check :observe
+   :tryharder-license :action
+   :proof-mode-get :observe
+   :proof-mode-set :action
    :corpus-check :observe
    :read :observe
    :glob :observe
@@ -152,6 +155,62 @@
    [:route/recorded-at :string]])
 
 ;; =============================================================================
+;; Proof mode — high-level protocol mode (FrontierMath 5-mode workflow)
+;; =============================================================================
+
+(def ProofMode
+  "High-level proof mode from the FrontierMath protocol.
+   SPEC: lock problem statement. FALSIFY: mandatory opposite-answer cycle.
+   CONSTRUCT: build proof routes. VERIFY: validate fragments. MAP: survey landscape."
+  [:enum :SPEC :FALSIFY :CONSTRUCT :VERIFY :MAP])
+
+(def BottleneckType
+  "Classification of why a TryHarder license is needed."
+  [:enum :missing-lemma :obstruction-search :spec-ambiguity
+   :dependency-gap :computation-gap])
+
+;; =============================================================================
+;; TryHarder license — gates persistence loops
+;; =============================================================================
+
+(def TryHarderLicense
+  "A signed license permitting one more persistence cycle.
+   Required when re-attempting a blocker. New lever must be materially different.
+   Kill condition forces mode switch when met."
+  [:map
+   [:license/id :string]
+   [:license/problem-id :string]
+   [:license/target-claim :string]
+   [:license/bottleneck-type BottleneckType]
+   [:license/new-lever :string]
+   [:license/witness :string]
+   [:license/kill-condition :string]
+   [:license/timebox-minutes :int]
+   [:license/issued-at :string]
+   [:license/outcome {:optional true}
+    [:map
+     [:witness-met :boolean]
+     [:mode-after [:maybe ProofMode]]
+     [:notes :string]]]])
+
+;; =============================================================================
+;; Valid proof mode transitions
+;; =============================================================================
+
+(def proof-mode-transitions
+  "Valid mode transitions. FALSIFY is mandatory before CONSTRUCT."
+  {:SPEC      #{:FALSIFY}
+   :FALSIFY   #{:CONSTRUCT}
+   :CONSTRUCT #{:VERIFY}
+   :VERIFY    #{:MAP}
+   :MAP       #{:SPEC}})
+
+(defn valid-mode-transition?
+  "Check if a mode transition is valid."
+  [from to]
+  (contains? (get proof-mode-transitions from) to))
+
+;; =============================================================================
 ;; Composite proof state — persisted per problem
 ;; =============================================================================
 
@@ -165,7 +224,11 @@
    [:proof/ledger [:map-of :string LedgerItem]]
    [:proof/cycles [:vector CycleRecord]]
    [:proof/failed-routes [:vector FailedRoute]]
-   [:proof/updated-at :string]])
+   [:proof/updated-at :string]
+   [:proof/current-mode {:optional true} ProofMode]
+   [:proof/falsify-completed? {:optional true} :boolean]
+   [:proof/tryharder-log {:optional true} [:vector TryHarderLicense]]
+   [:proof/active-license {:optional true} [:maybe TryHarderLicense]]])
 
 ;; =============================================================================
 ;; Phase tool restrictions
@@ -177,9 +240,10 @@
    :cycle-advance and :cycle-get are available in all active phases
    (they are the mechanism for phase transitions and inspection)."
   {:observe   #{:ledger-query :dag-impact :corpus-check :read :grep :glob
-                :bash-readonly :cycle-advance :cycle-get}
+                :bash-readonly :cycle-advance :cycle-get
+                :tryharder-license :proof-mode-get}
    :propose   #{:ledger-query :dag-impact :corpus-check :read :grep :glob
-                :bash-readonly :cycle-advance :cycle-get}
+                :bash-readonly :cycle-advance :cycle-get :proof-mode-get}
    :execute   #{:read :write :bash :glob :grep
                 :cycle-advance :cycle-get}
    :validate  #{:read :bash :bash-readonly :glob :grep

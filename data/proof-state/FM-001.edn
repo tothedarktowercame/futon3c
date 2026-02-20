@@ -1,0 +1,17 @@
+{:proof/problem-id "FM-001"
+ :proof/version 0
+ :proof/canonical {:statement "Determine the Ramsey number r(B_n) for book graphs B_n = K_2 + K̄_n (the join of K_2 and n isolated vertices). Specifically, find tight asymptotic bounds or exact values for small n."
+                   :closure-criterion "Either (a) prove exact values r(B_n) for a new range of n, (b) improve known asymptotic bounds, or (c) identify a named structural obstruction with evidence."
+                   :statement-hash "sha256:pending-spec-lock"
+                   :version-history [{:version 0
+                                      :statement "Pending formal spec-lock. Source: epoch.ai/frontiermath/open-problems"
+                                      :hash "sha256:pending-spec-lock"
+                                      :changed-at "2026-02-20T00:00:00Z"
+                                      :reason "Initial bootstrap from futon6 FM-001 problem state"}]}
+ :proof/ledger {}
+ :proof/cycles []
+ :proof/failed-routes []
+ :proof/updated-at "2026-02-20T00:00:00Z"
+ :proof/current-mode :SPEC
+ :proof/falsify-completed? false
+ :proof/tryharder-log []}

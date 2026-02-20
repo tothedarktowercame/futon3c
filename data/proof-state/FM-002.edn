@@ -1,0 +1,17 @@
+{:proof/problem-id "FM-002"
+ :proof/version 0
+ :proof/canonical {:statement "Determine the minimum number of edges in a 3-uniform hypergraph on n vertices such that every 2-coloring of its edges contains a monochromatic copy of a specified target hypergraph. A Ramsey-style problem on hypergraphs extending classical graph Ramsey theory."
+                   :closure-criterion "Either (a) prove tight bounds for a specific target hypergraph class, (b) improve known Ramsey-type results for 3-uniform hypergraphs, or (c) identify a named structural obstruction with evidence."
+                   :statement-hash "sha256:pending-spec-lock"
+                   :version-history [{:version 0
+                                      :statement "Pending formal spec-lock. Source: epoch.ai/frontiermath/open-problems"
+                                      :hash "sha256:pending-spec-lock"
+                                      :changed-at "2026-02-20T00:00:00Z"
+                                      :reason "Initial bootstrap from futon6 FM-002 problem state"}]}
+ :proof/ledger {}
+ :proof/cycles []
+ :proof/failed-routes []
+ :proof/updated-at "2026-02-20T00:00:00Z"
+ :proof/current-mode :SPEC
+ :proof/falsify-completed? false
+ :proof/tryharder-log []}
