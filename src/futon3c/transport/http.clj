@@ -167,31 +167,49 @@
 ;; Route handlers
 ;; =============================================================================
 
+(defn- live-registry
+  "Build a registry that merges the static config snapshot with live-registered agents.
+   HTTP-registered and federated agents appear in the live registry atom but not
+   in the startup config snapshot. Merge ensures dispatch can reach them."
+  [config]
+  (let [static-reg (:registry config)
+        live-status (reg/registry-status)
+        live-agents (into {}
+                         (map (fn [[id {:keys [capabilities type]}]]
+                                [id (cond-> {:capabilities (vec capabilities)}
+                                      (some? type) (assoc :type type))]))
+                         (:agents live-status))
+        merged-agents (merge (:agents static-reg) live-agents)]
+    (assoc static-reg :agents merged-agents)))
+
 (defn- handle-dispatch
   "POST /dispatch — parse JSON body, classify message, dispatch to agent.
-   Returns 200 + DispatchReceipt JSON or error status + SocialError JSON."
+   Returns 200 + DispatchReceipt JSON or error status + SocialError JSON.
+   Uses live registry (merged with config snapshot) so federated agents are reachable."
   [request config]
   (let [body (read-body request)
         parsed (proto/parse-dispatch-request (or body ""))]
     (if (error? parsed)
       (error-response parsed)
-      (let [classified (mode/classify parsed (:patterns config))]
+      (let [classified (mode/classify parsed (:patterns config))
+            registry (live-registry config)]
         (if (error? classified)
           (error-response classified)
-          (let [result (dispatch/dispatch classified (:registry config))]
+          (let [result (dispatch/dispatch classified registry)]
             (if (error? result)
               (error-response result)
               (json-response 200 (proto/render-receipt result)))))))))
 
 (defn- handle-presence
   "POST /presence — parse JSON body, verify agent presence via S-presence.
-   Returns 200 + PresenceRecord JSON or error status + SocialError JSON."
+   Returns 200 + PresenceRecord JSON or error status + SocialError JSON.
+   Uses live registry so federated agents are verifiable."
   [request config]
   (let [body (read-body request)
         parsed (proto/parse-presence-request (or body ""))]
     (if (error? parsed)
       (error-response parsed)
-      (let [result (presence/verify parsed (:registry config))]
+      (let [result (presence/verify parsed (live-registry config))]
         (if (error? result)
           (error-response result)
           (json-response 200 (proto/render-ws-frame result)))))))
