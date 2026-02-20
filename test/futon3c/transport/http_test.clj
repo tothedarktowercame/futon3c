@@ -260,6 +260,33 @@
       (is (= "Agent not found: nonexistent" (:error parsed))))))
 
 ;; =============================================================================
+;; POST /api/alpha/invoke tests
+;; =============================================================================
+
+(deftest invoke-registered-codex-agent
+  (testing "POST /api/alpha/invoke invokes codex agent via registry"
+    (register-mock-agent! "codex-1" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-1"
+                                      "prompt" "hello"})
+          response (post handler "/api/alpha/invoke" body)
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= "ok" (:result parsed))))))
+
+(deftest invoke-missing-agent-returns-404
+  (testing "POST /api/alpha/invoke returns 404 for unknown agent"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "ghost-agent"
+                                      "prompt" "hello"})
+          response (post handler "/api/alpha/invoke" body)
+          parsed (parse-body response)]
+      (is (= 404 (:status response)))
+      (is (false? (:ok parsed)))
+      (is (= "agent-not-found" (:error parsed))))))
+
+;; =============================================================================
 ;; GET /health tests
 ;; =============================================================================
 

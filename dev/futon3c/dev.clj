@@ -1,9 +1,8 @@
 (ns futon3c.dev
   "Dev server: boots futon1a (XTDB), futon3c (HTTP+WS), IRC, and Drawbridge.
 
-   Claude is registered at startup with a real invoke-fn that calls `claude -p`.
-   Both Emacs chat and IRC route through the registry's invoke-fn — one agent,
-   one session, serialized invocation.
+   Claude and Codex are registered at startup with real invoke-fns backed by
+   their CLIs. Transports route through the same registry invoke path.
 
    Environment variables:
      FUTON1A_PORT       — HTTP port for futon1a (default 7071)
@@ -19,8 +18,15 @@
      FUTON3C_PEERS      — comma-separated peer Agency URLs for federation
      FUTON3C_SELF_URL   — this Agency's externally reachable URL
      CLAUDE_BIN         — path to claude CLI binary (default: claude)
-     CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)"
+     CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)
+     CODEX_BIN          — path to codex CLI binary (default: codex)
+     CODEX_MODEL        — codex model (default: gpt-5-codex)
+     CODEX_SANDBOX      — codex sandbox (default: workspace-write)
+     CODEX_APPROVAL_POLICY / CODEX_APPROVAL
+                        — codex approval policy (default: never)
+     CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)"
   (:require [futon1a.system :as f1]
+            [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.tickle :as tickle]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.xtdb-backend :as xb]
@@ -64,6 +70,19 @@
          (remove str/blank?)
          vec)
     default))
+
+(defn- read-session-id
+  [f]
+  (when (.exists f)
+    (let [s (str/trim (slurp f))]
+      (when-not (str/blank? s) s))))
+
+(defn- persist-session-id!
+  [f sid]
+  (when (and sid (not (str/blank? sid)))
+    (try (spit f sid)
+         (catch Exception e
+           (println (str "[dev] session-id persist warning: " (.getMessage e)))))))
 
 ;; =============================================================================
 ;; Runtime atoms — populated by -main, accessible from Drawbridge REPL
@@ -372,30 +391,48 @@
              (:ws-connections f3c-sys)
              (:relay-bridge irc-sys)
              (:server irc-sys)))
-        ;; Register Claude agent with real invoke-fn
-        ;; Wraps invoke-fn to persist session-id to disk after each call,
-        ;; so all transports (Emacs, IRC, curl) share a durable session.
+        ;; Register Claude + Codex with real invoke-fns.
+        ;; Each wrapper persists session-id to disk after each call so all
+        ;; transports share durable continuity.
         _ (let [raw-invoke-fn (make-claude-invoke-fn
                                 {:claude-bin (or (env "CLAUDE_BIN") "claude")})
                 session-file (io/file (or (env "CLAUDE_SESSION_FILE")
                                           "/tmp/futon-session-id"))
-                initial-sid (when (.exists session-file)
-                              (let [s (str/trim (slurp session-file))]
-                                (when-not (str/blank? s) s)))
+                initial-sid (read-session-id session-file)
                 invoke-fn (fn [prompt session-id]
                             (let [result (raw-invoke-fn prompt session-id)
                                   sid (:session-id result)]
-                              (when (and sid (not (str/blank? sid)))
-                                (try (spit session-file sid)
-                                     (catch Exception e
-                                       (println (str "[dev] session-id persist warning: "
-                                                     (.getMessage e))))))
+                              (persist-session-id! session-file sid)
                               result))]
             (rt/register-claude! {:agent-id "claude-1"
                                   :invoke-fn invoke-fn})
             (when initial-sid
               (reg/update-agent! "claude-1" :agent/session-id initial-sid))
             (println (str "[dev] Claude agent registered: claude-1"
+                          (when initial-sid
+                            (str " (session: " (subs initial-sid 0
+                                                     (min 8 (count initial-sid))) ")"))))
+        _ (let [raw-invoke-fn (codex-cli/make-invoke-fn
+                                {:codex-bin (or (env "CODEX_BIN") "codex")
+                                 :model (or (env "CODEX_MODEL") "gpt-5-codex")
+                                 :sandbox (or (env "CODEX_SANDBOX") "workspace-write")
+                                 :approval-policy (or (env "CODEX_APPROVAL_POLICY")
+                                                      (env "CODEX_APPROVAL")
+                                                      "never")
+                                 :cwd (System/getProperty "user.dir")})
+                session-file (io/file (or (env "CODEX_SESSION_FILE")
+                                          "/tmp/futon-codex-session-id"))
+                initial-sid (read-session-id session-file)
+                invoke-fn (fn [prompt session-id]
+                            (let [result (raw-invoke-fn prompt session-id)
+                                  sid (:session-id result)]
+                              (persist-session-id! session-file sid)
+                              result))]
+            (rt/register-codex! {:agent-id "codex-1"
+                                 :invoke-fn invoke-fn})
+            (when initial-sid
+              (reg/update-agent! "codex-1" :agent/session-id initial-sid))
+            (println (str "[dev] Codex agent registered: codex-1"
                           (when initial-sid
                             (str " (session: " (subs initial-sid 0
                                                      (min 8 (count initial-sid))) ")")))))
@@ -436,6 +473,7 @@
     (println "[dev] Invoke: curl -X POST http://localhost:7070/api/alpha/invoke \\")
     (println "[dev]   -H 'Content-Type: application/json' \\")
     (println "[dev]   -d '{\"agent-id\":\"claude-1\",\"prompt\":\"hello\"}'")
+    (println "[dev]   -d '{\"agent-id\":\"codex-1\",\"prompt\":\"hello\"}'")
     (println)
     (println "[dev] REPL helpers (Drawbridge or nREPL):")
     (println "[dev]   (require '[futon3c.dev :as dev])")
