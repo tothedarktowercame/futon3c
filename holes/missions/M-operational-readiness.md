@@ -36,14 +36,14 @@ each independently testable and deployable —
 
 | # | Title | Status | PSR | PUR | Commits |
 |---|-------|--------|-----|-----|---------|
-| #10 | ClosedChannelException cleanup | open | e-6f3ba8d1 | — | — |
-| #16 | Tickle self-exclusion | done | (pre-mission) | — | 4d7f876 |
-| #17 | GET /api/alpha/agents/:id | done | (pre-mission) | — | 610c85a |
-| #18 | DELETE /api/alpha/agents/:id | open | e-d16c51a4 | — | — |
-| #19 | /health per-agent details | done | e-c54ae926 | — | f3114b3 |
-| #20 | :query/author in EvidenceQuery | done | e-1faabc85 | — | f3114b3 |
-| #21 | /health uptime + started-at | done | e-480944d1 | — | a06a38b |
-| #22 | /health evidence count | done | e-f32b2785 | — | 020d876 |
+| #10 | ClosedChannelException cleanup | done | e-6f3ba8d1 | e-2fec7001 | 520604c |
+| #16 | Tickle self-exclusion | done | (pre-mission) | retroactive | 4d7f876 |
+| #17 | GET /api/alpha/agents/:id | done | (pre-mission) | retroactive | 610c85a |
+| #18 | DELETE /api/alpha/agents/:id | done | e-d16c51a4 | retroactive | fac1779 |
+| #19 | /health per-agent details | done | e-c54ae926 | retroactive | f3114b3 |
+| #20 | :query/author in EvidenceQuery | done | e-1faabc85 | retroactive | f3114b3 |
+| #21 | /health uptime + started-at | done | e-480944d1 | retroactive | a06a38b |
+| #22 | /health evidence count | done | e-f32b2785 | retroactive | 020d876 |
 
 ### Pattern
 
@@ -111,6 +111,21 @@ by tag (`?tag=psr`). Mission context in issue close comments.
 
 **Test state:** 695 tests, 2267 assertions, 0 failures
 
-### Checkpoint 3: Batch Completion (2026-02-20 13:??Z)
+### Checkpoint 3: Batch Completion (2026-02-20 ~13:30Z)
 
-(To be filled when Codex completes remaining issues)
+All 8 mission issues completed (6 by Codex, 2 pre-mission). Gate G0 (API
+surface) met: CRUD agents, enhanced health, evidence author filtering. Gate G1
+(test evidence) met: 700 tests, 0 failures. Evidence landscape write side
+complete with PSRs, PURs, checkpoints for all issues.
+
+**Test state:** 700 tests, 2292 assertions, 0 failures
+
+### Checkpoint 4: Evidence Read Side (2026-02-20 ~14:00Z)
+
+Codex autowake prompt now consumes evidence from the store before each cycle:
+- PSR for current issue (pattern rationale, context, decision)
+- Recent PURs from mission (outcomes, files touched — learning context)
+- Mission health (agent count, uptime)
+
+This closes the evidence loop: agents both emit and consume evidence.
+Write side (Layers 0-4) + read side = full evidence landscape.

@@ -56,6 +56,94 @@ json_escape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "${1:-}"
 }
 
+# ── Read-side: fetch evidence to guide Codex ──────────────────────────
+
+fetch_psr() {
+  # Fetch the Pattern Selection Record for a given issue number.
+  # Returns a human-readable summary or empty string.
+  local issue_num="$1"
+  command -v curl >/dev/null 2>&1 || return 0
+  local raw
+  raw="$(curl -sS --max-time 3 \
+    "${evidence_base%/}/api/alpha/evidence?tag=psr&tag=${MISSION}" \
+    2>/dev/null)" || return 0
+  python3 -c "
+import sys, json
+try:
+    data = json.loads(sys.argv[1])
+    entries = data.get('entries', data) if isinstance(data, dict) else data
+    issue = int(sys.argv[2])
+    for e in entries:
+        b = e.get('evidence/body', e.get('body', {}))
+        if isinstance(b, str): b = json.loads(b)
+        # PSR entries use psr/issue key
+        entry_issue = b.get('psr/issue', b.get('issue'))
+        if entry_issue == issue:
+            parts = []
+            if b.get('psr/pattern'): parts.append(f'pattern: {b[\"psr/pattern\"]}')
+            if b.get('psr/pattern-name'): parts.append(f'pattern-name: {b[\"psr/pattern-name\"]}')
+            if b.get('psr/context'): parts.append(f'context: {b[\"psr/context\"]}')
+            if b.get('psr/rationale'): parts.append(f'rationale: {b[\"psr/rationale\"]}')
+            if b.get('psr/decision'): parts.append(f'decision: {b[\"psr/decision\"]}')
+            # Also check non-prefixed keys (early PSR format)
+            for k in ['pattern-id','context','rationale']:
+                if b.get(k) and not any(k in p for p in parts):
+                    parts.append(f'{k}: {b[k]}')
+            if parts: print('\\n'.join(parts))
+            break
+except: pass
+" "$raw" "$issue_num" 2>/dev/null || true
+}
+
+fetch_recent_purs() {
+  # Fetch recent Pattern Use Records for the current mission.
+  # Returns a human-readable summary of outcomes for learning context.
+  command -v curl >/dev/null 2>&1 || return 0
+  local raw
+  raw="$(curl -sS --max-time 3 \
+    "${evidence_base%/}/api/alpha/evidence?tag=pur&tag=${MISSION}" \
+    2>/dev/null)" || return 0
+  python3 -c "
+import sys, json
+try:
+    data = json.loads(sys.argv[1])
+    entries = data.get('entries', data) if isinstance(data, dict) else data
+    lines = []
+    for e in entries:
+        b = e.get('evidence/body', e.get('body', {}))
+        if isinstance(b, str): b = json.loads(b)
+        # Only include actual PUR entries (have pur/issue key)
+        if 'pur/issue' not in b: continue
+        issue = b['pur/issue']
+        outcome = b.get('pur/outcome', '?')
+        title = b.get('pur/title', '')[:60]
+        files = b.get('pur/file-list', '')
+        lines.append(f'  #{issue} ({outcome}): {title}')
+        if files: lines.append(f'    files: {files}')
+        if len(lines) >= 10: break  # ~5 entries with file info
+    if lines: print('\\n'.join(lines))
+except: pass
+" "$raw" 2>/dev/null || true
+}
+
+fetch_mission_context() {
+  # Fetch current mission checkpoint/health status.
+  command -v curl >/dev/null 2>&1 || return 0
+  local health
+  health="$(curl -sS --max-time 2 "${evidence_base%/}/health" 2>/dev/null)" || return 0
+  python3 -c "
+import sys, json
+try:
+    h = json.loads(sys.argv[1])
+    parts = []
+    if 'agents' in h: parts.append(f'agents: {h[\"agents\"]}')
+    if 'evidence' in h: parts.append(f'evidence entries: {h[\"evidence\"]}')
+    if 'uptime-seconds' in h: parts.append(f'uptime: {h[\"uptime-seconds\"]}s')
+    if parts: print(', '.join(parts))
+except: pass
+" "$health" 2>/dev/null || true
+}
+
 register_agent() {
   command -v curl >/dev/null 2>&1 || return 0
   curl -sS --max-time 2 \
@@ -186,12 +274,45 @@ while [[ $cycle -lt $MAX_CYCLES ]]; do
   echo "[autowake] Issue #${number}: ${title}"
   emit_evidence "issue-start" "$number" "$title"
 
-  # Build prompt from issue
+  # ── Read-side: gather evidence context for this issue ──
+  psr_context="$(fetch_psr "$number")"
+  pur_context="$(fetch_recent_purs)"
+  mission_health="$(fetch_mission_context)"
+
+  evidence_section=""
+  if [[ -n "$psr_context" || -n "$pur_context" || -n "$mission_health" ]]; then
+    evidence_section="
+--- Evidence Context (from the mission evidence landscape) ---"
+    if [[ -n "$psr_context" ]]; then
+      evidence_section="${evidence_section}
+
+Pattern Selection (why this issue exists):
+${psr_context}"
+    fi
+    if [[ -n "$pur_context" ]]; then
+      evidence_section="${evidence_section}
+
+Recent outcomes from this mission (learn from these):
+${pur_context}"
+    fi
+    if [[ -n "$mission_health" ]]; then
+      evidence_section="${evidence_section}
+
+Current system state: ${mission_health}"
+    fi
+    evidence_section="${evidence_section}
+---"
+    echo "[autowake] Injected evidence context into prompt"
+  fi
+
+  # Build prompt from issue + evidence context
   prompt="You are working on GitHub issue #${number} in the ${REPO} repository.
+Mission: ${MISSION} | Pattern: ${PATTERN}
 
 Title: ${title}
 
 ${body}
+${evidence_section}
 
 Instructions:
 1. Read the :in files listed in the issue for context
