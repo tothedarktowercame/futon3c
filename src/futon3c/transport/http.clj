@@ -10,6 +10,7 @@
      POST /presence  — verify presence, return record or error
      GET  /session/:id — retrieve session by ID
      GET  /api/alpha/evidence — query evidence entries
+     GET  /api/alpha/evidence/count — count evidence entries by filters
      GET  /api/alpha/evidence/:id — retrieve single evidence entry
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      GET  /health    — liveness check with agent/session counts
@@ -183,6 +184,12 @@
          (remove nil?)
          vec)))
 
+(defn- non-blank-string
+  "Return trimmed string when non-blank; otherwise nil."
+  [s]
+  (when (and (string? s) (not (str/blank? s)))
+    (str/trim s)))
+
 ;; =============================================================================
 ;; Route handlers
 ;; =============================================================================
@@ -317,27 +324,28 @@
   (let [params (parse-query-params request)
         limit (parse-int (get params "limit"))
         subject (parse-subject params)
-        query (cond-> {}
-                subject (assoc :query/subject subject)
-                (parse-keyword (get params "type")) (assoc :query/type (parse-keyword (get params "type")))
-                (parse-keyword (get params "claim-type")) (assoc :query/claim-type (parse-keyword (get params "claim-type")))
-                (get params "since") (assoc :query/since (get params "since"))
-                (some? (parse-bool (get params "include-ephemeral?")))
-                (assoc :query/include-ephemeral? (parse-bool (get params "include-ephemeral?"))))
-        author (get params "author")
-        session-id (get params "session-id")
+        evidence-type (parse-keyword (get params "type"))
+        claim-type (parse-keyword (get params "claim-type"))
+        include-ephemeral? (parse-bool (get params "include-ephemeral?"))
         pattern-id (parse-keyword (get params "pattern-id"))
         tags (parse-tags (get params "tag"))
+        author (non-blank-string (get params "author"))
+        session-id (non-blank-string (get params "session-id"))
+        query (cond-> {}
+                subject (assoc :query/subject subject)
+                evidence-type (assoc :query/type evidence-type)
+                claim-type (assoc :query/claim-type claim-type)
+                (get params "since") (assoc :query/since (get params "since"))
+                (some? include-ephemeral?)
+                (assoc :query/include-ephemeral? include-ephemeral?))
         evidence-store (evidence-store-for-config config)
         entries (cond->> (estore/query* evidence-store query)
                   true
                   (filter (fn [entry]
                             (and
-                             (or (not (string? author))
-                                 (str/blank? author)
+                             (or (nil? author)
                                  (= author (:evidence/author entry)))
-                             (or (not (string? session-id))
-                                 (str/blank? session-id)
+                             (or (nil? session-id)
                                  (= session-id (:evidence/session-id entry)))
                              (or (nil? pattern-id)
                                  (= pattern-id (:evidence/pattern-id entry)))
@@ -351,6 +359,42 @@
     (json-response 200 {:ok true
                         :count (count entries)
                         :entries entries})))
+
+(defn- handle-evidence-count
+  "GET /api/alpha/evidence/count — return filtered evidence count."
+  [request config]
+  (let [params (parse-query-params request)
+        subject (parse-subject params)
+        evidence-type (parse-keyword (get params "type"))
+        claim-type (parse-keyword (get params "claim-type"))
+        include-ephemeral? (parse-bool (get params "include-ephemeral?"))
+        pattern-id (parse-keyword (get params "pattern-id"))
+        tags (parse-tags (get params "tag"))
+        author (non-blank-string (get params "author"))
+        session-id (non-blank-string (get params "session-id"))
+        query (cond-> {}
+                subject (assoc :query/subject subject)
+                evidence-type (assoc :query/type evidence-type)
+                claim-type (assoc :query/claim-type claim-type)
+                (get params "since") (assoc :query/since (get params "since"))
+                (some? include-ephemeral?)
+                (assoc :query/include-ephemeral? include-ephemeral?))
+        evidence-store (evidence-store-for-config config)
+        count* (->> (estore/query* evidence-store query)
+                    (filter (fn [entry]
+                              (and
+                               (or (nil? author)
+                                   (= author (:evidence/author entry)))
+                               (or (nil? session-id)
+                                   (= session-id (:evidence/session-id entry)))
+                               (or (nil? pattern-id)
+                                   (= pattern-id (:evidence/pattern-id entry)))
+                               (or (empty? tags)
+                                   (let [entry-tags (set (:evidence/tags entry))]
+                                     (every? entry-tags tags))))))
+                    count)]
+    (json-response 200 {:ok true
+                        :count count*})))
 
 (defn- handle-evidence-entry
   "GET /api/alpha/evidence/:id — fetch one entry."
@@ -587,6 +631,9 @@
 
           (and (= :get method) (= "/api/alpha/evidence" uri))
           (handle-evidence-query request config)
+
+          (and (= :get method) (= "/api/alpha/evidence/count" uri))
+          (handle-evidence-count request config)
 
           (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)/chain" uri))
           (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)/chain" uri)

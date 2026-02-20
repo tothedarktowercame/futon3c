@@ -423,6 +423,101 @@
       (is (string? entry-id))
       (is (some? (estore/get-entry entry-id))))))
 
+(deftest evidence-count-returns-total
+  (testing "GET /api/alpha/evidence/count returns total evidence count"
+    (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-count-1"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "codex"
+                             :session-id "sess-count-1"
+                             :body {:msg "one"}
+                             :tags [:alpha]})
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-count-2"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "claude"
+                             :session-id "sess-count-2"
+                             :body {:msg "two"}
+                             :tags [:beta]})
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-count-3"}
+                             :type :reflection
+                             :claim-type :conclusion
+                             :author "tickle"
+                             :session-id "sess-count-3"
+                             :body {:msg "three"}
+                             :tags [:gamma]})
+          handler (make-handler)
+          response (get-req handler "/api/alpha/evidence/count")
+          parsed (parse-body response)
+          session-response (get-req-with-query handler "/api/alpha/evidence/count" "session-id=sess-count-2")
+          session-parsed (parse-body session-response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= 3 (:count parsed)))
+      (is (= 200 (:status session-response)))
+      (is (true? (:ok session-parsed)))
+      (is (= 1 (:count session-parsed))))))
+
+(deftest evidence-count-filters-by-tag
+  (testing "GET /api/alpha/evidence/count?tag=foo counts only matching tags"
+    (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-tag-1"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "codex"
+                             :session-id "sess-tag-1"
+                             :body {:msg "a"}
+                             :tags [:foo]})
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-tag-2"}
+                             :type :reflection
+                             :claim-type :conclusion
+                             :author "claude"
+                             :session-id "sess-tag-2"
+                             :body {:msg "b"}
+                             :tags [:bar]})
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-tag-3"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "codex"
+                             :session-id "sess-tag-3"
+                             :body {:msg "c"}
+                             :tags [:foo :bar]})
+          handler (make-handler)
+          response (get-req-with-query handler "/api/alpha/evidence/count" "tag=foo")
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= 2 (:count parsed))))))
+
+(deftest evidence-count-filters-by-author
+  (testing "GET /api/alpha/evidence/count?author=alice counts only matching author"
+    (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-author-1"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "alice"
+                             :session-id "sess-author-1"
+                             :body {:msg "a"}
+                             :tags [:author]})
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-author-2"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "bob"
+                             :session-id "sess-author-2"
+                             :body {:msg "b"}
+                             :tags [:author]})
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-author-3"}
+                             :type :reflection
+                             :claim-type :conclusion
+                             :author "alice"
+                             :session-id "sess-author-3"
+                             :body {:msg "c"}
+                             :tags [:author]})
+          handler (make-handler)
+          response (get-req-with-query handler "/api/alpha/evidence/count" "author=alice")
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= 2 (:count parsed))))))
+
 ;; =============================================================================
 ;; Encyclopedia route tests
 ;; =============================================================================
