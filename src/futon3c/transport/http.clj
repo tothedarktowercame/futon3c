@@ -596,10 +596,11 @@
                          :metadata (cond-> {}
                                      proxy? (assoc :proxy? true)
                                      origin-url (assoc :origin-url origin-url))})]
-            (if (and (map? result) (:ok result) (= false (:ok result)))
+            (if (and (map? result) (= false (:ok result)))
               (json-response 409 {:ok false
                                   :err "duplicate-registration"
-                                  :message (str "Agent already registered: " agent-id)})
+                                  :message (str "Agent already registered: " agent-id)
+                                  :detail result})
               (if (and (map? result) (:agent/id result))
                 (json-response 201 {:ok true
                                     :agent-id (get-in result [:agent/id :id/value])
@@ -660,8 +661,10 @@
                               :message "prompt is required"})
 
           :else
-          (do
-            (emit-invoke-evidence! evidence-store "joe" (str prompt) nil)
+          (let [caller (or (some-> payload :caller str)
+                           (some-> payload (get "caller") str)
+                           "http-caller")]
+            (emit-invoke-evidence! evidence-store caller (str prompt) nil)
             (let [result (reg/invoke-agent! (str agent-id) prompt)
                   sid (:session-id result)]
               (if (:ok result)

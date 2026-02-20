@@ -228,6 +228,20 @@
     (is (:ok start))
     (is @autoconf-called)))
 
+(deftest autoconf-changes-persist-into-step
+  (testing "autoconf removes a setup tool → that tool is rejected in step"
+    (let [config (assoc test-config
+                        :autoconf-fn (fn [_ctx cfg]
+                                       ;; Remove :tool-a from setup-tools
+                                       (update cfg :setup-tools disj :tool-a)))
+          backend (tools/make-mock-backend {:tool-a "should-not-run"})
+          p (cycle/make-cycle-peripheral config test-spec backend)
+          start (runner/start p {:session-id "sess-autoconf"})
+          step (runner/step p (:state start) {:tool :tool-a :args []})]
+      ;; tool-a was removed by autoconf, so it should be rejected
+      (fix/assert-valid! shapes/SocialError step)
+      (is (= :phase-tool-not-allowed (:error/code step))))))
+
 ;; =============================================================================
 ;; Unclassified tool rejection
 ;; =============================================================================

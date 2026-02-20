@@ -18,7 +18,7 @@
    - :fruit-fn         (fn [state] -> fruit-map) extract fruit at stop
    - :exit-context-fn  (fn [state] -> context-map) exit context at stop
    - :phase-tags-fn    (fn [phase tool] -> tags) optional Table 25 auto-tags
-   - :autoconf-fn      (fn [context] -> CycleDomainConfig) optional autoconf
+   - :autoconf-fn      (fn [context config] -> CycleDomainConfig) optional autoconf
 
    The futonic loop maps onto the cycle machine:
      象 = CycleDomainConfig (the configuration entering the cycle)
@@ -196,10 +196,11 @@
     (let [domain-id (:domain-id config)]
       (if-let [err (runner/validate-context domain-id context #{:session-id})]
         err
-        (let [;; Autoconf: allow domain config to be refined from context
-              config (if-let [autoconf (:autoconf-fn config)]
-                       (autoconf context config)
-                       config)
+        (let [;; Autoconf: allow domain config to be refined from context.
+              ;; Store refined config in state so step/stop use it too.
+              effective-config (if-let [autoconf (:autoconf-fn config)]
+                                 (autoconf context config)
+                                 config)
               sid (:session-id context)
               author (common/resolve-author context)
               ev (evidence/make-start-evidence domain-id sid author)
@@ -210,9 +211,10 @@
                           :current-phase nil
                           :current-cycle-id nil
                           :cycles-completed 0
-                          :evidence-store (:evidence-store context)}
+                          :evidence-store (:evidence-store context)
+                          :cycle-config effective-config}
               ;; Domain-specific state initialization
-              domain-state (when-let [f (:state-init-fn config)]
+              domain-state (when-let [f (:state-init-fn effective-config)]
                              (f context))
               state (merge base-state domain-state)
               append-err (common/maybe-append-evidence! state ev)]
@@ -221,15 +223,17 @@
             {:ok true :state state :evidence ev})))))
 
   (step [_ state action]
-    (let [result (dispatch-step config spec backend state action)]
+    (let [effective-config (or (:cycle-config state) config)
+          result (dispatch-step effective-config spec backend state action)]
       (when (:ok result)
-        (bb/project! (:domain-id config) (:state result)))
+        (bb/project! (:domain-id effective-config) (:state result)))
       result))
 
   (stop [_ state reason]
-    (let [domain-id (:domain-id config)
-          fruit ((:fruit-fn config) state)
-          exit-ctx ((:exit-context-fn config) state)
+    (let [effective-config (or (:cycle-config state) config)
+          domain-id (:domain-id effective-config)
+          fruit ((:fruit-fn effective-config) state)
+          exit-ctx ((:exit-context-fn effective-config) state)
           ev (evidence/make-stop-evidence
               domain-id (:session-id state) (:author state)
               fruit reason (:last-evidence-id state))

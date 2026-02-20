@@ -5,3 +5,4 @@ target/
 .venv-*/
 log/
 .alleycat-drop/
+storage/mission-control/sessions.edn
