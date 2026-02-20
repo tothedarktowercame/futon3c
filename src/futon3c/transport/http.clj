@@ -241,15 +241,19 @@
    Reads both live registry and config snapshot, reports the larger count.
    Live registry reflects HTTP-registered and federated agents;
    config snapshot reflects agents wired at startup."
-  [config]
-  (let [live-count (:count (reg/registry-status))
+  [config started-at]
+  (let [now (Instant/now)
+        uptime-seconds (max 0 (.getSeconds (java.time.Duration/between started-at now)))
+        live-count (:count (reg/registry-status))
         config-count (count (get-in config [:registry :agents]))
         evidence-store (evidence-store-for-config config)
         evidence-count (count (estore/query* evidence-store {}))]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
                          "sessions" (count (persist/list-sessions {}))
-                         "evidence" evidence-count})))
+                         "evidence" evidence-count
+                         "started-at" (str started-at)
+                         "uptime-seconds" uptime-seconds})))
 
 (defn- handle-encyclopedia-corpuses
   "GET /fulab/encyclopedia/corpuses — list available corpuses."
@@ -528,68 +532,69 @@
 
    Returns a Ring handler fn that routes to the social pipeline."
   [config]
-  (fn [request]
-    (let [method (:request-method request)
-          uri (:uri request)]
-      (cond
-        (and (= :post method) (= "/dispatch" uri))
-        (handle-dispatch request config)
+  (let [started-at (Instant/now)]
+    (fn [request]
+      (let [method (:request-method request)
+            uri (:uri request)]
+        (cond
+          (and (= :post method) (= "/dispatch" uri))
+          (handle-dispatch request config)
 
-        (and (= :post method) (= "/presence" uri))
-        (handle-presence request config)
+          (and (= :post method) (= "/presence" uri))
+          (handle-presence request config)
 
-        (and (= :get method) (string? uri) (str/starts-with? uri "/session/"))
-        (handle-get-session request config)
+          (and (= :get method) (string? uri) (str/starts-with? uri "/session/"))
+          (handle-get-session request config)
 
-        (and (= :post method) (= "/api/alpha/evidence" uri))
-        (handle-evidence-create request config)
+          (and (= :post method) (= "/api/alpha/evidence" uri))
+          (handle-evidence-create request config)
 
-        (and (= :get method) (= "/api/alpha/evidence" uri))
-        (handle-evidence-query request config)
+          (and (= :get method) (= "/api/alpha/evidence" uri))
+          (handle-evidence-query request config)
 
-        (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)/chain" uri))
-        (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)/chain" uri)
-              evidence-id (enc/decode-uri-component raw-id)]
-          (handle-evidence-chain config evidence-id))
+          (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)/chain" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)/chain" uri)
+                evidence-id (enc/decode-uri-component raw-id)]
+            (handle-evidence-chain config evidence-id))
 
-        (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)" uri))
-        (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)" uri)
-              evidence-id (enc/decode-uri-component raw-id)]
-          (handle-evidence-entry config evidence-id))
+          (and (= :get method) (re-matches #"/api/alpha/evidence/(.+)" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)" uri)
+                evidence-id (enc/decode-uri-component raw-id)]
+            (handle-evidence-entry config evidence-id))
 
-        (and (= :post method) (= "/api/alpha/agents" uri))
-        (handle-agents-register request config)
+          (and (= :post method) (= "/api/alpha/agents" uri))
+          (handle-agents-register request config)
 
-        (and (= :get method) (re-matches #"/api/alpha/agents/(.+)" uri))
-        (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
-          (handle-agent-get config agent-id))
+          (and (= :get method) (re-matches #"/api/alpha/agents/(.+)" uri))
+          (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
+            (handle-agent-get config agent-id))
 
-        (and (= :get method) (= "/api/alpha/agents" uri))
-        (handle-agents-list config)
+          (and (= :get method) (= "/api/alpha/agents" uri))
+          (handle-agents-list config)
 
-        (and (= :get method) (= "/health" uri))
-        (handle-health config)
+          (and (= :get method) (= "/health" uri))
+          (handle-health config started-at)
 
-        (and (= :get method) (= "/fulab/encyclopedia/corpuses" uri))
-        (handle-encyclopedia-corpuses config)
+          (and (= :get method) (= "/fulab/encyclopedia/corpuses" uri))
+          (handle-encyclopedia-corpuses config)
 
-        (and (= :get method) (re-matches #"/fulab/encyclopedia/([^/]+)/entries" uri))
-        (let [[_ corpus] (re-find #"/fulab/encyclopedia/([^/]+)/entries" uri)
-              corpus-name (enc/decode-uri-component corpus)]
-          (handle-encyclopedia-entries request config corpus-name))
+          (and (= :get method) (re-matches #"/fulab/encyclopedia/([^/]+)/entries" uri))
+          (let [[_ corpus] (re-find #"/fulab/encyclopedia/([^/]+)/entries" uri)
+                corpus-name (enc/decode-uri-component corpus)]
+            (handle-encyclopedia-entries request config corpus-name))
 
-        (and (= :get method) (re-matches #"/fulab/encyclopedia/([^/]+)/entry/(.+)" uri))
-        (let [[_ corpus raw-entry-id] (re-find #"/fulab/encyclopedia/([^/]+)/entry/(.+)" uri)
-              corpus-name (enc/decode-uri-component corpus)
-              entry-id (enc/decode-uri-component raw-entry-id)]
-          (handle-encyclopedia-entry config corpus-name entry-id))
+          (and (= :get method) (re-matches #"/fulab/encyclopedia/([^/]+)/entry/(.+)" uri))
+          (let [[_ corpus raw-entry-id] (re-find #"/fulab/encyclopedia/([^/]+)/entry/(.+)" uri)
+                corpus-name (enc/decode-uri-component corpus)
+                entry-id (enc/decode-uri-component raw-entry-id)]
+            (handle-encyclopedia-entry config corpus-name entry-id))
 
-        :else
-        (json-response 404 {"error" true
-                            "code" "not-found"
-                            "message" (str "Unknown endpoint: "
-                                          (some-> method name str/upper-case)
-                                          " " uri)})))))
+          :else
+          (json-response 404 {"error" true
+                              "code" "not-found"
+                              "message" (str "Unknown endpoint: "
+                                            (some-> method name str/upper-case)
+                                            " " uri)}))))))
 
 (defn start-server!
   "Start HTTP server on port. Returns {:server stop-fn :port p :started-at t}.

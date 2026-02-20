@@ -269,6 +269,29 @@
         (is (integer? (:evidence parsed)))
         (is (= expected-count (:evidence parsed)))))))
 
+(deftest health-includes-uptime
+  (testing "GET /health includes started-at and non-decreasing uptime seconds"
+    (let [handler (make-handler)
+          response-1 (get-req handler "/health")
+          parsed-1 (parse-body response-1)
+          uptime-1 (:uptime-seconds parsed-1)
+          started-at (:started-at parsed-1)]
+      (Thread/sleep 1200)
+      (let [response-2 (get-req handler "/health")
+            parsed-2 (parse-body response-2)
+            uptime-2 (:uptime-seconds parsed-2)]
+        (is (= 200 (:status response-1)))
+        (is (= 200 (:status response-2)))
+        (is (= "ok" (:status parsed-1)))
+        (is (= 3 (:agents parsed-1)))
+        (is (= 0 (:sessions parsed-1)))
+        (is (string? started-at))
+        (is (instance? java.time.Instant (java.time.Instant/parse started-at)))
+        (is (integer? uptime-1))
+        (is (integer? uptime-2))
+        (is (<= 0 uptime-1))
+        (is (<= uptime-1 uptime-2))))))
+
 ;; =============================================================================
 ;; GET/POST /api/alpha/evidence tests
 ;; =============================================================================
