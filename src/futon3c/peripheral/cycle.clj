@@ -29,7 +29,8 @@
      味 = required-outputs (evaluation: did this phase produce enough?)
      🔮 = phase gating (regulation: constrain tools to prevent harm)
      捨 = stop with reason (set-down when boundary is reached)"
-  (:require [futon3c.peripheral.common :as common]
+  (:require [futon3c.blackboard :as bb]
+            [futon3c.peripheral.common :as common]
             [futon3c.peripheral.evidence :as evidence]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]))
@@ -220,7 +221,10 @@
             {:ok true :state state :evidence ev})))))
 
   (step [_ state action]
-    (dispatch-step config spec backend state action))
+    (let [result (dispatch-step config spec backend state action)]
+      (when (:ok result)
+        (bb/project! (:domain-id config) (:state result)))
+      result))
 
   (stop [_ state reason]
     (let [domain-id (:domain-id config)

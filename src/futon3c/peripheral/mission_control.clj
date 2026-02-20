@@ -13,7 +13,8 @@
 
    Fruit: {:review PortfolioReview :steps-taken int}
    Exit context: {:session-id str :review-id str}"
-  (:require [futon3c.peripheral.common :as common]
+  (:require [futon3c.blackboard :as bb]
+            [futon3c.peripheral.common :as common]
             [futon3c.peripheral.evidence :as evidence]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.peripheral.runner :as runner]
@@ -136,7 +137,10 @@
           {:ok true :state state :evidence ev}))))
 
   (step [_ state action]
-    (dispatch-step spec backend state action))
+    (let [result (dispatch-step spec backend state action)]
+      (when (:ok result)
+        (bb/project! :mission-control (:state result)))
+      result))
 
   (stop [_ state reason]
     (let [review (:latest-review state)

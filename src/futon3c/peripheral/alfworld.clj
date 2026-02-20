@@ -15,6 +15,7 @@
    AND coordination bells from Joe/Codex (P-6 interleaved streams)."
   (:require [cheshire.core :as json]
             [clojure.string :as str]
+            [futon3c.blackboard :as bb]
             [futon3c.peripheral.common :as common]
             [futon3c.peripheral.evidence :as evidence]
             [futon3c.peripheral.runner :as runner]
@@ -247,7 +248,10 @@
               {:ok true :state state :evidence ev}))))))
 
   (step [_ state action]
-    (dispatch-step spec backend state action))
+    (let [result (dispatch-step spec backend state action)]
+      (when (:ok result)
+        (bb/project! :alfworld (:state result)))
+      result))
 
   (stop [_ state reason]
     (let [alf-state (:alfworld-state state)
