@@ -29,6 +29,11 @@
   :type 'string
   :group 'futon3c-chat)
 
+(defcustom futon3c-chat-session-file "/tmp/futon-session-id"
+  "File storing Claude session ID (shared with IRC relay)."
+  :type 'string
+  :group 'futon3c-chat)
+
 ;;; Face (Claude-specific; shared faces are in futon3c-ui)
 
 (defface futon3c-chat-claude-face
@@ -89,10 +94,19 @@ CALLBACK receives the response string."
                                                    :false-object nil))
                                         (ok (alist-get 'ok json-obj))
                                         (result (alist-get 'result json-obj))
+                                        (sid (alist-get 'session-id json-obj))
                                         (err-msg (or (alist-get 'message json-obj)
                                                      (alist-get 'error json-obj))))
+                                   (when (and ok sid (buffer-live-p chat-buffer))
+                                     (with-current-buffer chat-buffer
+                                       (futon3c-ui-update-session-id sid))
+                                     (when futon3c-chat-session-file
+                                       (write-region sid nil futon3c-chat-session-file nil 'silent)))
                                    (if ok
-                                       (or result "[empty response]")
+                                       (let ((r (and (stringp result)
+                                                     (not (string-empty-p (string-trim result)))
+                                                     result)))
+                                         (or r "[empty response]"))
                                      (format "[Error: %s]" (or err-msg raw))))
                                (error
                                 (format "[JSON parse error: %s\nRaw: %s]"
@@ -157,15 +171,25 @@ Type after the prompt, RET to send.
   (futon3c-ui-clear #'futon3c-chat--init))
 
 (defun futon3c-chat--init ()
-  "Initialize."
-  (futon3c-ui-init-buffer
-   (list :title "futon3c chat"
-         :session-id futon3c-chat-agent-id
-         :modeline-fn #'futon3c-chat--build-modeline
-         :face-alist `(("claude" . futon3c-chat-claude-face))
-         :agent-name "claude"
-         :thinking-text "claude is thinking..."
-         :thinking-prop 'futon3c-thinking)))
+  "Initialize.
+Load existing session-id from file if available."
+  (let ((existing-sid
+         (when (and futon3c-chat-session-file
+                    (file-exists-p futon3c-chat-session-file))
+           (let ((s (string-trim
+                     (with-temp-buffer
+                       (insert-file-contents futon3c-chat-session-file)
+                       (buffer-string)))))
+             (unless (string-empty-p s) s)))))
+    (futon3c-ui-init-buffer
+     (list :title "futon3c chat"
+           :session-id (or existing-sid
+                           (format "%s (awaiting session)" futon3c-chat-agent-id))
+           :modeline-fn #'futon3c-chat--build-modeline
+           :face-alist `(("claude" . futon3c-chat-claude-face))
+           :agent-name "claude"
+           :thinking-text "claude is thinking..."
+           :thinking-prop 'futon3c-thinking))))
 
 ;;;###autoload
 (defun futon3c-chat ()

@@ -48,6 +48,9 @@
 (defvar-local futon3c-ui--pending-process nil
   "Current in-flight subprocess for this chat buffer.")
 
+(defvar-local futon3c-ui--session-id nil
+  "Current session ID displayed in the buffer header.")
+
 (defvar-local futon3c-ui--face-alist nil
   "Alist mapping speaker name to face, e.g. ((\"claude\" . face)).")
 
@@ -255,9 +258,10 @@ CONFIG keys:
     (setq futon3c-ui--agent-name agent-name)
     (setq futon3c-ui--thinking-text thinking-text)
     (setq futon3c-ui--thinking-property thinking-prop)
+    (setq futon3c-ui--session-id (or session-id "pending"))
     ;; Insert header
     (insert (propertize (concat title " ") 'face 'bold)
-            (propertize (format "(session: %s)\n" (or session-id "pending"))
+            (propertize (format "(session: %s)\n" futon3c-ui--session-id)
                         'face 'font-lock-comment-face))
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
@@ -288,6 +292,19 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
                                 (buffer-string)))))
         (unless (string-empty-p sid)
           (funcall setter-fn sid))))))
+
+(defun futon3c-ui-update-session-id (new-id)
+  "Update the session ID displayed in the buffer header.
+Replaces the `(session: ...)' text in the first line."
+  (when (and new-id (not (equal new-id futon3c-ui--session-id)))
+    (let ((inhibit-read-only t)
+          (old-text (format "(session: %s)" futon3c-ui--session-id))
+          (new-text (format "(session: %s)" new-id)))
+      (save-excursion
+        (goto-char (point-min))
+        (when (search-forward old-text (line-end-position 2) t)
+          (replace-match (propertize new-text 'face 'font-lock-comment-face) t t)))
+      (setq futon3c-ui--session-id new-id))))
 
 ;;; IRC check (shared)
 

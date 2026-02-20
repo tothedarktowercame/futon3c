@@ -19,7 +19,9 @@
 
    Design: emacsclient is the transport. No protocol to design, no
    endpoint to build. Emacs IS the sliding blackboard."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [futon3c.evidence.store :as estore])
+  (:import [java.util UUID]))
 
 ;; =============================================================================
 ;; Enable/disable — bind *enabled* to false in tests or non-interactive contexts
@@ -205,13 +207,23 @@
         step-count (:step-count state 0)
         bells (count (:bells-sent state))
         whistles (count (:whistles-sent state))
-        last-obs (or (:last-observation state) "none")
-        task-desc (or (:task-description state) "unknown")]
+        last-obs (or (:last-observation state)
+                     (:observation alf-state)
+                     "none")
+        task-desc (or (:task-description state)
+                      (:task alf-state)
+                      "unknown")
+        score (:score alf-state)
+        done? (:done alf-state)
+        won? (:won alf-state)]
     (str "ALFWorld\n"
          "Task: " task-desc "\n"
-         "Steps: " step-count "\n"
-         "Last: " (if (> (count last-obs) 60)
-                    (str (subs last-obs 0 57) "...")
+         "Steps: " step-count
+         (when score (str "  Score: " score))
+         (when done? (str "  " (if won? "WON" "LOST")))
+         "\n"
+         "Last: " (if (> (count (str last-obs)) 60)
+                    (str (subs (str last-obs) 0 57) "...")
                     last-obs) "\n"
          (when (pos? bells)
            (str "Bells: " bells "\n"))
@@ -222,6 +234,32 @@
   (format-alfworld-state state))
 
 ;; =============================================================================
+;; Evidence emission — blackboard "commits"
+;; =============================================================================
+
+(defn- emit-blackboard-evidence!
+  "Record a blackboard snapshot as evidence. Fire-and-forget — never throws."
+  [peripheral-id state content]
+  (when-let [store (:evidence-store state)]
+    (try
+      (estore/append* store
+                      {:evidence/id (str "e-bb-" (UUID/randomUUID))
+                       :evidence/subject {:ref/type :peripheral
+                                          :ref/id (name peripheral-id)}
+                       :evidence/type :coordination
+                       :evidence/claim-type :observation
+                       :evidence/author (or (:author state) (str (name peripheral-id) "-blackboard"))
+                       :evidence/at (str (java.time.Instant/now))
+                       :evidence/body {:blackboard (name peripheral-id)
+                                       :content content
+                                       :session-id (:session-id state)
+                                       :step-count (:step-count state)}
+                       :evidence/tags [:blackboard (keyword (name peripheral-id))]
+                       :evidence/session-id (:session-id state)})
+      (catch Throwable _
+        nil))))
+
+;; =============================================================================
 ;; Projection helper — call from step dispatch
 ;; =============================================================================
 
@@ -229,7 +267,8 @@
   "Project the current peripheral state to the blackboard.
 
    Called after each step. Renders the peripheral's state via its adaptor,
-   then writes to a buffer named after the peripheral.
+   then writes to a buffer named after the peripheral. Also emits an
+   evidence entry tagged :blackboard — the permanent record.
 
    No-op when *enabled* is false (tests, non-interactive contexts).
    Never throws — rendering and projection errors are swallowed.
@@ -242,6 +281,7 @@
        (when-let [content (render-blackboard peripheral-id state)]
          (let [buf-name (str "*" (name peripheral-id) "*")]
            (blackboard! buf-name content opts)
+           (emit-blackboard-evidence! peripheral-id state content)
            nil))
        (catch Throwable _
          nil)))))

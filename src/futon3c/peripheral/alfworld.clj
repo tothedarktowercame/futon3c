@@ -145,6 +145,8 @@
             new-state (-> state
                           (assoc :last-evidence-id (:evidence/id ev))
                           (assoc :alfworld-state result)
+                          (assoc :task-description (or (:task result) (:task-description state)))
+                          (assoc :last-observation (:observation result))
                           (update :step-count inc)
                           (update :actions-taken conj {:action action :result result}))
             append-err (common/maybe-append-evidence! new-state ev)]
@@ -235,6 +237,8 @@
                        :author author
                        :last-evidence-id (:evidence/id ev)
                        :alfworld-state initial-state
+                       :task-description (:task initial-state)
+                       :last-observation (:observation initial-state)
                        :step-count 0
                        :actions-taken []
                        :bells-sent []

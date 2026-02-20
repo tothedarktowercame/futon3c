@@ -128,6 +128,22 @@
           result (bb/render-blackboard :alfworld state)]
       (is (str/includes? result "...")))))
 
+(deftest alfworld-shows-score-and-status
+  (testing "ALFWorld renders score and win status from alfworld-state"
+    (let [state {:alfworld-state {:task "put vase in safe"
+                                  :observation "You put the vase in the safe."
+                                  :score 1.0
+                                  :done true
+                                  :won true}
+                 :step-count 6
+                 :bells-sent []
+                 :whistles-sent []}
+          result (bb/render-blackboard :alfworld state)]
+      (is (str/includes? result "put vase in safe"))
+      (is (str/includes? result "Score: 1.0"))
+      (is (str/includes? result "WON"))
+      (is (str/includes? result "vase in the safe")))))
+
 ;; =============================================================================
 ;; blackboard! primitive — elisp construction
 ;; =============================================================================
