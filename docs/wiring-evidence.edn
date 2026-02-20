@@ -45,4 +45,11 @@
            "test/futon3c/runtime/agents_test.clj"]
    :scripts ["scripts/tri_agent_ws_alleycat_smoke.clj"]
    :artifacts ["README-alleycat.md"]
-   :summary "Tri-agent smoke and tickle path stabilization landed."}]}
+   :summary "Tri-agent smoke and tickle path stabilization landed."}
+
+  {:evidence/id "WE-2026-02-20-INVOKE-ROUTING"
+   :claim/id :ui/emacs-interfaces
+   :commit "c84ad33"
+   :artifacts ["emacs/futon3c-chat.el"
+               "scripts/claude-picker"]
+   :summary "Emacs chat routes through registry invoke-fn via POST /api/alpha/invoke, not direct claude -p."}]}

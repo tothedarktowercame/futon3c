@@ -21,6 +21,8 @@
      CLAUDE_BIN         — path to claude CLI binary (default: claude)
      CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)"
   (:require [futon1a.system :as f1]
+            [futon3c.agents.tickle :as tickle]
+            [futon3c.blackboard :as bb]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.mission-control.service :as mcs]
             [futon3c.agency.federation :as federation]
@@ -62,6 +64,88 @@
          (remove str/blank?)
          vec)
     default))
+
+;; =============================================================================
+;; Runtime atoms — populated by -main, accessible from Drawbridge REPL
+;; =============================================================================
+
+(defonce !f1-sys (atom nil))
+(defonce !evidence-store (atom nil))
+(defonce !irc-sys (atom nil))
+(defonce !f3c-sys (atom nil))
+(defonce !tickle (atom nil))
+
+;; =============================================================================
+;; REPL helpers — use from Drawbridge or nREPL after boot
+;; =============================================================================
+
+(defn start-tickle!
+  "Start the Tickle watchdog. Pages stalled agents via IRC (which triggers
+   the dispatch relay → invoke-agent!).
+
+   Options:
+     :interval-ms       — scan interval (default 60000 = 1 min)
+     :threshold-seconds — stale after this many seconds (default 300 = 5 min)
+     :room              — IRC room for nudges (default \"#futon\")
+
+   Returns the watchdog handle, or nil if IRC is not running."
+  ([] (start-tickle! {}))
+  ([opts]
+   (when-let [irc-sys @!irc-sys]
+     (when-let [evidence-store @!evidence-store]
+       (when-let [old @!tickle]
+         (println "[dev] Stopping previous tickle watchdog...")
+         ((:stop-fn old)))
+       (let [send-fn (:send-to-channel! (:server irc-sys))
+             config {:evidence-store evidence-store
+                     :interval-ms (or (:interval-ms opts) 60000)
+                     :threshold-seconds (or (:threshold-seconds opts) 300)
+                     :page-config {;; Skip bell (always returns "paged" without actually
+                                   ;; reaching the agent). Go straight to IRC, where the
+                                   ;; dispatch relay invokes the agent for real.
+                                   :ring-test-bell! (constantly {:ok false :error :skip-to-irc})
+                                   :send-to-channel! send-fn
+                                   :room (or (:room opts) "#futon")}
+                     :escalate-config {:notify-fn
+                                       (fn [agent-id reason]
+                                         ;; Escalate to Joe via blackboard
+                                         (bb/blackboard!
+                                          "*Tickle*"
+                                          (str "ESCALATION\n"
+                                               "Agent: " agent-id "\n"
+                                               "Reason: " reason "\n"
+                                               "Time: " (Instant/now))))}
+                     :on-cycle (fn [{:keys [stalled paged]}]
+                                 (when (seq stalled)
+                                   (println (str "[tickle] stalled: " stalled
+                                                 " paged: " paged))))}
+             handle (tickle/start-watchdog! config)]
+         (reset! !tickle handle)
+         (println (str "[dev] Tickle started: interval="
+                       (or (:interval-ms opts) 60000) "ms"
+                       " threshold=" (or (:threshold-seconds opts) 300) "s"))
+         handle)))))
+
+(defn stop-tickle!
+  "Stop the Tickle watchdog."
+  []
+  (when-let [handle @!tickle]
+    ((:stop-fn handle))
+    (reset! !tickle nil)
+    (println "[dev] Tickle stopped.")))
+
+(defn status
+  "Quick runtime status for the REPL."
+  []
+  {:agents (reg/registered-agents)
+   :tickle (when @!tickle {:running true :started-at (:started-at @!tickle)})
+   :irc (when @!irc-sys {:port (:port @!irc-sys)})
+   :evidence-count (when @!evidence-store
+                     (count (futon3c.evidence.store/query* @!evidence-store {})))})
+
+;; =============================================================================
+;; System boot
+;; =============================================================================
 
 (defn start-futon1a!
   "Start futon1a (XTDB + HTTP). Returns system map with :node, :store, :stop!, etc."
@@ -146,10 +230,31 @@
 ;; Claude invoke-fn — real CLI invocation via `claude -p`
 ;; =============================================================================
 
+(defn- extract-text-from-json-output
+  "Extract text content from `claude -p --output-format json` response.
+
+   JSON shape: {\"type\":\"result\", \"result\":\"text here\", \"session_id\":\"uuid\", ...}
+   The `result` field is a string with the text output.
+   Falls back to the raw string if JSON parsing fails."
+  [raw]
+  (try
+    (let [parsed (json/parse-string raw true)
+          result (:result parsed)
+          text (if (string? result) result (str result))
+          session-id (:session_id parsed)]
+      {:text (str/trim (or text ""))
+       :session-id session-id})
+    (catch Exception _
+      {:text (str/trim (or raw ""))
+       :session-id nil})))
+
 (defn make-claude-invoke-fn
   "Create an invoke-fn that calls `claude -p` for real Claude interaction.
 
    invoke-fn contract: (fn [prompt session-id] -> {:result str :session-id str})
+
+   Uses --output-format json to capture tool-use responses that would
+   otherwise produce empty text output.
 
    Serialized via locking — only one `claude -p` process at a time (I-1).
    First call with nil session-id generates a new UUID via --session-id.
@@ -166,7 +271,8 @@
                            :else            (str prompt))
               new-sid (when-not session-id (str (UUID/randomUUID)))
               args (cond-> [claude-bin "-p" prompt-str
-                            "--permission-mode" permission-mode]
+                            "--permission-mode" permission-mode
+                            "--output-format" "json"]
                      session-id (into ["--resume" (str session-id)])
                      new-sid    (into ["--session-id" new-sid]))
               used-sid (or session-id new-sid)
@@ -174,13 +280,20 @@
                                                           (min 60 (count (pr-str prompt-str))))
                               "... (session: " (when used-sid (subs used-sid 0 8)) ")"))
               _ (flush)
-              {:keys [exit out err]} (apply shell/sh args)]
+              {:keys [exit out err]} (apply shell/sh args)
+              {:keys [text session-id]} (extract-text-from-json-output (or out ""))
+              ;; Prefer session-id from JSON output (canonical), fall back to our tracked one
+              final-sid (or session-id used-sid)]
           (println (str "[invoke] exit=" exit " out-len=" (count (or out ""))
+                        " text-len=" (count (or text ""))
                         " err-len=" (count (or err ""))))
           (flush)
           (if (zero? exit)
-            {:result (str/trim (or out "")) :session-id used-sid}
-            {:result nil :session-id used-sid
+            {:result (if (str/blank? text)
+                       "[Claude used tools but produced no text response]"
+                       text)
+             :session-id final-sid}
+            {:result nil :session-id final-sid
              :error (str "Exit " exit ": " (str/trim (or err out "")))}))))))
 
 ;; =============================================================================
@@ -241,14 +354,18 @@
 (defn -main [& _args]
   (let [f1-sys (start-futon1a!)
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
+        _ (reset! !f1-sys f1-sys)
+        _ (reset! !evidence-store evidence-store)
         _ (mcs/configure! {:evidence-store evidence-store})
         ;; IRC relay bridge + server (before futon3c so interceptor is ready)
         irc-sys (start-irc! evidence-store)
+        _ (reset! !irc-sys irc-sys)
         ;; futon3c HTTP + WS (with IRC interceptor if IRC is running)
         f3c-sys (start-futon3c!
                  {:xtdb-node (:node f1-sys)
                   :irc-interceptor (when irc-sys
                                      (:irc-interceptor (:relay-bridge irc-sys)))})
+        _ (reset! !f3c-sys f3c-sys)
         ;; Auto-join agents to #futon when they complete WS handshake
         _ (when (and irc-sys (:ws-connections f3c-sys))
             (install-irc-auto-join!
@@ -256,13 +373,24 @@
              (:relay-bridge irc-sys)
              (:server irc-sys)))
         ;; Register Claude agent with real invoke-fn
-        _ (let [invoke-fn (make-claude-invoke-fn
-                           {:claude-bin (or (env "CLAUDE_BIN") "claude")})
+        ;; Wraps invoke-fn to persist session-id to disk after each call,
+        ;; so all transports (Emacs, IRC, curl) share a durable session.
+        _ (let [raw-invoke-fn (make-claude-invoke-fn
+                                {:claude-bin (or (env "CLAUDE_BIN") "claude")})
                 session-file (io/file (or (env "CLAUDE_SESSION_FILE")
                                           "/tmp/futon-session-id"))
                 initial-sid (when (.exists session-file)
                               (let [s (str/trim (slurp session-file))]
-                                (when-not (str/blank? s) s)))]
+                                (when-not (str/blank? s) s)))
+                invoke-fn (fn [prompt session-id]
+                            (let [result (raw-invoke-fn prompt session-id)
+                                  sid (:session-id result)]
+                              (when (and sid (not (str/blank? sid)))
+                                (try (spit session-file sid)
+                                     (catch Exception e
+                                       (println (str "[dev] session-id persist warning: "
+                                                     (.getMessage e))))))
+                              result))]
             (rt/register-claude! {:agent-id "claude-1"
                                   :invoke-fn invoke-fn})
             (when initial-sid
@@ -285,6 +413,10 @@
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")
+    (println "[dev]   POST /api/alpha/mission-control    — portfolio review, sessions, step")
+    (println "[dev]   GET  /api/alpha/missions           — cross-repo mission inventory")
+    (println "[dev]   GET  /api/alpha/missions/:id       — mission detail + wiring")
+    (println "[dev]   GET  /api/alpha/missions/:id/wiring — per-mission wiring diagram")
     (println "[dev]   GET  /api/alpha/evidence          — query entries")
     (println "[dev]   GET  /api/alpha/evidence/:id       — single entry")
     (println "[dev]   GET  /api/alpha/evidence/:id/chain — reply chain")
@@ -305,12 +437,14 @@
     (println "[dev]   -H 'Content-Type: application/json' \\")
     (println "[dev]   -d '{\"agent-id\":\"claude-1\",\"prompt\":\"hello\"}'")
     (println)
-    (println "[dev] Register more agents via REPL:")
-    (println "[dev]   (require '[futon3c.runtime.agents :as rt])")
-    (println "[dev]   (rt/register-codex!  {:agent-id \"codex-1\"  :invoke-fn ...})")
-    (println "[dev]   (rt/register-tickle! {:agent-id \"tickle-1\" :invoke-fn ...})")
+    (println "[dev] REPL helpers (Drawbridge or nREPL):")
+    (println "[dev]   (require '[futon3c.dev :as dev])")
+    (println "[dev]   (dev/start-tickle!)                    — start watchdog")
+    (println "[dev]   (dev/start-tickle! {:interval-ms 30000}) — fast scan")
+    (println "[dev]   (dev/stop-tickle!)                     — stop watchdog")
+    (println "[dev]   (dev/status)                           — runtime summary")
     (println)
-    (println "[dev] Mission control service (Drawbridge, no cold-start per query)")
+    (println "[dev] Mission control service:")
     (println "[dev]   (require '[futon3c.mission-control.service :as mcs])")
     (println "[dev]   (mcs/list-sessions)")
     (println "[dev]   (mcs/run-review! {:author \"joe\"})")
@@ -330,6 +464,7 @@
       ^Runnable
       (fn []
         (println "\n[dev] Shutting down...")
+        (stop-tickle!)
         (when-let [stop (:stop bridge-sys)] (stop))
         (when-let [stop (:stop-fn (:server irc-sys))] (stop))
         (when-let [stop (:server f3c-sys)] (stop))

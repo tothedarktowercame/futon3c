@@ -30,13 +30,27 @@
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
             [futon3c.social.persist :as persist]
+            [futon3c.mission-control.service :as mcs]
+            [futon3c.peripheral.mission-control-backend :as mcb]
             [cheshire.core :as json]
+            [cheshire.generate :as json-gen]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
            [java.net Socket InetSocketAddress]
            [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException]
+           [java.util UUID]
            [org.httpkit.logger ContextLogger]))
+
+;; =============================================================================
+;; JSON encoders for java.time types (Cheshire doesn't handle them natively)
+;; =============================================================================
+
+(json-gen/add-encoder Instant
+  (fn [val jg]
+    (.writeString jg (str val))))
 
 ;; =============================================================================
 ;; Internal helpers
@@ -49,11 +63,21 @@
     (if (string? body) body (slurp body))))
 
 (defn- json-response
-  "Build a Ring response with JSON content-type."
+  "Build a Ring response with JSON content-type.
+   If serialization fails, returns a 500 with the error message
+   rather than letting the exception propagate and wedge the server."
   [status body]
   {:status status
    :headers {"Content-Type" "application/json"}
-   :body (if (string? body) body (json/generate-string body))})
+   :body (if (string? body)
+           body
+           (try
+             (json/generate-string body)
+             (catch Exception e
+               (json/generate-string
+                {:ok false
+                 :error "json-serialization-failed"
+                 :message (.getMessage e)}))))})
 
 (defn- error?
   "True if result is a SocialError (has :error/code key)."
@@ -586,6 +610,29 @@
                                     :message (str "Could not register: " agent-id)
                                     :detail result})))))))))
 
+(defn- emit-invoke-evidence!
+  "Emit a forum-post evidence entry for an invoke prompt or response.
+   Mirrors the pattern used by the IRC transport so chat messages from
+   all surfaces are queryable in the same evidence landscape."
+  [evidence-store author text session-id]
+  (when evidence-store
+    (try
+      (estore/append* evidence-store
+                      {:evidence/id (str "e-" (UUID/randomUUID))
+                       :evidence/subject {:ref/type :thread :ref/id "emacs/chat"}
+                       :evidence/type :forum-post
+                       :evidence/claim-type :observation
+                       :evidence/author author
+                       :evidence/at (str (Instant/now))
+                       :evidence/body {:channel "emacs-chat"
+                                       :text text
+                                       :from author
+                                       :transport :emacs-chat}
+                       :evidence/tags [:emacs :chat :transport/emacs-chat]
+                       :evidence/session-id (or session-id "pending")})
+      (catch Exception e
+        (println (str "[invoke] evidence emit warning: " (.getMessage e)))))))
+
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
    Body: {\"agent-id\": \"claude-1\", \"prompt\": \"hello\"}
@@ -593,14 +640,16 @@
    or error: {\"ok\": false, \"error\": \"...\", \"message\": \"...\"}
 
    This is the direct invocation endpoint — the futon3c equivalent of futon3's
-   POST /agency/page. Both Emacs and IRC peripherals route through this."
-  [request _config]
+   POST /agency/page. Both Emacs and IRC peripherals route through this.
+   Emits evidence entries for both prompt and response (parity with IRC transport)."
+  [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"
                           :message "Request body must be a JSON object"})
       (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
-            prompt (or (:prompt payload) (get payload "prompt"))]
+            prompt (or (:prompt payload) (get payload "prompt"))
+            evidence-store (evidence-store-for-config config)]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -611,18 +660,23 @@
                               :message "prompt is required"})
 
           :else
-          (let [result (reg/invoke-agent! (str agent-id) prompt)]
-            (if (:ok result)
-              (json-response 200 {:ok true
-                                  :result (:result result)
-                                  :session-id (:session-id result)})
-              (let [err (:error result)
-                    code (if (map? err) (:error/code err) :invoke-failed)
-                    msg (if (map? err) (:error/message err) (str err))]
-                (json-response (if (= :agent-not-found code) 404 502)
-                               {:ok false
-                                :error (name code)
-                                :message msg})))))))))
+          (do
+            (emit-invoke-evidence! evidence-store "joe" (str prompt) nil)
+            (let [result (reg/invoke-agent! (str agent-id) prompt)
+                  sid (:session-id result)]
+              (if (:ok result)
+                (do
+                  (emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid)
+                  (json-response 200 {:ok true
+                                      :result (:result result)
+                                      :session-id sid}))
+                (let [err (:error result)
+                      code (if (map? err) (:error/code err) :invoke-failed)
+                      msg (if (map? err) (:error/message err) (str err))]
+                  (json-response (if (= :agent-not-found code) 404 502)
+                                 {:ok false
+                                  :error (name code)
+                                  :message msg}))))))))))
 
 (defn- handle-agents-list
   "GET /api/alpha/agents — list all registered agents."
@@ -648,6 +702,114 @@
     (if (:ok result)
       (json-response 200 {:ok true :agent-id agent-id :deregistered true})
       (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
+
+;; =============================================================================
+;; Mission-control endpoints
+;; =============================================================================
+
+(defn- handle-mission-control
+  "POST /api/alpha/mission-control — multiplexed mission-control RPC.
+   Actions: review, status, sessions, step, start, stop.
+   Wraps futon3c.mission-control.service functions."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [action (or (:action payload) (get payload "action"))]
+        (case (str action)
+          "review"
+          (let [author (or (:author payload) (get payload "author"))
+                session-id (or (:session-id payload) (get payload "session-id"))
+                close? (boolean (or (:close payload) (get payload "close")))]
+            (json-response 200 (mcs/run-review!
+                                {:session-id session-id
+                                 :author author
+                                 :close? close?})))
+
+          "status"
+          (json-response 200 (mcs/status))
+
+          "sessions"
+          (json-response 200 {:ok true :sessions (mcs/list-sessions)})
+
+          "step"
+          (let [session-id (or (:session-id payload) (get payload "session-id"))
+                tool (parse-keyword (or (:tool payload) (get payload "tool")))
+                args (or (:args payload) (get payload "args") [])]
+            (if (or (nil? session-id) (nil? tool))
+              (json-response 400 {:ok false :err "missing-params"
+                                  :message "step requires session-id and tool"})
+              (json-response 200 (mcs/step! session-id tool (vec args)))))
+
+          "start"
+          (let [session-id (or (:session-id payload) (get payload "session-id"))
+                author (or (:author payload) (get payload "author"))]
+            (json-response 200 (mcs/start-session!
+                                (cond-> {}
+                                  session-id (assoc :session-id session-id)
+                                  author (assoc :author author)))))
+
+          "stop"
+          (let [session-id (or (:session-id payload) (get payload "session-id"))
+                reason (or (:reason payload) (get payload "reason") "stopped via API")]
+            (if (nil? session-id)
+              (json-response 400 {:ok false :err "missing-session-id"
+                                  :message "stop requires session-id"})
+              (json-response 200 (mcs/stop-session! session-id reason))))
+
+          ;; default
+          (json-response 400 {:ok false :err "unknown-action"
+                              :message (str "Unknown action: " action
+                                            ". Valid: review, status, sessions, step, start, stop")}))))))
+
+(defn- load-mission-wiring-edn
+  "Load a per-mission wiring diagram from holes/missions/.
+   Convention: M-foo → foo-wiring.edn or M-foo-wiring.edn"
+  [mission-id]
+  (let [cwd (System/getProperty "user.dir")
+        ;; Try {name}-wiring.edn (strip M- prefix)
+        short-name (str/replace (str mission-id) #"^M-" "")
+        candidates [(io/file cwd "holes" "missions" (str short-name "-wiring.edn"))
+                    (io/file cwd "holes" "missions" (str "M-" short-name "-wiring.edn"))
+                    (io/file cwd "holes" "missions" (str mission-id "-wiring.edn"))]]
+    (some (fn [^java.io.File f]
+            (when (.exists f)
+              (try (edn/read-string (slurp f))
+                   (catch Exception _ nil))))
+          candidates)))
+
+(defn- handle-missions
+  "GET /api/alpha/missions — cross-repo mission inventory."
+  [_request _config]
+  (let [missions (mcb/build-inventory)]
+    (json-response 200 {:ok true
+                        :missions missions
+                        :count (count missions)})))
+
+(defn- handle-mission-detail
+  "GET /api/alpha/missions/:id — single mission info + wiring diagram."
+  [_config mission-id]
+  (let [missions (mcb/build-inventory)
+        mission (first (filter #(= mission-id (:mission/id %)) missions))
+        wiring (load-mission-wiring-edn mission-id)]
+    (if mission
+      (json-response 200 {:ok true
+                          :mission mission
+                          :wiring wiring})
+      (json-response 404 {:ok false
+                          :err "mission-not-found"
+                          :message (str "No mission found: " mission-id)}))))
+
+(defn- handle-mission-wiring
+  "GET /api/alpha/missions/:id/wiring — per-mission wiring diagram."
+  [_config mission-id]
+  (let [wiring (load-mission-wiring-edn mission-id)]
+    (if wiring
+      (json-response 200 {:ok true :wiring wiring})
+      (json-response 404 {:ok false
+                          :err "not-found"
+                          :message (str "No wiring diagram for mission " mission-id)}))))
 
 ;; =============================================================================
 ;; Public API
@@ -697,6 +859,24 @@
 
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
+
+          (and (= :post method) (= "/api/alpha/mission-control" uri))
+          (handle-mission-control request config)
+
+          (and (= :get method) (= "/api/alpha/missions" uri))
+          (handle-missions request config)
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/missions/")
+               (str/ends-with? uri "/wiring"))
+          (let [raw (subs uri (count "/api/alpha/missions/")
+                         (- (count uri) (count "/wiring")))]
+            (handle-mission-wiring config (enc/decode-uri-component raw)))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/missions/"))
+          (let [raw (subs uri (count "/api/alpha/missions/"))]
+            (handle-mission-detail config (enc/decode-uri-component raw)))
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)

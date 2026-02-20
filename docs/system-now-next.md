@@ -10,7 +10,7 @@ current reality, not intent.
 ### 1) Build and test baseline
 
 - Test command: `make test`
-- Current result (2026-02-20): `723 tests`, `2469 assertions`, `0 failures`, `0 errors`
+- Current result (2026-02-20): `723 tests`, `2484 assertions`, `0 failures`, `0 errors`
 
 ### 2) Runtime entrypoints
 
@@ -27,6 +27,8 @@ current reality, not intent.
   - list: `GET /api/alpha/agents`
   - get one: `GET /api/alpha/agents/:id`
   - deregister: `DELETE /api/alpha/agents/:id`
+  - invoke: `POST /api/alpha/invoke` (routes to registered agent's invoke-fn)
+- Claude is registered at startup with real invoke-fn (calls `claude -p`, serialized via locking)
 - Social stages are implemented and tested:
   - `S-presence`, `S-authenticate`, `S-mode`, `S-dispatch`, `S-persist`, `S-validate`
 
@@ -35,6 +37,7 @@ current reality, not intent.
 - HTTP adapter is wired (`src/futon3c/transport/http.clj`)
 - WebSocket adapter is wired (`src/futon3c/transport/ws.clj`)
 - IRC adapter is wired and stability-tested (`src/futon3c/transport/irc.clj`)
+- Both Emacs chat and IRC relay route through registry `invoke-agent!` (not direct `claude -p`)
 - `/health` includes:
   - agent/session counts
   - evidence count
@@ -71,6 +74,15 @@ current reality, not intent.
 - Persistent session service is implemented (`src/futon3c/mission_control/service.clj`)
 - Supports start/list/get/resume/step/stop and snapshot reload from `storage/mission-control/sessions.edn`
 - Usable from Drawbridge/nREPL in the dev JVM
+- HTTP API surface:
+  - `POST /api/alpha/mission-control` — review, status, sessions, step, start, stop
+  - `GET /api/alpha/missions` — cross-repo mission inventory
+  - `GET /api/alpha/missions/:id` — single mission detail + wiring diagram
+  - `GET /api/alpha/missions/:id/wiring` — per-mission wiring diagram only
+- Per-mission wiring diagrams (`holes/missions/*-wiring.edn`) are first-class:
+  - Loaded by mission peripheral autoconf on session start
+  - Queryable via `:mission-wiring` tool during observe phase
+  - Included in mission-control devmap scanning and coverage analysis
 
 ### 8) Operational automation
 

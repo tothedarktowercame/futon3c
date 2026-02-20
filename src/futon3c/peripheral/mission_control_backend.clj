@@ -217,18 +217,36 @@
        :devmap/failed-checks [:parse-error]
        :devmap/components []})))
 
+(defn- scan-per-mission-wirings
+  "Scan holes/missions/*-wiring.edn in each repo for per-mission wiring diagrams."
+  [repos]
+  (into []
+        (mapcat
+         (fn [[_repo-name root]]
+           (let [dir (io/file root "holes" "missions")]
+             (if (.isDirectory dir)
+               (->> (.listFiles dir)
+                    (filter #(and (.isFile %)
+                                  (str/ends-with? (.getName %) "-wiring.edn")))
+                    (keep #(read-devmap (.getPath %))))
+               []))))
+        repos))
+
 (defn read-all-devmaps
-  "Read all devmap EDN files from futon5/data/missions/.
-   Skips grounding functor files (not mission diagrams)."
-  [futon5-root]
-  (let [dir (io/file futon5-root "data" "missions")]
-    (if (.isDirectory dir)
-      (->> (.listFiles dir)
-           (filter #(and (.isFile %)
-                         (str/ends-with? (.getName %) ".edn")
-                         (not (str/includes? (.getName %) "grounding-functor"))))
-           (mapv #(read-devmap (.getPath %))))
-      [])))
+  "Read all devmap EDN files from futon5/data/missions/ and per-mission
+   wiring diagrams from each repo's holes/missions/*-wiring.edn."
+  ([futon5-root] (read-all-devmaps futon5-root nil))
+  ([futon5-root repos]
+   (let [futon5-devmaps (let [dir (io/file futon5-root "data" "missions")]
+                          (if (.isDirectory dir)
+                            (->> (.listFiles dir)
+                                 (filter #(and (.isFile %)
+                                               (str/ends-with? (.getName %) ".edn")
+                                               (not (str/includes? (.getName %) "grounding-functor"))))
+                                 (mapv #(read-devmap (.getPath %))))
+                            []))
+         per-mission (scan-per-mission-wirings (or repos default-repo-roots))]
+     (into futon5-devmaps per-mission))))
 
 ;; =============================================================================
 ;; Devmap coverage analysis
@@ -347,7 +365,7 @@
   ([repos]
    (let [missions (build-inventory repos)
          futon5-root (or (:futon5 repos) (:futon5 default-repo-roots))
-         devmap-summaries (read-all-devmaps futon5-root)
+         devmap-summaries (read-all-devmaps futon5-root repos)
          coverage (compute-coverage devmap-summaries missions)
          mana (query-mana futon5-root)
          summary (summarize-portfolio missions devmap-summaries coverage mana)

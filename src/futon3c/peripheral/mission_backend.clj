@@ -500,6 +500,29 @@
   ;; not the backend. This tool exists so the phase gate allows it.
   {:ok true :result {:entries [] :query (first args)}})
 
+(defn load-mission-wiring
+  "Load a per-mission wiring diagram from holes/missions/.
+   Convention: M-foo → foo-wiring.edn or M-foo-wiring.edn.
+   Returns parsed EDN map or nil."
+  [cwd mission-id]
+  (when (and cwd mission-id)
+    (let [short-name (str/replace (str mission-id) #"^M-" "")
+          candidates [(io/file cwd "holes" "missions" (str short-name "-wiring.edn"))
+                      (io/file cwd "holes" "missions" (str "M-" short-name "-wiring.edn"))
+                      (io/file cwd "holes" "missions" (str mission-id "-wiring.edn"))]]
+      (some (fn [^File f]
+              (when (.exists f)
+                (try (edn/read-string (slurp f))
+                     (catch Exception _ nil))))
+            candidates))))
+
+(defn- tool-mission-wiring
+  "Load and return the per-mission wiring diagram."
+  [_cache cwd args]
+  (let [mission-id (first args)
+        wiring (load-mission-wiring cwd mission-id)]
+    {:ok true :result wiring}))
+
 (defn- tool-corpus-check
   "Query futon3a's ANN index for structurally similar patterns.
    Same implementation as proof backend — delegates to notions_search.py."
@@ -554,7 +577,7 @@
     :mission-spec-get :mission-spec-update
     :cycle-begin :cycle-advance :cycle-get :cycle-list
     :failed-approach-add :status-validate :gate-check
-    :corpus-check :evidence-query})
+    :corpus-check :evidence-query :mission-wiring})
 
 (def delegated-tools
   "Tools delegated to the wrapped RealBackend."
@@ -583,6 +606,7 @@
         (= tool-id :gate-check)         (tool-gate-check cache cwd args)
         (= tool-id :corpus-check)       (tool-corpus-check cache cwd args config)
         (= tool-id :evidence-query)     (tool-evidence-query cache cwd args)
+        (= tool-id :mission-wiring)    (tool-mission-wiring cache cwd args)
 
         ;; Delegated tools
         (contains? delegated-tools tool-id)

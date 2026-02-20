@@ -41,7 +41,7 @@
   #{:mission-load :mission-save :obligation-query :obligation-upsert
     :dag-check :dag-impact :mission-spec-get :mission-spec-update
     :cycle-begin :cycle-list :cycle-get :failed-approach-add
-    :evidence-query :corpus-check
+    :evidence-query :corpus-check :mission-wiring
     :read :glob :grep :bash-readonly})
 
 ;; =============================================================================
@@ -50,17 +50,18 @@
 
 (defn- autoconf
   "Refine domain config from context.
-   If context includes :mission-id, the config is left unchanged
-   (the agent will load mission state via :mission-load tool).
-
-   Future: when :mission-spec-path is present, parse the spec document
-   and derive obligations/scope automatically."
+   When context includes :mission-id, loads the per-mission wiring
+   diagram (if one exists) and attaches it to the config as structural
+   context. The diagram is then available via :mission-wiring tool
+   and informs the cycle machine about the mission's architecture."
   [context config]
-  ;; Currently a pass-through — the mission agent loads state manually.
-  ;; The autoconf hook exists so that future refinements (reading
-  ;; mission spec documents, deriving scope from file paths, etc.)
-  ;; slot in without changing the factory or cycle machine.
-  config)
+  (if-let [mid (:mission-id context)]
+    (let [cwd (System/getProperty "user.dir")
+          wiring (mb/load-mission-wiring cwd mid)]
+      (if wiring
+        (assoc config :wiring-diagram wiring)
+        config))
+    config))
 
 ;; =============================================================================
 ;; Domain state initialization

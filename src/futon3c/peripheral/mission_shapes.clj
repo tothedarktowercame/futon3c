@@ -52,6 +52,7 @@
    Extends the proof tool set with mission-specific tools."
   {;; Mission-specific tools (observe)
    :mission-load :observe
+   :mission-wiring :observe
    :obligation-query :observe
    :dag-check :observe
    :dag-impact :observe
@@ -190,7 +191,7 @@
    - :integrate adds :obligation-upsert (update DAG)
    - :commit uses :mission-save instead of :proof-save"
   {:observe    #{:obligation-query :dag-impact :corpus-check :evidence-query
-                 :read :grep :glob :bash-readonly
+                 :mission-wiring :read :grep :glob :bash-readonly
                  :cycle-advance :cycle-get}
    :propose    #{:obligation-query :dag-impact :corpus-check :evidence-query
                  :read :grep :glob :bash-readonly
