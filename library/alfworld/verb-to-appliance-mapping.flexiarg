@@ -1,0 +1,55 @@
+@flexiarg alfworld/verb-to-appliance-mapping
+@title Map Task Verbs to Required Appliances Before Acting
+@keywords task-decomposition, verbs, appliances, clean, heat, cool, plan
+@audience alfworld agents, household-task planners
+@tone practical
+@style pattern
+@references [alfworld/object-location-priors]
+
+! conclusion: The task type's verb (clean/heat/cool) deterministically maps to a specific appliance. Decode the verb into a concrete plan before searching — you always know the intermediate step.
+  + context: You are in an ALFWorld environment with a multi-step task of the form "pick_<verb>_then_place_in_recep" — find an object, transform it using an appliance, then place it.
+  + IF:
+    The task includes a transformation verb like "clean", "heat", or "cool" and you need to figure out where to perform that transformation.
+  + HOWEVER:
+    The environment has many appliances (sinkbasin, stoveburner, microwave, fridge, toaster, coffeemachine) and searching them all wastes steps.
+  + THEN:
+    Map the verb to its unique appliance before doing anything:
+    - "clean" → sinkbasin (always sinkbasin 1 — there's typically one)
+    - "heat"  → microwave (preferred) or stoveburner
+    - "cool"  → fridge (always fridge 1)
+    - "use"   → depends on object (lamp for examine-under-light tasks)
+    Then execute the fixed plan: find object → take → go to appliance → use → go to target → place.
+  + BECAUSE:
+    ALFWorld tasks with transformation verbs have a deterministic structure. The verb tells you exactly one appliance you need. There's no ambiguity — "clean" never means "use the microwave." Knowing the appliance in advance lets you plan the optimal route: if the object is near the sink and the sink is near the target, you can minimize backtracking.
+
+  + EVIDENCE:
+    Game 2 (2026-02-20): "clean some knife and put it in countertop"
+    - Task type: pick_clean_then_place_in_recep
+    - Verb "clean" → sinkbasin 1 (correct, only option)
+    - Execution: countertop 1 (miss) → countertop 2 (found knife) → take → sinkbasin 1 → clean → countertop 1 → place
+    - Steps: 7 (1 wasted on initial search miss)
+    - Key observation: "clean X with sinkbasin 1" appeared as admissible command only when at sinkbasin holding the object
+    - Target receptacle was generic: any countertop worked, not a specific one
+
+    Game from 2026-02-13 PAR: "cool potato, place in microwave"
+    - Task type: pick_cool_then_place_in_recep
+    - Verb "cool" → fridge 1 (correct)
+    - Steps: 8
+
+  + FAILURE-MODES:
+    - Attempting transformation at wrong appliance (e.g. "clean" at microwave — command won't be admissible)
+    - Forgetting the intermediate step entirely (going straight from find to place — object won't count as transformed)
+    - Heating at stoveburner when microwave exists (both work but microwave is more reliable for "heat" tasks)
+
+  + EVIDENCE-SHAPE:
+    {:task-type :string
+     :verb :string
+     :appliance-used :string
+     :appliance-was-correct :boolean
+     :total-steps :int
+     :transform-step :int}
+
+  + NEXT-STEPS:
+    - Confirm that "heat" tasks accept both microwave and stoveburner
+    - Test whether "use" (examine under light) maps to desklamp or floorlamp
+    - Track whether target receptacle is always generic or sometimes specific

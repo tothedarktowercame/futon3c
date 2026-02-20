@@ -1,0 +1,59 @@
+@flexiarg alfworld/systematic-search-fallback
+@title When Priors Fail, Sweep Containers by Category
+@keywords search, fallback, containers, sweep, cabinets, drawers
+@audience alfworld agents, household-task planners
+@tone practical
+@style pattern
+@references [alfworld/object-location-priors alfworld/plan-then-execute]
+
+! conclusion: When the top 2-3 location priors miss, don't continue guessing — switch to a systematic sweep of remaining container types, ordered by likelihood category. Group containers by type (countertops → cabinets → drawers → shelves) rather than searching individually.
+  + context: You are searching for an object in an ALFWorld room. Your initial guesses (based on object-location-priors) have not found the target. You have many remaining receptacles to check.
+  + IF:
+    Your first 2-3 location checks (guided by priors) come up empty and you have 15+ receptacles remaining.
+  + HOWEVER:
+    Searching every receptacle individually (cabinet 1, cabinet 2, ..., shelf 12) is extremely wasteful. Some receptacles naturally cluster by type and share a probability class. If the object isn't on countertops, checking more countertops is low-value — switch to cabinets.
+  + THEN:
+    After priors miss, sweep by container category in this order:
+    1. **Open surfaces first**: countertops, tables, desks (objects visible on arrival)
+    2. **Storage containers**: cabinets, drawers (may need "open" first, but often contents are visible)
+    3. **Appliance interiors**: fridge, microwave, oven (for food items)
+    4. **Specialized fixtures**: sinkbasin, stoveburner, bathtub (for items being "used")
+    5. **Shelves**: only if nothing found elsewhere (shelves are numerous and have low density)
+
+    Within each category, check low-numbered instances first (cabinet 1, cabinet 2 — items tend to be in lower-numbered receptacles).
+
+    Budget: if you've checked 5 locations without finding the target, consider using "look" to re-read the room description — you may have missed a receptacle type in your mental model.
+  + BECAUSE:
+    ALFWorld environments place objects in realistic locations. While priors capture the most likely spots, some tasks deliberately place objects in less obvious locations (bowl in cabinet, not on counter). A category-ordered sweep ensures you cover high-probability zones first without wasting steps on repetitive same-category checks.
+
+    The step budget is finite (100 max). A clean-and-place task has a theoretical minimum of 6 steps for execution. Every search step above 1 is overhead. Efficient search is the primary differentiator between a 6-step solution and a 20-step one.
+
+  + EVIDENCE:
+    Game 5 (2026-02-20): "clean bowl, put in cabinet"
+    - Search sequence: sinkbasin 1 (miss) → countertop 1 (miss) → countertop 2 (miss) → countertop 3 (miss) → cabinet 1 (HIT)
+    - Search cost: 5 steps (4 misses + 1 hit)
+    - Execution cost: 5 steps (take + go sink + clean + go cabinet + place)
+    - Total: 10 steps. Optimal with 1-step search: 6 steps. Overhead: 4 steps (67% inflation)
+    - Better strategy would have been: countertop 1 (miss) → cabinet 1 (hit) → only 2 search steps total
+
+    Contrast with games 1-3 where priors hit immediately: 6-8 steps total with 0-1 search waste.
+
+  + FAILURE-MODES:
+    - Sticking with same category too long: checking all 3 countertops when the first 2 had no relevant objects
+    - Skipping categories: ignoring drawers entirely because "bowls aren't in drawers" (they might be)
+    - Not using "look" to re-orient: forgetting which receptacles exist after several go-to commands
+    - Checking appliance interiors for non-food items (wasting steps on fridge for a pillow)
+
+  + EVIDENCE-SHAPE:
+    {:search/steps :int
+     :search/categories-checked [:string]
+     :search/priors-tried :int
+     :search/priors-hit :boolean
+     :search/fallback-category-hit :string
+     :execution/steps :int
+     :total/steps :int}
+
+  + NEXT-STEPS:
+    - Track search cost vs. execution cost per game as a ratio
+    - Identify objects with high search cost (weak priors)
+    - Test: does "look" ever reveal new information not in the initial room description?

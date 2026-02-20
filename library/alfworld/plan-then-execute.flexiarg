@@ -1,0 +1,51 @@
+@flexiarg alfworld/plan-then-execute
+@title Parse the Task Into a Linear Plan Before Taking Any Action
+@keywords planning, task-decomposition, linear-plan, no-exploration
+@audience alfworld agents, household-task planners
+@tone foundational
+@style pattern
+@references [alfworld/object-location-priors alfworld/verb-to-appliance-mapping]
+
+! conclusion: ALFWorld tasks have deterministic structure. Parse the task description into a linear plan (find → take → [transform] → go-to-target → place) before taking any action. Exploration is only needed for the "find" step — everything else follows from the plan.
+  + context: You are in an ALFWorld environment with a task like "clean X and put in Y" or "find X and put in Y". The room has many receptacles and objects.
+  + IF:
+    You start acting immediately — looking around, examining things, wandering — without first understanding the task structure.
+  + HOWEVER:
+    ALFWorld tasks are highly structured. The task type directly encodes the required steps. There are only 6 task families, and each decomposes into a fixed sequence of actions. The only genuinely uncertain step is finding the target object.
+  + THEN:
+    Before your first action, parse the task into a concrete plan:
+
+    1. **pick_and_place_simple**: find X → take X → go to Y → place X
+    2. **pick_clean_then_place_in_recep**: find X → take X → go to sinkbasin → clean → go to Y → place
+    3. **pick_heat_then_place_in_recep**: find X → take X → go to microwave → heat → go to Y → place
+    4. **pick_cool_then_place_in_recep**: find X → take X → go to fridge → cool → go to Y → place
+    5. **pick_two_obj_and_place**: find X1 → take → go to Y → place → find X2 → take → go to Y → place
+    6. **look_at_obj_in_light**: find X → take → find lamp → use lamp → examine
+
+    Only step 1 ("find X") requires search. Everything else is deterministic navigation.
+  + BECAUSE:
+    ALFWorld tasks are generated from human demonstrations (ALFRED dataset). Each task type has a fixed structure — the variation is in object identity and location, not in the procedure. Treating these tasks as search problems wastes steps on exploration. Treating them as planning problems (with one uncertain step) leads to near-optimal solutions.
+
+    The theoretical minimum steps for each type:
+    - pick_and_place: 4 + search_cost (go-find, take, go-target, place)
+    - pick_*_then_place: 6 + search_cost (go-find, take, go-appliance, use, go-target, place)
+    - pick_two: 8 + 2*search_cost (two round trips)
+    - look_at_in_light: 4-6 + search_cost (depends on lamp proximity)
+
+  + EVIDENCE:
+    Three games (2026-02-20):
+    - Game 1: pick_two_obj_and_place, "put two pillows in sofa" — 8 steps (optimal: 8 when objects co-located)
+    - Game 2: pick_clean_then_place, "clean knife, put on countertop" — 7 steps (optimal: 6, cost +1 for search miss)
+    - Game 3: pick_clean_then_place, "clean soapbar, put on countertop" — 6 steps (optimal: 6, zero search waste)
+
+    Pattern: once the object is found, the remaining plan executes without any decisions or exploration.
+
+  + FAILURE-MODES:
+    - Over-planning: spending steps on "look" and "examine" when you already know the plan
+    - Under-parsing: not reading the task type carefully and missing the transformation verb
+    - Search stalls: the plan is clear but the object can't be found (this is the only failure that matters)
+
+  + NEXT-STEPS:
+    - Track search_cost per game (steps spent finding the target object)
+    - Identify which object types have high search cost (pattern 1's priors are weakest for these)
+    - Measure: are there any tasks where the plan is NOT linear? (branching, conditional steps?)

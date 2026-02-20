@@ -1,0 +1,50 @@
+@flexiarg alfworld/admissible-commands-are-ground-truth
+@title Trust Admissible Commands Over Task Description Wording
+@keywords admissible-commands, task-description, ground-truth, action-selection
+@audience alfworld agents, household-task planners
+@tone practical
+@style pattern
+@references [alfworld/plan-then-execute]
+
+! conclusion: The admissible_commands list is the ground truth for what actions are available. The task description is a natural-language hint that may use different verbs or imply different action sequences than what the engine actually accepts. When in doubt, check admissible commands.
+  + context: You are in an ALFWorld environment where each state returns both a natural-language observation and a list of admissible_commands. The task description is also natural language.
+  + IF:
+    You construct your action from the task description's wording (e.g., "examine the cd with the desklamp" → try to type "examine cd 3 with desklamp 1").
+  + HOWEVER:
+    ALFWorld's action grammar is specific and limited. The task description uses natural language that may not match any admissible command exactly. "Examine X with desklamp" might mean "use desklamp 1" in the engine. "Rinse off the soap" might mean "clean soapbar 1 with sinkbasin 1". The description is a paraphrase, not a literal command template.
+  + THEN:
+    After forming your plan from the task type, validate each planned action against the admissible_commands list at each step. The admissible commands:
+    - Show exactly which verbs are valid (use, clean, cool, heat — not synonyms like "rinse", "wash", "examine with")
+    - Show which objects can be interacted with from the current location
+    - Reveal actions you might not have considered (e.g., "use desklamp 1" appearing when you expected "examine cd 3 with desklamp 1")
+    - Include the exact string you should submit as your action
+  + BECAUSE:
+    ALFWorld is built on TextWorld, which has a formal grammar of valid actions. The task descriptions are human paraphrases from Amazon Mechanical Turk annotators. There is a systematic gap between what the task says in English and what the engine accepts as input. The admissible commands list bridges this gap — it's the action grammar rendered as concrete strings.
+
+  + EVIDENCE:
+    Game 4 (2026-02-20): "examine the cd with the desklamp"
+    - Task description: "examine the cd with the desklamp"
+    - Expected action: "examine cd 3 with desklamp 1" (wrong — not admissible)
+    - Actual winning action: "use desklamp 1" (while holding cd 3, at desk with desklamp)
+    - The game completed immediately on "use desklamp 1" — no separate "examine" step needed
+    - Admissible commands showed "use desklamp 1" alongside "examine cd 3" and "move cd 3 to desk 1"
+
+    Game 2 (2026-02-20): "clean some knife and put it in countertop"
+    - "Clean some knife" → admissible command was "clean knife 1 with sinkbasin 1" (not "wash" or "rinse")
+
+  + FAILURE-MODES:
+    - Composing commands that aren't admissible: "examine cd 3 with desklamp 1" → rejected, step wasted
+    - Ignoring the admissible list and guessing at verbs: "wash knife 1" instead of "clean knife 1 with sinkbasin 1"
+    - Not checking admissible commands after each state change (the available actions change with every step)
+
+  + EVIDENCE-SHAPE:
+    {:task-description :string
+     :expected-action :string
+     :actual-action :string
+     :was-task-description-misleading :boolean
+     :admissible-commands-consulted :boolean}
+
+  + NEXT-STEPS:
+    - Catalog verb mappings: task description verb → admissible command verb
+    - Identify task types where the description is most misleading
+    - Test: are admissible commands ever wrong? (probably not — they're from the engine grammar)

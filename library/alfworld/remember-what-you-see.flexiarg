@@ -1,0 +1,65 @@
+@flexiarg alfworld/remember-what-you-see
+@title Remember What You See While Searching — Build a Mental Map
+@keywords memory, mental-map, search, observation, co-location
+@audience alfworld agents, household-task planners
+@tone practical
+@style pattern
+@references [alfworld/single-carry-economy alfworld/systematic-search-fallback]
+
+! conclusion: Every location you visit reveals all objects there. Even if you're searching for X and find Y instead, remember Y's location — you may need it later. Building a mental map of object locations during search eliminates redundant visits.
+  + context: You are navigating an ALFWorld room searching for a specific object. Each "go to" reveals all objects at that location. You can only carry one object, so you often visit locations multiple times.
+  + IF:
+    You visit a location, see objects you don't currently need, and then move on without recording what was there.
+  + HOWEVER:
+    Many tasks require multiple objects or multiple visits (find object, find appliance, find target). If you forgot that the desklamp was on desk 1 when you were searching for the mug on desk 1, you'd waste a step rediscovering it.
+  + THEN:
+    Maintain a mental map during search. When you visit any location, note ALL objects there:
+    - "desk 1: bowl 1, desklamp 1, laptop 1, pen 1"
+    - "desk 2: alarmclock 3, bowl 2, keychain 2, keychain 1, mug 3, mug 2"
+    This map serves two purposes:
+    1. **Eliminate redundant search**: if you later need a bowl, you already know desk 1 and desk 2 have them
+    2. **Route optimization**: when planning the next move, choose the location where you know the target is
+
+    For multi-step tasks (clean-and-place, examine-in-light), the mental map often reveals both the object and the appliance/tool during the search phase. No second search needed.
+  + BECAUSE:
+    ALFWorld environments are static — objects don't move between steps. Any observation is permanent knowledge. The cost of remembering is zero; the cost of re-visiting is 1 step per forgotten location. In a 6-step optimal plan, 1 wasted step is 17% overhead.
+
+    The mental map also enables strategic decisions: if the task says "find any mug" and you've seen mug 2 on desk 2 and there might be a closer mug, your map lets you pick the nearest known option.
+
+  + EVIDENCE:
+    Game 7 (2026-02-20): "examine mug with desklamp"
+    - Step 1: visited desk 1, saw desklamp 1 + bowl 1 + laptop 1 + pen 1 (no mug)
+    - Step 2: visited desk 2, saw mug 3 + mug 2 (plus other items)
+    - Step 3: took mug 2
+    - Step 4: returned to desk 1 (knew desklamp was there from step 1 — zero search cost for lamp)
+    - Step 5: used desklamp → WON
+    - Mental map saved at least 1 step: didn't need to search for the desklamp after finding the mug
+
+    Game 4 (2026-02-20): "examine cd with desklamp"
+    - Step 1: visited desk 1, saw desklamp 1 (no CD)
+    - Step 2: visited desk 2, saw cd 3
+    - Step 3: took cd
+    - Step 4: returned to desk 1 (knew lamp was there)
+    - Same pattern: lamp location remembered from step 1
+
+    Game 1 (2026-02-20): "put two pillows in sofa"
+    - Step 1: visited armchair 1, saw pillow 1 AND pillow 2
+    - Remembered both objects → took pillow 1, placed it, came back for pillow 2
+    - No search needed for second object because the mental map showed both were co-located
+
+  + FAILURE-MODES:
+    - Not noting non-target objects: "I was looking for a mug, I didn't notice the desklamp"
+    - Forgetting locations of seen objects as the game progresses (context window decay)
+    - Over-trusting memory in long games: re-check if many steps have passed (though objects don't move in ALFWorld)
+
+  + EVIDENCE-SHAPE:
+    {:locations-visited :int
+     :objects-mapped :int
+     :map-reuse-count :int
+     :steps-saved-by-map :int
+     :forgot-and-revisited :int}
+
+  + NEXT-STEPS:
+    - Explicitly log the mental map after each step in game notes
+    - Count how often the map prevents redundant visits
+    - Test: are there ALFWorld scenarios where objects can be in different locations on reset? (almost certainly yes, randomized)

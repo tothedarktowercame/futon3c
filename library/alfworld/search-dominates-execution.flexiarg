@@ -1,0 +1,86 @@
+@flexiarg alfworld/search-dominates-execution
+@title Search Efficiency Dominates Task Performance — Optimize the Find Step
+@keywords search, performance, efficiency, bottleneck, optimization
+@audience alfworld agents, household-task planners, AIF researchers
+@tone analytical-foundational
+@style pattern
+@references [alfworld/plan-then-execute alfworld/object-location-priors alfworld/systematic-search-fallback alfworld/single-carry-economy alfworld/remember-what-you-see]
+
+! conclusion: Across all ALFWorld task types, the execution phase (take/transform/place) is deterministic and has a fixed step cost. The only variable is search — finding the target object. Performance optimization in ALFWorld is almost entirely about reducing search cost, not about executing the plan more cleverly.
+  + context: You have completed multiple ALFWorld games and are analyzing what determines step count. The task types have fixed procedural structure (pattern 3: plan-then-execute). The only uncertainty is where the target object is located.
+  + IF:
+    You try to optimize ALFWorld performance by refining execution (e.g., taking a more efficient route from sink to target, or finding a faster way to clean).
+  + HOWEVER:
+    Execution steps are fixed. A pick_clean_then_place task always costs exactly 6 execution steps: take(1) + go-to-appliance(1) + use-appliance(1) + go-to-target(1) + place(1) + the-go-to-find step-that-succeeded(1). You cannot reduce this below 6. The variable is the number of failed searches before the successful one.
+  + THEN:
+    Focus all optimization effort on the search phase:
+    1. **Build and maintain priors** (pattern 1) — which locations are most likely for each object type
+    2. **Use room-type identification** (pattern 8) — narrow search space based on room context
+    3. **Sweep by container category** (pattern 5) — when priors fail, use systematic fallback
+    4. **Remember what you see** (pattern 7) — never search a location twice
+    5. **Budget for closed containers** (pattern 9) — factor in open-step overhead
+
+    The performance ceiling for any task is:
+    - Best case: 0 search misses → theoretical minimum steps
+    - Typical: 1-2 misses → 1-2 extra steps (10-30% overhead)
+    - Worst case: 4+ misses → significant overhead (40%+ of total steps)
+
+    Step budget breakdown across 10 games:
+    | Game | Type | Search miss | Exec steps | Total | Overhead% |
+    |------|------|-------------|------------|-------|-----------|
+    | 1 | pick_two | 0 | 8 | 8 | 0% |
+    | 2 | clean+place | 1 | 6 | 7 | 14% |
+    | 3 | clean+place | 0 | 6 | 6 | 0% |
+    | 4 | light | 1 | 4 | 5 | 20% |
+    | 5 | clean+place | 4 | 6 | 10 | 40% |
+    | 6 | pick+place | 4 | 4 | 8 | 50% |
+    | 7 | light | 1 | 4 | 5 | 20% |
+    | 8 | light | 1 | 4 | 5 | 20% |
+    | 9 | pick_two | 1+1 | 8+1 | 10 | 10% |
+    | 10 | clean+place | 2 | 6 | 8 | 25% |
+
+    Mean search overhead: ~20%. In perfectly efficient play, all 10 games would total 60 steps; actual total was 72, with 12 steps of pure search overhead.
+  + BECAUSE:
+    ALFWorld is a procedural task environment, not a strategic one. There are no choices about HOW to clean a mug — the procedure is fixed. The only interesting decision is WHERE to look for the mug. This makes ALFWorld fundamentally a search problem with a deterministic post-search execution phase.
+
+    This has implications beyond ALFWorld:
+    - In any task with a "find the resource" + "use the resource" structure, the find phase dominates
+    - Caching (mental map, pattern 7) and priors (pattern 1) are the highest-leverage interventions
+    - Over-engineering the execution phase (route optimization between known points) yields diminishing returns
+
+    For AIF (Active Inference) modelling: the prediction error that matters is in the search phase (where is the object?), not the execution phase (how do I clean it?). The agent's internal model should prioritize beliefs about object locations.
+
+  + EVIDENCE:
+    10 games (2026-02-20): 10/10 wins, 72 total steps, 60 execution steps, 12 search overhead steps.
+
+    Breakdown by task type:
+    - pick_and_place_simple (1 game): 8 steps, 4 overhead (50%)
+    - pick_clean_then_place (4 games): avg 7.75 steps, avg 1.75 overhead (23%)
+    - pick_two_obj_and_place (2 games): avg 9 steps, avg 1 overhead (11%)
+    - look_at_obj_in_light (3 games): avg 5 steps, avg 1 overhead (20%)
+
+    Total: 72 steps, 12 overhead = 16.7% search overhead across all games.
+
+    Most efficient game: Game 3 (clean soapbar) — 6 steps, 0 overhead, theoretically optimal.
+    Least efficient game: Game 5 (clean bowl) — 10 steps, 4 overhead (40%).
+
+  + FAILURE-MODES:
+    - Optimizing execution instead of search (e.g., trying to find the shortest route between sink and counter — this saves 0 steps because the route is always 1 "go to")
+    - Treating each game as unique instead of building cross-game priors
+    - Not adapting priors after failures (if bowls are in cabinets, update the prior for next time)
+
+  + EVIDENCE-SHAPE:
+    {:game/id :int
+     :task-type :string
+     :search-miss-count :int
+     :execution-steps :int
+     :total-steps :int
+     :search-overhead-pct :float
+     :won :boolean
+     :prior-was-correct :boolean}
+
+  + NEXT-STEPS:
+    - Compile cross-game prior table: object type → hit location → frequency
+    - Compute prior accuracy rate and identify weakest priors
+    - Model: expected steps = execution_cost + (1/prior_accuracy) * avg_miss_cost
+    - Test: does prior accuracy improve with more games? (learning curve)

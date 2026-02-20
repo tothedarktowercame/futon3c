@@ -1,0 +1,63 @@
+@flexiarg alfworld/closed-containers-need-opening
+@title Check and Open Closed Containers Before Interacting
+@keywords containers, closed, open, cabinets, fridge, interaction
+@audience alfworld agents, household-task planners
+@tone practical
+@style pattern
+@references [alfworld/plan-then-execute alfworld/admissible-commands-are-ground-truth]
+
+! conclusion: Some receptacles (cabinets, fridge, microwave, safe) can be in a "closed" state. You must open them before you can see contents, take objects from them, or place objects in them. The observation text says "The X is closed" when this is the case. Budget one extra step per closed container in your plan.
+  + context: You are in an ALFWorld environment where you need to interact with a container — either searching it for an object or placing an object in it.
+  + IF:
+    You arrive at a container and try to take/place without checking whether it's open or closed.
+  + HOWEVER:
+    Not all containers are closed. In many games, cabinets are open by default and you can see their contents on arrival ("On the cabinet 1, you see a bowl 1"). But sometimes the observation says "The cabinet 1 is closed" — and you can't see or interact with its contents until you open it.
+  + THEN:
+    After each "go to" targeting a container, check the observation for "closed":
+    - If observation contains "is closed" → must "open X" before interacting (costs 1 step)
+    - If observation lists contents ("On the X, you see...") → already open, proceed normally
+    - After opening, re-check: contents are revealed in the open response
+    - Budget: add 1 step to your plan for each container that might be closed
+
+    Containers that can be closed:
+    - cabinets (sometimes closed, sometimes open)
+    - fridge (usually closed)
+    - microwave (usually closed)
+    - safe (usually closed)
+
+    Containers that are never closed:
+    - countertops, shelves, desks, beds, sinkbasin, stoveburner (always open surfaces)
+  + BECAUSE:
+    The "open" action is mandatory for closed containers — there's no way to bypass it. Placing an object in a closed cabinet will fail (the admissible commands won't include "move X to Y" until the container is open). This is a realistic household constraint: you can't put dishes in a closed cabinet.
+
+    The 1-step cost of opening is small but adds up in games with multiple container interactions. Knowing which containers tend to be closed lets you factor this into route planning.
+
+  + EVIDENCE:
+    Game 9 (2026-02-20): "find two toiletpaper and put them in cabinet"
+    - Step 4: "go to cabinet 1" → "The cabinet 1 is closed."
+    - Step 5: "open cabinet 1" → revealed candle 2, cloth 1
+    - Steps 6 and 10: successfully moved toiletpaper into the now-open cabinet
+    - Cost: 1 extra step (open) that wouldn't have been needed if cabinet was already open
+
+    Prior games 1-8: no closed containers encountered. All cabinets visited (games 5, 6) were auto-revealing.
+    - Game 5: "go to cabinet 1" → "On the cabinet 1, you see a bowl 1." (open)
+    - Game 6: "go to cabinet 1" → "On the cabinet 1, you see a glassbottle 2." (open)
+
+    This means closed containers are occasional, not guaranteed — making them easy to overlook.
+
+  + FAILURE-MODES:
+    - Trying to place in a closed container → command not admissible, step wasted on invalid action
+    - Not realizing you need to open → confusion when "move X to Y" doesn't appear in admissible commands
+    - Opening containers speculatively during search → wastes steps if you don't need to interact with them (but "go to" an open cabinet reveals contents anyway)
+
+  + EVIDENCE-SHAPE:
+    {:container/id :string
+     :container/was-closed :boolean
+     :container/opened :boolean
+     :open-step-cost :int
+     :interaction-type :keyword}
+
+  + NEXT-STEPS:
+    - Track which container types are most often closed
+    - Test: does "go to fridge 1" auto-reveal contents or is the fridge always closed?
+    - Test: can you take from a closed container without opening? (hypothesis: no)

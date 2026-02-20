@@ -1,0 +1,51 @@
+@flexiarg alfworld/object-location-priors
+@title Check Semantically Likely Locations Before Exhaustive Search
+@keywords navigation, search, priors, object-location, heuristic
+@audience alfworld agents, household-task planners
+@tone practical
+@style pattern
+@references [realtime/learn-as-you-go]
+
+! conclusion: When searching for an object, visit semantically plausible receptacles first rather than searching exhaustively. Pillows on armchairs, food on countertops, keys in drawers — real-world priors dramatically reduce search steps.
+  + context: You are navigating an ALFWorld household environment with many receptacles (cabinets, shelves, drawers, tables, appliances). The task names the object type but not its location.
+  + IF:
+    You need to find an object (pillow, mug, potato, etc.) and the room has 20+ possible locations.
+  + HOWEVER:
+    Exhaustive left-to-right search (cabinet 1, cabinet 2, ... shelf 12) wastes steps. ALFWorld rooms follow household conventions — objects are placed where they'd plausibly be in a real home.
+  + THEN:
+    Before searching, generate a ranked list of likely locations based on the object type:
+    - Pillows, remotes → armchairs, sofas, beds
+    - Food items → countertops, fridge, dining table
+    - Cleaning supplies → under sink, cabinets near sink
+    - Toiletries → bathroom shelves, medicine cabinet
+    - Keys, phones → drawers, sidetables, dressers
+    - Books → shelves, desks, sidetables
+    Check the top 2-3 priors before falling back to systematic search.
+  + BECAUSE:
+    ALFWorld tasks use ALFRED trajectories from human demonstrations. Objects are placed in realistic positions. Exploiting these priors reduces average search from O(n) receptacles to O(1-3) checks for common objects.
+
+  + EVIDENCE:
+    Game 1 (2026-02-20): "put two pillow in sofa"
+    - Task type: pick_two_obj_and_place
+    - Room had 26 receptacles (4 cabinets, 5 drawers, 12 shelves, etc.)
+    - First check: armchair 1 → found BOTH pillows immediately
+    - Total steps: 8 (4 per pillow: go→take→go→place)
+    - Minimum possible for two-object task: 8 (already optimal)
+    - No wasted search steps because the prior (pillows → armchair) was correct
+
+  + FAILURE-MODES:
+    - Over-reliance on priors: if the first 2-3 guesses miss, don't keep guessing — switch to systematic sweep
+    - Confirmation bias: checking the "obvious" location twice instead of moving on
+    - Task-type mismatch: some tasks involve unusual placements (e.g. "find the remote in the fridge" — ALFWorld tasks generally don't do this, but be ready)
+
+  + EVIDENCE-SHAPE:
+    {:object/type :string
+     :locations/checked [:string]
+     :location/found-at :string
+     :search/steps-to-find :int
+     :search/was-prior-correct :boolean}
+
+  + NEXT-STEPS:
+    - Build up a table of object→location hits across games
+    - Track prior accuracy rate (correct guesses / total searches)
+    - Identify which object types have weak priors (need more data)

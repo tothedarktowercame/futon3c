@@ -1,0 +1,56 @@
+@flexiarg alfworld/single-carry-economy
+@title Respect the Single-Object Inventory Constraint in Route Planning
+@keywords inventory, single-carry, route-planning, economy, commitment
+@audience alfworld agents, household-task planners
+@tone analytical
+@style pattern
+@references [alfworld/plan-then-execute alfworld/systematic-search-fallback]
+
+! conclusion: You can only hold one object at a time. This transforms every "go to" into a commitment — you pay the travel cost regardless of whether the destination has what you need. Minimize speculative movement and maximize information per step.
+  + context: You are in an ALFWorld environment where your inventory is limited to a single object. Multi-object tasks (pick_two_obj_and_place) require multiple round trips because you cannot carry two items simultaneously.
+  + IF:
+    You navigate to a location hoping to find the target object, but it's not there. You've spent a step with zero progress toward the goal.
+  + HOWEVER:
+    Navigation is the ONLY way to discover what's at a location. There is no "scan room" or "ask about contents" command. Every location check costs exactly one step, whether it succeeds or fails.
+  + THEN:
+    Treat each "go to" as an investment decision:
+    1. **For single-object tasks**: minimize search by using priors, then systematic sweep. Once you have the object, the route to the target is deterministic — no more search costs.
+    2. **For two-object tasks**: consider whether both objects might be at the same location. If both pillows are on the armchair, you save an entire search phase for the second one. When you find the first object, note what else was at that location.
+    3. **For transform tasks**: plan the route to minimize total travel: find → take → appliance → target. If the object is near the appliance already, that's ideal.
+    4. **Never explore "just to look"**: every step should either be moving toward a high-probability search target or executing the plan. "Look" and "inventory" cost a step and rarely provide new information.
+  + BECAUSE:
+    The single-carry constraint makes ALFWorld fundamentally a traveling-salesman variant: visit locations in the most efficient order, carrying one item at a time. The cost function is step count. Since the environment is deterministic (objects don't move) and fully observable at each location (you see everything on arrival), the optimal strategy is to minimize total navigation steps.
+
+    Step budget: pick-and-place needs minimum 4 steps. Pick-transform-place needs 6. Pick-two needs 8. Every search miss adds 1 step of pure overhead. In game 5, search overhead was 4/10 = 40% of total steps. In game 6, it was 4/8 = 50%.
+
+  + EVIDENCE:
+    Games 1-6 (2026-02-20):
+    - Game 1: pick_two, 8 steps — both objects at same location (armchair), 0 search waste
+    - Game 2: pick_clean, 7 steps — 1 search miss (countertop 1), 1 step waste (14%)
+    - Game 3: pick_clean, 6 steps — 0 search miss, optimal (0%)
+    - Game 4: look_at_light, 5 steps — 1 search miss (desk 1 had lamp not CD), ~20% waste
+    - Game 5: pick_clean, 10 steps — 4 search misses, 4 step waste (40%)
+    - Game 6: pick_and_place, 8 steps — 4 search misses, 4 step waste (50%)
+
+    Pattern: search cost dominates. Execution (take/clean/place) is always 4-6 steps. Search ranges from 0 to 5+ steps. The variable to optimize is search.
+
+    Game 1 insight: when finding the first pillow, I noticed the second pillow was at the same location. This eliminated the entire search phase for the second object.
+
+  + FAILURE-MODES:
+    - Exploring for information without intent to act (e.g., "look" costs a step, provides no new info beyond initial room description)
+    - Not noting co-located objects when searching (miss that both target objects are in the same place)
+    - Suboptimal route planning for transform tasks (finding object far from appliance when a closer instance exists)
+    - Treating each step as free when they're actually the scarcest resource
+
+  + EVIDENCE-SHAPE:
+    {:search-steps :int
+     :execution-steps :int
+     :total-steps :int
+     :search-overhead-pct :float
+     :co-located-objects-found :int
+     :route-was-optimal :boolean}
+
+  + NEXT-STEPS:
+    - Track search overhead percentage across all games
+    - When finding an object, log all other objects visible at that location (builds a location→objects map)
+    - For two-object tasks: check if second object was at same location as first before searching elsewhere

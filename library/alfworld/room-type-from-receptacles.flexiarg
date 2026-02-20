@@ -1,0 +1,73 @@
+@flexiarg alfworld/room-type-from-receptacles
+@title Identify Room Type From Receptacles to Narrow Strategy
+@keywords room-type, receptacles, context, strategy-selection
+@audience alfworld agents, household-task planners
+@tone analytical
+@style pattern
+@references [alfworld/object-location-priors alfworld/verb-to-appliance-mapping]
+
+! conclusion: The receptacle list in the initial observation uniquely identifies the room type (kitchen, bedroom, bathroom, living room). Room type constrains which task types are possible and which search strategies apply. Read the room before parsing the task.
+  + context: You are placed in an ALFWorld room. The initial observation lists all receptacles. The task type and optimal strategy depend heavily on which room you're in.
+  + IF:
+    You start parsing the task and forming a plan without first identifying what kind of room you're in.
+  + HOWEVER:
+    Room type strongly predicts task type and object locations. A bedroom never has a sinkbasin or fridge. A kitchen never has a bed. The receptacle set is a reliable signal for which strategy to apply.
+  + THEN:
+    Identify the room type from distinctive receptacles before planning:
+
+    **Kitchen** (most common):
+    - Signature: countertop, sinkbasin, fridge, stoveburner, microwave, coffeemachine, toaster
+    - Task types: pick_clean_then_place, pick_heat_then_place, pick_cool_then_place, pick_and_place
+    - Object priors: utensils on countertops, dishes in cabinets/sinkbasin, food in fridge/countertops
+
+    **Bedroom**:
+    - Signature: bed, desk, desklamp, drawer (many), safe, laundryhamper
+    - Task types: look_at_obj_in_light (dominant), pick_and_place
+    - Object priors: desklamp ALWAYS on a desk, small objects on desks/shelves, valuables in safe
+
+    **Bathroom**:
+    - Signature: sinkbasin, toilet, towelholder, handtowelholder, toiletpaperhanger
+    - Task types: pick_clean_then_place (dominant)
+    - Object priors: soap/toiletries on countertop or in cabinet, towels on holders
+
+    **Living room**:
+    - Signature: armchair, sofa, dresser, sidetable, shelf (many)
+    - Task types: pick_and_place (dominant), pick_two_obj_and_place
+    - Object priors: pillows/remotes on armchair/sofa, decorative items on shelves
+
+    Each room type has a different optimal search order for pattern 1 (object-location-priors).
+  + BECAUSE:
+    ALFWorld environments are generated from the ALFRED dataset, which uses realistic room layouts. Each room type has a characteristic receptacle set that's consistent across episodes. Recognizing the room type gives you:
+    1. Better object-location priors (search order tailored to room)
+    2. Immediate knowledge of which appliances are available (no need to search for the sinkbasin)
+    3. Task-type prediction (kitchen → probably a transform task)
+
+  + EVIDENCE:
+    Games 1-8 (2026-02-20):
+    - Game 1: Living room (armchair, sofa, dresser, shelves) → pick_two_obj_and_place ✓
+    - Game 2: Kitchen (countertops, sinkbasin, fridge, microwave) → pick_clean_then_place ✓
+    - Game 3: Bathroom (sinkbasin, toilet, handtowelholder) → pick_clean_then_place ✓
+    - Game 4: Bedroom (bed, desks, drawers, safe) → look_at_obj_in_light ✓
+    - Game 5: Kitchen → pick_clean_then_place ✓
+    - Game 6: Kitchen → pick_and_place ✓
+    - Game 7: Bedroom → look_at_obj_in_light ✓
+    - Game 8: Bedroom → look_at_obj_in_light ✓
+
+    Room type predicted task type correctly in 8/8 games (though sample is small).
+
+  + FAILURE-MODES:
+    - Assuming room type predicts task type deterministically (kitchens could have pick_and_place tasks too)
+    - Missing unusual receptacles that blur room type (e.g., kitchen with a desk)
+    - Over-indexing on room type and ignoring the actual task description
+
+  + EVIDENCE-SHAPE:
+    {:room-type :keyword
+     :signature-receptacles [:string]
+     :task-type :string
+     :room-predicted-task-type :boolean
+     :search-order-used [:string]}
+
+  + NEXT-STEPS:
+    - Encounter all 4 room types and confirm receptacle signatures
+    - Test whether room type ever misleads task-type prediction
+    - Build per-room search order tables based on accumulated evidence
