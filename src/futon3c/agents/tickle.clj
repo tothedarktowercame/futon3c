@@ -63,23 +63,25 @@
   "Check evidence store for recent activity per registered agent.
    Returns map of {agent-id {:last-active Instant :stale? bool :stale-seconds long}}.
    Queries evidence store (not agent internals) — respects Tickle's umwelt darkness."
-  [evidence-store registry-snapshot threshold-seconds]
+  [evidence-store registry-snapshot threshold-seconds & {:keys [self-id]
+                                                         :or {self-id "tickle-1"}}]
   (let [threshold-seconds (long (or threshold-seconds 300))
         now (Instant/now)
         entries (estore/query* evidence-store {})
-        latest-by-author (latest-activity-by-author entries)]
-    (into {}
-          (map (fn [agent-id]
-                 (let [last-active (get latest-by-author agent-id)
-                       stale-seconds (if last-active
-                                       (max 0 (.getSeconds (Duration/between last-active now)))
-                                       Long/MAX_VALUE)
-                       stale? (or (nil? last-active)
-                                  (> stale-seconds threshold-seconds))]
-                   [agent-id {:last-active last-active
-                              :stale? stale?
-                              :stale-seconds stale-seconds}])))
-          (registry-agent-ids registry-snapshot))))
+        latest-by-author (latest-activity-by-author entries)
+        result (into {}
+                     (map (fn [agent-id]
+                            (let [last-active (get latest-by-author agent-id)
+                                  stale-seconds (if last-active
+                                                  (max 0 (.getSeconds (Duration/between last-active now)))
+                                                  Long/MAX_VALUE)
+                                  stale? (or (nil? last-active)
+                                             (> stale-seconds threshold-seconds))]
+                              [agent-id {:last-active last-active
+                                         :stale? stale?
+                                         :stale-seconds stale-seconds}])))
+                     (registry-agent-ids registry-snapshot))]
+    (dissoc result self-id)))
 
 (defn detect-stalls
   "Given scan-activity result, return seq of stalled agent-ids."
@@ -159,9 +161,11 @@
   [config]
   (let [threshold-seconds (long (or (:threshold-seconds config) 300))
         evidence-store (:evidence-store config)
+        self-id (or (:self-id config) "tickle-1")
         registry-snapshot (or (:registry-snapshot config)
                               (reg/registered-agents))
-        activity-map (scan-activity evidence-store registry-snapshot threshold-seconds)
+        activity-map (scan-activity evidence-store registry-snapshot threshold-seconds
+                                    :self-id self-id)
         stalled (detect-stalls activity-map)
         page-config (assoc (:page-config config) :evidence-store evidence-store)
         page-results (mapv #(page-agent! % page-config) stalled)

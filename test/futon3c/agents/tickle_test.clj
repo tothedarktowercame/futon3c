@@ -68,6 +68,25 @@
         (is (true? (get-in activity ["claude-1" :stale?])))
         (is (> (get-in activity ["claude-1" :stale-seconds]) 120))))))
 
+(deftest scan-activity-excludes-self-id
+  (testing "scan-activity excludes tickle's own agent-id"
+    (register-agent! "claude-1")
+    (register-agent! "tickle-1")
+    (let [store (make-evidence-store)
+          activity (tickle/scan-activity store (reg/registered-agents) 300
+                                         :self-id "tickle-1")]
+      (is (contains? activity "claude-1"))
+      (is (not (contains? activity "tickle-1"))))))
+
+(deftest scan-activity-default-self-id-is-tickle-1
+  (testing "scan-activity defaults self-id to tickle-1"
+    (register-agent! "claude-1")
+    (register-agent! "tickle-1")
+    (let [store (make-evidence-store)
+          activity (tickle/scan-activity store (reg/registered-agents) 300)]
+      (is (contains? activity "claude-1"))
+      (is (not (contains? activity "tickle-1"))))))
+
 (deftest detect-stalls-filters-only-stale
   (testing "detect-stalls returns only stale entries"
     (let [stalled (tickle/detect-stalls
@@ -122,6 +141,22 @@
       (is (= #{"escalate-1"} (set (:escalated result))))
       (is (= #{"paged-1" "escalate-1"} (set @page-calls)))
       (is (= [["escalate-1" :page-failed]] @escalations)))))
+
+(deftest run-scan-cycle-excludes-self
+  (testing "run-scan-cycle! does not page tickle-1"
+    (register-agent! "claude-1")
+    (register-agent! "tickle-1")
+    (let [store (make-evidence-store)
+          page-calls (atom [])
+          result (tickle/run-scan-cycle!
+                  {:evidence-store store
+                   :threshold-seconds 60
+                   :self-id "tickle-1"
+                   :page-config {:ring-test-bell! (fn [{:keys [agent-id]}]
+                                                    (swap! page-calls conj agent-id)
+                                                    {:bell/type :test-bell})}})]
+      (is (not (some #{"tickle-1"} (:stalled result))))
+      (is (not (some #{"tickle-1"} @page-calls))))))
 
 (deftest start-watchdog-stop-fn-halts-loop
   (testing "start-watchdog! returns stop-fn that halts the loop"
