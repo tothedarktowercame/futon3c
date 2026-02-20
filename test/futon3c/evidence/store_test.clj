@@ -81,6 +81,28 @@
         (is (= 1 (count xs)))
         (is (= :presence-event (:evidence/type (first xs))))))))
 
+(deftest query-by-author-filters-correctly
+  (testing "query filters by author"
+    (let [s (fix/make-artifact-ref :mission "M1")]
+      (store/append! {:evidence-id "e-a1" :subject s :type :reflection :claim-type :observation :author "claude-1" :body {} :tags [:t]})
+      (store/append! {:evidence-id "e-b1" :subject s :type :reflection :claim-type :observation :author "codex-1" :body {} :tags [:t]})
+      (store/append! {:evidence-id "e-a2" :subject s :type :coordination :claim-type :step :author "claude-1" :body {} :tags [:t]})
+      (let [xs (store/query {:query/author "claude-1"})]
+        (is (= 2 (count xs)))
+        (is (= #{"e-a1" "e-a2"} (set (map :evidence/id xs))))
+        (is (every? #(= "claude-1" (:evidence/author %)) xs))))))
+
+(deftest query-by-author-with-type-combines-filters
+  (testing "query applies author and type filters together"
+    (let [s (fix/make-artifact-ref :mission "M1")]
+      (store/append! {:evidence-id "e-match" :subject s :type :coordination :claim-type :goal :author "claude-1" :body {} :tags [:t]})
+      (store/append! {:evidence-id "e-wrong-type" :subject s :type :reflection :claim-type :observation :author "claude-1" :body {} :tags [:t]})
+      (store/append! {:evidence-id "e-wrong-author" :subject s :type :coordination :claim-type :goal :author "codex-1" :body {} :tags [:t]})
+      (let [xs (store/query {:query/author "claude-1"
+                             :query/type :coordination})]
+        (is (= 1 (count xs)))
+        (is (= "e-match" (:evidence/id (first xs))))))))
+
 (deftest query-excludes-ephemeral-by-default
   (testing "query excludes ephemeral entries by default"
     (let [s (fix/make-artifact-ref :mission "M1")]
@@ -170,4 +192,3 @@
         (is (= 1 (:compacted r))))
       (let [xs (store/query {:query/include-ephemeral? true})]
         (is (= #{"e-new-eph" "e-old-durable"} (set (map :evidence/id xs))))))))
-

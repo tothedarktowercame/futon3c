@@ -318,6 +318,7 @@
    [:query/subject {:optional true} ArtifactRef]
    [:query/type {:optional true} EvidenceType]
    [:query/claim-type {:optional true} ClaimType]
+   [:query/author {:optional true} :string]
    [:query/since {:optional true} Timestamp]
    [:query/limit {:optional true} :int]
    [:query/include-ephemeral? {:optional true} :boolean]])

@@ -65,7 +65,7 @@
 (defn filter-and-sort-entries
   "Apply standard query filtering and sorting to a seq of entries.
    Shared logic used by both AtomBackend and XtdbBackend."
-  [entries {:query/keys [subject type claim-type since limit include-ephemeral?]}]
+  [entries {:query/keys [subject type claim-type author since limit include-ephemeral?]}]
   (let [include-ephemeral? (true? include-ephemeral?)
         since-inst (when since
                      (try (parse-instant since)
@@ -77,6 +77,7 @@
         entries (if subject (filter #(= subject (:evidence/subject %)) entries) entries)
         entries (if type (filter #(= type (:evidence/type %)) entries) entries)
         entries (if claim-type (filter #(= claim-type (:evidence/claim-type %)) entries) entries)
+        entries (if author (filter #(= author (:evidence/author %)) entries) entries)
         entries (if since-inst
                   (filter #(not (.isBefore (entry-at %) since-inst)) entries)
                   entries)

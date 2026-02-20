@@ -46,6 +46,7 @@
     (let [query-params (cond-> {}
                          (:query/type params) (assoc "type" (name (:query/type params)))
                          (:query/claim-type params) (assoc "claim-type" (name (:query/claim-type params)))
+                         (:query/author params) (assoc "author" (:query/author params))
                          (:query/since params) (assoc "since" (str (:query/since params)))
                          (:query/limit params) (assoc "limit" (str (:query/limit params))))
           qs (str/join "&" (map (fn [[k v]] (str k "=" v)) query-params))
