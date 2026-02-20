@@ -242,6 +242,22 @@
         (is (= 3 (:agents parsed)))
         (is (= 0 (:sessions parsed)))))))
 
+(deftest health-includes-agent-summary
+  (testing "GET /health includes per-agent summary for live registered agents"
+    (register-mock-agent! "codex-1" :codex)
+    (let [handler (make-handler)
+          response (get-req handler "/health")]
+      (is (= 200 (:status response)))
+      (let [parsed (parse-body response)
+            agent (get-in parsed [:agent-summary :codex-1])]
+        (is (= "ok" (:status parsed)))
+        (is (= 3 (:agents parsed)))
+        (is (= 0 (:sessions parsed)))
+        (is (= "codex" (:type agent)))
+        (is (string? (:last-active agent)))
+        (is (instance? java.time.Instant (java.time.Instant/parse (:last-active agent))))
+        (is (= ["explore" "edit"] (:capabilities agent)))))))
+
 (deftest health-includes-evidence-count
   (testing "GET /health includes evidence count from store"
     (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-health-1"}

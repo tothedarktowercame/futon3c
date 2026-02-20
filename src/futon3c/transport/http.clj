@@ -244,13 +244,21 @@
   [config started-at]
   (let [now (Instant/now)
         uptime-seconds (max 0 (.getSeconds (java.time.Duration/between started-at now)))
-        live-count (:count (reg/registry-status))
+        live-status (reg/registry-status)
+        live-count (:count live-status)
         config-count (count (get-in config [:registry :agents]))
+        agent-summary (into {}
+                            (map (fn [[id info]]
+                                   [id {:type (:type info)
+                                        :last-active (:last-active info)
+                                        :capabilities (:capabilities info)}]))
+                            (:agents live-status))
         evidence-store (evidence-store-for-config config)
         evidence-count (count (estore/query* evidence-store {}))]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
                          "sessions" (count (persist/list-sessions {}))
+                         "agent-summary" agent-summary
                          "evidence" evidence-count
                          "started-at" (str started-at)
                          "uptime-seconds" uptime-seconds})))
