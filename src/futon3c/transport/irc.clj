@@ -469,9 +469,17 @@
              agent (get @!agents agent-id)]
          (when (and agent channel text)
            (let [nick (:nick agent)]
-             ;; Send to IRC channel via the IRC server
+             ;; Send to IRC channel via the IRC server (human observers)
              (when-let [irc-send @!irc-send-fn]
                (irc-send channel nick text))
+             ;; Relay to other WS-connected agents in the channel
+             (doseq [[other-id {:keys [channels ws-send-fn]}] @!agents
+                     :when (and (contains? channels channel)
+                                (not= other-id agent-id))]
+               (try
+                 (let [f (future (ws-send-fn (proto/render-irc-message channel nick text)))]
+                   (deref f relay-timeout-ms ::timeout))
+                 (catch Exception _)))
              ;; Emit evidence for agent response
              (emit-evidence! channel nick text)))
          true))}))
