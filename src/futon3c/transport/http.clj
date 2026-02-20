@@ -23,6 +23,8 @@
   (:require [futon3c.transport.protocol :as proto]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
+            [futon3c.agency.registry :as reg]
+            [futon3c.agency.federation :as federation]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -406,6 +408,79 @@
                           :error result}))))))
 
 ;; =============================================================================
+;; Agent registration endpoints
+;; =============================================================================
+
+(def ^:private default-capabilities
+  {:claude [:explore :edit :test :coordination/execute]
+   :codex  [:edit :test :coordination/execute]
+   :tickle [:mission-control :discipline :coordination/execute]})
+
+(defn- handle-agents-register
+  "POST /api/alpha/agents — register an agent via HTTP.
+   Body: {\"agent-id\": \"codex-1\", \"type\": \"codex\",
+          \"origin-url\": \"http://...\", \"proxy\": true}
+   Local registration (no origin-url): no-op invoke-fn, agent connects via WS later.
+   Proxy registration (with origin-url): invoke-fn forwards to origin Agency."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            agent-type-str (or (:type payload) (get payload "type"))
+            agent-type (parse-keyword agent-type-str)
+            origin-url (or (:origin-url payload) (get payload "origin-url"))
+            proxy? (or (:proxy payload) (get payload "proxy") (some? origin-url))
+            caps-raw (or (:capabilities payload) (get payload "capabilities"))
+            capabilities (if (sequential? caps-raw)
+                           (mapv keyword caps-raw)
+                           (get default-capabilities agent-type []))]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? agent-type)
+          (json-response 400 {:ok false :err "missing-type"
+                              :message "type is required (claude, codex, tickle, mock)"})
+
+          :else
+          (let [invoke-fn (if (and proxy? origin-url (not (str/blank? origin-url)))
+                            (federation/make-proxy-invoke-fn origin-url agent-id)
+                            (fn [_prompt _session-id]
+                              {:result "registered-via-http" :session-id nil}))
+                result (reg/register-agent!
+                        {:agent-id {:id/value (str agent-id) :id/type :continuity}
+                         :type agent-type
+                         :invoke-fn invoke-fn
+                         :capabilities capabilities
+                         :metadata (cond-> {}
+                                     proxy? (assoc :proxy? true)
+                                     origin-url (assoc :origin-url origin-url))})]
+            (if (and (map? result) (:ok result) (= false (:ok result)))
+              (json-response 409 {:ok false
+                                  :err "duplicate-registration"
+                                  :message (str "Agent already registered: " agent-id)})
+              (if (and (map? result) (:agent/id result))
+                (json-response 201 {:ok true
+                                    :agent-id (get-in result [:agent/id :id/value])
+                                    :type (name (:agent/type result))
+                                    :proxy proxy?})
+                (json-response 409 {:ok false
+                                    :err "registration-failed"
+                                    :message (str "Could not register: " agent-id)
+                                    :detail result})))))))))
+
+(defn- handle-agents-list
+  "GET /api/alpha/agents — list all registered agents."
+  [_config]
+  (let [status (reg/registry-status)]
+    (json-response 200 {:ok true
+                        :count (:count status)
+                        :agents (:agents status)})))
+
+;; =============================================================================
 ;; Public API
 ;; =============================================================================
 
@@ -446,6 +521,12 @@
         (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)" uri)
               evidence-id (enc/decode-uri-component raw-id)]
           (handle-evidence-entry config evidence-id))
+
+        (and (= :post method) (= "/api/alpha/agents" uri))
+        (handle-agents-register request config)
+
+        (and (= :get method) (= "/api/alpha/agents" uri))
+        (handle-agents-list config)
 
         (and (= :get method) (= "/health" uri))
         (handle-health config)

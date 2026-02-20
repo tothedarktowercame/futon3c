@@ -74,6 +74,16 @@ EOF
     "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
 }
 
+register_agent() {
+  command -v curl >/dev/null 2>&1 || return 0
+  local agent_id="${1:-claude-1}"
+  curl -sS --max-time 2 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "{\"agent-id\":\"${agent_id}\",\"type\":\"claude\"}" \
+    "${evidence_base%/}/api/alpha/agents" >/dev/null 2>&1 || true
+}
+
 # --- Collect sessions -------------------------------------------------------
 #
 # Output format (pipe-separated, 6 fields):
@@ -283,6 +293,7 @@ if [[ -z "$sid" ]]; then
 fi
 
 emit_session_evidence "$sid" "claude-picker-resume" "picked"
+register_agent "claude-1"
 
 echo
 printf "Resuming session ${CYAN}%s${RESET}...\n" "${sid:0:8}"

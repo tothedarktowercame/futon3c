@@ -24,6 +24,11 @@
 ;; Agent Registry — single atom, single routing authority (R2)
 ;; =============================================================================
 
+(defonce ^{:doc "Optional callback invoked after successful registration.
+   Set via set-on-register! to enable federation announcements.
+   Signature: (fn [agent-record] ...) — called asynchronously."}
+  !on-register (atom nil))
+
 (defonce ^{:doc "Registry of agents.
 
    Structure: {agent-id-value -> agent-record}
@@ -73,6 +78,12 @@
   "Reset the registry to empty state. For testing only."
   []
   (reset! !registry {}))
+
+(defn set-on-register!
+  "Set callback invoked asynchronously after successful agent registration.
+   Pass nil to clear. Signature: (fn [agent-record] ...)."
+  [f]
+  (reset! !on-register f))
 
 (defn get-agent
   "Get agent record by typed ID, or nil if not registered."
@@ -128,7 +139,14 @@
                    m)
                (do (reset! result agent-record)
                    (assoc m aid-val agent-record)))))
-    @result))
+    (let [r @result]
+      ;; Fire on-register hook asynchronously for federation announcement
+      (when (and (map? r) (:agent/id r))
+        (when-let [hook @!on-register]
+          (future
+            (try (hook r)
+                 (catch Exception _)))))
+      r)))
 
 (defn unregister-agent!
   "Unregister an agent.

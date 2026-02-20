@@ -12,10 +12,13 @@
      FUTON3C_DRAWBRIDGE_BIND  — Drawbridge bind interface (default 127.0.0.1)
      FUTON3C_DRAWBRIDGE_ALLOW — Drawbridge allowlist CSV (default 127.0.0.1,::1)
      FUTON3C_ADMIN_TOKEN / ADMIN_TOKEN / .admintoken — Drawbridge auth token
-     FUTON3C_PATTERNS   — comma-separated pattern IDs (default: none)"
+     FUTON3C_PATTERNS   — comma-separated pattern IDs (default: none)
+     FUTON3C_PEERS      — comma-separated peer Agency URLs for federation
+     FUTON3C_SELF_URL   — this Agency's externally reachable URL"
   (:require [futon1a.system :as f1]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.mission-control.service :as mcs]
+            [futon3c.agency.federation :as federation]
             [futon3c.runtime.agents :as rt]
             [futon3c.transport.http :as http]
             [repl.http :as drawbridge]
@@ -98,13 +101,25 @@
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
         _ (mcs/configure! {:evidence-store evidence-store})
         f3c-sys (start-futon3c! (:node f1-sys))
-        bridge-sys (start-drawbridge!)]
+        bridge-sys (start-drawbridge!)
+        ;; Federation: configure peers and install announcement hook
+        _ (federation/configure-from-env!)
+        _ (federation/install-hook!)
+        fed-peers (federation/peers)
+        fed-self (federation/self-url)]
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   GET  /api/alpha/evidence          — query entries")
     (println "[dev]   GET  /api/alpha/evidence/:id       — single entry")
     (println "[dev]   GET  /api/alpha/evidence/:id/chain — reply chain")
     (println "[dev]   POST /api/alpha/evidence          — append entry")
+    (println "[dev]   POST /api/alpha/agents            — register agent")
+    (println "[dev]   GET  /api/alpha/agents            — list agents")
+    (println)
+    (if (seq fed-peers)
+      (do (println (str "[dev] Federation: self=" fed-self " peers=" fed-peers))
+          (println "[dev]   Agents registered locally will be announced to peers."))
+      (println "[dev] Federation: no peers configured (set FUTON3C_PEERS, FUTON3C_SELF_URL)"))
     (println)
     (println "[dev] No agents registered. Use `make claude`, `make codex`, or REPL:")
     (println "[dev]   (require '[futon3c.runtime.agents :as rt])")

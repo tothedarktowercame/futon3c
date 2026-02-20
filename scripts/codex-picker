@@ -81,6 +81,16 @@ EOF
     "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
 }
 
+register_agent() {
+  command -v curl >/dev/null 2>&1 || return 0
+  local agent_id="${1:-codex-1}"
+  curl -sS --max-time 2 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "{\"agent-id\":\"${agent_id}\",\"type\":\"codex\"}" \
+    "${evidence_base%/}/api/alpha/agents" >/dev/null 2>&1 || true
+}
+
 latest_session_id() {
   local latest_file base
   [[ -d "${HOME}/.codex/sessions" ]] || return 1
@@ -202,6 +212,7 @@ if $open_repl; then
       printf '%s' "${sid}" > "${session_file}"
       echo "Opening Emacs Codex REPL (session ${sid})."
       emit_session_evidence "${sid}" "codex-picker-repl" "repl"
+      register_agent "codex-1"
     else
       echo "Opening Emacs Codex REPL (no prior session id found; new on first turn)."
     fi
@@ -227,13 +238,16 @@ fi
 
 if [[ -n "${session_id}" ]]; then
   emit_session_evidence "${session_id}" "codex-picker-resume" "explicit"
+  register_agent "codex-1"
 elif $resume_last; then
   sid="$(latest_session_id || true)"
   if [[ -n "${sid}" ]]; then
     emit_session_evidence "${sid}" "codex-picker-resume" "last"
+    register_agent "codex-1"
   fi
 elif [[ -n "${session_hint}" ]]; then
   emit_session_evidence "${session_hint}" "codex-picker-resume" "hint"
+  register_agent "codex-1"
 fi
 
 exec "${cmd[@]}"
