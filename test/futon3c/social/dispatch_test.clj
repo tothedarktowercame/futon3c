@@ -275,7 +275,7 @@
         (is (= :peripheral-failed (:error/code result)))))))
 
 (deftest peripheral-dispatch-mission-control-default-action
-  (testing "tickle action dispatch defaults to :mc-review when payload has no explicit actions"
+  (testing "tickle action dispatch defaults to :tickle-cycle when payload has no explicit actions"
     (let [captured-steps (atom nil)
           config (fix/make-peripheral-config)
           registry (fix/mock-registry
@@ -293,7 +293,7 @@
         (let [result (dispatch/dispatch msg registry)]
           (fix/assert-valid! shapes/DispatchReceipt result)
           (is (= :mission-control (:receipt/peripheral-id result)))
-          (is (= [{:tool :mc-review :args []}]
+          (is (= [{:tool :tickle-cycle :args []}]
                  (get-in (first @captured-steps) [:actions]))))))))
 
 (deftest peripheral-dispatch-mission-control-payload-actions

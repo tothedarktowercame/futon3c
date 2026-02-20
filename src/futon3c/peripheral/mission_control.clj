@@ -26,36 +26,47 @@
 (defn- dispatch-mc-tool
   "Dispatch a mission-control-specific tool.
    Returns {:ok true :result ...} or {:ok false :error ...}."
-  [tool args repos]
-  (case tool
-    :mc-inventory
-    {:ok true :result (mcb/build-inventory repos)}
+  [tool args state]
+  (let [repos (:repos state)]
+    (case tool
+      :mc-inventory
+      {:ok true :result (mcb/build-inventory repos)}
 
-    :mc-devmaps
-    (let [f5 (or (:futon5 repos) (:futon5 mcb/default-repo-roots))]
-      {:ok true :result (mcb/read-all-devmaps f5)})
+      :mc-devmaps
+      (let [f5 (or (:futon5 repos) (:futon5 mcb/default-repo-roots))]
+        {:ok true :result (mcb/read-all-devmaps f5)})
 
-    :mc-coverage
-    (let [missions (mcb/build-inventory repos)
-          f5 (or (:futon5 repos) (:futon5 mcb/default-repo-roots))
-          devmaps (mcb/read-all-devmaps f5)]
-      {:ok true :result (mcb/compute-coverage devmaps missions)})
+      :mc-coverage
+      (let [missions (mcb/build-inventory repos)
+            f5 (or (:futon5 repos) (:futon5 mcb/default-repo-roots))
+            devmaps (mcb/read-all-devmaps f5)]
+        {:ok true :result (mcb/compute-coverage devmaps missions)})
 
-    :mc-mana
-    (let [f5 (or (:futon5 repos) (:futon5 mcb/default-repo-roots))]
-      {:ok true :result (mcb/query-mana f5)})
+      :mc-mana
+      (let [f5 (or (:futon5 repos) (:futon5 mcb/default-repo-roots))]
+        {:ok true :result (mcb/query-mana f5)})
 
-    :mc-review
-    {:ok true :result (mcb/build-portfolio-review repos)}
+      :mc-review
+      {:ok true :result (mcb/build-portfolio-review repos)}
 
-    :mc-bulletin
-    (let [text (first args)]
-      (if (string? text)
-        {:ok true :result {:bulletin text}}
-        {:ok false :error "mc-bulletin requires a string argument"}))
+      :mc-bulletin
+      (let [text (first args)]
+        (if (string? text)
+          {:ok true :result {:bulletin text}}
+          {:ok false :error "mc-bulletin requires a string argument"}))
 
-    ;; Fall through to generic tools
-    nil))
+      ;; Tickle — stall detection and agent paging
+      :tickle-scan
+      {:ok true :result (mcb/tickle-scan (:evidence-store state) (or (first args) {}))}
+
+      :tickle-page
+      {:ok true :result (mcb/tickle-page (:evidence-store state) (first args))}
+
+      :tickle-cycle
+      {:ok true :result (mcb/tickle-cycle (:evidence-store state) (or (first args) {}))}
+
+      ;; Fall through to generic tools
+      nil)))
 
 ;; =============================================================================
 ;; Step dispatch
@@ -67,7 +78,7 @@
     err
     (let [{:keys [tool args]} (common/normalize-action action)
           ;; Try domain-specific tools first, then fall back to generic dispatch
-          dispatch-result (or (dispatch-mc-tool tool args (:repos state))
+          dispatch-result (or (dispatch-mc-tool tool args state)
                               (tools/dispatch-tool tool args spec backend))]
       (cond
         (common/social-error? dispatch-result)

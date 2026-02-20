@@ -87,16 +87,19 @@
       :else nil)))
 
 (defn- default-actions
-  "Default tool actions when payload does not specify explicit actions."
-  [peripheral-id]
-  (case peripheral-id
-    :mission-control [{:tool :mc-review :args []}]
-    []))
+  "Default tool actions when payload does not specify explicit actions.
+   Agent type overrides peripheral default when relevant (tickle → tickle-cycle)."
+  [peripheral-id agent-type]
+  (if (= :tickle agent-type)
+    [{:tool :tickle-cycle :args []}]
+    (case peripheral-id
+      :mission-control [{:tool :mc-review :args []}]
+      [])))
 
 (defn- resolve-actions
-  [payload peripheral-id]
+  [payload peripheral-id agent-type]
   (or (payload-actions payload)
-      (default-actions peripheral-id)))
+      (default-actions peripheral-id agent-type)))
 
 (defn select-peripheral
   "Given agent type and message payload, choose starting peripheral.
@@ -173,12 +176,13 @@
   "Dispatch an action-mode message through the peripheral system.
    Returns DispatchReceipt (with :receipt/session-id, :receipt/peripheral-id,
    :receipt/fruit) or SocialError."
-  [classified-message _agent-entry peripheral-id config]
+  [classified-message agent-entry peripheral-id config]
   (let [session-id (str "sess-" (UUID/randomUUID))
         msg-id (:msg/id classified-message)
         agent-id (:msg/from classified-message)
+        agent-type (:type agent-entry)
         payload (:msg/payload classified-message)
-        actions (resolve-actions payload peripheral-id)
+        actions (resolve-actions payload peripheral-id agent-type)
         {:keys [backend peripherals evidence-store]} config]
     ;; Emit root evidence entry
     (emit-dispatch-evidence evidence-store session-id msg-id peripheral-id agent-id)

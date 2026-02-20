@@ -13,7 +13,9 @@
    Evidence emission happens at the peripheral level, not here."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [futon3c.agency.registry :as reg]
+            [futon3c.agents.tickle :as tickle]))
 
 ;; =============================================================================
 ;; Configuration — repo paths
@@ -390,3 +392,46 @@
   ([] (backfill-inventory (build-inventory)))
   ([missions]
    (mapv mission->evidence missions)))
+
+;; =============================================================================
+;; Tickle — stall detection and agent paging
+;; =============================================================================
+
+(defn- stringify-instants
+  "Convert Instant values to strings for JSON serialization."
+  [activity-map]
+  (into {}
+        (map (fn [[agent-id info]]
+               [agent-id (update info :last-active #(when % (str %)))]))
+        activity-map))
+
+(defn tickle-scan
+  "Scan for stalled agents. Returns activity map and stalled list.
+   Observation only — does not page or escalate."
+  [evidence-store opts]
+  (let [threshold (long (or (:threshold-seconds opts) 300))
+        self-id (or (:self-id opts) "tickle-1")
+        registry-snapshot (reg/registered-agents)
+        activity (tickle/scan-activity evidence-store registry-snapshot
+                                      threshold :self-id self-id)
+        stalled (tickle/detect-stalls activity)]
+    {:scan/activity (stringify-instants activity)
+     :scan/stalled stalled
+     :scan/agent-count (count activity)
+     :scan/stall-count (count stalled)
+     :scan/threshold-seconds threshold}))
+
+(defn tickle-page
+  "Page a specific agent via test bell. Returns page result."
+  [evidence-store agent-id]
+  (tickle/page-agent! (or agent-id "unknown")
+                      {:evidence-store evidence-store}))
+
+(defn tickle-cycle
+  "Run a full scan → page → escalate cycle. Returns cycle result."
+  [evidence-store opts]
+  (tickle/run-scan-cycle!
+   {:evidence-store evidence-store
+    :threshold-seconds (or (:threshold-seconds opts) 300)
+    :self-id (or (:self-id opts) "tickle-1")
+    :page-config (or (:page-config opts) {})}))

@@ -106,7 +106,8 @@
   {:peripheral/id :mission-control
    :peripheral/tools #{:read :glob :grep :bash-readonly
                        :mc-inventory :mc-devmaps :mc-coverage
-                       :mc-mana :mc-review :mc-bulletin}
+                       :mc-mana :mc-review :mc-bulletin
+                       :tickle-scan :tickle-page :tickle-cycle}
    :peripheral/scope :full-codebase
    :peripheral/entry #{:from-any :user-request}
    :peripheral/exit #{:review-complete :hop-reflect :hop-explore :user-request}

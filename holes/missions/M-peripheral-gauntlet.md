@@ -554,6 +554,70 @@ COMPLETE:
 NEXT: Linearized task plan for VERIFY phase, ordered by the three
 structural weak points identified in the wiring diagram analysis.
 
+### Checkpoint 1 — 2026-02-20: Three-Repo Integration Demonstrated
+
+**What was done:**
+
+- Dispatch routing fix: `ensure-{mission,proof}-backend` auto-wraps
+  `RealBackend` in domain backend when dispatch router passes it to
+  peripheral factories. This was the blocking bug preventing `POST /dispatch`
+  from reaching mission/proof domain tools. (`558fdbc`)
+
+- futon3a integration (Phase 3 / patterns as landscape): `corpus-check`
+  tool now uses futon3a's `.venv/bin/python3` for MiniLM semantic search.
+  `ProcessBuilder.directory()` set to `futon3a-root` so relative embeddings
+  path resolves. Two corpus-check calls per cycle (observe + propose phases)
+  return ranked pattern matches. (`9d36c5e`)
+
+- futon3b integration (Phase 4 / gate pipeline): `tool-gate-check` in both
+  mission and proof backends now calls `bridge/submit-to-gates!` after local
+  structural checks pass. The futon3b pipeline (G5→G0) executes, producing
+  a proof-path with 6 gate events. Falls back gracefully to local-only when
+  pipeline is unavailable. (`827cf00`)
+
+- Full 9-phase cycle via dispatch: `POST /dispatch` → mission peripheral →
+  observe → propose → execute → validate → classify → integrate → commit →
+  gate-review → completed. 15 tool steps, 19 evidence entries with Table 25
+  sigil auto-tags and structural proof-tree shape (goal → step×N → conclusion).
+
+- nginx port fix: Agency HTTPS moved from 7071 to 7073 to avoid collision
+  with futon1a dev server. Canonical config in futon0. (`efef4fb`)
+
+**Three-repo integration status:**
+
+| Repo | Role | Integration point | Status |
+|------|------|-------------------|--------|
+| futon3a | Pattern search (MiniLM) | `corpus-check` → `notions_search.py` via venv | Working |
+| futon3b | Gate pipeline (G5→G0) | `gate-check` → `bridge/submit-to-gates!` → `pipeline/run` | Working |
+| futon3c | Coordination + evidence | `POST /dispatch` → mission peripheral → 9-phase cycle | Working |
+| futon1a | Evidence persistence | XTDB backend, 418+ evidence entries | Working |
+
+**Evidence:**
+- Session `sess-0cc8707f`: 19 entries, gate-check returned `pipeline.ok=true`,
+  proof-path `path-b7b7a42a-b` with 6 gate events (G5→G0)
+- Mission state `data/mission-state/M-gauntlet-p3.edn`: version 2, cycle
+  C001 completed with all 8 phases
+- Evidence entries carry sigil tags: `sigil/perception`, `sigil/argumentation`,
+  `sigil/software`, `sigil/logic-deduction`, `sigil/personal-comprehension`,
+  `sigil/collaborative-knowledge`, `sigil/consistency`, `sigil/quality`
+
+**Test state:** 711 tests, 2322 assertions, 0 failures
+
+**Gate impact:**
+- Phase 3 (task 3.1): Done — `corpus-check` queries futon3a environmentally
+  from inside a mission cycle, not as instruction. Agents see pattern matches
+  as observation data.
+- Phase 4: Partially started — `gate-check` runs the full futon3b pipeline.
+  Proof-paths are produced but not yet queryable as gauntlet gate evidence.
+  Next: submit actual gauntlet gate demonstrations through the pipeline.
+- Phase 1 (Gate 0): Not started — IRC adapter still needed.
+- Phase 2 (Tickle): Not started — stall detection agent.
+
+**Next:**
+1. Wire Tickle through dispatch router (Phase 2 / Gate 6 first step)
+2. Start Phase 1 (IRC adapter) to unblock Gate 0
+3. Submit gauntlet gate demonstrations through futon3b pipeline
+
 ## Task Plan
 
 Three phases, dependency-ordered. Each phase firms up one of the three
@@ -621,7 +685,7 @@ pass through human review before re-entering the catalog.
 
 | # | Task | Owner | Depends on | :in | :out |
 |---|------|-------|------------|-----|------|
-| 3.1 | Pattern search tool for peripherals ([#9](https://github.com/tothedarktowercame/futon3c/issues/9)) | Codex | — (parallel with Phase 1) | futon3a/src/futon/notions.clj, futon3a/src/musn/portal.clj, futon3c/peripheral/tools.clj | futon3c/peripheral/patterns.clj (tool that queries futon3a) |
+| 3.1 | Pattern search tool for peripherals ([#9](https://github.com/tothedarktowercame/futon3c/issues/9)) | ~~Codex~~ Done | — | ~~futon3a/src/futon/notions.clj~~ | `corpus-check` in mission_backend.clj + proof_backend.clj (via notions_search.py + venv python). Commits: `9d36c5e`, `827cf00` |
 | 3.2 | Exogeneity boundary documentation | Claude | 3.1 | gauntlet-wiring.edn (I4 analysis) | Addition to M-peripheral-gauntlet.md documenting the human-review gate |
 | 3.3 | End-to-end test: pattern as landscape | Claude + Joe | 3.1, Phase 1 | — | Test: agent searches patterns environmentally (not instructionally), selects one, applies it, records PUR |
 
@@ -633,6 +697,12 @@ pass through human review before re-entering the catalog.
 - Tool returns pattern candidates with rationale + sigil, NOT instructions to follow
 
 ### Phase 4: Gate Finalization via futon3b (after Phases 1-3 validated)
+
+**Infrastructure status**: The three-repo pipeline is wired and working
+(Checkpoint 1, 2026-02-20). `gate-check` calls `bridge/submit-to-gates!`
+which executes `futon3b.gate.pipeline/run` (G5→G0), producing proof-paths.
+What remains is submitting actual gauntlet gate demonstrations through this
+pipeline — the mechanism is ready, the evidence is not yet produced.
 
 Phase 4 is where the three-repo split earns its keep. futon3b's gate
 pipeline (G5→G0) is the mechanism for formalizing "has gauntlet gate N
