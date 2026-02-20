@@ -57,6 +57,73 @@ interoperate but have distinct concerns and timescales.
 | futon5 | Wiring diagrams for AIF loop specification |
 | futon1a | Durable store for session evidence |
 
+## Architectural Invariants
+
+These are hard constraints. Violating any of them is a design error, not a
+tradeoff. If you find yourself reaching for a pattern that conflicts with
+these invariants, stop and rethink.
+
+### I-1: Agent Identity Is Singular
+
+One agent = one session = one identity. An agent that is already running is
+never "represented" by spawning a new process. If Claude is running in this
+CLI session, IRC messages are **routed to this session** via the transport
+layer — never farmed out to a new `claude -p` invocation. The agent inhabits
+its peripherals; it does not delegate them to clones.
+
+**Test**: grep for `sh/sh.*claude` or `ProcessBuilder.*claude` in transport
+or dev code. If it exists, it's a violation.
+
+### I-2: Transport Routes, It Does Not Create
+
+The transport layer (IRC, WS, HTTP) routes messages to agents that already
+exist. It never creates new agents, spawns new processes, or makes API calls
+on behalf of agents. The relay bridge translates between transport protocols
+(IRC PRIVMSG ↔ WS frame). That's all.
+
+**Test**: transport code should have zero requires on `clojure.java.shell`,
+`ProcessBuilder`, or any AI SDK. If it imports these, it's a violation.
+
+### I-3: Peripherals Are Inhabited, Not Delegated
+
+When an agent enters a peripheral (chat, explore, edit), the **same agent**
+operates within that peripheral's constraints. The peripheral constrains what
+the agent can do (tools, scope, exit conditions). It does not hand the work
+to a different agent or process. Inhabitation means: the agent's context,
+memory, and identity persist across the peripheral boundary.
+
+**Test**: peripheral code should never spawn subprocesses that act as the
+agent. Helper processes (language servers, test runners) are fine. Agent
+impersonation is not.
+
+### I-4: Read Before You Write
+
+Before writing new code, exhaustively search for existing implementations.
+The futon stack has scripts, bridges, and modules that already solve many
+problems. The correct workflow is: search `scripts/`, search futon3 source
+material, read the mission doc, understand what's already built — THEN wire
+it together. Writing new code to solve an already-solved problem wastes time,
+introduces bugs, and ignores hard-won design decisions embedded in the
+existing implementation.
+
+**Discipline**: When starting any integration task, spend the first pass
+reading — `Glob` for related files, `Grep` for related functions, `Read`
+the scripts directory. Only after you understand what exists should you
+decide whether new code is needed. If the answer is "this already exists
+in a script," the task is wiring, not writing.
+
+**Test**: before creating a new `.clj` file, search for existing files with
+similar names or purposes. If you find one, read it fully before proceeding.
+If you find yourself reimplementing logic that exists in `scripts/`, stop.
+
+### I-5: No futon3 Dependencies
+
+futon3 is source material for porting, not running infrastructure. Nothing
+in futon3c may depend on futon3 being importable or on the classpath. See
+M-peripheral-gauntlet §"Foundational Constraint." When porting from futon3,
+the existing code documents what worked and what failed — read it as design
+documentation, not as code to copy blindly.
+
 ## Development Protocol
 
 Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):
