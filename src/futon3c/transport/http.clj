@@ -586,6 +586,44 @@
                                     :message (str "Could not register: " agent-id)
                                     :detail result})))))))))
 
+(defn- handle-invoke
+  "POST /api/alpha/invoke — invoke a registered agent directly.
+   Body: {\"agent-id\": \"claude-1\", \"prompt\": \"hello\"}
+   Returns the invoke-fn result: {\"ok\": true, \"result\": \"...\", \"session-id\": \"...\"}
+   or error: {\"ok\": false, \"error\": \"...\", \"message\": \"...\"}
+
+   This is the direct invocation endpoint — the futon3c equivalent of futon3's
+   POST /agency/page. Both Emacs and IRC peripherals route through this."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            prompt (or (:prompt payload) (get payload "prompt"))]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? prompt)
+          (json-response 400 {:ok false :err "missing-prompt"
+                              :message "prompt is required"})
+
+          :else
+          (let [result (reg/invoke-agent! (str agent-id) prompt)]
+            (if (:ok result)
+              (json-response 200 {:ok true
+                                  :result (:result result)
+                                  :session-id (:session-id result)})
+              (let [err (:error result)
+                    code (if (map? err) (:error/code err) :invoke-failed)
+                    msg (if (map? err) (:error/message err) (str err))]
+                (json-response (if (= :agent-not-found code) 404 502)
+                               {:ok false
+                                :error (name code)
+                                :message msg})))))))))
+
 (defn- handle-agents-list
   "GET /api/alpha/agents — list all registered agents."
   [_config]
@@ -656,6 +694,9 @@
           (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)" uri)
                 evidence-id (enc/decode-uri-component raw-id)]
             (handle-evidence-entry config evidence-id))
+
+          (and (= :post method) (= "/api/alpha/invoke" uri))
+          (handle-invoke request config)
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)

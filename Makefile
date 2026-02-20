@@ -1,7 +1,7 @@
 CLOJURE=clojure
 EVIDENCE_BASE?=http://localhost:7070
 
-.PHONY: dev test claude codex codex-autowake tickle status repl
+.PHONY: dev test claude claude-repl codex codex-autowake tickle status repl
 
 dev:
 	$(CLOJURE) -M:dev
@@ -11,6 +11,9 @@ test:
 
 claude:
 	./scripts/claude-picker $(ARGS)
+
+claude-repl:
+	./scripts/claude-picker --repl $(ARGS)
 
 codex:
 	./scripts/codex-picker $(ARGS)
