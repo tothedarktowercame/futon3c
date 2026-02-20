@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+set -euo pipefail
+#
+# Codex autowake — loop through GitHub issues labeled 'codex'.
+#
+# Fetches the next open issue, runs Codex in full-auto mode, then
+# waits for a cooldown before the next cycle. Tickle monitors agent
+# activity on the server and pages if Codex stalls mid-task.
+#
+# Usage:
+#   ./scripts/codex-autowake                        # default settings
+#   AUTOWAKE_MAX_CYCLES=10 ./scripts/codex-autowake # more cycles
+#   AUTOWAKE_COOLDOWN=30 ./scripts/codex-autowake   # shorter cooldown
+#
+# Environment:
+#   AUTOWAKE_MAX_CYCLES   — max issue cycles (default: 5)
+#   AUTOWAKE_COOLDOWN     — seconds between cycles (default: 60)
+#   AUTOWAKE_LABEL        — GitHub issue label to pick (default: codex)
+#   FUTON3C_EVIDENCE_BASE — Agency URL (default: http://localhost:7070)
+
+MAX_CYCLES="${AUTOWAKE_MAX_CYCLES:-5}"
+COOLDOWN="${AUTOWAKE_COOLDOWN:-60}"
+LABEL="${AUTOWAKE_LABEL:-codex}"
+evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
+
+# Determine repo from git remote
+REPO="$(git remote get-url origin 2>/dev/null | sed -E 's|.*github\.com[:/]||;s|\.git$||')"
+if [[ -z "$REPO" ]]; then
+  echo "[autowake] Could not determine GitHub repo from git remote." >&2
+  exit 1
+fi
+
+echo "[autowake] Starting autowake loop"
+echo "[autowake]   repo:       ${REPO}"
+echo "[autowake]   label:      ${LABEL}"
+echo "[autowake]   max_cycles: ${MAX_CYCLES}"
+echo "[autowake]   cooldown:   ${COOLDOWN}s"
+echo "[autowake]   agency:     ${evidence_base}"
+echo
+
+json_escape() {
+  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "${1:-}"
+}
+
+register_agent() {
+  command -v curl >/dev/null 2>&1 || return 0
+  curl -sS --max-time 2 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d '{"agent-id":"codex-1","type":"codex"}' \
+    "${evidence_base%/}/api/alpha/agents" >/dev/null 2>&1 || true
+}
+
+emit_evidence() {
+  local event="$1" issue_num="${2:-0}" title="${3:-}"
+  command -v curl >/dev/null 2>&1 || return 0
+  local escaped_title
+  escaped_title="$(json_escape "$title")"
+  curl -sS --max-time 2 \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "{\"subject\":{\"ref/type\":\"session\",\"ref/id\":\"autowake\"},\"type\":\"coordination\",\"claim-type\":\"observation\",\"author\":\"codex-1\",\"body\":{\"event\":\"${event}\",\"issue\":${issue_num},\"title\":\"${escaped_title}\"},\"tags\":[\"codex\",\"autowake\",\"${event}\"]}" \
+    "${evidence_base%/}/api/alpha/evidence" >/dev/null 2>&1 || true
+}
+
+register_agent
+emit_evidence "autowake-start" 0 "starting ${MAX_CYCLES} cycles"
+
+cycle=0
+while [[ $cycle -lt $MAX_CYCLES ]]; do
+  cycle=$((cycle + 1))
+  ts="$(date -u +%H:%M:%SZ)"
+  echo "[autowake] ===== Cycle ${cycle}/${MAX_CYCLES} ${ts} ====="
+
+  # Pull latest before each cycle so we build on Codex's own commits
+  git pull --rebase origin master 2>/dev/null || true
+
+  # Fetch next open issue labeled for codex
+  issue_json="$(gh issue list --repo "$REPO" --label "$LABEL" --state open --limit 1 --json number,title,body -q '.[0]' 2>/dev/null || echo "")"
+
+  if [[ -z "$issue_json" || "$issue_json" == "null" ]]; then
+    echo "[autowake] No open issues with label '${LABEL}'. Sleeping ${COOLDOWN}s..."
+    sleep "$COOLDOWN"
+    continue
+  fi
+
+  number="$(echo "$issue_json" | jq -r '.number')"
+  title="$(echo "$issue_json" | jq -r '.title')"
+  body="$(echo "$issue_json" | jq -r '.body')"
+
+  echo "[autowake] Issue #${number}: ${title}"
+  emit_evidence "issue-start" "$number" "$title"
+
+  # Build prompt from issue
+  prompt="You are working on GitHub issue #${number} in the ${REPO} repository.
+
+Title: ${title}
+
+${body}
+
+Instructions:
+1. Read the :in files listed in the issue for context
+2. Create/modify the :out files as specified
+3. Run \`clojure -X:test\` to verify all tests pass
+4. Commit your changes referencing issue #${number}
+5. Push to origin/master when all criteria in the checklist are met"
+
+  # Run codex in full-auto mode
+  echo "[autowake] Running codex --approval-mode full-auto ..."
+  if codex --approval-mode full-auto "$prompt" 2>&1; then
+    echo "[autowake] Codex completed issue #${number}."
+    emit_evidence "issue-done" "$number" "$title"
+  else
+    echo "[autowake] Codex exited with error on issue #${number}."
+    emit_evidence "issue-error" "$number" "$title"
+  fi
+
+  register_agent
+
+  if [[ $cycle -lt $MAX_CYCLES ]]; then
+    echo "[autowake] Cooldown ${COOLDOWN}s..."
+    sleep "$COOLDOWN"
+  fi
+done
+
+emit_evidence "autowake-done" 0 "completed ${MAX_CYCLES} cycles"
+echo "[autowake] All ${MAX_CYCLES} cycles complete."
