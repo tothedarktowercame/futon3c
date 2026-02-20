@@ -33,7 +33,9 @@
             [clojure.string :as str]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
-           [java.net Socket InetSocketAddress]))
+           [java.net Socket InetSocketAddress]
+           [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException]
+           [org.httpkit.logger ContextLogger]))
 
 ;; =============================================================================
 ;; Internal helpers
@@ -138,6 +140,24 @@
   [config]
   (or (:evidence-store config)
       (get-in config [:registry :peripheral-config :evidence-store])))
+
+(defn- expected-http-kit-shutdown-close?
+  "True when `http-kit` accept-loop emitted an expected close exception while stopping."
+  [msg ex]
+  (and (= "accept incoming request" msg)
+       (or (instance? ClosedChannelException ex)
+           (instance? ClosedSelectorException ex)
+           (instance? AsynchronousCloseException ex))))
+
+(defn- make-http-kit-error-logger
+  "Create an error logger that suppresses expected shutdown close races only."
+  [!server]
+  (fn [msg ex]
+    (let [status (some-> @!server hk/server-status)
+          suppress? (and (not= :running status)
+                         (expected-http-kit-shutdown-close? msg ex))]
+      (when-not suppress?
+        (.log ContextLogger/ERROR_PRINTER msg ex)))))
 
 (defn- normalize-artifact-ref
   "Normalize subject map (string or keyword :ref/type accepted)."
@@ -625,7 +645,15 @@
 
    Call (:server result) to stop the server (it's the stop function)."
   [handler port]
-  (let [stop-fn (hk/run-server handler {:port port})
+  (let [!server (atom nil)
+        server (hk/run-server handler {:port port
+                                       :legacy-return-value? false
+                                       :error-logger (make-http-kit-error-logger !server)})
+        _ (reset! !server server)
+        stop-fn (fn [& {:keys [timeout] :or {timeout 100}}]
+                  ;; Keep `:server` return value as a callable stop fn.
+                  (hk/server-stop! server {:timeout timeout})
+                  nil)
         _ (Thread/sleep 100)
         listening? (try
                      (with-open [sock (Socket.)]
