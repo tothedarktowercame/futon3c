@@ -201,6 +201,34 @@
       (is (= 404 (:status response))))))
 
 ;; =============================================================================
+;; GET /api/alpha/agents/:id tests
+;; =============================================================================
+
+(deftest agent-get-returns-registered-agent
+  (testing "GET /api/alpha/agents/:id returns agent details"
+    (let [handler (make-handler)
+          register-body (json/generate-string {"agent-id" "test-agent-1"
+                                               "type" "codex"})
+          register-response (post handler "/api/alpha/agents" register-body)
+          response (get-req handler "/api/alpha/agents/test-agent-1")
+          parsed (parse-body response)]
+      (is (= 201 (:status register-response)))
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= "test-agent-1" (:agent-id parsed)))
+      (is (= "test-agent-1" (get-in parsed [:agent :id :id/value])))
+      (is (= "codex" (get-in parsed [:agent :type]))))))
+
+(deftest agent-get-returns-404-for-unknown
+  (testing "GET /api/alpha/agents/:id returns 404 for unknown agent"
+    (let [handler (make-handler)
+          response (get-req handler "/api/alpha/agents/nonexistent")
+          parsed (parse-body response)]
+      (is (= 404 (:status response)))
+      (is (false? (:ok parsed)))
+      (is (= "Agent not found: nonexistent" (:error parsed))))))
+
+;; =============================================================================
 ;; GET /health tests
 ;; =============================================================================
 

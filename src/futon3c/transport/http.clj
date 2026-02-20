@@ -503,6 +503,15 @@
                         :count (:count status)
                         :agents (:agents status)})))
 
+(defn- handle-agent-get
+  "GET /api/alpha/agents/:id — return a single agent's details."
+  [_config agent-id]
+  (let [status (reg/registry-status)
+        agent (get-in status [:agents agent-id])]
+    (if agent
+      (json-response 200 {:ok true :agent-id agent-id :agent agent})
+      (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
+
 ;; =============================================================================
 ;; Public API
 ;; =============================================================================
@@ -547,6 +556,10 @@
 
         (and (= :post method) (= "/api/alpha/agents" uri))
         (handle-agents-register request config)
+
+        (and (= :get method) (re-matches #"/api/alpha/agents/(.+)" uri))
+        (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
+          (handle-agent-get config agent-id))
 
         (and (= :get method) (= "/api/alpha/agents" uri))
         (handle-agents-list config)
