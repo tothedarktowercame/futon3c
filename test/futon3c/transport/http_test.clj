@@ -242,6 +242,33 @@
         (is (= 3 (:agents parsed)))
         (is (= 0 (:sessions parsed)))))))
 
+(deftest health-includes-evidence-count
+  (testing "GET /health includes evidence count from store"
+    (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-health-1"}
+                             :type :coordination
+                             :claim-type :step
+                             :author "codex"
+                             :session-id "sess-health-1"
+                             :body {:msg "first"}
+                             :tags [:health]})
+          _ (estore/append! {:subject {:ref/type :session :ref/id "sess-health-2"}
+                             :type :reflection
+                             :claim-type :conclusion
+                             :author "claude"
+                             :session-id "sess-health-2"
+                             :body {:msg "second"}
+                             :tags [:health]})
+          expected-count (count (estore/query {}))
+          handler (make-handler)
+          response (get-req handler "/health")]
+      (is (= 200 (:status response)))
+      (let [parsed (parse-body response)]
+        (is (= "ok" (:status parsed)))
+        (is (= 3 (:agents parsed)))
+        (is (= 0 (:sessions parsed)))
+        (is (integer? (:evidence parsed)))
+        (is (= expected-count (:evidence parsed)))))))
+
 ;; =============================================================================
 ;; GET/POST /api/alpha/evidence tests
 ;; =============================================================================
