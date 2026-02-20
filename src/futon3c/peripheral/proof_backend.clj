@@ -17,6 +17,7 @@
             [clojure.java.io :as io]
             [clojure.set]
             [clojure.string :as str]
+            [futon3c.bridge :as bridge]
             [futon3c.peripheral.proof-dag :as dag]
             [futon3c.peripheral.proof-shapes :as ps]
             [futon3c.peripheral.tools :as tools])
@@ -395,8 +396,47 @@
 
                                    :else "Unknown validation failure"))}}))
 
+(defn- cycle->gate-receipt
+  "Convert proof cycle state into a DispatchReceipt-like map for the bridge."
+  [problem-id cycle]
+  {:receipt/msg-id (str problem-id "-" (:cycle/id cycle))
+   :receipt/route "peripheral/run-chain"
+   :receipt/session-id nil
+   :receipt/peripheral-id :proof
+   :receipt/delivered? true
+   :receipt/at (str (Instant/now))})
+
+(defn- cycle->gate-opts
+  "Build gate pipeline options from proof cycle state."
+  [problem-id cycle]
+  {:mission-ref problem-id
+   :missions {problem-id {:mission/id problem-id :mission/state :active}}
+   :intent (str "Proof cycle " (:cycle/id cycle)
+                " for blocker " (:cycle/blocker-id cycle))
+   :agent-id "claude"})
+
+(defn- run-pipeline-gates
+  "Run futon3b gate pipeline on cycle state. Returns pipeline result map
+   or a fallback map on failure."
+  [problem-id cycle]
+  (try
+    (let [receipt (cycle->gate-receipt problem-id cycle)
+          opts (cycle->gate-opts problem-id cycle)
+          result (bridge/submit-to-gates! receipt opts)]
+      (if (:ok result)
+        {:ok true
+         :proof-path (:O-proof-path result)
+         :evidence (:O-evidence result)}
+        {:ok false
+         :error (or (:message result) (str (:error/key result)))
+         :gate-id (:gate/id result)}))
+    (catch Exception e
+      {:ok false :error (.getMessage e) :fallback :local-only})))
+
 (defn- tool-gate-check
-  "Run the G5-G0 gate checklist (CR-8)."
+  "Run the G5-G0 gate checklist (CR-8).
+   Performs local structural checks, then runs the futon3b gate pipeline
+   via bridge/submit-to-gates! for external quality validation."
   [cache cwd args]
   (let [problem-id (first args)
         cycle-id (second args)]
@@ -448,10 +488,15 @@
                   :detail (if g0-saved "State saved" "State not yet saved")}
 
               gates [g5 g4 g3 g2 g1 g0]
-              all-passed? (every? :passed? gates)]
+              all-local-passed? (every? :passed? gates)
+
+              ;; Run futon3b pipeline when local checks pass
+              pipeline (when all-local-passed?
+                         (run-pipeline-gates problem-id cycle))]
           {:ok true :result {:gates gates
-                             :all-passed? all-passed?
-                             :cycle-id cycle-id}})
+                             :all-passed? all-local-passed?
+                             :cycle-id cycle-id
+                             :pipeline (or pipeline {:ok false :fallback :skipped})}})
         (proof-error :cycle-not-found (str "Cycle " cycle-id " not found")))
       (proof-error :not-found (str "No proof state for " problem-id)))))
 

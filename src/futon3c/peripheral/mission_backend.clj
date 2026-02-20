@@ -19,6 +19,7 @@
             [clojure.java.io :as io]
             [clojure.set]
             [clojure.string :as str]
+            [futon3c.bridge :as bridge]
             [futon3c.peripheral.mission-shapes :as ms]
             [futon3c.peripheral.proof-dag :as dag]
             [futon3c.peripheral.tools :as tools])
@@ -386,8 +387,47 @@
 
                                    :else "Unknown validation failure"))}}))
 
+(defn- cycle->gate-receipt
+  "Convert mission cycle state into a DispatchReceipt-like map for the bridge."
+  [mission-id cycle]
+  {:receipt/msg-id (str mission-id "-" (:cycle/id cycle))
+   :receipt/route "peripheral/run-chain"
+   :receipt/session-id nil
+   :receipt/peripheral-id :mission
+   :receipt/delivered? true
+   :receipt/at (str (Instant/now))})
+
+(defn- cycle->gate-opts
+  "Build gate pipeline options from mission cycle state."
+  [mission-id cycle]
+  {:mission-ref mission-id
+   :missions {mission-id {:mission/id mission-id :mission/state :active}}
+   :intent (str "Mission cycle " (:cycle/id cycle)
+                " for obligation " (:cycle/blocker-id cycle))
+   :agent-id "claude"})
+
+(defn- run-pipeline-gates
+  "Run futon3b gate pipeline on cycle state. Returns pipeline result map
+   or a fallback map on failure."
+  [mission-id cycle]
+  (try
+    (let [receipt (cycle->gate-receipt mission-id cycle)
+          opts (cycle->gate-opts mission-id cycle)
+          result (bridge/submit-to-gates! receipt opts)]
+      (if (:ok result)
+        {:ok true
+         :proof-path (:O-proof-path result)
+         :evidence (:O-evidence result)}
+        {:ok false
+         :error (or (:message result) (str (:error/key result)))
+         :gate-id (:gate/id result)}))
+    (catch Exception e
+      {:ok false :error (.getMessage e) :fallback :local-only})))
+
 (defn- tool-gate-check
-  "Run the gate checklist for a mission cycle."
+  "Run the gate checklist for a mission cycle.
+   Performs local structural checks (G5-G0), then runs the futon3b gate
+   pipeline via bridge/submit-to-gates! for external quality validation."
   [cache cwd args]
   (let [mission-id (first args)
         cycle-id (second args)]
@@ -439,10 +479,15 @@
                   :detail (if g0-saved "State saved" "State not yet saved")}
 
               gates [g5 g4 g3 g2 g1 g0]
-              all-passed? (every? :passed? gates)]
+              all-local-passed? (every? :passed? gates)
+
+              ;; Run futon3b pipeline when local checks pass
+              pipeline (when all-local-passed?
+                         (run-pipeline-gates mission-id cycle))]
           {:ok true :result {:gates gates
-                             :all-passed? all-passed?
-                             :cycle-id cycle-id}})
+                             :all-passed? all-local-passed?
+                             :cycle-id cycle-id
+                             :pipeline (or pipeline {:ok false :fallback :skipped})}})
         (mission-error :cycle-not-found (str "Cycle " cycle-id " not found")))
       (mission-error :not-found (str "No mission state for " mission-id)))))
 
