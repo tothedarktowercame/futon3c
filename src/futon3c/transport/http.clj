@@ -219,11 +219,16 @@
              "at" (str (:session/at result))}))))))
 
 (defn- handle-health
-  "GET /health — return agent and session counts."
+  "GET /health — return agent and session counts.
+   Reads both live registry and config snapshot, reports the larger count.
+   Live registry reflects HTTP-registered and federated agents;
+   config snapshot reflects agents wired at startup."
   [config]
-  (json-response 200 {"status" "ok"
-                       "agents" (count (get-in config [:registry :agents]))
-                       "sessions" (count (persist/list-sessions {}))}))
+  (let [live-count (:count (reg/registry-status))
+        config-count (count (get-in config [:registry :agents]))]
+    (json-response 200 {"status" "ok"
+                         "agents" (max live-count config-count)
+                         "sessions" (count (persist/list-sessions {}))})))
 
 (defn- handle-encyclopedia-corpuses
   "GET /fulab/encyclopedia/corpuses — list available corpuses."
