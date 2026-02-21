@@ -117,6 +117,10 @@ inbound laptop networking for IRC → Codex delivery.
 prefers the live Agency session when available, so Emacs and IRC can pivot through
 the same continuity lane.
 
+When Codex needs to post from Emacs to IRC, it can emit an explicit directive
+(`IRC_SEND <channel> :: <message>`), which `codex-repl` forwards to
+`POST /api/alpha/irc/send` on the local Agency endpoint.
+
 When using `--repl`, `codex-repl.el` logs evidence turn-by-turn:
 - session bootstrap (`claim-type: goal`, event `session-start`)
 - user and assistant chat turns (`claim-type: question` / `observation`)

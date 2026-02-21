@@ -308,6 +308,45 @@
       (is (= "agent-not-found" (:error parsed))))))
 
 ;; =============================================================================
+;; POST /api/alpha/irc/send tests
+;; =============================================================================
+
+(deftest irc-send-forwards-to-configured-relay
+  (testing "POST /api/alpha/irc/send forwards message to configured send fn"
+    (let [calls (atom [])
+          handler (make-handler {:irc-send-fn (fn [channel from text]
+                                                (swap! calls conj [channel from text]))})
+          body (json/generate-string {"channel" "#futon"
+                                      "from" "codex"
+                                      "text" "@claude ping"})
+          response (post handler "/api/alpha/irc/send" body)
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= [["#futon" "codex" "@claude ping"]] @calls)))))
+
+(deftest irc-send-without-relay-returns-503
+  (testing "POST /api/alpha/irc/send returns 503 when relay is unavailable"
+    (let [handler (make-handler)
+          body (json/generate-string {"channel" "#futon"
+                                      "text" "hello"})
+          response (post handler "/api/alpha/irc/send" body)
+          parsed (parse-body response)]
+      (is (= 503 (:status response)))
+      (is (false? (:ok parsed)))
+      (is (= "irc-unavailable" (:err parsed))))))
+
+(deftest irc-send-validates-required-fields
+  (testing "POST /api/alpha/irc/send validates channel and text"
+    (let [handler (make-handler {:irc-send-fn (fn [_ _ _] :ok)})
+          body (json/generate-string {"channel" "#futon"})
+          response (post handler "/api/alpha/irc/send" body)
+          parsed (parse-body response)]
+      (is (= 400 (:status response)))
+      (is (false? (:ok parsed)))
+      (is (= "missing-text" (:err parsed))))))
+
+;; =============================================================================
 ;; GET /health tests
 ;; =============================================================================
 

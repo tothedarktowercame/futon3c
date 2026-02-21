@@ -173,7 +173,9 @@
 (defn make-http-handler
   "Create an HTTP handler from live runtime state."
   [opts]
-  (http/make-handler (runtime-config opts)))
+  (http/make-handler
+   (merge (runtime-config opts)
+          (select-keys opts [:irc-send-fn]))))
 
 (defn make-ws-callbacks
   "Create WS callbacks from live runtime state."

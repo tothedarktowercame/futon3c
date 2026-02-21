@@ -467,15 +467,17 @@
 
    opts:
      :xtdb-node        — XTDB node for persistent peripheral config
-     :irc-interceptor  — (fn [ch conn parsed]) for IRC relay (optional)"
-  [{:keys [xtdb-node irc-interceptor]}]
+     :irc-interceptor  — (fn [ch conn parsed]) for IRC relay (optional)
+     :irc-send-fn      — (fn [channel from text]) for explicit IRC posts (optional)"
+  [{:keys [xtdb-node irc-interceptor irc-send-fn]}]
   (let [port (env-int "FUTON3C_PORT" 7070)]
     (when (pos? port)
       (let [pattern-ids (if-let [s (env "FUTON3C_PATTERNS")]
                           (mapv keyword (remove empty? (.split s ",")))
                           [])
             opts {:patterns {:patterns/ids pattern-ids}
-                  :xtdb-node xtdb-node}
+                  :xtdb-node xtdb-node
+                  :irc-send-fn irc-send-fn}
             http-handler (rt/make-http-handler opts)
             ws-opts (cond-> opts
                       irc-interceptor (assoc :irc-interceptor irc-interceptor))
@@ -1019,6 +1021,8 @@
         ;; futon3c HTTP + WS (with IRC interceptor if IRC is running)
         f3c-sys (start-futon3c!
                  {:xtdb-node (:node f1-sys)
+                  :irc-send-fn (when irc-sys
+                                 (:send-to-channel! (:server irc-sys)))
                   :irc-interceptor (when irc-sys
                                      (:irc-interceptor (:relay-bridge irc-sys)))})
         _ (reset! !f3c-sys f3c-sys)

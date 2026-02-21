@@ -297,6 +297,68 @@ Returns plist with keys :status and :json. Returns nil on transport failure."
             (kill-buffer buffer)
             (list :status status :json parsed)))))))
 
+(defconst codex-repl--irc-send-regex
+  "^IRC_SEND[[:space:]]+\\([^[:space:]]+\\)[[:space:]]*::[[:space:]]*\\(.+\\)$"
+  "Regex for explicit IRC send directives emitted by Codex.")
+
+(defun codex-repl--extract-irc-send-directive (text)
+  "Extract IRC send directive from TEXT.
+Returns plist (:channel :text), or nil."
+  (when (stringp text)
+    (catch 'directive
+      (dolist (line (split-string text "\n"))
+        (when (string-match codex-repl--irc-send-regex line)
+          (throw 'directive
+                 (list :channel (match-string 1 line)
+                       :text (match-string 2 line)))))
+      nil)))
+
+(defun codex-repl--strip-irc-send-directives (text)
+  "Remove IRC_SEND directive lines from TEXT."
+  (string-join
+   (cl-remove-if
+    (lambda (line)
+      (string-match-p codex-repl--irc-send-regex line))
+    (split-string (or text "") "\n"))
+   "\n"))
+
+(defun codex-repl--send-irc-via-agency (channel text)
+  "Send TEXT to IRC CHANNEL through the Agency HTTP API."
+  (let* ((base (string-remove-suffix "/" futon3c-ui-agency-base-url))
+         (url (format "%s/api/alpha/irc/send" base))
+         (response (codex-repl--evidence-request-json
+                    "POST" url
+                    `((channel . ,channel)
+                      (text . ,text)
+                      (from . "codex"))))
+         (status (plist-get response :status))
+         (parsed (plist-get response :json)))
+    (if (and (integerp status) (<= 200 status) (< status 300))
+        (list :ok t :status status)
+      (list :ok nil
+            :status (or status 0)
+            :message (or (plist-get parsed :message)
+                         "IRC send failed")))))
+
+(defun codex-repl--apply-irc-send-directive (final-text)
+  "Execute any IRC_SEND directive in FINAL-TEXT and append delivery status."
+  (let ((directive (codex-repl--extract-irc-send-directive final-text)))
+    (if (null directive)
+        final-text
+      (let* ((channel (plist-get directive :channel))
+             (text (plist-get directive :text))
+             (result (codex-repl--send-irc-via-agency channel text))
+             (cleaned (string-trim (codex-repl--strip-irc-send-directives final-text)))
+             (status-line
+              (if (plist-get result :ok)
+                  (format "[IRC sent] %s: %s" channel text)
+                (format "[IRC send failed status=%s] %s"
+                        (plist-get result :status)
+                        (plist-get result :message)))))
+        (if (string-empty-p cleaned)
+            status-line
+          (format "%s\n\n%s" cleaned status-line))))))
+
 (defun codex-repl--evidence-post-entry-id (payload)
   "POST PAYLOAD to evidence API and return created evidence id, or nil."
   (when (codex-repl--evidence-enabled-p)
@@ -554,7 +616,8 @@ Returns plist: (:session-id sid :text response :error err)."
       "- Current surface: emacs-codex-repl."
       "- Your response is shown only in this Emacs buffer."
       "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
-      "- If asked to send something to IRC, provide a one-line draft and mark it UNSENT."
+      "- If user explicitly asks you to post to IRC, emit exactly one directive line:"
+      "- IRC_SEND <channel> :: <single-line message>"
       (format "- Telemetry snapshot: agency=%s irc=%s." agency irc))
      "\n")))
 
@@ -603,7 +666,8 @@ Invoke CALLBACK with the final response text."
                       (response (plist-get parsed :text))
                       (err (plist-get parsed :error))
                       (final-text (if (= exit-code 0)
-                                      (string-trim response)
+                                      (codex-repl--apply-irc-send-directive
+                                       (string-trim response))
                                     (format "[Error (exit %d): %s]"
                                             exit-code
                                             (string-trim (or err response))))))

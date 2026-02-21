@@ -13,6 +13,7 @@
      GET  /api/alpha/evidence/count — count evidence entries by filters
      GET  /api/alpha/evidence/:id — retrieve single evidence entry
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
+     POST /api/alpha/irc/send — post a line to IRC via server relay
      GET  /health    — liveness check with agent/session counts
 
    Pattern references:
@@ -697,6 +698,45 @@
                                   :error (name code)
                                   :message msg}))))))))))
 
+(defn- handle-irc-send
+  "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
+   Body: {\"channel\": \"#futon\", \"text\": \"...\", \"from\": \"codex\"}."
+  [request config]
+  (let [payload (parse-json-map (read-body request))
+        send-fn (:irc-send-fn config)]
+    (cond
+      (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+
+      (not (fn? send-fn))
+      (json-response 503 {:ok false :err "irc-unavailable"
+                          :message "IRC relay is not configured on this node"})
+
+      :else
+      (let [channel (or (:channel payload) (get payload "channel"))
+            text (or (:text payload) (get payload "text"))
+            from (or (:from payload) (get payload "from") "codex")]
+        (cond
+          (or (nil? channel) (str/blank? (str channel)))
+          (json-response 400 {:ok false :err "missing-channel"
+                              :message "channel is required"})
+
+          (or (nil? text) (str/blank? (str text)))
+          (json-response 400 {:ok false :err "missing-text"
+                              :message "text is required"})
+
+          :else
+          (try
+            (send-fn (str channel) (str from) (str text))
+            (json-response 200 {:ok true
+                                :channel (str channel)
+                                :from (str from)
+                                :text (str text)})
+            (catch Exception e
+              (json-response 502 {:ok false :err "irc-send-failed"
+                                  :message (.getMessage e)}))))))))
+
 (defn- handle-agents-list
   "GET /api/alpha/agents — list all registered agents."
   [_config]
@@ -886,6 +926,9 @@
 
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
+
+          (and (= :post method) (= "/api/alpha/irc/send" uri))
+          (handle-irc-send request config)
 
           (and (= :post method) (= "/api/alpha/mission-control" uri))
           (handle-mission-control request config)
