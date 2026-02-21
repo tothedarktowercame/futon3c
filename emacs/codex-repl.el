@@ -605,13 +605,12 @@ Invoke CALLBACK with the final response text."
                        :label (format "emacs-codex-repl (active, session %s)" session)
                        :status 'active
                        :session session)
+                 (list :key 'agency
+                       :label "agency (/api/alpha/invoke)"
+                       :status (if agency-up 'available 'configured))
                  (list :key 'cli
                        :label "cli (codex exec --json)"
                        :status 'available))
-           (when agency-up
-             (list (list :key 'agency
-                         :label "agency (/api/alpha/invoke, available)"
-                         :status 'available)))
            (when irc-up
              (list (list :key 'irc
                          :label "irc (#futon :6667, available)"
