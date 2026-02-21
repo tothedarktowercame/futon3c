@@ -28,6 +28,7 @@
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
+     FUTON3C_CODEX_WS_HTTP_BASE — optional HTTP base for remote ws-bridge agent registration
      FUTON3C_CODEX_WS_PATH   — override codex WS bridge path (default /agency/ws)
      FUTON3C_REGISTER_CLAUDE — whether to register claude-1 on this host
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host"
@@ -48,10 +49,11 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [org.httpkit.server :as hk])
-  (:import [java.time Instant]
+  (:import [java.time Instant Duration]
            [java.util UUID]
            [java.net URI]
-           [java.net.http HttpClient WebSocket WebSocket$Listener]
+           [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers
+            HttpResponse$BodyHandlers WebSocket WebSocket$Listener]
            [java.util.concurrent CompletableFuture]))
 
 (defn env
@@ -88,6 +90,50 @@
     (let [v (-> s str str/trim str/lower-case)]
       (not (contains? #{"0" "false" "no" "off"} v)))
     default))
+
+(defn- first-peer-url
+  "Return first configured federation peer URL, if any."
+  []
+  (first (env-list "FUTON3C_PEERS" [])))
+
+(defn- normalize-ws-base
+  "Normalize URL into ws:// or wss:// base URL (no trailing slash)."
+  [url]
+  (when-let [raw (some-> url str/trim not-empty)]
+    (let [lower (str/lower-case raw)]
+      (cond
+        (str/starts-with? lower "ws://") (str/replace raw #"/$" "")
+        (str/starts-with? lower "wss://") (str/replace raw #"/$" "")
+        (str/starts-with? lower "http://") (str/replace (str "ws://" (subs raw 7)) #"/$" "")
+        (str/starts-with? lower "https://") (str/replace (str "wss://" (subs raw 8)) #"/$" "")
+        :else nil))))
+
+(defn- normalize-http-base
+  "Normalize URL into http:// or https:// base URL (no trailing slash)."
+  [url]
+  (when-let [raw (some-> url str/trim not-empty)]
+    (let [lower (str/lower-case raw)]
+      (cond
+        (str/starts-with? lower "http://") (str/replace raw #"/$" "")
+        (str/starts-with? lower "https://") (str/replace raw #"/$" "")
+        (str/starts-with? lower "ws://") (str/replace (str "http://" (subs raw 5)) #"/$" "")
+        (str/starts-with? lower "wss://") (str/replace (str "https://" (subs raw 6)) #"/$" "")
+        :else nil))))
+
+(defn- local-ws-target?
+  "True when WS-BASE points at localhost on WS-PORT."
+  [ws-base ws-port]
+  (try
+    (let [u (URI/create ws-base)
+          host (some-> (.getHost u) str/lower-case)
+          port (let [p (.getPort u)]
+                 (if (neg? p)
+                   (if (= "wss" (some-> (.getScheme u) str/lower-case)) 443 80)
+                   p))]
+      (and (#{"127.0.0.1" "localhost" "::1"} host)
+           (= port (int ws-port))))
+    (catch Exception _
+      false)))
 
 (defn deployment-role
   "Resolve deployment role from FUTON3C_ROLE.
@@ -158,15 +204,65 @@
    Connects codex-1 to this host's /agency/ws endpoint, handles invoke frames,
    runs codex-cli invoke-fn, and replies with invoke_result frames.
    Returns {:stop-fn fn}."
-  [{:keys [agent-id invoke-fn initial-sid session-file ws-base ws-path]
+  [{:keys [agent-id invoke-fn initial-sid session-file ws-base ws-path register-http-base]
     :or {agent-id "codex-1"
          ws-path "/agency/ws"}}]
   (let [sid* (atom initial-sid)
         running? (atom true)
         ws* (atom nil)
         client (HttpClient/newHttpClient)
+        register-http-base (some-> register-http-base str/trim (str/replace #"/$" ""))
         send-json! (fn [^WebSocket ws payload]
                      (.join (.sendText ws (json/generate-string payload) true)))
+        request-json! (fn [method url payload]
+                        (let [builder (doto (HttpRequest/newBuilder (URI/create url))
+                                        (.header "Content-Type" "application/json")
+                                        (.timeout (Duration/ofSeconds 10)))
+                              req (case method
+                                    :post (.build (.POST builder (HttpRequest$BodyPublishers/ofString payload)))
+                                    :delete (.build (.DELETE builder))
+                                    (.build (.GET builder)))
+                              resp (.send client req (HttpResponse$BodyHandlers/ofString))]
+                          {:status (.statusCode resp)
+                           :body (.body resp)}))
+        ensure-registered! (fn []
+                             (if-not register-http-base
+                               true
+                               (try
+                                 (let [url (str register-http-base "/api/alpha/agents")
+                                       agent-url (str register-http-base "/api/alpha/agents/" agent-id)
+                                       payload (json/generate-string {"agent-id" agent-id
+                                                                      "type" "codex"
+                                                                      "ws-bridge" true})
+                                       attempt-register! #(request-json! :post url payload)
+                                       {:keys [status body]} (attempt-register!)]
+                                   (cond
+                                     (= 201 status) true
+                                     (= 409 status)
+                                     (let [{del-status :status del-body :body} (request-json! :delete agent-url nil)
+                                           _ (when-not (contains? #{200 404} del-status)
+                                               (println (str "[dev] codex ws bridge remote delete failed: "
+                                                             del-status " " del-body))
+                                               (flush))
+                                           {status2 :status body2 :body} (attempt-register!)]
+                                       (if (or (= 201 status2) (= 409 status2))
+                                         true
+                                         (do
+                                           (println (str "[dev] codex ws bridge registration failed after replace: "
+                                                         status2 " " body2))
+                                           (flush)
+                                           false)))
+                                     :else
+                                     (do
+                                       (println (str "[dev] codex ws bridge registration failed: "
+                                                     status " " body))
+                                       (flush)
+                                       false)))
+                                 (catch Exception e
+                                   (println (str "[dev] codex ws bridge registration exception: "
+                                                 (.getMessage e)))
+                                   (flush)
+                                   false))))
         ws-url (fn []
                  (str (str/replace ws-base #"/$" "")
                       ws-path
@@ -196,44 +292,46 @@
                                                      (.getMessage e)))))))))))
         worker (future
                  (while @running?
-                   (let [closed (promise)
-                         url (ws-url)]
-                     (try
-                       (println (str "[dev] codex ws bridge connecting: " url))
-                       (flush)
-                       (let [listener (reify WebSocket$Listener
-                                        (onOpen [_ ws]
-                                          (reset! ws* ws)
-                                          (send-json! ws {"type" "ready"
-                                                          "agent_id" agent-id
-                                                          "session_id" (or @sid* (str "sess-" (System/currentTimeMillis)))})
-                                          (.request ws 1))
-                                        (onText [_ ws data _last]
-                                          (try
-                                            (let [frame (json/parse-string (str data) true)]
-                                              (when (= "invoke" (:type frame))
-                                                (handle-invoke! ws frame)))
-                                            (catch Exception e
-                                              (println (str "[dev] codex ws bridge parse failed: "
-                                                            (.getMessage e)))))
-                                          (.request ws 1)
-                                          (CompletableFuture/completedFuture nil))
-                                        (onClose [_ _ws _code _reason]
-                                          (reset! ws* nil)
-                                          (deliver closed true)
-                                          (CompletableFuture/completedFuture nil))
-                                        (onError [_ _ws e]
-                                          (reset! ws* nil)
-                                          (println (str "[dev] codex ws bridge error: " (.getMessage e)))
-                                          (flush)
-                                          (deliver closed true)))]
-                         (.join (.buildAsync (.newWebSocketBuilder client)
-                                             (URI/create url)
-                                             listener))
-                         (deref closed 600000 nil))
-                       (catch Exception e
-                         (println (str "[dev] codex ws bridge connect failed: " (.getMessage e)))
-                         (flush))))
+                   (if-not (ensure-registered!)
+                     (Thread/sleep 5000)
+                     (let [closed (promise)
+                           url (ws-url)]
+                       (try
+                         (println (str "[dev] codex ws bridge connecting: " url))
+                         (flush)
+                         (let [listener (reify WebSocket$Listener
+                                          (onOpen [_ ws]
+                                            (reset! ws* ws)
+                                            (send-json! ws {"type" "ready"
+                                                            "agent_id" agent-id
+                                                            "session_id" (or @sid* (str "sess-" (System/currentTimeMillis)))})
+                                            (.request ws 1))
+                                          (onText [_ ws data _last]
+                                            (try
+                                              (let [frame (json/parse-string (str data) true)]
+                                                (when (= "invoke" (:type frame))
+                                                  (handle-invoke! ws frame)))
+                                              (catch Exception e
+                                                (println (str "[dev] codex ws bridge parse failed: "
+                                                              (.getMessage e)))))
+                                            (.request ws 1)
+                                            (CompletableFuture/completedFuture nil))
+                                          (onClose [_ _ws _code _reason]
+                                            (reset! ws* nil)
+                                            (deliver closed true)
+                                            (CompletableFuture/completedFuture nil))
+                                          (onError [_ _ws e]
+                                            (reset! ws* nil)
+                                            (println (str "[dev] codex ws bridge error: " (.getMessage e)))
+                                            (flush)
+                                            (deliver closed true)))]
+                           (.join (.buildAsync (.newWebSocketBuilder client)
+                                               (URI/create url)
+                                               listener))
+                           (deref closed 600000 nil))
+                         (catch Exception e
+                           (println (str "[dev] codex ws bridge connect failed: " (.getMessage e)))
+                           (flush)))))
                    (when @running?
                      (Thread/sleep 5000))))]
     {:stop-fn (fn []
@@ -626,8 +724,8 @@
    and chattering with each other.
 
    Returns {:agent-id str :nick str} or nil if IRC is not running."
-  [{:keys [relay-bridge irc-server agent-id nick]
-    :or {agent-id "claude-1" nick "claude"}}]
+  [{:keys [relay-bridge irc-server agent-id nick invoke-timeout-ms]
+    :or {agent-id "claude-1" nick "claude" invoke-timeout-ms 45000}}]
   (when (and relay-bridge irc-server)
     ((:join-agent! relay-bridge) agent-id nick "#futon"
      (fn [data]
@@ -642,7 +740,7 @@
                  (when-not (str/blank? prompt)
                    (future
                      (try
-                       (let [resp (reg/invoke-agent! agent-id prompt)]
+                       (let [resp (reg/invoke-agent! agent-id prompt invoke-timeout-ms)]
                          (if (and (:ok resp) (string? (:result resp)))
                            (do
                              ((:send-to-channel! irc-server)
@@ -651,7 +749,15 @@
                                            (subs (:result resp) 0 (min 80 (count (:result resp))))))
                              (flush))
                            (do
-                             (println (str "[dev] IRC invoke failed: " (:error resp)))
+                             (let [err-msg (if (map? (:error resp))
+                                             (or (:error/message (:error resp))
+                                                 (pr-str (:error resp)))
+                                             (str (:error resp)))]
+                               (println (str "[dev] IRC invoke failed: " err-msg))
+                               ((:send-to-channel! irc-server)
+                                (or (:channel parsed) "#futon")
+                                nick
+                                (str "[invoke failed] " err-msg)))
                              (flush))))
                        (catch Exception e
                          (println (str "[dev] IRC dispatch error: " (.getMessage e)))
@@ -684,6 +790,7 @@
         register-codex? (env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
         relay-claude? (env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
+        relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 45000) 45000)
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
         f1-sys (start-futon1a!)
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
@@ -731,14 +838,24 @@
         _ (when register-codex?
             (let [{:keys [invoke-fn session-file initial-sid]} (make-codex-invoke-wrapper)
                   ws-port (or (:port f3c-sys) (env-int "FUTON3C_PORT" 7070))
+                  peer-base (or (some-> (env "FUTON3C_LINODE_URL") str/trim not-empty)
+                                (first-peer-url))
+                  peer-ws-base (normalize-ws-base peer-base)
+                  explicit-ws-base (some-> (env "FUTON3C_CODEX_WS_BASE") str/trim not-empty)
+                  ws-base (or explicit-ws-base
+                              (when (= role :laptop) peer-ws-base)
+                              (str "ws://127.0.0.1:" ws-port))
+                  remote-ws-target? (and (pos? (long ws-port))
+                                         (not (local-ws-target? ws-base ws-port)))
+                  register-http-base (or (some-> (env "FUTON3C_CODEX_WS_HTTP_BASE") str/trim not-empty)
+                                         (when remote-ws-target?
+                                           (normalize-http-base (or peer-base ws-base))))
                   ws-bridge-enabled? (and codex-ws-bridge? (pos? (long ws-port)))]
               (when-let [old @!codex-ws-bridge]
                 ((:stop-fn old))
                 (reset! !codex-ws-bridge nil))
               (if ws-bridge-enabled?
-                (let [ws-base (or (some-> (env "FUTON3C_CODEX_WS_BASE") str/trim not-empty)
-                                  (str "ws://127.0.0.1:" ws-port))
-                      ws-path (or (some-> (env "FUTON3C_CODEX_WS_PATH") str/trim not-empty)
+                (let [ws-path (or (some-> (env "FUTON3C_CODEX_WS_PATH") str/trim not-empty)
                                   "/agency/ws")
                       bridge (start-codex-ws-bridge!
                               {:agent-id "codex-1"
@@ -746,14 +863,19 @@
                                :initial-sid initial-sid
                                :session-file session-file
                                :ws-base ws-base
-                               :ws-path ws-path})]
+                               :ws-path ws-path
+                               :register-http-base register-http-base})]
                   (rt/register-codex! {:agent-id "codex-1"
-                                       :invoke-fn nil
-                                       :metadata {:ws-bridge? true}})
+                                       :invoke-fn (when remote-ws-target? invoke-fn)
+                                       :metadata (cond-> {:ws-bridge? true}
+                                                   remote-ws-target? (assoc :skip-federation-proxy? true)
+                                                   remote-ws-target? (assoc :ws-remote? true))})
                   (when initial-sid
                     (reg/update-agent! "codex-1" :agent/session-id initial-sid))
                   (reset! !codex-ws-bridge bridge)
-                  (println (str "[dev] Codex agent registered: codex-1 (ws-bridge mode)"
+                  (println (str "[dev] Codex agent registered: codex-1 (ws-bridge mode"
+                                (when remote-ws-target? ", remote")
+                                ")"
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
                                                            (min 8 (count initial-sid))) ")")))))
@@ -771,20 +893,27 @@
         ;; Dispatch relays: route IRC messages through invoke-agent!
         _dispatch-relay-claude (when (and irc-sys relay-claude?)
                                  (start-dispatch-relay!
-                                  {:relay-bridge (:relay-bridge irc-sys)
-                                   :irc-server (:server irc-sys)
-                                   :agent-id "claude-1"
-                                   :nick "claude"}))
+                                 {:relay-bridge (:relay-bridge irc-sys)
+                                  :irc-server (:server irc-sys)
+                                  :agent-id "claude-1"
+                                  :nick "claude"
+                                  :invoke-timeout-ms relay-invoke-timeout-ms}))
         _dispatch-relay-codex (when (and irc-sys relay-codex?)
                                 (start-dispatch-relay!
                                  {:relay-bridge (:relay-bridge irc-sys)
                                   :irc-server (:server irc-sys)
                                   :agent-id "codex-1"
-                                  :nick "codex"}))
+                                  :nick "codex"
+                                  :invoke-timeout-ms relay-invoke-timeout-ms}))
         bridge-sys (start-drawbridge!)
         ;; Federation: configure peers and install announcement hook
         _ (federation/configure-from-env!)
         _ (federation/install-hook!)
+        ;; Announce agents that were registered before hook installation
+        ;; (startup registers Codex/Claude earlier in this let).
+        _ (doseq [typed-id (reg/registered-agents)]
+            (when-let [agent-record (reg/get-agent typed-id)]
+              (federation/announce! agent-record)))
         fed-peers (federation/peers)
         fed-self (federation/self-url)]
     (println)
