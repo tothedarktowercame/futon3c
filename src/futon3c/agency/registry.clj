@@ -17,7 +17,8 @@
    Design: single registry atom with one entry per agent-id value.
    The triple-store problem from futon3 (registry + local-handlers +
    connected-agents) is eliminated by having one authoritative store."
-  (:require [futon3c.social.shapes :as shapes])
+  (:require [futon3c.blackboard :as bb]
+            [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]))
 
 ;; =============================================================================
@@ -222,7 +223,28 @@
      (if-let [agent (get @!registry aid-val)]
        (let [invoke-fn (:agent/invoke-fn agent)
              current-session (:agent/session-id agent)
-             timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))]
+             timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))
+             prompt-preview (let [s (str prompt)]
+                              (subs s 0 (min 120 (count s))))]
+         ;; Mark agent as invoking and project to blackboard
+         (swap! !registry
+                (fn [m]
+                  (if-let [a (get m aid-val)]
+                    (assoc m aid-val
+                           (assoc a
+                                  :agent/status :invoking
+                                  :agent/invoke-started-at (now)
+                                  :agent/invoke-prompt-preview prompt-preview))
+                    m)))
+         (bb/project-agents! {:agents (into {}
+                       (map (fn [[aid a]]
+                              [aid (cond-> {:type (:agent/type a)
+                                            :status (or (:agent/status a) :idle)}
+                                     (:agent/invoke-started-at a)
+                                     (assoc :invoke-started-at (str (:agent/invoke-started-at a))
+                                            :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
+                            @!registry))
+                      :count (count @!registry)})
          (try
            (let [call-invoke
                  (fn []
@@ -240,15 +262,27 @@
                        v))
                    (call-invoke))
                  {:keys [result session-id error]} result-map]
-             ;; Update session-id and last-active only if agent still registered (R5: no resurrect)
+             ;; Update session-id, last-active, and mark idle
              (swap! !registry
                     (fn [m]
                       (if-let [agent* (get m aid-val)]
                         (assoc m aid-val
                                (merge agent*
                                       {:agent/session-id (or session-id current-session)
-                                       :agent/last-active (now)}))
+                                       :agent/last-active (now)
+                                       :agent/status :idle
+                                       :agent/invoke-started-at nil
+                                       :agent/invoke-prompt-preview nil}))
                         m)))
+             (bb/project-agents! {:agents (into {}
+                       (map (fn [[aid a]]
+                              [aid (cond-> {:type (:agent/type a)
+                                            :status (or (:agent/status a) :idle)}
+                                     (:agent/invoke-started-at a)
+                                     (assoc :invoke-started-at (str (:agent/invoke-started-at a))
+                                            :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
+                            @!registry))
+                      :count (count @!registry)})
              (if error
                {:ok false
                 :error (make-social-error
@@ -258,6 +292,26 @@
                         :timeout-ms (:timeout-ms result-map))}
                {:ok true :result result :session-id session-id}))
            (catch Exception e
+             ;; Mark idle on exception too
+             (swap! !registry
+                    (fn [m]
+                      (if-let [agent* (get m aid-val)]
+                        (assoc m aid-val
+                               (assoc agent*
+                                      :agent/status :idle
+                                      :agent/invoke-started-at nil
+                                      :agent/invoke-prompt-preview nil
+                                      :agent/last-active (now)))
+                        m)))
+             (bb/project-agents! {:agents (into {}
+                       (map (fn [[aid a]]
+                              [aid (cond-> {:type (:agent/type a)
+                                            :status (or (:agent/status a) :idle)}
+                                     (:agent/invoke-started-at a)
+                                     (assoc :invoke-started-at (str (:agent/invoke-started-at a))
+                                            :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
+                            @!registry))
+                      :count (count @!registry)})
              {:ok false
               :error (make-social-error
                       :invoke-exception
@@ -306,13 +360,17 @@
   {:agents
    (into {}
          (map (fn [[aid agent]]
-                [aid {:type (:agent/type agent)
-                      :id (:agent/id agent)
-                      :session-id (:agent/session-id agent)
-                      :registered-at (str (:agent/registered-at agent))
-                      :last-active (str (:agent/last-active agent))
-                      :capabilities (:agent/capabilities agent)
-                      :ttl-ms (:agent/ttl-ms agent)}])
+                [aid (cond-> {:type (:agent/type agent)
+                              :id (:agent/id agent)
+                              :session-id (:agent/session-id agent)
+                              :registered-at (str (:agent/registered-at agent))
+                              :last-active (str (:agent/last-active agent))
+                              :capabilities (:agent/capabilities agent)
+                              :ttl-ms (:agent/ttl-ms agent)
+                              :status (or (:agent/status agent) :idle)}
+                       (:agent/invoke-started-at agent)
+                       (assoc :invoke-started-at (str (:agent/invoke-started-at agent))
+                              :invoke-prompt-preview (:agent/invoke-prompt-preview agent)))])
               @!registry))
    :count (count @!registry)})
 
