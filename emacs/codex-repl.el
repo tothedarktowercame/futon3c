@@ -57,6 +57,12 @@ Set to nil to use the Codex CLI/user config default."
   :type '(choice (const nil) string)
   :group 'codex-repl)
 
+(defcustom codex-repl-reasoning-effort "high"
+  "Reasoning effort passed as `-c model_reasoning_effort=\"...\"`.
+Set to nil to use the Codex CLI/user config default."
+  :type '(choice (const nil) string)
+  :group 'codex-repl)
+
 (defcustom codex-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
       "http://localhost:7070/api/alpha/evidence")
@@ -517,6 +523,12 @@ Returns plist: (:session-id sid :text response :error err)."
                           "--json"
                           "--sandbox" codex-repl-sandbox
                           "-c" (format "approval_policy=\"%s\"" codex-repl-approval-policy)))
+         (exec-args (if (and codex-repl-reasoning-effort
+                             (not (string-empty-p codex-repl-reasoning-effort)))
+                        (append exec-args
+                                (list "-c" (format "model_reasoning_effort=\"%s\""
+                                                   codex-repl-reasoning-effort)))
+                      exec-args))
          (exec-args (if (and codex-repl-model (not (string-empty-p codex-repl-model)))
                         (append exec-args (list "--model" codex-repl-model))
                       exec-args)))
