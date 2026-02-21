@@ -75,50 +75,32 @@
 ;; Claude CLI invocation
 ;; =============================================================================
 
-(defn- extract-text-from-json-output
-  "Extract text from `claude -p --output-format json` response.
-   JSON shape: {\"type\":\"result\", \"result\":\"text\", \"session_id\":\"uuid\"}
-   Falls back to raw string if JSON parsing fails."
-  [raw]
-  (if (str/blank? raw)
-    {:text nil :session-id nil}
-    (try
-      (let [parsed (json/parse-string raw true)
-            result-text (cond
-                          ;; Standard result shape
-                          (= "result" (:type parsed))
-                          (let [r (:result parsed)]
-                            (cond
-                              (string? r) r
-                              (sequential? r) (->> r
-                                                   (keep (fn [block]
-                                                           (when (= "text" (:type block))
-                                                             (:text block))))
-                                                   (str/join "\n"))
-                              :else (str r)))
-                          ;; Direct string result
-                          (string? (:result parsed))
-                          (:result parsed)
-                          ;; Fallback
-                          :else (str/trim raw))
-            sid (or (:session_id parsed) (:sessionId parsed))]
-        {:text result-text :session-id sid})
-      (catch Exception _
-        {:text (str/trim raw) :session-id nil}))))
+(defn- extract-text-from-assistant-message
+  "Extract text content from a stream-json assistant message.
+   Shape: {\"type\":\"assistant\", \"message\":{\"content\":[{\"type\":\"text\",\"text\":\"...\"}]}}"
+  [parsed]
+  (when-let [content (get-in parsed [:message :content])]
+    (when (sequential? content)
+      (->> content
+           (keep (fn [block] (when (= "text" (:type block)) (:text block))))
+           (str/join "\n")))))
 
 (defn- invoke-claude!
-  "Invoke claude -p with a prompt. Uses ProcessBuilder for clean process
-   management. Returns {:ok bool :result str :session-id str :error str}."
-  [prompt prior-session-id sid*]
+  "Invoke claude -p with stream-json output. Reads stdout line by line,
+   calls on-text for each text chunk as it arrives. Returns final
+   {:ok bool :result str :session-id str :error str}."
+  [prompt prior-session-id sid* & {:keys [on-text]}]
   (if (= "mock" invoke-mode)
-    {:ok true
-     :result (str "mock: " prompt)
-     :session-id (or prior-session-id @sid*)}
+    (let [text (str "mock: " prompt)]
+      (when on-text (on-text text))
+      {:ok true
+       :result text
+       :session-id (or prior-session-id @sid*)})
     (let [sid (or prior-session-id @sid*)
           new-sid (when-not sid (str (UUID/randomUUID)))
           args (cond-> [claude-bin "-p" (str prompt)
                         "--permission-mode" claude-permission
-                        "--output-format" "json"]
+                        "--output-format" "stream-json" "--verbose"]
                  sid     (into ["--resume" sid])
                  new-sid (into ["--session-id" new-sid]))
           used-sid (or sid new-sid)
@@ -126,17 +108,39 @@
                (.directory (File. claude-cwd))
                (.redirectErrorStream false))
           proc (.start pb)
-          ;; Drain stdout and stderr in background
+          ;; Accumulate text and session-id from the stream
+          text-acc (StringBuilder.)
+          result-sid (atom nil)
+          result-ok (atom true)
+          ;; Read stream-json lines as they arrive
           stdout-fut (future
                        (with-open [r (BufferedReader. (InputStreamReader. (.getInputStream proc)))]
-                         (let [sb (StringBuilder.)]
-                           (loop []
-                             (let [line (.readLine r)]
-                               (when line
-                                 (.append sb line)
-                                 (.append sb "\n")
-                                 (recur))))
-                           (str sb))))
+                         (loop []
+                           (when-let [line (.readLine r)]
+                             (when-not (str/blank? line)
+                               (try
+                                 (let [parsed (json/parse-string line true)]
+                                   (case (:type parsed)
+                                     ;; Text from Claude — extract and callback immediately
+                                     "assistant"
+                                     (when-let [text (extract-text-from-assistant-message parsed)]
+                                       (when-not (str/blank? text)
+                                         (.append text-acc text)
+                                         (when on-text (on-text text))))
+
+                                     ;; Final result — grab session-id
+                                     "result"
+                                     (do
+                                       (reset! result-sid (:session_id parsed))
+                                       (when (:is_error parsed)
+                                         (reset! result-ok false)))
+
+                                     ;; system, rate_limit_event, etc — ignore
+                                     nil))
+                                 (catch Exception e
+                                   (println "[bridge] stream parse error:" (.getMessage e))
+                                   (flush))))
+                             (recur)))))
           stderr-fut (future
                        (with-open [r (BufferedReader. (InputStreamReader. (.getErrorStream proc)))]
                          (let [sb (StringBuilder.)]
@@ -148,22 +152,22 @@
                                  (recur))))
                            (str sb))))]
       (.waitFor proc)
+      @stdout-fut
       (let [exit (.exitValue proc)
-            out @stdout-fut
             _err @stderr-fut
-            {:keys [text session-id]} (extract-text-from-json-output (or out ""))
-            final-sid (or session-id used-sid)]
+            text (str text-acc)
+            final-sid (or @result-sid used-sid)]
         (when (and (string? final-sid) (not (str/blank? final-sid)))
           (reset! sid* final-sid)
           (persist-session-id! session-file final-sid))
-        (if (zero? exit)
+        (if (and (zero? exit) @result-ok)
           {:ok true
            :result (if (str/blank? text)
                      "[Claude used tools but produced no text response]"
                      text)
            :session-id final-sid}
           {:ok false
-           :error (str "claude-exit-" exit ": " (str/trim (or text out "")))
+           :error (str "claude-exit-" exit ": " (str/trim (or text "")))
            :session-id used-sid})))))
 
 ;; =============================================================================
@@ -288,7 +292,15 @@
           ;; Start heartbeat
           (let [stop-heartbeat! (start-heartbeat! invoke-id prompt-preview incoming-session)
                 outcome (try
-                          (invoke-claude! prompt-str incoming-session sid*)
+                          (invoke-claude! prompt-str incoming-session sid*
+                                          :on-text (fn [text]
+                                                     (try
+                                                       (send-json! ws {"type" "invoke_text"
+                                                                       "invoke_id" invoke-id
+                                                                       "text" text})
+                                                       (catch Exception e
+                                                         (println "[bridge] send invoke_text failed:" (.getMessage e))
+                                                         (flush)))))
                           (finally
                             (stop-heartbeat!)))
                 payload (cond-> {"type" "invoke_result"

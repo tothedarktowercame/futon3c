@@ -538,23 +538,15 @@
 ;; Claude invoke-fn — real CLI invocation via `claude -p`
 ;; =============================================================================
 
-(defn- extract-text-from-json-output
-  "Extract text content from `claude -p --output-format json` response.
-
-   JSON shape: {\"type\":\"result\", \"result\":\"text here\", \"session_id\":\"uuid\", ...}
-   The `result` field is a string with the text output.
-   Falls back to the raw string if JSON parsing fails."
-  [raw]
-  (try
-    (let [parsed (json/parse-string raw true)
-          result (:result parsed)
-          text (if (string? result) result (str result))
-          session-id (:session_id parsed)]
-      {:text (str/trim (or text ""))
-       :session-id session-id})
-    (catch Exception _
-      {:text (str/trim (or raw ""))
-       :session-id nil})))
+(defn- extract-text-from-assistant-message
+  "Extract text content from a stream-json assistant message.
+   Shape: {\"type\":\"assistant\", \"message\":{\"content\":[{\"type\":\"text\",\"text\":\"...\"}]}}"
+  [parsed]
+  (when-let [content (get-in parsed [:message :content])]
+    (when (sequential? content)
+      (->> content
+           (keep (fn [block] (when (= "text" (:type block)) (:text block))))
+           (str/join "\n")))))
 
 (defn- drain-stream!
   "Read a stream to completion in background, return the content as a string.
@@ -661,9 +653,11 @@
      :permission-mode  — permission mode (default \"bypassPermissions\")
      :agent-id         — agent identifier (default \"claude\")
      :session-file     — path to session ID file for persistence (optional)
-     :session-id-atom  — atom holding current session ID (optional)"
-  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom]
-    :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"}}]
+     :session-id-atom  — atom holding current session ID (optional)
+     :timeout-ms       — hard process timeout in ms (default 120000 = 2 min)"
+  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms]
+    :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
+         timeout-ms 120000}}]
   (let [!lock (Object.)
         buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]
@@ -676,7 +670,7 @@
               new-sid (when-not session-id (str (UUID/randomUUID)))
               args (cond-> [claude-bin "-p" prompt-str
                             "--permission-mode" permission-mode
-                            "--output-format" "json"]
+                            "--output-format" "stream-json" "--verbose"]
                      session-id (into ["--resume" (str session-id)])
                      new-sid    (into ["--session-id" new-sid]))
               used-sid (or session-id new-sid)
@@ -705,21 +699,53 @@
               ;; Also emits evidence heartbeats every 30s
               stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
               ;; Launch process with ProcessBuilder
-              pb (ProcessBuilder. ^java.util.List (vec args))
+              pb (doto (ProcessBuilder. ^java.util.List (vec args))
+                    (.redirectInput (java.lang.ProcessBuilder$Redirect/from (java.io.File. "/dev/null"))))
               proc (.start pb)
               ;; Drain stderr in background (prevents buffer blocking)
               stderr-future (future (drain-stream! (.getErrorStream proc)))
-              ;; Collect stdout (JSON output) in background
-              stdout-future (future (drain-stream! (.getInputStream proc)))]
+              ;; Parse stream-json stdout line by line
+              text-acc (StringBuilder.)
+              result-sid (atom nil)
+              result-error (atom false)
+              stdout-future (future
+                              (with-open [r (java.io.BufferedReader.
+                                             (java.io.InputStreamReader.
+                                              (.getInputStream proc)))]
+                                (loop []
+                                  (when-let [line (.readLine r)]
+                                    (when-not (str/blank? line)
+                                      (try
+                                        (let [parsed (json/parse-string line true)]
+                                          (case (:type parsed)
+                                            "assistant"
+                                            (when-let [text (extract-text-from-assistant-message parsed)]
+                                              (when-not (str/blank? text)
+                                                (.append text-acc text)))
+                                            "result"
+                                            (do (reset! result-sid (:session_id parsed))
+                                                (when (:is_error parsed)
+                                                  (reset! result-error true)))
+                                            nil))
+                                        (catch Exception e
+                                          (println (str "[invoke] stream parse error: " (.getMessage e)))
+                                          (flush))))
+                                    (recur)))))]
           (try
-            ;; Wait for process to complete
-            (.waitFor proc)
+            ;; Wait for process with hard timeout
+            (let [finished? (.waitFor proc timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)]
+              (when-not finished?
+                (println (str "[invoke] " agent-id " TIMEOUT after " (format-elapsed timeout-ms) " — killing process"))
+                (flush)
+                (.destroyForcibly proc)
+                (.waitFor proc 5000 java.util.concurrent.TimeUnit/MILLISECONDS)))
+            @stdout-future
             (let [exit (.exitValue proc)
-                  out @stdout-future
                   err @stderr-future
-                  {:keys [text session-id]} (extract-text-from-json-output (or out ""))
+                  text (str text-acc)
+                  session-id @result-sid
                   final-sid (or session-id used-sid)
-                  ok? (zero? exit)]
+                  ok? (and (zero? exit) (not @result-error))]
               ;; Persist session ID
               (when (and session-file final-sid (not (str/blank? final-sid)))
                 (persist-session-id! session-file final-sid))
@@ -751,7 +777,6 @@
                                 {:width 80 :no-display true})
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
-                            " out-len=" (count (or out ""))
                             " text-len=" (count (or text ""))
                             " err-len=" (count (or err ""))))
               (flush)
@@ -761,7 +786,7 @@
                            text)
                  :session-id final-sid}
                 {:result nil :session-id final-sid
-                 :error (str "Exit " exit ": " (str/trim (or err out "")))}))
+                 :error (str "Exit " exit ": " (str/trim (or err "")))}))
             (finally
               (stop-ticker!))))))))
 
