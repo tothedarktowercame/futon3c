@@ -107,6 +107,11 @@ Examples:
 reachable through `/api/alpha/invoke` and IRC dispatch without a separate bridge
 process.
 
+When laptop role has a configured Linode peer (`FUTON3C_LINODE_URL` or the first
+entry in `FUTON3C_PEERS`), the Codex bridge now targets that peer over outbound
+WS and auto-registers `codex-1` there as `ws-bridge=true`. This avoids requiring
+inbound laptop networking for IRC → Codex delivery.
+
 `make codex-repl` reuses the same session file (`/tmp/futon-codex-session-id`) and
 prefers the live Agency session when available, so Emacs and IRC can pivot through
 the same continuity lane.

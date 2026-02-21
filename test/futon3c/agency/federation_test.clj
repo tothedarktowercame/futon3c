@@ -1,9 +1,11 @@
 (ns futon3c.agency.federation-test
   "Federation unit tests — peer announcement, proxy invoke, hook wiring."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [cheshire.core :as json]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as fed]
-            [futon3c.social.test-fixtures :as fix]))
+            [futon3c.social.test-fixtures :as fix]
+            [org.httpkit.client :as http]))
 
 (use-fixtures
   :each
@@ -52,6 +54,25 @@
       (is (map? result))
       (is (string? (:error result))))))
 
+(deftest proxy-invoke-fn-forwards-to-invoke-endpoint
+  (testing "proxy invoke calls /api/alpha/invoke and returns result/session"
+    (let [calls (atom [])
+          f (fed/make-proxy-invoke-fn "http://remote:7070" "codex-1")]
+      (with-redefs [http/post (fn [url opts]
+                                (swap! calls conj {:url url :opts opts})
+                                (doto (promise)
+                                  (deliver {:status 200
+                                            :body "{\"ok\":true,\"result\":\"pong\",\"session-id\":\"sid-2\"}"})))]
+        (let [result (f "hello" "sess-1")
+              call (first @calls)
+              payload (json/parse-string (get-in call [:opts :body]) true)]
+          (is (= "pong" (:result result)))
+          (is (= "sid-2" (:session-id result)))
+          (is (= "http://remote:7070/api/alpha/invoke" (:url call)))
+          (is (= "codex-1" (:agent-id payload)))
+          (is (= "hello" (:prompt payload)))
+          (is (= "federation-proxy" (:caller payload))))))))
+
 ;; =============================================================================
 ;; Announcement — skips when not configured
 ;; =============================================================================
@@ -83,6 +104,15 @@
                         :agent/metadata {:proxy? true}}]
       (is (nil? (fed/announce! agent-record))))))
 
+(deftest announce-skips-ws-remote-bridge-agents
+  (testing "announce! skips agents marked to avoid proxy federation"
+    (fed/configure! {:peers ["http://host-a:7070"] :self-url "http://me:7070"})
+    (let [agent-record {:agent/id {:id/value "codex-1" :id/type :continuity}
+                        :agent/type :codex
+                        :agent/capabilities [:edit]
+                        :agent/metadata {:skip-federation-proxy? true}}]
+      (is (nil? (fed/announce! agent-record))))))
+
 (deftest announce-attempts-post-to-each-peer
   (testing "announce! attempts POST to each configured peer"
     (fed/configure! {:peers ["http://127.0.0.1:19998" "http://127.0.0.1:19999"]
@@ -97,6 +127,22 @@
       (is (every? #(not (:ok %)) results))
       (is (= "http://127.0.0.1:19998" (:peer (first results))))
       (is (= "http://127.0.0.1:19999" (:peer (second results)))))))
+
+(deftest announce-preserves-namespaced-capabilities
+  (testing "announce serializes namespaced capabilities with full keyword string"
+    (fed/configure! {:peers ["http://peer:7070"] :self-url "http://me:7070"})
+    (let [calls (atom [])
+          agent-record {:agent/id {:id/value "codex-1" :id/type :continuity}
+                        :agent/type :codex
+                        :agent/capabilities [:edit :coordination/execute]
+                        :agent/metadata {}}]
+      (with-redefs [http/post (fn [url opts]
+                                (swap! calls conj {:url url :opts opts})
+                                (doto (promise) (deliver {:status 201 :body "{}"})))]
+        (let [results (fed/announce! agent-record)
+              payload (json/parse-string (get-in (first @calls) [:opts :body]) true)]
+          (is (= 1 (count results)))
+          (is (= ["edit" "coordination/execute"] (:capabilities payload))))))))
 
 ;; =============================================================================
 ;; Hook wiring
