@@ -468,8 +468,9 @@
    opts:
      :xtdb-node        — XTDB node for persistent peripheral config
      :irc-interceptor  — (fn [ch conn parsed]) for IRC relay (optional)
-     :irc-send-fn      — (fn [channel from text]) for explicit IRC posts (optional)"
-  [{:keys [xtdb-node irc-interceptor irc-send-fn]}]
+     :irc-send-fn      — (fn [channel from text]) for explicit IRC posts (optional)
+     :irc-send-base    — remote Agency base URL hint for IRC send fallback"
+  [{:keys [xtdb-node irc-interceptor irc-send-fn irc-send-base]}]
   (let [port (env-int "FUTON3C_PORT" 7070)]
     (when (pos? port)
       (let [pattern-ids (if-let [s (env "FUTON3C_PATTERNS")]
@@ -477,7 +478,8 @@
                           [])
             opts {:patterns {:patterns/ids pattern-ids}
                   :xtdb-node xtdb-node
-                  :irc-send-fn irc-send-fn}
+                  :irc-send-fn irc-send-fn
+                  :irc-send-base irc-send-base}
             http-handler (rt/make-http-handler opts)
             ws-opts (cond-> opts
                       irc-interceptor (assoc :irc-interceptor irc-interceptor))
@@ -1013,6 +1015,9 @@
         relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
         relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 120000) 120000)
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
+        irc-send-base-hint (or (some-> (env "FUTON3C_IRC_SEND_BASE") normalize-http-base)
+                               (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
+                               (some-> (first-peer-url) normalize-http-base))
         f1-sys (start-futon1a!)
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
         _ (reset! !f1-sys f1-sys)
@@ -1024,6 +1029,7 @@
         ;; futon3c HTTP + WS (with IRC interceptor if IRC is running)
         f3c-sys (start-futon3c!
                  {:xtdb-node (:node f1-sys)
+                  :irc-send-base irc-send-base-hint
                   :irc-send-fn (when irc-sys
                                  (:send-to-channel! (:server irc-sys)))
                   :irc-interceptor (when irc-sys

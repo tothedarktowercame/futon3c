@@ -10,7 +10,8 @@
             [futon3c.peripheral.registry :as preg]
             [futon3c.social.shapes :as shapes]
             [futon3c.transport.http :as http]
-            [futon3c.transport.ws :as ws]))
+            [futon3c.transport.ws :as ws]
+            [clojure.string :as str]))
 
 (def ^:private default-capabilities
   {:claude [:explore :edit :test :coordination/execute]
@@ -143,11 +144,12 @@
    opts:
    - :patterns PatternLibrary
    - :peripheral-config optional (passed through into registry snapshot)
+   - :irc-send-base optional remote Agency base for IRC send fallback
    - :enable-peripherals? default true; when false, skip auto peripheral config
    - :xtdb-node optional XTDB node/store for durable evidence persistence
    - :cwd/:timeout-ms/:evidence-store/:discipline-state/:notions-index-path
      optional inputs for default peripheral backend wiring"
-  [{:keys [patterns peripheral-config enable-peripherals?
+  [{:keys [patterns peripheral-config irc-send-base enable-peripherals?
            xtdb-node cwd timeout-ms evidence-store discipline-state notions-index-path]
     :or {enable-peripherals? true}}]
   (let [periph-opts {:cwd cwd
@@ -162,8 +164,10 @@
                 (make-persistent-peripheral-config
                  (assoc periph-opts :xtdb-node xtdb-node))
                 (make-default-peripheral-config periph-opts))))
-        cfg {:registry (registry-snapshot {:peripheral-config resolved-peripheral-config})
-             :patterns patterns}]
+        cfg (cond-> {:registry (registry-snapshot {:peripheral-config resolved-peripheral-config})
+                     :patterns patterns}
+              (and (string? irc-send-base) (not (str/blank? irc-send-base)))
+              (assoc :irc-send-base (str/trim irc-send-base)))]
     (when-not (shapes/valid? shapes/PatternLibrary (:patterns cfg))
       (throw (ex-info "Invalid PatternLibrary for runtime-config"
                       {:patterns patterns

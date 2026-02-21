@@ -403,6 +403,17 @@
         (is (integer? (:evidence parsed)))
         (is (= expected-count (:evidence parsed)))))))
 
+(deftest health-includes-irc-send-hint
+  (testing "GET /health includes IRC relay availability and send-base hint from config"
+    (let [handler (make-handler {:irc-send-fn (fn [_channel _from _text] :ok)
+                                 :irc-send-base "http://172.236.28.208:7070"})
+          response (get-req handler "/health")
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (= "ok" (:status parsed)))
+      (is (= true (:irc-relay-configured parsed)))
+      (is (= "http://172.236.28.208:7070" (:irc-send-base parsed))))))
+
 (deftest health-includes-uptime
   (testing "GET /health includes started-at and non-decreasing uptime seconds"
     (let [handler (make-handler)

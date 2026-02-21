@@ -318,11 +318,15 @@
                                         :capabilities (:capabilities info)}]))
                             (:agents live-status))
         evidence-store (evidence-store-for-config config)
-        evidence-count (count (estore/query* evidence-store {}))]
+        evidence-count (count (estore/query* evidence-store {}))
+        irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
+        irc-relay-configured? (fn? (:irc-send-fn config))]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
                          "sessions" (count (persist/list-sessions {}))
                          "agent-summary" agent-summary
+                         "irc-relay-configured" irc-relay-configured?
+                         "irc-send-base" irc-send-base
                          "evidence" evidence-count
                          "started-at" (str started-at)
                          "uptime-seconds" uptime-seconds})))

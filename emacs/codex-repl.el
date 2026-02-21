@@ -117,6 +117,8 @@ When local Agency returns irc-unavailable (503), codex-repl retries against this
   "Most recent short progress status from Codex stream events.")
 (defvar codex-repl--thinking-timer nil
   "Timer used to refresh Codex liveness/progress while waiting.")
+(defvar codex-repl--cached-irc-send-base nil
+  "Cached remote Agency base URL hint for IRC send fallback.")
 
 (defun codex-repl--progress-line (status &optional elapsed-seconds)
   "Render STATUS as a codex thinking progress line.
@@ -335,10 +337,25 @@ Returns plist (:channel :text), or nil."
   (when (and (stringp base) (not (string-empty-p (string-trim base))))
     (string-remove-suffix "/" (string-trim base))))
 
+(defun codex-repl--health-irc-send-base ()
+  "Fetch IRC send base hint from local Agency /health."
+  (let ((local (codex-repl--normalize-base-url futon3c-ui-agency-base-url)))
+    (when local
+      (let* ((url (format "%s/health" local))
+             (response (codex-repl--evidence-request-json "GET" url nil))
+             (status (plist-get response :status))
+             (parsed (plist-get response :json))
+             (hint (plist-get parsed :irc-send-base)))
+        (when (and (integerp status) (<= 200 status) (< status 300))
+          (codex-repl--normalize-base-url hint))))))
+
 (defun codex-repl--irc-send-candidate-bases ()
   "Return ordered base URLs to try for IRC send."
   (let* ((local (codex-repl--normalize-base-url futon3c-ui-agency-base-url))
-         (fallback (codex-repl--normalize-base-url codex-repl-irc-send-base-url)))
+         (fallback (or (codex-repl--normalize-base-url codex-repl-irc-send-base-url)
+                       codex-repl--cached-irc-send-base
+                       (setq codex-repl--cached-irc-send-base
+                             (codex-repl--health-irc-send-base)))))
     (cond
       ((and local fallback (not (string= local fallback)))
        (list local fallback))
@@ -399,6 +416,21 @@ Returns plist (:channel :text), or nil."
         (if (string-empty-p cleaned)
             status-line
           (format "%s\n\n%s" cleaned status-line))))))
+
+(defconst codex-repl--irc-send-request-regexes
+  '("\\bpost\\b.*\\birc\\b"
+    "\\bsend\\b.*\\birc\\b"
+    "\\btell\\s+@?\\(claude\\|codex\\|joe\\)\\b"
+    "\\bping\\s+@?\\(claude\\|codex\\|joe\\)\\b"
+    "\\bmessage\\s+@?\\(claude\\|codex\\|joe\\)\\b"
+    "\\bnotify\\s+@?\\(claude\\|codex\\|joe\\)\\b")
+  "Regexes indicating likely user intent to send a message to IRC.")
+
+(defun codex-repl--likely-irc-send-request-p (text)
+  "Return non-nil when TEXT likely asks to post to IRC."
+  (let ((s (downcase (or text ""))))
+    (cl-some (lambda (re) (string-match-p re s))
+             codex-repl--irc-send-request-regexes)))
 
 (defun codex-repl--evidence-post-entry-id (payload)
   "POST PAYLOAD to evidence API and return created evidence id, or nil."
@@ -657,7 +689,10 @@ Returns plist: (:session-id sid :text response :error err)."
       "- Current surface: emacs-codex-repl."
       "- Your response is shown only in this Emacs buffer."
       "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
-      "- To post to IRC: curl -sS -H 'Content-Type: application/json' -d '{\"channel\":\"#futon\",\"from\":\"codex\",\"text\":\"YOUR MESSAGE\"}' http://localhost:7070/api/alpha/irc/send"
+      "- If the user asks you to tell/ping/message someone, treat it as an IRC-send request."
+      "- For IRC-send requests, output exactly one line and nothing else:"
+      "- IRC_SEND #futon :: <single-line message>"
+      "- Never use curl/tool calls for IRC on this surface."
       (format "- Telemetry snapshot: agency=%s irc=%s." agency irc))
      "\n")))
 
@@ -673,10 +708,23 @@ Invoke CALLBACK with the final response text."
          (extra-preamble (and codex-repl-chat-preamble
                               (not (string-empty-p codex-repl-chat-preamble))
                               codex-repl-chat-preamble))
+         (turn-directive (when (codex-repl--likely-irc-send-request-p text)
+                           (string-join
+                            '("Turn-specific directive:"
+                              "- Interpret this as an IRC-send request."
+                              "- Output exactly one line and nothing else:"
+                              "IRC_SEND #futon :: <single-line message>"
+                              "- Do not run tools/curl for this turn.")
+                            "\n")))
          (prompt-text (format "%s\n\nUser message:\n%s"
-                              (if extra-preamble
-                                  (format "%s\n\n%s" runtime-preamble extra-preamble)
-                                runtime-preamble)
+                              (cond
+                               ((and extra-preamble turn-directive)
+                                (format "%s\n\n%s\n\n%s" runtime-preamble extra-preamble turn-directive))
+                               (extra-preamble
+                                (format "%s\n\n%s" runtime-preamble extra-preamble))
+                               (turn-directive
+                                (format "%s\n\n%s" runtime-preamble turn-directive))
+                               (t runtime-preamble))
                               text))
          (payload (if (string-suffix-p "\n" prompt-text)
                       prompt-text
@@ -915,6 +963,7 @@ Type after the prompt, RET to send.
 
 (defun codex-repl--init ()
   "Initialize buffer UI."
+  (setq codex-repl--cached-irc-send-base nil)
   (codex-repl--ensure-session-id)
   (futon3c-ui-init-buffer
    (list :title "codex repl"
