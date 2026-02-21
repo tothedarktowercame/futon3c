@@ -1,7 +1,7 @@
 CLOJURE=clojure
 EVIDENCE_BASE?=http://localhost:7070
 
-.PHONY: dev test claude claude-repl codex codex-repl codex-autowake tickle status repl
+.PHONY: dev test claude claude-repl codex codex-repl codex-autowake tickle status repl fresh
 
 dev:
 	$(CLOJURE) -M:dev
@@ -42,3 +42,12 @@ status:
 
 repl:
 	$(CLOJURE) -M:dev:repl
+
+fresh:
+	@claude_session_file="$${CLAUDE_SESSION_FILE:-/tmp/futon-session-id}"; \
+	codex_session_file="$${CODEX_SESSION_FILE:-/tmp/futon-codex-session-id}"; \
+	echo "Clearing local agent continuity files:"; \
+	echo "  - $$claude_session_file"; \
+	echo "  - $$codex_session_file"; \
+	rm -f "$$claude_session_file" "$$codex_session_file" /tmp/futon-irc-inbox.jsonl /tmp/futon-irc-outbox.jsonl; \
+	echo "Done. Next invoke starts fresh sessions."

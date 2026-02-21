@@ -21,6 +21,7 @@ make dev       # Boot futon1a (XTDB) + futon3c transport
 make claude    # Pick a session or start fresh
 make codex     # Pick a Codex session or start fresh
 make codex-repl # Open Codex Emacs REPL launcher
+make fresh     # Clear local agent continuity/session files
 make test      # Run all tests
 make repl      # Start nREPL with CIDER middleware
 ```
