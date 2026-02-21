@@ -656,10 +656,13 @@
      :agent-id         — agent identifier (default \"claude\")
      :session-file     — path to session ID file for persistence (optional)
      :session-id-atom  — atom holding current session ID (optional)
-     :timeout-ms       — hard process timeout in ms (default 120000 = 2 min)"
+     :timeout-ms       — hard process timeout in ms (default 1800000 = 30 min).
+                         Set high because Emacs sessions replace the CLI and should
+                         not be arbitrarily killed. IRC relay enforces its own
+                         shorter timeout (120s) via invoke-timeout-ms."
   [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
-         timeout-ms 120000}}]
+         timeout-ms 1800000}}]
   (let [!lock (Object.)
         buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]

@@ -63,7 +63,7 @@ CALLBACK receives the response string."
           (make-process
            :name "futon3c-invoke"
            :buffer outbuf
-           :command (list "curl" "-sS" "--max-time" "300"
+           :command (list "curl" "-sS" "--max-time" "1800"
                           "-H" "Content-Type: application/json"
                           "-d" json-body url)
            :noquery t
