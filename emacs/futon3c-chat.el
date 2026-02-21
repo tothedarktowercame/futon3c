@@ -45,6 +45,20 @@
 
 (defvar futon3c-chat--buffer-name "*futon3c-chat*")
 
+;;; Surface contract
+
+(defun futon3c-chat--surface-contract ()
+  "Return runtime surface contract for Claude invoke prompts."
+  (string-join
+   (list
+    "Runtime surface contract:"
+    "- Current surface: emacs-futon3c-chat."
+    "- Your response is shown in the user's Emacs chat buffer."
+    (format "- To post to IRC: curl -sS -H 'Content-Type: application/json' -d '{\"channel\":\"#futon\",\"from\":\"%s\",\"text\":\"YOUR MESSAGE\"}' %s/api/alpha/irc/send"
+            futon3c-chat-agent-id futon3c-chat-api-url)
+    "- Do not claim to post to IRC or send network messages unless a tool call in this turn actually did it.")
+   "\n"))
+
 ;;; Claude API call
 
 (defun futon3c-chat--call-claude-async (text callback)
@@ -54,9 +68,11 @@ calls `claude -p' with the correct session-id (managed by the registry).
 CALLBACK receives the response string."
   (let* ((chat-buffer (current-buffer))
          (url (concat futon3c-chat-api-url "/api/alpha/invoke"))
+         (full-prompt (format "%s\n\nUser message:\n%s"
+                              (futon3c-chat--surface-contract) text))
          (json-body (json-serialize
                      `(:agent-id ,futon3c-chat-agent-id
-                       :prompt ,text)))
+                       :prompt ,full-prompt)))
          (outbuf (generate-new-buffer " *futon3c-invoke*"))
          (proc nil))
     (setq proc

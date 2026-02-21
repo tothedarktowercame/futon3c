@@ -616,8 +616,7 @@ Returns plist: (:session-id sid :text response :error err)."
       "- Current surface: emacs-codex-repl."
       "- Your response is shown only in this Emacs buffer."
       "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
-      "- If user explicitly asks you to post to IRC, emit exactly one directive line:"
-      "- IRC_SEND <channel> :: <single-line message>"
+      "- To post to IRC: curl -sS -H 'Content-Type: application/json' -d '{\"channel\":\"#futon\",\"from\":\"codex\",\"text\":\"YOUR MESSAGE\"}' http://localhost:7070/api/alpha/irc/send"
       (format "- Telemetry snapshot: agency=%s irc=%s." agency irc))
      "\n")))
 
