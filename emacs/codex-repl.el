@@ -87,6 +87,14 @@ Set to nil to disable and send raw user text."
   :type 'number
   :group 'codex-repl)
 
+(defcustom codex-repl-irc-send-base-url
+  (or (getenv "FUTON3C_IRC_SEND_BASE")
+      (getenv "FUTON3C_LINODE_URL"))
+  "Optional fallback Agency base URL for IRC send requests.
+When local Agency returns irc-unavailable (503), codex-repl retries against this base."
+  :type '(choice (const nil) string)
+  :group 'codex-repl)
+
 ;;; Face (Codex-specific; shared faces are in futon3c-ui)
 
 (defface codex-repl-codex-face
@@ -319,13 +327,28 @@ Returns plist (:channel :text), or nil."
    (cl-remove-if
     (lambda (line)
       (string-match-p codex-repl--irc-send-regex line))
-    (split-string (or text "") "\n"))
+   (split-string (or text "") "\n"))
    "\n"))
 
-(defun codex-repl--send-irc-via-agency (channel text)
-  "Send TEXT to IRC CHANNEL through the Agency HTTP API."
-  (let* ((base (string-remove-suffix "/" futon3c-ui-agency-base-url))
-         (url (format "%s/api/alpha/irc/send" base))
+(defun codex-repl--normalize-base-url (base)
+  "Return BASE without trailing slash, or nil when blank."
+  (when (and (stringp base) (not (string-empty-p (string-trim base))))
+    (string-remove-suffix "/" (string-trim base))))
+
+(defun codex-repl--irc-send-candidate-bases ()
+  "Return ordered base URLs to try for IRC send."
+  (let* ((local (codex-repl--normalize-base-url futon3c-ui-agency-base-url))
+         (fallback (codex-repl--normalize-base-url codex-repl-irc-send-base-url)))
+    (cond
+      ((and local fallback (not (string= local fallback)))
+       (list local fallback))
+      (local (list local))
+      (fallback (list fallback))
+      (t nil))))
+
+(defun codex-repl--send-irc-via-base (base channel text)
+  "Send TEXT to IRC CHANNEL through Agency BASE."
+  (let* ((url (format "%s/api/alpha/irc/send" base))
          (response (codex-repl--evidence-request-json
                     "POST" url
                     `((channel . ,channel)
@@ -334,11 +357,29 @@ Returns plist (:channel :text), or nil."
          (status (plist-get response :status))
          (parsed (plist-get response :json)))
     (if (and (integerp status) (<= 200 status) (< status 300))
-        (list :ok t :status status)
+        (list :ok t :status status :base base)
       (list :ok nil
             :status (or status 0)
+            :base base
             :message (or (plist-get parsed :message)
                          "IRC send failed")))))
+
+(defun codex-repl--send-irc-via-agency (channel text)
+  "Send TEXT to IRC CHANNEL through Agency HTTP API with fallback."
+  (let ((bases (codex-repl--irc-send-candidate-bases))
+        (last-failure (list :ok nil :status 0 :message "IRC send failed")))
+    (if (null bases)
+        (list :ok nil :status 0 :message "No Agency base configured for IRC send")
+      (catch 'done
+        (dolist (base bases)
+          (let ((result (codex-repl--send-irc-via-base base channel text)))
+            (if (plist-get result :ok)
+                (throw 'done result)
+              (setq last-failure result)
+              ;; Retry on irc-unavailable only; other failures are terminal.
+              (unless (= 503 (plist-get result :status))
+                (throw 'done result)))))
+        last-failure))))
 
 (defun codex-repl--apply-irc-send-directive (final-text)
   "Execute any IRC_SEND directive in FINAL-TEXT and append delivery status."

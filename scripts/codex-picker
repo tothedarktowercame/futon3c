@@ -69,6 +69,27 @@ pick_local_agency_base() {
   printf 'http://127.0.0.1:%s\n' "${FUTON3C_PORT:-7070}"
 }
 
+pick_remote_agency_base() {
+  if [[ -n "${FUTON3C_IRC_SEND_BASE:-}" ]]; then
+    printf '%s\n' "${FUTON3C_IRC_SEND_BASE%/}"
+    return 0
+  fi
+  if [[ -n "${FUTON3C_LINODE_URL:-}" ]]; then
+    printf '%s\n' "${FUTON3C_LINODE_URL%/}"
+    return 0
+  fi
+  if [[ -n "${FUTON3C_PEERS:-}" ]]; then
+    local first_peer="${FUTON3C_PEERS%%,*}"
+    first_peer="${first_peer## }"
+    first_peer="${first_peer%% }"
+    if [[ -n "${first_peer}" ]]; then
+      printf '%s\n' "${first_peer%/}"
+      return 0
+    fi
+  fi
+  return 1
+}
+
 if [[ -n "${FUTON3C_EVIDENCE_BASE:-}" ]]; then
   evidence_base="${FUTON3C_EVIDENCE_BASE}"
 elif [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
@@ -76,6 +97,8 @@ elif [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
 else
   evidence_base="$(pick_local_agency_base)"
 fi
+
+irc_send_base="$(pick_remote_agency_base || true)"
 
 elisp_escape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "$1"
@@ -161,7 +184,7 @@ latest_session_id() {
 
 launch_repl() {
   local sid="${1:-}" sid_form escaped_session_file escaped_ui escaped_repl
-  local escaped_agency_base escaped_evidence_url new_form
+  local escaped_agency_base escaped_evidence_url escaped_irc_send_base new_form irc_send_form
   if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
     echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
     exit 1
@@ -171,6 +194,12 @@ launch_repl() {
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
   escaped_agency_base="$(elisp_escape "${evidence_base%/}")"
   escaped_evidence_url="$(elisp_escape "${evidence_base%/}/api/alpha/evidence")"
+  if [[ -n "${irc_send_base}" ]]; then
+    escaped_irc_send_base="$(elisp_escape "${irc_send_base%/}")"
+    irc_send_form="\"${escaped_irc_send_base}\""
+  else
+    irc_send_form="nil"
+  fi
   if [[ -n "${sid}" ]]; then
     sid_form="\"$(elisp_escape "${sid}")\""
   else
@@ -188,6 +217,7 @@ launch_repl() {
     (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\")
     (setq codex-repl-session-file \"${escaped_session_file}\")
     (setq codex-repl-evidence-url \"${escaped_evidence_url}\")
+    (setq codex-repl-irc-send-base-url ${irc_send_form})
     (setq codex-repl-session-id ${sid_form})
     (codex-repl))" >/dev/null
 }
