@@ -543,6 +543,21 @@ Returns plist: (:session-id sid :text response :error err)."
         (append exec-args (list "resume" session-id "-"))
       (append exec-args (list "-")))))
 
+(defun codex-repl--surface-contract ()
+  "Return a strict runtime contract for prompt routing semantics."
+  (let* ((state (codex-repl-modeline-state t))
+         (agency (if (plist-get state :agency-available?) "up" "down"))
+         (irc (if (plist-get state :irc-available?) "up" "down")))
+    (string-join
+     (list
+      "Runtime surface contract:"
+      "- Current surface: emacs-codex-repl."
+      "- Your response is shown only in this Emacs buffer."
+      "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
+      "- If asked to send something to IRC, provide a one-line draft and mark it UNSENT."
+      (format "- Telemetry snapshot: agency=%s irc=%s." agency irc))
+     "\n")))
+
 (defun codex-repl--call-codex-async (text callback)
   "Call `codex exec --json` with TEXT asynchronously.
 Invoke CALLBACK with the final response text."
@@ -551,12 +566,15 @@ Invoke CALLBACK with the final response text."
          (outbuf (generate-new-buffer " *codex-repl-codex*"))
          (process-environment process-environment)
          (proc nil)
-         (prompt-text (if (and codex-repl-chat-preamble
-                               (not (string-empty-p codex-repl-chat-preamble)))
-                          (format "%s\n\nUser message:\n%s"
-                                  codex-repl-chat-preamble
-                                  text)
-                        text))
+         (runtime-preamble (codex-repl--surface-contract))
+         (extra-preamble (and codex-repl-chat-preamble
+                              (not (string-empty-p codex-repl-chat-preamble))
+                              codex-repl-chat-preamble))
+         (prompt-text (format "%s\n\nUser message:\n%s"
+                              (if extra-preamble
+                                  (format "%s\n\n%s" runtime-preamble extra-preamble)
+                                runtime-preamble)
+                              text))
          (payload (if (string-suffix-p "\n" prompt-text)
                       prompt-text
                     (concat prompt-text "\n"))))

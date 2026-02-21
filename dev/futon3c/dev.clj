@@ -908,6 +908,18 @@
     (reduce (fn [t p] (str/trim (str/replace t p "")))
             text patterns)))
 
+(defn- irc-invoke-prompt
+  "Wrap an IRC user message with explicit surface/delivery semantics."
+  [{:keys [nick sender channel user-text]}]
+  (str "Runtime surface contract:\n"
+       "- Current surface: IRC.\n"
+       "- Channel: " channel "\n"
+       "- Sender: " sender "\n"
+       "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
+       "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
+       "User message:\n"
+       user-text))
+
 (defn start-dispatch-relay!
   "Wire IRC messages to agent dispatch via invoke-agent!.
 
@@ -940,7 +952,11 @@
                      (flush)
                      (future
                        (try
-                         (let [resp (reg/invoke-agent! agent-id prompt invoke-timeout-ms)]
+                         (let [invoke-prompt (irc-invoke-prompt {:nick nick
+                                                                 :sender sender
+                                                                 :channel channel
+                                                                 :user-text prompt})
+                               resp (reg/invoke-agent! agent-id invoke-prompt invoke-timeout-ms)]
                            (if (and (:ok resp) (string? (:result resp)))
                              (do
                                ((:send-to-channel! irc-server) channel nick (:result resp))
