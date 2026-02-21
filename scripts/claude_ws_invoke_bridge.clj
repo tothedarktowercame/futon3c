@@ -1,35 +1,40 @@
 ;; clj-kondo: ignore-file
-(ns scripts.codex-ws-invoke-bridge
-  "Codex WS invoke bridge.
+(ns scripts.claude-ws-invoke-bridge
+  "Claude WS invoke bridge.
 
    Connects to Agency WS, performs ready handshake, receives invoke frames,
-   runs Codex CLI, and replies with invoke_result frames.
+   runs Claude CLI, and replies with invoke_result frames.
+
+   Mirrors codex_ws_invoke_bridge.clj but invokes `claude -p --resume`
+   instead of `codex exec`.
 
    Usage:
-     clojure -M scripts/codex_ws_invoke_bridge.clj
+     clojure -M scripts/claude_ws_invoke_bridge.clj
 
    Env:
      AGENCY_WS_BASE      ws://127.0.0.1:7070
      AGENCY_WS_PATH      /agency/ws
-     AGENT_ID            codex-1
-     CODEX_BIN           codex
-     CODEX_CWD           <pwd>
-     CODEX_MODEL         gpt-5-codex
-     CODEX_SANDBOX       workspace-write
-     CODEX_APPROVAL      never
-     CODEX_SESSION_FILE  /tmp/futon-codex-session-id
-     CODEX_SESSION_ID    optional startup session id
-     INVOKE_MODE         codex|mock (default codex)"
+     AGENT_ID            claude-1
+     CLAUDE_BIN          claude
+     CLAUDE_CWD          <pwd>
+     CLAUDE_PERMISSION   bypassPermissions
+     CLAUDE_SESSION_FILE /tmp/futon-session-id
+     CLAUDE_SESSION_ID   optional startup session id
+     INVOKE_MODE         claude|mock (default claude)
+     HEARTBEAT_INTERVAL_MS  30000"
   (:require [cheshire.core :as json]
-            [clojure.java.shell :as sh]
             [clojure.string :as str]
             [org.httpkit.client :as http])
-  (:import [java.io File]
+  (:import [java.io BufferedReader File InputStreamReader]
            [java.net URI]
            [java.net.http HttpClient WebSocket WebSocket$Listener]
            [java.time Instant]
            [java.util UUID]
            [java.util.concurrent CompletableFuture]))
+
+;; =============================================================================
+;; Config
+;; =============================================================================
 
 (defn- env [k default] (or (System/getenv k) default))
 (defn- parse-int [s default]
@@ -39,20 +44,21 @@
 (def agency-ws-base (env "AGENCY_WS_BASE" "ws://127.0.0.1:7070"))
 (def agency-ws-path (env "AGENCY_WS_PATH" "/agency/ws"))
 (def agency-http-base (env "AGENCY_HTTP_BASE" "http://127.0.0.1:7070"))
-(def agent-id (env "AGENT_ID" "codex-1"))
-;; codex|claude|tickle|mock (used for optional HTTP registration)
-(def agent-type (str/lower-case (env "AGENT_TYPE" "codex")))
+(def agent-id (env "AGENT_ID" "claude-1"))
+(def agent-type "claude")
 
-(def codex-bin (env "CODEX_BIN" "codex"))
-(def codex-cwd (env "CODEX_CWD" (System/getProperty "user.dir")))
-(def codex-model (env "CODEX_MODEL" "gpt-5-codex"))
-(def codex-sandbox (env "CODEX_SANDBOX" "workspace-write"))
-(def codex-approval (env "CODEX_APPROVAL" "never"))
-(def session-file (env "CODEX_SESSION_FILE" "/tmp/futon-codex-session-id"))
-(def startup-session-id (System/getenv "CODEX_SESSION_ID"))
-(def invoke-mode (str/lower-case (env "INVOKE_MODE" "codex")))
+(def claude-bin (env "CLAUDE_BIN" "claude"))
+(def claude-cwd (env "CLAUDE_CWD" (System/getProperty "user.dir")))
+(def claude-permission (env "CLAUDE_PERMISSION" "bypassPermissions"))
+(def session-file (env "CLAUDE_SESSION_FILE" "/tmp/futon-session-id"))
+(def startup-session-id (System/getenv "CLAUDE_SESSION_ID"))
+(def invoke-mode (str/lower-case (env "INVOKE_MODE" "claude")))
 (def auto-register? (not (contains? #{"0" "false" "no" "off"}
                                      (str/lower-case (env "AUTO_REGISTER" "true")))))
+
+;; =============================================================================
+;; Session helpers
+;; =============================================================================
 
 (defn- load-session-id [path]
   (let [f (File. path)]
@@ -65,79 +71,104 @@
   (when-not (str/blank? sid)
     (spit path sid)))
 
-(defn- extract-agent-text [item]
-  (let [content (or (:text item) (:content item))]
-    (cond
-      (string? content) content
-      (sequential? content)
-      (->> content
-           (keep (fn [part]
-                   (when (and (map? part) (= "text" (:type part)))
-                     (:text part))))
-           (remove str/blank?)
-           (str/join ""))
-      :else nil)))
+;; =============================================================================
+;; Claude CLI invocation
+;; =============================================================================
 
-(defn- parse-codex-output [raw-output prior-session-id]
-  (let [events (keep (fn [line]
-                       (try (json/parse-string line true)
-                            (catch Exception _ nil)))
-                     (str/split-lines (or raw-output "")))
-        session-id (or (some (fn [evt]
-                               (when (= "thread.started" (:type evt))
-                                 (or (:thread_id evt) (:session_id evt))))
-                             events)
-                       prior-session-id)
-        text (or (some->> events
-                          (filter #(= "item.completed" (:type %)))
-                          (map :item)
-                          (filter #(= "agent_message" (:type %)))
-                          (map extract-agent-text)
-                          (remove str/blank?)
-                          last)
-                 (some->> events
-                          (filter #(= "error" (:type %)))
-                          (map :message)
-                          (remove str/blank?)
-                          last)
-                 (some-> raw-output str/trim not-empty)
-                 "[No assistant message returned]")]
-    {:session-id session-id
-     :text text}))
+(defn- extract-text-from-json-output
+  "Extract text from `claude -p --output-format json` response.
+   JSON shape: {\"type\":\"result\", \"result\":\"text\", \"session_id\":\"uuid\"}
+   Falls back to raw string if JSON parsing fails."
+  [raw]
+  (if (str/blank? raw)
+    {:text nil :session-id nil}
+    (try
+      (let [parsed (json/parse-string raw true)
+            result-text (cond
+                          ;; Standard result shape
+                          (= "result" (:type parsed))
+                          (let [r (:result parsed)]
+                            (cond
+                              (string? r) r
+                              (sequential? r) (->> r
+                                                   (keep (fn [block]
+                                                           (when (= "text" (:type block))
+                                                             (:text block))))
+                                                   (str/join "\n"))
+                              :else (str r)))
+                          ;; Direct string result
+                          (string? (:result parsed))
+                          (:result parsed)
+                          ;; Fallback
+                          :else (str/trim raw))
+            sid (or (:session_id parsed) (:sessionId parsed))]
+        {:text result-text :session-id sid})
+      (catch Exception _
+        {:text (str/trim raw) :session-id nil}))))
 
-(defn- build-codex-cmd [sid]
-  (let [exec-opts ["--json"
-                   "--skip-git-repo-check"
-                   "--sandbox" codex-sandbox
-                   "-c" (format "approval_policy=\"%s\"" codex-approval)]
-        exec-opts (if (str/blank? codex-model)
-                    exec-opts
-                    (concat exec-opts ["--model" codex-model]))]
-    (if (str/blank? sid)
-      (into [codex-bin "exec"] (concat exec-opts ["-"]))
-      (into [codex-bin "exec"] (concat exec-opts ["resume" sid "-"])))))
-
-(defn- invoke-codex!
+(defn- invoke-claude!
+  "Invoke claude -p with a prompt. Uses ProcessBuilder for clean process
+   management. Returns {:ok bool :result str :session-id str :error str}."
   [prompt prior-session-id sid*]
   (if (= "mock" invoke-mode)
     {:ok true
      :result (str "mock: " prompt)
      :session-id (or prior-session-id @sid*)}
     (let [sid (or prior-session-id @sid*)
-          cmd (build-codex-cmd sid)
-          result (apply sh/sh (concat cmd [:in (str prompt "\n") :dir codex-cwd]))
-          parsed (parse-codex-output (str (:out result) (:err result)) sid)
-          new-sid (:session-id parsed)]
-      (when (and (string? new-sid) (not (str/blank? new-sid)))
-        (reset! sid* new-sid)
-        (persist-session-id! session-file new-sid))
-      (if (zero? (:exit result))
-        {:ok true
-         :result (some-> (:text parsed) str/trim not-empty)
-         :session-id new-sid}
-        {:ok false
-         :error (str "codex-exit-" (:exit result) ": " (str/trim (:text parsed)))
-         :session-id sid}))))
+          new-sid (when-not sid (str (UUID/randomUUID)))
+          args (cond-> [claude-bin "-p" (str prompt)
+                        "--permission-mode" claude-permission
+                        "--output-format" "json"]
+                 sid     (into ["--resume" sid])
+                 new-sid (into ["--session-id" new-sid]))
+          used-sid (or sid new-sid)
+          pb (doto (ProcessBuilder. ^java.util.List (vec args))
+               (.directory (File. claude-cwd))
+               (.redirectErrorStream false))
+          proc (.start pb)
+          ;; Drain stdout and stderr in background
+          stdout-fut (future
+                       (with-open [r (BufferedReader. (InputStreamReader. (.getInputStream proc)))]
+                         (let [sb (StringBuilder.)]
+                           (loop []
+                             (let [line (.readLine r)]
+                               (when line
+                                 (.append sb line)
+                                 (.append sb "\n")
+                                 (recur))))
+                           (str sb))))
+          stderr-fut (future
+                       (with-open [r (BufferedReader. (InputStreamReader. (.getErrorStream proc)))]
+                         (let [sb (StringBuilder.)]
+                           (loop []
+                             (let [line (.readLine r)]
+                               (when line
+                                 (.append sb line)
+                                 (.append sb "\n")
+                                 (recur))))
+                           (str sb))))]
+      (.waitFor proc)
+      (let [exit (.exitValue proc)
+            out @stdout-fut
+            _err @stderr-fut
+            {:keys [text session-id]} (extract-text-from-json-output (or out ""))
+            final-sid (or session-id used-sid)]
+        (when (and (string? final-sid) (not (str/blank? final-sid)))
+          (reset! sid* final-sid)
+          (persist-session-id! session-file final-sid))
+        (if (zero? exit)
+          {:ok true
+           :result (if (str/blank? text)
+                     "[Claude used tools but produced no text response]"
+                     text)
+           :session-id final-sid}
+          {:ok false
+           :error (str "claude-exit-" exit ": " (str/trim (or text out "")))
+           :session-id used-sid})))))
+
+;; =============================================================================
+;; HTTP registration + evidence emission
+;; =============================================================================
 
 (defn- ws-url [sid]
   (str (str/replace agency-ws-base #"/$" "")
@@ -172,13 +203,6 @@
           (println "[bridge] registration failed:" status (:body resp))
           false)))))
 
-(defn- send-json! [^WebSocket ws payload]
-  (.join (.sendText ws (json/generate-string payload) true)))
-
-;; =============================================================================
-;; Evidence emission — POST to /api/alpha/evidence during long invokes
-;; =============================================================================
-
 (def ^:private evidence-url
   (str (str/replace agency-http-base #"/$" "") "/api/alpha/evidence"))
 
@@ -205,7 +229,7 @@
                              {:headers {"Content-Type" "application/json"}
                               :body payload
                               :timeout 5000})]
-        (when (and (:error resp))
+        (when (:error resp)
           (println "[bridge] evidence emit error:" (:error resp))
           (flush)))
       (catch Exception e
@@ -239,6 +263,13 @@
     (.start thread)
     (fn [] (reset! running false) (.interrupt thread))))
 
+;; =============================================================================
+;; WS invoke handler
+;; =============================================================================
+
+(defn- send-json! [^WebSocket ws payload]
+  (.join (.sendText ws (json/generate-string payload) true)))
+
 (defn- handle-invoke-frame!
   [^WebSocket ws sid* frame]
   (let [invoke-id (:invoke_id frame)
@@ -257,7 +288,7 @@
           ;; Start heartbeat
           (let [stop-heartbeat! (start-heartbeat! invoke-id prompt-preview incoming-session)
                 outcome (try
-                          (invoke-codex! prompt-str incoming-session sid*)
+                          (invoke-claude! prompt-str incoming-session sid*)
                           (finally
                             (stop-heartbeat!)))
                 payload (cond-> {"type" "invoke_result"
@@ -280,6 +311,10 @@
               (catch Exception e
                 (println "[bridge] send invoke_result failed:" (.getMessage e))
                 (flush)))))))))
+
+;; =============================================================================
+;; WS connection loop
+;; =============================================================================
 
 (defn- connect-loop! [sid*]
   (let [client (HttpClient/newHttpClient)]
@@ -329,11 +364,15 @@
       (Thread/sleep 5000)
       (recur))))
 
+;; =============================================================================
+;; Main
+;; =============================================================================
+
 (let [initial-sid (or startup-session-id (load-session-id session-file))
       sid* (atom initial-sid)]
   (when (and (string? startup-session-id) (not (str/blank? startup-session-id)))
     (persist-session-id! session-file startup-session-id))
-  (println "=== codex ws invoke bridge ===")
+  (println "=== claude ws invoke bridge ===")
   (println "  at:" (now-str))
   (println "  agency:" (str (str/replace agency-ws-base #"/$" "") agency-ws-path))
   (println "  agency-http-base:" agency-http-base)
@@ -341,13 +380,12 @@
   (println "  agent-type:" agent-type)
   (println "  auto-register:" auto-register?)
   (println "  invoke-mode:" invoke-mode)
-  (println "  codex-bin:" codex-bin)
-  (println "  cwd:" codex-cwd)
-  (println "  model:" codex-model)
-  (println "  sandbox:" codex-sandbox)
-  (println "  approval:" codex-approval)
+  (println "  claude-bin:" claude-bin)
+  (println "  cwd:" claude-cwd)
+  (println "  permission:" claude-permission)
   (println "  session-file:" session-file)
   (println "  session:" (or @sid* "(new session on first invoke)"))
+  (println "  heartbeat-interval-ms:" heartbeat-interval-ms)
   (println)
   (flush)
   (ensure-registered!)

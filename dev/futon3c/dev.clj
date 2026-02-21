@@ -1,8 +1,10 @@
 (ns futon3c.dev
   "Dev server: boots futon1a (XTDB), futon3c (HTTP+WS), IRC, and Drawbridge.
 
-   Claude and Codex are registered at startup with real invoke-fns backed by
-   their CLIs. Transports route through the same registry invoke path.
+   Claude and Codex are registered at startup with inline invoke-fns that run
+   their CLIs in-JVM. Evidence emission (start, heartbeat, complete) and
+   blackboard updates are built into the invoke path. No external bridge
+   scripts needed for local agents — WS bridges are for remote scenarios.
 
    Environment variables:
      FUTON3C_ROLE       — deployment role (linode|laptop|default)
@@ -36,6 +38,7 @@
             [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.tickle :as tickle]
             [futon3c.blackboard :as bb]
+            [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.mission-control.service :as mcs]
             [futon3c.agency.federation :as federation]
@@ -174,29 +177,6 @@
     (try (spit f sid)
          (catch Exception e
            (println (str "[dev] session-id persist warning: " (.getMessage e)))))))
-
-(defn- make-codex-invoke-wrapper
-  "Create codex invoke fn + durable session file state shared by transports."
-  []
-  (let [raw-invoke-fn (codex-cli/make-invoke-fn
-                       {:codex-bin (or (env "CODEX_BIN") "codex")
-                        :model (or (env "CODEX_MODEL") "gpt-5-codex")
-                        :sandbox (or (env "CODEX_SANDBOX") "workspace-write")
-                        :approval-policy (or (env "CODEX_APPROVAL_POLICY")
-                                             (env "CODEX_APPROVAL")
-                                             "never")
-                        :cwd (System/getProperty "user.dir")})
-        session-file (io/file (or (env "CODEX_SESSION_FILE")
-                                  "/tmp/futon-codex-session-id"))
-        initial-sid (read-session-id session-file)
-        invoke-fn (fn [prompt session-id]
-                    (let [result (raw-invoke-fn prompt session-id)
-                          sid (:session-id result)]
-                      (persist-session-id! session-file sid)
-                      result))]
-    {:invoke-fn invoke-fn
-     :session-file session-file
-     :initial-sid initial-sid}))
 
 (defn- start-codex-ws-bridge!
   "Start an in-process Codex WS bridge.
@@ -353,6 +333,32 @@
 (defonce !f3c-sys (atom nil))
 (defonce !tickle (atom nil))
 (defonce !codex-ws-bridge (atom nil))
+
+;; =============================================================================
+;; Invoke evidence emission — writes directly to the evidence store in-JVM
+;; =============================================================================
+
+(defn- emit-invoke-evidence!
+  "Emit an invoke lifecycle evidence entry. Fire-and-forget.
+   Uses the XTDB evidence store directly — no HTTP round-trip."
+  [agent-id event-type body-map & {:keys [session-id tags]}]
+  (when-let [store @!evidence-store]
+    (future
+      (try
+        (estore/append* store
+                        {:subject {:ref/type "agent" :ref/id agent-id}
+                         :type :coordination
+                         :claim-type :step
+                         :author agent-id
+                         :session-id (or session-id "dev-invoke")
+                         :body (assoc body-map
+                                      "event" event-type
+                                      "agent-id" agent-id
+                                      "at" (str (Instant/now)))
+                         :tags (into ["invoke" "dev" agent-id]
+                                     (or tags []))})
+        (catch Exception e
+          (println (str "[dev] evidence emit error: " (.getMessage e))))))))
 
 ;; =============================================================================
 ;; REPL helpers — use from Drawbridge or nREPL after boot
@@ -564,18 +570,23 @@
 (defn- start-invoke-ticker!
   "Start a background thread that updates both *agents* and the invoke buffer
    with elapsed time, file change detection, and a progress spinner.
+   Also emits evidence heartbeats every 30s for long-running invocations.
    Returns a function that stops the ticker when called."
   [buf-name agent-id prompt-str used-sid interval-ms]
   (let [running (atom true)
         start-ms (System/currentTimeMillis)
         spinner-chars [\| \/ \- \\]
         tick (atom 0)
+        heartbeat-interval 30000 ;; evidence heartbeat every 30s
+        last-heartbeat-ms (atom start-ms)
+        prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
         thread (Thread.
                 (fn []
                   (while @running
                     (try
                       (Thread/sleep interval-ms)
-                      (let [elapsed (- (System/currentTimeMillis) start-ms)
+                      (let [now-ms (System/currentTimeMillis)
+                            elapsed (- now-ms start-ms)
                             elapsed-str (format-elapsed elapsed)
                             spin (nth spinner-chars (mod (swap! tick inc) 4))
                             changed-files (detect-file-changes start-ms)
@@ -590,7 +601,15 @@
                         ;; Update invoke buffer
                         (bb/blackboard! buf-name content {:width 80 :no-display true})
                         ;; Update agents buffer
-                        (bb/project-agents! (reg/registry-status)))
+                        (bb/project-agents! (reg/registry-status))
+                        ;; Evidence heartbeat (every 30s, not every tick)
+                        (when (>= (- now-ms @last-heartbeat-ms) heartbeat-interval)
+                          (reset! last-heartbeat-ms now-ms)
+                          (emit-invoke-evidence! agent-id "invoke-heartbeat"
+                                                 {"elapsed-seconds" (quot elapsed 1000)
+                                                  "prompt-preview" prompt-preview}
+                                                 :session-id used-sid
+                                                 :tags ["heartbeat"])))
                       (catch InterruptedException _
                         (reset! running false))
                       (catch Throwable _))))
@@ -611,11 +630,19 @@
 
    Streams stderr to the *invoke: <agent-id>* Emacs buffer for live visibility.
    Periodically refreshes the *agents* buffer to show elapsed time.
+   Emits evidence (start, heartbeat, complete) to the evidence store.
 
    Serialized via locking — only one `claude -p` process at a time (I-1).
    First call with nil session-id generates a new UUID via --session-id.
-   Subsequent calls use --resume."
-  [{:keys [claude-bin permission-mode agent-id]
+   Subsequent calls use --resume.
+
+   opts:
+     :claude-bin       — path to claude CLI (default \"claude\")
+     :permission-mode  — permission mode (default \"bypassPermissions\")
+     :agent-id         — agent identifier (default \"claude\")
+     :session-file     — path to session ID file for persistence (optional)
+     :session-id-atom  — atom holding current session ID (optional)"
+  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"}}]
   (let [!lock (Object.)
         buf-name (str "*invoke: " agent-id "*")]
@@ -633,11 +660,17 @@
                      session-id (into ["--resume" (str session-id)])
                      new-sid    (into ["--session-id" new-sid]))
               used-sid (or session-id new-sid)
+              prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
               _ (println (str "[invoke] " agent-id " claude -p "
                               (subs (pr-str prompt-str) 0
                                     (min 80 (count (pr-str prompt-str))))
                               "... (session: " (when used-sid (subs used-sid 0 8)) ")"))
               _ (flush)
+              ;; Evidence: invoke started
+              _ (emit-invoke-evidence! agent-id "invoke-start"
+                                       {"prompt-preview" prompt-preview}
+                                       :session-id used-sid
+                                       :tags ["invoke-start"])
               ;; Show prompt in the invoke buffer + force display
               _ (try
                   (bb/blackboard! buf-name
@@ -649,6 +682,7 @@
                                   {:width 80})
                   (catch Throwable _))
               ;; Start ticker: updates invoke buffer + agents buffer every 5s
+              ;; Also emits evidence heartbeats every 30s
               stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
               ;; Launch process with ProcessBuilder
               pb (ProcessBuilder. ^java.util.List (vec args))
@@ -664,7 +698,24 @@
                   out @stdout-future
                   err @stderr-future
                   {:keys [text session-id]} (extract-text-from-json-output (or out ""))
-                  final-sid (or session-id used-sid)]
+                  final-sid (or session-id used-sid)
+                  ok? (zero? exit)]
+              ;; Persist session ID
+              (when (and session-file final-sid (not (str/blank? final-sid)))
+                (persist-session-id! session-file final-sid))
+              (when (and session-id-atom final-sid (not (str/blank? final-sid)))
+                (reset! session-id-atom final-sid))
+              ;; Evidence: invoke complete
+              (emit-invoke-evidence! agent-id "invoke-complete"
+                                     {"ok" ok?
+                                      "exit-code" exit
+                                      "result-preview" (when ok?
+                                                         (let [r (str (or text ""))]
+                                                           (subs r 0 (min 300 (count r)))))
+                                      "error" (when-not ok?
+                                                (str "exit-" exit))}
+                                     :session-id final-sid
+                                     :tags ["invoke-complete"])
               ;; Final blackboard update with result summary
               (try
                 (bb/blackboard! buf-name
@@ -684,7 +735,7 @@
                             " text-len=" (count (or text ""))
                             " err-len=" (count (or err ""))))
               (flush)
-              (if (zero? exit)
+              (if ok?
                 {:result (if (str/blank? text)
                            "[Claude used tools but produced no text response]"
                            text)
@@ -693,6 +744,100 @@
                  :error (str "Exit " exit ": " (str/trim (or err out "")))}))
             (finally
               (stop-ticker!))))))))
+
+(defn make-codex-invoke-fn
+  "Create an invoke-fn that calls `codex exec` for real Codex interaction.
+
+   invoke-fn contract: (fn [prompt session-id] -> {:result str :session-id str})
+
+   Wraps codex-cli/make-invoke-fn with evidence emission and blackboard updates.
+
+   opts:
+     :codex-bin          — path to codex CLI (default \"codex\")
+     :model              — model name (default \"gpt-5-codex\")
+     :sandbox            — sandbox mode (default \"workspace-write\")
+     :approval-policy    — approval policy (default \"never\")
+     :cwd                — working directory (default user.dir)
+     :agent-id           — agent identifier (default \"codex\")
+     :session-file       — path to session ID file for persistence (optional)
+     :session-id-atom    — atom holding current session ID (optional)"
+  [{:keys [codex-bin model sandbox approval-policy cwd agent-id
+           session-file session-id-atom]
+    :or {codex-bin "codex" model "gpt-5-codex" sandbox "workspace-write"
+         approval-policy "never" agent-id "codex"}}]
+  (let [inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
+                                             :model model
+                                             :sandbox sandbox
+                                             :approval-policy approval-policy
+                                             :cwd cwd})
+        buf-name (str "*invoke: " agent-id "*")]
+    (fn [prompt session-id]
+      (let [prompt-str (cond
+                         (string? prompt) prompt
+                         (map? prompt)    (or (:prompt prompt) (:text prompt)
+                                              (json/generate-string prompt))
+                         :else            (str prompt))
+            prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
+            used-sid (or session-id "new")]
+        (println (str "[invoke] " agent-id " codex exec "
+                      (subs prompt-str 0 (min 80 (count prompt-str)))
+                      "... (session: " (when session-id (subs session-id 0 (min 8 (count session-id)))) ")"))
+        (flush)
+        ;; Evidence: invoke started
+        (emit-invoke-evidence! agent-id "invoke-start"
+                               {"prompt-preview" prompt-preview}
+                               :session-id used-sid
+                               :tags ["invoke-start"])
+        ;; Show prompt in invoke buffer
+        (try
+          (bb/blackboard! buf-name
+                          (str "Invoke: " agent-id "\n"
+                               "Session: " used-sid "\n"
+                               "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
+                               (when (> (count prompt-str) 300) "...")
+                               "\n\nStarting...")
+                          {:width 80})
+          (catch Throwable _))
+        ;; Start ticker with evidence heartbeats
+        (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
+              result (try
+                       (inner-fn prompt session-id)
+                       (finally
+                         (stop-ticker!)))
+              final-sid (:session-id result)
+              ok? (nil? (:error result))]
+          ;; Persist session ID
+          (when (and session-file final-sid (not (str/blank? final-sid)))
+            (persist-session-id! session-file final-sid))
+          (when (and session-id-atom final-sid (not (str/blank? final-sid)))
+            (reset! session-id-atom final-sid))
+          ;; Evidence: invoke complete
+          (emit-invoke-evidence! agent-id "invoke-complete"
+                                 {"ok" ok?
+                                  "result-preview" (when ok?
+                                                     (let [r (str (or (:result result) ""))]
+                                                       (subs r 0 (min 300 (count r)))))
+                                  "error" (when-not ok? (:error result))}
+                                 :session-id (or final-sid used-sid)
+                                 :tags ["invoke-complete"])
+          ;; Final blackboard update
+          (try
+            (bb/blackboard! buf-name
+                            (str "Invoke: " agent-id " — DONE"
+                                 (if ok? "" (str " ERROR: " (:error result))) "\n"
+                                 "Session: " final-sid "\n"
+                                 (when (:result result)
+                                   (let [r (str (:result result))]
+                                     (str "\n--- response ---\n"
+                                          (subs r 0 (min 1000 (count r)))
+                                          (when (> (count r) 1000) "\n...")))))
+                            {:width 80 :no-display true})
+            (catch Throwable _))
+          (println (str "[invoke] " agent-id
+                        (if ok? " ok" (str " error: " (:error result)))
+                        " result-len=" (count (or (:result result) ""))))
+          (flush)
+          result)))))
 
 ;; =============================================================================
 ;; Dispatch-based IRC relay — routes through invoke-agent! (I-1, I-2 compliant)
@@ -812,31 +957,42 @@
              (:ws-connections f3c-sys)
              (:relay-bridge irc-sys)
              (:server irc-sys)))
-        ;; Register Claude + Codex with real invoke-fns.
-        ;; Each wrapper persists session-id to disk after each call so all
-        ;; transports share durable continuity.
+        ;; Register Claude + Codex with inline invoke-fns.
+        ;; CLI invocation runs in-JVM with evidence emission and blackboard updates.
+        ;; WS bridge scripts remain available for remote agent scenarios.
         _ (when register-claude?
-            (let [raw-invoke-fn (make-claude-invoke-fn
-                                 {:claude-bin (or (env "CLAUDE_BIN") "claude")
-                                  :agent-id "claude-1"})
-                  session-file (io/file (or (env "CLAUDE_SESSION_FILE")
-                                            "/tmp/futon-session-id"))
-                  initial-sid (read-session-id session-file)
-                  invoke-fn (fn [prompt session-id]
-                              (let [result (raw-invoke-fn prompt session-id)
-                                    sid (:session-id result)]
-                                (persist-session-id! session-file sid)
-                                result))]
+            (let [sf (io/file (or (env "CLAUDE_SESSION_FILE")
+                                  "/tmp/futon-session-id"))
+                  initial-sid (read-session-id sf)
+                  sid-atom (atom initial-sid)
+                  invoke-fn (make-claude-invoke-fn
+                             {:claude-bin (env "CLAUDE_BIN" "claude")
+                              :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
+                              :agent-id "claude-1"
+                              :session-file sf
+                              :session-id-atom sid-atom})]
               (rt/register-claude! {:agent-id "claude-1"
                                     :invoke-fn invoke-fn})
               (when initial-sid
                 (reg/update-agent! "claude-1" :agent/session-id initial-sid))
-              (println (str "[dev] Claude agent registered: claude-1"
+              (println (str "[dev] Claude agent registered: claude-1 (inline invoke)"
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
                                                        (min 8 (count initial-sid))) ")"))))))
         _ (when register-codex?
-            (let [{:keys [invoke-fn session-file initial-sid]} (make-codex-invoke-wrapper)
+            (let [sf (io/file (or (env "CODEX_SESSION_FILE")
+                                  "/tmp/futon-codex-session-id"))
+                  initial-sid (read-session-id sf)
+                  sid-atom (atom initial-sid)
+                  invoke-fn (make-codex-invoke-fn
+                             {:codex-bin (env "CODEX_BIN" "codex")
+                              :model (env "CODEX_MODEL" "gpt-5-codex")
+                              :sandbox (env "CODEX_SANDBOX" "workspace-write")
+                              :approval-policy (or (env "CODEX_APPROVAL_POLICY")
+                                                   (env "CODEX_APPROVAL" "never"))
+                              :agent-id "codex-1"
+                              :session-file sf
+                              :session-id-atom sid-atom})
                   ws-port (or (:port f3c-sys) (env-int "FUTON3C_PORT" 7070))
                   peer-base (or (some-> (env "FUTON3C_LINODE_URL") str/trim not-empty)
                                 (first-peer-url))
@@ -855,13 +1011,14 @@
                 ((:stop-fn old))
                 (reset! !codex-ws-bridge nil))
               (if ws-bridge-enabled?
+                ;; WS bridge mode: Codex connects via WS (local or remote)
                 (let [ws-path (or (some-> (env "FUTON3C_CODEX_WS_PATH") str/trim not-empty)
                                   "/agency/ws")
                       bridge (start-codex-ws-bridge!
                               {:agent-id "codex-1"
                                :invoke-fn invoke-fn
                                :initial-sid initial-sid
-                               :session-file session-file
+                               :session-file sf
                                :ws-base ws-base
                                :ws-path ws-path
                                :register-http-base register-http-base})]
@@ -879,14 +1036,15 @@
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
                                                            (min 8 (count initial-sid))) ")")))))
+                ;; Inline mode: Codex runs directly in this JVM
                 (do
                   (when codex-ws-bridge?
-                    (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to local invoke-fn"))
+                    (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to inline invoke"))
                   (rt/register-codex! {:agent-id "codex-1"
                                        :invoke-fn invoke-fn})
                   (when initial-sid
                     (reg/update-agent! "codex-1" :agent/session-id initial-sid))
-                  (println (str "[dev] Codex agent registered: codex-1"
+                  (println (str "[dev] Codex agent registered: codex-1 (inline invoke)"
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
                                                            (min 8 (count initial-sid))) ")"))))))))

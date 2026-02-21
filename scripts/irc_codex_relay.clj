@@ -48,7 +48,7 @@
 (def relay-backend (str/lower-case (env "RELAY_BACKEND" "agency")))
 (def agency-url (env "AGENCY_URL" "http://127.0.0.1:7070"))
 (def agency-agent-id (env "AGENCY_AGENT_ID" "codex-1"))
-(def agency-timeout-ms (parse-int (env "AGENCY_TIMEOUT_MS" "120000") 120000))
+(def agency-timeout-ms (parse-int (env "AGENCY_TIMEOUT_MS" "600000") 600000))
 (def require-mention? (parse-bool (System/getenv "IRC_REQUIRE_MENTION") true))
 
 ;; =============================================================================
@@ -156,7 +156,8 @@
                        irc-channel from from text)
         payload (json/generate-string {"agent-id" agency-agent-id
                                        "prompt" prompt
-                                       "caller" (str "irc:" from)})
+                                       "caller" (str "irc:" from)
+                                       "timeout-ms" agency-timeout-ms})
         resp @(http/post url {:headers {"Content-Type" "application/json"}
                               :body payload
                               :timeout agency-timeout-ms})]
