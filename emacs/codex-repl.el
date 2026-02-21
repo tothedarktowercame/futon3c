@@ -63,12 +63,7 @@ Set to nil to use the Codex CLI/user config default."
   :type '(choice (const nil) string)
   :group 'codex-repl)
 
-(defcustom codex-repl-chat-preamble
-  (concat
-   "You are in interactive chat mode. "
-   "Answer directly and concisely. "
-   "Do not run shell commands, edit files, or inspect the repository "
-   "unless the user explicitly asks you to do so.")
+(defcustom codex-repl-chat-preamble nil
   "Optional instruction prepended to each Codex REPL turn.
 Set to nil to disable and send raw user text."
   :type '(choice (const nil) string)
