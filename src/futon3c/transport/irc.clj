@@ -398,7 +398,7 @@
    Returns:
      {:relay-fn       (fn [channel from text]) — call from IRC on PRIVMSG
       :irc-interceptor (fn [ch conn parsed]) — pass to WS config
-      :join-agent!    (fn [agent-id nick channel]) — register agent in IRC channel
+      :join-agent!    (fn [agent-id nick channel ws-send-fn & [opts]]) — register/update agent
       :part-agent!    (fn [agent-id]) — remove agent from all channels
       :agents         atom}"
   [config]
@@ -432,11 +432,22 @@
        (reset! !irc-send-fn f))
 
      :join-agent!
-     (fn [agent-id nick channel ws-send-fn]
-       (swap! !agents assoc agent-id
-              {:nick nick
-               :channels #{channel}
-               :ws-send-fn ws-send-fn}))
+     (fn join-agent!
+       ([agent-id nick channel ws-send-fn]
+        (join-agent! agent-id nick channel ws-send-fn {}))
+       ([agent-id nick channel ws-send-fn {:keys [overwrite?]
+                                           :or {overwrite? true}}]
+        (swap! !agents
+               (fn [m]
+                 (let [existing (get m agent-id)
+                       preserve? (and existing (not overwrite?))
+                       nick* (if preserve? (:nick existing) nick)
+                       ws-send-fn* (if preserve? (:ws-send-fn existing) ws-send-fn)
+                       channels* (conj (or (:channels existing) #{}) channel)]
+                   (assoc m agent-id
+                          {:nick nick*
+                           :channels channels*
+                           :ws-send-fn ws-send-fn*}))))))
 
      :part-agent!
      (fn [agent-id]

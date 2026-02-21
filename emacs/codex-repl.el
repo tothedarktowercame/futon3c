@@ -819,6 +819,7 @@ Type after the prompt, RET to send.
             (erase-buffer))
           (codex-repl--init))
         (codex-repl--refresh-session-header (current-buffer)))
+      (codex-repl--refresh-session-header (current-buffer))
       (codex-repl--ensure-header-line!))
     (pop-to-buffer buf)
     (goto-char (point-max))))

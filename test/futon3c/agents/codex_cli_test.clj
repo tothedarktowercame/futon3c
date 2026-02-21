@@ -66,6 +66,8 @@
             (is (some #{"--json"} argv))
             (is (some #{"-"} argv))
             (is (some #{"hello codex\n"} argv))
+            (is (some #{:timeout} argv))
+            (is (= 120000 (some #(when (number? %) %) argv)))
             (is (= "/tmp" (some #(when (= "/tmp" %) %) argv))))))))
   (testing "non-zero exit returns error and preserves prior session-id fallback"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"

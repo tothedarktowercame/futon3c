@@ -27,6 +27,7 @@
      CODEX_SANDBOX      — codex sandbox (default: workspace-write)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
                         — codex approval policy (default: never)
+     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 120000)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
@@ -509,7 +510,9 @@
         (let [agent-id (:agent-id conn)
               send-fn (fn [msg] (hk/send! ch msg))]
           (try
-            ((:join-agent! relay-bridge) agent-id agent-id "#futon" send-fn)
+            ;; Do not clobber dispatch-relay callbacks (e.g. codex/claude mention handlers)
+            ;; when a WS connection reconnects.
+            ((:join-agent! relay-bridge) agent-id agent-id "#futon" send-fn {:overwrite? false})
             ((:join-virtual-nick! irc-server) "#futon" agent-id)
             (catch Exception e
               (println (str "[dev] IRC auto-join failed for " agent-id ": " (.getMessage e))))))))))
@@ -757,18 +760,20 @@
      :model              — model name (default \"gpt-5-codex\")
      :sandbox            — sandbox mode (default \"workspace-write\")
      :approval-policy    — approval policy (default \"never\")
+     :timeout-ms         — hard timeout for codex process (default 120000)
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
      :session-id-atom    — atom holding current session ID (optional)"
-  [{:keys [codex-bin model sandbox approval-policy cwd agent-id
+  [{:keys [codex-bin model sandbox approval-policy timeout-ms cwd agent-id
            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "workspace-write"
-         approval-policy "never" agent-id "codex"}}]
+         approval-policy "never" timeout-ms 120000 agent-id "codex"}}]
   (let [inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
                                              :model model
                                              :sandbox sandbox
                                              :approval-policy approval-policy
+                                             :timeout-ms timeout-ms
                                              :cwd cwd})
         buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]
@@ -990,6 +995,7 @@
                               :sandbox (env "CODEX_SANDBOX" "workspace-write")
                               :approval-policy (or (env "CODEX_APPROVAL_POLICY")
                                                    (env "CODEX_APPROVAL" "never"))
+                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 120000) 120000)
                               :agent-id "codex-1"
                               :session-file sf
                               :session-id-atom sid-atom})

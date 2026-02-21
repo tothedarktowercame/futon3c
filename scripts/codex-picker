@@ -53,12 +53,28 @@ emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
 agency_agent_id="${AGENCY_AGENT_ID:-codex-1}"
+
+pick_local_agency_base() {
+  local -a candidates=()
+  if [[ -n "${FUTON3C_PORT:-}" ]]; then
+    candidates+=("http://127.0.0.1:${FUTON3C_PORT}")
+  fi
+  candidates+=("http://127.0.0.1:47070" "http://127.0.0.1:7070")
+  for base in "${candidates[@]}"; do
+    if curl -sS --max-time 1 "${base%/}/health" >/dev/null 2>&1; then
+      printf '%s\n' "${base%/}"
+      return 0
+    fi
+  done
+  printf 'http://127.0.0.1:%s\n' "${FUTON3C_PORT:-7070}"
+}
+
 if [[ -n "${FUTON3C_EVIDENCE_BASE:-}" ]]; then
   evidence_base="${FUTON3C_EVIDENCE_BASE}"
 elif [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
   evidence_base="${FUTON3C_SELF_URL}"
 else
-  evidence_base="http://127.0.0.1:${FUTON3C_PORT:-7070}"
+  evidence_base="$(pick_local_agency_base)"
 fi
 
 elisp_escape() {
@@ -145,7 +161,7 @@ latest_session_id() {
 
 launch_repl() {
   local sid="${1:-}" sid_form escaped_session_file escaped_ui escaped_repl
-  local escaped_agency_base escaped_evidence_url
+  local escaped_agency_base escaped_evidence_url new_form
   if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
     echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
     exit 1
@@ -160,9 +176,15 @@ launch_repl() {
   else
     sid_form="nil"
   fi
+  if $start_new; then
+    new_form="t"
+  else
+    new_form="nil"
+  fi
   "${emacsclient_bin}" -e "(progn
     (load \"${escaped_ui}\")
     (load \"${escaped_repl}\")
+    (when ${new_form} (when (get-buffer \"*codex-repl*\") (kill-buffer \"*codex-repl*\")))
     (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\")
     (setq codex-repl-session-file \"${escaped_session_file}\")
     (setq codex-repl-evidence-url \"${escaped_evidence_url}\")
