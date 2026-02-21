@@ -543,6 +543,8 @@
         server-socket (ServerSocket. port 50
                                      (java.net.InetAddress/getByName bind-host))
 
+        relay-fn (or (:relay-fn config) (fn [_ _ _]))
+
         send-to-channel!
         (fn [channel from-nick text]
           ;; Send PRIVMSG to a channel from an agent nick (used by relay bridge)
@@ -552,7 +554,20 @@
             (doseq [[cid client] all-clients
                      :when (contains? nicks (:nick client))]
               (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text))))
-          (emit-evidence! channel from-nick text)
+          (when evidence-store
+            (estore/append* evidence-store
+                            {:evidence/id (str "e-" (UUID/randomUUID))
+                             :evidence/subject {:ref/type :thread :ref/id (str "irc/" channel)}
+                             :evidence/type :forum-post
+                             :evidence/claim-type :observation
+                             :evidence/author from-nick
+                             :evidence/at (now-str)
+                             :evidence/body {:channel channel
+                                             :text text
+                                             :from from-nick
+                                             :transport :irc}
+                             :evidence/tags [:irc :chat :transport/irc (keyword "channel" channel)]
+                             :evidence/session-id (str "irc-sess-" channel)}))
           (relay-fn channel from-nick text))
 
         ;; F1: Keepalive loop — single future for all clients
