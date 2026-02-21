@@ -227,6 +227,7 @@
      {\"type\": \"peripheral_start\", \"peripheral_id\": \"explore\"}
      {\"type\": \"tool_action\", \"tool\": \"read\", \"args\": [...]}
      {\"type\": \"peripheral_stop\", \"reason\": \"done\"}
+     {\"type\": \"invoke_result\", \"invoke_id\": \"...\", ...}
 
    Returns:
      {:ws/type :ready :agent-id \"...\" :session-id \"...\"}
@@ -286,6 +287,25 @@
               {:ws/type :irc-response
                :irc/channel channel
                :irc/text text}))
+
+          (= "invoke_result" (str frame-type))
+          (let [invoke-id (or (:invoke_id parsed) (:invoke-id parsed))
+                session-id (or (:session_id parsed) (:session-id parsed))
+                result (:result parsed)
+                error (:error parsed)]
+            (cond
+              (or (nil? invoke-id) (not (string? invoke-id)))
+              (transport-error :invalid-frame "invoke_result frame missing invoke_id")
+
+              (and (some? result) (some? error))
+              (transport-error :invalid-frame "invoke_result cannot contain both result and error")
+
+              :else
+              {:ws/type :invoke-result
+               :invoke/id invoke-id
+               :invoke/result result
+               :invoke/error error
+               :invoke/session-id session-id}))
 
           ;; --- Peripheral session frames (Seam 4) ---
           (= "peripheral_start" (str frame-type))

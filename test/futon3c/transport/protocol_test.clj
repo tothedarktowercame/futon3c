@@ -449,3 +449,29 @@
     (let [result (proto/parse-ws-message
                   (json/generate-string {"type" "peripheral_stop"}))]
       (is (= "client-requested" (:reason result))))))
+
+(deftest parse-ws-invoke-result
+  (testing "invoke_result frame parses result payload"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "invoke_result"
+                                         "invoke_id" "inv-1"
+                                         "result" "ok"
+                                         "session_id" "sess-9"}))]
+      (is (= :invoke-result (:ws/type result)))
+      (is (= "inv-1" (:invoke/id result)))
+      (is (= "ok" (:invoke/result result)))
+      (is (= "sess-9" (:invoke/session-id result)))))
+
+  (testing "invoke_result with missing invoke_id returns invalid-frame"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "invoke_result"
+                                         "result" "ok"}))]
+      (is (= :invalid-frame (:error/code result)))))
+
+  (testing "invoke_result cannot include both result and error"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "invoke_result"
+                                         "invoke_id" "inv-2"
+                                         "result" "ok"
+                                         "error" "boom"}))]
+      (is (= :invalid-frame (:error/code result))))))

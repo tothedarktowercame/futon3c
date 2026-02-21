@@ -8,7 +8,8 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.social.shapes :as shapes]
-            [futon3c.social.test-fixtures :as fix]))
+            [futon3c.social.test-fixtures :as fix]
+            [futon3c.transport.ws.invoke :as ws-invoke]))
 
 (use-fixtures
   :each
@@ -100,6 +101,22 @@
       (is (= :registry (:error/component (:error result))))
       (is (= :agent-not-found (:error/code (:error result))))
       (is (shapes/valid? shapes/SocialError (:error result))))))
+
+(deftest invoke-falls-back-to-ws
+  (testing "invoke-agent! uses WS bridge when no invoke-fn"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-ws")
+      :type :codex
+      :invoke-fn nil
+      :capabilities []})
+    (with-redefs [ws-invoke/available? (constantly true)
+                  ws-invoke/invoke! (fn [_ prompt _ _]
+                                      {:result (str prompt " ack")
+                                       :session-id "sess-ws"})]
+      (let [result (reg/invoke-agent! (fix/make-agent-id "codex-ws") "hi" 1000)]
+        (is (:ok result))
+        (is (= "hi ack" (:result result)))
+        (is (= "sess-ws" (:session-id result)))))))
 
 (deftest invoke-exception-returns-social-error
   (testing "invoke-fn that throws returns SocialError, not nil"

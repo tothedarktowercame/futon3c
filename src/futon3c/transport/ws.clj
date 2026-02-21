@@ -27,6 +27,7 @@
             [futon3c.social.presence :as presence]
             [futon3c.peripheral.registry :as preg]
             [futon3c.peripheral.runner :as runner]
+            [futon3c.transport.ws.invoke :as ws-invoke]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -207,6 +208,7 @@
                                      :agent-id agent-id
                                      :session-id session-id
                                      :connected? true))
+                       (ws-invoke/register! agent-id #(send-fn ch %))
                        (send-fn ch (proto/render-ready-ack))
                        (when on-connect-hook
                          (on-connect-hook agent-id)))))
@@ -323,6 +325,19 @@
                          (send-fn ch (proto/render-peripheral-stopped
                                       pid (:fruit stop-result) reason))))))
 
+                 ;; --- Invoke result (WS bridge) ---
+                 :invoke-result
+                 (let [agent-id (:agent-id conn)
+                       resolved? (ws-invoke/resolve! agent-id
+                                                     (:invoke/id parsed)
+                                                     {:result (:invoke/result parsed)
+                                                      :session-id (:invoke/session-id parsed)
+                                                      :error (:invoke/error parsed)})]
+                   (when-not resolved?
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :unknown-invoke
+                                                   "No pending invoke for invoke_result")))))
+
                  ;; --- Unknown frame type ---
                  (send-fn ch (proto/render-ws-frame
                               (transport-error :invalid-frame
@@ -342,8 +357,10 @@
            (stop-peripheral! !connections ch conn "connection-closed"))
          ;; L2: only clean up if truly connected (handshake completed)
          (when (and conn (:connected? conn))
-           (when on-disconnect-hook
-             (on-disconnect-hook (:agent-id conn))))
+           (when-let [agent-id (:agent-id conn)]
+             (ws-invoke/unregister! agent-id)
+             (when on-disconnect-hook
+               (on-disconnect-hook agent-id))))
          ;; Remove from connections regardless of state
          (swap! !connections dissoc ch)))}))
 

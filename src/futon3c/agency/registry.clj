@@ -18,7 +18,8 @@
    The triple-store problem from futon3 (registry + local-handlers +
    connected-agents) is eliminated by having one authoritative store."
   (:require [futon3c.blackboard :as bb]
-            [futon3c.social.shapes :as shapes])
+            [futon3c.social.shapes :as shapes]
+            [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
 ;; =============================================================================
@@ -29,6 +30,8 @@
    Set via set-on-register! to enable federation announcements.
    Signature: (fn [agent-record] ...) — called asynchronously."}
   !on-register (atom nil))
+
+(def ^:private ws-invoke-timeout-ms 120000)
 
 (defonce ^{:doc "Registry of agents.
 
@@ -55,7 +58,8 @@
   "Extract the string value from a TypedAgentId."
   [typed-id]
   (cond
-    (map? typed-id)    (:id/value typed-id)
+    (map? typed-id)    (let [v (:id/value typed-id)]
+                          (if (string? v) v (str v)))
     (string? typed-id) typed-id
     (keyword? typed-id) (name typed-id)
     :else              (str typed-id)))
@@ -225,93 +229,112 @@
              current-session (:agent/session-id agent)
              timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))
              prompt-preview (let [s (str prompt)]
-                              (subs s 0 (min 120 (count s))))]
-         ;; Mark agent as invoking and project to blackboard
-         (swap! !registry
-                (fn [m]
-                  (if-let [a (get m aid-val)]
-                    (assoc m aid-val
-                           (assoc a
-                                  :agent/status :invoking
-                                  :agent/invoke-started-at (now)
-                                  :agent/invoke-prompt-preview prompt-preview))
-                    m)))
-         (bb/project-agents! {:agents (into {}
-                       (map (fn [[aid a]]
-                              [aid (cond-> {:type (:agent/type a)
-                                            :status (or (:agent/status a) :idle)}
-                                     (:agent/invoke-started-at a)
-                                     (assoc :invoke-started-at (str (:agent/invoke-started-at a))
-                                            :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
-                            @!registry))
-                      :count (count @!registry)})
+                              (subs s 0 (min 120 (count s))))
+             project-agents! (fn []
+                               (bb/project-agents!
+                                {:agents (into {}
+                                               (map (fn [[aid a]]
+                                                      [aid (cond-> {:type (:agent/type a)
+                                                                    :status (or (:agent/status a) :idle)}
+                                                             (:agent/invoke-started-at a)
+                                                             (assoc :invoke-started-at (str (:agent/invoke-started-at a))
+                                                                    :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
+                                                    @!registry))
+                                 :count (count @!registry)}))
+             mark-invoking! (fn []
+                              (swap! !registry
+                                     (fn [m]
+                                       (if-let [a (get m aid-val)]
+                                         (assoc m aid-val
+                                                (assoc a
+                                                       :agent/status :invoking
+                                                       :agent/invoke-started-at (now)
+                                                       :agent/invoke-prompt-preview prompt-preview))
+                                         m)))
+                              (project-agents!))
+             mark-idle! (fn [session-id]
+                          ;; Update only if still registered (R5: no resurrect).
+                          (swap! !registry
+                                 (fn [m]
+                                   (if-let [agent* (get m aid-val)]
+                                     (assoc m aid-val
+                                            (merge agent*
+                                                   {:agent/session-id (or session-id current-session)
+                                                    :agent/last-active (now)
+                                                    :agent/status :idle
+                                                    :agent/invoke-started-at nil
+                                                    :agent/invoke-prompt-preview nil}))
+                                     m)))
+                          (project-agents!))]
+         (mark-invoking!)
          (try
-           (let [call-invoke
-                 (fn []
-                   (try
-                     (invoke-fn prompt current-session)
-                     (catch clojure.lang.ArityException _
-                       (invoke-fn prompt current-session))))
-                 result-map
-                 (if timeout-ms
-                   (let [f (future (call-invoke))
-                         v (deref f timeout-ms ::timeout)]
-                     (if (= v ::timeout)
-                       (do (future-cancel f)
-                           {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
-                       v))
-                   (call-invoke))
-                 {:keys [result session-id error]} result-map]
-             ;; Update session-id, last-active, and mark idle
-             (swap! !registry
-                    (fn [m]
-                      (if-let [agent* (get m aid-val)]
-                        (assoc m aid-val
-                               (merge agent*
-                                      {:agent/session-id (or session-id current-session)
-                                       :agent/last-active (now)
-                                       :agent/status :idle
-                                       :agent/invoke-started-at nil
-                                       :agent/invoke-prompt-preview nil}))
-                        m)))
-             (bb/project-agents! {:agents (into {}
-                       (map (fn [[aid a]]
-                              [aid (cond-> {:type (:agent/type a)
-                                            :status (or (:agent/status a) :idle)}
-                                     (:agent/invoke-started-at a)
-                                     (assoc :invoke-started-at (str (:agent/invoke-started-at a))
-                                            :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
-                            @!registry))
-                      :count (count @!registry)})
-             (if error
+           (cond
+             invoke-fn
+             (let [call-invoke (fn []
+                                 (try
+                                   (invoke-fn prompt current-session)
+                                   (catch clojure.lang.ArityException _
+                                     (invoke-fn prompt current-session))))
+                   result-map (if timeout-ms
+                                (let [f (future (call-invoke))
+                                      v (deref f timeout-ms ::timeout)]
+                                  (if (= v ::timeout)
+                                    (do (future-cancel f)
+                                        {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
+                                    v))
+                                (call-invoke))
+                   {:keys [result session-id error]} result-map]
+               (mark-idle! session-id)
+               (if error
+                 {:ok false
+                  :error (make-social-error
+                          :invoke-error
+                          (str error)
+                          :agent-id aid-val
+                          :timeout-ms (:timeout-ms result-map))}
+                 {:ok true :result result :session-id session-id}))
+
+             (ws-invoke/available? aid-val)
+             (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
+                   response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
+                   session-id (when (map? response) (:session-id response))]
+               (mark-idle! session-id)
+               (cond
+                 (= response ws-invoke/timeout-sentinel)
+                 {:ok false
+                  :error (make-social-error
+                          :invoke-error
+                          (str "WS invoke timeout after " (or timeout-ms ws-invoke-timeout-ms) "ms")
+                          :agent-id aid-val
+                          :timeout-ms (or timeout-ms ws-invoke-timeout-ms))}
+
+                 (and (map? response) (:error response))
+                 {:ok false
+                  :error (make-social-error
+                          :invoke-error
+                          (str (:error response))
+                          :agent-id aid-val)}
+
+                 (map? response)
+                 {:ok true :result (:result response) :session-id (:session-id response)}
+
+                 :else
+                 {:ok false
+                  :error (make-social-error
+                          :invoke-error
+                          "Unknown WS invoke failure"
+                          :agent-id aid-val)}))
+
+             :else
+             (do
+               (mark-idle! nil)
                {:ok false
                 :error (make-social-error
                         :invoke-error
-                        (str error)
-                        :agent-id aid-val
-                        :timeout-ms (:timeout-ms result-map))}
-               {:ok true :result result :session-id session-id}))
+                        "Agent has no invoke handler"
+                        :agent-id aid-val)}))
            (catch Exception e
-             ;; Mark idle on exception too
-             (swap! !registry
-                    (fn [m]
-                      (if-let [agent* (get m aid-val)]
-                        (assoc m aid-val
-                               (assoc agent*
-                                      :agent/status :idle
-                                      :agent/invoke-started-at nil
-                                      :agent/invoke-prompt-preview nil
-                                      :agent/last-active (now)))
-                        m)))
-             (bb/project-agents! {:agents (into {}
-                       (map (fn [[aid a]]
-                              [aid (cond-> {:type (:agent/type a)
-                                            :status (or (:agent/status a) :idle)}
-                                     (:agent/invoke-started-at a)
-                                     (assoc :invoke-started-at (str (:agent/invoke-started-at a))
-                                            :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
-                            @!registry))
-                      :count (count @!registry)})
+             (mark-idle! nil)
              {:ok false
               :error (make-social-error
                       :invoke-exception

@@ -259,6 +259,27 @@
       (is (false? (:ok parsed)))
       (is (= "Agent not found: nonexistent" (:error parsed))))))
 
+(deftest agent-register-ws-bridge-opt-in
+  (testing "POST /api/alpha/agents with ws-bridge=true registers without local invoke-fn"
+    (let [handler (make-handler)
+          register-body (json/generate-string {"agent-id" "bridge-agent-1"
+                                               "type" "codex"
+                                               "ws-bridge" true})
+          register-response (post handler "/api/alpha/agents" register-body)
+          register-parsed (parse-body register-response)
+          invoke-body (json/generate-string {"agent-id" "bridge-agent-1"
+                                             "prompt" "hello"})
+          invoke-response (post handler "/api/alpha/invoke" invoke-body)
+          invoke-parsed (parse-body invoke-response)
+          live (reg/get-agent {:id/value "bridge-agent-1" :id/type :continuity})]
+      (is (= 201 (:status register-response)))
+      (is (true? (:ok register-parsed)))
+      (is (true? (:ws-bridge register-parsed)))
+      (is (nil? (:agent/invoke-fn live)) "ws-bridge registration should use WS invoke fallback")
+      (is (= 502 (:status invoke-response)))
+      (is (false? (:ok invoke-parsed)))
+      (is (= "invoke-error" (:error invoke-parsed))))))
+
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================

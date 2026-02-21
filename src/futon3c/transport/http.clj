@@ -557,8 +557,10 @@
 (defn- handle-agents-register
   "POST /api/alpha/agents — register an agent via HTTP.
    Body: {\"agent-id\": \"codex-1\", \"type\": \"codex\",
-          \"origin-url\": \"http://...\", \"proxy\": true}
-   Local registration (no origin-url): no-op invoke-fn, agent connects via WS later.
+          \"origin-url\": \"http://...\", \"proxy\": true,
+          \"ws-bridge\": true}
+   Local registration (no origin-url): default no-op invoke-fn.
+   Set ws-bridge=true to register with no local invoke-fn and use WS fallback.
    Proxy registration (with origin-url): invoke-fn forwards to origin Agency."
   [request _config]
   (let [payload (parse-json-map (read-body request))]
@@ -570,6 +572,10 @@
             agent-type (parse-keyword agent-type-str)
             origin-url (or (:origin-url payload) (get payload "origin-url"))
             proxy? (or (:proxy payload) (get payload "proxy") (some? origin-url))
+            ws-bridge? (boolean (or (:ws-bridge payload)
+                                    (get payload "ws-bridge")
+                                    (:ws_bridge payload)
+                                    (get payload "ws_bridge")))
             caps-raw (or (:capabilities payload) (get payload "capabilities"))
             capabilities (if (sequential? caps-raw)
                            (mapv keyword caps-raw)
@@ -584,8 +590,14 @@
                               :message "type is required (claude, codex, tickle, mock)"})
 
           :else
-          (let [invoke-fn (if (and proxy? origin-url (not (str/blank? origin-url)))
+          (let [invoke-fn (cond
+                            (and proxy? origin-url (not (str/blank? origin-url)))
                             (federation/make-proxy-invoke-fn origin-url agent-id)
+
+                            ws-bridge?
+                            nil
+
+                            :else
                             (fn [_prompt _session-id]
                               {:result "registered-via-http" :session-id nil}))
                 result (reg/register-agent!
@@ -595,6 +607,7 @@
                          :capabilities capabilities
                          :metadata (cond-> {}
                                      proxy? (assoc :proxy? true)
+                                     ws-bridge? (assoc :ws-bridge? true)
                                      origin-url (assoc :origin-url origin-url))})]
             (if (and (map? result) (= false (:ok result)))
               (json-response 409 {:ok false
@@ -605,7 +618,8 @@
                 (json-response 201 {:ok true
                                     :agent-id (get-in result [:agent/id :id/value])
                                     :type (name (:agent/type result))
-                                    :proxy proxy?})
+                                    :proxy proxy?
+                                    :ws-bridge ws-bridge?})
                 (json-response 409 {:ok false
                                     :err "registration-failed"
                                     :message (str "Could not register: " agent-id)
