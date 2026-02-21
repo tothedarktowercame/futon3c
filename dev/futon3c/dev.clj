@@ -5,6 +5,7 @@
    their CLIs. Transports route through the same registry invoke path.
 
    Environment variables:
+     FUTON3C_ROLE       — deployment role (linode|laptop|default)
      FUTON1A_PORT       — HTTP port for futon1a (default 7071)
      FUTON1A_DATA_DIR   — XTDB storage directory
      FUTON3C_PORT       — futon3c transport HTTP+WS port (default 7070, 0 = disable)
@@ -24,7 +25,9 @@
      CODEX_SANDBOX      — codex sandbox (default: workspace-write)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
                         — codex approval policy (default: never)
-     CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)"
+     CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
+     FUTON3C_REGISTER_CLAUDE — whether to register claude-1 on this host
+     FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host"
   (:require [futon1a.system :as f1]
             [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.tickle :as tickle]
@@ -70,6 +73,42 @@
          (remove str/blank?)
          vec)
     default))
+
+(defn env-bool
+  "Read a boolean env var. Returns DEFAULT when unset.
+   Falsey values: 0,false,no,off (case-insensitive)."
+  [k default]
+  (if-let [s (env k)]
+    (let [v (-> s str str/trim str/lower-case)]
+      (not (contains? #{"0" "false" "no" "off"} v)))
+    default))
+
+(defn deployment-role
+  "Resolve deployment role from FUTON3C_ROLE.
+   Supported: linode, laptop. Anything else => :default."
+  []
+  (case (some-> (env "FUTON3C_ROLE") str/trim str/lower-case)
+    "linode" :linode
+    "laptop" :laptop
+    :default))
+
+(defn role-defaults
+  "Role-driven defaults. Explicit env vars still override."
+  [role]
+  (case role
+    :linode {:irc-port 6667
+             :irc-bind-host "0.0.0.0"
+             :register-claude? true
+             :register-codex? false}
+    :laptop {:irc-port 0
+             :irc-bind-host "127.0.0.1"
+             :register-claude? false
+             :register-codex? true}
+    ;; Legacy behavior when role is not set.
+    {:irc-port 6667
+     :irc-bind-host "0.0.0.0"
+     :register-claude? true
+     :register-codex? true}))
 
 (defn- read-session-id
   [f]
@@ -212,10 +251,13 @@
    it's relayed to all WS-connected agents in that channel. When an agent
    sends an irc_response WS frame, it's broadcast back to the IRC channel.
    Agents are auto-joined to #futon when they connect via WS."
-  [evidence-store]
-  (let [irc-port (env-int "FUTON3C_IRC_PORT" 6667)]
+  ([evidence-store]
+   (start-irc! evidence-store (deployment-role)))
+  ([evidence-store role]
+  (let [{:keys [irc-port irc-bind-host]} (role-defaults role)
+        irc-port (env-int "FUTON3C_IRC_PORT" irc-port)]
     (when (pos? irc-port)
-      (let [bind-host (env "FUTON3C_BIND_HOST" "0.0.0.0")
+      (let [bind-host (env "FUTON3C_BIND_HOST" irc-bind-host)
             relay-bridge (irc/make-relay-bridge {:evidence-store evidence-store})
             server (irc/start-irc-server!
                     {:port irc-port
@@ -227,7 +269,7 @@
                       " (channel: #futon, auto-join on WS connect)"))
         {:server server
          :relay-bridge relay-bridge
-         :port irc-port}))))
+         :port irc-port})))))
 
 (defn- install-irc-auto-join!
   "Watch WS connections atom; auto-join agents to #futon when they connect."
@@ -371,13 +413,19 @@
          :bind bind}))))
 
 (defn -main [& _args]
-  (let [f1-sys (start-futon1a!)
+  (let [role (deployment-role)
+        role-cfg (role-defaults role)
+        register-claude? (env-bool "FUTON3C_REGISTER_CLAUDE" (:register-claude? role-cfg))
+        register-codex? (env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
+        relay-claude? (env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
+        relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
+        f1-sys (start-futon1a!)
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
         _ (mcs/configure! {:evidence-store evidence-store})
         ;; IRC relay bridge + server (before futon3c so interceptor is ready)
-        irc-sys (start-irc! evidence-store)
+        irc-sys (start-irc! evidence-store role)
         _ (reset! !irc-sys irc-sys)
         ;; futon3c HTTP + WS (with IRC interceptor if IRC is running)
         f3c-sys (start-futon3c!
@@ -394,59 +442,75 @@
         ;; Register Claude + Codex with real invoke-fns.
         ;; Each wrapper persists session-id to disk after each call so all
         ;; transports share durable continuity.
-        _ (let [raw-invoke-fn (make-claude-invoke-fn
-                                {:claude-bin (or (env "CLAUDE_BIN") "claude")})
-                session-file (io/file (or (env "CLAUDE_SESSION_FILE")
-                                          "/tmp/futon-session-id"))
-                initial-sid (read-session-id session-file)
-                invoke-fn (fn [prompt session-id]
-                            (let [result (raw-invoke-fn prompt session-id)
-                                  sid (:session-id result)]
-                              (persist-session-id! session-file sid)
-                              result))]
-            (rt/register-claude! {:agent-id "claude-1"
-                                  :invoke-fn invoke-fn})
-            (when initial-sid
-              (reg/update-agent! "claude-1" :agent/session-id initial-sid))
-            (println (str "[dev] Claude agent registered: claude-1"
-                          (when initial-sid
-                            (str " (session: " (subs initial-sid 0
-                                                     (min 8 (count initial-sid))) ")"))))
-        _ (let [raw-invoke-fn (codex-cli/make-invoke-fn
-                                {:codex-bin (or (env "CODEX_BIN") "codex")
-                                 :model (or (env "CODEX_MODEL") "gpt-5-codex")
-                                 :sandbox (or (env "CODEX_SANDBOX") "workspace-write")
-                                 :approval-policy (or (env "CODEX_APPROVAL_POLICY")
-                                                      (env "CODEX_APPROVAL")
-                                                      "never")
-                                 :cwd (System/getProperty "user.dir")})
-                session-file (io/file (or (env "CODEX_SESSION_FILE")
-                                          "/tmp/futon-codex-session-id"))
-                initial-sid (read-session-id session-file)
-                invoke-fn (fn [prompt session-id]
-                            (let [result (raw-invoke-fn prompt session-id)
-                                  sid (:session-id result)]
-                              (persist-session-id! session-file sid)
-                              result))]
-            (rt/register-codex! {:agent-id "codex-1"
-                                 :invoke-fn invoke-fn})
-            (when initial-sid
-              (reg/update-agent! "codex-1" :agent/session-id initial-sid))
-            (println (str "[dev] Codex agent registered: codex-1"
-                          (when initial-sid
-                            (str " (session: " (subs initial-sid 0
-                                                     (min 8 (count initial-sid))) ")")))))
-        ;; Dispatch relay: routes IRC messages through invoke-agent!
-        dispatch-relay (when irc-sys
-                         (start-dispatch-relay!
-                          {:relay-bridge (:relay-bridge irc-sys)
-                           :irc-server (:server irc-sys)}))
+        _ (when register-claude?
+            (let [raw-invoke-fn (make-claude-invoke-fn
+                                 {:claude-bin (or (env "CLAUDE_BIN") "claude")})
+                  session-file (io/file (or (env "CLAUDE_SESSION_FILE")
+                                            "/tmp/futon-session-id"))
+                  initial-sid (read-session-id session-file)
+                  invoke-fn (fn [prompt session-id]
+                              (let [result (raw-invoke-fn prompt session-id)
+                                    sid (:session-id result)]
+                                (persist-session-id! session-file sid)
+                                result))]
+              (rt/register-claude! {:agent-id "claude-1"
+                                    :invoke-fn invoke-fn})
+              (when initial-sid
+                (reg/update-agent! "claude-1" :agent/session-id initial-sid))
+              (println (str "[dev] Claude agent registered: claude-1"
+                            (when initial-sid
+                              (str " (session: " (subs initial-sid 0
+                                                       (min 8 (count initial-sid))) ")"))))))
+        _ (when register-codex?
+            (let [raw-invoke-fn (codex-cli/make-invoke-fn
+                                 {:codex-bin (or (env "CODEX_BIN") "codex")
+                                  :model (or (env "CODEX_MODEL") "gpt-5-codex")
+                                  :sandbox (or (env "CODEX_SANDBOX") "workspace-write")
+                                  :approval-policy (or (env "CODEX_APPROVAL_POLICY")
+                                                       (env "CODEX_APPROVAL")
+                                                       "never")
+                                  :cwd (System/getProperty "user.dir")})
+                  session-file (io/file (or (env "CODEX_SESSION_FILE")
+                                            "/tmp/futon-codex-session-id"))
+                  initial-sid (read-session-id session-file)
+                  invoke-fn (fn [prompt session-id]
+                              (let [result (raw-invoke-fn prompt session-id)
+                                    sid (:session-id result)]
+                                (persist-session-id! session-file sid)
+                                result))]
+              (rt/register-codex! {:agent-id "codex-1"
+                                   :invoke-fn invoke-fn})
+              (when initial-sid
+                (reg/update-agent! "codex-1" :agent/session-id initial-sid))
+              (println (str "[dev] Codex agent registered: codex-1"
+                            (when initial-sid
+                              (str " (session: " (subs initial-sid 0
+                                                       (min 8 (count initial-sid))) ")"))))))
+        ;; Dispatch relays: route IRC messages through invoke-agent!
+        _dispatch-relay-claude (when (and irc-sys relay-claude?)
+                                 (start-dispatch-relay!
+                                  {:relay-bridge (:relay-bridge irc-sys)
+                                   :irc-server (:server irc-sys)
+                                   :agent-id "claude-1"
+                                   :nick "claude"}))
+        _dispatch-relay-codex (when (and irc-sys relay-codex?)
+                                (start-dispatch-relay!
+                                 {:relay-bridge (:relay-bridge irc-sys)
+                                  :irc-server (:server irc-sys)
+                                  :agent-id "codex-1"
+                                  :nick "codex"}))
         bridge-sys (start-drawbridge!)
         ;; Federation: configure peers and install announcement hook
         _ (federation/configure-from-env!)
         _ (federation/install-hook!)
         fed-peers (federation/peers)
         fed-self (federation/self-url)]
+    (println)
+    (println (str "[dev] Role: " (name role)
+                  " | register-claude=" register-claude?
+                  " register-codex=" register-codex?
+                  " | relay-claude=" relay-claude?
+                  " relay-codex=" relay-codex?))
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")

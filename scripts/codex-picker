@@ -47,6 +47,8 @@ open_repl=false
 session_id=""
 session_hint=""
 session_file="${CODEX_SESSION_FILE:-/tmp/futon-codex-session-id}"
+codex_approval_policy="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL:-never}}"
+codex_sandbox="${CODEX_SANDBOX:-danger-full-access}"
 emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
@@ -222,10 +224,10 @@ if $open_repl; then
 fi
 
 if $start_new; then
-  exec codex
+  exec codex --ask-for-approval "${codex_approval_policy}" --sandbox "${codex_sandbox}"
 fi
 
-cmd=(codex resume)
+cmd=(codex resume --ask-for-approval "${codex_approval_policy}" --sandbox "${codex_sandbox}")
 if [[ "$mode" == "all" ]]; then
   cmd+=(--all)
 fi

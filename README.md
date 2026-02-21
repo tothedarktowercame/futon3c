@@ -20,6 +20,7 @@ For Mission Peripheral / Mission Control / War Room convergence, see
 make dev       # Boot futon1a (XTDB) + futon3c transport
 make claude    # Pick a session or start fresh
 make codex     # Pick a Codex session or start fresh
+make codex-repl # Open Codex Emacs REPL launcher
 make test      # Run all tests
 make repl      # Start nREPL with CIDER middleware
 ```
@@ -34,6 +35,11 @@ Starts a single JVM with:
   dispatch, presence, and health endpoints
 - **Drawbridge** on port 6768 (configurable via `FUTON3C_DRAWBRIDGE_PORT`) —
   nREPL-over-HTTP for low-latency mission-control queries and admin eval
+
+Role-aware defaults are available via `FUTON3C_ROLE`:
+- `linode`: enables IRC (`6667`), registers `claude-1`, leaves `codex-1` for federation/proxy.
+- `laptop`: disables local IRC (`0`), registers `codex-1`, skips `claude-1`.
+- `default`: legacy behavior (IRC on, both agents registered).
 
 No agents are registered at startup. They come alive when you launch a
 Claude or Codex session, or register them via REPL.
@@ -72,6 +78,7 @@ Supports `--all` (show all sessions), `--new` (skip resume, start fresh),
 `--last` (resume most recent), explicit session/thread ID, and `--repl`
 (open `emacs/codex-repl.el`).
 Use flags via make as: `make codex ARGS="--all"` (or call the script directly).
+`make codex-repl` is a shortcut for `make codex ARGS="--repl"`.
 Examples:
 - `make codex ARGS="--repl --last"` — hop into Emacs REPL on your latest Codex session
 - `make codex ARGS="--repl <SESSION_ID>"` — hop into Emacs REPL for a specific session
@@ -200,12 +207,19 @@ and sessions.
 |----------|---------|-------------|
 | `FUTON1A_PORT` | 7071 | futon1a HTTP port |
 | `FUTON1A_DATA_DIR` | `~/code/storage/futon1a/default` | XTDB data directory |
+| `FUTON3C_ROLE` | `default` | Deployment role (`linode`, `laptop`, or `default`) used for role-based defaults |
 | `FUTON3C_PORT` | 7070 | futon3c transport HTTP port (0 = disable) |
+| `FUTON3C_IRC_PORT` | role-dependent | IRC server port (`linode`: 6667, `laptop`: 0, `default`: 6667) |
+| `FUTON3C_BIND_HOST` | role-dependent | Bind host for IRC server (`linode/default`: `0.0.0.0`, `laptop`: `127.0.0.1`) |
 | `FUTON3C_DRAWBRIDGE_PORT` | 6768 | Drawbridge HTTP port (0 = disable) |
 | `FUTON3C_DRAWBRIDGE_BIND` | `127.0.0.1` | Drawbridge bind interface |
 | `FUTON3C_DRAWBRIDGE_ALLOW` | `127.0.0.1,::1` | Comma-separated allowlist of remote addrs |
 | `FUTON3C_ADMIN_TOKEN` | (falls back to `ADMIN_TOKEN`/`.admintoken`) | Drawbridge auth token |
 | `FUTON3C_PATTERNS` | (none) | Comma-separated pattern IDs |
+| `FUTON3C_REGISTER_CLAUDE` | role-dependent | Register local `claude-1` invoke-fn at startup |
+| `FUTON3C_REGISTER_CODEX` | role-dependent | Register local `codex-1` invoke-fn at startup |
+| `FUTON3C_PEERS` | (none) | Comma-separated peer Agency URLs for federation announcements |
+| `FUTON3C_SELF_URL` | (none) | This host's reachable Agency base URL for federation callbacks |
 | `CLAUDE_PERMISSION_MODE` | `bypassPermissions` | Permission mode for claude CLI |
 | `CLAUDE_PICKER_MAX` | 12 | Max sessions shown in picker |
 
