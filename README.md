@@ -41,6 +41,23 @@ Role-aware defaults are available via `FUTON3C_ROLE`:
 - `laptop`: disables local IRC (`0`), registers `codex-1`, skips `claude-1`.
 - `default`: legacy behavior (IRC on, both agents registered).
 
+Convenience launchers:
+- `./scripts/dev-linode-env` — Linode profile + `make dev`
+- `./scripts/dev-laptop-env` — laptop profile + `make dev`
+
+Examples:
+```bash
+# Linode
+FUTON3C_SELF_URL=http://172.236.28.208:7070 \
+FUTON3C_LAPTOP_URL=http://<laptop-host>:47070 \
+./scripts/dev-linode-env
+
+# Laptop
+FUTON3C_SELF_URL=http://<laptop-host>:47070 \
+FUTON3C_LINODE_URL=http://172.236.28.208:7070 \
+./scripts/dev-laptop-env
+```
+
 No agents are registered at startup. They come alive when you launch a
 Claude or Codex session, or register them via REPL.
 

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Linode authority profile for futon3c dev.
+# Usage:
+#   FUTON3C_SELF_URL=http://<linode-host>:7070 \
+#   FUTON3C_LAPTOP_URL=http://<laptop-host>:47070 \
+#   ./scripts/dev-linode-env
+#
+# Notes:
+# - FUTON3C_LAPTOP_URL is optional; when set, it is used as FUTON3C_PEERS
+#   unless FUTON3C_PEERS is already provided.
+
+export FUTON3C_ROLE="${FUTON3C_ROLE:-linode}"
+export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
+export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
+export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-6667}"
+
+if [[ -n "${FUTON3C_LAPTOP_URL:-}" && -z "${FUTON3C_PEERS:-}" ]]; then
+  export FUTON3C_PEERS="${FUTON3C_LAPTOP_URL}"
+fi
+
+if [[ -z "${FUTON3C_SELF_URL:-}" ]]; then
+  echo "[dev-linode-env] FUTON3C_SELF_URL is not set; federation callbacks from peers will be disabled."
+fi
+
+exec make dev "$@"
