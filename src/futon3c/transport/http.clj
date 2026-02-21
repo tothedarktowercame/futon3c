@@ -677,9 +677,11 @@
           :else
           (let [caller (or (some-> payload :caller str)
                            (some-> payload (get "caller") str)
-                           "http-caller")]
+                           "http-caller")
+                timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                                   long)]
             (emit-invoke-evidence! evidence-store caller (str prompt) nil)
-            (let [result (reg/invoke-agent! (str agent-id) prompt)
+            (let [result (reg/invoke-agent! (str agent-id) prompt timeout-ms)
                   sid (:session-id result)]
               (if (:ok result)
                 (do

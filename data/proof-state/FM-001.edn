@@ -1,17 +1,22 @@
 {:proof/problem-id "FM-001"
- :proof/version 0
- :proof/canonical {:statement "Determine the Ramsey number r(B_n) for book graphs B_n = K_2 + K̄_n (the join of K_2 and n isolated vertices). Specifically, find tight asymptotic bounds or exact values for small n."
-                   :closure-criterion "Either (a) prove exact values r(B_n) for a new range of n, (b) improve known asymptotic bounds, or (c) identify a named structural obstruction with evidence."
-                   :statement-hash "sha256:pending-spec-lock"
+ :proof/version 3
+ :proof/canonical {:statement "Given n, construct a graph G on 4n-2 vertices such that G contains no copy of B_{n-1} and the complement of G contains no copy of B_n, where B_k is the triangular book graph on k+2 vertices (k pages sharing a common K_2 edge). This witnesses R(B_{n-1}, B_n) >= 4n-1, proving the Rousseau-Sheehan upper bound sharp. Output: binary adjacency string, column-major order. Tiers: (T1) n=25, 98 vertices; (T2) n=50, 198 vertices; (T3) general algorithm for all n, under 10 minutes for n<=100."
+                   :closure-criterion "Either (a) produce a general algorithm solving T3, or (b) solve T1 and/or T2 with explicit constructions, or (c) identify a named structural obstruction proving no general construction exists."
+                   :statement-hash "sha256:7c1b69591e101dfd5f0a9263a15ec04c06b3331d83a67339546c33604e32c322"
                    :version-history [{:version 0
                                       :statement "Pending formal spec-lock. Source: epoch.ai/frontiermath/open-problems"
                                       :hash "sha256:pending-spec-lock"
                                       :changed-at "2026-02-20T00:00:00Z"
-                                      :reason "Initial bootstrap from futon6 FM-001 problem state"}]}
+                                      :reason "Initial bootstrap from futon6 FM-001 problem state"}
+                                     {:version 1
+                                      :statement "Given n, construct a graph G on 4n-2 vertices such that G contains no copy of B_{n-1} and the complement of G contains no copy of B_n, where B_k is the triangular book graph on k+2 vertices (k pages sharing a common K_2 edge). This witnesses R(B_{n-1}, B_n) >= 4n-1, proving the Rousseau-Sheehan upper bound sharp. Output: binary adjacency string, column-major order. Tiers: (T1) n=25, 98 vertices; (T2) n=50, 198 vertices; (T3) general algorithm for all n, under 10 minutes for n<=100."
+                                      :hash "sha256:7c1b69591e101dfd5f0a9263a15ec04c06b3331d83a67339546c33604e32c322"
+                                      :changed-at "2026-02-21T16:56:28Z"
+                                      :reason "Spec correction: actual FrontierMath problem is off-diagonal construction R(B_{n-1},B_n). Added tiers, output format, runtime constraint."}]}
  :proof/ledger {}
  :proof/cycles []
  :proof/failed-routes []
- :proof/updated-at "2026-02-20T00:00:00Z"
- :proof/current-mode :SPEC
+ :proof/updated-at "2026-02-21T16:57:00Z"
+ :proof/current-mode :FALSIFY
  :proof/falsify-completed? false
  :proof/tryharder-log []}

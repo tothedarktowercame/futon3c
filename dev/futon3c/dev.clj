@@ -309,6 +309,77 @@
       {:text (str/trim (or raw ""))
        :session-id nil})))
 
+(defn- drain-stream!
+  "Read a stream to completion in background, return the content as a string.
+   Prevents process blocking when stdout/stderr buffers fill up."
+  [^java.io.InputStream stream]
+  (slurp stream))
+
+(defn- format-elapsed
+  "Format milliseconds as human-readable elapsed time."
+  [ms]
+  (let [secs (quot ms 1000)
+        mins (quot secs 60)
+        s (mod secs 60)]
+    (if (pos? mins)
+      (str mins "m" s "s")
+      (str secs "s"))))
+
+(defn- detect-file-changes
+  "Check data/proof-state/*.edn for recent modifications.
+   Returns a string describing changes, or nil."
+  [start-ms]
+  (try
+    (let [dir (io/file "data/proof-state")]
+      (when (.isDirectory dir)
+        (let [changed (->> (.listFiles dir)
+                           (filter #(str/ends-with? (.getName %) ".edn"))
+                           (filter #(> (.lastModified %) start-ms))
+                           (mapv #(.getName %)))]
+          (when (seq changed)
+            (str/join ", " changed)))))
+    (catch Throwable _ nil)))
+
+(defn- start-invoke-ticker!
+  "Start a background thread that updates both *agents* and the invoke buffer
+   with elapsed time, file change detection, and a progress spinner.
+   Returns a function that stops the ticker when called."
+  [buf-name agent-id prompt-str used-sid interval-ms]
+  (let [running (atom true)
+        start-ms (System/currentTimeMillis)
+        spinner-chars [\| \/ \- \\]
+        tick (atom 0)
+        thread (Thread.
+                (fn []
+                  (while @running
+                    (try
+                      (Thread/sleep interval-ms)
+                      (let [elapsed (- (System/currentTimeMillis) start-ms)
+                            elapsed-str (format-elapsed elapsed)
+                            spin (nth spinner-chars (mod (swap! tick inc) 4))
+                            changed-files (detect-file-changes start-ms)
+                            content (str "Invoke: " agent-id " " spin " " elapsed-str "\n"
+                                         "Session: " used-sid "\n"
+                                         "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
+                                         (when (> (count prompt-str) 300) "...")
+                                         "\n\n"
+                                         (when changed-files
+                                           (str "Files modified: " changed-files "\n"))
+                                         "Waiting for response...")]
+                        ;; Update invoke buffer
+                        (bb/blackboard! buf-name content {:width 80 :no-display true})
+                        ;; Update agents buffer
+                        (bb/project-agents! (reg/registry-status)))
+                      (catch InterruptedException _
+                        (reset! running false))
+                      (catch Throwable _))))
+                "invoke-ticker")]
+    (.setDaemon thread true)
+    (.start thread)
+    (fn []
+      (reset! running false)
+      (.interrupt thread))))
+
 (defn make-claude-invoke-fn
   "Create an invoke-fn that calls `claude -p` for real Claude interaction.
 
@@ -317,12 +388,16 @@
    Uses --output-format json to capture tool-use responses that would
    otherwise produce empty text output.
 
+   Streams stderr to the *invoke: <agent-id>* Emacs buffer for live visibility.
+   Periodically refreshes the *agents* buffer to show elapsed time.
+
    Serialized via locking — only one `claude -p` process at a time (I-1).
    First call with nil session-id generates a new UUID via --session-id.
    Subsequent calls use --resume."
-  [{:keys [claude-bin permission-mode]
-    :or {claude-bin "claude" permission-mode "bypassPermissions"}}]
-  (let [!lock (Object.)]
+  [{:keys [claude-bin permission-mode agent-id]
+    :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"}}]
+  (let [!lock (Object.)
+        buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]
       (locking !lock
         (let [prompt-str (cond
@@ -337,25 +412,66 @@
                      session-id (into ["--resume" (str session-id)])
                      new-sid    (into ["--session-id" new-sid]))
               used-sid (or session-id new-sid)
-              _ (println (str "[invoke] claude -p " (subs (pr-str prompt-str) 0
-                                                          (min 60 (count (pr-str prompt-str))))
+              _ (println (str "[invoke] " agent-id " claude -p "
+                              (subs (pr-str prompt-str) 0
+                                    (min 80 (count (pr-str prompt-str))))
                               "... (session: " (when used-sid (subs used-sid 0 8)) ")"))
               _ (flush)
-              {:keys [exit out err]} (apply shell/sh args)
-              {:keys [text session-id]} (extract-text-from-json-output (or out ""))
-              ;; Prefer session-id from JSON output (canonical), fall back to our tracked one
-              final-sid (or session-id used-sid)]
-          (println (str "[invoke] exit=" exit " out-len=" (count (or out ""))
-                        " text-len=" (count (or text ""))
-                        " err-len=" (count (or err ""))))
-          (flush)
-          (if (zero? exit)
-            {:result (if (str/blank? text)
-                       "[Claude used tools but produced no text response]"
-                       text)
-             :session-id final-sid}
-            {:result nil :session-id final-sid
-             :error (str "Exit " exit ": " (str/trim (or err out "")))}))))))
+              ;; Show prompt in the invoke buffer + force display
+              _ (try
+                  (bb/blackboard! buf-name
+                                  (str "Invoke: " agent-id "\n"
+                                       "Session: " used-sid "\n"
+                                       "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
+                                       (when (> (count prompt-str) 300) "...")
+                                       "\n\nStarting...")
+                                  {:width 80})
+                  (catch Throwable _))
+              ;; Start ticker: updates invoke buffer + agents buffer every 5s
+              stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
+              ;; Launch process with ProcessBuilder
+              pb (ProcessBuilder. ^java.util.List (vec args))
+              proc (.start pb)
+              ;; Drain stderr in background (prevents buffer blocking)
+              stderr-future (future (drain-stream! (.getErrorStream proc)))
+              ;; Collect stdout (JSON output) in background
+              stdout-future (future (drain-stream! (.getInputStream proc)))]
+          (try
+            ;; Wait for process to complete
+            (.waitFor proc)
+            (let [exit (.exitValue proc)
+                  out @stdout-future
+                  err @stderr-future
+                  {:keys [text session-id]} (extract-text-from-json-output (or out ""))
+                  final-sid (or session-id used-sid)]
+              ;; Final blackboard update with result summary
+              (try
+                (bb/blackboard! buf-name
+                                (str "Invoke: " agent-id " — DONE (exit=" exit ")\n"
+                                     "Session: " final-sid "\n"
+                                     "Output: " (count (or text "")) " chars\n"
+                                     (when (not (str/blank? err))
+                                       (str "\nStderr: " (subs err 0 (min 200 (count err))) "\n"))
+                                     (when text
+                                       (str "\n--- response ---\n"
+                                            (subs text 0 (min 1000 (count text)))
+                                            (when (> (count text) 1000) "\n..."))))
+                                {:width 80 :no-display true})
+                (catch Throwable _))
+              (println (str "[invoke] " agent-id " exit=" exit
+                            " out-len=" (count (or out ""))
+                            " text-len=" (count (or text ""))
+                            " err-len=" (count (or err ""))))
+              (flush)
+              (if (zero? exit)
+                {:result (if (str/blank? text)
+                           "[Claude used tools but produced no text response]"
+                           text)
+                 :session-id final-sid}
+                {:result nil :session-id final-sid
+                 :error (str "Exit " exit ": " (str/trim (or err out "")))}))
+            (finally
+              (stop-ticker!))))))))
 
 ;; =============================================================================
 ;; Dispatch-based IRC relay — routes through invoke-agent! (I-1, I-2 compliant)
@@ -470,7 +586,8 @@
         ;; transports share durable continuity.
         _ (when register-claude?
             (let [raw-invoke-fn (make-claude-invoke-fn
-                                 {:claude-bin (or (env "CLAUDE_BIN") "claude")})
+                                 {:claude-bin (or (env "CLAUDE_BIN") "claude")
+                                  :agent-id "claude-1"})
                   session-file (io/file (or (env "CLAUDE_SESSION_FILE")
                                             "/tmp/futon-session-id"))
                   initial-sid (read-session-id session-file)
