@@ -170,12 +170,14 @@
             :threshold-seconds 60
             :page-config {:ring-test-bell! (fn [_] {:bell/type :test-bell})}
             :on-cycle (fn [_] (swap! cycles inc))})]
-      (Thread/sleep 120)
+      (Thread/sleep 200)
       (is (instance? Instant started-at))
       (is (pos? @cycles))
       (stop-fn)
+      ;; Allow any in-flight cycle to finish before sampling
+      (Thread/sleep 150)
       (let [stopped-at @cycles]
-        (Thread/sleep 80)
+        (Thread/sleep 150)
         (is (= stopped-at @cycles))))))
 
 (deftest start-watchdog-on-cycle-callback-fires
