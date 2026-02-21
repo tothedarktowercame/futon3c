@@ -242,7 +242,7 @@
           ;; Drain join messages
           _ (irc-read-until conn #(str/includes? % " 366 ") 3000)
           ;; Send test message
-          test-msg (str "inflight check " (Instant/now) " — reply with OK")
+          test-msg (str "@claude inflight check " (Instant/now) " — reply with OK")
           _ ((:send! conn) (str "PRIVMSG #futon :" test-msg))
           ;; Wait for response (agent PRIVMSG back to channel)
           response (irc-read-until conn

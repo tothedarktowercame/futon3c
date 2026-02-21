@@ -361,11 +361,30 @@
 ;; Dispatch-based IRC relay — routes through invoke-agent! (I-1, I-2 compliant)
 ;; =============================================================================
 
+(defn- mentioned?
+  "Check if text mentions nick via @nick or nick: prefix (case-insensitive)."
+  [text nick]
+  (let [t (str/lower-case (str/trim (str text)))
+        n (str/lower-case (str nick))]
+    (or (str/includes? t (str "@" n))
+        (str/starts-with? t (str n ":"))
+        (str/starts-with? t (str n ",")))))
+
+(defn- strip-mention
+  "Remove @nick or nick: prefix from text, return the rest."
+  [text nick]
+  (let [patterns [(re-pattern (str "(?i)@" (java.util.regex.Pattern/quote nick) "\\b[:;,]?\\s*"))
+                  (re-pattern (str "(?i)^" (java.util.regex.Pattern/quote nick) "[:;,]\\s*"))]]
+    (reduce (fn [t p] (str/trim (str/replace t p "")))
+            text patterns)))
+
 (defn start-dispatch-relay!
   "Wire IRC messages to agent dispatch via invoke-agent!.
 
-   When an IRC message arrives, invoke the registered agent through the
-   registry and send the response back to IRC. Uses future for non-blocking.
+   When an IRC message mentions the agent nick (@claude or claude:),
+   invoke the registered agent and send the response back to IRC.
+   At-mention gating prevents agents from responding to every message
+   and chattering with each other.
 
    Returns {:agent-id str :nick str} or nil if IRC is not running."
   [{:keys [relay-bridge irc-server agent-id nick]
@@ -375,24 +394,31 @@
      (fn [data]
        (let [parsed (try (json/parse-string data true) (catch Exception _ nil))]
          (when (and parsed (= "irc_message" (:type parsed)))
-           (future
-             (try
-               (let [resp (reg/invoke-agent! agent-id (:text parsed))]
-                 (if (and (:ok resp) (string? (:result resp)))
-                   (do
-                     ((:send-to-channel! irc-server)
-                      (or (:channel parsed) "#futon") nick (:result resp))
-                     (println (str "[" nick " → " (or (:channel parsed) "#futon") "] "
-                                   (subs (:result resp) 0 (min 80 (count (:result resp))))))
-                     (flush))
-                   (do
-                     (println (str "[dev] IRC invoke failed: " (:error resp)))
-                     (flush))))
-               (catch Exception e
-                 (println (str "[dev] IRC dispatch error: " (.getMessage e)))
-                 (flush))))))))
+           (let [text (str (:text parsed))
+                 sender (:nick parsed)]
+             ;; Only respond when mentioned, and never respond to self
+             (when (and (mentioned? text nick)
+                        (not= sender nick))
+               (let [prompt (strip-mention text nick)]
+                 (when-not (str/blank? prompt)
+                   (future
+                     (try
+                       (let [resp (reg/invoke-agent! agent-id prompt)]
+                         (if (and (:ok resp) (string? (:result resp)))
+                           (do
+                             ((:send-to-channel! irc-server)
+                              (or (:channel parsed) "#futon") nick (:result resp))
+                             (println (str "[" nick " → " (or (:channel parsed) "#futon") "] "
+                                           (subs (:result resp) 0 (min 80 (count (:result resp))))))
+                             (flush))
+                           (do
+                             (println (str "[dev] IRC invoke failed: " (:error resp)))
+                             (flush))))
+                       (catch Exception e
+                         (println (str "[dev] IRC dispatch error: " (.getMessage e)))
+                         (flush))))))))))))
     ((:join-virtual-nick! irc-server) "#futon" nick)
-    (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon"))
+    (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon (mention-gated)"))
     {:agent-id agent-id :nick nick}))
 
 (defn start-drawbridge!
