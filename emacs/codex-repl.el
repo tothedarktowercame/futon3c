@@ -599,18 +599,18 @@ Invoke CALLBACK with the final response text."
   (let* ((session (or codex-repl-session-id "pending"))
          (irc-up (futon3c-ui-irc-available-p))
          (transports
-          (list (list :key 'codex-repl
-                      :label (format "emacs-codex-repl (active, session %s)" session)
-                      :status 'active
-                      :session session)
-                (list :key 'cli
-                      :label "cli (codex exec --json)"
-                      :status 'available)
-                (list :key 'irc
-                      :label (if irc-up
-                                 "irc (#futon :6667, available)"
-                               "irc (#futon :6667, offline)")
-                      :status (if irc-up 'available 'offline)))))
+          (append
+           (list (list :key 'codex-repl
+                       :label (format "emacs-codex-repl (active, session %s)" session)
+                       :status 'active
+                       :session session)
+                 (list :key 'cli
+                       :label "cli (codex exec --json)"
+                       :status 'available))
+           (when irc-up
+             (list (list :key 'irc
+                         :label "irc (#futon :6667, available)"
+                         :status 'available))))))
     (list :current 'codex-repl
           :current-label "emacs-codex-repl"
           :session-id session
