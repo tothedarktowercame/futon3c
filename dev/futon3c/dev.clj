@@ -179,6 +179,23 @@
          (catch Exception e
            (println (str "[dev] session-id persist warning: " (.getMessage e)))))))
 
+(defn- session-file->file
+  "Normalize session-file input into java.io.File when possible."
+  [session-file]
+  (cond
+    (instance? java.io.File session-file) session-file
+    (string? session-file) (io/file session-file)
+    :else nil))
+
+(defn- preferred-session-id
+  "Pick the best session id for invoke continuity.
+   Priority: session file (shared with codex-repl) -> incoming invoke session -> sid atom."
+  [session-file incoming-session-id session-id-atom]
+  (let [file-sid (some-> (session-file->file session-file) read-session-id)
+        incoming (some-> incoming-session-id str str/trim not-empty)
+        atom-sid (some-> session-id-atom deref str str/trim not-empty)]
+    (or file-sid incoming atom-sid)))
+
 (defn- start-codex-ws-bridge!
   "Start an in-process Codex WS bridge.
 
@@ -783,10 +800,11 @@
                                               (json/generate-string prompt))
                          :else            (str prompt))
             prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
-            used-sid (or session-id "new")]
+            invoke-sid (preferred-session-id session-file session-id session-id-atom)
+            used-sid (or invoke-sid "new")]
         (println (str "[invoke] " agent-id " codex exec "
                       (subs prompt-str 0 (min 80 (count prompt-str)))
-                      "... (session: " (when session-id (subs session-id 0 (min 8 (count session-id)))) ")"))
+                      "... (session: " (when invoke-sid (subs invoke-sid 0 (min 8 (count invoke-sid)))) ")"))
         (flush)
         ;; Evidence: invoke started
         (emit-invoke-evidence! agent-id "invoke-start"
@@ -806,7 +824,7 @@
         ;; Start ticker with evidence heartbeats
         (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
               result (try
-                       (inner-fn prompt session-id)
+                       (inner-fn prompt invoke-sid)
                        (finally
                          (stop-ticker!)))
               final-sid (:session-id result)
