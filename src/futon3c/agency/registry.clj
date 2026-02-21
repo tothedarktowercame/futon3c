@@ -177,13 +177,14 @@
     @result))
 
 (defn deregister-agent!
-  "Remove an agent from the registry. Returns {:ok true :agent-id id} or
-   {:ok false :error \"not-found\"} if the agent wasn't registered."
+  "Compatibility wrapper around `unregister-agent!`.
+
+   Returns legacy shape:
+   {:ok true :agent-id id} or {:ok false :error \"not-found\"}."
   [agent-id]
   (let [aid-val (agent-id-value agent-id)
-        existed? (contains? @!registry aid-val)]
-    (swap! !registry dissoc aid-val)
-    (if existed?
+        result (unregister-agent! agent-id)]
+    (if (:ok result)
       {:ok true :agent-id aid-val}
       {:ok false :error "not-found"})))
 
@@ -270,11 +271,11 @@
          (try
            (cond
              invoke-fn
-             (let [call-invoke (fn []
+                   (let [call-invoke (fn []
                                  (try
                                    (invoke-fn prompt current-session)
                                    (catch clojure.lang.ArityException _
-                                     (invoke-fn prompt current-session))))
+                                     (invoke-fn prompt))))
                    result-map (if timeout-ms
                                 (let [f (future (call-invoke))
                                       v (deref f timeout-ms ::timeout)]

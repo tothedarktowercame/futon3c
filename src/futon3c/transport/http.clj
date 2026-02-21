@@ -717,10 +717,18 @@
 (defn- handle-agent-delete
   "DELETE /api/alpha/agents/:id — deregister an agent."
   [_config agent-id]
-  (let [result (reg/deregister-agent! agent-id)]
+  (let [result (reg/unregister-agent! agent-id)]
     (if (:ok result)
       (json-response 200 {:ok true :agent-id agent-id :deregistered true})
-      (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
+      (let [err (:error result)
+            code (if (map? err) (:error/code err) :deregister-failed)]
+        (json-response (if (= :agent-not-found code) 404 502)
+                       {:ok false
+                        :error (if (= :agent-not-found code)
+                                 (str "Agent not found: " agent-id)
+                                 (if (map? err)
+                                   (:error/message err)
+                                   (str err)))})))))
 
 ;; =============================================================================
 ;; Mission-control endpoints
