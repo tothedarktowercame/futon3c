@@ -882,36 +882,43 @@
        (let [parsed (try (json/parse-string data true) (catch Exception _ nil))]
          (when (and parsed (= "irc_message" (:type parsed)))
            (let [text (str (:text parsed))
-                 sender (:nick parsed)]
-             ;; Only respond when mentioned, and never respond to self
-             (when (and (mentioned? text nick)
-                        (not= sender nick))
+                 sender (:nick parsed)
+                 channel (or (:channel parsed) "#futon")]
+             (println (str "[irc] " channel " <" sender "> " text))
+             (flush)
+             (if (and (mentioned? text nick)
+                      (not= sender nick))
                (let [prompt (strip-mention text nick)]
-                 (when-not (str/blank? prompt)
-                   (future
-                     (try
-                       (let [resp (reg/invoke-agent! agent-id prompt invoke-timeout-ms)]
-                         (if (and (:ok resp) (string? (:result resp)))
-                           (do
-                             ((:send-to-channel! irc-server)
-                              (or (:channel parsed) "#futon") nick (:result resp))
-                             (println (str "[" nick " → " (or (:channel parsed) "#futon") "] "
-                                           (subs (:result resp) 0 (min 80 (count (:result resp))))))
-                             (flush))
-                           (do
-                             (let [err-msg (if (map? (:error resp))
-                                             (or (:error/message (:error resp))
-                                                 (pr-str (:error resp)))
-                                             (str (:error resp)))]
-                               (println (str "[dev] IRC invoke failed: " err-msg))
-                               ((:send-to-channel! irc-server)
-                                (or (:channel parsed) "#futon")
-                                nick
-                                (str "[invoke failed] " err-msg)))
-                             (flush))))
-                       (catch Exception e
-                         (println (str "[dev] IRC dispatch error: " (.getMessage e)))
-                         (flush))))))))))))
+                 (if (str/blank? prompt)
+                   (do (println (str "[irc] " nick ": mention detected but prompt empty, ignoring"))
+                       (flush))
+                   (do
+                     (println (str "[irc] " nick ": dispatching invoke (timeout=" invoke-timeout-ms "ms)"))
+                     (flush)
+                     (future
+                       (try
+                         (let [resp (reg/invoke-agent! agent-id prompt invoke-timeout-ms)]
+                           (if (and (:ok resp) (string? (:result resp)))
+                             (do
+                               ((:send-to-channel! irc-server) channel nick (:result resp))
+                               (println (str "[irc] " nick " → " channel " ("
+                                             (count (:result resp)) " chars): "
+                                             (subs (:result resp) 0 (min 120 (count (:result resp))))))
+                               (flush))
+                             (do
+                               (let [err-msg (if (map? (:error resp))
+                                               (or (:error/message (:error resp))
+                                                   (pr-str (:error resp)))
+                                               (str (:error resp)))]
+                                 (println (str "[irc] " nick " invoke FAILED: " err-msg))
+                                 ((:send-to-channel! irc-server) channel nick
+                                  (str "[invoke failed] " err-msg)))
+                               (flush))))
+                         (catch Exception e
+                           (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
+                           (flush)))))))
+               (do (println (str "[irc] " nick ": not mentioned, skipping"))
+                   (flush))))))))
     ((:join-virtual-nick! irc-server) "#futon" nick)
     (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon (mention-gated)"))
     {:agent-id agent-id :nick nick}))
