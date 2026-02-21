@@ -100,6 +100,17 @@ Examples:
 - `make codex ARGS="--repl --last"` — hop into Emacs REPL on your latest Codex session
 - `make codex ARGS="--repl <SESSION_ID>"` — hop into Emacs REPL for a specific session
 
+### Codex WS Bridge
+
+`make dev` in laptop role starts an in-process Codex WebSocket bridge by default
+(`FUTON3C_CODEX_WS_BRIDGE=true` for `FUTON3C_ROLE=laptop`). This keeps `codex-1`
+reachable through `/api/alpha/invoke` and IRC dispatch without a separate bridge
+process.
+
+`make codex-repl` reuses the same session file (`/tmp/futon-codex-session-id`) and
+prefers the live Agency session when available, so Emacs and IRC can pivot through
+the same continuity lane.
+
 When using `--repl`, `codex-repl.el` logs evidence turn-by-turn:
 - session bootstrap (`claim-type: goal`, event `session-start`)
 - user and assistant chat turns (`claim-type: question` / `observation`)

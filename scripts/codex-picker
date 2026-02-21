@@ -52,7 +52,14 @@ codex_sandbox="${CODEX_SANDBOX:-danger-full-access}"
 emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
-evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
+agency_agent_id="${AGENCY_AGENT_ID:-codex-1}"
+if [[ -n "${FUTON3C_EVIDENCE_BASE:-}" ]]; then
+  evidence_base="${FUTON3C_EVIDENCE_BASE}"
+elif [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
+  evidence_base="${FUTON3C_SELF_URL}"
+else
+  evidence_base="http://127.0.0.1:${FUTON3C_PORT:-7070}"
+fi
 
 elisp_escape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "$1"
@@ -85,12 +92,37 @@ EOF
 
 register_agent() {
   command -v curl >/dev/null 2>&1 || return 0
-  local agent_id="${1:-codex-1}"
+  local agent_id="${1:-${agency_agent_id}}"
   curl -sS --max-time 2 \
     -H "Content-Type: application/json" \
     -X POST \
     -d "{\"agent-id\":\"${agent_id}\",\"type\":\"codex\"}" \
     "${evidence_base%/}/api/alpha/agents" >/dev/null 2>&1 || true
+}
+
+resolve_agent_session_id() {
+  local agent_id="${1:-${agency_agent_id}}" payload sid
+  command -v curl >/dev/null 2>&1 || return 1
+  payload="$(curl -sS --max-time 2 \
+    "${evidence_base%/}/api/alpha/agents/${agent_id}" 2>/dev/null || true)"
+  [[ -n "${payload}" ]] || return 1
+  if command -v jq >/dev/null 2>&1; then
+    sid="$(printf '%s' "${payload}" \
+      | jq -r '.agent["session-id"] // .agent.session_id // empty' 2>/dev/null || true)"
+  elif command -v python3 >/dev/null 2>&1; then
+    sid="$(printf '%s' "${payload}" | python3 -c 'import json,sys
+try:
+    data=json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+agent=data.get("agent") or {}
+sid=agent.get("session-id") or agent.get("session_id") or ""
+print(sid, end="")' 2>/dev/null || true)"
+  else
+    sid=""
+  fi
+  [[ -n "${sid}" ]] || return 1
+  printf '%s\n' "${sid}"
 }
 
 latest_session_id() {
@@ -113,6 +145,7 @@ latest_session_id() {
 
 launch_repl() {
   local sid="${1:-}" sid_form escaped_session_file escaped_ui escaped_repl
+  local escaped_agency_base escaped_evidence_url
   if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
     echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
     exit 1
@@ -120,6 +153,8 @@ launch_repl() {
   escaped_session_file="$(elisp_escape "${session_file}")"
   escaped_ui="$(elisp_escape "${emacs_dir}/futon3c-ui.el")"
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
+  escaped_agency_base="$(elisp_escape "${evidence_base%/}")"
+  escaped_evidence_url="$(elisp_escape "${evidence_base%/}/api/alpha/evidence")"
   if [[ -n "${sid}" ]]; then
     sid_form="\"$(elisp_escape "${sid}")\""
   else
@@ -128,7 +163,9 @@ launch_repl() {
   "${emacsclient_bin}" -e "(progn
     (load \"${escaped_ui}\")
     (load \"${escaped_repl}\")
+    (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\")
     (setq codex-repl-session-file \"${escaped_session_file}\")
+    (setq codex-repl-evidence-url \"${escaped_evidence_url}\")
     (setq codex-repl-session-id ${sid_form})
     (codex-repl))" >/dev/null
 }
@@ -202,8 +239,11 @@ if $open_repl; then
         echo "Could not determine latest Codex session id from ~/.codex/sessions." >&2
         exit 1
       fi
-    elif [[ -f "${session_file}" ]]; then
-      sid="$(tr -d '\r\n' < "${session_file}")"
+    else
+      sid="$(resolve_agent_session_id "${agency_agent_id}" || true)"
+      if [[ -z "${sid}" && -f "${session_file}" ]]; then
+        sid="$(tr -d '\r\n' < "${session_file}")"
+      fi
     fi
 
     if [[ -z "${sid}" ]]; then
@@ -214,7 +254,7 @@ if $open_repl; then
       printf '%s' "${sid}" > "${session_file}"
       echo "Opening Emacs Codex REPL (session ${sid})."
       emit_session_evidence "${sid}" "codex-picker-repl" "repl"
-      register_agent "codex-1"
+      register_agent "${agency_agent_id}"
     else
       echo "Opening Emacs Codex REPL (no prior session id found; new on first turn)."
     fi
@@ -240,16 +280,16 @@ fi
 
 if [[ -n "${session_id}" ]]; then
   emit_session_evidence "${session_id}" "codex-picker-resume" "explicit"
-  register_agent "codex-1"
+  register_agent "${agency_agent_id}"
 elif $resume_last; then
   sid="$(latest_session_id || true)"
   if [[ -n "${sid}" ]]; then
     emit_session_evidence "${sid}" "codex-picker-resume" "last"
-    register_agent "codex-1"
+    register_agent "${agency_agent_id}"
   fi
 elif [[ -n "${session_hint}" ]]; then
   emit_session_evidence "${session_hint}" "codex-picker-resume" "hint"
-  register_agent "codex-1"
+  register_agent "${agency_agent_id}"
 fi
 
 exec "${cmd[@]}"

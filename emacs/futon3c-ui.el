@@ -14,6 +14,29 @@
   "Shared UI for futon3c chat buffers."
   :group 'communication)
 
+(defcustom futon3c-ui-agency-base-url
+  (or (getenv "FUTON3C_EVIDENCE_BASE")
+      (getenv "FUTON3C_SELF_URL")
+      (format "http://127.0.0.1:%s" (or (getenv "FUTON3C_PORT") "7070")))
+  "Agency base URL used for availability checks in chat headers."
+  :type 'string
+  :group 'futon3c-ui)
+
+(defcustom futon3c-ui-irc-host
+  (or (getenv "FUTON3C_BIND_HOST") "127.0.0.1")
+  "IRC host used for local availability checks."
+  :type 'string
+  :group 'futon3c-ui)
+
+(defcustom futon3c-ui-irc-port
+  (let ((raw (getenv "FUTON3C_IRC_PORT")))
+    (if (and raw (string-match-p "\\`[0-9]+\\'" raw))
+        (string-to-number raw)
+      6667))
+  "IRC port used for local availability checks."
+  :type 'integer
+  :group 'futon3c-ui)
+
 (defface futon3c-ui-joe-face
   '((t :foreground "#50fa7b" :weight bold))
   "Face for joe."
@@ -316,13 +339,30 @@ Replaces the `(session: ...)' text in the first line."
         t)
     (error nil)))
 
+(defun futon3c-ui--url-host-port (url default-port)
+  "Extract host/port from URL, falling back to DEFAULT-PORT when missing."
+  (let ((clean (and (stringp url) (string-trim url))))
+    (if (and clean
+             (string-match
+              "\\`[a-zA-Z]+://\\([^/:?#]+\\)\\(?::\\([0-9]+\\)\\)?\\(?:[/?#].*\\)?\\'"
+              clean))
+        (cons (match-string 1 clean)
+              (if-let ((port (match-string 2 clean)))
+                (string-to-number port)
+                default-port))
+      (cons "127.0.0.1" default-port))))
+
 (defun futon3c-ui-irc-available-p ()
-  "Check if IRC relay is running on port 6667."
-  (futon3c-ui-port-open-p "127.0.0.1" 6667))
+  "Check if IRC relay is reachable on configured host/port."
+  (and (integerp futon3c-ui-irc-port)
+       (> futon3c-ui-irc-port 0)
+       (futon3c-ui-port-open-p futon3c-ui-irc-host futon3c-ui-irc-port)))
 
 (defun futon3c-ui-agency-available-p ()
-  "Check if futon3c agency HTTP server is reachable on port 7070."
-  (futon3c-ui-port-open-p "127.0.0.1" 7070))
+  "Check if futon3c agency HTTP server is reachable."
+  (pcase-let ((`(,host . ,port)
+               (futon3c-ui--url-host-port futon3c-ui-agency-base-url 7070)))
+    (futon3c-ui-port-open-p host port)))
 
 ;;; Base keymap
 

@@ -71,7 +71,8 @@ Set to nil to disable and send raw user text."
 
 (defcustom codex-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
-      "http://localhost:7070/api/alpha/evidence")
+      (format "%s/api/alpha/evidence"
+              (string-remove-suffix "/" futon3c-ui-agency-base-url)))
   "Evidence API endpoint used to log codex-repl session starts."
   :type 'string
   :group 'codex-repl)

@@ -206,10 +206,21 @@ Then send two frames:
 This path gives practical Codex parity with the Claude transport pivot:
 
 1. `codex-repl.el` for direct Emacs chat.
-2. `irc_codex_relay.clj` for IRC participation.
+2. The Codex WS bridge for futon3c/IRC participation.
 3. Shared session continuity through `/tmp/futon-codex-session-id`.
 
-### Start Codex IRC Relay
+### Automatic spin-up (default)
+
+- `make dev` under the laptop role starts the in-process Codex WS bridge by
+  default (`FUTON3C_CODEX_WS_BRIDGE=true`). Codex stays WS-connected while the
+  dev JVM is up, so IRC can page it without extra bridge setup.
+- `make codex-repl` opens Emacs against the same continuity lane: it uses
+  `/tmp/futon-codex-session-id` and prefers the live Agency `codex-1` session
+  when available.
+- Net effect: the normal workflow (`make dev` + `make codex-repl`) is enough
+  for Emacs/IRC pivoting.
+
+### Manual Codex IRC Relay (optional)
 
 From `futon3c/`:
 
