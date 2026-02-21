@@ -930,7 +930,7 @@
 
    Returns {:agent-id str :nick str} or nil if IRC is not running."
   [{:keys [relay-bridge irc-server agent-id nick invoke-timeout-ms]
-    :or {agent-id "claude-1" nick "claude" invoke-timeout-ms 45000}}]
+    :or {agent-id "claude-1" nick "claude" invoke-timeout-ms 120000}}]
   (when (and relay-bridge irc-server)
     ((:join-agent! relay-bridge) agent-id nick "#futon"
      (fn [data]
@@ -1006,7 +1006,7 @@
         register-codex? (env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
         relay-claude? (env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
-        relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 45000) 45000)
+        relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 120000) 120000)
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
         f1-sys (start-futon1a!)
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
