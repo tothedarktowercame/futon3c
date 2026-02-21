@@ -63,6 +63,17 @@ Set to nil to use the Codex CLI/user config default."
   :type '(choice (const nil) string)
   :group 'codex-repl)
 
+(defcustom codex-repl-chat-preamble
+  (concat
+   "You are in interactive chat mode. "
+   "Answer directly and concisely. "
+   "Do not run shell commands, edit files, or inspect the repository "
+   "unless the user explicitly asks you to do so.")
+  "Optional instruction prepended to each Codex REPL turn.
+Set to nil to disable and send raw user text."
+  :type '(choice (const nil) string)
+  :group 'codex-repl)
+
 (defcustom codex-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
       "http://localhost:7070/api/alpha/evidence")
@@ -544,7 +555,15 @@ Invoke CALLBACK with the final response text."
          (outbuf (generate-new-buffer " *codex-repl-codex*"))
          (process-environment process-environment)
          (proc nil)
-         (payload (if (string-suffix-p "\n" text) text (concat text "\n"))))
+         (prompt-text (if (and codex-repl-chat-preamble
+                               (not (string-empty-p codex-repl-chat-preamble)))
+                          (format "%s\n\nUser message:\n%s"
+                                  codex-repl-chat-preamble
+                                  text)
+                        text))
+         (payload (if (string-suffix-p "\n" prompt-text)
+                      prompt-text
+                    (concat prompt-text "\n"))))
     (setq codex-repl--thinking-start-time (float-time)
           codex-repl--last-progress-status "starting")
     (setq proc
