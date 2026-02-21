@@ -21,6 +21,7 @@
    - realtime/single-authority-registration (L6): one connection per agent-id
    - realtime/structured-events-only (R9): typed JSON frames only"
   (:require [futon3c.transport.protocol :as proto]
+            [futon3c.agency.registry :as reg]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -69,9 +70,23 @@
         (let [claimed {:peripheral (:peripheral current)
                        :state-atom (:peripheral-state current)}
               after (update before ch dissoc :peripheral :peripheral-state :peripheral-id)]
-          (if (compare-and-set! !connections before after)
+  (if (compare-and-set! !connections before after)
             (runner/stop (:peripheral claimed) @(:state-atom claimed) reason)
             (recur)))))))
+
+(defn- live-registry
+  "Merge static registry snapshot with live registered agents so WS traffic sees
+   HTTP-registered/federated agents. Mirrors the HTTP transport behavior."
+  [config]
+  (let [static-reg (or (:registry config) {})
+        live-status (reg/registry-status)
+        live-agents (into {}
+                          (map (fn [[id {:keys [capabilities type]}]]
+                                 [id (cond-> {:capabilities (vec capabilities)}
+                                       (some? type) (assoc :type type))]))
+                          (:agents live-status))
+        merged-agents (merge (:agents static-reg) live-agents)]
+    (assoc static-reg :agents merged-agents)))
 
 ;; =============================================================================
 ;; Connection state
@@ -121,7 +136,7 @@
   (let [!connections (atom {})
         send-fn (or (:send-fn config) hk/send!)
         close-fn (or (:close-fn config) hk/close)
-        registry (:registry config)
+        registry-view #(live-registry config)
         patterns (:patterns config)
         on-connect-hook (:on-connect config)
         on-disconnect-hook (:on-disconnect config)
@@ -179,7 +194,7 @@
                                                    :id/type :continuity}
                                    :conn/at (now-str)
                                    :conn/metadata {:ready true}}
-                       result (presence/verify conn-event registry)]
+                       result (presence/verify conn-event (registry-view))]
                    (if (error? result)
                      ;; Handshake failed — send error, close connection
                      (do
@@ -204,13 +219,14 @@
                                 (transport-error :not-ready
                                                  "Readiness handshake required before sending messages")))
                    ;; Connected — classify and dispatch
-                   (let [;; Override :msg/from with authenticated agent-id
+                     (let [;; Override :msg/from with authenticated agent-id
                          ;; (prevents impersonation over WS)
                          agent-id (:agent-id conn)
                          message (assoc parsed
                                         :msg/from {:id/value agent-id
                                                    :id/type :continuity})
-                         classified (mode/classify message patterns)]
+                         classified (mode/classify message patterns)
+                         registry (registry-view)]
                      (if (error? classified)
                        (send-fn ch (proto/render-ws-frame classified))
                        (let [result (dispatch/dispatch classified registry)]
@@ -226,7 +242,8 @@
                      (send-fn ch (proto/render-ws-frame
                                   (transport-error :peripheral-already-active
                                                    "A peripheral session is already active on this connection")))
-                     (let [agent-id (:agent-id conn)
+                     (let [registry (registry-view)
+                           agent-id (:agent-id conn)
                            pid (resolve-peripheral-id (:peripheral-id parsed) agent-id registry)
                            periph-config (:peripheral-config registry)]
                        (cond
