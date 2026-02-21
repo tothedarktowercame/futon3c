@@ -306,15 +306,23 @@ Replaces the `(session: ...)' text in the first line."
           (replace-match (propertize new-text 'face 'font-lock-comment-face) t t)))
       (setq futon3c-ui--session-id new-id))))
 
-;;; IRC check (shared)
+;;; Transport availability checks (shared)
 
-(defun futon3c-ui-irc-available-p ()
-  "Check if IRC relay is running on port 6667."
+(defun futon3c-ui-port-open-p (host port)
+  "Return non-nil when HOST:PORT accepts a TCP connection."
   (condition-case nil
-      (let ((proc (open-network-stream "irc-check" nil "127.0.0.1" 6667)))
+      (let ((proc (open-network-stream "futon3c-port-check" nil host port)))
         (delete-process proc)
         t)
     (error nil)))
+
+(defun futon3c-ui-irc-available-p ()
+  "Check if IRC relay is running on port 6667."
+  (futon3c-ui-port-open-p "127.0.0.1" 6667))
+
+(defun futon3c-ui-agency-available-p ()
+  "Check if futon3c agency HTTP server is reachable on port 7070."
+  (futon3c-ui-port-open-p "127.0.0.1" 7070))
 
 ;;; Base keymap
 

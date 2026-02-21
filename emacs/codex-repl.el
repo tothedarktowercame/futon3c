@@ -597,6 +597,7 @@ Invoke CALLBACK with the final response text."
 (defun codex-repl--compute-modeline-state ()
   "Return plist describing current transport/modeline state."
   (let* ((session (or codex-repl-session-id "pending"))
+         (agency-up (futon3c-ui-agency-available-p))
          (irc-up (futon3c-ui-irc-available-p))
          (transports
           (append
@@ -607,6 +608,10 @@ Invoke CALLBACK with the final response text."
                  (list :key 'cli
                        :label "cli (codex exec --json)"
                        :status 'available))
+           (when agency-up
+             (list (list :key 'agency
+                         :label "agency (/api/alpha/invoke, available)"
+                         :status 'available)))
            (when irc-up
              (list (list :key 'irc
                          :label "irc (#futon :6667, available)"
@@ -614,6 +619,7 @@ Invoke CALLBACK with the final response text."
     (list :current 'codex-repl
           :current-label "emacs-codex-repl"
           :session-id session
+          :agency-available? agency-up
           :irc-available? irc-up
           :timestamp (current-time)
           :transports transports)))
@@ -637,6 +643,7 @@ With REFRESH non-nil, recompute the state even if cached."
 (defun codex-repl--world-view-string (state)
   "Return multi-line description of STATE plist."
   (let* ((session (plist-get state :session-id))
+         (agency? (if (plist-get state :agency-available?) "up" "down"))
          (irc? (if (plist-get state :irc-available?) "up" "down"))
          (timestamp (plist-get state :timestamp))
          (time-str (format-time-string "%Y-%m-%d %H:%M:%S %Z" timestamp))
@@ -644,6 +651,7 @@ With REFRESH non-nil, recompute the state even if cached."
          (lines (list (format "Codex REPL world @ %s" time-str)
                       (format "  Session: %s" session)
                       (format "  Current transport: %s" current)
+                      (format "  Agency API: %s" agency?)
                       (format "  IRC relay: %s" irc?)
                       "  Transports:")))
     (dolist (entry (plist-get state :transports))
@@ -658,6 +666,7 @@ With REFRESH non-nil, recompute the state even if cached."
   "Return header line string summarizing Codex transport state."
   (let* ((state (codex-repl-modeline-state))
          (session (plist-get state :session-id))
+         (agency (if (plist-get state :agency-available?) "agency:up" "agency:down"))
          (irc (if (plist-get state :irc-available?) "irc:up" "irc:down"))
          (current (plist-get state :current-label))
          (transports (mapconcat (lambda (entry)
@@ -666,8 +675,8 @@ With REFRESH non-nil, recompute the state even if cached."
                                           (plist-get entry :status)))
                                 (plist-get state :transports)
                                 ", ")))
-    (format "Codex session %s | current=%s | %s | transports[%s]"
-            session current irc transports)))
+    (format "Codex session %s | current=%s | %s | %s | transports[%s]"
+            session current agency irc transports)))
 
 (defun codex-repl-refresh-header-line (&optional refresh buffer)
   "Refresh Codex modeline header.
