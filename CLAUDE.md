@@ -141,6 +141,31 @@ M-peripheral-gauntlet §"Foundational Constraint." When porting from futon3,
 the existing code documents what worked and what failed — read it as design
 documentation, not as code to copy blindly.
 
+## Agent Prompting: Surface Contracts
+
+When agents operate across multiple surfaces (IRC, Emacs buffer, WS), they
+need factual context about where their output will appear. The correct pattern
+is **surface contracts**: tell the agent what surface it's on and how its
+output will be delivered. This is transport metadata, not capability restriction.
+
+**Good** (surface context — invariant-compliant):
+- "Current surface: IRC. Your returned text will be posted to #futon as \<nick\>."
+- "Current surface: emacs-codex-repl. Your response is shown only in this buffer."
+- "Do not claim to write relay files unless this turn actually executed such a tool."
+
+**Bad** (capability restriction — violates the spirit of I-1/I-3):
+- Adding `--tools ""` to disable agent tools
+- Injecting system prompts that tell agents to "keep responses short" or "avoid tool use"
+- Setting `--effort low` to lobotomize the agent
+
+The distinction: surface contracts give agents accurate information about their
+environment. Capability restrictions make agents less capable. We want fully
+capable agents that know where they are.
+
+**Reference commit**: `f5c3e25` — "Enforce explicit surface contracts for Codex
+replies" — `irc-invoke-prompt` in dev.clj and `codex-repl--surface-contract` in
+codex-repl.el.
+
 ## Development Protocol
 
 Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):
