@@ -26,6 +26,8 @@
             [clojure.string :as str]
             [org.httpkit.client :as http])
   (:import [java.io BufferedReader File InputStreamReader]
+           [java.lang ProcessBuilder$Redirect]
+           [java.util.concurrent TimeUnit]
            [java.net URI]
            [java.net.http HttpClient WebSocket WebSocket$Listener]
            [java.time Instant]
@@ -104,9 +106,11 @@
                  sid     (into ["--resume" sid])
                  new-sid (into ["--session-id" new-sid]))
           used-sid (or sid new-sid)
+          timeout-ms 120000
           pb (doto (ProcessBuilder. ^java.util.List (vec args))
                (.directory (File. claude-cwd))
-               (.redirectErrorStream false))
+               (.redirectErrorStream false)
+               (.redirectInput (ProcessBuilder$Redirect/from (File. "/dev/null"))))
           proc (.start pb)
           ;; Accumulate text and session-id from the stream
           text-acc (StringBuilder.)
@@ -151,7 +155,12 @@
                                  (.append sb "\n")
                                  (recur))))
                            (str sb))))]
-      (.waitFor proc)
+      (let [finished? (.waitFor proc timeout-ms TimeUnit/MILLISECONDS)]
+        (when-not finished?
+          (println "[bridge] TIMEOUT after 120s — killing process")
+          (flush)
+          (.destroyForcibly proc)
+          (.waitFor proc 5000 TimeUnit/MILLISECONDS)))
       @stdout-fut
       (let [exit (.exitValue proc)
             _err @stderr-fut
