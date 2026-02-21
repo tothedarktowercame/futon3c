@@ -925,7 +925,7 @@
        (let [parsed (try (json/parse-string data true) (catch Exception _ nil))]
          (when (and parsed (= "irc_message" (:type parsed)))
            (let [text (str (:text parsed))
-                 sender (:nick parsed)
+                 sender (or (:from parsed) (:nick parsed))
                  channel (or (:channel parsed) "#futon")]
              (println (str "[irc] " channel " <" sender "> " text))
              (flush)

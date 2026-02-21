@@ -546,11 +546,14 @@
         send-to-channel!
         (fn [channel from-nick text]
           ;; Send PRIVMSG to a channel from an agent nick (used by relay bridge)
+          ;; Also relay to other agents so they can see each other's messages
           (let [nicks (get @rooms channel #{})
                 all-clients @clients]
             (doseq [[cid client] all-clients
                      :when (contains? nicks (:nick client))]
-              (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text)))))
+              (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text))))
+          (emit-evidence! channel from-nick text)
+          (relay-fn channel from-nick text))
 
         ;; F1: Keepalive loop — single future for all clients
         keepalive-loop
