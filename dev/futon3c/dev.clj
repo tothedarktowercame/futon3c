@@ -26,6 +26,9 @@
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
                         — codex approval policy (default: never)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
+     FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
+     FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
+     FUTON3C_CODEX_WS_PATH   — override codex WS bridge path (default /agency/ws)
      FUTON3C_REGISTER_CLAUDE — whether to register claude-1 on this host
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host"
   (:require [futon1a.system :as f1]
@@ -46,7 +49,10 @@
             [clojure.java.io :as io]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
-           [java.util UUID]))
+           [java.util UUID]
+           [java.net URI]
+           [java.net.http HttpClient WebSocket WebSocket$Listener]
+           [java.util.concurrent CompletableFuture]))
 
 (defn env
   "Read an env var with optional default."
@@ -123,6 +129,122 @@
          (catch Exception e
            (println (str "[dev] session-id persist warning: " (.getMessage e)))))))
 
+(defn- make-codex-invoke-wrapper
+  "Create codex invoke fn + durable session file state shared by transports."
+  []
+  (let [raw-invoke-fn (codex-cli/make-invoke-fn
+                       {:codex-bin (or (env "CODEX_BIN") "codex")
+                        :model (or (env "CODEX_MODEL") "gpt-5-codex")
+                        :sandbox (or (env "CODEX_SANDBOX") "workspace-write")
+                        :approval-policy (or (env "CODEX_APPROVAL_POLICY")
+                                             (env "CODEX_APPROVAL")
+                                             "never")
+                        :cwd (System/getProperty "user.dir")})
+        session-file (io/file (or (env "CODEX_SESSION_FILE")
+                                  "/tmp/futon-codex-session-id"))
+        initial-sid (read-session-id session-file)
+        invoke-fn (fn [prompt session-id]
+                    (let [result (raw-invoke-fn prompt session-id)
+                          sid (:session-id result)]
+                      (persist-session-id! session-file sid)
+                      result))]
+    {:invoke-fn invoke-fn
+     :session-file session-file
+     :initial-sid initial-sid}))
+
+(defn- start-codex-ws-bridge!
+  "Start an in-process Codex WS bridge.
+
+   Connects codex-1 to this host's /agency/ws endpoint, handles invoke frames,
+   runs codex-cli invoke-fn, and replies with invoke_result frames.
+   Returns {:stop-fn fn}."
+  [{:keys [agent-id invoke-fn initial-sid session-file ws-base ws-path]
+    :or {agent-id "codex-1"
+         ws-path "/agency/ws"}}]
+  (let [sid* (atom initial-sid)
+        running? (atom true)
+        ws* (atom nil)
+        client (HttpClient/newHttpClient)
+        send-json! (fn [^WebSocket ws payload]
+                     (.join (.sendText ws (json/generate-string payload) true)))
+        ws-url (fn []
+                 (str (str/replace ws-base #"/$" "")
+                      ws-path
+                      "?agent-id=" agent-id
+                      (when-let [sid (some-> @sid* str not-empty)]
+                        (str "&session-id=" sid))))
+        handle-invoke! (fn [^WebSocket ws frame]
+                         (let [invoke-id (:invoke_id frame)
+                               prompt (:prompt frame)
+                               incoming-session (:session_id frame)]
+                           (when (string? invoke-id)
+                             (future
+                               (let [result (invoke-fn (str prompt) incoming-session)
+                                     sid (:session-id result)]
+                                 (when (and (string? sid) (not (str/blank? sid)))
+                                   (reset! sid* sid)
+                                   (persist-session-id! session-file sid))
+                                 (let [payload (cond-> {"type" "invoke_result"
+                                                        "invoke_id" invoke-id}
+                                                 sid (assoc "session_id" sid)
+                                                 (:error result) (assoc "error" (str (:error result)))
+                                                 (not (:error result)) (assoc "result" (or (:result result) "")))]
+                                   (try
+                                     (send-json! ws payload)
+                                     (catch Exception e
+                                       (println (str "[dev] codex ws bridge send failed: "
+                                                     (.getMessage e)))))))))))
+        worker (future
+                 (while @running?
+                   (let [closed (promise)
+                         url (ws-url)]
+                     (try
+                       (println (str "[dev] codex ws bridge connecting: " url))
+                       (flush)
+                       (let [listener (reify WebSocket$Listener
+                                        (onOpen [_ ws]
+                                          (reset! ws* ws)
+                                          (send-json! ws {"type" "ready"
+                                                          "agent_id" agent-id
+                                                          "session_id" (or @sid* (str "sess-" (System/currentTimeMillis)))})
+                                          (.request ws 1))
+                                        (onText [_ ws data _last]
+                                          (try
+                                            (let [frame (json/parse-string (str data) true)]
+                                              (when (= "invoke" (:type frame))
+                                                (handle-invoke! ws frame)))
+                                            (catch Exception e
+                                              (println (str "[dev] codex ws bridge parse failed: "
+                                                            (.getMessage e)))))
+                                          (.request ws 1)
+                                          (CompletableFuture/completedFuture nil))
+                                        (onClose [_ _ws _code _reason]
+                                          (reset! ws* nil)
+                                          (deliver closed true)
+                                          (CompletableFuture/completedFuture nil))
+                                        (onError [_ _ws e]
+                                          (reset! ws* nil)
+                                          (println (str "[dev] codex ws bridge error: " (.getMessage e)))
+                                          (flush)
+                                          (deliver closed true)))]
+                         (.join (.buildAsync (.newWebSocketBuilder client)
+                                             (URI/create url)
+                                             listener))
+                         (deref closed 600000 nil))
+                       (catch Exception e
+                         (println (str "[dev] codex ws bridge connect failed: " (.getMessage e)))
+                         (flush))))
+                   (when @running?
+                     (Thread/sleep 5000))))]
+    {:stop-fn (fn []
+                (reset! running? false)
+                (when-let [ws @ws*]
+                  (try
+                    (.join (.sendClose ws WebSocket/NORMAL_CLOSURE "shutdown"))
+                    (catch Exception _)))
+                (future-cancel worker))
+     :sid* sid*}))
+
 ;; =============================================================================
 ;; Runtime atoms — populated by -main, accessible from Drawbridge REPL
 ;; =============================================================================
@@ -132,6 +254,7 @@
 (defonce !irc-sys (atom nil))
 (defonce !f3c-sys (atom nil))
 (defonce !tickle (atom nil))
+(defonce !codex-ws-bridge (atom nil))
 
 ;; =============================================================================
 ;; REPL helpers — use from Drawbridge or nREPL after boot
@@ -561,6 +684,7 @@
         register-codex? (env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
         relay-claude? (env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
+        codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
         f1-sys (start-futon1a!)
         evidence-store (xb/make-xtdb-backend (:node f1-sys))
         _ (reset! !f1-sys f1-sys)
@@ -605,30 +729,45 @@
                               (str " (session: " (subs initial-sid 0
                                                        (min 8 (count initial-sid))) ")"))))))
         _ (when register-codex?
-            (let [raw-invoke-fn (codex-cli/make-invoke-fn
-                                 {:codex-bin (or (env "CODEX_BIN") "codex")
-                                  :model (or (env "CODEX_MODEL") "gpt-5-codex")
-                                  :sandbox (or (env "CODEX_SANDBOX") "workspace-write")
-                                  :approval-policy (or (env "CODEX_APPROVAL_POLICY")
-                                                       (env "CODEX_APPROVAL")
-                                                       "never")
-                                  :cwd (System/getProperty "user.dir")})
-                  session-file (io/file (or (env "CODEX_SESSION_FILE")
-                                            "/tmp/futon-codex-session-id"))
-                  initial-sid (read-session-id session-file)
-                  invoke-fn (fn [prompt session-id]
-                              (let [result (raw-invoke-fn prompt session-id)
-                                    sid (:session-id result)]
-                                (persist-session-id! session-file sid)
-                                result))]
-              (rt/register-codex! {:agent-id "codex-1"
-                                   :invoke-fn invoke-fn})
-              (when initial-sid
-                (reg/update-agent! "codex-1" :agent/session-id initial-sid))
-              (println (str "[dev] Codex agent registered: codex-1"
-                            (when initial-sid
-                              (str " (session: " (subs initial-sid 0
-                                                       (min 8 (count initial-sid))) ")"))))))
+            (let [{:keys [invoke-fn session-file initial-sid]} (make-codex-invoke-wrapper)
+                  ws-port (or (:port f3c-sys) (env-int "FUTON3C_PORT" 7070))
+                  ws-bridge-enabled? (and codex-ws-bridge? (pos? (long ws-port)))]
+              (when-let [old @!codex-ws-bridge]
+                ((:stop-fn old))
+                (reset! !codex-ws-bridge nil))
+              (if ws-bridge-enabled?
+                (let [ws-base (or (some-> (env "FUTON3C_CODEX_WS_BASE") str/trim not-empty)
+                                  (str "ws://127.0.0.1:" ws-port))
+                      ws-path (or (some-> (env "FUTON3C_CODEX_WS_PATH") str/trim not-empty)
+                                  "/agency/ws")
+                      bridge (start-codex-ws-bridge!
+                              {:agent-id "codex-1"
+                               :invoke-fn invoke-fn
+                               :initial-sid initial-sid
+                               :session-file session-file
+                               :ws-base ws-base
+                               :ws-path ws-path})]
+                  (rt/register-codex! {:agent-id "codex-1"
+                                       :invoke-fn nil
+                                       :metadata {:ws-bridge? true}})
+                  (when initial-sid
+                    (reg/update-agent! "codex-1" :agent/session-id initial-sid))
+                  (reset! !codex-ws-bridge bridge)
+                  (println (str "[dev] Codex agent registered: codex-1 (ws-bridge mode)"
+                                (when initial-sid
+                                  (str " (session: " (subs initial-sid 0
+                                                           (min 8 (count initial-sid))) ")")))))
+                (do
+                  (when codex-ws-bridge?
+                    (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to local invoke-fn"))
+                  (rt/register-codex! {:agent-id "codex-1"
+                                       :invoke-fn invoke-fn})
+                  (when initial-sid
+                    (reg/update-agent! "codex-1" :agent/session-id initial-sid))
+                  (println (str "[dev] Codex agent registered: codex-1"
+                                (when initial-sid
+                                  (str " (session: " (subs initial-sid 0
+                                                           (min 8 (count initial-sid))) ")"))))))))
         ;; Dispatch relays: route IRC messages through invoke-agent!
         _dispatch-relay-claude (when (and irc-sys relay-claude?)
                                  (start-dispatch-relay!
@@ -653,7 +792,8 @@
                   " | register-claude=" register-claude?
                   " register-codex=" register-codex?
                   " | relay-claude=" relay-claude?
-                  " relay-codex=" relay-codex?))
+                  " relay-codex=" relay-codex?
+                  " | codex-ws-bridge=" codex-ws-bridge?))
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")
@@ -710,6 +850,9 @@
       (fn []
         (println "\n[dev] Shutting down...")
         (stop-tickle!)
+        (when-let [stop (:stop-fn @!codex-ws-bridge)]
+          (stop)
+          (reset! !codex-ws-bridge nil))
         (when-let [stop (:stop bridge-sys)] (stop))
         (when-let [stop (:stop-fn (:server irc-sys))] (stop))
         (when-let [stop (:server f3c-sys)] (stop))
