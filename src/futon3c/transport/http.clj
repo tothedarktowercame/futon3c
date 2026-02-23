@@ -14,6 +14,12 @@
      GET  /api/alpha/evidence/:id — retrieve single evidence entry
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      POST /api/alpha/irc/send — post a line to IRC via server relay
+     GET  /api/alpha/reflect/namespaces — list loaded Clojure namespaces
+     GET  /api/alpha/reflect/ns/:ns — public vars in a namespace
+     GET  /api/alpha/reflect/ns/:ns/full — all vars (public + private)
+     GET  /api/alpha/reflect/var/:ns/:var — full var metadata (envelope)
+     GET  /api/alpha/reflect/deps/:ns — namespace dependency graph
+     GET  /api/alpha/reflect/java/:class — Java class reflection
      GET  /health    — liveness check with agent/session counts
 
    Pattern references:
@@ -33,6 +39,7 @@
             [futon3c.social.persist :as persist]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
+            [futon3c.reflection.core :as reflection]
             [cheshire.core :as json]
             [cheshire.generate :as json-gen]
             [clojure.edn :as edn]
@@ -883,6 +890,64 @@
                           :message (str "No wiring diagram for mission " mission-id)}))))
 
 ;; =============================================================================
+;; Reflection endpoints — Clojure runtime introspection
+;; =============================================================================
+
+(defn- handle-reflect-namespaces
+  "GET /api/alpha/reflect/namespaces — list loaded namespaces."
+  [request]
+  (let [pattern (get-in request [:query-params "pattern"])
+        result (if pattern
+                 (reflection/list-namespaces pattern)
+                 (reflection/list-namespaces))]
+    (json-response 200 {:ok true :namespaces result :count (count result)})))
+
+(defn- handle-reflect-ns
+  "GET /api/alpha/reflect/ns/:ns — public vars in a namespace."
+  [ns-str]
+  (let [ns-sym (symbol ns-str)
+        result (reflection/reflect-ns ns-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :vars result :count (count result)}))))
+
+(defn- handle-reflect-ns-full
+  "GET /api/alpha/reflect/ns/:ns/full — all vars (public + private)."
+  [ns-str]
+  (let [ns-sym (symbol ns-str)
+        result (reflection/reflect-ns-full ns-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :vars result :count (count result)}))))
+
+(defn- handle-reflect-var
+  "GET /api/alpha/reflect/var/:ns/:var — full metadata for one var."
+  [ns-str var-str]
+  (let [ns-sym (symbol ns-str)
+        var-sym (symbol var-str)
+        result (reflection/reflect-var ns-sym var-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :envelope result}))))
+
+(defn- handle-reflect-deps
+  "GET /api/alpha/reflect/deps/:ns — namespace dependency graph."
+  [ns-str]
+  (let [ns-sym (symbol ns-str)
+        result (reflection/reflect-deps ns-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :deps result}))))
+
+(defn- handle-reflect-java-class
+  "GET /api/alpha/reflect/java/:class — reflect on a Java class."
+  [class-name]
+  (let [result (reflection/reflect-java-class class-name)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :class result}))))
+
+;; =============================================================================
 ;; Public API
 ;; =============================================================================
 
@@ -965,6 +1030,42 @@
 
           (and (= :get method) (= "/api/alpha/agents" uri))
           (handle-agents-list config)
+
+          ;; Reflection endpoints
+          (and (= :get method) (= "/api/alpha/reflect/namespaces" uri))
+          (handle-reflect-namespaces request)
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/ns/")
+               (str/ends-with? uri "/full"))
+          (let [raw (subs uri (count "/api/alpha/reflect/ns/")
+                         (- (count uri) (count "/full")))]
+            (handle-reflect-ns-full (enc/decode-uri-component raw)))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/ns/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/ns/"))]
+            (handle-reflect-ns (enc/decode-uri-component raw)))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/var/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/var/"))
+                idx (.indexOf raw "/")]
+            (if (pos? idx)
+              (handle-reflect-var
+                (enc/decode-uri-component (subs raw 0 idx))
+                (enc/decode-uri-component (subs raw (inc idx))))
+              (json-response 400 {:ok false :error "Expected /api/alpha/reflect/var/:ns/:var"})))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/deps/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/deps/"))]
+            (handle-reflect-deps (enc/decode-uri-component raw)))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/java/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/java/"))]
+            (handle-reflect-java-class (enc/decode-uri-component raw)))
 
           (and (= :get method) (= "/health" uri))
           (handle-health config started-at)
