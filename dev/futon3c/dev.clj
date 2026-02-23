@@ -10,6 +10,8 @@
      FUTON3C_ROLE       — deployment role (linode|laptop|default)
      FUTON1A_PORT       — HTTP port for futon1a (default 7071)
      FUTON1A_DATA_DIR   — XTDB storage directory
+     FUTON1A_ALLOWED_PENHOLDERS — comma-separated penholders (default: api,joe)
+     FUTON3C_DIRECT_XTDB — enable direct futon3c -> XTDB writes (default false)
      FUTON3C_PORT       — futon3c transport HTTP+WS port (default 7070, 0 = disable)
      FUTON3C_IRC_PORT   — IRC server port (default 6667, 0 = disable)
      FUTON3C_BIND_HOST  — bind address for IRC server (default 0.0.0.0)
@@ -381,13 +383,31 @@
 (defonce !tickle (atom nil))
 (defonce !codex-ws-bridge (atom nil))
 
+(defn- direct-xtdb-enabled?
+  "Whether futon3c may write evidence directly to XTDB.
+   Disabled by default to keep writes on explicit governed paths."
+  []
+  (env-bool "FUTON3C_DIRECT_XTDB" false))
+
+(defn- make-evidence-store
+  "Build the evidence store based on FUTON3C_DIRECT_XTDB.
+   Default is in-memory (no direct XTDB write path)."
+  [f1-sys]
+  (if (direct-xtdb-enabled?)
+    (do
+      (println "[dev] direct XTDB path: ENABLED (legacy mode)")
+      (xb/make-xtdb-backend (:node f1-sys)))
+    (do
+      (println "[dev] direct XTDB path: disabled (using in-memory evidence store)")
+      (atom {:entries {} :order []}))))
+
 ;; =============================================================================
 ;; Invoke evidence emission — writes directly to the evidence store in-JVM
 ;; =============================================================================
 
 (defn- emit-invoke-evidence!
   "Emit an invoke lifecycle evidence entry. Fire-and-forget.
-   Uses the XTDB evidence store directly — no HTTP round-trip."
+   Uses the configured in-process evidence store — no HTTP round-trip."
   [agent-id event-type body-map & {:keys [session-id tags]}]
   (when-let [store @!evidence-store]
     (future
@@ -486,11 +506,22 @@
         data-dir (env "FUTON1A_DATA_DIR"
                       (str (System/getProperty "user.home")
                            "/code/storage/futon1a/default"))
-        static-dir (env "FUTON1A_STATIC_DIR" nil)]
+        static-dir (env "FUTON1A_STATIC_DIR" nil)
+        direct-xtdb? (direct-xtdb-enabled?)
+        allowed-penholders (->> (env-list "FUTON1A_ALLOWED_PENHOLDERS" ["api" "joe"])
+                                (remove str/blank?)
+                                set)]
     (println (str "[dev] Starting futon1a (XTDB: " data-dir ")..."))
-    (let [sys (f1/start! (cond-> {:data-dir data-dir :port port}
+    (let [sys (f1/start! (cond-> {:data-dir data-dir
+                                  :port port
+                                  :allowed-penholders allowed-penholders
+                                  :expose-internals? direct-xtdb?}
                            static-dir (assoc :static-dir static-dir)))]
       (println (str "[dev] futon1a: http://localhost:" (:http/port sys)))
+      (println (str "[dev] futon1a allowed penholders: "
+                    (if (seq allowed-penholders)
+                      (str/join "," (sort allowed-penholders))
+                      "<none>")))
       (when static-dir
         (println (str "[dev] futon1a static: " static-dir)))
       sys)))
@@ -500,19 +531,21 @@
 
    opts:
      :xtdb-node        — XTDB node for persistent peripheral config
+     :evidence-store   — evidence store/backend for peripheral evidence emission
      :irc-interceptor  — (fn [ch conn parsed]) for IRC relay (optional)
      :irc-send-fn      — (fn [channel from text]) for explicit IRC posts (optional)
      :irc-send-base    — remote Agency base URL hint for IRC send fallback"
-  [{:keys [xtdb-node irc-interceptor irc-send-fn irc-send-base]}]
+  [{:keys [xtdb-node evidence-store irc-interceptor irc-send-fn irc-send-base]}]
   (let [port (env-int "FUTON3C_PORT" 7070)]
     (when (pos? port)
       (let [pattern-ids (if-let [s (env "FUTON3C_PATTERNS")]
                           (mapv keyword (remove empty? (.split s ",")))
                           [])
-            opts {:patterns {:patterns/ids pattern-ids}
-                  :xtdb-node xtdb-node
-                  :irc-send-fn irc-send-fn
-                  :irc-send-base irc-send-base}
+            opts (cond-> {:patterns {:patterns/ids pattern-ids}
+                          :irc-send-fn irc-send-fn
+                          :irc-send-base irc-send-base}
+                   xtdb-node (assoc :xtdb-node xtdb-node)
+                   evidence-store (assoc :evidence-store evidence-store))
             http-handler (rt/make-http-handler opts)
             ws-opts (cond-> opts
                       irc-interceptor (assoc :irc-interceptor irc-interceptor))
@@ -1052,7 +1085,8 @@
                                (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
                                (some-> (first-peer-url) normalize-http-base))
         f1-sys (start-futon1a!)
-        evidence-store (xb/make-xtdb-backend (:node f1-sys))
+        direct-xtdb? (direct-xtdb-enabled?)
+        evidence-store (make-evidence-store f1-sys)
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
         _ (mcs/configure! {:evidence-store evidence-store})
@@ -1061,7 +1095,8 @@
         _ (reset! !irc-sys irc-sys)
         ;; futon3c HTTP + WS (with IRC interceptor if IRC is running)
         f3c-sys (start-futon3c!
-                 {:xtdb-node (:node f1-sys)
+                 {:xtdb-node (when direct-xtdb? (:node f1-sys))
+                  :evidence-store evidence-store
                   :irc-send-base irc-send-base-hint
                   :irc-send-fn (when irc-sys
                                  (:send-to-channel! (:server irc-sys)))
