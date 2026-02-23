@@ -456,10 +456,14 @@
   (let [port (env-int "FUTON1A_PORT" 7071)
         data-dir (env "FUTON1A_DATA_DIR"
                       (str (System/getProperty "user.home")
-                           "/code/storage/futon1a/default"))]
+                           "/code/storage/futon1a/default"))
+        static-dir (env "FUTON1A_STATIC_DIR" nil)]
     (println (str "[dev] Starting futon1a (XTDB: " data-dir ")..."))
-    (let [sys (f1/start! {:data-dir data-dir :port port})]
+    (let [sys (f1/start! (cond-> {:data-dir data-dir :port port}
+                           static-dir (assoc :static-dir static-dir)))]
       (println (str "[dev] futon1a: http://localhost:" (:http/port sys)))
+      (when static-dir
+        (println (str "[dev] futon1a static: " static-dir)))
       sys)))
 
 (defn start-futon3c!

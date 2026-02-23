@@ -28,6 +28,7 @@
             [futon3c.peripheral.registry :as preg]
             [futon3c.peripheral.runner :as runner]
             [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.evidence.store :as estore]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -337,6 +338,43 @@
                      (send-fn ch (proto/render-ws-frame
                                   (transport-error :unknown-invoke
                                                    "No pending invoke for invoke_result")))))
+
+                 ;; --- Evidence replication ---
+                 :evidence
+                 (if-not (:connected? conn)
+                   (send-fn ch (proto/render-ws-frame
+                                (transport-error :not-ready
+                                                 "Readiness handshake required before replicating evidence")))
+                   (let [registry (registry-view)
+                         evidence-store (get-in registry [:peripheral-config :evidence-store])
+                         raw-entry (:evidence/entry parsed)]
+                     (cond
+                       (nil? evidence-store)
+                       (send-fn ch (proto/render-ws-frame
+                                    (transport-error :no-evidence-store
+                                                     "No evidence store configured for replication")))
+
+                       ;; Loop protection: reject entries already tagged :replicated
+                       (some #{:replicated "replicated"} (:evidence/tags raw-entry))
+                       (send-fn ch (proto/render-ws-frame
+                                    (transport-error :replication-loop
+                                                     "Entry already has :replicated tag — refusing to re-replicate")))
+
+                       :else
+                       (let [;; Coerce JSON-parsed entry to shape-conforming form,
+                             ;; then tag as replicated and record provenance
+                             agent-id (:agent-id conn)
+                             entry (-> raw-entry
+                                       proto/coerce-replication-entry
+                                       (update :evidence/tags
+                                               (fn [tags] (vec (conj (or tags []) :replicated))))
+                                       (assoc :evidence/replicated-by agent-id
+                                              :evidence/replicated-at (now-str)))
+                             result (estore/append* evidence-store entry)]
+                         (if (contains? result :error/code)
+                           (send-fn ch (proto/render-ws-frame result))
+                           (send-fn ch (proto/render-evidence-ack
+                                        (:evidence/id raw-entry))))))))
 
                  ;; --- Unknown frame type ---
                  (send-fn ch (proto/render-ws-frame
