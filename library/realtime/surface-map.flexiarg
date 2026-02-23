@@ -1,0 +1,79 @@
+@flexiarg realtime/surface-map
+@title Lazy Surface Maps Over Eager Contract Bundling
+@keywords surface, contract, routing, peripheral, transport, multi-surface, self-similarity
+@audience futon3c agent architects, surface/peripheral implementers
+@tone technical
+@style pattern
+@references [realtime/single-authority-registration realtime/transport-pivot]
+
+! conclusion: Give agents a map of available surfaces with on-demand contracts, rather than bundling all surface contracts into the prompt at once. Surfaces and peripherals compose fractally: an agent inhabits a surface through a peripheral, and that agent's own sub-agents do the same at the next level down.
+  + context: You are building a multi-surface coordination system where agents operate across IRC, Emacs buffers, web dashboards, deploy consoles, and other surfaces. Each surface has its own routing semantics, outbound paths, and delivery constraints. Agents need accurate surface context to behave correctly, but loading all surface contracts simultaneously dilutes prompt quality.
+  + IF:
+    You inject every surface contract into the agent's prompt at session start — IRC routing rules, Emacs buffer semantics, deploy console constraints, Slack formatting, etc. — so the agent "knows about" all surfaces at once.
+  + HOWEVER:
+    Prompt space is finite and attention is scarce. Each additional surface contract competes for the agent's context window. Empirically (from custom GPT work), bundling too many operational contexts degrades performance: the agent confuses which rules apply to the current surface, hallucinates cross-surface actions (claiming to post to IRC from an Emacs-only buffer), or ignores constraints buried deep in the preamble. The problem scales with surface count — three surfaces might be manageable, eight will not be.
+  + THEN:
+    Maintain a surface map: a directory of available surfaces, each with a contract that is loaded only when the agent enters that surface. The map itself is lightweight (surface names + one-line descriptions). The full contract (routing rules, outbound paths, delivery semantics, telemetry) is injected only for the active surface. When the agent needs to reach another surface, the map tells it how — either via an outbound path in the current contract (e.g., the IRC send endpoint available from Emacs), or by requesting a surface hop.
+  + BECAUSE:
+    This is the same principle as lazy loading: pay for what you use. The agent needs to know where it is (current surface contract) and what else exists (the map). It does not need the full operational semantics of every surface loaded simultaneously. This preserves prompt quality while maintaining multi-surface awareness.
+
+  + SURFACE-PERIPHERAL SELF-SIMILARITY:
+    Surfaces and peripherals are orthogonal but compose at every level:
+    - A peripheral constrains what you CAN DO (tools, scope, exit conditions)
+    - A surface constrains where your output GOES (routing, delivery, outbound paths)
+    An agent inhabits a peripheral on a surface. Joe inhabits Codex (peripheral) on his laptop (surface), and Claude (peripheral) on Linode (surface). Claude itself inhabits explore/edit/reflect peripherals within its Emacs or IRC surfaces. The pattern is fractal — the same inhabitation relationship recurs at every level of the agent hierarchy. This means the surface map pattern applies recursively: each agent at each level needs its own map of the surfaces available to it.
+
+  + SURFACE-MAP-SHAPE:
+    {:surface/id :keyword
+     :surface/description :string           ; one-line, for the map listing
+     :surface/contract                      ; loaded on entry, not at session start
+       {:output :string                     ; where responses appear
+        :outbound                           ; paths to other surfaces
+          [{:target :keyword                ; surface-id of destination
+            :method :keyword                ; :curl, :hop, :draft-only
+            :endpoint :string               ; URL or command template
+            :constraints :string}]          ; e.g. "mark UNSENT if no tool call"
+        :telemetry {:keys [:keyword]}}}     ; available status signals
+
+  + EXAMPLE-MAP:
+    [{:surface/id :emacs-chat
+      :surface/description "Emacs chat buffer — direct conversation with Joe"
+      :surface/contract
+        {:output "Emacs buffer"
+         :outbound [{:target :irc-futon
+                     :method :curl
+                     :endpoint "http://localhost:7070/api/alpha/irc/send"
+                     :constraints "Only via tool call; do not claim to send without executing"}]
+         :telemetry {:keys [:agency :irc]}}}
+     {:surface/id :irc-futon
+      :surface/description "IRC #futon — public channel, multi-agent"
+      :surface/contract
+        {:output "Posted to #futon as <nick>"
+         :outbound []
+         :constraints "Reply-only surface; no cross-post capability"}}
+     {:surface/id :codex-repl
+      :surface/description "Emacs codex REPL — Codex agent buffer"
+      :surface/contract
+        {:output "Emacs codex buffer"
+         :outbound [{:target :irc-futon
+                     :method :draft-only
+                     :constraints "Provide one-line draft, mark UNSENT"}]
+         :telemetry {:keys [:agency :irc]}}}]
+
+  + EVIDENCE:
+    futon3c git log, surface contract evolution:
+    - f5c3e25: "Enforce explicit surface contracts for Codex replies" — added irc-invoke-prompt (IRC surface contract) and codex-repl--surface-contract (Emacs surface contract); Codex stopped hallucinating cross-surface actions once told which surface it was on
+    - c73a9ba: "Add surface contracts with IRC send endpoint to both Emacs surfaces" — added outbound IRC path to Emacs surface contract; Claude could now post to IRC from Emacs via curl endpoint instead of drafting UNSENT messages
+    - Empirical observation: bundling IRC + Emacs + deploy contracts into a single Codex preamble caused Codex to confuse which rules applied; splitting into per-surface injection resolved the confusion
+
+  + FAILURE-MODES:
+    - Context dilution: too many surface contracts in prompt causes agent to ignore or confuse constraints
+    - Cross-surface hallucination: agent claims to post to IRC when on an Emacs-only surface (observed before surface contracts)
+    - Stale map: surface comes online or goes offline but map is not updated; agent tries to reach a dead surface
+    - Missing outbound: agent needs to reach another surface but current contract has no outbound path; must fall back to draft-only
+
+  + NEXT-STEPS:
+    - evidence: measure prompt quality degradation as surface count increases (A/B test: 2 vs 5 surface contracts bundled)
+    - evidence: track cross-surface hallucination rate before and after surface map adoption
+    - evidence: implement surface map as queryable endpoint (GET /api/alpha/surfaces) so agents can refresh at runtime
+    - evidence-shape: {:surface/id :keyword, :surface/entered-at :string, :surface/exited-at :string, :surface/outbound-calls :int, :surface/hallucination-count :int, :agent/id :string, :session/id :string}

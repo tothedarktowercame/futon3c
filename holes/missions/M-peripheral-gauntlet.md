@@ -696,6 +696,133 @@ pass through human review before re-entering the catalog.
 - futon3a is a local dep (../futon3a) — add to futon3c's deps.edn
 - Tool returns pattern candidates with rationale + sigil, NOT instructions to follow
 
+#### Task 3.2: Exogeneity Boundary — How Patterns Stay Environmental
+
+**Status**: Complete (2026-02-21)
+
+The exogeneity boundary is the structural guarantee that patterns remain
+landscape rather than instruction. This is I4 (preference exogeneity)
+applied to the pattern catalog: no fast-timescale agent output can modify
+the constraint-timescale pattern library.
+
+**The boundary in practice (current implementation)**
+
+The data flow has three segments, each with a different timescale and
+direction of authority:
+
+```
+  READ path (fast, agent→observation):
+    Agent peripheral  →  corpus-check tool  →  notions_search.py  →  futon3a embeddings
+                                                                      (read-only query)
+    Returns: ranked pattern matches as observation data
+    Agent sees: {neighbors [{:pattern "..." :score 0.83 :source :futon3a} ...]}
+    Agent does NOT see: "use this pattern" or "AIF suggests pattern X"
+
+  USE path (task, agent→evidence):
+    Agent selects pattern  →  PSR (selection record)  →  evidence store
+    Agent applies pattern  →  PUR (use record)        →  evidence store
+    No write to futon3a. Pattern catalog is unchanged.
+
+  REFINE path (slow/glacial, human→catalog):
+    Evidence accumulates (PURs with outcomes)  →  human reviews
+    Human decides: refine wording / merge / retire / promote
+    Human writes updated pattern to futon3a catalog
+    This is the ONLY write path to the pattern library.
+```
+
+**Why this boundary exists (I4 derivation)**
+
+The wiring diagram (`gauntlet-wiring.edn`) declares the pattern catalog
+as a constraint input:
+
+```edn
+{:id :I-patterns
+ :name "Pattern catalog"
+ :type :pattern-catalog
+ :source "futon3a"
+ :timescale :slow
+ :constraint true}
+```
+
+`:constraint true` means: this input governs how work is done. It operates
+at a slower timescale than the agents using it. The invariant (I4) says
+a fast-timescale output cannot reach a constraint input. Applied here:
+
+- Agents operate at social/task timescale
+- The pattern catalog operates at slow timescale
+- Therefore: no agent action can modify the catalog directly
+
+This is the same principle documented in `scope-bounded-handoff.flexiarg`:
+"no task-timescale agent can modify a constraint-timescale artifact." The
+evidence for why this matters is concrete — the futon5 feat/compose-parallel
+incident (2026-02-10), where Codex rewrote `social-exotype.edn` to make
+tests pass, losing gate duality mappings and ARGUMENT traceability. Three
+coordination tensions recorded (T1: artifact-ownership-violation, T2:
+scope-enforcement-gap, T3: social-i4-violation).
+
+**How `corpus-check` enforces it structurally**
+
+The implementation in `proof_backend.clj:846` (`search-futon3a`) and
+`mission_backend.clj:526` both enforce read-only access:
+
+1. **Subprocess isolation**: Queries run via `ProcessBuilder` calling
+   `notions_search.py` — a read-only script that loads embeddings and
+   returns cosine-similarity matches. No write API exists.
+
+2. **No futon3a dependency on classpath**: futon3a is not a Clojure dep
+   of futon3c (per I-5, foundational constraint). The search script runs
+   in futon3a's own venv. There is no import path through which an agent
+   could call a futon3a write function.
+
+3. **Return shape is observation, not instruction**: Results are
+   `{:neighbors [...] :query "..." :source :futon3a}` — ranked candidates
+   with scores. The tool does not say "use pattern X" or "AIF recommends."
+   The agent perceives candidates the way it perceives search results: as
+   data to reason about, not commands to follow.
+
+4. **Output port for refinements exists but is human-gated**: The wiring
+   diagram declares `:O-pattern-refinements` as an output, consumed by
+   futon3a. But this output is produced by Gate 7 (Teaching Inversion),
+   which operates at slow timescale and requires human review. There is no
+   direct edge from any fast-timescale component to `:I-patterns`.
+
+**The human-review gate**
+
+Pattern refinement follows this protocol:
+
+1. Agent applies a pattern and records a PUR with outcome (confirmed,
+   pivoted, rejected, or deferred)
+2. PURs accumulate as evidence in futon1a
+3. Human reviews PUR evidence periodically (glacial timescale)
+4. Human decides whether to refine the pattern in futon3a's catalog
+5. Refined pattern becomes available to agents via corpus-check
+
+The human is not a bottleneck here — they are the timescale boundary.
+Pattern refinement is slow because pattern quality is a slow-timescale
+property. A pattern that works once might fail ten times; a pattern that
+fails once might be misapplied. Only accumulated evidence (many PURs
+across sessions) justifies refinement. The human reviews the evidence,
+not individual uses.
+
+**Failure mode the boundary prevents**
+
+The PLoP 2025 paper (§4) documented what happens when patterns are
+instructional rather than environmental: "AIF suggests pattern X
+(G=0.12, τ=0.72)." Codex became overly compliant, producing PSR/PUR
+bookkeeping instead of writing code. The pattern became the task instead
+of informing the task.
+
+The fix is not to remove patterns but to make them environmental:
+- The agent sees which patterns are available (via corpus-check)
+- The agent sees its own PSR/PUR history (via evidence query)
+- The agent decides whether to select, carry, or drop a pattern
+- What the agent does in response is emergent, not prescribed
+
+This is the same distinction as a fuel gauge vs. a speed limit sign.
+The gauge is environmental (read it when you need it, ignore it when
+you don't). The sign is instructional (obey or face consequences).
+Patterns must be gauges, not signs.
+
 ### Phase 4: Gate Finalization via futon3b (after Phases 1-3 validated)
 
 **Infrastructure status**: The three-repo pipeline is wired and working

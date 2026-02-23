@@ -1,5 +1,8 @@
 # Mission: IRC Transport Stability
 
+Date: 2026-02-20
+Status: Complete (all 6 failure modes fixed, 16 stability tests, 2026-02-23)
+
 ## Derivation
 
 VERIFY step — the IRC adapter is functional (26 tests, 66 assertions) but has
@@ -190,14 +193,14 @@ For non-evidence-store contexts, at minimum log to stderr. The key invariant:
 **no exception is silently discarded.**
 
 Criteria:
-- [ ] Server sends PING to idle clients after :ping-interval-ms
-- [ ] Client that doesn't PONG within :ping-timeout-ms is reaped
-- [ ] Any received message resets the liveness timer (not just PONG)
-- [ ] Socket read timeout is set (no indefinite .readLine blocks)
-- [ ] SocketTimeoutException is handled gracefully (not treated as disconnect)
-- [ ] All catch blocks log or emit evidence (no silent swallowing)
-- [ ] Existing 26 IRC tests still pass
-- [ ] New tests for: PING sent after interval, reap after timeout, timeout doesn't kill active connection
+- [x] Server sends PING to idle clients after :ping-interval-ms
+- [x] Client that doesn't PONG within :ping-timeout-ms is reaped
+- [x] Any received message resets the liveness timer (not just PONG)
+- [x] Socket read timeout is set (no indefinite .readLine blocks)
+- [x] SocketTimeoutException is handled gracefully (not treated as disconnect)
+- [x] All catch blocks log or emit evidence (no silent swallowing)
+- [x] Existing 26 IRC tests still pass
+- [x] New tests for: PING sent after interval, reap after timeout, timeout doesn't kill active connection
 
 ### Part II: Nick Reclaim + Relay Timeout
 
@@ -240,12 +243,12 @@ Wrap the relay ws-send-fn call in a timeout:
 to the next agent. Emit a tension evidence entry for the timeout.
 
 Criteria:
-- [ ] Reconnecting client reclaims nick from ghost connection
-- [ ] Non-ghost nick collision returns ERR_NICKNAMEINUSE (433)
-- [ ] Ghost detection uses liveness timer from Part I
-- [ ] Relay timeout: stalled agent doesn't block other agents
-- [ ] Relay timeout emits tension evidence
-- [ ] Existing tests still pass
+- [x] Reconnecting client reclaims nick from ghost connection
+- [x] Non-ghost nick collision returns ERR_NICKNAMEINUSE (433)
+- [x] Ghost detection uses liveness timer from Part I
+- [x] Relay timeout: stalled agent doesn't block other agents
+- [x] Relay timeout emits tension evidence
+- [x] Existing tests still pass
 
 ### Part III: Shutdown Coordination + Integration
 
@@ -277,22 +280,30 @@ Also add the keepalive future to the shutdown sequence.
 5. Server shutdown → all reader threads and keepalive loop stop cleanly
 
 Criteria:
-- [ ] stop-fn cancels all reader futures
-- [ ] stop-fn stops keepalive loop
-- [ ] No orphaned threads after shutdown
-- [ ] `clojure -X:test` passes cleanly
-- [ ] All existing transport tests unaffected
+- [x] stop-fn cancels all reader futures
+- [x] stop-fn stops keepalive loop
+- [x] No orphaned threads after shutdown
+- [x] `clojure -X:test` passes cleanly
+- [x] All existing transport tests unaffected
 
 ## Exit Conditions
 
-- Server-initiated PING/PONG detects dead connections within 90s
-- No reader thread can block indefinitely (SO_TIMEOUT enforced)
-- No exception is silently discarded anywhere in irc.clj
-- Reconnecting clients reclaim their nick from ghost connections
-- One slow agent cannot block IRC→agent relay for other agents
-- Server shutdown is clean: all threads stopped, all sockets closed
-- All existing tests pass; 10+ new tests for stability behavior
-- `clojure -X:test` passes cleanly
+- [x] Server-initiated PING/PONG detects dead connections within 90s
+- [x] No reader thread can block indefinitely (SO_TIMEOUT enforced)
+- [x] No exception is silently discarded anywhere in irc.clj
+- [x] Reconnecting clients reclaim their nick from ghost connections
+- [x] One slow agent cannot block IRC→agent relay for other agents
+- [x] Server shutdown is clean: all threads stopped, all sockets closed
+- [x] All existing tests pass; 10+ new tests for stability behavior (16 new)
+- [x] `clojure -X:test` passes cleanly
+
+## Completion (2026-02-23)
+
+All 6 failure modes (F1-F6) implemented in `transport/irc.clj` (652 lines).
+16 stability-specific tests in `irc_test.clj` sections 11-16.
+Code implements: keepalive loop (F1), SO_TIMEOUT (F2), emit-error-evidence! (F3),
+nick-ghost?/kill-ghost! (F4), relay timeout with future deref (F5),
+!reader-futures tracking + future-cancel (F6).
 
 ## Relationship to Other Missions
 
