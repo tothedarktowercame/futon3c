@@ -8,7 +8,9 @@
    Constructor: (make-xtdb-backend xtdb-store-or-node)
    Accepts either a futon1a XtdbStore record or a raw XTDB node."
   (:require [xtdb.api :as xtdb]
-            [futon3c.evidence.backend :as backend]))
+            [futon3c.evidence.backend :as backend])
+  (:import [java.time Instant]
+           [java.util Date]))
 
 (defn- social-error
   [code message & {:as context}]
@@ -39,10 +41,26 @@
   [node id]
   (some? (xtdb/entity (db node) id)))
 
+(defn- parse-valid-time
+  "Parse :evidence/at to a java.util.Date for XTDB valid-time.
+   Returns nil if unparseable (XTDB will use transaction time as fallback)."
+  [doc]
+  (when-let [at (:evidence/at doc)]
+    (try
+      (Date/from (Instant/parse at))
+      (catch Exception _ nil))))
+
 (defn- put-and-sync!
-  "Submit a put transaction and wait for it to be indexed."
+  "Submit a put transaction and wait for it to be indexed.
+   Sets XTDB valid-time to :evidence/at so entries appear at their true
+   chronological position, not when they were physically written (important
+   for replicated entries that arrive after a delay)."
   [node doc]
-  (let [tx (xtdb/submit-tx node [[:xtdb.api/put doc]])]
+  (let [valid-time (parse-valid-time doc)
+        tx-op (if valid-time
+                [:xtdb.api/put doc valid-time]
+                [:xtdb.api/put doc])
+        tx (xtdb/submit-tx node [tx-op])]
     (xtdb/await-tx node tx)))
 
 (defn- delete-and-sync!
