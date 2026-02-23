@@ -1,11 +1,29 @@
 # Mission: PSR/PUR Mesh Peripheral (futon3a + futon3b)
 
-Date: 2026-02-15  
-Status: In progress (Codex-only live gate path landed)
+Date: 2026-02-15
+Status: DONE-NEEDS-RETRO (Gates A+B pass, C infrastructure complete, D deferred)
 
-## Latest Validation (2026-02-15)
+## Gate Status (2026-02-23)
 
-Codex-only live validation is now runnable in one command:
+- **Gate A (PSR/PUR Round-Trip): PASS** — live evidence in
+  `holes/qa/discipline-live-gate-2026-02-15.edn` (12 entries: 2 PSR,
+  1 PUR, 4 reflection, 5 coordination). 6 discipline tests in suite.
+- **Gate B (Explicit Transition): PASS** — `:discipline → :reflect`
+  hop with session continuity preserved (`:explicit-hop true`,
+  `:session-continuity true` in live gate evidence).
+- **Gate C (Interleaved Streams): INFRASTRUCTURE COMPLETE** — WS routing
+  proven, IRC P6 multi-sender interleaving tested (irc_test.clj §16-17).
+  Live multi-transport discipline demo not yet captured as evidence.
+- **Gate D (ALFWorld-Triggered): DEFERRED** — depends on
+  M-alfworld-pattern-discovery. ALFWorld peripheral works (2 games,
+  1.0/1.0) but no ALFWorld→PSR→PUR chain recorded yet.
+
+Open questions resolved: naming = `:discipline`, single peripheral with
+5 tools, Malli-validated evidence entries.
+
+## Validation (2026-02-15)
+
+Codex-only live validation is runnable in one command:
 
 ```bash
 ./scripts/run_discipline_live_gate.sh
@@ -16,13 +34,6 @@ This performs:
 2. Real-backend PSR->PUR->PAR cycle in `:discipline`.
 3. Explicit hop `:discipline -> :reflect` with session continuity checks.
 4. Artifact emission to `holes/qa/discipline-live-gate-*.edn`.
-5. Automatic scorecard update at `holes/missions/alleycat-scorecard.md`.
-
-Current state:
-1. Gate A (PSR/PUR round-trip): implemented and passing in live harness.
-2. Gate B (explicit transition): implemented and passing (`:discipline -> :reflect`).
-3. Gate C (transport-native interleaving): partially covered (live WS routing proven; full multi-source interleave still pending).
-4. Gate D (ALFWorld-triggered validation): pending.
 
 ## Why This Mission Exists
 
@@ -189,9 +200,13 @@ Integration boundaries:
 
 Mission complete when:
 
-1. Discipline peripheral exists with typed PSR/PUR operations.
-2. Gates A-D pass in live runs with saved evidence.
-3. Alleycat scorecard references this gate as completed or active with date and proof.
-4. Discipline records align with Evidence Landscape semantics from
+1. [x] Discipline peripheral exists with typed PSR/PUR operations.
+   (`:discipline` in peripherals.edn, 5 tools in real_backend.clj, 6 tests)
+2. [~] Gates A-D pass in live runs with saved evidence.
+   (A+B pass with evidence. C infrastructure proven, live demo deferred.
+   D deferred to M-alfworld-pattern-discovery.)
+3. [ ] Alleycat scorecard references this gate as completed or active with date and proof.
+   (Scorecard file never materialized — absorbed into mission doc gate status above.)
+4. [x] Discipline records align with Evidence Landscape semantics from
    `holes/technotes/TN-forum-to-evidence-landscape.md` (evidence-first,
    projection-friendly, no thread-first bypass).

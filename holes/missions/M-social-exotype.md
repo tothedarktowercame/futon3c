@@ -1,5 +1,7 @@
 # Mission: Social Exotype
 
+Status: DONE-NEEDS-RETRO (Parts I-III substantively complete, traceability docs deferred)
+
 Write the abstract wiring diagram for the social coordination loop, extend
 futon5's validation framework to support nested diagram composition, and
 validate the three-diagram stack (futon3a + futon3b + futon3c) as one
