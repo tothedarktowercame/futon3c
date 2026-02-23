@@ -1,7 +1,11 @@
-CLOJURE=clojure
+CLOJURE ?= $(shell if [ -x .tools/clojure/bin/clojure ]; then echo .tools/clojure/bin/clojure; else echo clojure; fi)
 EVIDENCE_BASE?=http://localhost:7070
 
-.PHONY: dev test claude claude-repl codex codex-repl codex-autowake tickle status repl
+.PHONY: tools dev test claude claude-repl codex codex-repl codex-autowake tickle status repl \
+	alfworld-server alfworld-runner alfworld-test alfworld-demo
+
+tools:
+	./scripts/bootstrap-tools.sh
 
 dev:
 	$(CLOJURE) -M:dev
@@ -42,3 +46,27 @@ status:
 
 repl:
 	$(CLOJURE) -M:dev:repl
+
+ALFWORLD_PORT ?= 3456
+ALFWORLD_PY ?= python
+
+# Deterministic runner defaults (override at call site if you want).
+# Example: make alfworld-runner ALFWORLD_RUNNER_GAMES=50 ALFWORLD_RUNNER_ARGS=
+ALFWORLD_RUNNER_GAMES ?= 10
+ALFWORLD_RUNNER_ARGS ?= verbose
+
+# -----------------------------------------------------------------------------
+# ALFWorld convenience targets
+# -----------------------------------------------------------------------------
+
+alfworld-server:
+	$(ALFWORLD_PY) scripts/alfworld-server.py --port $(ALFWORLD_PORT)
+
+alfworld-runner:
+	bb scripts/alfworld_runner.clj $(ALFWORLD_RUNNER_GAMES) $(ALFWORLD_RUNNER_ARGS)
+
+alfworld-test:
+	bb scripts/alfworld_test.clj
+
+alfworld-demo:
+	bb scripts/alfworld_demo.clj

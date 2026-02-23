@@ -3,6 +3,13 @@
 target/
 *.class
 .venv-*/
+.tools/
 log/
 .alleycat-drop/
 storage/mission-control/sessions.edn
+
+bb
+clojure
+library/social/cluster-tooling-bootstrap.flexiarg
+?/
+AGENTS.md

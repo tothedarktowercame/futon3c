@@ -17,12 +17,35 @@ For Mission Peripheral / Mission Control / War Room convergence, see
 ## Quick Start
 
 ```bash
+make tools     # Install repo-local clojure + bb into .tools/ (cluster-friendly)
 make dev       # Boot futon1a (XTDB) + futon3c transport
 make claude    # Pick a session or start fresh
 make codex     # Pick a Codex session or start fresh
 make codex-repl # Open Codex Emacs REPL launcher
 make test      # Run all tests
 make repl      # Start nREPL with CIDER middleware
+```
+
+## ALFWorld
+
+ALFWorld is integrated as an HTTP “simulation peripheral”: a Python server
+wraps TextWorld/ALFWorld and Clojure/bb code drives it via `curl`.
+
+In two terminals:
+
+```bash
+make dev
+```
+
+```bash
+make alfworld-server
+make alfworld-runner   # defaults: 10 games + verbose
+```
+
+Overrides:
+```bash
+make alfworld-server ALFWORLD_PORT=3457
+make alfworld-runner ALFWORLD_RUNNER_GAMES=50 ALFWORLD_RUNNER_ARGS=
 ```
 
 ### `make dev`
