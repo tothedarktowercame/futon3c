@@ -7,7 +7,8 @@
    scripts needed for local agents — WS bridges are for remote scenarios.
 
    Environment variables:
-     FUTON3C_ROLE       — deployment role (linode|laptop|default)
+     FUTON3C_ROLE       — deployment role override (linode|laptop|default);
+                          when unset, role is auto-detected from configured URLs
      FUTON1A_PORT       — HTTP port for futon1a (default 7071)
      FUTON1A_DATA_DIR   — XTDB storage directory
      FUTON1A_ALLOWED_PENHOLDERS — comma-separated penholders (default: api,joe)
@@ -56,13 +57,14 @@
             [repl.http :as drawbridge]
             [cheshire.core :as json]
             [clojure.java.shell :as shell]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.pprint :as pprint]
             [clojure.java.io :as io]
             [org.httpkit.server :as hk])
   (:import [java.time Instant Duration]
            [java.util UUID]
-           [java.net URI]
+           [java.net URI InetAddress NetworkInterface]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers
             HttpResponse$BodyHandlers WebSocket WebSocket$Listener]
            [java.util.concurrent CompletableFuture]))
@@ -146,14 +148,92 @@
     (catch Exception _
       false)))
 
-(defn deployment-role
-  "Resolve deployment role from FUTON3C_ROLE.
-   Supported: linode, laptop. Anything else => :default."
+(defn- parse-url-host
+  "Extract host from URL string; nil on parse failure."
+  [url]
+  (try
+    (when-let [raw (some-> url str/trim not-empty)]
+      (some-> (URI/create raw) .getHost))
+    (catch Exception _
+      nil)))
+
+(defn- local-ip-set
+  "Best-effort set of local interface IP addresses (IPv4/IPv6 textual forms)."
   []
-  (case (some-> (env "FUTON3C_ROLE") str/trim str/lower-case)
-    "linode" :linode
-    "laptop" :laptop
-    :default))
+  (try
+    (->> (enumeration-seq (NetworkInterface/getNetworkInterfaces))
+         (mapcat #(enumeration-seq (.getInetAddresses ^NetworkInterface %)))
+         (map #(.getHostAddress ^InetAddress %))
+         (remove str/blank?)
+         set)
+    (catch Exception _
+      #{})))
+
+(defn- resolve-host-ip-set
+  "Resolve HOST to a set of IP string forms. Empty on failure."
+  [host]
+  (try
+    (->> (InetAddress/getAllByName host)
+         (map #(.getHostAddress ^InetAddress %))
+         (remove str/blank?)
+         set)
+    (catch Exception _
+      #{})))
+
+(defn- host-local?
+  "True when HOST resolves to this machine."
+  [host]
+  (let [h (some-> host str/lower-case str/trim)]
+    (cond
+      (str/blank? h) false
+      (#{"localhost" "127.0.0.1" "::1"} h) true
+      :else (let [local-ips (local-ip-set)
+                  host-ips (resolve-host-ip-set h)]
+              (boolean (seq (set/intersection local-ips host-ips)))))))
+
+(defn deployment-role-info
+  "Resolve deployment role with explicit override first, then conservative auto-detection.
+
+   Auto rules (only when signals are clear):
+   - Remote FUTON3C_LINODE_URL => :laptop
+   - Remote FUTON3C_LAPTOP_URL => :linode
+   - Remote FUTON3C_PEERS with no FUTON3C_SELF_URL => :laptop
+   - Otherwise :default"
+  []
+  (let [explicit (some-> (env "FUTON3C_ROLE") str/trim str/lower-case)
+        linode-host (parse-url-host (env "FUTON3C_LINODE_URL"))
+        laptop-host (parse-url-host (env "FUTON3C_LAPTOP_URL"))
+        self-host (parse-url-host (env "FUTON3C_SELF_URL"))
+        peer-hosts (->> (env-list "FUTON3C_PEERS" [])
+                        (keep parse-url-host))
+        remote-peer? (some #(not (host-local? %)) peer-hosts)]
+    (cond
+      (= explicit "linode")
+      {:role :linode :source "FUTON3C_ROLE"}
+
+      (= explicit "laptop")
+      {:role :laptop :source "FUTON3C_ROLE"}
+
+      (= explicit "default")
+      {:role :default :source "FUTON3C_ROLE"}
+
+      (and linode-host (not (host-local? linode-host)))
+      {:role :laptop :source "auto:FUTON3C_LINODE_URL"}
+
+      (and laptop-host (not (host-local? laptop-host)))
+      {:role :linode :source "auto:FUTON3C_LAPTOP_URL"}
+
+      (and remote-peer? (nil? self-host))
+      {:role :laptop :source "auto:FUTON3C_PEERS"}
+
+      :else
+      {:role :default :source "auto:default"})))
+
+(defn deployment-role
+  "Resolve effective deployment role.
+   FUTON3C_ROLE overrides; otherwise falls back to auto-detection."
+  []
+  (:role (deployment-role-info)))
 
 (defn role-defaults
   "Role-driven defaults. Explicit env vars still override."
@@ -1273,7 +1353,8 @@
          :bind bind}))))
 
 (defn -main [& _args]
-  (let [role (deployment-role)
+  (let [role-info (deployment-role-info)
+        role (:role role-info)
         role-cfg (role-defaults role)
         register-claude? (env-bool "FUTON3C_REGISTER_CLAUDE" (:register-claude? role-cfg))
         register-codex? (env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
@@ -1458,6 +1539,7 @@
         fed-self (federation/self-url)]
     (println)
     (println (str "[dev] Role: " (name role)
+                  " (" (:source role-info) ")"
                   " | register-claude=" register-claude?
                   " register-codex=" register-codex?
                   " | relay-claude=" relay-claude?
