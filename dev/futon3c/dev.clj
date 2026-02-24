@@ -57,6 +57,7 @@
             [cheshire.core :as json]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [clojure.pprint :as pprint]
             [clojure.java.io :as io]
             [org.httpkit.server :as hk])
   (:import [java.time Instant Duration]
@@ -669,6 +670,22 @@
                (select-keys (:evidence/body e) [:agent :ok :status :issue-number])))
     orch-entries))
 
+(defn tickle-status!
+  "Pretty-print the current Tickle orchestration status summary."
+  []
+  (let [status-fn (or (ns-resolve 'futon3c.agents.tickle-orchestrate 'tickle-status)
+                      (do
+                        (require 'futon3c.agents.tickle-orchestrate :reload)
+                        (ns-resolve 'futon3c.agents.tickle-orchestrate 'tickle-status)))]
+    (when-not status-fn
+      (throw (ex-info "tickle-status helper unavailable in futon3c.agents.tickle-orchestrate"
+                      {:ns 'futon3c.agents.tickle-orchestrate
+                       :var 'tickle-status})))
+    (let [summary (status-fn @!evidence-store)]
+      (println "[dev] Tickle orchestration status:")
+      (pprint/pprint summary)
+      summary)))
+
 (defn status
   "Quick runtime status for the REPL."
   []
@@ -863,7 +880,8 @@
                                            (str "Files modified: " changed-files "\n"))
                                          "Waiting for response...")]
                         ;; Update invoke buffer
-                        (bb/blackboard! buf-name content {:width 80 :no-display true})
+                        ;; Keep invoke output separate from *agents* in side-window slot 1.
+                        (bb/blackboard! buf-name content {:width 80 :slot 1 :no-display true})
                         ;; Update agents buffer
                         (bb/project-agents! (reg/registry-status))
                         ;; Evidence heartbeat (every 30s, not every tick)
@@ -948,7 +966,7 @@
                                        "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                        (when (> (count prompt-str) 300) "...")
                                        "\n\nStarting...")
-                                  {:width 80})
+                                  {:width 80 :slot 1})
                   (catch Throwable _))
               ;; Start ticker: updates invoke buffer + agents buffer every 5s
               ;; Also emits evidence heartbeats every 30s
@@ -1029,7 +1047,7 @@
                                        (str "\n--- response ---\n"
                                             (subs text 0 (min 1000 (count text)))
                                             (when (> (count text) 1000) "\n..."))))
-                                {:width 80 :no-display true})
+                                {:width 80 :slot 1 :no-display true})
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
                             " text-len=" (count (or text ""))
@@ -1099,7 +1117,7 @@
                                "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                (when (> (count prompt-str) 300) "...")
                                "\n\nStarting...")
-                          {:width 80})
+                          {:width 80 :slot 1})
           (catch Throwable _))
         ;; Start ticker with evidence heartbeats
         (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
@@ -1134,7 +1152,7 @@
                                      (str "\n--- response ---\n"
                                           (subs r 0 (min 1000 (count r)))
                                           (when (> (count r) 1000) "\n...")))))
-                            {:width 80 :no-display true})
+                            {:width 80 :slot 1 :no-display true})
             (catch Throwable _))
           (println (str "[invoke] " agent-id
                         (if ok? " ok" (str " error: " (:error result)))
