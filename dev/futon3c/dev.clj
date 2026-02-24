@@ -1322,9 +1322,14 @@
                               :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
                               :agent-id "claude-1"
                               :session-file sf
-                              :session-id-atom sid-atom})]
-              (rt/register-claude! {:agent-id "claude-1"
-                                    :invoke-fn invoke-fn})
+                              :session-id-atom sid-atom})
+                  _register (rt/register-claude! {:agent-id "claude-1"
+                                                  :invoke-fn invoke-fn})
+                  ;; Reconcile stale duplicate entries so invoke-fn is always present.
+                  _ (reg/update-agent! "claude-1"
+                                       :agent/type :claude
+                                       :agent/invoke-fn invoke-fn
+                                       :agent/capabilities [:explore :edit :test :coordination/execute])]
               (when initial-sid
                 (reg/update-agent! "claude-1" :agent/session-id initial-sid))
               (println (str "[dev] Claude agent registered: claude-1 (inline invoke)"
@@ -1371,6 +1376,10 @@
                 ;; WS bridge mode: Codex connects via WS (local or remote)
                 (let [ws-path (or (some-> (env "FUTON3C_CODEX_WS_PATH") str/trim not-empty)
                                   "/agency/ws")
+                      codex-invoke-fn (when remote-ws-target? invoke-fn)
+                      codex-metadata (cond-> {:ws-bridge? true}
+                                       remote-ws-target? (assoc :skip-federation-proxy? true)
+                                       remote-ws-target? (assoc :ws-remote? true))
                       bridge (start-codex-ws-bridge!
                               {:agent-id "codex-1"
                                :invoke-fn invoke-fn
@@ -1383,10 +1392,14 @@
                                :evidence-replication? evidence-replication?
                                :replication-interval-ms replication-interval-ms})]
                   (rt/register-codex! {:agent-id "codex-1"
-                                       :invoke-fn (when remote-ws-target? invoke-fn)
-                                       :metadata (cond-> {:ws-bridge? true}
-                                                   remote-ws-target? (assoc :skip-federation-proxy? true)
-                                                   remote-ws-target? (assoc :ws-remote? true))})
+                                       :invoke-fn codex-invoke-fn
+                                       :metadata codex-metadata})
+                  ;; Reconcile stale duplicate entries before dispatch relay starts.
+                  (reg/update-agent! "codex-1"
+                                     :agent/type :codex
+                                     :agent/invoke-fn codex-invoke-fn
+                                     :agent/capabilities [:edit :test :coordination/execute]
+                                     :agent/metadata codex-metadata)
                   (when initial-sid
                     (reg/update-agent! "codex-1" :agent/session-id initial-sid))
                   (reset! !codex-ws-bridge bridge)
@@ -1406,6 +1419,11 @@
                     (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to inline invoke"))
                   (rt/register-codex! {:agent-id "codex-1"
                                        :invoke-fn invoke-fn})
+                  ;; Reconcile stale duplicate entries so invoke-fn is always present.
+                  (reg/update-agent! "codex-1"
+                                     :agent/type :codex
+                                     :agent/invoke-fn invoke-fn
+                                     :agent/capabilities [:edit :test :coordination/execute])
                   (when initial-sid
                     (reg/update-agent! "codex-1" :agent/session-id initial-sid))
                   (println (str "[dev] Codex agent registered: codex-1 (inline invoke)"
