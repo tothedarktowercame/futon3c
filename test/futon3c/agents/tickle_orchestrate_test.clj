@@ -387,3 +387,42 @@
         (is (every? #(= :complete (:status %)) results))
         ;; Codex invoked in order
         (is (= ["1" "2" "3"] @invoke-order))))))
+
+;; =============================================================================
+;; report-status!
+;; =============================================================================
+
+(deftest report-status-works-without-irc
+  (testing "report-status! works without send-to-channel! (IRC is optional)"
+    (let [store (-> (make-evidence-store)
+                    (append-orch! "2026-02-24T10:00:00Z" :kick-start {:agent "codex-1"})
+                    (append-orch! "2026-02-24T10:05:00Z" :kick-complete {:status :done}))]
+      (let [result (orch/report-status! {:evidence-store store})]
+        (is (= 1 (get-in result [:summary :total-kicks])))
+        (is (= 1 (get-in result [:summary :issues-completed])))
+        ;; Evidence still emitted
+        (let [entries (estore/query* store {})
+              report (first (filter #(= :status-report (last (:evidence/tags %))) entries))]
+          (is (some? report)))))))
+
+(deftest kick-queue-calls-report-status
+  (testing "kick-queue! emits a :status-report entry after processing"
+    (let [store (make-evidence-store)
+          irc-messages (atom [])]
+      (register-mock-agent!
+       "codex-1"
+       (fn [_ _] {:result "done" :session-id "s1"}))
+      (let [issues [(assoc sample-issue :number 1 :title "First")
+                    (assoc sample-issue :number 2 :title "Second")]
+            _results (orch/kick-queue! issues
+                                       {:evidence-store store
+                                        :repo-dir "/tmp/test-repo"
+                                        :send-to-channel! (fn [ch from text]
+                                                            (swap! irc-messages conj {:ch ch :from from :text text}))
+                                        :room "#test"})]
+        ;; Status report evidence emitted
+        (let [entries (estore/query* store {})
+              report (first (filter #(= :status-report (last (:evidence/tags %))) entries))]
+          (is (some? report)))
+        ;; IRC messages include the status report (last message)
+        (is (some #(re-find #"kicks" (:text %)) @irc-messages))))))
