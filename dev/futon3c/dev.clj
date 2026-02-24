@@ -500,6 +500,26 @@
   []
   (orch/fetch-open-issues! "/home/joe/code/futon4" :label "codex"))
 
+(defn fetch-ti-issues!
+  "Fetch open tickle-integration issues from futon3c."
+  []
+  (orch/fetch-open-issues! "/home/joe/code/futon3c" :label "tickle-integration"))
+
+(defn kick-all-ti-issues!
+  "Kick all open tickle-integration issues to Codex sequentially.
+   Usage: (dev/kick-all-ti-issues!)"
+  []
+  (let [{:keys [ok issues error]} (fetch-ti-issues!)]
+    (if ok
+      (do (println "[dev] Found" (count issues) "TI issues:" (mapv :number issues))
+          (orch/kick-queue! issues
+            {:evidence-store @!evidence-store
+             :repo-dir "/home/joe/code/futon3c"
+             :send-to-channel! (when-let [s @!irc-sys]
+                                 (:send-to-channel! (:server s)))
+             :room "#futon"}))
+      {:ok false :error error})))
+
 (defn kick-ev-issue!
   "Kick a single futon4 EV issue to Codex. No review, just assign and report.
    Usage: (dev/kick-ev-issue! 4)"
@@ -565,7 +585,7 @@
    Returns a map of checks — all values should be truthy for a real run."
   []
   (let [agents (reg/registered-agents)
-        agent-ids (set (map (comp :id/value :agent/id) agents))]
+        agent-ids (set (map :id/value agents))]
     {:agents-registered (vec agent-ids)
      :codex-available?  (contains? agent-ids "codex-1")
      :claude-available? (contains? agent-ids "claude-1")
