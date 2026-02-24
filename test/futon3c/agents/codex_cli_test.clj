@@ -41,6 +41,12 @@
       (is (= "sid-1" (nth args (inc idx))))
       (is (= "-" (last args))))))
 
+(deftest build-exec-args-defaults-to-full-access
+  (let [args (codex-cli/build-exec-args {:codex-bin "codex"})]
+    (is (some #{"--sandbox"} args))
+    (is (some #{"danger-full-access"} args))
+    (is (some #{"approval_policy=\"never\""} args))))
+
 (deftest make-invoke-fn-success-and-error-paths
   (testing "successful invoke returns parsed text and session-id"
     (let [calls (atom [])

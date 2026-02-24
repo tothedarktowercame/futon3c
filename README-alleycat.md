@@ -237,10 +237,10 @@ Optional environment overrides:
 
 - `FUTON3C_IRC_PORT` (default `6667`)
 - `FUTON3C_BIND_HOST` (default `0.0.0.0`)
-- `FUTON3C_CODEX_BIN` (default `codex`)
-- `FUTON3C_CODEX_SANDBOX` (default `workspace-write`)
-- `FUTON3C_CODEX_APPROVAL` (default `never`)
-- `FUTON3C_CODEX_SESSION_FILE` (default `/tmp/futon-codex-session-id`)
+- `CODEX_BIN` (default `codex`)
+- `CODEX_SANDBOX` (default `danger-full-access`)
+- `CODEX_APPROVAL_POLICY` / `CODEX_APPROVAL` (default `never`)
+- `CODEX_SESSION_FILE` (default `/tmp/futon-codex-session-id`)
 
 ### Start Codex Emacs REPL
 

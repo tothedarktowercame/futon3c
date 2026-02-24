@@ -66,7 +66,7 @@
    When SESSION-ID is present, uses `codex exec ... resume <sid> -`."
   [{:keys [codex-bin model sandbox approval-policy session-id]
     :or {codex-bin "codex"
-         sandbox "workspace-write"
+         sandbox "danger-full-access"
          approval-policy "never"}}]
   (let [exec-opts (cond-> ["--json"
                            "--skip-git-repo-check"
@@ -84,14 +84,14 @@
    opts:
    - :codex-bin (default \"codex\")
    - :model (optional, default \"gpt-5-codex\")
-   - :sandbox (default \"workspace-write\")
+   - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
    - :timeout-ms hard process timeout in milliseconds (default 120000)
    - :cwd (optional shell working directory)"
   [{:keys [codex-bin model sandbox approval-policy timeout-ms cwd]
     :or {codex-bin "codex"
          model "gpt-5-codex"
-         sandbox "workspace-write"
+         sandbox "danger-full-access"
          approval-policy "never"
          timeout-ms 120000}}]
   (let [!lock (Object.)]

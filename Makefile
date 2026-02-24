@@ -1,9 +1,17 @@
 CLOJURE=clojure
 EVIDENCE_BASE?=http://localhost:7070
+CODEX_SANDBOX?=danger-full-access
+CODEX_APPROVAL?=never
+CODEX_APPROVAL_POLICY?=$(CODEX_APPROVAL)
+
+export CODEX_SANDBOX
+export CODEX_APPROVAL
+export CODEX_APPROVAL_POLICY
 
 .PHONY: dev test claude claude-repl codex codex-repl codex-autowake tickle status repl fresh
 
 dev:
+	@echo "[dev] Codex defaults: sandbox=$(CODEX_SANDBOX) approval=$(CODEX_APPROVAL_POLICY)"
 	$(CLOJURE) -M:dev
 
 test:
