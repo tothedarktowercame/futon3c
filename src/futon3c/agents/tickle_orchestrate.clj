@@ -123,26 +123,6 @@
       (bb/blackboard! "*Tickle Status*" content {:no-display true})
       summary)))
 
-(defn- format-status-board
-  [{:keys [last-kick-at last-complete-at issues-completed issues-failed
-           total-kicks last-agent uptime-seconds]}]
-  (str "Tickle Status\n"
-       "================\n"
-       "Last kick: " (or last-kick-at "never") "\n"
-       "Last complete: " (or last-complete-at "never") "\n"
-       "Completed: " (or issues-completed 0)
-       "  Failed: " (or issues-failed 0) "\n"
-       "Total kicks: " (or total-kicks 0) "\n"
-       "Last agent: " (or last-agent "-") "\n"
-       "Uptime: " (or uptime-seconds 0) "s\n"))
-
-(defn- project-status!
-  [evidence-store]
-  (when evidence-store
-    (let [summary (tickle-status evidence-store)
-          content (format-status-board summary)]
-      (bb/blackboard! "*Tickle Status*" content {:no-display true})
-      summary)))
 (defn- workflow-id [] (str "tko-" (UUID/randomUUID)))
 
 (defn- emit!
@@ -435,9 +415,9 @@
     (project! {:issue issue :status :running :phase "Starting workflow"})
 
     ;; 2. Assign to Codex
-        (let [codex-result (assign-issue! issue
-                                          (assoc step-config
-                                                 :timeout-ms codex-timeout-ms))]
+    (let [codex-result (assign-issue! issue
+                                      (assoc step-config
+                                             :timeout-ms codex-timeout-ms))]
       (if-not (:ok codex-result)
         ;; Codex failed — report and stop
         (let [elapsed (- (System/currentTimeMillis) start)
