@@ -1261,6 +1261,29 @@
     (reduce (fn [t p] (str/trim (str/replace t p "")))
             text patterns)))
 
+(def ^:private irc-send-directive-re
+  #"(?i)^IRC_SEND\s+\S+\s*::\s*(.+)$")
+
+(defn- normalize-irc-result
+  "Normalize agent reply text before posting to IRC.
+
+   If the model emits `IRC_SEND #channel :: message`, strip that directive
+   and post just `message` so chat reads naturally."
+  [text]
+  (let [lines (str/split-lines (or text ""))
+        directive-msg (some (fn [line]
+                              (when-let [[_ msg] (re-matches irc-send-directive-re (str/trim line))]
+                                (str/trim msg)))
+                            lines)
+        stripped (->> lines
+                      (remove #(re-matches irc-send-directive-re (str/trim %)))
+                      (str/join "\n")
+                      str/trim)]
+    (cond
+      (not (str/blank? stripped)) stripped
+      (not (str/blank? directive-msg)) directive-msg
+      :else (str/trim (or text "")))))
+
 (defn- irc-invoke-prompt
   "Wrap an IRC user message with explicit surface/delivery semantics."
   [{:keys [nick sender channel user-text]}]
@@ -1312,10 +1335,11 @@
                                resp (reg/invoke-agent! agent-id invoke-prompt invoke-timeout-ms)]
                            (if (and (:ok resp) (string? (:result resp)))
                              (do
-                               ((:send-to-channel! irc-server) channel nick (:result resp))
-                               (println (str "[irc] " nick " → " channel " ("
-                                             (count (:result resp)) " chars): "
-                                             (subs (:result resp) 0 (min 120 (count (:result resp))))))
+                               (let [reply (normalize-irc-result (:result resp))]
+                                 ((:send-to-channel! irc-server) channel nick reply)
+                                 (println (str "[irc] " nick " → " channel " ("
+                                               (count reply) " chars): "
+                                               (subs reply 0 (min 120 (count reply))))))
                                (flush))
                              (do
                                (let [err-msg (if (map? (:error resp))
