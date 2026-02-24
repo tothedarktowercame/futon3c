@@ -168,10 +168,10 @@
 
         broadcast!
         (fn [channel from text & {:keys [exclude]}]
-          (let [nicks (get @!rooms channel #{})
-                clients @!clients]
+          (let [clients @!clients]
             (doseq [[cid client] clients
-                     :when (and (contains? nicks (:nick client))
+                     :let [client-channels (or (:channels client) #{})]
+                     :when (and (contains? client-channels channel)
                                 (not= cid exclude))]
               (send-fn cid (str ":" from " PRIVMSG " channel " :" text)))))
 
@@ -231,22 +231,36 @@
                (let [new-nick (first (:params parsed))]
                  (when new-nick
                    ;; F4: Check for ghost nick and reclaim
-                   (let [existing-cid (some (fn [[cid c]]
+                   (let [old-nick nick
+                         existing-cid (some (fn [[cid c]]
                                               (when (and (= new-nick (:nick c))
                                                          (not= cid client-id))
                                                 cid))
-                                            @!clients)]
-                     (if existing-cid
-                       ;; Nick in use — ghost or live?
-                       (if (nick-ghost? new-nick)
-                         (do (kill-ghost! existing-cid)
-                             (swap! !clients update client-id assoc :nick new-nick))
-                         ;; Not a ghost — ERR_NICKNAMEINUSE (433)
-                         (send-numeric! (partial send-fn client-id)
-                                        (or nick "*") "433"
-                                        (str new-nick " :Nickname is already in use")))
-                       ;; Nick is free
-                       (swap! !clients update client-id assoc :nick new-nick)))
+                                            @!clients)
+                         nick-assigned? (if existing-cid
+                                          ;; Nick in use — ghost or live?
+                                          (if (nick-ghost? new-nick)
+                                            (do (kill-ghost! existing-cid)
+                                                (swap! !clients update client-id assoc :nick new-nick)
+                                                true)
+                                            ;; Not a ghost — ERR_NICKNAMEINUSE (433)
+                                            (do
+                                              (send-numeric! (partial send-fn client-id)
+                                                             (or nick "*") "433"
+                                                             (str new-nick " :Nickname is already in use"))
+                                              false))
+                                          ;; Nick is free
+                                          (do (swap! !clients update client-id assoc :nick new-nick)
+                                              true))]
+                     ;; Keep room membership in sync when an in-room nick changes.
+                     (when (and nick-assigned? old-nick (not= old-nick new-nick))
+                       (doseq [channel (:channels (get @!clients client-id))]
+                         (swap! !rooms update channel
+                                (fn [members]
+                                  (-> (or members #{})
+                                      (disj old-nick)
+                                      (conj new-nick))))
+                         (broadcast! channel old-nick (str "NICK :" new-nick)))))
                    ;; Check if registration complete (have both NICK and USER)
                    (let [updated (get @!clients client-id)]
                      (when (and (not (:registered? updated))
@@ -549,26 +563,34 @@
         (fn [channel from-nick text]
           ;; Send PRIVMSG to a channel from an agent nick (used by relay bridge)
           ;; Also relay to other agents so they can see each other's messages
-          (let [nicks (get @rooms channel #{})
-                all-clients @clients]
+          (let [all-clients @clients]
             (doseq [[cid client] all-clients
-                     :when (contains? nicks (:nick client))]
+                     :let [client-channels (or (:channels client) #{})]
+                     :when (contains? client-channels channel)]
               (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text))))
-          (when evidence-store
-            (estore/append* evidence-store
-                            {:evidence/id (str "e-" (UUID/randomUUID))
-                             :evidence/subject {:ref/type :thread :ref/id (str "irc/" channel)}
-                             :evidence/type :forum-post
-                             :evidence/claim-type :observation
-                             :evidence/author from-nick
-                             :evidence/at (now-str)
-                             :evidence/body {:channel channel
-                                             :text text
-                                             :from from-nick
-                                             :transport :irc}
-                             :evidence/tags [:irc :chat :transport/irc (keyword "channel" channel)]
-                             :evidence/session-id (str "irc-sess-" channel)}))
-          (relay-fn channel from-nick text))
+          (try
+            (when evidence-store
+              (estore/append* evidence-store
+                              {:evidence/id (str "e-" (UUID/randomUUID))
+                               :evidence/subject {:ref/type :thread :ref/id (str "irc/" channel)}
+                               :evidence/type :forum-post
+                               :evidence/claim-type :observation
+                               :evidence/author from-nick
+                               :evidence/at (now-str)
+                               :evidence/body {:channel channel
+                                               :text text
+                                               :from from-nick
+                                               :transport :irc}
+                               :evidence/tags [:irc :chat :transport/irc (keyword "channel" channel)]
+                               :evidence/session-id (str "irc-sess-" channel)}))
+            (catch Exception e
+              (emit-error-evidence! evidence-store nil "send-to-channel-evidence-error"
+                                    (.getMessage e))))
+          (try
+            (relay-fn channel from-nick text)
+            (catch Exception e
+              (emit-error-evidence! evidence-store nil "send-to-channel-relay-error"
+                                    (.getMessage e)))))
 
         ;; F1: Keepalive loop — single future for all clients
         keepalive-loop

@@ -138,6 +138,26 @@
       ((:on-line irc) :c2 "JOIN #futon")
       (is (= #{"joe" "claude"} (get @rooms "#futon"))))))
 
+(deftest nick-change-preserves-channel-delivery
+  (testing "client still receives channel messages after changing nick in-room"
+    (let [{:keys [rooms sent] :as irc} (make-test-irc)]
+      (register-client! irc :c1 "joe-old")
+      (register-client! irc :c2 "claude")
+      ((:on-line irc) :c1 "JOIN #futon")
+      ((:on-line irc) :c2 "JOIN #futon")
+
+      ;; Change nick after joining; room membership should track the new nick.
+      ((:on-line irc) :c1 "NICK joe")
+      (is (contains? (get @rooms "#futon") "joe"))
+      (is (not (contains? (get @rooms "#futon") "joe-old")))
+
+      (reset! sent [])
+      ((:on-line irc) :c2 "PRIVMSG #futon :Can you hear me?")
+
+      (let [joe-lines (sent-lines-to sent :c1)]
+        (is (some #(re-find #"Can you hear me\?" %) joe-lines)
+            "renamed client should still receive channel broadcasts")))))
+
 ;; =============================================================================
 ;; 4. PRIVMSG relay and evidence
 ;; =============================================================================
