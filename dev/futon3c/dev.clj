@@ -1537,6 +1537,14 @@
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
                                                            (min 8 (count initial-sid))) ")"))))))))
+        ;; If codex wasn't registered locally but is expected as a remote peer,
+        ;; register a stub so it appears in the agents list. The laptop's WS
+        ;; bridge will update the registration with a real invoke-fn on connect.
+        _ (when (and (not register-codex?) relay-codex?)
+            (rt/register-codex! {:agent-id "codex-1"
+                                 :metadata {:remote? true
+                                            :note "Awaiting WS bridge from laptop"}})
+            (println "[dev] Codex agent registered: codex-1 (remote peer, no local invoke)"))
         ;; Dispatch relays: route IRC messages through invoke-agent!
         _dispatch-relay-claude (when (and irc-sys relay-claude?)
                                  (start-dispatch-relay!
