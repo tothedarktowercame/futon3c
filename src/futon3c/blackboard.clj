@@ -72,6 +72,7 @@
    :side    — which side for the window (:right :bottom :left), default :right
    :width   — window width (for :left/:right), default 50
    :height  — window height (for :bottom), default 15
+   :slot    — side-window slot index (keeps multiple panels stable)
    :no-display — if true, update buffer but don't force-display it
 
    Returns {:ok bool :output str}."
@@ -83,11 +84,24 @@
          side (or (:side opts) 'right)
          width (or (:width opts) 50)
          height (or (:height opts) 15)
+         slot (if (contains? opts :slot)
+                (:slot opts)
+                (cond
+                  (= buffer-name "*agents*") 0
+                  (str/starts-with? buffer-name "*invoke:") 1
+                  :else nil))
          display? (not (:no-display opts))
          display-form (when display?
-                        (if (#{:bottom} side)
-                          (format "(display-buffer-in-side-window buf '((side . bottom) (window-height . %d)))" height)
-                          (format "(display-buffer-in-side-window buf '((side . %s) (window-width . %d)))" (name side) width)))
+                        (let [slot-form (when (some? slot)
+                                          (format " (slot . %s)" slot))]
+                          (if (#{:bottom} side)
+                            (format "(display-buffer-in-side-window buf '((side . bottom) (window-height . %d)%s))"
+                                    height
+                                    (or slot-form ""))
+                            (format "(display-buffer-in-side-window buf '((side . %s) (window-width . %d)%s))"
+                                    (name side)
+                                    width
+                                    (or slot-form "")))))
          elisp (str "(let ((buf (get-buffer-create \"" buf-escaped "\")))"
                     "(with-current-buffer buf"
                     "(let ((inhibit-read-only t))"
@@ -338,7 +352,8 @@
   (when *enabled*
     (try
       (let [content (format-agent-status registry-status)]
-        (blackboard! "*agents*" content {:width 60}))
+        ;; Keep *agents* in a stable side-window slot.
+        (blackboard! "*agents*" content {:width 60 :slot 0}))
       (catch Throwable _ nil))))
 
 ;; =============================================================================
