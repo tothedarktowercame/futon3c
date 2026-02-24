@@ -368,27 +368,53 @@
                       "?agent-id=" agent-id
                       (when-let [sid (some-> @sid* str not-empty)]
                         (str "&session-id=" sid))))
+        mark-local-invoke-state! (fn [{:keys [status session-id prompt-preview]}]
+                                   (let [updates (cond-> [:agent/status status
+                                                          :agent/invoke-started-at (when (= status :invoking) (Instant/now))
+                                                          :agent/invoke-prompt-preview (when (= status :invoking) prompt-preview)]
+                                                   (some? session-id) (into [:agent/session-id session-id]))]
+                                     (try
+                                       (apply reg/update-agent! agent-id updates)
+                                       (bb/project-agents! (reg/registry-status))
+                                       (catch Throwable _))))
         handle-invoke! (fn [^WebSocket ws frame]
                          (let [invoke-id (:invoke_id frame)
                                prompt (:prompt frame)
                                incoming-session (:session_id frame)]
                            (when (string? invoke-id)
                              (future
-                               (let [result (invoke-fn (str prompt) incoming-session)
-                                     sid (:session-id result)]
-                                 (when (and (string? sid) (not (str/blank? sid)))
-                                   (reset! sid* sid)
-                                   (persist-session-id! session-file sid))
-                                 (let [payload (cond-> {"type" "invoke_result"
-                                                        "invoke_id" invoke-id}
-                                                 sid (assoc "session_id" sid)
-                                                 (:error result) (assoc "error" (str (:error result)))
-                                                 (not (:error result)) (assoc "result" (or (:result result) "")))]
-                                   (try
-                                     (send-json! ws payload)
-                                     (catch Exception e
-                                       (println (str "[dev] codex ws bridge send failed: "
-                                                     (.getMessage e)))))))))))
+                               (let [prompt-str (str prompt)
+                                     prompt-preview (subs prompt-str 0 (min 120 (count prompt-str)))
+                                     final-sid* (atom nil)]
+                                 (mark-local-invoke-state! {:status :invoking
+                                                            :prompt-preview prompt-preview})
+                                 (try
+                                   (let [raw-result (try
+                                                      (invoke-fn prompt-str incoming-session)
+                                                      (catch Throwable t
+                                                        {:error (str "invoke exception: " (.getMessage t))
+                                                         :session-id incoming-session}))
+                                         result (if (map? raw-result)
+                                                  raw-result
+                                                  {:result (str raw-result)})
+                                         sid (some-> (:session-id result) str str/trim not-empty)]
+                                     (reset! final-sid* sid)
+                                     (when sid
+                                       (reset! sid* sid)
+                                       (persist-session-id! session-file sid))
+                                     (let [payload (cond-> {"type" "invoke_result"
+                                                            "invoke_id" invoke-id}
+                                                     sid (assoc "session_id" sid)
+                                                     (:error result) (assoc "error" (str (:error result)))
+                                                     (not (:error result)) (assoc "result" (or (:result result) "")))]
+                                       (try
+                                         (send-json! ws payload)
+                                         (catch Exception e
+                                           (println (str "[dev] codex ws bridge send failed: "
+                                                         (.getMessage e)))))))
+                                   (finally
+                                     (mark-local-invoke-state! {:status :idle
+                                                                :session-id @final-sid*}))))))))
         worker (future
                  (while @running?
                    (if-not (ensure-registered!)
@@ -770,6 +796,33 @@
       (println "[dev] Tickle orchestration status:")
       (pprint/pprint summary)
       summary)))
+
+(defn tickle-report!
+  "Emit a one-line Tickle status report (IRC + evidence)."
+  [& {:keys [room repo-dir now]
+      :or {room "#futon"
+           repo-dir "/home/joe/code/futon3c"}}]
+  (let [store @!evidence-store
+        send-fn (some-> @!irc-sys :server :send-to-channel!)]
+    (if-not store
+      (do
+        (println "[dev] No evidence store available; cannot emit Tickle report.")
+        {:ok false :error :missing-evidence-store})
+      (if-let [report-status! (or (ns-resolve 'futon3c.agents.tickle-orchestrate 'report-status!)
+                                  (do
+                                    (require 'futon3c.agents.tickle-orchestrate :reload)
+                                    (ns-resolve 'futon3c.agents.tickle-orchestrate 'report-status!)))]
+        (let [result (report-status!
+                      {:evidence-store store
+                       :send-to-channel! send-fn
+                       :room room
+                       :repo-dir repo-dir
+                       :now now})]
+          (println "[dev] Tickle report:" (:message result))
+          result)
+        (do
+          (println "[dev] Tickle report unavailable: futon3c.agents.tickle-orchestrate/report-status! missing")
+          {:ok false :error :missing-report-status})))))
 
 (defn status
   "Quick runtime status for the REPL."
@@ -1338,7 +1391,7 @@
 
    Returns {:agent-id str :nick str} or nil if IRC is not running."
   [{:keys [relay-bridge irc-server agent-id nick invoke-timeout-ms]
-    :or {agent-id "claude-1" nick "claude" invoke-timeout-ms 120000}}]
+    :or {agent-id "claude-1" nick "claude" invoke-timeout-ms 600000}}]
   (when (and relay-bridge irc-server)
     ((:join-agent! relay-bridge) agent-id nick "#futon"
      (fn [data]
@@ -1416,7 +1469,7 @@
         register-codex? (env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
         relay-claude? (env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
-        relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 120000) 120000)
+        relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 600000) 600000)
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
         irc-send-base-hint (or (some-> (env "FUTON3C_IRC_SEND_BASE") normalize-http-base)
                                (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
