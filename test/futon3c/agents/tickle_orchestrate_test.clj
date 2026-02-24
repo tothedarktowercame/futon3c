@@ -93,6 +93,38 @@
       (is (= 2 (:total-kicks summary)))
       (is (= 7200 (:uptime-seconds summary))))))
 
+(deftest report-status-broadcasts-message-and-emits-evidence
+  (testing "report-status! posts to IRC and records evidence"
+    (let [store (-> (make-evidence-store)
+                    (append-orch! "2026-02-24T10:00:00Z" :kick-start {:agent "codex-1"})
+                    (append-orch! "2026-02-24T10:01:00Z" :kick-complete {:status :done})
+                    (append-orch! "2026-02-24T11:00:00Z" :kick-start {:agent "codex-2"})
+                    (append-orch! "2026-02-24T11:02:00Z" :kick-complete {:status :failed}))
+          sent (atom [])]
+      (let [result (orch/report-status!
+                    {:evidence-store store
+                     :send-to-channel! (fn [ch from text]
+                                         (swap! sent conj {:ch ch :from from :text text}))
+                     :room "#status"
+                     :repo-dir "/tmp/repo"
+                     :session-id "session-report"
+                     :now "2026-02-24T12:00:00Z"})]
+        (is (= "Tickle: 2 kicks (1 ok, 1 failed), last: codex-2 @ 2026-02-24T11:02:00Z"
+               (:message result)))
+        (is (= 1 (count @sent)))
+        (is (= {:ch "#status" :from "tickle-1"
+                :text "Tickle: 2 kicks (1 ok, 1 failed), last: codex-2 @ 2026-02-24T11:02:00Z"}
+               (first @sent)))
+        (let [entries (estore/query* store {})
+              report-entry (some #(when (= :status-report (last (:evidence/tags %))) %) entries)]
+          (is (some? report-entry))
+          (is (= :status-report (last (:evidence/tags report-entry))))
+          (is (= "tickle-1" (:evidence/author report-entry)))
+          (is (= "session-report" (:evidence/session-id report-entry)))
+          (is (= "/tmp/repo" (get-in report-entry [:evidence/body :repo])))
+          (is (= (:message result) (get-in report-entry [:evidence/body :message])))
+          (is (= 2 (get-in report-entry [:evidence/body :summary :total-kicks]))))))))
+
 ;; =============================================================================
 ;; Prompt construction (via assign/review)
 ;; =============================================================================

@@ -160,6 +160,48 @@
         "\nLast updated: " (now-str))
    {:no-display true}))
 
+(defn report-status!
+  "Broadcast a concise orchestration status line and emit supporting evidence.
+
+   opts:
+     :evidence-store   — evidence backend/atom for summarising + emission
+     :send-to-channel! — IRC send fn (optional)
+     :room             — IRC room (default \"#futon\")
+     :repo-dir         — repo identifier for evidence context (optional)
+     :now              — override Instant/string for deterministic tests
+     :session-id       — optional fixed evidence session id
+     :status-subject   — optional evidence subject map"
+  [{:keys [evidence-store send-to-channel! room repo-dir now session-id status-subject] :as _opts}]
+  (let [summary (tickle-status evidence-store {:now now})
+        total (or (:total-kicks summary) 0)
+        completed (or (:issues-completed summary) 0)
+        failed (or (:issues-failed summary) 0)
+        last-agent (or (:last-agent summary) "-")
+        last-time (or (:last-complete-at summary)
+                     (:last-kick-at summary)
+                     "never")
+        message (format "Tickle: %d kicks (%d ok, %d failed), last: %s @ %s"
+                        total completed failed last-agent last-time)
+        subject (or status-subject {:ref/type :component :ref/id "tickle-status"})]
+    (when (fn? send-to-channel!)
+      (send-to-channel! (or room "#futon") "tickle-1" message))
+    (when evidence-store
+      (let [append-result
+            (estore/append* evidence-store
+                            {:subject subject
+                             :type :coordination
+                             :claim-type :observation
+                             :author "tickle-1"
+                             :session-id (or session-id (workflow-id))
+                             :tags [:tickle :orchestrate :status-report]
+                             :body {:repo repo-dir
+                                    :summary summary
+                                    :message message}})]
+        (when (:error/component append-result)
+          (throw (ex-info "Failed to append tickle status report" {:error append-result})))))
+    {:summary summary
+     :message message}))
+
 ;; =============================================================================
 ;; GitHub issue fetching
 ;; =============================================================================
@@ -542,18 +584,22 @@
   "Feed a queue of issues to an agent one at a time.
    Returns [{:issue-number :status :total-elapsed-ms} ...]."
   [issues config]
-  (mapv (fn [issue]
-          (project! {:issue issue :status :pending
-                     :phase (str (count issues) " in queue")})
-          (kick! issue config))
-        issues))
+  (let [results (mapv (fn [issue]
+                        (project! {:issue issue :status :pending
+                                   :phase (str (count issues) " in queue")})
+                        (kick! issue config))
+                      issues)]
+    (report-status! config)
+    results))
 
 (defn run-batch!
   "Run full workflows (assign + review) for a batch of issues sequentially.
    Returns [{:issue-number :status :verdict :total-elapsed-ms} ...]."
   [issues config]
-  (mapv (fn [issue]
-          (project! {:issue issue :status :pending
-                     :phase (str "Queue: " (count issues) " issues")})
-          (run-issue-workflow! issue config))
-        issues))
+  (let [results (mapv (fn [issue]
+                        (project! {:issue issue :status :pending
+                                   :phase (str "Queue: " (count issues) " issues")})
+                        (run-issue-workflow! issue config))
+                      issues)]
+    (report-status! config)
+    results))
