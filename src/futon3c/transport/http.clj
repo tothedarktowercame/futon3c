@@ -692,9 +692,9 @@
                            "http-caller")
                 timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
                                    long)]
-            (emit-invoke-evidence! evidence-store caller (str prompt) nil)
             (let [result (reg/invoke-agent! (str agent-id) prompt timeout-ms)
                   sid (:session-id result)]
+              (emit-invoke-evidence! evidence-store caller (str prompt) sid)
               (if (:ok result)
                 (do
                   (emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid)

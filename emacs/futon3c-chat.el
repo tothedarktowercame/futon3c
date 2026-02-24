@@ -253,7 +253,8 @@ CALLBACK receives the response string."
                               (futon3c-chat--surface-contract) text))
          (json-body (json-serialize
                      `(:agent-id ,futon3c-chat-agent-id
-                       :prompt ,full-prompt)))
+                       :prompt ,full-prompt
+                       :caller ,(or (getenv "USER") user-login-name "joe"))))
          (outbuf (generate-new-buffer " *futon3c-invoke*"))
          (proc nil))
     (setq proc
