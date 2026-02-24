@@ -1322,7 +1322,6 @@
        "- Sender: " sender "\n"
        "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
        "- Return natural chat text only; do not emit directive wrappers.\n"
-       "- Never prefix with `IRC_SEND #futon ::` on this surface.\n"
        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
        "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
        "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"

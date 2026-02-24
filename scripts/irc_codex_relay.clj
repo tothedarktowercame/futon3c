@@ -148,8 +148,7 @@
         cmd (build-codex-cmd sid)
         prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
                             "Keep replies concise for IRC. "
-                            "Return natural chat text only; never prefix with "
-                            "`IRC_SEND #futon ::`.\n"
+                            "Return natural chat text only.\n"
                             "Before claiming DNS/network/git connectivity failure, "
                             "run a command that verifies it and quote actual output.\n"
                             "Do not recommend exporting CODEX_SANDBOX/CODEX_APPROVAL "
@@ -178,8 +177,7 @@
         url (str base "/api/alpha/invoke")
         prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
                             "Keep replies concise for IRC. "
-                            "Return natural chat text only; never prefix with "
-                            "`IRC_SEND #futon ::`.\n"
+                            "Return natural chat text only.\n"
                             "Before claiming DNS/network/git connectivity failure, "
                             "run a command that verifies it and quote actual output.\n"
                             "Do not recommend exporting CODEX_SANDBOX/CODEX_APPROVAL "
