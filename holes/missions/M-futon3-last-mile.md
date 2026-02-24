@@ -1,9 +1,12 @@
 # Mission: Futon3x Last Mile — Independent Agent Runs
 
 **Date:** 2026-02-19
-**Status:** IDENTIFY (mission proposal)
+**Status:** IDENTIFY (mission proposal, brushed up 2026-02-24)
 **Blocked by:** None (all substrate prototypes settled or active; components
 exist but are not yet integrated end-to-end)
+**Cross-ref:** M-self-representing-stack (futon4) makes this mission's
+evidence landscape navigable; M-improve-irc (futon3c) is a side quest
+for transport reliability
 
 ## Motivation
 
@@ -21,7 +24,7 @@ the bottom up across 16 prototypes. The substrate layers are now settled:
   the successor.
 
 On top of these, futon3c has:
-- 614 tests, 11 peripherals (10 wired)
+- 841 tests (as of 2026-02-24), 11 peripherals (10 wired)
 - Social pipeline (5 stages: presence→auth→mode→dispatch→persist)
 - Evidence landscape (AtomBackend + XtdbBackend via futon1a)
 - Agency registry with session lifecycle (Claude, Codex, Tickle)
@@ -104,6 +107,53 @@ proof-paths as evidence entries.
 | S (solution) | Wiring code + smoke tests | Parts I-III below |
 | H (heuristic) | Patterns from existing library | `stack-coherence/*`, `realtime/*` |
 | E (evidence) | Integration tests + live evidence entries | Success = evidence in landscape |
+
+## What's Changed Since IDENTIFY (2026-02-24 brush-up)
+
+### The Parallel Integration Path
+
+While this mission waited at IDENTIFY, a de facto integration happened
+through `dev.clj` — the REPL-driven runtime that wires agents for
+day-to-day use:
+
+- **Claude and Codex invoke end-to-end**: `make-claude-invoke-fn` and
+  `make-codex-invoke-fn` in dev.clj call the agents, stream responses,
+  and update the registry. This bypasses the formal PeripheralRunner path
+  but achieves the same result: agents run, produce output, and their
+  state is tracked.
+- **IRC transport is live**: agents receive and respond to IRC messages
+  via the relay bridge. Transport routing works (I-2 compliant).
+- **Agents blackboard**: registry projects live agent status (idle/invoking,
+  activity tracking, relative timestamps) to Emacs via emacsclient.
+- **Evidence persists via XTDB**: the evidence landscape is operational
+  and queryable via HTTP API.
+- **Mission Control runs**: Tickle invokes MC portfolio reviews that
+  scan repos and produce coverage data.
+
+**The gap this reveals:** The formal peripheral runner path (PeripheralRunner
+→ RealBackend → tool dispatch → evidence emission) is tested but not the
+path agents actually use. The dev.clj path is pragmatic but doesn't enforce
+peripheral constraints (tool-set boundaries, exit conditions, capability
+envelopes). The last-mile work is making the formal path the *actual* path.
+
+### The futon3a Gap
+
+(Identified 2026-02-24, conversation between Joe and Claude.)
+
+During the M-self-representing-stack DERIVE session, pattern searches were
+done by generic Explore agents grepping `.flexiarg` files — not by querying
+futon3a's pattern search API. futon3a has notions/compass for pattern search,
+but the day-to-day workflow doesn't route through it. The PSR/PUR discipline
+exists in CLAUDE.md instructions, but the infrastructure path (agent wants
+pattern → queries futon3a → gets ranked results → selects → records PSR)
+isn't wired end-to-end.
+
+This is the cross-repo integration gap: the futon3x trilogy is individually
+functional but not yet an organism. The flows (3c routes to 3a for patterns,
+3a results feed into 3b's gate pipeline, 3b evidence flows back through 3c)
+are still manual. This mission's scope-out of futon3a integration ("separate
+mission") may need revisiting — without 3a, the pattern search loop that
+makes agents self-improving is bypassed.
 
 ## Scope In
 
@@ -317,7 +367,7 @@ appear, are correctly typed, and form valid reply chains.
 | Proof-paths appear as evidence entries | futon3b proof-paths bridge to futon3c evidence |
 | Three agents run concurrently | Claude (explore), Codex (edit), Tickle (mission-control) |
 | Portfolio review produces real output | Mission control scans live repos and emits review evidence |
-| All existing tests still pass | No regressions in the 614-test suite |
+| All existing tests still pass | No regressions in the 841-test suite |
 
 ## Dogfood Targets
 
