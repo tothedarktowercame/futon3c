@@ -171,7 +171,8 @@
     {:irc-port 6667
      :irc-bind-host "0.0.0.0"
      :register-claude? true
-     :register-codex? true}))
+     :register-codex? true
+     :direct-xtdb? true}))
 
 (defn- read-session-id
   [f]
@@ -554,6 +555,99 @@
                              (:send-to-channel! (:server s)))
          :room "#futon"})
       {:ok false :error error})))
+
+;; =============================================================================
+;; Tickle smoke tests — preflight + definitive runs
+;; =============================================================================
+
+(defn tickle-preflight!
+  "Check all prerequisites for a Tickle orchestration run.
+   Returns a map of checks — all values should be truthy for a real run."
+  []
+  (let [agents (reg/registered-agents)
+        agent-ids (set (map (comp :id/value :agent/id) agents))]
+    {:agents-registered (vec agent-ids)
+     :codex-available?  (contains? agent-ids "codex-1")
+     :claude-available? (contains? agent-ids "claude-1")
+     :evidence-store?   (some? @!evidence-store)
+     :irc?              (some? @!irc-sys)}))
+
+(defn tickle-smoke!
+  "Run a minimal Tickle smoke test with a synthetic issue.
+   Exercises the real invoke path end-to-end: assign → evidence → report.
+
+   Options:
+     :agent-id   — agent to invoke (default \"codex-1\")
+     :repo-dir   — working directory for the agent (default futon3c)
+     :timeout-ms — invoke timeout (default 120000)
+     :dry-run?   — if true, just show what would happen without invoking
+
+   Usage:
+     (dev/tickle-smoke!)                          ; kick codex-1
+     (dev/tickle-smoke! :agent-id \"claude-1\")   ; kick claude-1
+     (dev/tickle-smoke! :dry-run? true)           ; preflight only"
+  [& {:keys [agent-id repo-dir timeout-ms dry-run?]
+      :or {agent-id "codex-1"
+           repo-dir "/home/joe/code/futon3c"
+           timeout-ms 120000}}]
+  (let [preflight (tickle-preflight!)
+        smoke-issue {:number 0
+                     :title "Tickle smoke test"
+                     :body (str "## Smoke Test\n\n"
+                                "Create the file `test/futon3c/agents/tickle_smoke_output.txt` "
+                                "containing exactly the text `SMOKE OK`.\n\n"
+                                "This is an automated test of the Tickle orchestration pipeline. "
+                                "Do not modify any other files.\n\n"
+                                "## Criteria\n\n"
+                                "- [ ] File exists at test/futon3c/agents/tickle_smoke_output.txt\n"
+                                "- [ ] File contains exactly `SMOKE OK`\n"
+                                "- [ ] No other files modified")
+                     :labels ["smoke-test"]}
+        config {:evidence-store @!evidence-store
+                :repo-dir repo-dir
+                :agent-id agent-id
+                :timeout-ms timeout-ms
+                :send-to-channel! (when-let [s @!irc-sys]
+                                    (:send-to-channel! (:server s)))
+                :room "#futon"}]
+    (if dry-run?
+      {:dry-run true
+       :preflight preflight
+       :issue smoke-issue
+       :config (dissoc config :evidence-store :send-to-channel!)}
+      (do
+        (println "[smoke] Preflight:" preflight)
+        (println "[smoke] Kicking" agent-id "with smoke issue...")
+        (let [result (orch/kick! smoke-issue config)
+              ;; Check for the output file
+              output-file (java.io.File. (str repo-dir "/test/futon3c/agents/tickle_smoke_output.txt"))
+              file-ok? (and (.exists output-file)
+                            (= "SMOKE OK" (clojure.string/trim (slurp output-file))))]
+          (println "[smoke] Result:" (:status result)
+                   (if file-ok? "— output file verified" "— output file NOT found"))
+          (assoc result
+                 :smoke-file-ok? file-ok?
+                 :preflight preflight))))))
+
+(defn tickle-verify!
+  "Query evidence store for recent orchestration evidence.
+   Useful after a smoke run to verify evidence was emitted correctly.
+
+   Options:
+     :limit — max entries to return (default 20)
+     :tag   — filter by tag (default :orchestrate)"
+  [& {:keys [limit tag] :or {limit 20 tag :orchestrate}}]
+  (let [entries (estore/query* @!evidence-store {})
+        orch-entries (->> entries
+                         (filter #(some #{tag} (:evidence/tags %)))
+                         (sort-by :evidence/at)
+                         (take-last limit))]
+    (println "[verify]" (count orch-entries) "orchestration evidence entries found")
+    (doseq [e orch-entries]
+      (println "  " (:evidence/at e)
+               (last (:evidence/tags e))
+               (select-keys (:evidence/body e) [:agent :ok :status :issue-number])))
+    orch-entries))
 
 (defn status
   "Quick runtime status for the REPL."
