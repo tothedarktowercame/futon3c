@@ -161,7 +161,8 @@
     :linode {:irc-port 6667
              :irc-bind-host "0.0.0.0"
              :register-claude? true
-             :register-codex? false}
+             :register-codex? false
+             :direct-xtdb? true}
     :laptop {:irc-port 0
              :irc-bind-host "127.0.0.1"
              :register-claude? false
@@ -386,17 +387,19 @@
 
 (defn- direct-xtdb-enabled?
   "Whether futon3c may write evidence directly to XTDB.
-   Disabled by default to keep writes on explicit governed paths."
-  []
-  (env-bool "FUTON3C_DIRECT_XTDB" false))
+   On the Linode role this defaults to true (same JVM as futon1a).
+   Explicit env var FUTON3C_DIRECT_XTDB always overrides."
+  [role-cfg]
+  (env-bool "FUTON3C_DIRECT_XTDB" (:direct-xtdb? role-cfg false)))
 
 (defn- make-evidence-store
-  "Build the evidence store based on FUTON3C_DIRECT_XTDB.
-   Default is in-memory (no direct XTDB write path)."
-  [f1-sys]
-  (if (direct-xtdb-enabled?)
+  "Build the evidence store based on direct-xtdb? flag.
+   When true, uses shared XTDB node (evidence persists to futon1a).
+   When false, uses in-memory atom (evidence lost on restart)."
+  [f1-sys direct-xtdb?]
+  (if direct-xtdb?
     (do
-      (println "[dev] direct XTDB path: ENABLED (legacy mode)")
+      (println "[dev] direct XTDB path: ENABLED")
       (xb/make-xtdb-backend (:node f1-sys)))
     (do
       (println "[dev] direct XTDB path: disabled (using in-memory evidence store)")
@@ -567,13 +570,12 @@
 
 (defn start-futon1a!
   "Start futon1a (XTDB + HTTP). Returns system map with :node, :store, :stop!, etc."
-  []
+  [direct-xtdb?]
   (let [port (env-int "FUTON1A_PORT" 7071)
         data-dir (env "FUTON1A_DATA_DIR"
                       (str (System/getProperty "user.home")
                            "/code/storage/futon1a/default"))
         static-dir (env "FUTON1A_STATIC_DIR" nil)
-        direct-xtdb? (direct-xtdb-enabled?)
         allowed-penholders (->> (env-list "FUTON1A_ALLOWED_PENHOLDERS" ["api" "joe"])
                                 (remove str/blank?)
                                 set)]
@@ -1150,9 +1152,9 @@
         irc-send-base-hint (or (some-> (env "FUTON3C_IRC_SEND_BASE") normalize-http-base)
                                (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
                                (some-> (first-peer-url) normalize-http-base))
-        f1-sys (start-futon1a!)
-        direct-xtdb? (direct-xtdb-enabled?)
-        evidence-store (make-evidence-store f1-sys)
+        direct-xtdb? (direct-xtdb-enabled? role-cfg)
+        f1-sys (start-futon1a! direct-xtdb?)
+        evidence-store (make-evidence-store f1-sys direct-xtdb?)
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
         _ (mcs/configure! {:evidence-store evidence-store})
