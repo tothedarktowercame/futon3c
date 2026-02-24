@@ -398,7 +398,7 @@
    Returns:
      {:relay-fn       (fn [channel from text]) — call from IRC on PRIVMSG
       :irc-interceptor (fn [ch conn parsed]) — pass to WS config
-      :join-agent!    (fn [agent-id nick channel]) — register agent in IRC channel
+      :join-agent!    (fn [agent-id nick channel ws-send-fn & [opts]]) — register/update agent
       :part-agent!    (fn [agent-id]) — remove agent from all channels
       :agents         atom}"
   [config]
@@ -432,11 +432,22 @@
        (reset! !irc-send-fn f))
 
      :join-agent!
-     (fn [agent-id nick channel ws-send-fn]
-       (swap! !agents assoc agent-id
-              {:nick nick
-               :channels #{channel}
-               :ws-send-fn ws-send-fn}))
+     (fn join-agent!
+       ([agent-id nick channel ws-send-fn]
+        (join-agent! agent-id nick channel ws-send-fn {}))
+       ([agent-id nick channel ws-send-fn {:keys [overwrite?]
+                                           :or {overwrite? true}}]
+        (swap! !agents
+               (fn [m]
+                 (let [existing (get m agent-id)
+                       preserve? (and existing (not overwrite?))
+                       nick* (if preserve? (:nick existing) nick)
+                       ws-send-fn* (if preserve? (:ws-send-fn existing) ws-send-fn)
+                       channels* (conj (or (:channels existing) #{}) channel)]
+                   (assoc m agent-id
+                          {:nick nick*
+                           :channels channels*
+                           :ws-send-fn ws-send-fn*}))))))
 
      :part-agent!
      (fn [agent-id]
@@ -532,14 +543,32 @@
         server-socket (ServerSocket. port 50
                                      (java.net.InetAddress/getByName bind-host))
 
+        relay-fn (or (:relay-fn config) (fn [_ _ _]))
+
         send-to-channel!
         (fn [channel from-nick text]
           ;; Send PRIVMSG to a channel from an agent nick (used by relay bridge)
+          ;; Also relay to other agents so they can see each other's messages
           (let [nicks (get @rooms channel #{})
                 all-clients @clients]
             (doseq [[cid client] all-clients
                      :when (contains? nicks (:nick client))]
-              (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text)))))
+              (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text))))
+          (when evidence-store
+            (estore/append* evidence-store
+                            {:evidence/id (str "e-" (UUID/randomUUID))
+                             :evidence/subject {:ref/type :thread :ref/id (str "irc/" channel)}
+                             :evidence/type :forum-post
+                             :evidence/claim-type :observation
+                             :evidence/author from-nick
+                             :evidence/at (now-str)
+                             :evidence/body {:channel channel
+                                             :text text
+                                             :from from-nick
+                                             :transport :irc}
+                             :evidence/tags [:irc :chat :transport/irc (keyword "channel" channel)]
+                             :evidence/session-id (str "irc-sess-" channel)}))
+          (relay-fn channel from-nick text))
 
         ;; F1: Keepalive loop — single future for all clients
         keepalive-loop

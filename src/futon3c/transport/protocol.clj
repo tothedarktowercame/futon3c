@@ -227,6 +227,7 @@
      {\"type\": \"peripheral_start\", \"peripheral_id\": \"explore\"}
      {\"type\": \"tool_action\", \"tool\": \"read\", \"args\": [...]}
      {\"type\": \"peripheral_stop\", \"reason\": \"done\"}
+     {\"type\": \"invoke_result\", \"invoke_id\": \"...\", ...}
 
    Returns:
      {:ws/type :ready :agent-id \"...\" :session-id \"...\"}
@@ -287,6 +288,25 @@
                :irc/channel channel
                :irc/text text}))
 
+          (= "invoke_result" (str frame-type))
+          (let [invoke-id (or (:invoke_id parsed) (:invoke-id parsed))
+                session-id (or (:session_id parsed) (:session-id parsed))
+                result (:result parsed)
+                error (:error parsed)]
+            (cond
+              (or (nil? invoke-id) (not (string? invoke-id)))
+              (transport-error :invalid-frame "invoke_result frame missing invoke_id")
+
+              (and (some? result) (some? error))
+              (transport-error :invalid-frame "invoke_result cannot contain both result and error")
+
+              :else
+              {:ws/type :invoke-result
+               :invoke/id invoke-id
+               :invoke/result result
+               :invoke/error error
+               :invoke/session-id session-id}))
+
           ;; --- Peripheral session frames (Seam 4) ---
           (= "peripheral_start" (str frame-type))
           (let [pid-raw (or (:peripheral_id parsed) (:peripheral-id parsed))]
@@ -317,6 +337,14 @@
           (= "peripheral_stop" (str frame-type))
           {:ws/type :peripheral-stop
            :reason (or (:reason parsed) "client-requested")}
+
+          ;; --- Evidence replication frame ---
+          (= "evidence" (str frame-type))
+          (let [entry (:entry parsed)]
+            (if (or (nil? entry) (not (map? entry)))
+              (transport-error :invalid-frame "evidence frame missing 'entry' map")
+              {:ws/type :evidence
+               :evidence/entry entry}))
 
           :else
           (transport-error :invalid-frame
@@ -462,6 +490,47 @@
             "tool" (name tool)
             "ok" ok?}
      (some? result) (assoc "result" result))))
+
+;; =============================================================================
+;; Evidence replication — coercion from JSON-parsed maps to EvidenceEntry shape
+;;
+;; JSON round-trips lose Clojure keyword values: :reflection → "reflection".
+;; This coerces the entry back into shape-conforming form.
+;; =============================================================================
+
+(defn coerce-replication-entry
+  "Coerce a JSON-parsed evidence entry map into a shape-conforming EvidenceEntry.
+   Handles the keyword/string boundary that JSON round-trips introduce:
+   - :evidence/type and :evidence/claim-type → keywords
+   - :evidence/subject :ref/type → keyword
+   - :evidence/tags → vector of keywords
+   - :evidence/pattern-id → keyword (when present)
+   Returns the coerced map (does not validate — that's the store's job)."
+  [m]
+  (cond-> m
+    (:evidence/type m)
+    (update :evidence/type str->keyword)
+
+    (:evidence/claim-type m)
+    (update :evidence/claim-type str->keyword)
+
+    (get-in m [:evidence/subject :ref/type])
+    (update-in [:evidence/subject :ref/type] str->keyword)
+
+    (:evidence/tags m)
+    (update :evidence/tags (fn [tags]
+                             (vec (map #(if (keyword? %) % (str->keyword (str %)))
+                                       (or tags [])))))
+
+    (:evidence/pattern-id m)
+    (update :evidence/pattern-id str->keyword)))
+
+(defn render-evidence-ack
+  "Render an evidence_ack frame after successful replication."
+  [evidence-id]
+  (json/generate-string {"type" "evidence_ack"
+                          "evidence_id" evidence-id
+                          "ok" true}))
 
 (defn render-peripheral-stopped
   "Render a peripheral_stopped frame with fruit."

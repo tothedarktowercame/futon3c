@@ -86,12 +86,14 @@
    - :model (optional, default \"gpt-5-codex\")
    - :sandbox (default \"workspace-write\")
    - :approval-policy (default \"never\")
+   - :timeout-ms hard process timeout in milliseconds (default 120000)
    - :cwd (optional shell working directory)"
-  [{:keys [codex-bin model sandbox approval-policy cwd]
+  [{:keys [codex-bin model sandbox approval-policy timeout-ms cwd]
     :or {codex-bin "codex"
          model "gpt-5-codex"
          sandbox "workspace-write"
-         approval-policy "never"}}]
+         approval-policy "never"
+         timeout-ms 120000}}]
   (let [!lock (Object.)]
     (fn [prompt session-id]
       (locking !lock
@@ -103,6 +105,7 @@
                                       :approval-policy approval-policy
                                       :session-id session-id})
                 shell-args (cond-> (concat cmd [:in (str prompt-str "\n")])
+                             (some? timeout-ms) (concat [:timeout timeout-ms])
                              (some? cwd) (concat [:dir cwd]))
                 {:keys [exit out err]} (apply shell/sh shell-args)
                 parsed (parse-output (str (or out "") (or err "")) session-id)

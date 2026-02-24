@@ -10,7 +10,9 @@
 {:peripherals
  {:explore
   {:peripheral/id :explore
-   :peripheral/tools #{:read :glob :grep :bash-readonly :web-fetch}
+   :peripheral/tools #{:read :glob :grep :bash-readonly :web-fetch
+                       :reflect-namespaces :reflect-ns :reflect-var
+                       :reflect-deps :reflect-java-class}
    :peripheral/scope :full-codebase
    :peripheral/entry #{:default :from-reflect}
    :peripheral/exit #{:found-target :ready-to-edit :user-request :hop-reflect}
@@ -107,7 +109,9 @@
    :peripheral/tools #{:read :glob :grep :bash-readonly
                        :mc-inventory :mc-devmaps :mc-coverage
                        :mc-mana :mc-review :mc-bulletin
-                       :tickle-scan :tickle-page :tickle-cycle}
+                       :tickle-scan :tickle-page :tickle-cycle
+                       :reflect-namespaces :reflect-ns :reflect-var
+                       :reflect-deps :reflect-java-class}
    :peripheral/scope :full-codebase
    :peripheral/entry #{:from-any :user-request}
    :peripheral/exit #{:review-complete :hop-reflect :hop-explore :user-request}

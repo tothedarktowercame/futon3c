@@ -21,7 +21,8 @@
             [futon3.gate.shapes :as gate-shapes]
             [futon3b.query.relations :as relations]
             [futon3c.evidence.store :as estore]
-            [futon3c.peripheral.tools :as tools])
+            [futon3c.peripheral.tools :as tools]
+            [futon3c.reflection.core :as reflection])
   (:import [java.io File]
            [java.nio.file FileSystems Path]
            [java.time Instant]
@@ -250,6 +251,67 @@
                          (sort-by :evidence/at)
                          vec))]
       {:ok true :result entries})))
+
+;; =============================================================================
+;; Reflection tools (Clojure runtime introspection)
+;; =============================================================================
+
+(defn- tool-reflect-namespaces
+  "List loaded namespaces. Args: [] or [pattern-string]."
+  [args]
+  (try
+    (let [result (if-let [pattern (first args)]
+                   (reflection/list-namespaces pattern)
+                   (reflection/list-namespaces))]
+      {:ok true :result result})
+    (catch Exception e
+      {:ok false :error (str "reflect-namespaces failed: " (.getMessage e))})))
+
+(defn- tool-reflect-ns
+  "Public vars in a namespace. Args: [ns-sym-or-string]."
+  [args]
+  (let [ns-sym (symbol (str (first args)))]
+    (let [result (reflection/reflect-ns ns-sym)]
+      (if (:error result)
+        {:ok false :error (:error result)}
+        {:ok true :result result}))))
+
+(defn- tool-reflect-var
+  "Full metadata for a var. Args: [ns-sym var-sym] or [\"ns/var\"]."
+  [args]
+  (let [[ns-sym var-sym] (if (= 1 (count args))
+                           (let [fqn (str (first args))
+                                 idx (.lastIndexOf fqn "/")]
+                             (if (pos? idx)
+                               [(symbol (subs fqn 0 idx))
+                                (symbol (subs fqn (inc idx)))]
+                               [nil nil]))
+                           [(symbol (str (first args)))
+                            (symbol (str (second args)))])]
+    (if (and ns-sym var-sym)
+      (let [result (reflection/reflect-var ns-sym var-sym)]
+        (if (:error result)
+          {:ok false :error (:error result)}
+          {:ok true :result result}))
+      {:ok false :error "Expected [ns var] or [\"ns/var\"]"})))
+
+(defn- tool-reflect-deps
+  "Namespace dependency graph. Args: [ns-sym-or-string]."
+  [args]
+  (let [ns-sym (symbol (str (first args)))]
+    (let [result (reflection/reflect-deps ns-sym)]
+      (if (:error result)
+        {:ok false :error (:error result)}
+        {:ok true :result result}))))
+
+(defn- tool-reflect-java-class
+  "Reflect on a Java class. Args: [class-name-string]."
+  [args]
+  (let [class-name (str (first args))]
+    (let [result (reflection/reflect-java-class class-name)]
+      (if (:error result)
+        {:ok false :error (:error result)}
+        {:ok true :result result}))))
 
 ;; =============================================================================
 ;; Discipline tools (futon3a + futon3b adapters)
@@ -567,6 +629,13 @@
 
         ;; Evidence tools
         :musn-log       (tool-musn-log evidence-store args)
+
+        ;; Reflection tools
+        :reflect-namespaces  (tool-reflect-namespaces args)
+        :reflect-ns          (tool-reflect-ns args)
+        :reflect-var         (tool-reflect-var args)
+        :reflect-deps        (tool-reflect-deps args)
+        :reflect-java-class  (tool-reflect-java-class args)
 
         ;; Discipline-domain tools
         :psr-search     (tool-psr-search cwd config args)

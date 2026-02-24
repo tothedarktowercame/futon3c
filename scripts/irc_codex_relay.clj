@@ -12,7 +12,8 @@
      IRC_HOST=172.236.28.208 clojure -M scripts/irc_codex_relay.clj"
   (:require [cheshire.core :as json]
             [clojure.java.shell :as sh]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [org.httpkit.client :as http])
   (:import [java.io BufferedReader File InputStreamReader OutputStreamWriter]
            [java.net Socket]
            [java.time Instant]
@@ -44,6 +45,10 @@
 (def codex-approval (env "CODEX_APPROVAL" "never"))
 (def session-file (env "CODEX_SESSION_FILE" "/tmp/futon-codex-session-id"))
 (def startup-session-id (System/getenv "CODEX_SESSION_ID"))
+(def relay-backend (str/lower-case (env "RELAY_BACKEND" "agency")))
+(def agency-url (env "AGENCY_URL" "http://127.0.0.1:7070"))
+(def agency-agent-id (env "AGENCY_AGENT_ID" "codex-1"))
+(def agency-timeout-ms (parse-int (env "AGENCY_TIMEOUT_MS" "600000") 600000))
 (def require-mention? (parse-bool (System/getenv "IRC_REQUIRE_MENTION") true))
 
 ;; =============================================================================
@@ -117,7 +122,7 @@
       (into [codex-bin "exec"] (concat exec-opts ["-"]))
       (into [codex-bin "exec"] (concat exec-opts ["resume" sid "-"])))))
 
-(defn- call-codex!
+(defn- call-codex-cli!
   [text from sid*]
   (let [sid @sid*
         cmd (build-codex-cmd sid)
@@ -140,6 +145,45 @@
                          (str/trim (:text parsed))))
         (flush)
         nil))))
+
+(defn- call-agency-invoke!
+  [text from]
+  (let [base (str/replace agency-url #"/$" "")
+        url (str base "/api/alpha/invoke")
+        prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
+                            "Keep replies concise for IRC.\n\n"
+                            "%s: %s")
+                       irc-channel from from text)
+        payload (json/generate-string {"agent-id" agency-agent-id
+                                       "prompt" prompt
+                                       "caller" (str "irc:" from)
+                                       "timeout-ms" agency-timeout-ms})
+        resp @(http/post url {:headers {"Content-Type" "application/json"}
+                              :body payload
+                              :timeout agency-timeout-ms})]
+    (if-let [err (:error resp)]
+      (do
+        (println (format "  [agency invoke error] %s" err))
+        (flush)
+        nil)
+      (let [status (:status resp)
+            parsed (try (json/parse-string (or (:body resp) "{}") true)
+                        (catch Exception _ {}))]
+        (if (and (= 200 status) (= true (:ok parsed)))
+          (some-> (:result parsed) str not-empty str/trim not-empty)
+          (do
+            (println (format "  [agency invoke failed] status=%s error=%s message=%s"
+                             status
+                             (or (:error parsed) "unknown")
+                             (or (:message parsed) "")))
+            (flush)
+            nil))))))
+
+(defn- call-agent!
+  [text from sid*]
+  (case relay-backend
+    "cli" (call-codex-cli! text from sid*)
+    (call-agency-invoke! text from)))
 
 ;; =============================================================================
 ;; IRC client
@@ -209,7 +253,7 @@
                 (flush)
                 (send-off !processor
                   (fn [_]
-                    (let [response (call-codex! text* from sid*)]
+                    (let [response (call-agent! text* from sid*)]
                       (when response
                         (irc-privmsg! writer irc-channel response)
                         (println (format "[%s -> %s] %s" irc-nick irc-channel response))
@@ -228,6 +272,10 @@
   (println "  irc:" (str irc-host ":" irc-port))
   (println "  nick:" irc-nick)
   (println "  channel:" irc-channel)
+  (println "  relay-backend:" relay-backend)
+  (println "  agency-url:" agency-url)
+  (println "  agency-agent-id:" agency-agent-id)
+  (println "  agency-timeout-ms:" agency-timeout-ms)
   (println "  codex:" codex-bin)
   (println "  cwd:" codex-cwd)
   (println "  model:" codex-model)

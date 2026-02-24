@@ -259,6 +259,27 @@
       (is (false? (:ok parsed)))
       (is (= "Agent not found: nonexistent" (:error parsed))))))
 
+(deftest agent-register-ws-bridge-opt-in
+  (testing "POST /api/alpha/agents with ws-bridge=true registers without local invoke-fn"
+    (let [handler (make-handler)
+          register-body (json/generate-string {"agent-id" "bridge-agent-1"
+                                               "type" "codex"
+                                               "ws-bridge" true})
+          register-response (post handler "/api/alpha/agents" register-body)
+          register-parsed (parse-body register-response)
+          invoke-body (json/generate-string {"agent-id" "bridge-agent-1"
+                                             "prompt" "hello"})
+          invoke-response (post handler "/api/alpha/invoke" invoke-body)
+          invoke-parsed (parse-body invoke-response)
+          live (reg/get-agent {:id/value "bridge-agent-1" :id/type :continuity})]
+      (is (= 201 (:status register-response)))
+      (is (true? (:ok register-parsed)))
+      (is (true? (:ws-bridge register-parsed)))
+      (is (nil? (:agent/invoke-fn live)) "ws-bridge registration should use WS invoke fallback")
+      (is (= 502 (:status invoke-response)))
+      (is (false? (:ok invoke-parsed)))
+      (is (= "invoke-error" (:error invoke-parsed))))))
+
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================
@@ -285,6 +306,45 @@
       (is (= 404 (:status response)))
       (is (false? (:ok parsed)))
       (is (= "agent-not-found" (:error parsed))))))
+
+;; =============================================================================
+;; POST /api/alpha/irc/send tests
+;; =============================================================================
+
+(deftest irc-send-forwards-to-configured-relay
+  (testing "POST /api/alpha/irc/send forwards message to configured send fn"
+    (let [calls (atom [])
+          handler (make-handler {:irc-send-fn (fn [channel from text]
+                                                (swap! calls conj [channel from text]))})
+          body (json/generate-string {"channel" "#futon"
+                                      "from" "codex"
+                                      "text" "@claude ping"})
+          response (post handler "/api/alpha/irc/send" body)
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= [["#futon" "codex" "@claude ping"]] @calls)))))
+
+(deftest irc-send-without-relay-returns-503
+  (testing "POST /api/alpha/irc/send returns 503 when relay is unavailable"
+    (let [handler (make-handler)
+          body (json/generate-string {"channel" "#futon"
+                                      "text" "hello"})
+          response (post handler "/api/alpha/irc/send" body)
+          parsed (parse-body response)]
+      (is (= 503 (:status response)))
+      (is (false? (:ok parsed)))
+      (is (= "irc-unavailable" (:err parsed))))))
+
+(deftest irc-send-validates-required-fields
+  (testing "POST /api/alpha/irc/send validates channel and text"
+    (let [handler (make-handler {:irc-send-fn (fn [_ _ _] :ok)})
+          body (json/generate-string {"channel" "#futon"})
+          response (post handler "/api/alpha/irc/send" body)
+          parsed (parse-body response)]
+      (is (= 400 (:status response)))
+      (is (false? (:ok parsed)))
+      (is (= "missing-text" (:err parsed))))))
 
 ;; =============================================================================
 ;; GET /health tests
@@ -342,6 +402,17 @@
         (is (= 0 (:sessions parsed)))
         (is (integer? (:evidence parsed)))
         (is (= expected-count (:evidence parsed)))))))
+
+(deftest health-includes-irc-send-hint
+  (testing "GET /health includes IRC relay availability and send-base hint from config"
+    (let [handler (make-handler {:irc-send-fn (fn [_channel _from _text] :ok)
+                                 :irc-send-base "http://172.236.28.208:7070"})
+          response (get-req handler "/health")
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (= "ok" (:status parsed)))
+      (is (= true (:irc-relay-configured parsed)))
+      (is (= "http://172.236.28.208:7070" (:irc-send-base parsed))))))
 
 (deftest health-includes-uptime
   (testing "GET /health includes started-at and non-decreasing uptime seconds"

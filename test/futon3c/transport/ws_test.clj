@@ -8,6 +8,7 @@
             [cheshire.core :as json]
             [futon3c.transport.ws :as ws]
             [futon3c.transport.protocol :as proto]
+            [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
@@ -211,6 +212,44 @@
       ;; Should still dispatch successfully (from is overridden to claude-1)
       (let [frame (last-sent sent)]
         (is (= "receipt" (:type frame)))))))
+
+(deftest ws-invoke-result-resolves-pending-call
+  (testing "invoke_result frame resolves pending WS invoke and emits no error"
+    (let [resolved (atom nil)
+          {:keys [on-open on-receive sent]} (make-test-ws)
+          ch :test-ch-invoke-ok
+          request (mock-request)]
+      (with-redefs [ws-invoke/resolve! (fn [agent-id invoke-id result]
+                                         (reset! resolved [agent-id invoke-id result])
+                                         true)]
+        (on-open ch request)
+        (on-receive ch (ready-frame "claude-1"))
+        (reset! sent [])
+        (on-receive ch (json/generate-string {"type" "invoke_result"
+                                              "invoke_id" "inv-1"
+                                              "result" "ok"
+                                              "session_id" "sess-x"}))
+        (is (= ["claude-1" "inv-1" {:result "ok"
+                                    :session-id "sess-x"
+                                    :error nil}]
+               @resolved))
+        (is (empty? @sent))))))
+
+(deftest ws-invoke-result-unknown-invoke-returns-error
+  (testing "invoke_result for unknown invoke emits unknown-invoke error"
+    (let [{:keys [on-open on-receive sent]} (make-test-ws)
+          ch :test-ch-invoke-miss
+          request (mock-request)]
+      (with-redefs [ws-invoke/resolve! (fn [_ _ _] false)]
+        (on-open ch request)
+        (on-receive ch (ready-frame "claude-1"))
+        (reset! sent [])
+        (on-receive ch (json/generate-string {"type" "invoke_result"
+                                              "invoke_id" "inv-missing"
+                                              "result" "ok"}))
+        (let [frame (last-sent sent)]
+          (is (= "error" (:type frame)))
+          (is (= "unknown-invoke" (:code frame))))))))
 
 ;; =============================================================================
 ;; on-close tests (L2: connection-state-machine)

@@ -231,6 +231,35 @@
         (is (contains? transports :irc) "joe's message has transport :irc")
         (is (contains? transports :ws-relay) "agent response has transport :ws-relay")))))
 
+(deftest relay-bridge-join-agent-overwrite-control
+  (testing "join-agent! with overwrite? false preserves existing callback/nick"
+    (let [dispatch-sent (atom [])
+          ws-sent (atom [])
+          bridge (irc/make-relay-bridge {:evidence-store estore/!store})
+          {:keys [relay-fn join-agent!]} bridge]
+      (join-agent! "codex-1" "codex" "#futon"
+                   (fn [data] (swap! dispatch-sent conj data)))
+      (join-agent! "codex-1" "codex-1" "#futon"
+                   (fn [data] (swap! ws-sent conj data))
+                   {:overwrite? false})
+      (relay-fn "#futon" "joe" "@codex hello")
+      (is (= 1 (count @dispatch-sent)))
+      (is (empty? @ws-sent))))
+
+  (testing "default join-agent! keeps overwrite behavior"
+    (let [dispatch-sent (atom [])
+          ws-sent (atom [])
+          bridge (irc/make-relay-bridge {:evidence-store estore/!store})
+          {:keys [relay-fn join-agent!]} bridge]
+      (join-agent! "codex-1" "codex" "#futon"
+                   (fn [data] (swap! dispatch-sent conj data)))
+      ;; default (no opts) should replace existing callback
+      (join-agent! "codex-1" "codex-1" "#futon"
+                   (fn [data] (swap! ws-sent conj data)))
+      (relay-fn "#futon" "joe" "@codex hello")
+      (is (empty? @dispatch-sent))
+      (is (= 1 (count @ws-sent))))))
+
 ;; =============================================================================
 ;; 6. Per-channel sessions
 ;; =============================================================================

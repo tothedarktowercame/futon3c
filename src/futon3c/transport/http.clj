@@ -13,6 +13,13 @@
      GET  /api/alpha/evidence/count — count evidence entries by filters
      GET  /api/alpha/evidence/:id — retrieve single evidence entry
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
+     POST /api/alpha/irc/send — post a line to IRC via server relay
+     GET  /api/alpha/reflect/namespaces — list loaded Clojure namespaces
+     GET  /api/alpha/reflect/ns/:ns — public vars in a namespace
+     GET  /api/alpha/reflect/ns/:ns/full — all vars (public + private)
+     GET  /api/alpha/reflect/var/:ns/:var — full var metadata (envelope)
+     GET  /api/alpha/reflect/deps/:ns — namespace dependency graph
+     GET  /api/alpha/reflect/java/:class — Java class reflection
      GET  /health    — liveness check with agent/session counts
 
    Pattern references:
@@ -32,6 +39,7 @@
             [futon3c.social.persist :as persist]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
+            [futon3c.reflection.core :as reflection]
             [cheshire.core :as json]
             [cheshire.generate :as json-gen]
             [clojure.edn :as edn]
@@ -317,11 +325,15 @@
                                         :capabilities (:capabilities info)}]))
                             (:agents live-status))
         evidence-store (evidence-store-for-config config)
-        evidence-count (count (estore/query* evidence-store {}))]
+        evidence-count (count (estore/query* evidence-store {}))
+        irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
+        irc-relay-configured? (fn? (:irc-send-fn config))]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
                          "sessions" (count (persist/list-sessions {}))
                          "agent-summary" agent-summary
+                         "irc-relay-configured" irc-relay-configured?
+                         "irc-send-base" irc-send-base
                          "evidence" evidence-count
                          "started-at" (str started-at)
                          "uptime-seconds" uptime-seconds})))
@@ -557,8 +569,10 @@
 (defn- handle-agents-register
   "POST /api/alpha/agents — register an agent via HTTP.
    Body: {\"agent-id\": \"codex-1\", \"type\": \"codex\",
-          \"origin-url\": \"http://...\", \"proxy\": true}
-   Local registration (no origin-url): no-op invoke-fn, agent connects via WS later.
+          \"origin-url\": \"http://...\", \"proxy\": true,
+          \"ws-bridge\": true}
+   Local registration (no origin-url): default no-op invoke-fn.
+   Set ws-bridge=true to register with no local invoke-fn and use WS fallback.
    Proxy registration (with origin-url): invoke-fn forwards to origin Agency."
   [request _config]
   (let [payload (parse-json-map (read-body request))]
@@ -570,6 +584,10 @@
             agent-type (parse-keyword agent-type-str)
             origin-url (or (:origin-url payload) (get payload "origin-url"))
             proxy? (or (:proxy payload) (get payload "proxy") (some? origin-url))
+            ws-bridge? (boolean (or (:ws-bridge payload)
+                                    (get payload "ws-bridge")
+                                    (:ws_bridge payload)
+                                    (get payload "ws_bridge")))
             caps-raw (or (:capabilities payload) (get payload "capabilities"))
             capabilities (if (sequential? caps-raw)
                            (mapv keyword caps-raw)
@@ -584,8 +602,14 @@
                               :message "type is required (claude, codex, tickle, mock)"})
 
           :else
-          (let [invoke-fn (if (and proxy? origin-url (not (str/blank? origin-url)))
+          (let [invoke-fn (cond
+                            (and proxy? origin-url (not (str/blank? origin-url)))
                             (federation/make-proxy-invoke-fn origin-url agent-id)
+
+                            ws-bridge?
+                            nil
+
+                            :else
                             (fn [_prompt _session-id]
                               {:result "registered-via-http" :session-id nil}))
                 result (reg/register-agent!
@@ -595,6 +619,7 @@
                          :capabilities capabilities
                          :metadata (cond-> {}
                                      proxy? (assoc :proxy? true)
+                                     ws-bridge? (assoc :ws-bridge? true)
                                      origin-url (assoc :origin-url origin-url))})]
             (if (and (map? result) (= false (:ok result)))
               (json-response 409 {:ok false
@@ -605,7 +630,8 @@
                 (json-response 201 {:ok true
                                     :agent-id (get-in result [:agent/id :id/value])
                                     :type (name (:agent/type result))
-                                    :proxy proxy?})
+                                    :proxy proxy?
+                                    :ws-bridge ws-bridge?})
                 (json-response 409 {:ok false
                                     :err "registration-failed"
                                     :message (str "Could not register: " agent-id)
@@ -663,9 +689,11 @@
           :else
           (let [caller (or (some-> payload :caller str)
                            (some-> payload (get "caller") str)
-                           "http-caller")]
+                           "http-caller")
+                timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                                   long)]
             (emit-invoke-evidence! evidence-store caller (str prompt) nil)
-            (let [result (reg/invoke-agent! (str agent-id) prompt)
+            (let [result (reg/invoke-agent! (str agent-id) prompt timeout-ms)
                   sid (:session-id result)]
               (if (:ok result)
                 (do
@@ -680,6 +708,45 @@
                                  {:ok false
                                   :error (name code)
                                   :message msg}))))))))))
+
+(defn- handle-irc-send
+  "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
+   Body: {\"channel\": \"#futon\", \"text\": \"...\", \"from\": \"codex\"}."
+  [request config]
+  (let [payload (parse-json-map (read-body request))
+        send-fn (:irc-send-fn config)]
+    (cond
+      (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+
+      (not (fn? send-fn))
+      (json-response 503 {:ok false :err "irc-unavailable"
+                          :message "IRC relay is not configured on this node"})
+
+      :else
+      (let [channel (or (:channel payload) (get payload "channel"))
+            text (or (:text payload) (get payload "text"))
+            from (or (:from payload) (get payload "from") "codex")]
+        (cond
+          (or (nil? channel) (str/blank? (str channel)))
+          (json-response 400 {:ok false :err "missing-channel"
+                              :message "channel is required"})
+
+          (or (nil? text) (str/blank? (str text)))
+          (json-response 400 {:ok false :err "missing-text"
+                              :message "text is required"})
+
+          :else
+          (try
+            (send-fn (str channel) (str from) (str text))
+            (json-response 200 {:ok true
+                                :channel (str channel)
+                                :from (str from)
+                                :text (str text)})
+            (catch Exception e
+              (json-response 502 {:ok false :err "irc-send-failed"
+                                  :message (.getMessage e)}))))))))
 
 (defn- handle-agents-list
   "GET /api/alpha/agents — list all registered agents."
@@ -701,10 +768,18 @@
 (defn- handle-agent-delete
   "DELETE /api/alpha/agents/:id — deregister an agent."
   [_config agent-id]
-  (let [result (reg/deregister-agent! agent-id)]
+  (let [result (reg/unregister-agent! agent-id)]
     (if (:ok result)
       (json-response 200 {:ok true :agent-id agent-id :deregistered true})
-      (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
+      (let [err (:error result)
+            code (if (map? err) (:error/code err) :deregister-failed)]
+        (json-response (if (= :agent-not-found code) 404 502)
+                       {:ok false
+                        :error (if (= :agent-not-found code)
+                                 (str "Agent not found: " agent-id)
+                                 (if (map? err)
+                                   (:error/message err)
+                                   (str err)))})))))
 
 ;; =============================================================================
 ;; Mission-control endpoints
@@ -815,6 +890,64 @@
                           :message (str "No wiring diagram for mission " mission-id)}))))
 
 ;; =============================================================================
+;; Reflection endpoints — Clojure runtime introspection
+;; =============================================================================
+
+(defn- handle-reflect-namespaces
+  "GET /api/alpha/reflect/namespaces — list loaded namespaces."
+  [request]
+  (let [pattern (get-in request [:query-params "pattern"])
+        result (if pattern
+                 (reflection/list-namespaces pattern)
+                 (reflection/list-namespaces))]
+    (json-response 200 {:ok true :namespaces result :count (count result)})))
+
+(defn- handle-reflect-ns
+  "GET /api/alpha/reflect/ns/:ns — public vars in a namespace."
+  [ns-str]
+  (let [ns-sym (symbol ns-str)
+        result (reflection/reflect-ns ns-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :vars result :count (count result)}))))
+
+(defn- handle-reflect-ns-full
+  "GET /api/alpha/reflect/ns/:ns/full — all vars (public + private)."
+  [ns-str]
+  (let [ns-sym (symbol ns-str)
+        result (reflection/reflect-ns-full ns-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :vars result :count (count result)}))))
+
+(defn- handle-reflect-var
+  "GET /api/alpha/reflect/var/:ns/:var — full metadata for one var."
+  [ns-str var-str]
+  (let [ns-sym (symbol ns-str)
+        var-sym (symbol var-str)
+        result (reflection/reflect-var ns-sym var-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :envelope result}))))
+
+(defn- handle-reflect-deps
+  "GET /api/alpha/reflect/deps/:ns — namespace dependency graph."
+  [ns-str]
+  (let [ns-sym (symbol ns-str)
+        result (reflection/reflect-deps ns-sym)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :deps result}))))
+
+(defn- handle-reflect-java-class
+  "GET /api/alpha/reflect/java/:class — reflect on a Java class."
+  [class-name]
+  (let [result (reflection/reflect-java-class class-name)]
+    (if (:error result)
+      (json-response 404 {:ok false :error (:error result)})
+      (json-response 200 {:ok true :class result}))))
+
+;; =============================================================================
 ;; Public API
 ;; =============================================================================
 
@@ -863,6 +996,9 @@
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
 
+          (and (= :post method) (= "/api/alpha/irc/send" uri))
+          (handle-irc-send request config)
+
           (and (= :post method) (= "/api/alpha/mission-control" uri))
           (handle-mission-control request config)
 
@@ -894,6 +1030,42 @@
 
           (and (= :get method) (= "/api/alpha/agents" uri))
           (handle-agents-list config)
+
+          ;; Reflection endpoints
+          (and (= :get method) (= "/api/alpha/reflect/namespaces" uri))
+          (handle-reflect-namespaces request)
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/ns/")
+               (str/ends-with? uri "/full"))
+          (let [raw (subs uri (count "/api/alpha/reflect/ns/")
+                         (- (count uri) (count "/full")))]
+            (handle-reflect-ns-full (enc/decode-uri-component raw)))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/ns/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/ns/"))]
+            (handle-reflect-ns (enc/decode-uri-component raw)))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/var/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/var/"))
+                idx (.indexOf raw "/")]
+            (if (pos? idx)
+              (handle-reflect-var
+                (enc/decode-uri-component (subs raw 0 idx))
+                (enc/decode-uri-component (subs raw (inc idx))))
+              (json-response 400 {:ok false :error "Expected /api/alpha/reflect/var/:ns/:var"})))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/deps/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/deps/"))]
+            (handle-reflect-deps (enc/decode-uri-component raw)))
+
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/reflect/java/"))
+          (let [raw (subs uri (count "/api/alpha/reflect/java/"))]
+            (handle-reflect-java-class (enc/decode-uri-component raw)))
 
           (and (= :get method) (= "/health" uri))
           (handle-health config started-at)

@@ -21,6 +21,8 @@
             [org.httpkit.client :as http])
   (:import [java.util UUID]))
 
+(def ^:private default-proxy-timeout-ms 30000)
+
 ;; =============================================================================
 ;; Configuration state
 ;; =============================================================================
@@ -71,29 +73,36 @@
    origin-url: the Agency where the real agent lives.
    agent-id: the agent's string ID.
 
-   Returns (fn [prompt session-id] result-map) that POSTs to origin-url/dispatch."
+   Returns (fn [prompt session-id] result-map) that POSTs to
+   origin-url/api/alpha/invoke."
   [origin-url agent-id]
   (fn [prompt session-id]
     (try
       (let [body (json/generate-string
-                  {"msg_id" (str "proxy-" (UUID/randomUUID))
-                   "payload" prompt
-                   "to" agent-id
-                   "from" "federation-proxy"
-                   "session_id" session-id})
+                  {"agent-id" agent-id
+                   "prompt" prompt
+                   "caller" "federation-proxy"
+                   "timeout-ms" default-proxy-timeout-ms})
             ;; Use org.httpkit.client for non-blocking HTTP
             resp @(http/post
-                   (str origin-url "/dispatch")
+                   (str origin-url "/api/alpha/invoke")
                    {:headers {"Content-Type" "application/json"}
                     :body body
-                    :timeout 30000})]
-        (if (and (:status resp) (< (:status resp) 400))
-          {:result (try (json/parse-string (:body resp) true) (catch Exception _ (:body resp)))
-           :session-id session-id}
-          {:error (str "Proxy dispatch failed: HTTP " (:status resp))
+                    :timeout default-proxy-timeout-ms})
+            status (:status resp)
+            parsed (try
+                     (json/parse-string (or (:body resp) "{}") true)
+                     (catch Exception _
+                       {}))]
+        (if (and status (< status 400) (= true (:ok parsed)))
+          {:result (:result parsed)
+           :session-id (or (:session-id parsed) session-id)}
+          {:error (str "Proxy invoke failed: HTTP " status
+                       (when-let [msg (:message parsed)]
+                         (str " (" msg ")")))
            :exit-code -1}))
       (catch Exception e
-        {:error (str "Proxy dispatch exception: " (.getMessage e))
+        {:error (str "Proxy invoke exception: " (.getMessage e))
          :exit-code -1}))))
 
 ;; =============================================================================
@@ -108,7 +117,11 @@
   (try
     (let [agent-id (get-in agent-record [:agent/id :id/value])
           agent-type (name (:agent/type agent-record))
-          capabilities (mapv name (:agent/capabilities agent-record))
+          capabilities (mapv (fn [cap]
+                               (if (keyword? cap)
+                                 (subs (str cap) 1)
+                                 (str cap)))
+                             (:agent/capabilities agent-record))
           body (json/generate-string
                 {"agent-id" agent-id
                  "type" agent-type
@@ -137,7 +150,10 @@
   (let [{:keys [peers self-url]} @!config]
     (when (and (seq peers) self-url
               ;; Don't re-announce proxy agents (prevents loops)
-              (not (get-in agent-record [:agent/metadata :proxy?])))
+              (not (get-in agent-record [:agent/metadata :proxy?]))
+              ;; Some local bridge agents intentionally connect directly to a
+              ;; remote Agency over WS and should not be mirrored as proxies.
+              (not (get-in agent-record [:agent/metadata :skip-federation-proxy?])))
       (mapv #(announce-to-peer! % agent-record self-url) peers))))
 
 ;; =============================================================================

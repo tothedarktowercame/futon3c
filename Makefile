@@ -2,7 +2,7 @@ CLOJURE ?= $(shell if [ -x .tools/clojure/bin/clojure ]; then echo .tools/clojur
 EVIDENCE_BASE?=http://localhost:7070
 
 .PHONY: tools dev test claude claude-repl codex codex-repl codex-autowake tickle status repl \
-	alfworld-server alfworld-runner alfworld-test alfworld-demo
+	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
 
 tools:
 	./scripts/bootstrap-tools.sh
@@ -70,3 +70,12 @@ alfworld-test:
 
 alfworld-demo:
 	bb scripts/alfworld_demo.clj
+  
+fresh:
+	@claude_session_file="$${CLAUDE_SESSION_FILE:-/tmp/futon-session-id}"; \
+	codex_session_file="$${CODEX_SESSION_FILE:-/tmp/futon-codex-session-id}"; \
+	echo "Clearing local agent continuity files:"; \
+	echo "  - $$claude_session_file"; \
+	echo "  - $$codex_session_file"; \
+	rm -f "$$claude_session_file" "$$codex_session_file" /tmp/futon-irc-inbox.jsonl /tmp/futon-irc-outbox.jsonl; \
+	echo "Done. Next invoke starts fresh sessions."

@@ -22,6 +22,7 @@ make dev       # Boot futon1a (XTDB) + futon3c transport
 make claude    # Pick a session or start fresh
 make codex     # Pick a Codex session or start fresh
 make codex-repl # Open Codex Emacs REPL launcher
+make fresh     # Clear local agent continuity/session files
 make test      # Run all tests
 make repl      # Start nREPL with CIDER middleware
 ```
@@ -122,6 +123,26 @@ Use flags via make as: `make codex ARGS="--all"` (or call the script directly).
 Examples:
 - `make codex ARGS="--repl --last"` — hop into Emacs REPL on your latest Codex session
 - `make codex ARGS="--repl <SESSION_ID>"` — hop into Emacs REPL for a specific session
+
+### Codex WS Bridge
+
+`make dev` in laptop role starts an in-process Codex WebSocket bridge by default
+(`FUTON3C_CODEX_WS_BRIDGE=true` for `FUTON3C_ROLE=laptop`). This keeps `codex-1`
+reachable through `/api/alpha/invoke` and IRC dispatch without a separate bridge
+process.
+
+When laptop role has a configured Linode peer (`FUTON3C_LINODE_URL` or the first
+entry in `FUTON3C_PEERS`), the Codex bridge now targets that peer over outbound
+WS and auto-registers `codex-1` there as `ws-bridge=true`. This avoids requiring
+inbound laptop networking for IRC → Codex delivery.
+
+`make codex-repl` reuses the same session file (`/tmp/futon-codex-session-id`) and
+prefers the live Agency session when available, so Emacs and IRC can pivot through
+the same continuity lane.
+
+When Codex needs to post from Emacs to IRC, it can emit an explicit directive
+(`IRC_SEND <channel> :: <message>`), which `codex-repl` forwards to
+`POST /api/alpha/irc/send` on the local Agency endpoint.
 
 When using `--repl`, `codex-repl.el` logs evidence turn-by-turn:
 - session bootstrap (`claim-type: goal`, event `session-start`)
@@ -241,6 +262,116 @@ Entries are rendered with type-aware faces (PSR = pink, PUR = green,
 PAR = dark, etc.) and clickable hyperlinks for patterns, reply chains,
 and sessions.
 
+## Reflection Layer
+
+The reflection layer exposes Clojure runtime metadata as structured,
+queryable data. Every loaded namespace, every public var, its arglists,
+doc string, file, and line number — all available through pure functions,
+peripheral tools, and HTTP endpoints.
+
+This serves two purposes:
+
+1. **Self-representing stack**: Strategic claims about code ("component
+   S-dispatch handles routing") can be grounded in what the runtime
+   actually exports, not in prose. A claim that can't resolve to a var
+   is a hypothesis, not evidence.
+
+2. **Documentation checklist**: The reflection data is the authoritative
+   inventory of what exists. Compare it against human-facing docs to
+   find what's undocumented. Compare it against devmap components to
+   find what's unimplemented. The gaps are discoverable mechanically.
+
+### Architecture
+
+```
+Tier 1: Pure functions     futon3c.reflection.core
+        ↓ called by
+Tier 2: Peripheral tools   :reflect-namespaces, :reflect-ns, :reflect-var,
+                           :reflect-deps, :reflect-java-class
+        ↓ exposed via
+Tier 3: HTTP endpoints     /api/alpha/reflect/*
+```
+
+### Core Functions (`futon3c.reflection.core`)
+
+| Function | Returns | Use |
+|----------|---------|-----|
+| `list-namespaces` | `[{:ns sym :doc str :file str}]` | Inventory of all loaded code |
+| `reflect-ns` | `[{:name sym :arglists :doc :file :line}]` | Public API of a namespace |
+| `reflect-ns-full` | Same, including private vars | Full implementation inventory |
+| `reflect-var` | `ReflectionEnvelope` | Complete metadata for one var |
+| `reflect-deps` | `{:requires :imports :required-by}` | Dependency graph |
+| `reflect-java-class` | `{:name :bases :flags :members}` | Java interop introspection |
+
+All functions return `{:error ...}` on failure (namespace not found,
+class not found) — no exceptions thrown.
+
+### ReflectionEnvelope (`futon3c.reflection.envelope`)
+
+The canonical shape for var metadata, validated by Malli:
+
+```clojure
+{:reflection/ns          'clojure.string       ;; namespace symbol
+ :reflection/symbol      'join                  ;; var name
+ :reflection/file        "clojure/string.clj"   ;; source file
+ :reflection/line        180                     ;; source line
+ :reflection/arglists    '([coll] [sep coll])   ;; function signatures
+ :reflection/doc         "Returns a string..."   ;; docstring
+ :reflection/resolved-at #inst "2026-02-23T..."  ;; when resolved (staleness)
+ :reflection/private?    false
+ :reflection/macro?      false
+ :reflection/dynamic?    false}
+```
+
+The `:reflection/resolved-at` timestamp enables staleness detection: if a
+strategic claim was grounded against a var that no longer exists (or has
+changed), the discrepancy is detectable.
+
+### HTTP API
+
+```bash
+# List all loaded namespaces
+curl http://localhost:7070/api/alpha/reflect/namespaces
+
+# Filter by pattern
+curl "http://localhost:7070/api/alpha/reflect/namespaces?pattern=futon3c.social"
+
+# Public vars in a namespace
+curl http://localhost:7070/api/alpha/reflect/ns/clojure.string
+
+# All vars (public + private)
+curl http://localhost:7070/api/alpha/reflect/ns/clojure.string/full
+
+# Full metadata for one var
+curl http://localhost:7070/api/alpha/reflect/var/clojure.core/map
+
+# Namespace dependency graph
+curl http://localhost:7070/api/alpha/reflect/deps/futon3c.reflection.core
+
+# Java class reflection
+curl http://localhost:7070/api/alpha/reflect/java/java.util.HashMap
+```
+
+### Peripheral Tools
+
+The reflection tools are available in the **:explore** and
+**:mission-control** peripherals. Agents in these peripherals can call
+`:reflect-namespaces`, `:reflect-ns`, `:reflect-var`, `:reflect-deps`,
+and `:reflect-java-class` as regular tool invocations.
+
+This means an agent exploring the codebase can ask structural questions
+about the runtime without shelling out to grep — and get typed,
+validated answers rather than text to parse.
+
+### Java Legacy Codebase Use Case
+
+The `reflect-java-class` function uses `clojure.reflect/reflect` to
+introspect any Java class on the classpath. For legacy Java codebases,
+this provides structural navigation without reading source: class
+hierarchies, method signatures, field types, and access flags. Add the
+Java JARs to the classpath, and the reflection layer can answer "what
+methods does this class have?" with machine-readable precision.
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -269,6 +400,7 @@ and sessions.
 src/futon3c/
   agency/         Multi-agent registry, session management
   evidence/       Evidence landscape (backend protocol, store API, XTDB backend)
+  reflection/     Clojure runtime reflection (core functions, envelope schema)
   peripheral/     Capability envelopes (explore, edit, test, reflect, discipline)
   runtime/        Dev-facing API (register agents, wire persistence, start transport)
   social/         Shapes, dispatch, pipeline, presence, validation

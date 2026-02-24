@@ -84,6 +84,15 @@
   (when-let [entry (last @sent-atom)]
     (json/parse-string (:data entry) true)))
 
+(defn- wait-until
+  [pred timeout-ms]
+  (let [deadline (+ (System/currentTimeMillis) timeout-ms)]
+    (loop []
+      (cond
+        (pred) true
+        (> (System/currentTimeMillis) deadline) false
+        :else (do (Thread/sleep 10) (recur))))))
+
 (defn- ready-frame [agent-id & {:keys [session-id]}]
   (json/generate-string
    (cond-> {"type" "ready" "agent_id" agent-id}
@@ -195,6 +204,52 @@
             "no session-id for coordination message")
         (is (nil? (:peripheral_id receipt))
             "no peripheral-id for coordination message")))))
+
+(deftest http-dispatch-to-ws-invoke-agent
+  (testing "HTTP coordination dispatch can invoke a WS-only agent via invoke/invoke_result"
+    (register-mock-agent! "claude-1" :claude)
+    ;; Target agent has no local invoke-fn; registry should fall back to WS bridge.
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-ws-1" :id/type :continuity}
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]})
+    (let [handler (make-http-handler)
+          {:keys [on-open on-receive sent]} (make-test-ws)
+          ch :int-ch-ws-invoke-1
+          request {:request-method :get :uri "/ws" :request-uri "/ws"}]
+      (on-open ch request)
+      (on-receive ch (ready-frame "codex-ws-1"))
+      (reset! sent [])
+
+      (let [http-f (future
+                     (post handler
+                           "/dispatch"
+                           (json/generate-string {"msg_id" "int-msg-ws-invoke-1"
+                                                  "payload" {"type" "standup"}
+                                                  "from" "claude-1"
+                                                  "to" "codex-ws-1"})))]
+        (is (wait-until #(some? (last-sent sent)) 2000)
+            "expected server to send invoke frame to WS agent")
+        (let [invoke-frame (last-sent sent)
+              invoke-id (:invoke_id invoke-frame)]
+          (is (= "invoke" (:type invoke-frame)))
+          (is (string? invoke-id))
+          (on-receive ch (json/generate-string {"type" "invoke_result"
+                                                "invoke_id" invoke-id
+                                                "result" "ws-ack"
+                                                "session_id" "sess-ws-invoke-1"})))
+
+        (let [response (deref http-f 3000 :timeout)]
+          (is (not= :timeout response) "HTTP dispatch should complete after invoke_result")
+          (is (= 200 (:status response)))
+          (let [receipt (parse-body response)]
+            (is (= "int-msg-ws-invoke-1" (:msg_id receipt)))
+            (is (true? (:delivered receipt)))
+            (is (= "registry/invoke" (:route receipt))))
+          (is (= "sess-ws-invoke-1"
+                 (:agent/session-id
+                  (reg/get-agent {:id/value "codex-ws-1" :id/type :continuity})))))))))
 
 ;; =============================================================================
 ;; 5. WS action message → peripheral

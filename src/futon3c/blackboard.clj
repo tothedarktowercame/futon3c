@@ -294,6 +294,53 @@
 (defmethod render-blackboard :proof [_ state]
   (format-proof-state state))
 
+;; -----------------------------------------------------------------------------
+;; :agents — registered agent status overview
+;; -----------------------------------------------------------------------------
+
+(defn format-agent-status
+  "Format agent registry status for blackboard display.
+   Takes the registry-status map from registry/registry-status."
+  [registry-status]
+  (let [agents (:agents registry-status)
+        now-ms (System/currentTimeMillis)]
+    (str "Agents (" (:count registry-status) " registered)\n"
+         (str/join "\n"
+                   (map (fn [[aid info]]
+                          (let [status (or (:status info) :idle)
+                                type-str (some-> (:type info) name)
+                                elapsed (when (and (= status :invoking)
+                                                   (:invoke-started-at info))
+                                          (try
+                                            (let [started (.toEpochMilli
+                                                            (java.time.Instant/parse
+                                                              (:invoke-started-at info)))
+                                                  secs (quot (- now-ms started) 1000)]
+                                              (if (>= secs 60)
+                                                (str (quot secs 60) "m" (mod secs 60) "s")
+                                                (str secs "s")))
+                                            (catch Exception _ nil)))
+                                status-line (case status
+                                              :invoking (str "INVOKING"
+                                                             (when elapsed (str " (" elapsed ")"))
+                                                             "\n    "
+                                                             (:invoke-prompt-preview info))
+                                              :idle "idle"
+                                              (name status))]
+                            (str "  " (name aid) " [" type-str "] " status-line)))
+                        agents))
+         "\n")))
+
+(defn project-agents!
+  "Project agent registry status to the *agents* blackboard buffer.
+   Call this from anywhere — it reads directly from the registry."
+  [registry-status]
+  (when *enabled*
+    (try
+      (let [content (format-agent-status registry-status)]
+        (blackboard! "*agents*" content {:width 60}))
+      (catch Throwable _ nil))))
+
 ;; =============================================================================
 ;; Evidence emission — blackboard "commits"
 ;; =============================================================================

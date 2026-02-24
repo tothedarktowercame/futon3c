@@ -21,11 +21,14 @@
    - realtime/single-authority-registration (L6): one connection per agent-id
    - realtime/structured-events-only (R9): typed JSON frames only"
   (:require [futon3c.transport.protocol :as proto]
+            [futon3c.agency.registry :as reg]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
             [futon3c.peripheral.registry :as preg]
             [futon3c.peripheral.runner :as runner]
+            [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.evidence.store :as estore]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -69,9 +72,23 @@
         (let [claimed {:peripheral (:peripheral current)
                        :state-atom (:peripheral-state current)}
               after (update before ch dissoc :peripheral :peripheral-state :peripheral-id)]
-          (if (compare-and-set! !connections before after)
+  (if (compare-and-set! !connections before after)
             (runner/stop (:peripheral claimed) @(:state-atom claimed) reason)
             (recur)))))))
+
+(defn- live-registry
+  "Merge static registry snapshot with live registered agents so WS traffic sees
+   HTTP-registered/federated agents. Mirrors the HTTP transport behavior."
+  [config]
+  (let [static-reg (or (:registry config) {})
+        live-status (reg/registry-status)
+        live-agents (into {}
+                          (map (fn [[id {:keys [capabilities type]}]]
+                                 [id (cond-> {:capabilities (vec capabilities)}
+                                       (some? type) (assoc :type type))]))
+                          (:agents live-status))
+        merged-agents (merge (:agents static-reg) live-agents)]
+    (assoc static-reg :agents merged-agents)))
 
 ;; =============================================================================
 ;; Connection state
@@ -121,7 +138,7 @@
   (let [!connections (atom {})
         send-fn (or (:send-fn config) hk/send!)
         close-fn (or (:close-fn config) hk/close)
-        registry (:registry config)
+        registry-view #(live-registry config)
         patterns (:patterns config)
         on-connect-hook (:on-connect config)
         on-disconnect-hook (:on-disconnect config)
@@ -179,7 +196,7 @@
                                                    :id/type :continuity}
                                    :conn/at (now-str)
                                    :conn/metadata {:ready true}}
-                       result (presence/verify conn-event registry)]
+                       result (presence/verify conn-event (registry-view))]
                    (if (error? result)
                      ;; Handshake failed — send error, close connection
                      (do
@@ -192,6 +209,7 @@
                                      :agent-id agent-id
                                      :session-id session-id
                                      :connected? true))
+                       (ws-invoke/register! agent-id #(send-fn ch %))
                        (send-fn ch (proto/render-ready-ack))
                        (when on-connect-hook
                          (on-connect-hook agent-id)))))
@@ -204,13 +222,14 @@
                                 (transport-error :not-ready
                                                  "Readiness handshake required before sending messages")))
                    ;; Connected — classify and dispatch
-                   (let [;; Override :msg/from with authenticated agent-id
+                     (let [;; Override :msg/from with authenticated agent-id
                          ;; (prevents impersonation over WS)
                          agent-id (:agent-id conn)
                          message (assoc parsed
                                         :msg/from {:id/value agent-id
                                                    :id/type :continuity})
-                         classified (mode/classify message patterns)]
+                         classified (mode/classify message patterns)
+                         registry (registry-view)]
                      (if (error? classified)
                        (send-fn ch (proto/render-ws-frame classified))
                        (let [result (dispatch/dispatch classified registry)]
@@ -226,7 +245,8 @@
                      (send-fn ch (proto/render-ws-frame
                                   (transport-error :peripheral-already-active
                                                    "A peripheral session is already active on this connection")))
-                     (let [agent-id (:agent-id conn)
+                     (let [registry (registry-view)
+                           agent-id (:agent-id conn)
                            pid (resolve-peripheral-id (:peripheral-id parsed) agent-id registry)
                            periph-config (:peripheral-config registry)]
                        (cond
@@ -306,6 +326,56 @@
                          (send-fn ch (proto/render-peripheral-stopped
                                       pid (:fruit stop-result) reason))))))
 
+                 ;; --- Invoke result (WS bridge) ---
+                 :invoke-result
+                 (let [agent-id (:agent-id conn)
+                       resolved? (ws-invoke/resolve! agent-id
+                                                     (:invoke/id parsed)
+                                                     {:result (:invoke/result parsed)
+                                                      :session-id (:invoke/session-id parsed)
+                                                      :error (:invoke/error parsed)})]
+                   (when-not resolved?
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :unknown-invoke
+                                                   "No pending invoke for invoke_result")))))
+
+                 ;; --- Evidence replication ---
+                 :evidence
+                 (if-not (:connected? conn)
+                   (send-fn ch (proto/render-ws-frame
+                                (transport-error :not-ready
+                                                 "Readiness handshake required before replicating evidence")))
+                   (let [registry (registry-view)
+                         evidence-store (get-in registry [:peripheral-config :evidence-store])
+                         raw-entry (:evidence/entry parsed)]
+                     (cond
+                       (nil? evidence-store)
+                       (send-fn ch (proto/render-ws-frame
+                                    (transport-error :no-evidence-store
+                                                     "No evidence store configured for replication")))
+
+                       ;; Loop protection: reject entries already tagged :replicated
+                       (some #{:replicated "replicated"} (:evidence/tags raw-entry))
+                       (send-fn ch (proto/render-ws-frame
+                                    (transport-error :replication-loop
+                                                     "Entry already has :replicated tag — refusing to re-replicate")))
+
+                       :else
+                       (let [;; Coerce JSON-parsed entry to shape-conforming form,
+                             ;; then tag as replicated and record provenance
+                             agent-id (:agent-id conn)
+                             entry (-> raw-entry
+                                       proto/coerce-replication-entry
+                                       (update :evidence/tags
+                                               (fn [tags] (vec (conj (or tags []) :replicated))))
+                                       (assoc :evidence/replicated-by agent-id
+                                              :evidence/replicated-at (now-str)))
+                             result (estore/append* evidence-store entry)]
+                         (if (contains? result :error/code)
+                           (send-fn ch (proto/render-ws-frame result))
+                           (send-fn ch (proto/render-evidence-ack
+                                        (:evidence/id raw-entry))))))))
+
                  ;; --- Unknown frame type ---
                  (send-fn ch (proto/render-ws-frame
                               (transport-error :invalid-frame
@@ -325,8 +395,10 @@
            (stop-peripheral! !connections ch conn "connection-closed"))
          ;; L2: only clean up if truly connected (handshake completed)
          (when (and conn (:connected? conn))
-           (when on-disconnect-hook
-             (on-disconnect-hook (:agent-id conn))))
+           (when-let [agent-id (:agent-id conn)]
+             (ws-invoke/unregister! agent-id)
+             (when on-disconnect-hook
+               (on-disconnect-hook agent-id))))
          ;; Remove from connections regardless of state
          (swap! !connections dissoc ch)))}))
 
