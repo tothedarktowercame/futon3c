@@ -27,7 +27,7 @@
      CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)
      CODEX_BIN          — path to codex CLI binary (default: codex)
      CODEX_MODEL        — codex model (default: gpt-5-codex)
-     CODEX_SANDBOX      — codex sandbox (default: workspace-write)
+     CODEX_SANDBOX      — codex sandbox (default: danger-full-access)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
                         — codex approval policy (default: never)
      CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 120000)
@@ -1153,7 +1153,7 @@
    opts:
      :codex-bin          — path to codex CLI (default \"codex\")
      :model              — model name (default \"gpt-5-codex\")
-     :sandbox            — sandbox mode (default \"workspace-write\")
+     :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :timeout-ms         — hard timeout for codex process (default 120000)
      :cwd                — working directory (default user.dir)
@@ -1162,7 +1162,7 @@
      :session-id-atom    — atom holding current session ID (optional)"
   [{:keys [codex-bin model sandbox approval-policy timeout-ms cwd agent-id
            session-file session-id-atom]
-    :or {codex-bin "codex" model "gpt-5-codex" sandbox "workspace-write"
+    :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
          approval-policy "never" timeout-ms 120000 agent-id "codex"}}]
   (let [inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
                                              :model model
@@ -1292,6 +1292,8 @@
        "- Channel: " channel "\n"
        "- Sender: " sender "\n"
        "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
+       "- Return natural chat text only; do not emit directive wrappers.\n"
+       "- Never prefix with `IRC_SEND #futon ::` on this surface.\n"
        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
        "User message:\n"
        user-text))
@@ -1449,7 +1451,7 @@
                   invoke-fn (make-codex-invoke-fn
                              {:codex-bin (env "CODEX_BIN" "codex")
                               :model (env "CODEX_MODEL" "gpt-5-codex")
-                              :sandbox (env "CODEX_SANDBOX" "workspace-write")
+                              :sandbox (env "CODEX_SANDBOX" "danger-full-access")
                               :approval-policy (or (env "CODEX_APPROVAL_POLICY")
                                                    (env "CODEX_APPROVAL" "never"))
                               :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 120000) 120000)

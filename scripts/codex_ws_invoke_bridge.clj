@@ -15,7 +15,7 @@
      CODEX_BIN           codex
      CODEX_CWD           <pwd>
      CODEX_MODEL         gpt-5-codex
-     CODEX_SANDBOX       workspace-write
+     CODEX_SANDBOX       danger-full-access
      CODEX_APPROVAL      never
      CODEX_SESSION_FILE  /tmp/futon-codex-session-id
      CODEX_SESSION_ID    optional startup session id
@@ -46,7 +46,7 @@
 (def codex-bin (env "CODEX_BIN" "codex"))
 (def codex-cwd (env "CODEX_CWD" (System/getProperty "user.dir")))
 (def codex-model (env "CODEX_MODEL" "gpt-5-codex"))
-(def codex-sandbox (env "CODEX_SANDBOX" "workspace-write"))
+(def codex-sandbox (env "CODEX_SANDBOX" "danger-full-access"))
 (def codex-approval (env "CODEX_APPROVAL" "never"))
 (def session-file (env "CODEX_SESSION_FILE" "/tmp/futon-codex-session-id"))
 (def startup-session-id (System/getenv "CODEX_SESSION_ID"))
