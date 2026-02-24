@@ -121,11 +121,11 @@
 ;; Prompt construction
 ;; =============================================================================
 
-(defn- make-codex-prompt
-  "Build a Codex prompt from an issue map. Includes surface contract."
-  [issue repo-dir]
+(defn- make-assign-prompt
+  "Build an assignment prompt from an issue map. Includes surface contract."
+  [issue repo-dir agent-id]
   (str "Runtime surface contract:\n"
-       "- Agent: codex-1 (Tickle orchestration)\n"
+       "- Agent: " agent-id " (Tickle orchestration)\n"
        "- Working directory: " repo-dir "\n"
        "- Task: Implement GitHub issue #" (:number issue) "\n"
        "- Your changes will be reviewed by another agent after completion.\n"
@@ -171,19 +171,21 @@
 ;; Workflow steps
 ;; =============================================================================
 
-(defn assign-to-codex!
-  "Invoke codex-1 with an issue prompt. Blocks until Codex returns.
+(defn assign-issue!
+  "Invoke an agent with an issue prompt. Blocks until agent returns.
    Returns {:ok bool :result str :elapsed-ms long}.
 
    config:
+     :agent-id — agent to invoke (default \"codex-1\")
      :evidence-store — for workflow tracking
      :repo-dir — repository root
      :timeout-ms — invoke timeout (default 180000 = 3 min)
      :session-id — workflow session id"
   [issue config]
-  (let [{:keys [evidence-store repo-dir timeout-ms session-id]} config
+  (let [{:keys [evidence-store repo-dir timeout-ms session-id agent-id]} config
+        agent-id (or agent-id "codex-1")
         timeout-ms (or timeout-ms 180000)
-        prompt (make-codex-prompt issue repo-dir)
+        prompt (make-assign-prompt issue repo-dir agent-id)
         issue-number (:number issue)
         start (System/currentTimeMillis)]
     (emit! evidence-store
@@ -191,11 +193,11 @@
             :issue-number issue-number
             :repo repo-dir
             :claim-type :step
-            :event-tag :codex-assigned
-            :body {:agent "codex-1"
+            :event-tag :agent-assigned
+            :body {:agent agent-id
                    :prompt-preview (subs prompt 0 (min 200 (count prompt)))}})
-    (project! {:issue issue :status :running :phase "Invoking Codex..."})
-    (let [result (reg/invoke-agent! "codex-1" prompt timeout-ms)
+    (project! {:issue issue :status :running :phase (str "Invoking " agent-id "...")})
+    (let [result (reg/invoke-agent! agent-id prompt timeout-ms)
           elapsed (- (System/currentTimeMillis) start)
           ok? (:ok result)]
       (emit! evidence-store
@@ -203,8 +205,9 @@
               :issue-number issue-number
               :repo repo-dir
               :claim-type :observation
-              :event-tag :codex-complete
-              :body {:ok ok?
+              :event-tag :agent-complete
+              :body {:agent agent-id
+                     :ok ok?
                      :result-preview (when (:result result)
                                        (subs (:result result)
                                              0 (min 300 (count (:result result)))))
@@ -314,9 +317,9 @@
     (project! {:issue issue :status :running :phase "Starting workflow"})
 
     ;; 2. Assign to Codex
-    (let [codex-result (assign-to-codex! issue
-                                         (assoc step-config
-                                                :timeout-ms codex-timeout-ms))]
+    (let [codex-result (assign-issue! issue
+                                      (assoc step-config
+                                             :timeout-ms codex-timeout-ms))]
       (if-not (:ok codex-result)
         ;; Codex failed — report and stop
         (let [elapsed (- (System/currentTimeMillis) start)
@@ -405,10 +408,11 @@
                    :repo repo-dir}})
     (project! {:issue issue :status :running
                :phase (str "Kicking " agent-id "...")})
-    (let [result (assign-to-codex! issue
-                                   (assoc config
-                                          :session-id session-id
-                                          :timeout-ms (or timeout-ms 180000)))
+    (let [result (assign-issue! issue
+                                (assoc config
+                                       :agent-id agent-id
+                                       :session-id session-id
+                                       :timeout-ms (or timeout-ms 180000)))
           elapsed (- (System/currentTimeMillis) start)
           summary {:issue-number issue-number
                    :status (if (:ok result) :done :failed)

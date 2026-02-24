@@ -33,8 +33,8 @@
 ;; Prompt construction (via assign/review)
 ;; =============================================================================
 
-(deftest assign-to-codex-invokes-and-emits-evidence
-  (testing "assign-to-codex! invokes codex-1 and emits evidence entries"
+(deftest assign-issue-invokes-and-emits-evidence
+  (testing "assign-issue! invokes agent and emits evidence entries"
     (let [invoked (atom nil)
           store (make-evidence-store)]
       (register-mock-agent!
@@ -43,7 +43,7 @@
          (reset! invoked prompt)
          {:result "I added the button to index.html."
           :session-id "sess-codex-1"}))
-      (let [result (orch/assign-to-codex!
+      (let [result (orch/assign-issue!
                     sample-issue
                     {:evidence-store store
                      :repo-dir "/tmp/test-repo"
@@ -60,17 +60,17 @@
         ;; Evidence emitted (assigned + complete)
         (let [entries (estore/query* store {})]
           (is (= 2 (count entries)))
-          (is (some #(= :codex-assigned (last (:evidence/tags %))) entries))
-          (is (some #(= :codex-complete (last (:evidence/tags %))) entries)))))))
+          (is (some #(= :agent-assigned (last (:evidence/tags %))) entries))
+          (is (some #(= :agent-complete (last (:evidence/tags %))) entries)))))))
 
-(deftest assign-to-codex-handles-failure
-  (testing "assign-to-codex! handles invoke failure gracefully"
+(deftest assign-issue-handles-failure
+  (testing "assign-issue! handles invoke failure gracefully"
     (let [store (make-evidence-store)]
       (register-mock-agent!
        "codex-1"
        (fn [_prompt _session]
          {:error "sandbox timeout" :exit-code 1}))
-      (let [result (orch/assign-to-codex!
+      (let [result (orch/assign-issue!
                     sample-issue
                     {:evidence-store store
                      :repo-dir "/tmp/test-repo"
@@ -145,7 +145,7 @@
         (is (= :approve (:verdict result)))
         (is (= 99 (:issue-number result)))
         (is (pos? (:total-elapsed-ms result)))
-        ;; 6 evidence entries: start, codex-assigned, codex-complete,
+        ;; 6 evidence entries: start, agent-assigned, agent-complete,
         ;;                     review-assigned, review-complete, workflow-complete
         (let [entries (estore/query* store {})]
           (is (= 6 (count entries)))
@@ -174,9 +174,30 @@
         (is (= :codex-failed (:status result)))
         ;; Claude was never invoked
         (is (false? @claude-invoked))
-        ;; 4 evidence entries: start, codex-assigned, codex-complete, workflow-complete
+        ;; 4 evidence entries: start, agent-assigned, agent-complete, workflow-complete
         (let [entries (estore/query* store {})]
           (is (= 4 (count entries))))))))
+
+(deftest assign-issue-uses-configured-agent
+  (testing "assign-issue! invokes the agent specified in :agent-id, not hardcoded codex-1"
+    (let [store (make-evidence-store)]
+      (register-mock-agent!
+       "claude-1"
+       (fn [prompt _session]
+         {:result "Review complete." :session-id "s1"}))
+      (let [result (orch/assign-issue!
+                    sample-issue
+                    {:agent-id "claude-1"
+                     :evidence-store store
+                     :repo-dir "/tmp/test-repo"
+                     :timeout-ms 5000
+                     :session-id "tko-test-agent"})]
+        (is (true? (:ok result)))
+        (is (= "Review complete." (:result result)))
+        ;; Evidence records the actual agent
+        (let [entries (estore/query* store {})
+              assigned (first (filter #(= :agent-assigned (last (:evidence/tags %))) entries))]
+          (is (= "claude-1" (get-in assigned [:evidence/body :agent]))))))))
 
 (deftest kick-invokes-without-review
   (testing "kick! invokes Codex and reports without Claude review"
@@ -198,7 +219,7 @@
         (is (pos? (:total-elapsed-ms result)))
         ;; Claude was NOT invoked
         (is (false? @claude-invoked))
-        ;; 4 evidence entries: kick-start, codex-assigned, codex-complete, kick-complete
+        ;; 4 evidence entries: kick-start, agent-assigned, agent-complete, kick-complete
         (let [entries (estore/query* store {})]
           (is (= 4 (count entries)))
           (is (some #(= :kick-start (last (:evidence/tags %))) entries))
