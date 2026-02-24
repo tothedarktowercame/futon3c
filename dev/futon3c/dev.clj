@@ -932,12 +932,21 @@
               :when (and (:connected? conn)
                          (not (:connected? (get old-conns ch))))]
         (let [agent-id (:agent-id conn)
+              nick (let [aid (str agent-id)]
+                     (or (some-> aid
+                                 (str/replace #"-\d+$" "")
+                                 str/trim
+                                 not-empty)
+                         aid))
               send-fn (fn [msg] (hk/send! ch msg))]
           (try
             ;; Do not clobber dispatch-relay callbacks (e.g. codex/claude mention handlers)
             ;; when a WS connection reconnects.
-            ((:join-agent! relay-bridge) agent-id agent-id "#futon" send-fn {:overwrite? false})
-            ((:join-virtual-nick! irc-server) "#futon" agent-id)
+            ((:join-agent! relay-bridge) agent-id nick "#futon" send-fn {:overwrite? false})
+            ;; Remove raw agent-id virtual nick (e.g. codex-1) if it was added earlier.
+            (when-let [part-virtual-nick! (:part-virtual-nick! irc-server)]
+              (part-virtual-nick! "#futon" (str agent-id)))
+            ((:join-virtual-nick! irc-server) "#futon" nick)
             (catch Exception e
               (println (str "[dev] IRC auto-join failed for " agent-id ": " (.getMessage e))))))))))
 
