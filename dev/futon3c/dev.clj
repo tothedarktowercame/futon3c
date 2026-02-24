@@ -941,6 +941,7 @@
         heartbeat-interval 30000 ;; evidence heartbeat every 30s
         last-heartbeat-ms (atom start-ms)
         prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
+        aid-val (str agent-id)
         thread (Thread.
                 (fn []
                   (while @running
@@ -951,14 +952,21 @@
                             elapsed-str (format-elapsed elapsed)
                             spin (nth spinner-chars (mod (swap! tick inc) 4))
                             changed-files (detect-file-changes start-ms)
+                            ;; Read current activity from registry
+                            activity (some-> (get @reg/!registry aid-val)
+                                             :agent/invoke-activity)
                             content (str "Invoke: " agent-id " " spin " " elapsed-str "\n"
                                          "Session: " used-sid "\n"
                                          "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                          (when (> (count prompt-str) 300) "...")
                                          "\n\n"
+                                         (when activity
+                                           (str "Activity: " activity "\n"))
                                          (when changed-files
                                            (str "Files modified: " changed-files "\n"))
-                                         "Waiting for response...")]
+                                         (if activity
+                                           (str "Working... (" activity ")")
+                                           "Waiting for response..."))]
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
                         (bb/blackboard! buf-name content {:width 80 :slot 1 :no-display true})
@@ -1061,6 +1069,7 @@
               text-acc (StringBuilder.)
               result-sid (atom nil)
               result-error (atom false)
+              aid-val (str agent-id)
               stdout-future (future
                               (with-open [r (java.io.BufferedReader.
                                              (java.io.InputStreamReader.
@@ -1072,8 +1081,22 @@
                                         (let [parsed (json/parse-string line true)]
                                           (case (:type parsed)
                                             "assistant"
-                                            (when-let [text (extract-text-from-assistant-message parsed)]
-                                              (when-not (str/blank? text)
+                                            (let [content (get-in parsed [:message :content])
+                                                  tools (when (sequential? content)
+                                                          (->> content
+                                                               (filter #(= "tool_use" (:type %)))
+                                                               (map :name)
+                                                               seq))
+                                                  text (extract-text-from-assistant-message parsed)]
+                                              ;; Surface tool activity to registry
+                                              (when tools
+                                                (reg/update-invoke-activity!
+                                                  aid-val
+                                                  (str "using " (str/join ", " tools))))
+                                              (when (and (not tools) text (not (str/blank? text)))
+                                                (reg/update-invoke-activity!
+                                                  aid-val "composing response"))
+                                              (when (and text (not (str/blank? text)))
                                                 (.append text-acc text)))
                                             "result"
                                             (do (reset! result-sid (:session_id parsed))

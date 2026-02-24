@@ -236,10 +236,13 @@
                                 {:agents (into {}
                                                (map (fn [[aid a]]
                                                       [aid (cond-> {:type (:agent/type a)
+                                                                    :metadata (:agent/metadata a)
                                                                     :status (or (:agent/status a) :idle)}
                                                              (:agent/invoke-started-at a)
                                                              (assoc :invoke-started-at (str (:agent/invoke-started-at a))
-                                                                    :invoke-prompt-preview (:agent/invoke-prompt-preview a)))])
+                                                                    :invoke-prompt-preview (:agent/invoke-prompt-preview a))
+                                                             (:agent/invoke-activity a)
+                                                             (assoc :invoke-activity (:agent/invoke-activity a)))])
                                                     @!registry))
                                  :count (count @!registry)}))
              mark-invoking! (fn []
@@ -264,7 +267,8 @@
                                                     :agent/last-active (now)
                                                     :agent/status :idle
                                                     :agent/invoke-started-at nil
-                                                    :agent/invoke-prompt-preview nil}))
+                                                    :agent/invoke-prompt-preview nil
+                                                    :agent/invoke-activity nil}))
                                      m)))
                           (project-agents!))]
          (mark-invoking!)
@@ -375,6 +379,22 @@
     @reaped))
 
 ;; =============================================================================
+;; Activity updates — called from invoke fns during long-running operations
+;; =============================================================================
+
+(defn update-invoke-activity!
+  "Update the current activity string for an invoking agent.
+   Called from invoke-fn stream parsers to surface tool use, thinking, etc.
+   Does NOT trigger a blackboard refresh — the ticker handles that every 5s."
+  [agent-id-val activity-str]
+  (swap! !registry
+         (fn [m]
+           (if-let [a (get m agent-id-val)]
+             (assoc m agent-id-val
+                    (assoc a :agent/invoke-activity activity-str))
+             m))))
+
+;; =============================================================================
 ;; Introspection
 ;; =============================================================================
 
@@ -391,10 +411,13 @@
                               :last-active (str (:agent/last-active agent))
                               :capabilities (:agent/capabilities agent)
                               :ttl-ms (:agent/ttl-ms agent)
+                              :metadata (:agent/metadata agent)
                               :status (or (:agent/status agent) :idle)}
                        (:agent/invoke-started-at agent)
                        (assoc :invoke-started-at (str (:agent/invoke-started-at agent))
-                              :invoke-prompt-preview (:agent/invoke-prompt-preview agent)))])
+                              :invoke-prompt-preview (:agent/invoke-prompt-preview agent))
+                       (:agent/invoke-activity agent)
+                       (assoc :invoke-activity (:agent/invoke-activity agent)))])
               @!registry))
    :count (count @!registry)})
 

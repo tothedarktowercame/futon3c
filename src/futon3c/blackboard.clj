@@ -312,6 +312,28 @@
 ;; :agents — registered agent status overview
 ;; -----------------------------------------------------------------------------
 
+(defn- format-elapsed-secs
+  "Format seconds as human-readable elapsed time."
+  [secs]
+  (cond
+    (>= secs 3600) (str (quot secs 3600) "h" (mod (quot secs 60) 60) "m")
+    (>= secs 60) (str (quot secs 60) "m" (mod secs 60) "s")
+    :else (str secs "s")))
+
+(defn- format-relative-time
+  "Format an ISO instant string as relative time from now."
+  [iso-str now-ms]
+  (try
+    (let [then (.toEpochMilli (java.time.Instant/parse iso-str))
+          secs (quot (- now-ms then) 1000)]
+      (cond
+        (neg? secs) "just now"
+        (< secs 60) (str secs "s ago")
+        (< secs 3600) (str (quot secs 60) "m ago")
+        (< secs 86400) (str (quot secs 3600) "h ago")
+        :else (str (quot secs 86400) "d ago")))
+    (catch Exception _ nil)))
+
 (defn format-agent-status
   "Format agent registry status for blackboard display.
    Takes the registry-status map from registry/registry-status."
@@ -323,6 +345,8 @@
                    (map (fn [[aid info]]
                           (let [status (or (:status info) :idle)
                                 type-str (some-> (:type info) name)
+                                metadata (:metadata info)
+                                remote? (:remote? metadata)
                                 elapsed (when (and (= status :invoking)
                                                    (:invoke-started-at info))
                                           (try
@@ -330,18 +354,27 @@
                                                             (java.time.Instant/parse
                                                               (:invoke-started-at info)))
                                                   secs (quot (- now-ms started) 1000)]
-                                              (if (>= secs 60)
-                                                (str (quot secs 60) "m" (mod secs 60) "s")
-                                                (str secs "s")))
+                                              (format-elapsed-secs secs))
                                             (catch Exception _ nil)))
-                                status-line (case status
-                                              :invoking (str "INVOKING"
-                                                             (when elapsed (str " (" elapsed ")"))
-                                                             "\n    "
-                                                             (:invoke-prompt-preview info))
-                                              :idle "idle"
-                                              (name status))]
-                            (str "  " (name aid) " [" type-str "] " status-line)))
+                                activity (:invoke-activity info)
+                                last-active-str (format-relative-time
+                                                  (:last-active info) now-ms)]
+                            (str "  " (name aid) " [" type-str
+                                 (when remote? " remote")
+                                 "] "
+                                 (case status
+                                   :invoking
+                                   (str "INVOKING"
+                                        (when elapsed (str " (" elapsed ")"))
+                                        (when activity
+                                          (str "\n    " activity))
+                                        "\n    "
+                                        (:invoke-prompt-preview info))
+                                   :idle
+                                   (str "idle"
+                                        (when last-active-str
+                                          (str " (" last-active-str ")")))
+                                   (name status)))))
                         agents))
          "\n")))
 
