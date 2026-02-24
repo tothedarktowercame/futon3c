@@ -42,6 +42,7 @@
   (:require [futon1a.system :as f1]
             [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.tickle :as tickle]
+            [futon3c.agents.tickle-orchestrate :as orch]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
@@ -485,6 +486,71 @@
     ((:stop-fn handle))
     (reset! !tickle nil)
     (println "[dev] Tickle stopped.")))
+
+;; =============================================================================
+;; Tickle orchestration — REPL helpers
+;; =============================================================================
+
+(defn fetch-futon4-issues!
+  "Fetch open Codex-labeled issues from futon4."
+  []
+  (orch/fetch-open-issues! "/home/joe/code/futon4" :label "codex"))
+
+(defn kick-ev-issue!
+  "Kick a single futon4 EV issue to Codex. No review, just assign and report.
+   Usage: (dev/kick-ev-issue! 4)"
+  [issue-number]
+  (let [{:keys [ok issue error]} (orch/fetch-issue! "/home/joe/code/futon4" issue-number)]
+    (if ok
+      (orch/kick! issue
+        {:evidence-store @!evidence-store
+         :repo-dir "/home/joe/code/futon4"
+         :send-to-channel! (when-let [s @!irc-sys]
+                             (:send-to-channel! (:server s)))
+         :room "#futon"})
+      {:ok false :error error})))
+
+(defn kick-all-ev-issues!
+  "Kick all open Codex-labeled futon4 issues sequentially. No review.
+   Usage: (dev/kick-all-ev-issues!)"
+  []
+  (let [{:keys [ok issues error]} (fetch-futon4-issues!)]
+    (if ok
+      (orch/kick-queue! issues
+        {:evidence-store @!evidence-store
+         :repo-dir "/home/joe/code/futon4"
+         :send-to-channel! (when-let [s @!irc-sys]
+                             (:send-to-channel! (:server s)))
+         :room "#futon"})
+      {:ok false :error error})))
+
+(defn run-ev-issue!
+  "Run full Tickle orchestration (assign + review) for a single futon4 EV issue.
+   Usage: (dev/run-ev-issue! 1)"
+  [issue-number]
+  (let [{:keys [ok issue error]} (orch/fetch-issue! "/home/joe/code/futon4" issue-number)]
+    (if ok
+      (orch/run-issue-workflow! issue
+        {:evidence-store @!evidence-store
+         :repo-dir "/home/joe/code/futon4"
+         :send-to-channel! (when-let [s @!irc-sys]
+                             (:send-to-channel! (:server s)))
+         :room "#futon"})
+      {:ok false :error error})))
+
+(defn run-all-ev-issues!
+  "Run Tickle orchestration for all open Codex-labeled futon4 issues.
+   Usage: (dev/run-all-ev-issues!)"
+  []
+  (let [{:keys [ok issues error]} (fetch-futon4-issues!)]
+    (if ok
+      (orch/run-batch! issues
+        {:evidence-store @!evidence-store
+         :repo-dir "/home/joe/code/futon4"
+         :send-to-channel! (when-let [s @!irc-sys]
+                             (:send-to-channel! (:server s)))
+         :room "#futon"})
+      {:ok false :error error})))
 
 (defn status
   "Quick runtime status for the REPL."
