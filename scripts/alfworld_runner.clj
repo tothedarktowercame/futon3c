@@ -383,124 +383,152 @@
           _ (trace "Search plan:" (take 5 search-plan) "...")
 
           ;; === Phase 1: Find and take the object ===
-          search-result (search-for-object! initial object-type search-plan {})
-          _ (when-not (:found search-result)
-              (println "  FAILED: Could not find" object-type)
-              (System/exit 1))
+          search-result (search-for-object! initial object-type search-plan {})]
+      (if-not (:found search-result)
+        (let [state (:state search-result)]
+          (println "  FAILED: Could not find" object-type "(giving up on this game)")
+          {:won false
+           :done true
+           :score 0.0
+           :steps (:step state)
+           :task-type task-type
+           :room-type room-type
+           :object object-type
+           :target target-rec-type
+           :fail-reason :could-not-find-object})
 
-          obj-name (:object search-result)
-          state (:state search-result)
-          mmap (:mental-map search-result)
+        (let [obj-name (:object search-result)
+              state (:state search-result)
+              mmap (:mental-map search-result)
 
-          ;; Take the object
-          take-cmd (find-take-command state obj-name)
-          _ (trace "Taking:" take-cmd)
-          state (if take-cmd (step! take-cmd) state)
+              ;; Take the object
+              take-cmd (find-take-command state obj-name)
+              _ (trace "Taking:" take-cmd)
+              state (if take-cmd (step! take-cmd) state)
 
-          ;; === Phase 2: Transform if needed ===
-          state (if appliance
-                  (let [;; Go to appliance
-                        go-cmd (str "go to " appliance " 1")
-                        _ (trace "Going to appliance:" go-cmd)
-                        result (step! go-cmd)
-                        result (handle-closed-container result (str appliance " 1"))
-                        ;; Find the transform command
-                        verb (case task-type
-                               :pick-clean-then-place-in-recep "clean"
-                               :pick-heat-then-place-in-recep "heat"
-                               :pick-cool-then-place-in-recep "cool"
-                               nil)
-                        transform-cmd (find-admissible result (str verb " " obj-name))
-                        _ (trace "Transform:" transform-cmd)]
-                    (if transform-cmd
-                      (step! transform-cmd)
-                      (do (trace "WARNING: no transform command found") result)))
-                  state)
+              ;; === Phase 2: Transform if needed ===
+              state (if appliance
+                      (let [;; Go to appliance
+                            go-cmd (str "go to " appliance " 1")
+                            _ (trace "Going to appliance:" go-cmd)
+                            result (step! go-cmd)
+                            result (handle-closed-container result (str appliance " 1"))
+                            ;; Find the transform command
+                            verb (case task-type
+                                   :pick-clean-then-place-in-recep "clean"
+                                   :pick-heat-then-place-in-recep "heat"
+                                   :pick-cool-then-place-in-recep "cool"
+                                   nil)
+                            transform-cmd (find-admissible result (str verb " " obj-name))
+                            _ (trace "Transform:" transform-cmd)]
+                        (if transform-cmd
+                          (step! transform-cmd)
+                          (do (trace "WARNING: no transform command found") result)))
+                      state)
 
-          ;; === Phase 3: Place at target (or use desklamp) ===
-          state (if examine-light?
-                  ;; For look_at_obj_in_light: find desklamp and use it
-                  (let [;; Check mental map for desklamp
-                        lamp-loc (find-in-mental-map mmap "desklamp")
-                        state (if lamp-loc
-                                (do (trace "Desklamp known at:" (:location lamp-loc))
-                                    (step! (str "go to " (:location lamp-loc))))
-                                ;; Search desks for desklamp
-                                (let [desks (filter #(str/starts-with? % "desk") recs)]
-                                  (trace "Searching desks for lamp:" desks)
-                                  (loop [ds desks
-                                         s state]
-                                    (if (empty? ds)
-                                      s
-                                      (let [result (step! (str "go to " (first ds)))]
-                                        (if (find-admissible result "use desklamp")
-                                          result
-                                          (recur (rest ds) result)))))))
-                        use-cmd (find-admissible state "use desklamp")]
-                    (if use-cmd
-                      (do (trace "Using lamp:" use-cmd)
-                          (step! use-cmd))
-                      (do (trace "WARNING: no use desklamp command found") state)))
+              ;; === Phase 3: Place at target (or use desklamp) ===
+              state (if examine-light?
+                      ;; For look_at_obj_in_light: find desklamp and use it
+                      (let [;; Check mental map for desklamp
+                            lamp-loc (find-in-mental-map mmap "desklamp")
+                            state (if lamp-loc
+                                    (do (trace "Desklamp known at:" (:location lamp-loc))
+                                        (step! (str "go to " (:location lamp-loc))))
+                                    ;; Search desks for desklamp
+                                    (let [desks (filter #(str/starts-with? % "desk") recs)]
+                                      (trace "Searching desks for lamp:" desks)
+                                      (loop [ds desks
+                                             s state]
+                                        (if (empty? ds)
+                                          s
+                                          (let [result (step! (str "go to " (first ds)))]
+                                            (if (find-admissible result "use desklamp")
+                                              result
+                                              (recur (rest ds) result)))))))
+                            use-cmd (find-admissible state "use desklamp")]
+                        (if use-cmd
+                          (do (trace "Using lamp:" use-cmd)
+                              (step! use-cmd))
+                          (do (trace "WARNING: no use desklamp command found") state)))
 
-                  ;; Normal placement: go to target receptacle and place
-                  (let [;; Find a target receptacle instance
-                        target-recs (->> recs
-                                         (filter #(str/starts-with? % (or target-rec-type "")))
-                                         sort)
-                        _ (trace "Target receptacles:" target-recs)
-                        ;; Go to first target
-                        go-cmd (when (seq target-recs)
-                                 (str "go to " (first target-recs)))
-                        _ (trace "Going to target:" go-cmd)
-                        state (if go-cmd
-                                (let [result (step! go-cmd)]
-                                  (handle-closed-container result (first target-recs)))
-                                state)
-                        ;; Place the object
-                        move-cmd (find-move-command state obj-name)
-                        _ (trace "Placing:" move-cmd)]
-                    (if move-cmd
-                      (step! move-cmd)
-                      (do (trace "WARNING: no move command found") state))))
+                      ;; Normal placement: go to target receptacle and place
+                      (let [;; Find a target receptacle instance
+                            target-recs (->> recs
+                                             (filter #(str/starts-with? % (or target-rec-type "")))
+                                             sort)
+                            _ (trace "Target receptacles:" target-recs)
+                            ;; Go to first target
+                            go-cmd (when (seq target-recs)
+                                     (str "go to " (first target-recs)))
+                            _ (trace "Going to target:" go-cmd)
+                            state (if go-cmd
+                                    (let [result (step! go-cmd)]
+                                      (handle-closed-container result (first target-recs)))
+                                    state)
+                            ;; Place the object
+                            move-cmd (find-move-command state obj-name)
+                            _ (trace "Placing:" move-cmd)]
+                        (if move-cmd
+                          (step! move-cmd)
+                          (do (trace "WARNING: no move command found") state))))
 
-          ;; === Phase 4: Second object for pick_two tasks ===
-          state (if two-objects?
-                  (let [_ (trace "=== Second object ===")
-                        ;; Search for second instance
-                        search2 (search-for-object! state object-type search-plan mmap)
-                        _ (when-not (:found search2)
-                            (println "  FAILED: Could not find second" object-type))
-                        obj2 (:object search2)
-                        state2 (:state search2)
-                        ;; Take it
-                        take-cmd2 (find-take-command state2 obj2)
-                        _ (trace "Taking second:" take-cmd2)
-                        state2 (if take-cmd2 (step! take-cmd2) state2)
-                        ;; Go to same target
-                        target-recs (->> (receptacles state2)
-                                         (filter #(str/starts-with? % (or target-rec-type "")))
-                                         sort)
-                        go-cmd2 (when (seq target-recs)
-                                  (str "go to " (first target-recs)))
-                        state2 (if go-cmd2
-                                 (let [r (step! go-cmd2)]
-                                   (handle-closed-container r (first target-recs)))
-                                 state2)
-                        move-cmd2 (find-move-command state2 obj2)]
-                    (if move-cmd2
-                      (step! move-cmd2)
-                      (do (trace "WARNING: no move command for second object") state2)))
-                  state)]
+              ;; === Phase 4: Second object for pick_two tasks ===
+              result (if two-objects?
+                       (let [_ (trace "=== Second object ===")
+                             search2 (search-for-object! state object-type search-plan mmap)]
+                         (if-not (:found search2)
+                           (let [state2 (:state search2)]
+                             (println "  FAILED: Could not find second" object-type "(giving up on this game)")
+                             {:won false
+                              :done true
+                              :score 0.0
+                              :steps (:step state2)
+                              :task-type task-type
+                              :room-type room-type
+                              :object object-type
+                              :target target-rec-type
+                              :fail-reason :could-not-find-second-object})
 
-      ;; Report
-      {:won (:won state)
-       :done (:done state)
-       :score (:score state)
-       :steps (:step state)
-       :task-type task-type
-       :room-type room-type
-       :object object-type
-       :target target-rec-type})))
+                           (let [obj2 (:object search2)
+                                 state2 (:state search2)
+                                 take-cmd2 (find-take-command state2 obj2)
+                                 _ (trace "Taking second:" take-cmd2)
+                                 state2 (if take-cmd2 (step! take-cmd2) state2)
+                                 ;; Go to same target
+                                 target-recs (->> (receptacles state2)
+                                                  (filter #(str/starts-with? % (or target-rec-type "")))
+                                                  sort)
+                                 go-cmd2 (when (seq target-recs)
+                                           (str "go to " (first target-recs)))
+                                 state2 (if go-cmd2
+                                          (let [r (step! go-cmd2)]
+                                            (handle-closed-container r (first target-recs)))
+                                          state2)
+                                 move-cmd2 (find-move-command state2 obj2)
+                                 _ (trace "Placing second:" move-cmd2)
+                                 state2 (if move-cmd2
+                                          (step! move-cmd2)
+                                          (do (trace "WARNING: no move command for second object") state2))]
+                             {:won (:won state2)
+                              :done (:done state2)
+                              :score (:score state2)
+                              :steps (:step state2)
+                              :task-type task-type
+                              :room-type room-type
+                              :object object-type
+                              :target target-rec-type})))
+
+                       ;; Non-two-object tasks: normal report from state
+                       {:won (:won state)
+                        :done (:done state)
+                        :score (:score state)
+                        :steps (:step state)
+                        :task-type task-type
+                        :room-type room-type
+                        :object object-type
+                        :target target-rec-type})]
+
+          result)))))
 
 ;; =============================================================================
 ;; Main

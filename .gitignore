@@ -10,6 +10,8 @@ storage/mission-control/sessions.edn
 
 bb
 clojure
-library/social/cluster-tooling-bootstrap.flexiarg
 ?/
+__pycache__/
 AGENTS.md
+library/alfworld/compile-flexiargs-to-deterministic-runner.flexiarg
+library/social/cluster-tooling-bootstrap.flexiarg
