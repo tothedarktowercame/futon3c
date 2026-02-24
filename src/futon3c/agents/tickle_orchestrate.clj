@@ -17,7 +17,7 @@
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.store :as estore]
             [futon3c.blackboard :as bb])
-  (:import [java.time Instant]
+  (:import [java.time Instant Duration]
            [java.util UUID]))
 
 ;; =============================================================================
@@ -25,6 +25,124 @@
 ;; =============================================================================
 
 (defn- now-str [] (str (Instant/now)))
+
+(defn- parse-instant
+  [x]
+  (cond
+    (instance? Instant x) x
+    (string? x)
+    (try
+      (Instant/parse x)
+      (catch Exception _ nil))
+    :else nil))
+
+(defn- newer?
+  [candidate baseline]
+  (let [c (:tickle/at candidate)
+        b (:tickle/at baseline)]
+    (cond
+      (nil? candidate) false
+      (nil? c) false
+      (nil? baseline) true
+      (nil? b) true
+      :else (.isAfter ^Instant c ^Instant b))))
+
+(defn- latest-entry
+  [entries pred]
+  (reduce
+   (fn [best entry]
+     (if (pred entry)
+       (if (newer? entry best) entry best)
+       best))
+   nil
+   entries))
+
+(def ^:private start-tags #{:kick-start :workflow-start})
+(def ^:private complete-tags #{:kick-complete :workflow-complete})
+(def ^:private success-statuses #{:done :complete})
+(def ^:private failure-statuses #{:failed :codex-failed :review-failed})
+
+(defn tickle-status
+  "Summarise orchestration evidence from the given store.
+
+   Args:
+     evidence-store — evidence backend or atom
+     opts — {:now Instant|String} override for current time (testing)
+
+   Returns a map with timing and outcome counts."
+  ([evidence-store]
+   (tickle-status evidence-store {}))
+  ([evidence-store {:keys [now]}]
+   (let [entries (if evidence-store (estore/query* evidence-store {}) [])
+         orch-entries (->> entries
+                           (filter #(some #{:orchestrate} (:evidence/tags %)))
+                           (map (fn [entry]
+                                  (assoc entry
+                                         :tickle/at (parse-instant (:evidence/at entry))
+                                         :tickle/event (-> entry :evidence/tags last)))))
+         now-inst (or (parse-instant now) (Instant/now))
+         earliest (->> orch-entries (keep :tickle/at) (sort) first)
+         uptime (if (and earliest now-inst)
+                  (max 0 (.getSeconds (Duration/between earliest now-inst)))
+                  0)
+         last-kick (latest-entry orch-entries #(contains? start-tags (:tickle/event %)))
+         last-complete (latest-entry orch-entries #(contains? complete-tags (:tickle/event %)))
+         last-agent (latest-entry orch-entries #(get-in % [:evidence/body :agent]))
+         total-kicks (count (filter #(contains? start-tags (:tickle/event %)) orch-entries))
+         completion-entries (filter #(contains? complete-tags (:tickle/event %)) orch-entries)
+         issues-completed (count (filter #(success-statuses (get-in % [:evidence/body :status]))
+                                         completion-entries))
+         issues-failed (count (filter #(failure-statuses (get-in % [:evidence/body :status]))
+                                      completion-entries))]
+     {:last-kick-at (:evidence/at last-kick)
+      :last-complete-at (:evidence/at last-complete)
+      :issues-completed issues-completed
+      :issues-failed issues-failed
+      :total-kicks total-kicks
+      :last-agent (get-in last-agent [:evidence/body :agent])
+      :uptime-seconds uptime})))
+
+(defn- format-status-board
+  [{:keys [last-kick-at last-complete-at issues-completed issues-failed
+           total-kicks last-agent uptime-seconds]}]
+  (str "Tickle Status\n"
+       "================\n"
+       "Last kick: " (or last-kick-at "never") "\n"
+       "Last complete: " (or last-complete-at "never") "\n"
+       "Completed: " (or issues-completed 0)
+       "  Failed: " (or issues-failed 0) "\n"
+       "Total kicks: " (or total-kicks 0) "\n"
+       "Last agent: " (or last-agent "-") "\n"
+       "Uptime: " (or uptime-seconds 0) "s\n"))
+
+(defn- project-status!
+  [evidence-store]
+  (when evidence-store
+    (let [summary (tickle-status evidence-store)
+          content (format-status-board summary)]
+      (bb/blackboard! "*Tickle Status*" content {:no-display true})
+      summary)))
+
+(defn- format-status-board
+  [{:keys [last-kick-at last-complete-at issues-completed issues-failed
+           total-kicks last-agent uptime-seconds]}]
+  (str "Tickle Status\n"
+       "================\n"
+       "Last kick: " (or last-kick-at "never") "\n"
+       "Last complete: " (or last-complete-at "never") "\n"
+       "Completed: " (or issues-completed 0)
+       "  Failed: " (or issues-failed 0) "\n"
+       "Total kicks: " (or total-kicks 0) "\n"
+       "Last agent: " (or last-agent "-") "\n"
+       "Uptime: " (or uptime-seconds 0) "s\n"))
+
+(defn- project-status!
+  [evidence-store]
+  (when evidence-store
+    (let [summary (tickle-status evidence-store)
+          content (format-status-board summary)]
+      (bb/blackboard! "*Tickle Status*" content {:no-display true})
+      summary)))
 (defn- workflow-id [] (str "tko-" (UUID/randomUUID)))
 
 (defn- emit!
@@ -317,9 +435,9 @@
     (project! {:issue issue :status :running :phase "Starting workflow"})
 
     ;; 2. Assign to Codex
-    (let [codex-result (assign-issue! issue
-                                      (assoc step-config
-                                             :timeout-ms codex-timeout-ms))]
+        (let [codex-result (assign-issue! issue
+                                          (assoc step-config
+                                                 :timeout-ms codex-timeout-ms))]
       (if-not (:ok codex-result)
         ;; Codex failed — report and stop
         (let [elapsed (- (System/currentTimeMillis) start)
@@ -336,6 +454,7 @@
                   :body summary})
           (project! {:issue issue :status :failed :phase "Codex failed"
                      :elapsed-ms elapsed})
+          (project-status! evidence-store)
           summary)
 
         ;; 3. Request review from Claude
@@ -376,6 +495,7 @@
                                     "- Verdict: " (name verdict) "\n"
                                     "- Elapsed: " (long (/ elapsed 1000)) "s")))
 
+          (project-status! evidence-store)
           summary)))))
 
 (defn kick!
@@ -435,6 +555,7 @@
         (send-to-channel! (or room "#futon") "tickle-1"
                           (str "Kicked #" issue-number " → " agent-id
                                ": " (name (:status summary)))))
+      (project-status! evidence-store)
       summary)))
 
 (defn kick-queue!

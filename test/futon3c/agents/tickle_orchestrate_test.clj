@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.tickle-orchestrate :as orch]
+            [futon3c.blackboard :as bb]
             [futon3c.evidence.store :as estore]))
 
 (use-fixtures
@@ -28,6 +29,69 @@
    :title "Test issue: add a button"
    :body "## Scope\n\nAdd a button to index.html.\n\n## Criteria\n\n- [ ] Button exists"
    :labels ["codex"]})
+
+(defn- append-orch!
+  "Append a synthetic orchestration entry at `at` with event keyword."
+  [store at event body]
+  (estore/append*
+   store
+   {:evidence/id (str (gensym "e-"))
+    :evidence/subject {:ref/type :task :ref/id "test#1"}
+    :evidence/type :coordination
+    :evidence/claim-type :observation
+    :evidence/author "tickle-1"
+    :evidence/at at
+    :evidence/body body
+    :evidence/tags [:tickle :orchestrate event]})
+  store)
+
+;; =============================================================================
+;; tickle-status
+;; =============================================================================
+
+(deftest tickle-status-empty-store
+  (testing "tickle-status returns zeroed summary when no evidence exists"
+    (let [store (make-evidence-store)
+          summary (orch/tickle-status store {:now "2026-02-24T12:00:00Z"})]
+      (is (nil? (:last-kick-at summary)))
+      (is (nil? (:last-complete-at summary)))
+      (is (nil? (:last-agent summary)))
+      (is (= 0 (:issues-completed summary)))
+      (is (= 0 (:issues-failed summary)))
+      (is (= 0 (:total-kicks summary)))
+      (is (= 0 (:uptime-seconds summary))))))
+
+(deftest tickle-status-counts-successful-kicks
+  (testing "tickle-status summarises successful kick queue"
+    (let [store (-> (make-evidence-store)
+                    (append-orch! "2026-02-24T10:00:00Z" :kick-start {:agent "codex-1"})
+                    (append-orch! "2026-02-24T10:05:00Z" :kick-complete {:status :done})
+                    (append-orch! "2026-02-24T11:00:00Z" :kick-start {:agent "codex-2"})
+                    (append-orch! "2026-02-24T11:06:00Z" :kick-complete {:status :done}))
+          summary (orch/tickle-status store {:now "2026-02-24T12:00:00Z"})]
+      (is (= "2026-02-24T11:00:00Z" (:last-kick-at summary)))
+      (is (= "2026-02-24T11:06:00Z" (:last-complete-at summary)))
+      (is (= "codex-2" (:last-agent summary)))
+      (is (= 2 (:issues-completed summary)))
+      (is (= 0 (:issues-failed summary)))
+      (is (= 2 (:total-kicks summary)))
+      (is (= 7200 (:uptime-seconds summary))))))
+
+(deftest tickle-status-counts-mixed-outcomes
+  (testing "tickle-status differentiates successful vs failed completions"
+    (let [store (-> (make-evidence-store)
+                    (append-orch! "2026-02-24T10:00:00Z" :workflow-start {:agent "codex-3"})
+                    (append-orch! "2026-02-24T10:15:00Z" :workflow-complete {:status :complete})
+                    (append-orch! "2026-02-24T11:00:00Z" :kick-start {:agent "codex-4"})
+                    (append-orch! "2026-02-24T11:05:00Z" :kick-complete {:status :failed}))
+          summary (orch/tickle-status store {:now "2026-02-24T12:00:00Z"})]
+      (is (= "2026-02-24T11:00:00Z" (:last-kick-at summary)))
+      (is (= "2026-02-24T11:05:00Z" (:last-complete-at summary)))
+      (is (= "codex-4" (:last-agent summary)))
+      (is (= 1 (:issues-completed summary)))
+      (is (= 1 (:issues-failed summary)))
+      (is (= 2 (:total-kicks summary)))
+      (is (= 7200 (:uptime-seconds summary))))))
 
 ;; =============================================================================
 ;; Prompt construction (via assign/review)
@@ -224,6 +288,30 @@
           (is (= 4 (count entries)))
           (is (some #(= :kick-start (last (:evidence/tags %))) entries))
           (is (some #(= :kick-complete (last (:evidence/tags %))) entries)))))))
+
+(deftest kick-projects-status-blackboard
+  (testing "kick! updates the *Tickle Status* blackboard buffer"
+    (let [store (make-evidence-store)
+          buffers (atom [])]
+      (register-mock-agent!
+       "codex-1"
+       (fn [_ _] {:result "done" :session-id "sess"}))
+      (let [fake-blackboard
+            (fn
+              ([buffer content]
+               (swap! buffers conj {:buffer buffer :content content :opts {}})
+               {:ok true})
+              ([buffer content opts]
+               (swap! buffers conj {:buffer buffer :content content :opts opts})
+               {:ok true}))]
+        (with-redefs [bb/blackboard! fake-blackboard]
+          (orch/kick! sample-issue
+                      {:evidence-store store
+                       :repo-dir "/tmp/test-repo"})))
+      (let [status-call (some #(when (= "*Tickle Status*" (:buffer %)) %) @buffers)]
+        (is (some? status-call))
+        (is (true? (:no-display (:opts status-call))))
+        (is (re-find #"Last kick" (:content status-call)))))))
 
 (deftest kick-queue-processes-sequentially
   (testing "kick-queue! processes multiple issues in order without review"
