@@ -41,7 +41,7 @@
 (def codex-bin (env "CODEX_BIN" "codex"))
 (def codex-cwd (env "CODEX_CWD" (System/getProperty "user.dir")))
 (def codex-model (env "CODEX_MODEL" "gpt-5-codex"))
-(def codex-sandbox (env "CODEX_SANDBOX" "workspace-write"))
+(def codex-sandbox (env "CODEX_SANDBOX" "danger-full-access"))
 (def codex-approval (env "CODEX_APPROVAL" "never"))
 (def session-file (env "CODEX_SESSION_FILE" "/tmp/futon-codex-session-id"))
 (def startup-session-id (System/getenv "CODEX_SESSION_ID"))
@@ -110,6 +110,26 @@
     {:session-id session-id
      :text text}))
 
+(def ^:private irc-send-directive-re
+  #"(?i)^IRC_SEND\s+\S+\s*::\s*(.+)$")
+
+(defn- normalize-irc-result [text]
+  (let [lines (->> (str/split-lines (or text ""))
+                   (map str/trim))
+        directive-msg (some (fn [line]
+                              (when-let [[_ msg] (re-matches irc-send-directive-re line)]
+                                (str/trim msg)))
+                            lines)
+        cleaned (->> lines
+                     (remove #(re-matches irc-send-directive-re %))
+                     (remove str/blank?)
+                     (str/join "\n")
+                     str/trim)]
+    (cond
+      (not (str/blank? directive-msg)) directive-msg
+      (not (str/blank? cleaned)) cleaned
+      :else (some-> text str/trim not-empty))))
+
 (defn- build-codex-cmd [sid]
   (let [exec-opts ["--json"
                    "--skip-git-repo-check"
@@ -128,6 +148,8 @@
         cmd (build-codex-cmd sid)
         prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
                             "Keep replies concise for IRC. "
+                            "Return natural chat text only; never prefix with "
+                            "`IRC_SEND #futon ::`.\n"
                             "This session is shared with emacs/codex-repl.\n\n"
                             "%s: %s")
                        irc-channel from from text)
@@ -138,7 +160,7 @@
         (reset! sid* new-sid)
         (persist-session-id! session-file new-sid)))
     (if (zero? (:exit result))
-      (some-> (:text parsed) str/trim not-empty)
+      (some-> (:text parsed) normalize-irc-result str/trim not-empty)
       (do
         (println (format "  [codex error, exit %d] %s"
                          (:exit result)
@@ -151,7 +173,9 @@
   (let [base (str/replace agency-url #"/$" "")
         url (str base "/api/alpha/invoke")
         prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
-                            "Keep replies concise for IRC.\n\n"
+                            "Keep replies concise for IRC. "
+                            "Return natural chat text only; never prefix with "
+                            "`IRC_SEND #futon ::`.\n\n"
                             "%s: %s")
                        irc-channel from from text)
         payload (json/generate-string {"agent-id" agency-agent-id
@@ -170,7 +194,7 @@
             parsed (try (json/parse-string (or (:body resp) "{}") true)
                         (catch Exception _ {}))]
         (if (and (= 200 status) (= true (:ok parsed)))
-          (some-> (:result parsed) str not-empty str/trim not-empty)
+          (some-> (:result parsed) str not-empty normalize-irc-result str/trim not-empty)
           (do
             (println (format "  [agency invoke failed] status=%s error=%s message=%s"
                              status
