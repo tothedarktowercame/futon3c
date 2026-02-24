@@ -150,6 +150,10 @@
                             "Keep replies concise for IRC. "
                             "Return natural chat text only; never prefix with "
                             "`IRC_SEND #futon ::`.\n"
+                            "Before claiming DNS/network/git connectivity failure, "
+                            "run a command that verifies it and quote actual output.\n"
+                            "Do not recommend exporting CODEX_SANDBOX/CODEX_APPROVAL "
+                            "on this IRC surface.\n"
                             "This session is shared with emacs/codex-repl.\n\n"
                             "%s: %s")
                        irc-channel from from text)
@@ -175,7 +179,11 @@
         prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
                             "Keep replies concise for IRC. "
                             "Return natural chat text only; never prefix with "
-                            "`IRC_SEND #futon ::`.\n\n"
+                            "`IRC_SEND #futon ::`.\n"
+                            "Before claiming DNS/network/git connectivity failure, "
+                            "run a command that verifies it and quote actual output.\n"
+                            "Do not recommend exporting CODEX_SANDBOX/CODEX_APPROVAL "
+                            "on this IRC surface.\n\n"
                             "%s: %s")
                        irc-channel from from text)
         payload (json/generate-string {"agent-id" agency-agent-id

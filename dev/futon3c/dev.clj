@@ -278,12 +278,17 @@
 
 (defn- preferred-session-id
   "Pick the best session id for invoke continuity.
-   Priority: session file (shared with codex-repl) -> incoming invoke session -> sid atom."
+   When a session file is configured, treat file/incoming state as authoritative
+   so clearing continuity on disk actually resets invoke behavior.
+   Priority with file: session file -> incoming invoke session.
+   Priority without file: incoming invoke session -> sid atom."
   [session-file incoming-session-id session-id-atom]
   (let [file-sid (some-> (session-file->file session-file) read-session-id)
         incoming (some-> incoming-session-id str str/trim not-empty)
         atom-sid (some-> session-id-atom deref str str/trim not-empty)]
-    (or file-sid incoming atom-sid)))
+    (if (session-file->file session-file)
+      (or file-sid incoming)
+      (or incoming atom-sid))))
 
 (defn- start-codex-ws-bridge!
   "Start an in-process Codex WS bridge.
@@ -1318,6 +1323,8 @@
        "- Return natural chat text only; do not emit directive wrappers.\n"
        "- Never prefix with `IRC_SEND #futon ::` on this surface.\n"
        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
+       "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
+       "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
        "User message:\n"
        user-text))
 
