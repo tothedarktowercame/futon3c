@@ -1390,8 +1390,10 @@
    and chattering with each other.
 
    Returns {:agent-id str :nick str} or nil if IRC is not running."
-  [{:keys [relay-bridge irc-server agent-id nick invoke-timeout-ms]
-    :or {agent-id "claude-1" nick "claude" invoke-timeout-ms 600000}}]
+  [{:keys [relay-bridge irc-server agent-id nick invoke-timeout-ms invoke-hard-timeout-ms]
+    :or {agent-id "claude-1" nick "claude"
+         invoke-timeout-ms 600000
+         invoke-hard-timeout-ms 1800000}}]
   (when (and relay-bridge irc-server)
     ((:join-agent! relay-bridge) agent-id nick "#futon"
      (fn [data]
@@ -1409,35 +1411,62 @@
                    (do (println (str "[irc] " nick ": mention detected but prompt empty, ignoring"))
                        (flush))
                    (do
-                     (println (str "[irc] " nick ": dispatching invoke (timeout=" invoke-timeout-ms "ms)"))
-                     (flush)
-                     (future
-                       (try
-                         (let [invoke-prompt (irc-invoke-prompt {:nick nick
-                                                                 :sender sender
-                                                                 :channel channel
-                                                                 :user-text prompt})
-                               resp (reg/invoke-agent! agent-id invoke-prompt invoke-timeout-ms)]
-                           (if (and (:ok resp) (string? (:result resp)))
-                             (do
-                               (let [reply (normalize-irc-result (:result resp))]
-                                 ((:send-to-channel! irc-server) channel nick reply)
-                                 (println (str "[irc] " nick " → " channel " ("
-                                               (count reply) " chars): "
-                                               (subs reply 0 (min 120 (count reply))))))
-                               (flush))
-                             (do
-                               (let [err-msg (if (map? (:error resp))
-                                               (or (:error/message (:error resp))
-                                                   (pr-str (:error resp)))
-                                               (str (:error resp)))]
-                                 (println (str "[irc] " nick " invoke FAILED: " err-msg))
-                                 ((:send-to-channel! irc-server) channel nick
-                                  (str "[invoke failed] " err-msg)))
-                               (flush))))
-                         (catch Exception e
-                           (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
-                           (flush)))))))
+                    (println (str "[irc] " nick ": dispatching invoke (soft-timeout="
+                                  invoke-timeout-ms "ms, hard-timeout="
+                                  invoke-hard-timeout-ms "ms)"))
+                    (flush)
+                    (future
+                      (try
+                        (let [invoke-prompt (irc-invoke-prompt {:nick nick
+                                                                :sender sender
+                                                                :channel channel
+                                                                :user-text prompt})
+                              started-ms (System/currentTimeMillis)
+                              soft-timeout-ms (when (and invoke-timeout-ms (pos? (long invoke-timeout-ms)))
+                                                (long invoke-timeout-ms))
+                              hard-timeout-ms (cond
+                                                (and invoke-hard-timeout-ms (pos? (long invoke-hard-timeout-ms)))
+                                                (long invoke-hard-timeout-ms)
+                                                soft-timeout-ms soft-timeout-ms
+                                                :else 1800000)
+                              invoke-fut (future (reg/invoke-agent! agent-id invoke-prompt hard-timeout-ms))
+                              resp (loop [soft-notified? false]
+                                     (if (realized? invoke-fut)
+                                       @invoke-fut
+                                       (let [elapsed (- (System/currentTimeMillis) started-ms)]
+                                         (when (and soft-timeout-ms
+                                                    (not soft-notified?)
+                                                    (>= elapsed soft-timeout-ms))
+                                           (let [msg (str "[invoke still running after "
+                                                          soft-timeout-ms
+                                                          "ms] waiting for completion...")]
+                                             (println (str "[irc] " nick " invoke SOFT TIMEOUT: " msg))
+                                             ((:send-to-channel! irc-server) channel nick msg)
+                                             (flush)))
+                                         (Thread/sleep 1000)
+                                         (recur (or soft-notified?
+                                                    (and soft-timeout-ms
+                                                         (>= elapsed soft-timeout-ms)))))))]
+                          (if (and (:ok resp) (string? (:result resp)))
+                            (do
+                              (let [reply (normalize-irc-result (:result resp))]
+                                ((:send-to-channel! irc-server) channel nick reply)
+                                (println (str "[irc] " nick " → " channel " ("
+                                              (count reply) " chars): "
+                                              (subs reply 0 (min 120 (count reply))))))
+                              (flush))
+                            (do
+                              (let [err-msg (if (map? (:error resp))
+                                              (or (:error/message (:error resp))
+                                                  (pr-str (:error resp)))
+                                              (str (:error resp)))]
+                                (println (str "[irc] " nick " invoke FAILED: " err-msg))
+                                ((:send-to-channel! irc-server) channel nick
+                                 (str "[invoke failed] " err-msg)))
+                              (flush))))
+                        (catch Exception e
+                          (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
+                          (flush)))))))
                (do (println (str "[irc] " nick ": not mentioned, skipping"))
                    (flush))))))))
     ((:join-virtual-nick! irc-server) "#futon" nick)
@@ -1470,6 +1499,7 @@
         relay-claude? (env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
         relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 600000) 600000)
+        relay-invoke-hard-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_HARD_TIMEOUT_MS" 1800000) 1800000)
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
         irc-send-base-hint (or (some-> (env "FUTON3C_IRC_SEND_BASE") normalize-http-base)
                                (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
@@ -1635,14 +1665,16 @@
                                   :irc-server (:server irc-sys)
                                   :agent-id "claude-1"
                                   :nick "claude"
-                                  :invoke-timeout-ms relay-invoke-timeout-ms}))
+                                  :invoke-timeout-ms relay-invoke-timeout-ms
+                                  :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
         _dispatch-relay-codex (when (and irc-sys relay-codex?)
                                 (start-dispatch-relay!
                                  {:relay-bridge (:relay-bridge irc-sys)
                                   :irc-server (:server irc-sys)
                                   :agent-id "codex-1"
                                   :nick "codex"
-                                  :invoke-timeout-ms relay-invoke-timeout-ms}))
+                                  :invoke-timeout-ms relay-invoke-timeout-ms
+                                  :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
         bridge-sys (start-drawbridge!)
         ;; Federation: configure peers and install announcement hook
         _ (federation/configure-from-env!)
