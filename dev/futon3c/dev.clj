@@ -1093,14 +1093,15 @@
                                                                (map :name)
                                                                seq))
                                                   text (extract-text-from-assistant-message parsed)]
-                                              ;; Surface tool activity to registry
-                                              (when tools
-                                                (reg/update-invoke-activity!
-                                                  aid-val
-                                                  (str "using " (str/join ", " tools))))
-                                              (when (and (not tools) text (not (str/blank? text)))
-                                                (reg/update-invoke-activity!
-                                                  aid-val "composing response"))
+                                              ;; Surface tool activity to registry when available.
+                                              (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
+                                                                                      'update-invoke-activity!)]
+                                                (when tools
+                                                  (update-activity!
+                                                   aid-val
+                                                   (str "using " (str/join ", " tools))))
+                                                (when (and (not tools) text (not (str/blank? text)))
+                                                  (update-activity! aid-val "composing response")))
                                               (when (and text (not (str/blank? text)))
                                                 (.append text-acc text)))
                                             "result"
