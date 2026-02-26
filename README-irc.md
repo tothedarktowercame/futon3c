@@ -121,6 +121,19 @@ mission focus, and task tracking. Any channel member can use them.
 
 Lists all available commands.
 
+### `!ungate` / `!gate` — Bot Gating
+
+By default, bots only respond to `@mentions`. Ungating a bot makes it
+listen to *all* channel messages (useful for lab meetings or
+free-flowing conversation).
+
+| Command | Description |
+|---------|-------------|
+| `!ungate <nick>` | Ungate a bot — it responds to all messages, not just @mentions |
+| `!gate <nick>` | Gate a bot — back to @mention-only mode |
+
+Gating state is per-bridge-session (resets on bridge restart).
+
 ### `!mc` — Mission Control
 
 | Command | Description |
