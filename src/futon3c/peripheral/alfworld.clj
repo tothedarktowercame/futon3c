@@ -19,7 +19,8 @@
             [futon3c.peripheral.common :as common]
             [futon3c.peripheral.evidence :as evidence]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.peripheral.tools :as tools]))
+            [futon3c.peripheral.tools :as tools]
+            [futon3c.social.whistles :as whistles]))
 
 ;; =============================================================================
 ;; ALFWorld HTTP client
@@ -90,18 +91,27 @@
     (update state :bells-sent conj bell)))
 
 (defn- whistle!
-  "Send a whistle (blocking request) to another agent.
-   For now, this is a simulation — just records the request.
-   Real implementation would call Codex via WS and wait for response."
+  "Send a whistle (blocking request) to another agent via the whistle dispatcher.
+   Blocks until the target agent responds (or times out)."
   [state target message]
-  (let [whistle {:timestamp (str (java.time.Instant/now))
+  (let [result (whistles/whistle!
+                {:agent-id target
+                 :prompt message
+                 :author "alfworld-agent"
+                 :evidence-store (:evidence-store state)})
+        response (if (:whistle/ok result)
+                   (str (:whistle/response result))
+                   (str "ERROR: " (:whistle/error result)))
+        whistle {:timestamp (str (java.time.Instant/now))
                  :from "alfworld-agent"
                  :to target
                  :message message
                  :type :whistle
-                 :response "TODO: implement real whistle via WS"}]
+                 :response response}]
     (println (format "[WHISTLE] alfworld → %s: %s" target message))
-    (println "         (waiting for response... [simulated])")
+    (when (:whistle/ok result)
+      (println (format "         response: %s"
+                       (subs response 0 (min 80 (count response))))))
     (flush)
     (update state :whistles-sent conj whistle)))
 

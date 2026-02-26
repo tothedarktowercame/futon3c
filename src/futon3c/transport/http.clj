@@ -37,6 +37,7 @@
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
             [futon3c.social.persist :as persist]
+            [futon3c.social.whistles :as whistles]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.reflection.core :as reflection]
@@ -709,6 +710,51 @@
                                   :error (name code)
                                   :message msg}))))))))))
 
+(defn- handle-whistle
+  "POST /api/alpha/whistle — synchronous request-response to a registered agent.
+   Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 60000}
+   Delegates to whistles/whistle! which wraps invoke-agent! with evidence."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            prompt (or (:prompt payload) (get payload "prompt"))
+            timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                               long)
+            caller (or (some-> payload :caller str)
+                       (some-> payload (get "caller") str)
+                       "http-caller")
+            evidence-store (evidence-store-for-config config)]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? prompt)
+          (json-response 400 {:ok false :err "missing-prompt"
+                              :message "prompt is required"})
+
+          :else
+          (let [result (whistles/whistle!
+                        {:agent-id (str agent-id)
+                         :prompt prompt
+                         :author caller
+                         :timeout-ms timeout-ms
+                         :evidence-store evidence-store})]
+            (if (:whistle/ok result)
+              (json-response 200 {:ok true
+                                  :response (:whistle/response result)
+                                  :agent-id (:whistle/agent-id result)
+                                  :session-id (:whistle/session-id result)})
+              (let [err (:whistle/error result)]
+                (json-response
+                 (if (and (string? err) (.contains ^String err "not registered")) 404 502)
+                 {:ok false
+                  :error err
+                  :agent-id (:whistle/agent-id result)})))))))))
+
 (defn- handle-irc-send
   "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
    Body: {\"channel\": \"#futon\", \"text\": \"...\", \"from\": \"codex\"}."
@@ -995,6 +1041,9 @@
 
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
+
+          (and (= :post method) (= "/api/alpha/whistle" uri))
+          (handle-whistle request config)
 
           (and (= :post method) (= "/api/alpha/irc/send" uri))
           (handle-irc-send request config)
