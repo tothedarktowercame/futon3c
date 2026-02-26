@@ -7,8 +7,16 @@ Claude interacts via curl; Joe coaches via the CLI walkie-talkie.
 Usage:
     .venv-alfworld/bin/python3 scripts/alfworld-server.py [--port 3456]
 
+Environment:
+    ALFWORLD_SPLIT: train | valid_seen | valid_unseen (default: train)
+    ALFWORLD_INCLUDE_UNSOLVABLE=1 to allow selecting unsolvable games (default: 0)
+
 Endpoints:
     POST /reset  - Start new game (random pick-and-place task)
+                   Optional JSON body for reproducibility/debugging:
+                     {"seed": 123}
+                     {"problem_dir": "/path/to/problem_dir"}
+                     {"gamefile": "/path/to/game.tw-pddl"}
     POST /step   - Take action. Body: {"action": "go to shelf 1"}
     GET  /state  - Current observation, admissible commands, step count
     POST /quit   - Shutdown server
@@ -20,6 +28,8 @@ import os
 import random
 import sys
 import threading
+from datetime import datetime
+from functools import lru_cache
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from os.path import join as pjoin
 
@@ -31,29 +41,73 @@ import textworld
 import textworld.gym
 
 
-def pick_problem():
-    """Pick a random problem that has a pre-built game file."""
-    # Only pick problems with existing game.tw-pddl (not all have them)
-    # Prefer valid_unseen for evaluation variety
+def _ts():
+    # Keep consistent with futon6 cluster scripts: [HH:MM:SS] prefix.
+    return datetime.now().strftime("%H:%M:%S")
+
+
+def log(msg):
+    sys.stderr.write(f"[{_ts()}] {msg}\n")
+    sys.stderr.flush()
+
+
+def _split_root():
+    # Keep terminology consistent with ALFWorld/base_config.yaml.
+    # Accepted values: train | valid_seen | valid_unseen
+    split = os.environ.get("ALFWORLD_SPLIT", "train").strip()
+    split_aliases = {
+        "eval_out_of_distribution": "valid_unseen",
+        "eval_ood": "valid_unseen",
+        "eval_in_distribution": "valid_seen",
+        "eval_id": "valid_seen",
+    }
+    split = split_aliases.get(split, split)
+    return split
+
+
+@lru_cache(maxsize=4)
+def _gamefile_pool(split: str, include_unsolvable: bool):
+    # NOTE: This mirrors the intent of AlfredTWEnv.collect_game_files:
+    # only choose solvable games, and skip known unsupported categories.
     games = glob.glob(
-        pjoin(ALFWORLD_DATA, "json_2.1.1", "valid_unseen", "**", "game.tw-pddl"),
+        pjoin(ALFWORLD_DATA, "json_2.1.1", split, "**", "game.tw-pddl"),
         recursive=True,
     )
     if not games:
         # Fall back to any split
-        games = glob.glob(
-            pjoin(ALFWORLD_DATA, "**", "game.tw-pddl"), recursive=True
-        )
-    # Remove movable receptacle problems (unsupported)
-    games = [g for g in games if "movable_recep" not in g]
+        games = glob.glob(pjoin(ALFWORLD_DATA, "**", "game.tw-pddl"), recursive=True)
+
+    # Remove movable receptacle problems (unsupported) and other known excluded sets.
+    games = [g for g in games if "movable_recep" not in g and "Sliced" not in g and "/movable" not in g]
+
+    if include_unsolvable:
+        return games
+
+    solvable = []
+    for g in games:
+        try:
+            with open(g, "r") as f:
+                data = json.load(f)
+        except Exception:
+            continue
+        if data.get("solvable") is True:
+            solvable.append(g)
+    return solvable
+
+
+def pick_gamefile():
+    """Pick a random game.tw-pddl file."""
+    split = _split_root()
+    include_unsolvable = os.environ.get("ALFWORLD_INCLUDE_UNSOLVABLE", "0").strip() == "1"
+    games = _gamefile_pool(split, include_unsolvable)
     if not games:
         raise ValueError(
-            f"No game files found in {ALFWORLD_DATA}. Run: alfworld-download"
+            f"No solvable game files found in {ALFWORLD_DATA} (split={split}). Run: alfworld-download"
         )
-    return os.path.dirname(random.choice(games))
+    return random.choice(games)
 
 
-def make_env(problem_dir):
+def make_env(problem_dir, gamefile=None):
     """Create a textworld gym environment for a single problem."""
     domain_path = pjoin(ALFWORLD_DATA, "logic", "alfred.pddl")
     grammar_path = pjoin(ALFWORLD_DATA, "logic", "alfred.twl2")
@@ -70,7 +124,7 @@ def make_env(problem_dir):
 
     game_logic["grammar"] = add_task_to_grammar(game_logic["grammar"], traj_data)
 
-    gamefile = pjoin(problem_dir, "game.tw-pddl")
+    gamefile = gamefile or pjoin(problem_dir, "game.tw-pddl")
 
     request_infos = textworld.EnvInfos(
         won=True,
@@ -105,6 +159,7 @@ class GameState:
         self.score = 0.0
         self.max_score = 1.0
         self.problem_dir = None
+        self.gamefile = None
         self.lock = threading.Lock()
 
     def to_dict(self):
@@ -121,6 +176,8 @@ class GameState:
             "won": self.won,
             "score": self.score,
             "max_score": self.max_score,
+            "problem_dir": self.problem_dir,
+            "gamefile": self.gamefile,
             "admissible_commands": admissible,
         }
 
@@ -165,10 +222,19 @@ class ALFWorldHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"Unknown: {self.path}"}, 404)
         except Exception as e:
             import traceback
-            traceback.print_exc()
-            self._send_json({"error": str(e)}, 500)
+            # Timestamped traceback for cluster log consistency.
+            for line in traceback.format_exc().rstrip().splitlines():
+                log(f"[alfworld] {line}")
+            with game.lock:
+                ctx = {}
+                if game.problem_dir:
+                    ctx["problem_dir"] = game.problem_dir
+                if game.gamefile:
+                    ctx["gamefile"] = game.gamefile
+            self._send_json({"error": str(e), **ctx}, 500)
 
     def _handle_reset(self):
+        body = self._read_body()
         with game.lock:
             # Close previous env if any
             if game.env is not None:
@@ -177,8 +243,33 @@ class ALFWorldHandler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
 
-            problem_dir = pick_problem()
-            env, traj_data = make_env(problem_dir)
+            if isinstance(body, dict) and "seed" in body:
+                try:
+                    random.seed(int(body["seed"]))
+                except Exception:
+                    self._send_json({"error": "seed must be an integer"}, 400)
+                    return
+
+            if isinstance(body, dict) and body.get("gamefile"):
+                gamefile = os.path.expanduser(str(body["gamefile"]))
+            elif isinstance(body, dict) and body.get("problem_dir"):
+                problem_dir = os.path.expanduser(str(body["problem_dir"]))
+                gamefile = pjoin(problem_dir, "game.tw-pddl")
+            else:
+                gamefile = pick_gamefile()
+
+            if not os.path.isfile(gamefile):
+                self._send_json({"error": f"gamefile not found: {gamefile}"}, 400)
+                return
+
+            problem_dir = os.path.dirname(gamefile)
+
+            # Record early so exceptions include repro path.
+            game.problem_dir = problem_dir
+            game.gamefile = gamefile
+            log(f"[alfworld-server] /reset problem_dir={problem_dir} gamefile={gamefile}")
+
+            env, traj_data = make_env(problem_dir, gamefile=gamefile)
 
             obs, infos = env.reset()
             game.env = env
@@ -193,8 +284,6 @@ class ALFWorldHandler(BaseHTTPRequestHandler):
             game.won = False
             game.score = 0.0
             game.max_score = float(infos.get("max_score") or 1.0)
-            game.problem_dir = problem_dir
-
             self._send_json(game.to_dict())
 
     def _handle_step(self):
@@ -229,7 +318,12 @@ class ALFWorldHandler(BaseHTTPRequestHandler):
             self._send_json(game.to_dict())
 
     def log_message(self, format, *args):
-        sys.stderr.write(f"[alfworld] {args[0]}\n")
+        try:
+            msg = format % args
+        except Exception:
+            msg = format
+        ip = self.client_address[0] if self.client_address else "?"
+        log(f"[alfworld] {ip} {msg}")
 
 
 def main():
@@ -238,18 +332,23 @@ def main():
         idx = sys.argv.index("--port")
         port = int(sys.argv[idx + 1])
 
-    print(f"[alfworld-server] Starting on http://localhost:{port}")
-    print(f"[alfworld-server] ALFWORLD_DATA = {ALFWORLD_DATA}")
-    print(f"[alfworld-server] POST /reset to start a game")
-    print(f"[alfworld-server] POST /step  to take an action")
-    print(f"[alfworld-server] GET  /state to see current state")
-    print(f"[alfworld-server] POST /quit  to shutdown")
+    split = _split_root()
+    include_unsolvable = os.environ.get("ALFWORLD_INCLUDE_UNSOLVABLE", "0").strip() == "1"
+    pool_size = len(_gamefile_pool(split, include_unsolvable))
+
+    log(f"[alfworld-server] Starting on http://localhost:{port}")
+    log(f"[alfworld-server] ALFWORLD_DATA = {ALFWORLD_DATA}")
+    log(f"[alfworld-server] Split = {split} | include_unsolvable = {int(include_unsolvable)} | pool_size = {pool_size}")
+    log("[alfworld-server] POST /reset to start a game")
+    log("[alfworld-server] POST /step  to take an action")
+    log("[alfworld-server] GET  /state to see current state")
+    log("[alfworld-server] POST /quit  to shutdown")
 
     server = HTTPServer(("localhost", port), ALFWorldHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n[alfworld-server] Shutting down")
+        log("[alfworld-server] Shutting down")
         server.shutdown()
 
 

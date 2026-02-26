@@ -1,4 +1,4 @@
-CLOJURE=clojure
+CLOJURE ?= $(shell if [ -x .tools/clojure/bin/clojure ]; then echo .tools/clojure/bin/clojure; else echo clojure; fi)
 EVIDENCE_BASE?=http://localhost:7070
 CODEX_SANDBOX?=danger-full-access
 CODEX_APPROVAL?=never
@@ -8,7 +8,11 @@ export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
 
-.PHONY: dev test claude claude-repl codex codex-repl codex-autowake tickle status repl fresh
+.PHONY: tools dev test claude claude-repl codex codex-repl codex-autowake tickle status repl \
+	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
+
+tools:
+	./scripts/bootstrap-tools.sh
 
 dev:
 	@echo "[dev] Codex defaults: sandbox=$(CODEX_SANDBOX) approval=$(CODEX_APPROVAL_POLICY)"
@@ -51,6 +55,30 @@ status:
 repl:
 	$(CLOJURE) -M:dev:repl
 
+ALFWORLD_PORT ?= 3456
+ALFWORLD_PY ?= python
+
+# Deterministic runner defaults (override at call site if you want).
+# Example: make alfworld-runner ALFWORLD_RUNNER_GAMES=50 ALFWORLD_RUNNER_ARGS=
+ALFWORLD_RUNNER_GAMES ?= 10
+ALFWORLD_RUNNER_ARGS ?= verbose
+
+# -----------------------------------------------------------------------------
+# ALFWorld convenience targets
+# -----------------------------------------------------------------------------
+
+alfworld-server:
+	$(ALFWORLD_PY) scripts/alfworld-server.py --port $(ALFWORLD_PORT)
+
+alfworld-runner:
+	bb scripts/alfworld_runner.clj $(ALFWORLD_RUNNER_GAMES) $(ALFWORLD_RUNNER_ARGS)
+
+alfworld-test:
+	bb scripts/alfworld_test.clj
+
+alfworld-demo:
+	bb scripts/alfworld_demo.clj
+  
 fresh:
 	@claude_session_file="$${CLAUDE_SESSION_FILE:-/tmp/futon-session-id}"; \
 	codex_session_file="$${CODEX_SESSION_FILE:-/tmp/futon-codex-session-id}"; \
