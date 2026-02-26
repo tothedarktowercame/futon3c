@@ -1499,8 +1499,40 @@
          :port port
          :bind bind}))))
 
-(defn -main [& _args]
-  (let [role-info (deployment-role-info)
+;; =============================================================================
+;; Agent layer lifecycle — independently restartable from IRC
+;; =============================================================================
+
+(defn stop-agents!
+  "Stop the WS transport + agent registrations. IRC stays up.
+   Use restart-agents! to bring them back."
+  []
+  ;; Remove IRC auto-join watcher (if ws-connections atom exists)
+  (when-let [f3c @!f3c-sys]
+    (when-let [ws-conns (:ws-connections f3c)]
+      (remove-watch ws-conns :irc-auto-join)))
+  ;; Stop codex WS bridge
+  (when-let [bridge @!codex-ws-bridge]
+    (try ((:stop-fn bridge)) (catch Exception _))
+    (reset! !codex-ws-bridge nil))
+  ;; Stop tickle (depends on agents)
+  (stop-tickle!)
+  ;; Stop http-kit WS server
+  (when-let [f3c @!f3c-sys]
+    (when-let [stop-fn (:server f3c)]
+      (try (stop-fn) (catch Exception _)))
+    (reset! !f3c-sys nil))
+  (println "[dev] Agent layer stopped. IRC still running."))
+
+(defn start-agents!
+  "Start (or restart) the WS transport + agent registrations.
+   Uses the existing IRC server and evidence store from atoms.
+   Safe to call after stop-agents!."
+  []
+  (let [irc-sys @!irc-sys
+        evidence-store @!evidence-store
+        f1-sys @!f1-sys
+        role-info (deployment-role-info)
         role (:role role-info)
         role-cfg (role-defaults role)
         register-claude? (env-bool "FUTON3C_REGISTER_CLAUDE" (:register-claude? role-cfg))
@@ -1514,15 +1546,7 @@
                                (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
                                (some-> (first-peer-url) normalize-http-base))
         direct-xtdb? (direct-xtdb-enabled? role-cfg)
-        f1-sys (start-futon1a! direct-xtdb?)
-        evidence-store (make-evidence-store f1-sys direct-xtdb?)
-        _ (reset! !f1-sys f1-sys)
-        _ (reset! !evidence-store evidence-store)
-        _ (mcs/configure! {:evidence-store evidence-store})
-        ;; IRC relay bridge + server (before futon3c so interceptor is ready)
-        irc-sys (start-irc! evidence-store role)
-        _ (reset! !irc-sys irc-sys)
-        ;; futon3c HTTP + WS (with IRC interceptor if IRC is running)
+        ;; Start WS transport (with IRC interceptor if IRC is running)
         f3c-sys (start-futon3c!
                  {:xtdb-node (when direct-xtdb? (:node f1-sys))
                   :evidence-store evidence-store
@@ -1538,9 +1562,7 @@
              (:ws-connections f3c-sys)
              (:relay-bridge irc-sys)
              (:server irc-sys)))
-        ;; Register Claude + Codex with inline invoke-fns.
-        ;; CLI invocation runs in-JVM with evidence emission and blackboard updates.
-        ;; WS bridge scripts remain available for remote agent scenarios.
+        ;; Register Claude
         _ (when register-claude?
             (let [sf (io/file (or (env "CLAUDE_SESSION_FILE")
                                   "/tmp/futon-session-id"))
@@ -1551,20 +1573,20 @@
                               :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
                               :agent-id "claude-1"
                               :session-file sf
-                              :session-id-atom sid-atom})
-                  _register (rt/register-claude! {:agent-id "claude-1"
-                                                  :invoke-fn invoke-fn})
-                  ;; Reconcile stale duplicate entries so invoke-fn is always present.
-                  _ (reg/update-agent! "claude-1"
-                                       :agent/type :claude
-                                       :agent/invoke-fn invoke-fn
-                                       :agent/capabilities [:explore :edit :test :coordination/execute])]
+                              :session-id-atom sid-atom})]
+              (rt/register-claude! {:agent-id "claude-1"
+                                    :invoke-fn invoke-fn})
+              (reg/update-agent! "claude-1"
+                                 :agent/type :claude
+                                 :agent/invoke-fn invoke-fn
+                                 :agent/capabilities [:explore :edit :test :coordination/execute])
               (when initial-sid
                 (reg/update-agent! "claude-1" :agent/session-id initial-sid))
               (println (str "[dev] Claude agent registered: claude-1 (inline invoke)"
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
                                                        (min 8 (count initial-sid))) ")"))))))
+        ;; Register Codex
         _ (when register-codex?
             (let [sf (io/file (or (env "CODEX_SESSION_FILE")
                                   "/tmp/futon-codex-session-id"))
@@ -1602,7 +1624,6 @@
                 ((:stop-fn old))
                 (reset! !codex-ws-bridge nil))
               (if ws-bridge-enabled?
-                ;; WS bridge mode: Codex connects via WS (local or remote)
                 (let [ws-path (or (some-> (env "FUTON3C_CODEX_WS_PATH") str/trim not-empty)
                                   "/agency/ws")
                       codex-invoke-fn (when remote-ws-target? invoke-fn)
@@ -1623,7 +1644,6 @@
                   (rt/register-codex! {:agent-id "codex-1"
                                        :invoke-fn codex-invoke-fn
                                        :metadata codex-metadata})
-                  ;; Reconcile stale duplicate entries before dispatch relay starts.
                   (reg/update-agent! "codex-1"
                                      :agent/type :codex
                                      :agent/invoke-fn codex-invoke-fn
@@ -1637,18 +1657,12 @@
                                 ")"
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
-                                                           (min 8 (count initial-sid))) ")"))))
-                  (println (str "[dev] codex ws bridge evidence replication: "
-                                (if evidence-replication?
-                                  (str "enabled (interval " replication-interval-ms "ms)")
-                                  "disabled"))))
-                ;; Inline mode: Codex runs directly in this JVM
+                                                           (min 8 (count initial-sid))) ")")))))
                 (do
                   (when codex-ws-bridge?
                     (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to inline invoke"))
                   (rt/register-codex! {:agent-id "codex-1"
                                        :invoke-fn invoke-fn})
-                  ;; Reconcile stale duplicate entries so invoke-fn is always present.
                   (reg/update-agent! "codex-1"
                                      :agent/type :codex
                                      :agent/invoke-fn invoke-fn
@@ -1659,31 +1673,53 @@
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
                                                            (min 8 (count initial-sid))) ")"))))))))
-        ;; If codex wasn't registered locally but is expected as a remote peer,
-        ;; register a stub so it appears in the agents list. The laptop's WS
-        ;; bridge will update the registration with a real invoke-fn on connect.
+        ;; Remote codex stub
         _ (when (and (not register-codex?) relay-codex?)
             (rt/register-codex! {:agent-id "codex-1"
                                  :metadata {:remote? true
                                             :note "Awaiting WS bridge from laptop"}})
             (println "[dev] Codex agent registered: codex-1 (remote peer, no local invoke)"))
-        ;; Dispatch relays: route IRC messages through invoke-agent!
-        _dispatch-relay-claude (when (and irc-sys relay-claude?)
-                                 (start-dispatch-relay!
-                                 {:relay-bridge (:relay-bridge irc-sys)
-                                  :irc-server (:server irc-sys)
-                                  :agent-id "claude-1"
-                                  :nick "claude"
-                                  :invoke-timeout-ms relay-invoke-timeout-ms
-                                  :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
-        _dispatch-relay-codex (when (and irc-sys relay-codex?)
-                                (start-dispatch-relay!
-                                 {:relay-bridge (:relay-bridge irc-sys)
-                                  :irc-server (:server irc-sys)
-                                  :agent-id "codex-1"
-                                  :nick "codex"
-                                  :invoke-timeout-ms relay-invoke-timeout-ms
-                                  :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
+        ;; Dispatch relays
+        _ (when (and irc-sys relay-claude?)
+            (start-dispatch-relay!
+             {:relay-bridge (:relay-bridge irc-sys)
+              :irc-server (:server irc-sys)
+              :agent-id "claude-1"
+              :nick "claude"
+              :invoke-timeout-ms relay-invoke-timeout-ms
+              :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
+        _ (when (and irc-sys relay-codex?)
+            (start-dispatch-relay!
+             {:relay-bridge (:relay-bridge irc-sys)
+              :irc-server (:server irc-sys)
+              :agent-id "codex-1"
+              :nick "codex"
+              :invoke-timeout-ms relay-invoke-timeout-ms
+              :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))]
+    (println "[dev] Agent layer started.")))
+
+(defn restart-agents!
+  "Restart WS transport + agents. IRC stays up."
+  []
+  (stop-agents!)
+  (start-agents!))
+
+(defn -main [& _args]
+  (let [role-info (deployment-role-info)
+        role (:role role-info)
+        role-cfg (role-defaults role)
+        direct-xtdb? (direct-xtdb-enabled? role-cfg)
+        f1-sys (start-futon1a! direct-xtdb?)
+        evidence-store (make-evidence-store f1-sys direct-xtdb?)
+        _ (reset! !f1-sys f1-sys)
+        _ (reset! !evidence-store evidence-store)
+        _ (mcs/configure! {:evidence-store evidence-store})
+        ;; IRC relay bridge + server (independent of agent layer)
+        irc-sys (start-irc! evidence-store role)
+        _ (reset! !irc-sys irc-sys)
+        ;; Agent layer: WS transport + Claude/Codex + dispatch relays
+        ;; Uses start-agents! so it can be restarted independently via REPL
+        _ (start-agents!)
         bridge-sys (start-drawbridge!)
         ;; Federation: configure peers and install announcement hook
         _ (federation/configure-from-env!)
@@ -1698,11 +1734,7 @@
     (println)
     (println (str "[dev] Role: " (name role)
                   " (" (:source role-info) ")"
-                  " | register-claude=" register-claude?
-                  " register-codex=" register-codex?
-                  " | relay-claude=" relay-claude?
-                  " relay-codex=" relay-codex?
-                  " | codex-ws-bridge=" codex-ws-bridge?))
+                  " | agents: " (count (reg/registered-agents)) " registered"))
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")
@@ -1733,6 +1765,9 @@
     (println)
     (println "[dev] REPL helpers (Drawbridge or nREPL):")
     (println "[dev]   (require '[futon3c.dev :as dev])")
+    (println "[dev]   (dev/restart-agents!)                  — restart WS+agents (IRC stays up)")
+    (println "[dev]   (dev/stop-agents!)                     — stop WS+agents only")
+    (println "[dev]   (dev/start-agents!)                    — start WS+agents only")
     (println "[dev]   (dev/start-tickle!)                    — start watchdog")
     (println "[dev]   (dev/start-tickle! {:interval-ms 30000}) — fast scan")
     (println "[dev]   (dev/stop-tickle!)                     — stop watchdog")
@@ -1758,14 +1793,16 @@
       ^Runnable
       (fn []
         (println "\n[dev] Shutting down...")
-        (stop-tickle!)
-        (when-let [stop (:stop-fn @!codex-ws-bridge)]
-          (stop)
-          (reset! !codex-ws-bridge nil))
+        ;; Agent layer (WS + codex bridge + tickle)
+        (stop-agents!)
+        ;; Drawbridge
         (when-let [stop (:stop bridge-sys)] (stop))
-        (when-let [stop (:stop-fn (:server irc-sys))] (stop))
-        (when-let [stop (:server f3c-sys)] (stop))
-        ((:stop! f1-sys))
+        ;; IRC server
+        (when-let [irc @!irc-sys]
+          (when-let [stop (:stop-fn (:server irc))] (stop)))
+        ;; futon1a
+        (when-let [f1 @!f1-sys]
+          ((:stop! f1)))
         (println "[dev] Stopped."))))
 
     ;; Block forever
