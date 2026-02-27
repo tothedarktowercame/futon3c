@@ -1627,6 +1627,37 @@
 (def ^:private irc-send-directive-re
   #"(?i)^IRC_SEND\s+\S+\s*::\s*(.+)$")
 
+(def ^:private irc-progress-promise-re
+  #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|kicking off|starting (?:now|right away|immediately)|about to|will push|will open|will send|in the next few|soon)\b")
+
+(def ^:private irc-artifact-ref-re
+  #"(?ix)
+    (https?://github\.com/\S+/(?:pull|issues)/\d+)
+    |
+    (\bPR\s*\#\d+\b)
+    |
+    (\b[0-9a-f]{7,40}\b)
+    |
+    ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b)")
+
+(defn- irc-progress-promise-without-evidence?
+  "True when TEXT makes an execution/progress promise but cites no artifact."
+  [text]
+  (let [t (str/trim (or text ""))]
+    (and (not (str/blank? t))
+         (boolean (re-find irc-progress-promise-re t))
+         (not (boolean (re-find irc-artifact-ref-re t))))))
+
+(defn- enforce-irc-planning-guard
+  "Prefix TEXT with a planning-only disclaimer when unsupported progress claims appear."
+  [text]
+  (let [t (str/trim (or text ""))]
+    (if (irc-progress-promise-without-evidence? t)
+      (str "Planning-only: no execution evidence cited yet (no command output/artifact reference).\n"
+           "No work has started in this reply.\n\n"
+           t)
+      t)))
+
 (defn- normalize-irc-result
   "Normalize agent reply text before posting to IRC.
 
@@ -1642,10 +1673,11 @@
                       (remove #(re-matches irc-send-directive-re (str/trim %)))
                       (str/join "\n")
                       str/trim)]
-    (cond
-      (not (str/blank? stripped)) stripped
-      (not (str/blank? directive-msg)) directive-msg
-      :else (str/trim (or text "")))))
+    (-> (cond
+          (not (str/blank? stripped)) stripped
+          (not (str/blank? directive-msg)) directive-msg
+          :else (str/trim (or text "")))
+        enforce-irc-planning-guard)))
 
 (defn- irc-invoke-prompt
   "Wrap an IRC user message with explicit surface/delivery semantics."
@@ -1657,6 +1689,10 @@
        "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
        "- Return natural chat text only; do not emit directive wrappers.\n"
        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
+       "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
+       "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
+       "- Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n\n"
+       "- If you cannot cite an artifact, do not use future-commitment phrasing like \"I'll start now\".\n\n"
        "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
        "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
        "User message:\n"
