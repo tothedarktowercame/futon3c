@@ -12,8 +12,10 @@
             [futon3c.portfolio.perceive :as perceive]
             [futon3c.portfolio.affect :as affect]
             [futon3c.portfolio.adjacent :as adjacent]
+            [futon3c.portfolio.heartbeat :as heartbeat]
             [futon3c.portfolio.logic :as logic]
             [futon3c.portfolio.policy :as policy]
+            [futon3c.peripheral.mission-control-backend :as mc-backend]
             [futon3c.evidence.store :as estore]))
 
 ;; =============================================================================
@@ -124,7 +126,7 @@
         observation (observe/observe mc-state)
         ;; Get adjacent missions via logic layer
         review (or (:portfolio-review opts)
-                   (futon3c.peripheral.mission-control-backend/build-portfolio-review))
+                   (mc-backend/build-portfolio-review))
         missions (:portfolio/missions review)
         mana (:portfolio/mana review)
         logic-db (logic/build-db missions mana (or (:logic-opts opts) {}))
@@ -137,19 +139,19 @@
     (reset! !state (:state result))
     ;; Attach structural summary from logic layer
     (let [result (assoc result :structure (logic/structural-summary logic-db))]
-    ;; Emit evidence
-    (when (:emit-evidence? opts true)
-      (emit-evidence! evidence-store :observation
-                      {:channels observation :mc-state mc-state})
-      (emit-evidence! evidence-store :belief
-                      {:mu (get-in result [:state :mu])
-                       :prec (get-in result [:state :prec])})
-      (emit-evidence! evidence-store :policy
-                      {:action (:action result)
-                       :policies (mapv #(select-keys % [:action :G :probability])
-                                       (get-in result [:policy :policies]))
-                       :abstain? (get-in result [:policy :abstain?])}))
-    result)))
+      ;; Emit evidence
+      (when (:emit-evidence? opts true)
+        (emit-evidence! evidence-store :observation
+                        {:channels observation :mc-state mc-state})
+        (emit-evidence! evidence-store :belief
+                        {:mu (get-in result [:state :mu])
+                         :prec (get-in result [:state :prec])})
+        (emit-evidence! evidence-store :policy
+                        {:action (:action result)
+                         :policies (mapv #(select-keys % [:action :G :probability])
+                                         (get-in result [:policy :policies]))
+                         :abstain? (get-in result [:policy :abstain?])}))
+      result)))
 
 ;; =============================================================================
 ;; portfolio-heartbeat! — weekly cycle with bid/clear
@@ -174,12 +176,10 @@
         observed-mode (get-in result [:diagnostics :mode])
         ;; Action-level prediction errors (D-11)
         action-errors (when (and (:bids heartbeat-data) (:clears heartbeat-data))
-                        (require 'futon3c.portfolio.heartbeat)
-                        ((resolve 'futon3c.portfolio.heartbeat/compute-action-errors)
+                        (heartbeat/compute-action-errors
                          (:bids heartbeat-data) (:clears heartbeat-data)))
         mode-error (when (:mode-prediction heartbeat-data)
-                     (require 'futon3c.portfolio.heartbeat)
-                     ((resolve 'futon3c.portfolio.heartbeat/compute-mode-error)
+                     (heartbeat/compute-mode-error
                       (:mode-prediction heartbeat-data)
                       (or (:mode-observed heartbeat-data) observed-mode)))
         delta {:action-errors action-errors
