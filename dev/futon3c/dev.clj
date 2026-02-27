@@ -39,11 +39,13 @@
      FUTON3C_CODEX_WS_REPLICATE_EVIDENCE — enable WS evidence replication (default true for remote WS target)
      EVIDENCE_REPLICATION_INTERVAL_MS — WS replication poll interval (default 30000)
      FUTON3C_REGISTER_CLAUDE — whether to register claude-1 on this host
-     FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host"
+     FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host
+     FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)"
   (:require [futon1a.system :as f1]
             [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-orchestrate :as orch]
+            [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
@@ -566,6 +568,7 @@
      :interval-ms       — scan interval (default 60000 = 1 min)
      :threshold-seconds — stale after this many seconds (default 300 = 5 min)
      :room              — IRC room for nudges (default \"#futon\")
+     :auto-restart?     — restart stalled agents on escalation (default true)
 
    Returns the watchdog handle, or nil if IRC is not running."
   ([] (start-tickle! {}))
@@ -576,6 +579,9 @@
          (println "[dev] Stopping previous tickle watchdog...")
          ((:stop-fn old)))
        (let [send-fn (:send-to-channel! (:server irc-sys))
+             auto-restart? (if (contains? opts :auto-restart?)
+                             (:auto-restart? opts)
+                             true)
              config {:evidence-store evidence-store
                      :interval-ms (or (:interval-ms opts) 60000)
                      :threshold-seconds (or (:threshold-seconds opts) 300)
@@ -587,13 +593,46 @@
                                    :room (or (:room opts) "#futon")}
                      :escalate-config {:notify-fn
                                        (fn [agent-id reason]
-                                         ;; Escalate to Joe via blackboard
+                                         ;; 1. Blackboard notification
                                          (bb/blackboard!
                                           "*Tickle*"
                                           (str "ESCALATION\n"
                                                "Agent: " agent-id "\n"
                                                "Reason: " reason "\n"
-                                               "Time: " (Instant/now))))}
+                                               "Time: " (Instant/now)
+                                               (when auto-restart?
+                                                 "\nAction: restarting agent layer")))
+                                         ;; 2. Emit escalation evidence
+                                         (estore/append* evidence-store
+                                                         {:subject {:ref/type :agent
+                                                                    :ref/id agent-id}
+                                                          :type :coordination
+                                                          :claim-type :observation
+                                                          :author "tickle-1"
+                                                          :tags [:tickle :escalation]
+                                                          :session-id "tickle-watchdog"
+                                                          :body {:event "escalation"
+                                                                 :agent-id agent-id
+                                                                 :reason (str reason)
+                                                                 :auto-restart? auto-restart?
+                                                                 :at (str (Instant/now))}})
+                                         ;; 3. IRC notification
+                                         (when send-fn
+                                           (send-fn (or (:room opts) "#futon")
+                                                    "tickle-1"
+                                                    (str "ESCALATION: " agent-id
+                                                         " unresponsive (reason: " reason ")"
+                                                         (when auto-restart?
+                                                           " — restarting agent layer"))))
+                                         ;; 4. Restart agents if enabled
+                                         (when auto-restart?
+                                           (println (str "[tickle] Restarting agent layer after "
+                                                         agent-id " escalation..."))
+                                           ;; Use resolve to avoid forward-reference compile error
+                                           ;; (start-tickle! is defined before restart-agents!)
+                                           (future
+                                             (when-let [restart-fn (resolve 'futon3c.dev/restart-agents!)]
+                                               (restart-fn)))))}
                      :on-cycle (fn [{:keys [stalled paged]}]
                                  (when (seq stalled)
                                    (println (str "[tickle] stalled: " stalled
@@ -602,7 +641,8 @@
          (reset! !tickle handle)
          (println (str "[dev] Tickle started: interval="
                        (or (:interval-ms opts) 60000) "ms"
-                       " threshold=" (or (:threshold-seconds opts) 300) "s"))
+                       " threshold=" (or (:threshold-seconds opts) 300) "s"
+                       " auto-restart=" auto-restart?))
          handle)))))
 
 (defn stop-tickle!
@@ -834,6 +874,200 @@
           (println "[dev] Tickle report unavailable: futon3c.agents.tickle-orchestrate/report-status! missing")
           {:ok false :error :missing-report-status})))))
 
+;; =============================================================================
+;; CT work queue — PlanetMath wiring diagram extraction
+;; =============================================================================
+
+(defn ct-progress!
+  "Show CT work queue progress: how many of 313 entries have been processed."
+  []
+  (let [status (ct-queue/queue-status @!evidence-store)]
+    (println (str "[ct] Progress: " (:completed status) "/" (:total status)
+                  " completed, " (:remaining status) " remaining"))
+    status))
+
+(defn run-ct-entry!
+  "Process a single CT entity through the extract→review pipeline.
+   Uses Codex for extraction, Claude for review.
+
+   Options:
+     :entity-id — specific entity to process (default: next unprocessed)
+     :agent-id  — extraction agent (default \"codex-1\")
+     :timeout-ms — extraction timeout (default 300000 = 5 min)
+     :review?   — run Claude review after extraction (default true)
+     :review-timeout-ms — review timeout (default 300000 = 5 min)
+
+   Usage:
+     (dev/run-ct-entry!)                                    ; next unprocessed
+     (dev/run-ct-entry! :entity-id \"pm-ct-FunctorCategory\") ; specific entry"
+  [& {:keys [entity-id agent-id timeout-ms review? review-timeout-ms]
+      :or {agent-id "codex-1"
+           timeout-ms 300000
+           review? true
+           review-timeout-ms 300000}}]
+  (let [evidence-store @!evidence-store
+        send-fn (some-> @!irc-sys :server :send-to-channel!)
+        ;; Find the issue to process
+        issue (if entity-id
+                ;; Find specific entity
+                (let [entities (ct-queue/load-ct-entities)
+                      idx (.indexOf (mapv :entity-id entities) entity-id)]
+                  (when (>= idx 0)
+                    (ct-queue/entity->issue (nth entities idx) idx)))
+                ;; Next unprocessed
+                (first (ct-queue/next-unprocessed evidence-store 1)))]
+    (if-not issue
+      (do (println "[ct] No entries to process"
+                   (if entity-id (str "(entity " entity-id " not found)") "(queue complete)"))
+          {:ok false :error :no-entries})
+      (let [session-id (str "ct-" (UUID/randomUUID))
+            eid (:entity-id issue)]
+        (println (str "[ct] Processing: " eid " — " (:title issue)))
+        ;; Emit start evidence
+        (ct-queue/emit-ct-evidence! evidence-store
+                                    {:entity-id eid
+                                     :entity-type (:entity-type issue)
+                                     :session-id session-id
+                                     :event-tag :workflow-start
+                                     :ground-truth (:ground-truth issue)})
+        ;; Assign to extraction agent
+        (println (str "[ct] Assigning to " agent-id "..."))
+        (let [extract-result (orch/assign-issue! issue
+                                                  {:evidence-store evidence-store
+                                                   :repo-dir "/home/joe/code/futon6"
+                                                   :agent-id agent-id
+                                                   :timeout-ms timeout-ms
+                                                   :session-id session-id})]
+          (if-not (:ok extract-result)
+            (do
+              (println (str "[ct] Extraction failed: " (:error extract-result)))
+              (ct-queue/emit-ct-evidence! evidence-store
+                                          {:entity-id eid
+                                           :entity-type (:entity-type issue)
+                                           :session-id session-id
+                                           :event-tag :workflow-complete
+                                           :ground-truth (:ground-truth issue)})
+              {:ok false :entity-id eid :error (:error extract-result)})
+            (let [extraction (:result extract-result)]
+              (println (str "[ct] Extraction complete (" (:elapsed-ms extract-result) "ms)"))
+              (ct-queue/emit-ct-evidence! evidence-store
+                                          {:entity-id eid
+                                           :entity-type (:entity-type issue)
+                                           :session-id session-id
+                                           :event-tag :extraction-complete
+                                           :extraction-result extraction
+                                           :ground-truth (:ground-truth issue)})
+              (if-not review?
+                ;; No review — done
+                (do
+                  (ct-queue/emit-ct-evidence! evidence-store
+                                              {:entity-id eid
+                                               :entity-type (:entity-type issue)
+                                               :session-id session-id
+                                               :event-tag :workflow-complete
+                                               :extraction-result extraction
+                                               :ground-truth (:ground-truth issue)})
+                  (when send-fn
+                    (send-fn "#futon" "tickle-1"
+                             (str "CT extracted: " eid " (" (:elapsed-ms extract-result) "ms)")))
+                  {:ok true :entity-id eid :status :extracted
+                   :elapsed-ms (:elapsed-ms extract-result)})
+                ;; Review with Claude
+                (let [entities (ct-queue/load-ct-entities)
+                      entity (first (filter #(= eid (:entity-id %)) entities))
+                      review-prompt (ct-queue/make-review-prompt entity extraction)
+                      review-issue {:number (:number issue)
+                                    :title (str "CT-review: " (:title issue))
+                                    :body review-prompt}]
+                  (println "[ct] Requesting Claude review...")
+                  (let [review-result (orch/request-review! review-issue extract-result
+                                                             {:evidence-store evidence-store
+                                                              :repo-dir "/home/joe/code/futon6"
+                                                              :timeout-ms review-timeout-ms
+                                                              :session-id session-id})
+                        verdict (or (:verdict review-result) :unclear)]
+                    (println (str "[ct] Review: " (name verdict)
+                                  " (" (:elapsed-ms review-result) "ms)"))
+                    (ct-queue/emit-ct-evidence! evidence-store
+                                                {:entity-id eid
+                                                 :entity-type (:entity-type issue)
+                                                 :session-id session-id
+                                                 :event-tag :workflow-complete
+                                                 :extraction-result extraction
+                                                 :verdict (name verdict)
+                                                 :ground-truth (:ground-truth issue)})
+                    (when send-fn
+                      (send-fn "#futon" "tickle-1"
+                               (str "CT " eid ": " (name verdict)
+                                    " (extract " (:elapsed-ms extract-result) "ms"
+                                    ", review " (:elapsed-ms review-result) "ms)")))
+                    {:ok true :entity-id eid :status :reviewed
+                     :verdict verdict
+                     :extract-elapsed-ms (:elapsed-ms extract-result)
+                     :review-elapsed-ms (:elapsed-ms review-result)})))))))))))
+
+(defn run-ct-batch!
+  "Process N CT entries overnight. Resumable — skips already-processed entries.
+
+   Options:
+     :n           — max entries to process (default 10)
+     :cooldown-ms — pause between entries (default 5000 = 5s)
+     :agent-id    — extraction agent (default \"codex-1\")
+     :timeout-ms  — per-entry extraction timeout (default 300000 = 5 min)
+     :review?     — run Claude review (default true)
+     :order       — :asc (quickest first) or :desc (longest first) (default :asc)
+
+   Usage:
+     (dev/run-ct-batch!)                          ; 10 entries, quickest first
+     (dev/run-ct-batch! :n 50 :order :desc)       ; 50 entries, longest first
+     (dev/run-ct-batch! :n 313)                   ; full corpus overnight"
+  [& {:keys [n cooldown-ms agent-id timeout-ms review? order]
+      :or {n 10 cooldown-ms 5000 agent-id "codex-1"
+           timeout-ms 300000 review? true order :asc}}]
+  (let [evidence-store @!evidence-store
+        issues (ct-queue/next-unprocessed evidence-store n)
+        total (count issues)
+        start (System/currentTimeMillis)]
+    (println (str "[ct-batch] Starting: " total " entries"
+                  " (agent=" agent-id
+                  " review=" review?
+                  " cooldown=" cooldown-ms "ms)"))
+    (when (some-> @!irc-sys :server :send-to-channel!)
+      (let [send-fn (:send-to-channel! (:server @!irc-sys))]
+        (send-fn "#futon" "tickle-1"
+                 (str "CT batch starting: " total " entries"))))
+    (let [results
+          (reduce
+           (fn [acc [idx issue]]
+             (println (str "\n[ct-batch] " (inc idx) "/" total
+                           " — " (:entity-id issue)))
+             (let [result (run-ct-entry!
+                           :entity-id (:entity-id issue)
+                           :agent-id agent-id
+                           :timeout-ms timeout-ms
+                           :review? review?)]
+               (when (and (< (inc idx) total) (pos? cooldown-ms))
+                 (Thread/sleep cooldown-ms))
+               (conj acc result)))
+           []
+           (map-indexed vector issues))
+          elapsed (- (System/currentTimeMillis) start)
+          ok-count (count (filter :ok results))
+          fail-count (- total ok-count)]
+      (println (str "\n[ct-batch] Complete: " ok-count "/" total " succeeded"
+                    " (" fail-count " failed)"
+                    " in " (long (/ elapsed 1000)) "s"))
+      (when (some-> @!irc-sys :server :send-to-channel!)
+        (let [send-fn (:send-to-channel! (:server @!irc-sys))]
+          (send-fn "#futon" "tickle-1"
+                   (str "CT batch complete: " ok-count "/" total
+                        " in " (long (/ elapsed 60000)) "min"))))
+      {:total total
+       :ok ok-count
+       :failed fail-count
+       :elapsed-ms elapsed
+       :results results})))
+
 (defn status
   "Quick runtime status for the REPL."
   []
@@ -841,7 +1075,10 @@
    :tickle (when @!tickle {:running true :started-at (:started-at @!tickle)})
    :irc (when @!irc-sys {:port (:port @!irc-sys)})
    :evidence-count (when @!evidence-store
-                     (count (futon3c.evidence.store/query* @!evidence-store {})))})
+                     (count (futon3c.evidence.store/query* @!evidence-store {})))
+   :ct-queue (when @!evidence-store
+               (let [s (ct-queue/queue-status @!evidence-store)]
+                 {:completed (:completed s) :remaining (:remaining s)}))})
 
 ;; =============================================================================
 ;; System boot
@@ -1777,6 +2014,9 @@
         ;; Agent layer: WS transport + Claude/Codex + dispatch relays
         ;; Uses start-agents! so it can be restarted independently via REPL
         _ (start-agents!)
+        ;; Tickle watchdog — auto-start if FUTON3C_TICKLE_AUTOSTART=true
+        _ (when (env-bool "FUTON3C_TICKLE_AUTOSTART" false)
+            (start-tickle! {:auto-restart? true}))
         bridge-sys (start-drawbridge!)
         ;; Federation: configure peers and install announcement hook
         _ (federation/configure-from-env!)
@@ -1834,10 +2074,17 @@
     (println "[dev]   (dev/restart-agents!)                  — restart WS+agents (IRC stays up)")
     (println "[dev]   (dev/stop-agents!)                     — stop WS+agents only")
     (println "[dev]   (dev/start-agents!)                    — start WS+agents only")
-    (println "[dev]   (dev/start-tickle!)                    — start watchdog")
-    (println "[dev]   (dev/start-tickle! {:interval-ms 30000}) — fast scan")
+    (println "[dev]   (dev/start-tickle!)                    — start watchdog (auto-restart on)")
+    (println "[dev]   (dev/start-tickle! {:auto-restart? false}) — watchdog without restart")
     (println "[dev]   (dev/stop-tickle!)                     — stop watchdog")
     (println "[dev]   (dev/status)                           — runtime summary")
+    (println)
+    (println "[dev] CT work queue (PlanetMath wiring extraction):")
+    (println "[dev]   (dev/ct-progress!)                       — queue status (N/313)")
+    (println "[dev]   (dev/run-ct-entry!)                      — process next entry")
+    (println "[dev]   (dev/run-ct-entry! :entity-id \"pm-ct-FunctorCategory\")")
+    (println "[dev]   (dev/run-ct-batch! :n 50)                — overnight batch (50 entries)")
+    (println "[dev]   (dev/run-ct-batch! :n 313)               — full corpus")
     (println)
     (println "[dev] Mission control service:")
     (println "[dev]   (require '[futon3c.mission-control.service :as mcs])")
