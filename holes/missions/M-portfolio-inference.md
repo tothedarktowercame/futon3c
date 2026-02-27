@@ -717,3 +717,146 @@ portfolio level, transforming mc-* observation tools from a sensory surface
 into a generative model that predicts, is surprised, updates, and recommends —
 while remaining auditable, mode-aware, and always available to answer the
 question that matters: "What should we do next, and why?"
+
+## VERIFY: core.logic Layer
+
+### Motivation
+
+The adjacent-possible boundary (D-7) is fundamentally relational: "mission X
+is adjacent if all its dependencies are complete AND shapes exist AND mana is
+available." The current implementation in `adjacent.clj` is imperative — five
+condition checks in Clojure. But the concept of "adjacent possible" suggests
+a relational definition. A mission isn't adjacent because it passes a
+function — it's adjacent because certain facts hold about it and the world.
+
+core.logic gives us:
+1. **Declarative structure** — facts about missions as relations, not code
+2. **What-if queries** — "what becomes adjacent if M-foo completes?"
+3. **Critical path** — longest dependency chain via recursive goals
+4. **Pattern co-occurrence** — which patterns appear in active missions
+5. **Composable rules** — new constraints as new logic rules, not code changes
+
+The right separation: **core.logic computes what is structurally possible,
+AIF computes how to prioritize among the possibilities.**
+
+### Existing core.logic in the Stack
+
+Three files across two repos use core.logic for two distinct architectural
+purposes:
+
+**L0 constraint checking** (futon3):
+- `futon3/src/futon3/hx/logic.clj` (822 lines) — hypertext step admissibility.
+  Uses `pldb/db-rel` for `artifacto`, `anchoro`, `linko`, `allowed-typeo`.
+  Validates artifact registration, anchor upsert, link management, PUR/PSR
+  records. Pattern: build in-memory fact DB → run existence queries → return
+  structured witness + obligations.
+- `futon3/src/futon3/musn/logic.clj` (135 lines) — MUSN turn rule constraints.
+  Uses `flago`, `actiono`, `costo` relations. Validates plan-before-tool,
+  selection-before-write, cost consent, off-trail budget.
+
+**L1 federated query** (futon3b):
+- `futon3b/src/futon3b/query/relations.clj` (432 lines) — federated relational
+  queries across session transcripts, pattern library, and proof paths. Uses
+  `l/to-stream` + `l/unify` to expose heterogeneous stores as logic relations.
+  Uses `l/conde` for disjunctive cross-store queries.
+  Pattern: each store → logic relation → `conde` federates → unified results.
+
+**Versions**: futon3 uses core.logic 1.0.1, futon3b uses 1.1.0.
+**futon3c currently has no core.logic dependency.**
+
+### Design: portfolio/logic.clj
+
+Portfolio inference adds a third architectural purpose: **L0.5 structural
+reasoning** — computing the adjacent-possible boundary and portfolio structure
+as a relational knowledge base that AIF queries into.
+
+**Relations (fact schema):**
+```clojure
+;; Mission facts (populated from mc-backend inventory scan)
+(pldb/db-rel missiono mid)                    ; mission exists
+(pldb/db-rel statuso mid status)              ; :complete, :in-progress, :blocked, :ready
+(pldb/db-rel blocked-byo mid blocker-mid)     ; dependency edge
+(pldb/db-rel unblockso mid enabled-mid)       ; inverse: completing mid enables enabled-mid
+(pldb/db-rel evidenceo mid count)             ; evidence entries accrued
+(pldb/db-rel patterno-used mid pattern-id)    ; patterns referenced by this mission
+(pldb/db-rel repo-ofo mid repo)              ; which repo owns this mission
+(pldb/db-rel shapeso-defined mid)            ; shapes exist for this mission
+(pldb/db-rel mana-fundedo mid)               ; sufficient mana
+
+;; Derived: adjacent-possible as a logic goal
+(defn adjacento [mid]
+  (l/fresh [status]
+    (missiono mid)
+    (statuso mid status)
+    (l/!= status :complete)
+    (all-deps-completeo mid)
+    (shapeso-defined mid)
+    (mana-fundedo mid)))
+```
+
+**Structural queries that become trivial:**
+```clojure
+;; All adjacent missions
+(run* [m] (adjacento m))
+
+;; What becomes adjacent if M-foo completes?
+(run* [m]
+  (blocked-byo m "foo")
+  (all-other-deps-clearo m "foo")
+  (shapeso-defined m)
+  (mana-fundedo m))
+
+;; Critical path: missions on the longest dependency chain
+(run* [m depth]
+  (chain-deptho m depth)
+  (l/project [depth] (l/>= depth 3)))
+
+;; Pattern co-occurrence across active missions
+(run* [p count]
+  (pattern-usage-counto p count)
+  (l/project [count] (l/>= count 2)))
+
+;; Missions blocked by the same dependency (clustering)
+(run* [m1 m2 blocker]
+  (blocked-byo m1 blocker)
+  (blocked-byo m2 blocker)
+  (l/!= m1 m2))
+```
+
+**Integration with AIF:**
+```
+mc-backend scan → populate logic DB → core.logic queries → adjacent set
+                                                              ↓
+                                          AIF observe → perceive → affect → policy
+```
+
+core.logic produces the **candidate set** (what's structurally valid).
+AIF evaluates the candidates (what's best among them).
+
+The fact database is rebuilt each aif-step from fresh mc-backend data
+(same as current approach, but the adjacency computation is now relational
+rather than imperative). This means the logic DB is always consistent with
+the latest inventory scan — no stale facts.
+
+### Ostrom Arena Connection
+
+The arena's **rules** become logic relations:
+- Participants → `(participanto agent arena)`
+- Positions → `(positiono agent role arena)`
+- Allowed actions → `(action-allowedo action mode arena)`
+- Outcomes → evaluated by AIF after logic filters admissible actions
+
+New arenas (per-mission, coordination) add new relation sets without
+changing the AIF machinery. The logic layer is the institutional grammar;
+AIF is the decision engine.
+
+### Implementation Plan
+
+1. Add `org.clojure/core.logic {:mvn/version "1.1.0"}` to deps.edn
+2. Create `src/futon3c/portfolio/logic.clj` — relation definitions +
+   fact DB builder + structural query goals
+3. Refactor `adjacent.clj` to delegate to logic layer (preserve API,
+   change implementation)
+4. Add structural queries: what-if, critical-path, pattern-co-occurrence
+5. Wire into `core.clj`: logic DB built at start of aif-step, adjacency
+   computed via `(run* [m] (adjacento m))`

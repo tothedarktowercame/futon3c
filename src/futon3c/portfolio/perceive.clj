@@ -93,14 +93,17 @@
 (defn update-urgency
   "Update urgency based on weighted error from key pressure channels.
    High gap-count, stall-count, review-age → urgency rises.
-   High coverage-pct, mission-complete-ratio → urgency falls."
+   High coverage-pct, mission-complete-ratio → urgency falls.
+   Normalized by channel count to prevent multi-channel saturation."
   [urgency weighted-errors beta]
   (let [pressure-channels [:gap-count :stall-count :review-age :blocked-ratio]
         relief-channels [:mission-complete-ratio :coverage-pct]
-        pressure (reduce + (map #(Math/abs (double (get weighted-errors % 0.0)))
-                                pressure-channels))
-        relief (reduce + (map #(Math/abs (double (get weighted-errors % 0.0)))
-                               relief-channels))
+        pressure (/ (reduce + (map #(Math/abs (double (get weighted-errors % 0.0)))
+                                   pressure-channels))
+                    (count pressure-channels))
+        relief (/ (reduce + (map #(Math/abs (double (get weighted-errors % 0.0)))
+                                  relief-channels))
+                  (count relief-channels))
         delta (* beta (- pressure relief))]
     (obs/clamp01 (+ urgency delta))))
 
@@ -111,7 +114,10 @@
 (def default-opts
   "Default perception options."
   {:alpha 0.55     ; learning rate for sensory update (from ant perceive)
-   :beta 0.30      ; learning rate for urgency update (from ant perceive)
+   :beta 0.08      ; learning rate for urgency update (dampened for portfolio scale;
+                    ; ant uses 0.30 but portfolio channels change slower and
+                    ; multiple pressure channels firing simultaneously was
+                    ; saturating urgency to 1.0)
    :micro-steps 3  ; number of prediction error minimization steps
    })
 

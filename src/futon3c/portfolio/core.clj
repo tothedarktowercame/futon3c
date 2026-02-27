@@ -12,6 +12,7 @@
             [futon3c.portfolio.perceive :as perceive]
             [futon3c.portfolio.affect :as affect]
             [futon3c.portfolio.adjacent :as adjacent]
+            [futon3c.portfolio.logic :as logic]
             [futon3c.portfolio.policy :as policy]
             [futon3c.evidence.store :as estore]))
 
@@ -121,17 +122,21 @@
   (let [;; Gather observations
         mc-state (observe/gather-mc-state evidence-store (:portfolio-review opts))
         observation (observe/observe mc-state)
-        ;; Get adjacent missions
+        ;; Get adjacent missions via logic layer
         review (or (:portfolio-review opts)
                    (futon3c.peripheral.mission-control-backend/build-portfolio-review))
         missions (:portfolio/missions review)
         mana (:portfolio/mana review)
-        adjacent-missions (adjacent/compute-adjacent-set missions mana)
+        logic-db (logic/build-db missions mana (or (:logic-opts opts) {}))
+        adjacent-missions (adjacent/compute-adjacent-set missions mana
+                                                         (or (:logic-opts opts) {}))
         ;; Run the step
         current-state @!state
         result (aif-step current-state observation adjacent-missions opts)]
     ;; Update persistent state
     (reset! !state (:state result))
+    ;; Attach structural summary from logic layer
+    (let [result (assoc result :structure (logic/structural-summary logic-db))]
     ;; Emit evidence
     (when (:emit-evidence? opts true)
       (emit-evidence! evidence-store :observation
@@ -144,7 +149,7 @@
                        :policies (mapv #(select-keys % [:action :G :probability])
                                        (get-in result [:policy :policies]))
                        :abstain? (get-in result [:policy :abstain?])}))
-    result))
+    result)))
 
 ;; =============================================================================
 ;; portfolio-heartbeat! — weekly cycle with bid/clear
