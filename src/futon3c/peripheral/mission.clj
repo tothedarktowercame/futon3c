@@ -28,8 +28,7 @@
             [futon3c.peripheral.mission-shapes :as ms]
             [futon3c.peripheral.real-backend]
             [futon3c.peripheral.tools :as tools])
-  (:import [futon3c.peripheral.mission_backend MissionBackend]
-           [futon3c.peripheral.real_backend RealBackend]))
+  (:import [futon3c.peripheral.real_backend RealBackend]))
 
 ;; =============================================================================
 ;; Setup tools — available when no cycle is active
@@ -41,7 +40,7 @@
   #{:mission-load :mission-save :obligation-query :obligation-upsert
     :dag-check :dag-impact :mission-spec-get :mission-spec-update
     :cycle-begin :cycle-list :cycle-get :failed-approach-add
-    :evidence-query :corpus-check :mission-wiring
+    :evidence-query :corpus-check :mission-wiring :mission-doc-audit
     :read :glob :grep :bash-readonly})
 
 ;; =============================================================================

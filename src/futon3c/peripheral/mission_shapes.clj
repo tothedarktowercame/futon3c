@@ -53,6 +53,7 @@
   {;; Mission-specific tools (observe)
    :mission-load :observe
    :mission-wiring :observe
+   :mission-doc-audit :observe
    :obligation-query :observe
    :dag-check :observe
    :dag-impact :observe
@@ -191,9 +192,11 @@
    - :integrate adds :obligation-upsert (update DAG)
    - :commit uses :mission-save instead of :proof-save"
   {:observe    #{:obligation-query :dag-impact :corpus-check :evidence-query
-                 :mission-wiring :read :grep :glob :bash-readonly
+                 :mission-wiring :mission-doc-audit
+                 :read :grep :glob :bash-readonly
                  :cycle-advance :cycle-get}
    :propose    #{:obligation-query :dag-impact :corpus-check :evidence-query
+                 :mission-doc-audit
                  :read :grep :glob :bash-readonly
                  :cycle-advance :cycle-get}
    :execute    #{:read :write :bash :glob :grep
@@ -207,7 +210,8 @@
                  :cycle-advance :cycle-get}
    :commit     #{:mission-save :read
                  :cycle-advance :cycle-get}
-   :gate-review #{:gate-check :obligation-query :dag-check :read
+   :gate-review #{:gate-check :mission-doc-audit
+                  :obligation-query :dag-check :read
                   :cycle-advance :cycle-get}
    :completed  #{}})
 
@@ -219,7 +223,9 @@
    :execute    #{:artifacts}
    :validate   #{:validation-artifacts}
    :classify   #{:classification}
-   :integrate  #{:rationale :obligation-changes}
+   ;; Post-INSTANTIATE DOCUMENT checkpoint:
+   ;; every cycle must record documentation artifacts and a hypergraph plan.
+   :integrate  #{:rationale :obligation-changes :doc-artifacts :hypergraph-plan}
    :commit     #{:saved?}
    :gate-review #{:gates-passed}})
 

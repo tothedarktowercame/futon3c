@@ -41,7 +41,7 @@ If nil, no resume is used until Codex returns thread.started."
   :type '(choice (const nil) string)
   :group 'codex-repl)
 
-(defcustom codex-repl-sandbox "workspace-write"
+(defcustom codex-repl-sandbox "danger-full-access"
   "Sandbox mode passed to `codex exec --sandbox`."
   :type 'string
   :group 'codex-repl)
@@ -690,8 +690,7 @@ Returns plist: (:session-id sid :text response :error err)."
       "- Your response is shown only in this Emacs buffer."
       "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
       "- If the user asks you to tell/ping/message someone, treat it as an IRC-send request."
-      "- For IRC-send requests, output exactly one line and nothing else:"
-      "- IRC_SEND #futon :: <single-line message>"
+      "- For IRC-send requests, output only the single-line message text to send (no wrappers)."
       "- Never use curl/tool calls for IRC on this surface."
       (format "- Telemetry snapshot: agency=%s irc=%s." agency irc))
      "\n")))
@@ -712,8 +711,7 @@ Invoke CALLBACK with the final response text."
                            (string-join
                             '("Turn-specific directive:"
                               "- Interpret this as an IRC-send request."
-                              "- Output exactly one line and nothing else:"
-                              "IRC_SEND #futon :: <single-line message>"
+                              "- Output only the single-line message text (no wrappers)."
                               "- Do not run tools/curl for this turn.")
                             "\n")))
          (prompt-text (format "%s\n\nUser message:\n%s"
@@ -830,9 +828,15 @@ With REFRESH non-nil, recompute the state even if cached."
 (defun codex-repl--render-modeline (state)
   "Render STATE plist into a human-readable modeline string."
   (let* ((entries (plist-get state :transports))
-         (labels (mapcar (lambda (entry) (plist-get entry :label)) entries))
+         (labels (mapcar (lambda (entry)
+                           (let ((label (plist-get entry :label))
+                                 (status (plist-get entry :status)))
+                             (if (memq status '(available active))
+                                 label
+                               (format "%s (%s)" label status))))
+                         entries))
          (current (plist-get state :current-label)))
-    (format "Available transports: [%s]. Current: %s."
+    (format "Transports: [%s]. Current: %s."
             (string-join labels ", ")
             current)))
 

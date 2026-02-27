@@ -7,6 +7,7 @@
    3. Integration: portfolio review across real repo data
    4. VERIFY: backward verification (←), invariant checks, real-data validation"
   (:require [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.peripheral.common :as common]
@@ -223,6 +224,7 @@
       (is (vector? (:portfolio/devmap-summaries review)))
       (is (vector? (:portfolio/coverage review)))
       (is (map? (:portfolio/mana review)))
+      (is (map? (:portfolio/doc-drift review)))
       (is (string? (:portfolio/summary review)))
       (is (vector? (:portfolio/gaps review)))
       (is (vector? (:portfolio/actionable review)))
@@ -405,7 +407,7 @@
     (let [spec (common/load-spec :mission-control)
           ;; Verify that :write is NOT in the tool set
           write-tools #{:edit :write :bash-git :bash-deploy}]
-      (is (empty? (clojure.set/intersection (:peripheral/tools spec) write-tools))
+      (is (empty? (set/intersection (:peripheral/tools spec) write-tools))
           "mission-control spec must not contain write tools"))))
 
 ;; =============================================================================
@@ -519,10 +521,14 @@
   (testing "portfolio review summary numbers match the underlying data"
     (let [review (mcb/build-portfolio-review)
           missions (:portfolio/missions review)
+          doc-drift (:portfolio/doc-drift review)
           summary (:portfolio/summary review)]
       ;; Summary should mention the mission count
       (is (str/includes? summary (str (count missions) " missions"))
           (str "summary doesn't match: " summary))
+      (is (str/includes? summary "Doc drift:")
+          (str "summary missing doc-drift clause: " summary))
+      (is (contains? doc-drift :audit/drift))
       ;; Actionable missions should be a subset of in-progress + ready
       (let [actionable-ids (set (map #(first (str/split % #" ")) (:portfolio/actionable review)))
             in-progress-or-ready (set (map :mission/id

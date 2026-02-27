@@ -54,7 +54,6 @@
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
             [futon3c.transport.ws.replication :as ws-repl]
-            [nonstarter.api :as nonstarter-api]
             [repl.http :as drawbridge]
             [cheshire.core :as json]
             [clojure.java.shell :as shell]
@@ -104,6 +103,16 @@
     (let [v (-> s str str/trim str/lower-case)]
       (not (contains? #{"0" "false" "no" "off"} v)))
     default))
+
+(defn- nonstarter-fn
+  "Resolve a nonstarter API function by symbol name.
+   Returns nil when futon5/nonstarter.api is not available on classpath."
+  [fn-sym]
+  (try
+    (require 'nonstarter.api)
+    (ns-resolve 'nonstarter.api fn-sym)
+    (catch Throwable _
+      nil)))
 
 (defn- first-peer-url
   "Return first configured federation peer URL, if any."
@@ -873,12 +882,16 @@
                 (str (System/getProperty "user.home")
                      "/code/futon5/data/nonstarter.db"))]
     (when (pos? port)
-      (try
-        (let [sys (nonstarter-api/start! {:port port :db db})]
-          (println (str "[dev] futon5 heartbeat API: http://localhost:" port))
-          sys)
-        (catch Exception e
-          (println (str "[dev] futon5 heartbeat API failed: " (.getMessage e)))
+      (if-let [start! (nonstarter-fn 'start!)]
+        (try
+          (let [sys (start! {:port port :db db})]
+            (println (str "[dev] futon5 heartbeat API: http://localhost:" port))
+            sys)
+          (catch Exception e
+            (println (str "[dev] futon5 heartbeat API failed: " (.getMessage e)))
+            nil))
+        (do
+          (println "[dev] futon5 heartbeat API disabled: nonstarter.api not on classpath")
           nil)))))
 
 (defn start-futon3c!
@@ -1854,7 +1867,9 @@
         (when-let [irc @!irc-sys]
           (when-let [stop (:stop-fn (:server irc))] (stop)))
         ;; futon5
-        (when f5-sys (nonstarter-api/stop! f5-sys))
+        (when f5-sys
+          (when-let [stop! (nonstarter-fn 'stop!)]
+            (stop! f5-sys)))
         ;; futon1a
         (when-let [f1 @!f1-sys]
           ((:stop! f1)))

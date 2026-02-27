@@ -271,6 +271,19 @@ earlier phases were incomplete.
 
 **Artifact**: Working code + passing tests.
 
+### DOCUMENT (Post-INSTANTIATE Checkpoint)
+
+After code lands, the mission must update its documentation and record how the
+new behavior is represented in the hypergraph layer.
+
+At minimum:
+- `doc-artifacts`: updated mission/docs paths
+- `hypergraph-plan`: either concrete hyperedge refs (`refs`) or an explicit
+  deferred record with reason
+
+This prevents "implemented but undocumented" drift and makes code→docs
+correspondence auditable per cycle.
+
 ## 4. Evidence at Every Layer
 
 A futonic mission doesn't just produce code. It produces typed evidence
@@ -308,6 +321,7 @@ At session close, a structured review captures:
 - What prediction errors occurred (with severity)
 - What worked well
 - What didn't work
+- What fidelity gaps were found (dropped/deferred capabilities, spec omissions)
 - Feedback on the patterns used
 - Proposed new patterns (if the session revealed a gap)
 - Time budgeted vs. time spent
@@ -325,14 +339,22 @@ G5  Task Specification ── Is the task well-defined?
  │
 G4  Agent Authorization ─ Is the agent registered and capable?
  │
+GF  Fidelity Contract ─── What baseline must be preserved and tested?
+ │
 G3  Pattern Reference ─── Has a pattern been selected? (PSR required)
  │
 G2  Execution ─────────── Do the work (the only gate that touches environment)
+ │
+GD  DOCUMENT ──────────── Are docs + hypergraph plan recorded?
  │
 G1  Validation ────────── Does output satisfy criteria? (PUR required)
  │
 G0  Evidence Durability ─ Is everything persisted? (PAR required)
 ```
+
+GF is mandatory for all missions:
+- Port/rebuild/replacement: baseline is donor behavior.
+- Greenfield/spec-first: baseline is declared mission interface + semantics.
 
 Each gate has a dual reading — an *agency* reading (about the agent doing
 the work) and a *pattern* reading (about the pattern guiding the work):
@@ -341,13 +363,57 @@ the work) and a *pattern* reading (about the pattern guiding the work):
 |------|---------------|-----------------|
 | G5 | Is the agent's task well-defined? | Is the task shaped so a pattern can guide it? |
 | G4 | Can this agent do this work? | Does this pattern apply to this domain? |
+| GF | Has the fidelity baseline been made explicit? | Are preserve/adapt/drop decisions grounded in evidence? |
 | G3 | Has the agent committed to an approach? | Has a pattern been engaged with? |
 | G2 | Agent executes within budget | Pattern application stays within scope |
+| GD | Has post-INSTANTIATE documentation been produced? | Are hypergraph links (or explicit deferral) recorded? |
 | G1 | Agent's work gets evaluated | Pattern's guidance gets evaluated |
 | G0 | Agent's session is recoverable | Pattern use evidence is persistent |
 
 The pipeline ensures that every piece of work — no matter how small —
 produces structured evidence that future missions can query.
+
+### GF: Fidelity Contract (Donor or Spec)
+
+The futon1 -> futon1a hyperedge miss shows a specific blind spot: a system can
+"pass compat tests" while dropping behavior that was present in the donor body
+but under-specified in the receiving mission.
+
+GF exists to prevent that class of failure. It requires five artifacts before
+pattern selection (G3):
+
+1. **Baseline capability inventory**:
+   - donor missions: concrete donor behaviors with file paths, endpoint
+     shapes, known consumers, and semantic/query affordances.
+   - greenfield missions: concrete specification commitments (ports, behavior,
+     and semantic/query layer) with section references.
+2. **Capability Preservation Matrix (CPM)**: each capability labeled
+   `preserve`, `adapt`, or `drop`, with owner, rationale, migration
+   implications, and linked consumer(s).
+3. **Tripwire test matrix**: for each `preserve` capability, at least one test
+   that fails on the target before implementation and passes after.
+   For each `adapt` capability, include at least one compatibility or migration
+   assertion showing old->new behavior is intentional.
+4. **Latent dependency/omission probe**:
+   - donor missions: static call-site scan + runtime usage probe.
+   - greenfield missions: consumer-facing scenario probe against declared spec.
+   unresolved findings must become explicit `preserve` or `drop` decisions.
+5. **Drop/Defer Decision Records (DRs)**: every `drop` or `defer` item gets an
+   explicit record with reason, owner, risk, and re-entry condition.
+
+GF rejects work when:
+- a baseline capability is uncategorized
+- preservation has no tripwire test
+- an `adapt` decision has no compatibility assertion
+- a `drop`/`defer` decision lacks an explicit DR
+- data shape is covered but behavioral or semantic/query fidelity is untracked
+
+No-silent-drop invariant: if a capability is not in CPM+DR, it is treated as
+`preserve` by default and must have tripwire coverage.
+
+G0 (PAR) must close the fidelity loop with a short "fidelity retro" note:
+what was omitted/deferred, what was missed initially, and which new probe/test
+now catches that class of omission.
 
 ## 6. Three Nested Loops
 
@@ -582,6 +648,11 @@ To create a futonic mission:
    domain-specific analogue. Cross-reference at least the theory library,
    the relevant domain library, and any prior implementations.
 
+   Run GF now using the correct baseline:
+   donor behavior (for ports/replacements) or declared specification
+   (for greenfield/spec-first missions), plus CPM, tripwire tests, latent
+   dependency/omission probe, and DRs for every drop/defer decision.
+
 3. **Write the DERIVE**. Each decision in IF/HOWEVER/THEN/BECAUSE form.
    Number them. Make each self-contained. If you can't write the BECAUSE,
    the decision isn't grounded — go back to MAP.
@@ -596,6 +667,156 @@ To create a futonic mission:
 6. **INSTANTIATE**. By now, implementation should be mechanical. If it
    requires novel design decisions, earlier phases were incomplete.
 
+### 12.1 Mission Template Addendum (GF Block)
+
+Paste this block into every mission before DERIVE work starts:
+
+```md
+## Fidelity Contract (GF)
+
+### Baseline Capability Inventory
+- Capability: ...
+  - Source: donor path/spec section
+  - Consumer(s): ...
+  - Semantic/query obligations: ...
+
+### Capability Preservation Matrix (CPM)
+| Capability | Decision (`preserve`/`adapt`/`drop`) | Owner | Evidence/Test | Notes |
+|------------|--------------------------------------|-------|---------------|-------|
+| ... | ... | ... | ... | ... |
+
+### Tripwire Matrix
+- `preserve`: test that fails pre-implementation and passes post-implementation
+- `adapt`: compatibility/migration assertion proving intentional delta
+
+### Latent Dependency/Omission Probe
+- Donor mission: static call-site scan + runtime usage probe
+- Greenfield mission: consumer scenario probe against declared interface
+
+### Drop/Defer Decision Records (DR)
+- Capability: ...
+  - Reason: ...
+  - Risk: ...
+  - Re-entry condition: ...
+  - Linked issue/mission: ...
+```
+
 At every task boundary, record a PSR (before) and PUR (after). At session
 close, write a PAR. These evidence records are not overhead — they are the
 learning signal that makes future missions better.
+
+## 13. Conclusion
+
+In 1996, Christopher Alexander stood before the OOPSLA convention and
+issued a challenge. The software community had adopted his pattern
+languages, but had kept only the format — a nice way of exchanging
+fragmentary ideas about design — while dropping the two features that
+made patterns powerful: their moral component (does this produce living
+structure?) and their generativity (does the language as a whole produce
+coherent results?).
+
+Alexander's answer was the shift from static pattern catalogues to
+generative schemes — sequences of instructions that unfold structure
+step by step, where each step preserves and enhances the whole. He
+noted that these generative schemes were "much more like what you call
+code." And he made an extraordinary request: that computer scientists
+take responsibility for generating living structure in the world,
+because the capacity for generative process was natural to their field
+in a way it was not to architecture, planning, or construction.
+
+The following year, Alan Kay stood at the same venue and diagnosed the
+crossroads that every technological advance presents: you can automate
+the old — take existing processes and run them faster — or you can
+leverage the new — recognise that the technology enables fundamentally
+different structures. Most people stay on the red plane. The computer
+revolution, Kay argued, hadn't happened yet.
+
+For thirty years, the software industry largely remained on the red
+plane. Design patterns became a static catalogue. Agile methodologies
+refined the ticket. AI was applied to automate existing workflows —
+code completion, test generation, bug detection — without changing the
+fundamental structure of how software is conceived, argued for, and
+evolved.
+
+### The Missing Machinery
+
+Alexander had the generative schemes but not the agents to execute
+them autonomously. He had the vision of structure-preserving
+transformation but not the feedback loop to evolve the schemes
+themselves. He had the moral imperative but not the computational
+framework to make "does this produce living structure?" a queryable
+relation rather than a subjective judgment.
+
+The pieces that were missing in 1996 have since arrived, from
+independent lines of work that converge on the same structure:
+
+**Active inference** provides the minimal non-teleological framework
+for agents operating in open-ended action situations. Unlike
+reinforcement learning or utility maximisation, which require
+predefined objectives, active inference agents maintain a generative
+model of their world, notice when they are surprised, and act to
+reduce free energy — a combination of goal progress and uncertainty
+reduction. This is the computational equivalent of Alexander's
+"structure-preserving transformation": the agent unfolds structure
+step by step, maintaining coherence at every stage, without requiring
+a fixed endpoint.
+
+**Large language models** provide agents capable of executing
+generative schemes at the level of complexity that real software
+demands. An LLM can read a derivation, select a pattern, write code
+that instantiates the pattern, and produce evidence of whether the
+pattern worked — the full PSR/PUR cycle. This is the workforce
+Alexander wished for: agents that can carry out generative
+instructions while adapting to local context.
+
+**The Baldwin effect** closes the loop that Alexander could not close.
+In biological evolution, organisms that learn during their lifetimes
+create selection pressure that eventually gets encoded in the genome.
+In the futonic stack, agents that discover successful patterns during
+execution create evidence that the glacial learning loop eventually
+promotes to the pattern library. The library evolves not through
+top-down design but through accumulated evidence of what works. The
+codebase co-evolves with the methodology.
+
+**Flexiformal argument** bridges Alexander's gap between human
+judgment and machine verification. The same pattern exists
+simultaneously as prose (readable by humans), logic relations
+(queryable by core.logic), and compiled gate code (enforceable by the
+pipeline). Alexander's question — "does this produce living
+structure?" — becomes a structural verification check, not merely an
+aesthetic judgment.
+
+### The Blue Plane
+
+Futonic missions are not a better way to write tickets. They are not
+an AI-assisted development methodology. They are a generative process
+in Alexander's precise sense: a sequence of structure-preserving
+transformations that unfolds coherent, living software from theoretical
+ground through argument, verification, and instantiation.
+
+The derivation xenotype — IDENTIFY, MAP, DERIVE, ARGUE, VERIFY,
+INSTANTIATE — is a generative scheme. Each phase preserves the
+structure established by prior phases while introducing new
+differentiation. If INSTANTIATE requires novel design decisions, the
+earlier phases were incomplete. This is Alexander's principle that
+the unfolding must be structure-preserving at every step.
+
+The evidence trail — PSRs before execution, PURs after, PARs at
+session close — is the feedback signal that makes the Baldwin cycle
+turn. The gate pipeline — G5 through G0 — ensures that every piece
+of work, no matter how small, produces structured evidence that
+future missions can query. The three nested loops — social, task,
+glacial — operate at different timescales but serve the same
+function: maintaining and evolving a living system.
+
+Alexander told the OOPSLA audience that when a paradigm shift occurs,
+the people who take responsibility are usually not the incumbent
+professionals. Henry Ford did not come from the buggy trade. The
+computer revolution that Kay said hadn't happened yet does not look
+like faster ticket resolution or smarter autocomplete. It looks like
+software that can argue for its own architecture, verify its own
+coherence, and evolve its own patterns through accumulated evidence
+of what works.
+
+The computer revolution is a generative process. It is beginning to
+unfold.

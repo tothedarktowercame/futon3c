@@ -21,7 +21,9 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.tickle :as tickle]
-            [futon3c.evidence.store :as estore]))
+            [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.mission-backend :as mb]
+            [futon3c.peripheral.tools :as tools]))
 
 ;; =============================================================================
 ;; Configuration — repo paths
@@ -210,6 +212,70 @@
      (into md-missions devmap-missions))))
 
 ;; =============================================================================
+;; Mission doc fidelity audit (GF / drift)
+;; =============================================================================
+
+(defn- repo-root-for-mission
+  [repos mission]
+  (let [repo-k (keyword (:mission/repo mission))]
+    (or (get repos repo-k)
+        (get default-repo-roots repo-k))))
+
+(defn- audit-mission-doc
+  "Run mission-doc-audit for markdown missions.
+   Returns audit map. Non-markdown sources return :n/a."
+  [repos mission]
+  (if (not= :md-file (:mission/source mission))
+    {:status :n/a
+     :reason :non-md-source}
+    (let [mission-id (:mission/id mission)
+          mission-path (:mission/path mission)
+          repo-root (repo-root-for-mission repos mission)
+          guide-path (when repo-root (str repo-root "/docs/futonic-missions.md"))
+          cwd (or repo-root (System/getProperty "user.dir"))
+          backend (mb/make-mission-backend {:cwd cwd} (tools/make-mock-backend))
+          opts (cond-> {:mission-doc-path mission-path}
+                 guide-path (assoc :guide-path guide-path))
+          result (try
+                   (tools/execute-tool backend :mission-doc-audit [mission-id opts])
+                   (catch Exception e
+                     {:ok false :error (.getMessage e)}))]
+      (if (:ok result)
+        (:result result)
+        {:status :error
+         :reason :audit-failed
+         :error (or (:error result) "mission-doc-audit failed")}))))
+
+(defn- attach-doc-audit
+  [repos missions]
+  (mapv (fn [m]
+          (if (= :md-file (:mission/source m))
+            (assoc m :mission/doc-audit (audit-mission-doc repos m))
+            m))
+        missions))
+
+(defn- summarize-doc-drift
+  "Summarize mission docs/code drift across markdown missions."
+  [missions]
+  (let [audited (->> missions
+                     (keep :mission/doc-audit)
+                     (filter #(not= :n/a (:status %)))
+                     vec)
+        ok-count (count (filter #(= :ok (:status %)) audited))
+        drift (filter #(= :drift (:status %)) audited)
+        error-count (count (filter #(= :error (:status %)) audited))
+        open-sections (reduce + (map #(or (:open-section-count %) 0) drift))
+        missing-gf (reduce + (map #(count (get-in % [:gf :missing-headings])) drift))
+        drifting-ids (mapv :mission-id drift)]
+    {:audit/total (count audited)
+     :audit/ok ok-count
+     :audit/drift (count drift)
+     :audit/error error-count
+     :audit/open-section-obligations open-sections
+     :audit/missing-gf-headings missing-gf
+     :audit/drifting-missions drifting-ids}))
+
+;; =============================================================================
 ;; Devmap reading (minimal reimpl — no futon5 classpath dependency)
 ;; =============================================================================
 
@@ -228,11 +294,9 @@
           edges (:edges raw)
           ;; Minimal validation: check structural properties
           input-ids (set (map :id inputs))
-          output-ids (set (map :id outputs))
           comp-ids (set (map :id components))
           edge-froms (set (map :from edges))
           edge-tos (set (map :to edges))
-          all-node-ids (into (into input-ids output-ids) comp-ids)
           ;; Check for orphan inputs (input not connected to anything)
           orphan-inputs (filter #(not (edge-froms %)) input-ids)
           ;; Check for dead components (component not reaching any output)
@@ -261,7 +325,7 @@
                                   {:component/id (:id c)
                                    :component/name (or (:name c) (name (:id c)))})
                                 components)})
-    (catch Exception e
+    (catch Exception _e
       {:devmap/id (keyword (.getName (io/file path)))
        :devmap/state :error
        :devmap/input-count 0
@@ -403,7 +467,7 @@
 
 (defn- summarize-portfolio
   "Generate a human-readable portfolio summary."
-  [missions devmap-summaries coverage mana]
+  [missions devmap-summaries coverage mana doc-drift]
   (let [total-missions (count missions)
         complete (count (filter #(= :complete (:mission/status %)) missions))
         in-progress (count (filter #(= :in-progress (:mission/status %)) missions))
@@ -422,23 +486,40 @@
          ". " total-devmaps " devmaps"
          " (" valid-devmaps " valid)."
          " Avg coverage: " (format "%.0f%%" (* 100 avg-coverage)) "."
+         " Doc drift: " (:audit/drift doc-drift) "/" (:audit/total doc-drift)
+         " drift, " (:audit/open-section-obligations doc-drift)
+         " open section obligations."
          (when-not (:mana/available mana) " Mana system not yet initialized."))))
 
 (defn- find-gaps
   "Identify gaps: devmap components without missions, blocked missions, etc."
   [missions coverage]
   (let [blocked-missions (filter #(= :blocked (:mission/status %)) missions)
+        doc-drift-missions (->> missions
+                                (filter (fn [m]
+                                          (= :drift (get-in m [:mission/doc-audit :status]))))
+                                (map (fn [m]
+                                       (let [a (:mission/doc-audit m)]
+                                         (str (:mission/id m)
+                                              " — doc drift"
+                                              " (open sections: "
+                                              (or (:open-section-count a) 0)
+                                              ", missing GF headings: "
+                                              (count (get-in a [:gf :missing-headings]))
+                                              ")"))))
+                                vec)
         uncovered (mapcat (fn [c]
                             (map (fn [comp-id]
                                    (str (name (:coverage/devmap-id c))
                                         "/" (name comp-id) " — no mission"))
                                  (:coverage/uncovered c)))
                           coverage)]
-    (into (mapv (fn [m]
-                  (str (:mission/id m) " — blocked"
-                       (when (:mission/blocked-by m)
-                         (str ": " (:mission/blocked-by m)))))
-                blocked-missions)
+    (into (into (mapv (fn [m]
+                        (str (:mission/id m) " — blocked"
+                             (when (:mission/blocked-by m)
+                               (str ": " (:mission/blocked-by m)))))
+                      blocked-missions)
+                doc-drift-missions)
           uncovered)))
 
 (defn audit-coverage-correspondence
@@ -510,18 +591,21 @@
    repos: map of {repo-name root-path} (defaults to default-repo-roots)."
   ([] (build-portfolio-review default-repo-roots))
   ([repos]
-   (let [missions (build-inventory repos)
+   (let [missions-raw (build-inventory repos)
+         missions (attach-doc-audit repos missions-raw)
          futon5-root (or (:futon5 repos) (:futon5 default-repo-roots))
          devmap-summaries (read-all-devmaps futon5-root repos)
          coverage (compute-coverage devmap-summaries missions)
          mana (query-mana futon5-root)
-         summary (summarize-portfolio missions devmap-summaries coverage mana)
+         doc-drift (summarize-doc-drift missions)
+         summary (summarize-portfolio missions devmap-summaries coverage mana doc-drift)
          gaps (find-gaps missions coverage)
          actionable (find-actionable missions)]
      {:portfolio/missions missions
       :portfolio/devmap-summaries devmap-summaries
       :portfolio/coverage coverage
       :portfolio/mana mana
+      :portfolio/doc-drift doc-drift
       :portfolio/summary summary
       :portfolio/gaps gaps
       :portfolio/actionable actionable})))
