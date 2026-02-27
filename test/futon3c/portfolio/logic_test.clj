@@ -150,3 +150,91 @@
       (is (= 7 (:total summary))))
     (testing "adjacent count is positive"
       (is (pos? (:adjacent-count summary))))))
+
+;; =============================================================================
+;; Coverage & tension relations
+;; =============================================================================
+
+(def test-devmaps
+  [{:devmap/id :social-exotype
+    :devmap/state :active
+    :devmap/components [{:component/id :S-presence}
+                        {:component/id :S-dispatch}
+                        {:component/id :S-invoke}]}
+   {:devmap/id :peripheral-gauntlet
+    :devmap/state :argue
+    :devmap/components [{:component/id :C-arena}
+                        {:component/id :C-bridge}
+                        {:component/id :C-mode}]}])
+
+(def test-coverage
+  [{:coverage/devmap-id :social-exotype
+    :coverage/covered [:S-presence :S-dispatch]
+    :coverage/uncovered [:S-invoke]
+    :coverage/by-component {:S-presence #{"transport-adapters"}
+                            :S-dispatch #{"agency-refactor"}}}
+   {:coverage/devmap-id :peripheral-gauntlet
+    :coverage/covered []
+    :coverage/uncovered [:C-arena :C-bridge :C-mode]
+    :coverage/by-component {}}])
+
+(deftest build-coverage-db-test
+  (let [base (logic/build-db test-missions test-mana test-opts)
+        db (logic/build-coverage-db base test-devmaps test-coverage {})]
+    (testing "devmap facts populated"
+      (is (= 2 (count (clojure.core.logic.pldb/with-db db
+                         (clojure.core.logic/run* [dm]
+                           (logic/devmapo dm)))))))
+    (testing "component facts populated"
+      (is (= 6 (count (clojure.core.logic.pldb/with-db db
+                         (clojure.core.logic/run* [q]
+                           (clojure.core.logic/fresh [dm c]
+                             (logic/componento dm c)
+                             (clojure.core.logic/== q [dm c]))))))))))
+
+(deftest query-uncovered-components-test
+  (let [base (logic/build-db test-missions test-mana test-opts)
+        db (logic/build-coverage-db base test-devmaps test-coverage {})]
+    (testing "uncovered components found"
+      (let [uncovered (logic/query-uncovered-components db)]
+        ;; S-invoke has no coverage, C-arena/C-bridge/C-mode have no coverage
+        (is (= 4 (count uncovered)))
+        (is (some (fn [[dm c]] (and (= dm :peripheral-gauntlet) (= c :C-arena)))
+                  uncovered))
+        (is (some (fn [[dm c]] (and (= dm :social-exotype) (= c :S-invoke)))
+                  uncovered))))
+    (testing "covered components not in uncovered"
+      (let [uncovered-comps (set (map second (logic/query-uncovered-components db)))]
+        (is (not (contains? uncovered-comps :S-presence)))
+        (is (not (contains? uncovered-comps :S-dispatch)))))))
+
+(deftest query-derived-tensions-test
+  (let [base (logic/build-db test-missions test-mana test-opts)
+        db (logic/build-coverage-db base test-devmaps test-coverage {})
+        result (logic/query-derived-tensions db)]
+    (testing "derives correct tension count"
+      (is (= 4 (:derived-count result))))
+    (testing "all derived tensions are uncovered-component type"
+      (is (every? #(= :uncovered-component (:tension/type %))
+                  (:derived result))))
+    (testing "stored count is 0 when no hyperedges loaded"
+      (is (= 0 (:stored-count result))))))
+
+(deftest query-unported-invariants-test
+  (let [base (logic/build-db test-missions test-mana test-opts)
+        db (-> base
+               ;; Add some invariant facts
+               (clojure.core.logic.pldb/db-fact logic/invarianto "entity-lifecycle" "futon1")
+               (clojure.core.logic.pldb/db-fact logic/invarianto "referential-integrity" "futon1")
+               (clojure.core.logic.pldb/db-fact logic/invarianto "penholder-auth" "futon1")
+               ;; Only penholder-auth was ported
+               (clojure.core.logic.pldb/db-fact logic/implementedo "penholder-auth" "futon1a"))]
+    (testing "finds unported invariants"
+      (let [unported (logic/query-unported-invariants db "futon1" "futon1a")]
+        (is (= 2 (count unported)))
+        (is (= #{"entity-lifecycle" "referential-integrity"} (set unported)))))
+    (testing "consistency check detects drift"
+      (let [db2 (logic/build-coverage-db db test-devmaps test-coverage {})
+            result (logic/query-consistency db2)]
+        (is (= :drifted (:invariant-drift result)))
+        (is (= 2 (count (:unported-invariants result))))))))

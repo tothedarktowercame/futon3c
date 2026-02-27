@@ -284,3 +284,171 @@
      :blocked-pairs blocked
      :critical-path (take 5 critical)
      :dependency-clusters clusters}))
+
+;; =============================================================================
+;; Coverage & tension relations
+;; =============================================================================
+;;
+;; These relations extend the portfolio knowledge base with devmap structure
+;; and coverage facts. The key insight: coverage is currently computed
+;; procedurally in mc-backend/compute-coverage (three-tier heuristic matching).
+;; Expressing it relationally makes tension discovery compositional:
+;; a tension is simply a structural query that fails to find a covering fact.
+;;
+;; Anti-drift property: any tension hyperedge in XTDB should be re-derivable
+;; by running these queries against the current state. When re-derivation
+;; fails (the tension was resolved) or succeeds where no hyperedge exists
+;; (new tension), that's a consistency signal.
+
+;; -- Devmap structure facts --
+(pldb/db-rel devmapo dm-id)                     ; devmap exists
+(pldb/db-rel devmap-stateo dm-id state)          ; devmap state (:active, :complete, etc.)
+(pldb/db-rel componento dm-id comp-id)           ; component belongs to devmap
+(pldb/db-rel devmap-edgeo dm-id from to)         ; edge in devmap wiring
+
+;; -- Coverage facts (derived from compute-coverage or annotation) --
+(pldb/db-rel coverso mid comp-id)                ; mission covers component
+(pldb/db-rel annotatedo comp-id mid)             ; explicit annotation: comp → mission
+
+;; -- Hyperedge facts (from XTDB, for consistency checking) --
+(pldb/db-rel hyperedgeo hx-id hx-type)           ; hyperedge exists with type
+(pldb/db-rel hx-endpointo hx-id endpoint)        ; hyperedge has endpoint
+
+;; -- Invariant facts (for porting audit) --
+(pldb/db-rel invarianto inv-id source-repo)      ; invariant defined in source repo
+(pldb/db-rel implementedo inv-id target-repo)    ; invariant implemented in target
+
+;; =============================================================================
+;; Extended fact database construction
+;; =============================================================================
+
+(defn build-coverage-db
+  "Extend a portfolio logic DB with devmap structure and coverage facts.
+
+   Takes:
+   - db: existing portfolio logic DB (from build-db)
+   - devmaps: vector of devmap summaries (from read-all-devmaps)
+   - coverage: vector of coverage results (from compute-coverage)
+   - opts: {:hyperedges [{:hx/id _ :hx/type _ :hx/endpoints [...]}...]}
+
+   Returns extended pldb database."
+  [db devmaps coverage opts]
+  (let [hyperedges (or (:hyperedges opts) [])]
+    (as-> db d
+      ;; Devmap structure
+      (reduce (fn [d2 dm]
+                (let [dm-id (:devmap/id dm)
+                      state (:devmap/state dm)
+                      components (:devmap/components dm)]
+                  (as-> d2 d3
+                    (pldb/db-fact d3 devmapo dm-id)
+                    (pldb/db-fact d3 devmap-stateo dm-id (or state :unknown))
+                    (reduce (fn [d4 c]
+                              (pldb/db-fact d4 componento dm-id (:component/id c)))
+                            d3 components))))
+              d devmaps)
+      ;; Coverage
+      (reduce (fn [d2 cov]
+                (let [dm-id (:coverage/devmap-id cov)
+                      covered (:coverage/covered cov)]
+                  (reduce (fn [d3 comp-id]
+                            (if-let [mids (get (:coverage/by-component cov) comp-id)]
+                              (reduce (fn [d4 mid]
+                                        (pldb/db-fact d4 coverso mid comp-id))
+                                      d3 mids)
+                              d3))
+                          d2 covered)))
+              d coverage)
+      ;; Hyperedges from XTDB (for consistency checking)
+      (reduce (fn [d2 hx]
+                (let [hx-id (:hx/id hx)
+                      hx-type (:hx/type hx)
+                      endpoints (:hx/endpoints hx)]
+                  (as-> d2 d3
+                    (pldb/db-fact d3 hyperedgeo hx-id hx-type)
+                    (reduce (fn [d4 ep]
+                              (pldb/db-fact d4 hx-endpointo hx-id ep))
+                            d3 (or endpoints [])))))
+              d hyperedges))))
+
+;; =============================================================================
+;; Coverage goals
+;; =============================================================================
+
+(defn uncoveredo
+  "Goal: component comp-id in devmap dm-id has no covering mission."
+  [dm-id comp-id]
+  (l/all
+   (componento dm-id comp-id)
+   (l/project [comp-id]
+     ;; No mission covers this component
+     (l/== true true)  ; placeholder — negation-as-failure below
+     )))
+
+(defn query-uncovered-components
+  "Find all (devmap, component) pairs with no covering mission.
+   This is the relational equivalent of mc-backend's 'uncovered' computation."
+  [db]
+  (let [all-comps (pldb/with-db db
+                    (l/run* [q]
+                      (l/fresh [dm comp]
+                        (componento dm comp)
+                        (l/== q [dm comp]))))
+        covered? (fn [[_dm comp]]
+                   (seq (pldb/with-db db
+                          (l/run 1 [mid]
+                            (coverso mid comp)))))]
+    (vec (remove covered? all-comps))))
+
+(defn query-derived-tensions
+  "Derive tension set from current state. Each tension is a map matching
+   the TensionEntry schema. Compare against stored hyperedges to find:
+   - :new — tension derivable but no hyperedge exists
+   - :resolved — hyperedge exists but tension no longer derivable
+   - :consistent — both agree"
+  [db]
+  (let [uncovered (query-uncovered-components db)
+        ;; Check which have corresponding hyperedges
+        stored-tensions (pldb/with-db db
+                          (l/run* [hx-id]
+                            (hyperedgeo hx-id :tension/uncovered-component)))]
+    {:derived (mapv (fn [[dm comp]]
+                      {:tension/type :uncovered-component
+                       :tension/devmap dm
+                       :tension/component comp})
+                    uncovered)
+     :derived-count (count uncovered)
+     :stored-count (count stored-tensions)}))
+
+;; =============================================================================
+;; Invariant porting audit
+;; =============================================================================
+
+(defn query-unported-invariants
+  "Find invariants defined in source-repo with no implementation in target-repo.
+   This is exactly the query that would have caught the futon1→futon1a drift."
+  [db source-repo target-repo]
+  (let [all-invariants (pldb/with-db db
+                         (l/run* [inv]
+                           (invarianto inv source-repo)))
+        ported? (fn [inv]
+                  (seq (pldb/with-db db
+                         (l/run 1 [q]
+                           (implementedo inv target-repo)
+                           (l/== q true)))))]
+    (vec (remove ported? all-invariants))))
+
+(defn query-consistency
+  "Check consistency between derived tensions and stored hyperedges.
+   Returns :ok if they agree, or a drift report if they don't."
+  [db]
+  (let [{:keys [derived stored-count]} (query-derived-tensions db)
+        unported (query-unported-invariants db "futon1" "futon1a")]
+    (cond-> {:tension-drift (if (= (count derived) stored-count)
+                              :consistent
+                              :drifted)
+             :derived-tension-count (count derived)
+             :stored-tension-count stored-count}
+      (seq unported)
+      (assoc :unported-invariants unported
+             :invariant-drift :drifted))))
