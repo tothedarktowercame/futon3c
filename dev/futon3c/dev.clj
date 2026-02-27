@@ -1004,7 +1004,7 @@
                     {:ok true :entity-id eid :status :reviewed
                      :verdict verdict
                      :extract-elapsed-ms (:elapsed-ms extract-result)
-                     :review-elapsed-ms (:elapsed-ms review-result)})))))))))))
+                     :review-elapsed-ms (:elapsed-ms review-result)}))))))))))
 
 (defn run-ct-batch!
   "Process N CT entries overnight. Resumable — skips already-processed entries.
