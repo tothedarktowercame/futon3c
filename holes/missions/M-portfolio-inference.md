@@ -626,6 +626,85 @@ trajectory. Observation + belief enables prediction error analysis. Policy enabl
 outcome tracking (did we follow the recommendation? what happened?). Heartbeat
 closes the weekly loop.
 
+### D-11: Weekly Bid/Clear — action-level with effort bands and privacy masking
+
+**IF** the weekly heartbeat (D-8) needs a bid shape to compute prediction error
+at portfolio timescale, and futon5a's weekly cycle already implements bid/clear
+with hour-level categories (`:q1 20h`, `:q2 15h`),
+**HOWEVER** futon5a's categories are personal time-allocation buckets, not portfolio
+actions. The actual hours are private data. And a bid without effort estimation
+is not good AIF — effort prediction is a genuine sensory channel whose
+discrepancy drives learning about which missions take more work than expected,
+**THEN** define a two-layer bid/clear system:
+
+**Public layer (futon5, nonstarter schema):** action-level bids with effort bands.
+```clojure
+;; Weekly bid: what I intend to do this week
+{:heartbeat/week-id    "2026-W09"
+ :heartbeat/bids       [{:action :work-on :mission "M-foo" :effort :hard}
+                         {:action :review  :mission nil     :effort :trivial}
+                         {:action :work-on :mission "M-bar" :effort :medium}]
+ :heartbeat/mode-prediction :BUILD}
+
+;; Weekly clear: what actually happened
+{:heartbeat/week-id    "2026-W09"
+ :heartbeat/clears     [{:action :work-on :mission "M-foo" :effort :hard :outcome :partial}
+                         {:action :work-on :mission "M-bar" :effort :medium :outcome :complete}
+                         {:action :work-on :mission "M-baz" :effort :easy :outcome :complete}]
+ :heartbeat/mode-observed :BUILD}
+```
+
+**Private layer (futon5a):** actual hours mapped to effort bands via compression.
+```
+futon5a (private)              futon5 (public)
+─────────────────              ───────────────
+:q4 14h on M-foo         →    {:action :work-on :mission "M-foo" :effort :hard}
+:q4 2h review             →    {:action :review :effort :trivial}
+:q1 6h on M-bar           →    {:action :work-on :mission "M-bar" :effort :medium}
+```
+
+**Effort bands** (derived from Nonstarter estimate.clj's size scale):
+```
+:trivial   — ≤2h equivalent, or Nonstarter :tiny
+:easy      — ~half-day, or Nonstarter :small
+:medium    — ~1-2 days, or Nonstarter :medium
+:hard      — ~3-5 days, or Nonstarter :large
+:epic      — >1 week, or Nonstarter :xl
+```
+
+**Prediction errors from this shape:**
+1. **Action mismatch** — bid `:work-on M-foo`, actually worked on M-baz (unplanned mission)
+2. **Effort mismatch** — bid `:hard` for M-foo, actual was `:medium` (easier than expected)
+3. **Outcome mismatch** — bid `:work-on M-foo`, outcome `:partial` (didn't finish)
+4. **Mode mismatch** — predicted BUILD, observed CONSOLIDATE (strategic drift)
+5. **Unplanned work** — actions in clear that weren't in bid (interrupts, emergencies)
+
+Each of these is a learnable signal that feeds back into the AIF loop.
+
+**Schema (futon5, replaces personal_weeks/personal_blocks):**
+```sql
+CREATE TABLE IF NOT EXISTS portfolio_heartbeats (
+  week_id TEXT PRIMARY KEY,
+  bids TEXT,          -- EDN: [{:action :effort :mission}]
+  clears TEXT,        -- EDN: [{:action :effort :mission :outcome}]
+  mode_prediction TEXT,
+  mode_observed TEXT,
+  delta TEXT,         -- EDN: computed prediction errors
+  aif_snapshot TEXT,  -- EDN: portfolio AIF state at clear time
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+**BECAUSE** effort prediction is a genuine sensory channel — without it the system
+can't learn which missions take more effort than expected, which means it can't
+calibrate future EFE computations (the λ_effort term in D-6). The privacy masking
+(hours → effort bands) preserves the learning signal while keeping actual time
+allocations in the private repo. The effort bands align with Nonstarter's existing
+size scale, maintaining vocabulary consistency across the stack. And action-level
+bids connect directly to the 5 portfolio actions (D-6), making the bid/clear
+discrepancy computable as prediction error by the existing AIF machinery.
+
 ## ARGUE
 
 M-mission-control gave us a sensory surface — tools that observe portfolio
@@ -886,7 +965,7 @@ candidates. Fact DB rebuilt each aif-step from fresh mc-backend data.
 
 ### Artifacts
 
-7 source modules (1,288 lines) + 7 test files (893 lines):
+8 source modules (1,400+ lines) + 8 test files (1,000+ lines):
 
 | Module | Lines | Purpose | Derivation |
 |--------|-------|---------|------------|
@@ -897,12 +976,21 @@ candidates. Fact DB rebuilt each aif-step from fresh mc-backend data.
 | `adjacent.clj` | 89 | 5-condition adjacent-possible boundary | D-7 |
 | `logic.clj` | 286 | core.logic relational layer (8 relations, 7 query types) | VERIFY |
 | `core.clj` | 219 | Full AIF loop: observe → perceive → affect → policy | D-8, D-9, D-10 |
+| `heartbeat.clj` | 112 | Action-level bid/clear, effort bands, futon5 API client | D-8, D-11 |
+
+**Cross-repo artifacts (futon5):**
+
+| File | Purpose | Derivation |
+|------|---------|------------|
+| `nonstarter/schema.clj` | `portfolio_heartbeats` table (replaces `personal_weeks`) | D-11 |
+| `nonstarter/db.clj` | CRUD: `upsert-heartbeat-bids!`, `upsert-heartbeat-clears!`, `get-heartbeat`, `list-heartbeats` | D-8, D-11 |
+| `nonstarter/api.clj` | HTTP API on port 7071: `/api/heartbeat`, `/api/heartbeat/bid`, `/api/heartbeat/clear` | D-8 |
 
 ### Test Results
 
-917 tests, 3,188 assertions, 0 failures, 0 errors.
+929 tests, 3,227 assertions, 0 failures, 0 errors.
 
-57 tests specific to portfolio inference across 7 test files:
+69 tests specific to portfolio inference across 8 test files:
 - `observe_test.clj` — channel normalization, clamp01, edge cases
 - `perceive_test.clj` — prediction error, belief update, precision weighting
 - `affect_test.clj` — mode transitions, hysteresis, urgency-τ coupling
@@ -910,6 +998,7 @@ candidates. Fact DB rebuilt each aif-step from fresh mc-backend data.
 - `adjacent_test.clj` — 5-condition gate, boundary computation
 - `logic_test.clj` — relation population, structural queries, what-if
 - `core_test.clj` — full AIF loop integration, evidence emission
+- `heartbeat_test.clj` — effort bands, action errors, mode errors, compound scenarios
 
 ### Live Result
 
@@ -953,16 +1042,20 @@ Structural summary:
 - [x] Full AIF loop operational: observe → perceive → affect → policy
 - [x] core.logic relational layer with structural queries
 - [x] Live test against real portfolio produces actionable recommendation
-- [x] 57+ portfolio-specific tests passing
-- [x] All 10 derivations (D-1 through D-10) instantiated in code
-- [ ] Evidence emission to durable store (D-10 — designed, not yet wired to persistence)
-- [ ] Weekly heartbeat integration with futon5a (D-8 — entry point exists, not yet scheduled)
+- [x] 69 portfolio-specific tests passing (929 total suite)
+- [x] All 11 derivations (D-1 through D-11) instantiated in code
+- [x] Evidence emission to durable store (D-10 — `:portfolio` added to ArtifactRefType;
+  `emit-evidence!` in core.clj calls `estore/append*` with proper shape)
+- [x] Weekly heartbeat infrastructure (D-8 + D-11):
+  - futon5: `portfolio_heartbeats` schema, CRUD in db.clj, HTTP API in api.clj (port 7071)
+  - futon3c: `heartbeat.clj` — effort bands, action-level prediction errors, futon5 API client
+  - `portfolio-heartbeat!` updated for action-level bid/clear shape
+  - futon5a: compression (hours → effort bands) deferred to futon5a maintainer
+- [ ] First live weekly heartbeat cycle (bid Monday → clear Sunday → prediction error)
 
-## Status: INSTANTIATE Complete (Core)
+## Status: INSTANTIATE Complete
 
-The core AIF loop is built, tested, and running live. Two integration
-items remain (evidence persistence and weekly scheduling) which are
-wiring concerns, not architectural ones — the interfaces exist, the
-backends need connecting. The mission's primary deliverable — a
-generative model that predicts, is surprised, and recommends — is
-operational.
+All derivations (D-1 through D-11) are instantiated. The core AIF loop,
+evidence emission, and weekly heartbeat infrastructure are all built and
+tested. The remaining item is operational: running the first actual weekly
+cycle. That's a use-the-system event, not a build-the-system event.

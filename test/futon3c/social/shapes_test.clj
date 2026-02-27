@@ -499,7 +499,7 @@
 
 (deftest artifact-ref-type-valid
   (testing "all ArtifactRefType values validate"
-    (doseq [rt [:pattern :mission :component :gate :session :agent :thread :evidence]]
+    (doseq [rt [:pattern :mission :component :gate :session :agent :thread :evidence :proof-path :task :portfolio]]
       (is (shapes/valid? shapes/ArtifactRefType rt) (str rt " should be valid")))))
 
 (deftest artifact-ref-type-invalid

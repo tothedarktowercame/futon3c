@@ -156,40 +156,49 @@
 ;; =============================================================================
 
 (defn portfolio-heartbeat!
-  "Weekly heartbeat: run aif-step + compute bid/clear discrepancy.
+  "Weekly heartbeat: run aif-step + compute action-level bid/clear discrepancy.
 
    Takes:
    - evidence-store: for evidence emission
-   - week-bid: map of {channel → predicted-value} (what we bid for this week)
+   - heartbeat-data: {:bids [{:action :mission :effort}]
+                      :clears [{:action :mission :effort :outcome}]
+                      :mode-prediction :BUILD
+                      :mode-observed :BUILD}
    - opts: same as portfolio-step!
 
-   Returns aif-step result + discrepancy analysis."
-  [evidence-store week-bid opts]
+   Returns aif-step result + action-level prediction error analysis.
+   See D-11 in M-portfolio-inference.md for the bid/clear shape."
+  [evidence-store heartbeat-data opts]
   (let [result (portfolio-step! evidence-store (assoc opts :emit-evidence? false))
         observation (:observation result)
-        ;; Compute discrepancy: bid - clear (predicted - observed)
-        delta (into {}
-                    (map (fn [k]
-                           [k (- (get week-bid k 0.5) (get observation k 0.5))]))
-                    observe/channel-keys)
-        total-delta (reduce + (map #(Math/abs (double %)) (vals delta)))]
+        observed-mode (get-in result [:diagnostics :mode])
+        ;; Action-level prediction errors (D-11)
+        action-errors (when (and (:bids heartbeat-data) (:clears heartbeat-data))
+                        (require 'futon3c.portfolio.heartbeat)
+                        ((resolve 'futon3c.portfolio.heartbeat/compute-action-errors)
+                         (:bids heartbeat-data) (:clears heartbeat-data)))
+        mode-error (when (:mode-prediction heartbeat-data)
+                     (require 'futon3c.portfolio.heartbeat)
+                     ((resolve 'futon3c.portfolio.heartbeat/compute-mode-error)
+                      (:mode-prediction heartbeat-data)
+                      (or (:mode-observed heartbeat-data) observed-mode)))
+        delta {:action-errors action-errors
+               :mode-error mode-error}]
     ;; Emit heartbeat evidence
     (emit-evidence! evidence-store :heartbeat
-                    {:bid week-bid
-                     :clear observation
-                     :delta delta
-                     :total-delta total-delta
-                     :mode (get-in result [:diagnostics :mode])
-                     :focus (get-in result [:state :mu :focus])
-                     :adjacent-count (count (filter :adjacent?
-                                                    ;; re-derive from result
-                                                    []))
+                    {:bids (:bids heartbeat-data)
+                     :clears (:clears heartbeat-data)
+                     :mode-prediction (:mode-prediction heartbeat-data)
+                     :mode-observed (or (:mode-observed heartbeat-data) observed-mode)
+                     :action-errors action-errors
+                     :mode-error mode-error
+                     :observation observation
+                     :aif-mode observed-mode
                      :step (:step-count (:state result))})
     (assoc result
-           :heartbeat {:bid week-bid
-                       :clear observation
-                       :delta delta
-                       :total-delta total-delta})))
+           :heartbeat {:bids (:bids heartbeat-data)
+                       :clears (:clears heartbeat-data)
+                       :delta delta})))
 
 ;; =============================================================================
 ;; Convenience: format recommendation
