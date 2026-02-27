@@ -8,6 +8,7 @@ target/
 log/
 .alleycat-drop/
 storage/
+data/
 
 bb
 clojure
