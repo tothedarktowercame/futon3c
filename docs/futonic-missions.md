@@ -1,16 +1,126 @@
 # Futonic Missions: A Methodology for Theory-Grounded Software Development
 
-## Abstract
+## Introduction
 
-A futonic mission is a unit of work that is derived from theory, backed by
-patterns, validated against wiring diagrams, and produces machine-checkable
-evidence at every stage. Unlike tickets or tasks, which describe work to be
-done, a mission describes *why the work follows from what we know*, traces
-every design decision to its theoretical ground, and produces typed evidence
-that feeds back into the system's own learning. This document describes
-the methodology, its components, and a worked example — M-portfolio-inference
-— where the methodology was applied end-to-end and then modeled
-computationally.
+### Opening: A Tale of Two Databases
+
+futon1 is a knowledge-graph database built by AI agents using standard
+agentic programming methods. Over 187 commits it accumulated silent
+durability drift, dangling relation hydration, data-root divergence across
+entry points, questions treated as assertions, RocksDB lock contention, and
+three JVM segfault crashes. Its test suite - 88 tests, 428 assertions -
+currently reports 6 failures and 6 errors. Debugging windows ranged from
+11 minutes for a watchdog fix to 26 days for ingest hardening.
+
+futon1a is the same database, rebuilt using futonic missions. In 63
+commits - a third of the effort - it reached 99 tests, 695 assertions,
+0 failures, 0 errors. It successfully migrated 17,564 documents with
+checksum verification. When tricky edge cases arose (whitespace rejection,
+nil entity handling, external-id conflicts under stress), they were
+resolved quickly because every design decision had a traceable argument
+chain.
+
+The difference is not that the programmer improved. The difference is
+the process.
+
+### What Changed
+
+futon1's problems are documented *after the fact*: issue files written
+once something broke, limitation docs cataloguing known risks, crash logs
+sitting in the repo root. The system failed and then someone wrote down
+why.
+
+futon1a's reasoning was recorded *before* execution and validated *after*.
+Seven Pattern Selection Records (PSRs) document which pattern was chosen
+for each task and why. Seven matching Pattern Use Records (PURs) document
+whether the pattern worked. A traceability chain - evidence -> pattern ->
+PSR -> module -> test -> doc -> error - is encoded as a first-class artifact
+in the repository.
+
+The structural catches illustrate the difference concretely:
+
+- A legacy descriptor verification test explicitly notes "would fail
+  pre-repair" - a verification-phase catch that would have been a runtime
+  bug in futon1.
+- A pipeline-order test prevents Layer 4 from preempting Layer 3 - a class
+  of bug that in futon1 required a debugging window of over four days.
+- An error hierarchy test enforces correct HTTP status codes per layer
+  (L0=503, L1=409, L2=500, L3=403, L4=400) - the equivalent problem in
+  futon1 (silent durability drift) was warning-only, not fail-stop.
+
+These are not just tests. They are *derived from architectural
+commitments* - specific decisions made in the DERIVE phase of the mission,
+each with a documented IF/HOWEVER/THEN/BECAUSE argument structure. In
+futon1, the equivalent problems were discovered through painful debugging.
+In futon1a, they were prevented by design.
+
+### The Donor Body
+
+futon1 was not wasted work. It was the necessary first pass that produced
+the evidence the methodology needed to exist. Its failure modes - the
+26-day debugging window, the crash logs, the silent drift - became the
+selection pressure that shaped the methodology's defences. futon1 donated
+its failure modes to futon1a's immune system.
+
+In the vocabulary of futonic methodology, futon1 is a phenotype: observable
+behaviour in the environment, failures included. Its problems became
+genotype material - patterns encoding "what goes wrong when you build
+without derivations." futon1a served as the first exotype for the theory:
+the interface where the methodology met a real system and had to prove it
+could connect. And the methodology itself is a xenotype - a portable
+process that transferred from theory-space into implementation-space. The
+only way to know a xenotype is real is to watch it transfer. futon1a is
+that evidence.
+
+This paper describes the methodology, its components, and why it exists.
+
+### What Is a Futon?
+
+A futon is a historical trend with clear generative potential - an element
+of the future that is visible in the present if you know how to read the
+developmental trajectory.
+
+Steam engines in the 1860s. The abolition of slavery. The internet in
+1993. These are futons: trends whose generative course was legible to
+those paying attention, even when the specific outcomes were not yet
+determined. The discipline of futonic thinking is reading those
+trajectories and building with them - not prediction, but something closer
+to morphological reading in the tradition of D'Arcy Thompson, who looked
+at biological forms and saw the mathematical forces that shaped them.
+
+The relevant futon for this work is computational mathematics - and more
+broadly, the mechanisation of knowledge production. Large language models
+are the current expression of this trend, but the trend predates them by
+decades. Alan Turing wrote about machine intelligence in 1951. Christopher
+Alexander formalised design patterns in the 1970s. Elinor Ostrom
+described institutional action arenas - bounded contexts where rules,
+participants, and outcomes co-evolve - and explicitly acknowledged the
+resonance with Alexander's patterns. William Gibson observed that the
+future is already here, just not evenly distributed.
+
+Futonic methodology draws on all of these: Thompson's morphological
+reading of developmental form, Turing's vision of machine reasoning,
+Alexander's patterns as microcosms of change, Ostrom's action arenas as
+the minimal institutional context for coordination, and Gibson's insight
+that the future is a distribution problem, not a prediction problem.
+
+### Why Now
+
+LLMs are powerful components. But components are not machines. An LLM can
+generate code, but it cannot do engineering - it cannot trace design
+decisions to theoretical ground, validate architecture against structural
+constraints, or learn from accumulated evidence of what works.
+
+Futonic missions supply the missing architecture. They are the methodology
+that makes LLM capabilities compose into something that develops over
+time. The key mechanism is evolutionary: a Baldwin cycle applied to the
+evolving codebase rather than to frozen model weights. Patterns are not
+designed top-down - they are distilled from accumulated evidence of what
+works, through a glacial learning loop that scans proof paths for
+recurring structural tensions and promotes them to new patterns.
+
+The result is a system that improves through use. futon1a is the first
+demonstration. This paper describes how it works and why.
 
 ## 1. The Problem with Tickets
 
