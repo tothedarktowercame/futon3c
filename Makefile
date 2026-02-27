@@ -3,10 +3,12 @@ EVIDENCE_BASE?=http://localhost:7070
 CODEX_SANDBOX?=danger-full-access
 CODEX_APPROVAL?=never
 CODEX_APPROVAL_POLICY?=$(CODEX_APPROVAL)
+NONSTARTER_DB?=$(HOME)/code/storage/nonstarter.db
 
 export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
+export NONSTARTER_DB
 
 .PHONY: tools dev test claude claude-repl codex codex-repl codex-autowake tickle status repl \
 	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
