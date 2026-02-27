@@ -1278,6 +1278,32 @@
       (json-response 500 {:ok false :error "devmap-export-failed"
                           :message (.getMessage e)}))))
 
+(defn- handle-mc-trace
+  "GET /api/alpha/mc/trace — trace all tensions through the gate chain.
+   Returns per-tension paths with gate results and aggregate stats.
+   Optional ?devmap=X to filter to a single devmap."
+  [request _config]
+  (try
+    (let [params (parse-query-params request)
+          dm-filter (get params "devmap")
+          result (mcb/trace-all-tensions)
+          paths (if dm-filter
+                  (filterv (fn [p]
+                             (let [dm (get-in p [:tension :tension/devmap])]
+                               (= dm-filter (when dm (name dm)))))
+                           (:paths result))
+                  (:paths result))]
+      (json-response 200 {:ok true
+                          :paths paths
+                          :summary (if dm-filter
+                                     {:total (count paths)
+                                      :filter dm-filter}
+                                     (:summary result))
+                          :detected-at (:detected-at result)}))
+    (catch Exception e
+      (json-response 500 {:ok false :error "trace-failed"
+                          :message (.getMessage e)}))))
+
 ;; =============================================================================
 ;; Portfolio inference handlers
 ;; =============================================================================
@@ -1426,6 +1452,9 @@
 
           (and (= :get method) (= "/api/alpha/mc/devmaps" uri))
           (handle-mc-devmaps config)
+
+          (and (= :get method) (= "/api/alpha/mc/trace" uri))
+          (handle-mc-trace request config)
 
           (and (= :post method) (= "/api/alpha/todo" uri))
           (handle-todo request config)

@@ -673,6 +673,172 @@
                 :by-type by-type}})))
 
 ;; =============================================================================
+;; Tension path tracing — 間 + 関 (gap-reading + gate-traversal)
+;; =============================================================================
+;;
+;; Given a tension, trace the full chain of 関 from devmap to source:
+;;   devmap → component → covering missions (or gap) → evidence → var → source
+;; Each step is a typed gate that either passes (link found) or blocks (gap).
+;; The trace is the replicable form of what tension discovery demonstrated ad hoc.
+
+(defn trace-tension-path
+  "Trace a tension through the full chain of 関 (gates/relations).
+
+   Takes a tension entry (from build-tension-export) and the current
+   portfolio review. Returns a path map with each gate's result:
+
+   {:tension    — the input tension
+    :gates      — ordered vector of gate results
+    :complete?  — true if all gates passed (full path traced)
+    :blocked-at — keyword of the first blocked gate, or nil}
+
+   Gate types:
+   - :devmap     — does the devmap exist and what's its structure?
+   - :component  — does the component exist in the devmap?
+   - :coverage   — which missions cover this component (may be empty = gap)?
+   - :evidence   — what evidence exists for related missions?
+   - :reflection — can we resolve a var that implements this?
+   - :source     — file + line of the implementing code"
+  ([tension] (trace-tension-path tension nil))
+  ([tension review]
+   (let [review (or review (build-portfolio-review))
+         devmaps (:portfolio/devmap-summaries review)
+         missions (:portfolio/missions review)
+         coverage (:portfolio/coverage review)
+         dm-id (:tension/devmap tension)
+         comp-id (:tension/component tension)
+         ttype (:tension/type tension)
+
+         ;; Gate 1: Devmap
+         devmap (first (filter #(= dm-id (:devmap/id %)) devmaps))
+         g-devmap {:gate :devmap
+                   :status (if devmap :pass :blocked)
+                   :data (when devmap
+                           {:id (:devmap/id devmap)
+                            :state (:devmap/state devmap)
+                            :component-count (:devmap/component-count devmap)
+                            :edge-count (:devmap/edge-count devmap)})}
+
+         ;; Gate 2: Component
+         component (when devmap
+                     (first (filter #(= comp-id (:component/id %))
+                                    (:devmap/components devmap))))
+         g-component {:gate :component
+                      :status (if component :pass :blocked)
+                      :data (when component
+                              {:id (:component/id component)
+                               :name (:component/name component)
+                               :devmap dm-id})}
+
+         ;; Gate 3: Coverage (this is where uncovered tensions block)
+         cov-entry (first (filter #(= dm-id (:coverage/devmap-id %)) coverage))
+         covering-missions (when (and cov-entry comp-id)
+                             (get (:coverage/by-component cov-entry) comp-id))
+         g-coverage {:gate :coverage
+                     :status (if (seq covering-missions) :pass :gap)
+                     :data {:component comp-id
+                            :missions (vec (or covering-missions []))
+                            :tension-type ttype}}
+
+         ;; Gate 4: Evidence (for covering missions, or the devmap itself)
+         related-mission-ids (if (seq covering-missions)
+                               covering-missions
+                               ;; No covering missions — look for devmap-level evidence
+                               (let [dm-name (when dm-id (str/lower-case (name dm-id)))]
+                                 (keep (fn [m]
+                                         (when (= dm-name (str/lower-case (:mission/id m)))
+                                           (:mission/id m)))
+                                       missions)))
+         related-missions (filter (fn [m]
+                                    (contains? (set related-mission-ids)
+                                               (:mission/id m)))
+                                  missions)
+         g-evidence {:gate :evidence
+                     :status (if (seq related-missions) :pass :blocked)
+                     :data {:missions (mapv (fn [m]
+                                             {:id (:mission/id m)
+                                              :status (:mission/status m)
+                                              :repo (:mission/repo m)
+                                              :path (:mission/path m)})
+                                           related-missions)}}
+
+         ;; Gate 5: Reflection (attempt to resolve a related var)
+         ;; Heuristic: look for vars in namespaces matching the devmap/component
+         reflection-result
+         (try
+           (let [;; Try to find a namespace related to this devmap
+                 dm-name (when dm-id (name dm-id))
+                 comp-name (when comp-id (name comp-id))
+                 ;; Search loaded namespaces for ones containing the devmap name
+                 candidate-nses (when dm-name
+                                  (->> (all-ns)
+                                       (filter (fn [ns-obj]
+                                                 (let [nsn (str (ns-name ns-obj))]
+                                                   (or (str/includes? nsn (str/replace dm-name "-" "_"))
+                                                       (str/includes? nsn (str/replace dm-name "-" "."))
+                                                       (when comp-name
+                                                         (str/includes? nsn (str/replace comp-name "-" "_")))))))
+                                       (take 3)))
+                 ;; Get public vars from first matching namespace
+                 first-ns (first candidate-nses)
+                 vars-sample (when first-ns
+                               (->> (ns-publics first-ns)
+                                    (take 5)
+                                    (mapv (fn [[sym v]]
+                                            (let [m (meta v)]
+                                              {:var (str (ns-name first-ns) "/" sym)
+                                               :file (:file m)
+                                               :line (:line m)
+                                               :arglists (str (:arglists m))})))))]
+             {:ns (when first-ns (str (ns-name first-ns)))
+              :candidate-namespaces (mapv #(str (ns-name %)) candidate-nses)
+              :vars vars-sample})
+           (catch Exception _ nil))
+
+         g-reflection {:gate :reflection
+                       :status (if (:ns reflection-result) :pass :blocked)
+                       :data reflection-result}
+
+         ;; Gate 6: Source (file + line from reflection)
+         source-file (some :file (:vars reflection-result))
+         source-line (some :line (:vars reflection-result))
+         g-source {:gate :source
+                   :status (if source-file :pass :blocked)
+                   :data (when source-file
+                           {:file source-file
+                            :line source-line})}
+
+         gates [g-devmap g-component g-coverage g-evidence g-reflection g-source]
+         first-blocked (first (filter #(= :blocked (:status %)) gates))]
+
+     {:tension tension
+      :gates gates
+      :complete? (nil? first-blocked)
+      :blocked-at (:gate first-blocked)
+      :gap-at (when (= :gap (:status g-coverage)) :coverage)})))
+
+(defn trace-all-tensions
+  "Trace all current tensions through the gate chain.
+   Returns a summary with per-tension paths and aggregate stats."
+  ([] (trace-all-tensions default-repo-roots))
+  ([repos]
+   (let [export (build-tension-export repos)
+         review (build-portfolio-review repos)
+         tensions (:tensions export)
+         paths (mapv #(trace-tension-path % review) tensions)
+         complete (filter :complete? paths)
+         blocked (remove :complete? paths)
+         blocked-at-freq (frequencies (keep :blocked-at blocked))
+         gap-count (count (filter :gap-at paths))]
+     {:paths paths
+      :summary {:total (count paths)
+                :complete (count complete)
+                :blocked (count blocked)
+                :gap-count gap-count
+                :blocked-at blocked-at-freq}
+      :detected-at (:detected-at export)})))
+
+;; =============================================================================
 ;; Backfill — legacy missions as evidence (D7)
 ;; =============================================================================
 

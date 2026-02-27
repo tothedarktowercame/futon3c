@@ -737,3 +737,54 @@
         (is (keyword? (:tension/devmap t)))
         (is (keyword? (:tension/component t)))
         (is (number? (:tension/coverage-pct t)))))))
+
+;; =============================================================================
+;; Tension path tracing (間 + 関)
+;; =============================================================================
+
+(deftest trace-tension-path-returns-gates
+  (testing "trace-tension-path returns a structured path for a tension"
+    (let [export (mcb/build-tension-export)
+          tension (first (:tensions export))
+          path (mcb/trace-tension-path tension)]
+      (is (map? path))
+      (is (= tension (:tension path)))
+      (is (vector? (:gates path)))
+      (is (= 6 (count (:gates path))))
+      (is (boolean? (:complete? path)))
+      ;; Every gate has :gate keyword and :status
+      (doseq [g (:gates path)]
+        (is (keyword? (:gate g)))
+        (is (#{:pass :blocked :gap} (:status g)))))))
+
+(deftest trace-tension-path-devmap-gate-passes
+  (testing "devmap gate passes for real tensions (devmap must exist)"
+    (let [export (mcb/build-tension-export)
+          uncovered (filter #(= :uncovered-component (:tension/type %))
+                            (:tensions export))]
+      (doseq [t uncovered]
+        (let [path (mcb/trace-tension-path t)
+              g-devmap (first (:gates path))]
+          (is (= :devmap (:gate g-devmap)))
+          (is (= :pass (:status g-devmap))
+              (str "devmap gate should pass for " (:tension/devmap t))))))))
+
+(deftest trace-tension-path-coverage-gap-for-uncovered
+  (testing "uncovered-component tensions have :gap at coverage gate"
+    (let [export (mcb/build-tension-export)
+          uncovered (filter #(= :uncovered-component (:tension/type %))
+                            (:tensions export))]
+      (doseq [t uncovered]
+        (let [path (mcb/trace-tension-path t)
+              g-coverage (nth (:gates path) 2)]
+          (is (= :coverage (:gate g-coverage)))
+          (is (= :gap (:status g-coverage))
+              (str "coverage should be :gap for " (:tension/component t))))))))
+
+(deftest trace-all-tensions-returns-summary
+  (testing "trace-all-tensions returns paths and summary"
+    (let [result (mcb/trace-all-tensions)]
+      (is (vector? (:paths result)))
+      (is (map? (:summary result)))
+      (is (pos? (:total (:summary result))))
+      (is (string? (:detected-at result))))))
