@@ -189,10 +189,10 @@ For making the system *usable for a real weekly cycle*:
 1. ~~**T-1, T-4, T-9** — Trivial hygiene fixes. Do first. (minutes)~~ DONE (ed8fb6b)
 2. ~~**T-3** — HTTP endpoints for portfolio ops. Required for any UI. (hour)~~ DONE
 3. ~~**T-2** — Start and smoke-test the futon5 API. (30 min)~~ DONE (3 tests, 16 assertions)
-4. **T-6** — Emacs UI for bid/clear. Required for actual weekly use. (hours)
-5. **T-8** — futon5a compression script. Required for privacy masking. (30 min)
+4. ~~**T-6** — Emacs UI for bid/clear. Required for actual weekly use. (hours)~~ DONE (cd8f809 futon5, 37329e9 futon3c)
+5. ~~**T-8** — futon5a compression script. Required for privacy masking. (30 min)~~ DONE (integrated into T-6 as nonstarter--hours-to-effort-band)
 6. **T-7** — Wire effort bands to EFE computation. Nice-to-have. (hour)
-7. **T-5** — Per-session state. Only needed for multi-agent. (future)
+7. ~~**T-5** — Per-session state. Only needed for multi-agent. (future)~~ DEFERRED — different mission (MUSN/fulab agent rework)
 
-Items 1-5 are needed before the first real weekly cycle. Items 6-7 improve
-the system's intelligence but aren't blockers.
+Items 1-6 are done. T-7 improves the system's intelligence but isn't a blocker.
+The system is now usable for a real weekly cycle.
