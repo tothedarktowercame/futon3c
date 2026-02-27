@@ -1217,6 +1217,53 @@
       (json-response 200 {:ok true :class result}))))
 
 ;; =============================================================================
+;; Mission control data endpoints
+;; =============================================================================
+
+(defn- handle-mc-backfill
+  "POST /api/alpha/mc/backfill — backfill per-mission evidence entries.
+   Creates one evidence entry per scanned mission, tagged [:mission :backfill :snapshot].
+   Idempotent: skips entries whose IDs already exist."
+  [config]
+  (let [evidence-store (evidence-store-for-config config)]
+    (if-not evidence-store
+      (json-response 500 {:ok false :error "no-evidence-store"
+                          :message "Evidence store not configured"})
+      (try
+        (let [entries (mcb/backfill-inventory)
+              results (mapv (fn [entry]
+                              (let [result (estore/append* evidence-store entry)]
+                                {:id (:evidence/id entry)
+                                 :ok (boolean (:ok result))
+                                 :skipped (= :duplicate-id (:error/code result))}))
+                            entries)
+              created (count (filter :ok results))
+              skipped (count (filter :skipped results))]
+          (json-response 200
+            {:ok true
+             :count (count entries)
+             :created created
+             :skipped skipped
+             :sample (vec (take 3 entries))}))
+        (catch Exception e
+          (json-response 500 {:ok false :error "backfill-failed"
+                              :message (.getMessage e)}))))))
+
+(defn- handle-mc-tensions
+  "GET /api/alpha/mc/tensions — export structured tension data.
+   Returns typed tension entries pre-shaped for hyperedge creation."
+  [config]
+  (try
+    (let [result (mcb/build-tension-export)]
+      (json-response 200 {:ok true
+                          :tensions (:tensions result)
+                          :detected-at (:detected-at result)
+                          :summary (:summary result)}))
+    (catch Exception e
+      (json-response 500 {:ok false :error "tension-export-failed"
+                          :message (.getMessage e)}))))
+
+;; =============================================================================
 ;; Portfolio inference handlers
 ;; =============================================================================
 
@@ -1355,6 +1402,12 @@
 
           (and (= :post method) (= "/api/alpha/mission-control" uri))
           (handle-mission-control request config)
+
+          (and (= :post method) (= "/api/alpha/mc/backfill" uri))
+          (handle-mc-backfill config)
+
+          (and (= :get method) (= "/api/alpha/mc/tensions" uri))
+          (handle-mc-tensions config)
 
           (and (= :post method) (= "/api/alpha/todo" uri))
           (handle-todo request config)

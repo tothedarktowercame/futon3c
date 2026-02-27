@@ -85,6 +85,24 @@
           :in-progress)
         :else :unknown))))
 
+(defn- count-checkboxes
+  "Count checked and total checkboxes in markdown text.
+   Returns {:checked N :total N} or nil if no checkboxes found."
+  [text]
+  (let [checked (count (re-seq #"(?m)^[\s]*- \[x\]" text))
+        unchecked (count (re-seq #"(?m)^[\s]*- \[ \]" text))
+        total (+ checked unchecked)]
+    (when (pos? total)
+      {:checked checked :total total})))
+
+(defn- infer-status-from-checkboxes
+  "When no explicit Status header, infer from success criteria checkboxes."
+  [{:keys [checked total]}]
+  (cond
+    (= checked total)           :complete
+    (zero? checked)             :ready
+    (> checked 0)               :in-progress))
+
 (defn parse-mission-md
   "Parse a mission .md file into a MissionEntry."
   [path repo-name]
@@ -94,15 +112,26 @@
           mission-id (str/replace filename #"^M-|\.md$" "")
           raw-status (extract-header text "Status")
           date (extract-header text "Date")
-          blocked-by (extract-header text "Blocked by")]
-      {:mission/id mission-id
-       :mission/status (or (classify-status raw-status) :unknown)
-       :mission/source :md-file
-       :mission/repo (name repo-name)
-       :mission/path (str path)
-       :mission/date date
-       :mission/blocked-by blocked-by
-       :mission/raw-status raw-status})
+          blocked-by (extract-header text "Blocked by")
+          explicit-status (classify-status raw-status)
+          checkboxes (count-checkboxes text)
+          inferred-status (when (and (nil? explicit-status) checkboxes)
+                            (infer-status-from-checkboxes checkboxes))
+          status (or explicit-status inferred-status :unknown)]
+      (cond-> {:mission/id mission-id
+               :mission/status status
+               :mission/source :md-file
+               :mission/repo (name repo-name)
+               :mission/path (str path)
+               :mission/date date
+               :mission/blocked-by blocked-by
+               :mission/raw-status raw-status}
+        checkboxes
+        (assoc :mission/gates checkboxes)
+        (and (nil? explicit-status) inferred-status)
+        (assoc :mission/raw-status
+               (str "inferred:" (name inferred-status)
+                    " (" (:checked checkboxes) "/" (:total checkboxes) " gates)"))))
     (catch Exception e
       {:mission/id (str path)
        :mission/status :unknown
@@ -498,6 +527,68 @@
       :portfolio/actionable actionable})))
 
 ;; =============================================================================
+;; Tension export — structured gaps for hyperedge creation
+;; =============================================================================
+
+(defn build-tension-export
+  "Build structured tension data from portfolio review.
+   Returns typed tension entries pre-shaped for Arxana hyperedge creation.
+   repos: map of {repo-name root-path} (defaults to default-repo-roots)."
+  ([] (build-tension-export default-repo-roots))
+  ([repos]
+   (let [review (build-portfolio-review repos)
+         missions (:portfolio/missions review)
+         coverage (:portfolio/coverage review)
+         devmaps (:portfolio/devmap-summaries review)
+         now (str (java.time.Instant/now))
+         ;; Uncovered components: one tension per (devmap, component) pair
+         uncovered-tensions
+         (into []
+               (mapcat (fn [cov]
+                         (let [dm-id (:coverage/devmap-id cov)]
+                           (map (fn [comp-id]
+                                  {:tension/type :uncovered-component
+                                   :tension/devmap dm-id
+                                   :tension/component comp-id
+                                   :tension/coverage-pct (:coverage/coverage-pct cov)
+                                   :tension/detected-at now
+                                   :tension/summary (str (name dm-id) "/" (name comp-id)
+                                                         " — no mission")})
+                                (:coverage/uncovered cov)))))
+               coverage)
+         ;; Blocked missions
+         blocked-tensions
+         (into []
+               (comp (filter #(= :blocked (:mission/status %)))
+                     (map (fn [m]
+                            {:tension/type :blocked-mission
+                             :tension/mission (:mission/id m)
+                             :tension/blocked-by (:mission/blocked-by m)
+                             :tension/detected-at now
+                             :tension/summary (str (:mission/id m) " — blocked"
+                                                   (when (:mission/blocked-by m)
+                                                     (str ": " (:mission/blocked-by m))))})))
+               missions)
+         ;; Structural invalidity: devmaps with failed checks
+         structural-tensions
+         (into []
+               (comp (filter #(seq (:devmap/failed-checks %)))
+                     (map (fn [dm]
+                            {:tension/type :structural-invalid
+                             :tension/devmap (:devmap/id dm)
+                             :tension/detected-at now
+                             :tension/summary (str (name (:devmap/id dm))
+                                                   " — failed checks: "
+                                                   (str/join ", " (map name (:devmap/failed-checks dm))))})))
+               devmaps)
+         tensions (into (into uncovered-tensions blocked-tensions) structural-tensions)
+         by-type (frequencies (map :tension/type tensions))]
+     {:tensions tensions
+      :detected-at now
+      :summary {:total (count tensions)
+                :by-type by-type}})))
+
+;; =============================================================================
 ;; Backfill — legacy missions as evidence (D7)
 ;; =============================================================================
 
@@ -519,7 +610,8 @@
                                           :mission/path :mission/date
                                           :mission/blocked-by
                                           :mission/raw-status
-                                          :mission/devmap-id])
+                                          :mission/devmap-id
+                                          :mission/gates])
      :evidence/tags [:mission :backfill :snapshot]}))
 
 (defn backfill-inventory

@@ -696,3 +696,38 @@
         (evidence-store/append* store e))
       (is (= 2 (count (:entries @store))))
       (is (= 2 (count (:order @store)))))))
+
+;; =============================================================================
+;; Tension export
+;; =============================================================================
+
+(deftest build-tension-export-returns-structured-tensions
+  (testing "build-tension-export returns tensions with required fields"
+    (let [result (mcb/build-tension-export)]
+      (is (map? result))
+      (is (vector? (:tensions result)))
+      (is (string? (:detected-at result)))
+      (is (map? (:summary result)))
+      (is (number? (:total (:summary result))))
+      (is (= (:total (:summary result)) (count (:tensions result)))))))
+
+(deftest tension-entries-have-required-shape
+  (testing "each tension entry has type, detected-at, summary"
+    (let [result (mcb/build-tension-export)
+          tensions (:tensions result)]
+      (doseq [t tensions]
+        (is (contains? #{:uncovered-component :blocked-mission :structural-invalid}
+                       (:tension/type t))
+            (str "unexpected tension type: " (:tension/type t)))
+        (is (string? (:tension/detected-at t)))
+        (is (string? (:tension/summary t)))))))
+
+(deftest tension-uncovered-components-have-devmap-and-component
+  (testing "uncovered-component tensions include devmap and component IDs"
+    (let [result (mcb/build-tension-export)
+          uncovered (filter #(= :uncovered-component (:tension/type %))
+                            (:tensions result))]
+      (doseq [t uncovered]
+        (is (keyword? (:tension/devmap t)))
+        (is (keyword? (:tension/component t)))
+        (is (number? (:tension/coverage-pct t)))))))
