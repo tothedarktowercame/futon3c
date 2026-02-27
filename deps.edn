@@ -28,6 +28,7 @@
          :exec-args {:dirs ["test"]}}
 
   :dev {:extra-paths ["dev"]
+        :extra-deps {futon5/futon5 {:local/root "../futon5"}}
         :main-opts ["-m" "futon3c.dev"]}
 
   :repl {:main-opts ["-m" "nrepl.cmdline"

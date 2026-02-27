@@ -54,6 +54,7 @@
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
             [futon3c.transport.ws.replication :as ws-repl]
+            [nonstarter.api :as nonstarter-api]
             [repl.http :as drawbridge]
             [cheshire.core :as json]
             [clojure.java.shell :as shell]
@@ -863,6 +864,23 @@
         (println (str "[dev] futon1a static: " static-dir)))
       sys)))
 
+(defn start-futon5!
+  "Start futon5 nonstarter heartbeat API. Returns system map or nil if disabled.
+   Port defaults to 7072 (7071 is used by futon1a)."
+  []
+  (let [port (env-int "FUTON5_PORT" 7072)
+        db (env "FUTON5_DB"
+                (str (System/getProperty "user.home")
+                     "/code/futon5/data/nonstarter.db"))]
+    (when (pos? port)
+      (try
+        (let [sys (nonstarter-api/start! {:port port :db db})]
+          (println (str "[dev] futon5 heartbeat API: http://localhost:" port))
+          sys)
+        (catch Exception e
+          (println (str "[dev] futon5 heartbeat API failed: " (.getMessage e)))
+          nil)))))
+
 (defn start-futon3c!
   "Start futon3c transport HTTP+WS. Returns system map or nil if disabled.
 
@@ -1335,6 +1353,10 @@
 ;; Dispatch-based IRC relay — routes through invoke-agent! (I-1, I-2 compliant)
 ;; =============================================================================
 
+;; Set of IRC nicks that receive all messages without @mention gating.
+;; Toggle with !ungate <nick> and !gate <nick> in IRC.
+(defonce ^:private !ungated-nicks (atom #{}))
+
 (defn- mentioned?
   "Check if text mentions nick via @nick or nick: prefix (case-insensitive)."
   [text nick]
@@ -1413,9 +1435,29 @@
                  channel (or (:channel parsed) "#futon")]
              (println (str "[irc] " channel " <" sender "> " text))
              (flush)
-             (if (and (mentioned? text nick)
-                      (not= sender nick))
-               (let [prompt (strip-mention text nick)]
+             ;; Handle !ungate / !gate commands from any user
+             (when-let [[_ cmd target] (re-matches #"(?i)^!(un)?gate\s+(\S+)\s*$" text)]
+               (let [target-nick (str/lower-case target)]
+                 (if cmd
+                   (do (swap! !ungated-nicks conj target-nick)
+                       (println (str "[irc] UNGATED: " target-nick " — receiving all messages"))
+                       ((:send-to-channel! irc-server) channel "system"
+                        (str target-nick " is now ungated — listening to all messages")))
+                   (do (swap! !ungated-nicks disj target-nick)
+                       (println (str "[irc] GATED: " target-nick " — mention-only"))
+                       ((:send-to-channel! irc-server) channel "system"
+                        (str target-nick " is now gated — mention-only mode"))))
+                 (flush)))
+             (let [ungated? (contains? @!ungated-nicks (str/lower-case nick))
+                   addressed? (or ungated?
+                                  (mentioned? text nick))]
+             (if (and addressed?
+                      (not= sender nick)
+                      ;; Don't dispatch !gate/!ungate commands as prompts
+                      (not (re-matches #"(?i)^!(un)?gate\s+.*" text)))
+               (let [prompt (if ungated?
+                              text
+                              (strip-mention text nick))]
                  (if (str/blank? prompt)
                    (do (println (str "[irc] " nick ": mention detected but prompt empty, ignoring"))
                        (flush))
@@ -1477,7 +1519,7 @@
                           (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
                           (flush)))))))
                (do (println (str "[irc] " nick ": not mentioned, skipping"))
-                   (flush))))))))
+                   (flush)))))))))
     ((:join-virtual-nick! irc-server) "#futon" nick)
     (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon (mention-gated)"))
     {:agent-id agent-id :nick nick}))
@@ -1714,6 +1756,8 @@
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
         _ (mcs/configure! {:evidence-store evidence-store})
+        ;; futon5 nonstarter heartbeat API (portfolio bid/clear persistence)
+        f5-sys (start-futon5!)
         ;; IRC relay bridge + server (independent of agent layer)
         irc-sys (start-irc! evidence-store role)
         _ (reset! !irc-sys irc-sys)
@@ -1748,6 +1792,15 @@
     (println "[dev]   POST /api/alpha/evidence          — append entry")
     (println "[dev]   POST /api/alpha/agents            — register agent")
     (println "[dev]   GET  /api/alpha/agents            — list agents")
+    (println "[dev]   POST /api/alpha/portfolio/step    — AIF portfolio step")
+    (println "[dev]   POST /api/alpha/portfolio/heartbeat — weekly heartbeat")
+    (println "[dev]   GET  /api/alpha/portfolio/state   — portfolio belief state")
+    (when f5-sys
+      (println)
+      (println "[dev] futon5 Heartbeat API (portfolio bid/clear persistence)")
+      (println "[dev]   GET  /api/heartbeat              — current week heartbeat")
+      (println "[dev]   POST /api/heartbeat/bid          — record intended actions")
+      (println "[dev]   POST /api/heartbeat/clear        — record actual actions"))
     (println)
     (when irc-sys
       (println (str "[dev]   Connect IRC: irssi -c localhost -p " (:port irc-sys) " -n joe"))
@@ -1800,6 +1853,8 @@
         ;; IRC server
         (when-let [irc @!irc-sys]
           (when-let [stop (:stop-fn (:server irc))] (stop)))
+        ;; futon5
+        (when f5-sys (nonstarter-api/stop! f5-sys))
         ;; futon1a
         (when-let [f1 @!f1-sys]
           ((:stop! f1)))
