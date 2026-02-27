@@ -1263,6 +1263,21 @@
       (json-response 500 {:ok false :error "tension-export-failed"
                           :message (.getMessage e)}))))
 
+(defn- handle-mc-devmaps
+  "GET /api/alpha/mc/devmaps — export devmap structural summaries.
+   Returns all devmap prototypes with component/edge/port counts."
+  [_config]
+  (try
+    (let [devmaps (mcb/read-all-devmaps
+                   (get mcb/default-repo-roots :futon5)
+                   mcb/default-repo-roots)]
+      (json-response 200 {:ok true
+                          :devmaps devmaps
+                          :count (count devmaps)}))
+    (catch Exception e
+      (json-response 500 {:ok false :error "devmap-export-failed"
+                          :message (.getMessage e)}))))
+
 ;; =============================================================================
 ;; Portfolio inference handlers
 ;; =============================================================================
@@ -1408,6 +1423,9 @@
 
           (and (= :get method) (= "/api/alpha/mc/tensions" uri))
           (handle-mc-tensions config)
+
+          (and (= :get method) (= "/api/alpha/mc/devmaps" uri))
+          (handle-mc-devmaps config)
 
           (and (= :post method) (= "/api/alpha/todo" uri))
           (handle-todo request config)
