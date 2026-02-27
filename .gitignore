@@ -7,7 +7,7 @@ target/
 .tools/
 log/
 .alleycat-drop/
-storage/mission-control/sessions.edn
+storage/
 
 bb
 clojure

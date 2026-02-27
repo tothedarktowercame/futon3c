@@ -72,7 +72,9 @@ current reality, not intent.
 ### 7) Mission control
 
 - Persistent session service is implemented (`src/futon3c/mission_control/service.clj`)
-- Supports start/list/get/resume/step/stop and snapshot reload from `storage/mission-control/sessions.edn`
+- Supports start/list/get/resume/step/stop and snapshot reload from
+  `~/code/storage/futon3c/mission-control/sessions.edn`
+  (override with `FUTON3C_MISSION_CONTROL_SNAPSHOT_PATH`)
 - Usable from Drawbridge/nREPL in the dev JVM
 - HTTP API surface:
   - `POST /api/alpha/mission-control` — review, status, sessions, step, start, stop

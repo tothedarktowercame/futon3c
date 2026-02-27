@@ -22,7 +22,10 @@
   (and (map? x) (contains? x :error/code)))
 
 (defn- default-snapshot-path []
-  (str (System/getProperty "user.dir") "/storage/mission-control/sessions.edn"))
+  (or (System/getenv "FUTON3C_MISSION_CONTROL_SNAPSHOT_PATH")
+      (str (or (System/getenv "FUTON_STORAGE_ROOT")
+               (str (System/getProperty "user.home") "/code/storage"))
+           "/futon3c/mission-control/sessions.edn")))
 
 (defonce !config
   (atom {:repos mcb/default-repo-roots
