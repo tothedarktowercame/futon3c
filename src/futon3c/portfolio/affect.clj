@@ -114,13 +114,16 @@
 ;; =============================================================================
 
 (def mode-precision-boosts
-  "Per-mode precision boosts. Each mode sharpens the channels it cares about."
+  "Per-mode precision boosts. Each mode sharpens the channels it cares about.
+   Heartbeat channels (T-7): BUILD cares about completion rate (are we doing what
+   we planned?), CONSOLIDATE cares about effort error and unplanned work."
   {:BUILD        {:gap-count 0.3 :stall-count 0.2 :evidence-velocity 0.2
-                  :dependency-depth 0.2}
+                  :dependency-depth 0.2 :bid-completion-rate 0.2}
    :MAINTAIN     {:coverage-pct 0.2 :coverage-trajectory 0.3
                   :mission-complete-ratio 0.2}
    :CONSOLIDATE  {:spinoff-pressure 0.3 :review-age 0.3
-                  :pattern-reuse 0.2}})
+                  :pattern-reuse 0.2 :effort-prediction-error 0.2
+                  :unplanned-work-ratio 0.2}})
 
 (defn modulate-precisions
   "Apply mode-conditioned precision boosts and urgency→tau coupling.

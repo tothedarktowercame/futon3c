@@ -39,7 +39,11 @@
           :stall-count            0.7
           :spinoff-pressure       0.4
           :pattern-reuse          0.3
-          :review-age             1.0}
+          :review-age             1.0
+          ;; Heartbeat-derived channels (T-7)
+          :effort-prediction-error 0.6
+          :bid-completion-rate     0.7
+          :unplanned-work-ratio    0.5}
    :tau 1.0})
 
 ;; =============================================================================

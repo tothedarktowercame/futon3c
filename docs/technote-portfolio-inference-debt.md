@@ -6,7 +6,7 @@
 
 ## What's Built and Working
 
-The portfolio AIF loop runs live: 8 modules, 929 tests, 3,227 assertions.
+The portfolio AIF loop runs live: 8 modules, 937 tests, 3,281 assertions.
 It can answer "what should we work on?" backed by prediction error and EFE
 computation. The weekly heartbeat shape (D-11) is designed and implemented.
 Evidence emission passes Malli validation. The whitepaper documents the
@@ -122,21 +122,30 @@ Neither is realistic for weekly use. Needs:
 
 **Effort:** medium-hard (the backend exists; the UX design is the real work)
 
-### T-7: Effort bands not connected to Nonstarter mana estimation
+### T-7: Effort bands not connected to EFE computation ~~DONE~~
 
-**File:** `futon3c/src/futon3c/portfolio/heartbeat.clj:26-28`
+Wired heartbeat effort data into the full AIF pipeline:
 
-The effort bands (`:trivial` through `:epic`) are aligned with Nonstarter's
-size scale conceptually, but there's no code that maps between them. When
-`policy.clj` computes the λ_effort term in EFE, it doesn't consult the
-effort bands from the heartbeat. The two systems don't talk to each other
-yet.
+1. **observe.clj**: Added 3 heartbeat-derived channels (effort-prediction-error,
+   bid-completion-rate, unplanned-work-ratio) with neutral defaults when no
+   heartbeat data is available. Added `merge-heartbeat-summary` to enrich
+   mc-state from action-error output. Channel count: 12 → 15.
 
-**Fix:** In `policy.clj`, when computing effort cost for a mission, look up
-the effort band from the most recent bid (if available) and map it to a
-mana estimate via `nonstarter.estimate/estimate-cost`. This makes the EFE
-computation effort-aware based on actual predictions, not just static
-defaults.
+2. **perceive.clj**: Added precision entries for 3 new channels. The generic
+   perceive loop automatically picks them up via `obs/channel-keys`.
+
+3. **affect.clj**: Added heartbeat channels to mode-precision-boosts. BUILD
+   sharpens bid-completion-rate; CONSOLIDATE sharpens effort-prediction-error
+   and unplanned-work-ratio.
+
+4. **policy.clj**: Made `effort-cost` observation-aware. When
+   effort-prediction-error is high, static effort costs regress toward the
+   mean (0.3), meaning the EFE trusts effort estimates less when recent
+   heartbeats show they've been wrong.
+
+5. **core.clj**: In `portfolio-heartbeat!`, action errors are computed upfront
+   and threaded into the observation pipeline via opts, so the AIF step sees
+   the heartbeat data in its observation channels.
 
 **Effort:** easy (the mapping is straightforward; both ends exist)
 
@@ -191,8 +200,8 @@ For making the system *usable for a real weekly cycle*:
 3. ~~**T-2** — Start and smoke-test the futon5 API. (30 min)~~ DONE (3 tests, 16 assertions)
 4. ~~**T-6** — Emacs UI for bid/clear. Required for actual weekly use. (hours)~~ DONE (cd8f809 futon5, 37329e9 futon3c)
 5. ~~**T-8** — futon5a compression script. Required for privacy masking. (30 min)~~ DONE (integrated into T-6 as nonstarter--hours-to-effort-band)
-6. **T-7** — Wire effort bands to EFE computation. Nice-to-have. (hour)
+6. ~~**T-7** — Wire effort bands to EFE computation. Nice-to-have. (hour)~~ DONE (937 tests, 3281 assertions)
 7. ~~**T-5** — Per-session state. Only needed for multi-agent. (future)~~ DEFERRED — different mission (MUSN/fulab agent rework)
 
-Items 1-6 are done. T-7 improves the system's intelligence but isn't a blocker.
-The system is now usable for a real weekly cycle.
+All technical debt items are resolved or deferred. The system is fully operational
+for weekly bid/clear cycles with effort-aware EFE computation.

@@ -1,9 +1,8 @@
 # Mission: Mission Control Peripheral
 
 **Date:** 2026-02-18
-**Status:** INSTANTIATE complete (35 tests, 614 suite total, D7 backfill implemented)
-**Blocked by:** None (mission peripheral complete, evidence landscape
-wired, futon5 devmaps operational)
+**Status:** Complete (2026-02-26)
+**Blocked by:** N/A (complete)
 
 ## Motivation
 
@@ -1090,3 +1089,89 @@ human-readable summary.
 - [x] D5: Portfolio state shape — COMMITTED, justified (A8, A9), verified (evidence invariants)
 - [x] D6: Filesystem + reimpl — COMMITTED, justified (A7), verified (real data)
 - [x] D7: Backfill legacy missions — IMPLEMENTED, tested (3 INSTANTIATE tests)
+
+## Checkpoint: 2026-02-26 — IRC Surface + 味 Evaluation
+
+### What Changed
+
+Two features added to close the gap between IRC activity and the
+mission/evidence landscape, plus agent-facing peripheral equivalents:
+
+**`!mission focus <id>` / `:mc-focus`** — Per-channel (IRC) or per-session
+(peripheral) mission focus. Tags subsequent agent invocations with a
+mission subject so conversations become part of the mission evidence trail.
+Evidence entries get `{:ref/type :mission :ref/id <id>}` as subject and
+`:mission-focused` in tags.
+
+**`!mc diff` / `:mc-diff`** — Portfolio diff (味 evaluation). Compares the
+two most recent portfolio review snapshots to surface added/removed/changed
+missions. Closes Known Weakness A10.5 ("No diff across reviews"). The 味
+sigil in the futonic loop (A8) is now implemented.
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `scripts/ngircd_bridge.py` | `!mission focus/show/clear`, `!mc diff`, focused invoke |
+| `src/futon3c/transport/http.clj` | mission-id in invoke evidence, `emit-review-snapshot!`, `"diff"` action |
+| `src/futon3c/peripheral/mission_control.clj` | `:mc-focus`, `:mc-focus-clear`, `:mc-focus-show`, `:mc-diff` dispatch |
+| `src/futon3c/peripheral/mission_control_backend.clj` | `portfolio-diff` (evidence query + set comparison) |
+| `resources/peripherals.edn` | 4 new tools in `:mission-control` peripheral |
+
+### Known Weakness Update
+
+- A10.5 ~~No diff across reviews~~ → **Closed.** `mc-diff` and `!mc diff`
+  compare sequential portfolio snapshots. Review snapshots are emitted as
+  evidence entries (`{:ref/type :portfolio :ref/id "global"}` with tags
+  `[:review :portfolio-snapshot]`) after each `!mc review` / `:mc-review`.
+
+### What Remains (Larger / AIF Visualization)
+
+These were explicitly scoped out of M-mission-control (line 166:
+"Visualization — mission control produces data, viewers render") and
+remain out of scope. They are candidates for a separate mission:
+
+1. **Per-mission AIF status panel** — render sigil positions visually.
+   Data exists (A8 mapping); needs a viewer surface.
+2. **Portfolio-level AIF dashboard** — temporal trajectory from successive
+   味 diffs. Backend primitive now exists; rendering does not.
+3. **Arxana evidence corrections** — structured write path into evidence
+   from Emacs. Architecturally distinct (write path, not read path).
+
+### Test Counts
+
+- 858 tests, 2941 assertions, 0 failures (up from 614/1996 at INSTANTIATE)
+
+## Closure — 2026-02-26
+
+### What This Mission Delivered
+
+1. **Portfolio inventory** — `mc-inventory` queries all mission files across repos, parses status/blocked-by/phase, returns structured data. IRC surface: `!mc inventory`.
+2. **Coverage analysis** — `mc-coverage` cross-references missions against futon5 devmaps/wiring diagrams to surface structural gaps. IRC surface: `!mc coverage`.
+3. **Review-as-evidence** — `mc-review` emits portfolio review snapshots as evidence entries (`{:ref/type :portfolio :ref/id "global"}` with tags `[:review :portfolio-snapshot]`). Reviews are durable, queryable, and diffable.
+4. **味 diff** — `mc-diff` compares sequential portfolio snapshots to surface added/removed/changed missions. Closes A10.5; implements the 味 sigil in the futonic loop (A8).
+5. **IRC surface** — `!mc inventory`, `!mc coverage`, `!mc review`, `!mc diff`, `!mission focus/show/clear` commands via ngircd bridge. Mission-focused invoke tags evidence with mission subject.
+6. **Agent-facing peripheral tools** — `:mc-inventory`, `:mc-coverage`, `:mc-review`, `:mc-diff`, `:mc-focus`, `:mc-focus-clear`, `:mc-focus-show` dispatch in the mission-control peripheral. Agents can query portfolio state programmatically.
+7. **Legacy backfill** — shapes, backend, and peripheral wiring built from scratch in futon3c (no futon3 dependencies per I-5), informed by the pattern library and prior mission docs.
+
+### Known Weakness Disposition
+
+| ID | Weakness | Disposition |
+|----|----------|-------------|
+| A10.1 | No evidence-store query from peripheral | By-design: peripheral dispatches to backend which queries evidence. Indirection is the correct layering. |
+| A10.2 | No Arxana integration | Out-of-scope: Arxana is a write-path concern, not a read-path concern. Candidate for separate mission. |
+| A10.3 | No visualization | Out-of-scope: M-mission-control produces data, viewers render. Stated at line 166 of this mission doc. |
+| A10.4 | No automated scheduling | By-design: mission control observes and recommends; agents and humans act. Same principle as 未知 (action sigil deliberately out of scope). |
+| A10.5 | No diff across reviews | **Closed.** `mc-diff` compares sequential portfolio snapshots. |
+| A10.6 | No multi-repo coordination protocol | By-design: inventory already queries across repos. Protocol coordination is a glacial-timescale concern (L1), not a social-timescale tool. |
+
+### Spinoff
+
+The deeper AIF gap — tools are AIF-labelled but don't perform AIF inference — is spun off into **M-portfolio-inference**. M-mission-control built the sensory surface (observation tools). M-portfolio-inference will build the generative model, prediction error, belief update, and policy selection on top of that surface.
+
+### Final Metrics
+
+- 858 tests, 2941 assertions, 0 failures
+- 7 portfolio tools (inventory, coverage, review, diff, focus, focus-show, focus-clear)
+- 4 IRC commands (`!mc inventory/coverage/review/diff`) + 3 mission-focus commands
+- Known weaknesses: 3 by-design, 2 out-of-scope, 1 closed

@@ -32,11 +32,14 @@
 ;; =============================================================================
 
 (def default-priors
-  "Normalization constants. These are tunable, not magic numbers."
+  "Normalization constants — calibrated so current portfolio state maps to
+   ~0.5-0.7, leaving gradient in both directions.
+   Recalibrated 2026-02-27: expanded from 4 repos to 7 (~64 missions,
+   ~88 prototypes across 9 devmaps, ~80 gaps at current state)."
   {:evidence-per-day-cap  20.0   ; >20 evidence entries/day would be surprising
-   :max-chain-cap          5.0   ; dependency chain deeper than 5 would be surprising
-   :gap-cap               10.0   ; >10 coverage gaps would be surprising
-   :spinoff-cap            5.0   ; >5 spinoff candidates would be surprising
+   :max-chain-cap         10.0   ; >10 dependency depth would be surprising
+   :gap-cap              120.0   ; ~80 current gaps → 0.67 (room for improvement/degradation)
+   :spinoff-cap           40.0   ; ~20 current spinoffs → 0.5
    :review-age-cap        14.0}) ; >14 days since last review would be surprising
 
 ;; =============================================================================
@@ -108,14 +111,21 @@
                                                        (> t (- now-ms day-ms)))))
                                                  recent))]
                               recent-today))
-         ;; Review age: days since last portfolio review evidence
+         ;; Review age: days since last portfolio-related evidence
+         ;; Check both "global" (mc-review) and "inference" (portfolio-step!) subjects
          days-since-review (when evidence-store
-                             (let [snapshots (estore/query* evidence-store
+                             (let [global (estore/query* evidence-store
+                                                         {:query/subject {:ref/type :portfolio
+                                                                          :ref/id "global"}
+                                                          :query/type :coordination
+                                                          :query/limit 1})
+                                   inference (estore/query* evidence-store
                                                             {:query/subject {:ref/type :portfolio
-                                                                             :ref/id "global"}
+                                                                             :ref/id "inference"}
                                                              :query/type :coordination
                                                              :query/limit 1})
-                                   latest (first snapshots)]
+                                   latest (first (sort-by :evidence/at #(compare %2 %1)
+                                                          (concat global inference)))]
                                (when-let [at (:evidence/at latest)]
                                  (try
                                    (let [then (.toEpochMilli (java.time.Instant/parse (str at)))
@@ -169,18 +179,51 @@
                                            (:spinoff-cap priors)))
       :pattern-reuse           (clamp01 (double (:pattern-reuse-ratio mc-state 0.0)))
       :review-age              (clamp01 (/ (double (:days-since-review mc-state 0.0))
-                                           (:review-age-cap priors)))})))
+                                           (:review-age-cap priors)))
+      ;; Heartbeat-derived channels (T-7): default to neutral when no heartbeat data
+      :effort-prediction-error (clamp01 (double (:effort-prediction-error mc-state 0.0)))
+      :bid-completion-rate     (clamp01 (double (:bid-completion-rate mc-state 0.5)))
+      :unplanned-work-ratio    (clamp01 (double (:unplanned-work-ratio mc-state 0.0)))})))
+
+;; =============================================================================
+;; Heartbeat enrichment (T-7)
+;; =============================================================================
+
+(defn merge-heartbeat-summary
+  "Merge heartbeat action-error summary into mc-state for observation.
+   Adds :effort-prediction-error, :bid-completion-rate, :unplanned-work-ratio
+   from the output of heartbeat/compute-action-errors.
+   Returns mc-state unchanged when action-errors is nil."
+  [mc-state action-errors]
+  (if-let [summary (:summary action-errors)]
+    (let [planned (max 1 (:planned summary 1))
+          taken (:taken summary 0)
+          unplanned (:unplanned summary 0)
+          effort-err (:effort-error-sum summary 0)]
+      (assoc mc-state
+             ;; Normalize effort error: max distance is ~4 per action (trivial↔epic),
+             ;; scale by planned count. Clamp01 catches edge cases.
+             :effort-prediction-error (/ (double effort-err) (* 2.0 planned))
+             :bid-completion-rate (/ (double taken) planned)
+             :unplanned-work-ratio (if (pos? (+ taken unplanned))
+                                     (/ (double unplanned) (+ taken unplanned))
+                                     0.0)))
+    mc-state))
 
 ;; =============================================================================
 ;; Channel metadata
 ;; =============================================================================
 
 (def channel-keys
-  "Ordered list of observation channel keys."
+  "Ordered list of observation channel keys.
+   First 12: portfolio state from mc-backend.
+   Last 3: heartbeat effort data (neutral defaults when no heartbeat available)."
   [:mission-complete-ratio :coverage-pct :coverage-trajectory
    :mana-available :blocked-ratio :evidence-velocity
    :dependency-depth :gap-count :stall-count
-   :spinoff-pressure :pattern-reuse :review-age])
+   :spinoff-pressure :pattern-reuse :review-age
+   ;; Heartbeat-derived channels (T-7)
+   :effort-prediction-error :bid-completion-rate :unplanned-work-ratio])
 
 (defn obs->vector
   "Convert observation map to ordered vector (for ML-style consumers)."

@@ -134,6 +134,16 @@ free-flowing conversation).
 
 Gating state is per-bridge-session (resets on bridge restart).
 
+### `!reset` — Session Reset
+
+| Command | Description |
+|---------|-------------|
+| `!reset <agent-id>` | Clear an agent's conversation session so the next invoke starts fresh |
+
+Useful when a session becomes poisoned (e.g. API rejects the
+conversation history due to invalid tool-use). The agent-id is the
+registered ID, e.g. `claude-1` or `codex-1`.
+
 ### `!mc` — Mission Control
 
 | Command | Description |

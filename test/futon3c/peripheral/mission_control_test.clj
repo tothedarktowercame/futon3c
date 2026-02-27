@@ -163,6 +163,46 @@
         ;; 2/3 ≈ 0.667
         (is (< 0.6 (:coverage/coverage-pct c) 0.7))))))
 
+(deftest compute-coverage-parent-mission-match
+  (testing "devmap with matching active mission has 100% coverage"
+    (let [devmaps [{:devmap/id :social-exotype
+                    :devmap/state :active
+                    :devmap/input-count 1
+                    :devmap/output-count 1
+                    :devmap/component-count 3
+                    :devmap/edge-count 3
+                    :devmap/all-valid true
+                    :devmap/failed-checks []
+                    :devmap/components [{:component/id :S-presence :component/name "Presence"}
+                                        {:component/id :S-dispatch :component/name "Dispatch"}
+                                        {:component/id :S-validate :component/name "Validate"}]}]
+          missions [{:mission/id "social-exotype"
+                     :mission/status :in-progress
+                     :mission/source :md-file}]
+          coverage (mcb/compute-coverage devmaps missions)
+          c (first coverage)]
+      (is (= 3 (:coverage/covered-components c)))
+      (is (empty? (:coverage/uncovered c)))
+      (is (== 1.0 (:coverage/coverage-pct c)))))
+  (testing "devmap with matching but non-active mission falls back to heuristic"
+    (let [devmaps [{:devmap/id :social-exotype
+                    :devmap/state :active
+                    :devmap/input-count 1
+                    :devmap/output-count 1
+                    :devmap/component-count 2
+                    :devmap/edge-count 2
+                    :devmap/all-valid true
+                    :devmap/failed-checks []
+                    :devmap/components [{:component/id :S-presence :component/name "Presence"}
+                                        {:component/id :S-dispatch :component/name "Dispatch"}]}]
+          missions [{:mission/id "social-exotype"
+                     :mission/status :unknown   ; not active
+                     :mission/source :md-file}]
+          coverage (mcb/compute-coverage devmaps missions)
+          c (first coverage)]
+      ;; Falls back to heuristic, which won't match S-presence to social-exotype
+      (is (< (:coverage/coverage-pct c) 1.0)))))
+
 ;; =============================================================================
 ;; Backend: mana queries
 ;; =============================================================================

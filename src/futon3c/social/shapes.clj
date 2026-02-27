@@ -321,7 +321,8 @@
    [:query/author {:optional true} :string]
    [:query/since {:optional true} Timestamp]
    [:query/limit {:optional true} :int]
-   [:query/include-ephemeral? {:optional true} :boolean]])
+   [:query/include-ephemeral? {:optional true} :boolean]
+   [:query/tags {:optional true} [:vector :keyword]]])
 
 ;; =============================================================================
 ;; Error shape (R4: loud failure)

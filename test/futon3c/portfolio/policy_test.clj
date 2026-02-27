@@ -20,7 +20,11 @@
    :stall-count 0.3
    :spinoff-pressure 0.2
    :pattern-reuse 0.1
-   :review-age 0.3})
+   :review-age 0.3
+   ;; Heartbeat channels (T-7) — neutral defaults
+   :effort-prediction-error 0.0
+   :bid-completion-rate 0.5
+   :unplanned-work-ratio 0.0})
 
 (def test-mu perc/default-mu)
 (def test-precision perc/default-precision)
@@ -132,3 +136,36 @@
     (testing "selects valid action with rng"
       (is (contains? (set (:arena/actions pol/portfolio-arena))
                      (:action result))))))
+
+;; =============================================================================
+;; Effort cost tests (T-7)
+;; =============================================================================
+
+(deftest effort-cost-static-defaults
+  (testing "effort-cost without observation returns static values"
+    (is (== 0.6 (pol/effort-cost :work-on)))
+    (is (== 0.2 (pol/effort-cost :review)))
+    (is (== 0.4 (pol/effort-cost :consolidate)))
+    (is (== 0.05 (pol/effort-cost :upvote)))
+    (is (== 0.0 (pol/effort-cost :wait)))))
+
+(deftest effort-cost-observation-aware
+  (testing "zero effort-prediction-error → static values unchanged"
+    (let [obs-no-error (assoc test-observation :effort-prediction-error 0.0)]
+      (is (== 0.6 (pol/effort-cost :work-on obs-no-error)))
+      (is (== 0.0 (pol/effort-cost :wait obs-no-error)))))
+  (testing "high effort-prediction-error → costs regress toward mean (0.3)"
+    (let [obs-high-error (assoc test-observation :effort-prediction-error 1.0)]
+      ;; work-on: base 0.6 → should regress toward 0.3
+      (is (< (pol/effort-cost :work-on obs-high-error) 0.6))
+      (is (> (pol/effort-cost :work-on obs-high-error) 0.2))
+      ;; review: base 0.2 → should increase toward 0.3
+      (is (> (pol/effort-cost :review obs-high-error) 0.2))
+      ;; At max error, all costs converge to mean
+      (is (== 0.3 (pol/effort-cost :work-on obs-high-error)))
+      (is (== 0.3 (pol/effort-cost :review obs-high-error)))
+      (is (== 0.3 (pol/effort-cost :consolidate obs-high-error)))))
+  (testing "moderate error partially regresses"
+    (let [obs-mid (assoc test-observation :effort-prediction-error 0.5)]
+      ;; work-on: 0.5*0.6 + 0.5*0.3 = 0.45
+      (is (< 0.44 (pol/effort-cost :work-on obs-mid) 0.46)))))

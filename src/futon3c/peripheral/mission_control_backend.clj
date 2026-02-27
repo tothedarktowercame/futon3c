@@ -8,14 +8,20 @@
    - :mc-mana          — query mana pool stats (if nonstarter.db exists)
    - :mc-review        — produce a full portfolio review
    - :mc-bulletin      — emit a war bulletin as evidence
+   - :mc-diff          — compare last two portfolio review snapshots
+
+   Mission focus tools (:mc-focus, :mc-focus-clear, :mc-focus-show)
+   are dispatched in mission_control.clj as they only manipulate session state.
 
    All tools are read-only with respect to external systems.
    Evidence emission happens at the peripheral level, not here."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as cset]
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
-            [futon3c.agents.tickle :as tickle]))
+            [futon3c.agents.tickle :as tickle]
+            [futon3c.evidence.store :as estore]))
 
 ;; =============================================================================
 ;; Configuration — repo paths
@@ -23,38 +29,58 @@
 
 (def default-repo-roots
   "Default repo locations (co-located at ~/code/)."
-  {:futon3c (str (System/getProperty "user.home") "/code/futon3c")
-   :futon3b (str (System/getProperty "user.home") "/code/futon3b")
-   :futon3a (str (System/getProperty "user.home") "/code/futon3a")
-   :futon5  (str (System/getProperty "user.home") "/code/futon5")})
+  (let [home (System/getProperty "user.home")]
+    {:futon3c (str home "/code/futon3c")
+     :futon3b (str home "/code/futon3b")
+     :futon3a (str home "/code/futon3a")
+     :futon5  (str home "/code/futon5")
+     :futon3  (str home "/code/futon3")
+     :futon4  (str home "/code/futon4")
+     :futon6  (str home "/code/futon6")}))
 
 ;; =============================================================================
 ;; Mission file parsing
 ;; =============================================================================
 
 (defn- extract-header
-  "Extract a **Key:** value from markdown text."
+  "Extract a Key: value from markdown text.
+   Matches three formats:
+   - **Key:** value      (bold key)
+   - Key: value          (plain key)
+   - ## Key: value       (heading key)"
   [text key-name]
-  (let [pattern (re-pattern (str "(?m)^\\*\\*" (java.util.regex.Pattern/quote key-name) ":\\*\\*\\s*(.+)$"))]
-    (when-let [m (re-find pattern text)]
-      (str/trim (second m)))))
+  (let [quoted (java.util.regex.Pattern/quote key-name)
+        ;; Try bold format first: **Key:** value
+        bold-pat (re-pattern (str "(?m)^\\*\\*" quoted ":\\*\\*\\s*(.+)$"))
+        ;; Fallback: plain or heading format: Key: value or ## Key: value
+        plain-pat (re-pattern (str "(?mi)^(?:#{1,3}\\s+)?" quoted ":\\s*(.+)$"))]
+    (or (when-let [m (re-find bold-pat text)]
+          (str/trim (second m)))
+        (when-let [m (re-find plain-pat text)]
+          (str/trim (second m))))))
 
 (defn classify-status
   "Classify a raw status string into a MissionStatus keyword."
   [raw]
   (when raw
-    (let [s (str/lower-case (str/trim raw))]
+    (let [s (-> raw str/trim str/lower-case (str/replace #"^:" ""))]
       (cond
-        (str/starts-with? s "complete")    :complete
-        (str/starts-with? s "blocked")     :blocked
-        (str/starts-with? s "ready")       :ready
-        (str/starts-with? s "pass")        :complete
+        (str/starts-with? s "complete")         :complete
+        (str/starts-with? s "done")             :complete
+        (str/starts-with? s "blocked")          :blocked
+        (str/starts-with? s "ready")            :ready
+        (str/starts-with? s "pass")             :complete
+        (str/starts-with? s "in-progress")      :in-progress
+        (str/starts-with? s "in progress")      :in-progress
+        (str/starts-with? s "active")           :in-progress
+        (str/starts-with? s "open")             :in-progress
+        (str/starts-with? s "greenfield")       :ready
         ;; Derivation keywords: check if the *derivation step itself* is marked complete.
         ;; "INSTANTIATE complete" → :complete (the mission finished its last step)
+        ;; "INSTANTIATE (complete)" → :complete (parenthetical variant)
         ;; "MAP (landscape survey complete)" → :in-progress (MAP done, mission continues)
-        ;; Heuristic: "complete" must follow the keyword directly, not be in a parenthetical.
         (re-find #"identify|map|derive|argue|verify|instantiate" s)
-        (if (re-find #"^(?:identify|map|derive|argue|verify|instantiate)\s+complete" s)
+        (if (re-find #"^(?:identify|map|derive|argue|verify|instantiate)\s+(?:\(?\s*complete)" s)
           :complete
           :in-progress)
         :else :unknown))))
@@ -252,25 +278,63 @@
 ;; Devmap coverage analysis
 ;; =============================================================================
 
+(def component-coverage-annotations
+  "Explicit component → mission-id coverage map.
+   The heuristic substring match is a fallback; this map is ground truth
+   where provided. Values are sets of lowercase mission-id strings.
+   Extend via (mc/audit-coverage-correspondence) to find orphan components."
+  {;; social-exotype components
+   :S-presence     #{"transport-adapters" "operational-readiness"}
+   :S-authenticate #{"agency-refactor"}
+   :S-dispatch     #{"dispatch-peripheral-bridge" "agency-refactor"}
+   :S-invoke       #{"peripheral-model" "peripheral-behavior"}
+   :S-mode         #{"peripheral-model" "peripheral-behavior"}
+   :S-validate     #{"proof-peripheral"}
+   :S-persist      #{"forum-refactor"}
+   ;; coordination-exotype (gate pipeline)
+   :G5 #{"peripheral-gauntlet"}
+   :G4 #{"agency-refactor"}
+   :G3 #{"psr-pur-mesh-peripheral"}
+   :G2 #{"dispatch-peripheral-bridge"}
+   :G1 #{"proof-peripheral"}
+   :G0 #{"futon3-last-mile"}})
+
 (defn compute-coverage
   "Compute coverage of devmap components by missions.
-   For each devmap, check which components have corresponding missions
-   (by name matching: component :S-dispatch matches mission containing 'dispatch')."
+
+   Three-tier matching:
+   1. Parent match: if the devmap's :devmap/id matches an active mission,
+      ALL its components are considered covered.
+   2. Annotation match: check component-coverage-annotations map for
+      explicit component → mission-id correspondence.
+   3. Heuristic: substring match on component name ↔ mission name."
   [devmap-summaries missions]
   (let [mission-ids (set (map :mission/id missions))
-        mission-id-lower (set (map str/lower-case mission-ids))]
+        mission-id-lower (set (map str/lower-case mission-ids))
+        active-ids (set (map (comp str/lower-case :mission/id)
+                             (filter #(#{:in-progress :complete} (:mission/status %))
+                                     missions)))]
     (mapv (fn [dm]
             (let [components (:devmap/components dm)
-                  covered (filter (fn [c]
-                                    (let [cname (str/lower-case (name (:component/id c)))]
-                                      ;; A component is "covered" if any mission name
-                                      ;; contains part of the component name or vice versa.
-                                      ;; This is heuristic — the real link is devmap annotations.
-                                      (some (fn [mid]
-                                              (or (str/includes? mid cname)
-                                                  (str/includes? cname mid)))
-                                            mission-id-lower)))
-                                  components)
+                  devmap-mid (when-let [id (:devmap/id dm)]
+                               (str/lower-case (name id)))
+                  parent-active? (and devmap-mid (contains? active-ids devmap-mid))
+                  covered (if parent-active?
+                            components
+                            (filter (fn [c]
+                                      (let [cid (:component/id c)
+                                            ;; Tier 2: explicit annotation
+                                            annotated (get component-coverage-annotations cid)
+                                            annotated? (and annotated
+                                                            (some annotated mission-id-lower))
+                                            ;; Tier 3: heuristic fallback
+                                            cname (str/lower-case (name cid))
+                                            heuristic? (some (fn [mid]
+                                                               (or (str/includes? mid cname)
+                                                                   (str/includes? cname mid)))
+                                                             mission-id-lower)]
+                                        (or annotated? heuristic?)))
+                                    components))
                   uncovered (remove (set (map :component/id covered)) (map :component/id components))
                   total (count components)]
               {:coverage/devmap-id (:devmap/id dm)
@@ -348,6 +412,60 @@
                 blocked-missions)
           uncovered)))
 
+(defn audit-coverage-correspondence
+  "Audit devmap/mission correspondence. Returns:
+   :orphan-components — devmap components with no annotation and no heuristic match
+   :orphan-missions   — missions that address no devmap component
+   :stale-annotations — annotation entries referencing non-existent missions
+   :summary           — counts for quick overview"
+  ([] (audit-coverage-correspondence default-repo-roots))
+  ([repos]
+   (let [missions (build-inventory repos)
+         futon5-root (or (:futon5 repos) (:futon5 default-repo-roots))
+         devmaps (read-all-devmaps futon5-root repos)
+         mission-id-lower (set (map (comp str/lower-case :mission/id) missions))
+         all-components (mapcat (fn [dm]
+                                  (map (fn [c] {:devmap (:devmap/id dm)
+                                                :component (:component/id c)})
+                                       (:devmap/components dm)))
+                                devmaps)
+         annotated-ids (set (keys component-coverage-annotations))
+         orphan-components (vec
+                            (remove (fn [{:keys [component]}]
+                                      (or (contains? annotated-ids component)
+                                          (let [cname (str/lower-case (name component))]
+                                            (some (fn [mid]
+                                                    (or (str/includes? mid cname)
+                                                        (str/includes? cname mid)))
+                                                  mission-id-lower))))
+                                    all-components))
+         ;; Missions that appear in no annotation and no devmap parent
+         devmap-mids (set (map (comp str/lower-case name :devmap/id) devmaps))
+         annotation-mids (reduce into #{} (vals component-coverage-annotations))
+         orphan-missions (vec
+                          (remove (fn [m]
+                                    (let [mid (str/lower-case (:mission/id m))]
+                                      (or (contains? devmap-mids mid)
+                                          (contains? annotation-mids mid))))
+                                  missions))
+         stale (reduce-kv (fn [acc comp-id mission-set]
+                            (let [missing (remove mission-id-lower mission-set)]
+                              (if (seq missing)
+                                (conj acc {:component comp-id
+                                           :missing-missions (vec missing)})
+                                acc)))
+                          [] component-coverage-annotations)]
+     {:orphan-components orphan-components
+      :orphan-missions (mapv #(select-keys % [:mission/id :mission/repo :mission/status])
+                             orphan-missions)
+      :stale-annotations stale
+      :summary {:total-components (count all-components)
+                :annotated (count annotated-ids)
+                :orphan-components (count orphan-components)
+                :total-missions (count missions)
+                :orphan-missions (count orphan-missions)
+                :stale-annotations (count stale)}})))
+
 (defn- find-actionable
   "Identify actionable missions: ready or in-progress, not blocked."
   [missions]
@@ -390,7 +508,7 @@
   (let [mid (:mission/id mission)
         src (name (:mission/source mission))
         now (str (java.time.Instant/now))]
-    {:evidence/id (str "e-backfill-" mid "-" src)
+    {:evidence/id (str "e-backfill-" mid "-" (or (:mission/repo mission) "unknown") "-" src)
      :evidence/subject {:ref/type :mission :ref/id mid}
      :evidence/type :coordination
      :evidence/claim-type :observation
@@ -453,3 +571,64 @@
     :threshold-seconds (or (:threshold-seconds opts) 300)
     :self-id (or (:self-id opts) "tickle-1")
     :page-config (or (:page-config opts) {})}))
+
+;; =============================================================================
+;; Portfolio diff — compare consecutive review snapshots
+;; =============================================================================
+
+(defn- compute-portfolio-diff
+  "Compute diff between two portfolio snapshots (newest first).
+   Each snapshot is an evidence entry with :evidence/body containing
+   :portfolio/missions (vec of {:mission/id :mission/status})."
+  [new-snapshot old-snapshot]
+  (let [new-missions (:portfolio/missions (:evidence/body new-snapshot))
+        old-missions (:portfolio/missions (:evidence/body old-snapshot))
+        new-by-id (into {} (map (juxt :mission/id identity)) new-missions)
+        old-by-id (into {} (map (juxt :mission/id identity)) old-missions)
+        new-ids (set (keys new-by-id))
+        old-ids (set (keys old-by-id))
+        added (vec (for [id (sort (cset/difference new-ids old-ids))]
+                     (get new-by-id id)))
+        removed (vec (for [id (sort (cset/difference old-ids new-ids))]
+                       (get old-by-id id)))
+        changed (vec (for [id (sort (cset/intersection new-ids old-ids))
+                           :let [new-status (:mission/status (get new-by-id id))
+                                 old-status (:mission/status (get old-by-id id))]
+                           :when (not= new-status old-status)]
+                       {:mission/id id
+                        :old-status old-status
+                        :new-status new-status}))]
+    {:added added
+     :removed removed
+     :changed changed
+     :new-count (count new-missions)
+     :old-count (count old-missions)
+     :new-summary (:portfolio/summary (:evidence/body new-snapshot))
+     :old-summary (:portfolio/summary (:evidence/body old-snapshot))
+     :new-coverage (:portfolio/coverage (:evidence/body new-snapshot))
+     :old-coverage (:portfolio/coverage (:evidence/body old-snapshot))}))
+
+(defn portfolio-diff
+  "Query last two portfolio review snapshots from evidence and compute diff.
+   Returns {:ok true :diff {...}} or {:ok true :diff nil :message ...}."
+  [evidence-store]
+  (if-not evidence-store
+    {:ok false :error "Evidence store not available"}
+    (let [snapshots (estore/query* evidence-store
+                                   {:query/subject {:ref/type :portfolio
+                                                    :ref/id "global"}
+                                    :query/type :coordination
+                                    :query/limit 100})
+          snapshots (->> snapshots
+                         (filter (fn [e]
+                                   (let [tags (set (:evidence/tags e))]
+                                     (and (contains? tags :review)
+                                          (contains? tags :portfolio-snapshot)))))
+                         (take 2)
+                         vec)]
+      (if (< (count snapshots) 2)
+        {:ok true
+         :diff nil
+         :message "Not enough review history — run mc-review at least twice"}
+        {:ok true
+         :diff (compute-portfolio-diff (first snapshots) (second snapshots))}))))

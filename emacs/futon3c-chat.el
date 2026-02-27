@@ -307,7 +307,18 @@ CALLBACK receives the response string."
                                                      (not (string-empty-p (string-trim result)))
                                                      result)))
                                          (or r "[empty response]"))
-                                     (format "[Error: %s]" (or err-msg raw))))
+                                     (message "futon3c-chat invoke error: %s"
+                                              (truncate-string-to-width
+                                               (or err-msg raw) 500))
+                                     (let ((msg (or err-msg raw)))
+                                       (if (and (stringp msg)
+                                                (string-match-p
+                                                 "\\`\\(Exit [0-9]+:\\|invoke-error\\)"
+                                                 msg)
+                                                (< (length (string-trim msg)) 20))
+                                           (format "[Error: %s — try C-c C-n for fresh session]"
+                                                   msg)
+                                         (format "[Error: %s]" msg)))))
                                (error
                                 (format "[JSON parse error: %s\nRaw: %s]"
                                         (error-message-string parse-err)
@@ -349,11 +360,12 @@ CALLBACK receives the response string."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'futon3c-chat-send-input)
     (define-key map (kbd "C-c C-k") #'futon3c-chat-clear)
+    (define-key map (kbd "C-c C-n") #'futon3c-chat-new-session)
     map))
 
 (define-derived-mode futon3c-chat-mode nil "Chat"
   "Chat with Claude via futon3c API.
-Type after the prompt, RET to send.
+Type after the prompt, RET to send, C-c C-n for fresh session.
 \\{futon3c-chat-mode-map}"
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
@@ -373,6 +385,119 @@ Type after the prompt, RET to send.
   "Clear display and re-draw header. Session continues."
   (interactive)
   (futon3c-ui-clear #'futon3c-chat--init))
+
+(defcustom futon3c-chat-drawbridge-url "http://localhost:6768"
+  "Drawbridge REPL URL for direct registry access."
+  :type 'string
+  :group 'futon3c-chat)
+
+(defcustom futon3c-chat-drawbridge-token nil
+  "Admin token for Drawbridge REPL.
+If nil, reads from .admintoken in the project root at first use."
+  :type '(choice (const nil) string)
+  :group 'futon3c-chat)
+
+(defun futon3c-chat--drawbridge-token ()
+  "Return the Drawbridge admin token, reading .admintoken if needed."
+  (or futon3c-chat-drawbridge-token
+      (let ((f (expand-file-name ".admintoken"
+                                 (locate-dominating-file default-directory ".admintoken"))))
+        (when (file-exists-p f)
+          (setq futon3c-chat-drawbridge-token
+                (string-trim (with-temp-buffer
+                               (insert-file-contents f)
+                               (buffer-string))))))))
+
+(defun futon3c-chat--reset-via-api ()
+  "Try to reset session via the reset-session HTTP endpoint.
+Returns (ok . old-session-id) on success, nil on failure."
+  (let* ((url (format "%s/api/alpha/agents/%s/reset-session"
+                       futon3c-chat-api-url futon3c-chat-agent-id))
+         (url-request-method "POST")
+         (url-request-extra-headers
+          '(("Content-Type" . "application/json")))
+         (url-request-data "{}")
+         (buffer (condition-case nil
+                     (url-retrieve-synchronously url t t 10)
+                   (error nil)))
+         (result nil))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (goto-char (point-min))
+        (when (re-search-forward "\n\n" nil t)
+          (condition-case nil
+              (let* ((json-obj (json-parse-string
+                                (buffer-substring (point) (point-max))
+                                :object-type 'alist :null-object nil)))
+                (when (alist-get 'ok json-obj)
+                  (setq result (cons t (alist-get 'old-session-id json-obj)))))
+            (error nil))))
+      (kill-buffer buffer))
+    result))
+
+(defun futon3c-chat--reset-via-drawbridge ()
+  "Try to reset session via Drawbridge REPL eval.
+Returns (ok . old-session-id) on success, nil on failure."
+  (let* ((clj-code (format "(let [r (swap-vals! futon3c.agency.registry/!registry update \"%s\" assoc :agent/session-id nil)] (get-in (first r) [\"%s\" :agent/session-id]))"
+                           futon3c-chat-agent-id futon3c-chat-agent-id))
+         (url (format "%s/eval" futon3c-chat-drawbridge-url))
+         (url-request-method "POST")
+         (token (futon3c-chat--drawbridge-token))
+         (url-request-extra-headers
+          `(("x-admin-token" . ,token)
+            ("Content-Type" . "text/plain")))
+         (url-request-data (encode-coding-string clj-code 'utf-8))
+         (buffer (condition-case nil
+                     (url-retrieve-synchronously url t t 10)
+                   (error nil)))
+         (result nil))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (goto-char (point-min))
+        (when (re-search-forward "\n\n" nil t)
+          (condition-case nil
+              (let* ((json-obj (json-parse-string
+                                (buffer-substring (point) (point-max))
+                                :object-type 'alist :null-object nil)))
+                (when (alist-get 'ok json-obj)
+                  (setq result (cons t (alist-get 'value json-obj)))))
+            (error nil))))
+      (kill-buffer buffer))
+    result))
+
+(defun futon3c-chat-new-session ()
+  "Reset the agent session so the next message starts a fresh conversation.
+Useful when a session becomes poisoned (e.g. API rejects the conversation
+history). Tries the reset-session endpoint first, falls back to Drawbridge."
+  (interactive)
+  (let* ((api-result (futon3c-chat--reset-via-api))
+         (result (or api-result (futon3c-chat--reset-via-drawbridge)))
+         (ok (car result))
+         (old-sid (cdr result)))
+    ;; Clear local session state regardless of server response
+    (setq futon3c-ui--session-id nil)
+    (when futon3c-chat-session-file
+      (when (file-exists-p futon3c-chat-session-file)
+        (delete-file futon3c-chat-session-file)))
+    ;; Update the buffer
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward "(session: [^)]*)" (line-end-position 2) t)
+          (replace-match (propertize "(session: new)"
+                                     'face 'font-lock-comment-face)
+                         t t))))
+    (futon3c-ui-insert-message
+     "system"
+     (cond
+      (ok
+       (format "[Session reset — was %s. Next message starts fresh.]"
+               (or old-sid "unknown")))
+      (t
+       "[Session reset locally only — could not reach server. Next message may still fail.]")))
+    (goto-char (point-max))
+    (message "futon3c-chat: session reset (server=%s, was %s)"
+             (if ok "yes" "no") (or old-sid "nil"))))
 
 (defun futon3c-chat--init ()
   "Initialize.

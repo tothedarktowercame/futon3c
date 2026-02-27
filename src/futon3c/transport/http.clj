@@ -392,7 +392,8 @@
                 claim-type (assoc :query/claim-type claim-type)
                 (get params "since") (assoc :query/since (get params "since"))
                 (some? include-ephemeral?)
-                (assoc :query/include-ephemeral? include-ephemeral?))
+                (assoc :query/include-ephemeral? include-ephemeral?)
+                (seq tags) (assoc :query/tags tags))
         evidence-store (evidence-store-for-config config)
         entries (cond->> (estore/query* evidence-store query)
                   true
@@ -403,10 +404,7 @@
                              (or (nil? session-id)
                                  (= session-id (:evidence/session-id entry)))
                              (or (nil? pattern-id)
-                                 (= pattern-id (:evidence/pattern-id entry)))
-                             (or (empty? tags)
-                                 (let [entry-tags (set (:evidence/tags entry))]
-                                   (every? entry-tags tags))))))
+                                 (= pattern-id (:evidence/pattern-id entry))))))
                   (and (int? limit) (pos? limit))
                   (take limit)
                   true
@@ -433,7 +431,8 @@
                 claim-type (assoc :query/claim-type claim-type)
                 (get params "since") (assoc :query/since (get params "since"))
                 (some? include-ephemeral?)
-                (assoc :query/include-ephemeral? include-ephemeral?))
+                (assoc :query/include-ephemeral? include-ephemeral?)
+                (seq tags) (assoc :query/tags tags))
         evidence-store (evidence-store-for-config config)
         count* (->> (estore/query* evidence-store query)
                     (filter (fn [entry]
@@ -443,10 +442,7 @@
                                (or (nil? session-id)
                                    (= session-id (:evidence/session-id entry)))
                                (or (nil? pattern-id)
-                                   (= pattern-id (:evidence/pattern-id entry)))
-                               (or (empty? tags)
-                                   (let [entry-tags (set (:evidence/tags entry))]
-                                     (every? entry-tags tags))))))
+                                   (= pattern-id (:evidence/pattern-id entry))))))
                     count)]
     (json-response 200 {:ok true
                         :count count*})))

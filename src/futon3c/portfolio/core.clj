@@ -117,12 +117,14 @@
 
    Takes:
    - evidence-store: for evidence emission + observation gathering
-   - opts: {:portfolio-review pre-built review, :emit-evidence? bool}
+   - opts: {:portfolio-review pre-built review, :emit-evidence? bool,
+            :action-errors heartbeat action-error summary for T-7 channels}
 
    Returns the aif-step result + updates !state."
   [evidence-store opts]
-  (let [;; Gather observations
-        mc-state (observe/gather-mc-state evidence-store (:portfolio-review opts))
+  (let [;; Gather observations, enriched with heartbeat data when available (T-7)
+        mc-state (cond-> (observe/gather-mc-state evidence-store (:portfolio-review opts))
+                   (:action-errors opts) (observe/merge-heartbeat-summary (:action-errors opts)))
         observation (observe/observe mc-state)
         ;; Get adjacent missions via logic layer
         review (or (:portfolio-review opts)
@@ -168,16 +170,23 @@
                       :mode-observed :BUILD}
    - opts: same as portfolio-step!
 
+   Action errors are computed upfront and threaded into the AIF observation
+   pipeline (T-7), so effort-related channels reflect the bid/clear discrepancy.
+
    Returns aif-step result + action-level prediction error analysis.
    See D-11 in M-portfolio-inference.md for the bid/clear shape."
   [evidence-store heartbeat-data opts]
-  (let [result (portfolio-step! evidence-store (assoc opts :emit-evidence? false))
-        observation (:observation result)
-        observed-mode (get-in result [:diagnostics :mode])
-        ;; Action-level prediction errors (D-11)
+  (let [;; Compute action errors upfront so T-7 channels can observe them
         action-errors (when (and (:bids heartbeat-data) (:clears heartbeat-data))
                         (heartbeat/compute-action-errors
                          (:bids heartbeat-data) (:clears heartbeat-data)))
+        ;; Run AIF step with heartbeat data enriching the observation
+        result (portfolio-step! evidence-store
+                                (assoc opts
+                                       :emit-evidence? false
+                                       :action-errors action-errors))
+        observation (:observation result)
+        observed-mode (get-in result [:diagnostics :mode])
         mode-error (when (:mode-prediction heartbeat-data)
                      (heartbeat/compute-mode-error
                       (:mode-prediction heartbeat-data)

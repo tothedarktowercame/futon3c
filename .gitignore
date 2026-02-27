@@ -1,5 +1,6 @@
 .cpcache/
 .nrepl-port
+.admintoken
 target/
 *.class
 .venv-*/

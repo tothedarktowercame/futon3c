@@ -104,14 +104,27 @@
 
 (defn effort-cost
   "Effort cost: how much does this action cost in mana/time?
-   Lower cost → lower penalty → preferred, all else equal."
-  [action]
-  (case action
-    :work-on     0.6   ; significant effort
-    :review      0.2   ; moderate effort
-    :consolidate 0.4   ; moderate-to-significant
-    :upvote      0.05  ; minimal effort
-    :wait        0.0)) ; zero effort
+   Lower cost → lower penalty → preferred, all else equal.
+
+   When observation is provided (T-7), modulates base cost by effort-prediction-error:
+   high error → effort predictions unreliable → regress toward mean (0.3).
+   This means the EFE trusts static effort estimates less when recent heartbeats
+   show they've been wrong."
+  ([action] (effort-cost action nil))
+  ([action observation]
+   (let [base (case action
+                :work-on     0.6
+                :review      0.2
+                :consolidate 0.4
+                :upvote      0.05
+                :wait        0.0)]
+     (if observation
+       (let [epe (:effort-prediction-error observation 0.0)
+             mean-effort 0.3]
+         ;; Interpolate: (1-epe)*base + epe*mean
+         (+ (* (- 1.0 epe) base)
+            (* epe mean-effort)))
+       base))))
 
 ;; =============================================================================
 ;; Expected Free Energy
@@ -126,7 +139,7 @@
   (let [prag (pragmatic-value action observation mu-sens adjacent-missions)
         epis (epistemic-value action observation precision)
         upv (upvote-value action upvote-state)
-        eff (effort-cost action)
+        eff (effort-cost action observation)
         ;; G = negative of value + cost
         ;; Lower G = better, so: G = -(pragmatic + epistemic + upvote) + effort
         G (+ (* (:effort lambdas) eff)

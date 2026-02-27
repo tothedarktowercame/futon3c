@@ -20,7 +20,11 @@
    :stall-count 0.3
    :spinoff-pressure 0.2
    :pattern-reuse 0.1
-   :review-age 0.3})
+   :review-age 0.3
+   ;; Heartbeat channels (T-7)
+   :effort-prediction-error 0.0
+   :bid-completion-rate 0.5
+   :unplanned-work-ratio 0.0})
 
 (def test-adjacent
   [{:adjacent? true :mission {:mission/id "m1" :mission/status :in-progress}}
@@ -94,7 +98,9 @@
              :blocked-ratio 0.2 :evidence-velocity 0.3
              :dependency-depth 0.2 :gap-count 0.3
              :stall-count 0.2 :spinoff-pressure 0.4
-             :pattern-reuse 0.1 :review-age 0.5}
+             :pattern-reuse 0.1 :review-age 0.5
+             :effort-prediction-error 0.0 :bid-completion-rate 0.5
+             :unplanned-work-ratio 0.0}
         result (core/aif-step state obs test-adjacent {})]
     (testing "mode stays CONSOLIDATE when no transition triggers"
       (is (= :CONSOLIDATE (get-in result [:diagnostics :mode]))))))
