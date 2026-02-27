@@ -95,6 +95,32 @@ When local Agency returns irc-unavailable (503), codex-repl retries against this
   :type '(choice (const nil) string)
   :group 'codex-repl)
 
+(defcustom codex-repl-invoke-buffer-name "*invoke: codex-repl*"
+  "Buffer used for live Codex stream/invoke trace output."
+  :type 'string
+  :group 'codex-repl)
+
+(defcustom codex-repl-show-invoke-buffer t
+  "When non-nil, keep a side-window open with live invoke trace."
+  :type 'boolean
+  :group 'codex-repl)
+
+(defcustom codex-repl-invoke-window-side 'right
+  "Side used when displaying the invoke trace buffer."
+  :type '(choice (const left) (const right) (const bottom) (const top))
+  :group 'codex-repl)
+
+(defcustom codex-repl-invoke-window-size 0.33
+  "Window size for invoke trace side window.
+Interpreted as width on left/right and height on top/bottom."
+  :type 'number
+  :group 'codex-repl)
+
+(defcustom codex-repl-invoke-log-raw-events nil
+  "When non-nil, include raw NDJSON lines in invoke trace output."
+  :type 'boolean
+  :group 'codex-repl)
+
 ;;; Face (Codex-specific; shared faces are in futon3c-ui)
 
 (defface codex-repl-codex-face
@@ -119,6 +145,8 @@ When local Agency returns irc-unavailable (503), codex-repl retries against this
   "Timer used to refresh Codex liveness/progress while waiting.")
 (defvar codex-repl--cached-irc-send-base nil
   "Cached remote Agency base URL hint for IRC send fallback.")
+(defvar codex-repl--invoke-turn-id 0
+  "Monotonic local counter for codex-repl invoke turns.")
 
 (defun codex-repl--progress-line (status &optional elapsed-seconds)
   "Render STATUS as a codex thinking progress line.
@@ -209,20 +237,161 @@ Returns non-nil when prompt markers were restored."
              (marker-insertion-type futon3c-ui--input-start))
     (set-marker-insertion-type futon3c-ui--input-start nil)))
 
+(defun codex-repl--invoke-buffer ()
+  "Return (and initialize) the Codex invoke trace buffer."
+  (let ((buf (get-buffer-create codex-repl-invoke-buffer-name)))
+    (with-current-buffer buf
+      (unless (derived-mode-p 'special-mode)
+        (special-mode))
+      (setq-local truncate-lines t))
+    buf))
+
+(defun codex-repl--display-invoke-buffer ()
+  "Display invoke trace side-window if enabled."
+  (when codex-repl-show-invoke-buffer
+    (let* ((buf (codex-repl--invoke-buffer))
+           (side codex-repl-invoke-window-side)
+           (size-pair (if (memq side '(left right))
+                          (cons 'window-width codex-repl-invoke-window-size)
+                        (cons 'window-height codex-repl-invoke-window-size)))
+           (params (list (cons 'side side)
+                         size-pair
+                         (cons 'slot 1))))
+      (display-buffer-in-side-window buf params))))
+
+(defun codex-repl--truncate-single-line (text max-len)
+  "Return TEXT collapsed to one line and truncated to MAX-LEN chars."
+  (let* ((collapsed (replace-regexp-in-string "[\n\r\t]+" " " (or text "")))
+         (trimmed (string-trim collapsed)))
+    (if (> (length trimmed) max-len)
+        (concat (substring trimmed 0 max-len) "...")
+      trimmed)))
+
+(defun codex-repl--append-invoke-trace (line &optional face)
+  "Append LINE to invoke trace buffer, optionally with FACE."
+  (when (and (stringp line) (not (string-empty-p line)))
+    (let ((buf (codex-repl--invoke-buffer)))
+      (with-current-buffer buf
+        (let ((inhibit-read-only t))
+          (goto-char (point-max))
+          (insert (propertize
+                   (format "[%s] %s\n" (format-time-string "%H:%M:%S") line)
+                   'face (or face 'default))))))))
+
+(defun codex-repl--titleize-token (token)
+  "Return TOKEN converted from snake_case/kebab-case to Title Case."
+  (if (and (stringp token) (not (string-empty-p token)))
+      (mapconcat #'capitalize
+                 (split-string (replace-regexp-in-string "[-_]+" " " token) " " t)
+                 " ")
+    "Unknown"))
+
+(defun codex-repl--humanize-tool-name (name)
+  "Return a human-friendly label for Codex tool NAME."
+  (let ((tool (and (stringp name) (downcase name))))
+    (cond
+     ((member tool '("command_execution" "command-execution" "bash" "shell"))
+      "Using Bash")
+     ((member tool '("read_file" "read-files"))
+      "Reading Files")
+     ((member tool '("write_file" "edit_file" "apply_patch"))
+      "Editing Files")
+     ((member tool '("search" "grep" "ripgrep"))
+      "Searching Code")
+     ((member tool '("list_files" "list_directory"))
+      "Inspecting Files")
+     ((stringp tool)
+      (format "Using %s" (codex-repl--titleize-token tool)))
+     (t "Using Tool"))))
+
+(defun codex-repl--humanize-item-type (item-type)
+  "Return a human-friendly label for stream ITEM-TYPE."
+  (let ((kind (and (stringp item-type) (downcase item-type))))
+    (cond
+     ((member kind '("reasoning" "agent_message")) "Preparing Response")
+     ((stringp kind) (codex-repl--titleize-token kind))
+     (t "Working"))))
+
+(defun codex-repl--stream-event-summary (evt)
+  "Render one-line summary for Codex stream event EVT."
+  (let ((type (alist-get 'type evt)))
+    (cond
+     ((string= type "thread.started")
+      (let ((sid (or (alist-get 'thread_id evt)
+                     (alist-get 'session_id evt)
+                     "?")))
+        (format "thread.started session=%s" sid)))
+     ((or (string= type "item.started")
+          (string= type "item.completed"))
+      (let* ((item (alist-get 'item evt))
+             (item-type (and (listp item) (alist-get 'type item)))
+             (name (and (listp item) (alist-get 'name item))))
+        (cond
+         ((and (stringp item-type) (string= item-type "tool_call"))
+          (format "%s (%s)"
+                  (codex-repl--humanize-tool-name name)
+                  (if (string= type "item.started") "started" "done")))
+         ((stringp item-type)
+          (format "%s (%s)"
+                  (codex-repl--humanize-item-type item-type)
+                  (if (string= type "item.started") "started" "done")))
+         (t type))))
+     ((string= type "reasoning")
+      "Preparing Response")
+     ((string= type "command_execution")
+      "Using Bash")
+     ((string= type "turn.failed")
+      (let* ((err (alist-get 'error evt))
+             (msg (and (listp err) (alist-get 'message err))))
+        (if (stringp msg)
+            (format "turn.failed %s" (truncate-string-to-width msg 100))
+          "turn.failed")))
+     ((string= type "error")
+      (let ((msg (alist-get 'message evt)))
+        (if (stringp msg)
+            (format "error %s" (truncate-string-to-width msg 100))
+          "error")))
+     ((stringp type)
+      (format "event %s" type))
+     (t nil))))
+
+(defun codex-repl--log-stream-event (evt json-line)
+  "Emit stream event EVT (and optional JSON-LINE) to invoke trace buffer."
+  (when-let ((summary (codex-repl--stream-event-summary evt)))
+    (codex-repl--append-invoke-trace summary 'font-lock-comment-face))
+  (when (and codex-repl-invoke-log-raw-events
+             (stringp json-line))
+    (codex-repl--append-invoke-trace
+     (format "raw %s" (codex-repl--truncate-single-line json-line 500))
+     'shadow)))
+
 ;;; Streaming event parser (for progress display)
 
 (defun codex-repl--parse-stream-event (json-line)
   "Parse a Codex JSONL event and return a progress string or nil."
-  (condition-case nil
+  (condition-case err
       (let* ((evt (json-parse-string json-line
                                      :object-type 'alist
                                      :array-type 'list
                                      :null-object nil
                                      :false-object nil))
              (type (alist-get 'type evt)))
+         (codex-repl--log-stream-event evt json-line)
          (cond
          ((string= type "thread.started")
           (codex-repl--set-progress-status "thread started"))
+         ((string= type "item.started")
+          (let* ((item (alist-get 'item evt))
+                 (item-type (and (listp item) (alist-get 'type item))))
+            (cond
+             ((and (stringp item-type) (string= item-type "tool_call"))
+              (let ((name (alist-get 'name item)))
+                (codex-repl--set-progress-status
+                 (codex-repl--humanize-tool-name name))))
+             ((stringp item-type)
+              (codex-repl--set-progress-status
+               (codex-repl--humanize-item-type item-type)))
+             (t nil))))
          ((string= type "item.completed")
           (let* ((item (alist-get 'item evt))
                  (item-type (and (listp item) (alist-get 'type item))))
@@ -230,12 +399,17 @@ Returns non-nil when prompt markers were restored."
              ((and (stringp item-type) (string= item-type "tool_call"))
               (let ((name (alist-get 'name item)))
                 (codex-repl--set-progress-status
-                 (if (stringp name)
-                     (format "ran: %s" name)
-                   "tool call completed"))))
+                 (format "%s (done)"
+                         (codex-repl--humanize-tool-name name)))))
              ((and (stringp item-type) (string= item-type "agent_message"))
-              (codex-repl--set-progress-status "composing response..."))
+              (codex-repl--set-progress-status "Preparing Response"))
+             ((and (stringp item-type) (string= item-type "reasoning"))
+              (codex-repl--set-progress-status "Preparing Response"))
              (t nil))))
+         ((string= type "reasoning")
+          (codex-repl--set-progress-status "Preparing Response"))
+         ((string= type "command_execution")
+          (codex-repl--set-progress-status "Using Bash"))
          ((string= type "turn.failed")
           (let* ((err (alist-get 'error evt))
                  (msg (and (listp err) (alist-get 'message err))))
@@ -248,7 +422,12 @@ Returns non-nil when prompt markers were restored."
               (codex-repl--set-progress-status
                (format "error: %s" (truncate-string-to-width msg 60))))))
          (t nil)))
-    (error nil)))
+    (error
+     (codex-repl--append-invoke-trace
+      (format "event parse error: %s"
+              (error-message-string err))
+      'font-lock-warning-face)
+     nil)))
 
 (defun codex-repl--parse-json-string (text)
   "Parse TEXT as JSON and return a plist/list structure, or nil."
@@ -689,6 +868,9 @@ Returns plist: (:session-id sid :text response :error err)."
       "- Current surface: emacs-codex-repl."
       "- Your response is shown only in this Emacs buffer."
       "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
+      "- Do not claim that work is actively starting/running unless this turn executed tool calls/commands."
+      "- If no execution happened in this turn, say explicitly: not started yet / planning only."
+      "- Any progress claim must include concrete evidence (artifact path, commit SHA, or PR/issue URL)."
       "- If the user asks you to tell/ping/message someone, treat it as an IRC-send request."
       "- For IRC-send requests, output only the single-line message text to send (no wrappers)."
       "- Never use curl/tool calls for IRC on this surface."
@@ -727,6 +909,22 @@ Invoke CALLBACK with the final response text."
          (payload (if (string-suffix-p "\n" prompt-text)
                       prompt-text
                     (concat prompt-text "\n"))))
+    (setq codex-repl--invoke-turn-id (1+ codex-repl--invoke-turn-id))
+    (codex-repl--display-invoke-buffer)
+    (codex-repl--append-invoke-trace
+     (make-string 72 ?-)
+     'shadow)
+    (codex-repl--append-invoke-trace
+     (format "invoke start turn=%d session=%s model=%s effort=%s"
+             codex-repl--invoke-turn-id
+             (or codex-repl-session-id "new")
+             (or codex-repl-model "default")
+             (or codex-repl-reasoning-effort "default"))
+     'font-lock-keyword-face)
+    (codex-repl--append-invoke-trace
+     (format "user prompt %s"
+             (codex-repl--truncate-single-line text 240))
+     'shadow)
     (setq codex-repl--thinking-start-time (float-time)
           codex-repl--last-progress-status "starting")
     (setq proc
@@ -742,8 +940,9 @@ Invoke CALLBACK with the final response text."
            :sentinel
            (lambda (p _event)
              (when (memq (process-status p) '(exit signal))
-               (let* ((exit-code (process-exit-status p))
-                      (raw (if (buffer-live-p (process-buffer p))
+              (let* ((exit-code (process-exit-status p))
+                     (elapsed (codex-repl--thinking-elapsed-seconds))
+                     (raw (if (buffer-live-p (process-buffer p))
                                (with-current-buffer (process-buffer p)
                                  (buffer-string))
                              ""))
@@ -757,6 +956,15 @@ Invoke CALLBACK with the final response text."
                                     (format "[Error (exit %d): %s]"
                                             exit-code
                                             (string-trim (or err response))))))
+                 (codex-repl--append-invoke-trace
+                  (format "invoke done exit=%d elapsed=%ds session=%s"
+                          exit-code elapsed (or sid codex-repl-session-id "unknown"))
+                  (if (= exit-code 0) 'font-lock-string-face 'font-lock-warning-face))
+                 (when (and err (not (string-empty-p (string-trim err))))
+                   (codex-repl--append-invoke-trace
+                    (format "invoke error %s"
+                            (codex-repl--truncate-single-line err 240))
+                    'font-lock-warning-face))
                  (unwind-protect
                      (progn
                        (when (and (stringp sid) (not (string-empty-p sid)))
@@ -929,12 +1137,29 @@ With REFRESH non-nil, recompute state first."
            (codex-repl-modeline-state refresh))
           "\n"))
 
+(defun codex-repl-show-invoke-trace ()
+  "Display invoke trace buffer."
+  (interactive)
+  (pop-to-buffer (codex-repl--invoke-buffer))
+  (goto-char (point-max)))
+
+(defun codex-repl-clear-invoke-trace ()
+  "Clear invoke trace buffer."
+  (interactive)
+  (let ((buf (codex-repl--invoke-buffer)))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)))
+    (codex-repl--append-invoke-trace "invoke trace cleared" 'shadow)))
+
 ;;; Mode
 
 (defvar codex-repl-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'codex-repl-send-input)
     (define-key map (kbd "C-c C-k") #'codex-repl-clear)
+    (define-key map (kbd "C-c C-v") #'codex-repl-show-invoke-trace)
+    (define-key map (kbd "C-c C-l") #'codex-repl-clear-invoke-trace)
     map))
 
 (define-derived-mode codex-repl-mode nil "Codex-REPL"
