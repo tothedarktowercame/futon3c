@@ -20,6 +20,10 @@
      GET  /api/alpha/reflect/var/:ns/:var — full var metadata (envelope)
      GET  /api/alpha/reflect/deps/:ns — namespace dependency graph
      GET  /api/alpha/reflect/java/:class — Java class reflection
+     POST /api/alpha/todo — lightweight todo management (add/list/done)
+     POST /api/alpha/portfolio/step — run one AIF portfolio step
+     POST /api/alpha/portfolio/heartbeat — weekly heartbeat with bid/clear
+     GET  /api/alpha/portfolio/state — current portfolio belief state
      GET  /health    — liveness check with agent/session counts
 
    Pattern references:
@@ -40,11 +44,13 @@
             [futon3c.social.whistles :as whistles]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
+            [futon3c.portfolio.core :as portfolio]
             [futon3c.reflection.core :as reflection]
             [cheshire.core :as json]
             [cheshire.generate :as json-gen]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as cset]
             [clojure.string :as str]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
@@ -641,25 +647,64 @@
 (defn- emit-invoke-evidence!
   "Emit a forum-post evidence entry for an invoke prompt or response.
    Mirrors the pattern used by the IRC transport so chat messages from
-   all surfaces are queryable in the same evidence landscape."
-  [evidence-store author text session-id]
+   all surfaces are queryable in the same evidence landscape.
+   When mission-id is provided, tags evidence with that mission subject."
+  [evidence-store author text session-id & {:keys [mission-id]}]
   (when evidence-store
     (try
-      (estore/append* evidence-store
-                      {:evidence/id (str "e-" (UUID/randomUUID))
-                       :evidence/subject {:ref/type :thread :ref/id "emacs/chat"}
-                       :evidence/type :forum-post
-                       :evidence/claim-type :observation
-                       :evidence/author author
-                       :evidence/at (str (Instant/now))
-                       :evidence/body {:channel "emacs-chat"
-                                       :text text
-                                       :from author
-                                       :transport :emacs-chat}
-                       :evidence/tags [:emacs :chat :transport/emacs-chat]
-                       :evidence/session-id (or session-id "pending")})
+      (let [subject (if mission-id
+                      {:ref/type :mission :ref/id mission-id}
+                      {:ref/type :thread :ref/id "emacs/chat"})
+            tags (cond-> [:emacs :chat :transport/emacs-chat]
+                   mission-id (conj :mission-focused))]
+        (estore/append* evidence-store
+                        {:evidence/id (str "e-" (UUID/randomUUID))
+                         :evidence/subject subject
+                         :evidence/type :forum-post
+                         :evidence/claim-type :observation
+                         :evidence/author author
+                         :evidence/at (str (Instant/now))
+                         :evidence/body {:channel "emacs-chat"
+                                         :text text
+                                         :from author
+                                         :transport :emacs-chat}
+                         :evidence/tags tags
+                         :evidence/session-id (or session-id "pending")}))
       (catch Exception e
         (println (str "[invoke] evidence emit warning: " (.getMessage e)))))))
+
+(defn- emit-review-snapshot!
+  "Emit a portfolio snapshot evidence entry after a successful review.
+   Stores compact mission id+status pairs for diffing between reviews."
+  [evidence-store author review-result]
+  (when evidence-store
+    (try
+      (let [missions (get review-result "portfolio/missions"
+                       (:portfolio/missions review-result))
+            summary (get review-result "portfolio/summary"
+                      (:portfolio/summary review-result))
+            coverage (get review-result "portfolio/coverage"
+                       (:portfolio/coverage review-result))
+            ;; Compact form: just id + status per mission
+            compact-missions (vec (for [m (or missions [])]
+                                   (let [mid (or (get m "mission/id")
+                                                 (:mission/id m) "?")
+                                         status (or (get m "mission/status")
+                                                    (:mission/status m) "unknown")]
+                                     {:mission/id mid :mission/status status})))]
+        (estore/append* evidence-store
+                        {:evidence/id (str "e-review-" (UUID/randomUUID))
+                         :evidence/subject {:ref/type :portfolio :ref/id "global"}
+                         :evidence/type :coordination
+                         :evidence/claim-type :observation
+                         :evidence/author (or author "mission-control")
+                         :evidence/at (str (Instant/now))
+                         :evidence/body {:portfolio/missions compact-missions
+                                         :portfolio/summary summary
+                                         :portfolio/coverage coverage}
+                         :evidence/tags [:review :portfolio-snapshot]}))
+      (catch Exception e
+        (println (str "[review] snapshot emit warning: " (.getMessage e)))))))
 
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
@@ -691,14 +736,18 @@
           (let [caller (or (some-> payload :caller str)
                            (some-> payload (get "caller") str)
                            "http-caller")
+                mission-id (or (:mission-id payload) (get payload "mission-id"))
                 timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
-                                   long)]
+                                   long)
+                ev-opts (when mission-id [:mission-id mission-id])]
             (let [result (reg/invoke-agent! (str agent-id) prompt timeout-ms)
                   sid (:session-id result)]
-              (emit-invoke-evidence! evidence-store caller (str prompt) sid)
+              (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
+                     (or ev-opts []))
               (if (:ok result)
                 (do
-                  (emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid)
+                  (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
+                         (or ev-opts []))
                   (json-response 200 {:ok true
                                       :result (:result result)
                                       :session-id sid}))
@@ -827,29 +876,116 @@
                                    (:error/message err)
                                    (str err)))})))))
 
+(defn- handle-agent-reset-session
+  "POST /api/alpha/agents/:id/reset-session — clear an agent's session so the
+   next invoke starts a fresh conversation. Useful when a session becomes
+   poisoned (e.g. invalid tool-use in conversation history)."
+  [_config agent-id]
+  (let [result (reg/reset-session! agent-id)]
+    (if (:ok result)
+      (json-response 200 {:ok true
+                          :agent-id (:agent-id result)
+                          :old-session-id (:old-session-id result)})
+      (let [err (:error result)
+            code (if (map? err) (:error/code err) :reset-failed)]
+        (json-response (if (= :agent-not-found code) 404 502)
+                       {:ok false
+                        :error (if (= :agent-not-found code)
+                                 (str "Agent not found: " agent-id)
+                                 (if (map? err)
+                                   (:error/message err)
+                                   (str err)))})))))
+
 ;; =============================================================================
 ;; Mission-control endpoints
 ;; =============================================================================
 
+(defn- compute-portfolio-diff
+  "Compute diff between two portfolio snapshots (newest first).
+   Returns {:added [...] :removed [...] :changed [...] :summary {...}}."
+  [new-snapshot old-snapshot]
+  (let [new-missions (:portfolio/missions (:evidence/body new-snapshot))
+        old-missions (:portfolio/missions (:evidence/body old-snapshot))
+        new-by-id (into {} (map (juxt :mission/id identity)) new-missions)
+        old-by-id (into {} (map (juxt :mission/id identity)) old-missions)
+        new-ids (set (keys new-by-id))
+        old-ids (set (keys old-by-id))
+        added (vec (for [id (sort (cset/difference new-ids old-ids))]
+                     (get new-by-id id)))
+        removed (vec (for [id (sort (cset/difference old-ids new-ids))]
+                       (get old-by-id id)))
+        changed (vec (for [id (sort (cset/intersection new-ids old-ids))
+                           :let [new-status (:mission/status (get new-by-id id))
+                                 old-status (:mission/status (get old-by-id id))]
+                           :when (not= new-status old-status)]
+                       {:mission/id id
+                        :old-status old-status
+                        :new-status new-status}))
+        new-summary (:portfolio/summary (:evidence/body new-snapshot))
+        old-summary (:portfolio/summary (:evidence/body old-snapshot))
+        new-coverage (:portfolio/coverage (:evidence/body new-snapshot))
+        old-coverage (:portfolio/coverage (:evidence/body old-snapshot))]
+    {:added added
+     :removed removed
+     :changed changed
+     :new-count (count new-missions)
+     :old-count (count old-missions)
+     :new-summary new-summary
+     :old-summary old-summary
+     :new-coverage new-coverage
+     :old-coverage old-coverage}))
+
 (defn- handle-mission-control
   "POST /api/alpha/mission-control — multiplexed mission-control RPC.
-   Actions: review, status, sessions, step, start, stop.
+   Actions: review, status, sessions, step, start, stop, diff.
    Wraps futon3c.mission-control.service functions."
-  [request _config]
+  [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"
                           :message "Request body must be a JSON object"})
-      (let [action (or (:action payload) (get payload "action"))]
+      (let [action (or (:action payload) (get payload "action"))
+            evidence-store (evidence-store-for-config config)]
         (case (str action)
           "review"
           (let [author (or (:author payload) (get payload "author"))
                 session-id (or (:session-id payload) (get payload "session-id"))
-                close? (boolean (or (:close payload) (get payload "close")))]
-            (json-response 200 (mcs/run-review!
-                                {:session-id session-id
-                                 :author author
-                                 :close? close?})))
+                close? (boolean (or (:close payload) (get payload "close")))
+                result (mcs/run-review!
+                        {:session-id session-id
+                         :author author
+                         :close? close?})]
+            ;; Emit portfolio snapshot on successful review
+            (when (and (:ok result) evidence-store)
+              (let [lr (:last-result result)
+                    review-data (if (map? lr) (:result lr) {})]
+                (when (map? review-data)
+                  (emit-review-snapshot! evidence-store author review-data))))
+            (json-response 200 result))
+
+          "diff"
+          (if-not evidence-store
+            (json-response 500 {:ok false :err "no-evidence-store"
+                                :message "Evidence store not configured"})
+            (let [snapshots (estore/query* evidence-store
+                                          {:query/subject {:ref/type :portfolio
+                                                           :ref/id "global"}
+                                           :query/type :coordination
+                                           :query/limit 100})
+                  ;; Filter to portfolio-snapshot tagged entries
+                  snapshots (->> snapshots
+                                 (filter (fn [e]
+                                           (let [tags (set (:evidence/tags e))]
+                                             (and (contains? tags :review)
+                                                  (contains? tags :portfolio-snapshot)))))
+                                 (take 2)
+                                 vec)]
+              (if (< (count snapshots) 2)
+                (json-response 200 {:ok true
+                                    :diff nil
+                                    :message "Not enough review history — run !mc review at least twice"})
+                (let [diff (compute-portfolio-diff (first snapshots) (second snapshots))]
+                  (json-response 200 {:ok true :diff diff})))))
 
           "status"
           (json-response 200 (mcs/status))
@@ -885,7 +1021,7 @@
           ;; default
           (json-response 400 {:ok false :err "unknown-action"
                               :message (str "Unknown action: " action
-                                            ". Valid: review, status, sessions, step, start, stop")}))))))
+                                            ". Valid: review, status, sessions, step, start, stop, diff")}))))))
 
 (defn- load-mission-wiring-edn
   "Load a per-mission wiring diagram from holes/missions/.
@@ -934,6 +1070,97 @@
       (json-response 404 {:ok false
                           :err "not-found"
                           :message (str "No wiring diagram for mission " mission-id)}))))
+
+;; =============================================================================
+;; Todo endpoints — lightweight task management via evidence entries
+;; =============================================================================
+
+(defn- handle-todo
+  "POST /api/alpha/todo — lightweight todo management.
+   Actions: add, list, done.
+   Todos are stored as evidence entries with tags [:todo :pending]."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [action (or (:action payload) (get payload "action"))
+            evidence-store (evidence-store-for-config config)]
+        (case (str action)
+          "add"
+          (let [text (or (:text payload) (get payload "text"))
+                author (or (:author payload) (get payload "author") "anonymous")
+                todo-id (str "todo-" (java.util.UUID/randomUUID))
+                entry {:subject {:ref/type :task :ref/id todo-id}
+                       :type :coordination
+                       :claim-type :goal
+                       :author author
+                       :body {:text text}
+                       :tags [:todo :pending]}
+                result (estore/append* evidence-store entry)]
+            (if (and (map? result) (:evidence/id result))
+              (json-response 201 {:ok true
+                                  :id todo-id
+                                  :evidence-id (:evidence/id result)
+                                  :text text})
+              (if (:ok result)
+                (json-response 201 {:ok true
+                                    :id todo-id
+                                    :evidence-id (get-in result [:entry :evidence/id])
+                                    :text text})
+                (json-response 400 {:ok false :err "append-failed"
+                                    :error result}))))
+
+          "list"
+          (let [author (or (:author payload) (get payload "author"))
+                all-goals (estore/query* evidence-store {:query/claim-type :goal})
+                pending (->> all-goals
+                             (filter (fn [e]
+                                       (let [tags (set (:evidence/tags e))]
+                                         (and (contains? tags :todo)
+                                              (contains? tags :pending)))))
+                             (filter (fn [e]
+                                       (or (nil? author)
+                                           (= author (:evidence/author e))))))
+                done-ids (->> (estore/query* evidence-store {:query/claim-type :conclusion})
+                              (filter (fn [e]
+                                        (let [tags (set (:evidence/tags e))]
+                                          (and (contains? tags :todo)
+                                               (contains? tags :done)))))
+                              (map (fn [e] (get-in e [:evidence/subject :ref/id])))
+                              set)
+                todos (->> pending
+                           (remove (fn [e] (done-ids (get-in e [:evidence/subject :ref/id]))))
+                           (map (fn [e]
+                                  {:id (get-in e [:evidence/subject :ref/id])
+                                   :text (get-in e [:evidence/body :text])
+                                   :author (:evidence/author e)
+                                   :at (:evidence/at e)}))
+                           (sort-by :at)
+                           vec)]
+            (json-response 200 {:ok true :todos todos :count (count todos)}))
+
+          "done"
+          (let [todo-id (or (:id payload) (get payload "id"))
+                author (or (:author payload) (get payload "author") "anonymous")]
+            (if (or (nil? todo-id) (str/blank? (str todo-id)))
+              (json-response 400 {:ok false :err "missing-id"
+                                  :message "done requires id"})
+              (let [entry {:subject {:ref/type :task :ref/id (str todo-id)}
+                           :type :coordination
+                           :claim-type :conclusion
+                           :author author
+                           :body {:completed true}
+                           :tags [:todo :done]}
+                    result (estore/append* evidence-store entry)]
+                (if (or (:ok result) (:evidence/id result))
+                  (json-response 200 {:ok true :id (str todo-id)})
+                  (json-response 400 {:ok false :err "append-failed"
+                                      :error result})))))
+
+          ;; default
+          (json-response 400 {:ok false :err "unknown-action"
+                              :message (str "Unknown action: " action ". Valid: add, list, done")}))))))
 
 ;; =============================================================================
 ;; Reflection endpoints — Clojure runtime introspection
@@ -994,6 +1221,88 @@
       (json-response 200 {:ok true :class result}))))
 
 ;; =============================================================================
+;; Portfolio inference handlers
+;; =============================================================================
+
+(defn- handle-portfolio-step
+  "POST /api/alpha/portfolio/step — run one AIF step, return recommendation."
+  [request config]
+  (let [evidence-store (evidence-store-for-config config)
+        payload (or (parse-json-map (read-body request)) {})
+        opts (cond-> {}
+               (:emit-evidence payload)
+               (assoc :emit-evidence? (boolean (:emit-evidence payload))))]
+    (try
+      (let [result (portfolio/portfolio-step! evidence-store opts)]
+        (json-response 200
+          {:ok true
+           :recommendation (portfolio/format-recommendation result)
+           :action (some-> (:action result) name)
+           :diagnostics (:diagnostics result)
+           :abstain (get-in result [:policy :abstain?])
+           :structure (:structure result)}))
+      (catch Exception e
+        (json-response 500 {:ok false :error "portfolio-step-failed"
+                            :message (.getMessage e)})))))
+
+(defn- handle-portfolio-heartbeat
+  "POST /api/alpha/portfolio/heartbeat — run heartbeat with bid/clear data."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :error "invalid-json"
+                          :message "Request body must be a JSON object with heartbeat data"})
+      (let [evidence-store (evidence-store-for-config config)
+            ;; Parse heartbeat-data from payload, keywordizing effort/outcome/mode
+            heartbeat-data
+            (cond-> {}
+              (:bids payload)
+              (assoc :bids (mapv (fn [b]
+                                  (cond-> {:action (keyword (:action b))
+                                           :mission (:mission b)
+                                           :effort (keyword (:effort b))}))
+                                (:bids payload)))
+              (:clears payload)
+              (assoc :clears (mapv (fn [c]
+                                    (cond-> {:action (keyword (:action c))
+                                             :mission (:mission c)
+                                             :effort (keyword (:effort c))
+                                             :outcome (keyword (:outcome c))}))
+                                  (:clears payload)))
+              (:mode-prediction payload)
+              (assoc :mode-prediction (keyword (:mode-prediction payload)))
+              (:mode-observed payload)
+              (assoc :mode-observed (keyword (:mode-observed payload))))
+            opts {}]
+        (try
+          (let [result (portfolio/portfolio-heartbeat! evidence-store heartbeat-data opts)]
+            (json-response 200
+              {:ok true
+               :recommendation (portfolio/format-recommendation result)
+               :action (some-> (:action result) name)
+               :diagnostics (:diagnostics result)
+               :heartbeat (:heartbeat result)}))
+          (catch Exception e
+            (json-response 500 {:ok false :error "portfolio-heartbeat-failed"
+                                :message (.getMessage e)})))))))
+
+(defn- handle-portfolio-state
+  "GET /api/alpha/portfolio/state — return current belief state."
+  [_config]
+  (let [state @portfolio/!state
+        mu (:mu state)
+        prec (:prec state)]
+    (json-response 200
+      {:ok true
+       :state {:mu mu
+               :prec prec
+               :mode (:mode mu)
+               :urgency (:urgency mu)
+               :tau (:tau prec)
+               :step-count (:step-count state)
+               :pending (:pending state)}})))
+
+;; =============================================================================
 ;; Public API
 ;; =============================================================================
 
@@ -1051,6 +1360,19 @@
           (and (= :post method) (= "/api/alpha/mission-control" uri))
           (handle-mission-control request config)
 
+          (and (= :post method) (= "/api/alpha/todo" uri))
+          (handle-todo request config)
+
+          ;; Portfolio inference
+          (and (= :post method) (= "/api/alpha/portfolio/step" uri))
+          (handle-portfolio-step request config)
+
+          (and (= :post method) (= "/api/alpha/portfolio/heartbeat" uri))
+          (handle-portfolio-heartbeat request config)
+
+          (and (= :get method) (= "/api/alpha/portfolio/state" uri))
+          (handle-portfolio-state config)
+
           (and (= :get method) (= "/api/alpha/missions" uri))
           (handle-missions request config)
 
@@ -1068,6 +1390,13 @@
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)
+
+          (and (= :post method) (string? uri)
+               (str/starts-with? uri "/api/alpha/agents/")
+               (str/ends-with? uri "/reset-session"))
+          (let [raw (subs uri (count "/api/alpha/agents/")
+                         (- (count uri) (count "/reset-session")))]
+            (handle-agent-reset-session config (enc/decode-uri-component raw)))
 
           (and (= :delete method) (re-matches #"/api/alpha/agents/(.+)" uri))
           (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
