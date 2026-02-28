@@ -151,3 +151,71 @@
   (let [text "I'll start now and push in a minute."
         execution {:tool-events 2 :command-events 1 :executed? true}]
     (is (= text (codex-cli/enforce-execution-guard text execution)))))
+
+(deftest make-invoke-fn-irc-auto-follows-up-after-ack-without-execution
+  (let [calls (atom [])
+        prompt (str "Runtime surface contract:\n"
+                    "- Current surface: IRC.\n\n"
+                    "User message:\n"
+                    "Please do repository work and open one PR.")
+        invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
+                                          :model nil
+                                          :sandbox "workspace-write"
+                                          :approval-policy "never"
+                                          :auto-exec-turns 3})
+        fake-run (fn [_cmd prompt-str _opts]
+                   (swap! calls conj prompt-str)
+                   (if (= 1 (count @calls))
+                     {:exit 0
+                      :timed-out? false
+                      :session-id "sid-1"
+                      :text "Acknowledged - I'll open one PR once done."
+                      :error-text nil
+                      :execution {:tool-events 0 :command-events 0 :executed? false}
+                      :stderr ""
+                      :raw-output "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"Acknowledged - I'll open one PR once done.\"}}\n"}
+                     {:exit 0
+                      :timed-out? false
+                      :session-id "sid-1"
+                      :text "DONE :: https://github.com/acme/repo/pull/42 :: abcdef1"
+                      :error-text nil
+                      :execution {:tool-events 2 :command-events 1 :executed? true}
+                      :stderr ""
+                      :raw-output "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"DONE :: https://github.com/acme/repo/pull/42 :: abcdef1\"}}\n"}))]
+    (with-redefs [codex-cli/run-codex-stream! fake-run]
+      (let [resp (invoke prompt "sid-old")]
+        (is (= "sid-1" (:session-id resp)))
+        (is (nil? (:error resp)))
+        (is (str/includes? (:result resp) "DONE"))
+        (is (= 2 (count @calls)))
+        (is (str/includes? (second @calls)
+                           "Continue in the same session and execute the requested work now."))))))
+
+(deftest make-invoke-fn-irc-errors-after-max-planning-turns
+  (let [calls (atom 0)
+        prompt (str "Runtime surface contract:\n"
+                    "- Current surface: IRC.\n\n"
+                    "User message:\n"
+                    "Do real work.")
+        invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
+                                          :model nil
+                                          :sandbox "workspace-write"
+                                          :approval-policy "never"
+                                          :auto-exec-turns 2})
+        fake-run (fn [& _]
+                   (swap! calls inc)
+                   {:exit 0
+                    :timed-out? false
+                    :session-id "sid-2"
+                    :text "I'll start now."
+                    :error-text nil
+                    :execution {:tool-events 0 :command-events 0 :executed? false}
+                    :stderr ""
+                    :raw-output "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"I'll start now.\"}}\n"})]
+    (with-redefs [codex-cli/run-codex-stream! fake-run]
+      (let [resp (invoke prompt "sid-old")]
+        (is (nil? (:result resp)))
+        (is (= "sid-2" (:session-id resp)))
+        (is (string? (:error resp)))
+        (is (str/includes? (:error resp) "planning/ack responses"))
+        (is (= 2 @calls))))))
