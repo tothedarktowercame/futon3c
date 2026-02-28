@@ -1,0 +1,48 @@
+% PlanetMath proposal draft for arXiv:2602.19045
+% Source corpora: arXiv math.CT eprints, storage/mo-processed-gpu, storage/math-processed-gpu
+\section*{Higher spans for semistrict infinity-operads}
+\subsection*{Source}
+\begin{itemize}
+  \item arXiv:2602.19045, "Higher spans for semistrict infinity-operads" (2026-02-19)
+  \item StackExchange cross-links via storage/mo-processed-gpu + math-processed-gpu
+\end{itemize}
+\subsection*{Synopsis}
+We treat the semistrict $(\infty,1)$-operads that arise from iterated span constructions in a presentable $(\infty,1)$-category $\mathcal{C}$. The eprint develops a comparison between:
+\begin{enumerate}
+  \item span-based models built out of $n$-fold complete Segal objects,
+  \item Lurie's dendroidal operad models for the same input data, and
+  \item categorified Day convolution on the slice $\operatorname{Fun}(\mathcal{C}^{\mathrm{op}},\mathcal{S})$.
+\end{enumerate}
+Key deliverables for the PlanetMath entry:
+\begin{itemize}
+  \item a dictionary translating the paper's "semistrict" constraints into the pm-full-dictionary vocabulary (objects, spans, cospans, completeness, etc.),
+  \item a worked example showing how the $\operatorname{Span}(\mathsf{FinGpd})$ operad produces classical quantum field theory span-operads, and
+  \item a short library of lemmas on conservativity of evaluation at globular boundaries.
+\end{itemize}
+\subsection*{MathOverflow cues}
+The GPU manifest links several higher-category prompts; we align with two threads whose IDs appear in storage/mo-processed-gpu relations:
+\begin{description}
+  \item[MO 464303] Request for references on model structures for $\infty$-categories built from spans and fibrations (tags: algebraic topology, homotopy theory, model categories, infinity categories). We will cross-reference this for background on the Cisinski-Moehring presentation used in the eprint.
+  \item[MO 467615] Terminology discussion on triangulated and higher-categorical enhancements. This thread motivates the dictionary for "semistrict" versus "weak" operadic data.
+\end{description}
+These IDs (se-mathoverflow-464303 and se-mathoverflow-467615) surface in storage/mo-processed-gpu/relations.json, so we can pull their entities + embeddings to seed cross-links inside the encyclopedia text.
+\subsection*{Math.SE anchors}
+The math-processed-gpu corpus contains several high-score posts with category-theory tags; we will reuse:
+\begin{description}
+  \item[Math.SE 452479] "Characterizing associative spans via pullbacks" (tags: ct.category-theory, reference-request) for a didactic example on constructing pullback powers of spans.
+  \item[Math.SE 467599] "Finite group spans and orthogonal representations" (tags: gr.group-theory, finite-groups, ct.category-theory) for the representation-theoretic remark in the Examples section.
+\end{description}
+\subsection*{Encyclopedia outline}
+\begin{enumerate}
+  \item Definition of semistrict $(\infty,1)$-operad via iterated spans.
+  \item Comparison lemma with dendroidal nerves; cite Lemma 2.3 of the eprint.
+  \item Construction of evaluation functors on boundary cubes; explain the conservativity statement.
+  \item Examples: spans in $\mathsf{FinGpd}$, spans of derived stacks, field-theoretic operads.
+  \item Bibliography and StackExchange cross-links (MO 464303, MO 467615, Math.SE 452479, Math.SE 467599).
+\end{enumerate}
+\subsection*{Action items}
+\begin{itemize}
+  \item Pull the arXiv PDF/TeX into /home/joe/code/futon6/data/arxiv-math-ct-eprints/proof-state.
+  \item Attach embeddings from storage/mo-processed-gpu by querying hypergraph-thread-ids for the cited threads.
+  \item Generate the PlanetMath EDN + TeX pair once the outline above is vetted.
+\end{itemize}
