@@ -43,7 +43,7 @@ MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
-INVOKE_TIMEOUT = 600  # 10 minutes — agents can be slow
+INVOKE_TIMEOUT = 90  # 90 seconds — stale WS connections timeout faster
 CMD_TIMEOUT = 30  # 30 seconds for ! commands
 
 # Ungated nicks receive ALL channel messages, not just @mentions.
@@ -167,15 +167,17 @@ class IRCBot:
         return prefix.split("!")[0] if "!" in prefix else prefix
 
     def _is_mention(self, text):
-        """Check if text mentions this bot (e.g., '@claude ...' or 'claude: ...')."""
+        """Check if text mentions this bot. Matches @nick anywhere in the
+        text (not just line start) so mentions like 'done.@codex review'
+        still trigger. Also matches 'nick: ...' at line start."""
         base_nick = self.nick.rstrip("_")
         patterns = [
-            rf"^@{re.escape(base_nick)}\b",
-            rf"^{re.escape(base_nick)}:\s",
-            rf"^{re.escape(base_nick)},\s",
+            rf"@{re.escape(base_nick)}\b",          # @nick anywhere
+            rf"^{re.escape(base_nick)}:\s",          # nick: at start
+            rf"^{re.escape(base_nick)},\s",          # nick, at start
         ]
         for p in patterns:
-            if re.match(p, text, re.IGNORECASE):
+            if re.search(p, text, re.IGNORECASE):
                 return True
         return False
 
@@ -219,19 +221,53 @@ class IRCBot:
         except Exception as e:
             return f"[invoke failed: {e}]"
 
-    def _say(self, text):
-        """Send a PRIVMSG to the channel, splitting long lines."""
+    @staticmethod
+    def _sanitize_for_irc(text):
+        """Strip markdown formatting that doesn't render in IRC.
+        Agents sometimes emit markdown despite surface contract instructions;
+        this ensures it never reaches the wire."""
+        # Strip code fences (``` ... ```)
+        text = re.sub(r"```\w*\n?", "", text)
+        # Strip bold **text** or __text__
+        text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+        text = re.sub(r"__(.+?)__", r"\1", text)
+        # Strip italic *text* or _text_ (but not underscores in identifiers)
+        text = re.sub(r"(?<!\w)\*(.+?)\*(?!\w)", r"\1", text)
+        # Strip headers (## Foo → Foo)
+        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+        # Strip bullet prefixes (- item → item)
+        text = re.sub(r"^[-*]\s+", "", text, flags=re.MULTILINE)
+        # Strip numbered list prefixes (1. item → item)
+        text = re.sub(r"^\d+\.\s+", "", text, flags=re.MULTILINE)
+        # Collapse multiple spaces
+        text = re.sub(r"  +", " ", text)
+        return text
+
+    def _say(self, text, max_lines=6):
+        """Send a PRIVMSG to the channel. Caps output at max_lines to keep
+        IRC readable. If the response exceeds max_lines, the tail is dropped
+        and a truncation notice is appended."""
+        text = self._sanitize_for_irc(text)
+        lines = []
         for line in text.split("\n"):
             line = line.rstrip()
             if not line:
                 continue
-            # Split long lines
+            # Wrap long lines at IRC limit
             while len(line) > MAX_IRC_LINE:
-                self._send(f"PRIVMSG {self.channel} :{line[:MAX_IRC_LINE]}")
+                lines.append(line[:MAX_IRC_LINE])
                 line = line[MAX_IRC_LINE:]
-                time.sleep(0.3)  # rate limit
+            lines.append(line)
+
+        truncated = len(lines) > max_lines
+        for line in lines[:max_lines]:
             self._send(f"PRIVMSG {self.channel} :{line}")
             time.sleep(0.1)  # gentle rate limit
+        if truncated:
+            self._send(f"PRIVMSG {self.channel} :"
+                       f"[truncated {len(lines) - max_lines} more lines — "
+                       f"post details to GitHub instead]")
+            time.sleep(0.1)
 
     def _handle_mention(self, sender, text):
         """Process a mention: invoke agent, post response."""
@@ -247,16 +283,23 @@ class IRCBot:
             f"[Surface: IRC | Channel: {self.channel} | "
             f"Speaker: {sender}{mission_part} | "
             f"Your response will be posted to {self.channel} as <{self.nick}>. "
-            f"Keep responses concise for IRC.]"
+            f"IMPORTANT: Max 4-5 short lines. No markdown, no bullets, no headers. "
+            f"For detailed work, post to GitHub issues/comments instead and "
+            f"share the link here.]"
         )
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
         log(self.nick, f"Invoking for {sender}: {prompt_text[:80]}")
 
-        # Serialize invocations per bot
-        with self._invoking:
+        # Serialize invocations per bot — drop if already busy
+        if not self._invoking.acquire(blocking=False):
+            log(self.nick, f"Busy — dropping invocation from {sender}")
+            return
+        try:
             result = self._invoke_agent(full_prompt, sender,
                                         mission_id=self.focused_mission)
+        finally:
+            self._invoking.release()
 
         if result:
             log(self.nick, f"Response ({len(result)} chars)")
@@ -274,15 +317,22 @@ class IRCBot:
             f"[Surface: IRC | Channel: {self.channel} | "
             f"Speaker: {sender}{mission_part} | "
             f"Your response will be posted to {self.channel} as <{self.nick}>. "
-            f"Keep responses concise for IRC.]"
+            f"IMPORTANT: Max 4-5 short lines. No markdown, no bullets, no headers. "
+            f"For detailed work, post to GitHub issues/comments instead and "
+            f"share the link here.]"
         )
         full_prompt = f"{surface_context}\n\n{sender}: {text}"
 
         log(self.nick, f"Ungated invoke for {sender}: {text[:80]}")
 
-        with self._invoking:
+        if not self._invoking.acquire(blocking=False):
+            log(self.nick, f"Busy — dropping ungated invocation from {sender}")
+            return
+        try:
             result = self._invoke_agent(full_prompt, sender,
                                         mission_id=self.focused_mission)
+        finally:
+            self._invoking.release()
 
         if result:
             log(self.nick, f"Response ({len(result)} chars)")

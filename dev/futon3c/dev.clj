@@ -66,10 +66,13 @@
             [org.httpkit.server :as hk])
   (:import [java.time Instant Duration]
            [java.util UUID]
-           [java.net URI InetAddress NetworkInterface]
+           [java.net Socket URI InetAddress NetworkInterface]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers
             HttpResponse$BodyHandlers WebSocket WebSocket$Listener]
+           [java.io PrintWriter]
            [java.util.concurrent CompletableFuture]))
+
+(declare make-claude-invoke-fn)
 
 (defn env
   "Read an env var with optional default."
@@ -557,6 +560,717 @@
           (println (str "[dev] evidence emit error: " (.getMessage e))))))))
 
 ;; =============================================================================
+;; ngircd IRC sender — persistent connection for Tickle paging
+;; =============================================================================
+
+(defonce !irc-conn (atom nil))
+(defonce !irc-log (atom []))
+(def ^:private irc-log-max 200)
+
+(defn- irc-conn-alive?
+  "Check if the persistent IRC connection is still open."
+  [conn]
+  (and conn
+       (let [{:keys [^Socket socket]} conn]
+         (and socket (not (.isClosed socket))))))
+
+(defn- parse-irc-privmsg
+  "Parse a raw IRC PRIVMSG line into {:nick :channel :text :at}."
+  [raw-line]
+  (when-let [[_ prefix _ trailing] (re-matches #":([^ ]+) PRIVMSG ([^ ]+) :(.*)" raw-line)]
+    (let [nick (first (str/split prefix #"!"))]
+      {:nick nick
+       :text trailing
+       :at (str (Instant/now))})))
+
+(defn- irc-connect!
+  "Open a persistent connection to ngircd. JOINs #futon and stays connected.
+   Background thread handles PINGs and captures PRIVMSG lines to !irc-log."
+  [nick]
+  (let [nick (str/replace (str nick) #"[^a-zA-Z0-9_-]" "")
+        sock (Socket. "127.0.0.1" 6667)
+        out (PrintWriter. (.getOutputStream sock) true)
+        in (io/reader (.getInputStream sock))]
+    (.println out "PASS MonsterMountain")
+    (.println out (str "NICK " nick))
+    (.println out (str "USER " nick " 0 * :" nick))
+    (Thread/sleep 500)
+    (.println out "JOIN #futon")
+    (Thread/sleep 300)
+    ;; Background thread: respond to PINGs + capture PRIVMSG to ring buffer
+    (let [running (atom true)
+          reader-thread (Thread.
+                         (fn []
+                           (try
+                             (while @running
+                               (when-let [line (try (.readLine in) (catch Exception _ nil))]
+                                 (cond
+                                   (str/starts-with? line "PING")
+                                   (.println out (str/replace line "PING" "PONG"))
+
+                                   (str/includes? line "PRIVMSG")
+                                   (when-let [msg (parse-irc-privmsg line)]
+                                     (swap! !irc-log
+                                            (fn [log]
+                                              (let [log (conj log msg)]
+                                                (if (> (count log) irc-log-max)
+                                                  (subvec log (- (count log) irc-log-max))
+                                                  log))))))))
+                             (catch Exception _))))]
+      (.setDaemon reader-thread true)
+      (.start reader-thread)
+      {:socket sock :out out :nick nick :running running})))
+
+(defn- ensure-irc-conn!
+  "Return the persistent IRC connection, reconnecting if needed."
+  [nick]
+  (let [conn @!irc-conn]
+    (if (irc-conn-alive? conn)
+      conn
+      (let [new-conn (irc-connect! nick)]
+        (reset! !irc-conn new-conn)
+        (println (str "[irc] Connected to ngircd as " nick))
+        new-conn))))
+
+(defn close-irc-conn!
+  "Close the persistent IRC connection."
+  []
+  (when-let [{:keys [^Socket socket ^PrintWriter out running]} @!irc-conn]
+    (when running (reset! running false))
+    (try (.println out "QUIT :shutting down") (catch Exception _))
+    (try (.close socket) (catch Exception _))
+    (reset! !irc-conn nil)
+    (println "[irc] Disconnected from ngircd")))
+
+(defn irc-recent
+  "Return the last N messages from the IRC log ring buffer.
+   Each entry is {:nick string :text string :at iso-timestamp}."
+  ([] (irc-recent 50))
+  ([n] (let [log @!irc-log]
+         (subvec log (max 0 (- (count log) n))))))
+
+(defn irc-catchup!
+  "Print a formatted summary of recent IRC activity for REPL use.
+   Returns the message count."
+  ([] (irc-catchup! 50))
+  ([n]
+   (let [msgs (irc-recent n)]
+     (if (empty? msgs)
+       (do (println "[irc] No messages captured yet.") 0)
+       (do
+         (println (str "[irc] Last " (count msgs) " messages:"))
+         (doseq [{:keys [nick text at]} msgs]
+           (let [time-part (when at (subs at 11 19))]
+             (println (str "  " time-part " <" nick "> " text))))
+         (count msgs))))))
+
+(defn send-irc!
+  "Send a message to ngircd via persistent connection.
+   Signature matches send-to-channel!: (send-irc! channel from-nick message).
+   Returns true on success, false on error."
+  [channel from-nick message]
+  (try
+    (let [{:keys [^PrintWriter out]} (ensure-irc-conn! (or from-nick "tickle-1"))]
+      (doseq [line (str/split-lines message)
+              chunk (if (> (count line) 400)
+                      (mapv #(apply str %) (partition-all 400 line))
+                      [line])]
+        (.println out (str "PRIVMSG " channel " :" chunk))))
+    true
+    (catch Exception e
+      ;; Connection died — clear it so next call reconnects
+      (reset! !irc-conn nil)
+      (println (str "[irc] send-irc! error: " (.getMessage e)))
+      false)))
+
+(defn make-irc-send-fn
+  "Create a send-to-channel! function backed by persistent ngircd connection."
+  ([] (make-irc-send-fn "tickle-1"))
+  ([default-nick]
+   (fn [channel from-nick message]
+     (send-irc! channel (or from-nick default-nick) message))))
+
+;; =============================================================================
+;; Tickle task state machine — full lifecycle tracking
+;; =============================================================================
+
+;; Lifecycle: proposal → approved → implementing → pr-open → merged
+;; Labels:    ct-proposal → ct-approved → ct-implementing → ct-pr-open → ct-merged
+;; Also:      ct-needs-rework (loops back to proposal)
+;;
+;; Task map: {:id string :gh-issue int :title string :phase keyword
+;;            :assignee string :status keyword :last-nudge-at string
+;;            :created-at string :labels #{string}}
+
+(defonce !tickle-tasks (atom {}))  ;; {task-id → task-map}
+(defonce !tickle-conductor (atom nil))
+(defonce !last-batch-assign (atom nil))  ;; Instant of last batch assignment
+
+(def ^:private ct-repo "tothedarktowercame/18_Category_theory_homological_algebra")
+
+(def ^:private nudge-cooldown-ms
+  "Minimum time between re-paging the same task (3 minutes)."
+  180000)
+
+(defn- gh-issue-labels
+  "Extract label name set from a GitHub issue map."
+  [issue]
+  (into #{} (map :name) (:labels issue)))
+
+(defn- issue-phase
+  "Determine lifecycle phase from issue labels."
+  [label-set]
+  (cond
+    (label-set "ct-merged")       :merged
+    (label-set "ct-pr-open")      :pr-open
+    (label-set "ct-implementing") :implementing
+    (label-set "ct-needs-rework") :needs-rework
+    (label-set "ct-approved")     :approved
+    (label-set "ct-proposal")     :proposal
+    :else                         :unknown))
+
+(defn- issue-has-comment-matching?
+  "Check if any comment on the issue matches the regex."
+  [issue pattern]
+  (some (fn [c]
+          (when-let [body (:body c)]
+            (re-find pattern body)))
+        (:comments issue)))
+
+(defn- issue-last-verdict
+  "Return the last review verdict (:approve, :request-changes, or nil).
+   Scans comments in order; last one matching a verdict wins."
+  [issue]
+  (let [verdicts (keep (fn [c]
+                         (when-let [body (:body c)]
+                           (cond
+                             (re-find #"(?i)\bAPPROVE\b" body) :approve
+                             (re-find #"(?i)\bREQUEST_CHANGES\b" body) :request-changes)))
+                       (:comments issue))]
+    (last verdicts)))
+
+(defn- gh-relabel!
+  "Remove old-label, add new-label on a GitHub issue. Fire-and-forget."
+  [issue-number old-label new-label]
+  (future
+    (try
+      (when old-label
+        (shell/sh "gh" "issue" "edit" (str issue-number)
+                  "--repo" ct-repo
+                  "--remove-label" old-label))
+      (when new-label
+        (shell/sh "gh" "issue" "edit" (str issue-number)
+                  "--repo" ct-repo
+                  "--add-label" new-label))
+      (println (str "[tickle] #" issue-number ": " old-label " → " new-label))
+      (catch Exception e
+        (println (str "[tickle] relabel error #" issue-number ": " (.getMessage e)))))))
+
+(defn tickle-task-sync!
+  "Sync task state from GitHub issues + IRC log.
+   Detects lifecycle transitions and auto-promotes labels.
+   Returns the updated task map."
+  []
+  (let [;; 1. Fetch all issues with comments
+        gh-issues (try
+                    (-> (shell/sh "gh" "issue" "list"
+                                  "--repo" ct-repo
+                                  "--state" "all"
+                                  "--json" "number,title,labels,state,comments,assignees"
+                                  "--limit" "30")
+                        :out
+                        (json/parse-string true))
+                    (catch Exception _ []))
+        ;; 2. Scan recent IRC for acks
+        recent-msgs (irc-recent 50)
+        ack-patterns #"(?i)(ack|received|on it|working on|will do|reviewing|filed|posted|updated|opened PR|opened pull)"
+        acked-by (into #{}
+                       (keep (fn [{:keys [nick text]}]
+                               (when (and text (re-find ack-patterns text))
+                                 nick)))
+                       recent-msgs)
+        now (Instant/now)]
+    ;; 3. Process each issue
+    (doseq [issue gh-issues]
+      (let [n (:number issue)
+            labels (gh-issue-labels issue)
+            phase (issue-phase labels)
+            closed? (= "closed" (str/lower-case (or (:state issue) "")))]
+        (when (and (not= 1 n) (not= :unknown phase))
+          ;; Auto-promote: proposal with APPROVE comment → ct-approved
+          (when (and (= :proposal phase)
+                     (issue-has-comment-matching? issue #"(?i)\bAPPROVE\b"))
+            (if (issue-has-comment-matching? issue #"(?i)\bREQUEST_CHANGES\b")
+              ;; Has REQUEST_CHANGES — mark needs-rework
+              (gh-relabel! n "ct-proposal" "ct-needs-rework")
+              ;; Clean approve
+              (gh-relabel! n "ct-proposal" "ct-approved")))
+          ;; Auto-promote: needs-rework with latest verdict APPROVE → ct-approved
+          (when (and (= :needs-rework phase)
+                     (= :approve (issue-last-verdict issue)))
+            (gh-relabel! n "ct-needs-rework" "ct-approved")))))
+    ;; 4. Re-fetch after auto-promotion (labels may have changed)
+    (let [gh-issues-fresh (try
+                            (-> (shell/sh "gh" "issue" "list"
+                                          "--repo" ct-repo
+                                          "--state" "all"
+                                          "--json" "number,title,labels,state"
+                                          "--limit" "30")
+                                :out
+                                (json/parse-string true))
+                            (catch Exception _ gh-issues))]
+      ;; 5. Update task atom
+      (swap! !tickle-tasks
+             (fn [tasks]
+               (reduce
+                (fn [ts issue]
+                  (let [n (:number issue)
+                        tid (str "gh-" n)
+                        labels (gh-issue-labels issue)
+                        phase (issue-phase labels)
+                        closed? (= "closed" (str/lower-case (or (:state issue) "")))
+                        existing (get ts tid)]
+                    (if (or (= 1 n) (= :unknown phase))
+                      ts
+                      (let [status (cond
+                                     closed?          :merged
+                                     (= phase :merged) :merged
+                                     (= phase :pr-open) :pr-review
+                                     (= phase :implementing) :implementing
+                                     (= phase :needs-rework) :needs-rework
+                                     (= phase :approved) :ready-to-implement
+                                     (= phase :proposal) :proposal-review
+                                     :else :unknown)
+                            assignee (cond
+                                       (#{:proposal-review :pr-review} status) "claude-1"
+                                       (#{:ready-to-implement :implementing :needs-rework} status) "codex-1"
+                                       (:assignee existing) (:assignee existing)
+                                       :else nil)]
+                        (assoc ts tid
+                               (merge {:id tid
+                                       :gh-issue n
+                                       :title (:title issue)
+                                       :labels labels
+                                       :created-at (or (:created-at existing) (str now))
+                                       :last-nudge-at (:last-nudge-at existing)}
+                                      {:phase phase
+                                       :status status
+                                       :assignee assignee}))))))
+                {}
+                gh-issues-fresh))))))
+
+(defn tickle-tasks-summary
+  "Return a concise summary of task states for the LLM prompt."
+  []
+  (let [tasks (vals @!tickle-tasks)
+        by-status (group-by :status tasks)]
+    (str/join "\n"
+              (for [[status items] (sort-by (comp str key) by-status)]
+                (str (name status) " (" (count items) "): "
+                     (str/join ", " (map (fn [t] (str "#" (:gh-issue t)
+                                                      (when (:assignee t)
+                                                        (str " → " (:assignee t)))))
+                                        items)))))))
+
+(defn tickle-tasks-needing-nudge
+  "Return tasks that need a nudge — actionable tasks past cooldown."
+  []
+  (let [now (Instant/now)]
+    (->> (vals @!tickle-tasks)
+         (filter (fn [{:keys [status last-nudge-at]}]
+                   (and (#{:ready-to-implement :needs-rework :proposal-review :pr-review} status)
+                        (or (nil? last-nudge-at)
+                            (> (.toMillis (Duration/between
+                                          (Instant/parse last-nudge-at) now))
+                               nudge-cooldown-ms))))))))
+
+;; =============================================================================
+;; tickle-lite: DONE signal processing — immediate queue advancement
+;; =============================================================================
+
+(defonce !done-signals-seen (atom #{}))  ;; set of {:at :nick} already processed
+
+(def ^:private done-signal-re
+  "Match: DONE #N :: <artifact-ref>"
+  #"(?i)^DONE\s+#?(\d+)\s*::\s*(.+)")
+
+(defn- parse-done-signal
+  "Parse a DONE signal from IRC text. Returns {:task-ref N :artifact text} or nil."
+  [text]
+  (when-let [[_ num artifact] (re-find done-signal-re (str/trim (or text "")))]
+    {:task-ref (parse-long num)
+     :artifact (str/trim artifact)}))
+
+(defn- nick->agent-id
+  "Map IRC nick to agent-id (codex → codex-1, claude → claude-1)."
+  [nick]
+  (cond
+    (str/starts-with? (str nick) "codex") "codex-1"
+    (str/starts-with? (str nick) "claude") "claude-1"
+    :else nil))
+
+(defn- next-queued-task
+  "Find the next task that's ready for the same worker, by issue number order."
+  [worker-id]
+  (->> (vals @!tickle-tasks)
+       (filter (fn [{:keys [status assignee]}]
+                 (and (= assignee worker-id)
+                      (#{:ready-to-implement :proposal-review :pr-review} status))))
+       (sort-by :gh-issue)
+       first))
+
+(defn process-done-signals!
+  "Scan recent IRC for DONE signals, validate, transition tasks, assign next.
+   Returns seq of processed signals (may be empty)."
+  []
+  (let [msgs (irc-recent 30)
+        now (str (Instant/now))
+        processed (atom [])]
+    (doseq [{:keys [nick text at] :as msg} msgs]
+      (when-let [{:keys [task-ref artifact]} (parse-done-signal text)]
+        (let [sig-key {:at at :nick nick}]
+          (when-not (contains? @!done-signals-seen sig-key)
+            (swap! !done-signals-seen conj sig-key)
+            (let [tid (str "gh-" task-ref)
+                  task (get @!tickle-tasks tid)
+                  agent-id (nick->agent-id nick)]
+              (cond
+                ;; No such task
+                (nil? task)
+                (do (println (str "[tickle-lite] Ignoring DONE #" task-ref " — unknown task"))
+                    (send-irc! "#futon" "tickle-1"
+                               (str "@" nick " unknown task #" task-ref ", ignoring.")))
+
+                ;; Not from assigned worker
+                (not= agent-id (:assignee task))
+                (do (println (str "[tickle-lite] Ignoring DONE #" task-ref " from " nick
+                                  " — assigned to " (:assignee task)))
+                    (send-irc! "#futon" "tickle-1"
+                               (str "@" nick " #" task-ref " is assigned to "
+                                    (:assignee task) ", not you. Ignoring.")))
+
+                ;; Valid done signal
+                :else
+                (do
+                  (println (str "[tickle-lite] DONE #" task-ref " from " nick
+                                " artifact: " artifact))
+                  ;; Transition to done-pending-verify
+                  (swap! !tickle-tasks assoc-in [tid :status] :done-pending-verify)
+                  (swap! !tickle-tasks assoc-in [tid :done-artifact] artifact)
+                  (swap! !tickle-tasks assoc-in [tid :done-at] now)
+                  (swap! processed conj {:task-ref task-ref :agent-id agent-id
+                                         :artifact artifact})
+                  ;; Assign next queued task to same worker
+                  (if-let [next-task (next-queued-task agent-id)]
+                    (let [msg (str "@" agent-id " #" task-ref " done. Next: #"
+                                   (:gh-issue next-task) " " (:title next-task)
+                                   ". Repo at /home/joe/code/18_Category_theory_homological_algebra")]
+                      (send-irc! "#futon" "tickle-1" msg)
+                      (swap! !tickle-tasks assoc-in
+                             [(str "gh-" (:gh-issue next-task)) :last-nudge-at] now))
+                    ;; Queue empty — check if all tasks merged → immediate next batch
+                    (let [all-merged? (and (seq @!tickle-tasks)
+                                          (every? #(#{:merged :done-pending-verify} (:status %))
+                                                  (vals @!tickle-tasks)))]
+                      (if all-merged?
+                        (do (println "[tickle-lite] All tasks done, assigning next batch immediately")
+                            (reset! !last-batch-assign (Instant/now))
+                            (send-irc! "#futon" "tickle-1"
+                                       (str "@" agent-id " #" task-ref " done. Next batch: pick 5 new arXiv math.CT"
+                                            " entries, write .tex files, open ONE PR."
+                                            " Repo: /home/joe/code/18_Category_theory_homological_algebra"
+                                            " Signal DONE #N :: <pr-url> when ready.")))
+                        (send-irc! "#futon" "tickle-1"
+                                   (str "@" agent-id " #" task-ref
+                                        " done, nice work. Queue empty — stand by."))))))))))))
+    @processed))
+
+;; =============================================================================
+;; LLM-backed Tickle conductor — evidence-aware, stateful orchestration
+;; =============================================================================
+
+(def ^:private tickle-system-prompt
+  "You are Tickle, the stateful orchestrator for a multi-agent math research system.
+
+AGENTS:
+  codex-1 (laptop): searches local corpus, writes .tex PlanetMath entries, opens PRs
+  claude-1 (Linode): reviews proposals and PRs with APPROVE/REQUEST_CHANGES/REJECT
+
+REPO: tothedarktowercame/18_Category_theory_homological_algebra
+LOCAL PATH: /home/joe/code/18_Category_theory_homological_algebra
+Always include the local path when paging codex-1 about implementation work.
+
+LOCAL DATA SOURCES (all on laptop, accessible to codex-1):
+  1. arXiv math.CT eprints: ~/code/futon6/data/arxiv-math-ct-eprints/
+     ~9900 paper sources (.tex/.tar.gz). Grep for CT concepts here.
+  2. math.SE processed: ~/code/storage/math-processed-gpu/
+     entities.json, relations.json, hypergraphs.json, thread-wiring-ct.json
+     GPU-processed StackExchange math data with CT patterns and NER terms.
+  3. MathOverflow processed: ~/code/storage/mo-processed-gpu/
+     Same structure as math-processed-gpu. Research-level Q&A.
+  4. PlanetMath dictionary: ~/code/futon6/data/pm-all-terms/pm-full-dictionary.json
+     26944 terms with MSC codes, domains, confidence. Use to avoid duplicates.
+  5. nLab CT patterns: ~/code/futon6/data/nlab-ct-reference.json
+     8 CT pattern types mapped to ~20k nLab pages.
+  6. arXiv metadata: ~/code/futon6/data/arxiv-ct-metadata.jsonl
+     Title, abstract, authors, categories for ~9900 math.CT papers.
+
+RESEARCH WORKFLOW:
+  When assigning a batch, tell codex-1 to:
+  1. Search the local corpus (arXiv eprints, math.SE, MathOverflow) for CT topics
+     not already covered by the 322 existing entries
+  2. Cross-check pm-full-dictionary.json to avoid duplicating existing PlanetMath terms
+  3. Write .tex entries in PlanetMath format (pmmeta, MSC classification, definitions)
+  4. Cite the source material (arXiv ID, SE question, MO thread) in each entry
+  5. Open one PR with all entries in the batch
+
+LIFECYCLE (labels auto-promoted by Tickle):
+  ct-proposal → ct-approved → ct-implementing → ct-pr-open → ct-merged
+  (also: ct-needs-rework loops back when REQUEST_CHANGES)
+
+WHO DOES WHAT:
+  proposal-review: claude-1 reviews the proposal issue
+  ready-to-implement: codex-1 edits .tex file, opens PR linking the issue
+  needs-rework: codex-1 addresses review feedback, updates issue/PR
+  pr-review: claude-1 reviews the PR diff
+  implementing: codex-1 is working (don't nudge)
+  merged: done
+
+YOU HAVE STATE. Below you'll see task status per issue + tasks needing nudge.
+
+BATCH MODE — work in batches of 5 entries for efficiency:
+- Codex: search local data sources, pick 5 CT topics, write .tex files, open ONE PR.
+  No individual proposal issues needed — just the PR with all 5 entries.
+  Mix sources: some from arXiv eprints, some from math.SE/MO threads.
+- Claude: review the whole batch PR in one pass.
+- This collapses the pipeline: one PR per batch, one review per batch.
+
+DONE SIGNAL: When assigning work, tell agents to signal completion with:
+  DONE #N :: <artifact-url>
+  Example: DONE #5 :: https://github.com/.../pull/8
+  This triggers immediate queue advancement — no waiting for next poll cycle.
+
+RULES:
+1. Only nudge tasks in 'needs nudge'. Never re-page implementing/merged work.
+2. Delta prompts only — reference what changed, never repeat full instructions.
+   Good: '@codex-1 PR #7 merged. Next batch: 5 new entries from local corpus
+          (arXiv eprints + math.SE/MO). Check pm-full-dictionary.json for dupes.'
+   Good: '@claude-1 PR #8 open with 5 new entries — review the batch.'
+   Bad: full repeat of all data source paths (codex already knows them)
+3. Keep BOTH agents busy. Page codex-1 for implementation, page claude-1 for reviews.
+4. When all current PRs are merged, immediately assign the next batch to codex-1.
+5. Max 1-2 lines, <400 chars. Always @mention target. No markdown.
+6. PASS only if agents are actively working (implementing/pr-review in progress).
+7. If tasks are in 'needs nudge', you MUST nudge them — never PASS when there are tasks needing nudge.
+   An IRC ack ('on it', 'will do') without a concrete result (PR, commit) does NOT count as progress.
+8. If ALL tasks are merged and queue is empty, assign the next batch to codex-1 immediately.
+   This is NOT a PASS situation — idle workers must be given new work.
+
+RESPOND WITH ONLY:
+- A short IRC message (start with @agent-id), OR
+- PASS")
+
+(defonce !tickle-llm-invoke (atom nil))
+
+(defn start-tickle-llm!
+  "Register the tickle-llm agent — a dedicated Claude instance for Tickle decisions.
+   Same pattern as claude-1 but with its own session."
+  []
+  (let [sf (io/file "/tmp/futon-tickle-session-id")
+        initial-sid (read-session-id sf)
+        sid-atom (atom initial-sid)
+        invoke-fn (make-claude-invoke-fn
+                   {:claude-bin (env "CLAUDE_BIN" "claude")
+                    :permission-mode "default"
+                    :agent-id "tickle-llm"
+                    :session-file sf
+                    :session-id-atom sid-atom})]
+    (reset! !tickle-llm-invoke invoke-fn)
+    (rt/register-claude! {:agent-id "tickle-llm"
+                          :invoke-fn invoke-fn})
+    (reg/update-agent! "tickle-llm"
+                       :agent/type :claude
+                       :agent/invoke-fn invoke-fn
+                       :agent/capabilities [:coordination/execute])
+    (println (str "[dev] Tickle LLM agent registered: tickle-llm"
+                  (when initial-sid
+                    (str " (session: " (subs initial-sid 0 (min 8 (count initial-sid))) ")"))))
+    invoke-fn))
+
+(defn- tickle-llm-call
+  "Invoke tickle-llm for a one-shot decision.
+   Returns the response string, or nil on failure."
+  [prompt]
+  (when-let [invoke-fn @!tickle-llm-invoke]
+    (try
+      (let [result (invoke-fn prompt nil)]
+        (when-let [text (:result result)]
+          (str/trim text)))
+      (catch Exception e
+        (println (str "[tickle-llm] invoke error: " (.getMessage e)))
+        nil))))
+
+(defn- tickle-build-context
+  "Assemble the context snapshot for the LLM."
+  []
+  (let [msgs (irc-recent 30)
+        irc-text (if (empty? msgs)
+                   "(no recent IRC messages)"
+                   (str/join "\n"
+                             (map (fn [{:keys [nick text at]}]
+                                    (str (when at (subs at 11 19)) " <" nick "> " text))
+                                  msgs)))
+        gh-issues (try
+                    (-> (shell/sh "gh" "issue" "list"
+                                  "--repo" "tothedarktowercame/18_Category_theory_homological_algebra"
+                                  "--state" "open" "--json" "number,title,labels"
+                                  "--limit" "20")
+                        :out
+                        (json/parse-string true))
+                    (catch Exception _ []))
+        needs-nudge (tickle-tasks-needing-nudge)]
+    (str "Current time: " (Instant/now) "\n\n"
+         "## Task state machine\n"
+         (tickle-tasks-summary) "\n\n"
+         "## Tasks needing nudge (" (count needs-nudge) ")\n"
+         (if (empty? needs-nudge)
+           "(none — all tasks are progressing or complete)"
+           (str/join "\n" (map (fn [t]
+                                 (str "#" (:gh-issue t) " " (name (:status t))
+                                      " → " (or (:assignee t) "unassigned")
+                                      " — " (:title t)))
+                               needs-nudge)))
+         "\n\n## IRC log (last " (count msgs) " messages)\n"
+         irc-text "\n\n"
+         "## Open GitHub issues\n"
+         (if (empty? gh-issues)
+           "(none)"
+           (str/join "\n" (map (fn [i] (str "#" (:number i) " " (:title i)))
+                               gh-issues)))
+         "\n\nWhat should Tickle do next?")))
+
+(defn tickle-think!
+  "Tickle reads state + IRC + GitHub, decides whether to intervene.
+   Syncs task state first, then consults LLM.
+   Returns {:action :pass|:message, :text string-or-nil}."
+  []
+  (tickle-task-sync!)
+  (let [context (tickle-build-context)]
+    (println "[tickle-llm] Thinking...")
+    (if-let [response (tickle-llm-call (str tickle-system-prompt "\n\n---\n\n" context))]
+      (let [trimmed (str/trim response)
+            first-line (first (str/split-lines trimmed))]
+        (if (re-find #"(?i)^PASS\b" (str/trim (or first-line "")))
+          (do (println "[tickle-llm] PASS") {:action :pass})
+          (do (println (str "[tickle-llm] → " first-line))
+              {:action :message :text first-line})))
+      (do (println "[tickle-llm] LLM call failed")
+          {:action :pass}))))
+
+(defn tickle-conduct!
+  "Run one Tickle conductor cycle: process done signals, sync state, think, act.
+   Done signals are processed first for immediate queue advancement.
+   Updates last-nudge-at on tasks that get paged.
+   Returns the action taken."
+  []
+  (let [done (process-done-signals!)
+        ;; Deterministic fast path: all tasks merged, nothing queued → assign new batch
+        all-merged? (and (seq @!tickle-tasks)
+                         (every? #(= :merged (:status %)) (vals @!tickle-tasks))
+                         ;; 10-min cooldown on batch assignments
+                         (or (nil? @!last-batch-assign)
+                             (> (.toMillis (Duration/between @!last-batch-assign (Instant/now)))
+                                600000)))
+        {:keys [action text]}
+        (cond
+          ;; Done signals processed — already acted
+          (seq done)
+          (do (println (str "[tickle-lite] Processed " (count done)
+                            " done signal(s), skipping LLM"))
+              {:action :done-signal})
+          ;; All tasks merged — deterministic new-batch assignment
+          all-merged?
+          (do (println "[tickle-lite] All tasks merged, assigning new batch")
+              (reset! !last-batch-assign (Instant/now))
+              {:action :message
+               :text (str "@codex-1 All previous entries merged. Next batch: pick 5 new arXiv math.CT"
+                          " entries, write .tex files, open ONE PR. Repo: /home/joe/code/18_Category_theory_homological_algebra"
+                          " Signal DONE #N :: <pr-url> when ready.")})
+          ;; Otherwise consult LLM
+          :else
+          (tickle-think!))]
+    (when (and (= action :message) text)
+      (send-irc! "#futon" "tickle-1" text)
+      ;; Mark nudged tasks
+      (let [now (str (Instant/now))]
+        (doseq [[tid task] @!tickle-tasks]
+          (when (and (:gh-issue task)
+                     (str/includes? (str text) (str "#" (:gh-issue task))))
+            (swap! !tickle-tasks assoc-in [tid :last-nudge-at] now)
+            (when (= :queued (:status task))
+              (swap! !tickle-tasks assoc-in [tid :status] :assigned))))))
+    action))
+
+(defn start-tickle-conductor!
+  "Start the LLM-backed Tickle conductor loop.
+   Runs every interval-ms (default 120000 = 2 min).
+   Returns {:stop-fn (fn []) :started-at Instant}."
+  ([] (start-tickle-conductor! {}))
+  ([{:keys [interval-ms] :or {interval-ms 120000}}]
+   (when-let [old @!tickle-conductor]
+     ((:stop-fn old))
+     (println "[tickle-llm] Stopped previous conductor."))
+   (let [running (atom true)
+         thread (Thread.
+                 (fn []
+                   (while @running
+                     (try
+                       (tickle-conduct!)
+                       (catch Exception e
+                         (println (str "[tickle-llm] Error: " (.getMessage e)))))
+                     (Thread/sleep interval-ms))))]
+     (.setDaemon thread true)
+     (.start thread)
+     (let [handle {:stop-fn #(do (reset! running false) (println "[tickle-llm] Conductor stopped."))
+                   :started-at (Instant/now)}]
+       (reset! !tickle-conductor handle)
+       (println (str "[tickle-llm] Conductor started (interval=" interval-ms "ms)"))
+       handle))))
+
+(defn stop-tickle-conductor!
+  "Stop the LLM-backed Tickle conductor."
+  []
+  (when-let [h @!tickle-conductor]
+    ((:stop-fn h))
+    (reset! !tickle-conductor nil)))
+
+(defn tickle-dashboard
+  "Print Tickle's current state for REPL inspection."
+  []
+  (tickle-task-sync!)
+  (let [tasks (sort-by :gh-issue (vals @!tickle-tasks))]
+    (println "Tickle task lifecycle:")
+    (println "───────────────────────────────────────────────────────")
+    (println "  #     Phase              Assignee   Title")
+    (println "───────────────────────────────────────────────────────")
+    (doseq [{:keys [gh-issue status phase assignee title]} tasks]
+      (println (format "  #%-3d  %-18s %-10s %s"
+                       (or gh-issue 0)
+                       (name (or status :unknown))
+                       (or assignee "—")
+                       (subs (or title "") 0 (min 45 (count (or title "")))))))
+    (println "───────────────────────────────────────────────────────")
+    (let [by-status (group-by :status tasks)]
+      (println (str "  " (count tasks) " tasks"
+                    (when-let [n (seq (get by-status :ready-to-implement))]
+                      (str " | " (count n) " ready to implement"))
+                    (when-let [n (seq (get by-status :implementing))]
+                      (str " | " (count n) " implementing"))
+                    (when-let [n (seq (get by-status :merged))]
+                      (str " | " (count n) " merged"))
+                    " | " (count (tickle-tasks-needing-nudge)) " need nudge")))))
+
+;; =============================================================================
 ;; REPL helpers — use from Drawbridge or nREPL after boot
 ;; =============================================================================
 
@@ -570,15 +1284,18 @@
      :room              — IRC room for nudges (default \"#futon\")
      :auto-restart?     — restart stalled agents on escalation (default true)
 
-   Returns the watchdog handle, or nil if IRC is not running."
+   Returns the watchdog handle, or nil if evidence store is not available."
   ([] (start-tickle! {}))
   ([opts]
-   (when-let [irc-sys @!irc-sys]
-     (when-let [evidence-store @!evidence-store]
-       (when-let [old @!tickle]
-         (println "[dev] Stopping previous tickle watchdog...")
-         ((:stop-fn old)))
-       (let [send-fn (:send-to-channel! (:server irc-sys))
+   (when-let [evidence-store @!evidence-store]
+     (when-let [old @!tickle]
+       (println "[dev] Stopping previous tickle watchdog...")
+       ((:stop-fn old)))
+     (let [irc-sys @!irc-sys
+           send-fn (or (:send-to-channel! (:server irc-sys))
+                       (:send-fn opts)
+                       ;; Fallback: ephemeral socket to ngircd (external IRC daemon)
+                       (make-irc-send-fn "tickle-bot"))
              auto-restart? (if (contains? opts :auto-restart?)
                              (:auto-restart? opts)
                              true)
@@ -590,7 +1307,24 @@
                                    ;; dispatch relay invokes the agent for real.
                                    :ring-test-bell! (constantly {:ok false :error :skip-to-irc})
                                    :send-to-channel! send-fn
-                                   :room (or (:room opts) "#futon")}
+                                   :room (or (:room opts) "#futon")
+                                   :make-page-message
+                                   (fn [agent-id]
+                                     (cond
+                                       ;; Codex (laptop): search arXiv, propose encyclopedia extensions
+                                       (str/includes? agent-id "codex")
+                                       (str "@" agent-id " search local copy of arXiv math.CT, propose PlanetMath extensions. "
+                                            "See gh issue tothedarktowercame/18_Category_theory_homological_algebra#1 for full instructions.")
+
+                                       ;; Claude (Linode): review Codex's proposals
+                                       (str/includes? agent-id "claude")
+                                       (str "@" agent-id " review ct-proposal issues on "
+                                            "tothedarktowercame/18_Category_theory_homological_algebra. "
+                                            "APPROVE/REJECT with reasoning.")
+
+                                       ;; Unknown agent
+                                       :else
+                                       (str "@" agent-id " check #futon for current tasks")))}
                      :escalate-config {:notify-fn
                                        (fn [agent-id reason]
                                          ;; 1. Blackboard notification
@@ -642,8 +1376,9 @@
          (println (str "[dev] Tickle started: interval="
                        (or (:interval-ms opts) 60000) "ms"
                        " threshold=" (or (:threshold-seconds opts) 300) "s"
-                       " auto-restart=" auto-restart?))
-         handle)))))
+                       " auto-restart=" auto-restart?
+                       (when-not send-fn " (no IRC send-fn)")))
+         handle))))
 
 (defn stop-tickle!
   "Stop the Tickle watchdog."
@@ -853,7 +1588,8 @@
       :or {room "#futon"
            repo-dir "/home/joe/code/futon3c"}}]
   (let [store @!evidence-store
-        send-fn (some-> @!irc-sys :server :send-to-channel!)]
+        send-fn (or (some-> @!irc-sys :server :send-to-channel!)
+                    (make-irc-send-fn "tickle-1"))]
     (if-not store
       (do
         (println "[dev] No evidence store available; cannot emit Tickle report.")
@@ -906,7 +1642,8 @@
            review? true
            review-timeout-ms 300000}}]
   (let [evidence-store @!evidence-store
-        send-fn (some-> @!irc-sys :server :send-to-channel!)
+        send-fn (or (some-> @!irc-sys :server :send-to-channel!)
+                    (make-irc-send-fn "tickle-1"))
         ;; Find the issue to process
         issue (if entity-id
                 ;; Find specific entity

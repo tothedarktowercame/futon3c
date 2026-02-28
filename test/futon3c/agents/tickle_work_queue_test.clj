@@ -1,5 +1,6 @@
 (ns futon3c.agents.tickle-work-queue-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [futon3c.agents.tickle-work-queue :as wq]
             [futon3c.evidence.store :as estore])
@@ -197,6 +198,67 @@
         (is (= "tickle-1" (:evidence/author ct-entry)))
         (is (some #{:ct-extraction} (:evidence/tags ct-entry)))
         (is (= "pm-ct-TestEntry" (get-in ct-entry [:evidence/body :entity-id])))))))
+
+;; =============================================================================
+;; arXiv entity loading
+;; =============================================================================
+
+(def ^:private sample-arxiv-entries
+  [{"entity_id" "arxiv-2301.00001"
+    "title" "On Functorial Semantics of Algebraic Theories"
+    "source_file" "2301.00001.tex"
+    "type" "Article"
+    "body_length" 12345
+    "arxiv_id" "2301.00001"
+    "categories" ["math.CT"]
+    "authors" ["A. Mathematician"]
+    "ner_count" 0 "scope_count" 0 "wire_count" 0 "port_count" 0}
+   {"entity_id" "arxiv-2301.00002"
+    "title" "Monoidal Categories and Topological Field Theories"
+    "source_file" "2301.00002.tex"
+    "type" "Article"
+    "body_length" 28901
+    "arxiv_id" "2301.00002"
+    "categories" ["math.CT" "math.QA"]
+    "ner_count" 0 "scope_count" 0 "wire_count" 0 "port_count" 0}])
+
+(deftest load-arxiv-entities-from-file
+  (testing "loads arXiv entities from a temp manifest"
+    (let [tmp (java.io.File/createTempFile "arxiv-test" ".json")]
+      (try
+        (spit tmp (json/generate-string sample-arxiv-entries))
+        (let [entities (wq/load-arxiv-entities (.getAbsolutePath tmp))]
+          (is (= 2 (count entities)))
+          (is (= "arxiv-2301.00001" (:entity-id (first entities))))
+          (is (= "Article" (:type (first entities))))
+          (is (= 12345 (:body-length (first entities))))
+          (is (= "2301.00001" (:arxiv-id (first entities))))
+          (is (= ["math.CT"] (:categories (first entities))))
+          (is (= ["A. Mathematician"] (:authors (first entities))))
+          (is (zero? (:ner-count (first entities)))))
+        (finally
+          (.delete tmp))))))
+
+(deftest load-arxiv-entities-missing-file
+  (testing "returns nil when manifest doesn't exist"
+    (is (nil? (wq/load-arxiv-entities "/nonexistent/entities.json")))))
+
+(deftest load-all-entities-tags-corpus
+  (testing "load-all-entities tags each entry with :corpus"
+    (let [all (wq/load-all-entities)]
+      (is (pos? (count all)))
+      (is (every? :corpus all))
+      (is (every? #{:planetmath :arxiv} (map :corpus all)))
+      (is (some #(= :planetmath (:corpus %)) all)))))
+
+(deftest queue-status-by-corpus
+  (testing "queue-status filters by corpus"
+    (let [store (make-evidence-store)
+          pm-status (wq/queue-status store :corpus :planetmath)
+          all-status (wq/queue-status store :corpus :all)]
+      (is (pos? (:total pm-status)))
+      (is (= :planetmath (:corpus pm-status)))
+      (is (>= (:total all-status) (:total pm-status))))))
 
 ;; =============================================================================
 ;; Complexity sorting
