@@ -166,6 +166,14 @@
            "No work has started in this reply.\n\n"
            t))))
 
+(defn- stale-action-type-error?
+  [error-text]
+  (let [t (some-> error-text str/lower-case)]
+    (boolean (and (string? t)
+                  (str/includes? t "action.type")
+                  (or (str/includes? t "invalid value: 'other'")
+                      (str/includes? t "supported values are: 'search', 'open_page', and 'find_in_page'"))))))
+
 (defn build-exec-args
   "Build argv for codex execution.
    When SESSION-ID is present, uses `codex exec ... resume <sid> -`."
@@ -303,46 +311,66 @@
       (locking !lock
         (try
           (let [prompt-str (coerce-prompt prompt)
-                cmd (build-exec-args {:codex-bin codex-bin
-                                      :model model
-                                      :sandbox sandbox
-                                      :approval-policy approval-policy
-                                      :session-id session-id})
-                {:keys [exit timed-out? text error-text stderr raw-output execution]
-                 :as stream-result}
-                (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
-                                                   :cwd cwd
-                                                   :on-event on-event})
-                stream-sid (:session-id stream-result)
-                parsed (parse-output raw-output (or stream-sid session-id))
-                final-sid (or stream-sid
-                              (:session-id parsed))
-                final-text (or (some-> text str/trim not-empty)
-                               (some-> (:text parsed) str/trim not-empty))
-                execution (or execution (summarize-execution 0 0))
-                guarded-text (enforce-execution-guard final-text execution)
-                final-error (or (some-> error-text str/trim not-empty)
-                                (when-not (zero? exit)
-                                  (some-> (:text parsed) str/trim not-empty))
-                                (some-> stderr str/trim not-empty))]
+                attempt (fn [resume-sid]
+                          (let [cmd (build-exec-args {:codex-bin codex-bin
+                                                      :model model
+                                                      :sandbox sandbox
+                                                      :approval-policy approval-policy
+                                                      :session-id resume-sid})
+                                {:keys [exit timed-out? text error-text stderr raw-output execution]
+                                 :as stream-result}
+                                (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
+                                                                   :cwd cwd
+                                                                   :on-event on-event})
+                                stream-sid (:session-id stream-result)
+                                parsed (parse-output raw-output (or stream-sid resume-sid))
+                                final-sid (or stream-sid
+                                              (:session-id parsed))
+                                final-text (or (some-> text str/trim not-empty)
+                                               (some-> (:text parsed) str/trim not-empty))
+                                execution (or execution (summarize-execution 0 0))
+                                guarded-text (enforce-execution-guard final-text execution)
+                                final-error (or (some-> error-text str/trim not-empty)
+                                                (when-not (zero? exit)
+                                                  (some-> (:text parsed) str/trim not-empty))
+                                                (some-> stderr str/trim not-empty))]
+                            {:exit exit
+                             :timed-out? timed-out?
+                             :session-id final-sid
+                             :execution execution
+                             :result-text guarded-text
+                             :error-text final-error}))
+                first-attempt (attempt session-id)
+                retry-needed? (and (string? session-id)
+                                   (not (str/blank? session-id))
+                                   (not (:timed-out? first-attempt))
+                                   (not (zero? (:exit first-attempt)))
+                                   (stale-action-type-error? (:error-text first-attempt)))
+                final-attempt (if retry-needed?
+                                (attempt nil)
+                                first-attempt)
+                attempted-recovery? retry-needed?]
             (cond
-              timed-out?
+              (:timed-out? final-attempt)
               {:result nil
-               :session-id final-sid
-               :execution execution
-               :error (str "Exit " exit ": codex invocation timed out after "
+               :session-id (:session-id final-attempt)
+               :execution (:execution final-attempt)
+               :error (str "Exit " (:exit final-attempt) ": codex invocation timed out after "
                            timeout-ms "ms")}
 
-              (zero? exit)
-              {:result (or guarded-text "[Codex produced no text response]")
-               :session-id final-sid
-               :execution execution}
+              (zero? (:exit final-attempt))
+              {:result (or (:result-text final-attempt) "[Codex produced no text response]")
+               :session-id (:session-id final-attempt)
+               :execution (:execution final-attempt)}
 
               :else
               {:result nil
-               :session-id final-sid
-               :execution execution
-               :error (str "Exit " exit ": " (or final-error "codex invocation failed"))}))
+               :session-id (:session-id final-attempt)
+               :execution (:execution final-attempt)
+               :error (str "Exit " (:exit final-attempt) ": "
+                           (or (:error-text final-attempt) "codex invocation failed")
+                           (when attempted-recovery?
+                             " (after automatic stale-session reset attempt)"))}))
           (catch Exception e
             {:result nil
              :session-id session-id

@@ -98,6 +98,40 @@
           (is (map? (:execution resp)))
           (is (str/includes? (:error resp) "Exit 2")))))))
 
+(deftest make-invoke-fn-recovers-from-stale-resume-action-type-error
+  (let [calls (atom [])
+        invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
+                                          :model nil
+                                          :sandbox "workspace-write"
+                                          :approval-policy "never"})
+        stale-msg "Invalid value: 'other'. Supported values are: 'search', 'open_page', and 'find_in_page'. param: input[83].action.type"
+        fake-run (fn [cmd _prompt _opts]
+                   (swap! calls conj cmd)
+                   (if (some #{"resume"} cmd)
+                     {:exit 1
+                      :timed-out? false
+                      :session-id nil
+                      :text nil
+                      :error-text stale-msg
+                      :stderr stale-msg
+                      :raw-output (str "{\"type\":\"error\",\"message\":\"" stale-msg "\"}\n")}
+                     {:exit 0
+                      :timed-out? false
+                      :session-id "sid-new"
+                      :text "recovered"
+                      :error-text nil
+                      :stderr ""
+                      :raw-output (str "{\"type\":\"thread.started\",\"thread_id\":\"sid-new\"}\n"
+                                       "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"recovered\"}}\n")}))]
+    (with-redefs [codex-cli/run-codex-stream! fake-run]
+      (let [resp (invoke "hello" "sid-old")]
+        (is (= "recovered" (:result resp)))
+        (is (= "sid-new" (:session-id resp)))
+        (is (nil? (:error resp)))
+        (is (= 2 (count @calls)))
+        (is (some #{"resume"} (first @calls)))
+        (is (not (some #{"resume"} (second @calls))))))))
+
 (deftest event->activity-maps-tool-and-reasoning-events
   (is (= "using bash"
          (codex-cli/event->activity
