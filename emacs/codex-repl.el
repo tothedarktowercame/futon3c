@@ -379,7 +379,23 @@ Returns non-nil when prompt markers were restored."
          (codex-repl--log-stream-event evt json-line)
          (cond
          ((string= type "thread.started")
-          (codex-repl--set-progress-status "thread started"))
+          (let ((thread-id (or (alist-get 'thread_id evt)
+                               (alist-get 'session_id evt))))
+            (when (and (stringp thread-id)
+                       (not (string-empty-p thread-id))
+                       (not (equal thread-id codex-repl-session-id)))
+              (condition-case persist-err
+                  (codex-repl--persist-session-id! thread-id)
+                (error
+                 (codex-repl--append-invoke-trace
+                  (format "session persist warning: %s"
+                          (error-message-string persist-err))
+                  'font-lock-warning-face))))
+            (codex-repl--set-progress-status
+             (if (and (stringp thread-id) (not (string-empty-p thread-id)))
+                 (format "thread started (%s)"
+                         (substring thread-id 0 (min 8 (length thread-id))))
+               "thread started"))))
          ((string= type "item.started")
           (let* ((item (alist-get 'item evt))
                  (item-type (and (listp item) (alist-get 'type item))))
