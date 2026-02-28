@@ -1,7 +1,6 @@
 (ns futon3c.agents.codex-cli-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [clojure.java.shell :as shell]
             [futon3c.agents.codex-cli :as codex-cli]))
 
 (deftest parse-output-prefers-agent-message-and-thread-id
@@ -55,37 +54,52 @@
                                             :sandbox "workspace-write"
                                             :approval-policy "never"
                                             :cwd "/tmp"})
-          fake-sh (fn [& args]
-                    (swap! calls conj (vec args))
-                    {:exit 0
-                     :out (str "{\"type\":\"thread.started\",\"thread_id\":\"sid-new\"}\n"
-                               "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"answer\"}}\n")
-                     :err ""})]
-      (with-redefs [shell/sh fake-sh]
+          fake-run (fn [cmd prompt opts]
+                     (swap! calls conj {:cmd cmd :prompt prompt :opts opts})
+                     {:exit 0
+                      :timed-out? false
+                      :session-id "sid-new"
+                      :text "answer"
+                      :error-text nil
+                      :stderr ""
+                      :raw-output (str "{\"type\":\"thread.started\",\"thread_id\":\"sid-new\"}\n"
+                                       "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"answer\"}}\n")})]
+      (with-redefs [codex-cli/run-codex-stream! fake-run]
         (let [resp (invoke "hello codex" nil)]
           (is (= "answer" (:result resp)))
           (is (= "sid-new" (:session-id resp)))
           (is (nil? (:error resp)))
-          (let [argv (first @calls)]
-            (is (= "codex" (first argv)))
-            (is (= "exec" (second argv)))
-            (is (some #{"--json"} argv))
-            (is (some #{"-"} argv))
-            (is (some #{"hello codex\n"} argv))
-            (is (some #{:timeout} argv))
-            (is (= 120000 (some #(when (number? %) %) argv)))
-            (is (= "/tmp" (some #(when (= "/tmp" %) %) argv))))))))
+          (let [{:keys [cmd prompt opts]} (first @calls)]
+            (is (= "codex" (first cmd)))
+            (is (= "exec" (second cmd)))
+            (is (some #{"--json"} cmd))
+            (is (some #{"-"} cmd))
+            (is (= "hello codex" prompt))
+            (is (= 120000 (:timeout-ms opts)))
+            (is (= "/tmp" (:cwd opts))))))))
   (testing "non-zero exit returns error and preserves prior session-id fallback"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
                                             :model nil
                                             :sandbox "workspace-write"
                                             :approval-policy "never"})]
-      (with-redefs [shell/sh (fn [& _]
-                               {:exit 2
-                                :out ""
-                                :err "{\"type\":\"error\",\"message\":\"nope\"}\n"})]
+      (with-redefs [codex-cli/run-codex-stream! (fn [& _]
+                                                  {:exit 2
+                                                   :timed-out? false
+                                                   :session-id nil
+                                                   :text nil
+                                                   :error-text "nope"
+                                                   :stderr "nope"
+                                                   :raw-output "{\"type\":\"error\",\"message\":\"nope\"}\n"})]
         (let [resp (invoke "x" "sid-old")]
           (is (nil? (:result resp)))
           (is (= "sid-old" (:session-id resp)))
           (is (string? (:error resp)))
           (is (str/includes? (:error resp) "Exit 2")))))))
+
+(deftest event->activity-maps-tool-and-reasoning-events
+  (is (= "using bash"
+         (codex-cli/event->activity
+          {:type "item.started"
+           :item {:type "tool_call" :name "command_execution"}})))
+  (is (= "preparing response"
+         (codex-cli/event->activity {:type "reasoning"}))))

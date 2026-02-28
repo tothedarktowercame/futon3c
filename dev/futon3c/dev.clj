@@ -1523,12 +1523,21 @@
            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
          approval-policy "never" timeout-ms 120000 agent-id "codex"}}]
-  (let [inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
+  (let [aid-val (str agent-id)
+        update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
+        on-event (when update-activity!
+                   (fn [evt]
+                     (when-let [activity (codex-cli/event->activity evt)]
+                       (try
+                         (update-activity! aid-val activity)
+                         (catch Throwable _)))))
+        inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
                                              :model model
                                              :sandbox sandbox
                                              :approval-policy approval-policy
                                              :timeout-ms timeout-ms
-                                             :cwd cwd})
+                                             :cwd cwd
+                                             :on-event on-event})
         buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]
       (let [prompt-str (cond
