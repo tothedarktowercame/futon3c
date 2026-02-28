@@ -73,6 +73,7 @@ pick_local_agency_base() {
 }
 
 pick_remote_agency_base() {
+  local local_base="${1:-}"
   if [[ -n "${FUTON3C_IRC_SEND_BASE:-}" ]]; then
     printf '%s\n' "${FUTON3C_IRC_SEND_BASE%/}"
     return 0
@@ -90,6 +91,32 @@ pick_remote_agency_base() {
       return 0
     fi
   fi
+  if [[ -z "${local_base}" ]]; then
+    local_base="$(pick_local_agency_base)"
+  fi
+  if [[ -n "${local_base}" ]]; then
+    local health hint
+    health="$(curl -sS --max-time 1 "${local_base%/}/health" 2>/dev/null || true)"
+    if [[ -n "${health}" ]]; then
+      if command -v python3 >/dev/null 2>&1; then
+        hint="$(printf '%s' "${health}" | python3 -c 'import json,sys
+try:
+    data=json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+hint=(data.get("irc-send-base") or data.get("irc_send_base") or "").strip()
+print(hint, end="")' 2>/dev/null || true)"
+      else
+        hint="$(printf '%s' "${health}" \
+          | sed -n 's/.*"irc-send-base"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+          | head -n 1)"
+      fi
+      if [[ -n "${hint}" ]]; then
+        printf '%s\n' "${hint%/}"
+        return 0
+      fi
+    fi
+  fi
   return 1
 }
 
@@ -101,7 +128,7 @@ else
   evidence_base="$(pick_local_agency_base)"
 fi
 
-irc_send_base="$(pick_remote_agency_base || true)"
+irc_send_base="$(pick_remote_agency_base "${evidence_base%/}" || true)"
 
 elisp_escape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "$1"
