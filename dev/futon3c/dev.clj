@@ -30,7 +30,7 @@
      CODEX_SANDBOX      — codex sandbox (default: danger-full-access)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
                         — codex approval policy (default: never)
-     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 120000)
+     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 600000)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
@@ -761,7 +761,7 @@
    Options:
      :agent-id   — agent to invoke (default \"codex-1\")
      :repo-dir   — working directory for the agent (default futon3c)
-     :timeout-ms — invoke timeout (default 120000)
+     :timeout-ms — invoke timeout (default 600000)
      :dry-run?   — if true, just show what would happen without invoking
 
    Usage:
@@ -771,7 +771,7 @@
   [& {:keys [agent-id repo-dir timeout-ms dry-run?]
       :or {agent-id "codex-1"
            repo-dir "/home/joe/code/futon3c"
-           timeout-ms 120000}}]
+           timeout-ms 600000}}]
   (let [preflight (tickle-preflight!)
         smoke-issue {:number 0
                      :title "Tickle smoke test"
@@ -1514,7 +1514,7 @@
      :model              — model name (default \"gpt-5-codex\")
      :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
-     :timeout-ms         — hard timeout for codex process (default 120000)
+     :timeout-ms         — hard timeout for codex process (default 600000)
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
@@ -1522,7 +1522,7 @@
   [{:keys [codex-bin model sandbox approval-policy timeout-ms cwd agent-id
            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
-         approval-policy "never" timeout-ms 120000 agent-id "codex"}}]
+        approval-policy "never" timeout-ms 600000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
         on-event (when update-activity!
@@ -1935,7 +1935,7 @@
                               :sandbox (env "CODEX_SANDBOX" "danger-full-access")
                               :approval-policy (or (env "CODEX_APPROVAL_POLICY")
                                                    (env "CODEX_APPROVAL" "never"))
-                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 120000) 120000)
+                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 600000) 600000)
                               :agent-id "codex-1"
                               :session-file sf
                               :session-id-atom sid-atom})

@@ -75,7 +75,7 @@
             (is (some #{"--json"} cmd))
             (is (some #{"-"} cmd))
             (is (= "hello codex" prompt))
-            (is (= 120000 (:timeout-ms opts)))
+            (is (= 600000 (:timeout-ms opts)))
             (is (= "/tmp" (:cwd opts))))))))
   (testing "non-zero exit returns error and preserves prior session-id fallback"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
