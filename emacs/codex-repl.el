@@ -506,34 +506,6 @@ Returns plist with keys :status and :json. Returns nil on transport failure."
   "^IRC_SEND[[:space:]]+\\([^[:space:]]+\\)[[:space:]]*::[[:space:]]*\\(.+\\)$"
   "Regex for explicit IRC send directives emitted by Codex.")
 
-(defconst codex-repl--progress-promise-regex
-  "\\b\\(i['’]?ll\\|i will\\|we['’]?ll\\|we will\\|kicking off\\|starting \\(?:now\\|right away\\|immediately\\)\\|about to\\|will push\\|will open\\|will send\\|in the next few\\|soon\\)\\b"
-  "Regex matching progress-promise phrasing that requires evidence.")
-
-(defconst codex-repl--artifact-reference-regex
-  "\\(https?://[^[:space:]]+\\)\\|\\bPR[[:space:]]*#[0-9]+\\b\\|\\b[0-9a-f]\\{7,40\\}\\b\\|\\(?:/\\|\\.?\\.?/\\|~?/\\)[^[:space:]]+\\.[[:alnum:]]+\\b"
-  "Regex matching artifact evidence like URLs, PR refs, SHAs, or file paths.")
-
-(defun codex-repl--progress-promise-without-evidence-p (text)
-  "Return non-nil when TEXT makes progress promises but cites no artifact evidence."
-  (let* ((trimmed (string-trim (or text "")))
-         (promise? (string-match-p codex-repl--progress-promise-regex
-                                   (downcase trimmed)))
-         (artifact? (string-match-p codex-repl--artifact-reference-regex trimmed)))
-    (and (not (string-empty-p trimmed))
-         promise?
-         (not artifact?))))
-
-(defun codex-repl--enforce-planning-guard (text)
-  "Prefix TEXT with a planning-only disclaimer when unsupported progress claims appear."
-  (let ((trimmed (string-trim (or text ""))))
-    (if (codex-repl--progress-promise-without-evidence-p trimmed)
-        (concat
-         "Planning-only: no execution evidence cited yet (no command output/artifact reference).\n"
-         "No work has started in this reply.\n\n"
-         trimmed)
-      trimmed)))
-
 (defun codex-repl--extract-irc-send-directive (text)
   "Extract IRC send directive from TEXT.
 Returns plist (:channel :text), or nil."
@@ -913,7 +885,6 @@ Returns plist: (:session-id sid :text response :error err)."
       "- Your response is shown only in this Emacs buffer."
       "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
       "- Do not claim that work is actively starting/running unless this turn executed tool calls/commands."
-      "- Only when reporting progress/status: if no execution happened in this turn, say explicitly planning-only / not started yet."
       "- Any progress claim must include concrete evidence (artifact path, commit SHA, or PR/issue URL)."
       "- If the user asks you to tell/ping/message someone, treat it as an IRC-send request."
       "- For IRC-send requests, output only the single-line message text to send (no wrappers)."
@@ -995,9 +966,8 @@ Invoke CALLBACK with the final response text."
                       (response (plist-get parsed :text))
                       (err (plist-get parsed :error))
                       (final-text (if (= exit-code 0)
-                                      (codex-repl--enforce-planning-guard
-                                       (codex-repl--apply-irc-send-directive
-                                        (string-trim response)))
+                                      (codex-repl--apply-irc-send-directive
+                                       (string-trim response))
                                     (format "[Error (exit %d): %s]"
                                             exit-code
                                             (string-trim (or err response))))))
