@@ -135,20 +135,40 @@ EOF
 register_agent() {
   command -v curl >/dev/null 2>&1 || return 0
   local agent_id="${1:-${agency_agent_id}}"
-  local status
-  status="$(curl -sS --max-time 2 \
-    --output /dev/null \
-    --write-out "%{http_code}" \
-    -H "Content-Type: application/json" \
-    -X POST \
-    -d "{\"agent-id\":\"${agent_id}\",\"type\":\"codex\"}" \
-    "${evidence_base%/}/api/alpha/agents" 2>/dev/null || true)"
-  if [[ "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+  local primary_base="${evidence_base%/}"
+  local remote_base="${irc_send_base%/}"
+  local base status ok_any=0
+  local -a bases=()
+
+  if [[ -n "${primary_base}" ]]; then
+    bases+=("${primary_base}")
+  fi
+  if [[ -n "${remote_base}" && "${remote_base}" != "${primary_base}" ]]; then
+    bases+=("${remote_base}")
+  fi
+
+  for base in "${bases[@]}"; do
+    status="$(curl -sS --max-time 2 \
+      --output /dev/null \
+      --write-out "%{http_code}" \
+      -H "Content-Type: application/json" \
+      -X POST \
+      -d "{\"agent-id\":\"${agent_id}\",\"type\":\"codex\"}" \
+      "${base}/api/alpha/agents" 2>/dev/null || true)"
     if [[ "${status}" == "201" || "${status}" == "409" ]]; then
-      echo "codex-picker: register ${agent_id} @ ${evidence_base%/} (status ${status})"
+      ok_any=1
+      if [[ "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+        echo "codex-picker: register ${agent_id} @ ${base} (status ${status})"
+      fi
     else
-      echo "codex-picker: register ${agent_id} @ ${evidence_base%/} failed (status ${status:-none})" >&2
+      if [[ "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+        echo "codex-picker: register ${agent_id} @ ${base} failed (status ${status:-none})" >&2
+      fi
     fi
+  done
+
+  if [[ "${ok_any}" -ne 1 && "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+    echo "codex-picker: register ${agent_id} failed on all targets" >&2
   fi
 }
 
