@@ -135,11 +135,21 @@ EOF
 register_agent() {
   command -v curl >/dev/null 2>&1 || return 0
   local agent_id="${1:-${agency_agent_id}}"
-  curl -sS --max-time 2 \
+  local status
+  status="$(curl -sS --max-time 2 \
+    --output /dev/null \
+    --write-out "%{http_code}" \
     -H "Content-Type: application/json" \
     -X POST \
     -d "{\"agent-id\":\"${agent_id}\",\"type\":\"codex\"}" \
-    "${evidence_base%/}/api/alpha/agents" >/dev/null 2>&1 || true
+    "${evidence_base%/}/api/alpha/agents" 2>/dev/null || true)"
+  if [[ "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+    if [[ "${status}" == "201" || "${status}" == "409" ]]; then
+      echo "codex-picker: register ${agent_id} @ ${evidence_base%/} (status ${status})"
+    else
+      echo "codex-picker: register ${agent_id} @ ${evidence_base%/} failed (status ${status:-none})" >&2
+    fi
+  fi
 }
 
 resolve_agent_session_id() {
@@ -383,6 +393,7 @@ fi
 
 if $open_repl; then
   sid=""
+  register_agent "${agency_agent_id}"
   if $start_new; then
     rm -f "${session_file}"
     echo "Opening Emacs Codex REPL (new session)."
