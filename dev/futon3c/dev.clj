@@ -1574,6 +1574,10 @@
                        (finally
                          (stop-ticker!)))
               final-sid (:session-id result)
+              execution (:execution result)
+              tool-events (long (or (:tool-events execution) 0))
+              command-events (long (or (:command-events execution) 0))
+              execution-evidence? (boolean (:executed? execution))
               ok? (nil? (:error result))]
           ;; Persist session ID
           (when (and session-file final-sid (not (str/blank? final-sid)))
@@ -1583,6 +1587,9 @@
           ;; Evidence: invoke complete
           (emit-invoke-evidence! agent-id "invoke-complete"
                                  {"ok" ok?
+                                  "execution-evidence" execution-evidence?
+                                  "tool-events" tool-events
+                                  "command-events" command-events
                                   "result-preview" (when ok?
                                                      (let [r (str (or (:result result) ""))]
                                                        (subs r 0 (min 300 (count r)))))
@@ -1595,6 +1602,9 @@
                             (str "Invoke: " agent-id " — DONE"
                                  (if ok? "" (str " ERROR: " (:error result))) "\n"
                                  "Session: " final-sid "\n"
+                                 "Runtime evidence: executed=" execution-evidence?
+                                 ", tool-events=" tool-events
+                                 ", command-events=" command-events "\n"
                                  (when (:result result)
                                    (let [r (str (:result result))]
                                      (str "\n--- response ---\n"
@@ -1604,7 +1614,10 @@
             (catch Throwable _))
           (println (str "[invoke] " agent-id
                         (if ok? " ok" (str " error: " (:error result)))
-                        " result-len=" (count (or (:result result) ""))))
+                        " result-len=" (count (or (:result result) ""))
+                        " execution-evidence=" execution-evidence?
+                        " tool-events=" tool-events
+                        " command-events=" command-events))
           (flush)
           result)))))
 

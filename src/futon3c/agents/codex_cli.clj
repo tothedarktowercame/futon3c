@@ -38,6 +38,9 @@
     (catch Exception _
       nil)))
 
+(def ^:private progress-promise-re
+  #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|kicking off|starting (?:now|right away|immediately)|about to|will push|will open|will send|in the next few|soon)\b")
+
 (defn- titleize-token
   [token]
   (if (and (string? token) (not (str/blank? token)))
@@ -120,6 +123,49 @@
     {:session-id session-id
      :text text}))
 
+(defn- tool-event?
+  [evt]
+  (let [t (:type evt)
+        item (:item evt)]
+    (or (= "command_execution" t)
+        (and (contains? #{"item.started" "item.completed"} t)
+             (= "tool_call" (:type item))))))
+
+(defn- command-event?
+  [evt]
+  (let [t (:type evt)
+        item (:item evt)
+        name (:name item)]
+    (or (= "command_execution" t)
+        (and (contains? #{"item.started" "item.completed"} t)
+             (= "tool_call" (:type item))
+             (contains? #{"command_execution" "command-execution" "bash" "shell"}
+                        (some-> name str/lower-case))))))
+
+(defn- summarize-execution
+  [tool-events command-events]
+  {:tool-events tool-events
+   :command-events command-events
+   :executed? (pos? (+ tool-events command-events))})
+
+(defn execution-evidence?
+  "True when execution summary contains concrete runtime tool/command evidence."
+  [execution]
+  (boolean (and (map? execution) (:executed? execution))))
+
+(defn enforce-execution-guard
+  "Rewrite unsupported progress promises when stream evidence shows no execution."
+  [text execution]
+  (let [t (some-> text str/trim)
+        promise? (boolean (re-find progress-promise-re (or t "")))]
+    (cond
+      (or (str/blank? t) (not promise?)) t
+      (execution-evidence? execution) t
+      :else
+      (str "Planning-only: no runtime execution evidence in this turn.\n"
+           "No work has started in this reply.\n\n"
+           t))))
+
 (defn build-exec-args
   "Build argv for codex execution.
    When SESSION-ID is present, uses `codex exec ... resume <sid> -`."
@@ -139,7 +185,7 @@
 
 (defn run-codex-stream!
   "Run CMD with PROMPT-STR on stdin, streaming Codex JSONL output.
-   Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output}."
+   Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
   [cmd prompt-str {:keys [timeout-ms cwd on-event]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec cmd))
         _ (when (and (string? cwd) (not (str/blank? cwd)))
@@ -148,9 +194,15 @@
         sid* (atom nil)
         text* (atom nil)
         error* (atom nil)
+        tool-events* (atom 0)
+        command-events* (atom 0)
         out-buf (StringBuilder.)
         err-buf (StringBuilder.)
         handle-event! (fn [evt]
+                        (when (tool-event? evt)
+                          (swap! tool-events* inc))
+                        (when (command-event? evt)
+                          (swap! command-events* inc))
                         (when on-event
                           (try
                             (on-event evt)
@@ -225,6 +277,7 @@
          :session-id @sid*
          :text @text*
          :error-text @error*
+         :execution (summarize-execution @tool-events* @command-events*)
          :stderr stderr
          :raw-output raw-output}))))
 
@@ -255,7 +308,7 @@
                                       :sandbox sandbox
                                       :approval-policy approval-policy
                                       :session-id session-id})
-                {:keys [exit timed-out? text error-text stderr raw-output]
+                {:keys [exit timed-out? text error-text stderr raw-output execution]
                  :as stream-result}
                 (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
                                                    :cwd cwd
@@ -266,6 +319,8 @@
                               (:session-id parsed))
                 final-text (or (some-> text str/trim not-empty)
                                (some-> (:text parsed) str/trim not-empty))
+                execution (or execution (summarize-execution 0 0))
+                guarded-text (enforce-execution-guard final-text execution)
                 final-error (or (some-> error-text str/trim not-empty)
                                 (when-not (zero? exit)
                                   (some-> (:text parsed) str/trim not-empty))
@@ -274,16 +329,19 @@
               timed-out?
               {:result nil
                :session-id final-sid
+               :execution execution
                :error (str "Exit " exit ": codex invocation timed out after "
                            timeout-ms "ms")}
 
               (zero? exit)
-              {:result (or final-text "[Codex produced no text response]")
-               :session-id final-sid}
+              {:result (or guarded-text "[Codex produced no text response]")
+               :session-id final-sid
+               :execution execution}
 
               :else
               {:result nil
                :session-id final-sid
+               :execution execution
                :error (str "Exit " exit ": " (or final-error "codex invocation failed"))}))
           (catch Exception e
             {:result nil

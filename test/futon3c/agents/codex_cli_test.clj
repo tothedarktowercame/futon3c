@@ -69,6 +69,7 @@
           (is (= "answer" (:result resp)))
           (is (= "sid-new" (:session-id resp)))
           (is (nil? (:error resp)))
+          (is (map? (:execution resp)))
           (let [{:keys [cmd prompt opts]} (first @calls)]
             (is (= "codex" (first cmd)))
             (is (= "exec" (second cmd)))
@@ -94,6 +95,7 @@
           (is (nil? (:result resp)))
           (is (= "sid-old" (:session-id resp)))
           (is (string? (:error resp)))
+          (is (map? (:execution resp)))
           (is (str/includes? (:error resp) "Exit 2")))))))
 
 (deftest event->activity-maps-tool-and-reasoning-events
@@ -103,3 +105,15 @@
            :item {:type "tool_call" :name "command_execution"}})))
   (is (= "preparing response"
          (codex-cli/event->activity {:type "reasoning"}))))
+
+(deftest enforce-execution-guard-rewrites-promise-without-runtime-evidence
+  (let [text "I'll start now and push in a minute."
+        execution {:tool-events 0 :command-events 0 :executed? false}
+        guarded (codex-cli/enforce-execution-guard text execution)]
+    (is (str/includes? guarded "Planning-only"))
+    (is (str/includes? guarded "No work has started"))))
+
+(deftest enforce-execution-guard-keeps-promise-when-runtime-evidence-exists
+  (let [text "I'll start now and push in a minute."
+        execution {:tool-events 2 :command-events 1 :executed? true}]
+    (is (= text (codex-cli/enforce-execution-guard text execution)))))
