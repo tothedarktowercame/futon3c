@@ -16,6 +16,8 @@ Environment variables:
     IRC_CHANNEL     (default: #futon)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
     BRIDGE_BOTS     (default: claude,codex)  — comma-separated bot nicks
+    INVOKE_TIMEOUT_SECONDS (default: 90)     — invoke timeout in seconds
+    CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
 
 import json
@@ -28,6 +30,19 @@ import time
 import traceback
 import urllib.request
 import urllib.error
+
+# --- Helpers ---
+
+def env_int_seconds(name, default):
+    """Read positive integer from env var (seconds), with fallback."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+        return value if value > 0 else default
+    except ValueError:
+        return default
 
 # --- Configuration ---
 
@@ -43,8 +58,11 @@ MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
-INVOKE_TIMEOUT = 90  # 90 seconds — stale WS connections timeout faster
-CMD_TIMEOUT = 30  # 30 seconds for ! commands
+INVOKE_TIMEOUT_SECONDS = env_int_seconds(
+    "INVOKE_TIMEOUT_SECONDS",
+    env_int_seconds("INVOKE_TIMEOUT", 90),
+)  # seconds
+CMD_TIMEOUT = env_int_seconds("CMD_TIMEOUT_SECONDS", 30)  # seconds for ! commands
 
 # Ungated nicks receive ALL channel messages, not just @mentions.
 # Toggle with !ungate <nick> and !gate <nick>.
@@ -196,7 +214,7 @@ class IRCBot:
             "agent-id": self.agent_id,
             "prompt": prompt,
             "caller": f"irc:{caller}",
-            "timeout-ms": INVOKE_TIMEOUT * 1000,
+            "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
         if mission_id:
             payload["mission-id"] = mission_id
@@ -209,7 +227,7 @@ class IRCBot:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=INVOKE_TIMEOUT) as resp:
+            with urllib.request.urlopen(req, timeout=INVOKE_TIMEOUT_SECONDS) as resp:
                 data = json.loads(resp.read())
                 if data.get("ok"):
                     return data.get("result", "")
