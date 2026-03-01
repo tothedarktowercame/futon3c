@@ -1,4 +1,6 @@
 .cpcache/
+.clj-config/
+.m2/
 .nrepl-port
 target/
 *.class
@@ -10,8 +12,7 @@ storage/mission-control/sessions.edn
 
 bb
 clojure
-?/
 __pycache__/
 AGENTS.md
-library/alfworld/compile-flexiargs-to-deterministic-runner.flexiarg
-library/social/cluster-tooling-bootstrap.flexiarg
+.state/
+.tmp/

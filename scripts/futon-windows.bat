@@ -31,12 +31,19 @@ if not defined MAKE_CMD (
 )
 
 echo [futon-windows] Running target '%TARGET%' via %MAKE_CMD%
+pushd "%REPO_ROOT%" >nul 2>nul
+if errorlevel 1 (
+  1>&2 echo [futon-windows] ERROR: unable to enter %REPO_ROOT%
+  exit /b 1
+)
 if /i "%MAKE_CMD%"=="%REPO_ROOT%\.tools\bin\make.bat" (
   call "%MAKE_CMD%" -f "%REPO_ROOT%\Makefile.windows" %TARGET% %*
 ) else (
   "%MAKE_CMD%" -f "%REPO_ROOT%\Makefile.windows" %TARGET% %*
 )
-exit /b %ERRORLEVEL%
+set "FW_EXIT=%ERRORLEVEL%"
+popd
+exit /b %FW_EXIT%
 
 :find_make
 set "FM_OUTVAR=%~1"
