@@ -7,6 +7,12 @@ Purpose:
 Entry point:
 - `scripts/windows/futon-windows.bat <target> [ARGS=...]`
 
+Shell note:
+- `cd /d ...` is `cmd.exe` syntax.
+- in PowerShell use `Set-Location <path>` (or `cd <path>`).
+- cross-shell safe form:
+  - `cmd /c "cd /d <path> && scripts\\windows\\futon-windows.bat <target> ..."`
+
 Target authority:
 - `Makefile.windows` is the canonical target list.
 - this file maps each target to the implementing script for quick operator reference.
@@ -32,3 +38,8 @@ Target authority:
 - `run-bash-script-windows.bat` is the bridge that executes Unix shell scripts
   under Windows through `bash.exe`.
 
+`codex-repl` precondition:
+- `emacsclient.exe` requires a running Emacs server.
+- if no server is running, start one before `codex-repl`:
+  - inside Emacs: `M-x server-start`
+  - or from shell: `emacs --daemon` (or `runemacs --daemon`, depending on install)

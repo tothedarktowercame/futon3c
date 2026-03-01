@@ -11,6 +11,13 @@ if not defined REL_SCRIPT (
   exit /b 1
 )
 shift
+set "FORWARD_ARGS="
+:collect_forward_args
+if "%~1"=="" goto forward_args_done
+set "FORWARD_ARGS=%FORWARD_ARGS% "%~1""
+shift
+goto collect_forward_args
+:forward_args_done
 
 set "SCRIPT_PATH=%REL_SCRIPT:/=\%"
 set "TARGET_SCRIPT=%REPO_ROOT%\%SCRIPT_PATH%"
@@ -27,14 +34,30 @@ if not defined BASH_EXE (
   exit /b 1
 )
 
-set "PATH=%REPO_ROOT%\.tools\bin;%PATH%"
+set "BASH_DIR="
+for %%I in ("%BASH_EXE%") do set "BASH_DIR=%%~dpI"
+if defined BASH_DIR if "%BASH_DIR:~-1%"=="\" set "BASH_DIR=%BASH_DIR:~0,-1%"
+
+set "MSYS_ROOT="
+if defined BASH_DIR (
+  for %%I in ("%BASH_DIR%\..\..") do set "MSYS_ROOT=%%~fI"
+)
+
+set "MSYS_UCRT64_BIN="
+if defined MSYS_ROOT if exist "%MSYS_ROOT%\ucrt64\bin" set "MSYS_UCRT64_BIN=%MSYS_ROOT%\ucrt64\bin"
+set "MSYS_BIN_FALLBACK="
+if defined MSYS_ROOT if exist "%MSYS_ROOT%\bin" set "MSYS_BIN_FALLBACK=%MSYS_ROOT%\bin"
+
+set "MSYS2_PATH_TYPE=inherit"
+set "CHERE_INVOKING=1"
+set "PATH=%REPO_ROOT%\.tools\bin;%BASH_DIR%;%MSYS_UCRT64_BIN%;%MSYS_BIN_FALLBACK%;%PATH%"
 pushd "%REPO_ROOT%" >nul 2>nul
 if errorlevel 1 (
   1>&2 echo [run-bash-script-windows] ERROR: unable to enter %REPO_ROOT%
   exit /b 1
 )
 
-"%BASH_EXE%" "./%REL_SCRIPT%" %*
+"%BASH_EXE%" "./%REL_SCRIPT%" %FORWARD_ARGS%
 set "RB_EXIT=%ERRORLEVEL%"
 popd
 exit /b %RB_EXIT%
