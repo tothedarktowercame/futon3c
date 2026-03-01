@@ -31,19 +31,42 @@ import urllib.error
 
 # --- Configuration ---
 
+
+def int_env(name, default, minimum=1):
+    """Parse integer env var with fallback and lower bound."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(minimum, value)
+
+
 IRC_HOST = os.environ.get("IRC_HOST", "127.0.0.1")
-IRC_PORT = int(os.environ.get("IRC_PORT", "6667"))
+IRC_PORT = int_env("IRC_PORT", 6667, minimum=1)
 IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
 IRC_CHANNEL = os.environ.get("IRC_CHANNEL", "#futon")
 INVOKE_BASE = os.environ.get("INVOKE_BASE", "http://127.0.0.1:7070")
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,codex").split(",")
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
+AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
-INVOKE_TIMEOUT = 90  # 90 seconds — stale WS connections timeout faster
+INVOKE_TIMEOUT = int_env(
+    "INVOKE_TIMEOUT", 90, minimum=60
+)  # seconds; 90s default avoids stale WS hangs
+STATUS_TIMEOUT = int_env("AGENT_STATUS_TIMEOUT", 5, minimum=1)
+INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
 CMD_TIMEOUT = 30  # 30 seconds for ! commands
 
 # Ungated nicks receive ALL channel messages, not just @mentions.
@@ -78,6 +101,22 @@ def api_post(url, payload, timeout=CMD_TIMEOUT):
         return {"ok": False, "error": str(e)}
 
 
+def api_get(url, timeout=CMD_TIMEOUT):
+    """GET JSON from a futon3c API endpoint."""
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        body_text = e.read().decode("utf-8", errors="replace")[:500]
+        try:
+            return json.loads(body_text)
+        except Exception:
+            return {"ok": False, "error": f"HTTP {e.code}: {body_text[:200]}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 class IRCBot:
     """Single IRC bot that connects as a nick and relays @mentions."""
 
@@ -94,6 +133,39 @@ class IRCBot:
         self.handle_commands = handle_commands
         self.focused_mission = None
         self._invoking = threading.Lock()
+
+    def _agent_status(self):
+        """Fetch this bot agent's status from Agency."""
+        data = api_get(f"{AGENTS_URL}/{self.agent_id}", timeout=STATUS_TIMEOUT)
+        if not data.get("ok"):
+            return None
+        agent = data.get("agent", {})
+        if not isinstance(agent, dict):
+            return None
+        return {
+            "status": agent.get("status", "unknown"),
+            "session_id": agent.get("session-id")
+            or agent.get("session_id")
+            or "unknown",
+            "invoke_started_at": agent.get("invoke-started-at")
+            or agent.get("invoke_started_at"),
+            "invoke_activity": agent.get("invoke-activity")
+            or agent.get("invoke_activity"),
+        }
+
+    def _agent_busy_summary(self, status):
+        """Format a compact busy summary for IRC."""
+        if not isinstance(status, dict):
+            return f"{self.agent_id} appears busy"
+        sid = status.get("session_id") or "unknown"
+        activity = status.get("invoke_activity")
+        started = status.get("invoke_started_at")
+        parts = [f"{self.agent_id} is already invoking", f"session={sid}"]
+        if isinstance(activity, str) and activity.strip():
+            parts.append(f"activity={activity.strip()[:90]}")
+        if isinstance(started, str) and started.strip():
+            parts.append(f"since={started.strip()}")
+        return " | ".join(parts)
 
     def connect(self):
         """Connect to IRC server, authenticate, join channel."""
@@ -192,6 +264,14 @@ class IRCBot:
 
     def _invoke_agent(self, prompt, caller, mission_id=None):
         """Call the futon3c invoke API and return the result text."""
+        status_before = self._agent_status()
+        if (
+            INVOKE_SKIP_WHEN_BUSY
+            and isinstance(status_before, dict)
+            and status_before.get("status") == "invoking"
+        ):
+            return f"[invoke skipped: {self._agent_busy_summary(status_before)}]"
+
         payload = {
             "agent-id": self.agent_id,
             "prompt": prompt,
@@ -217,7 +297,39 @@ class IRCBot:
                     return f"[invoke error: {data.get('error', 'unknown')}]"
         except urllib.error.HTTPError as e:
             body_text = e.read().decode("utf-8", errors="replace")[:200]
+            parsed = None
+            try:
+                parsed = json.loads(body_text)
+            except Exception:
+                parsed = None
+            if isinstance(parsed, dict):
+                err = parsed.get("error", "unknown")
+                msg = parsed.get("message", "")
+                timed_out = (
+                    e.code == 502
+                    and isinstance(msg, str)
+                    and "timeout" in msg.lower()
+                )
+                if timed_out:
+                    status_after = self._agent_status()
+                    if isinstance(status_after, dict) and status_after.get("status") == "invoking":
+                        return f"[invoke timeout: {self._agent_busy_summary(status_after)}]"
+                if msg:
+                    return f"[HTTP {e.code}: {err}: {msg}]"
+                return f"[HTTP {e.code}: {err}]"
             return f"[HTTP {e.code}: {body_text}]"
+        except urllib.error.URLError as e:
+            reason = str(getattr(e, "reason", e))
+            if "timed out" in reason.lower():
+                status_after = self._agent_status()
+                if isinstance(status_after, dict) and status_after.get("status") == "invoking":
+                    return f"[invoke timeout: {self._agent_busy_summary(status_after)}]"
+            return f"[invoke failed: {reason}]"
+        except socket.timeout:
+            status_after = self._agent_status()
+            if isinstance(status_after, dict) and status_after.get("status") == "invoking":
+                return f"[invoke timeout: {self._agent_busy_summary(status_after)}]"
+            return "[invoke failed: timed out]"
         except Exception as e:
             return f"[invoke failed: {e}]"
 
@@ -362,6 +474,8 @@ class IRCBot:
             self._cmd_reset(sender, args)
         elif cmd == "!todo":
             self._cmd_todo(sender, args)
+        elif cmd == "!agent":
+            self._cmd_agent(sender, args)
         else:
             self._say(f"Unknown command: {cmd} — try !help")
 
@@ -372,7 +486,8 @@ class IRCBot:
                   "!mc missions | !mc sessions | !mc diff | "
                   "!mission focus <id> | !mission show | "
                   "!mission clear | !todo add <text> | "
-                  "!todo list | !todo done <id> | !help")
+                  "!todo list | !todo done <id> | "
+                  "!agent [agent-id] | !help")
 
     def _cmd_ungate(self, sender, args):
         """Ungate a bot — it will respond to all messages, not just @mentions."""
@@ -608,6 +723,29 @@ class IRCBot:
         else:
             self._say(f"Unknown !todo subcommand: {sub} — "
                       "try: add, list, done")
+
+    def _cmd_agent(self, _sender, args):
+        """Show live agent status from /api/alpha/agents/:id."""
+        agent_id = args.strip() or self.agent_id
+        data = api_get(f"{AGENTS_URL}/{agent_id}", timeout=STATUS_TIMEOUT)
+        if not data.get("ok"):
+            err = data.get("error", "unknown")
+            self._say(f"[agent status error: {err}]")
+            return
+        agent = data.get("agent", {})
+        if not isinstance(agent, dict):
+            self._say(f"[agent status error: invalid payload for {agent_id}]")
+            return
+        status = agent.get("status", "unknown")
+        sid = agent.get("session-id") or agent.get("session_id") or "none"
+        activity = agent.get("invoke-activity") or agent.get("invoke_activity")
+        started = agent.get("invoke-started-at") or agent.get("invoke_started_at")
+        msg = f"{agent_id}: status={status} session={sid}"
+        if isinstance(activity, str) and activity.strip():
+            msg += f" activity={activity.strip()[:120]}"
+        if isinstance(started, str) and started.strip():
+            msg += f" since={started.strip()}"
+        self._say(msg)
 
     def run(self):
         """Main loop: read IRC messages, handle PINGs, commands, mentions."""
