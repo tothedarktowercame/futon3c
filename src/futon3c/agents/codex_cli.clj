@@ -177,7 +177,7 @@
 (defn build-exec-args
   "Build argv for codex execution.
    When SESSION-ID is present, uses `codex exec ... resume <sid> -`."
-  [{:keys [codex-bin model sandbox approval-policy session-id]
+  [{:keys [codex-bin model sandbox approval-policy reasoning-effort session-id]
     :or {codex-bin "codex"
          sandbox "danger-full-access"
          approval-policy "never"}}]
@@ -186,16 +186,32 @@
                            "--sandbox" sandbox
                            "-c" (format "approval_policy=\"%s\"" approval-policy)]
                     (and (string? model) (not (str/blank? model)))
-                    (into ["--model" model]))]
+                    (into ["--model" model])
+                    (and (string? reasoning-effort) (not (str/blank? reasoning-effort)))
+                    (into ["-c" (format "model_reasoning_effort=\"%s\"" reasoning-effort)]))]
     (if (and (string? session-id) (not (str/blank? session-id)))
       (into [codex-bin "exec"] (concat exec-opts ["resume" session-id "-"]))
       (into [codex-bin "exec"] (concat exec-opts ["-"])))))
+
+(defn- windows?
+  []
+  (-> (System/getProperty "os.name" "")
+      str/lower-case
+      (str/includes? "windows")))
+
+(defn- process-cmd
+  "Normalize command argv for ProcessBuilder execution across OSes.
+   On Windows, route through cmd.exe so PATH/PATHEXT resolves codex.cmd."
+  [cmd]
+  (if (windows?)
+    (into ["cmd.exe" "/c"] cmd)
+    cmd))
 
 (defn run-codex-stream!
   "Run CMD with PROMPT-STR on stdin, streaming Codex JSONL output.
    Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
   [cmd prompt-str {:keys [timeout-ms cwd on-event]}]
-  (let [pb (ProcessBuilder. ^java.util.List (vec cmd))
+  (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
         _ (when (and (string? cwd) (not (str/blank? cwd)))
             (.directory pb (io/file cwd)))
         proc (.start pb)
@@ -297,10 +313,11 @@
    - :model (optional, default \"gpt-5-codex\")
    - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
+   - :reasoning-effort (optional, e.g. low|medium|high)
    - :timeout-ms hard process timeout in milliseconds (default 600000)
    - :cwd (optional working directory)
    - :on-event (optional fn called with each parsed stream event)"
-  [{:keys [codex-bin model sandbox approval-policy timeout-ms cwd on-event]
+  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd on-event]
     :or {codex-bin "codex"
          model "gpt-5-codex"
          sandbox "danger-full-access"
@@ -316,6 +333,7 @@
                                                       :model model
                                                       :sandbox sandbox
                                                       :approval-policy approval-policy
+                                                      :reasoning-effort reasoning-effort
                                                       :session-id resume-sid})
                                 {:keys [exit timed-out? text error-text stderr raw-output execution]
                                  :as stream-result}
