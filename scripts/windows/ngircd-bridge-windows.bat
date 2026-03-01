@@ -26,7 +26,6 @@ if not defined IRC_PORT set "IRC_PORT=6667"
 if not defined IRC_CHANNEL set "IRC_CHANNEL=#futon"
 if not defined INVOKE_BASE set "INVOKE_BASE=http://127.0.0.1:7070"
 if not defined BRIDGE_BOTS set "BRIDGE_BOTS=claude,codex"
-if not defined AUTO_START_DEV set "AUTO_START_DEV=1"
 
 set "BRIDGE_BOTS_NORMALIZED=%BRIDGE_BOTS: =%"
 if /i "%BRIDGE_BOTS_NORMALIZED%"=="codex" (
@@ -43,28 +42,12 @@ goto after_local_irc_check
 :check_local_irc
 call :is_port_listening %IRC_PORT%
 if not errorlevel 1 goto after_local_irc_check
-
-if /i not "%AUTO_START_DEV%"=="1" (
-  1>&2 echo [ngircd-bridge-windows] ERROR: no IRC server listening on %IRC_HOST%:%IRC_PORT%.
-  1>&2 echo [ngircd-bridge-windows] Set AUTO_START_DEV=1 to auto-start futon dev.
-  exit /b 1
-)
-
-echo [ngircd-bridge-windows] No IRC listener on %IRC_HOST%:%IRC_PORT%; auto-starting futon dev in this console...
-start "futon-dev" /b cmd /c ""%SCRIPT_DIR%\futon-windows.bat" dev 1>CON 2>&1"
-set /a WAIT_SECS=0
-:wait_for_irc
-call :is_port_listening %IRC_PORT%
-if not errorlevel 1 goto after_local_irc_check
-if !WAIT_SECS! GEQ 120 (
-  1>&2 echo [ngircd-bridge-windows] ERROR: timed out waiting for IRC listener on %IRC_HOST%:%IRC_PORT%.
-  1>&2 echo [ngircd-bridge-windows] Check the dev logs above for startup failures.
-  exit /b 1
-)
-if !WAIT_SECS! EQU 0 echo [ngircd-bridge-windows] Waiting for futon dev to open IRC port %IRC_PORT%...
-call :sleep_1s
-set /a WAIT_SECS+=1
-goto wait_for_irc
+1>&2 echo [ngircd-bridge-windows] ERROR: no IRC listener on %IRC_HOST%:%IRC_PORT%.
+1>&2 echo [ngircd-bridge-windows] Start runtime first with:
+1>&2 echo [ngircd-bridge-windows]   scripts/windows/futon-windows.bat dev-core
+1>&2 echo [ngircd-bridge-windows] Or launch full stack with:
+1>&2 echo [ngircd-bridge-windows]   scripts/windows/futon-windows.bat dev
+exit /b 1
 
 :after_local_irc_check
 
@@ -96,7 +79,3 @@ if defined PORT_LISTENING (
 ) else (
   exit /b 1
 )
-
-:sleep_1s
-ping -n 2 127.0.0.1 >nul 2>nul
-exit /b 0

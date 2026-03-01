@@ -41,6 +41,11 @@ if /i "%TARGET%"=="kill-futon1a" (
 )
 
 if /i "%TARGET%"=="dev" (
+  call :run_windows_script "%SCRIPT_DIR%\dev-stack-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
+if /i "%TARGET%"=="dev-core" (
   call :run_windows_script "%SCRIPT_DIR%\dev-windows.bat"!TARGET_ARGS!
   exit /b %ERRORLEVEL%
 )

@@ -17,8 +17,8 @@ Target authority:
 - `Makefile.windows` is the canonical target list.
 - this file maps each target to the implementing script for quick operator reference.
 - `scripts/windows/futon-windows.bat` may directly dispatch selected targets
-  (`dev`, `test`, `status`, `repl`, `codex`, `codex-repl`, `ngircd-bridge`) to avoid make/shell
-  interop drift on Windows.
+  (`dev`, `dev-core`, `test`, `status`, `repl`, `codex`, `codex-repl`,
+  `ngircd-bridge`) to avoid make/shell interop drift on Windows.
 
 ## Target Mapping
 
@@ -27,7 +27,8 @@ Target authority:
 | `tools` | `scripts/windows/bootstrap-tools.bat` |
 | `preflight` | `scripts/windows/preflight-windows.bat` |
 | `stop-futon1a` / `kill-futon1a` | `scripts/windows/stop-futon1a-windows.bat` |
-| `dev` | `scripts/windows/dev-windows.bat` |
+| `dev` | `scripts/windows/dev-stack-windows.bat` |
+| `dev-core` | `scripts/windows/dev-windows.bat` |
 | `test` | `scripts/windows/test-windows.bat` |
 | `status` | `scripts/windows/status-windows.bat` |
 | `repl` | `scripts/windows/repl-windows.bat` |
@@ -44,12 +45,20 @@ Codex target arg forms accepted by `futon-windows.bat`:
 ngircd bridge launch examples:
 - `scripts/windows/futon-windows.bat ngircd-bridge`
 - `set BRIDGE_BOTS=codex && scripts/windows/futon-windows.bat ngircd-bridge`
-- when `BRIDGE_BOTS=codex`, the wrapper defaults
+- when `BRIDGE_BOTS=codex`, the bridge wrapper defaults
   `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
   (unless already set) so codex is the only active bot lane.
-- default behavior auto-starts `futon-windows.bat dev` in the same console when
-  `IRC_HOST=127.0.0.1` and no listener exists on `IRC_PORT`; set `AUTO_START_DEV=0`
-  to require a pre-existing IRC server.
+
+Full-stack launch (`dev`) behavior:
+- runs `stop-futon1a-windows.bat`
+- stops existing listeners on `7070`, `6667`, and (when configured) `6768`
+- starts `dev-core` in the background with output streamed to the same console
+- waits for runtime ports, then starts `ngircd-bridge`
+
+Bridge-only behavior:
+- `ngircd-bridge` no longer auto-starts runtime services.
+- if no local IRC listener is present on `IRC_PORT`, it exits with guidance to
+  run `dev-core` (runtime only) or `dev` (full stack).
 
 ## Codex Launcher Boundary
 

@@ -52,6 +52,7 @@
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.mission-control.service :as mcs]
+            [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
             [futon3c.runtime.agents :as rt]
@@ -2805,7 +2806,8 @@ RESPOND WITH ONLY:
         evidence-store (make-evidence-store f1-sys direct-xtdb?)
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
-        _ (mcs/configure! {:evidence-store evidence-store})
+        _ (mcs/configure! {:evidence-store evidence-store
+                           :repos mcb/default-repo-roots})
         ;; futon5 nonstarter heartbeat API (portfolio bid/clear persistence)
         f5-sys (start-futon5!)
         ;; IRC relay bridge + server (independent of agent layer)
