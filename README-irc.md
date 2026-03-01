@@ -102,6 +102,9 @@ Environment variables (set in systemd unit or shell):
 | `IRC_CHANNEL` | #futon | Channel to join |
 | `INVOKE_BASE` | http://127.0.0.1:7070 | futon3c HTTP base |
 | `BRIDGE_BOTS` | claude,codex | Comma-separated bot nicks |
+| `INVOKE_TIMEOUT` | 600 | Per-invoke timeout in seconds for `/api/alpha/invoke` |
+| `AGENT_STATUS_TIMEOUT` | 5 | Timeout in seconds for `/api/alpha/agents/:id` status checks |
+| `INVOKE_SKIP_WHEN_BUSY` | 1 | When true, skip new invokes while target agent status is `invoking` |
 
 ### futon3c
 
@@ -143,6 +146,13 @@ Gating state is per-bridge-session (resets on bridge restart).
 Useful when a session becomes poisoned (e.g. API rejects the
 conversation history due to invalid tool-use). The agent-id is the
 registered ID, e.g. `claude-1` or `codex-1`.
+
+### `!agent` — Live Agent Status
+
+| Command | Description |
+|---------|-------------|
+| `!agent` | Show status/session/activity for the current bot agent |
+| `!agent <agent-id>` | Show status/session/activity for a specific registered agent |
 
 ### `!mc` — Mission Control
 
