@@ -70,6 +70,11 @@ if /i "%TARGET%"=="codex-repl" (
   exit /b %ERRORLEVEL%
 )
 
+if /i "%TARGET%"=="ngircd-bridge" (
+  call :run_windows_script "%SCRIPT_DIR%\ngircd-bridge-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
 call "%SCRIPT_DIR%\preflight-windows.bat"
 if errorlevel 1 exit /b 1
 

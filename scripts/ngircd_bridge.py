@@ -483,15 +483,23 @@ class IRCBot:
                 for m in missions:
                     s = m.get("mission/status", "unknown")
                     by_status.setdefault(s, []).append(m)
+                emitted = False
                 for status in ["in-progress", "ready", "blocked",
                                "complete", "unknown"]:
                     items = by_status.get(status, [])
                     if items:
+                        emitted = True
                         names = ", ".join(m.get("mission/id", "?")
                                           for m in items[:8])
                         extra = (f" +{len(items)-8}" if len(items) > 8
                                  else "")
                         self._say(f"[{status}] ({len(items)}): {names}{extra}")
+                if not emitted:
+                    summary = result.get("portfolio/summary")
+                    if summary:
+                        self._say(f"No missions found. {summary}")
+                    else:
+                        self._say("No missions found.")
             else:
                 self._say(f"[mc error: {data.get('error', 'unknown')}]")
 

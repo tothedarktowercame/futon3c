@@ -17,7 +17,7 @@ Target authority:
 - `Makefile.windows` is the canonical target list.
 - this file maps each target to the implementing script for quick operator reference.
 - `scripts/windows/futon-windows.bat` may directly dispatch selected targets
-  (`dev`, `test`, `status`, `repl`, `codex`, `codex-repl`) to avoid make/shell
+  (`dev`, `test`, `status`, `repl`, `codex`, `codex-repl`, `ngircd-bridge`) to avoid make/shell
   interop drift on Windows.
 
 ## Target Mapping
@@ -33,12 +33,23 @@ Target authority:
 | `repl` | `scripts/windows/repl-windows.bat` |
 | `codex` | `scripts/windows/codex-picker-windows.bat` |
 | `codex-repl` | `scripts/windows/codex-repl-windows.bat` |
+| `ngircd-bridge` | `scripts/windows/ngircd-bridge-windows.bat` |
 
 Codex target arg forms accepted by `futon-windows.bat`:
 - `scripts/windows/futon-windows.bat codex --help`
 - `scripts/windows/futon-windows.bat codex ARGS=--help`
 - `scripts/windows/futon-windows.bat codex-repl --new`
 - `scripts/windows/futon-windows.bat codex-repl ARGS=--new`
+
+ngircd bridge launch examples:
+- `scripts/windows/futon-windows.bat ngircd-bridge`
+- `set BRIDGE_BOTS=codex && scripts/windows/futon-windows.bat ngircd-bridge`
+- when `BRIDGE_BOTS=codex`, the wrapper defaults
+  `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
+  (unless already set) so codex is the only active bot lane.
+- default behavior auto-starts `futon-windows.bat dev` in the same console when
+  `IRC_HOST=127.0.0.1` and no listener exists on `IRC_PORT`; set `AUTO_START_DEV=0`
+  to require a pre-existing IRC server.
 
 ## Codex Launcher Boundary
 

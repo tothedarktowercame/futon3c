@@ -7,7 +7,7 @@ export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
 
-.PHONY: tools preflight dev test status repl codex codex-repl
+.PHONY: tools preflight dev test status repl codex codex-repl ngircd-bridge
 
 tools:
 	cmd /c $(WIN_SCRIPTS)\\bootstrap-tools.bat
@@ -32,3 +32,6 @@ codex:
 
 codex-repl:
 	cmd /c $(WIN_SCRIPTS)\\codex-repl-windows.bat $(ARGS)
+
+ngircd-bridge:
+	cmd /c $(WIN_SCRIPTS)\\ngircd-bridge-windows.bat $(ARGS)
