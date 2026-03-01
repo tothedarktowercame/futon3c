@@ -62,7 +62,7 @@ if errorlevel 1 (
 if errorlevel 1 (
   1>&2 echo Failed to download Clojure CLI tools archive for version %CLJ_VER%.
   1>&2 echo Try an explicit known Windows version, for example:
-  1>&2 echo   scripts\bootstrap-tools.bat --cljtools-version 1.12.4.1597
+  1>&2 echo   scripts\windows\bootstrap-tools.bat --cljtools-version 1.12.4.1597
   rmdir /s /q "%CLJ_TMP%" >nul 2>nul
   exit /b 1
 )

@@ -3,12 +3,12 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
-for %%I in ("%SCRIPT_DIR%\..") do set "REPO_ROOT=%%~fI"
+for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
 
 set "CLOJURE_BAT=%REPO_ROOT%\.tools\clojure\bin\clojure.bat"
 if not exist "%CLOJURE_BAT%" (
   1>&2 echo [run-clojure-windows] ERROR: missing %CLOJURE_BAT%
-  1>&2 echo Run scripts\bootstrap-tools.bat first.
+  1>&2 echo Run scripts\windows\bootstrap-tools.bat first.
   exit /b 1
 )
 

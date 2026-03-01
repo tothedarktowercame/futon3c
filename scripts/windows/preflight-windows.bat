@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
-for %%I in ("%SCRIPT_DIR%\..") do set "REPO_ROOT=%%~fI"
+for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
 
 set "FAIL_COUNT=0"
 

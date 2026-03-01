@@ -9,19 +9,19 @@ export CODEX_APPROVAL_POLICY
 .PHONY: tools preflight dev test status repl
 
 tools:
-	cmd /c scripts\\bootstrap-tools.bat
+	cmd /c scripts\\windows\\bootstrap-tools.bat
 
 preflight:
-	cmd /c scripts\\preflight-windows.bat
+	cmd /c scripts\\windows\\preflight-windows.bat
 
 dev:
-	cmd /c scripts\\dev-windows.bat
+	cmd /c scripts\\windows\\dev-windows.bat
 
 test:
-	cmd /c scripts\\test-windows.bat
+	cmd /c scripts\\windows\\test-windows.bat
 
 status:
-	cmd /c scripts\\status-windows.bat
+	cmd /c scripts\\windows\\status-windows.bat
 
 repl:
-	cmd /c scripts\\repl-windows.bat
+	cmd /c scripts\\windows\\repl-windows.bat

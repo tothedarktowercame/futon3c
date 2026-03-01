@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
-for %%I in ("%SCRIPT_DIR%\..") do set "REPO_ROOT=%%~fI"
+for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
 
 set "TARGET=%~1"
 if not defined TARGET set "TARGET=dev"
@@ -26,7 +26,7 @@ set "MAKE_CMD="
 call :find_make MAKE_CMD
 if not defined MAKE_CMD (
   1>&2 echo [futon-windows] ERROR: no make command found.
-  1>&2 echo Install make/mingw32-make or run scripts\bootstrap-tools.bat first.
+  1>&2 echo Install make/mingw32-make or run scripts\windows\bootstrap-tools.bat first.
   exit /b 1
 )
 
