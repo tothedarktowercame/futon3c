@@ -19,6 +19,16 @@ if /i "%TARGET%"=="preflight" (
   exit /b %ERRORLEVEL%
 )
 
+if /i "%TARGET%"=="codex" (
+  call :run_windows_script "%SCRIPT_DIR%\codex-picker-windows.bat" %*
+  exit /b %ERRORLEVEL%
+)
+
+if /i "%TARGET%"=="codex-repl" (
+  call :run_windows_script "%SCRIPT_DIR%\codex-repl-windows.bat" %*
+  exit /b %ERRORLEVEL%
+)
+
 call "%SCRIPT_DIR%\preflight-windows.bat"
 if errorlevel 1 exit /b 1
 
@@ -61,3 +71,30 @@ if not defined FM_PATH (
 )
 set "%FM_OUTVAR%=%FM_PATH%"
 exit /b 0
+
+:run_windows_script
+setlocal EnableExtensions EnableDelayedExpansion
+set "RWS_SCRIPT=%~1"
+shift
+
+call "%SCRIPT_DIR%\preflight-windows.bat"
+if errorlevel 1 (
+  endlocal & exit /b 1
+)
+
+set "RWS_ARGS="
+:rws_collect
+if "%~1"=="" goto rws_exec
+set "RWS_CUR=%~1"
+if /i "!RWS_CUR:~0,5!"=="ARGS=" (
+  set "RWS_CUR=!RWS_CUR:~5!"
+)
+if defined RWS_CUR set "RWS_ARGS=!RWS_ARGS! !RWS_CUR!"
+shift
+goto rws_collect
+
+:rws_exec
+echo [futon-windows] Running target '%TARGET%' via %~nx1
+call "%RWS_SCRIPT%"!RWS_ARGS!
+set "RWS_EXIT=!ERRORLEVEL!"
+endlocal & exit /b %RWS_EXIT%

@@ -16,6 +16,9 @@ Shell note:
 Target authority:
 - `Makefile.windows` is the canonical target list.
 - this file maps each target to the implementing script for quick operator reference.
+- `scripts/windows/futon-windows.bat` may directly dispatch selected targets
+  (currently `codex` and `codex-repl`) to avoid make/shell interop drift on
+  Windows.
 
 ## Target Mapping
 
@@ -30,6 +33,12 @@ Target authority:
 | `codex` | `scripts/windows/codex-picker-windows.bat` |
 | `codex-repl` | `scripts/windows/codex-repl-windows.bat` |
 
+Codex target arg forms accepted by `futon-windows.bat`:
+- `scripts/windows/futon-windows.bat codex --help`
+- `scripts/windows/futon-windows.bat codex ARGS=--help`
+- `scripts/windows/futon-windows.bat codex-repl --new`
+- `scripts/windows/futon-windows.bat codex-repl ARGS=--new`
+
 ## Codex Launcher Boundary
 
 - `codex-picker-windows.bat` and `codex-repl-windows.bat` are Windows companions.
@@ -43,3 +52,14 @@ Target authority:
 - if no server is running, start one before `codex-repl`:
   - inside Emacs: `M-x server-start`
   - or from shell: `emacs --daemon` (or `runemacs --daemon`, depending on install)
+- wrapper default:
+  - `run-bash-script-windows.bat` now defaults `HOME=%USERPROFILE%` and
+    `TMPDIR=%LOCALAPPDATA%\Temp` when unset, to avoid MSYS Emacs `/tmp`
+    permission failures.
+- GUI behavior default:
+  - `codex-repl-windows.bat` sets:
+    - prepends detected native Emacs `bin` directory to `PATH` when found
+    - bootstraps one GUI frame via:
+      - `emacsclientw -a "" -c -n -e "(progn (switch-to-buffer \"*scratch*\") t)"`
+    - then launches `codex-picker-windows.bat --repl`
+  - this requests a GUI frame for the REPL by default on Windows.

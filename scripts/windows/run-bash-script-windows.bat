@@ -50,6 +50,9 @@ if defined MSYS_ROOT if exist "%MSYS_ROOT%\bin" set "MSYS_BIN_FALLBACK=%MSYS_ROO
 
 set "MSYS2_PATH_TYPE=inherit"
 set "CHERE_INVOKING=1"
+if not defined HOME if defined USERPROFILE set "HOME=%USERPROFILE%"
+if not defined TMPDIR if defined LOCALAPPDATA set "TMPDIR=%LOCALAPPDATA%\Temp"
+if defined TMPDIR if not exist "%TMPDIR%" mkdir "%TMPDIR%" >nul 2>nul
 set "PATH=%REPO_ROOT%\.tools\bin;%BASH_DIR%;%MSYS_UCRT64_BIN%;%MSYS_BIN_FALLBACK%;%PATH%"
 pushd "%REPO_ROOT%" >nul 2>nul
 if errorlevel 1 (
