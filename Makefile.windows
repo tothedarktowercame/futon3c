@@ -1,0 +1,27 @@
+CODEX_SANDBOX ?= danger-full-access
+CODEX_APPROVAL ?= never
+CODEX_APPROVAL_POLICY ?= $(CODEX_APPROVAL)
+
+export CODEX_SANDBOX
+export CODEX_APPROVAL
+export CODEX_APPROVAL_POLICY
+
+.PHONY: tools preflight dev test status repl
+
+tools:
+	cmd /c scripts\\bootstrap-tools.bat
+
+preflight:
+	cmd /c scripts\\preflight-windows.bat
+
+dev:
+	cmd /c scripts\\dev-windows.bat
+
+test:
+	cmd /c scripts\\test-windows.bat
+
+status:
+	cmd /c scripts\\status-windows.bat
+
+repl:
+	cmd /c scripts\\repl-windows.bat
