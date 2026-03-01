@@ -209,6 +209,35 @@
                    m))))
     @result))
 
+(defn reset-session!
+  "Clear an agent's session-id so the next invoke starts a fresh conversation.
+   Useful when a session becomes poisoned (e.g. invalid tool-use in history).
+
+   Returns:
+     {:ok true :agent-id aid :old-session-id old-sid} on success.
+     {:ok false :error SocialError} if agent not found."
+  [agent-id]
+  (let [aid-val (agent-id-value agent-id)
+        result (atom nil)]
+    (swap! !registry
+           (fn [m]
+             (if-let [agent (get m aid-val)]
+               (let [old-sid (:agent/session-id agent)]
+                 (reset! result {:ok true
+                                 :agent-id aid-val
+                                 :old-session-id old-sid})
+                 (assoc m aid-val (assoc agent
+                                        :agent/session-id nil
+                                        :agent/last-active (now))))
+               (do (reset! result
+                           {:ok false
+                            :error (make-social-error
+                                    :agent-not-found
+                                    (str "Agent not registered: " aid-val)
+                                    :agent-id aid-val)})
+                   m))))
+    @result))
+
 ;; =============================================================================
 ;; Invocation (R1: delivery receipt, R4: loud failure)
 ;; =============================================================================

@@ -97,24 +97,21 @@
   (testing "after reconnect reset, sender resumes from last acked timestamp"
     (let [store (mk-store [(mk-entry "e-1" "2026-02-23T10:00:00Z")
                            (mk-entry "e-2" "2026-02-23T10:01:00Z")])
-          sender (repl/start! {:evidence-store store
-                               :interval-ms 1000000
-                               :send-fn nil})
+          ;; Use make-state + poll-once! directly to avoid the background
+          ;; future race in start! (future can poll between set-send-fn!
+          ;; and the manual poll!, duplicating entries).
+          state* (repl/make-state)
           sent* (atom [])]
-      (try
-        ((:set-send-fn! sender) #(swap! sent* conj %))
-        ((:poll! sender))
-        (is (= ["e-1" "e-2"] (sent-ids sent*)))
+      (repl/poll-once! state* store #(swap! sent* conj %))
+      (is (= ["e-1" "e-2"] (sent-ids sent*)))
 
-        ;; Ack first entry only.
-        ((:handle-frame! sender) {:type "evidence_ack"
+      ;; Ack first entry only.
+      (repl/handle-frame! state* {:type "evidence_ack"
                                   :evidence_id "e-1"
                                   :ok true})
 
-        ;; Reconnect: clear pending and continue from last acked point.
-        ((:reset-connection! sender))
-        (reset! sent* [])
-        ((:poll! sender))
-        (is (= ["e-2"] (sent-ids sent*)))
-        (finally
-          ((:stop-fn sender)))))))
+      ;; Reconnect: clear pending and continue from last acked point.
+      (repl/reset-connection! state*)
+      (reset! sent* [])
+      (repl/poll-once! state* store #(swap! sent* conj %))
+      (is (= ["e-2"] (sent-ids sent*))))))

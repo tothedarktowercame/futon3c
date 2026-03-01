@@ -796,3 +796,36 @@
                            true)
                          (catch Exception _ false))]
         (is (not reachable?) "Port should remain closed after repeated stop calls")))))
+
+;; =============================================================================
+;; Portfolio inference endpoint tests
+;; =============================================================================
+
+(deftest portfolio-state-returns-belief-state
+  (testing "GET /api/alpha/portfolio/state returns current belief state"
+    (let [handler (make-handler)
+          response (get-req handler "/api/alpha/portfolio/state")
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (map? (:state parsed)))
+      (is (contains? (:state parsed) :step-count)))))
+
+(deftest portfolio-step-returns-recommendation
+  (testing "POST /api/alpha/portfolio/step runs AIF step and returns recommendation"
+    (let [handler (make-handler)
+          response (post handler "/api/alpha/portfolio/step"
+                         (json/generate-string {:emit-evidence false}))
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (string? (:recommendation parsed)))
+      (is (contains? parsed :diagnostics))
+      (is (contains? parsed :action)))))
+
+(deftest portfolio-heartbeat-rejects-invalid-json
+  (testing "POST /api/alpha/portfolio/heartbeat with bad JSON returns 400"
+    (let [handler (make-handler)
+          response (post handler "/api/alpha/portfolio/heartbeat" "{bad")]
+      (is (= 400 (:status response)))
+      (is (false? (:ok (parse-body response)))))))

@@ -100,3 +100,23 @@
    [:portfolio/summary :string]
    [:portfolio/gaps [:vector :string]]
    [:portfolio/actionable [:vector :string]]])
+
+;; =============================================================================
+;; Tension export (structured gaps for hyperedge creation)
+;; =============================================================================
+
+(def TensionType
+  [:enum :uncovered-component :blocked-mission :structural-invalid])
+
+(def TensionEntry
+  "A single tension — a typed discrepancy between ideal and actual.
+   Pre-shaped for Arxana hyperedge creation."
+  [:map
+   [:tension/type TensionType]
+   [:tension/devmap {:optional true} :keyword]
+   [:tension/component {:optional true} :keyword]
+   [:tension/mission {:optional true} :string]
+   [:tension/blocked-by {:optional true} :string]
+   [:tension/coverage-pct {:optional true} :double]
+   [:tension/detected-at :string]
+   [:tension/summary :string]])

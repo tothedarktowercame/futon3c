@@ -278,7 +278,7 @@
 
 (def ArtifactRefType
   "Universal reference types for any artifact that can accumulate evidence."
-  [:enum :pattern :mission :component :gate :session :agent :thread :evidence :proof-path :task])
+  [:enum :pattern :mission :component :gate :session :agent :thread :evidence :proof-path :task :portfolio])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
@@ -321,7 +321,8 @@
    [:query/author {:optional true} :string]
    [:query/since {:optional true} Timestamp]
    [:query/limit {:optional true} :int]
-   [:query/include-ephemeral? {:optional true} :boolean]])
+   [:query/include-ephemeral? {:optional true} :boolean]
+   [:query/tags {:optional true} [:vector :keyword]]])
 
 ;; =============================================================================
 ;; Error shape (R4: loud failure)

@@ -124,6 +124,29 @@
     (let [xs (backend/-query *backend* {:query/limit 2})]
       (is (= 2 (count xs))))))
 
+(deftest query-filters-by-tags
+  (testing "-query filters by tags (AND semantics)"
+    (append! (fix/make-evidence-entry {:evidence/id "e1" :evidence/tags [:mission :backfill]}))
+    (append! (fix/make-evidence-entry {:evidence/id "e2" :evidence/tags [:mission :snapshot]}))
+    (append! (fix/make-evidence-entry {:evidence/id "e3" :evidence/tags [:test]}))
+    (let [xs (backend/-query *backend* {:query/tags [:mission]})]
+      (is (= 2 (count xs)))
+      (is (every? #(contains? (set (:evidence/tags %)) :mission) xs)))
+    (let [xs (backend/-query *backend* {:query/tags [:mission :backfill]})]
+      (is (= 1 (count xs)))
+      (is (= "e1" (:evidence/id (first xs)))))
+    (let [xs (backend/-query *backend* {:query/tags [:nonexistent]})]
+      (is (= 0 (count xs))))))
+
+(deftest query-with-empty-tags-returns-all
+  (testing "-query with nil/empty tags returns all"
+    (append! (fix/make-evidence-entry {:evidence/id "e1" :evidence/tags [:a]}))
+    (append! (fix/make-evidence-entry {:evidence/id "e2" :evidence/tags [:b]}))
+    (let [xs (backend/-query *backend* {:query/tags []})]
+      (is (= 2 (count xs))))
+    (let [xs (backend/-query *backend* {})]
+      (is (= 2 (count xs))))))
+
 (deftest forks-of
   (testing "-forks-of returns forked entries sorted by time"
     (append! (fix/make-evidence-entry {:evidence/id "base"

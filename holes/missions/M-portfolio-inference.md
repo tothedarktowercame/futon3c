@@ -1,7 +1,7 @@
 # Mission: Portfolio Inference
 
 **Date:** 2026-02-26
-**Status:** DERIVE
+**Status:** INSTANTIATE (complete)
 **Blocked by:** None (M-mission-control complete; chapter0 invariants
 defined; ant AIF loop operational in futon2; AifAdapter protocol exists
 with 3 domain adapters)
@@ -626,6 +626,85 @@ trajectory. Observation + belief enables prediction error analysis. Policy enabl
 outcome tracking (did we follow the recommendation? what happened?). Heartbeat
 closes the weekly loop.
 
+### D-11: Weekly Bid/Clear — action-level with effort bands and privacy masking
+
+**IF** the weekly heartbeat (D-8) needs a bid shape to compute prediction error
+at portfolio timescale, and futon5a's weekly cycle already implements bid/clear
+with hour-level categories (`:q1 20h`, `:q2 15h`),
+**HOWEVER** futon5a's categories are personal time-allocation buckets, not portfolio
+actions. The actual hours are private data. And a bid without effort estimation
+is not good AIF — effort prediction is a genuine sensory channel whose
+discrepancy drives learning about which missions take more work than expected,
+**THEN** define a two-layer bid/clear system:
+
+**Public layer (futon5, nonstarter schema):** action-level bids with effort bands.
+```clojure
+;; Weekly bid: what I intend to do this week
+{:heartbeat/week-id    "2026-W09"
+ :heartbeat/bids       [{:action :work-on :mission "M-foo" :effort :hard}
+                         {:action :review  :mission nil     :effort :trivial}
+                         {:action :work-on :mission "M-bar" :effort :medium}]
+ :heartbeat/mode-prediction :BUILD}
+
+;; Weekly clear: what actually happened
+{:heartbeat/week-id    "2026-W09"
+ :heartbeat/clears     [{:action :work-on :mission "M-foo" :effort :hard :outcome :partial}
+                         {:action :work-on :mission "M-bar" :effort :medium :outcome :complete}
+                         {:action :work-on :mission "M-baz" :effort :easy :outcome :complete}]
+ :heartbeat/mode-observed :BUILD}
+```
+
+**Private layer (futon5a):** actual hours mapped to effort bands via compression.
+```
+futon5a (private)              futon5 (public)
+─────────────────              ───────────────
+:q4 14h on M-foo         →    {:action :work-on :mission "M-foo" :effort :hard}
+:q4 2h review             →    {:action :review :effort :trivial}
+:q1 6h on M-bar           →    {:action :work-on :mission "M-bar" :effort :medium}
+```
+
+**Effort bands** (derived from Nonstarter estimate.clj's size scale):
+```
+:trivial   — ≤2h equivalent, or Nonstarter :tiny
+:easy      — ~half-day, or Nonstarter :small
+:medium    — ~1-2 days, or Nonstarter :medium
+:hard      — ~3-5 days, or Nonstarter :large
+:epic      — >1 week, or Nonstarter :xl
+```
+
+**Prediction errors from this shape:**
+1. **Action mismatch** — bid `:work-on M-foo`, actually worked on M-baz (unplanned mission)
+2. **Effort mismatch** — bid `:hard` for M-foo, actual was `:medium` (easier than expected)
+3. **Outcome mismatch** — bid `:work-on M-foo`, outcome `:partial` (didn't finish)
+4. **Mode mismatch** — predicted BUILD, observed CONSOLIDATE (strategic drift)
+5. **Unplanned work** — actions in clear that weren't in bid (interrupts, emergencies)
+
+Each of these is a learnable signal that feeds back into the AIF loop.
+
+**Schema (futon5, replaces personal_weeks/personal_blocks):**
+```sql
+CREATE TABLE IF NOT EXISTS portfolio_heartbeats (
+  week_id TEXT PRIMARY KEY,
+  bids TEXT,          -- EDN: [{:action :effort :mission}]
+  clears TEXT,        -- EDN: [{:action :effort :mission :outcome}]
+  mode_prediction TEXT,
+  mode_observed TEXT,
+  delta TEXT,         -- EDN: computed prediction errors
+  aif_snapshot TEXT,  -- EDN: portfolio AIF state at clear time
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+**BECAUSE** effort prediction is a genuine sensory channel — without it the system
+can't learn which missions take more effort than expected, which means it can't
+calibrate future EFE computations (the λ_effort term in D-6). The privacy masking
+(hours → effort bands) preserves the learning signal while keeping actual time
+allocations in the private repo. The effort bands align with Nonstarter's existing
+size scale, maintaining vocabulary consistency across the stack. And action-level
+bids connect directly to the 5 portfolio actions (D-6), making the bid/clear
+discrepancy computable as prediction error by the existing AIF machinery.
+
 ## ARGUE
 
 M-mission-control gave us a sensory surface — tools that observe portfolio
@@ -717,3 +796,266 @@ portfolio level, transforming mc-* observation tools from a sensory surface
 into a generative model that predicts, is surprised, updates, and recommends —
 while remaining auditable, mode-aware, and always available to answer the
 question that matters: "What should we do next, and why?"
+
+## VERIFY: core.logic Layer
+
+### Motivation
+
+The adjacent-possible boundary (D-7) is fundamentally relational: "mission X
+is adjacent if all its dependencies are complete AND shapes exist AND mana is
+available." The current implementation in `adjacent.clj` is imperative — five
+condition checks in Clojure. But the concept of "adjacent possible" suggests
+a relational definition. A mission isn't adjacent because it passes a
+function — it's adjacent because certain facts hold about it and the world.
+
+core.logic gives us:
+1. **Declarative structure** — facts about missions as relations, not code
+2. **What-if queries** — "what becomes adjacent if M-foo completes?"
+3. **Critical path** — longest dependency chain via recursive goals
+4. **Pattern co-occurrence** — which patterns appear in active missions
+5. **Composable rules** — new constraints as new logic rules, not code changes
+
+The right separation: **core.logic computes what is structurally possible,
+AIF computes how to prioritize among the possibilities.**
+
+### Existing core.logic in the Stack
+
+Three files across two repos use core.logic for two distinct architectural
+purposes:
+
+**L0 constraint checking** (futon3):
+- `futon3/src/futon3/hx/logic.clj` (822 lines) — hypertext step admissibility.
+  Uses `pldb/db-rel` for `artifacto`, `anchoro`, `linko`, `allowed-typeo`.
+  Validates artifact registration, anchor upsert, link management, PUR/PSR
+  records. Pattern: build in-memory fact DB → run existence queries → return
+  structured witness + obligations.
+- `futon3/src/futon3/musn/logic.clj` (135 lines) — MUSN turn rule constraints.
+  Uses `flago`, `actiono`, `costo` relations. Validates plan-before-tool,
+  selection-before-write, cost consent, off-trail budget.
+
+**L1 federated query** (futon3b):
+- `futon3b/src/futon3b/query/relations.clj` (432 lines) — federated relational
+  queries across session transcripts, pattern library, and proof paths. Uses
+  `l/to-stream` + `l/unify` to expose heterogeneous stores as logic relations.
+  Uses `l/conde` for disjunctive cross-store queries.
+  Pattern: each store → logic relation → `conde` federates → unified results.
+
+**Versions**: futon3 uses core.logic 1.0.1, futon3b uses 1.1.0.
+**futon3c currently has no core.logic dependency.**
+
+### Design: portfolio/logic.clj
+
+Portfolio inference adds a third architectural purpose: **L0.5 structural
+reasoning** — computing the adjacent-possible boundary and portfolio structure
+as a relational knowledge base that AIF queries into.
+
+**Relations (fact schema):**
+```clojure
+;; Mission facts (populated from mc-backend inventory scan)
+(pldb/db-rel missiono mid)                    ; mission exists
+(pldb/db-rel statuso mid status)              ; :complete, :in-progress, :blocked, :ready
+(pldb/db-rel blocked-byo mid blocker-mid)     ; dependency edge
+(pldb/db-rel unblockso mid enabled-mid)       ; inverse: completing mid enables enabled-mid
+(pldb/db-rel evidenceo mid count)             ; evidence entries accrued
+(pldb/db-rel patterno-used mid pattern-id)    ; patterns referenced by this mission
+(pldb/db-rel repo-ofo mid repo)              ; which repo owns this mission
+(pldb/db-rel shapeso-defined mid)            ; shapes exist for this mission
+(pldb/db-rel mana-fundedo mid)               ; sufficient mana
+
+;; Derived: adjacent-possible as a logic goal
+(defn adjacento [mid]
+  (l/fresh [status]
+    (missiono mid)
+    (statuso mid status)
+    (l/!= status :complete)
+    (all-deps-completeo mid)
+    (shapeso-defined mid)
+    (mana-fundedo mid)))
+```
+
+**Structural queries that become trivial:**
+```clojure
+;; All adjacent missions
+(run* [m] (adjacento m))
+
+;; What becomes adjacent if M-foo completes?
+(run* [m]
+  (blocked-byo m "foo")
+  (all-other-deps-clearo m "foo")
+  (shapeso-defined m)
+  (mana-fundedo m))
+
+;; Critical path: missions on the longest dependency chain
+(run* [m depth]
+  (chain-deptho m depth)
+  (l/project [depth] (l/>= depth 3)))
+
+;; Pattern co-occurrence across active missions
+(run* [p count]
+  (pattern-usage-counto p count)
+  (l/project [count] (l/>= count 2)))
+
+;; Missions blocked by the same dependency (clustering)
+(run* [m1 m2 blocker]
+  (blocked-byo m1 blocker)
+  (blocked-byo m2 blocker)
+  (l/!= m1 m2))
+```
+
+**Integration with AIF:**
+```
+mc-backend scan → populate logic DB → core.logic queries → adjacent set
+                                                              ↓
+                                          AIF observe → perceive → affect → policy
+```
+
+core.logic produces the **candidate set** (what's structurally valid).
+AIF evaluates the candidates (what's best among them).
+
+The fact database is rebuilt each aif-step from fresh mc-backend data
+(same as current approach, but the adjacency computation is now relational
+rather than imperative). This means the logic DB is always consistent with
+the latest inventory scan — no stale facts.
+
+### Ostrom Arena Connection
+
+The arena's **rules** become logic relations:
+- Participants → `(participanto agent arena)`
+- Positions → `(positiono agent role arena)`
+- Allowed actions → `(action-allowedo action mode arena)`
+- Outcomes → evaluated by AIF after logic filters admissible actions
+
+New arenas (per-mission, coordination) add new relation sets without
+changing the AIF machinery. The logic layer is the institutional grammar;
+AIF is the decision engine.
+
+### Implementation Plan
+
+1. Add `org.clojure/core.logic {:mvn/version "1.1.0"}` to deps.edn
+2. Create `src/futon3c/portfolio/logic.clj` — relation definitions +
+   fact DB builder + structural query goals
+3. Refactor `adjacent.clj` to delegate to logic layer (preserve API,
+   change implementation)
+4. Add structural queries: what-if, critical-path, pattern-co-occurrence
+5. Wire into `core.clj`: logic DB built at start of aif-step, adjacency
+   computed via `(run* [m] (adjacento m))`
+
+### VERIFY Results
+
+All items from the implementation plan completed. core.logic 1.1.0 added
+to deps.edn. `logic.clj` implements 8 relation types and 7 structural
+query types:
+
+**Relations**: `missiono`, `statuso`, `blocked-byo`, `unblockso`,
+`evidenceo`, `patterno-used`, `repo-ofo`, `shapeso-defined`, `mana-fundedo`
+
+**Structural queries**:
+1. Adjacent set — `(run* [m] (adjacento m))`
+2. What-if — what becomes adjacent if mission X completes
+3. Critical path — longest dependency chain via recursive goals
+4. Pattern co-occurrence — patterns appearing across active missions
+5. Shared blockers — missions blocked by same dependency
+6. Repo distribution — mission distribution across repos
+7. Evidence ranking — missions ranked by evidence count
+
+Integration verified: core.logic produces candidate set → AIF evaluates
+candidates. Fact DB rebuilt each aif-step from fresh mc-backend data.
+
+## INSTANTIATE
+
+### Artifacts
+
+8 source modules (1,400+ lines) + 8 test files (1,000+ lines):
+
+| Module | Lines | Purpose | Derivation |
+|--------|-------|---------|------------|
+| `observe.clj` | 188 | 12 normalized sensory channels from mc-backend | D-2 |
+| `perceive.clj` | 160 | Predictive coding: prediction error + belief update | D-3, D-4 |
+| `affect.clj` | 142 | BUILD/MAINTAIN/CONSOLIDATE mode dynamics with hysteresis | D-5 |
+| `policy.clj` | 204 | 4-term EFE decomposition + softmax selection + abstain | D-6 |
+| `adjacent.clj` | 89 | 5-condition adjacent-possible boundary | D-7 |
+| `logic.clj` | 286 | core.logic relational layer (8 relations, 7 query types) | VERIFY |
+| `core.clj` | 219 | Full AIF loop: observe → perceive → affect → policy | D-8, D-9, D-10 |
+| `heartbeat.clj` | 112 | Action-level bid/clear, effort bands, futon5 API client | D-8, D-11 |
+
+**Cross-repo artifacts (futon5):**
+
+| File | Purpose | Derivation |
+|------|---------|------------|
+| `nonstarter/schema.clj` | `portfolio_heartbeats` table (replaces `personal_weeks`) | D-11 |
+| `nonstarter/db.clj` | CRUD: `upsert-heartbeat-bids!`, `upsert-heartbeat-clears!`, `get-heartbeat`, `list-heartbeats` | D-8, D-11 |
+| `nonstarter/api.clj` | HTTP API on port 7071: `/api/heartbeat`, `/api/heartbeat/bid`, `/api/heartbeat/clear` | D-8 |
+
+### Test Results
+
+929 tests, 3,227 assertions, 0 failures, 0 errors.
+
+69 tests specific to portfolio inference across 8 test files:
+- `observe_test.clj` — channel normalization, clamp01, edge cases
+- `perceive_test.clj` — prediction error, belief update, precision weighting
+- `affect_test.clj` — mode transitions, hysteresis, urgency-τ coupling
+- `policy_test.clj` — EFE computation, softmax, abstain threshold
+- `adjacent_test.clj` — 5-condition gate, boundary computation
+- `logic_test.clj` — relation population, structural queries, what-if
+- `core_test.clj` — full AIF loop integration, evidence emission
+- `heartbeat_test.clj` — effort bands, action errors, mode errors, compound scenarios
+
+### Live Result
+
+Running against the real portfolio (40 missions):
+
+```
+Portfolio Inference (step 6)
+Mode: CONSOLIDATE | Urgency: 0.54 | τ: 1.38 | FE: 0.0000
+Recommendation: review
+Top actions:
+  review:       G=-0.520  p=23.6%
+  consolidate:  G=-0.340  p=20.7%
+  wait:         G=-0.300  p=20.1%
+
+Structural summary:
+  Total: 40
+  By status: {:complete 13, :in-progress 11, :unknown 13, :ready 3}
+  Adjacent (26): xor-coupling-probe, f6-ingest, sliding-blackboard, ...
+  Critical path: portfolio-inference (depth 1), coupling-as-constraint (depth 1)
+```
+
+### Commit
+
+`56fcf0d` — "Add core.logic relational layer for portfolio inference"
+(final commit in implementation sequence)
+
+### Chapter 0 Invariant Satisfaction
+
+| Invariant | Status | Evidence |
+|-----------|--------|----------|
+| I1: Generative model generates observations | **Satisfied** | `observe.clj` produces 12-channel normalized vector; `perceive.clj` maintains μ |
+| I2: Prediction error drives update | **Satisfied** | `perceive.clj` computes ε = μ.sens − observation, updates μ ← μ + κ·τ·ε |
+| I3: Precision weights prediction error | **Satisfied** | Per-channel Π_o in `perceive.clj`; mode-conditioned modulation in `affect.clj` |
+| I4: Action minimizes EFE | **Satisfied** | `policy.clj` computes G(a) over 5 actions, selects by softmax over -G/τ |
+| I5: Hierarchical depth ≥ 2 | **Satisfied** | Channel-level (12 channels) → mode-level (BUILD/MAINTAIN/CONSOLIDATE) → policy-level |
+| I6: Compositional closure | **Satisfied** | mc-* tools are default mode; portfolio inference is deliberative layer on top |
+
+## Exit Conditions
+
+- [x] All 6 Chapter 0 invariants satisfied at portfolio level
+- [x] Full AIF loop operational: observe → perceive → affect → policy
+- [x] core.logic relational layer with structural queries
+- [x] Live test against real portfolio produces actionable recommendation
+- [x] 69 portfolio-specific tests passing (929 total suite)
+- [x] All 11 derivations (D-1 through D-11) instantiated in code
+- [x] Evidence emission to durable store (D-10 — `:portfolio` added to ArtifactRefType;
+  `emit-evidence!` in core.clj calls `estore/append*` with proper shape)
+- [x] Weekly heartbeat infrastructure (D-8 + D-11):
+  - futon5: `portfolio_heartbeats` schema, CRUD in db.clj, HTTP API in api.clj (port 7071)
+  - futon3c: `heartbeat.clj` — effort bands, action-level prediction errors, futon5 API client
+  - `portfolio-heartbeat!` updated for action-level bid/clear shape
+  - futon5a: compression (hours → effort bands) deferred to futon5a maintainer
+- [ ] First live weekly heartbeat cycle (bid Monday → clear Sunday → prediction error)
+
+## Status: INSTANTIATE Complete
+
+All derivations (D-1 through D-11) are instantiated. The core AIF loop,
+evidence emission, and weekly heartbeat infrastructure are all built and
+tested. The remaining item is operational: running the first actual weekly
+cycle. That's a use-the-system event, not a build-the-system event.

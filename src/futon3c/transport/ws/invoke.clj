@@ -6,7 +6,7 @@
             [clojure.string :as str])
   (:import [java.util UUID]))
 
-(def ^:const default-timeout-ms 120000)
+(def ^:const default-timeout-ms 600000)
 (def ^:const timeout-sentinel ::timeout)
 
 (defonce ^:private !agents

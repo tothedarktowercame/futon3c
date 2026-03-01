@@ -8,14 +8,22 @@
    - :mc-mana          — query mana pool stats (if nonstarter.db exists)
    - :mc-review        — produce a full portfolio review
    - :mc-bulletin      — emit a war bulletin as evidence
+   - :mc-diff          — compare last two portfolio review snapshots
+
+   Mission focus tools (:mc-focus, :mc-focus-clear, :mc-focus-show)
+   are dispatched in mission_control.clj as they only manipulate session state.
 
    All tools are read-only with respect to external systems.
    Evidence emission happens at the peripheral level, not here."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as cset]
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
-            [futon3c.agents.tickle :as tickle]))
+            [futon3c.agents.tickle :as tickle]
+            [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.mission-backend :as mb]
+            [futon3c.peripheral.tools :as tools]))
 
 ;; =============================================================================
 ;; Configuration — repo paths
@@ -23,41 +31,79 @@
 
 (def default-repo-roots
   "Default repo locations (co-located at ~/code/)."
-  {:futon3c (str (System/getProperty "user.home") "/code/futon3c")
-   :futon3b (str (System/getProperty "user.home") "/code/futon3b")
-   :futon3a (str (System/getProperty "user.home") "/code/futon3a")
-   :futon5  (str (System/getProperty "user.home") "/code/futon5")})
+  (let [home (System/getProperty "user.home")]
+    {:futon3c (str home "/code/futon3c")
+     :futon3b (str home "/code/futon3b")
+     :futon3a (str home "/code/futon3a")
+     :futon5  (str home "/code/futon5")
+     :futon3  (str home "/code/futon3")
+     :futon4  (str home "/code/futon4")
+     :futon6  (str home "/code/futon6")}))
 
 ;; =============================================================================
 ;; Mission file parsing
 ;; =============================================================================
 
 (defn- extract-header
-  "Extract a **Key:** value from markdown text."
+  "Extract a Key: value from markdown text.
+   Matches three formats:
+   - **Key:** value      (bold key)
+   - Key: value          (plain key)
+   - ## Key: value       (heading key)"
   [text key-name]
-  (let [pattern (re-pattern (str "(?m)^\\*\\*" (java.util.regex.Pattern/quote key-name) ":\\*\\*\\s*(.+)$"))]
-    (when-let [m (re-find pattern text)]
-      (str/trim (second m)))))
+  (let [quoted (java.util.regex.Pattern/quote key-name)
+        ;; Try bold format first: **Key:** value
+        bold-pat (re-pattern (str "(?m)^\\*\\*" quoted ":\\*\\*\\s*(.+)$"))
+        ;; Fallback: plain or heading format: Key: value or ## Key: value
+        plain-pat (re-pattern (str "(?mi)^(?:#{1,3}\\s+)?" quoted ":\\s*(.+)$"))]
+    (or (when-let [m (re-find bold-pat text)]
+          (str/trim (second m)))
+        (when-let [m (re-find plain-pat text)]
+          (str/trim (second m))))))
 
 (defn classify-status
   "Classify a raw status string into a MissionStatus keyword."
   [raw]
   (when raw
-    (let [s (str/lower-case (str/trim raw))]
+    (let [s (-> raw str/trim str/lower-case (str/replace #"^:" ""))]
       (cond
-        (str/starts-with? s "complete")    :complete
-        (str/starts-with? s "blocked")     :blocked
-        (str/starts-with? s "ready")       :ready
-        (str/starts-with? s "pass")        :complete
+        (str/starts-with? s "complete")         :complete
+        (str/starts-with? s "done")             :complete
+        (str/starts-with? s "blocked")          :blocked
+        (str/starts-with? s "ready")            :ready
+        (str/starts-with? s "pass")             :complete
+        (str/starts-with? s "in-progress")      :in-progress
+        (str/starts-with? s "in progress")      :in-progress
+        (str/starts-with? s "active")           :in-progress
+        (str/starts-with? s "open")             :in-progress
+        (str/starts-with? s "greenfield")       :ready
         ;; Derivation keywords: check if the *derivation step itself* is marked complete.
         ;; "INSTANTIATE complete" → :complete (the mission finished its last step)
+        ;; "INSTANTIATE (complete)" → :complete (parenthetical variant)
         ;; "MAP (landscape survey complete)" → :in-progress (MAP done, mission continues)
-        ;; Heuristic: "complete" must follow the keyword directly, not be in a parenthetical.
         (re-find #"identify|map|derive|argue|verify|instantiate" s)
-        (if (re-find #"^(?:identify|map|derive|argue|verify|instantiate)\s+complete" s)
+        (if (re-find #"^(?:identify|map|derive|argue|verify|instantiate)\s+(?:\(?\s*complete)" s)
           :complete
           :in-progress)
         :else :unknown))))
+
+(defn- count-checkboxes
+  "Count checked and total checkboxes in markdown text.
+   Returns {:checked N :total N} or nil if no checkboxes found."
+  [text]
+  (let [checked (count (re-seq #"(?m)^[\s]*- \[x\]" text))
+        unchecked (count (re-seq #"(?m)^[\s]*- \[ \]" text))
+        total (+ checked unchecked)]
+    (when (pos? total)
+      {:checked checked :total total})))
+
+(defn- infer-status-from-checkboxes
+  "When no explicit Status header, infer from success criteria checkboxes."
+  [{:keys [checked total]}]
+  (cond
+    (= checked total)           :complete
+    (zero? checked)             :ready
+    (> checked 0)               :in-progress))
 
 (defn parse-mission-md
   "Parse a mission .md file into a MissionEntry."
@@ -68,15 +114,26 @@
           mission-id (str/replace filename #"^M-|\.md$" "")
           raw-status (extract-header text "Status")
           date (extract-header text "Date")
-          blocked-by (extract-header text "Blocked by")]
-      {:mission/id mission-id
-       :mission/status (or (classify-status raw-status) :unknown)
-       :mission/source :md-file
-       :mission/repo (name repo-name)
-       :mission/path (str path)
-       :mission/date date
-       :mission/blocked-by blocked-by
-       :mission/raw-status raw-status})
+          blocked-by (extract-header text "Blocked by")
+          explicit-status (classify-status raw-status)
+          checkboxes (count-checkboxes text)
+          inferred-status (when (and (nil? explicit-status) checkboxes)
+                            (infer-status-from-checkboxes checkboxes))
+          status (or explicit-status inferred-status :unknown)]
+      (cond-> {:mission/id mission-id
+               :mission/status status
+               :mission/source :md-file
+               :mission/repo (name repo-name)
+               :mission/path (str path)
+               :mission/date date
+               :mission/blocked-by blocked-by
+               :mission/raw-status raw-status}
+        checkboxes
+        (assoc :mission/gates checkboxes)
+        (and (nil? explicit-status) inferred-status)
+        (assoc :mission/raw-status
+               (str "inferred:" (name inferred-status)
+                    " (" (:checked checkboxes) "/" (:total checkboxes) " gates)"))))
     (catch Exception e
       {:mission/id (str path)
        :mission/status :unknown
@@ -155,6 +212,70 @@
      (into md-missions devmap-missions))))
 
 ;; =============================================================================
+;; Mission doc fidelity audit (GF / drift)
+;; =============================================================================
+
+(defn- repo-root-for-mission
+  [repos mission]
+  (let [repo-k (keyword (:mission/repo mission))]
+    (or (get repos repo-k)
+        (get default-repo-roots repo-k))))
+
+(defn- audit-mission-doc
+  "Run mission-doc-audit for markdown missions.
+   Returns audit map. Non-markdown sources return :n/a."
+  [repos mission]
+  (if (not= :md-file (:mission/source mission))
+    {:status :n/a
+     :reason :non-md-source}
+    (let [mission-id (:mission/id mission)
+          mission-path (:mission/path mission)
+          repo-root (repo-root-for-mission repos mission)
+          guide-path (when repo-root (str repo-root "/docs/futonic-missions.md"))
+          cwd (or repo-root (System/getProperty "user.dir"))
+          backend (mb/make-mission-backend {:cwd cwd} (tools/make-mock-backend))
+          opts (cond-> {:mission-doc-path mission-path}
+                 guide-path (assoc :guide-path guide-path))
+          result (try
+                   (tools/execute-tool backend :mission-doc-audit [mission-id opts])
+                   (catch Exception e
+                     {:ok false :error (.getMessage e)}))]
+      (if (:ok result)
+        (:result result)
+        {:status :error
+         :reason :audit-failed
+         :error (or (:error result) "mission-doc-audit failed")}))))
+
+(defn- attach-doc-audit
+  [repos missions]
+  (mapv (fn [m]
+          (if (= :md-file (:mission/source m))
+            (assoc m :mission/doc-audit (audit-mission-doc repos m))
+            m))
+        missions))
+
+(defn- summarize-doc-drift
+  "Summarize mission docs/code drift across markdown missions."
+  [missions]
+  (let [audited (->> missions
+                     (keep :mission/doc-audit)
+                     (filter #(not= :n/a (:status %)))
+                     vec)
+        ok-count (count (filter #(= :ok (:status %)) audited))
+        drift (filter #(= :drift (:status %)) audited)
+        error-count (count (filter #(= :error (:status %)) audited))
+        open-sections (reduce + (map #(or (:open-section-count %) 0) drift))
+        missing-gf (reduce + (map #(count (get-in % [:gf :missing-headings])) drift))
+        drifting-ids (mapv :mission-id drift)]
+    {:audit/total (count audited)
+     :audit/ok ok-count
+     :audit/drift (count drift)
+     :audit/error error-count
+     :audit/open-section-obligations open-sections
+     :audit/missing-gf-headings missing-gf
+     :audit/drifting-missions drifting-ids}))
+
+;; =============================================================================
 ;; Devmap reading (minimal reimpl — no futon5 classpath dependency)
 ;; =============================================================================
 
@@ -173,11 +294,9 @@
           edges (:edges raw)
           ;; Minimal validation: check structural properties
           input-ids (set (map :id inputs))
-          output-ids (set (map :id outputs))
           comp-ids (set (map :id components))
           edge-froms (set (map :from edges))
           edge-tos (set (map :to edges))
-          all-node-ids (into (into input-ids output-ids) comp-ids)
           ;; Check for orphan inputs (input not connected to anything)
           orphan-inputs (filter #(not (edge-froms %)) input-ids)
           ;; Check for dead components (component not reaching any output)
@@ -206,7 +325,7 @@
                                   {:component/id (:id c)
                                    :component/name (or (:name c) (name (:id c)))})
                                 components)})
-    (catch Exception e
+    (catch Exception _e
       {:devmap/id (keyword (.getName (io/file path)))
        :devmap/state :error
        :devmap/input-count 0
@@ -252,25 +371,63 @@
 ;; Devmap coverage analysis
 ;; =============================================================================
 
+(def component-coverage-annotations
+  "Explicit component → mission-id coverage map.
+   The heuristic substring match is a fallback; this map is ground truth
+   where provided. Values are sets of lowercase mission-id strings.
+   Extend via (mc/audit-coverage-correspondence) to find orphan components."
+  {;; social-exotype components
+   :S-presence     #{"transport-adapters" "operational-readiness"}
+   :S-authenticate #{"agency-refactor"}
+   :S-dispatch     #{"dispatch-peripheral-bridge" "agency-refactor"}
+   :S-invoke       #{"peripheral-model" "peripheral-behavior"}
+   :S-mode         #{"peripheral-model" "peripheral-behavior"}
+   :S-validate     #{"proof-peripheral"}
+   :S-persist      #{"forum-refactor"}
+   ;; coordination-exotype (gate pipeline)
+   :G5 #{"peripheral-gauntlet"}
+   :G4 #{"agency-refactor"}
+   :G3 #{"psr-pur-mesh-peripheral"}
+   :G2 #{"dispatch-peripheral-bridge"}
+   :G1 #{"proof-peripheral"}
+   :G0 #{"futon3-last-mile"}})
+
 (defn compute-coverage
   "Compute coverage of devmap components by missions.
-   For each devmap, check which components have corresponding missions
-   (by name matching: component :S-dispatch matches mission containing 'dispatch')."
+
+   Three-tier matching:
+   1. Parent match: if the devmap's :devmap/id matches an active mission,
+      ALL its components are considered covered.
+   2. Annotation match: check component-coverage-annotations map for
+      explicit component → mission-id correspondence.
+   3. Heuristic: substring match on component name ↔ mission name."
   [devmap-summaries missions]
   (let [mission-ids (set (map :mission/id missions))
-        mission-id-lower (set (map str/lower-case mission-ids))]
+        mission-id-lower (set (map str/lower-case mission-ids))
+        active-ids (set (map (comp str/lower-case :mission/id)
+                             (filter #(#{:in-progress :complete} (:mission/status %))
+                                     missions)))]
     (mapv (fn [dm]
             (let [components (:devmap/components dm)
-                  covered (filter (fn [c]
-                                    (let [cname (str/lower-case (name (:component/id c)))]
-                                      ;; A component is "covered" if any mission name
-                                      ;; contains part of the component name or vice versa.
-                                      ;; This is heuristic — the real link is devmap annotations.
-                                      (some (fn [mid]
-                                              (or (str/includes? mid cname)
-                                                  (str/includes? cname mid)))
-                                            mission-id-lower)))
-                                  components)
+                  devmap-mid (when-let [id (:devmap/id dm)]
+                               (str/lower-case (name id)))
+                  parent-active? (and devmap-mid (contains? active-ids devmap-mid))
+                  covered (if parent-active?
+                            components
+                            (filter (fn [c]
+                                      (let [cid (:component/id c)
+                                            ;; Tier 2: explicit annotation
+                                            annotated (get component-coverage-annotations cid)
+                                            annotated? (and annotated
+                                                            (some annotated mission-id-lower))
+                                            ;; Tier 3: heuristic fallback
+                                            cname (str/lower-case (name cid))
+                                            heuristic? (some (fn [mid]
+                                                               (or (str/includes? mid cname)
+                                                                   (str/includes? cname mid)))
+                                                             mission-id-lower)]
+                                        (or annotated? heuristic?)))
+                                    components))
                   uncovered (remove (set (map :component/id covered)) (map :component/id components))
                   total (count components)]
               {:coverage/devmap-id (:devmap/id dm)
@@ -310,7 +467,7 @@
 
 (defn- summarize-portfolio
   "Generate a human-readable portfolio summary."
-  [missions devmap-summaries coverage mana]
+  [missions devmap-summaries coverage mana doc-drift]
   (let [total-missions (count missions)
         complete (count (filter #(= :complete (:mission/status %)) missions))
         in-progress (count (filter #(= :in-progress (:mission/status %)) missions))
@@ -329,24 +486,95 @@
          ". " total-devmaps " devmaps"
          " (" valid-devmaps " valid)."
          " Avg coverage: " (format "%.0f%%" (* 100 avg-coverage)) "."
+         " Doc drift: " (:audit/drift doc-drift) "/" (:audit/total doc-drift)
+         " drift, " (:audit/open-section-obligations doc-drift)
+         " open section obligations."
          (when-not (:mana/available mana) " Mana system not yet initialized."))))
 
 (defn- find-gaps
   "Identify gaps: devmap components without missions, blocked missions, etc."
   [missions coverage]
   (let [blocked-missions (filter #(= :blocked (:mission/status %)) missions)
+        doc-drift-missions (->> missions
+                                (filter (fn [m]
+                                          (= :drift (get-in m [:mission/doc-audit :status]))))
+                                (map (fn [m]
+                                       (let [a (:mission/doc-audit m)]
+                                         (str (:mission/id m)
+                                              " — doc drift"
+                                              " (open sections: "
+                                              (or (:open-section-count a) 0)
+                                              ", missing GF headings: "
+                                              (count (get-in a [:gf :missing-headings]))
+                                              ")"))))
+                                vec)
         uncovered (mapcat (fn [c]
                             (map (fn [comp-id]
                                    (str (name (:coverage/devmap-id c))
                                         "/" (name comp-id) " — no mission"))
                                  (:coverage/uncovered c)))
                           coverage)]
-    (into (mapv (fn [m]
-                  (str (:mission/id m) " — blocked"
-                       (when (:mission/blocked-by m)
-                         (str ": " (:mission/blocked-by m)))))
-                blocked-missions)
+    (into (into (mapv (fn [m]
+                        (str (:mission/id m) " — blocked"
+                             (when (:mission/blocked-by m)
+                               (str ": " (:mission/blocked-by m)))))
+                      blocked-missions)
+                doc-drift-missions)
           uncovered)))
+
+(defn audit-coverage-correspondence
+  "Audit devmap/mission correspondence. Returns:
+   :orphan-components — devmap components with no annotation and no heuristic match
+   :orphan-missions   — missions that address no devmap component
+   :stale-annotations — annotation entries referencing non-existent missions
+   :summary           — counts for quick overview"
+  ([] (audit-coverage-correspondence default-repo-roots))
+  ([repos]
+   (let [missions (build-inventory repos)
+         futon5-root (or (:futon5 repos) (:futon5 default-repo-roots))
+         devmaps (read-all-devmaps futon5-root repos)
+         mission-id-lower (set (map (comp str/lower-case :mission/id) missions))
+         all-components (mapcat (fn [dm]
+                                  (map (fn [c] {:devmap (:devmap/id dm)
+                                                :component (:component/id c)})
+                                       (:devmap/components dm)))
+                                devmaps)
+         annotated-ids (set (keys component-coverage-annotations))
+         orphan-components (vec
+                            (remove (fn [{:keys [component]}]
+                                      (or (contains? annotated-ids component)
+                                          (let [cname (str/lower-case (name component))]
+                                            (some (fn [mid]
+                                                    (or (str/includes? mid cname)
+                                                        (str/includes? cname mid)))
+                                                  mission-id-lower))))
+                                    all-components))
+         ;; Missions that appear in no annotation and no devmap parent
+         devmap-mids (set (map (comp str/lower-case name :devmap/id) devmaps))
+         annotation-mids (reduce into #{} (vals component-coverage-annotations))
+         orphan-missions (vec
+                          (remove (fn [m]
+                                    (let [mid (str/lower-case (:mission/id m))]
+                                      (or (contains? devmap-mids mid)
+                                          (contains? annotation-mids mid))))
+                                  missions))
+         stale (reduce-kv (fn [acc comp-id mission-set]
+                            (let [missing (remove mission-id-lower mission-set)]
+                              (if (seq missing)
+                                (conj acc {:component comp-id
+                                           :missing-missions (vec missing)})
+                                acc)))
+                          [] component-coverage-annotations)]
+     {:orphan-components orphan-components
+      :orphan-missions (mapv #(select-keys % [:mission/id :mission/repo :mission/status])
+                             orphan-missions)
+      :stale-annotations stale
+      :summary {:total-components (count all-components)
+                :annotated (count annotated-ids)
+                :orphan-components (count orphan-components)
+                :total-missions (count missions)
+                :orphan-missions (count orphan-missions)
+                :stale-annotations (count stale)}})))
 
 (defn- find-actionable
   "Identify actionable missions: ready or in-progress, not blocked."
@@ -363,21 +591,252 @@
    repos: map of {repo-name root-path} (defaults to default-repo-roots)."
   ([] (build-portfolio-review default-repo-roots))
   ([repos]
-   (let [missions (build-inventory repos)
+   (let [missions-raw (build-inventory repos)
+         missions (attach-doc-audit repos missions-raw)
          futon5-root (or (:futon5 repos) (:futon5 default-repo-roots))
          devmap-summaries (read-all-devmaps futon5-root repos)
          coverage (compute-coverage devmap-summaries missions)
          mana (query-mana futon5-root)
-         summary (summarize-portfolio missions devmap-summaries coverage mana)
+         doc-drift (summarize-doc-drift missions)
+         summary (summarize-portfolio missions devmap-summaries coverage mana doc-drift)
          gaps (find-gaps missions coverage)
          actionable (find-actionable missions)]
      {:portfolio/missions missions
       :portfolio/devmap-summaries devmap-summaries
       :portfolio/coverage coverage
       :portfolio/mana mana
+      :portfolio/doc-drift doc-drift
       :portfolio/summary summary
       :portfolio/gaps gaps
       :portfolio/actionable actionable})))
+
+;; =============================================================================
+;; Tension export — structured gaps for hyperedge creation
+;; =============================================================================
+
+(defn build-tension-export
+  "Build structured tension data from portfolio review.
+   Returns typed tension entries pre-shaped for Arxana hyperedge creation.
+   repos: map of {repo-name root-path} (defaults to default-repo-roots)."
+  ([] (build-tension-export default-repo-roots))
+  ([repos]
+   (let [review (build-portfolio-review repos)
+         missions (:portfolio/missions review)
+         coverage (:portfolio/coverage review)
+         devmaps (:portfolio/devmap-summaries review)
+         now (str (java.time.Instant/now))
+         ;; Uncovered components: one tension per (devmap, component) pair
+         uncovered-tensions
+         (into []
+               (mapcat (fn [cov]
+                         (let [dm-id (:coverage/devmap-id cov)]
+                           (map (fn [comp-id]
+                                  {:tension/type :uncovered-component
+                                   :tension/devmap dm-id
+                                   :tension/component comp-id
+                                   :tension/coverage-pct (:coverage/coverage-pct cov)
+                                   :tension/detected-at now
+                                   :tension/summary (str (name dm-id) "/" (name comp-id)
+                                                         " — no mission")})
+                                (:coverage/uncovered cov)))))
+               coverage)
+         ;; Blocked missions
+         blocked-tensions
+         (into []
+               (comp (filter #(= :blocked (:mission/status %)))
+                     (map (fn [m]
+                            {:tension/type :blocked-mission
+                             :tension/mission (:mission/id m)
+                             :tension/blocked-by (:mission/blocked-by m)
+                             :tension/detected-at now
+                             :tension/summary (str (:mission/id m) " — blocked"
+                                                   (when (:mission/blocked-by m)
+                                                     (str ": " (:mission/blocked-by m))))})))
+               missions)
+         ;; Structural invalidity: devmaps with failed checks
+         structural-tensions
+         (into []
+               (comp (filter #(seq (:devmap/failed-checks %)))
+                     (map (fn [dm]
+                            {:tension/type :structural-invalid
+                             :tension/devmap (:devmap/id dm)
+                             :tension/detected-at now
+                             :tension/summary (str (name (:devmap/id dm))
+                                                   " — failed checks: "
+                                                   (str/join ", " (map name (:devmap/failed-checks dm))))})))
+               devmaps)
+         tensions (into (into uncovered-tensions blocked-tensions) structural-tensions)
+         by-type (frequencies (map :tension/type tensions))]
+     {:tensions tensions
+      :detected-at now
+      :summary {:total (count tensions)
+                :by-type by-type}})))
+
+;; =============================================================================
+;; Tension path tracing — 間 + 関 (gap-reading + gate-traversal)
+;; =============================================================================
+;;
+;; Given a tension, trace the full chain of 関 from devmap to source:
+;;   devmap → component → covering missions (or gap) → evidence → var → source
+;; Each step is a typed gate that either passes (link found) or blocks (gap).
+;; The trace is the replicable form of what tension discovery demonstrated ad hoc.
+
+(defn trace-tension-path
+  "Trace a tension through the full chain of 関 (gates/relations).
+
+   Takes a tension entry (from build-tension-export) and the current
+   portfolio review. Returns a path map with each gate's result:
+
+   {:tension    — the input tension
+    :gates      — ordered vector of gate results
+    :complete?  — true if all gates passed (full path traced)
+    :blocked-at — keyword of the first blocked gate, or nil}
+
+   Gate types:
+   - :devmap     — does the devmap exist and what's its structure?
+   - :component  — does the component exist in the devmap?
+   - :coverage   — which missions cover this component (may be empty = gap)?
+   - :evidence   — what evidence exists for related missions?
+   - :reflection — can we resolve a var that implements this?
+   - :source     — file + line of the implementing code"
+  ([tension] (trace-tension-path tension nil))
+  ([tension review]
+   (let [review (or review (build-portfolio-review))
+         devmaps (:portfolio/devmap-summaries review)
+         missions (:portfolio/missions review)
+         coverage (:portfolio/coverage review)
+         dm-id (:tension/devmap tension)
+         comp-id (:tension/component tension)
+         ttype (:tension/type tension)
+
+         ;; Gate 1: Devmap
+         devmap (first (filter #(= dm-id (:devmap/id %)) devmaps))
+         g-devmap {:gate :devmap
+                   :status (if devmap :pass :blocked)
+                   :data (when devmap
+                           {:id (:devmap/id devmap)
+                            :state (:devmap/state devmap)
+                            :component-count (:devmap/component-count devmap)
+                            :edge-count (:devmap/edge-count devmap)})}
+
+         ;; Gate 2: Component
+         component (when devmap
+                     (first (filter #(= comp-id (:component/id %))
+                                    (:devmap/components devmap))))
+         g-component {:gate :component
+                      :status (if component :pass :blocked)
+                      :data (when component
+                              {:id (:component/id component)
+                               :name (:component/name component)
+                               :devmap dm-id})}
+
+         ;; Gate 3: Coverage (this is where uncovered tensions block)
+         cov-entry (first (filter #(= dm-id (:coverage/devmap-id %)) coverage))
+         covering-missions (when (and cov-entry comp-id)
+                             (get (:coverage/by-component cov-entry) comp-id))
+         g-coverage {:gate :coverage
+                     :status (if (seq covering-missions) :pass :gap)
+                     :data {:component comp-id
+                            :missions (vec (or covering-missions []))
+                            :tension-type ttype}}
+
+         ;; Gate 4: Evidence (for covering missions, or the devmap itself)
+         related-mission-ids (if (seq covering-missions)
+                               covering-missions
+                               ;; No covering missions — look for devmap-level evidence
+                               (let [dm-name (when dm-id (str/lower-case (name dm-id)))]
+                                 (keep (fn [m]
+                                         (when (= dm-name (str/lower-case (:mission/id m)))
+                                           (:mission/id m)))
+                                       missions)))
+         related-missions (filter (fn [m]
+                                    (contains? (set related-mission-ids)
+                                               (:mission/id m)))
+                                  missions)
+         g-evidence {:gate :evidence
+                     :status (if (seq related-missions) :pass :blocked)
+                     :data {:missions (mapv (fn [m]
+                                             {:id (:mission/id m)
+                                              :status (:mission/status m)
+                                              :repo (:mission/repo m)
+                                              :path (:mission/path m)})
+                                           related-missions)}}
+
+         ;; Gate 5: Reflection (attempt to resolve a related var)
+         ;; Heuristic: look for vars in namespaces matching the devmap/component
+         reflection-result
+         (try
+           (let [;; Try to find a namespace related to this devmap
+                 dm-name (when dm-id (name dm-id))
+                 comp-name (when comp-id (name comp-id))
+                 ;; Search loaded namespaces for ones containing the devmap name
+                 candidate-nses (when dm-name
+                                  (->> (all-ns)
+                                       (filter (fn [ns-obj]
+                                                 (let [nsn (str (ns-name ns-obj))]
+                                                   (or (str/includes? nsn (str/replace dm-name "-" "_"))
+                                                       (str/includes? nsn (str/replace dm-name "-" "."))
+                                                       (when comp-name
+                                                         (str/includes? nsn (str/replace comp-name "-" "_")))))))
+                                       (take 3)))
+                 ;; Get public vars from first matching namespace
+                 first-ns (first candidate-nses)
+                 vars-sample (when first-ns
+                               (->> (ns-publics first-ns)
+                                    (take 5)
+                                    (mapv (fn [[sym v]]
+                                            (let [m (meta v)]
+                                              {:var (str (ns-name first-ns) "/" sym)
+                                               :file (:file m)
+                                               :line (:line m)
+                                               :arglists (str (:arglists m))})))))]
+             {:ns (when first-ns (str (ns-name first-ns)))
+              :candidate-namespaces (mapv #(str (ns-name %)) candidate-nses)
+              :vars vars-sample})
+           (catch Exception _ nil))
+
+         g-reflection {:gate :reflection
+                       :status (if (:ns reflection-result) :pass :blocked)
+                       :data reflection-result}
+
+         ;; Gate 6: Source (file + line from reflection)
+         source-file (some :file (:vars reflection-result))
+         source-line (some :line (:vars reflection-result))
+         g-source {:gate :source
+                   :status (if source-file :pass :blocked)
+                   :data (when source-file
+                           {:file source-file
+                            :line source-line})}
+
+         gates [g-devmap g-component g-coverage g-evidence g-reflection g-source]
+         first-blocked (first (filter #(= :blocked (:status %)) gates))]
+
+     {:tension tension
+      :gates gates
+      :complete? (nil? first-blocked)
+      :blocked-at (:gate first-blocked)
+      :gap-at (when (= :gap (:status g-coverage)) :coverage)})))
+
+(defn trace-all-tensions
+  "Trace all current tensions through the gate chain.
+   Returns a summary with per-tension paths and aggregate stats."
+  ([] (trace-all-tensions default-repo-roots))
+  ([repos]
+   (let [export (build-tension-export repos)
+         review (build-portfolio-review repos)
+         tensions (:tensions export)
+         paths (mapv #(trace-tension-path % review) tensions)
+         complete (filter :complete? paths)
+         blocked (remove :complete? paths)
+         blocked-at-freq (frequencies (keep :blocked-at blocked))
+         gap-count (count (filter :gap-at paths))]
+     {:paths paths
+      :summary {:total (count paths)
+                :complete (count complete)
+                :blocked (count blocked)
+                :gap-count gap-count
+                :blocked-at blocked-at-freq}
+      :detected-at (:detected-at export)})))
 
 ;; =============================================================================
 ;; Backfill — legacy missions as evidence (D7)
@@ -390,7 +849,7 @@
   (let [mid (:mission/id mission)
         src (name (:mission/source mission))
         now (str (java.time.Instant/now))]
-    {:evidence/id (str "e-backfill-" mid "-" src)
+    {:evidence/id (str "e-backfill-" mid "-" (or (:mission/repo mission) "unknown") "-" src)
      :evidence/subject {:ref/type :mission :ref/id mid}
      :evidence/type :coordination
      :evidence/claim-type :observation
@@ -401,7 +860,8 @@
                                           :mission/path :mission/date
                                           :mission/blocked-by
                                           :mission/raw-status
-                                          :mission/devmap-id])
+                                          :mission/devmap-id
+                                          :mission/gates])
      :evidence/tags [:mission :backfill :snapshot]}))
 
 (defn backfill-inventory
@@ -453,3 +913,64 @@
     :threshold-seconds (or (:threshold-seconds opts) 300)
     :self-id (or (:self-id opts) "tickle-1")
     :page-config (or (:page-config opts) {})}))
+
+;; =============================================================================
+;; Portfolio diff — compare consecutive review snapshots
+;; =============================================================================
+
+(defn- compute-portfolio-diff
+  "Compute diff between two portfolio snapshots (newest first).
+   Each snapshot is an evidence entry with :evidence/body containing
+   :portfolio/missions (vec of {:mission/id :mission/status})."
+  [new-snapshot old-snapshot]
+  (let [new-missions (:portfolio/missions (:evidence/body new-snapshot))
+        old-missions (:portfolio/missions (:evidence/body old-snapshot))
+        new-by-id (into {} (map (juxt :mission/id identity)) new-missions)
+        old-by-id (into {} (map (juxt :mission/id identity)) old-missions)
+        new-ids (set (keys new-by-id))
+        old-ids (set (keys old-by-id))
+        added (vec (for [id (sort (cset/difference new-ids old-ids))]
+                     (get new-by-id id)))
+        removed (vec (for [id (sort (cset/difference old-ids new-ids))]
+                       (get old-by-id id)))
+        changed (vec (for [id (sort (cset/intersection new-ids old-ids))
+                           :let [new-status (:mission/status (get new-by-id id))
+                                 old-status (:mission/status (get old-by-id id))]
+                           :when (not= new-status old-status)]
+                       {:mission/id id
+                        :old-status old-status
+                        :new-status new-status}))]
+    {:added added
+     :removed removed
+     :changed changed
+     :new-count (count new-missions)
+     :old-count (count old-missions)
+     :new-summary (:portfolio/summary (:evidence/body new-snapshot))
+     :old-summary (:portfolio/summary (:evidence/body old-snapshot))
+     :new-coverage (:portfolio/coverage (:evidence/body new-snapshot))
+     :old-coverage (:portfolio/coverage (:evidence/body old-snapshot))}))
+
+(defn portfolio-diff
+  "Query last two portfolio review snapshots from evidence and compute diff.
+   Returns {:ok true :diff {...}} or {:ok true :diff nil :message ...}."
+  [evidence-store]
+  (if-not evidence-store
+    {:ok false :error "Evidence store not available"}
+    (let [snapshots (estore/query* evidence-store
+                                   {:query/subject {:ref/type :portfolio
+                                                    :ref/id "global"}
+                                    :query/type :coordination
+                                    :query/limit 100})
+          snapshots (->> snapshots
+                         (filter (fn [e]
+                                   (let [tags (set (:evidence/tags e))]
+                                     (and (contains? tags :review)
+                                          (contains? tags :portfolio-snapshot)))))
+                         (take 2)
+                         vec)]
+      (if (< (count snapshots) 2)
+        {:ok true
+         :diff nil
+         :message "Not enough review history — run mc-review at least twice"}
+        {:ok true
+         :diff (compute-portfolio-diff (first snapshots) (second snapshots))}))))

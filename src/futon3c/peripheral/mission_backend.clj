@@ -36,6 +36,8 @@
 (defn- gen-id [prefix]
   (str prefix "-" (UUID/randomUUID)))
 
+(declare mission-doc-audit)
+
 (defn- mission-error
   "Create an error result for mission tool failures."
   [code message & {:as context}]
@@ -430,13 +432,15 @@
    pipeline via bridge/submit-to-gates! for external quality validation."
   [cache cwd args]
   (let [mission-id (first args)
-        cycle-id (second args)]
+        cycle-id (second args)
+        opts (let [o (nth args 2 nil)] (if (map? o) o {}))]
     (if-let [state (get-state cache cwd mission-id)]
       (if-let [cycle (find-cycle state cycle-id)]
         (let [blocker-id (:cycle/blocker-id cycle)
               blocker (get-in state [:mission/obligations blocker-id])
               phase-data (:cycle/phase-data cycle)
               dag-result (dag/acyclic? (:mission/obligations state))
+              doc-audit (mission-doc-audit cwd mission-id opts)
 
               ;; G5: scope — blocker exists in obligations
               g5 {:gate :G5-scope
@@ -448,6 +452,37 @@
               g4 {:gate :G4-evidence
                   :passed? (seq g4-artifacts)
                   :detail (str (count g4-artifacts) " artifact(s) referenced")}
+
+              ;; GF: mission/spec fidelity and documentation drift checks
+              gf-missing (get-in doc-audit [:gf :missing-headings])
+              gf-open-intervals (:honest-intervals doc-audit)
+              gf-silent-gaps (:silent-section-gaps doc-audit)
+              gF {:gate :GF-fidelity
+                  :passed? (= :ok (:status doc-audit))
+                  :detail (cond
+                            (not (:mission-doc-found? doc-audit))
+                            (str "Mission doc not found: " (:mission-doc-path doc-audit))
+
+                            (not (:guide-doc-found? doc-audit))
+                            (str "Guide doc not found: " (:guide-path doc-audit))
+
+                            (false? (:guide-gf-order? doc-audit))
+                            "Guide gate order is missing GF between G4 and G3"
+
+                            (seq gf-missing)
+                            (str "Missing GF headings: " (pr-str gf-missing))
+
+                            (seq gf-silent-gaps)
+                            (str "Silent section gaps: " (pr-str (mapv :section gf-silent-gaps)))
+
+                            (seq gf-open-intervals)
+                            (str "Open honest intervals (間): " (count gf-open-intervals))
+
+                            :else
+                            "GF checks passed")
+                  :audit {:open-section-count (:open-section-count doc-audit)
+                          :silent-gap-count (count gf-silent-gaps)
+                          :missing-gf-headings gf-missing}}
 
               ;; G3: status — valid classification
               g3-classification (get-in phase-data [:classify :classification])
@@ -464,6 +499,42 @@
                             "DAG is acyclic"
                             (str "Cycle detected: " (:cycle-nodes dag-result)))}
 
+              ;; GD: DOCUMENT — post-INSTANTIATE documentation + hypergraph discipline
+              gd-doc-artifacts (get-in phase-data [:integrate :doc-artifacts] [])
+              gd-plan (get-in phase-data [:integrate :hypergraph-plan])
+              gd-refs (if (map? gd-plan)
+                        (vec (or (:refs gd-plan)
+                                 (:hyperedge-ids gd-plan)
+                                 (:links gd-plan)
+                                 []))
+                        [])
+              gd-status (some-> gd-plan :status str str/lower-case)
+              gd-reason (some-> (or (:reason gd-plan)
+                                    (:defer-reason gd-plan))
+                                str str/trim)
+              gd-passed? (and (seq gd-doc-artifacts)
+                              (or (seq gd-refs)
+                                  (and (= "deferred" gd-status)
+                                       (seq gd-reason))))
+              gD {:gate :GD-document
+                  :passed? gd-passed?
+                  :detail (cond
+                            (not (seq gd-doc-artifacts))
+                            "No DOCUMENT artifacts recorded in :integrate/:doc-artifacts"
+
+                            (seq gd-refs)
+                            (str "DOCUMENT complete with " (count gd-doc-artifacts)
+                                 " doc artifact(s) and " (count gd-refs) " hypergraph ref(s)")
+
+                            (and (= "deferred" gd-status) (seq gd-reason))
+                            (str "Hypergraph wiring deferred with reason: " gd-reason)
+
+                            :else
+                            "Hypergraph plan missing refs or explicit deferred reason")
+                  :audit {:doc-artifact-count (count gd-doc-artifacts)
+                          :hypergraph-ref-count (count gd-refs)
+                          :hypergraph-status gd-status}}
+
               ;; G1: obligation consistency
               g1-dangling (dag/dangling-refs (:mission/obligations state))
               g1 {:gate :G1-obligations
@@ -478,7 +549,7 @@
                   :passed? (boolean g0-saved)
                   :detail (if g0-saved "State saved" "State not yet saved")}
 
-              gates [g5 g4 g3 g2 g1 g0]
+              gates [g5 g4 gF g3 g2 gD g1 g0]
               all-local-passed? (every? :passed? gates)
 
               ;; Run futon3b pipeline when local checks pass
@@ -515,6 +586,138 @@
                 (try (edn/read-string (slurp f))
                      (catch Exception _ nil))))
             candidates))))
+
+(def ^:private gf-required-headings
+  ["## Fidelity Contract (GF)"
+   "### Baseline Capability Inventory"
+   "### Capability Preservation Matrix (CPM)"
+   "### Tripwire Matrix"
+   "### Latent Dependency/Omission Probe"
+   "### Drop/Defer Decision Records (DR)"])
+
+(defn- resolve-mission-doc-path
+  [cwd mission-id opts]
+  (if-let [p (:mission-doc-path opts)]
+    (io/file p)
+    (io/file cwd "holes" "missions" (str mission-id ".md"))))
+
+(defn- resolve-guide-path
+  [cwd opts]
+  (if-let [p (:guide-path opts)]
+    (io/file p)
+    (io/file cwd "docs" "futonic-missions.md")))
+
+(defn- indexed-lines
+  [s]
+  (map-indexed (fn [i line] {:line (inc i) :text line}) (str/split-lines s)))
+
+(defn- parse-checklist-item
+  "Parse markdown checklist line.
+   Returns {:done? boolean :text string} or nil."
+  [line]
+  (when-let [[_ mark txt] (re-matches #"^\s*-\s*\[( |x|X)\]\s*(.+)\s*$" line)]
+    {:done? (not= " " mark)
+     :text txt}))
+
+(defn- section-refs
+  "Extract 'Section X.Y' refs from a checklist item text."
+  [txt]
+  (->> (re-seq #"Section\s+([0-9]+(?:\.[0-9]+)*)" (or txt ""))
+       (map second)
+       (distinct)
+       (vec)))
+
+(defn- section-heading-present?
+  [doc-content section-id]
+  (let [pat (re-pattern (str "(?m)^#+\\s+.*\\b"
+                             (java.util.regex.Pattern/quote section-id)
+                             "\\b"))]
+    (boolean (re-find pat (or doc-content "")))))
+
+(defn- guide-gf-order?
+  [guide-content]
+  (let [tokens ["G5  Task Specification"
+                "G4  Agent Authorization"
+                "GF  Fidelity Contract"
+                "G3  Pattern Reference"]
+        idxs (mapv #(str/index-of (or guide-content "") %) tokens)]
+    (and (every? some? idxs)
+         (apply < idxs))))
+
+(defn- mission-doc-audit
+  "Audit mission markdown against futonic mission discipline, including GF.
+   Returns an audit map. This is the perceives-interval (間) step:
+   explicitly surface open, section-linked obligations instead of assuming
+   completeness."
+  [cwd mission-id opts]
+  (let [mission-doc (resolve-mission-doc-path cwd mission-id opts)
+        guide-doc (resolve-guide-path cwd opts)
+        mission-exists? (.exists ^File mission-doc)
+        guide-exists? (.exists ^File guide-doc)
+        mission-content (when mission-exists? (slurp mission-doc))
+        guide-content (when guide-exists? (slurp guide-doc))
+        checklist (if mission-content
+                    (->> (indexed-lines mission-content)
+                         (keep (fn [{:keys [line text]}]
+                                 (when-let [item (parse-checklist-item text)]
+                                   (assoc item :line line))))
+                         vec)
+                    [])
+        open-items (filterv (comp not :done?) checklist)
+        open-section-items (->> open-items
+                                (mapcat (fn [{:keys [line text]}]
+                                          (let [refs (section-refs text)]
+                                            (if (seq refs)
+                                              (map (fn [section-id]
+                                                     {:line line
+                                                      :section section-id
+                                                      :text text})
+                                                   refs)
+                                              []))))
+                                vec)
+        ;; "Honest intervals" are explicit open obligations linked to sections.
+        honest-intervals open-section-items
+        silent-section-gaps (->> honest-intervals
+                                 (remove (fn [{:keys [section]}]
+                                           (section-heading-present? mission-content section)))
+                                 vec)
+        missing-gf-headings (if mission-content
+                              (->> gf-required-headings
+                                   (remove #(str/includes? mission-content %))
+                                   vec)
+                              gf-required-headings)
+        audit {:mission-id mission-id
+               :mission-doc-path (.getPath mission-doc)
+               :mission-doc-found? mission-exists?
+               :guide-path (.getPath guide-doc)
+               :guide-doc-found? guide-exists?
+               :guide-gf-order? (when guide-exists? (guide-gf-order? guide-content))
+               :gf {:present? (and mission-content
+                                   (str/includes? mission-content "## Fidelity Contract (GF)"))
+                    :missing-headings missing-gf-headings}
+               :checklist {:total (count checklist)
+                           :open (count open-items)}
+               :honest-intervals honest-intervals
+               :silent-section-gaps silent-section-gaps
+               :open-section-count (count honest-intervals)}]
+    (assoc audit
+           :status (if (and mission-exists?
+                            guide-exists?
+                            (:guide-gf-order? audit)
+                            (empty? missing-gf-headings)
+                            (empty? silent-section-gaps)
+                            (zero? (:open-section-count audit)))
+                     :ok
+                     :drift))))
+
+(defn- tool-mission-doc-audit
+  "Return mission documentation drift/fidelity audit."
+  [_cache cwd args]
+  (let [mission-id (first args)
+        opts (let [o (second args)] (if (map? o) o {}))]
+    (if (or (nil? mission-id) (str/blank? (str mission-id)))
+      (mission-error :invalid-mission-id "mission-doc-audit requires mission-id")
+      {:ok true :result (mission-doc-audit cwd mission-id opts)})))
 
 (defn- tool-mission-wiring
   "Load and return the per-mission wiring diagram."
@@ -577,7 +780,7 @@
     :mission-spec-get :mission-spec-update
     :cycle-begin :cycle-advance :cycle-get :cycle-list
     :failed-approach-add :status-validate :gate-check
-    :corpus-check :evidence-query :mission-wiring})
+    :corpus-check :evidence-query :mission-wiring :mission-doc-audit})
 
 (def delegated-tools
   "Tools delegated to the wrapped RealBackend."
@@ -604,6 +807,7 @@
         (= tool-id :failed-approach-add) (tool-failed-approach-add cache cwd args)
         (= tool-id :status-validate)    (tool-status-validate cache cwd args)
         (= tool-id :gate-check)         (tool-gate-check cache cwd args)
+        (= tool-id :mission-doc-audit)  (tool-mission-doc-audit cache cwd args)
         (= tool-id :corpus-check)       (tool-corpus-check cache cwd args config)
         (= tool-id :evidence-query)     (tool-evidence-query cache cwd args)
         (= tool-id :mission-wiring)    (tool-mission-wiring cache cwd args)

@@ -10,6 +10,7 @@
   ring/ring-core            {:mvn/version "1.11.0"}
   nrepl/nrepl               {:mvn/version "1.1.0"}
   org.clojure/tools.nrepl   {:mvn/version "0.2.13"}
+  org.clojure/core.logic    {:mvn/version "1.1.0"}
 
   ;; futon3b gate pipeline — social loop submits tasks through gates
   futon3b/futon3b           {:local/root "../futon3b"}
@@ -27,6 +28,7 @@
          :exec-args {:dirs ["test"]}}
 
   :dev {:extra-paths ["dev"]
+        :extra-deps {futon5/futon5 {:local/root "../futon5"}}
         :main-opts ["-m" "futon3c.dev"]}
 
   :repl {:main-opts ["-m" "nrepl.cmdline"

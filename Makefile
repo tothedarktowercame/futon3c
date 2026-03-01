@@ -3,12 +3,14 @@ EVIDENCE_BASE?=http://localhost:7070
 CODEX_SANDBOX?=danger-full-access
 CODEX_APPROVAL?=never
 CODEX_APPROVAL_POLICY?=$(CODEX_APPROVAL)
+NONSTARTER_DB?=$(HOME)/code/storage/nonstarter.db
 
 export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
+export NONSTARTER_DB
 
-.PHONY: tools dev test claude claude-repl codex codex-repl codex-autowake tickle status repl \
+.PHONY: tools dev dev-linode test claude claude-repl codex codex-repl codex-autowake tickle status repl \
 	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
 
 tools:
@@ -17,6 +19,12 @@ tools:
 dev:
 	@echo "[dev] Codex defaults: sandbox=$(CODEX_SANDBOX) approval=$(CODEX_APPROVAL_POLICY)"
 	$(CLOJURE) -M:dev
+
+dev-linode:
+	FUTON3C_IRC_PORT=0 FUTON3C_ROLE=linode FUTON1A_STATIC_DIR=$(HOME)/code/futon4/dev/web $(MAKE) dev
+
+dev-laptop:
+	FUTON3C_ROLE=laptop FUTON3C_LINODE_URL=http://172.236.28.208:7070 $(MAKE) dev
 
 test:
 	$(CLOJURE) -X:test

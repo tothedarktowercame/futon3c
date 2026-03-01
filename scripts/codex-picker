@@ -37,6 +37,7 @@ check_infra() {
 usage() {
   cat <<'EOF'
 Usage: ./scripts/codex-picker [--all] [--new] [--last] [--repl] [SESSION_ID]
+Legacy aliases also work: all | new | last | repl
 EOF
 }
 
@@ -50,6 +51,8 @@ session_file="${CODEX_SESSION_FILE:-/tmp/futon-codex-session-id}"
 codex_approval_policy="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL:-never}}"
 codex_sandbox="${CODEX_SANDBOX:-danger-full-access}"
 emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
+emacsclient_timeout="${EMACSCLIENT_TIMEOUT:-8}"
+emacs_bin="${EMACS_BIN:-emacs}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
 agency_agent_id="${AGENCY_AGENT_ID:-codex-1}"
@@ -70,6 +73,7 @@ pick_local_agency_base() {
 }
 
 pick_remote_agency_base() {
+  local local_base="${1:-}"
   if [[ -n "${FUTON3C_IRC_SEND_BASE:-}" ]]; then
     printf '%s\n' "${FUTON3C_IRC_SEND_BASE%/}"
     return 0
@@ -87,6 +91,32 @@ pick_remote_agency_base() {
       return 0
     fi
   fi
+  if [[ -z "${local_base}" ]]; then
+    local_base="$(pick_local_agency_base)"
+  fi
+  if [[ -n "${local_base}" ]]; then
+    local health hint
+    health="$(curl -sS --max-time 1 "${local_base%/}/health" 2>/dev/null || true)"
+    if [[ -n "${health}" ]]; then
+      if command -v python3 >/dev/null 2>&1; then
+        hint="$(printf '%s' "${health}" | python3 -c 'import json,sys
+try:
+    data=json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+hint=(data.get("irc-send-base") or data.get("irc_send_base") or "").strip()
+print(hint, end="")' 2>/dev/null || true)"
+      else
+        hint="$(printf '%s' "${health}" \
+          | sed -n 's/.*"irc-send-base"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+          | head -n 1)"
+      fi
+      if [[ -n "${hint}" ]]; then
+        printf '%s\n' "${hint%/}"
+        return 0
+      fi
+    fi
+  fi
   return 1
 }
 
@@ -98,7 +128,7 @@ else
   evidence_base="$(pick_local_agency_base)"
 fi
 
-irc_send_base="$(pick_remote_agency_base || true)"
+irc_send_base="$(pick_remote_agency_base "${evidence_base%/}" || true)"
 
 elisp_escape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "$1"
@@ -132,11 +162,41 @@ EOF
 register_agent() {
   command -v curl >/dev/null 2>&1 || return 0
   local agent_id="${1:-${agency_agent_id}}"
-  curl -sS --max-time 2 \
-    -H "Content-Type: application/json" \
-    -X POST \
-    -d "{\"agent-id\":\"${agent_id}\",\"type\":\"codex\"}" \
-    "${evidence_base%/}/api/alpha/agents" >/dev/null 2>&1 || true
+  local primary_base="${evidence_base%/}"
+  local remote_base="${irc_send_base%/}"
+  local base status ok_any=0
+  local -a bases=()
+
+  if [[ -n "${primary_base}" ]]; then
+    bases+=("${primary_base}")
+  fi
+  if [[ -n "${remote_base}" && "${remote_base}" != "${primary_base}" ]]; then
+    bases+=("${remote_base}")
+  fi
+
+  for base in "${bases[@]}"; do
+    status="$(curl -sS --max-time 2 \
+      --output /dev/null \
+      --write-out "%{http_code}" \
+      -H "Content-Type: application/json" \
+      -X POST \
+      -d "{\"agent-id\":\"${agent_id}\",\"type\":\"codex\"}" \
+      "${base}/api/alpha/agents" 2>/dev/null || true)"
+    if [[ "${status}" == "201" || "${status}" == "409" ]]; then
+      ok_any=1
+      if [[ "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+        echo "codex-picker: register ${agent_id} @ ${base} (status ${status})"
+      fi
+    else
+      if [[ "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+        echo "codex-picker: register ${agent_id} @ ${base} failed (status ${status:-none})" >&2
+      fi
+    fi
+  done
+
+  if [[ "${ok_any}" -ne 1 && "${FUTON3C_PICKER_TRACE:-0}" == "1" ]]; then
+    echo "codex-picker: register ${agent_id} failed on all targets" >&2
+  fi
 }
 
 resolve_agent_session_id() {
@@ -185,8 +245,15 @@ latest_session_id() {
 launch_repl() {
   local sid="${1:-}" sid_form escaped_session_file escaped_ui escaped_repl
   local escaped_agency_base escaped_evidence_url escaped_irc_send_base new_form irc_send_form
+  local escaped_codex_sandbox escaped_codex_approval
+  local elisp eval_out primary_eval_out rc quick_server quick_socket
+  local -a emacsclient_cmd
   if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
     echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
+    exit 1
+  fi
+  if ! [[ "${emacsclient_timeout}" =~ ^[0-9]+$ ]] || [[ "${emacsclient_timeout}" -le 0 ]]; then
+    echo "EMACSCLIENT_TIMEOUT must be a positive integer (seconds)." >&2
     exit 1
   fi
   escaped_session_file="$(elisp_escape "${session_file}")"
@@ -194,6 +261,8 @@ launch_repl() {
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
   escaped_agency_base="$(elisp_escape "${evidence_base%/}")"
   escaped_evidence_url="$(elisp_escape "${evidence_base%/}/api/alpha/evidence")"
+  escaped_codex_sandbox="$(elisp_escape "${codex_sandbox}")"
+  escaped_codex_approval="$(elisp_escape "${codex_approval_policy}")"
   if [[ -n "${irc_send_base}" ]]; then
     escaped_irc_send_base="$(elisp_escape "${irc_send_base%/}")"
     irc_send_form="\"${escaped_irc_send_base}\""
@@ -210,16 +279,92 @@ launch_repl() {
   else
     new_form="nil"
   fi
-  "${emacsclient_bin}" -e "(progn
+
+  if command -v timeout >/dev/null 2>&1; then
+    emacsclient_cmd=(timeout --kill-after=2 "${emacsclient_timeout}s" "${emacsclient_bin}")
+  else
+    emacsclient_cmd=("${emacsclient_bin}")
+  fi
+
+  elisp="(progn
     (load \"${escaped_ui}\")
     (load \"${escaped_repl}\")
-    (when ${new_form} (when (get-buffer \"*codex-repl*\") (kill-buffer \"*codex-repl*\")))
+    (when ${new_form}
+      ;; Reset stale REPL subprocesses so --new doesn't inherit a stuck turn.
+      (dolist (p (process-list))
+        (when (and (process-live-p p)
+                   (string-prefix-p \"codex-repl-codex\" (process-name p)))
+          (delete-process p)))
+      (when (get-buffer \"*codex-repl*\")
+        (kill-buffer \"*codex-repl*\")))
     (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\")
     (setq codex-repl-session-file \"${escaped_session_file}\")
     (setq codex-repl-evidence-url \"${escaped_evidence_url}\")
     (setq codex-repl-irc-send-base-url ${irc_send_form})
+    (setq codex-repl-sandbox \"${escaped_codex_sandbox}\")
+    (setq codex-repl-approval-policy \"${escaped_codex_approval}\")
     (setq codex-repl-session-id ${sid_form})
-    (codex-repl))" >/dev/null
+    (codex-repl))"
+
+  set +e
+  eval_out="$("${emacsclient_cmd[@]}" --timeout "${emacsclient_timeout}" --alternate-editor "" --reuse-frame --no-wait -e "${elisp}" 2>&1)"
+  rc=$?
+  set -e
+  primary_eval_out="${eval_out}"
+  if [[ ${rc} -eq 0 ]]; then
+    return 0
+  fi
+
+  # Fallback: dedicated quick daemon so broken/stuck user init doesn't block REPL launch.
+  if ! command -v "${emacs_bin}" >/dev/null 2>&1; then
+    echo "emacs not found. Install Emacs or set EMACS_BIN." >&2
+    echo "Primary emacsclient failure output:" >&2
+    [[ -n "${eval_out}" ]] && echo "${eval_out}" >&2
+    exit 1
+  fi
+  quick_server="${FUTON3C_EMACS_QUICK_SERVER:-futon3c-codex}"
+  if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+    quick_socket="${XDG_RUNTIME_DIR%/}/emacs/${quick_server}"
+  else
+    quick_socket="${HOME}/.emacs.d/server/${quick_server}"
+  fi
+  mkdir -p "$(dirname "${quick_socket}")"
+  if [[ -S "${quick_socket}" ]] && command -v lsof >/dev/null 2>&1; then
+    if ! lsof "${quick_socket}" >/dev/null 2>&1; then
+      rm -f "${quick_socket}"
+    fi
+  fi
+  if [[ ! -S "${quick_socket}" ]]; then
+    set +e
+    "${emacs_bin}" --quick --daemon="${quick_server}" >/dev/null 2>&1
+    rc=$?
+    set -e
+    if [[ ${rc} -ne 0 ]]; then
+      echo "Failed to start fallback Emacs quick daemon (${quick_server})." >&2
+      echo "Primary emacsclient failure output:" >&2
+      [[ -n "${eval_out}" ]] && echo "${eval_out}" >&2
+      exit 1
+    fi
+  fi
+
+  set +e
+  eval_out="$("${emacsclient_cmd[@]}" --socket-name "${quick_socket}" --create-frame --no-wait -e "${elisp}" 2>&1)"
+  rc=$?
+  set -e
+  if [[ ${rc} -eq 0 ]]; then
+    return 0
+  fi
+
+  echo "Failed to open Emacs Codex REPL via emacsclient (primary + fallback)." >&2
+  if [[ -n "${primary_eval_out}" ]]; then
+    echo "Primary emacsclient failure output:" >&2
+    echo "${primary_eval_out}" >&2
+  fi
+  if [[ -n "${eval_out}" ]]; then
+    echo "Fallback emacsclient failure output:" >&2
+    echo "${eval_out}" >&2
+  fi
+  exit 1
 }
 
 while [[ $# -gt 0 ]]; do
@@ -228,7 +373,15 @@ while [[ $# -gt 0 ]]; do
       mode="all"
       shift
       ;;
+    all)
+      mode="all"
+      shift
+      ;;
     --new)
+      start_new=true
+      shift
+      ;;
+    new)
       start_new=true
       shift
       ;;
@@ -236,7 +389,15 @@ while [[ $# -gt 0 ]]; do
       resume_last=true
       shift
       ;;
+    last)
+      resume_last=true
+      shift
+      ;;
     --repl)
+      open_repl=true
+      shift
+      ;;
+    repl)
       open_repl=true
       shift
       ;;
@@ -279,6 +440,7 @@ fi
 
 if $open_repl; then
   sid=""
+  register_agent "${agency_agent_id}"
   if $start_new; then
     rm -f "${session_file}"
     echo "Opening Emacs Codex REPL (new session)."

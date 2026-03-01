@@ -2,13 +2,15 @@
 .clj-config/
 .m2/
 .nrepl-port
+.admintoken
 target/
 *.class
 .venv-*/
 .tools/
 log/
 .alleycat-drop/
-storage/mission-control/sessions.edn
+storage/
+data/
 
 bb
 clojure
@@ -16,3 +18,5 @@ __pycache__/
 AGENTS.md
 .state/
 .tmp/
+library/alfworld/compile-flexiargs-to-deterministic-runner.flexiarg
+library/social/cluster-tooling-bootstrap.flexiarg

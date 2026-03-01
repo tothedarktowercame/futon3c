@@ -289,7 +289,7 @@ CONFIG keys:
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face)))
-    (insert (propertize "RET send | C-c C-k clear\n\n"
+    (insert (propertize "RET send | C-c C-k clear | C-c C-n new session\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers
     (setq futon3c-ui--prompt-marker (point-marker))

@@ -56,6 +56,23 @@
           {:ok true :result {:bulletin text}}
           {:ok false :error "mc-bulletin requires a string argument"}))
 
+      ;; Mission focus — per-session mission targeting
+      :mc-focus
+      (let [mission-id (first args)]
+        (if (and (string? mission-id) (seq mission-id))
+          {:ok true :result {:focused-mission mission-id}}
+          {:ok false :error "mc-focus requires a mission-id string argument"}))
+
+      :mc-focus-clear
+      {:ok true :result {:focused-mission nil}}
+
+      :mc-focus-show
+      {:ok true :result {:focused-mission (:focused-mission state)}}
+
+      ;; Portfolio diff — compare consecutive review snapshots
+      :mc-diff
+      (mcb/portfolio-diff (:evidence-store state))
+
       ;; Tickle — stall detection and agent paging
       :tickle-scan
       {:ok true :result (mcb/tickle-scan (:evidence-store state) (or (first args) {}))}
@@ -102,7 +119,12 @@
                             (update :steps conj {:tool tool :args args :result result})
                             ;; Track the latest review if one was produced
                             (cond-> (and (= tool :mc-review) (:portfolio/missions result))
-                              (assoc :latest-review result)))
+                              (assoc :latest-review result)
+                              ;; Track focused mission
+                              (= tool :mc-focus)
+                              (assoc :focused-mission (first args))
+                              (= tool :mc-focus-clear)
+                              (dissoc :focused-mission)))
               append-err (common/maybe-append-evidence! new-state ev)]
           (if append-err
             append-err

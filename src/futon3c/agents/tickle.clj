@@ -105,7 +105,8 @@
    IRC message for nudge. Returns {:paged? bool :agent-id string :method :bell|:irc}."
   [agent-id config]
   (let [agent-id (agent-id->string agent-id)
-        {:keys [ring-test-bell! send-to-channel! room evidence-store]} config
+        {:keys [ring-test-bell! send-to-channel! room evidence-store
+                make-page-message]} config
         ring-test-bell! (or ring-test-bell! bells/ring-test-bell!)
         bell-result (try
                       (ring-test-bell! {:agent-id agent-id
@@ -117,9 +118,10 @@
 
       (fn? send-to-channel!)
       (try
-        (send-to-channel! (or room "#ops")
-                          "tickle-1"
-                          (str "tickle paging " agent-id ": no recent activity observed"))
+        (let [msg (if (fn? make-page-message)
+                    (make-page-message agent-id)
+                    (str "@" agent-id " tickle paging you: no recent activity observed"))]
+          (send-to-channel! (or room "#ops") "tickle-1" msg))
         {:paged? true :agent-id agent-id :method :irc}
         (catch Throwable _
           {:paged? false :agent-id agent-id :method :irc}))

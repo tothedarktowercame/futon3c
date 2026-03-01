@@ -3,7 +3,19 @@
 # Usage: bash scripts/agency-diagnostic.sh [drawbridge-url] [token]
 
 URL="${1:-http://localhost:6768/eval}"
-TOKEN="${2:-change-me}"
+
+# Resolve token: arg > env > .admintoken file
+if [ -n "${2:-}" ]; then
+  TOKEN="$2"
+elif [ -n "${FUTON3C_ADMIN_TOKEN:-}" ]; then
+  TOKEN="$FUTON3C_ADMIN_TOKEN"
+elif [ -n "${ADMIN_TOKEN:-}" ]; then
+  TOKEN="$ADMIN_TOKEN"
+elif [ -f .admintoken ]; then
+  TOKEN="$(cat .admintoken | tr -d '[:space:]')"
+else
+  TOKEN="change-me"
+fi
 
 eval_clj() {
   curl -s -X POST "$URL" -H "x-admin-token: $TOKEN" -d @- <<CLOJURE

@@ -7,6 +7,7 @@
    3. Integration: portfolio review across real repo data
    4. VERIFY: backward verification (←), invariant checks, real-data validation"
   (:require [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.peripheral.common :as common]
@@ -163,6 +164,46 @@
         ;; 2/3 ≈ 0.667
         (is (< 0.6 (:coverage/coverage-pct c) 0.7))))))
 
+(deftest compute-coverage-parent-mission-match
+  (testing "devmap with matching active mission has 100% coverage"
+    (let [devmaps [{:devmap/id :social-exotype
+                    :devmap/state :active
+                    :devmap/input-count 1
+                    :devmap/output-count 1
+                    :devmap/component-count 3
+                    :devmap/edge-count 3
+                    :devmap/all-valid true
+                    :devmap/failed-checks []
+                    :devmap/components [{:component/id :S-presence :component/name "Presence"}
+                                        {:component/id :S-dispatch :component/name "Dispatch"}
+                                        {:component/id :S-validate :component/name "Validate"}]}]
+          missions [{:mission/id "social-exotype"
+                     :mission/status :in-progress
+                     :mission/source :md-file}]
+          coverage (mcb/compute-coverage devmaps missions)
+          c (first coverage)]
+      (is (= 3 (:coverage/covered-components c)))
+      (is (empty? (:coverage/uncovered c)))
+      (is (== 1.0 (:coverage/coverage-pct c)))))
+  (testing "devmap with matching but non-active mission falls back to heuristic"
+    (let [devmaps [{:devmap/id :social-exotype
+                    :devmap/state :active
+                    :devmap/input-count 1
+                    :devmap/output-count 1
+                    :devmap/component-count 2
+                    :devmap/edge-count 2
+                    :devmap/all-valid true
+                    :devmap/failed-checks []
+                    :devmap/components [{:component/id :S-presence :component/name "Presence"}
+                                        {:component/id :S-dispatch :component/name "Dispatch"}]}]
+          missions [{:mission/id "social-exotype"
+                     :mission/status :unknown   ; not active
+                     :mission/source :md-file}]
+          coverage (mcb/compute-coverage devmaps missions)
+          c (first coverage)]
+      ;; Falls back to heuristic, which won't match S-presence to social-exotype
+      (is (< (:coverage/coverage-pct c) 1.0)))))
+
 ;; =============================================================================
 ;; Backend: mana queries
 ;; =============================================================================
@@ -183,6 +224,7 @@
       (is (vector? (:portfolio/devmap-summaries review)))
       (is (vector? (:portfolio/coverage review)))
       (is (map? (:portfolio/mana review)))
+      (is (map? (:portfolio/doc-drift review)))
       (is (string? (:portfolio/summary review)))
       (is (vector? (:portfolio/gaps review)))
       (is (vector? (:portfolio/actionable review)))
@@ -365,7 +407,7 @@
     (let [spec (common/load-spec :mission-control)
           ;; Verify that :write is NOT in the tool set
           write-tools #{:edit :write :bash-git :bash-deploy}]
-      (is (empty? (clojure.set/intersection (:peripheral/tools spec) write-tools))
+      (is (empty? (set/intersection (:peripheral/tools spec) write-tools))
           "mission-control spec must not contain write tools"))))
 
 ;; =============================================================================
@@ -479,10 +521,14 @@
   (testing "portfolio review summary numbers match the underlying data"
     (let [review (mcb/build-portfolio-review)
           missions (:portfolio/missions review)
+          doc-drift (:portfolio/doc-drift review)
           summary (:portfolio/summary review)]
       ;; Summary should mention the mission count
       (is (str/includes? summary (str (count missions) " missions"))
           (str "summary doesn't match: " summary))
+      (is (str/includes? summary "Doc drift:")
+          (str "summary missing doc-drift clause: " summary))
+      (is (contains? doc-drift :audit/drift))
       ;; Actionable missions should be a subset of in-progress + ready
       (let [actionable-ids (set (map #(first (str/split % #" ")) (:portfolio/actionable review)))
             in-progress-or-ready (set (map :mission/id
@@ -656,3 +702,89 @@
         (evidence-store/append* store e))
       (is (= 2 (count (:entries @store))))
       (is (= 2 (count (:order @store)))))))
+
+;; =============================================================================
+;; Tension export
+;; =============================================================================
+
+(deftest build-tension-export-returns-structured-tensions
+  (testing "build-tension-export returns tensions with required fields"
+    (let [result (mcb/build-tension-export)]
+      (is (map? result))
+      (is (vector? (:tensions result)))
+      (is (string? (:detected-at result)))
+      (is (map? (:summary result)))
+      (is (number? (:total (:summary result))))
+      (is (= (:total (:summary result)) (count (:tensions result)))))))
+
+(deftest tension-entries-have-required-shape
+  (testing "each tension entry has type, detected-at, summary"
+    (let [result (mcb/build-tension-export)
+          tensions (:tensions result)]
+      (doseq [t tensions]
+        (is (contains? #{:uncovered-component :blocked-mission :structural-invalid}
+                       (:tension/type t))
+            (str "unexpected tension type: " (:tension/type t)))
+        (is (string? (:tension/detected-at t)))
+        (is (string? (:tension/summary t)))))))
+
+(deftest tension-uncovered-components-have-devmap-and-component
+  (testing "uncovered-component tensions include devmap and component IDs"
+    (let [result (mcb/build-tension-export)
+          uncovered (filter #(= :uncovered-component (:tension/type %))
+                            (:tensions result))]
+      (doseq [t uncovered]
+        (is (keyword? (:tension/devmap t)))
+        (is (keyword? (:tension/component t)))
+        (is (number? (:tension/coverage-pct t)))))))
+
+;; =============================================================================
+;; Tension path tracing (間 + 関)
+;; =============================================================================
+
+(deftest trace-tension-path-returns-gates
+  (testing "trace-tension-path returns a structured path for a tension"
+    (let [export (mcb/build-tension-export)
+          tension (first (:tensions export))
+          path (mcb/trace-tension-path tension)]
+      (is (map? path))
+      (is (= tension (:tension path)))
+      (is (vector? (:gates path)))
+      (is (= 6 (count (:gates path))))
+      (is (boolean? (:complete? path)))
+      ;; Every gate has :gate keyword and :status
+      (doseq [g (:gates path)]
+        (is (keyword? (:gate g)))
+        (is (#{:pass :blocked :gap} (:status g)))))))
+
+(deftest trace-tension-path-devmap-gate-passes
+  (testing "devmap gate passes for real tensions (devmap must exist)"
+    (let [export (mcb/build-tension-export)
+          uncovered (filter #(= :uncovered-component (:tension/type %))
+                            (:tensions export))]
+      (doseq [t uncovered]
+        (let [path (mcb/trace-tension-path t)
+              g-devmap (first (:gates path))]
+          (is (= :devmap (:gate g-devmap)))
+          (is (= :pass (:status g-devmap))
+              (str "devmap gate should pass for " (:tension/devmap t))))))))
+
+(deftest trace-tension-path-coverage-gap-for-uncovered
+  (testing "uncovered-component tensions have :gap at coverage gate"
+    (let [export (mcb/build-tension-export)
+          uncovered (filter #(= :uncovered-component (:tension/type %))
+                            (:tensions export))]
+      (doseq [t uncovered]
+        (let [path (mcb/trace-tension-path t)
+              g-coverage (nth (:gates path) 2)]
+          (is (= :coverage (:gate g-coverage)))
+          (is (= :gap (:status g-coverage))
+              (str "coverage should be :gap for " (:tension/component t))))))))
+
+(deftest trace-all-tensions-returns-summary
+  (testing "trace-all-tensions returns paths and summary"
+    (let [result (mcb/trace-all-tensions)]
+      (is (vector? (:paths result)))
+      (is (map? (:summary result)))
+      (is (pos? (:total (:summary result))))
+      (is (string? (:detected-at result))))))
