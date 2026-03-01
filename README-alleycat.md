@@ -224,6 +224,13 @@ This path gives practical Codex parity with the Claude transport pivot:
 - Net effect: the normal workflow (`make dev` + `make codex-repl`) is enough
   for Emacs/IRC pivoting.
 
+Windows-native hybrid equivalent surface:
+- use `scripts/windows/futon-windows.bat <target> [ARGS=...]`
+- canonical target mapping lives in: `scripts/windows/README.md`
+- practical parity loop:
+  - `scripts/windows/futon-windows.bat dev`
+  - `scripts/windows/futon-windows.bat codex-repl`
+
 ### Manual Codex IRC Relay (optional)
 
 From `futon3c/`:

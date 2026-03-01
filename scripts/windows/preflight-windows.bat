@@ -26,6 +26,7 @@ call :check_cmd curl.exe "curl"
 call :check_cmd git.exe "git"
 call :check_cmd java.exe "java"
 call :check_cmd python.exe "python"
+call :check_cmd codex "codex"
 
 if "%FAIL_COUNT%"=="0" (
   echo [preflight] PASS

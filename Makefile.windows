@@ -1,27 +1,34 @@
 CODEX_SANDBOX ?= danger-full-access
 CODEX_APPROVAL ?= never
 CODEX_APPROVAL_POLICY ?= $(CODEX_APPROVAL)
+WIN_SCRIPTS ?= scripts\\windows
 
 export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
 
-.PHONY: tools preflight dev test status repl
+.PHONY: tools preflight dev test status repl codex codex-repl
 
 tools:
-	cmd /c scripts\\windows\\bootstrap-tools.bat
+	cmd /c $(WIN_SCRIPTS)\\bootstrap-tools.bat
 
 preflight:
-	cmd /c scripts\\windows\\preflight-windows.bat
+	cmd /c $(WIN_SCRIPTS)\\preflight-windows.bat
 
 dev:
-	cmd /c scripts\\windows\\dev-windows.bat
+	cmd /c $(WIN_SCRIPTS)\\dev-windows.bat
 
 test:
-	cmd /c scripts\\windows\\test-windows.bat
+	cmd /c $(WIN_SCRIPTS)\\test-windows.bat
 
 status:
-	cmd /c scripts\\windows\\status-windows.bat
+	cmd /c $(WIN_SCRIPTS)\\status-windows.bat
 
 repl:
-	cmd /c scripts\\windows\\repl-windows.bat
+	cmd /c $(WIN_SCRIPTS)\\repl-windows.bat
+
+codex:
+	cmd /c $(WIN_SCRIPTS)\\codex-picker-windows.bat $(ARGS)
+
+codex-repl:
+	cmd /c $(WIN_SCRIPTS)\\codex-repl-windows.bat $(ARGS)
