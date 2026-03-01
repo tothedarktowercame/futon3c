@@ -29,5 +29,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem Force codex-picker to use native Emacs client (avoid MSYS emacsclient socket mismatch).
+set "EMACSCLIENT_BIN=emacsclientw.exe"
 call "%~dp0codex-picker-windows.bat" --repl %*
 exit /b %ERRORLEVEL%
