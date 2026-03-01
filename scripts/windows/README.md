@@ -17,8 +17,8 @@ Target authority:
 - `Makefile.windows` is the canonical target list.
 - this file maps each target to the implementing script for quick operator reference.
 - `scripts/windows/futon-windows.bat` may directly dispatch selected targets
-  (currently `codex` and `codex-repl`) to avoid make/shell interop drift on
-  Windows.
+  (`dev`, `test`, `status`, `repl`, `codex`, `codex-repl`) to avoid make/shell
+  interop drift on Windows.
 
 ## Target Mapping
 
@@ -26,6 +26,7 @@ Target authority:
 |---|---|
 | `tools` | `scripts/windows/bootstrap-tools.bat` |
 | `preflight` | `scripts/windows/preflight-windows.bat` |
+| `stop-futon1a` / `kill-futon1a` | `scripts/windows/stop-futon1a-windows.bat` |
 | `dev` | `scripts/windows/dev-windows.bat` |
 | `test` | `scripts/windows/test-windows.bat` |
 | `status` | `scripts/windows/status-windows.bat` |

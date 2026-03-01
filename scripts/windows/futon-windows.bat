@@ -6,11 +6,22 @@ if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
 
 set "TARGET=%~1"
-if not defined TARGET set "TARGET=dev"
-if defined TARGET shift
+if not defined TARGET (
+  set "TARGET=dev"
+) else (
+  shift
+)
+
+set "TARGET_ARGS="
+:collect_target_args
+if "%~1"=="" goto target_args_done
+set "TARGET_ARGS=!TARGET_ARGS! "%~1""
+shift
+goto collect_target_args
+:target_args_done
 
 if /i "%TARGET%"=="tools" (
-  call "%SCRIPT_DIR%\bootstrap-tools.bat" %*
+  call "%SCRIPT_DIR%\bootstrap-tools.bat"!TARGET_ARGS!
   exit /b %ERRORLEVEL%
 )
 
@@ -19,13 +30,43 @@ if /i "%TARGET%"=="preflight" (
   exit /b %ERRORLEVEL%
 )
 
+if /i "%TARGET%"=="stop-futon1a" (
+  call "%SCRIPT_DIR%\stop-futon1a-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
+if /i "%TARGET%"=="kill-futon1a" (
+  call "%SCRIPT_DIR%\stop-futon1a-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
+if /i "%TARGET%"=="dev" (
+  call :run_windows_script "%SCRIPT_DIR%\dev-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
+if /i "%TARGET%"=="test" (
+  call :run_windows_script "%SCRIPT_DIR%\test-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
+if /i "%TARGET%"=="status" (
+  call :run_windows_script "%SCRIPT_DIR%\status-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
+if /i "%TARGET%"=="repl" (
+  call :run_windows_script "%SCRIPT_DIR%\repl-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
 if /i "%TARGET%"=="codex" (
-  call :run_windows_script "%SCRIPT_DIR%\codex-picker-windows.bat" %*
+  call :run_windows_script "%SCRIPT_DIR%\codex-picker-windows.bat"!TARGET_ARGS!
   exit /b %ERRORLEVEL%
 )
 
 if /i "%TARGET%"=="codex-repl" (
-  call :run_windows_script "%SCRIPT_DIR%\codex-repl-windows.bat" %*
+  call :run_windows_script "%SCRIPT_DIR%\codex-repl-windows.bat"!TARGET_ARGS!
   exit /b %ERRORLEVEL%
 )
 
@@ -47,9 +88,9 @@ if errorlevel 1 (
   exit /b 1
 )
 if /i "%MAKE_CMD%"=="%REPO_ROOT%\.tools\bin\make.bat" (
-  call "%MAKE_CMD%" -f "%REPO_ROOT%\Makefile.windows" %TARGET% %*
+  call "%MAKE_CMD%" -f "%REPO_ROOT%\Makefile.windows" %TARGET%!TARGET_ARGS!
 ) else (
-  "%MAKE_CMD%" -f "%REPO_ROOT%\Makefile.windows" %TARGET% %*
+  "%MAKE_CMD%" -f "%REPO_ROOT%\Makefile.windows" %TARGET%!TARGET_ARGS!
 )
 set "FW_EXIT=%ERRORLEVEL%"
 popd
@@ -94,7 +135,7 @@ shift
 goto rws_collect
 
 :rws_exec
-echo [futon-windows] Running target '%TARGET%' via %~nx1
+echo [futon-windows] Running target '%TARGET%' via !RWS_SCRIPT!
 call "%RWS_SCRIPT%"!RWS_ARGS!
 set "RWS_EXIT=!ERRORLEVEL!"
 endlocal & exit /b %RWS_EXIT%
