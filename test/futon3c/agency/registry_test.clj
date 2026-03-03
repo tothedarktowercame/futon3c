@@ -214,6 +214,22 @@
       :capabilities []})
     (is (= 1 (:count (reg/registry-status))))))
 
+(deftest registry-status-detects-external-codex-invocation
+  (testing "codex agent marked invoking when matching external codex process session is active"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-ext")
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]
+      :session-id "019c91b2-fa9f-7080-a443-e7c882046a3c"})
+    (with-redefs [reg/running-codex-session-ids
+                  (constantly #{"019c91b2-fa9f-7080-a443-e7c882046a3c"})]
+      (let [info (get-in (reg/registry-status) [:agents "codex-ext"])]
+        (is (= :invoking (:status info)))
+        (is (= "[external invoke]" (:invoke-prompt-preview info)))
+        (is (= "codex exec running (external surface)"
+               (:invoke-activity info)))))))
+
 (deftest shutdown-all-clears-registry
   (testing "shutdown-all! removes all agents"
     (doseq [i (range 5)]
