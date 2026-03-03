@@ -63,5 +63,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+pushd "%REPO_ROOT%" >nul 2>nul
+if errorlevel 1 (
+  1>&2 echo [run-clojure-windows] ERROR: unable to enter %REPO_ROOT%
+  exit /b 1
+)
+
 call "%CLOJURE_BAT%" %*
-exit /b %ERRORLEVEL%
+set "RC=%ERRORLEVEL%"
+popd >nul 2>nul
+exit /b %RC%
