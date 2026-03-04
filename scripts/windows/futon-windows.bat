@@ -45,6 +45,11 @@ if /i "%TARGET%"=="dev" (
   exit /b %ERRORLEVEL%
 )
 
+if /i "%TARGET%"=="dev-arxana" (
+  call :run_windows_script "%SCRIPT_DIR%\dev-stack-arxana-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
 if /i "%TARGET%"=="dev-core" (
   call :run_windows_script "%SCRIPT_DIR%\dev-windows.bat"!TARGET_ARGS!
   exit /b %ERRORLEVEL%

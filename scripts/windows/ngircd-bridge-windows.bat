@@ -25,7 +25,7 @@ if not defined IRC_HOST set "IRC_HOST=127.0.0.1"
 if not defined IRC_PORT set "IRC_PORT=6667"
 if not defined IRC_CHANNEL set "IRC_CHANNEL=#futon"
 if not defined INVOKE_BASE set "INVOKE_BASE=http://127.0.0.1:7070"
-if not defined BRIDGE_BOTS set "BRIDGE_BOTS=claude,codex"
+if not defined BRIDGE_BOTS set "BRIDGE_BOTS=codex"
 
 set "BRIDGE_BOTS_NORMALIZED=%BRIDGE_BOTS: =%"
 if /i "%BRIDGE_BOTS_NORMALIZED%"=="codex" (

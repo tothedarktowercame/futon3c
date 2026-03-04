@@ -4,11 +4,31 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+for %%I in ("%REPO_ROOT%\..\futon4\dev\web") do set "DEFAULT_FUTON1A_STATIC_DIR=%%~fI"
 
 if not defined FUTON1A_PORT set "FUTON1A_PORT=7071"
 if not defined FUTON3C_PORT set "FUTON3C_PORT=7070"
 if not defined FUTON3C_IRC_PORT set "FUTON3C_IRC_PORT=6667"
 if not defined FUTON3C_DRAWBRIDGE_PORT set "FUTON3C_DRAWBRIDGE_PORT=6768"
+if not defined BRIDGE_BOTS set "BRIDGE_BOTS=codex"
+
+if not defined FUTON1A_STATIC_DIR (
+  if exist "%DEFAULT_FUTON1A_STATIC_DIR%\evidence-viewer\index.html" (
+    set "FUTON1A_STATIC_DIR=%DEFAULT_FUTON1A_STATIC_DIR%"
+    echo [dev-stack-windows] FUTON1A_STATIC_DIR defaulted to %FUTON1A_STATIC_DIR%
+  ) else (
+    echo [dev-stack-windows] WARN: FUTON1A_STATIC_DIR unset and default missing: %DEFAULT_FUTON1A_STATIC_DIR%
+  )
+) else (
+  echo [dev-stack-windows] FUTON1A_STATIC_DIR preset: %FUTON1A_STATIC_DIR%
+)
+
+set "BRIDGE_BOTS_NORMALIZED=%BRIDGE_BOTS: =%"
+if /i "%BRIDGE_BOTS_NORMALIZED%"=="codex" (
+  if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
+  if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
+  echo [dev-stack-windows] codex-only mode: FUTON3C_REGISTER_CLAUDE=%FUTON3C_REGISTER_CLAUDE% FUTON3C_RELAY_CLAUDE=%FUTON3C_RELAY_CLAUDE%
+)
 
 echo [dev-stack-windows] Preparing clean runtime start...
 call "%SCRIPT_DIR%\stop-futon1a-windows.bat" %FUTON1A_PORT%
