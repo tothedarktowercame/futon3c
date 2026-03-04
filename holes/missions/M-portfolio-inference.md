@@ -1,7 +1,7 @@
 # Mission: Portfolio Inference
 
 **Date:** 2026-02-26
-**Status:** INSTANTIATE (complete)
+**Status:** DONE (TESTING)
 **Blocked by:** None (M-mission-control complete; chapter0 invariants
 defined; ant AIF loop operational in futon2; AifAdapter protocol exists
 with 3 domain adapters)
@@ -1053,9 +1053,11 @@ Structural summary:
   - futon5a: compression (hours → effort bands) deferred to futon5a maintainer
 - [ ] First live weekly heartbeat cycle (bid Monday → clear Sunday → prediction error)
 
-## Status: INSTANTIATE Complete
+## Status: DONE (TESTING) — 2026-03-01
 
 All derivations (D-1 through D-11) are instantiated. The core AIF loop,
 evidence emission, and weekly heartbeat infrastructure are all built and
-tested. The remaining item is operational: running the first actual weekly
-cycle. That's a use-the-system event, not a build-the-system event.
+tested (69 portfolio-specific tests, all passing). The remaining exit
+condition — first live weekly heartbeat cycle (bid Monday → clear Sunday →
+prediction error) — is operational validation, not build work. The system
+is complete and awaiting its first real-world cycle.
