@@ -59,6 +59,11 @@ Full-stack launch (`dev`) behavior:
 - defaults `BRIDGE_BOTS=codex` when unset
 - if `BRIDGE_BOTS=codex`, applies `FUTON3C_REGISTER_CLAUDE=false` and
   `FUTON3C_RELAY_CLAUDE=false` before runtime startup
+- if `FUTON3C_REPOS` is unset and a local installation root exists at
+  `..\..\gh\mfuton`, `dev` temporarily injects:
+  `FUTON3C_REPOS=installation=<that-root>`
+- otherwise, runtime uses futon3c native default repo-root discovery
+- for deterministic repo scope, set `FUTON3C_REPOS` explicitly before startup
 - starts `dev-core` in the background with output streamed to the same console
 - waits for runtime ports, then starts `ngircd-bridge`
 
