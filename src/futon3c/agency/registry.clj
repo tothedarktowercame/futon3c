@@ -17,7 +17,8 @@
    Design: single registry atom with one entry per agent-id value.
    The triple-store problem from futon3 (registry + local-handlers +
    connected-agents) is eliminated by having one authoritative store."
-  (:require [futon3c.blackboard :as bb]
+  (:require [clojure.string :as str]
+            [futon3c.blackboard :as bb]
             [futon3c.social.shapes :as shapes]
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
@@ -427,28 +428,68 @@
 ;; Introspection
 ;; =============================================================================
 
+(defn running-codex-session-ids
+  "Best-effort detection of local `codex exec --json resume <sid>` processes.
+   Returns a set of active session IDs.
+
+   This is used to surface external Codex activity (e.g. emacs codex-repl)
+   in the shared *agents* panel even when that invoke did not flow through
+   registry/invoke-agent!."
+  []
+  (try
+    (with-open [processes (java.lang.ProcessHandle/allProcesses)]
+      (->> (iterator-seq (.iterator processes))
+           (keep (fn [^java.lang.ProcessHandle process]
+                   (let [cmd-opt (.. process info commandLine)]
+                     (when (.isPresent cmd-opt)
+                       (let [line (.get cmd-opt)]
+                         (when (and (str/includes? line "codex exec --json")
+                                    (str/includes? line " resume "))
+                           (second (re-find #"resume\s+([0-9a-fA-F-]{36})\b" line))))))))
+           set))
+    (catch Throwable _
+      #{})))
+
 (defn registry-status
   "Return status of all registered agents."
   []
-  {:agents
-   (into {}
-         (map (fn [[aid agent]]
-                [aid (cond-> {:type (:agent/type agent)
-                              :id (:agent/id agent)
-                              :session-id (:agent/session-id agent)
-                              :registered-at (str (:agent/registered-at agent))
-                              :last-active (str (:agent/last-active agent))
-                              :capabilities (:agent/capabilities agent)
-                              :ttl-ms (:agent/ttl-ms agent)
-                              :metadata (:agent/metadata agent)
-                              :status (or (:agent/status agent) :idle)}
-                       (:agent/invoke-started-at agent)
-                       (assoc :invoke-started-at (str (:agent/invoke-started-at agent))
-                              :invoke-prompt-preview (:agent/invoke-prompt-preview agent))
-                       (:agent/invoke-activity agent)
-                       (assoc :invoke-activity (:agent/invoke-activity agent)))])
-              @!registry))
-   :count (count @!registry)})
+  (let [codex-session-ids (running-codex-session-ids)]
+    {:agents
+     (into {}
+           (map (fn [[aid agent]]
+                  (let [base-status (or (:agent/status agent) :idle)
+                        session-id (:agent/session-id agent)
+                        external-codex-invoking?
+                        (and (= :codex (:agent/type agent))
+                             (not= base-status :invoking)
+                             (string? session-id)
+                             (contains? codex-session-ids session-id))
+                        status (if external-codex-invoking? :invoking base-status)
+                        invoke-started-at (or (:agent/invoke-started-at agent)
+                                              (when external-codex-invoking?
+                                                (:agent/last-active agent)))
+                        invoke-prompt-preview (or (:agent/invoke-prompt-preview agent)
+                                                  (when external-codex-invoking?
+                                                    "[external invoke]"))
+                        invoke-activity (or (:agent/invoke-activity agent)
+                                            (when external-codex-invoking?
+                                              "codex exec running (external surface)"))]
+                    [aid (cond-> {:type (:agent/type agent)
+                                  :id (:agent/id agent)
+                                  :session-id session-id
+                                  :registered-at (str (:agent/registered-at agent))
+                                  :last-active (str (:agent/last-active agent))
+                                  :capabilities (:agent/capabilities agent)
+                                  :ttl-ms (:agent/ttl-ms agent)
+                                  :metadata (:agent/metadata agent)
+                                  :status status}
+                           invoke-started-at
+                           (assoc :invoke-started-at (str invoke-started-at)
+                                  :invoke-prompt-preview invoke-prompt-preview)
+                           invoke-activity
+                           (assoc :invoke-activity invoke-activity))]))
+                @!registry))
+     :count (count @!registry)}))
 
 (defn registered-agents
   "Return list of registered TypedAgentId maps."
