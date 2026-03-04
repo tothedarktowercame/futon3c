@@ -29,16 +29,62 @@
 ;; Configuration — repo paths
 ;; =============================================================================
 
+(def ^:private repo-names
+  [:futon3c :futon3b :futon3a :futon5 :futon3 :futon4 :futon6])
+
+(defn- normalize-path-separators
+  [path]
+  (some-> path (str/replace "\\" "/")))
+
+(defn- join-path
+  [base leaf]
+  (-> (io/file base leaf) str normalize-path-separators))
+
+(defn- existing-dir?
+  [path]
+  (and path (.isDirectory (io/file path))))
+
+(defn- repo-base-score
+  [base]
+  (count (filter existing-dir?
+                 (map #(join-path base (name %)) repo-names))))
+
+(defn- choose-default-repo-base
+  []
+  (let [env-base (or (some-> (System/getenv "FUTON3C_REPO_BASE") str/trim not-empty)
+                     (some-> (System/getenv "FUTON_REPO_BASE") str/trim not-empty))
+        cwd-parent (some-> (System/getProperty "user.dir")
+                           io/file
+                           .getAbsoluteFile
+                           .getParentFile
+                           str)
+        home-code (str (System/getProperty "user.home") "/code")
+        candidates (->> [env-base cwd-parent home-code]
+                        (remove str/blank?)
+                        distinct)
+        scored (->> candidates
+                    (map (fn [base]
+                           [base (repo-base-score base)]))
+                    (sort-by (fn [[_ score]] score) >))]
+    (or (some->> scored
+                 (filter (fn [[_ score]] (pos? score)))
+                 ffirst)
+        home-code)))
+
+(defn- build-repo-roots
+  [base]
+  (into {}
+        (map (fn [repo-k]
+               [repo-k (join-path base (name repo-k))]))
+        repo-names))
+
 (def default-repo-roots
-  "Default repo locations (co-located at ~/code/)."
-  (let [home (System/getProperty "user.home")]
-    {:futon3c (str home "/code/futon3c")
-     :futon3b (str home "/code/futon3b")
-     :futon3a (str home "/code/futon3a")
-     :futon5  (str home "/code/futon5")
-     :futon3  (str home "/code/futon3")
-     :futon4  (str home "/code/futon4")
-     :futon6  (str home "/code/futon6")}))
+  "Default repo locations.
+   Preference order:
+   1) FUTON3C_REPO_BASE / FUTON_REPO_BASE
+   2) sibling directory of current user.dir
+   3) ~/code"
+  (build-repo-roots (choose-default-repo-base)))
 
 ;; =============================================================================
 ;; Mission file parsing
@@ -174,14 +220,34 @@
 ;; =============================================================================
 
 (defn scan-mission-files
-  "Scan for M-*.md mission files in a repo's holes/missions/ directory."
+  "Scan for mission markdown files in a repo's holes/missions/ tree.
+
+   Canonical format:
+   - M-<mission-id>.md (any depth)
+
+   Legacy compatibility:
+   - non-M markdown files at top-level holes/missions/ (excluding README.md
+     and mission-template.md)."
   [repo-root repo-name]
   (let [dir (io/file repo-root "holes" "missions")]
     (if (.isDirectory dir)
-      (->> (.listFiles dir)
-           (filter #(and (.isFile %)
-                         (str/starts-with? (.getName %) "M-")
-                         (str/ends-with? (.getName %) ".md")))
+      (->> (file-seq dir)
+           (filter (fn [f]
+                     (when (.isFile f)
+                       (let [name (.getName f)
+                             parent-path (some-> (.getParentFile f)
+                                                 .getAbsolutePath)
+                             root-path (.getAbsolutePath dir)
+                             top-level? (= parent-path root-path)
+                             canonical? (and (str/starts-with? name "M-")
+                                             (str/ends-with? name ".md"))
+                             legacy-top-level? (and top-level?
+                                                    (str/ends-with? name ".md")
+                                                    (not (str/starts-with? name "M-"))
+                                                    (not (#{"README.md"
+                                                            "mission-template.md"} name)))]
+                         (or canonical? legacy-top-level?)))))
+           (sort-by #(.getPath %))
            (mapv #(parse-mission-md (.getPath %) repo-name)))
       [])))
 

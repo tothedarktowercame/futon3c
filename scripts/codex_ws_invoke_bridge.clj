@@ -17,6 +17,7 @@
      CODEX_MODEL         gpt-5-codex
      CODEX_SANDBOX       danger-full-access
      CODEX_APPROVAL      never
+     CODEX_REASONING_EFFORT low|medium|high (optional)
      CODEX_SESSION_FILE  /tmp/futon-codex-session-id
      CODEX_SESSION_ID    optional startup session id
      INVOKE_MODE         codex|mock (default codex)"
@@ -48,6 +49,7 @@
 (def codex-model (env "CODEX_MODEL" "gpt-5-codex"))
 (def codex-sandbox (env "CODEX_SANDBOX" "danger-full-access"))
 (def codex-approval (env "CODEX_APPROVAL" "never"))
+(def codex-reasoning-effort (System/getenv "CODEX_REASONING_EFFORT"))
 (def session-file (env "CODEX_SESSION_FILE" "/tmp/futon-codex-session-id"))
 (def startup-session-id (System/getenv "CODEX_SESSION_ID"))
 (def invoke-mode (str/lower-case (env "INVOKE_MODE" "codex")))
@@ -112,10 +114,18 @@
                    "-c" (format "approval_policy=\"%s\"" codex-approval)]
         exec-opts (if (str/blank? codex-model)
                     exec-opts
-                    (concat exec-opts ["--model" codex-model]))]
-    (if (str/blank? sid)
-      (into [codex-bin "exec"] (concat exec-opts ["-"]))
-      (into [codex-bin "exec"] (concat exec-opts ["resume" sid "-"])))))
+                    (concat exec-opts ["--model" codex-model]))
+        exec-opts (if (str/blank? codex-reasoning-effort)
+                    exec-opts
+                    (concat exec-opts ["-c" (format "model_reasoning_effort=\"%s\"" codex-reasoning-effort)]))]
+    (let [base (if (str/blank? sid)
+                 (into [codex-bin "exec"] (concat exec-opts ["-"]))
+                 (into [codex-bin "exec"] (concat exec-opts ["resume" sid "-"])))]
+      (if (-> (System/getProperty "os.name" "")
+              str/lower-case
+              (str/includes? "windows"))
+        (into ["cmd.exe" "/c"] base)
+        base))))
 
 (defn- invoke-codex!
   [prompt prior-session-id sid*]

@@ -30,6 +30,8 @@
      CODEX_SANDBOX      — codex sandbox (default: danger-full-access)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
                         — codex approval policy (default: never)
+     CODEX_REASONING_EFFORT
+                       — codex reasoning effort override (for example: low|medium|high)
      CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 600000)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
@@ -50,6 +52,7 @@
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.mission-control.service :as mcs]
+            [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
             [futon3c.runtime.agents :as rt]
@@ -2251,12 +2254,13 @@ RESPOND WITH ONLY:
      :model              — model name (default \"gpt-5-codex\")
      :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
+     :reasoning-effort   — override reasoning effort (optional)
      :timeout-ms         — hard timeout for codex process (default 600000)
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
      :session-id-atom    — atom holding current session ID (optional)"
-  [{:keys [codex-bin model sandbox approval-policy timeout-ms cwd agent-id
+  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
         approval-policy "never" timeout-ms 600000 agent-id "codex"}}]
@@ -2272,6 +2276,7 @@ RESPOND WITH ONLY:
                                              :model model
                                              :sandbox sandbox
                                              :approval-policy approval-policy
+                                             :reasoning-effort reasoning-effort
                                              :timeout-ms timeout-ms
                                              :cwd cwd
                                              :on-event on-event})
@@ -2685,6 +2690,7 @@ RESPOND WITH ONLY:
                               :sandbox (env "CODEX_SANDBOX" "danger-full-access")
                               :approval-policy (or (env "CODEX_APPROVAL_POLICY")
                                                    (env "CODEX_APPROVAL" "never"))
+                              :reasoning-effort (env "CODEX_REASONING_EFFORT")
                               :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 600000) 600000)
                               :agent-id "codex-1"
                               :session-file sf
@@ -2800,7 +2806,8 @@ RESPOND WITH ONLY:
         evidence-store (make-evidence-store f1-sys direct-xtdb?)
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
-        _ (mcs/configure! {:evidence-store evidence-store})
+        _ (mcs/configure! {:evidence-store evidence-store
+                           :repos mcb/default-repo-roots})
         ;; futon5 nonstarter heartbeat API (portfolio bid/clear persistence)
         f5-sys (start-futon5!)
         ;; IRC relay bridge + server (independent of agent layer)
