@@ -358,6 +358,14 @@ CALLBACK receives the response string."
                                                      (not (string-empty-p (string-trim result)))
                                                      result)))
                                          (or r "[empty response]"))
+                                     ;; Auto-re-register on agent-not-found
+                                     (when (and (stringp err-msg)
+                                                (string-match-p "not registered\\|agent-not-found" err-msg)
+                                                (buffer-live-p chat-buffer))
+                                       (with-current-buffer chat-buffer
+                                         (when (claude-repl--auto-register)
+                                           (message "claude-repl: re-registered as %s — please resend"
+                                                    claude-repl-agent-id))))
                                      (message "claude-repl invoke error: %s"
                                               (truncate-string-to-width
                                                (or err-msg raw) 500))
