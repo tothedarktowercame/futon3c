@@ -6,12 +6,12 @@
 ;; Session continuity via Codex thread id + `codex exec resume <id>`.
 ;;
 ;; Usage:
-;;   (load "/home/joe/code/futon3c/emacs/futon3c-ui.el")
+;;   (load "/home/joe/code/futon3c/emacs/agent-chat.el")
 ;;   (load "/home/joe/code/futon3c/emacs/codex-repl.el")
 ;;   M-x codex-repl
 
 (require 'cl-lib)
-(require 'futon3c-ui)
+(require 'agent-chat)
 (require 'json)
 (require 'subr-x)
 (require 'url)
@@ -22,7 +22,7 @@
 
 (defgroup codex-repl nil
   "Chat with Codex via CLI."
-  :group 'futon3c-ui)
+  :group 'agent-chat)
 
 (defcustom codex-repl-codex-command
   (or (executable-find "codex") "codex")
@@ -72,7 +72,7 @@ Set to nil to disable and send raw user text."
 (defcustom codex-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
       (format "%s/api/alpha/evidence"
-              (string-remove-suffix "/" futon3c-ui-agency-base-url)))
+              (string-remove-suffix "/" agent-chat-agency-base-url)))
   "Evidence API endpoint used to log codex-repl session starts."
   :type 'string
   :group 'codex-repl)
@@ -132,7 +132,7 @@ Interpreted as width on left/right and height on top/bottom."
   :type 'boolean
   :group 'codex-repl)
 
-;;; Face (Codex-specific; shared faces are in futon3c-ui)
+;;; Face (Codex-specific; shared faces are in agent-chat)
 
 (defface codex-repl-codex-face
   '((t :foreground "#ff79c6" :weight bold))
@@ -199,28 +199,28 @@ When ELAPSED-SECONDS is non-nil, include it in the display."
            (if (not (buffer-live-p chat-buffer))
                (codex-repl--stop-thinking-heartbeat)
              (with-current-buffer chat-buffer
-               (if (not (process-live-p futon3c-ui--pending-process))
+               (if (not (process-live-p agent-chat--pending-process))
                    (codex-repl--stop-thinking-heartbeat)
-                 (futon3c-ui-update-progress
+                 (agent-chat-update-progress
                   (codex-repl--progress-line
                    (or codex-repl--last-progress-status "working")
                    (codex-repl--thinking-elapsed-seconds))))))))))
 
 (defun codex-repl--ui-state-valid-p ()
-  "Return non-nil when futon3c-ui markers/state are usable in this buffer."
-  (and (markerp futon3c-ui--prompt-marker)
-       (markerp futon3c-ui--separator-start)
-       (markerp futon3c-ui--input-start)
-       futon3c-ui--agent-name))
+  "Return non-nil when agent-chat markers/state are usable in this buffer."
+  (and (markerp agent-chat--prompt-marker)
+       (markerp agent-chat--separator-start)
+       (markerp agent-chat--input-start)
+       agent-chat--agent-name))
 
 (defun codex-repl--apply-ui-state-defaults ()
-  "Ensure required futon3c-ui buffer-local state is initialized."
-  (setq-local futon3c-ui--face-alist
+  "Ensure required agent-chat buffer-local state is initialized."
+  (setq-local agent-chat--face-alist
               (append `(("codex" . codex-repl-codex-face))
-                      (list (cons "joe" 'futon3c-ui-joe-face))))
-  (setq-local futon3c-ui--agent-name "codex")
-  (setq-local futon3c-ui--thinking-text "codex is thinking...")
-  (setq-local futon3c-ui--thinking-property 'codex-repl-thinking))
+                      (list (cons "joe" 'agent-chat-joe-face))))
+  (setq-local agent-chat--agent-name "codex")
+  (setq-local agent-chat--thinking-text "codex is thinking...")
+  (setq-local agent-chat--thinking-property 'codex-repl-thinking))
 
 (defun codex-repl--restore-ui-state ()
   "Best-effort repair for stale `*codex-repl*` buffers.
@@ -238,19 +238,19 @@ Returns non-nil when prompt markers were restored."
           (when (looking-at "^[-─]+$")
             (setq separator-pos (line-beginning-position))))))
     (when prompt-pos
-      (setq-local futon3c-ui--prompt-marker (copy-marker separator-pos t))
-      (setq-local futon3c-ui--separator-start (copy-marker separator-pos))
+      (setq-local agent-chat--prompt-marker (copy-marker separator-pos t))
+      (setq-local agent-chat--separator-start (copy-marker separator-pos))
       ;; Input-start must stay fixed at prompt boundary while user types.
-      (setq-local futon3c-ui--input-start (copy-marker prompt-pos))
-      (set-marker-insertion-type futon3c-ui--prompt-marker t)
-      (set-marker-insertion-type futon3c-ui--input-start nil)
+      (setq-local agent-chat--input-start (copy-marker prompt-pos))
+      (set-marker-insertion-type agent-chat--prompt-marker t)
+      (set-marker-insertion-type agent-chat--input-start nil)
       t)))
 
 (defun codex-repl--ensure-input-marker-stable! ()
-  "Ensure `futon3c-ui--input-start` does not advance while typing."
-  (when (and (markerp futon3c-ui--input-start)
-             (marker-insertion-type futon3c-ui--input-start))
-    (set-marker-insertion-type futon3c-ui--input-start nil)))
+  "Ensure `agent-chat--input-start` does not advance while typing."
+  (when (and (markerp agent-chat--input-start)
+             (marker-insertion-type agent-chat--input-start))
+    (set-marker-insertion-type agent-chat--input-start nil)))
 
 (defun codex-repl--invoke-buffer ()
   "Return (and initialize) the Codex invoke trace buffer."
@@ -549,7 +549,7 @@ Returns plist (:channel :text), or nil."
 
 (defun codex-repl--health-irc-send-base ()
   "Fetch IRC send base hint from local Agency /health."
-  (let ((local (codex-repl--normalize-base-url futon3c-ui-agency-base-url)))
+  (let ((local (codex-repl--normalize-base-url agent-chat-agency-base-url)))
     (when local
       (let* ((url (format "%s/health" local))
              (response (codex-repl--evidence-request-json "GET" url nil))
@@ -561,7 +561,7 @@ Returns plist (:channel :text), or nil."
 
 (defun codex-repl--irc-send-candidate-bases ()
   "Return ordered base URLs to try for IRC send."
-  (let* ((local (codex-repl--normalize-base-url futon3c-ui-agency-base-url))
+  (let* ((local (codex-repl--normalize-base-url agent-chat-agency-base-url))
          (fallback (or (codex-repl--normalize-base-url codex-repl-irc-send-base-url)
                        codex-repl--cached-irc-send-base
                        (setq codex-repl--cached-irc-send-base
@@ -610,7 +610,7 @@ Returns plist (:channel :text), or nil."
 
 (defun codex-repl--routing-bases ()
   "Return distinct Agency base URLs to probe for routing diagnostics."
-  (let* ((local (codex-repl--normalize-base-url futon3c-ui-agency-base-url))
+  (let* ((local (codex-repl--normalize-base-url agent-chat-agency-base-url))
          (fallback (or (codex-repl--normalize-base-url codex-repl-irc-send-base-url)
                        codex-repl--cached-irc-send-base
                        (setq codex-repl--cached-irc-send-base
@@ -910,7 +910,7 @@ When FORCE is non-nil, refresh even when session is unchanged."
 
 (defun codex-repl--ensure-session-id ()
   "Load existing Codex session id from file, if present."
-  (futon3c-ui-ensure-session-id
+  (agent-chat-ensure-session-id
    codex-repl-session-file
    codex-repl-session-id
    (lambda (sid)
@@ -1079,7 +1079,7 @@ Invoke CALLBACK with the final response text."
            :command (cons codex-repl-codex-command args)
            :noquery t
            :connection-type 'pipe
-           :filter (futon3c-ui-make-streaming-filter
+           :filter (agent-chat-make-streaming-filter
                     #'codex-repl--parse-stream-event
                     repl-buffer)
            :sentinel
@@ -1120,8 +1120,8 @@ Invoke CALLBACK with the final response text."
                                      (error-message-string persist-err)))))
                        (when (buffer-live-p repl-buffer)
                          (with-current-buffer repl-buffer
-                           (when (eq futon3c-ui--pending-process p)
-                             (setq futon3c-ui--pending-process nil))
+                           (when (eq agent-chat--pending-process p)
+                             (setq agent-chat--pending-process nil))
                            (condition-case callback-err
                                (funcall callback final-text)
                              (error
@@ -1145,8 +1145,8 @@ Invoke CALLBACK with the final response text."
 (defun codex-repl--compute-modeline-state ()
   "Return plist describing current transport/modeline state."
   (let* ((session (or codex-repl-session-id "pending"))
-         (agency-up (futon3c-ui-agency-available-p))
-         (irc-up (futon3c-ui-irc-available-p))
+         (agency-up (agent-chat-agency-available-p))
+         (irc-up (agent-chat-irc-available-p))
          (transports
           (append
            (list (list :key 'codex-repl
@@ -1318,6 +1318,7 @@ With REFRESH non-nil, force an immediate refresh."
 (defvar codex-repl-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'codex-repl-send-input)
+    (define-key map (kbd "C-c C-c") #'agent-chat-interrupt)
     (define-key map (kbd "C-c C-k") #'codex-repl-clear)
     (define-key map (kbd "C-c C-d") #'codex-repl-diagnose-routing)
     (define-key map (kbd "C-c C-v") #'codex-repl-show-invoke-trace)
@@ -1338,7 +1339,7 @@ Type after the prompt, RET to send.
   "Send input to Codex and display response."
   (interactive)
   (codex-repl--ensure-input-marker-stable!)
-  (futon3c-ui-send-input
+  (agent-chat-send-input
    #'codex-repl--call-codex-async
    "codex"
    (list :before-send #'codex-repl--emit-user-turn-evidence!
@@ -1350,13 +1351,13 @@ Type after the prompt, RET to send.
   (codex-repl--stop-thinking-heartbeat)
   (setq codex-repl--thinking-start-time nil
         codex-repl--last-progress-status nil)
-  (futon3c-ui-clear #'codex-repl--init))
+  (agent-chat-clear #'codex-repl--init))
 
 (defun codex-repl--init ()
   "Initialize buffer UI."
   (setq codex-repl--cached-irc-send-base nil)
   (codex-repl--ensure-session-id)
-  (futon3c-ui-init-buffer
+  (agent-chat-init-buffer
    (list :title "codex repl"
          :session-id (or codex-repl-session-id "pending")
          :modeline-fn #'codex-repl--build-modeline

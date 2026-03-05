@@ -10,13 +10,13 @@
 ;;     M-x futon3c-code-blocks-mode
 
 (require 'cl-lib)
-(require 'futon3c-ui)
+(require 'agent-chat)
 
 ;;; Configuration
 
 (defgroup futon3c-code-blocks nil
   "Sliding blackboard for code block extraction."
-  :group 'futon3c-ui)
+  :group 'agent-chat)
 
 (defcustom futon3c-code-blocks-side 'right
   "Side of frame for code block panels."
@@ -165,7 +165,7 @@ Returns the buffer."
 ;;; Message interception
 
 (defun futon3c-code-blocks--intercept (name text)
-  "Hook function for `futon3c-ui--insert-message-hook'.
+  "Hook function for `agent-chat--insert-message-hook'.
 Replaces code fences in TEXT with clickable references when NAME
 is the agent. Returns transformed text or nil."
   (when (and futon3c-code-blocks-mode
@@ -293,9 +293,9 @@ with clickable references and displayed in fontified side panels."
   :lighter " Blocks"
   :keymap futon3c-code-blocks-mode-map
   (if futon3c-code-blocks-mode
-      (add-hook 'futon3c-ui--insert-message-hook
+      (add-hook 'agent-chat--insert-message-hook
                 #'futon3c-code-blocks--intercept nil t)
-    (remove-hook 'futon3c-ui--insert-message-hook
+    (remove-hook 'agent-chat--insert-message-hook
                  #'futon3c-code-blocks--intercept t)
     ;; Clean up panels when mode is disabled
     (futon3c-code-blocks-clear)))
