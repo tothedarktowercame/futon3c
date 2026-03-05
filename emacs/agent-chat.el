@@ -391,6 +391,36 @@ an [interrupted] message."
 
 ;;; Markdown font-lock
 
+(defcustom agent-chat-hide-markup nil
+  "When non-nil, hide markdown delimiters (backticks, stars, fences).
+Delimiters are hidden via the `display' text property — the underlying
+text is preserved for copy/paste.  Toggle and `font-lock-flush' to
+see the change."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-fontify-code-natively t
+  "When non-nil, fontify fenced code blocks using their language mode.
+Falls back to `agent-chat-markdown-fence' face when the mode is
+unavailable."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-code-lang-modes
+  '(("clojure" . clojure-mode) ("clj" . clojure-mode)
+    ("edn" . clojure-mode) ("elisp" . emacs-lisp-mode)
+    ("emacs-lisp" . emacs-lisp-mode) ("python" . python-mode)
+    ("bash" . sh-mode) ("shell" . sh-mode) ("sh" . sh-mode)
+    ("javascript" . js-mode) ("js" . js-mode)
+    ("json" . js-mode) ("ruby" . ruby-mode)
+    ("rust" . rust-mode) ("go" . go-mode)
+    ("html" . html-mode) ("css" . css-mode)
+    ("sql" . sql-mode) ("yaml" . yaml-mode)
+    ("markdown" . markdown-mode) ("md" . markdown-mode))
+  "Alist mapping fenced-block language tags to major modes."
+  :type '(alist :key-type string :value-type symbol)
+  :group 'agent-chat)
+
 (defface agent-chat-markdown-bold
   '((t :weight bold))
   "Face for **bold** markdown text."
@@ -416,21 +446,215 @@ an [interrupted] message."
   "Face for fenced code blocks."
   :group 'agent-chat)
 
+(defface agent-chat-markdown-fence-delimiter
+  '((t :foreground "#6272a4"))
+  "Face for fence delimiter lines (``` markers) when not hidden."
+  :group 'agent-chat)
+
+;; --- Markup hiding helpers ---
+
+(defun agent-chat--hide-region (start end)
+  "Apply display \"\" to START..END when `agent-chat-hide-markup' is non-nil."
+  (when agent-chat-hide-markup
+    (add-text-properties start end '(display ""))))
+
+;; --- Native code block fontification ---
+
+(defun agent-chat--resolve-lang-mode (lang)
+  "Return a major-mode symbol for LANG, or nil if unavailable."
+  (when (and lang (not (string-empty-p lang)))
+    (let ((mode (or (cdr (assoc (downcase lang) agent-chat-code-lang-modes))
+                    (intern (concat (downcase lang) "-mode")))))
+      (when (fboundp mode) mode))))
+
+(defun agent-chat--fontify-code-natively (lang code-start code-end)
+  "Fontify the region CODE-START..CODE-END using LANG's major mode.
+Copies face properties from a temporary fontification buffer back
+to the chat buffer as overlays (resilient to font-lock refontification).
+Returns non-nil on success."
+  (let ((lang-mode (agent-chat--resolve-lang-mode lang)))
+    (when lang-mode
+      (let* ((code (buffer-substring-no-properties code-start code-end))
+             (chat-buf (current-buffer))
+             (temp-buf (get-buffer-create
+                        (format " *agent-chat-code:%s*" (symbol-name lang-mode)))))
+        (with-current-buffer temp-buf
+          (let ((inhibit-modification-hooks t))
+            (erase-buffer)
+            (insert code))
+          (unless (eq major-mode lang-mode)
+            (delay-mode-hooks (funcall lang-mode)))
+          (font-lock-ensure))
+        ;; Copy face properties back as overlays
+        (let ((pos 1)
+              (len (length code)))
+          (while (< pos (1+ len))
+            (let* ((next (or (with-current-buffer temp-buf
+                               (next-single-property-change pos 'face))
+                             (1+ len)))
+                   (face-val (with-current-buffer temp-buf
+                               (get-text-property pos 'face))))
+              (when face-val
+                (let ((ov (make-overlay (+ code-start (1- pos))
+                                        (min code-end (+ code-start (1- next)))
+                                        chat-buf)))
+                  (overlay-put ov 'face face-val)
+                  (overlay-put ov 'agent-chat-code t)))
+              (setq pos next))))
+        t))))
+
+;; --- Font-lock matcher functions ---
+
+(defun agent-chat--match-heading (limit)
+  "Font-lock matcher for # headings.
+Groups: 1=prefix (# + space), 2=heading text."
+  (re-search-forward (rx bol (group (+ "#") " ") (group (* nonl))) limit t))
+
+(defun agent-chat--match-bold (limit)
+  "Font-lock matcher for **bold**.
+Groups: 1=open **, 2=text, 3=close **."
+  (re-search-forward
+   (rx (group "**") (group (+? (not (any "*")))) (group "**"))
+   limit t))
+
+(defun agent-chat--match-italic (limit)
+  "Font-lock matcher for *italic* (not **bold**).
+Groups: 1=preceding-char + open *, 2=text, 3=close * + following-char."
+  (let ((found nil))
+    (while (and (not found)
+                (re-search-forward
+                 (rx (group (not (any "*")) "*")
+                     (group (+? (not (any "*" "\n"))))
+                     (group "*" (not (any "*"))))
+                 limit t))
+      (unless (and (> (match-beginning 1) 0)
+                   (eq (char-before (match-beginning 1)) ?*))
+        (setq found t)))
+    found))
+
+(defun agent-chat--match-inline-code (limit)
+  "Font-lock matcher for \\=`code\\=`.
+Groups: 1=open `, 2=text, 3=close `.  Skips fenced regions."
+  (let ((found nil))
+    (while (and (not found)
+                (re-search-forward
+                 (rx (group "`") (group (+? (not (any "`" "\n")))) (group "`"))
+                 limit t))
+      (unless (or (get-text-property (match-beginning 0) 'agent-chat-in-fence)
+                  (eq (char-before (match-beginning 1)) ?`)
+                  (eq (char-after (match-end 3)) ?`))
+        (setq found t)))
+    found))
+
+(defun agent-chat--match-fence (limit)
+  "Font-lock matcher for fenced code blocks.
+Groups: 1=opening fence line, 2=language tag, 3=code content, 4=closing fence."
+  (re-search-forward
+   (rx bol (group "```" (group (* (any alnum "-" "_" "+"))) (* blank) "\n")
+       (group (*? anything))
+       (group bol "```" (* blank) eol))
+   limit t))
+
+;; --- Fontify functions (called as font-lock FACESPEC side effects) ---
+
+(defun agent-chat--fontify-heading ()
+  "Apply heading face, optionally hide # prefix.  Return nil."
+  (agent-chat--hide-region (match-beginning 1) (match-end 1))
+  (add-text-properties (match-beginning 2) (match-end 2)
+                        '(face agent-chat-markdown-heading))
+  (unless agent-chat-hide-markup
+    (add-text-properties (match-beginning 1) (match-end 1)
+                          '(face agent-chat-markdown-heading)))
+  nil)
+
+(defun agent-chat--fontify-bold ()
+  "Apply bold face, optionally hide **.  Return nil."
+  (agent-chat--hide-region (match-beginning 1) (match-end 1))
+  (agent-chat--hide-region (match-beginning 3) (match-end 3))
+  (add-text-properties (match-beginning 2) (match-end 2)
+                        '(face agent-chat-markdown-bold))
+  nil)
+
+(defun agent-chat--fontify-italic ()
+  "Apply italic face, optionally hide *.  Return nil.
+Group 1 includes preceding non-* char; group 3 includes following non-* char.
+Only hide the * character itself within each group."
+  (agent-chat--hide-region (1- (match-end 1)) (match-end 1))
+  (agent-chat--hide-region (match-beginning 3) (1+ (match-beginning 3)))
+  (add-text-properties (match-beginning 2) (match-end 2)
+                        '(face agent-chat-markdown-italic))
+  nil)
+
+(defun agent-chat--fontify-inline-code ()
+  "Apply code face, optionally hide backticks.  Return nil."
+  (agent-chat--hide-region (match-beginning 1) (match-end 1))
+  (agent-chat--hide-region (match-beginning 3) (match-end 3))
+  (add-text-properties (match-beginning 2) (match-end 2)
+                        '(face agent-chat-markdown-code))
+  nil)
+
+(defun agent-chat--fontify-fence ()
+  "Fontify fenced code block with native highlighting.  Return nil.
+Marks code content with `agent-chat-in-fence' so inline-code matcher
+skips it.  Uses overlays for native syntax faces."
+  (let ((fence-open-start (match-beginning 1))
+        (fence-open-end (match-end 1))
+        (lang (match-string-no-properties 2))
+        (code-start (match-beginning 3))
+        (code-end (match-end 3))
+        (fence-close-start (match-beginning 4))
+        (fence-close-end (match-end 4)))
+    ;; Mark code region so inline-code matcher skips it
+    (when (> code-end code-start)
+      (add-text-properties code-start code-end '(agent-chat-in-fence t)))
+    ;; Remove stale code overlays in this region
+    (dolist (ov (overlays-in (or code-start fence-open-start)
+                             (or code-end fence-close-end)))
+      (when (overlay-get ov 'agent-chat-code)
+        (delete-overlay ov)))
+    ;; Fence delimiters: hide or dim
+    (if agent-chat-hide-markup
+        (progn
+          (agent-chat--hide-region fence-open-start fence-open-end)
+          (agent-chat--hide-region fence-close-start fence-close-end))
+      (add-text-properties fence-open-start fence-open-end
+                            '(face agent-chat-markdown-fence-delimiter))
+      (add-text-properties fence-close-start fence-close-end
+                            '(face agent-chat-markdown-fence-delimiter)))
+    ;; Code content: native fontification or fence face
+    (when (> code-end code-start)
+      (add-text-properties code-start code-end
+                            '(face agent-chat-markdown-fence))
+      (when agent-chat-fontify-code-natively
+        (agent-chat--fontify-code-natively lang code-start code-end))))
+  nil)
+
+;; --- Font-lock keyword list ---
+
 (defvar agent-chat-markdown-keywords
-  `((,(rx bol (group (+ "#") " " (* nonl))) 0 'agent-chat-markdown-heading prepend)
-    (,(rx (group "**" (+? (not (any "*"))) "**")) 0 'agent-chat-markdown-bold prepend)
-    (,(rx (not (any "*")) (group "*" (+? (not (any "*" "\n"))) "*") (not (any "*")))
-     1 'agent-chat-markdown-italic prepend)
-    (,(rx (group "`" (+? (not (any "`" "\n"))) "`")) 0 'agent-chat-markdown-code prepend)
-    (,(rx (group bol "```" (* nonl) "\n" (*? anything) bol "```" (* blank) eol))
-     0 'agent-chat-markdown-fence prepend))
-  "Font-lock keywords for lightweight GFM highlighting.")
+  '((agent-chat--match-fence (0 (agent-chat--fontify-fence) nil t))
+    (agent-chat--match-heading (0 (agent-chat--fontify-heading) nil t))
+    (agent-chat--match-bold (0 (agent-chat--fontify-bold) nil t))
+    (agent-chat--match-italic (0 (agent-chat--fontify-italic) nil t))
+    (agent-chat--match-inline-code (0 (agent-chat--fontify-inline-code) nil t)))
+  "Font-lock keywords for GFM highlighting with markup hiding and native code.")
 
 (defun agent-chat-enable-markdown-font-lock ()
-  "Enable subtle markdown highlighting in the current buffer."
+  "Enable markdown highlighting in the current buffer.
+Respects `agent-chat-hide-markup' and `agent-chat-fontify-code-natively'."
+  (setq-local font-lock-extra-managed-props '(display agent-chat-in-fence))
   (font-lock-add-keywords nil agent-chat-markdown-keywords t)
   (setq-local font-lock-multiline t)
   (font-lock-mode 1))
+
+;;; Toggle commands
+
+(defun agent-chat-toggle-markup-hiding ()
+  "Toggle hiding of markdown delimiters and refontify."
+  (interactive)
+  (setq agent-chat-hide-markup (not agent-chat-hide-markup))
+  (font-lock-flush)
+  (message "Markup hiding %s" (if agent-chat-hide-markup "enabled" "disabled")))
 
 ;;; Base keymap
 
