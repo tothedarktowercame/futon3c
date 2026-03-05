@@ -257,7 +257,7 @@ launch_repl() {
     exit 1
   fi
   escaped_session_file="$(elisp_escape "${session_file}")"
-  escaped_ui="$(elisp_escape "${emacs_dir}/futon3c-ui.el")"
+  escaped_ui="$(elisp_escape "${emacs_dir}/agent-chat.el")"
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
   escaped_agency_base="$(elisp_escape "${evidence_base%/}")"
   escaped_evidence_url="$(elisp_escape "${evidence_base%/}/api/alpha/evidence")"

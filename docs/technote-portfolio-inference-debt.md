@@ -62,7 +62,7 @@ but no portfolio endpoints. There's no way to trigger `portfolio-step!` or
 - `GET /api/alpha/portfolio/state` — return current belief state (μ, τ, mode)
 
 This also needs an Emacs integration — a command in `claude-repl.el` or
-`futon3c-ui.el` that calls the endpoint and displays the recommendation.
+`agent-chat.el` that calls the endpoint and displays the recommendation.
 
 **Effort:** medium (HTTP routes are mechanical; Emacs UI is the real work)
 

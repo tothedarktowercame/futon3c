@@ -14,7 +14,7 @@
    :diagram/components [:S-dispatch :S-persist]
    :implementation/files ["emacs/claude-repl.el"
                           "emacs/codex-repl.el"
-                          "emacs/futon3c-ui.el"
+                          "emacs/agent-chat.el"
                           "emacs/futon3c-code-blocks.el"]
    :verification/required #{:commit :artifact}}
 

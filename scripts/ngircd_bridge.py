@@ -76,7 +76,7 @@ INVOKE_TIMEOUT_SECONDS = int_env(
     "INVOKE_TIMEOUT_SECONDS",
     int_env("INVOKE_TIMEOUT", 600, minimum=60),
     minimum=60,
-)  # seconds; supports legacy INVOKE_TIMEOUT
+)  # seconds; matches JVM relay timeout (10 min)
 STATUS_TIMEOUT = int_env("AGENT_STATUS_TIMEOUT", 5, minimum=1)
 INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not in (
     "0",

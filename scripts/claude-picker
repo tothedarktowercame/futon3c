@@ -125,7 +125,7 @@ launch_repl() {
     echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
     exit 1
   fi
-  escaped_ui="$(elisp_escape "${emacs_dir}/futon3c-ui.el")"
+  escaped_ui="$(elisp_escape "${emacs_dir}/agent-chat.el")"
   escaped_chat="$(elisp_escape "${emacs_dir}/claude-repl.el")"
   # Write session-id to file so dev server picks it up on (re)start
   if [[ -n "${sid}" ]]; then
