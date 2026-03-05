@@ -82,34 +82,54 @@
 ;;; Auto-registration
 
 (defun claude-repl--auto-register ()
-  "Ask the futon3c server to auto-register the next available Claude agent.
-Returns the assigned agent-id string, or nil on failure."
-  (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
-         (json-body (json-serialize '(:type "claude")))
-         (result (with-temp-buffer
-                   (let ((exit (call-process "curl" nil t nil
-                                             "-sS" "--max-time" "5"
-                                             "-H" "Content-Type: application/json"
-                                             "-d" json-body url)))
-                     (when (= exit 0)
-                       (goto-char (point-min))
-                       (condition-case nil
-                           (json-parse-buffer :object-type 'alist)
-                         (error nil)))))))
-    (when (and result (alist-get 'ok result))
-      (let ((agent-id (alist-get 'agent-id result)))
-        (when (and (stringp agent-id) (not (string-empty-p agent-id)))
-          (setq claude-repl-agent-id agent-id)
-          (setq claude-repl-session-file
-                (format "/tmp/futon-session-id-%s" agent-id))
-          (message "claude-repl: registered as %s" agent-id)
-          agent-id)))))
-
-;;; Surface contract
-
-(defun claude-repl--surface-contract ()
-  "Return surface metadata — where the output goes."
-  (format "Surface: emacs-claude-repl | Agent: %s" claude-repl-agent-id))
+  "Find or register a Claude agent on the futon3c server.
+First tries POST /agents/auto. If that fails (older server), falls back to
+GET /agents to find an existing claude agent. Returns the agent-id or nil."
+  (let ((agent-id
+         (or
+          ;; Try /agents/auto first
+          (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
+                 (json-body (json-serialize '(:type "claude")))
+                 (result (with-temp-buffer
+                           (let ((exit (call-process "curl" nil t nil
+                                                     "-sS" "--max-time" "5"
+                                                     "-H" "Content-Type: application/json"
+                                                     "-d" json-body url)))
+                             (when (= exit 0)
+                               (goto-char (point-min))
+                               (condition-case nil
+                                   (json-parse-buffer :object-type 'alist)
+                                 (error nil)))))))
+            (when (and result (alist-get 'ok result))
+              (alist-get 'agent-id result)))
+          ;; Fallback: query existing agents and find a claude-N
+          (let* ((url (concat claude-repl-api-url "/api/alpha/agents"))
+                 (result (with-temp-buffer
+                           (let ((exit (call-process "curl" nil t nil
+                                                     "-sS" "--max-time" "5" url)))
+                             (when (= exit 0)
+                               (goto-char (point-min))
+                               (condition-case nil
+                                   (json-parse-buffer :object-type 'alist)
+                                 (error nil)))))))
+            ;; agents is a map: {"claude-1": {...}, "codex-1": {...}}
+            (when-let ((agents-val (alist-get 'agents result)))
+              (let ((keys (cond
+                           ((hash-table-p agents-val)
+                            (let (ks)
+                              (maphash (lambda (k _v) (push (symbol-name k) ks))
+                                       agents-val)
+                              ks))
+                           ((listp agents-val)
+                            (mapcar (lambda (pair) (symbol-name (car pair)))
+                                    agents-val)))))
+                (seq-find (lambda (k) (string-prefix-p "claude-" k)) keys)))))))
+    (when (and (stringp agent-id) (not (string-empty-p agent-id)))
+      (setq claude-repl-agent-id agent-id)
+      (setq claude-repl-session-file
+            (format "/tmp/futon-session-id-%s" agent-id))
+      (message "claude-repl: registered as %s" agent-id)
+      agent-id)))
 
 ;;; Evidence logging
 
@@ -274,11 +294,12 @@ calls `claude -p' with the correct session-id (managed by the registry).
 CALLBACK receives the response string."
   (let* ((chat-buffer (current-buffer))
          (url (concat claude-repl-api-url "/api/alpha/invoke"))
-         (full-prompt (format "%s\n\nUser message:\n%s"
-                              (claude-repl--surface-contract) text))
+         (full-prompt (format "Agent: %s\n\nUser message:\n%s"
+                              claude-repl-agent-id text))
          (json-body (json-serialize
                      `(:agent-id ,claude-repl-agent-id
                        :prompt ,full-prompt
+                       :surface "emacs-repl"
                        :caller ,(or (getenv "USER") user-login-name "joe"))))
          (outbuf (generate-new-buffer " *futon3c-invoke*"))
          (proc nil))
@@ -535,15 +556,16 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
 When running inside a named daemon (e.g. workspace1), use the
 workspace name to disambiguate agent-id, session file, and buffer.
 Then auto-register with the server and load existing session-id."
-  ;; Derive workspace-specific defaults
+  ;; Auto-register: ask server for next available claude-N (I-1 compliant).
+  ;; Each repl gets its own agent identity. If registration succeeds,
+  ;; it sets claude-repl-agent-id. If it fails, keep default (claude-1).
+  (claude-repl--auto-register)
+  ;; Derive workspace-specific session file for disambiguation
   (when-let ((ws (claude-repl--workspace)))
     (unless (local-variable-p 'claude-repl--workspace-applied)
-      (setq-local claude-repl-agent-id (format "claude-%s" ws))
       (setq-local claude-repl-session-file
-                  (format "/tmp/futon-session-id-claude-%s" ws))
+                  (format "/tmp/futon-session-id-%s" claude-repl-agent-id))
       (setq-local claude-repl--workspace-applied t)))
-  ;; Auto-register: get next available claude-N from the server
-  (claude-repl--auto-register)
   (let ((existing-sid
          (when (and claude-repl-session-file
                     (file-exists-p claude-repl-session-file))

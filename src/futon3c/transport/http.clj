@@ -642,6 +642,60 @@
                                     :message (str "Could not register: " agent-id)
                                     :detail result})))))))))
 
+(defn- handle-agents-auto-register
+  "POST /api/alpha/agents/auto — allocate and register next available agent.
+   Body: {\"type\": \"claude\"} — type is required.
+   Finds the next unused ID (e.g. claude-2 if claude-1 exists) and registers it
+   with a real invoke-fn (resolved from dev.clj's make-claude-invoke-fn).
+   Each call creates a new, independent agent (I-1: one agent = one identity)."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [agent-type-str (or (:type payload) (get payload "type"))
+            agent-type (parse-keyword agent-type-str)]
+        (if (nil? agent-type)
+          (json-response 400 {:ok false :err "missing-type"
+                              :message "type is required"})
+          (let [prefix (name agent-type)
+                existing (reg/registered-agents)
+                matching-ids (->> existing
+                                  (map :id/value)
+                                  (filter #(str/starts-with? (str %) (str prefix "-")))
+                                  set)
+                next-n (loop [n 1]
+                         (if (contains? matching-ids (str prefix "-" n))
+                           (recur (inc n))
+                           n))
+                agent-id (str prefix "-" next-n)
+                ;; Build invoke-fn: resolve make-claude-invoke-fn from dev ns
+                invoke-fn (when (= agent-type :claude)
+                            (try
+                              (require 'futon3c.dev)
+                              (when-let [make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)]
+                                (let [sf (format "/tmp/futon-session-id-%s" agent-id)
+                                      sid-atom (atom (when (.exists (java.io.File. sf))
+                                                       (str/trim (slurp sf))))]
+                                  (@make-fn {:agent-id agent-id
+                                             :session-file sf
+                                             :session-id-atom sid-atom})))
+                              (catch Throwable _ nil)))
+                result (reg/register-agent!
+                        {:agent-id {:id/value agent-id :id/type :continuity}
+                         :type agent-type
+                         :invoke-fn invoke-fn
+                         :capabilities (get default-capabilities agent-type [])
+                         :metadata {:auto-registered? true}})]
+            (when (and invoke-fn (map? result) (:agent/id result))
+              (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
+            (if (and (map? result) (:agent/id result))
+              (json-response 201 {:ok true
+                                  :agent-id agent-id
+                                  :type (name agent-type)})
+              (json-response 409 {:ok false
+                                  :err "registration-failed"
+                                  :message (str "Could not register: " agent-id)}))))))))
+
 (defn- emit-invoke-evidence!
   "Emit a forum-post evidence entry for an invoke prompt or response.
    Mirrors the pattern used by the IRC transport so chat messages from
@@ -704,11 +758,30 @@
       (catch Exception e
         (println (str "[review] snapshot emit warning: " (.getMessage e)))))))
 
+(defn- wrap-surface-header
+  "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
+   This ensures the agent sees a consistent, unambiguous surface declaration
+   on every turn — even when session history has messages from other surfaces."
+  [prompt surface caller]
+  (if (and surface (not (str/blank? (str surface))))
+    (str "--- CURRENT TURN ---\n"
+         "Surface: " surface "\n"
+         (when (and caller (not (str/blank? (str caller))))
+           (str "Caller: " caller "\n"))
+         "---\n\n"
+         prompt)
+    prompt))
+
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
-   Body: {\"agent-id\": \"claude-1\", \"prompt\": \"hello\"}
+   Body: {\"agent-id\": \"claude-1\", \"prompt\": \"hello\",
+          \"surface\": \"irc\", \"caller\": \"joe\"}
    Returns the invoke-fn result: {\"ok\": true, \"result\": \"...\", \"session-id\": \"...\"}
    or error: {\"ok\": false, \"error\": \"...\", \"message\": \"...\"}
+
+   When `surface` is provided, an authoritative surface header is prepended
+   to the prompt so the agent always knows which surface the current turn
+   came from — regardless of what previous turns in the session said.
 
    This is the direct invocation endpoint — the futon3c equivalent of futon3's
    POST /agency/page. Both Emacs and IRC peripherals route through this.
@@ -734,11 +807,14 @@
           (let [caller (or (some-> payload :caller str)
                            (some-> payload (get "caller") str)
                            "http-caller")
+                surface (or (some-> payload :surface str)
+                            (some-> payload (get "surface") str))
                 mission-id (or (:mission-id payload) (get payload "mission-id"))
                 timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
                                    long)
-                ev-opts (when mission-id [:mission-id mission-id])]
-            (let [result (reg/invoke-agent! (str agent-id) prompt timeout-ms)
+                ev-opts (when mission-id [:mission-id mission-id])
+                effective-prompt (wrap-surface-header prompt surface caller)]
+            (let [result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
                   sid (:session-id result)]
               (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                      (or ev-opts []))
@@ -1487,6 +1563,9 @@
                (str/starts-with? uri "/api/alpha/missions/"))
           (let [raw (subs uri (count "/api/alpha/missions/"))]
             (handle-mission-detail config (enc/decode-uri-component raw)))
+
+          (and (= :post method) (= "/api/alpha/agents/auto" uri))
+          (handle-agents-auto-register request config)
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)

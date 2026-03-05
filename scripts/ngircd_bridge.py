@@ -486,6 +486,7 @@ class IRCBot:
             "agent-id": self.agent_id,
             "prompt": prompt,
             "caller": f"irc:{caller}",
+            "surface": f"irc ({self.channel})",
             "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
         if mission_id:
