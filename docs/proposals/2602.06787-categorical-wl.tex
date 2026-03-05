@@ -1,0 +1,34 @@
+% PlanetMath proposal draft for arXiv:2602.06787
+% Source corpora: arXiv math.CT eprints, storage/mo-processed-gpu, storage/math-processed-gpu
+\section*{Weisfeiler and Lehman go categorical}
+\subsection*{Source}
+\begin{itemize}
+  \item arXiv:2602.06787, Simone Scipioni et al., ``Weisfeiler and Lehman Go Categorical'' (2026-02-07)
+  \item Cross-reference MO 368070 on defining Weisfeiler-Lehman refinements for hypergraphs
+  \item Cross-reference Math.SE 4847737 on the limits of color refinement/Weisfeiler-Leman algorithms for graph isomorphism
+\end{itemize}
+\subsection*{Synopsis}
+The authors recast Weisfeiler-Leman (WL) lifting as a functorial process: any ``data'' category $\mathcal{C}$ feeds into a universal target, the category of graded posets, via a lifting functor that determines the message-passing topology of a neural architecture. Two concrete functors from the hypergraph category are analysed---an incidence functor and a symmetric simplicial complex functor---yielding \emph{Hypergraph Isomorphism Networks} whose expressivity strictly dominates the classical Hypergraph WL test. Their categorical analysis clarifies when different liftings commute, how to compose them, and why certain architectures capture higher-order intersection patterns. Experiments on standard hypergraph benchmarks corroborate the theoretical expressivity bounds.
+\subsection*{MathOverflow cues}
+\begin{description}
+  \item[MO 368070] asks how to generalize WL refinement to hypergraphs; the functorial graded-poset construction directly answers by producing hypergraph WL as a universal lifting.
+\end{description}
+\subsection*{Math.SE anchors}
+\begin{description}
+  \item[Math.SE 4847737] discusses the failure modes of color refinement; the paper’s expressivity theorems explain how categorical liftings overcome those obstacles by encoding higher-order relations.
+\end{description}
+\subsection*{Encyclopedia outline}
+\begin{enumerate}
+  \item \textbf{WL as a functor.} Formalize the graded-poset target category and explain how a lifting functor $\mathcal{C}\to \text{GrPos}$ induces message passing.
+  \item \textbf{Hypergraph functors.} Detail the incidence and symmetric simplicial functors, show how they encode intersection data, and reference MO 368070.
+  \item \textbf{Expressivity results.} Present the main theorem: both architectures subsume Hypergraph WL and can separate certain Math.SE 4847737 counterexamples.
+  \item \textbf{Compositionality and universality.} Discuss how the categorical viewpoint unifies different WL variants, including graphs, hypergraphs, and higher-order structures.
+  \item \textbf{Empirical validation.} Summarize benchmark results and note how categorical design choices translate into performance.
+\end{enumerate}
+\subsection*{Action items}
+\begin{itemize}
+  \item Translate the categorical lifting definition into PlanetMath-friendly notation, with explicit examples.
+  \item Provide proofs/sketches for the expressivity hierarchy (standard WL $\subsetneq$ incidence $\subseteq$ symmetric simplicial).
+  \item Include a worked example showing how a hypergraph counterexample to color refinement becomes distinguishable after functorial lifting.
+  \item Link to related entries on graph neural networks, categorical machine learning, and hypergraph theory.
+\end{itemize}

@@ -1,0 +1,46 @@
+% PlanetMath proposal draft for arXiv:2602.19110
+% Source corpora: arXiv math.CT eprints, storage/mo-processed-gpu, storage/math-processed-gpu
+\section*{Simplicial nerves for internal bicategories}
+\subsection*{Source}
+\begin{itemize}
+  \item arXiv:2602.19110, "Simplicial nerves for internal bicategories" (2026-02-20)
+  \item StackExchange cross-links via storage/mo-processed-gpu + math-processed-gpu
+\end{itemize}
+\subsection*{Synopsis}
+The paper develops a model for internal bicategories using simplicial nerves built inside a finitely complete ambient category. The key ingredients include:
+\begin{enumerate}
+  \item A comparison of Duskin-type nerves with Street nerves for internal bicategories,
+  \item a rigidification procedure that uses codescent objects to pass from weak nerves to semistrict nerves, and
+  \item an application to Grothendieck constructions for indexed bicategories.
+\end{enumerate}
+For the PlanetMath entry we will surface:
+\begin{itemize}
+  \item a dictionary converting the "simplicial refinement" jargon into pm-full-dictionary atoms (objects, spans, codescent, and horn fillers),
+  \item a fully worked example in the bicategory of profunctors, and
+  \item a note on how these nerves interact with base change in indexed bicategories.
+\end{itemize}
+\subsection*{MathOverflow cues}
+\begin{description}
+  \item[MO 467527] Question on higher-category terminology for semistrict nerves (tags: category-theory, higher-category-theory). We will cite this for definitions of "Gray nerves" versus "Duskin nerves".
+  \item[MO 466863] Thread about D-modules and quiver varieties that references span-like nerves. We can map their intuition to the examples section.
+\end{description}
+\subsection*{Math.SE anchors}
+\begin{description}
+  \item[Math.SE 452731] "Explicit nerve of an internal groupoid" (ct.category-theory, reference-request) — good for an accessible example.
+  \item[Math.SE 458240] "When do coskeletons detect equivalences?" (ct.category-theory, homotopy-theory) — supports the discussion of horn-filling conditions.
+\end{description}
+\subsection*{Encyclopedia outline}
+\begin{enumerate}
+  \item Definition of internal bicategory and recall of Duskin nerve.
+  \item Construction of the semistrict nerve and theorem on equivalence with Street's construction.
+  \item Codescent objects and their role in the rigidification.
+  \item Examples: profunctors, indexed bicategories, and the Grothendieck construction.
+  \item Bibliography + cross-links (MO 467527, MO 466863, Math.SE 452731, Math.SE 458240).
+\end{enumerate}
+\subsection*{Action items}
+\begin{itemize}
+  \item Extract the arXiv TeX into /home/joe/code/futon6/data/arxiv-math-ct-eprints/proof-state.
+  \item Pull embeddings for MO 467527 and MO 466863 via storage/mo-processed-gpu hypergraph-thread-ids.
+  \item Add Math.SE citations by querying storage/math-processed-gpu for thread IDs 452731 and 458240.
+  \item Produce the PlanetMath EDN + TeX pair once outline is confirmed.
+\end{itemize}

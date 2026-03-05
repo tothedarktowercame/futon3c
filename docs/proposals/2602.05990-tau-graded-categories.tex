@@ -1,0 +1,34 @@
+% PlanetMath proposal draft for arXiv:2602.05990
+% Source corpora: arXiv math.CT eprints, storage/mo-processed-gpu, storage/math-processed-gpu
+\section*{Categories graded by group homomorphisms}
+\subsection*{Source}
+\begin{itemize}
+  \item arXiv:2602.05990, Jonathan Davies, ``Categories graded by group homomorphisms'' (2026-02-05)
+  \item Cross-reference MO 401964 on extending the classification of group extensions to group-graded algebras
+  \item Cross-reference Math.SE 2373066 on relating graded categories to enriched categories
+\end{itemize}
+\subsection*{Synopsis}
+Davies defines \emph{$\tau$-graded categories} for any group homomorphism $\tau:H\to G$, simultaneously recording degrees on morphisms and objects and recovering the $\chi$-graded setting used in HQFTs as a special case. The paper develops a $2$-category $\Cat_\tau$ of such structures, introduces $\tau$-graded functors and natural transformations, and proves a Yoneda-type lemma adapted to the non-symmetric enrichment coming from $\tau$. Key structural results include a description of semisimple $\tau$-graded categories via pseudofunctors into $\Cat$, and a classification of $\tau$-graded spherical fusion categories compatible with Turaev-Viro HQFTs. The HQFT motivation supplies concrete examples where crossing information is encoded by $\tau$, while the categorical formulation allows one to transport grading data through higher constructions such as traces or state-sum invariants.
+\subsection*{MathOverflow cues}
+\begin{description}
+  \item[MO 401964] asks for a unifying framework connecting non-abelian cohomology of group extensions with crossed, $Q$-graded categories; Davies' $\tau$-graded approach supplies precisely such a common generalization.
+\end{description}
+\subsection*{Math.SE anchors}
+\begin{description}
+  \item[Math.SE 2373066] discusses how graded categories relate to enriched categories; the $\tau$-graded Yoneda lemma provides the requested bridge by viewing graded morphisms as enrichment over a Day convolution construction.
+\end{description}
+\subsection*{Encyclopedia outline}
+\begin{enumerate}
+  \item \textbf{Definition of $\tau$-graded categories.} Explain the data of hom-objects $C(x,y)$ decomposed by $H$ with object degrees in $G$, compatibility with $\tau$, and examples from HQFT state-sum inputs.
+  \item \textbf{$2$-categorical viewpoint.} Describe the $2$-category $\Cat_\tau$, $\tau$-graded functors/natural transformations, and relation to enrichment/pseudofunctors (answering Math.SE 2373066).
+  \item \textbf{Yoneda and representability.} Summarize the ``half-enriched'' Yoneda lemma and its consequences for representable $\tau$-graded presheaves.
+  \item \textbf{Semisimple and fusion cases.} Present the structure theorem classifying semisimple $\tau$-graded categories via pseudofunctors into $\Cat$, connecting to MO 401964.
+  \item \textbf{Applications to HQFT and state sums.} Show how $\tau$-graded spherical fusion categories feed into extended Turaev-Viro-type HQFTs and illustrate with concrete gradings.
+\end{enumerate}
+\subsection*{Action items}
+\begin{itemize}
+  \item Extract precise definitions and the Yoneda statement to include as formal propositions with proofs or references.
+  \item Summarize the classification theorem for semisimple $\tau$-graded categories, highlighting connections to cohomological obstructions.
+  \item Provide at least two illustrative examples (e.g., HQFT gradings and crossed module gradings) that resonate with the MO discussion.
+  \item Cross-link to existing PlanetMath articles on HQFTs, graded fusion categories, and enriched category theory for context.
+\end{itemize}

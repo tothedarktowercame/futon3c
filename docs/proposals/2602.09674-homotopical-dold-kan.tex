@@ -1,0 +1,34 @@
+% PlanetMath proposal draft for arXiv:2602.09674
+% Source corpora: arXiv math.CT eprints, storage/mo-processed-gpu, storage/math-processed-gpu
+\section*{A Homotopical Dold-Kan correspondence for $\Theta$ and other test categories}
+\subsection*{Source}
+\begin{itemize}
+  \item arXiv:2602.09674, Léo Hubert, ``A Homotopical Dold-Kan correspondence for Joyal's category $\Theta$ and other test categories'' (2026-02-14)
+  \item Cross-reference MO 225893 on extending the Dold--Kan correspondence beyond $\Delta$ using test categoriesciteturn0search0
+  \item Cross-reference Math.SE 2282428 on Dold--Kan in additive settings beyond abelian categoriesciteturn1search3
+\end{itemize}
+\subsection*{Synopsis}
+Hubert proves Grothendieck's Pursuing Stacks conjecture for a large class of test categories $A$: the model category of abelian presheaves on $A$ (with homology equivalences as weak equivalences) is Quillen equivalent to the derived category $D^+(\mathsf{Ab})$. The key ingredients are a compatibility condition between $A$-weak equivalences and homology equivalences, a model structure on abelian presheaves whose cofibrations are degreewise monomorphisms, and explicit analysis for Joyal's $\Theta$. This recovers and extends the classical Dold--Kan equivalence beyond simplicial abelian groups to combinatorial models such as $\Theta$-objects.
+\subsection*{MathOverflow cues}
+\begin{description}
+  \item[MO 225893] asks whether one can replace $\Delta$ by a test category when formulating Dold--Kan; Hubert's result supplies the desired Quillen equivalence for any $A$ satisfying his homology compatibility hypothesis.
+\end{description}
+\subsection*{Math.SE anchors}
+\begin{description}
+  \item[Math.SE 2282428] observes that Dold--Kan works for additive categories satisfying splittings; the paper provides the homotopical model-categorical upgrade in the setting of test categories.
+\end{description}
+\subsection*{Encyclopedia outline}
+\begin{enumerate}
+  \item \textbf{Test categories and homology.} Summarize Grothendieck's notion, the Yoneda-to-$\mathsf{Cat}$ weak equivalences, and the extra condition ensuring homology equivalences match $A$-weak equivalences.
+  \item \textbf{Model structure on abelian presheaves.} Describe cofibrations, fibrations, weak equivalences, and the homotopy category.
+  \item \textbf{Derived comparison.} Explain the Quillen adjunction with chain complexes of abelian groups and why it becomes an equivalence.
+  \item \textbf{Application to $\Theta$.} Detail how Joyal's category satisfies the hypotheses, yielding a Dold--Kan-like correspondence for higher categorical disks.
+  \item \textbf{Grothendieck's conjecture.} State the original claim from \emph{Pursuing Stacks} and how the paper proves it, relating to MO 225893.
+\end{enumerate}
+\subsection*{Action items}
+\begin{itemize}
+  \item Provide precise definitions (test, weak, homology equivalence) and restate the main theorem in PlanetMath style.
+  \item Sketch the proof strategy: construction of the model structure; comparison with chain complexes; verification of Quillen equivalence.
+  \item Work out the $\Theta$ example explicitly, highlighting generators and the resulting equivalence.
+  \item Link to the classical Dold--Kan entry and note how the new result generalizes it via Math.SE 2282428.
+\end{itemize}

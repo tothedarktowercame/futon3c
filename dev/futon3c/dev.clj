@@ -1809,200 +1809,6 @@ RESPOND WITH ONLY:
        :elapsed-ms elapsed
        :results results})))
 
-;; =============================================================================
-;; ArSE work queue — Artificial Stack Exchange synthetic QA generation
-;; =============================================================================
-
-(defn arse-progress!
-  "Show ArSE work queue progress."
-  [& {:keys [problem]}]
-  (let [status (arse-queue/queue-status @!evidence-store :problem problem)]
-    (println (str "[arse] Progress: " (:completed status) "/" (:total status)
-                  " completed, " (:remaining status) " remaining"
-                  (when problem (str " (P" problem ")"))))
-    status))
-
-(defn run-arse-entry!
-  "Process a single ArSE work item: generate synthetic QA → review.
-   Codex generates, Claude reviews.
-
-   Options:
-     :entity-id — specific entity to process (default: next unprocessed)
-     :agent-id  — generation agent (default \"codex-1\")
-     :timeout-ms — generation timeout (default 300000 = 5 min)
-     :review?   — run Claude review after generation (default true)
-     :review-timeout-ms — review timeout (default 300000 = 5 min)
-     :problem   — filter by problem number
-
-   Usage:
-     (dev/run-arse-entry!)                                     ; next unprocessed
-     (dev/run-arse-entry! :problem 7)                          ; next P7 entry
-     (dev/run-arse-entry! :entity-id \"synth-p7-problem-000\") ; specific entry"
-  [& {:keys [entity-id agent-id timeout-ms review? review-timeout-ms problem]
-      :or {agent-id "codex-1"
-           timeout-ms 300000
-           review? true
-           review-timeout-ms 300000}}]
-  (let [evidence-store @!evidence-store
-        send-fn (or (some-> @!irc-sys :server :send-to-channel!)
-                    (make-irc-send-fn "tickle-1"))
-        issue (if entity-id
-                (let [entities (arse-queue/load-arse-entities)
-                      idx (.indexOf (mapv :entity-id-str entities) entity-id)]
-                  (when (>= idx 0)
-                    (arse-queue/entity->issue (nth entities idx) idx)))
-                (first (arse-queue/next-unprocessed evidence-store 1
-                                                    :problem problem)))]
-    (if-not issue
-      (do (println "[arse] No entries to process"
-                   (if entity-id (str "(entity " entity-id " not found)") "(queue complete)"))
-          {:ok false :error :no-entries})
-      (let [session-id (str "arse-" (UUID/randomUUID))
-            eid (:entity-id issue)]
-        (println (str "[arse] Processing: " eid " — " (:title issue)))
-        (arse-queue/emit-arse-evidence! evidence-store
-                                        {:entity-id eid
-                                         :problem (:problem issue)
-                                         :node-id (:node-id issue)
-                                         :session-id session-id
-                                         :event-tag :workflow-start})
-        (println (str "[arse] Assigning to " agent-id "..."))
-        (let [gen-result (orch/assign-issue! issue
-                                             {:evidence-store evidence-store
-                                              :repo-dir "/home/joe/code/futon6"
-                                              :agent-id agent-id
-                                              :timeout-ms timeout-ms
-                                              :session-id session-id})]
-          (if-not (:ok gen-result)
-            (do
-              (println (str "[arse] Generation failed: " (:error gen-result)))
-              (arse-queue/emit-arse-evidence! evidence-store
-                                              {:entity-id eid
-                                               :problem (:problem issue)
-                                               :node-id (:node-id issue)
-                                               :session-id session-id
-                                               :event-tag :workflow-complete})
-              {:ok false :entity-id eid :error (:error gen-result)})
-            (let [generation (:result gen-result)]
-              (println (str "[arse] Generation complete (" (:elapsed-ms gen-result) "ms)"))
-              (arse-queue/emit-arse-evidence! evidence-store
-                                              {:entity-id eid
-                                               :problem (:problem issue)
-                                               :node-id (:node-id issue)
-                                               :session-id session-id
-                                               :event-tag :generation-complete
-                                               :generation-result generation})
-              (if-not review?
-                (do
-                  (arse-queue/emit-arse-evidence! evidence-store
-                                                  {:entity-id eid
-                                                   :problem (:problem issue)
-                                                   :node-id (:node-id issue)
-                                                   :session-id session-id
-                                                   :event-tag :workflow-complete
-                                                   :generation-result generation})
-                  (when send-fn
-                    (send-fn "#futon" "tickle-1"
-                             (str "ArSE generated: " eid " (" (:elapsed-ms gen-result) "ms)")))
-                  {:ok true :entity-id eid :status :generated
-                   :elapsed-ms (:elapsed-ms gen-result)})
-                (let [entities (arse-queue/load-arse-entities)
-                      entity (first (filter #(= eid (:entity-id-str %)) entities))
-                      review-prompt (arse-queue/make-review-prompt entity generation)
-                      review-issue {:number (:number issue)
-                                    :title (str "ArSE-review: " (:title issue))
-                                    :body review-prompt}]
-                  (println "[arse] Requesting Claude review...")
-                  (let [review-result (orch/request-review! review-issue gen-result
-                                                             {:evidence-store evidence-store
-                                                              :repo-dir "/home/joe/code/futon6"
-                                                              :timeout-ms review-timeout-ms
-                                                              :session-id session-id})
-                        verdict (or (:verdict review-result) :unclear)]
-                    (println (str "[arse] Review: " (name verdict)
-                                  " (" (:elapsed-ms review-result) "ms)"))
-                    (arse-queue/emit-arse-evidence! evidence-store
-                                                    {:entity-id eid
-                                                     :problem (:problem issue)
-                                                     :node-id (:node-id issue)
-                                                     :session-id session-id
-                                                     :event-tag :workflow-complete
-                                                     :generation-result generation
-                                                     :verdict (name verdict)})
-                    (when send-fn
-                      (send-fn "#futon" "tickle-1"
-                               (str "ArSE " eid ": " (name verdict)
-                                    " (gen " (:elapsed-ms gen-result) "ms"
-                                    ", review " (:elapsed-ms review-result) "ms)")))
-                    {:ok true :entity-id eid :status :reviewed
-                     :verdict verdict
-                     :gen-elapsed-ms (:elapsed-ms gen-result)
-                     :review-elapsed-ms (:elapsed-ms review-result)}))))))))))
-
-(defn run-arse-batch!
-  "Process N ArSE entries. Resumable — skips already-processed entries.
-
-   Options:
-     :n           — max entries to process (default 10)
-     :cooldown-ms — pause between entries (default 5000 = 5s)
-     :agent-id    — generation agent (default \"codex-1\")
-     :timeout-ms  — per-entry timeout (default 300000 = 5 min)
-     :review?     — run Claude review (default true)
-     :problem     — filter by problem number
-
-   Usage:
-     (dev/run-arse-batch!)                          ; 10 entries
-     (dev/run-arse-batch! :n 40)                    ; full queue
-     (dev/run-arse-batch! :n 16 :problem 7)         ; P7 only"
-  [& {:keys [n cooldown-ms agent-id timeout-ms review? problem]
-      :or {n 10 cooldown-ms 5000 agent-id "codex-1"
-           timeout-ms 300000 review? true}}]
-  (let [evidence-store @!evidence-store
-        issues (arse-queue/next-unprocessed evidence-store n :problem problem)
-        total (count issues)
-        start (System/currentTimeMillis)]
-    (println (str "[arse-batch] Starting: " total " entries"
-                  " (agent=" agent-id
-                  " review=" review?
-                  (when problem (str " problem=" problem))
-                  " cooldown=" cooldown-ms "ms)"))
-    (when (some-> @!irc-sys :server :send-to-channel!)
-      (let [send-fn (:send-to-channel! (:server @!irc-sys))]
-        (send-fn "#futon" "tickle-1"
-                 (str "ArSE Tickling started: " total " entries"
-                      (when problem (str " (P" problem ")"))))))
-    (let [results
-          (reduce
-           (fn [acc [idx issue]]
-             (println (str "\n[arse-batch] " (inc idx) "/" total
-                           " — " (:entity-id issue)))
-             (let [result (run-arse-entry!
-                           :entity-id (:entity-id issue)
-                           :agent-id agent-id
-                           :timeout-ms timeout-ms
-                           :review? review?)]
-               (when (and (< (inc idx) total) (pos? cooldown-ms))
-                 (Thread/sleep cooldown-ms))
-               (conj acc result)))
-           []
-           (map-indexed vector issues))
-          elapsed (- (System/currentTimeMillis) start)
-          ok-count (count (filter :ok results))
-          fail-count (- total ok-count)]
-      (println (str "\n[arse-batch] Complete: " ok-count "/" total " succeeded"
-                    " (" fail-count " failed)"
-                    " in " (long (/ elapsed 1000)) "s"))
-      (when (some-> @!irc-sys :server :send-to-channel!)
-        (let [send-fn (:send-to-channel! (:server @!irc-sys))]
-          (send-fn "#futon" "tickle-1"
-                   (str "ArSE Tickling complete: " ok-count "/" total
-                        " in " (long (/ elapsed 60000)) "min"))))
-      {:total total
-       :ok ok-count
-       :failed fail-count
-       :elapsed-ms elapsed
-       :results results})))
-
 (defn status
   "Quick runtime status for the REPL."
   []
@@ -2014,7 +1820,6 @@ RESPOND WITH ONLY:
    :ct-queue (when @!evidence-store
                (let [s (ct-queue/queue-status @!evidence-store)]
                  {:completed (:completed s) :remaining (:remaining s)}))
-<<<<<<< Updated upstream
    :ase-queue (when (and @!evidence-store
                          (.exists (io/file "/home/joe/code/futon6/data/ase-queue/entities.json")))
                 (let [s (ase-queue/queue-status @!evidence-store)]
@@ -2652,51 +2457,6 @@ RESPOND WITH ONLY:
             (finally
               (stop-ticker!))))))))
 
-(defn register-claude-agent!
-  "Register a new Claude agent dynamically. Each agent gets its own session
-   file, session atom, and invoke-fn — fully independent from other agents.
-
-   Usage from REPL or Drawbridge:
-     (dev/register-claude-agent! \"claude-2\")
-     (dev/register-claude-agent! \"claude-3\" {:permission-mode \"default\"})
-
-   On the Emacs side, set `futon3c-chat-agent-id` to match:
-     (setq futon3c-chat-agent-id \"claude-2\")
-
-   opts (all optional):
-     :claude-bin       — path to claude CLI (default from CLAUDE_BIN or \"claude\")
-     :permission-mode  — permission mode (default from CLAUDE_PERMISSION or \"bypassPermissions\")
-     :session-file     — explicit session file path (default /tmp/futon-session-id-<agent-id>)
-     :capabilities     — capability vector (default [:explore :edit :test :coordination/execute])"
-  ([agent-id] (register-claude-agent! agent-id {}))
-  ([agent-id {:keys [claude-bin permission-mode session-file capabilities]
-              :or {capabilities [:explore :edit :test :coordination/execute]}}]
-   (let [sf (io/file (or session-file
-                         (str "/tmp/futon-session-id-" agent-id)))
-         initial-sid (read-session-id sf)
-         sid-atom (atom initial-sid)
-         invoke-fn (make-claude-invoke-fn
-                    {:claude-bin (or claude-bin (env "CLAUDE_BIN" "claude"))
-                     :permission-mode (or permission-mode
-                                          (env "CLAUDE_PERMISSION" "bypassPermissions"))
-                     :agent-id agent-id
-                     :session-file sf
-                     :session-id-atom sid-atom})]
-     (rt/register-claude! {:agent-id agent-id
-                           :invoke-fn invoke-fn})
-     (reg/update-agent! agent-id
-                        :agent/type :claude
-                        :agent/invoke-fn invoke-fn
-                        :agent/capabilities capabilities)
-     (when initial-sid
-       (reg/update-agent! agent-id :agent/session-id initial-sid))
-     (println (str "[dev] Claude agent registered: " agent-id " (inline invoke)"
-                   " session-file=" (str sf)
-                   (when initial-sid
-                     (str " (session: " (subs initial-sid 0
-                                              (min 8 (count initial-sid))) ")"))))
-     agent-id)))
-
 (defn make-codex-invoke-fn
   "Create an invoke-fn that calls `codex exec` for real Codex interaction.
 
@@ -2899,10 +2659,21 @@ RESPOND WITH ONLY:
         enforce-irc-planning-guard)))
 
 (defn- irc-invoke-prompt
-  "Wrap an IRC user message with surface metadata — where the output goes."
+  "Wrap an IRC user message with explicit surface/delivery semantics."
   [{:keys [nick sender channel user-text]}]
-  (str "Surface: IRC | Channel: " channel " | Sender: " sender "\n"
-       "Your returned text will be posted to " channel " as <" nick ">.\n\n"
+  (str "Runtime surface contract:\n"
+       "- Current surface: IRC.\n"
+       "- Channel: " channel "\n"
+       "- Sender: " sender "\n"
+       "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
+       "- Return natural chat text only; do not emit directive wrappers.\n"
+       "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
+       "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
+       "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
+       "- Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n\n"
+       "- If you cannot cite an artifact, do not use future-commitment phrasing like \"I'll start now\".\n\n"
+       "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
+       "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
        "User message:\n"
        user-text))
 
@@ -3103,9 +2874,28 @@ RESPOND WITH ONLY:
              (:server irc-sys)))
         ;; Register Claude
         _ (when register-claude?
-            (register-claude-agent! "claude-1"
-                                    {:session-file (env "CLAUDE_SESSION_FILE"
-                                                        "/tmp/futon-session-id")}))
+            (let [sf (io/file (or (env "CLAUDE_SESSION_FILE")
+                                  "/tmp/futon-session-id"))
+                  initial-sid (read-session-id sf)
+                  sid-atom (atom initial-sid)
+                  invoke-fn (make-claude-invoke-fn
+                             {:claude-bin (env "CLAUDE_BIN" "claude")
+                              :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
+                              :agent-id "claude-1"
+                              :session-file sf
+                              :session-id-atom sid-atom})]
+              (rt/register-claude! {:agent-id "claude-1"
+                                    :invoke-fn invoke-fn})
+              (reg/update-agent! "claude-1"
+                                 :agent/type :claude
+                                 :agent/invoke-fn invoke-fn
+                                 :agent/capabilities [:explore :edit :test :coordination/execute])
+              (when initial-sid
+                (reg/update-agent! "claude-1" :agent/session-id initial-sid))
+              (println (str "[dev] Claude agent registered: claude-1 (inline invoke)"
+                            (when initial-sid
+                              (str " (session: " (subs initial-sid 0
+                                                       (min 8 (count initial-sid))) ")"))))))
         ;; Register Codex
         _ (when register-codex?
             (let [sf (io/file (or (env "CODEX_SESSION_FILE")
@@ -3228,9 +3018,7 @@ RESPOND WITH ONLY:
               :nick "codex"
               :invoke-timeout-ms relay-invoke-timeout-ms
               :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))]
-    ;; Install agent factories for auto-registration
-    (reg/set-agent-factory! :claude register-claude-agent!)
-    (println "[dev] Agent layer started. Auto-registration: (reg/auto-register-agent! :claude)")))
+    (println "[dev] Agent layer started.")))
 
 (defn restart-agents!
   "Restart WS transport + agents. IRC stays up."

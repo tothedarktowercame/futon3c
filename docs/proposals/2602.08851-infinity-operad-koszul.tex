@@ -1,0 +1,34 @@
+% PlanetMath proposal draft for arXiv:2602.08851
+% Source corpora: arXiv math.CT eprints, storage/mo-processed-gpu, storage/math-processed-gpu
+\section*{Koszul duality for algebras over $\infty$-operads}
+\subsection*{Source}
+\begin{itemize}
+  \item arXiv:2602.08851, Eric Hoffbeck \& Ieke Moerdijk, ``Koszul duality for algebras over infinity-operads'' (2026-02-14)
+  \item Cross-reference MO 489090 on extending Koszul duality to monoidal $\infty$-categories
+  \item Cross-reference Math.SE 1674352 on interpreting $C_\infty$ and $A_\infty$ structures via Koszul duality
+\end{itemize}
+\subsection*{Synopsis}
+Building on their earlier work on linear $\infty$-operads, Hoffbeck and Moerdijk define algebras and coalgebras over such operads via presheaves on an expanded category of trees $\mathcal{R}$ that encodes both inner faces and controlled prunings. They extend the bar--cobar Koszul duality from $\infty$-operads/cooperads to their categories of algebras/coalgebras by lifting the presheaf/copresheaf duality over $\mathcal{R}$. The resulting duality specializes to classical Koszul duality when the $\infty$-operad comes from a strict operad, but the proof uses a general tree-based bar construction rather than quadratic presentations. They also define homology for algebras over an $\infty$-operad via the homology of the tree category with coefficients in the presheaf, providing computational tools for MO 489090’s monoidal questions.
+\subsection*{MathOverflow cues}
+\begin{description}
+  \item[MO 489090] asks how far Koszul duality extends in monoidal $\infty$-categories; the paper’s bar--cobar duality over $\mathcal{R}$ instances one such extension.
+\end{description}
+\subsection*{Math.SE anchors}
+\begin{description}
+  \item[Math.SE 1674352] inquires about $C_\infty$ analogues of the $A_\infty$ coalgebra correspondence; the article supplies this via $\infty$-operad homology.
+\end{description}
+\subsection*{Encyclopedia outline}
+\begin{enumerate}
+  \item \textbf{Linear $\infty$-operads revisited.} Briefly recall presheaf models on $\mathcal{A}$ and the new enlargement to $\mathcal{R}$ capturing prunings.
+  \item \textbf{Algebras and coalgebras.} Define $\mathcal{R}$-presheaves with extra grafting maps, explain conilpotence conditions, and relate to MO 489090.
+  \item \textbf{Bar--cobar duality on $\mathcal{R}$.} State the adjoint functors $\mathcal{B}\dashv\Omega$ between conilpotent copresheaves and presheaves, and show how they lift to algebras/coalgebras.
+  \item \textbf{Homology via trees.} Present the homology theory for $\infty$-operad algebras, showing agreement with Math.SE 1674352 expectations.
+  \item \textbf{Classical recoveries and examples.} Discuss the strict operad case, Postnikov truncations, and examples (associative, commutative, Lie).
+\end{enumerate}
+\subsection*{Action items}
+\begin{itemize}
+  \item Write precise definitions of $\mathcal{A}$, $\mathcal{R}$, and their morphisms, including factorization properties.
+  \item Detail the bar construction over $\mathcal{R}$ and supply illustrative computations for familiar operads.
+  \item Explain how the duality specializes to classical Koszul duality and to $A_\infty/C_\infty$ contexts tied to Math.SE 1674352.
+  \item Cross-link to entries on operads, cooperads, bar--cobar duality, and homology of trees.
+\end{itemize}

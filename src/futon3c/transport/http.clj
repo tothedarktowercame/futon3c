@@ -329,7 +329,9 @@
                             (map (fn [[id info]]
                                    [id {:type (:type info)
                                         :last-active (:last-active info)
-                                        :capabilities (:capabilities info)}]))
+                                        :capabilities (:capabilities info)
+                                        :invoke-route (:invoke-route info)
+                                        :invoke-ready? (:invoke-ready? info)}]))
                             (:agents live-status))
         evidence-store (evidence-store-for-config config)
         evidence-count (count (estore/query* evidence-store {}))
@@ -639,27 +641,6 @@
                                     :err "registration-failed"
                                     :message (str "Could not register: " agent-id)
                                     :detail result})))))))))
-
-(defn- handle-agents-auto-register
-  "POST /api/alpha/agents/auto — auto-register next agent of a given type.
-   Body: {\"type\": \"claude\"} or {\"type\": \"codex\"}
-   Uses the factory registered by dev.clj at startup to create a fully
-   functional agent with its own session, invoke-fn, and session file.
-   Returns: {\"ok\": true, \"agent-id\": \"claude-2\"}"
-  [request _config]
-  (let [payload (parse-json-map (read-body request))]
-    (if (nil? payload)
-      (json-response 400 {:ok false :err "invalid-json"
-                          :message "Request body must be a JSON object"})
-      (let [type-str (or (:type payload) (get payload "type"))
-            agent-type (when type-str (keyword type-str))]
-        (if (nil? agent-type)
-          (json-response 400 {:ok false :err "missing-type"
-                              :message "type is required (claude, codex)"})
-          (let [result (reg/auto-register-agent! agent-type)]
-            (if (:ok result)
-              (json-response 201 result)
-              (json-response 400 result))))))))
 
 (defn- emit-invoke-evidence!
   "Emit a forum-post evidence entry for an invoke prompt or response.
@@ -1325,23 +1306,6 @@
       (json-response 500 {:ok false :error "trace-failed"
                           :message (.getMessage e)}))))
 
-(defn- handle-mc-trace-all
-  "GET /api/alpha/mc/trace-all — trace ALL components through the gate chain.
-   Unlike /mc/trace (tensions only), this traces every component in every devmap.
-   Optional ?devmap=X to filter to a single devmap."
-  [request _config]
-  (try
-    (let [params (parse-query-params request)
-          dm-filter (get params "devmap")
-          result (mcb/trace-all-components dm-filter)]
-      (json-response 200 {:ok true
-                          :paths (:paths result)
-                          :summary (:summary result)
-                          :detected-at (:detected-at result)}))
-    (catch Exception e
-      (json-response 500 {:ok false :error "trace-all-failed"
-                          :message (.getMessage e)}))))
-
 ;; =============================================================================
 ;; Portfolio inference handlers
 ;; =============================================================================
@@ -1494,9 +1458,6 @@
           (and (= :get method) (= "/api/alpha/mc/trace" uri))
           (handle-mc-trace request config)
 
-          (and (= :get method) (= "/api/alpha/mc/trace-all" uri))
-          (handle-mc-trace-all request config)
-
           (and (= :post method) (= "/api/alpha/todo" uri))
           (handle-todo request config)
 
@@ -1527,9 +1488,6 @@
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)
-
-          (and (= :post method) (= "/api/alpha/agents/auto" uri))
-          (handle-agents-auto-register request config)
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")

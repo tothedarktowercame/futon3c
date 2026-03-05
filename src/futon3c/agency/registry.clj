@@ -32,13 +32,6 @@
    Signature: (fn [agent-record] ...) — called asynchronously."}
   !on-register (atom nil))
 
-(defonce ^{:doc "Optional factory function for auto-registering agents by type.
-   Set via set-agent-factory! from dev.clj at startup.
-   Signature: (fn [agent-id opts] -> agent-id-string)
-   where opts may include :capabilities, :session-file, etc.
-   Keyed by agent type: {:claude factory-fn, :codex factory-fn}."}
-  !agent-factories (atom {}))
-
 (def ^:private ws-invoke-timeout-ms 120000)
 
 (defonce ^{:doc "Registry of agents.
@@ -83,6 +76,30 @@
 
 (defn- now [] (Instant/now))
 
+(defn- invoke-routing-info
+  "Compute invoke routing readiness for an agent record.
+   Exposes whether invoke will route via local fn, WS bridge, or fail."
+  [aid-val agent]
+  (let [local? (fn? (:agent/invoke-fn agent))
+        ws-available? (ws-invoke/available? aid-val)
+        route (cond
+                local? :local
+                ws-available? :ws
+                :else :none)
+        note (or (get-in agent [:agent/metadata :note])
+                 (get-in agent [:agent/metadata "note"]))
+        diagnostic (case route
+                     :local "local invoke-fn registered"
+                     :ws "ws bridge connected"
+                     (if (and (string? note) (not (str/blank? note)))
+                       (str "no local invoke-fn and no ws bridge (" note ")")
+                       "no local invoke-fn and no ws bridge"))]
+    {:invoke-route route
+     :invoke-ready? (not= :none route)
+     :invoke-local? local?
+     :invoke-ws-available? ws-available?
+     :invoke-diagnostic diagnostic}))
+
 ;; =============================================================================
 ;; Registry Operations
 ;; =============================================================================
@@ -97,41 +114,6 @@
    Pass nil to clear. Signature: (fn [agent-record] ...)."
   [f]
   (reset! !on-register f))
-
-(defn set-agent-factory!
-  "Set factory function for a given agent type (:claude, :codex, etc.).
-   Factory signature: (fn [agent-id opts] -> agent-id-string).
-   Pass nil to clear."
-  [agent-type f]
-  (swap! !agent-factories assoc agent-type f))
-
-(defn next-agent-id
-  "Return the next available agent ID for a given prefix.
-   E.g. (next-agent-id \"claude\") -> \"claude-1\" if none exist,
-   \"claude-2\" if \"claude-1\" is registered, etc."
-  [prefix]
-  (let [registered (keys @!registry)
-        pat (re-pattern (str "^" (java.util.regex.Pattern/quote prefix) "-(\\d+)$"))
-        nums (->> registered
-                  (keep #(when-let [m (re-matches pat (str %))]
-                           (parse-long (second m))))
-                  sort)]
-    (str prefix "-" (if (seq nums) (inc (last nums)) 1))))
-
-(defn auto-register-agent!
-  "Auto-register the next available agent of the given type.
-   Uses the factory function set via set-agent-factory!.
-   Returns {:ok true :agent-id \"claude-2\"} or {:ok false :error ...}."
-  [agent-type]
-  (let [prefix (name agent-type)]
-    (if-let [factory (get @!agent-factories agent-type)]
-      (let [aid (next-agent-id prefix)]
-        (try
-          (factory aid {})
-          {:ok true :agent-id aid}
-          (catch Exception e
-            {:ok false :error (str "Factory failed: " (.getMessage e))})))
-      {:ok false :error (str "No factory registered for type: " agent-type)})))
 
 (defn get-agent
   "Get agent record by typed ID, or nil if not registered."
@@ -299,6 +281,7 @@
    (let [aid-val (agent-id-value typed-id)]
      (if-let [agent (get @!registry aid-val)]
        (let [invoke-fn (:agent/invoke-fn agent)
+             routing-info (invoke-routing-info aid-val agent)
              current-session (:agent/session-id agent)
              timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))
              prompt-preview (let [s (str prompt)]
@@ -371,7 +354,7 @@
                           :timeout-ms (:timeout-ms result-map))}
                  {:ok true :result result :session-id session-id}))
 
-             (ws-invoke/available? aid-val)
+             (:invoke-ws-available? routing-info)
              (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
                    response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
                    session-id (when (map? response) (:session-id response))]
@@ -408,8 +391,11 @@
                {:ok false
                 :error (make-social-error
                         :invoke-error
-                        "Agent has no invoke handler"
-                        :agent-id aid-val)}))
+                        (str "Agent has no invoke handler (" (:invoke-diagnostic routing-info) ")")
+                        :agent-id aid-val
+                        :invoke-route (:invoke-route routing-info)
+                        :invoke-local? (:invoke-local? routing-info)
+                        :invoke-ws-available? (:invoke-ws-available? routing-info))}))
            (catch Exception e
              (mark-idle! nil)
              {:ok false
@@ -500,6 +486,7 @@
      (into {}
            (map (fn [[aid agent]]
                   (let [base-status (or (:agent/status agent) :idle)
+                        routing-info (invoke-routing-info aid agent)
                         session-id (:agent/session-id agent)
                         external-codex-invoking?
                         (and (= :codex (:agent/type agent))
@@ -524,6 +511,11 @@
                                   :capabilities (:agent/capabilities agent)
                                   :ttl-ms (:agent/ttl-ms agent)
                                   :metadata (:agent/metadata agent)
+                                  :invoke-route (:invoke-route routing-info)
+                                  :invoke-ready? (:invoke-ready? routing-info)
+                                  :invoke-local? (:invoke-local? routing-info)
+                                  :invoke-ws-available? (:invoke-ws-available? routing-info)
+                                  :invoke-diagnostic (:invoke-diagnostic routing-info)
                                   :status status}
                            invoke-started-at
                            (assoc :invoke-started-at (str invoke-started-at)

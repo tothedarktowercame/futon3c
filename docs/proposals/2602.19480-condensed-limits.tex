@@ -1,0 +1,40 @@
+% PlanetMath proposal draft for arXiv:2602.19480
+% Source corpora: arXiv math.CT eprints, storage/mo-processed-gpu, storage/math-processed-gpu
+\section*{Condensed limits via span logoi}
+\subsection*{Source}
+\begin{itemize}
+  \item arXiv:2602.19480, "Condensed limits via span logoi" (2026-02-20)
+  \item StackExchange cross-links via storage/mo-processed-gpu + math-processed-gpu
+\end{itemize}
+\subsection*{Synopsis}
+The manuscript computes limits/colimits in condensed mathematics using span logoi to encode condensed symmetry. PR \#12 already contains the structural ``span logoi from condensed groups'' entry (arXiv:2602.19267); this proposal narrows to the explicit limit formulas, the condensed torus/field case studies, and the Beck--Chevalley identities so the two PlanetMath pages split \emph{framework} vs \emph{computation}. Key steps:
+\begin{enumerate}
+  \item construct span logoi from condensed groups and record how limits pull back along spans;
+  \item prove a condensed Beck--Chevalley theorem ensuring the span calculus respects base-change;
+  \item treat condensed tori and condensed fields as working examples; and
+  \item connect the story to Galois symmetries highlighted in MO 466647 + MO 467599.
+\end{enumerate}
+\subsection*{MathOverflow cues}
+\begin{description}
+  \item[MO 466647] Picard/Picard span discussion relevant to condensed tori.
+  \item[MO 467599] Finite-group spans controlling condensed symmetry constraints.
+\end{description}
+\subsection*{Math.SE anchors}
+\begin{description}
+  \item[Math.SE 498240] "Condensed sets vs. logoi".
+  \item[Math.SE 499776] "Span correspondences in condensed mathematics".
+\end{description}
+\subsection*{Encyclopedia outline}
+\begin{enumerate}
+  \item \textbf{Condensed refresher.} Review condensed logoi, summarize Math.SE 498240, and point to the span-logoi entry (2602.19267) for the abstract construction we will reference.
+  \item \textbf{Limit/colimit formulas.} Define span logoi in the condensed setting, write down the condensed Beck--Chevalley theorem, and outline the explicit co/end formulas that make this entry computational.
+  \item \textbf{Condensed torus example.} Carry out the torus computation in detail, explaining how MO 466647 supplies Picard-span input and how condensed norms appear.
+  \item \textbf{Galois symmetry + condensed fields.} Describe the finite-group symmetry application (MO 467599) and explain how the formulas specialize to condensed fields and $p$-adic coefficients.
+  \item \textbf{Cross-link + future work.} Document how these calculations feed back into the span-logoi article without duplication and list the downstream PlanetMath pages (condensed fields, condensed norms) that will consume the formulas.
+\end{enumerate}
+\subsection*{Action items}
+\begin{itemize}
+  \item Sync the arXiv source, fetch MO embeddings (466647, 467599), and fetch Math.SE embeddings (498240, 499776).
+  \item Coordinate with the 2602.19267 span-logoi draft so introductory text lives there while this entry keeps the explicit formulas and examples.
+  \item Expand the PlanetMath entry following the outline and record which condensed field identities will become separate encyclopedia lemmas.
+\end{itemize}
