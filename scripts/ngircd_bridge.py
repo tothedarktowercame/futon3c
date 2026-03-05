@@ -61,11 +61,53 @@ def int_env(name, default, minimum=1):
     return max(minimum, value)
 
 
+def _health_ok(base_url, timeout_seconds=0.5):
+    """Return True when base_url/health responds."""
+    url = f"{base_url.rstrip('/')}/health"
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
+            return 200 <= int(resp.status) < 500
+    except Exception:
+        return False
+
+
+def resolve_invoke_base():
+    """Pick futon3c HTTP base.
+
+    Priority:
+    1) explicit INVOKE_BASE
+    2) FUTON3C_PORT-derived local base if healthy
+    3) healthy default local ports (7070, 47070)
+    4) fallback to first candidate
+    """
+    explicit = os.environ.get("INVOKE_BASE")
+    if explicit:
+        return explicit.rstrip("/"), "INVOKE_BASE"
+
+    candidates = []
+    futon3c_port = os.environ.get("FUTON3C_PORT", "").strip()
+    if futon3c_port.isdigit():
+        candidates.append(f"http://127.0.0.1:{int(futon3c_port)}")
+    candidates.extend(["http://127.0.0.1:7070", "http://127.0.0.1:47070"])
+
+    deduped = []
+    for c in candidates:
+        c = c.rstrip("/")
+        if c and c not in deduped:
+            deduped.append(c)
+
+    for c in deduped:
+        if _health_ok(c):
+            return c, "autodetect"
+    return deduped[0], "fallback"
+
+
 IRC_HOST = os.environ.get("IRC_HOST", "127.0.0.1")
 IRC_PORT = int_env("IRC_PORT", 6667, minimum=1)
 IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
 IRC_CHANNEL = os.environ.get("IRC_CHANNEL", "#futon")
-INVOKE_BASE = os.environ.get("INVOKE_BASE", "http://127.0.0.1:7070")
+INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,codex").split(",")
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
@@ -1040,7 +1082,10 @@ def main():
         print("No bots configured. Set BRIDGE_BOTS env var.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Starting ngircd bridge: {[b.nick for b in bots]} → {INVOKE_BASE}")
+    print(
+        f"Starting ngircd bridge: {[b.nick for b in bots]} → {INVOKE_BASE} "
+        f"(source: {INVOKE_BASE_SOURCE})"
+    )
     print(f"IRC: {IRC_HOST}:{IRC_PORT} | Channel: {IRC_CHANNEL}")
     print(f"Commands handled by: {bots[0].nick}")
 
