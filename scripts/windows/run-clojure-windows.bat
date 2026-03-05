@@ -19,6 +19,19 @@ if errorlevel 1 (
   1>&2 echo [run-clojure-windows] ERROR: unable to create FUTON1A_DATA_DIR=%FUTON1A_DATA_DIR%
   exit /b 1
 )
+if not defined FUTON_STORAGE_ROOT set "FUTON_STORAGE_ROOT=%REPO_ROOT%\.state\storage"
+if not exist "%FUTON_STORAGE_ROOT%" mkdir "%FUTON_STORAGE_ROOT%" >nul 2>nul
+if errorlevel 1 (
+  1>&2 echo [run-clojure-windows] ERROR: unable to create FUTON_STORAGE_ROOT=%FUTON_STORAGE_ROOT%
+  exit /b 1
+)
+if not defined FUTON3C_MISSION_CONTROL_SNAPSHOT_PATH set "FUTON3C_MISSION_CONTROL_SNAPSHOT_PATH=%REPO_ROOT%\.state\mission-control\sessions.edn"
+for %%I in ("%FUTON3C_MISSION_CONTROL_SNAPSHOT_PATH%") do set "MC_SNAPSHOT_DIR=%%~dpI"
+if not exist "%MC_SNAPSHOT_DIR%" mkdir "%MC_SNAPSHOT_DIR%" >nul 2>nul
+if errorlevel 1 (
+  1>&2 echo [run-clojure-windows] ERROR: unable to create mission-control snapshot directory=%MC_SNAPSHOT_DIR%
+  exit /b 1
+)
 set "CLJ_CONFIG=%REPO_ROOT%\.clj-config"
 if not exist "%CLJ_CONFIG%" mkdir "%CLJ_CONFIG%" >nul 2>nul
 if errorlevel 1 (
@@ -32,12 +45,13 @@ if errorlevel 1 (
   1>&2 echo [run-clojure-windows] ERROR: unable to create %LOCAL_M2%
   exit /b 1
 )
-set "LOCAL_TMP=%REPO_ROOT%\.tmp\java"
-if not exist "%LOCAL_TMP%" mkdir "%LOCAL_TMP%" >nul 2>nul
+set "LOCAL_TMP_DIR=%REPO_ROOT%\.tmp\java"
+if not exist "%LOCAL_TMP_DIR%" mkdir "%LOCAL_TMP_DIR%" >nul 2>nul
 if errorlevel 1 (
-  1>&2 echo [run-clojure-windows] ERROR: unable to create %LOCAL_TMP%
+  1>&2 echo [run-clojure-windows] ERROR: unable to create %LOCAL_TMP_DIR%
   exit /b 1
 )
+set "LOCAL_TMP=%LOCAL_TMP_DIR:\=/%"
 set "TMP=%LOCAL_TMP%"
 set "TEMP=%LOCAL_TMP%"
 if defined JAVA_OPTS (

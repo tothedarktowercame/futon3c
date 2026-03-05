@@ -20,3 +20,4 @@ AGENTS.md
 .tmp/
 library/alfworld/compile-flexiargs-to-deterministic-runner.flexiarg
 library/social/cluster-tooling-bootstrap.flexiarg
+.gitlibs/

@@ -932,8 +932,63 @@
                 :blocked-at blocked-at-freq}
       :detected-at (:detected-at export)})))
 
+(defn trace-all-components
+  "Trace every devmap component through the gate chain.
+   Optional dm-filter limits tracing to one devmap name (string/keyword)."
+  ([] (trace-all-components default-repo-roots nil))
+  ([arg]
+   (if (map? arg)
+     (trace-all-components arg nil)
+     (trace-all-components default-repo-roots arg)))
+  ([repos dm-filter]
+   (let [review (build-portfolio-review repos)
+         now (str (java.time.Instant/now))
+         normalized-filter (when (some? dm-filter)
+                             (str/lower-case
+                              (cond
+                                (keyword? dm-filter) (name dm-filter)
+                                :else (str dm-filter))))
+         devmaps (->> (:portfolio/devmap-summaries review)
+                      (filter (fn [dm]
+                                (if normalized-filter
+                                  (= normalized-filter
+                                     (some-> (:devmap/id dm) name str/lower-case))
+                                  true)))
+                      vec)
+         tensions (mapcat (fn [dm]
+                            (let [dm-id (:devmap/id dm)]
+                              (map (fn [component]
+                                     (let [comp-id (:component/id component)]
+                                       {:tension/type :component-trace
+                                        :tension/devmap dm-id
+                                        :tension/component comp-id
+                                        :tension/detected-at now
+                                        :tension/summary (str (name dm-id) "/" (name comp-id)
+                                                              " - component trace")}))
+                                   (:devmap/components dm))))
+                          devmaps)
+         paths (mapv #(trace-tension-path % review) tensions)
+         complete (filter :complete? paths)
+         blocked (remove :complete? paths)
+         blocked-at-freq (frequencies (keep :blocked-at blocked))
+         gap-count (count (filter :gap-at paths))
+         by-devmap (frequencies
+                    (keep (fn [p]
+                            (some-> p :tension :tension/devmap name))
+                          paths))]
+     {:paths paths
+      :summary {:total (count paths)
+                :complete (count complete)
+                :blocked (count blocked)
+                :gap-count gap-count
+                :blocked-at blocked-at-freq
+                :devmaps-scanned (count devmaps)
+                :by-devmap by-devmap
+                :filter normalized-filter}
+      :detected-at now})))
+
 ;; =============================================================================
-;; Backfill — legacy missions as evidence (D7)
+;; Backfill - legacy missions as evidence (D7)
 ;; =============================================================================
 
 (defn mission->evidence
