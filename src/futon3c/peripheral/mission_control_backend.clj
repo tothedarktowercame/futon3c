@@ -29,62 +29,90 @@
 ;; Configuration — repo paths
 ;; =============================================================================
 
-(def ^:private repo-names
-  [:futon3c :futon3b :futon3a :futon5 :futon3 :futon4 :futon6])
-
 (defn- normalize-path-separators
   [path]
   (some-> path (str/replace "\\" "/")))
 
-(defn- join-path
-  [base leaf]
-  (-> (io/file base leaf) str normalize-path-separators))
+(defn- futon-repo-name?
+  [name]
+  (boolean (re-matches #"(?i)^futon[0-9a-z].*" (or name ""))))
 
-(defn- existing-dir?
-  [path]
-  (and path (.isDirectory (io/file path))))
+(defn- parse-repo-pair
+  "Parse one FUTON3C_REPOS entry: name=path."
+  [entry]
+  (let [[repo-name repo-path] (str/split (or entry "") #"=" 2)
+        repo-name (some-> repo-name str/trim not-empty)
+        repo-path (some-> repo-path str/trim not-empty)]
+    (when (and repo-name repo-path)
+      [(keyword (str/lower-case repo-name))
+       (-> repo-path io/file .getAbsolutePath normalize-path-separators)])))
+
+(defn- parse-repo-roots-env
+  "Parse FUTON3C_REPOS/FUTON_REPOS:
+   futon3c=/path/to/futon3c,futon4=/path/to/futon4,mfuton=/path/to/mfuton.
+   Supports comma or semicolon separators."
+  [raw]
+  (let [pairs (->> (str/split (or raw "") #"[,;]")
+                   (map str/trim)
+                   (remove str/blank?)
+                   (keep parse-repo-pair)
+                   vec)]
+    (when (seq pairs)
+      (into {} pairs))))
+
+(defn- discover-futon-repo-roots
+  "Discover futon* directories directly under BASE."
+  [base]
+  (let [dir (some-> base io/file .getAbsoluteFile)]
+    (if (and dir (.isDirectory dir))
+      (->> (.listFiles dir)
+           (filter #(.isDirectory ^java.io.File %))
+           (keep (fn [^java.io.File f]
+                   (let [name (.getName f)]
+                     (when (futon-repo-name? name)
+                       [(keyword (str/lower-case name))
+                        (-> f .getAbsolutePath normalize-path-separators)]))))
+           (sort-by (comp str first))
+           (into {}))
+      {})))
 
 (defn- repo-base-score
   [base]
-  (count (filter existing-dir?
-                 (map #(join-path base (name %)) repo-names))))
+  (count (discover-futon-repo-roots base)))
 
-(defn- choose-default-repo-base
+(defn- choose-default-repo-roots
   []
-  (let [env-base (or (some-> (System/getenv "FUTON3C_REPO_BASE") str/trim not-empty)
-                     (some-> (System/getenv "FUTON_REPO_BASE") str/trim not-empty))
-        cwd-parent (some-> (System/getProperty "user.dir")
-                           io/file
-                           .getAbsoluteFile
-                           .getParentFile
-                           str)
-        home-code (str (System/getProperty "user.home") "/code")
-        candidates (->> [env-base cwd-parent home-code]
-                        (remove str/blank?)
-                        distinct)
-        scored (->> candidates
-                    (map (fn [base]
-                           [base (repo-base-score base)]))
-                    (sort-by (fn [[_ score]] score) >))]
-    (or (some->> scored
-                 (filter (fn [[_ score]] (pos? score)))
-                 ffirst)
-        home-code)))
-
-(defn- build-repo-roots
-  [base]
-  (into {}
-        (map (fn [repo-k]
-               [repo-k (join-path base (name repo-k))]))
-        repo-names))
+  (or (parse-repo-roots-env (System/getenv "FUTON3C_REPOS"))
+      (parse-repo-roots-env (System/getenv "FUTON_REPOS"))
+      (let [env-base (or (some-> (System/getenv "FUTON3C_REPO_BASE") str/trim not-empty)
+                         (some-> (System/getenv "FUTON_REPO_BASE") str/trim not-empty))
+            cwd-parent (some-> (System/getProperty "user.dir")
+                               io/file
+                               .getAbsoluteFile
+                               .getParentFile
+                               str)
+            home-code (str (System/getProperty "user.home") "/code")
+            candidates (->> [env-base cwd-parent home-code]
+                            (remove str/blank?)
+                            distinct)
+            scored (->> candidates
+                        (map (fn [base]
+                               [base (repo-base-score base)]))
+                        (sort-by second >))
+            best-base (or (some->> scored
+                                   (filter (fn [[_ score]] (pos? score)))
+                                   ffirst)
+                          home-code)]
+        (discover-futon-repo-roots best-base))))
 
 (def default-repo-roots
   "Default repo locations.
    Preference order:
-   1) FUTON3C_REPO_BASE / FUTON_REPO_BASE
-   2) sibling directory of current user.dir
-   3) ~/code"
-  (build-repo-roots (choose-default-repo-base)))
+   1) FUTON3C_REPOS / FUTON_REPOS (name=path pairs)
+   2) auto-discover futon* siblings under FUTON3C_REPO_BASE / FUTON_REPO_BASE
+   3) auto-discover under sibling directory of current user.dir
+   4) auto-discover under ~/code"
+  (choose-default-repo-roots))
 
 ;; =============================================================================
 ;; Mission file parsing

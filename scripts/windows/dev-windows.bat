@@ -5,6 +5,12 @@ set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
 
+if defined FUTON3C_REPOS (
+  echo [dev-windows] FUTON3C_REPOS preset: %FUTON3C_REPOS%
+) else (
+  echo [dev-windows] FUTON3C_REPOS unset; using futon3c runtime defaults.
+)
+
 if not defined CODEX_SANDBOX set "CODEX_SANDBOX=danger-full-access"
 if not defined CODEX_APPROVAL_POLICY (
   if defined CODEX_APPROVAL (

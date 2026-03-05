@@ -7,7 +7,7 @@ export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
 
-.PHONY: tools preflight dev dev-core test status repl codex codex-repl ngircd-bridge
+.PHONY: tools preflight dev dev-arxana dev-core test status repl codex codex-repl ngircd-bridge
 
 tools:
 	cmd /c $(WIN_SCRIPTS)\\bootstrap-tools.bat
@@ -17,6 +17,9 @@ preflight:
 
 dev:
 	cmd /c $(WIN_SCRIPTS)\\dev-stack-windows.bat
+
+dev-arxana:
+	cmd /c $(WIN_SCRIPTS)\\dev-stack-arxana-windows.bat
 
 dev-core:
 	cmd /c $(WIN_SCRIPTS)\\dev-windows.bat
