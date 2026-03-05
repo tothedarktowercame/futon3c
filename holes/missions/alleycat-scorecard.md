@@ -332,7 +332,7 @@ Invariant: **I-transport-pivot** (joe+claude, bidirectional, shared session)
 
 Joe and Claude maintained a single conversation across two transports:
 
-1. **Emacs chat** (`futon3c-chat.el`) — custom Emacs buffer backed by
+1. **Emacs chat** (`claude-repl.el`) — custom Emacs buffer backed by
    `claude -p --session-id <uuid>` / `claude -p --resume <uuid>`
 2. **IRC** (`irc_claude_relay.clj`) — futon3c IRC server on :6667,
    relay calls `claude -p --resume <uuid>` with transport-aware system prompt
@@ -343,7 +343,7 @@ ID is persisted to `/tmp/futon-session-id` and shared between transports.
 
 ### Evidence
 
-- **Emacs → Claude**: Joe chatted with Claude in `*futon3c-chat*`. Claude
+- **Emacs → Claude**: Joe chatted with Claude in `*claude-repl*`. Claude
   correctly identified the Emacs transport and discussed the codebase.
 - **IRC → Claude**: Joe connected via ERC from Oxford laptop to Linode IRC
   server in London. Claude responded on IRC with awareness of the transport
@@ -363,7 +363,7 @@ Joe (Emacs chat)  --claude -p --resume UUID-->  Claude session db112a88
 Joe (ERC/Oxford)  --IRC :6667-->  relay --claude -p --resume UUID-->  same session
 ```
 
-- `emacs/futon3c-chat.el`: synchronous `call-process` to `claude -p`
+- `emacs/claude-repl.el`: synchronous `call-process` to `claude -p`
 - `scripts/irc_claude_relay.clj`: IRC server + `clojure.java.shell/sh` to
   `claude -p`, serial processing via Clojure agent
 - Transport metadata: `--append-system-prompt` injects transport context

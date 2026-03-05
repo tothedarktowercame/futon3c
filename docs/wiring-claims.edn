@@ -12,7 +12,7 @@
   {:claim/id :ui/emacs-interfaces
    :claim/description "Emacs Claude chat + Codex REPL + shared UI are implemented."
    :diagram/components [:S-dispatch :S-persist]
-   :implementation/files ["emacs/futon3c-chat.el"
+   :implementation/files ["emacs/claude-repl.el"
                           "emacs/codex-repl.el"
                           "emacs/futon3c-ui.el"
                           "emacs/futon3c-code-blocks.el"]

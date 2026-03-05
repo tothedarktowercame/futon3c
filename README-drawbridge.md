@@ -58,7 +58,7 @@ fresh:
 bash scripts/proof-eval.sh '(futon3c.agency.registry/reset-session! "claude-1")'
 ```
 
-Or from Emacs: `C-c C-n` in the futon3c-chat buffer (tries the HTTP
+Or from Emacs: `C-c C-n` in the claude-repl buffer (tries the HTTP
 endpoint first, falls back to Drawbridge automatically).
 
 Or from IRC: `!reset claude-1`
@@ -98,13 +98,13 @@ with double quotes in Clojure code.
 
 ## Emacs Integration
 
-The futon3c-chat REPL reads `.admintoken` automatically for Drawbridge
+The claude-repl REPL reads `.admintoken` automatically for Drawbridge
 operations (e.g. `C-c C-n` session reset). No configuration needed
 beyond having the file in the project root.
 
 If you need to customize:
 
 ```elisp
-(setq futon3c-chat-drawbridge-url "http://localhost:6768")
-(setq futon3c-chat-drawbridge-token "your-token-here")
+(setq claude-repl-drawbridge-url "http://localhost:6768")
+(setq claude-repl-drawbridge-token "your-token-here")
 ```

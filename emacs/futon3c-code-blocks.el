@@ -6,7 +6,7 @@
 ;;
 ;; Usage:
 ;;   (require 'futon3c-code-blocks)
-;;   In a futon3c-chat or codex-repl buffer:
+;;   In a claude-repl or codex-repl buffer:
 ;;     M-x futon3c-code-blocks-mode
 
 (require 'cl-lib)

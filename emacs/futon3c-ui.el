@@ -2,7 +2,7 @@
 
 ;; Author: Claude + Joe
 ;; Description: Common faces, buffer state, display, and streaming
-;;   infrastructure shared by futon3c-chat.el (Claude) and codex-repl.el (Codex).
+;;   infrastructure shared by claude-repl.el (Claude) and codex-repl.el (Codex).
 
 (require 'cl-lib)
 (require 'json)

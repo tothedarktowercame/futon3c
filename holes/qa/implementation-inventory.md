@@ -68,7 +68,7 @@ Status categories:
 | Component | Status | Evidence |
 |---|---|---|
 | Shared UI library | Written | `emacs/futon3c-ui.el` |
-| Claude chat | Written | `emacs/futon3c-chat.el`; streaming via `--output-format stream-json` |
+| Claude chat | Written | `emacs/claude-repl.el`; streaming via `--output-format stream-json` |
 | Codex REPL | Written | `emacs/codex-repl.el`; streaming via JSONL |
 | Sliding blackboards | Written | `emacs/futon3c-code-blocks.el` |
 

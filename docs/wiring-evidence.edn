@@ -21,7 +21,7 @@
    :claim/id :ui/emacs-interfaces
    :commit "c9de156"
    :artifacts ["emacs/futon3c-ui.el"
-               "emacs/futon3c-chat.el"
+               "emacs/claude-repl.el"
                "emacs/codex-repl.el"
                "emacs/futon3c-code-blocks.el"]
    :summary "Shared Emacs UI and chat/repl surfaces landed in a single wiring pass."}
@@ -50,6 +50,6 @@
   {:evidence/id "WE-2026-02-20-INVOKE-ROUTING"
    :claim/id :ui/emacs-interfaces
    :commit "c84ad33"
-   :artifacts ["emacs/futon3c-chat.el"
+   :artifacts ["emacs/claude-repl.el"
                "scripts/claude-picker"]
    :summary "Emacs chat routes through registry invoke-fn via POST /api/alpha/invoke, not direct claude -p."}]}

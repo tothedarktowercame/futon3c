@@ -10,7 +10,7 @@ set -euo pipefail
 #   ./scripts/claude-picker            # sessions for CWD project
 #   ./scripts/claude-picker --all      # sessions across all futon projects
 #   ./scripts/claude-picker --new      # skip picker, start fresh
-#   ./scripts/claude-picker --repl     # open Emacs futon3c-chat (shared session)
+#   ./scripts/claude-picker --repl     # open Emacs claude-repl (shared session)
 #   ./scripts/claude-picker SEARCH     # filter sessions by search term
 
 CLAUDE_DIR="${HOME}/.claude/projects"
@@ -126,7 +126,7 @@ launch_repl() {
     exit 1
   fi
   escaped_ui="$(elisp_escape "${emacs_dir}/futon3c-ui.el")"
-  escaped_chat="$(elisp_escape "${emacs_dir}/futon3c-chat.el")"
+  escaped_chat="$(elisp_escape "${emacs_dir}/claude-repl.el")"
   # Write session-id to file so dev server picks it up on (re)start
   if [[ -n "${sid}" ]]; then
     printf '%s' "${sid}" > "${session_file}"
@@ -134,7 +134,7 @@ launch_repl() {
   "${emacsclient_bin}" -e "(progn
     (load \"${escaped_ui}\")
     (load \"${escaped_chat}\")
-    (futon3c-chat))" >/dev/null
+    (claude-repl))" >/dev/null
 }
 
 # --- Collect sessions -------------------------------------------------------

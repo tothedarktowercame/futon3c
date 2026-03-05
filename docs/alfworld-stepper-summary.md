@@ -2,7 +2,7 @@
 
 **Created**: 2026-02-15
 **Session**: db112a88-2170-45c6-9071-d32a7f14a308
-**Agent**: Claude Opus (via futon3c-chat + IRC)
+**Agent**: Claude Opus (via claude-repl + IRC)
 **Context**: Following the three-way chat proof-of-concept (Joe + Claude + Codex)
 
 ## What Was Built

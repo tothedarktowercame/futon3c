@@ -1,4 +1,4 @@
-;;; futon3c-chat.el --- Chat with Claude via futon3c API -*- lexical-binding: t; -*-
+;;; claude-repl.el --- Chat with Claude via futon3c API -*- lexical-binding: t; -*-
 
 ;; Author: Claude + Joe
 ;; Description: Emacs chat buffer backed by futon3c's /api/alpha/invoke endpoint.
@@ -8,8 +8,8 @@
 ;;
 ;; Usage:
 ;;   (load "/home/joe/code/futon3c/emacs/futon3c-ui.el")
-;;   (load "/home/joe/code/futon3c/emacs/futon3c-chat.el")
-;;   M-x futon3c-chat
+;;   (load "/home/joe/code/futon3c/emacs/claude-repl.el")
+;;   M-x claude-repl
 
 (require 'cl-lib)
 (require 'json)
@@ -18,66 +18,66 @@
 
 ;;; Configuration
 
-(defgroup futon3c-chat nil
+(defgroup claude-repl nil
   "Chat with Claude via futon3c API."
   :group 'futon3c-ui)
 
-(defcustom futon3c-chat-api-url "http://localhost:7070"
+(defcustom claude-repl-api-url "http://localhost:7070"
   "Base URL for the futon3c API server."
   :type 'string
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
-(defcustom futon3c-chat-agent-id "claude-1"
+(defcustom claude-repl-agent-id "claude-1"
   "Agent ID to invoke via the API."
   :type 'string
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
-(defcustom futon3c-chat-session-file "/tmp/futon-session-id"
+(defcustom claude-repl-session-file "/tmp/futon-session-id"
   "File storing Claude session ID (shared with IRC relay)."
   :type 'string
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
-(defcustom futon3c-chat-evidence-url
+(defcustom claude-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
       (format "%s/api/alpha/evidence"
               (string-remove-suffix "/" futon3c-ui-agency-base-url)))
   "Evidence API endpoint for logging chat turns."
   :type 'string
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
-(defcustom futon3c-chat-evidence-log-turns t
+(defcustom claude-repl-evidence-log-turns t
   "When non-nil, log user/assistant turns into the evidence API."
   :type 'boolean
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
-(defcustom futon3c-chat-evidence-timeout 1
+(defcustom claude-repl-evidence-timeout 1
   "Timeout in seconds for evidence API requests."
   :type 'number
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
 ;;; Face (Claude-specific; shared faces are in futon3c-ui)
 
-(defface futon3c-chat-claude-face
+(defface claude-repl-claude-face
   '((t :foreground "#8be9fd" :weight bold))
   "Face for Claude."
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
 ;;; Internal state
 
-(defvar futon3c-chat--buffer-name "*futon3c-chat*")
-(defvar futon3c-chat--last-evidence-id nil
+(defvar claude-repl--buffer-name "*claude-repl*")
+(defvar claude-repl--last-evidence-id nil
   "Last evidence entry ID, used for in-reply-to chaining.")
-(defvar futon3c-chat--evidence-session-id nil
-  "Session ID associated with `futon3c-chat--last-evidence-id'.")
-(defvar futon3c-chat--last-emitted-session-id nil
+(defvar claude-repl--evidence-session-id nil
+  "Session ID associated with `claude-repl--last-evidence-id'.")
+(defvar claude-repl--last-emitted-session-id nil
   "Last session ID for which a session-start evidence entry was emitted.")
 
 ;;; Auto-registration
 
-(defun futon3c-chat--auto-register ()
+(defun claude-repl--auto-register ()
   "Ask the futon3c server to auto-register the next available Claude agent.
 Returns the assigned agent-id string, or nil on failure."
-  (let* ((url (concat futon3c-chat-api-url "/api/alpha/agents/auto"))
+  (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
          (json-body (json-serialize '(:type "claude")))
          (result (with-temp-buffer
                    (let ((exit (call-process "curl" nil t nil
@@ -92,31 +92,31 @@ Returns the assigned agent-id string, or nil on failure."
     (when (and result (alist-get 'ok result))
       (let ((agent-id (alist-get 'agent-id result)))
         (when (and (stringp agent-id) (not (string-empty-p agent-id)))
-          (setq futon3c-chat-agent-id agent-id)
-          (setq futon3c-chat-session-file
+          (setq claude-repl-agent-id agent-id)
+          (setq claude-repl-session-file
                 (format "/tmp/futon-session-id-%s" agent-id))
-          (message "futon3c-chat: registered as %s" agent-id)
+          (message "claude-repl: registered as %s" agent-id)
           agent-id)))))
 
 ;;; Surface contract
 
-(defun futon3c-chat--surface-contract ()
+(defun claude-repl--surface-contract ()
   "Return surface metadata — where the output goes."
-  (format "Surface: emacs-futon3c-chat | Agent: %s" futon3c-chat-agent-id))
+  (format "Surface: emacs-claude-repl | Agent: %s" claude-repl-agent-id))
 
 ;;; Evidence logging
 
-(defun futon3c-chat--evidence-enabled-p ()
+(defun claude-repl--evidence-enabled-p ()
   "Return non-nil when evidence logging is configured."
-  (and (stringp futon3c-chat-evidence-url)
-       (not (string-empty-p futon3c-chat-evidence-url))))
+  (and (stringp claude-repl-evidence-url)
+       (not (string-empty-p claude-repl-evidence-url))))
 
-(defun futon3c-chat--evidence-base-url ()
+(defun claude-repl--evidence-base-url ()
   "Return evidence API base URL without trailing /api/alpha/evidence."
-  (let ((value (string-remove-suffix "/" (or futon3c-chat-evidence-url ""))))
+  (let ((value (string-remove-suffix "/" (or claude-repl-evidence-url ""))))
     (replace-regexp-in-string "/api/alpha/evidence\\'" "" value)))
 
-(defun futon3c-chat--evidence-request-json (method url &optional payload)
+(defun claude-repl--evidence-request-json (method url &optional payload)
   "Send evidence METHOD request to URL with optional JSON PAYLOAD.
 Returns plist with keys :status and :json.  Returns nil on transport failure."
   (let* ((url-request-method method)
@@ -126,7 +126,7 @@ Returns plist with keys :status and :json.  Returns nil on transport failure."
          (url-request-data (when payload
                              (encode-coding-string (json-encode payload) 'utf-8)))
          (buffer (condition-case nil
-                     (url-retrieve-synchronously url t t futon3c-chat-evidence-timeout)
+                     (url-retrieve-synchronously url t t claude-repl-evidence-timeout)
                    (error nil))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
@@ -140,28 +140,28 @@ Returns plist with keys :status and :json.  Returns nil on transport failure."
             (kill-buffer buffer)
             (list :status status :json parsed)))))))
 
-(defun futon3c-chat--evidence-post-entry-id (payload)
+(defun claude-repl--evidence-post-entry-id (payload)
   "POST PAYLOAD to evidence API and return created evidence id, or nil."
-  (when (futon3c-chat--evidence-enabled-p)
-    (let* ((url (format "%s/api/alpha/evidence" (futon3c-chat--evidence-base-url)))
-           (response (futon3c-chat--evidence-request-json "POST" url payload))
+  (when (claude-repl--evidence-enabled-p)
+    (let* ((url (format "%s/api/alpha/evidence" (claude-repl--evidence-base-url)))
+           (response (claude-repl--evidence-request-json "POST" url payload))
            (status (plist-get response :status))
            (parsed (plist-get response :json)))
       (when (and (integerp status) (<= 200 status) (< status 300))
         (or (plist-get parsed :evidence/id)
             (plist-get (plist-get parsed :entry) :evidence/id))))))
 
-(defun futon3c-chat--evidence-fetch-latest-id (sid)
+(defun claude-repl--evidence-fetch-latest-id (sid)
   "Fetch most recent evidence id for session SID."
-  (when (and (futon3c-chat--evidence-enabled-p)
+  (when (and (claude-repl--evidence-enabled-p)
              (stringp sid)
              (not (string-empty-p sid)))
     (let* ((query (format "session-id=%s&limit=1"
                           (url-hexify-string sid)))
            (url (format "%s/api/alpha/evidence?%s"
-                        (futon3c-chat--evidence-base-url)
+                        (claude-repl--evidence-base-url)
                         query))
-           (response (futon3c-chat--evidence-request-json "GET" url nil))
+           (response (claude-repl--evidence-request-json "GET" url nil))
            (status (plist-get response :status))
            (entries (and (integerp status)
                          (<= 200 status)
@@ -171,28 +171,28 @@ Returns plist with keys :status and :json.  Returns nil on transport failure."
       (and (listp entry)
            (plist-get entry :evidence/id)))))
 
-(defun futon3c-chat--sync-evidence-anchor! (&optional sid force)
+(defun claude-repl--sync-evidence-anchor! (&optional sid force)
   "Refresh last evidence anchor from API for SID.
 When FORCE is non-nil, refresh even when session is unchanged."
   (let ((target-sid (or sid futon3c-ui--session-id)))
     (when (and (stringp target-sid) (not (string-empty-p target-sid))
                (or force
-                   (not (equal target-sid futon3c-chat--evidence-session-id))
-                   (null futon3c-chat--last-evidence-id)))
-      (setq futon3c-chat--evidence-session-id target-sid
-            futon3c-chat--last-evidence-id (futon3c-chat--evidence-fetch-latest-id target-sid)))))
+                   (not (equal target-sid claude-repl--evidence-session-id))
+                   (null claude-repl--last-evidence-id)))
+      (setq claude-repl--evidence-session-id target-sid
+            claude-repl--last-evidence-id (claude-repl--evidence-fetch-latest-id target-sid)))))
 
-(defun futon3c-chat--emit-session-start-evidence! (sid)
+(defun claude-repl--emit-session-start-evidence! (sid)
   "Emit a lightweight session-start evidence entry for SID."
   (when (and (stringp sid) (not (string-empty-p sid)))
-    (unless (equal sid futon3c-chat--evidence-session-id)
-      (setq futon3c-chat--evidence-session-id sid
-            futon3c-chat--last-evidence-id nil))
-    (futon3c-chat--sync-evidence-anchor! sid t)
-    (when (and (not (equal sid futon3c-chat--last-emitted-session-id))
-               (not (and (stringp futon3c-chat--last-evidence-id)
-                         (not (string-empty-p futon3c-chat--last-evidence-id))))
-               (futon3c-chat--evidence-enabled-p))
+    (unless (equal sid claude-repl--evidence-session-id)
+      (setq claude-repl--evidence-session-id sid
+            claude-repl--last-evidence-id nil))
+    (claude-repl--sync-evidence-anchor! sid t)
+    (when (and (not (equal sid claude-repl--last-emitted-session-id))
+               (not (and (stringp claude-repl--last-evidence-id)
+                         (not (string-empty-p claude-repl--last-evidence-id))))
+               (claude-repl--evidence-enabled-p))
       (let ((payload `((subject . ((ref/type . "session")
                                    (ref/id . ,sid)))
                        (type . "coordination")
@@ -200,26 +200,26 @@ When FORCE is non-nil, refresh even when session is unchanged."
                        (author . ,(or (getenv "USER") user-login-name "joe"))
                        (session-id . ,sid)
                        (body . ((event . "session-start")
-                                (source . "futon3c-chat")
+                                (source . "claude-repl")
                                 (mode . "emacs")))
                        (tags . ["claude" "session-start" "chat"]))))
-        (when-let ((new-id (futon3c-chat--evidence-post-entry-id payload)))
-          (setq futon3c-chat--last-evidence-id new-id))
-        (setq futon3c-chat--last-emitted-session-id sid)))
-    (unless (and (stringp futon3c-chat--last-evidence-id)
-                 (not (string-empty-p futon3c-chat--last-evidence-id)))
-      (futon3c-chat--sync-evidence-anchor! sid t))))
+        (when-let ((new-id (claude-repl--evidence-post-entry-id payload)))
+          (setq claude-repl--last-evidence-id new-id))
+        (setq claude-repl--last-emitted-session-id sid)))
+    (unless (and (stringp claude-repl--last-evidence-id)
+                 (not (string-empty-p claude-repl--last-evidence-id)))
+      (claude-repl--sync-evidence-anchor! sid t))))
 
-(defun futon3c-chat--emit-turn-evidence! (role text)
+(defun claude-repl--emit-turn-evidence! (role text)
   "Emit a turn evidence event for ROLE (\"user\" or \"assistant\") and TEXT."
   (let ((sid futon3c-ui--session-id))
-    (when (and futon3c-chat-evidence-log-turns
+    (when (and claude-repl-evidence-log-turns
                (stringp text)
                (not (string-empty-p (string-trim text)))
                (stringp sid)
                (not (string-empty-p sid))
-               (futon3c-chat--evidence-enabled-p))
-      (futon3c-chat--sync-evidence-anchor! sid)
+               (claude-repl--evidence-enabled-p))
+      (claude-repl--sync-evidence-anchor! sid)
       (let* ((trimmed (string-trim text))
              (is-user (string= role "user"))
              (is-error (string-prefix-p "[Error" trimmed))
@@ -229,7 +229,7 @@ When FORCE is non-nil, refresh even when session is unchanged."
                           (t "observation")))
              (author (if is-user
                          (or (getenv "USER") user-login-name "joe")
-                       futon3c-chat-agent-id))
+                       claude-repl-agent-id))
              (role-tag (if is-user "user" "assistant"))
              (payload `((subject . ((ref/type . "session")
                                     (ref/id . ,sid)))
@@ -238,39 +238,39 @@ When FORCE is non-nil, refresh even when session is unchanged."
                         (author . ,author)
                         (session-id . ,sid)
                         (body . ((event . "chat-turn")
-                                 (transport . "emacs-futon3c-chat")
+                                 (transport . "emacs-claude-repl")
                                  (role . ,role)
                                  (text . ,trimmed)))
                         (tags . ["claude" "chat" "turn" ,role-tag]))))
-        (when (and (stringp futon3c-chat--last-evidence-id)
-                   (not (string-empty-p futon3c-chat--last-evidence-id)))
+        (when (and (stringp claude-repl--last-evidence-id)
+                   (not (string-empty-p claude-repl--last-evidence-id)))
           (setq payload (append payload
-                                `((in-reply-to . ,futon3c-chat--last-evidence-id)))))
-        (when-let ((new-id (futon3c-chat--evidence-post-entry-id payload)))
-          (setq futon3c-chat--evidence-session-id sid
-                futon3c-chat--last-evidence-id new-id))))))
+                                `((in-reply-to . ,claude-repl--last-evidence-id)))))
+        (when-let ((new-id (claude-repl--evidence-post-entry-id payload)))
+          (setq claude-repl--evidence-session-id sid
+                claude-repl--last-evidence-id new-id))))))
 
-(defun futon3c-chat--emit-user-turn-evidence! (text)
+(defun claude-repl--emit-user-turn-evidence! (text)
   "Emit evidence for user TEXT."
-  (futon3c-chat--emit-turn-evidence! "user" text))
+  (claude-repl--emit-turn-evidence! "user" text))
 
-(defun futon3c-chat--emit-assistant-turn-evidence! (text)
+(defun claude-repl--emit-assistant-turn-evidence! (text)
   "Emit evidence for assistant TEXT."
-  (futon3c-chat--emit-turn-evidence! "assistant" text))
+  (claude-repl--emit-turn-evidence! "assistant" text))
 
 ;;; Claude API call
 
-(defun futon3c-chat--call-claude-async (text callback)
+(defun claude-repl--call-claude-async (text callback)
   "Send TEXT to Claude via POST /api/alpha/invoke.
 Uses curl to POST to the futon3c API server. The server's invoke-fn
 calls `claude -p' with the correct session-id (managed by the registry).
 CALLBACK receives the response string."
   (let* ((chat-buffer (current-buffer))
-         (url (concat futon3c-chat-api-url "/api/alpha/invoke"))
+         (url (concat claude-repl-api-url "/api/alpha/invoke"))
          (full-prompt (format "%s\n\nUser message:\n%s"
-                              (futon3c-chat--surface-contract) text))
+                              (claude-repl--surface-contract) text))
          (json-body (json-serialize
-                     `(:agent-id ,futon3c-chat-agent-id
+                     `(:agent-id ,claude-repl-agent-id
                        :prompt ,full-prompt
                        :caller ,(or (getenv "USER") user-login-name "joe"))))
          (outbuf (generate-new-buffer " *futon3c-invoke*"))
@@ -316,16 +316,16 @@ CALLBACK receives the response string."
                                    (when (and ok sid (buffer-live-p chat-buffer))
                                      (with-current-buffer chat-buffer
                                        (futon3c-ui-update-session-id sid))
-                                     (when futon3c-chat-session-file
-                                       (write-region sid nil futon3c-chat-session-file nil 'silent))
+                                     (when claude-repl-session-file
+                                       (write-region sid nil claude-repl-session-file nil 'silent))
                                      ;; Emit session-start evidence on first successful response
-                                     (futon3c-chat--emit-session-start-evidence! sid))
+                                     (claude-repl--emit-session-start-evidence! sid))
                                    (if ok
                                        (let ((r (and (stringp result)
                                                      (not (string-empty-p (string-trim result)))
                                                      result)))
                                          (or r "[empty response]"))
-                                     (message "futon3c-chat invoke error: %s"
+                                     (message "claude-repl invoke error: %s"
                                               (truncate-string-to-width
                                                (or err-msg raw) 500))
                                      (let ((msg (or err-msg raw)))
@@ -341,7 +341,7 @@ CALLBACK receives the response string."
                                 (format "[JSON parse error: %s\nRaw: %s]"
                                         (error-message-string parse-err)
                                         (truncate-string-to-width raw 200)))))))
-                     (message "futon3c-chat: exit=%d raw-len=%d" exit-code (length raw))
+                     (message "claude-repl: exit=%d raw-len=%d" exit-code (length raw))
                      (when (buffer-live-p (process-buffer p))
                        (kill-buffer (process-buffer p)))
                      (when (buffer-live-p chat-buffer)
@@ -350,7 +350,7 @@ CALLBACK receives the response string."
                            (setq futon3c-ui--pending-process nil))
                          (funcall callback response))))
                  (error
-                  (message "futon3c-chat sentinel error: %s" (error-message-string err))
+                  (message "claude-repl sentinel error: %s" (error-message-string err))
                   (when (buffer-live-p chat-buffer)
                     (with-current-buffer chat-buffer
                       (setq futon3c-ui--pending-process nil)
@@ -362,7 +362,7 @@ CALLBACK receives the response string."
 
 ;;; Modeline
 
-(defun futon3c-chat--build-modeline ()
+(defun claude-repl--build-modeline ()
   "Build dynamic transport modeline for system prompt."
   (let ((transports (list "emacs-chat (active, via /api/alpha/invoke)"))
         (irc-up (futon3c-ui-irc-available-p)))
@@ -374,63 +374,63 @@ CALLBACK receives the response string."
 
 ;;; Mode
 
-(defvar futon3c-chat-mode-map
+(defvar claude-repl-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") #'futon3c-chat-send-input)
-    (define-key map (kbd "C-c C-k") #'futon3c-chat-clear)
-    (define-key map (kbd "C-c C-n") #'futon3c-chat-new-session)
+    (define-key map (kbd "RET") #'claude-repl-send-input)
+    (define-key map (kbd "C-c C-k") #'claude-repl-clear)
+    (define-key map (kbd "C-c C-n") #'claude-repl-new-session)
     map))
 
-(define-derived-mode futon3c-chat-mode nil "Chat"
+(define-derived-mode claude-repl-mode nil "Claude-REPL"
   "Chat with Claude via futon3c API.
 Type after the prompt, RET to send, C-c C-n for fresh session.
-\\{futon3c-chat-mode-map}"
+\\{claude-repl-mode-map}"
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
   (setq-local scroll-conservatively 101)
   (setq-local scroll-margin 0))
 
-(defun futon3c-chat-send-input ()
+(defun claude-repl-send-input ()
   "Send input to Claude and display response."
   (interactive)
   (futon3c-ui-send-input
-   #'futon3c-chat--call-claude-async
+   #'claude-repl--call-claude-async
    "claude"
-   (list :before-send #'futon3c-chat--emit-user-turn-evidence!
-         :on-response #'futon3c-chat--emit-assistant-turn-evidence!)))
+   (list :before-send #'claude-repl--emit-user-turn-evidence!
+         :on-response #'claude-repl--emit-assistant-turn-evidence!)))
 
-(defun futon3c-chat-clear ()
+(defun claude-repl-clear ()
   "Clear display and re-draw header. Session continues."
   (interactive)
-  (futon3c-ui-clear #'futon3c-chat--init))
+  (futon3c-ui-clear #'claude-repl--init))
 
-(defcustom futon3c-chat-drawbridge-url "http://localhost:6768"
+(defcustom claude-repl-drawbridge-url "http://localhost:6768"
   "Drawbridge REPL URL for direct registry access."
   :type 'string
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
-(defcustom futon3c-chat-drawbridge-token nil
+(defcustom claude-repl-drawbridge-token nil
   "Admin token for Drawbridge REPL.
 If nil, reads from .admintoken in the project root at first use."
   :type '(choice (const nil) string)
-  :group 'futon3c-chat)
+  :group 'claude-repl)
 
-(defun futon3c-chat--drawbridge-token ()
+(defun claude-repl--drawbridge-token ()
   "Return the Drawbridge admin token, reading .admintoken if needed."
-  (or futon3c-chat-drawbridge-token
+  (or claude-repl-drawbridge-token
       (let ((f (expand-file-name ".admintoken"
                                  (locate-dominating-file default-directory ".admintoken"))))
         (when (file-exists-p f)
-          (setq futon3c-chat-drawbridge-token
+          (setq claude-repl-drawbridge-token
                 (string-trim (with-temp-buffer
                                (insert-file-contents f)
                                (buffer-string))))))))
 
-(defun futon3c-chat--reset-via-api ()
+(defun claude-repl--reset-via-api ()
   "Try to reset session via the reset-session HTTP endpoint.
 Returns (ok . old-session-id) on success, nil on failure."
   (let* ((url (format "%s/api/alpha/agents/%s/reset-session"
-                       futon3c-chat-api-url futon3c-chat-agent-id))
+                       claude-repl-api-url claude-repl-agent-id))
          (url-request-method "POST")
          (url-request-extra-headers
           '(("Content-Type" . "application/json")))
@@ -453,14 +453,14 @@ Returns (ok . old-session-id) on success, nil on failure."
       (kill-buffer buffer))
     result))
 
-(defun futon3c-chat--reset-via-drawbridge ()
+(defun claude-repl--reset-via-drawbridge ()
   "Try to reset session via Drawbridge REPL eval.
 Returns (ok . old-session-id) on success, nil on failure."
   (let* ((clj-code (format "(let [r (swap-vals! futon3c.agency.registry/!registry update \"%s\" assoc :agent/session-id nil)] (get-in (first r) [\"%s\" :agent/session-id]))"
-                           futon3c-chat-agent-id futon3c-chat-agent-id))
-         (url (format "%s/eval" futon3c-chat-drawbridge-url))
+                           claude-repl-agent-id claude-repl-agent-id))
+         (url (format "%s/eval" claude-repl-drawbridge-url))
          (url-request-method "POST")
-         (token (futon3c-chat--drawbridge-token))
+         (token (claude-repl--drawbridge-token))
          (url-request-extra-headers
           `(("x-admin-token" . ,token)
             ("Content-Type" . "text/plain")))
@@ -483,20 +483,20 @@ Returns (ok . old-session-id) on success, nil on failure."
       (kill-buffer buffer))
     result))
 
-(defun futon3c-chat-new-session ()
+(defun claude-repl-new-session ()
   "Reset the agent session so the next message starts a fresh conversation.
 Useful when a session becomes poisoned (e.g. API rejects the conversation
 history). Tries the reset-session endpoint first, falls back to Drawbridge."
   (interactive)
-  (let* ((api-result (futon3c-chat--reset-via-api))
-         (result (or api-result (futon3c-chat--reset-via-drawbridge)))
+  (let* ((api-result (claude-repl--reset-via-api))
+         (result (or api-result (claude-repl--reset-via-drawbridge)))
          (ok (car result))
          (old-sid (cdr result)))
     ;; Clear local session state regardless of server response
     (setq futon3c-ui--session-id nil)
-    (when futon3c-chat-session-file
-      (when (file-exists-p futon3c-chat-session-file)
-        (delete-file futon3c-chat-session-file)))
+    (when claude-repl-session-file
+      (when (file-exists-p claude-repl-session-file)
+        (delete-file claude-repl-session-file)))
     ;; Update the buffer
     (let ((inhibit-read-only t))
       (save-excursion
@@ -514,46 +514,46 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
       (t
        "[Session reset locally only — could not reach server. Next message may still fail.]")))
     (goto-char (point-max))
-    (message "futon3c-chat: session reset (server=%s, was %s)"
+    (message "claude-repl: session reset (server=%s, was %s)"
              (if ok "yes" "no") (or old-sid "nil"))))
 
-(defun futon3c-chat--init ()
+(defun claude-repl--init ()
   "Initialize.
 Auto-register with the server to get a unique agent-id, then
 load existing session-id from file if available."
   ;; Auto-register: get next available claude-N from the server
-  (futon3c-chat--auto-register)
+  (claude-repl--auto-register)
   (let ((existing-sid
-         (when (and futon3c-chat-session-file
-                    (file-exists-p futon3c-chat-session-file))
+         (when (and claude-repl-session-file
+                    (file-exists-p claude-repl-session-file))
            (let ((s (string-trim
                      (with-temp-buffer
-                       (insert-file-contents futon3c-chat-session-file)
+                       (insert-file-contents claude-repl-session-file)
                        (buffer-string)))))
              (unless (string-empty-p s) s)))))
     (futon3c-ui-init-buffer
-     (list :title "futon3c chat"
+     (list :title "claude repl"
            :session-id (or existing-sid
-                           (format "%s (awaiting session)" futon3c-chat-agent-id))
-           :modeline-fn #'futon3c-chat--build-modeline
-           :face-alist `(("claude" . futon3c-chat-claude-face))
+                           (format "%s (awaiting session)" claude-repl-agent-id))
+           :modeline-fn #'claude-repl--build-modeline
+           :face-alist `(("claude" . claude-repl-claude-face))
            :agent-name "claude"
            :thinking-text "claude is thinking..."
-           :thinking-prop 'futon3c-thinking))
+           :thinking-prop 'claude-repl-thinking))
     (when existing-sid
-      (futon3c-chat--emit-session-start-evidence! existing-sid))))
+      (claude-repl--emit-session-start-evidence! existing-sid))))
 
 ;;;###autoload
-(defun futon3c-chat ()
+(defun claude-repl ()
   "Start or switch to chat."
   (interactive)
-  (let ((buf (get-buffer-create futon3c-chat--buffer-name)))
+  (let ((buf (get-buffer-create claude-repl--buffer-name)))
     (with-current-buffer buf
-      (unless (eq major-mode 'futon3c-chat-mode)
-        (futon3c-chat-mode)
-        (futon3c-chat--init)))
+      (unless (eq major-mode 'claude-repl-mode)
+        (claude-repl-mode)
+        (claude-repl--init)))
     (pop-to-buffer buf)
     (goto-char (point-max))))
 
-(provide 'futon3c-chat)
-;;; futon3c-chat.el ends here
+(provide 'claude-repl)
+;;; claude-repl.el ends here

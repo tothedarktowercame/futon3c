@@ -2,7 +2,7 @@
 
 ## Origin
 
-Conversation between Joe and Claude in `*futon3c-chat*` (Emacs chat interface),
+Conversation between Joe and Claude in `*claude-repl*` (Emacs chat interface),
 2026-02-15. Joe observed that code blocks render inline in the chat buffer and
 proposed extracting them to a separate "sliding blackboard" — multiple stacked
 side panels with proper fontification.
@@ -14,7 +14,7 @@ When Claude emits code blocks in the chat, instead of rendering them inline
 
 ```
 +---------------------+------------------+
-|  *futon3c-chat*     | *code-1* (clj)   | <- Panel 1
+|  *claude-repl*      | *code-1* (clj)   | <- Panel 1
 |  (main convo)       | (defn foo ...)   |
 |                     +------------------+
 |  joe: Can you...    | *code-2* (py)    | <- Panel 2
@@ -58,7 +58,7 @@ When Claude emits code blocks in the chat, instead of rendering them inline
 
 - Works as a **minor mode** enabled in the chat buffer:
   ```elisp
-  (with-current-buffer "*futon3c-chat*"
+  (with-current-buffer "*claude-repl*"
     (futon3c-code-blocks-mode 1))
   ```
 - Should be a separate file (`futon3c-code-blocks.el`) to keep concerns clean
