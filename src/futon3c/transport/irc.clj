@@ -98,6 +98,37 @@
     (.write writer (str line "\r\n"))
     (.flush writer)))
 
+(def ^:private max-irc-line-bytes 510)
+
+(defn- privmsg-text-limit
+  "Compute max payload length for `:<from> PRIVMSG <channel> :<text>`."
+  [from-nick channel]
+  (max 1
+       (- max-irc-line-bytes
+          (count (str ":" from-nick " PRIVMSG " channel " :")))))
+
+(defn- split-privmsg-text
+  "Split outbound PRIVMSG text into RFC-safe payload chunks.
+   Newlines become separate IRC messages; overlong lines are hard-wrapped."
+  [from-nick channel text]
+  (let [limit (privmsg-text-limit from-nick channel)
+        normalized (-> (str (or text ""))
+                       (str/replace #"\r\n?" "\n"))
+        chunks (mapcat (fn [line]
+                         (let [line (or line "")]
+                           (if (<= (count line) limit)
+                             [line]
+                             (loop [s line
+                                    out []]
+                               (if (<= (count s) limit)
+                                 (conj out s)
+                                 (recur (subs s limit)
+                                        (conj out (subs s 0 limit))))))))
+                       (str/split normalized #"\n"))]
+    (if (seq chunks)
+      chunks
+      [""])))
+
 (defn- send-numeric!
   "Send an IRC numeric reply via a send function (fn [line])."
   [send nick numeric text]
@@ -564,10 +595,11 @@
           ;; Send PRIVMSG to a channel from an agent nick (used by relay bridge)
           ;; Also relay to other agents so they can see each other's messages
           (let [all-clients @clients]
-            (doseq [[cid client] all-clients
-                     :let [client-channels (or (:channels client) #{})]
-                     :when (contains? client-channels channel)]
-              (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" text))))
+            (doseq [msg (split-privmsg-text from-nick channel text)
+                    [cid client] all-clients
+                    :let [client-channels (or (:channels client) #{})]
+                    :when (contains? client-channels channel)]
+              (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" msg))))
           (try
             (when evidence-store
               (estore/append* evidence-store

@@ -78,6 +78,21 @@
     (is (nil? (irc/parse-irc-line "")))
     (is (nil? (irc/parse-irc-line "  ")))))
 
+(deftest split-privmsg-text-hard-wraps-long-lines
+  (testing "overlong outbound text is split into RFC-safe PRIVMSG chunks"
+    (let [limit (#'futon3c.transport.irc/privmsg-text-limit "codex" "#futon")
+          payload (apply str (repeat (+ limit 37) "x"))
+          chunks (#'futon3c.transport.irc/split-privmsg-text "codex" "#futon" payload)]
+      (is (> (count chunks) 1))
+      (is (= payload (apply str chunks)))
+      (is (every? #(<= (count %) limit) chunks)))))
+
+(deftest split-privmsg-text-preserves-newline-boundaries
+  (testing "newlines become separate PRIVMSG payloads with CRLF normalized"
+    (let [chunks (#'futon3c.transport.irc/split-privmsg-text
+                  "codex" "#futon" "line-1\r\nline-2\nline-3")]
+      (is (= ["line-1" "line-2" "line-3"] chunks)))))
+
 ;; =============================================================================
 ;; 2. Client lifecycle
 ;; =============================================================================

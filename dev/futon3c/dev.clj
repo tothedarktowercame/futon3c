@@ -2765,11 +2765,14 @@ RESPOND WITH ONLY:
                                                          (>= elapsed soft-timeout-ms)))))))]
                           (if (and (:ok resp) (string? (:result resp)))
                             (do
-                              (let [reply (normalize-irc-result (:result resp))]
-                                ((:send-to-channel! irc-server) channel nick reply)
+                              (let [reply (normalize-irc-result (:result resp))
+                                    reply* (if (str/blank? reply)
+                                             "[no textual response]"
+                                             reply)]
+                                ((:send-to-channel! irc-server) channel nick reply*)
                                 (println (str "[irc] " nick " → " channel " ("
-                                              (count reply) " chars): "
-                                              (subs reply 0 (min 120 (count reply))))))
+                                              (count reply*) " chars): "
+                                              (subs reply* 0 (min 120 (count reply*))))))
                               (flush))
                             (do
                               (let [err-msg (if (map? (:error resp))
