@@ -48,7 +48,7 @@
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-orchestrate :as orch]
             [futon3c.agents.tickle-work-queue :as ct-queue]
-            [futon3c.agents.ase-work-queue :as ase-queue]
+            [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
@@ -1820,29 +1820,29 @@ RESPOND WITH ONLY:
    :ct-queue (when @!evidence-store
                (let [s (ct-queue/queue-status @!evidence-store)]
                  {:completed (:completed s) :remaining (:remaining s)}))
-   :ase-queue (when (and @!evidence-store
-                         (.exists (io/file "/home/joe/code/futon6/data/ase-queue/entities.json")))
-                (let [s (ase-queue/queue-status @!evidence-store)]
+   :arse-queue (when (and @!evidence-store
+                         (.exists (io/file "/home/joe/code/futon6/data/arse-queue/entities.json")))
+                (let [s (arse-queue/queue-status @!evidence-store)]
                   {:completed (:completed s) :remaining (:remaining s)
                    :by-problem (:by-problem s)}))})
 
 ;; =============================================================================
-;; ASE work queue — Artificial Stack Exchange synthetic QA generation
+;; ArSE work queue — Artificial Stack Exchange synthetic QA generation
 ;; =============================================================================
 
-(defn ase-progress!
-  "Show ASE work queue progress: how many work items have been processed."
+(defn arse-progress!
+  "Show ArSE work queue progress: how many work items have been processed."
   []
-  (let [status (ase-queue/queue-status @!evidence-store)]
-    (println (str "[ase] Progress: " (:completed status) "/" (:total status)
+  (let [status (arse-queue/queue-status @!evidence-store)]
+    (println (str "[arse] Progress: " (:completed status) "/" (:total status)
                   " completed, " (:remaining status) " remaining"))
     (doseq [[p stats] (:by-problem status)]
       (println (str "  P" p ": " (:done stats) "/" (:total stats)
                     " (" (:remaining stats) " remaining)")))
     status))
 
-(defn run-ase-entry!
-  "Process a single ASE work item through the generate→review pipeline.
+(defn run-arse-entry!
+  "Process a single ArSE work item through the generate→review pipeline.
    Uses Codex for generation, Claude for review.
 
    Options:
@@ -1853,8 +1853,8 @@ RESPOND WITH ONLY:
      :review-timeout-ms — review timeout (default 300000 = 5 min)
 
    Usage:
-     (dev/run-ase-entry!)                                         ; next unprocessed
-     (dev/run-ase-entry! :entity-id \"p7-problem-qa-001\")         ; specific entry"
+     (dev/run-arse-entry!)                                         ; next unprocessed
+     (dev/run-arse-entry! :entity-id \"p7-problem-qa-001\")         ; specific entry"
   [& {:keys [entity-id agent-id timeout-ms review? review-timeout-ms]
       :or {agent-id "codex-1"
            timeout-ms 300000
@@ -1866,21 +1866,21 @@ RESPOND WITH ONLY:
         ;; Find the issue to process
         issue (if entity-id
                 ;; Find specific entity
-                (let [entities (ase-queue/load-ase-entities)
+                (let [entities (arse-queue/load-arse-entities)
                       idx (.indexOf (mapv :entity-id entities) entity-id)]
                   (when (>= idx 0)
-                    (ase-queue/entity->issue (nth entities idx) idx)))
+                    (arse-queue/entity->issue (nth entities idx) idx)))
                 ;; Next unprocessed (highest severity)
-                (first (ase-queue/next-unprocessed evidence-store 1)))]
+                (first (arse-queue/next-unprocessed evidence-store 1)))]
     (if-not issue
-      (do (println "[ase] No entries to process"
+      (do (println "[arse] No entries to process"
                    (if entity-id (str "(entity " entity-id " not found)") "(queue complete)"))
           {:ok false :error :no-entries})
-      (let [session-id (str "ase-" (UUID/randomUUID))
+      (let [session-id (str "arse-" (UUID/randomUUID))
             eid (:entity-id issue)]
-        (println (str "[ase] Processing: " eid " — " (:title issue)))
+        (println (str "[arse] Processing: " eid " — " (:title issue)))
         ;; Emit start evidence
-        (ase-queue/emit-ase-evidence! evidence-store
+        (arse-queue/emit-arse-evidence! evidence-store
                                       {:entity-id eid
                                        :node-id (:node-id issue)
                                        :problem (:problem issue)
@@ -1888,7 +1888,7 @@ RESPOND WITH ONLY:
                                        :session-id session-id
                                        :event-tag :workflow-start})
         ;; Assign to generation agent
-        (println (str "[ase] Assigning to " agent-id "..."))
+        (println (str "[arse] Assigning to " agent-id "..."))
         (let [gen-result (orch/assign-issue! issue
                                               {:evidence-store evidence-store
                                                :repo-dir "/home/joe/code/futon6"
@@ -1897,8 +1897,8 @@ RESPOND WITH ONLY:
                                                :session-id session-id})]
           (if-not (:ok gen-result)
             (do
-              (println (str "[ase] Generation failed: " (:error gen-result)))
-              (ase-queue/emit-ase-evidence! evidence-store
+              (println (str "[arse] Generation failed: " (:error gen-result)))
+              (arse-queue/emit-arse-evidence! evidence-store
                                             {:entity-id eid
                                              :node-id (:node-id issue)
                                              :problem (:problem issue)
@@ -1907,8 +1907,8 @@ RESPOND WITH ONLY:
                                              :event-tag :workflow-complete})
               {:ok false :entity-id eid :error (:error gen-result)})
             (let [generation (:result gen-result)]
-              (println (str "[ase] Generation complete (" (:elapsed-ms gen-result) "ms)"))
-              (ase-queue/emit-ase-evidence! evidence-store
+              (println (str "[arse] Generation complete (" (:elapsed-ms gen-result) "ms)"))
+              (arse-queue/emit-arse-evidence! evidence-store
                                             {:entity-id eid
                                              :node-id (:node-id issue)
                                              :problem (:problem issue)
@@ -1919,7 +1919,7 @@ RESPOND WITH ONLY:
               (if-not review?
                 ;; No review — done
                 (do
-                  (ase-queue/emit-ase-evidence! evidence-store
+                  (arse-queue/emit-arse-evidence! evidence-store
                                                 {:entity-id eid
                                                  :node-id (:node-id issue)
                                                  :problem (:problem issue)
@@ -1929,26 +1929,26 @@ RESPOND WITH ONLY:
                                                  :generation-result generation})
                   (when send-fn
                     (send-fn "#futon" "tickle-1"
-                             (str "ASE generated: " eid " (" (:elapsed-ms gen-result) "ms)")))
+                             (str "ArSEgenerated: " eid " (" (:elapsed-ms gen-result) "ms)")))
                   {:ok true :entity-id eid :status :generated
                    :elapsed-ms (:elapsed-ms gen-result)})
                 ;; Review with Claude
-                (let [entities (ase-queue/load-ase-entities)
+                (let [entities (arse-queue/load-arse-entities)
                       entity (first (filter #(= eid (:entity-id %)) entities))
-                      review-prompt (ase-queue/make-review-prompt entity generation)
+                      review-prompt (arse-queue/make-review-prompt entity generation)
                       review-issue {:number (:number issue)
                                     :title (str "ASE-review: " (:title issue))
                                     :body review-prompt}]
-                  (println "[ase] Requesting Claude review...")
+                  (println "[arse] Requesting Claude review...")
                   (let [review-result (orch/request-review! review-issue gen-result
                                                              {:evidence-store evidence-store
                                                               :repo-dir "/home/joe/code/futon6"
                                                               :timeout-ms review-timeout-ms
                                                               :session-id session-id})
                         verdict (or (:verdict review-result) :unclear)]
-                    (println (str "[ase] Review: " (name verdict)
+                    (println (str "[arse] Review: " (name verdict)
                                   " (" (:elapsed-ms review-result) "ms)"))
-                    (ase-queue/emit-ase-evidence! evidence-store
+                    (arse-queue/emit-arse-evidence! evidence-store
                                                   {:entity-id eid
                                                    :node-id (:node-id issue)
                                                    :problem (:problem issue)
@@ -1959,7 +1959,7 @@ RESPOND WITH ONLY:
                                                    :verdict (name verdict)})
                     (when send-fn
                       (send-fn "#futon" "tickle-1"
-                               (str "ASE " eid ": " (name verdict)
+                               (str "ArSE" eid ": " (name verdict)
                                     " (gen " (:elapsed-ms gen-result) "ms"
                                     ", review " (:elapsed-ms review-result) "ms)")))
                     {:ok true :entity-id eid :status :reviewed
@@ -1967,8 +1967,8 @@ RESPOND WITH ONLY:
                      :gen-elapsed-ms (:elapsed-ms gen-result)
                      :review-elapsed-ms (:elapsed-ms review-result)}))))))))))
 
-(defn run-ase-batch!
-  "Process N ASE work items overnight. Resumable — skips already-processed entries.
+(defn run-arse-batch!
+  "Process N ArSE work items overnight. Resumable — skips already-processed entries.
    Work items are processed in gap-severity order (most severe first).
 
    Options:
@@ -1980,20 +1980,20 @@ RESPOND WITH ONLY:
      :problem     — filter to specific problem number (default: all)
 
    Usage:
-     (dev/run-ase-batch!)                          ; 10 items, highest severity
-     (dev/run-ase-batch! :n 50)                    ; 50 items
-     (dev/run-ase-batch! :problem 7 :n 16)         ; all P7 items"
+     (dev/run-arse-batch!)                          ; 10 items, highest severity
+     (dev/run-arse-batch! :n 50)                    ; 50 items
+     (dev/run-arse-batch! :problem 7 :n 16)         ; all P7 items"
   [& {:keys [n cooldown-ms agent-id timeout-ms review? problem]
       :or {n 10 cooldown-ms 5000 agent-id "codex-1"
            timeout-ms 300000 review? true}}]
   (let [evidence-store @!evidence-store
-        all-issues (ase-queue/next-unprocessed evidence-store 1000)
+        all-issues (arse-queue/next-unprocessed evidence-store 1000)
         issues (cond->> all-issues
                  problem (filter #(= problem (:problem %)))
                  true (take n))
         total (count issues)
         start (System/currentTimeMillis)]
-    (println (str "[ase-batch] Starting: " total " items"
+    (println (str "[arse-batch] Starting: " total " items"
                   (when problem (str " (P" problem ")"))
                   " (agent=" agent-id
                   " review=" review?
@@ -2001,14 +2001,14 @@ RESPOND WITH ONLY:
     (when (some-> @!irc-sys :server :send-to-channel!)
       (let [send-fn (:send-to-channel! (:server @!irc-sys))]
         (send-fn "#futon" "tickle-1"
-                 (str "ASE batch starting: " total " items"
+                 (str "ArSEbatch starting: " total " items"
                       (when problem (str " (P" problem ")"))))))
     (let [results
           (reduce
            (fn [acc [idx issue]]
              (println (str "\n[ase-batch] " (inc idx) "/" total
                            " — " (:entity-id issue)))
-             (let [result (run-ase-entry!
+             (let [result (run-arse-entry!
                            :entity-id (:entity-id issue)
                            :agent-id agent-id
                            :timeout-ms timeout-ms
@@ -2027,7 +2027,7 @@ RESPOND WITH ONLY:
       (when (some-> @!irc-sys :server :send-to-channel!)
         (let [send-fn (:send-to-channel! (:server @!irc-sys))]
           (send-fn "#futon" "tickle-1"
-                   (str "ASE batch complete: " ok-count "/" total
+                   (str "ArSEbatch complete: " ok-count "/" total
                         " in " (long (/ elapsed 60000)) "min"))))
       {:total total
        :ok ok-count
@@ -2897,7 +2897,20 @@ RESPOND WITH ONLY:
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
                                                        (min 8 (count initial-sid))) ")"))))))
-        ;; Register Codex
+        ;; Register Codex — guard against missing binary
+        codex-bin-name (env "CODEX_BIN" "codex")
+        codex-bin-exists? (try
+                            (let [which (.start (ProcessBuilder.
+                                                 ^java.util.List ["which" codex-bin-name]))]
+                              (.waitFor which 5000 java.util.concurrent.TimeUnit/MILLISECONDS)
+                              (zero? (.exitValue which)))
+                            (catch Exception _ false))
+        register-codex? (if (and register-codex? (not codex-bin-exists?))
+                          (do (println (str "[dev][WARN] FUTON3C_REGISTER_CODEX=true but `"
+                                            codex-bin-name "` not found on PATH."))
+                              (println "[dev][WARN] Falling back to relay mode. Remove FUTON3C_REGISTER_CODEX override.")
+                              false)
+                          register-codex?)
         _ (when register-codex?
             (let [sf (io/file (or (env "CODEX_SESSION_FILE")
                                   "/tmp/futon-codex-session-id"))

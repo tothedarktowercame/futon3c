@@ -2,24 +2,30 @@
 set -euo pipefail
 
 # Laptop profile for futon3c dev.
-# Usage:
-#   FUTON3C_SELF_URL=http://<laptop-host>:47070 \
-#   FUTON3C_LINODE_URL=http://<linode-host>:7070 \
-#   ./scripts/dev-laptop-env
+# Just run: ./scripts/dev-laptop-env
 #
-# Notes:
-# - FUTON3C_LINODE_URL is optional; when set, it is used as FUTON3C_PEERS
-#   unless FUTON3C_PEERS is already provided.
+# All role-specific knowledge is baked in. Override env vars only if
+# you know what you're doing.
 
+# --- Role & network ---
 export FUTON3C_ROLE="${FUTON3C_ROLE:-laptop}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
 export FUTON3C_PORT="${FUTON3C_PORT:-47070}"
+export FUTON3C_LINODE_URL="${FUTON3C_LINODE_URL:-http://172.236.28.208:7070}"
+
+# --- IRC: disabled on laptop (ngircd runs on Linode) ---
 export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
+
+# --- Agents: Codex runs here, Claude runs on Linode ---
+export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-true}"
+export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-false}"
+
+# --- Codex settings ---
 export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
 export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 
-# Futon1a/Futon4 compatibility defaults for docbook sync.
+# --- Futon1a/Futon4 compatibility ---
 export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
 export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
 if [[ -z "${FUTON1A_ALLOWED_PENHOLDERS:-}" ]]; then
@@ -31,12 +37,9 @@ export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 
-if [[ -n "${FUTON3C_LINODE_URL:-}" && -z "${FUTON3C_PEERS:-}" ]]; then
+# --- Federation: peer with Linode ---
+if [[ -z "${FUTON3C_PEERS:-}" ]]; then
   export FUTON3C_PEERS="${FUTON3C_LINODE_URL}"
-fi
-
-if [[ -z "${FUTON3C_SELF_URL:-}" ]]; then
-  echo "[dev-laptop-env] FUTON3C_SELF_URL is not set; federation callbacks from peers will be disabled."
 fi
 
 exec make dev "$@"

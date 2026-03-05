@@ -2,25 +2,33 @@
 set -euo pipefail
 
 # Linode authority profile for futon3c dev.
-# Usage:
-#   FUTON3C_SELF_URL=http://<linode-host>:7070 \
-#   FUTON3C_LAPTOP_URL=http://<laptop-host>:47070 \
-#   ./scripts/dev-linode-env
+# Just run: ./scripts/dev-linode-env
 #
-# Notes:
-# - FUTON3C_LAPTOP_URL is optional; when set, it is used as FUTON3C_PEERS
-#   unless FUTON3C_PEERS is already provided.
+# All role-specific knowledge is baked in. Override env vars only if
+# you know what you're doing.
 
+# --- Role & network ---
 export FUTON3C_ROLE="${FUTON3C_ROLE:-linode}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
-export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-6667}"
+export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://172.236.28.208:7070}"
+
+# --- IRC: ngircd runs externally; built-in IRC disabled ---
+export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
+
+# --- Agents: Claude runs here, Codex runs on laptop ---
+export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
+export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
+export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-true}"
+
+# --- Codex settings (for relay/proxy, not local execution) ---
 export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
 export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 
-# Futon1a/Futon4 compatibility defaults for docbook sync.
+# --- Futon1a/Futon4 compatibility ---
 export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
+export FUTON1A_STATIC_DIR="${FUTON1A_STATIC_DIR:-${HOME}/code/futon4/dev/web}"
 export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
 if [[ -z "${FUTON1A_ALLOWED_PENHOLDERS:-}" ]]; then
   export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_COMPAT_PENHOLDER}"
@@ -31,12 +39,9 @@ export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 
+# --- Federation: auto-peer with laptop if URL provided ---
 if [[ -n "${FUTON3C_LAPTOP_URL:-}" && -z "${FUTON3C_PEERS:-}" ]]; then
   export FUTON3C_PEERS="${FUTON3C_LAPTOP_URL}"
-fi
-
-if [[ -z "${FUTON3C_SELF_URL:-}" ]]; then
-  echo "[dev-linode-env] FUTON3C_SELF_URL is not set; federation callbacks from peers will be disabled."
 fi
 
 exec make dev "$@"
