@@ -2894,6 +2894,9 @@ RESPOND WITH ONLY:
         relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 600000) 600000)
         relay-invoke-hard-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_HARD_TIMEOUT_MS" 1800000) 1800000)
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
+        codex-remote-origin (or (some-> (env "FUTON3C_CODEX_REMOTE_BASE") normalize-http-base)
+                                (some-> (env "FUTON3C_LAPTOP_URL") normalize-http-base)
+                                (some-> (first-peer-url) normalize-http-base))
         irc-send-base-hint (or (some-> (env "FUTON3C_IRC_SEND_BASE") normalize-http-base)
                                (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
                                (some-> (first-peer-url) normalize-http-base))
@@ -3009,10 +3012,21 @@ RESPOND WITH ONLY:
                                                            (min 8 (count initial-sid))) ")"))))))))
         ;; Remote codex stub
         _ (when (and (not register-codex?) relay-codex?)
-            (rt/register-codex! {:agent-id "codex-1"
-                                 :metadata {:remote? true
-                                            :note "Awaiting WS bridge from laptop"}})
-            (println "[dev] Codex agent registered: codex-1 (remote peer, no local invoke)"))
+            (let [proxy-invoke-fn (when codex-remote-origin
+                                    (federation/make-proxy-invoke-fn codex-remote-origin "codex-1"))
+                  metadata (cond-> {:remote? true
+                                    :note "Awaiting WS bridge from laptop"}
+                             codex-remote-origin
+                             (assoc :origin-url codex-remote-origin
+                                    :remote-proxy? true))]
+              (rt/register-codex! {:agent-id "codex-1"
+                                   :invoke-fn proxy-invoke-fn
+                                   :metadata metadata})
+              (println (str "[dev] Codex agent registered: codex-1 (remote peer"
+                            (if proxy-invoke-fn
+                              (str ", proxy invoke via " codex-remote-origin)
+                              ", no local invoke")
+                            ")"))))
         ;; Dispatch relays
         _ (when (and irc-sys relay-claude?)
             (start-dispatch-relay!
