@@ -932,6 +932,45 @@
                 :blocked-at blocked-at-freq}
       :detected-at (:detected-at export)})))
 
+(defn trace-all-components
+  "Trace every component in every devmap through the gate chain.
+   Optional DM-FILTER narrows tracing to one devmap id (string or keyword)."
+  ([] (trace-all-components nil default-repo-roots))
+  ([dm-filter] (trace-all-components dm-filter default-repo-roots))
+  ([dm-filter repos]
+   (let [review (build-portfolio-review repos)
+         devmaps (:devmaps review)
+         dm-filter-str (some-> dm-filter str str/trim not-empty)
+         selected-devmaps (if dm-filter-str
+                            (filterv (fn [dm]
+                                       (= dm-filter-str
+                                          (some-> dm :devmap/id name)))
+                                     devmaps)
+                            devmaps)
+         component-tensions (vec
+                             (mapcat (fn [dm]
+                                       (let [dm-id (:devmap/id dm)]
+                                         (map (fn [component]
+                                                {:tension/type :component-scan
+                                                 :tension/source :component-scan
+                                                 :tension/devmap-id dm-id
+                                                 :tension/component-id (:component/id component)})
+                                              (:devmap/components dm))))
+                                     selected-devmaps))
+         paths (mapv #(trace-tension-path % review) component-tensions)
+         complete (filter :complete? paths)
+         blocked (remove :complete? paths)
+         blocked-at-freq (frequencies (keep :blocked-at blocked))
+         gap-count (count (filter :gap-at paths))]
+     {:paths paths
+      :summary {:total (count paths)
+                :complete (count complete)
+                :blocked (count blocked)
+                :gap-count gap-count
+                :blocked-at blocked-at-freq
+                :devmap-filter dm-filter-str}
+      :detected-at (str (java.time.Instant/now))})))
+
 ;; =============================================================================
 ;; Backfill — legacy missions as evidence (D7)
 ;; =============================================================================

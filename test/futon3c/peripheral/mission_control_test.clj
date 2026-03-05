@@ -788,3 +788,11 @@
       (is (map? (:summary result)))
       (is (pos? (:total (:summary result))))
       (is (string? (:detected-at result))))))
+
+(deftest trace-all-components-returns-summary
+  (testing "trace-all-components returns paths and summary"
+    (let [result (mcb/trace-all-components)]
+      (is (vector? (:paths result)))
+      (is (map? (:summary result)))
+      (is (number? (:total (:summary result))))
+      (is (string? (:detected-at result))))))
