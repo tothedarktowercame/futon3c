@@ -96,6 +96,7 @@ If a function returns nil, the original TEXT is used.")
 (defun agent-chat-insert-message (name text)
   "Insert a message from NAME with TEXT above the prompt.
 Uses `agent-chat--face-alist' to pick the name face.
+Applies faces via overlays so they survive font-lock refontification.
 Runs `agent-chat--insert-message-hook' which may transform TEXT."
   (let* ((inhibit-read-only t)
          (face (or (cdr (assoc name agent-chat--face-alist))
@@ -108,8 +109,13 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
         (setq transformed result)))
     (save-excursion
       (goto-char (marker-position agent-chat--prompt-marker))
-      (insert (propertize (format "%s: " name) 'face face)
-              (propertize (format "%s\n\n" transformed) 'face 'agent-chat-text-face)))
+      (let ((name-start (point)))
+        (insert (format "%s: " name))
+        (let ((name-end (point)))
+          (insert (format "%s\n\n" transformed))
+          (let ((text-end (point)))
+            (overlay-put (make-overlay name-start name-end) 'face face)
+            (overlay-put (make-overlay name-end text-end) 'face 'agent-chat-text-face)))))
     (when at-end
       (goto-char (point-max))
       (agent-chat-scroll-to-bottom))))
