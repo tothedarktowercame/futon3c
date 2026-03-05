@@ -2619,6 +2619,72 @@ RESPOND WITH ONLY:
     |
     ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b)")
 
+(def ^:private irc-summary-max-chars 220)
+(def ^:private irc-summary-hard-limit 320)
+(def ^:private irc-summary-max-refs 3)
+
+(def ^:private irc-ref-github-re
+  #"(?i)https?://github\.com/\S+/(?:pull|issues)/\d+")
+
+(def ^:private irc-ref-pr-re
+  #"(?i)\bPR\s*\#\d+\b")
+
+(def ^:private irc-ref-commit-re
+  #"(?i)\b(?:commit|sha)\s*[:#]?\s*([0-9a-f]{7,40})\b")
+
+(def ^:private irc-ref-path-re
+  #"(?i)(?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b")
+
+(defn- truncate-with-ellipsis
+  [s max-len]
+  (let [txt (str (or s ""))]
+    (if (<= (count txt) max-len)
+      txt
+      (str (subs txt 0 (max 0 (- max-len 3))) "..."))))
+
+(defn- extract-artifact-refs
+  [text]
+  (let [raw (or text "")
+        github-refs (re-seq irc-ref-github-re raw)
+        pr-refs (re-seq irc-ref-pr-re raw)
+        commit-refs (map second (re-seq irc-ref-commit-re raw))
+        path-refs (re-seq irc-ref-path-re raw)]
+    (->> (concat github-refs pr-refs commit-refs path-refs)
+         (map str/trim)
+         (remove str/blank?)
+         distinct
+         (take irc-summary-max-refs)
+         vec)))
+
+(defn- summarize-irc-result
+  "Render agent text as a short IRC-friendly line with artifact refs."
+  [text]
+  (let [raw (str (or text ""))
+        normalized (-> raw
+                       (str/replace #"\s+" " ")
+                       str/trim)
+        refs (extract-artifact-refs raw)
+        base (cond
+               (str/blank? normalized)
+               "[no textual response]"
+
+               (re-find #"^\s*[\{\[]" raw)
+               "Structured output generated."
+
+               :else
+               (truncate-with-ellipsis normalized irc-summary-max-chars))
+        suffix (cond
+                 (seq refs)
+                 (str " refs: " (str/join ", " refs))
+
+                 (re-find #"(?i)\bplanning-only\b" base)
+                 ""
+
+                 :else
+                 " (no artifact reference yet)")
+        msg (str base suffix)]
+    (truncate-with-ellipsis msg irc-summary-hard-limit)))
+
 (defn- irc-progress-promise-without-evidence?
   "True when TEXT makes an execution/progress promise but cites no artifact."
   [text]
@@ -2667,6 +2733,8 @@ RESPOND WITH ONLY:
        "- Sender: " sender "\n"
        "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
        "- Return natural chat text only; do not emit directive wrappers.\n"
+       "- Keep replies short: one line, <= 220 chars before refs.\n"
+       "- If work happened, include refs to concrete artifacts (commit, PR/issue URL, or changed file path).\n"
        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
        "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
        "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
@@ -2765,7 +2833,9 @@ RESPOND WITH ONLY:
                                                          (>= elapsed soft-timeout-ms)))))))]
                           (if (and (:ok resp) (string? (:result resp)))
                             (do
-                              (let [reply (normalize-irc-result (:result resp))
+                              (let [reply (-> (:result resp)
+                                              normalize-irc-result
+                                              summarize-irc-result)
                                     reply* (if (str/blank? reply)
                                              "[no textual response]"
                                              reply)]
