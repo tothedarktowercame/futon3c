@@ -72,6 +72,32 @@
 (defvar futon3c-chat--last-emitted-session-id nil
   "Last session ID for which a session-start evidence entry was emitted.")
 
+;;; Auto-registration
+
+(defun futon3c-chat--auto-register ()
+  "Ask the futon3c server to auto-register the next available Claude agent.
+Returns the assigned agent-id string, or nil on failure."
+  (let* ((url (concat futon3c-chat-api-url "/api/alpha/agents/auto"))
+         (json-body (json-serialize '(:type "claude")))
+         (result (with-temp-buffer
+                   (let ((exit (call-process "curl" nil t nil
+                                             "-sS" "--max-time" "5"
+                                             "-H" "Content-Type: application/json"
+                                             "-d" json-body url)))
+                     (when (= exit 0)
+                       (goto-char (point-min))
+                       (condition-case nil
+                           (json-parse-buffer :object-type 'alist)
+                         (error nil)))))))
+    (when (and result (alist-get 'ok result))
+      (let ((agent-id (alist-get 'agent-id result)))
+        (when (and (stringp agent-id) (not (string-empty-p agent-id)))
+          (setq futon3c-chat-agent-id agent-id)
+          (setq futon3c-chat-session-file
+                (format "/tmp/futon-session-id-%s" agent-id))
+          (message "futon3c-chat: registered as %s" agent-id)
+          agent-id)))))
+
 ;;; Surface contract
 
 (defun futon3c-chat--surface-contract ()
@@ -501,7 +527,10 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
 
 (defun futon3c-chat--init ()
   "Initialize.
-Load existing session-id from file if available."
+Auto-register with the server to get a unique agent-id, then
+load existing session-id from file if available."
+  ;; Auto-register: get next available claude-N from the server
+  (futon3c-chat--auto-register)
   (let ((existing-sid
          (when (and futon3c-chat-session-file
                     (file-exists-p futon3c-chat-session-file))

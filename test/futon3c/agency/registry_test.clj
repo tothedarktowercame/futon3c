@@ -242,3 +242,52 @@
     (let [n (reg/shutdown-all!)]
       (is (= 5 n))
       (is (= 0 (:count (reg/registry-status)))))))
+
+;; =============================================================================
+;; Auto-registration
+;; =============================================================================
+
+(deftest next-agent-id-finds-gaps
+  (testing "next-agent-id returns claude-1 when no claude agents exist"
+    (is (= "claude-1" (reg/next-agent-id "claude"))))
+  (testing "next-agent-id increments past highest registered"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "claude-1")
+      :type :claude
+      :invoke-fn (fn [_p _s] {:result "ok"})
+      :capabilities []})
+    (is (= "claude-2" (reg/next-agent-id "claude"))))
+  (testing "next-agent-id skips to N+1 of highest"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "claude-3")
+      :type :claude
+      :invoke-fn (fn [_p _s] {:result "ok"})
+      :capabilities []})
+    (is (= "claude-4" (reg/next-agent-id "claude")))))
+
+(deftest auto-register-agent-uses-factory
+  (testing "auto-register-agent! calls factory and returns assigned id"
+    (let [created (atom nil)]
+      (reg/set-agent-factory!
+       :claude
+       (fn [agent-id _opts]
+         (reset! created agent-id)
+         (reg/register-agent!
+          {:agent-id {:id/value agent-id :id/type :continuity}
+           :type :claude
+           :invoke-fn (fn [_p _s] {:result "ok"})
+           :capabilities [:explore]})
+         agent-id))
+      (let [result (reg/auto-register-agent! :claude)]
+        (is (:ok result))
+        (is (= "claude-1" (:agent-id result)))
+        (is (= "claude-1" @created))
+        (is (reg/agent-registered? "claude-1")))
+      ;; Second call should get claude-2
+      (let [result (reg/auto-register-agent! :claude)]
+        (is (:ok result))
+        (is (= "claude-2" (:agent-id result))))))
+  (testing "auto-register-agent! fails without factory"
+    (reg/set-agent-factory! :claude nil)
+    (let [result (reg/auto-register-agent! :claude)]
+      (is (not (:ok result))))))

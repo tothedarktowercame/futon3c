@@ -32,6 +32,13 @@
    Signature: (fn [agent-record] ...) — called asynchronously."}
   !on-register (atom nil))
 
+(defonce ^{:doc "Optional factory function for auto-registering agents by type.
+   Set via set-agent-factory! from dev.clj at startup.
+   Signature: (fn [agent-id opts] -> agent-id-string)
+   where opts may include :capabilities, :session-file, etc.
+   Keyed by agent type: {:claude factory-fn, :codex factory-fn}."}
+  !agent-factories (atom {}))
+
 (def ^:private ws-invoke-timeout-ms 120000)
 
 (defonce ^{:doc "Registry of agents.
@@ -90,6 +97,41 @@
    Pass nil to clear. Signature: (fn [agent-record] ...)."
   [f]
   (reset! !on-register f))
+
+(defn set-agent-factory!
+  "Set factory function for a given agent type (:claude, :codex, etc.).
+   Factory signature: (fn [agent-id opts] -> agent-id-string).
+   Pass nil to clear."
+  [agent-type f]
+  (swap! !agent-factories assoc agent-type f))
+
+(defn next-agent-id
+  "Return the next available agent ID for a given prefix.
+   E.g. (next-agent-id \"claude\") -> \"claude-1\" if none exist,
+   \"claude-2\" if \"claude-1\" is registered, etc."
+  [prefix]
+  (let [registered (keys @!registry)
+        pat (re-pattern (str "^" (java.util.regex.Pattern/quote prefix) "-(\\d+)$"))
+        nums (->> registered
+                  (keep #(when-let [m (re-matches pat (str %))]
+                           (parse-long (second m))))
+                  sort)]
+    (str prefix "-" (if (seq nums) (inc (last nums)) 1))))
+
+(defn auto-register-agent!
+  "Auto-register the next available agent of the given type.
+   Uses the factory function set via set-agent-factory!.
+   Returns {:ok true :agent-id \"claude-2\"} or {:ok false :error ...}."
+  [agent-type]
+  (let [prefix (name agent-type)]
+    (if-let [factory (get @!agent-factories agent-type)]
+      (let [aid (next-agent-id prefix)]
+        (try
+          (factory aid {})
+          {:ok true :agent-id aid}
+          (catch Exception e
+            {:ok false :error (str "Factory failed: " (.getMessage e))})))
+      {:ok false :error (str "No factory registered for type: " agent-type)})))
 
 (defn get-agent
   "Get agent record by typed ID, or nil if not registered."

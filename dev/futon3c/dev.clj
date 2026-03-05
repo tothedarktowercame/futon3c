@@ -2242,6 +2242,51 @@ RESPOND WITH ONLY:
             (finally
               (stop-ticker!))))))))
 
+(defn register-claude-agent!
+  "Register a new Claude agent dynamically. Each agent gets its own session
+   file, session atom, and invoke-fn — fully independent from other agents.
+
+   Usage from REPL or Drawbridge:
+     (dev/register-claude-agent! \"claude-2\")
+     (dev/register-claude-agent! \"claude-3\" {:permission-mode \"default\"})
+
+   On the Emacs side, set `futon3c-chat-agent-id` to match:
+     (setq futon3c-chat-agent-id \"claude-2\")
+
+   opts (all optional):
+     :claude-bin       — path to claude CLI (default from CLAUDE_BIN or \"claude\")
+     :permission-mode  — permission mode (default from CLAUDE_PERMISSION or \"bypassPermissions\")
+     :session-file     — explicit session file path (default /tmp/futon-session-id-<agent-id>)
+     :capabilities     — capability vector (default [:explore :edit :test :coordination/execute])"
+  ([agent-id] (register-claude-agent! agent-id {}))
+  ([agent-id {:keys [claude-bin permission-mode session-file capabilities]
+              :or {capabilities [:explore :edit :test :coordination/execute]}}]
+   (let [sf (io/file (or session-file
+                         (str "/tmp/futon-session-id-" agent-id)))
+         initial-sid (read-session-id sf)
+         sid-atom (atom initial-sid)
+         invoke-fn (make-claude-invoke-fn
+                    {:claude-bin (or claude-bin (env "CLAUDE_BIN" "claude"))
+                     :permission-mode (or permission-mode
+                                          (env "CLAUDE_PERMISSION" "bypassPermissions"))
+                     :agent-id agent-id
+                     :session-file sf
+                     :session-id-atom sid-atom})]
+     (rt/register-claude! {:agent-id agent-id
+                           :invoke-fn invoke-fn})
+     (reg/update-agent! agent-id
+                        :agent/type :claude
+                        :agent/invoke-fn invoke-fn
+                        :agent/capabilities capabilities)
+     (when initial-sid
+       (reg/update-agent! agent-id :agent/session-id initial-sid))
+     (println (str "[dev] Claude agent registered: " agent-id " (inline invoke)"
+                   " session-file=" (str sf)
+                   (when initial-sid
+                     (str " (session: " (subs initial-sid 0
+                                              (min 8 (count initial-sid))) ")"))))
+     agent-id)))
+
 (defn make-codex-invoke-fn
   "Create an invoke-fn that calls `codex exec` for real Codex interaction.
 
@@ -2656,28 +2701,9 @@ RESPOND WITH ONLY:
              (:server irc-sys)))
         ;; Register Claude
         _ (when register-claude?
-            (let [sf (io/file (or (env "CLAUDE_SESSION_FILE")
-                                  "/tmp/futon-session-id"))
-                  initial-sid (read-session-id sf)
-                  sid-atom (atom initial-sid)
-                  invoke-fn (make-claude-invoke-fn
-                             {:claude-bin (env "CLAUDE_BIN" "claude")
-                              :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
-                              :agent-id "claude-1"
-                              :session-file sf
-                              :session-id-atom sid-atom})]
-              (rt/register-claude! {:agent-id "claude-1"
-                                    :invoke-fn invoke-fn})
-              (reg/update-agent! "claude-1"
-                                 :agent/type :claude
-                                 :agent/invoke-fn invoke-fn
-                                 :agent/capabilities [:explore :edit :test :coordination/execute])
-              (when initial-sid
-                (reg/update-agent! "claude-1" :agent/session-id initial-sid))
-              (println (str "[dev] Claude agent registered: claude-1 (inline invoke)"
-                            (when initial-sid
-                              (str " (session: " (subs initial-sid 0
-                                                       (min 8 (count initial-sid))) ")"))))))
+            (register-claude-agent! "claude-1"
+                                    {:session-file (env "CLAUDE_SESSION_FILE"
+                                                        "/tmp/futon-session-id")}))
         ;; Register Codex
         _ (when register-codex?
             (let [sf (io/file (or (env "CODEX_SESSION_FILE")
@@ -2789,7 +2815,9 @@ RESPOND WITH ONLY:
               :nick "codex"
               :invoke-timeout-ms relay-invoke-timeout-ms
               :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))]
-    (println "[dev] Agent layer started.")))
+    ;; Install agent factories for auto-registration
+    (reg/set-agent-factory! :claude register-claude-agent!)
+    (println "[dev] Agent layer started. Auto-registration: (reg/auto-register-agent! :claude)")))
 
 (defn restart-agents!
   "Restart WS transport + agents. IRC stays up."
