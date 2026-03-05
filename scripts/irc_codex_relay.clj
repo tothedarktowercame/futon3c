@@ -155,18 +155,7 @@
   [text from sid*]
   (let [sid @sid*
         cmd (build-codex-cmd sid)
-        prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
-                            "Keep replies concise for IRC. "
-                            "Return natural chat text only.\n"
-                            "Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
-                            "If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
-                            "Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n"
-                            "Before claiming DNS/network/git connectivity failure, "
-                            "run a command that verifies it and quote actual output.\n"
-                            "Do not recommend exporting CODEX_SANDBOX/CODEX_APPROVAL "
-                            "on this IRC surface.\n"
-                            "This session is shared with emacs/codex-repl.\n\n"
-                            "%s: %s")
+        prompt (format "Surface: IRC | Channel: %s | Sender: %s\n\n%s: %s"
                        irc-channel from from text)
         result (apply sh/sh (concat cmd [:in (str prompt "\n") :dir codex-cwd]))
         parsed (parse-codex-output (str (:out result) (:err result)) @sid*)]
@@ -187,17 +176,7 @@
   [text from]
   (let [base (str/replace agency-url #"/$" "")
         url (str base "/api/alpha/invoke")
-        prompt (format (str "Transport: irc. Channel: %s. Sender: %s. "
-                            "Keep replies concise for IRC. "
-                            "Return natural chat text only.\n"
-                            "Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
-                            "If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
-                            "Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n"
-                            "Before claiming DNS/network/git connectivity failure, "
-                            "run a command that verifies it and quote actual output.\n"
-                            "Do not recommend exporting CODEX_SANDBOX/CODEX_APPROVAL "
-                            "on this IRC surface.\n\n"
-                            "%s: %s")
+        prompt (format "Surface: IRC | Channel: %s | Sender: %s\n\n%s: %s"
                        irc-channel from from text)
         payload (json/generate-string {"agent-id" agency-agent-id
                                        "prompt" prompt

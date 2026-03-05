@@ -101,16 +101,8 @@ Returns the assigned agent-id string, or nil on failure."
 ;;; Surface contract
 
 (defun futon3c-chat--surface-contract ()
-  "Return runtime surface contract for Claude invoke prompts."
-  (string-join
-   (list
-    "Runtime surface contract:"
-    "- Current surface: emacs-futon3c-chat."
-    "- Your response is shown in the user's Emacs chat buffer."
-    (format "- To post to IRC: curl -sS -H 'Content-Type: application/json' -d '{\"channel\":\"#futon\",\"from\":\"%s\",\"text\":\"YOUR MESSAGE\"}' %s/api/alpha/irc/send"
-            futon3c-chat-agent-id futon3c-chat-api-url)
-    "- Do not claim to post to IRC or send network messages unless a tool call in this turn actually did it.")
-   "\n"))
+  "Return surface metadata — where the output goes."
+  (format "Surface: emacs-futon3c-chat | Agent: %s" futon3c-chat-agent-id))
 
 ;;; Evidence logging
 

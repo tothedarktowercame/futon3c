@@ -411,10 +411,7 @@ class IRCBot:
         surface_context = (
             f"[Surface: IRC | Channel: {self.channel} | "
             f"Speaker: {sender}{mission_part} | "
-            f"Your response will be posted to {self.channel} as <{self.nick}>. "
-            f"IMPORTANT: Max 4-5 short lines. No markdown, no bullets, no headers. "
-            f"For detailed work, post to GitHub issues/comments instead and "
-            f"share the link here.]"
+            f"Your response will be posted to {self.channel} as <{self.nick}>.]"
         )
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
@@ -445,10 +442,7 @@ class IRCBot:
         surface_context = (
             f"[Surface: IRC | Channel: {self.channel} | "
             f"Speaker: {sender}{mission_part} | "
-            f"Your response will be posted to {self.channel} as <{self.nick}>. "
-            f"IMPORTANT: Max 4-5 short lines. No markdown, no bullets, no headers. "
-            f"For detailed work, post to GitHub issues/comments instead and "
-            f"share the link here.]"
+            f"Your response will be posted to {self.channel} as <{self.nick}>.]"
         )
         full_prompt = f"{surface_context}\n\n{sender}: {text}"
 

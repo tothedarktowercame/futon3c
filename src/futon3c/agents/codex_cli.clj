@@ -38,27 +38,6 @@
     (catch Exception _
       nil)))
 
-(def ^:private progress-promise-re
-  #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|kicking off|starting (?:now|right away|immediately)|about to|will push|will open|will send|in the next few|soon)\b")
-
-(def ^:private artifact-ref-re
-  #"(?ix)
-    (https?://github\.com/\S+/(?:pull|issues)/\d+)
-    |
-    (\bPR\s*\#\d+\b)
-    |
-    (\b[0-9a-f]{7,40}\b)
-    |
-    ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b)")
-
-(def ^:private blocked-response-re
-  #"(?i)\bblocked\b")
-
-(def ^:private done-response-re
-  #"(?im)^\s*done(?:\s*(?:::|#|$))")
-
-(def ^:private planning-response-re
-  #"(?i)\b(planning-only|not started yet|no work has started|haven't started|have not started|acknowledged|understood)\b")
 
 (defn- titleize-token
   [token]
@@ -172,60 +151,6 @@
   [execution]
   (boolean (and (map? execution) (:executed? execution))))
 
-(defn- irc-surface-prompt?
-  [prompt-str]
-  (boolean (and (string? prompt-str)
-                (str/includes? prompt-str "Current surface: IRC."))))
-
-(defn- references-artifact?
-  [text]
-  (boolean (re-find artifact-ref-re (or text ""))))
-
-(defn- promise-without-artifact?
-  [text]
-  (let [t (str/trim (or text ""))]
-    (and (not (str/blank? t))
-         (boolean (re-find progress-promise-re t))
-         (not (references-artifact? t)))))
-
-(defn- ack-or-planning-without-evidence?
-  [text execution]
-  (let [t (str/trim (or text ""))]
-    (and (not (str/blank? t))
-         (not (execution-evidence? execution))
-         (or (promise-without-artifact? t)
-             (boolean (re-find planning-response-re t)))
-         (not (references-artifact? t)))))
-
-(defn- blocked-or-done?
-  [text]
-  (let [t (or text "")]
-    (or (boolean (re-find blocked-response-re t))
-        (boolean (re-find done-response-re t))
-        (references-artifact? t))))
-
-(defn- codex-execution-followup-prompt
-  [attempt-idx max-turns]
-  (str "Continue in the same session and execute the requested work now.\n"
-       "Do not send acknowledgements/planning text.\n"
-       "Reply only when complete with concrete artifacts using one of:\n"
-       "- DONE :: <artifact refs such as PR URL, commit SHA, changed file paths>\n"
-       "- BLOCKED :: <exact command> :: <exact error output>\n"
-       "If you are not done yet, keep working silently.\n"
-       "(automatic follow-up " attempt-idx "/" max-turns ")"))
-
-(defn enforce-execution-guard
-  "Rewrite unsupported progress promises when stream evidence shows no execution."
-  [text execution]
-  (let [t (some-> text str/trim)
-        promise? (boolean (re-find progress-promise-re (or t "")))]
-    (cond
-      (or (str/blank? t) (not promise?)) t
-      (execution-evidence? execution) t
-      :else
-      (str "Planning-only: no runtime execution evidence in this turn.\n"
-           "No work has started in this reply.\n\n"
-           t))))
 
 (defn- stale-action-type-error?
   [error-text]
@@ -377,114 +302,85 @@
    - :reasoning-effort (optional, e.g. low|medium|high)
    - :timeout-ms hard process timeout in milliseconds (default 600000)
    - :cwd (optional working directory)
-   - :on-event (optional fn called with each parsed stream event)
-   - :auto-exec-turns max turns for IRC execution follow-up loop (default 3)"
-  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd on-event auto-exec-turns]
+   - :on-event (optional fn called with each parsed stream event)"
+  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd on-event]
     :or {codex-bin "codex"
          model "gpt-5-codex"
          sandbox "danger-full-access"
          approval-policy "never"
-         timeout-ms 600000
-         auto-exec-turns 3}}]
+         timeout-ms 600000}}]
   (let [!lock (Object.)]
     (fn [prompt session-id]
       (locking !lock
         (try
           (let [prompt-str (coerce-prompt prompt)
-                attempt (fn [turn-prompt resume-sid]
-                          (let [cmd (build-exec-args {:codex-bin codex-bin
-                                                      :model model
-                                                      :sandbox sandbox
-                                                      :approval-policy approval-policy
-                                                      :reasoning-effort reasoning-effort
-                                                      :session-id resume-sid})
-                                {:keys [exit timed-out? text error-text stderr raw-output execution]
-                                 :as stream-result}
-                                (run-codex-stream! cmd turn-prompt {:timeout-ms timeout-ms
-                                                                    :cwd cwd
-                                                                    :on-event on-event})
-                                stream-sid (:session-id stream-result)
-                                parsed (parse-output raw-output (or stream-sid resume-sid))
-                                final-sid (or stream-sid
-                                              (:session-id parsed))
-                                final-text (or (some-> text str/trim not-empty)
-                                               (some-> (:text parsed) str/trim not-empty))
-                                execution (or execution (summarize-execution 0 0))
-                                guarded-text (enforce-execution-guard final-text execution)
-                                final-error (or (some-> error-text str/trim not-empty)
-                                                (when-not (zero? exit)
-                                                  (some-> (:text parsed) str/trim not-empty))
-                                                (some-> stderr str/trim not-empty))]
-                            {:exit exit
-                             :timed-out? timed-out?
-                             :session-id final-sid
-                             :execution execution
-                             :result-text guarded-text
-                             :error-text final-error}))
-                max-turns (max 1 (long auto-exec-turns))
-                first-attempt (attempt prompt-str session-id)
-                retry-needed? (and (string? session-id)
-                                   (not (str/blank? session-id))
-                                   (not (:timed-out? first-attempt))
-                                   (not (zero? (:exit first-attempt)))
-                                   (stale-action-type-error? (:error-text first-attempt)))
-                recovered-attempt (if retry-needed?
-                                    (attempt prompt-str nil)
-                                    first-attempt)
-                attempted-recovery? retry-needed?
-                irc-prompt? (irc-surface-prompt? prompt-str)
-                final-attempt (if (and irc-prompt? (pos? max-turns))
-                                (loop [turn 1
-                                       current recovered-attempt]
-                                  (let [text (:result-text current)
-                                        execution (:execution current)
-                                        continue? (and (< turn max-turns)
-                                                       (not (:timed-out? current))
-                                                       (zero? (:exit current))
-                                                       (ack-or-planning-without-evidence? text execution)
-                                                       (not (blocked-or-done? text)))]
-                                    (if continue?
-                                      (let [next-prompt (codex-execution-followup-prompt (inc turn) max-turns)
-                                            next-sid (:session-id current)
-                                            next-attempt (attempt next-prompt next-sid)]
-                                        (recur (inc turn) next-attempt))
-                                      (assoc current :turns turn))))
-                                (assoc recovered-attempt :turns 1))
-                turns (long (or (:turns final-attempt) 1))
-                unresolved-planning? (and irc-prompt?
-                                          (>= turns max-turns)
-                                          (zero? (:exit final-attempt))
-                                          (ack-or-planning-without-evidence? (:result-text final-attempt)
-                                                                             (:execution final-attempt))
-                                          (not (blocked-or-done? (:result-text final-attempt))))]
-            (cond
-              (:timed-out? final-attempt)
-              {:result nil
-               :session-id (:session-id final-attempt)
-               :execution (:execution final-attempt)
-               :error (str "Exit " (:exit final-attempt) ": codex invocation timed out after "
-                           timeout-ms "ms")}
-
-              unresolved-planning?
-              {:result nil
-               :session-id (:session-id final-attempt)
-               :execution (:execution final-attempt)
-               :error (str "Codex returned planning/ack responses without execution evidence after "
-                           turns " turns")}
-
-              (zero? (:exit final-attempt))
-              {:result (or (:result-text final-attempt) "[Codex produced no text response]")
-               :session-id (:session-id final-attempt)
-               :execution (:execution final-attempt)}
-
-              :else
-              {:result nil
-               :session-id (:session-id final-attempt)
-               :execution (:execution final-attempt)
-               :error (str "Exit " (:exit final-attempt) ": "
-                           (or (:error-text final-attempt) "codex invocation failed")
-                           (when attempted-recovery?
-                             " (after automatic stale-session reset attempt)"))}))
+                cmd (build-exec-args {:codex-bin codex-bin
+                                      :model model
+                                      :sandbox sandbox
+                                      :approval-policy approval-policy
+                                      :reasoning-effort reasoning-effort
+                                      :session-id session-id})
+                {:keys [exit timed-out? text error-text stderr raw-output execution]
+                 :as stream-result}
+                (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
+                                                   :cwd cwd
+                                                   :on-event on-event})
+                stream-sid (:session-id stream-result)
+                parsed (parse-output raw-output (or stream-sid session-id))
+                final-sid (or stream-sid (:session-id parsed))
+                final-text (or (some-> text str/trim not-empty)
+                               (some-> (:text parsed) str/trim not-empty))
+                final-error (or (some-> error-text str/trim not-empty)
+                                (when-not (zero? exit)
+                                  (some-> (:text parsed) str/trim not-empty))
+                                (some-> stderr str/trim not-empty))
+                ;; Retry on stale session (action.type error)
+                retry? (and (string? session-id)
+                            (not (str/blank? session-id))
+                            (not timed-out?)
+                            (not (zero? exit))
+                            (stale-action-type-error? final-error))]
+            (if retry?
+              ;; Fresh session retry
+              (let [cmd2 (build-exec-args {:codex-bin codex-bin
+                                           :model model
+                                           :sandbox sandbox
+                                           :approval-policy approval-policy
+                                           :reasoning-effort reasoning-effort
+                                           :session-id nil})
+                    r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms
+                                                           :cwd cwd
+                                                           :on-event on-event})
+                    p2 (parse-output (:raw-output r2) (:session-id r2))
+                    sid2 (or (:session-id r2) (:session-id p2))
+                    txt2 (or (some-> (:text r2) str/trim not-empty)
+                             (some-> (:text p2) str/trim not-empty))
+                    exec2 (or (:execution r2) (summarize-execution 0 0))]
+                (cond
+                  (:timed-out? r2)
+                  {:result nil :session-id sid2 :execution exec2
+                   :error (str "codex timed out after " timeout-ms "ms")}
+                  (zero? (:exit r2))
+                  {:result (or txt2 "[Codex produced no text response]")
+                   :session-id sid2 :execution exec2}
+                  :else
+                  {:result nil :session-id sid2 :execution exec2
+                   :error (str "Exit " (:exit r2) ": "
+                               (or (:error-text r2) "codex invocation failed")
+                               " (after stale-session reset)")}))
+              ;; Normal path
+              (let [exec (or execution (summarize-execution 0 0))]
+                (cond
+                  timed-out?
+                  {:result nil :session-id final-sid :execution exec
+                   :error (str "codex timed out after " timeout-ms "ms")}
+                  (zero? exit)
+                  {:result (or final-text "[Codex produced no text response]")
+                   :session-id final-sid :execution exec}
+                  :else
+                  {:result nil :session-id final-sid :execution exec
+                   :error (str "Exit " exit ": "
+                               (or final-error "codex invocation failed"))}))))
           (catch Exception e
             {:result nil
              :session-id session-id

@@ -941,7 +941,7 @@ Returns plist: (:session-id sid :text response :error err)."
             text)))
 
 (defun codex-repl--surface-contract ()
-  "Return a strict runtime contract for prompt routing semantics."
+  "Return surface metadata — where the output goes and what's available."
   (let* ((state (codex-repl-modeline-state t))
          (agency (if (plist-get state :agency-available?) "up" "down"))
          (irc (if (plist-get state :irc-available?) "up" "down"))
@@ -949,17 +949,9 @@ Returns plist: (:session-id sid :text response :error err)."
          (active (plist-get state :resolved-transport)))
     (string-join
      (list
-      "Runtime surface contract:"
-      "- Current surface: emacs-codex-repl."
-      "- Your response is shown only in this Emacs buffer."
-      "- Do not claim to post to IRC, write /tmp relay files, or send network messages unless a tool call in this turn actually did it."
-      "- Do not claim that work is actively starting/running unless this turn executed tool calls/commands."
-      "- Any progress claim must include concrete evidence (artifact path, commit SHA, or PR/issue URL)."
-      "- If the user asks you to tell/ping/message someone, treat it as an IRC-send request."
-      "- For IRC-send requests, output only the single-line message text to send (no wrappers)."
-      "- Never use curl/tool calls for IRC on this surface."
-      (format "- Transport: requested=%s active=%s." mode active)
-      (format "- Telemetry snapshot: agency=%s irc=%s." agency irc))
+      "Surface: emacs-codex-repl."
+      (format "Transport: requested=%s active=%s." mode active)
+      (format "Agency=%s IRC=%s." agency irc))
      "\n")))
 
 (defun codex-repl--call-cli-async (text callback)
