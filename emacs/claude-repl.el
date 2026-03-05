@@ -62,6 +62,13 @@
   "Face for Claude."
   :group 'claude-repl)
 
+;;; Workspace detection
+
+(defun claude-repl--workspace ()
+  "Return the daemon name if running inside a named daemon, else nil."
+  (let ((d (daemonp)))
+    (when (stringp d) d)))
+
 ;;; Internal state
 
 (defvar claude-repl--buffer-name "*claude-repl*")
@@ -525,8 +532,16 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
 
 (defun claude-repl--init ()
   "Initialize.
-Auto-register with the server to get a unique agent-id, then
-load existing session-id from file if available."
+When running inside a named daemon (e.g. workspace1), use the
+workspace name to disambiguate agent-id, session file, and buffer.
+Then auto-register with the server and load existing session-id."
+  ;; Derive workspace-specific defaults
+  (when-let ((ws (claude-repl--workspace)))
+    (unless (local-variable-p 'claude-repl--workspace-applied)
+      (setq-local claude-repl-agent-id (format "claude-%s" ws))
+      (setq-local claude-repl-session-file
+                  (format "/tmp/futon-session-id-claude-%s" ws))
+      (setq-local claude-repl--workspace-applied t)))
   ;; Auto-register: get next available claude-N from the server
   (claude-repl--auto-register)
   (let ((existing-sid
@@ -536,9 +551,13 @@ load existing session-id from file if available."
                      (with-temp-buffer
                        (insert-file-contents claude-repl-session-file)
                        (buffer-string)))))
-             (unless (string-empty-p s) s)))))
+             (unless (string-empty-p s) s))))
+        (ws (claude-repl--workspace))
+        (title (if (claude-repl--workspace)
+                   (format "claude repl [%s]" (claude-repl--workspace))
+                 "claude repl")))
     (agent-chat-init-buffer
-     (list :title "claude repl"
+     (list :title title
            :session-id (or existing-sid
                            (format "%s (awaiting session)" claude-repl-agent-id))
            :modeline-fn #'claude-repl--build-modeline
@@ -553,7 +572,11 @@ load existing session-id from file if available."
 (defun claude-repl ()
   "Start or switch to chat."
   (interactive)
-  (let ((buf (get-buffer-create claude-repl--buffer-name)))
+  (let* ((ws (claude-repl--workspace))
+         (bufname (if ws
+                     (format "*claude-repl[%s]*" ws)
+                   claude-repl--buffer-name))
+         (buf (get-buffer-create bufname)))
     (with-current-buffer buf
       (unless (eq major-mode 'claude-repl-mode)
         (claude-repl-mode)
