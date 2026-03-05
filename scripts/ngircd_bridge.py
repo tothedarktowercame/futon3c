@@ -16,7 +16,7 @@ Environment variables:
     IRC_CHANNEL     (default: #futon)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
     BRIDGE_BOTS     (default: claude,codex)  — comma-separated bot nicks
-    INVOKE_TIMEOUT_SECONDS (default: 90)     — invoke timeout in seconds
+    INVOKE_TIMEOUT_SECONDS (default: 600)    — invoke timeout in seconds
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
 
@@ -74,7 +74,7 @@ MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
     "INVOKE_TIMEOUT_SECONDS",
-    int_env("INVOKE_TIMEOUT", 90, minimum=60),
+    int_env("INVOKE_TIMEOUT", 600, minimum=60),
     minimum=60,
 )  # seconds; supports legacy INVOKE_TIMEOUT
 STATUS_TIMEOUT = int_env("AGENT_STATUS_TIMEOUT", 5, minimum=1)

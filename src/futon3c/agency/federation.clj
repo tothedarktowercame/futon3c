@@ -21,7 +21,7 @@
             [org.httpkit.client :as http])
   (:import [java.util UUID]))
 
-(def ^:private default-proxy-timeout-ms 30000)
+(def ^:private default-proxy-timeout-ms 600000)
 
 ;; =============================================================================
 ;; Configuration state
