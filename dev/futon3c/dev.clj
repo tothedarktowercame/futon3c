@@ -2851,6 +2851,7 @@ RESPOND WITH ONLY:
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
         codex-remote-origin (or (some-> (env "FUTON3C_CODEX_REMOTE_BASE") normalize-http-base)
                                 (some-> (env "FUTON3C_LAPTOP_URL") normalize-http-base)
+                                (some-> (env "FUTON3C_IRC_SEND_BASE") normalize-http-base)
                                 (some-> (first-peer-url) normalize-http-base))
         irc-send-base-hint (or (some-> (env "FUTON3C_IRC_SEND_BASE") normalize-http-base)
                                (some-> (env "FUTON3C_LINODE_URL") normalize-http-base)
@@ -2988,14 +2989,20 @@ RESPOND WITH ONLY:
         _ (when (and (not register-codex?) relay-codex?)
             (let [proxy-invoke-fn (when codex-remote-origin
                                     (federation/make-proxy-invoke-fn codex-remote-origin "codex-1"))
+                  note (if codex-remote-origin
+                         (str "Remote proxy origin configured: " codex-remote-origin)
+                         "Awaiting WS bridge from laptop; set FUTON3C_LAPTOP_URL, FUTON3C_IRC_SEND_BASE, FUTON3C_CODEX_REMOTE_BASE, or FUTON3C_PEERS for HTTP proxy fallback")
                   metadata (cond-> {:remote? true
-                                    :note "Awaiting WS bridge from laptop"}
+                                    :note note}
                              codex-remote-origin
                              (assoc :origin-url codex-remote-origin
                                     :remote-proxy? true))]
               (rt/register-codex! {:agent-id "codex-1"
                                    :invoke-fn proxy-invoke-fn
                                    :metadata metadata})
+              (when-not proxy-invoke-fn
+                (println "[dev][warn] codex relay has no proxy origin; IRC invokes will fail until laptop WS bridge connects.")
+                (println "[dev][warn] set FUTON3C_LAPTOP_URL (or FUTON3C_IRC_SEND_BASE / FUTON3C_CODEX_REMOTE_BASE / FUTON3C_PEERS)."))
               (println (str "[dev] Codex agent registered: codex-1 (remote peer"
                             (if proxy-invoke-fn
                               (str ", proxy invoke via " codex-remote-origin)
