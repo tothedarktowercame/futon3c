@@ -1937,7 +1937,7 @@ RESPOND WITH ONLY:
                       entity (first (filter #(= eid (:entity-id %)) entities))
                       review-prompt (arse-queue/make-review-prompt entity generation)
                       review-issue {:number (:number issue)
-                                    :title (str "ASE-review: " (:title issue))
+                                    :title (str "ArSE-review: " (:title issue))
                                     :body review-prompt}]
                   (println "[arse] Requesting Claude review...")
                   (let [review-result (orch/request-review! review-issue gen-result
@@ -2006,7 +2006,7 @@ RESPOND WITH ONLY:
     (let [results
           (reduce
            (fn [acc [idx issue]]
-             (println (str "\n[ase-batch] " (inc idx) "/" total
+             (println (str "\n[arse-batch] " (inc idx) "/" total
                            " — " (:entity-id issue)))
              (let [result (run-arse-entry!
                            :entity-id (:entity-id issue)
@@ -2021,7 +2021,7 @@ RESPOND WITH ONLY:
           elapsed (- (System/currentTimeMillis) start)
           ok-count (count (filter :ok results))
           fail-count (- total ok-count)]
-      (println (str "\n[ase-batch] Complete: " ok-count "/" total " succeeded"
+      (println (str "\n[arse-batch] Complete: " ok-count "/" total " succeeded"
                     " (" fail-count " failed)"
                     " in " (long (/ elapsed 1000)) "s"))
       (when (some-> @!irc-sys :server :send-to-channel!)
