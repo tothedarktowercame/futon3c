@@ -352,7 +352,9 @@
                           (str error)
                           :agent-id aid-val
                           :timeout-ms (:timeout-ms result-map))}
-                 {:ok true :result result :session-id session-id}))
+                 (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))]
+                   (cond-> {:ok true :result result :session-id session-id}
+                     invoke-meta (assoc :invoke-meta invoke-meta)))))
 
              (:invoke-ws-available? routing-info)
              (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
@@ -376,7 +378,9 @@
                           :agent-id aid-val)}
 
                  (map? response)
-                 {:ok true :result (:result response) :session-id (:session-id response)}
+                 (let [invoke-meta (not-empty (dissoc response :result :session-id :error))]
+                   (cond-> {:ok true :result (:result response) :session-id (:session-id response)}
+                     invoke-meta (assoc :invoke-meta invoke-meta)))
 
                  :else
                  {:ok false

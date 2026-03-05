@@ -118,6 +118,27 @@
         (is (= "hi ack" (:result result)))
         (is (= "sess-ws" (:session-id result)))))))
 
+(deftest invoke-surfaces-invoke-meta
+  (testing "invoke-agent! returns invoke-meta when invoke-fn includes extra runtime data"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-meta")
+      :type :codex
+      :invoke-fn (fn [_prompt _session-id]
+                   {:result "ok"
+                    :session-id "sess-meta"
+                    :execution {:executed? true
+                                :tool-events 2
+                                :command-events 1}})
+      :capabilities [:edit]})
+    (let [result (reg/invoke-agent! (fix/make-agent-id "codex-meta") "hi" 1000)]
+      (is (:ok result))
+      (is (= "ok" (:result result)))
+      (is (= "sess-meta" (:session-id result)))
+      (is (= {:execution {:executed? true
+                          :tool-events 2
+                          :command-events 1}}
+             (:invoke-meta result))))))
+
 (deftest invoke-exception-returns-social-error
   (testing "invoke-fn that throws returns SocialError, not nil"
     (reg/register-agent!
@@ -242,4 +263,3 @@
     (let [n (reg/shutdown-all!)]
       (is (= 5 n))
       (is (= 0 (:count (reg/registry-status)))))))
-

@@ -17,11 +17,13 @@ Environment variables:
     INVOKE_BASE     (default: http://127.0.0.1:7070)
     BRIDGE_BOTS     (default: claude,codex)  — comma-separated bot nicks
     INVOKE_TIMEOUT_SECONDS (default: 600)    — invoke timeout in seconds
+    INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
 
 import json
 import os
+import queue
 import re
 import socket
 import sys
@@ -85,6 +87,17 @@ INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not
     "off",
 )
 CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! commands
+INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
+
+ARTIFACT_REF_PATTERNS = [
+    re.compile(r"https?://github\.com/\S+/(?:pull|issues)/\d+", re.IGNORECASE),
+    re.compile(r"\bPR\s*#\d+\b", re.IGNORECASE),
+    re.compile(r"\b(?:commit|sha)\s*[:#]?\s*([0-9a-f]{7,40})\b", re.IGNORECASE),
+    re.compile(
+        r"(?:/|\.{1,2}/|~?/)?[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)+\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b",
+        re.IGNORECASE,
+    ),
+]
 
 # Ungated nicks receive ALL channel messages, not just @mentions.
 # Toggle with !ungate <nick> and !gate <nick>.
@@ -150,6 +163,15 @@ class IRCBot:
         self.handle_commands = handle_commands
         self.focused_mission = None
         self._invoking = threading.Lock()
+        self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
+        self._job_seq = 0
+        self._job_seq_lock = threading.Lock()
+        self._worker = threading.Thread(
+            target=self._invoke_worker_loop,
+            name=f"{self.nick}-invoke-worker",
+            daemon=True,
+        )
+        self._worker.start()
 
     def _agent_status(self):
         """Fetch this bot agent's status from Agency."""
@@ -279,15 +301,144 @@ class IRCBot:
         )
         return text.strip()
 
+    def _next_job_id(self):
+        """Create a short monotonic job id for async invoke tracking."""
+        with self._job_seq_lock:
+            self._job_seq += 1
+            seq = self._job_seq
+        return f"{self.nick}-{int(time.time())}-{seq}"
+
+    @staticmethod
+    def _truncate(text, max_len=220):
+        text = (text or "").strip()
+        if len(text) <= max_len:
+            return text
+        return text[: max(0, max_len - 3)] + "..."
+
+    @staticmethod
+    def _extract_artifact_refs(text, max_refs=3):
+        refs = []
+        src = text or ""
+        for pattern in ARTIFACT_REF_PATTERNS:
+            for match in pattern.finditer(src):
+                if match.lastindex:
+                    ref = match.group(1)
+                else:
+                    ref = match.group(0)
+                ref = (ref or "").strip()
+                if not ref:
+                    continue
+                if ref not in refs:
+                    refs.append(ref)
+                if len(refs) >= max_refs:
+                    return refs
+        return refs
+
+    def _summarize_invoke_result(self, result_text):
+        """Return a short IRC-safe summary with artifact refs when available."""
+        text = self._sanitize_for_irc(result_text or "")
+        compact = re.sub(r"\s+", " ", text).strip()
+        refs = self._extract_artifact_refs(text)
+        if compact.startswith("{") or compact.startswith("["):
+            summary = "Structured output generated."
+        elif compact:
+            summary = self._truncate(compact, max_len=180)
+        else:
+            summary = "[no textual response]"
+        if refs:
+            return f"{summary} refs: {', '.join(refs)}"
+        return f"{summary} (no artifact refs)"
+
+    @staticmethod
+    def _execution_stats(invoke_meta):
+        """Extract execution-evidence stats from invoke metadata."""
+        if not isinstance(invoke_meta, dict):
+            return None
+        execution = invoke_meta.get("execution")
+        if not isinstance(execution, dict):
+            return None
+        executed = bool(execution.get("executed?"))
+        try:
+            tool_events = int(execution.get("tool-events") or 0)
+        except (TypeError, ValueError):
+            tool_events = 0
+        try:
+            command_events = int(execution.get("command-events") or 0)
+        except (TypeError, ValueError):
+            command_events = 0
+        return {
+            "executed": executed,
+            "tool_events": tool_events,
+            "command_events": command_events,
+        }
+
+    def _enqueue_invoke(self, sender, full_prompt, mission_id):
+        """Queue an invoke request and return assigned job id or None when full."""
+        job_id = self._next_job_id()
+        task = {
+            "job_id": job_id,
+            "sender": sender,
+            "prompt": full_prompt,
+            "mission_id": mission_id,
+            "queued_at": time.time(),
+        }
+        try:
+            self._invoke_queue.put_nowait(task)
+        except queue.Full:
+            return None
+        return job_id
+
+    def _invoke_worker_loop(self):
+        """Process queued invoke jobs serially and post completion updates."""
+        while True:
+            task = self._invoke_queue.get()
+            if task is None:
+                self._invoke_queue.task_done()
+                return
+            job_id = task["job_id"]
+            sender = task["sender"]
+            prompt = task["prompt"]
+            mission_id = task.get("mission_id")
+            try:
+                with self._invoking:
+                    response = self._invoke_agent(prompt, sender, mission_id=mission_id)
+                if response.get("ok"):
+                    summary = self._summarize_invoke_result(response.get("result", ""))
+                    stats = self._execution_stats(response.get("invoke_meta"))
+                    if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
+                        self._say(
+                            f"[needs-artifacts {job_id}] no execution evidence "
+                            f"(tool-events={stats['tool_events']}, command-events={stats['command_events']})",
+                            max_lines=2,
+                        )
+                        continue
+                    sid = response.get("session_id")
+                    if sid:
+                        self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)
+                    else:
+                        self._say(f"[done {job_id}] {summary}", max_lines=2)
+                else:
+                    err = self._truncate(response.get("error", "unknown invoke error"), max_len=220)
+                    self._say(f"[failed {job_id}] {err}", max_lines=2)
+            except Exception as e:
+                self._say(f"[failed {job_id}] worker exception: {self._truncate(str(e), max_len=180)}", max_lines=2)
+                log(self.nick, f"Worker exception for {job_id}: {traceback.format_exc()}")
+            finally:
+                self._invoke_queue.task_done()
+
     def _invoke_agent(self, prompt, caller, mission_id=None):
-        """Call the futon3c invoke API and return the result text."""
+        """Call the futon3c invoke API and return structured invoke outcome."""
         status_before = self._agent_status()
         if (
             INVOKE_SKIP_WHEN_BUSY
             and isinstance(status_before, dict)
             and status_before.get("status") == "invoking"
         ):
-            return f"[invoke skipped: {self._agent_busy_summary(status_before)}]"
+            return {
+                "ok": False,
+                "error": f"invoke skipped: {self._agent_busy_summary(status_before)}",
+                "session_id": status_before.get("session_id"),
+            }
 
         payload = {
             "agent-id": self.agent_id,
@@ -309,9 +460,18 @@ class IRCBot:
             with urllib.request.urlopen(req, timeout=INVOKE_TIMEOUT_SECONDS) as resp:
                 data = json.loads(resp.read())
                 if data.get("ok"):
-                    return data.get("result", "")
+                    return {
+                        "ok": True,
+                        "result": data.get("result", ""),
+                        "session_id": data.get("session-id") or data.get("session_id"),
+                        "invoke_meta": data.get("invoke-meta") or data.get("invoke_meta"),
+                    }
                 else:
-                    return f"[invoke error: {data.get('error', 'unknown')}]"
+                    return {
+                        "ok": False,
+                        "error": f"invoke error: {data.get('error', 'unknown')}",
+                        "session_id": data.get("session-id") or data.get("session_id"),
+                    }
         except urllib.error.HTTPError as e:
             body_text = e.read().decode("utf-8", errors="replace")[:200]
             parsed = None
@@ -330,25 +490,37 @@ class IRCBot:
                 if timed_out:
                     status_after = self._agent_status()
                     if isinstance(status_after, dict) and status_after.get("status") == "invoking":
-                        return f"[invoke timeout: {self._agent_busy_summary(status_after)}]"
+                        return {
+                            "ok": False,
+                            "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
+                            "session_id": status_after.get("session_id"),
+                        }
                 if msg:
-                    return f"[HTTP {e.code}: {err}: {msg}]"
-                return f"[HTTP {e.code}: {err}]"
-            return f"[HTTP {e.code}: {body_text}]"
+                    return {"ok": False, "error": f"HTTP {e.code}: {err}: {msg}"}
+                return {"ok": False, "error": f"HTTP {e.code}: {err}"}
+            return {"ok": False, "error": f"HTTP {e.code}: {body_text}"}
         except urllib.error.URLError as e:
             reason = str(getattr(e, "reason", e))
             if "timed out" in reason.lower():
                 status_after = self._agent_status()
                 if isinstance(status_after, dict) and status_after.get("status") == "invoking":
-                    return f"[invoke timeout: {self._agent_busy_summary(status_after)}]"
-            return f"[invoke failed: {reason}]"
+                    return {
+                        "ok": False,
+                        "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
+                        "session_id": status_after.get("session_id"),
+                    }
+            return {"ok": False, "error": f"invoke failed: {reason}"}
         except socket.timeout:
             status_after = self._agent_status()
             if isinstance(status_after, dict) and status_after.get("status") == "invoking":
-                return f"[invoke timeout: {self._agent_busy_summary(status_after)}]"
-            return "[invoke failed: timed out]"
+                return {
+                    "ok": False,
+                    "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
+                    "session_id": status_after.get("session_id"),
+                }
+            return {"ok": False, "error": "invoke failed: timed out"}
         except Exception as e:
-            return f"[invoke failed: {e}]"
+            return {"ok": False, "error": f"invoke failed: {e}"}
 
     @staticmethod
     def _sanitize_for_irc(text):
@@ -399,7 +571,7 @@ class IRCBot:
             time.sleep(0.1)
 
     def _handle_mention(self, sender, text):
-        """Process a mention: invoke agent, post response."""
+        """Process a mention: queue invoke and ack immediately."""
         prompt_text = self._strip_mention(text)
         if not prompt_text:
             return
@@ -411,28 +583,27 @@ class IRCBot:
         surface_context = (
             f"[Surface: IRC | Channel: {self.channel} | "
             f"Speaker: {sender}{mission_part} | "
-            f"Your response will be posted to {self.channel} as <{self.nick}>.]"
+            f"Your completion update will be posted to {self.channel} as <{self.nick}>. "
+            "Execute work asynchronously, then return a short status with artifact refs "
+            "(commit/PR/issue/file path).]"
         )
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
-        log(self.nick, f"Invoking for {sender}: {prompt_text[:80]}")
-
-        # Serialize invocations per bot — drop if already busy
-        if not self._invoking.acquire(blocking=False):
-            log(self.nick, f"Busy — dropping invocation from {sender}")
+        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission)
+        if not job_id:
+            self._say("[queue full] invoke queue is saturated; retry in a moment", max_lines=1)
+            log(self.nick, f"Queue full — dropping invocation from {sender}")
             return
-        try:
-            result = self._invoke_agent(full_prompt, sender,
-                                        mission_id=self.focused_mission)
-        finally:
-            self._invoking.release()
-
-        if result:
-            log(self.nick, f"Response ({len(result)} chars)")
-            self._say(result)
+        pending = self._invoke_queue.qsize()
+        log(self.nick, f"Queued {job_id} from {sender}: {prompt_text[:80]}")
+        self._say(
+            f"[accepted {job_id}] queued ({pending} pending); "
+            "will post completion with artifact refs",
+            max_lines=1,
+        )
 
     def _handle_ungated(self, sender, text):
-        """Process an ungated message: invoke agent with full text."""
+        """Process an ungated message: queue invoke and ack immediately."""
         if not text.strip():
             return
 
@@ -442,24 +613,24 @@ class IRCBot:
         surface_context = (
             f"[Surface: IRC | Channel: {self.channel} | "
             f"Speaker: {sender}{mission_part} | "
-            f"Your response will be posted to {self.channel} as <{self.nick}>.]"
+            f"Your completion update will be posted to {self.channel} as <{self.nick}>. "
+            "Execute work asynchronously, then return a short status with artifact refs "
+            "(commit/PR/issue/file path).]"
         )
         full_prompt = f"{surface_context}\n\n{sender}: {text}"
 
-        log(self.nick, f"Ungated invoke for {sender}: {text[:80]}")
-
-        if not self._invoking.acquire(blocking=False):
-            log(self.nick, f"Busy — dropping ungated invocation from {sender}")
+        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission)
+        if not job_id:
+            self._say("[queue full] invoke queue is saturated; retry in a moment", max_lines=1)
+            log(self.nick, f"Queue full — dropping ungated invocation from {sender}")
             return
-        try:
-            result = self._invoke_agent(full_prompt, sender,
-                                        mission_id=self.focused_mission)
-        finally:
-            self._invoking.release()
-
-        if result:
-            log(self.nick, f"Response ({len(result)} chars)")
-            self._say(result)
+        pending = self._invoke_queue.qsize()
+        log(self.nick, f"Queued {job_id} (ungated) from {sender}: {text[:80]}")
+        self._say(
+            f"[accepted {job_id}] queued ({pending} pending); "
+            "will post completion with artifact refs",
+            max_lines=1,
+        )
 
     # --- ! command handlers ---
 
@@ -487,6 +658,8 @@ class IRCBot:
             self._cmd_todo(sender, args)
         elif cmd == "!agent":
             self._cmd_agent(sender, args)
+        elif cmd == "!jobs":
+            self._cmd_jobs(sender, args)
         else:
             self._say(f"Unknown command: {cmd} — try !help")
 
@@ -498,7 +671,12 @@ class IRCBot:
                   "!mission focus <id> | !mission show | "
                   "!mission clear | !todo add <text> | "
                   "!todo list | !todo done <id> | "
-                  "!agent [agent-id] | !help")
+                  "!agent [agent-id] | !jobs | !help")
+
+    def _cmd_jobs(self, _sender, _args):
+        """Show invoke queue depth for this bot."""
+        pending = self._invoke_queue.qsize()
+        self._say(f"Invoke queue: {pending} pending for {self.agent_id}", max_lines=1)
 
     def _cmd_ungate(self, sender, args):
         """Ungate a bot — it will respond to all messages, not just @mentions."""

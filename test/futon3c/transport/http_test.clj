@@ -307,6 +307,31 @@
       (is (false? (:ok parsed)))
       (is (= "agent-not-found" (:error parsed))))))
 
+(deftest invoke-includes-invoke-meta-when-available
+  (testing "POST /api/alpha/invoke includes invoke-meta from registry invoke result"
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-meta-http" :id/type :continuity}
+      :type :codex
+      :invoke-fn (fn [_prompt _session-id]
+                   {:result "done"
+                    :session-id "sess-meta-http"
+                    :execution {:executed? true
+                                :tool-events 1
+                                :command-events 1}})
+      :capabilities [:edit]})
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-meta-http"
+                                      "prompt" "ship it"})
+          response (post handler "/api/alpha/invoke" body)
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= "done" (:result parsed)))
+      (is (= "sess-meta-http" (:session-id parsed)))
+      (is (= true (get-in parsed [:invoke-meta :execution :executed?])))
+      (is (= 1 (get-in parsed [:invoke-meta :execution :tool-events])))
+      (is (= 1 (get-in parsed [:invoke-meta :execution :command-events]))))))
+
 ;; =============================================================================
 ;; POST /api/alpha/irc/send tests
 ;; =============================================================================

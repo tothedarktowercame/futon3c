@@ -746,9 +746,11 @@
                 (do
                   (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
                          (or ev-opts []))
-                  (json-response 200 {:ok true
-                                      :result (:result result)
-                                      :session-id sid}))
+                  (json-response 200 (cond-> {:ok true
+                                              :result (:result result)
+                                              :session-id sid}
+                                       (:invoke-meta result)
+                                       (assoc :invoke-meta (:invoke-meta result)))))
                 (let [err (:error result)
                       code (if (map? err) (:error/code err) :invoke-failed)
                       msg (if (map? err) (:error/message err) (str err))]
