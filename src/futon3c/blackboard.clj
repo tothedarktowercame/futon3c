@@ -405,6 +405,53 @@
         (blackboard! "*agents*" content {:width 60 :slot 0}))
       (catch Throwable _ nil))))
 
+;; -----------------------------------------------------------------------------
+;; :processes — CYDER process registry overview
+;; -----------------------------------------------------------------------------
+
+(defn format-process-status
+  "Format CYDER process registry for blackboard display.
+   Takes the output of cyder/list-processes."
+  [processes]
+  (let [now-ms (System/currentTimeMillis)
+        by-layer (group-by :process/layer processes)]
+    (str "Processes (" (count processes) " registered)\n"
+         (when-let [repls (seq (get by-layer :repl))]
+           (str "\n  REPL-like (" (count repls) ")\n"
+                (str/join "\n"
+                  (map (fn [p]
+                         (let [last-active (format-relative-time
+                                            (str (:process/last-active p))
+                                            now-ms)
+                               phase (get-in p [:process/metadata :phase])]
+                           (str "  " (:process/id p)
+                                " [" (name (:process/type p)) "]"
+                                (when phase (str " " phase))
+                                (when last-active (str " (" last-active ")")))))
+                       repls))
+                "\n"))
+         (when-let [infras (seq (get by-layer :infra))]
+           (str "\n  Infrastructure (" (count infras) ")\n"
+                (str/join "\n"
+                  (map (fn [p]
+                         (let [last-active (format-relative-time
+                                            (str (:process/last-active p))
+                                            now-ms)]
+                           (str "  " (:process/id p)
+                                " [" (name (:process/type p)) "]"
+                                (when last-active (str " (" last-active ")")))))
+                       infras))
+                "\n")))))
+
+(defn project-processes!
+  "Project CYDER process registry to the *processes* blackboard buffer."
+  [processes]
+  (when *enabled*
+    (try
+      (let [content (format-process-status processes)]
+        (blackboard! "*processes*" content {:width 60 :slot 1}))
+      (catch Throwable _ nil))))
+
 ;; =============================================================================
 ;; Evidence emission — blackboard "commits"
 ;; =============================================================================

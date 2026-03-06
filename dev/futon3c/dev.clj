@@ -57,6 +57,7 @@
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
             [futon3c.runtime.agents :as rt]
+            [futon3c.cyder :as cyder]
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
             [futon3c.transport.ws.replication :as ws-repl]
@@ -119,7 +120,7 @@
   [fn-sym]
   (try
     (require 'nonstarter.api)
-    (ns-resolve 'nonstarter.api fn-sym)
+    (some-> (ns-resolve 'nonstarter.api fn-sym) var-get)
     (catch Throwable _
       nil)))
 
@@ -1865,9 +1866,10 @@ RESPOND WITH ONLY:
                     (make-irc-send-fn "tickle-1"))
         ;; Find the issue to process
         issue (if entity-id
-                ;; Find specific entity
+                ;; Find specific entity (entity-id may be string or keyword)
                 (let [entities (arse-queue/load-arse-entities)
-                      idx (.indexOf (mapv :entity-id entities) entity-id)]
+                      eid-str (if (keyword? entity-id) (name entity-id) (str entity-id))
+                      idx (.indexOf (mapv :entity-id-str entities) eid-str)]
                   (when (>= idx 0)
                     (arse-queue/entity->issue (nth entities idx) idx)))
                 ;; Next unprocessed (highest severity)
@@ -3036,6 +3038,15 @@ RESPOND WITH ONLY:
                   :irc-interceptor (when irc-sys
                                      (:irc-interceptor (:relay-bridge irc-sys)))})
         _ (reset! !f3c-sys f3c-sys)
+        ;; CYDER: register futon3c HTTP+WS server
+        _ (when f3c-sys
+            (cyder/register!
+             {:id "futon3c-http"
+              :type :server
+              :stop-fn (or (:server f3c-sys) (fn []))
+              :state-fn #(let [s @!f3c-sys]
+                           {:port (:port s)
+                            :ws-connections (count (some-> s :ws-connections deref))})}))
         ;; Auto-join agents to #futon when they complete WS handshake
         _ (when (and irc-sys (:ws-connections f3c-sys))
             (install-irc-auto-join!
@@ -3226,11 +3237,36 @@ RESPOND WITH ONLY:
         _ (reset! !evidence-store evidence-store)
         _ (mcs/configure! {:evidence-store evidence-store
                            :repos mcb/default-repo-roots})
+        ;; CYDER: register futon1a
+        _ (cyder/register!
+           {:id "futon1a"
+            :type :server
+            :stop-fn (:stop! f1-sys)
+            :state-fn #(let [s @!f1-sys]
+                         {:port (:http/port s)
+                          :direct-xtdb? direct-xtdb?})})
         ;; futon5 nonstarter heartbeat API (portfolio bid/clear persistence)
         f5-sys (start-futon5!)
+        ;; CYDER: register futon5 (if started)
+        _ (when f5-sys
+            (cyder/register!
+             {:id "futon5"
+              :type :server
+              :stop-fn (or (nonstarter-fn 'stop!) (fn []))
+              :state-fn #(do {:port (env-int "FUTON5_PORT" 7072)})}))
         ;; IRC relay bridge + server (independent of agent layer)
         irc-sys (start-irc! evidence-store role)
         _ (reset! !irc-sys irc-sys)
+        ;; CYDER: register IRC server (if started)
+        _ (when irc-sys
+            (cyder/register!
+             {:id "irc-server"
+              :type :server
+              :stop-fn (or (get-in irc-sys [:server :stop-fn])
+                           (fn []))
+              :state-fn #(let [s @!irc-sys]
+                           {:port (:port s)
+                            :relay-bridge? (boolean (:relay-bridge s))})}))
         ;; Agent layer: WS transport + Claude/Codex + dispatch relays
         ;; Uses start-agents! so it can be restarted independently via REPL
         _ (start-agents!)
@@ -3238,6 +3274,14 @@ RESPOND WITH ONLY:
         _ (when (env-bool "FUTON3C_TICKLE_AUTOSTART" false)
             (start-tickle! {:auto-restart? true}))
         bridge-sys (start-drawbridge!)
+        ;; CYDER: register drawbridge (if started)
+        _ (when bridge-sys
+            (cyder/register!
+             {:id "drawbridge"
+              :type :server
+              :stop-fn (or (:stop bridge-sys) (fn []))
+              :state-fn #(do {:port (:port bridge-sys)
+                              :bind (:bind bridge-sys)})}))
         ;; Federation: configure peers and install announcement hook
         _ (federation/configure-from-env!)
         _ (federation/install-hook!)
@@ -3247,11 +3291,22 @@ RESPOND WITH ONLY:
             (when-let [agent-record (reg/get-agent typed-id)]
               (federation/announce! agent-record)))
         fed-peers (federation/peers)
-        fed-self (federation/self-url)]
+        fed-self (federation/self-url)
+        ;; CYDER: register active missions from holes/missions/
+        mission-count (cyder/register-missions!)
+        ;; CYDER: project *processes* buffer on every registry change
+        _ (add-watch cyder/!processes :blackboard
+            (fn [_ _ _ _new-val]
+              (bb/project-processes!
+                (cyder/list-processes))))
+        ;; Initial projection so the buffer appears on startup
+        _ (bb/project-processes! (cyder/list-processes))]
     (println)
     (println (str "[dev] Role: " (name role)
                   " (" (:source role-info) ")"
-                  " | agents: " (count (reg/registered-agents)) " registered"))
+                  " | agents: " (count (reg/registered-agents)) " registered"
+                  " | CYDER: " (count (cyder/list-processes)) " processes"
+                  " (" mission-count " missions)"))
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")
@@ -3265,6 +3320,9 @@ RESPOND WITH ONLY:
     (println "[dev]   POST /api/alpha/evidence          — append entry")
     (println "[dev]   POST /api/alpha/agents            — register agent")
     (println "[dev]   GET  /api/alpha/agents            — list agents")
+    (println "[dev]   GET  /api/alpha/processes         — CYDER: list processes")
+    (println "[dev]   GET  /api/alpha/processes/:id     — CYDER: inspect process")
+    (println "[dev]   DELETE /api/alpha/processes/:id   — CYDER: stop process")
     (println "[dev]   POST /api/alpha/portfolio/step    — AIF portfolio step")
     (println "[dev]   POST /api/alpha/portfolio/heartbeat — weekly heartbeat")
     (println "[dev]   GET  /api/alpha/portfolio/state   — portfolio belief state")
@@ -3326,6 +3384,9 @@ RESPOND WITH ONLY:
       ^Runnable
       (fn []
         (println "\n[dev] Shutting down...")
+        ;; CYDER: remove watch and deregister all (don't call stop-fns — shutdown does that below)
+        (remove-watch cyder/!processes :blackboard)
+        (reset! cyder/!processes {})
         ;; Agent layer (WS + codex bridge + tickle)
         (stop-agents!)
         ;; Drawbridge

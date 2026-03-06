@@ -1,6 +1,6 @@
 # Mission: CYDER — Cybernetic Development Environment that Rocks
 
-## Status: IDENTIFY
+## Status: Phase 0 DONE, Phase 1 scoped
 
 ## Motivation
 
@@ -347,7 +347,7 @@ structure. CYDER surfaces it.
    `*futon-agents*`)
 5. Jack-in: `GET /api/alpha/processes/:id` returns full mission state
 
-### Phase 1: Infrastructure Layer
+### Phase 1: Infrastructure Layer + Push-Based Status
 
 Extend the registry to servers, bridges, and daemons (Layer 2). These
 don't need jack-in or stepping — just list/inspect/stop.
@@ -356,6 +356,24 @@ don't need jack-in or stepping — just list/inspect/stop.
 - Retrofit: codex WS bridge, dispatch relay, IRC relay bridge
 - Retrofit: tickle watchdog, tickle conductor
 - `DELETE /api/alpha/processes/:id` to stop any process
+- Push-based status updates via WS events (not just polling). The
+  `*futon-agents*` buffer currently polls, which means fast state
+  transitions (e.g. `:idle` → `:invoking` → `:idle` within one poll
+  interval) are invisible. CYDER should emit lifecycle events
+  (registered, stopped, state-changed) over the existing WS transport
+  so Emacs buffers can update in real time. This also applies retroactively
+  to the agents buffer — the agent status display has the same polling
+  blind spot.
+
+  **Evidence (2026-03-06)**: claude-2's `*agents*` buffer never showed
+  `:invoking` during a conversation turn. The code path is correct:
+  `handle-invoke` → `reg/invoke-agent!` → `mark-invoking!` (sets
+  `:agent/status :invoking`, projects to blackboard) → invoke-fn →
+  `mark-idle!`. But the invoke completes within a single poll interval,
+  so the transition is invisible. This is exactly the cybernetic blind
+  spot CYDER exists to close — the system state changed, but the
+  observation surface couldn't see it. Push-based events (WS lifecycle
+  frames) would make every transition visible regardless of speed.
 
 ### Phase 2: Full Jack-In Protocol
 
@@ -419,11 +437,160 @@ peripheral session, observe its state live, optionally step it.
    could use the same buffer model (one buffer per jacked-in process)
    or a dedicated inspector buffer. TBD based on what feels natural.
 
-## Files (Anticipated)
+## ARGUE
+
+### Why This Design, Not Just Any Design
+
+The registry-with-functions shape (`{:stop-fn f :state-fn f :step-fn f}`)
+is the only design that satisfies all five proposed invariants simultaneously.
+A process table (PIDs, polling) would give I-6/I-7/I-9 but not I-8 or I-10
+— you could list and kill, but not inspect live state or step. A supervision
+tree (Erlang-style) would add restart semantics we explicitly scoped out,
+and would force every registrant into an OTP-like protocol. The
+functions-in-a-map approach lets each process define its own observability
+surface without conforming to a framework. Registration is voluntary and
+additive: existing code keeps its atoms and stop patterns; CYDER wraps them
+with a uniform lookup.
+
+The deeper reason this is right: CYDER doesn't *manage* processes, it
+*observes* them. The cybernetic claim from IDENTIFY is that a system that
+can't observe itself can't regulate itself. The registry is an observation
+surface, not a control plane. Stop and step are actions available *through*
+the observation surface, not the surface's primary purpose. This is why
+`state-fn` matters more than `stop-fn` for the design's coherence — the
+tickle incident wasn't fundamentally about stopping (we eventually did stop
+it), it was about not being able to *see* what was running.
+
+### Pattern References
+
+Three patterns from `futon3/library/realtime/` informed the design:
+
+**liveness-heartbeats**: The `touch!` function and `:process/last-active`
+timestamp are a minimal heartbeat. The pattern warns that "liveness without
+sequence context does not distinguish quiet from partitioned." Phase 0
+uses timestamps (sufficient for human observation); Phase 1 should add
+sequence numbers if we need automated stale-process detection.
+
+**listener-leases**: The duplicate-registration rejection (`register!`
+returns error on duplicate ID) prevents phantom process handles. The
+pattern's concern — "multiple listener instances can be active without
+clarity about which is authoritative" — maps directly to the restart
+scenario: if a server restarts, the old entry must be explicitly
+deregistered before re-registering. This is deliberate friction that
+forces the operator to acknowledge state transitions rather than silently
+overwriting.
+
+**learn-as-you-go**: The tickle incident *is* this pattern. CYDER exists
+because that incident surfaced an implicit assumption (that ad-hoc atoms
+are adequate lifecycle management). The mission doc itself is the pattern
+application — capturing what failed and deriving infrastructure from it.
+
+### Theoretical Coherence
+
+The IDENTIFY phase anchored on cybernetics: observation enables regulation.
+The DERIVE phase preserved this. The two-layer model (`:repl` vs `:infra`)
+maps cleanly to the two cybernetic operations: observation (both layers)
+and intervention (stepping, which only makes sense for loops). The
+`*futon-agents*` buffer already proves that making things visible makes
+them manageable — CYDER generalizes the mechanism, not the concept.
+
+One shift from IDENTIFY to DERIVE: the mission doc proposed typed process
+IDs (like `TypedAgentId`). The derivation uses plain strings. This is
+deliberate — processes don't have the identity/transport/continuity
+distinction that agents have. A process ID is a name, not a routed address.
+If federation later requires typed process IDs, that's a Phase 2 concern.
+
+### Trade-off Summary
+
+**Gave up: automatic restart / supervision.** Processes register a stop-fn,
+not a start-fn. If something dies, CYDER can observe that it's gone (via
+deregistration or stale `last-active`), but it won't restart it. This is
+correct for Phase 0 — supervision is a different problem with different
+invariants (idempotent restart, crash-loop detection, dependency ordering).
+Adding it now would conflate observation with control.
+
+**Gave up: historical process log.** CYDER is present-tense: what's running
+*now*. Process lifecycle events (started, stopped, crashed) aren't persisted
+to the evidence store. This means you can't ask "what was running at 3am
+when things went wrong?" That's valuable but is a Phase 2 integration with
+the evidence store, not a Phase 0 concern.
+
+**Gave up: Malli validation on registration.** The agent registry validates
+records against shapes. CYDER uses `:pre` assertions. This is adequate for
+an internal API where all callers are in `dev.clj`, but should be revisited
+if registration moves to HTTP.
+
+### Generalization Notes
+
+The registry pattern generalizes beyond futon3c. Any system with
+heterogeneous long-running components (microservices, plugin hosts, notebook
+kernels) faces the same problem: you can start things but you can't see
+what's running. The functions-in-a-map shape is intentionally generic —
+it doesn't depend on Clojure atoms, futon types, or any specific process
+model. A Python or Rust implementation would use the same shape with
+different storage.
+
+The two-layer distinction (steppable loops vs non-steppable infrastructure)
+also generalizes. It's the difference between a REPL and a daemon, which
+is a universal distinction in systems programming. The insight that
+peripherals are REPLs (read/eval/print = start/step/stop) would apply to
+any system with modal interactive subsystems.
+
+What would need to change for other contexts: the HTTP surface assumes a
+single-process registry (one atom). A distributed version would need
+consensus or at least crdt-like merge for `last-active` timestamps.
+Federation (already present in the agent layer) sketches how this might
+work — announce registrations to peers — but distributed process
+registries are a known hard problem (Consul, etcd) and we shouldn't
+reinvent them.
+
+## Phase 0 Status
+
+All 5 concrete steps are implemented:
+
+1. **Process registry** — `src/futon3c/cyder.clj`: register!/deregister!/
+   list-processes/inspect/stop!/stop-all!/step!/touch!/registry-status.
+   Plus mission scanner: scan-missions/register-missions!
+2. **Mission-aware state-fn** — `parse-mission-doc` reads `## Status:` and
+   `## Open Questions` from M-*.md files. state-fn re-reads live on each
+   inspect call. Active missions (non-DONE/CLOSED) auto-registered as
+   `:state-machine` / `:repl` layer processes.
+3. **HTTP endpoints** — `src/futon3c/transport/http.clj`:
+   - `GET /api/alpha/processes` — list all
+   - `GET /api/alpha/processes/:id` — inspect (includes live state)
+   - `DELETE /api/alpha/processes/:id` — stop + deregister
+   - `POST /api/alpha/processes/:id/step` — single-step
+4. **Emacs buffer** — `*processes*` blackboard buffer (slot 1, next to
+   `*agents*` in slot 0). Projected via atom watch on `cyder/!processes`,
+   formatted by `bb/format-process-status`. Shows REPL-like processes
+   (missions with phase) and Infrastructure (servers) in separate sections.
+5. **Jack-in** — `inspect` returns full mission state including live phase
+   and open questions from the doc.
+
+### Infrastructure registered on startup (dev.clj)
+
+| Process | Type | Layer |
+|---------|------|-------|
+| futon3c-http | :server | :infra |
+| futon1a | :server | :infra |
+| futon5 | :server | :infra |
+| irc-server | :server | :infra |
+| drawbridge | :server | :infra |
+| M-cyder, M-proof-peripheral, etc. | :state-machine | :repl |
+
+### Test coverage
+
+17 tests, 41 assertions (all pass). Covers: registration, duplicate
+rejection, deregistration, inspection with state-fn, list-processes JSON
+safety, stop lifecycle, stop-all, stepping, registry-status shape,
+mission scanning, mission registration.
+
+## Files
 
 | File | Purpose |
 |------|---------|
-| `src/futon3c/cyder.clj` | Process registry (register/deregister/list/inspect/stop) |
+| `src/futon3c/cyder.clj` | Process registry + mission scanner |
 | `src/futon3c/transport/http.clj` | HTTP routes for `/api/alpha/processes` |
-| `test/futon3c/cyder_test.clj` | Registry + lifecycle tests |
-| `dev/futon3c/dev.clj` | Retrofit: register existing runnables on startup |
+| `src/futon3c/blackboard.clj` | `format-process-status` + `project-processes!` |
+| `test/futon3c/cyder_test.clj` | Registry + lifecycle + mission scanner tests |
+| `dev/futon3c/dev.clj` | Retrofit: register servers + missions on startup |
