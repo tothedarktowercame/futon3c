@@ -19,6 +19,12 @@ if errorlevel 1 (
   1>&2 echo [run-clojure-windows] ERROR: unable to create FUTON1A_DATA_DIR=%FUTON1A_DATA_DIR%
   exit /b 1
 )
+if not defined GITLIBS set "GITLIBS=%REPO_ROOT%\.gitlibs"
+if not exist "%GITLIBS%" mkdir "%GITLIBS%" >nul 2>nul
+if errorlevel 1 (
+  1>&2 echo [run-clojure-windows] ERROR: unable to create GITLIBS=%GITLIBS%
+  exit /b 1
+)
 set "CLJ_CONFIG=%REPO_ROOT%\.clj-config"
 if not exist "%CLJ_CONFIG%" mkdir "%CLJ_CONFIG%" >nul 2>nul
 if errorlevel 1 (
