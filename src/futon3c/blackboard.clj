@@ -411,11 +411,11 @@
 
 (defn format-process-status
   "Format CYDER process registry for blackboard display.
-   Takes the output of cyder/list-processes."
-  [processes]
+   Takes raw registry entries (with :process/state-fn) so it can read live state."
+  [registry-entries]
   (let [now-ms (System/currentTimeMillis)
-        by-layer (group-by :process/layer processes)]
-    (str "Processes (" (count processes) " registered)\n"
+        by-layer (group-by :process/layer registry-entries)]
+    (str "Processes (" (count registry-entries) " registered)\n"
          (when-let [repls (seq (get by-layer :repl))]
            (str "\n  REPL-like (" (count repls) ")\n"
                 (str/join "\n"
@@ -423,7 +423,9 @@
                          (let [last-active (format-relative-time
                                             (str (:process/last-active p))
                                             now-ms)
-                               phase (get-in p [:process/metadata :phase])]
+                               phase (or (when-let [sf (:process/state-fn p)]
+                                           (try (:phase (sf)) (catch Exception _ nil)))
+                                         (get-in p [:process/metadata :phase]))]
                            (str "  " (:process/id p)
                                 " [" (name (:process/type p)) "]"
                                 (when phase (str " " phase))
@@ -444,11 +446,12 @@
                 "\n")))))
 
 (defn project-processes!
-  "Project CYDER process registry to the *processes* blackboard buffer."
-  [processes]
+  "Project CYDER process registry to the *processes* blackboard buffer.
+   Reads raw registry entries (not list-processes) so state-fn can provide live data."
+  [registry-entries]
   (when *enabled*
     (try
-      (let [content (format-process-status processes)]
+      (let [content (format-process-status registry-entries)]
         (blackboard! "*processes*" content {:width 60 :slot 1}))
       (catch Throwable _ nil))))
 
