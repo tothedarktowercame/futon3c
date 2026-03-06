@@ -279,6 +279,7 @@ class IRCBot:
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
         self._job_seq = 0
         self._job_seq_lock = threading.Lock()
+        self._send_lock = threading.Lock()
         self._worker = threading.Thread(
             target=self._invoke_worker_loop,
             name=f"{self.nick}-invoke-worker",
@@ -394,7 +395,13 @@ class IRCBot:
 
     def _send(self, line):
         """Send a raw IRC line."""
-        self.sock.sendall((line + "\r\n").encode("utf-8"))
+        payload = (line + "\r\n").encode("utf-8")
+        # Multiple worker/command threads can write concurrently; serialize
+        # socket writes so IRC commands are never interleaved mid-line.
+        with self._send_lock:
+            if self.sock is None:
+                raise ConnectionError("IRC socket is not connected")
+            self.sock.sendall(payload)
 
     def _readline(self):
         """Read one IRC line from the socket."""
