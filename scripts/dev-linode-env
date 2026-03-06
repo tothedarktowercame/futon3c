@@ -44,4 +44,24 @@ if [[ -n "${FUTON3C_LAPTOP_URL:-}" && -z "${FUTON3C_PEERS:-}" ]]; then
   export FUTON3C_PEERS="${FUTON3C_LAPTOP_URL}"
 fi
 
+# --- Emacs daemon socket auto-detection (for blackboard) ---
+if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
+  _emacs_dir="/run/user/$(id -u)/emacs"
+  if [[ -d "$_emacs_dir" ]]; then
+    _sockets=("$_emacs_dir"/*)
+    if [[ ${#_sockets[@]} -eq 1 && -S "${_sockets[0]}" ]]; then
+      export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
+    elif [[ ${#_sockets[@]} -gt 1 ]]; then
+      # Multiple daemons — pick the most recently modified socket
+      _newest="$(ls -t "$_emacs_dir" | head -1)"
+      if [[ -n "$_newest" ]]; then
+        export FUTON3C_EMACS_SOCKET="$_newest"
+      fi
+    fi
+  fi
+  if [[ -n "${FUTON3C_EMACS_SOCKET:-}" ]]; then
+    echo "[dev] Emacs socket: ${FUTON3C_EMACS_SOCKET}"
+  fi
+fi
+
 exec make dev "$@"

@@ -21,10 +21,13 @@ Environment variables:
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
 
+import atexit
+import fcntl
 import json
 import os
 import queue
 import re
+import signal
 import socket
 import sys
 import threading
@@ -131,6 +134,65 @@ INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not
 CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! commands
 INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
 
+# --- Health / PID file ---
+_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+PIDFILE = os.path.join(_RUNTIME_DIR, "ngircd-bridge.pid")
+HEALTH_FILE = os.path.join(_RUNTIME_DIR, "ngircd-bridge-health.json")
+HEALTH_INTERVAL = 30  # seconds between health file writes
+
+
+def acquire_pidfile():
+    """Acquire exclusive lock on PID file. Exit if another instance running."""
+    # Open r+/create without truncating so we can read existing PID on failure
+    if not os.path.exists(PIDFILE):
+        open(PIDFILE, "w").close()
+    fd = open(PIDFILE, "r+")
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        try:
+            existing_pid = fd.read().strip() or "unknown"
+        except Exception:
+            existing_pid = "unknown"
+        print(
+            f"Another bridge instance is running (PID {existing_pid}). Exiting.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    fd.seek(0)
+    fd.truncate()
+    fd.write(str(os.getpid()) + "\n")
+    fd.flush()
+    return fd  # keep open — lock auto-releases on process death
+
+
+def _cleanup():
+    """Remove health and PID files on clean shutdown."""
+    for path in [HEALTH_FILE, PIDFILE]:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+atexit.register(_cleanup)
+signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # triggers atexit
+
+
+def sd_notify(state):
+    """Send sd_notify state if running under systemd."""
+    addr = os.environ.get("NOTIFY_SOCKET")
+    if not addr:
+        return
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    try:
+        if addr.startswith("@"):
+            addr = "\0" + addr[1:]
+        sock.sendto(state.encode(), addr)
+    finally:
+        sock.close()
+
+
 ARTIFACT_REF_PATTERNS = [
     re.compile(r"https?://github\.com/\S+/(?:pull|issues)/\d+", re.IGNORECASE),
     re.compile(r"\bPR\s*#\d+\b", re.IGNORECASE),
@@ -194,6 +256,7 @@ class IRCBot:
 
     def __init__(self, nick, agent_id, channel, host, port, password,
                  handle_commands=False):
+        self.desired_nick = nick  # the nick we want
         self.nick = nick
         self.agent_id = agent_id
         self.channel = channel
@@ -204,6 +267,7 @@ class IRCBot:
         self.buf = ""
         self.handle_commands = handle_commands
         self.focused_mission = None
+        self.connected = False
         self._invoking = threading.Lock()
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
         self._job_seq = 0
@@ -214,6 +278,47 @@ class IRCBot:
             daemon=True,
         )
         self._worker.start()
+
+    def health_snapshot(self):
+        """Return a dict summarising this bot's health."""
+        return {
+            "desired_nick": self.desired_nick,
+            "current_nick": self.nick,
+            "nick_ok": self.nick == self.desired_nick,
+            "agent_id": self.agent_id,
+            "connected": self.connected,
+            "queue_depth": self._invoke_queue.qsize(),
+            "queue_max": INVOKE_QUEUE_MAX,
+            "handle_commands": self.handle_commands,
+        }
+
+    def _is_brief(self, text):
+        """True when the message looks like casual IRC chat, not a task."""
+        stripped = text.strip()
+        return (len(stripped) < 100
+                and "```" not in stripped
+                and "\n" not in stripped)
+
+    def _surface_context(self, sender, mission_part, brief):
+        """Build the surface contract header for an IRC invoke."""
+        if brief:
+            return (
+                f"[Surface: IRC | Channel: {self.channel} | "
+                f"Speaker: {sender}{mission_part} | Mode: brief | "
+                f"This is casual IRC chat. Respond in 1-2 short lines. "
+                f"Your reply will be posted to {self.channel} as <{self.nick}>.]"
+            )
+        return (
+            f"[Surface: IRC | Channel: {self.channel} | "
+            f"Speaker: {sender}{mission_part} | Mode: task | "
+            f"Your completion update will be posted to {self.channel} as <{self.nick}>. "
+            "Execute work asynchronously, then return a short status with artifact refs "
+            "(commit/PR/issue/file path). "
+            "To post progress mid-task: "
+            f'curl -s -X POST {INVOKE_BASE}/api/alpha/irc/send '
+            '-H "Content-Type: application/json" '
+            f'-d \'{{"channel":"{self.channel}","from":"{self.nick}","text":"..."}}\']'
+        )
 
     def _agent_status(self):
         """Fetch this bot agent's status from Agency."""
@@ -277,6 +382,7 @@ class IRCBot:
                 raise ConnectionError(f"Server error: {' '.join(params)}")
 
         self._send(f"JOIN {self.channel}")
+        self.connected = True
         log(self.nick, f"Joined {self.channel}")
 
     def _send(self, line):
@@ -376,10 +482,13 @@ class IRCBot:
                     return refs
         return refs
 
-    def _summarize_invoke_result(self, result_text):
-        """Return a short IRC-safe summary with artifact refs when available."""
+    def _summarize_invoke_result(self, result_text, clean=False):
+        """Return a short IRC-safe summary with artifact refs when available.
+        If clean=True, return the text without artifact ref annotations."""
         text = self._sanitize_for_irc(result_text or "")
         compact = re.sub(r"\s+", " ", text).strip()
+        if clean:
+            return self._truncate(compact, max_len=400) if compact else "[no response]"
         refs = self._extract_artifact_refs(text)
         if compact.startswith("{") or compact.startswith("["):
             summary = "Structured output generated."
@@ -445,20 +554,27 @@ class IRCBot:
                 with self._invoking:
                     response = self._invoke_agent(prompt, sender, mission_id=mission_id)
                 if response.get("ok"):
-                    summary = self._summarize_invoke_result(response.get("result", ""))
-                    stats = self._execution_stats(response.get("invoke_meta"))
-                    if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-                        self._say(
-                            f"[needs-artifacts {job_id}] no execution evidence "
-                            f"(tool-events={stats['tool_events']}, command-events={stats['command_events']})",
-                            max_lines=2,
-                        )
-                        continue
-                    sid = response.get("session_id")
-                    if sid:
-                        self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)
+                    # Claude: clean output (no [done]/[accepted] framing)
+                    # Codex: full framing with artifact refs and session IDs
+                    is_claude = self.nick.startswith("claude")
+                    if is_claude:
+                        summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
+                        self._say(summary, max_lines=4)
                     else:
-                        self._say(f"[done {job_id}] {summary}", max_lines=2)
+                        summary = self._summarize_invoke_result(response.get("result", ""))
+                        stats = self._execution_stats(response.get("invoke_meta"))
+                        if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
+                            self._say(
+                                f"[needs-artifacts {job_id}] no execution evidence "
+                                f"(tool-events={stats['tool_events']}, command-events={stats['command_events']})",
+                                max_lines=2,
+                            )
+                            continue
+                        sid = response.get("session_id")
+                        if sid:
+                            self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)
+                        else:
+                            self._say(f"[done {job_id}] {summary}", max_lines=2)
                 else:
                     err = self._truncate(response.get("error", "unknown invoke error"), max_len=220)
                     self._say(f"[failed {job_id}] {err}", max_lines=2)
@@ -623,13 +739,8 @@ class IRCBot:
         mission_part = ""
         if self.focused_mission:
             mission_part = f" | Focused Mission: {self.focused_mission}"
-        surface_context = (
-            f"[Surface: IRC | Channel: {self.channel} | "
-            f"Speaker: {sender}{mission_part} | "
-            f"Your completion update will be posted to {self.channel} as <{self.nick}>. "
-            "Execute work asynchronously, then return a short status with artifact refs "
-            "(commit/PR/issue/file path).]"
-        )
+        brief = self._is_brief(prompt_text)
+        surface_context = self._surface_context(sender, mission_part, brief)
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
         job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission)
@@ -638,12 +749,14 @@ class IRCBot:
             log(self.nick, f"Queue full — dropping invocation from {sender}")
             return
         pending = self._invoke_queue.qsize()
-        log(self.nick, f"Queued {job_id} from {sender}: {prompt_text[:80]}")
-        self._say(
-            f"[accepted {job_id}] queued ({pending} pending); "
-            "will post completion with artifact refs",
-            max_lines=1,
-        )
+        mode = "brief" if brief else "task"
+        log(self.nick, f"Queued {job_id} ({mode}) from {sender}: {prompt_text[:80]}")
+        # Claude: no [accepted] noise — just process silently
+        if not self.nick.startswith("claude"):
+            self._say(
+                f"[accepted {job_id}] queued ({pending} pending)",
+                max_lines=1,
+            )
 
     def _handle_ungated(self, sender, text):
         """Process an ungated message: queue invoke and ack immediately."""
@@ -653,13 +766,8 @@ class IRCBot:
         mission_part = ""
         if self.focused_mission:
             mission_part = f" | Focused Mission: {self.focused_mission}"
-        surface_context = (
-            f"[Surface: IRC | Channel: {self.channel} | "
-            f"Speaker: {sender}{mission_part} | "
-            f"Your completion update will be posted to {self.channel} as <{self.nick}>. "
-            "Execute work asynchronously, then return a short status with artifact refs "
-            "(commit/PR/issue/file path).]"
-        )
+        brief = self._is_brief(text)
+        surface_context = self._surface_context(sender, mission_part, brief)
         full_prompt = f"{surface_context}\n\n{sender}: {text}"
 
         job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission)
@@ -668,12 +776,13 @@ class IRCBot:
             log(self.nick, f"Queue full — dropping ungated invocation from {sender}")
             return
         pending = self._invoke_queue.qsize()
-        log(self.nick, f"Queued {job_id} (ungated) from {sender}: {text[:80]}")
-        self._say(
-            f"[accepted {job_id}] queued ({pending} pending); "
-            "will post completion with artifact refs",
-            max_lines=1,
-        )
+        mode = "brief" if brief else "task"
+        log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender}: {text[:80]}")
+        if not self.nick.startswith("claude"):
+            self._say(
+                f"[accepted {job_id}] queued ({pending} pending)",
+                max_lines=1,
+            )
 
     # --- ! command handlers ---
 
@@ -1003,6 +1112,25 @@ class IRCBot:
                     if cmd == "PING":
                         pong_arg = params[0] if params else ""
                         self._send(f"PONG :{pong_arg}")
+                        # Try to reclaim desired nick on each PING cycle
+                        if self.nick != self.desired_nick:
+                            self._send(f"NICK {self.desired_nick}")
+
+                    elif cmd == "NICK" and prefix:
+                        # Server confirmed our nick change
+                        new_nick = params[0] if params else ""
+                        old_nick = prefix.split("!")[0] if "!" in prefix else prefix
+                        if old_nick == self.nick and new_nick:
+                            log(self.nick, f"Nick changed to {new_nick}")
+                            self.nick = new_nick
+
+                    elif cmd == "QUIT" and prefix:
+                        # Someone quit — if it was our desired nick, reclaim
+                        quitter = prefix.split("!")[0] if "!" in prefix else prefix
+                        if (quitter == self.desired_nick
+                                and self.nick != self.desired_nick):
+                            log(self.nick, f"{quitter} quit, reclaiming nick")
+                            self._send(f"NICK {self.desired_nick}")
 
                     elif cmd == "PRIVMSG" and len(params) >= 2:
                         target = params[0]
@@ -1045,6 +1173,7 @@ class IRCBot:
                 traceback.print_exc()
 
             # Reconnect
+            self.connected = False
             if self.sock:
                 try:
                     self.sock.close()
@@ -1056,7 +1185,30 @@ class IRCBot:
             time.sleep(RECONNECT_DELAY)
 
 
+def _write_health(bots, started_at):
+    """Atomically write bridge health JSON to HEALTH_FILE."""
+    health = {
+        "pid": os.getpid(),
+        "started_at": started_at,
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "invoke_base": INVOKE_BASE,
+        "irc_host": IRC_HOST,
+        "irc_port": IRC_PORT,
+        "channel": IRC_CHANNEL,
+        "bots": [b.health_snapshot() for b in bots],
+    }
+    tmp = HEALTH_FILE + ".tmp"
+    try:
+        with open(tmp, "w") as f:
+            json.dump(health, f)
+        os.replace(tmp, HEALTH_FILE)
+    except Exception as e:
+        log("bridge", f"Health file write failed: {e}")
+
+
 def main():
+    _pidfile_fd = acquire_pidfile()  # noqa: F841 — must stay open
+
     nick_to_agent = {
         "claude": "claude-1",
         "codex": "codex-1",
@@ -1083,6 +1235,8 @@ def main():
         print("No bots configured. Set BRIDGE_BOTS env var.", file=sys.stderr)
         sys.exit(1)
 
+    started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
     print(
         f"Starting ngircd bridge: {[b.nick for b in bots]} → {INVOKE_BASE} "
         f"(source: {INVOKE_BASE_SOURCE})"
@@ -1097,10 +1251,14 @@ def main():
         threads.append(t)
         time.sleep(0.5)  # stagger connections
 
-    # Wait for all threads (they run forever with reconnect)
+    sd_notify("READY=1")
+
+    # Health-write loop (replaces plain sleep)
     try:
         while True:
-            time.sleep(60)
+            _write_health(bots, started_at)
+            sd_notify("WATCHDOG=1")
+            time.sleep(HEALTH_INTERVAL)
     except KeyboardInterrupt:
         print("\nShutting down bridge...")
         sys.exit(0)
