@@ -2263,6 +2263,38 @@ RESPOND WITH ONLY:
       (str mins "m" s "s")
       (str secs "s"))))
 
+(defn- codex-fallback-event-summary
+  "Best-effort human summary when codex-cli/event->activity is nil."
+  [evt]
+  (let [evt-type (:type evt)]
+    (cond
+      (= "thread.started" evt-type)
+      (str "thread.started session="
+           (or (:thread_id evt) (:session_id evt) "?"))
+
+      (= "turn.failed" evt-type)
+      (str "turn.failed "
+           (or (get-in evt [:error :message]) "unknown error"))
+
+      (= "error" evt-type)
+      (str "error " (or (:message evt) "unknown error"))
+
+      (string? evt-type)
+      (str "event " evt-type)
+
+      :else nil)))
+
+(defn- append-trace-entry!
+  "Append one trace line while keeping only the most recent max-entries."
+  [!trace entry max-entries]
+  (swap! !trace
+         (fn [entries]
+           (let [next (conj entries entry)
+                 n (count next)]
+             (if (> n max-entries)
+               (subvec next (- n max-entries))
+               next)))))
+
 (defn- detect-file-changes
   "Check data/proof-state/*.edn for recent modifications.
    Returns a string describing changes, or nil."
@@ -2305,10 +2337,21 @@ RESPOND WITH ONLY:
                             ;; Read current activity from registry
                             activity (some-> (get @reg/!registry aid-val)
                                              :agent/invoke-activity)
-                            trace-lines (when event-trace
-                                        (let [entries @event-trace]
-                                          (when (seq entries)
-                                            (str/join "\n" (take-last 20 entries)))))
+                            trace-entries (when event-trace
+                                            (let [entries @event-trace]
+                                              (when (seq entries)
+                                                (take-last 20 entries))))
+                            trace-lines (when (seq trace-entries)
+                                          (str/join "\n" trace-entries))
+                            status-line (cond
+                                          activity
+                                          (str "\nWorking... (" activity ")")
+
+                                          (seq trace-entries)
+                                          "\nReceiving stream events..."
+
+                                          :else
+                                          "\nWaiting for response...")
                             content (str "Invoke: " agent-id " " spin " " elapsed-str "\n"
                                          "Session: " used-sid "\n"
                                          "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
@@ -2320,9 +2363,7 @@ RESPOND WITH ONLY:
                                            (str "Files modified: " changed-files "\n"))
                                          (when trace-lines
                                            (str "\n--- trace ---\n" trace-lines "\n"))
-                                         (if activity
-                                           (str "\nWorking... (" activity ")")
-                                           "\nWaiting for response..."))]
+                                         status-line)]
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
                         (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
@@ -2559,12 +2600,14 @@ RESPOND WITH ONLY:
         !event-trace (atom [])
         !invoke-start-ms (atom (System/currentTimeMillis))
         on-event (fn [evt]
-                   (when-let [activity (codex-cli/event->activity evt)]
-                     (try
-                       (let [ts (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))]
-                         (swap! !event-trace conj (str ts " " activity)))
-                       (catch Throwable _))
-                     (when update-activity!
+                   (let [activity (codex-cli/event->activity evt)
+                         summary (or activity (codex-fallback-event-summary evt))]
+                     (when summary
+                       (try
+                         (let [ts (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))]
+                           (append-trace-entry! !event-trace (str ts " " summary) 200))
+                         (catch Throwable _)))
+                     (when (and update-activity! activity)
                        (try
                          (update-activity! aid-val activity)
                          (catch Throwable _)))))
@@ -2639,7 +2682,6 @@ RESPOND WITH ONLY:
                                  :session-id (or final-sid used-sid)
                                  :tags ["invoke-complete"])
           ;; Final blackboard update
-          (let [trace-entries @!event-trace]
           (try
             (bb/blackboard! buf-name
                             (str "Invoke: " agent-id " — DONE"
@@ -2658,7 +2700,7 @@ RESPOND WITH ONLY:
                         " tool-events=" tool-events
                         " command-events=" command-events))
           (flush)
-          result))))))
+          result)))))
 
 ;; =============================================================================
 ;; IRC-based Codex invoke — send @codex on IRC, poll for [done] response
