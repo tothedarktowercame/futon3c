@@ -19,23 +19,55 @@ MAX_SESSIONS="${CLAUDE_PICKER_MAX:-12}"
 evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
 session_file="${CLAUDE_SESSION_FILE:-/tmp/futon-session-id}"
 emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
+# Walk process tree to find an ancestor Emacs daemon.
+# Returns the daemon name (socket name) or empty string.
+find_ancestor_emacs() {
+  local pid=$$
+  while [[ "$pid" -gt 1 ]]; do
+    # /proc/PID/stat has comm in parens which may contain spaces;
+    # strip everything through the last ')' then grab field 2 (= PPID)
+    local stat_file="/proc/${pid}/stat"
+    [[ -f "$stat_file" ]] || break
+    local ppid
+    ppid=$(sed 's/.*) //' "$stat_file" 2>/dev/null | awk '{print $2}') || break
+    [[ -n "${ppid:-}" && "$ppid" -gt 0 ]] 2>/dev/null || break
+    local cmdline="/proc/${ppid}/cmdline"
+    if [[ -f "$cmdline" ]]; then
+      # cmdline is null-separated; convert to spaces for matching
+      local cmd
+      cmd=$(tr '\0' ' ' < "$cmdline" 2>/dev/null) || true
+      if [[ "${cmd:-}" =~ emacs.*--daemon=([^ ]+) ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return 0
+      fi
+    fi
+    pid="$ppid"
+  done
+  return 1
+}
+
 # Auto-detect Emacs daemon socket if not already set.
-# Priority: FUTON3C_EMACS_SOCKET > EMACS_SOCKET_NAME > single socket > error.
-# With multiple sockets, never guess — require explicit selection.
+# Priority: FUTON3C_EMACS_SOCKET > EMACS_SOCKET_NAME > ancestor process > single socket > error.
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   if [[ -n "${EMACS_SOCKET_NAME:-}" ]]; then
     # Shell was spawned from Emacs — use its socket
     FUTON3C_EMACS_SOCKET="${EMACS_SOCKET_NAME}"
   else
-    _emacs_dir="/run/user/$(id -u)/emacs"
-    if [[ -d "$_emacs_dir" ]]; then
-      _sockets=("$_emacs_dir"/*)
-      if [[ ${#_sockets[@]} -eq 1 && -S "${_sockets[0]}" ]]; then
-        FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
-      elif [[ ${#_sockets[@]} -gt 1 ]]; then
-        echo "Multiple Emacs daemons detected: $(ls "$_emacs_dir" | tr '\n' ' ')" >&2
-        echo "Set FUTON3C_EMACS_SOCKET or run from an Emacs shell (EMACS_SOCKET_NAME)." >&2
-        exit 1
+    # Try to find ancestor Emacs daemon in process tree
+    _ancestor_daemon=$(find_ancestor_emacs || true)
+    if [[ -n "$_ancestor_daemon" ]]; then
+      FUTON3C_EMACS_SOCKET="$_ancestor_daemon"
+    else
+      _emacs_dir="/run/user/$(id -u)/emacs"
+      if [[ -d "$_emacs_dir" ]]; then
+        _sockets=("$_emacs_dir"/*)
+        if [[ ${#_sockets[@]} -eq 1 && -S "${_sockets[0]}" ]]; then
+          FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
+        elif [[ ${#_sockets[@]} -gt 1 ]]; then
+          echo "Multiple Emacs daemons detected: $(ls "$_emacs_dir" | tr '\n' ' ')" >&2
+          echo "Set FUTON3C_EMACS_SOCKET or run from an Emacs shell (EMACS_SOCKET_NAME)." >&2
+          exit 1
+        fi
       fi
     fi
   fi
