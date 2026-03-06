@@ -2942,6 +2942,39 @@ RESPOND WITH ONLY:
           :else (str/trim (or text "")))
         enforce-irc-planning-guard)))
 
+(defn- invoke-error-text
+  "Render a stable human-readable invoke error string."
+  [resp]
+  (let [err (when (map? resp) (:error resp))]
+    (cond
+      (map? err) (or (:error/message err) (pr-str err))
+      (some? err) (str err)
+      :else "unknown invoke error")))
+
+(defn- invoke-response->irc-reply
+  "Convert invoke-agent! response map into a single IRC reply line.
+   Always returns a non-blank string."
+  [resp]
+  (let [[raw summarize?] (cond
+                           (and (map? resp) (:ok resp) (string? (:result resp)))
+                           [(:result resp) true]
+
+                           (and (map? resp) (:ok resp) (some? (:result resp)))
+                           [(pr-str (:result resp)) true]
+
+                           (and (map? resp) (:ok resp))
+                           ["[invoke completed with empty response]" false]
+
+                           :else
+                           [(str "[invoke failed] " (invoke-error-text resp)) false])
+        reply (if summarize?
+                (-> raw normalize-irc-result summarize-irc-result)
+                (truncate-with-ellipsis (str/trim (or raw "")) irc-summary-hard-limit))
+        trimmed (str/trim (or reply ""))]
+    (if (str/blank? trimmed)
+      "[invoke completed with empty response]"
+      trimmed)))
+
 (defn- irc-invoke-prompt
   "Wrap an IRC user message with explicit surface/delivery semantics."
   [{:keys [nick sender channel user-text]}]
@@ -3048,31 +3081,21 @@ RESPOND WITH ONLY:
                                          (Thread/sleep 1000)
                                          (recur (or soft-notified?
                                                     (and soft-timeout-ms
-                                                         (>= elapsed soft-timeout-ms)))))))]
-                          (if (and (:ok resp) (string? (:result resp)))
-                            (do
-                              (let [reply (-> (:result resp)
-                                              normalize-irc-result
-                                              summarize-irc-result)
-                                    reply* (if (str/blank? reply)
-                                             "[no textual response]"
-                                             reply)]
-                                ((:send-to-channel! irc-server) channel nick reply*)
-                                (println (str "[irc] " nick " → " channel " ("
-                                              (count reply*) " chars): "
-                                              (subs reply* 0 (min 120 (count reply*))))))
-                              (flush))
-                            (do
-                              (let [err-msg (if (map? (:error resp))
-                                              (or (:error/message (:error resp))
-                                                  (pr-str (:error resp)))
-                                              (str (:error resp)))]
-                                (println (str "[irc] " nick " invoke FAILED: " err-msg))
-                                ((:send-to-channel! irc-server) channel nick
-                                 (str "[invoke failed] " err-msg)))
-                              (flush))))
+                                                         (>= elapsed soft-timeout-ms)))))))
+                              reply* (invoke-response->irc-reply resp)]
+                          ((:send-to-channel! irc-server) channel nick reply*)
+                          (println (str "[irc] " nick " → " channel " ("
+                                        (count reply*) " chars): "
+                                        (subs reply* 0 (min 120 (count reply*)))))
+                          (flush))
                         (catch Exception e
                           (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
+                          (try
+                            ((:send-to-channel! irc-server) channel nick
+                             (str "[invoke dispatch error] " (.getMessage e)))
+                            (catch Exception send-e
+                              (println (str "[irc] " nick " dispatch ERROR while sending fallback: "
+                                            (.getMessage send-e)))))
                           (flush)))))))
                (do (println (str "[irc] " nick ": not mentioned, skipping"))
                    (flush)))))))))

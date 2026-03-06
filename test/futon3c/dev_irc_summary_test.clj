@@ -1,5 +1,6 @@
 (ns futon3c.dev-irc-summary-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.string :as str]
             [futon3c.dev :as dev]))
 
 (deftest summarize-irc-result-keeps-artifact-refs
@@ -44,3 +45,21 @@
       (is (not (.contains block "thread_id")))
       (is (.exists (java.io.File. artifact-path)))
       (is (= payload (slurp artifact-path))))))
+
+(deftest invoke-response->irc-reply-covers-success-and-failure
+  (testing "successful invoke with text preserves refs in summary"
+    (let [out (#'futon3c.dev/invoke-response->irc-reply
+               {:ok true
+                :result "Updated docs and committed 29d18a9 in /home/joe/code/futon3c/README.md"})]
+      (is (.contains out "refs:"))
+      (is (.contains out "29d18a9"))))
+  (testing "successful invoke with nil result still returns a non-blank fallback"
+    (let [out (#'futon3c.dev/invoke-response->irc-reply {:ok true :result nil})]
+      (is (string? out))
+      (is (not (str/blank? out)))
+      (is (.contains out "invoke completed"))))
+  (testing "failed invoke always returns a visible failure marker"
+    (let [out (#'futon3c.dev/invoke-response->irc-reply
+               {:ok false :error {:error/message "timeout waiting for response"}})]
+      (is (.contains out "[invoke failed]"))
+      (is (.contains out "timeout")))))
