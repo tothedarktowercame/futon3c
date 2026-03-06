@@ -1,8 +1,8 @@
 # TN: ArSE Tickling Handoff
 
-**Date**: 2026-03-05
+**Date**: 2026-03-05 (updated 2026-03-06)
 **Session**: c050ae94 (Linode claude-1)
-**Status**: Pipeline proven end-to-end, batch run blocked by Codex reliability
+**Status**: Pipeline proven (7/40 completed), orchestration design revised
 
 ## What ArSE Tickling Is
 
@@ -140,3 +140,92 @@ via WS → optional `orch/request-review!` → `reg/invoke-agent! "claude-1"`
 
 Evidence store key: entity-id. Tags: `[:tickle :arse-generation <event>]`.
 Issue numbers use 20000+ offset (CT uses 10000+).
+
+## Revised Orchestration Design (2026-03-06 pilot learnings)
+
+### What worked
+- **Whistle API** (`POST /api/alpha/whistle`) delivers full prompts to codex
+  reliably, returns responses in 30s. No IRC flooding.
+- **`invoke-agent!`** via WS works when the bridge is healthy.
+- **Entity-id fix**: `run-arse-entry!` now matches by `:entity-id-str` (string)
+  not `:entity-id` (keyword). Without this, batch items were never found.
+- **ngircd bridge** clean output for claude (no `[accepted]`/`[done]` framing),
+  full framing kept for codex.
+
+### What doesn't work
+- **Long prompts via IRC**: `send-irc!` splits multi-line prompts into separate
+  PRIVMSG lines. Codex only reads lines containing `@codex`, so it sees the
+  first line and ignores the rest. Result: "Need the topic details..."
+- **WS invoke reliability**: intermittent — sometimes 2s, sometimes 600s timeout.
+  Same entity succeeded in 30s via whistle but timed out via `run-arse-entry!`.
+- **Direct IRC connections**: agents must NOT open their own IRC connections as
+  `claude` or `tickle-1` (nick conflicts with bridge bots). The bridge owns
+  those nicks. Proactive messages use `claude-1` nick (agent-specific).
+
+### Correct orchestration pattern
+IRC is for **short coordination messages**, not prompt delivery:
+- **Tickle** (Haiku, separate agent) posts brief IRC nudges to keep agents
+  working: `@codex check issue #20042`, `@claude review is ready`
+- **Long content** (prompts, results) goes to GitHub issues or repo files,
+  referenced by number in IRC
+- **Whistle API** for direct prompt delivery when IRC handoff isn't needed
+- Agents MUST NOT flood IRC with multi-line prompts (I-1 violation when
+  impersonating other agents, and IRC protocol violation regardless)
+
+### Identity rules (I-1)
+| Nick | Owner | Purpose |
+|------|-------|---------|
+| claude | ngircd bridge | Relays @claude mentions to claude-1 invoke |
+| codex | ngircd bridge | Relays @codex mentions to codex-1 invoke |
+| claude-1 | claude-1 (proactive) | Direct IRC posts from claude agent |
+| tickle-1 | tickle system (Haiku) | Orchestrator — dispatches work, nudges agents |
+
+### Next steps
+1. Implement tickle-1 as Haiku agent that posts brief IRC handoffs
+2. ArSE prompts go to GitHub issues; tickle posts `@codex see issue #NNNNN`
+3. Codex reads the issue, generates QA, commits to repo
+4. Tickle posts `@claude review synth-p2-s5-000 in futon6/data/synthetic-qa/`
+5. Claude reviews, posts verdict to IRC and evidence store
+
+## Infrastructure Fixes (2026-03-06 session continuation)
+
+Several infrastructure issues were fixed while getting ArSE Tickling operational:
+
+### Blackboard reconnection
+
+The `*agents*` and `*invoke: claude-1*` side-windows stopped appearing because
+the Emacs daemon uses a named socket (`workspace1`) and `emacsclient` was
+called without `-s workspace1`.
+
+**Fix**: `src/futon3c/blackboard.clj` now checks (in order):
+1. `@!emacs-socket` atom (settable at runtime: `(reset! bb/!emacs-socket "workspace1")`)
+2. `FUTON3C_EMACS_SOCKET` env var
+3. `EMACS_SOCKET_NAME` env var
+
+Both `scripts/dev-linode-env` and `scripts/dev-laptop-env` auto-detect the
+daemon socket from `/run/user/$UID/emacs/` at startup.
+
+`scripts/claude-picker` also updated to pass the socket to `emacsclient`.
+
+### Multi-agent registration (`/api/alpha/agents/auto`)
+
+New HTTP endpoint: `POST /api/alpha/agents/auto` with body `{"type": "claude"}`.
+Allocates next available `claude-N` (I-1 compliant — each repl gets its own
+agent identity). Creates a real `invoke-fn` via `make-claude-invoke-fn`.
+
+`claude-repl.el` updated to:
+1. Try `/agents/auto` first (server assigns ID)
+2. Fall back to `GET /agents` and find existing `claude-*` agent
+3. Default to `claude-1` if all else fails
+
+**Note**: The `/agents/auto` route requires a server restart to take effect
+(HTTP handler is compiled at startup). For the current session, `claude-2`
+was registered manually via Drawbridge.
+
+### Current agent registry
+
+| Agent | Type | Status | Notes |
+|-------|------|--------|-------|
+| claude-1 | :claude | invoking | Primary session (c050ae94) |
+| claude-2 | :claude | idle | Registered via Drawbridge for workspace2 |
+| codex-1 | :codex | idle | WS bridge from laptop |
