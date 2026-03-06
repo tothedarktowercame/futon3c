@@ -761,9 +761,9 @@
   ([port]
    (fn [_channel from-nick message]
      (let [url (str "http://127.0.0.1:" port "/say")
-           payload (json/write-str {"from" (or from-nick "claude")
-                                    "text" (str message)
-                                    "max_lines" 4})
+           payload (json/generate-string {"from" (or from-nick "claude")
+                                           "text" (str message)
+                                           "max_lines" 4})
            conn (doto (-> (java.net.URI. url) .toURL .openConnection)
                   (.setRequestMethod "POST")
                   (.setRequestProperty "Content-Type" "application/json")
