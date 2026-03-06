@@ -81,13 +81,53 @@
 
 ;;; Auto-registration
 
+(defun claude-repl--find-idle-agent ()
+  "Find an existing idle claude agent from the registry.
+Prefers the lowest-numbered idle claude agent. Returns agent-id or nil."
+  (let* ((url (concat claude-repl-api-url "/api/alpha/agents"))
+         (result (with-temp-buffer
+                   (let ((exit (call-process "curl" nil t nil
+                                             "-sS" "--max-time" "5" url)))
+                     (when (= exit 0)
+                       (goto-char (point-min))
+                       (condition-case nil
+                           (json-parse-buffer :object-type 'alist)
+                         (error nil)))))))
+    (when-let ((agents-val (alist-get 'agents result)))
+      (let* ((entries (cond
+                       ((hash-table-p agents-val)
+                        (let (pairs)
+                          (maphash (lambda (k v) (push (cons (symbol-name k) v) pairs))
+                                   agents-val)
+                          pairs))
+                       ((listp agents-val)
+                        (mapcar (lambda (pair)
+                                  (cons (symbol-name (car pair)) (cdr pair)))
+                                agents-val))))
+             ;; Filter to idle claude agents
+             (claude-entries
+              (seq-filter
+               (lambda (pair)
+                 (and (string-prefix-p "claude-" (car pair))
+                      (let ((status (alist-get 'status (cdr pair))))
+                        (or (null status)
+                            (equal status "idle")))))
+               entries))
+             ;; Sort by agent number
+             (sorted (sort claude-entries
+                           (lambda (a b)
+                             (string< (car a) (car b))))))
+        (when sorted (caar sorted))))))
+
 (defun claude-repl--auto-register ()
   "Find or register a Claude agent on the futon3c server.
-First tries POST /agents/auto. If that fails (older server), falls back to
-GET /agents to find an existing claude agent. Returns the agent-id or nil."
+First tries to reuse an existing idle claude agent (preserving identity).
+Only creates a new one via POST /agents/auto if none are idle."
   (let ((agent-id
          (or
-          ;; Try /agents/auto first
+          ;; First: reuse an existing idle agent
+          (claude-repl--find-idle-agent)
+          ;; Second: register a new one
           (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
                  (socket-name (or (claude-repl--workspace)
                                   (and (boundp 'server-name) server-name)))
@@ -106,29 +146,7 @@ GET /agents to find an existing claude agent. Returns the agent-id or nil."
                                    (json-parse-buffer :object-type 'alist)
                                  (error nil)))))))
             (when (and result (alist-get 'ok result))
-              (alist-get 'agent-id result)))
-          ;; Fallback: query existing agents and find a claude-N
-          (let* ((url (concat claude-repl-api-url "/api/alpha/agents"))
-                 (result (with-temp-buffer
-                           (let ((exit (call-process "curl" nil t nil
-                                                     "-sS" "--max-time" "5" url)))
-                             (when (= exit 0)
-                               (goto-char (point-min))
-                               (condition-case nil
-                                   (json-parse-buffer :object-type 'alist)
-                                 (error nil)))))))
-            ;; agents is a map: {"claude-1": {...}, "codex-1": {...}}
-            (when-let ((agents-val (alist-get 'agents result)))
-              (let ((keys (cond
-                           ((hash-table-p agents-val)
-                            (let (ks)
-                              (maphash (lambda (k _v) (push (symbol-name k) ks))
-                                       agents-val)
-                              ks))
-                           ((listp agents-val)
-                            (mapcar (lambda (pair) (symbol-name (car pair)))
-                                    agents-val)))))
-                (seq-find (lambda (k) (string-prefix-p "claude-" k)) keys)))))))
+              (alist-get 'agent-id result))))))
     (when (and (stringp agent-id) (not (string-empty-p agent-id)))
       (setq-local claude-repl-agent-id agent-id)
       (setq-local claude-repl-session-file
