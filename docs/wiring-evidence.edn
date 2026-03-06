@@ -52,4 +52,11 @@
    :commit "c84ad33"
    :artifacts ["emacs/claude-repl.el"
                "scripts/claude-picker"]
-   :summary "Emacs chat routes through registry invoke-fn via POST /api/alpha/invoke, not direct claude -p."}]}
+   :summary "Emacs chat routes through registry invoke-fn via POST /api/alpha/invoke, not direct claude -p."}
+
+  {:evidence/id "WE-2026-03-06-CYDER-PHASE-0"
+   :claim/id :ops/cyder-process-registry
+   :commit "fbc711d"
+   :tests ["test/futon3c/cyder_test.clj"]
+   :artifacts ["holes/missions/M-cyder.md"]
+   :summary "CYDER Phase 0: process registry, mission scanner, HTTP endpoints, *processes* blackboard buffer. 17 tests, 41 assertions."}]}

@@ -26,6 +26,14 @@
                           "test/futon3c/transport/integration_test.clj"]
    :verification/required #{:commit :script :test}}
 
+  {:claim/id :ops/cyder-process-registry
+   :claim/description "CYDER process registry: every long-running process is registered, inspectable, and stoppable from a single surface."
+   :diagram/components [:S-dispatch]
+   :implementation/files ["src/futon3c/cyder.clj"
+                          "src/futon3c/blackboard.clj"
+                          "src/futon3c/transport/http.clj"]
+   :verification/required #{:commit :test}}
+
   {:claim/id :alleycat/tri-agent-tickle
    :claim/description "Tri-agent alleycat smoke (claude + codex + tickle) is executable."
    :diagram/components [:S-presence :S-mode :S-dispatch :S-persist :S-default]
