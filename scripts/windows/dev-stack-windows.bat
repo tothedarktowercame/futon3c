@@ -31,8 +31,8 @@ set "FUTON3C_IRC_LANE=local"
 if "%REMOTE_IRC%"=="1" (
   set "FUTON3C_IRC_LANE=linode"
   set "BRIDGE_BOTS=zcodex"
-  set "FUTON3C_CODEX_AGENT_ID=zcodex-1"
-  set "NICK_AGENT_MAP=zcodex:zcodex-1"
+  set "FUTON3C_CODEX_AGENT_ID=codex-1"
+  set "NICK_AGENT_MAP=zcodex:codex-1"
   if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
   if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
   if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-zabuton\session-id"
@@ -103,8 +103,8 @@ set "BRIDGE_BOTS_SCAN=%BRIDGE_BOTS_NORMALIZED%"
 set "BRIDGE_BOTS_SCAN=!BRIDGE_BOTS_SCAN:zcodex=!"
 if not "!BRIDGE_BOTS_SCAN!"=="%BRIDGE_BOTS_NORMALIZED%" set "USES_ZCODEX=1"
 if "%USES_ZCODEX%"=="1" (
-  if not defined FUTON3C_CODEX_AGENT_ID set "FUTON3C_CODEX_AGENT_ID=zcodex-1"
-  if not defined NICK_AGENT_MAP set "NICK_AGENT_MAP=zcodex:zcodex-1"
+  if not defined FUTON3C_CODEX_AGENT_ID set "FUTON3C_CODEX_AGENT_ID=codex-1"
+  if not defined NICK_AGENT_MAP set "NICK_AGENT_MAP=zcodex:codex-1"
 ) else (
   if not defined FUTON3C_CODEX_AGENT_ID set "FUTON3C_CODEX_AGENT_ID=codex-1"
 )

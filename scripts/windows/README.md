@@ -78,8 +78,8 @@ Full-stack launch (`dev`) behavior:
   - `local` -> `codex`
   - `linode` -> `zcodex`
 - if `BRIDGE_BOTS` includes `zcodex`, launcher auto-defaults:
-  - `FUTON3C_CODEX_AGENT_ID=zcodex-1` (unless already set)
-  - `NICK_AGENT_MAP=zcodex:zcodex-1` (unless already set)
+  - `FUTON3C_CODEX_AGENT_ID=codex-1` (unless already set)
+  - `NICK_AGENT_MAP=zcodex:codex-1` (unless already set)
 - if `BRIDGE_BOTS=codex`, applies `FUTON3C_REGISTER_CLAUDE=false` and
   `FUTON3C_RELAY_CLAUDE=false` before runtime startup
 - if `FUTON3C_REPOS` is unset and a local installation root exists at
@@ -102,8 +102,8 @@ IRC lane switch for `dev`:
 - `--remote-irc` -> linode lane (alias: joe lane)
   - skips local IRC port kill/wait in `dev-stack-windows.bat`
   - forces `BRIDGE_BOTS=zcodex`
-  - forces `FUTON3C_CODEX_AGENT_ID=zcodex-1`
-  - forces `NICK_AGENT_MAP=zcodex:zcodex-1`
+  - forces `FUTON3C_CODEX_AGENT_ID=codex-1`
+  - forces `NICK_AGENT_MAP=zcodex:codex-1`
   - defaults `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
     when unset (no `zclaude` lane)
   - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
