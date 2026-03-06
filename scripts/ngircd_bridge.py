@@ -564,12 +564,11 @@ class IRCBot:
                         summary = self._summarize_invoke_result(response.get("result", ""))
                         stats = self._execution_stats(response.get("invoke_meta"))
                         if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-                            self._say(
-                                f"[needs-artifacts {job_id}] no execution evidence "
-                                f"(tool-events={stats['tool_events']}, command-events={stats['command_events']})",
-                                max_lines=2,
+                            summary = (
+                                f"{summary} "
+                                f"[no execution evidence: tool-events={stats['tool_events']}, "
+                                f"command-events={stats['command_events']}]"
                             )
-                            continue
                         sid = response.get("session_id")
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)

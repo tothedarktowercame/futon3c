@@ -564,6 +564,64 @@
         (catch Exception e
           (println (str "[dev] evidence emit error: " (.getMessage e))))))))
 
+(defn- sanitize-file-fragment
+  "Normalize text for use in local artifact filenames."
+  [s fallback]
+  (let [raw (or (some-> s str str/trim not-empty) fallback "unknown")
+        cleaned (-> raw
+                    (str/replace #"[^A-Za-z0-9._-]" "_")
+                    (str/replace #"_+" "_"))]
+    (if (str/blank? cleaned) fallback cleaned)))
+
+(defn- summarize-invoke-result-text
+  "Render invoke result text as a short trace summary."
+  [text]
+  (let [raw (str (or text ""))
+        compact (-> raw
+                    (str/replace #"\s+" " ")
+                    str/trim)
+        max-len 220]
+    (cond
+      (str/blank? compact) "[no textual response]"
+      (re-find #"^\s*[\{\[]" raw) "Structured output generated."
+      (<= (count compact) max-len) compact
+      :else (str (subs compact 0 (- max-len 3)) "..."))))
+
+(defn- write-invoke-artifact!
+  "Persist full invoke output to a local artifact file.
+   Returns absolute file path on success, nil on failure or blank text."
+  [agent-id session-id text]
+  (let [payload (str (or text ""))]
+    (when-not (str/blank? (str/trim payload))
+      (try
+        (let [root (io/file (or (some-> (env "FUTON3C_INVOKE_ARTIFACT_DIR") str/trim not-empty)
+                                "/tmp/futon-invoke-artifacts"))
+              _ (.mkdirs root)
+              agent-frag (sanitize-file-fragment agent-id "agent")
+              sid-frag (sanitize-file-fragment (some-> session-id (subs 0 (min 8 (count session-id))))
+                                               "nosid")
+              file (io/file root (format "%s-%s-%d.txt"
+                                         agent-frag
+                                         sid-frag
+                                         (System/currentTimeMillis)))]
+          (spit file payload)
+          (.getAbsolutePath file))
+        (catch Exception e
+          (println (str "[dev] invoke artifact write error: " (.getMessage e)))
+          nil)))))
+
+(defn- invoke-trace-response-block
+  "Build the invoke buffer response section without dumping full payloads."
+  [agent-id session-id result-text]
+  (let [summary (summarize-invoke-result-text result-text)
+        artifact-path (write-invoke-artifact! agent-id session-id result-text)]
+    (str "\n--- response summary (trace only) ---\n"
+         "Summary: " summary "\n"
+         (if artifact-path
+           (str "Artifact: " artifact-path "\n")
+           "Artifact: [not written]\n")
+         "Note: full payload omitted from this buffer.\n")))
+
 ;; =============================================================================
 ;; ngircd IRC sender — persistent connection for Tickle paging
 ;; =============================================================================
@@ -2451,10 +2509,7 @@ RESPOND WITH ONLY:
                                      "Output: " (count (or text "")) " chars\n"
                                      (when (not (str/blank? err))
                                        (str "\nStderr: " (subs err 0 (min 200 (count err))) "\n"))
-                                     (when text
-                                       (str "\n--- response ---\n"
-                                            (subs text 0 (min 1000 (count text)))
-                                            (when (> (count text) 1000) "\n..."))))
+                                     (invoke-trace-response-block agent-id final-sid text))
                                 (merge {:width 80 :slot 1 :no-display true} bb-opts))
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
@@ -2576,11 +2631,7 @@ RESPOND WITH ONLY:
                                  "Runtime evidence: executed=" execution-evidence?
                                  ", tool-events=" tool-events
                                  ", command-events=" command-events "\n"
-                                 (when (:result result)
-                                   (let [r (str (:result result))]
-                                     (str "\n--- response ---\n"
-                                          (subs r 0 (min 1000 (count r)))
-                                          (when (> (count r) 1000) "\n...")))))
+                                 (invoke-trace-response-block agent-id final-sid (:result result)))
                             {:width 80 :slot 1 :no-display true})
             (catch Throwable _))
           (println (str "[invoke] " agent-id

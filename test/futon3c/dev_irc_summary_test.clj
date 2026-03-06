@@ -26,3 +26,21 @@
                "Ran checks locally and prepared a candidate fix for review.")]
       (is (.contains out "no artifact reference yet")))))
 
+(deftest invoke-trace-response-block-persists-full-payload
+  (testing "invoke trace shows a short summary and writes full payload to disk"
+    (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                            "f3c-invoke-trace-test"
+                            (make-array java.nio.file.attribute.FileAttribute 0)))
+          payload "{\"thread_id\":\"synth-p2-s3a-000\",\"title\":\"long structured payload\"}"
+          block (with-redefs [futon3c.dev/env (fn [k & [default]]
+                                                (if (= k "FUTON3C_INVOKE_ARTIFACT_DIR")
+                                                  (.getAbsolutePath tmp-dir)
+                                                  default))]
+                  (#'futon3c.dev/invoke-trace-response-block "codex-1" "019cc01c-b049-7ce1" payload))
+          artifact-path (some->> (re-find #"Artifact: (.+)" block) second)]
+      (is (.contains block "--- response summary (trace only) ---"))
+      (is (.contains block "Summary: Structured output generated."))
+      (is artifact-path)
+      (is (not (.contains block "thread_id")))
+      (is (.exists (java.io.File. artifact-path)))
+      (is (= payload (slurp artifact-path))))))
