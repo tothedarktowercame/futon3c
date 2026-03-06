@@ -19,6 +19,31 @@ MAX_SESSIONS="${CLAUDE_PICKER_MAX:-12}"
 evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
 session_file="${CLAUDE_SESSION_FILE:-/tmp/futon-session-id}"
 emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
+# Auto-detect Emacs daemon socket if not already set.
+# Priority: FUTON3C_EMACS_SOCKET > EMACS_SOCKET_NAME > single socket > error.
+# With multiple sockets, never guess — require explicit selection.
+if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
+  if [[ -n "${EMACS_SOCKET_NAME:-}" ]]; then
+    # Shell was spawned from Emacs — use its socket
+    FUTON3C_EMACS_SOCKET="${EMACS_SOCKET_NAME}"
+  else
+    _emacs_dir="/run/user/$(id -u)/emacs"
+    if [[ -d "$_emacs_dir" ]]; then
+      _sockets=("$_emacs_dir"/*)
+      if [[ ${#_sockets[@]} -eq 1 && -S "${_sockets[0]}" ]]; then
+        FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
+      elif [[ ${#_sockets[@]} -gt 1 ]]; then
+        echo "Multiple Emacs daemons detected: $(ls "$_emacs_dir" | tr '\n' ' ')" >&2
+        echo "Set FUTON3C_EMACS_SOCKET or run from an Emacs shell (EMACS_SOCKET_NAME)." >&2
+        exit 1
+      fi
+    fi
+  fi
+fi
+emacsclient_sock=()
+if [[ -n "${FUTON3C_EMACS_SOCKET:-}" ]]; then
+  emacsclient_sock=(-s "${FUTON3C_EMACS_SOCKET}")
+fi
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
 # Use pipe as field delimiter (tab causes bash read to collapse empty fields)
@@ -131,7 +156,7 @@ launch_repl() {
   if [[ -n "${sid}" ]]; then
     printf '%s' "${sid}" > "${session_file}"
   fi
-  "${emacsclient_bin}" -e "(progn
+  "${emacsclient_bin}" "${emacsclient_sock[@]}" -e "(progn
     (load \"${escaped_ui}\")
     (load \"${escaped_chat}\")
     (claude-repl))" >/dev/null
