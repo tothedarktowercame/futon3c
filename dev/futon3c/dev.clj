@@ -753,6 +753,31 @@
    (fn [channel from-nick message]
      (send-irc! channel (or from-nick default-nick) message))))
 
+(defn make-bridge-irc-send-fn
+  "Create a send-fn that posts via the ngircd bridge's HTTP /say endpoint.
+   This lets agents post as 'claude' or 'codex' without opening separate IRC
+   connections (which would conflict with the bridge's nicks)."
+  ([] (make-bridge-irc-send-fn 6769))
+  ([port]
+   (fn [_channel from-nick message]
+     (let [url (str "http://127.0.0.1:" port "/say")
+           payload (json/write-str {"from" (or from-nick "claude")
+                                    "text" (str message)
+                                    "max_lines" 4})
+           conn (doto (-> (java.net.URI. url) .toURL .openConnection)
+                  (.setRequestMethod "POST")
+                  (.setRequestProperty "Content-Type" "application/json")
+                  (.setDoOutput true)
+                  (.setConnectTimeout 3000)
+                  (.setReadTimeout 5000))]
+       (with-open [os (.getOutputStream conn)]
+         (.write os (.getBytes payload "UTF-8")))
+       (let [code (.getResponseCode conn)]
+         (when (>= code 400)
+           (throw (ex-info (str "bridge /say returned " code)
+                           {:status code :from from-nick})))
+         {:ok true :status code})))))
+
 ;; =============================================================================
 ;; Tickle task state machine — full lifecycle tracking
 ;; =============================================================================
@@ -3176,8 +3201,10 @@ RESPOND WITH ONLY:
                  {:xtdb-node (when direct-xtdb? (:node f1-sys))
                   :evidence-store evidence-store
                   :irc-send-base irc-send-base-hint
-                  :irc-send-fn (when irc-sys
-                                 (:send-to-channel! (:server irc-sys)))
+                  :irc-send-fn (or (when irc-sys
+                                     (:send-to-channel! (:server irc-sys)))
+                                   ;; No built-in IRC — route through ngircd bridge HTTP
+                                   (make-bridge-irc-send-fn))
                   :irc-interceptor (when irc-sys
                                      (:irc-interceptor (:relay-bridge irc-sys)))})
         _ (reset! !f3c-sys f3c-sys)
@@ -3202,12 +3229,15 @@ RESPOND WITH ONLY:
                                   "/tmp/futon-session-id"))
                   initial-sid (read-session-id sf)
                   sid-atom (atom initial-sid)
+                  claude-socket (or (env "CLAUDE_EMACS_SOCKET")
+                                    (env "FUTON3C_EMACS_SOCKET"))
                   invoke-fn (make-claude-invoke-fn
                              {:claude-bin (env "CLAUDE_BIN" "claude")
                               :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
                               :agent-id "claude-1"
                               :session-file sf
-                              :session-id-atom sid-atom})]
+                              :session-id-atom sid-atom
+                              :emacs-socket claude-socket})]
               (rt/register-claude! {:agent-id "claude-1"
                                     :invoke-fn invoke-fn})
               (reg/update-agent! "claude-1"
@@ -3217,6 +3247,8 @@ RESPOND WITH ONLY:
               (when initial-sid
                 (reg/update-agent! "claude-1" :agent/session-id initial-sid))
               (println (str "[dev] Claude agent registered: claude-1 (inline invoke)"
+                            (when claude-socket
+                              (str " (emacs: " claude-socket ")"))
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
                                                        (min 8 (count initial-sid))) ")"))))))

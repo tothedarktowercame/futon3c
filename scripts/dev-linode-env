@@ -17,6 +17,8 @@ export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://172.236.28.208:7070}"
 export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
 
 # --- Agents: Claude runs here, Codex runs on laptop ---
+# Claude-1 lives on workspace1 (its blackboard goes there)
+export CLAUDE_EMACS_SOCKET="${CLAUDE_EMACS_SOCKET:-workspace1}"
 export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
 export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
 export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-true}"
@@ -61,6 +63,39 @@ if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   fi
   if [[ -n "${FUTON3C_EMACS_SOCKET:-}" ]]; then
     echo "[dev] Emacs socket: ${FUTON3C_EMACS_SOCKET}"
+  fi
+fi
+
+# --- IRC infrastructure health check ---
+if systemctl is-active ngircd.service >/dev/null 2>&1; then
+  echo "[dev] ngircd: running"
+else
+  echo -e "[dev] \033[1;31m██ ngircd: DOWN ██\033[0m"
+  echo -e "[dev] \033[31m   restart with: sudo systemctl restart ngircd\033[0m"
+fi
+
+# Check all bridge instances (template units: ngircd-bridge@channel.service)
+_any_bridge=false
+for _envfile in /home/joe/.config/futon3c/bridge-*.env; do
+  [[ -f "$_envfile" ]] || continue
+  _chan=$(basename "$_envfile" .env)
+  _chan=${_chan#bridge-}
+  if systemctl --user is-active "ngircd-bridge@${_chan}.service" >/dev/null 2>&1; then
+    echo "[dev] ngircd bridge #${_chan}: running"
+    _any_bridge=true
+  else
+    echo -e "[dev] \033[1;31m██ ngircd bridge #${_chan}: DOWN ██\033[0m"
+    echo -e "[dev] \033[31m   restart with: systemctl --user restart ngircd-bridge@${_chan}\033[0m"
+  fi
+done
+if [[ "$_any_bridge" != "true" ]]; then
+  # Also check legacy single service and orphan processes
+  if systemctl --user is-active ngircd-bridge.service >/dev/null 2>&1; then
+    echo -e "[dev] \033[33mngircd bridge: running (legacy unit — migrate to template)\033[0m"
+  elif pgrep -f ngircd_bridge.py >/dev/null 2>&1; then
+    echo -e "[dev] \033[33mngircd bridge: running outside systemd (orphan?)\033[0m"
+  else
+    echo -e "[dev] \033[1;31m██ ngircd bridge: no bridges running ██\033[0m"
   fi
 fi
 

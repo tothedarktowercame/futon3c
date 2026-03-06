@@ -23,6 +23,7 @@ Environment variables:
 
 import atexit
 import fcntl
+import http.server
 import json
 import os
 import queue
@@ -139,10 +140,11 @@ INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not
 CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! commands
 INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
 
-# --- Health / PID file ---
+# --- Health / PID file (channel-scoped so multiple bridges can coexist) ---
 _RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-PIDFILE = os.path.join(_RUNTIME_DIR, "ngircd-bridge.pid")
-HEALTH_FILE = os.path.join(_RUNTIME_DIR, "ngircd-bridge-health.json")
+_CHANNEL_SLUG = IRC_CHANNEL.lstrip("#").replace("/", "_")
+PIDFILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}.pid")
+HEALTH_FILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}-health.json")
 HEALTH_INTERVAL = 30  # seconds between health file writes
 
 
@@ -1210,6 +1212,63 @@ def _write_health(bots, started_at):
         log("bridge", f"Health file write failed: {e}")
 
 
+BRIDGE_HTTP_PORT = int_env("BRIDGE_HTTP_PORT", 6769, minimum=1)
+
+
+def _make_say_handler(bots_by_nick):
+    """Create an HTTP request handler that routes /say to the right bot."""
+
+    class SayHandler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            if self.path != "/say":
+                self.send_error(404)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length) if length else b""
+            try:
+                payload = json.loads(body)
+            except Exception:
+                self._json(400, {"ok": False, "err": "invalid-json"})
+                return
+            text = payload.get("text", "")
+            from_nick = payload.get("from", "claude")
+            if not text.strip():
+                self._json(400, {"ok": False, "err": "missing-text"})
+                return
+            bot = bots_by_nick.get(from_nick)
+            if not bot:
+                self._json(404, {"ok": False, "err": "unknown-nick",
+                                 "available": list(bots_by_nick.keys())})
+                return
+            max_lines = payload.get("max_lines", 4)
+            bot._say(text, max_lines=max_lines)
+            self._json(200, {"ok": True, "from": from_nick, "text": text})
+
+        def _json(self, code, obj):
+            body = json.dumps(obj).encode()
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass  # suppress default stderr logging
+
+    return SayHandler
+
+
+def _start_bridge_http(bots):
+    """Start a tiny HTTP server on BRIDGE_HTTP_PORT for /say."""
+    bots_by_nick = {b.nick: b for b in bots}
+    handler = _make_say_handler(bots_by_nick)
+    server = http.server.HTTPServer(("127.0.0.1", BRIDGE_HTTP_PORT), handler)
+    t = threading.Thread(target=server.serve_forever, name="bridge-http", daemon=True)
+    t.start()
+    log("bridge", f"HTTP /say endpoint on 127.0.0.1:{BRIDGE_HTTP_PORT}")
+    return server
+
+
 def main():
     _pidfile_fd = acquire_pidfile()  # noqa: F841 — must stay open
 
@@ -1254,6 +1313,8 @@ def main():
         t.start()
         threads.append(t)
         time.sleep(0.5)  # stagger connections
+
+    _bridge_http = _start_bridge_http(bots)  # noqa: F841
 
     sd_notify("READY=1")
 
