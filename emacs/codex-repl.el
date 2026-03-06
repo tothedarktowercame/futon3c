@@ -132,6 +132,11 @@ Interpreted as width on left/right and height on top/bottom."
   :type 'boolean
   :group 'codex-repl)
 
+(defcustom codex-repl-invoke-show-tool-details t
+  "When non-nil, include tool-call details in invoke trace summaries."
+  :type 'boolean
+  :group 'codex-repl)
+
 ;;; Face (Codex-specific; shared faces are in agent-chat)
 
 (defface codex-repl-codex-face
@@ -327,6 +332,65 @@ Returns non-nil when prompt markers were restored."
      ((stringp kind) (codex-repl--titleize-token kind))
      (t "Working"))))
 
+(defun codex-repl--json-object->alist (value)
+  "Best-effort coerce VALUE into an alist if it looks JSON-like."
+  (cond
+   ((listp value) value)
+   ((and (stringp value)
+         (not (string-empty-p value))
+         (or (string-prefix-p "{" value)
+             (string-prefix-p "[" value)))
+    (condition-case nil
+        (json-parse-string value
+                           :object-type 'alist
+                           :array-type 'list
+                           :null-object nil
+                           :false-object nil)
+      (error nil)))
+   (t nil)))
+
+(defun codex-repl--first-string-value (alist keys)
+  "Return first non-empty string for any key in KEYS from ALIST."
+  (let ((found nil))
+    (while (and keys (not found))
+      (let* ((key (car keys))
+             (val (and (listp alist) (alist-get key alist))))
+        (when (and (stringp val) (not (string-empty-p val)))
+          (setq found val))
+        (setq keys (cdr keys))))
+    found))
+
+(defun codex-repl--tool-call-detail (item)
+  "Extract compact human-readable detail from tool-call ITEM."
+  (let* ((name (and (listp item) (alist-get 'name item)))
+         (args-raw (or (and (listp item) (alist-get 'arguments item))
+                       (and (listp item) (alist-get 'input item))
+                       (and (listp item) (alist-get 'params item))
+                       (and (listp item) (alist-get 'payload item))))
+         (args (codex-repl--json-object->alist args-raw))
+         (tool (and (stringp name) (downcase name)))
+         (cmd (or (codex-repl--first-string-value args '(cmd command chars patch))
+                  (and (stringp args-raw) args-raw)))
+         (q (codex-repl--first-string-value args '(q pattern search_query location)))
+         (path (codex-repl--first-string-value args '(path ref_id file filename location)))
+         (recipient (codex-repl--first-string-value args '(recipient_name tool_name fn)))
+         (detail
+          (cond
+           ((and (stringp tool)
+                 (member tool '("command_execution" "command-execution" "bash" "shell"))
+                 (stringp cmd))
+            (format "cmd: %s" (codex-repl--truncate-single-line cmd 140)))
+           ((stringp q)
+            (format "query: %s" (codex-repl--truncate-single-line q 120)))
+           ((stringp path)
+            (format "target: %s" (codex-repl--truncate-single-line path 120)))
+           ((stringp recipient)
+            (format "tool: %s" (codex-repl--truncate-single-line recipient 120)))
+           ((and (stringp cmd) (not (string-empty-p cmd)))
+            (format "input: %s" (codex-repl--truncate-single-line cmd 120)))
+           (t nil))))
+    detail))
+
 (defun codex-repl--stream-event-summary (evt)
   "Render one-line summary for Codex stream event EVT."
   (let ((type (alist-get 'type evt)))
@@ -340,12 +404,21 @@ Returns non-nil when prompt markers were restored."
           (string= type "item.completed"))
       (let* ((item (alist-get 'item evt))
              (item-type (and (listp item) (alist-get 'type item)))
-             (name (and (listp item) (alist-get 'name item))))
+             (name (and (listp item) (alist-get 'name item)))
+             (detail (and codex-repl-invoke-show-tool-details
+                          (stringp item-type)
+                          (string= item-type "tool_call")
+                          (codex-repl--tool-call-detail item))))
         (cond
          ((and (stringp item-type) (string= item-type "tool_call"))
-          (format "%s (%s)"
-                  (codex-repl--humanize-tool-name name)
-                  (if (string= type "item.started") "started" "done")))
+          (if (stringp detail)
+              (format "%s (%s): %s"
+                      (codex-repl--humanize-tool-name name)
+                      (if (string= type "item.started") "started" "done")
+                      detail)
+            (format "%s (%s)"
+                    (codex-repl--humanize-tool-name name)
+                    (if (string= type "item.started") "started" "done"))))
          ((stringp item-type)
           (format "%s (%s)"
                   (codex-repl--humanize-item-type item-type)
@@ -354,7 +427,11 @@ Returns non-nil when prompt markers were restored."
      ((string= type "reasoning")
       "Preparing Response")
      ((string= type "command_execution")
-      "Using Bash")
+      (let* ((detail (and codex-repl-invoke-show-tool-details
+                          (codex-repl--tool-call-detail evt))))
+        (if (stringp detail)
+            (format "Using Bash: %s" detail)
+          "Using Bash")))
      ((string= type "turn.failed")
       (let* ((err (alist-get 'error evt))
              (msg (and (listp err) (alist-get 'message err))))
