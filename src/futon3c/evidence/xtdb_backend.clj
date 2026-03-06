@@ -9,7 +9,7 @@
    Accepts either a futon1a XtdbStore record or a raw XTDB node."
   (:require [xtdb.api :as xtdb]
             [futon3c.evidence.backend :as backend])
-  (:import [java.time Instant]
+  (:import [java.time Duration Instant]
            [java.util Date]))
 
 (defn- social-error
@@ -50,8 +50,14 @@
       (Date/from (Instant/parse at))
       (catch Exception _ nil))))
 
+(def ^:private ^Duration put-timeout
+  "Maximum time to wait for XTDB to index a put transaction.
+   Defense-in-depth: prevents HTTP handler threads from blocking indefinitely
+   when XTDB indexing is stalled or interrupted."
+  (Duration/ofSeconds 10))
+
 (defn- put-and-sync!
-  "Submit a put transaction and wait for it to be indexed.
+  "Submit a put transaction and wait for it to be indexed (with timeout).
    Sets XTDB valid-time to :evidence/at so entries appear at their true
    chronological position, not when they were physically written (important
    for replicated entries that arrive after a delay)."
@@ -61,14 +67,14 @@
                 [:xtdb.api/put doc valid-time]
                 [:xtdb.api/put doc])
         tx (xtdb/submit-tx node [tx-op])]
-    (xtdb/await-tx node tx)))
+    (xtdb/await-tx node tx put-timeout)))
 
 (defn- delete-and-sync!
   "Submit delete transactions for a set of ids and wait for indexing."
   [node ids]
   (let [tx-ops (mapv (fn [id] [:xtdb.api/delete id]) ids)
         tx (xtdb/submit-tx node tx-ops)]
-    (xtdb/await-tx node tx)))
+    (xtdb/await-tx node tx put-timeout)))
 
 (defn- query-all-entries
   "Datalog query returning all evidence entries."
