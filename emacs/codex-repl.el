@@ -1162,53 +1162,66 @@ Invoke CALLBACK with the final response text."
            :sentinel
            (lambda (p _event)
              (when (memq (process-status p) '(exit signal))
-              (let* ((exit-code (process-exit-status p))
-                     (elapsed (codex-repl--thinking-elapsed-seconds))
-                     (raw (if (buffer-live-p (process-buffer p))
+               (let* ((interrupted? (not (eq agent-chat--pending-process p)))
+                      (exit-code (process-exit-status p))
+                      (elapsed (codex-repl--thinking-elapsed-seconds))
+                      (raw (if (buffer-live-p (process-buffer p))
                                (with-current-buffer (process-buffer p)
                                  (buffer-string))
-                             ""))
-                      (parsed (codex-repl--parse-codex-json-output raw))
-                      (sid (plist-get parsed :session-id))
-                      (response (plist-get parsed :text))
-                      (err (plist-get parsed :error))
-                      (final-text (if (= exit-code 0)
-                                      (codex-repl--apply-irc-send-directive
-                                       (string-trim response))
-                                    (format "[Error (exit %d): %s]"
-                                            exit-code
-                                            (string-trim (or err response))))))
-                 (codex-repl--append-invoke-trace
-                  (format "invoke done exit=%d elapsed=%ds session=%s"
-                          exit-code elapsed (or sid codex-repl-session-id "unknown"))
-                  (if (= exit-code 0) 'font-lock-string-face 'font-lock-warning-face))
-                 (when (and err (not (string-empty-p (string-trim err))))
-                   (codex-repl--append-invoke-trace
-                    (format "invoke error %s"
-                            (codex-repl--truncate-single-line err 240))
-                    'font-lock-warning-face))
-                 (unwind-protect
+                             "")))
+                 (if interrupted?
                      (progn
-                       (when (and (stringp sid) (not (string-empty-p sid)))
-                         (condition-case persist-err
-                             (codex-repl--persist-session-id! sid)
-                           (error
-                            (message "codex-repl persist warning: %s"
-                                     (error-message-string persist-err)))))
-                       (when (buffer-live-p repl-buffer)
-                         (with-current-buffer repl-buffer
-                           (when (eq agent-chat--pending-process p)
-                             (setq agent-chat--pending-process nil))
-                           (condition-case callback-err
-                               (funcall callback final-text)
-                             (error
-                              (message "codex-repl callback warning: %s"
-                                       (error-message-string callback-err)))))))
-                   (codex-repl--stop-thinking-heartbeat)
-                   (setq codex-repl--thinking-start-time nil
-                         codex-repl--last-progress-status nil)
-                   (when (buffer-live-p (process-buffer p))
-                     (kill-buffer (process-buffer p)))))))))
+                       (codex-repl--append-invoke-trace
+                        (format "invoke interrupted elapsed=%ds" elapsed)
+                        'font-lock-warning-face)
+                       (codex-repl--stop-thinking-heartbeat)
+                       (setq codex-repl--thinking-start-time nil
+                             codex-repl--last-progress-status nil)
+                       (when (buffer-live-p (process-buffer p))
+                         (kill-buffer (process-buffer p))))
+                   (let* ((parsed (codex-repl--parse-codex-json-output raw))
+                          (sid (plist-get parsed :session-id))
+                          (response (plist-get parsed :text))
+                          (err (plist-get parsed :error))
+                          (final-text (if (= exit-code 0)
+                                          (codex-repl--apply-irc-send-directive
+                                           (string-trim response))
+                                        (format "[Error (exit %d): %s]"
+                                                exit-code
+                                                (string-trim (or err response))))))
+                     (codex-repl--append-invoke-trace
+                      (format "invoke done exit=%d elapsed=%ds session=%s"
+                              exit-code elapsed (or sid codex-repl-session-id "unknown"))
+                      (if (= exit-code 0)
+                          'font-lock-string-face
+                        'font-lock-warning-face))
+                     (when (and err (not (string-empty-p (string-trim err))))
+                       (codex-repl--append-invoke-trace
+                        (format "invoke error %s"
+                                (codex-repl--truncate-single-line err 240))
+                        'font-lock-warning-face))
+                     (unwind-protect
+                         (progn
+                           (when (and (stringp sid) (not (string-empty-p sid)))
+                             (condition-case persist-err
+                                 (codex-repl--persist-session-id! sid)
+                               (error
+                                (message "codex-repl persist warning: %s"
+                                         (error-message-string persist-err)))))
+                           (when (buffer-live-p repl-buffer)
+                             (with-current-buffer repl-buffer
+                               (when (eq agent-chat--pending-process p)
+                                 (setq agent-chat--pending-process nil))
+                               (condition-case callback-err
+                                   (funcall callback final-text)
+                                 (error
+                                  (message "codex-repl callback warning: %s"
+                                           (error-message-string callback-err)))))))
+                       (codex-repl--stop-thinking-heartbeat)
+                       (setq codex-repl--thinking-start-time nil
+                             codex-repl--last-progress-status nil)
+                       (when (buffer-live-p (process-buffer p))
+                         (kill-buffer (process-buffer p)))))))))))
     (codex-repl--start-thinking-heartbeat repl-buffer)
     (process-send-string proc payload)
     (process-send-eof proc)
@@ -1390,13 +1403,57 @@ With REFRESH non-nil, force an immediate refresh."
         (erase-buffer)))
     (codex-repl--append-invoke-trace "invoke trace cleared" 'shadow)))
 
+(defun codex-repl-interrupt ()
+  "Interrupt current Codex turn with explicit invoke-trace logging."
+  (interactive)
+  (if (process-live-p agent-chat--pending-process)
+      (let ((proc agent-chat--pending-process))
+        (codex-repl--append-invoke-trace
+         (format "interrupt requested pid=%s"
+                 (or (process-id proc) "?"))
+         'font-lock-warning-face)
+        (codex-repl--stop-thinking-heartbeat)
+        (setq codex-repl--thinking-start-time nil
+              codex-repl--last-progress-status "interrupted")
+        (agent-chat-interrupt))
+    (codex-repl--append-invoke-trace
+     "interrupt requested but no live invoke process"
+     'shadow)
+    (message "Nothing to interrupt")))
+
+(defun codex-repl-new-session ()
+  "Clear local Codex session state so next turn starts a fresh thread."
+  (interactive)
+  (when (process-live-p agent-chat--pending-process)
+    (user-error "Codex is still responding; interrupt first (C-c C-c)"))
+  (let ((old-sid codex-repl-session-id))
+    (setq codex-repl-session-id nil
+          agent-chat--session-id nil
+          codex-repl--evidence-session-id nil
+          codex-repl--last-evidence-id nil
+          codex-repl--last-emitted-session-id nil)
+    (when (and codex-repl-session-file
+               (file-exists-p codex-repl-session-file))
+      (delete-file codex-repl-session-file))
+    (codex-repl--refresh-session-header (current-buffer))
+    (codex-repl-refresh-header-line t (current-buffer))
+    (agent-chat-insert-message
+     "system"
+     (format "[Session reset locally%s. Next message starts fresh.]"
+             (if (and (stringp old-sid) (not (string-empty-p old-sid)))
+                 (format " (was %s)" old-sid)
+               "")))
+    (goto-char (point-max))
+    (message "codex-repl: session reset (was %s)" (or old-sid "nil"))))
+
 ;;; Mode
 
 (defvar codex-repl-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'codex-repl-send-input)
-    (define-key map (kbd "C-c C-c") #'agent-chat-interrupt)
+    (define-key map (kbd "C-c C-c") #'codex-repl-interrupt)
     (define-key map (kbd "C-c C-k") #'codex-repl-clear)
+    (define-key map (kbd "C-c C-n") #'codex-repl-new-session)
     (define-key map (kbd "C-c C-d") #'codex-repl-diagnose-routing)
     (define-key map (kbd "C-c C-v") #'codex-repl-show-invoke-trace)
     (define-key map (kbd "C-c C-l") #'codex-repl-clear-invoke-trace)
@@ -1404,7 +1461,7 @@ With REFRESH non-nil, force an immediate refresh."
 
 (define-derived-mode codex-repl-mode nil "Codex-REPL"
   "Chat with Codex via CLI.
-Type after the prompt, RET to send.
+Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh session.
 \\{codex-repl-mode-map}"
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
