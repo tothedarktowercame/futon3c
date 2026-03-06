@@ -438,9 +438,16 @@ CALLBACK is called with the final response text on completion."
                                            (mapconcat #'identity
                                                       (append tools nil) ", ")
                                          (format "%s" tools))))
-                                 (agent-chat-update-progress
-                                  (format "using %s" tool-names)
-                                  'agent-chat-prompt-face)))))))
+                                 (if claude-repl--streaming-started
+                                     ;; Mid-stream tool use: append inline rather
+                                     ;; than replacing progress (avoids remove-thinking
+                                     ;; interfering with streamed text)
+                                     (claude-repl--stream-text
+                                      (propertize (format "\n[%s]\n" tool-names)
+                                                  'face 'agent-chat-prompt-face))
+                                   (agent-chat-update-progress
+                                    (format "using %s" tool-names)
+                                    'agent-chat-prompt-face))))))))
                      (error nil))))))
            :sentinel
            (lambda (p _event)
