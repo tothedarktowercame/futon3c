@@ -1269,7 +1269,11 @@ def _start_bridge_http(bots):
     """Start a tiny HTTP server on BRIDGE_HTTP_PORT for /say."""
     bots_by_nick = {b.nick: b for b in bots}
     handler = _make_say_handler(bots_by_nick)
-    server = http.server.HTTPServer(("127.0.0.1", BRIDGE_HTTP_PORT), handler)
+    try:
+        server = http.server.HTTPServer(("127.0.0.1", BRIDGE_HTTP_PORT), handler)
+    except OSError as e:
+        log("bridge", f"HTTP /say endpoint failed on port {BRIDGE_HTTP_PORT}: {e}")
+        return None
     t = threading.Thread(target=server.serve_forever, name="bridge-http", daemon=True)
     t.start()
     log("bridge", f"HTTP /say endpoint on 127.0.0.1:{BRIDGE_HTTP_PORT}")
@@ -1283,6 +1287,12 @@ def main():
         "claude": "claude-1",
         "codex": "codex-1",
     }
+    # NICK_AGENT_MAP overrides: "zcodex:codex-1,zclaude:claude-1"
+    for pair in os.environ.get("NICK_AGENT_MAP", "").split(","):
+        pair = pair.strip()
+        if ":" in pair:
+            n, a = pair.split(":", 1)
+            nick_to_agent[n.strip()] = a.strip()
 
     bots = []
     for i, nick in enumerate(BRIDGE_BOTS):
