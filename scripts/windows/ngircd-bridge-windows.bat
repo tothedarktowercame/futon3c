@@ -54,6 +54,7 @@ exit /b 1
 echo [ngircd-bridge-windows] Starting ngircd bridge
 echo [ngircd-bridge-windows] IRC=%IRC_HOST%:%IRC_PORT% channel=%IRC_CHANNEL%
 echo [ngircd-bridge-windows] invoke=%INVOKE_BASE% bots=%BRIDGE_BOTS%
+if defined NICK_AGENT_MAP echo [ngircd-bridge-windows] NICK_AGENT_MAP=%NICK_AGENT_MAP%
 if defined FUTON3C_REGISTER_CLAUDE echo [ngircd-bridge-windows] FUTON3C_REGISTER_CLAUDE=%FUTON3C_REGISTER_CLAUDE%
 if defined FUTON3C_RELAY_CLAUDE echo [ngircd-bridge-windows] FUTON3C_RELAY_CLAUDE=%FUTON3C_RELAY_CLAUDE%
 echo [ngircd-bridge-windows] python=%PYTHON_EXE%

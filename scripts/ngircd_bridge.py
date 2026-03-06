@@ -22,7 +22,6 @@ Environment variables:
 """
 
 import atexit
-import fcntl
 import http.server
 import json
 import os
@@ -31,11 +30,22 @@ import re
 import signal
 import socket
 import sys
+import tempfile
 import threading
 import time
 import traceback
 import urllib.request
 import urllib.error
+
+try:
+    import fcntl  # POSIX only
+except ImportError:
+    fcntl = None
+
+try:
+    import msvcrt  # Windows only
+except ImportError:
+    msvcrt = None
 
 # --- Helpers ---
 
@@ -141,11 +151,29 @@ CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! com
 INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
 
 # --- Health / PID file (channel-scoped so multiple bridges can coexist) ---
-_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()
 _CHANNEL_SLUG = IRC_CHANNEL.lstrip("#").replace("/", "_")
 PIDFILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}.pid")
 HEALTH_FILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}-health.json")
 HEALTH_INTERVAL = 30  # seconds between health file writes
+
+
+def _lock_pidfile(fd):
+    """Acquire a non-blocking exclusive lock on a pidfile handle."""
+    if fcntl is not None:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return
+    if msvcrt is not None:
+        # msvcrt locks byte ranges; ensure one byte exists to lock.
+        fd.seek(0, os.SEEK_END)
+        if fd.tell() == 0:
+            fd.write("\n")
+            fd.flush()
+        fd.seek(0)
+        msvcrt.locking(fd.fileno(), msvcrt.LK_NBLCK, 1)
+        fd.seek(0)
+        return
+    raise RuntimeError("No supported pidfile locking mechanism for this platform")
 
 
 def acquire_pidfile():
@@ -155,7 +183,7 @@ def acquire_pidfile():
         open(PIDFILE, "w").close()
     fd = open(PIDFILE, "r+")
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _lock_pidfile(fd)
     except OSError:
         try:
             existing_pid = fd.read().strip() or "unknown"
@@ -165,6 +193,9 @@ def acquire_pidfile():
             f"Another bridge instance is running (PID {existing_pid}). Exiting.",
             file=sys.stderr,
         )
+        sys.exit(1)
+    except RuntimeError as e:
+        print(f"Cannot lock PID file: {e}", file=sys.stderr)
         sys.exit(1)
     fd.seek(0)
     fd.truncate()
