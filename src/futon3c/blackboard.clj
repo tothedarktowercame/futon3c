@@ -32,6 +32,12 @@
    Bind to false in tests to avoid spawning emacsclient processes."
   true)
 
+(def !emacs-socket
+  "Emacs server socket name. Set at runtime when the daemon uses a named socket,
+   e.g. (reset! bb/!emacs-socket \"workspace1\").
+   Falls back to FUTON3C_EMACS_SOCKET or EMACS_SOCKET_NAME env vars."
+  (atom nil))
+
 ;; =============================================================================
 ;; Emacsclient primitive
 ;; =============================================================================
@@ -47,10 +53,19 @@
 (defn- run-emacsclient!
   "Run emacsclient --eval with the given elisp. Returns {:ok bool :output str}.
    Non-blocking: uses a short timeout. Failures are swallowed (the blackboard
-   is best-effort, never blocks the agent)."
-  [elisp]
+   is best-effort, never blocks the agent).
+   Optional socket-override targets a specific Emacs daemon (e.g. \"workspace2\")."
+  ([elisp] (run-emacsclient! elisp nil))
+  ([elisp socket-override]
   (try
-    (let [pb (ProcessBuilder. ["emacsclient" "--eval" elisp])
+    (let [socket (or socket-override
+                     @!emacs-socket
+                     (System/getenv "FUTON3C_EMACS_SOCKET")
+                     (System/getenv "EMACS_SOCKET_NAME"))
+          cmd (if socket
+                ["emacsclient" "-s" socket "--eval" elisp]
+                ["emacsclient" "--eval" elisp])
+          pb (ProcessBuilder. cmd)
           _ (.redirectErrorStream pb true)
           proc (.start pb)
           finished? (.waitFor proc 2 java.util.concurrent.TimeUnit/SECONDS)]
@@ -60,7 +75,7 @@
         (do (.destroyForcibly proc)
             {:ok false :output "timeout"})))
     (catch Exception e
-      {:ok false :output (.getMessage e)})))
+      {:ok false :output (.getMessage e)}))))
 
 (defn blackboard!
   "Project content to a named Emacs buffer.
@@ -74,6 +89,7 @@
    :height  — window height (for :bottom), default 15
    :slot    — side-window slot index (keeps multiple panels stable)
    :no-display — if true, update buffer but don't force-display it
+   :emacs-socket — target a specific Emacs daemon socket (e.g. \"workspace2\")
 
    Returns {:ok bool :output str}."
   ([buffer-name content]
@@ -110,7 +126,7 @@
                     "(goto-char (point-min))))"
                     (or display-form "")
                     "nil)")]
-     (run-emacsclient! elisp))))
+     (run-emacsclient! elisp (:emacs-socket opts)))))
 
 (defn blackboard-eval!
   "Run arbitrary elisp via emacsclient. For cases where text content

@@ -2223,7 +2223,7 @@ RESPOND WITH ONLY:
    with elapsed time, file change detection, and a progress spinner.
    Also emits evidence heartbeats every 30s for long-running invocations.
    Returns a function that stops the ticker when called."
-  [buf-name agent-id prompt-str used-sid interval-ms]
+  [buf-name agent-id prompt-str used-sid interval-ms & {:keys [bb-opts]}]
   (let [running (atom true)
         start-ms (System/currentTimeMillis)
         spinner-chars [\| \/ \- \\]
@@ -2259,7 +2259,7 @@ RESPOND WITH ONLY:
                                            "Waiting for response..."))]
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
-                        (bb/blackboard! buf-name content {:width 80 :slot 1 :no-display true})
+                        (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
                         ;; Update agents buffer
                         (bb/project-agents! (reg/registry-status))
                         ;; Evidence heartbeat (every 30s, not every tick)
@@ -2306,11 +2306,12 @@ RESPOND WITH ONLY:
                          Set high because Emacs sessions replace the CLI and should
                          not be arbitrarily killed. IRC relay enforces its own
                          shorter timeout (120s) via invoke-timeout-ms."
-  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms]
+  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
          timeout-ms 1800000}}]
   (let [!lock (Object.)
-        buf-name (str "*invoke: " agent-id "*")]
+        buf-name (str "*invoke: " agent-id "*")
+        bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
     (fn [prompt session-id]
       (locking !lock
         (let [prompt-str (cond
@@ -2319,11 +2320,12 @@ RESPOND WITH ONLY:
                                                 (json/generate-string prompt))
                            :else            (str prompt))
               new-sid (when-not session-id (str (UUID/randomUUID)))
-              args (cond-> [claude-bin "-p" prompt-str
+              args (cond-> [claude-bin "-p"
                             "--permission-mode" permission-mode
                             "--output-format" "stream-json" "--verbose"]
                      session-id (into ["--resume" (str session-id)])
-                     new-sid    (into ["--session-id" new-sid]))
+                     new-sid    (into ["--session-id" new-sid])
+                     :always    (into ["--" prompt-str]))
               used-sid (or session-id new-sid)
               prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
               _ (println (str "[invoke] " agent-id " claude -p "
@@ -2344,11 +2346,11 @@ RESPOND WITH ONLY:
                                        "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                        (when (> (count prompt-str) 300) "...")
                                        "\n\nStarting...")
-                                  {:width 80 :slot 1})
+                                  (merge {:width 80 :slot 1} bb-opts))
                   (catch Throwable _))
               ;; Start ticker: updates invoke buffer + agents buffer every 5s
               ;; Also emits evidence heartbeats every 30s
-              stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
+              stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000 :bb-opts bb-opts)
               ;; Launch process with ProcessBuilder
               pb (doto (ProcessBuilder. ^java.util.List (vec args))
                     (.redirectInput (java.lang.ProcessBuilder$Redirect/from (java.io.File. "/dev/null"))))
@@ -2441,7 +2443,7 @@ RESPOND WITH ONLY:
                                        (str "\n--- response ---\n"
                                             (subs text 0 (min 1000 (count text)))
                                             (when (> (count text) 1000) "\n..."))))
-                                {:width 80 :slot 1 :no-display true})
+                                (merge {:width 80 :slot 1 :no-display true} bb-opts))
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
                             " text-len=" (count (or text ""))
@@ -2577,6 +2579,100 @@ RESPOND WITH ONLY:
                         " command-events=" command-events))
           (flush)
           result)))))
+
+;; =============================================================================
+;; IRC-based Codex invoke — send @codex on IRC, poll for [done] response
+;; =============================================================================
+
+(defn make-irc-codex-invoke-fn
+  "Create an invoke-fn that sends prompts to Codex via IRC @codex mention.
+
+   Codex's multipass peripheral posts:
+     [accepted codex-TIMESTAMP-N] queued ...
+     [done codex-TIMESTAMP-N] <response> (session XXXXXX)
+
+   This fn sends the prompt, then polls !irc-log for the [done] message.
+
+   opts:
+     :channel     — IRC channel (default \"#futon\")
+     :from-nick   — nick to send as (default \"tickle-1\")
+     :poll-ms     — poll interval in ms (default 3000)
+     :timeout-ms  — max wait for response (default 600000 = 10 min)"
+  [{:keys [channel from-nick poll-ms timeout-ms]
+    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 600000}}]
+  (fn [prompt _session-id]
+    (let [prompt-str (cond
+                       (string? prompt) prompt
+                       (map? prompt) (or (:prompt prompt) (:text prompt) (str prompt))
+                       :else (str prompt))
+          ;; Snapshot log position before sending
+          log-pos (count @!irc-log)
+          ;; Send @codex prompt via IRC
+          prompt-lines (str/split-lines prompt-str)
+          first-line (str "@codex " (first prompt-lines))
+          _ (send-irc! channel from-nick first-line)
+          ;; Send remaining lines (if multi-line prompt)
+          _ (doseq [line (rest prompt-lines)]
+              (send-irc! channel from-nick line))
+          start-ms (System/currentTimeMillis)
+          deadline-ms (+ start-ms timeout-ms)]
+      (println (str "[irc-invoke] Sent @codex prompt (" (count prompt-str) " chars) to " channel))
+      (flush)
+      ;; Poll !irc-log for [done ...] response from codex
+      (loop []
+        (let [now-ms (System/currentTimeMillis)]
+          (if (> now-ms deadline-ms)
+            {:error (str "IRC invoke timeout after " timeout-ms "ms")
+             :exit-code -1
+             :timeout-ms timeout-ms}
+            (let [log @!irc-log
+                  ;; Look at messages after our send
+                  new-msgs (subvec log (min log-pos (count log)))
+                  codex-msgs (filter #(= "codex" (:nick %)) new-msgs)
+                  ;; Find [done ...] message
+                  done-msg (first (filter #(re-find #"^\[done " (:text %)) codex-msgs))]
+              (if done-msg
+                ;; Parse response: [done codex-ID] <response> (session XXXX)
+                (let [text (:text done-msg)
+                      ;; Strip [done codex-ID] prefix
+                      response (str/replace text #"^\[done [^\]]+\]\s*" "")
+                      ;; Extract session ID if present
+                      session-match (re-find #"\(session ([0-9a-f]+)\)\s*$" response)
+                      session-id (second session-match)
+                      ;; Strip (session ...) suffix and artifact refs noise
+                      clean-response (-> response
+                                         (str/replace #"\s*\(no artifact refs\)\s*$" "")
+                                         (str/replace #"\s*\(session [0-9a-f]+\)\s*$" "")
+                                         str/trim)
+                      ;; Also collect any continuation lines between accepted and done
+                      accepted-idx (some (fn [[i m]]
+                                           (when (and (= "codex" (:nick m))
+                                                      (re-find #"^\[accepted " (:text m)))
+                                             i))
+                                         (map-indexed vector new-msgs))
+                      done-idx (some (fn [[i m]]
+                                       (when (and (= "codex" (:nick m))
+                                                  (re-find #"^\[done " (:text m)))
+                                         i))
+                                     (map-indexed vector new-msgs))
+                      ;; Gather intermediate codex lines (between accepted and done)
+                      intermediate (when (and accepted-idx done-idx (< accepted-idx done-idx))
+                                     (->> (subvec (vec new-msgs) (inc accepted-idx) done-idx)
+                                          (filter #(= "codex" (:nick %)))
+                                          (mapv :text)))
+                      full-response (if (seq intermediate)
+                                      (str (str/join "\n" intermediate) "\n" clean-response)
+                                      clean-response)
+                      elapsed (- now-ms start-ms)]
+                  (println (str "[irc-invoke] Got [done] after " elapsed "ms"
+                                " (" (count full-response) " chars)"))
+                  (flush)
+                  {:result full-response
+                   :session-id session-id})
+                ;; Not done yet — check for [accepted] to confirm receipt
+                (do
+                  (Thread/sleep poll-ms)
+                  (recur))))))))))
 
 ;; =============================================================================
 ;; Dispatch-based IRC relay — routes through invoke-agent! (I-1, I-2 compliant)

@@ -20,6 +20,7 @@
      GET  /api/alpha/reflect/var/:ns/:var — full var metadata (envelope)
      GET  /api/alpha/reflect/deps/:ns — namespace dependency graph
      GET  /api/alpha/reflect/java/:class — Java class reflection
+     GET  /api/alpha/enrich/file?path=... — composite enrichment for a source file
      POST /api/alpha/todo — lightweight todo management (add/list/done)
      POST /api/alpha/portfolio/step — run one AIF portfolio step
      POST /api/alpha/portfolio/heartbeat — weekly heartbeat with bid/clear
@@ -46,6 +47,8 @@
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.reflection.core :as reflection]
+            [futon3c.enrichment.query :as enrich]
+            [futon3c.cyder :as cyder]
             [cheshire.core :as json]
             [cheshire.generate :as json-gen]
             [clojure.edn :as edn]
@@ -314,6 +317,37 @@
              "state" (:session/state result)
              "at" (str (:session/at result))}))))))
 
+(defn- bridge-health-file
+  "Path to the ngircd bridge health JSON file."
+  []
+  (let [runtime-dir (or (System/getenv "XDG_RUNTIME_DIR") "/tmp")]
+    (io/file runtime-dir "ngircd-bridge-health.json")))
+
+(defn- read-bridge-health
+  "Read the ngircd bridge health file. Returns a map with at minimum
+   {:status \"ok\"|\"stale\"|\"absent\"|\"error\"}."
+  []
+  (let [f (bridge-health-file)]
+    (if (.exists f)
+      (try
+        (let [data (json/parse-string (slurp f) true)
+              updated-at (:updated_at data)
+              age-seconds (when updated-at
+                            (try
+                              (.getSeconds
+                                (java.time.Duration/between
+                                  (Instant/parse updated-at)
+                                  (Instant/now)))
+                              (catch Exception _ nil)))
+              stale? (or (nil? age-seconds) (> age-seconds 90))]
+          (assoc data
+                 :status (if stale? "stale" "ok")
+                 :stale stale?
+                 :age_seconds age-seconds))
+        (catch Exception e
+          {"status" "error" "error" (.getMessage e)}))
+      {"status" "absent"})))
+
 (defn- handle-health
   "GET /health — return agent, session, and evidence counts.
    Reads both live registry and config snapshot, reports the larger count.
@@ -336,7 +370,8 @@
         evidence-store (evidence-store-for-config config)
         evidence-count (count (estore/query* evidence-store {}))
         irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
-        irc-relay-configured? (fn? (:irc-send-fn config))]
+        irc-relay-configured? (fn? (:irc-send-fn config))
+        bridge (read-bridge-health)]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
                          "sessions" (count (persist/list-sessions {}))
@@ -345,7 +380,8 @@
                          "irc-send-base" irc-send-base
                          "evidence" evidence-count
                          "started-at" (str started-at)
-                         "uptime-seconds" uptime-seconds})))
+                         "uptime-seconds" uptime-seconds
+                         "bridge" bridge})))
 
 (defn- handle-encyclopedia-corpuses
   "GET /fulab/encyclopedia/corpuses — list available corpuses."
@@ -669,6 +705,7 @@
                            n))
                 agent-id (str prefix "-" next-n)
                 ;; Build invoke-fn: resolve make-claude-invoke-fn from dev ns
+                emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
                 invoke-fn (when (= agent-type :claude)
                             (try
                               (require 'futon3c.dev)
@@ -676,9 +713,10 @@
                                 (let [sf (format "/tmp/futon-session-id-%s" agent-id)
                                       sid-atom (atom (when (.exists (java.io.File. sf))
                                                        (str/trim (slurp sf))))]
-                                  (@make-fn {:agent-id agent-id
-                                             :session-file sf
-                                             :session-id-atom sid-atom})))
+                                  (@make-fn (cond-> {:agent-id agent-id
+                                                     :session-file sf
+                                                     :session-id-atom sid-atom}
+                                              emacs-socket (assoc :emacs-socket emacs-socket)))))
                               (catch Throwable _ nil)))
                 result (reg/register-agent!
                         {:agent-id {:id/value agent-id :id/type :continuity}
@@ -700,63 +738,69 @@
   "Emit a forum-post evidence entry for an invoke prompt or response.
    Mirrors the pattern used by the IRC transport so chat messages from
    all surfaces are queryable in the same evidence landscape.
-   When mission-id is provided, tags evidence with that mission subject."
+   When mission-id is provided, tags evidence with that mission subject.
+   Fire-and-forget: runs in a future so HTTP handler threads are never
+   blocked by XTDB indexing delays."
   [evidence-store author text session-id & {:keys [mission-id]}]
   (when evidence-store
-    (try
-      (let [subject (if mission-id
-                      {:ref/type :mission :ref/id mission-id}
-                      {:ref/type :thread :ref/id "emacs/chat"})
-            tags (cond-> [:emacs :chat :transport/emacs-chat]
-                   mission-id (conj :mission-focused))]
-        (estore/append* evidence-store
-                        {:evidence/id (str "e-" (UUID/randomUUID))
-                         :evidence/subject subject
-                         :evidence/type :forum-post
-                         :evidence/claim-type :observation
-                         :evidence/author author
-                         :evidence/at (str (Instant/now))
-                         :evidence/body {:channel "emacs-chat"
-                                         :text text
-                                         :from author
-                                         :transport :emacs-chat}
-                         :evidence/tags tags
-                         :evidence/session-id (or session-id "pending")}))
-      (catch Exception e
-        (println (str "[invoke] evidence emit warning: " (.getMessage e)))))))
+    (future
+      (try
+        (let [subject (if mission-id
+                        {:ref/type :mission :ref/id mission-id}
+                        {:ref/type :thread :ref/id "emacs/chat"})
+              tags (cond-> [:emacs :chat :transport/emacs-chat]
+                     mission-id (conj :mission-focused))]
+          (estore/append* evidence-store
+                          {:evidence/id (str "e-" (UUID/randomUUID))
+                           :evidence/subject subject
+                           :evidence/type :forum-post
+                           :evidence/claim-type :observation
+                           :evidence/author author
+                           :evidence/at (str (Instant/now))
+                           :evidence/body {:channel "emacs-chat"
+                                           :text text
+                                           :from author
+                                           :transport :emacs-chat}
+                           :evidence/tags tags
+                           :evidence/session-id (or session-id "pending")}))
+        (catch Exception e
+          (println (str "[invoke] evidence emit warning: " (.getMessage e))))))))
 
 (defn- emit-review-snapshot!
   "Emit a portfolio snapshot evidence entry after a successful review.
-   Stores compact mission id+status pairs for diffing between reviews."
+   Stores compact mission id+status pairs for diffing between reviews.
+   Fire-and-forget: runs in a future so HTTP handler threads are never
+   blocked by XTDB indexing delays."
   [evidence-store author review-result]
   (when evidence-store
-    (try
-      (let [missions (get review-result "portfolio/missions"
-                       (:portfolio/missions review-result))
-            summary (get review-result "portfolio/summary"
-                      (:portfolio/summary review-result))
-            coverage (get review-result "portfolio/coverage"
-                       (:portfolio/coverage review-result))
-            ;; Compact form: just id + status per mission
-            compact-missions (vec (for [m (or missions [])]
-                                   (let [mid (or (get m "mission/id")
-                                                 (:mission/id m) "?")
-                                         status (or (get m "mission/status")
-                                                    (:mission/status m) "unknown")]
-                                     {:mission/id mid :mission/status status})))]
-        (estore/append* evidence-store
-                        {:evidence/id (str "e-review-" (UUID/randomUUID))
-                         :evidence/subject {:ref/type :portfolio :ref/id "global"}
-                         :evidence/type :coordination
-                         :evidence/claim-type :observation
-                         :evidence/author (or author "mission-control")
-                         :evidence/at (str (Instant/now))
-                         :evidence/body {:portfolio/missions compact-missions
-                                         :portfolio/summary summary
-                                         :portfolio/coverage coverage}
-                         :evidence/tags [:review :portfolio-snapshot]}))
-      (catch Exception e
-        (println (str "[review] snapshot emit warning: " (.getMessage e)))))))
+    (future
+      (try
+        (let [missions (get review-result "portfolio/missions"
+                         (:portfolio/missions review-result))
+              summary (get review-result "portfolio/summary"
+                        (:portfolio/summary review-result))
+              coverage (get review-result "portfolio/coverage"
+                         (:portfolio/coverage review-result))
+              ;; Compact form: just id + status per mission
+              compact-missions (vec (for [m (or missions [])]
+                                     (let [mid (or (get m "mission/id")
+                                                   (:mission/id m) "?")
+                                           status (or (get m "mission/status")
+                                                      (:mission/status m) "unknown")]
+                                       {:mission/id mid :mission/status status})))]
+          (estore/append* evidence-store
+                          {:evidence/id (str "e-review-" (UUID/randomUUID))
+                           :evidence/subject {:ref/type :portfolio :ref/id "global"}
+                           :evidence/type :coordination
+                           :evidence/claim-type :observation
+                           :evidence/author (or author "mission-control")
+                           :evidence/at (str (Instant/now))
+                           :evidence/body {:portfolio/missions compact-missions
+                                           :portfolio/summary summary
+                                           :portfolio/coverage coverage}
+                           :evidence/tags [:review :portfolio-snapshot]}))
+        (catch Exception e
+          (println (str "[review] snapshot emit warning: " (.getMessage e))))))))
 
 (defn- wrap-surface-header
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
@@ -919,6 +963,32 @@
               (json-response 502 {:ok false :err "irc-send-failed"
                                   :message (.getMessage e)}))))))))
 
+(defn- handle-irc-history
+  "GET /api/alpha/irc/history — recent IRC messages in chat-friendly format.
+   Query params: channel (default #futon), limit (default 50, max 200), since (ISO)."
+  [request config]
+  (let [params (parse-query-params request)
+        channel (or (non-blank-string (get params "channel")) "#futon")
+        limit (min (or (parse-int (get params "limit")) 50) 200)
+        since (non-blank-string (get params "since"))
+        evidence-store (evidence-store-for-config config)
+        query (cond-> {:query/subject {:ref/type :thread
+                                       :ref/id (str "irc/" channel)}
+                       :query/type :forum-post
+                       :query/limit limit}
+                since (assoc :query/since since))
+        entries (estore/query* evidence-store query)
+        messages (mapv (fn [e]
+                         {:nick (:evidence/author e)
+                          :text (get-in e [:evidence/body :text])
+                          :at (:evidence/at e)
+                          :channel (get-in e [:evidence/body :channel])})
+                       entries)]
+    (json-response 200 {:ok true
+                        :channel channel
+                        :count (count messages)
+                        :messages messages})))
+
 (defn- handle-agents-list
   "GET /api/alpha/agents — list all registered agents."
   [_config]
@@ -971,6 +1041,43 @@
                                  (if (map? err)
                                    (:error/message err)
                                    (str err)))})))))
+
+;; =============================================================================
+;; CYDER process endpoints
+;; =============================================================================
+
+(defn- handle-processes-list
+  "GET /api/alpha/processes — list all registered processes."
+  [_config]
+  (let [status (cyder/registry-status)]
+    (json-response 200 {:ok true
+                        :count (:count status)
+                        :processes (:processes status)})))
+
+(defn- handle-process-get
+  "GET /api/alpha/processes/:id — inspect a single process."
+  [_config process-id]
+  (let [result (cyder/inspect process-id)]
+    (if (:ok result)
+      (json-response 200 result)
+      (json-response 404 result))))
+
+(defn- handle-process-delete
+  "DELETE /api/alpha/processes/:id — stop and deregister a process."
+  [_config process-id]
+  (let [result (cyder/stop! process-id)]
+    (if (:ok result)
+      (json-response 200 {:ok true :id process-id :stopped true})
+      (json-response 404 result))))
+
+(defn- handle-process-step
+  "POST /api/alpha/processes/:id/step — single-step a REPL-like process."
+  [_config process-id]
+  (let [result (cyder/step! process-id)]
+    (if (:ok result)
+      (json-response 200 result)
+      (json-response (if (re-find #"not registered" (str (:error result))) 404 400)
+                     result))))
 
 ;; =============================================================================
 ;; Mission-control endpoints
@@ -1297,6 +1404,24 @@
       (json-response 200 {:ok true :class result}))))
 
 ;; =============================================================================
+;; Enrichment endpoint
+;; =============================================================================
+
+(defn- handle-enrich-file
+  "GET /api/alpha/enrich/file?path=... — composite enrichment for a source file.
+   Queries futon1a hyperedge store for all enrichment layers and returns
+   missions, patterns, evidence counts, tensions, and deps per symbol."
+  [request config]
+  (let [params (parse-query-params request)
+        path (or (get params "path") (get params :path))]
+    (if (or (nil? path) (str/blank? (str path)))
+      (json-response 400 {:ok false :error "missing-path"
+                           :message "path query parameter is required"})
+      (let [futon1a-url (or (System/getenv "FUTON1A_URL") "http://localhost:7071")
+            result (enrich/enrich-file (str path) {:futon1a-url futon1a-url})]
+        (json-response 200 (assoc result :ok true))))))
+
+;; =============================================================================
 ;; Mission control data endpoints
 ;; =============================================================================
 
@@ -1521,6 +1646,9 @@
           (and (= :post method) (= "/api/alpha/irc/send" uri))
           (handle-irc-send request config)
 
+          (and (= :get method) (= "/api/alpha/irc/history" uri))
+          (handle-irc-history request config)
+
           (and (= :post method) (= "/api/alpha/mission-control" uri))
           (handle-mission-control request config)
 
@@ -1588,6 +1716,27 @@
           (and (= :get method) (= "/api/alpha/agents" uri))
           (handle-agents-list config)
 
+          ;; CYDER process endpoints
+          (and (= :post method) (string? uri)
+               (str/starts-with? uri "/api/alpha/processes/")
+               (str/ends-with? uri "/step"))
+          (let [raw (subs uri (count "/api/alpha/processes/")
+                         (- (count uri) (count "/step")))]
+            (handle-process-step config (enc/decode-uri-component raw)))
+
+          (and (= :delete method) (string? uri)
+               (re-matches #"/api/alpha/processes/(.+)" uri))
+          (let [[_ process-id] (re-find #"/api/alpha/processes/(.+)" uri)]
+            (handle-process-delete config (enc/decode-uri-component process-id)))
+
+          (and (= :get method) (string? uri)
+               (re-matches #"/api/alpha/processes/(.+)" uri))
+          (let [[_ process-id] (re-find #"/api/alpha/processes/(.+)" uri)]
+            (handle-process-get config (enc/decode-uri-component process-id)))
+
+          (and (= :get method) (= "/api/alpha/processes" uri))
+          (handle-processes-list config)
+
           ;; Reflection endpoints
           (and (= :get method) (= "/api/alpha/reflect/namespaces" uri))
           (handle-reflect-namespaces request)
@@ -1623,6 +1772,9 @@
                (str/starts-with? uri "/api/alpha/reflect/java/"))
           (let [raw (subs uri (count "/api/alpha/reflect/java/"))]
             (handle-reflect-java-class (enc/decode-uri-component raw)))
+
+          (and (= :get method) (= "/api/alpha/enrich/file" uri))
+          (handle-enrich-file request config)
 
           (and (= :get method) (= "/health" uri))
           (handle-health config started-at)

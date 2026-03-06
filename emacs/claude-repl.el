@@ -89,7 +89,12 @@ GET /agents to find an existing claude agent. Returns the agent-id or nil."
          (or
           ;; Try /agents/auto first
           (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
-                 (json-body (json-serialize '(:type "claude")))
+                 (socket-name (or (claude-repl--workspace)
+                                  (and (boundp 'server-name) server-name)))
+                 (json-body (json-serialize
+                             (if socket-name
+                                 `(:type "claude" :emacs-socket ,socket-name)
+                               '(:type "claude"))))
                  (result (with-temp-buffer
                            (let ((exit (call-process "curl" nil t nil
                                                      "-sS" "--max-time" "5"
@@ -125,9 +130,9 @@ GET /agents to find an existing claude agent. Returns the agent-id or nil."
                                     agents-val)))))
                 (seq-find (lambda (k) (string-prefix-p "claude-" k)) keys)))))))
     (when (and (stringp agent-id) (not (string-empty-p agent-id)))
-      (setq claude-repl-agent-id agent-id)
-      (setq claude-repl-session-file
-            (format "/tmp/futon-session-id-%s" agent-id))
+      (setq-local claude-repl-agent-id agent-id)
+      (setq-local claude-repl-session-file
+                  (format "/tmp/futon-session-id-%s" agent-id))
       (message "claude-repl: registered as %s" agent-id)
       agent-id)))
 
