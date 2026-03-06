@@ -6,7 +6,7 @@
 
    Queries futon1a via HTTP (not classpath) to respect I-5 boundaries."
   (:require [clojure.string :as str]
-            [cheshire.core :as json])
+            [clojure.edn :as edn])
   (:import [java.net URLEncoder]
            [java.nio.charset StandardCharsets]))
 
@@ -15,33 +15,33 @@
 (defn- url-encode [s]
   (URLEncoder/encode (str s) (.name StandardCharsets/UTF_8)))
 
-(defn- http-get-json
-  "GET url, parse JSON response. Returns parsed body or nil on error."
+(defn- http-get-edn
+  "GET url, parse EDN response. Returns parsed body or nil on error."
   [url]
   (try
     (let [conn (doto (.openConnection (java.net.URL. url))
                  (.setRequestMethod "GET")
                  (.setConnectTimeout 5000)
                  (.setReadTimeout 10000)
-                 (.setRequestProperty "Accept" "application/json"))
+                 (.setRequestProperty "Accept" "application/edn"))
           status (.getResponseCode conn)]
       (when (<= 200 status 299)
         (with-open [is (.getInputStream conn)]
-          (json/parse-stream (java.io.InputStreamReader. is) true))))
+          (edn/read-string (slurp is)))))
     (catch Exception _ nil)))
 
 (defn- query-by-endpoint
   "Query futon1a for all hyperedges involving endpoint-id."
   [futon1a-url endpoint-id]
   (let [url (str futon1a-url "/api/alpha/hyperedges?end=" (url-encode endpoint-id))
-        result (http-get-json url)]
+        result (http-get-edn url)]
     (or (:hyperedges result) [])))
 
 (defn- query-by-type
   "Query futon1a for all hyperedges of a given type."
   [futon1a-url hx-type]
   (let [url (str futon1a-url "/api/alpha/hyperedges?type=" (url-encode hx-type))
-        result (http-get-json url)]
+        result (http-get-edn url)]
     (or (:hyperedges result) [])))
 
 ;; --- Path → Namespace mapping ---
