@@ -63,6 +63,19 @@
                      (str/replace "_" "-"))]
       ns-str)))
 
+(defn- path->file-endpoint
+  "Derive a file: endpoint ID for churn/complexity lookup.
+   Input: 'src/futon3c/transport/http.clj' or '/src/futon3c/...'
+   Output: 'file:futon3c/src/futon3c/transport/http.clj'
+   The repo name is the first namespace segment (= first dir under src/)."
+  [path]
+  (when-let [ns-str (path->namespace path)]
+    (let [repo (first (str/split ns-str #"\."))
+          ;; Normalize: strip leading / and ensure starts with src/
+          clean (cond-> path
+                  (str/starts-with? path "/") (subs 1))]
+      (str "file:" repo "/" clean))))
+
 ;; --- Enrichment aggregation ---
 
 (defn- classify-hyperedge
@@ -183,15 +196,26 @@
                                          0)
                                      layer-edges))
                      0)
-         ;; Extract churn data
-         churn-edges (filter #(= (keyword "code" "file-churn") (:hx/type %))
-                             ns-edges)
-         churn (when (seq churn-edges)
-                 (let [hx (first churn-edges)]
-                   {:commits (or (get-in hx [:hx/props :commits])
-                                 (get-in hx [:hx/props "commits"]))
-                    :score (or (get-in hx [:hx/props :score])
-                               (get-in hx [:hx/props "score"]))}))
+         ;; Extract churn + complexity via file endpoint
+         file-ep (path->file-endpoint path)
+         file-edges (when file-ep (query-by-endpoint futon1a-url file-ep))
+         file-classified (group-by classify-hyperedge file-edges)
+         churn (when-let [churn-edges (seq (:churn file-classified))]
+                 (let [hx (first churn-edges)
+                       props (:hx/props hx)]
+                   {:commits (or (:commits-all-time props)
+                                 (get props "commits-all-time")
+                                 (:commits props)
+                                 (get props "commits"))
+                    :commits-recent (or (:commits-recent props)
+                                        (get props "commits-recent"))
+                    :last-touch (or (:last-touch props)
+                                    (get props "last-touch"))}))
+         complexity (when-let [cx-edges (seq (:complexity file-classified))]
+                      (let [props (:hx/props (first cx-edges))]
+                        {:max-depth (or (:max-depth props) (get props "max-depth"))
+                         :mean-depth (or (:mean-depth props) (get props "mean-depth"))
+                         :lines (or (:lines props) (get props "lines"))}))
          ;; Extract missions at namespace level
          ns-missions (->> (concat (:missions ns-classified) [])
                           (keep extract-mission-id)
@@ -226,6 +250,7 @@
       :missions ns-missions
       :tensions tensions
       :churn churn
+      :complexity complexity
       :invariants invariants
       :var-count (count var-endpoints)
       :symbols symbols})))
