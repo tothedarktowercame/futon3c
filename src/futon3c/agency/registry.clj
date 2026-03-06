@@ -323,7 +323,8 @@
                                                     :agent/status :idle
                                                     :agent/invoke-started-at nil
                                                     :agent/invoke-prompt-preview nil
-                                                    :agent/invoke-activity nil}))
+                                                    :agent/invoke-activity nil
+                                                    :agent/invoke-event-sink nil}))
                                      m)))
                           (project-agents!))]
          (mark-invoking!)
@@ -454,6 +455,29 @@
            (if-let [a (get m agent-id-val)]
              (assoc m agent-id-val
                     (assoc a :agent/invoke-activity activity-str))
+             m))))
+
+(defn set-invoke-event-sink!
+  "Set a streaming event callback for an agent. sink-fn: (fn [event-map])."
+  [agent-id-val sink-fn]
+  (swap! !registry
+         (fn [m]
+           (if-let [a (get m agent-id-val)]
+             (assoc m agent-id-val (assoc a :agent/invoke-event-sink sink-fn))
+             m))))
+
+(defn get-invoke-event-sink
+  "Get the event sink callback for an agent, or nil."
+  [agent-id-val]
+  (:agent/invoke-event-sink (get @!registry agent-id-val)))
+
+(defn clear-invoke-event-sink!
+  "Remove the event sink callback for an agent."
+  [agent-id-val]
+  (swap! !registry
+         (fn [m]
+           (if-let [a (get m agent-id-val)]
+             (assoc m agent-id-val (dissoc a :agent/invoke-event-sink))
              m))))
 
 ;; =============================================================================

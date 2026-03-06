@@ -325,7 +325,223 @@ When FORCE is non-nil, refresh even when session is unchanged."
   "Emit evidence for assistant TEXT."
   (claude-repl--emit-turn-evidence! "assistant" text))
 
-;;; Claude API call
+;;; Streaming display
+
+(defvar-local claude-repl--streaming-marker nil
+  "Point marker for appending streamed text.")
+
+(defvar-local claude-repl--streaming-started nil
+  "Non-nil when streaming text has begun for current turn.")
+
+(defun claude-repl--begin-streaming-message (name)
+  "Insert NAME prefix above prompt and set streaming marker."
+  (let ((inhibit-read-only t)
+        (face (or (cdr (assoc name agent-chat--face-alist))
+                  'agent-chat-joe-face)))
+    (agent-chat-remove-thinking)
+    (save-excursion
+      (goto-char (marker-position agent-chat--prompt-marker))
+      (let ((name-start (point)))
+        (insert (format "%s: " name))
+        (let ((name-end (point)))
+          (overlay-put (make-overlay name-start name-end) 'face face)
+          (setq claude-repl--streaming-marker (copy-marker (point)))
+          (setq claude-repl--streaming-started t))))))
+
+(defun claude-repl--stream-text (text)
+  "Insert TEXT at streaming marker with text face."
+  (when (and claude-repl--streaming-marker
+             (marker-position claude-repl--streaming-marker))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (marker-position claude-repl--streaming-marker))
+        (let ((start (point)))
+          (insert text)
+          (overlay-put (make-overlay start (point)) 'face 'agent-chat-text-face)
+          (set-marker claude-repl--streaming-marker (point))))
+      (agent-chat-scroll-to-bottom))))
+
+(defun claude-repl--end-streaming-message ()
+  "Finalize streamed message: add trailing newlines, clear marker."
+  (when (and claude-repl--streaming-marker
+             (marker-position claude-repl--streaming-marker))
+    (let ((inhibit-read-only t))
+      ;; Remove any leftover progress lines (e.g. "using Read")
+      (agent-chat-remove-thinking)
+      (save-excursion
+        (goto-char (marker-position claude-repl--streaming-marker))
+        (insert "\n\n")))
+    (set-marker claude-repl--streaming-marker nil)
+    (setq claude-repl--streaming-marker nil
+          claude-repl--streaming-started nil)))
+
+;;; Streaming invoke
+
+(defun claude-repl--call-claude-streaming (text callback)
+  "Send TEXT to Claude via POST /api/alpha/invoke-stream.
+Streams NDJSON events incrementally. Text events are displayed as they
+arrive. Tool-use events update the progress line. The done event
+triggers evidence emission and session-id update.
+CALLBACK is called with the final response text on completion."
+  (let* ((chat-buffer (current-buffer))
+         (url (concat claude-repl-api-url "/api/alpha/invoke-stream"))
+         (full-prompt (format "Agent: %s\n\nUser message:\n%s"
+                              claude-repl-agent-id text))
+         (json-body (json-serialize
+                     `(:agent-id ,claude-repl-agent-id
+                       :prompt ,full-prompt
+                       :surface "emacs-repl"
+                       :caller ,(or (getenv "USER") user-login-name "joe"))))
+         (outbuf (generate-new-buffer " *futon3c-invoke-stream*"))
+         (line-buffer ""))
+    (let ((proc
+           (make-process
+            :name "futon3c-invoke-stream"
+            :buffer outbuf
+            :command (list "curl" "-N" "-sS" "--max-time" "1800"
+                           "-H" "Content-Type: application/json"
+                           "-d" json-body url)
+            :noquery t
+            :connection-type 'pipe
+            :filter
+            (lambda (p output)
+              ;; Append to process buffer for sentinel
+              (when (buffer-live-p (process-buffer p))
+                (with-current-buffer (process-buffer p)
+                  (goto-char (point-max))
+                  (insert output)))
+              ;; Split into NDJSON lines
+              (setq line-buffer (concat line-buffer output))
+             (let ((lines (split-string line-buffer "\n")))
+               (setq line-buffer (car (last lines)))
+               (dolist (line (butlast lines))
+                 (when (not (string-empty-p (string-trim line)))
+                   (condition-case nil
+                       (let* ((json-obj (json-parse-string
+                                         line
+                                         :object-type 'alist
+                                         :null-object nil
+                                         :false-object nil))
+                              (type (alist-get 'type json-obj)))
+                         (when (buffer-live-p chat-buffer)
+                           (with-current-buffer chat-buffer
+                             (cond
+                              ((equal type "text")
+                               (unless claude-repl--streaming-started
+                                 (claude-repl--begin-streaming-message "claude"))
+                               (claude-repl--stream-text
+                                (alist-get 'text json-obj)))
+                              ((equal type "tool_use")
+                               (let* ((tools (alist-get 'tools json-obj))
+                                      (tool-names
+                                       (if (vectorp tools)
+                                           (mapconcat #'identity
+                                                      (append tools nil) ", ")
+                                         (format "%s" tools))))
+                                 (agent-chat-update-progress
+                                  (format "using %s" tool-names)
+                                  'agent-chat-prompt-face)))))))
+                     (error nil))))))
+           :sentinel
+           (lambda (p _event)
+             (when (memq (process-status p) '(exit signal))
+               ;; If interrupted, just clean up
+               (if (and (eq (process-status p) 'signal)
+                        (not (eq agent-chat--pending-process p)))
+                   (progn
+                     (when (buffer-live-p chat-buffer)
+                       (with-current-buffer chat-buffer
+                         (when claude-repl--streaming-started
+                           (claude-repl--end-streaming-message))))
+                     (when (buffer-live-p (process-buffer p))
+                       (kill-buffer (process-buffer p))))
+                 (condition-case err
+                     (let* ((raw (if (buffer-live-p (process-buffer p))
+                                     (with-current-buffer (process-buffer p)
+                                       (buffer-string))
+                                   ""))
+                            ;; Find the done event in the raw output
+                            (done-event nil)
+                            (retried nil))
+                       ;; Parse done event from raw NDJSON
+                       (dolist (line (split-string raw "\n"))
+                         (when (and (not (string-empty-p (string-trim line)))
+                                    (string-match-p "\"type\"[[:space:]]*:[[:space:]]*\"done\"" line))
+                           (condition-case nil
+                               (setq done-event
+                                     (json-parse-string line
+                                                        :object-type 'alist
+                                                        :null-object nil
+                                                        :false-object nil))
+                             (error nil))))
+                       (when (buffer-live-p (process-buffer p))
+                         (kill-buffer (process-buffer p)))
+                       (when (buffer-live-p chat-buffer)
+                         (with-current-buffer chat-buffer
+                           (when (eq agent-chat--pending-process p)
+                             (setq agent-chat--pending-process nil))
+                           (cond
+                            ;; Successful done event
+                            ((and done-event (alist-get 'ok done-event))
+                             (let ((sid (alist-get 'session-id done-event))
+                                   (result (or (alist-get 'result done-event)
+                                               "[empty response]")))
+                               (when sid
+                                 (agent-chat-update-session-id sid)
+                                 (when claude-repl-session-file
+                                   (write-region sid nil claude-repl-session-file nil 'silent))
+                                 (claude-repl--emit-session-start-evidence! sid))
+                               (if claude-repl--streaming-started
+                                   (progn
+                                     ;; Text already displayed — just finalize
+                                     (claude-repl--end-streaming-message)
+                                     ;; Emit evidence directly (skip callback to avoid re-insert)
+                                     (claude-repl--emit-assistant-turn-evidence! result)
+                                     (goto-char (point-max))
+                                     (agent-chat-scroll-to-bottom))
+                                 ;; No streaming happened — use callback for full insert
+                                 (funcall callback result))))
+                            ;; Error done event — check for agent-not-found
+                            (done-event
+                             (let ((err-msg (or (alist-get 'message done-event)
+                                                (alist-get 'error done-event))))
+                               (when claude-repl--streaming-started
+                                 (claude-repl--end-streaming-message))
+                               (if (and (stringp err-msg)
+                                        (string-match-p "not registered\\|agent-not-found" err-msg))
+                                   (if (claude-repl--auto-register)
+                                       (progn
+                                         (message "claude-repl: re-registered as %s — retrying..."
+                                                  claude-repl-agent-id)
+                                         (setq retried t))
+                                     (funcall callback (format "[Error: %s]" err-msg)))
+                                 (funcall callback (format "[Error: %s]" err-msg)))))
+                            ;; No done event found (curl error, etc.)
+                            (t
+                             (when claude-repl--streaming-started
+                               (claude-repl--end-streaming-message))
+                             (let ((exit-code (process-exit-status p)))
+                               (funcall callback
+                                        (format "[curl error (exit %d): %s]"
+                                                exit-code
+                                                (string-trim (truncate-string-to-width raw 200)))))))
+                           ;; Handle retry
+                           (when retried
+                             (claude-repl--call-claude-streaming text callback)))))
+                   (error
+                    (message "claude-repl streaming sentinel error: %s" (error-message-string err))
+                    (when (buffer-live-p chat-buffer)
+                      (with-current-buffer chat-buffer
+                        (setq agent-chat--pending-process nil)
+                        (when claude-repl--streaming-started
+                          (claude-repl--end-streaming-message))
+                        (agent-chat-remove-thinking)
+                        (agent-chat-insert-message
+                         "claude"
+                         (format "[Sentinel error: %s]" (error-message-string err)))))))))))))
+      proc)))
+
+;;; Claude API call (non-streaming fallback)
 
 (defun claude-repl--call-claude-async (text callback)
   "Send TEXT to Claude via POST /api/alpha/invoke.
@@ -491,7 +707,7 @@ Type after the prompt, RET to send, C-c C-n for fresh session.
   "Send input to Claude and display response."
   (interactive)
   (agent-chat-send-input
-   #'claude-repl--call-claude-async
+   #'claude-repl--call-claude-streaming
    "claude"
    (list :before-send #'claude-repl--emit-user-turn-evidence!
          :on-response #'claude-repl--emit-assistant-turn-evidence!)))

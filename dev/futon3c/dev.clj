@@ -2392,7 +2392,17 @@ RESPOND WITH ONLY:
                                                 (when (and (not tools) text (not (str/blank? text)))
                                                   (update-activity! aid-val "composing response")))
                                               (when (and text (not (str/blank? text)))
-                                                (.append text-acc text)))
+                                                (.append text-acc text))
+                                              ;; Emit to streaming event sink (if any)
+                                              (when-let [get-sink (ns-resolve 'futon3c.agency.registry
+                                                                              'get-invoke-event-sink)]
+                                                (when-let [sink (get-sink aid-val)]
+                                                  (try
+                                                    (when tools
+                                                      (sink {:type "tool_use" :tools (vec tools)}))
+                                                    (when (and text (not (str/blank? text)))
+                                                      (sink {:type "text" :text text}))
+                                                    (catch Throwable _)))))
                                             "result"
                                             (do (reset! result-sid (:session_id parsed))
                                                 (when (:is_error parsed)
@@ -3296,11 +3306,11 @@ RESPOND WITH ONLY:
         mission-count (cyder/register-missions!)
         ;; CYDER: project *processes* buffer on every registry change
         _ (add-watch cyder/!processes :blackboard
-            (fn [_ _ _ _new-val]
+            (fn [_ _ _ new-val]
               (bb/project-processes!
-                (cyder/list-processes))))
+                (sort-by :process/id (vals new-val)))))
         ;; Initial projection so the buffer appears on startup
-        _ (bb/project-processes! (cyder/list-processes))]
+        _ (bb/project-processes! (sort-by :process/id (vals @cyder/!processes)))]
     (println)
     (println (str "[dev] Role: " (name role)
                   " (" (:source role-info) ")"

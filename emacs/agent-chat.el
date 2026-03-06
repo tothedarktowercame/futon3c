@@ -158,8 +158,9 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
                              (min (point-max) (1+ (line-end-position))))
             (goto-char next)))))))
 
-(defun agent-chat-update-progress (status-text)
-  "Replace the thinking/progress line with STATUS-TEXT."
+(defun agent-chat-update-progress (status-text &optional face)
+  "Replace the thinking/progress line with STATUS-TEXT.
+Optional FACE overrides `agent-chat-thinking-face'."
   (let ((inhibit-read-only t)
         (prop (or agent-chat--thinking-property 'agent-chat-thinking)))
     ;; Remove existing progress lines
@@ -168,7 +169,7 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
     (save-excursion
       (goto-char (marker-position agent-chat--prompt-marker))
       (insert (propertize (concat status-text "\n")
-                          'face 'agent-chat-thinking-face
+                          'face (or face 'agent-chat-thinking-face)
                           prop t)))))
 
 ;;; Streaming filter

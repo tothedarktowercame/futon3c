@@ -941,6 +941,120 @@
                                           :error "invoke-error"
                                           :message (.getMessage t)}))))))))))))
 
+(defn- handle-invoke-stream
+  "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
+   Same request body as /invoke. Returns application/x-ndjson with chunked events:
+     {\"type\":\"text\",\"text\":\"...\"}
+     {\"type\":\"tool_use\",\"tools\":[\"Read\"]}
+     {\"type\":\"done\",\"ok\":true,\"result\":\"...\",\"session-id\":\"...\"}
+   The event sink is installed on the agent registry so the NDJSON parse loop
+   in make-claude-invoke-fn emits events as they arrive."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            prompt (or (:prompt payload) (get payload "prompt"))]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? prompt)
+          (json-response 400 {:ok false :err "missing-prompt"
+                              :message "prompt is required"})
+
+          :else
+          (hk/with-channel request channel
+            ;; Send initial response with a keepalive comment to start chunked stream
+            (hk/send! channel
+              {:status 200
+               :headers {"Content-Type" "application/x-ndjson"
+                         "Cache-Control" "no-cache"
+                         "X-Accel-Buffering" "no"}
+               :body (str (json/generate-string {:type "started"}) "\n")}
+              false)
+            (let [aid (str agent-id)
+                  ;; Create sink-fn that writes NDJSON lines to the channel
+                  sink-fn (fn [event]
+                            (try
+                              (hk/send! channel
+                                (str (json/generate-string event) "\n")
+                                false)
+                              (catch Throwable _)))]
+              ;; Install event sink on the agent
+              (reg/set-invoke-event-sink! aid sink-fn)
+              ;; Clean up on client disconnect
+              (hk/on-close channel
+                (fn [_status]
+                  (reg/clear-invoke-event-sink! aid)))
+              ;; Run invoke on executor thread
+              (.submit invoke-executor
+                ^Runnable
+                (fn []
+                  (try
+                    (let [caller (or (some-> payload :caller str)
+                                     (some-> payload (get "caller") str)
+                                     "http-caller")
+                          surface (or (some-> payload :surface str)
+                                      (some-> payload (get "surface") str))
+                          mission-id (or (:mission-id payload) (get payload "mission-id"))
+                          timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                                             long)
+                          evidence-store (evidence-store-for-config config)
+                          ev-opts (when mission-id [:mission-id mission-id])
+                          effective-prompt (wrap-surface-header prompt surface caller)
+                          result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+                          sid (:session-id result)]
+                      ;; Emit evidence (same as handle-invoke)
+                      (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
+                             (or ev-opts []))
+                      (if (:ok result)
+                        (do
+                          (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
+                                 (or ev-opts []))
+                          ;; Send done event and close
+                          (try
+                            (hk/send! channel
+                              (str (json/generate-string
+                                     (cond-> {:type "done"
+                                              :ok true
+                                              :result (:result result)
+                                              :session-id sid}
+                                       (:invoke-meta result)
+                                       (assoc :invoke-meta (:invoke-meta result))))
+                                   "\n")
+                              false)
+                            (catch Throwable _)))
+                        (let [err (:error result)
+                              code (if (map? err) (:error/code err) :invoke-failed)
+                              msg (if (map? err) (:error/message err) (str err))]
+                          (try
+                            (hk/send! channel
+                              (str (json/generate-string
+                                     {:type "done"
+                                      :ok false
+                                      :error (name code)
+                                      :message msg})
+                                   "\n")
+                              false)
+                            (catch Throwable _)))))
+                    (catch Throwable t
+                      (try
+                        (hk/send! channel
+                          (str (json/generate-string
+                                 {:type "done"
+                                  :ok false
+                                  :error "invoke-error"
+                                  :message (.getMessage t)})
+                               "\n")
+                          false)
+                        (catch Throwable _)))
+                    (finally
+                      (reg/clear-invoke-event-sink! aid)
+                      (hk/close channel))))))))))))
+
 (defn- handle-whistle
   "POST /api/alpha/whistle — synchronous request-response to a registered agent.
    Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 60000}
@@ -1715,6 +1829,9 @@
 
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
+
+          (and (= :post method) (= "/api/alpha/invoke-stream" uri))
+          (handle-invoke-stream request config)
 
           (and (= :post method) (= "/api/alpha/whistle" uri))
           (handle-whistle request config)
