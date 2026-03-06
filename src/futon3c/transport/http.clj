@@ -60,6 +60,7 @@
            [java.net Socket InetSocketAddress]
            [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException]
            [java.util UUID]
+           [java.util.concurrent Executors ExecutorService]
            [org.httpkit.logger ContextLogger]))
 
 ;; =============================================================================
@@ -69,6 +70,19 @@
 (json-gen/add-encoder Instant
   (fn [val jg]
     (.writeString jg (str val))))
+
+;; =============================================================================
+;; Invoke thread pool — keeps long-running agent invocations off http-kit threads
+;; =============================================================================
+
+(defonce ^ExecutorService invoke-executor
+  (Executors/newFixedThreadPool
+   4
+   (let [ctr (atom 0)]
+     (reify java.util.concurrent.ThreadFactory
+       (newThread [_ r]
+         (doto (Thread. r (str "invoke-worker-" (swap! ctr inc)))
+           (.setDaemon true)))))))
 
 ;; =============================================================================
 ;; Internal helpers
@@ -882,36 +896,50 @@
                               :message "prompt is required"})
 
           :else
-          (let [caller (or (some-> payload :caller str)
-                           (some-> payload (get "caller") str)
-                           "http-caller")
-                surface (or (some-> payload :surface str)
-                            (some-> payload (get "surface") str))
-                mission-id (or (:mission-id payload) (get payload "mission-id"))
-                timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
-                                   long)
-                ev-opts (when mission-id [:mission-id mission-id])
-                effective-prompt (wrap-surface-header prompt surface caller)]
-            (let [result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
-                  sid (:session-id result)]
-              (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
-                     (or ev-opts []))
-              (if (:ok result)
-                (do
-                  (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
-                         (or ev-opts []))
-                  (json-response 200 (cond-> {:ok true
-                                              :result (:result result)
-                                              :session-id sid}
-                                       (:invoke-meta result)
-                                       (assoc :invoke-meta (:invoke-meta result)))))
-                (let [err (:error result)
-                      code (if (map? err) (:error/code err) :invoke-failed)
-                      msg (if (map? err) (:error/message err) (str err))]
-                  (json-response (if (= :agent-not-found code) 404 502)
-                                 {:ok false
-                                  :error (name code)
-                                  :message msg}))))))))))
+          (hk/with-channel request channel
+            (.submit invoke-executor
+              ^Runnable
+              (fn []
+                (try
+                  (let [caller (or (some-> payload :caller str)
+                                   (some-> payload (get "caller") str)
+                                   "http-caller")
+                        surface (or (some-> payload :surface str)
+                                    (some-> payload (get "surface") str))
+                        mission-id (or (:mission-id payload) (get payload "mission-id"))
+                        timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                                           long)
+                        ev-opts (when mission-id [:mission-id mission-id])
+                        effective-prompt (wrap-surface-header prompt surface caller)
+                        result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+                        sid (:session-id result)]
+                    (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
+                           (or ev-opts []))
+                    (if (:ok result)
+                      (do
+                        (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
+                               (or ev-opts []))
+                        (hk/send! channel
+                          (json-response 200 (cond-> {:ok true
+                                                      :result (:result result)
+                                                      :session-id sid}
+                                               (:invoke-meta result)
+                                               (assoc :invoke-meta (:invoke-meta result))))))
+                      (let [err (:error result)
+                            code (if (map? err) (:error/code err) :invoke-failed)
+                            msg (if (map? err) (:error/message err) (str err))]
+                        (hk/send! channel
+                          (json-response (if (= :agent-not-found code) 404 502)
+                                         {:ok false
+                                          :error (name code)
+                                          :message msg})))))
+                  (catch Throwable t
+                    (println (str "[invoke] async error: " (.getMessage t)))
+                    (flush)
+                    (hk/send! channel
+                      (json-response 500 {:ok false
+                                          :error "invoke-error"
+                                          :message (.getMessage t)}))))))))))))
 
 (defn- handle-whistle
   "POST /api/alpha/whistle — synchronous request-response to a registered agent.
@@ -940,23 +968,37 @@
                               :message "prompt is required"})
 
           :else
-          (let [result (whistles/whistle!
-                        {:agent-id (str agent-id)
-                         :prompt prompt
-                         :author caller
-                         :timeout-ms timeout-ms
-                         :evidence-store evidence-store})]
-            (if (:whistle/ok result)
-              (json-response 200 {:ok true
-                                  :response (:whistle/response result)
-                                  :agent-id (:whistle/agent-id result)
-                                  :session-id (:whistle/session-id result)})
-              (let [err (:whistle/error result)]
-                (json-response
-                 (if (and (string? err) (.contains ^String err "not registered")) 404 502)
-                 {:ok false
-                  :error err
-                  :agent-id (:whistle/agent-id result)})))))))))
+          (hk/with-channel request channel
+            (.submit invoke-executor
+              ^Runnable
+              (fn []
+                (try
+                  (let [result (whistles/whistle!
+                                {:agent-id (str agent-id)
+                                 :prompt prompt
+                                 :author caller
+                                 :timeout-ms timeout-ms
+                                 :evidence-store evidence-store})]
+                    (if (:whistle/ok result)
+                      (hk/send! channel
+                        (json-response 200 {:ok true
+                                            :response (:whistle/response result)
+                                            :agent-id (:whistle/agent-id result)
+                                            :session-id (:whistle/session-id result)}))
+                      (let [err (:whistle/error result)]
+                        (hk/send! channel
+                          (json-response
+                           (if (and (string? err) (.contains ^String err "not registered")) 404 502)
+                           {:ok false
+                            :error err
+                            :agent-id (:whistle/agent-id result)})))))
+                  (catch Throwable t
+                    (println (str "[whistle] async error: " (.getMessage t)))
+                    (flush)
+                    (hk/send! channel
+                      (json-response 500 {:ok false
+                                          :error "whistle-error"
+                                          :message (.getMessage t)}))))))))))))
 
 (defn- handle-irc-send
   "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
