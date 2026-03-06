@@ -207,6 +207,13 @@
                                   :invariant (or (get-in hx [:hx/props :invariant])
                                                  (get-in hx [:hx/props "invariant"])
                                                  "")})))
+         ;; Extract tensions
+         tensions (->> (:tensions ns-classified)
+                       (mapv (fn [hx]
+                               {:type (str (namespace (:hx/type hx)) "/" (name (:hx/type hx)))
+                                :summary (or (get-in hx [:hx/props :summary])
+                                             (get-in hx [:hx/props "summary"])
+                                             "")})))
          ;; Build per-symbol enrichment
          symbols (into {}
                        (for [[var-name edges] var-edge-map
@@ -217,6 +224,7 @@
       :namespace ns-str
       :enrichment-layer max-layer
       :missions ns-missions
+      :tensions tensions
       :churn churn
       :invariants invariants
       :var-count (count var-endpoints)
