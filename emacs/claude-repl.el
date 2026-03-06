@@ -371,6 +371,7 @@ CALLBACK receives the response string."
                                    (with-current-buffer (process-buffer p)
                                      (buffer-string))
                                  ""))
+                          (retried nil)
                           (response
                            (if (/= exit-code 0)
                                (format "[curl error (exit %d): %s]"
@@ -398,26 +399,32 @@ CALLBACK receives the response string."
                                                      (not (string-empty-p (string-trim result)))
                                                      result)))
                                          (or r "[empty response]"))
-                                     ;; Auto-re-register on agent-not-found
-                                     (when (and (stringp err-msg)
-                                                (string-match-p "not registered\\|agent-not-found" err-msg)
-                                                (buffer-live-p chat-buffer))
-                                       (with-current-buffer chat-buffer
-                                         (when (claude-repl--auto-register)
-                                           (message "claude-repl: re-registered as %s — please resend"
-                                                    claude-repl-agent-id))))
-                                     (message "claude-repl invoke error: %s"
-                                              (truncate-string-to-width
-                                               (or err-msg raw) 500))
-                                     (let ((msg (or err-msg raw)))
-                                       (if (and (stringp msg)
-                                                (string-match-p
-                                                 "\\`\\(Exit [0-9]+:\\|invoke-error\\)"
-                                                 msg)
-                                                (< (length (string-trim msg)) 20))
-                                           (format "[Error: %s — try C-c C-n for fresh session]"
-                                                   msg)
-                                         (format "[Error: %s]" msg)))))
+                                     ;; Auto-re-register and retry on agent-not-found
+                                     (if (and (stringp err-msg)
+                                              (string-match-p "not registered\\|agent-not-found" err-msg)
+                                              (buffer-live-p chat-buffer))
+                                         (with-current-buffer chat-buffer
+                                           (if (claude-repl--auto-register)
+                                               (progn
+                                                 (message "claude-repl: re-registered as %s — retrying..."
+                                                          claude-repl-agent-id)
+                                                 (setq retried t)
+                                                 nil)
+                                             (format "[Error: %s]" err-msg)))
+                                       ;; Non-registration error
+                                       (progn
+                                         (message "claude-repl invoke error: %s"
+                                                  (truncate-string-to-width
+                                                   (or err-msg raw) 500))
+                                         (let ((msg (or err-msg raw)))
+                                           (if (and (stringp msg)
+                                                    (string-match-p
+                                                     "\\`\\(Exit [0-9]+:\\|invoke-error\\)"
+                                                     msg)
+                                                    (< (length (string-trim msg)) 20))
+                                               (format "[Error: %s — try C-c C-n for fresh session]"
+                                                       msg)
+                                             (format "[Error: %s]" msg)))))))
                                (error
                                 (format "[JSON parse error: %s\nRaw: %s]"
                                         (error-message-string parse-err)
@@ -425,11 +432,19 @@ CALLBACK receives the response string."
                      (message "claude-repl: exit=%d raw-len=%d" exit-code (length raw))
                      (when (buffer-live-p (process-buffer p))
                        (kill-buffer (process-buffer p)))
-                     (when (buffer-live-p chat-buffer)
-                       (with-current-buffer chat-buffer
-                         (when (eq agent-chat--pending-process p)
-                           (setq agent-chat--pending-process nil))
-                         (funcall callback response))))
+                     (if retried
+                         ;; Re-registered successfully — retry the invoke
+                         (when (buffer-live-p chat-buffer)
+                           (with-current-buffer chat-buffer
+                             (when (eq agent-chat--pending-process p)
+                               (setq agent-chat--pending-process nil))
+                             (claude-repl--call-claude-async text callback)))
+                       ;; Normal path — deliver response
+                       (when (buffer-live-p chat-buffer)
+                         (with-current-buffer chat-buffer
+                           (when (eq agent-chat--pending-process p)
+                             (setq agent-chat--pending-process nil))
+                           (funcall callback response)))))
                  (error
                   (message "claude-repl sentinel error: %s" (error-message-string err))
                   (when (buffer-live-p chat-buffer)
