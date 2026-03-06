@@ -16,13 +16,14 @@ Environment variables:
     IRC_CHANNEL     (default: #futon)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
     BRIDGE_BOTS     (default: claude,codex)  — comma-separated bot nicks
-    INVOKE_TIMEOUT_SECONDS (default: 600)    — invoke timeout in seconds
+    INVOKE_TIMEOUT_SECONDS (default: 1800)   — invoke hard-timeout in seconds
     INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
 
 import atexit
 import fcntl
+import http.server
 import json
 import os
 import queue
@@ -121,9 +122,14 @@ MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
     "INVOKE_TIMEOUT_SECONDS",
-    int_env("INVOKE_TIMEOUT", 600, minimum=60),
+    int_env("INVOKE_TIMEOUT", 1800, minimum=60),
     minimum=60,
-)  # seconds; matches JVM relay timeout (10 min)
+)  # seconds; aligns with futon3c hard invoke timeout (30 min)
+INVOKE_CLIENT_TIMEOUT_SECONDS = int_env(
+    "INVOKE_CLIENT_TIMEOUT_SECONDS",
+    INVOKE_TIMEOUT_SECONDS + 15,
+    minimum=1,
+)
 STATUS_TIMEOUT = int_env("AGENT_STATUS_TIMEOUT", 5, minimum=1)
 INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not in (
     "0",
@@ -134,10 +140,11 @@ INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not
 CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! commands
 INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
 
-# --- Health / PID file ---
+# --- Health / PID file (channel-scoped so multiple bridges can coexist) ---
 _RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-PIDFILE = os.path.join(_RUNTIME_DIR, "ngircd-bridge.pid")
-HEALTH_FILE = os.path.join(_RUNTIME_DIR, "ngircd-bridge-health.json")
+_CHANNEL_SLUG = IRC_CHANNEL.lstrip("#").replace("/", "_")
+PIDFILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}.pid")
+HEALTH_FILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}-health.json")
 HEALTH_INTERVAL = 30  # seconds between health file writes
 
 
@@ -272,6 +279,7 @@ class IRCBot:
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
         self._job_seq = 0
         self._job_seq_lock = threading.Lock()
+        self._send_lock = threading.Lock()
         self._worker = threading.Thread(
             target=self._invoke_worker_loop,
             name=f"{self.nick}-invoke-worker",
@@ -387,7 +395,13 @@ class IRCBot:
 
     def _send(self, line):
         """Send a raw IRC line."""
-        self.sock.sendall((line + "\r\n").encode("utf-8"))
+        payload = (line + "\r\n").encode("utf-8")
+        # Multiple worker/command threads can write concurrently; serialize
+        # socket writes so IRC commands are never interleaved mid-line.
+        with self._send_lock:
+            if self.sock is None:
+                raise ConnectionError("IRC socket is not connected")
+            self.sock.sendall(payload)
 
     def _readline(self):
         """Read one IRC line from the socket."""
@@ -564,12 +578,11 @@ class IRCBot:
                         summary = self._summarize_invoke_result(response.get("result", ""))
                         stats = self._execution_stats(response.get("invoke_meta"))
                         if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-                            self._say(
-                                f"[needs-artifacts {job_id}] no execution evidence "
-                                f"(tool-events={stats['tool_events']}, command-events={stats['command_events']})",
-                                max_lines=2,
+                            summary = (
+                                f"{summary} "
+                                f"[no execution evidence: tool-events={stats['tool_events']}, "
+                                f"command-events={stats['command_events']}]"
                             )
-                            continue
                         sid = response.get("session_id")
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)
@@ -616,7 +629,7 @@ class IRCBot:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=INVOKE_TIMEOUT_SECONDS) as resp:
+            with urllib.request.urlopen(req, timeout=INVOKE_CLIENT_TIMEOUT_SECONDS) as resp:
                 data = json.loads(resp.read())
                 if data.get("ok"):
                     return {
@@ -754,7 +767,7 @@ class IRCBot:
         # Claude: no [accepted] noise — just process silently
         if not self.nick.startswith("claude"):
             self._say(
-                f"[accepted {job_id}] queued ({pending} pending)",
+                f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1,
             )
 
@@ -780,7 +793,7 @@ class IRCBot:
         log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender}: {text[:80]}")
         if not self.nick.startswith("claude"):
             self._say(
-                f"[accepted {job_id}] queued ({pending} pending)",
+                f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1,
             )
 
@@ -1206,6 +1219,63 @@ def _write_health(bots, started_at):
         log("bridge", f"Health file write failed: {e}")
 
 
+BRIDGE_HTTP_PORT = int_env("BRIDGE_HTTP_PORT", 6769, minimum=1)
+
+
+def _make_say_handler(bots_by_nick):
+    """Create an HTTP request handler that routes /say to the right bot."""
+
+    class SayHandler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            if self.path != "/say":
+                self.send_error(404)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length) if length else b""
+            try:
+                payload = json.loads(body)
+            except Exception:
+                self._json(400, {"ok": False, "err": "invalid-json"})
+                return
+            text = payload.get("text", "")
+            from_nick = payload.get("from", "claude")
+            if not text.strip():
+                self._json(400, {"ok": False, "err": "missing-text"})
+                return
+            bot = bots_by_nick.get(from_nick)
+            if not bot:
+                self._json(404, {"ok": False, "err": "unknown-nick",
+                                 "available": list(bots_by_nick.keys())})
+                return
+            max_lines = payload.get("max_lines", 4)
+            bot._say(text, max_lines=max_lines)
+            self._json(200, {"ok": True, "from": from_nick, "text": text})
+
+        def _json(self, code, obj):
+            body = json.dumps(obj).encode()
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass  # suppress default stderr logging
+
+    return SayHandler
+
+
+def _start_bridge_http(bots):
+    """Start a tiny HTTP server on BRIDGE_HTTP_PORT for /say."""
+    bots_by_nick = {b.nick: b for b in bots}
+    handler = _make_say_handler(bots_by_nick)
+    server = http.server.HTTPServer(("127.0.0.1", BRIDGE_HTTP_PORT), handler)
+    t = threading.Thread(target=server.serve_forever, name="bridge-http", daemon=True)
+    t.start()
+    log("bridge", f"HTTP /say endpoint on 127.0.0.1:{BRIDGE_HTTP_PORT}")
+    return server
+
+
 def main():
     _pidfile_fd = acquire_pidfile()  # noqa: F841 — must stay open
 
@@ -1250,6 +1320,8 @@ def main():
         t.start()
         threads.append(t)
         time.sleep(0.5)  # stagger connections
+
+    _bridge_http = _start_bridge_http(bots)  # noqa: F841
 
     sd_notify("READY=1")
 

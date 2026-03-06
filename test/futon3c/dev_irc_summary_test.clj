@@ -1,5 +1,6 @@
 (ns futon3c.dev-irc-summary-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.string :as str]
             [futon3c.dev :as dev]))
 
 (deftest summarize-irc-result-keeps-artifact-refs
@@ -26,3 +27,39 @@
                "Ran checks locally and prepared a candidate fix for review.")]
       (is (.contains out "no artifact reference yet")))))
 
+(deftest invoke-trace-response-block-persists-full-payload
+  (testing "invoke trace shows a short summary and writes full payload to disk"
+    (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                            "f3c-invoke-trace-test"
+                            (make-array java.nio.file.attribute.FileAttribute 0)))
+          payload "{\"thread_id\":\"synth-p2-s3a-000\",\"title\":\"long structured payload\"}"
+          block (with-redefs [futon3c.dev/env (fn [k & [default]]
+                                                (if (= k "FUTON3C_INVOKE_ARTIFACT_DIR")
+                                                  (.getAbsolutePath tmp-dir)
+                                                  default))]
+                  (#'futon3c.dev/invoke-trace-response-block "codex-1" "019cc01c-b049-7ce1" payload))
+          artifact-path (some->> (re-find #"Artifact: (.+)" block) second)]
+      (is (.contains block "--- response summary (trace only) ---"))
+      (is (.contains block "Summary: Structured output generated."))
+      (is artifact-path)
+      (is (not (.contains block "thread_id")))
+      (is (.exists (java.io.File. artifact-path)))
+      (is (= payload (slurp artifact-path))))))
+
+(deftest invoke-response->irc-reply-covers-success-and-failure
+  (testing "successful invoke with text preserves refs in summary"
+    (let [out (#'futon3c.dev/invoke-response->irc-reply
+               {:ok true
+                :result "Updated docs and committed 29d18a9 in /home/joe/code/futon3c/README.md"})]
+      (is (.contains out "refs:"))
+      (is (.contains out "29d18a9"))))
+  (testing "successful invoke with nil result still returns a non-blank fallback"
+    (let [out (#'futon3c.dev/invoke-response->irc-reply {:ok true :result nil})]
+      (is (string? out))
+      (is (not (str/blank? out)))
+      (is (.contains out "invoke completed"))))
+  (testing "failed invoke always returns a visible failure marker"
+    (let [out (#'futon3c.dev/invoke-response->irc-reply
+               {:ok false :error {:error/message "timeout waiting for response"}})]
+      (is (.contains out "[invoke failed]"))
+      (is (.contains out "timeout")))))

@@ -169,6 +169,8 @@ IRC is for **short coordination messages**, not prompt delivery:
 - **Long content** (prompts, results) goes to GitHub issues or repo files,
   referenced by number in IRC
 - **Whistle API** for direct prompt delivery when IRC handoff isn't needed
+- **Output commits**: Codex must commit and push generated files to the futon6
+  repo so they're accessible from Linode (not just local to the laptop)
 - Agents MUST NOT flood IRC with multi-line prompts (I-1 violation when
   impersonating other agents, and IRC protocol violation regardless)
 
@@ -183,9 +185,9 @@ IRC is for **short coordination messages**, not prompt delivery:
 ### Next steps
 1. Implement tickle-1 as Haiku agent that posts brief IRC handoffs
 2. ArSE prompts go to GitHub issues; tickle posts `@codex see issue #NNNNN`
-3. Codex reads the issue, generates QA, commits to repo
+3. Codex reads the issue, generates QA, commits and pushes output to futon6 repo
 4. Tickle posts `@claude review synth-p2-s5-000 in futon6/data/synthetic-qa/`
-5. Claude reviews, posts verdict to IRC and evidence store
+5. Claude pulls futon6, reviews, posts verdict to IRC and evidence store
 
 ## Infrastructure Fixes (2026-03-06 session continuation)
 

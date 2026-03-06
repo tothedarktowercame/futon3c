@@ -302,7 +302,9 @@ CONFIG keys:
     (setq agent-chat--prompt-marker (point-marker))
     (setq agent-chat--separator-start (point-marker))
     (insert (propertize (make-string 72 ?─) 'face 'font-lock-comment-face) "\n")
-    (insert (propertize "> " 'face prompt-face))
+    (let ((prompt-start (point)))
+      (insert "> ")
+      (overlay-put (make-overlay prompt-start (point)) 'face prompt-face))
     (setq agent-chat--input-start (point-marker))
     ;; Marker advances when messages are inserted
     (set-marker-insertion-type agent-chat--prompt-marker t)

@@ -32,7 +32,7 @@
                         — codex approval policy (default: never)
      CODEX_REASONING_EFFORT
                        — codex reasoning effort override (for example: low|medium|high)
-     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 600000)
+     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 1800000)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
@@ -564,6 +564,64 @@
         (catch Exception e
           (println (str "[dev] evidence emit error: " (.getMessage e))))))))
 
+(defn- sanitize-file-fragment
+  "Normalize text for use in local artifact filenames."
+  [s fallback]
+  (let [raw (or (some-> s str str/trim not-empty) fallback "unknown")
+        cleaned (-> raw
+                    (str/replace #"[^A-Za-z0-9._-]" "_")
+                    (str/replace #"_+" "_"))]
+    (if (str/blank? cleaned) fallback cleaned)))
+
+(defn- summarize-invoke-result-text
+  "Render invoke result text as a short trace summary."
+  [text]
+  (let [raw (str (or text ""))
+        compact (-> raw
+                    (str/replace #"\s+" " ")
+                    str/trim)
+        max-len 220]
+    (cond
+      (str/blank? compact) "[no textual response]"
+      (re-find #"^\s*[\{\[]" raw) "Structured output generated."
+      (<= (count compact) max-len) compact
+      :else (str (subs compact 0 (- max-len 3)) "..."))))
+
+(defn- write-invoke-artifact!
+  "Persist full invoke output to a local artifact file.
+   Returns absolute file path on success, nil on failure or blank text."
+  [agent-id session-id text]
+  (let [payload (str (or text ""))]
+    (when-not (str/blank? (str/trim payload))
+      (try
+        (let [root (io/file (or (some-> (env "FUTON3C_INVOKE_ARTIFACT_DIR") str/trim not-empty)
+                                "/tmp/futon-invoke-artifacts"))
+              _ (.mkdirs root)
+              agent-frag (sanitize-file-fragment agent-id "agent")
+              sid-frag (sanitize-file-fragment (some-> session-id (subs 0 (min 8 (count session-id))))
+                                               "nosid")
+              file (io/file root (format "%s-%s-%d.txt"
+                                         agent-frag
+                                         sid-frag
+                                         (System/currentTimeMillis)))]
+          (spit file payload)
+          (.getAbsolutePath file))
+        (catch Exception e
+          (println (str "[dev] invoke artifact write error: " (.getMessage e)))
+          nil)))))
+
+(defn- invoke-trace-response-block
+  "Build the invoke buffer response section without dumping full payloads."
+  [agent-id session-id result-text]
+  (let [summary (summarize-invoke-result-text result-text)
+        artifact-path (write-invoke-artifact! agent-id session-id result-text)]
+    (str "\n--- response summary (trace only) ---\n"
+         "Summary: " summary "\n"
+         (if artifact-path
+           (str "Artifact: " artifact-path "\n")
+           "Artifact: [not written]\n")
+         "Note: full payload omitted from this buffer.\n")))
+
 ;; =============================================================================
 ;; ngircd IRC sender — persistent connection for Tickle paging
 ;; =============================================================================
@@ -694,6 +752,31 @@
   ([default-nick]
    (fn [channel from-nick message]
      (send-irc! channel (or from-nick default-nick) message))))
+
+(defn make-bridge-irc-send-fn
+  "Create a send-fn that posts via the ngircd bridge's HTTP /say endpoint.
+   This lets agents post as 'claude' or 'codex' without opening separate IRC
+   connections (which would conflict with the bridge's nicks)."
+  ([] (make-bridge-irc-send-fn 6769))
+  ([port]
+   (fn [_channel from-nick message]
+     (let [url (str "http://127.0.0.1:" port "/say")
+           payload (json/generate-string {"from" (or from-nick "claude")
+                                           "text" (str message)
+                                           "max_lines" 4})
+           conn (doto (-> (java.net.URI. url) .toURL .openConnection)
+                  (.setRequestMethod "POST")
+                  (.setRequestProperty "Content-Type" "application/json")
+                  (.setDoOutput true)
+                  (.setConnectTimeout 3000)
+                  (.setReadTimeout 5000))]
+       (with-open [os (.getOutputStream conn)]
+         (.write os (.getBytes payload "UTF-8")))
+       (let [code (.getResponseCode conn)]
+         (when (>= code 400)
+           (throw (ex-info (str "bridge /say returned " code)
+                           {:status code :from from-nick})))
+         {:ok true :status code})))))
 
 ;; =============================================================================
 ;; Tickle task state machine — full lifecycle tracking
@@ -2205,6 +2288,38 @@ RESPOND WITH ONLY:
       (str mins "m" s "s")
       (str secs "s"))))
 
+(defn- codex-fallback-event-summary
+  "Best-effort human summary when codex-cli/event->activity is nil."
+  [evt]
+  (let [evt-type (:type evt)]
+    (cond
+      (= "thread.started" evt-type)
+      (str "thread.started session="
+           (or (:thread_id evt) (:session_id evt) "?"))
+
+      (= "turn.failed" evt-type)
+      (str "turn.failed "
+           (or (get-in evt [:error :message]) "unknown error"))
+
+      (= "error" evt-type)
+      (str "error " (or (:message evt) "unknown error"))
+
+      (string? evt-type)
+      (str "event " evt-type)
+
+      :else nil)))
+
+(defn- append-trace-entry!
+  "Append one trace line while keeping only the most recent max-entries."
+  [!trace entry max-entries]
+  (swap! !trace
+         (fn [entries]
+           (let [next (conj entries entry)
+                 n (count next)]
+             (if (> n max-entries)
+               (subvec next (- n max-entries))
+               next)))))
+
 (defn- detect-file-changes
   "Check data/proof-state/*.edn for recent modifications.
    Returns a string describing changes, or nil."
@@ -2225,7 +2340,7 @@ RESPOND WITH ONLY:
    with elapsed time, file change detection, and a progress spinner.
    Also emits evidence heartbeats every 30s for long-running invocations.
    Returns a function that stops the ticker when called."
-  [buf-name agent-id prompt-str used-sid interval-ms & {:keys [bb-opts]}]
+  [buf-name agent-id prompt-str used-sid interval-ms & {:keys [bb-opts event-trace]}]
   (let [running (atom true)
         start-ms (System/currentTimeMillis)
         spinner-chars [\| \/ \- \\]
@@ -2247,6 +2362,21 @@ RESPOND WITH ONLY:
                             ;; Read current activity from registry
                             activity (some-> (get @reg/!registry aid-val)
                                              :agent/invoke-activity)
+                            trace-entries (when event-trace
+                                            (let [entries @event-trace]
+                                              (when (seq entries)
+                                                (take-last 20 entries))))
+                            trace-lines (when (seq trace-entries)
+                                          (str/join "\n" trace-entries))
+                            status-line (cond
+                                          activity
+                                          (str "\nWorking... (" activity ")")
+
+                                          (seq trace-entries)
+                                          "\nReceiving stream events..."
+
+                                          :else
+                                          "\nWaiting for response...")
                             content (str "Invoke: " agent-id " " spin " " elapsed-str "\n"
                                          "Session: " used-sid "\n"
                                          "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
@@ -2256,9 +2386,9 @@ RESPOND WITH ONLY:
                                            (str "Activity: " activity "\n"))
                                          (when changed-files
                                            (str "Files modified: " changed-files "\n"))
-                                         (if activity
-                                           (str "Working... (" activity ")")
-                                           "Waiting for response..."))]
+                                         (when trace-lines
+                                           (str "\n--- trace ---\n" trace-lines "\n"))
+                                         status-line)]
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
                         (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
@@ -2451,10 +2581,7 @@ RESPOND WITH ONLY:
                                      "Output: " (count (or text "")) " chars\n"
                                      (when (not (str/blank? err))
                                        (str "\nStderr: " (subs err 0 (min 200 (count err))) "\n"))
-                                     (when text
-                                       (str "\n--- response ---\n"
-                                            (subs text 0 (min 1000 (count text)))
-                                            (when (> (count text) 1000) "\n..."))))
+                                     (invoke-trace-response-block agent-id final-sid text))
                                 (merge {:width 80 :slot 1 :no-display true} bb-opts))
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
@@ -2484,7 +2611,7 @@ RESPOND WITH ONLY:
      :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
-     :timeout-ms         — hard timeout for codex process (default 600000)
+     :timeout-ms         — hard timeout for codex process (default 1800000)
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
@@ -2492,12 +2619,20 @@ RESPOND WITH ONLY:
   [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
-        approval-policy "never" timeout-ms 600000 agent-id "codex"}}]
+        approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
-        on-event (when update-activity!
-                   (fn [evt]
-                     (when-let [activity (codex-cli/event->activity evt)]
+        !event-trace (atom [])
+        !invoke-start-ms (atom (System/currentTimeMillis))
+        on-event (fn [evt]
+                   (let [activity (codex-cli/event->activity evt)
+                         summary (or activity (codex-fallback-event-summary evt))]
+                     (when summary
+                       (try
+                         (let [ts (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))]
+                           (append-trace-entry! !event-trace (str ts " " summary) 200))
+                         (catch Throwable _)))
+                     (when (and update-activity! activity)
                        (try
                          (update-activity! aid-val activity)
                          (catch Throwable _)))))
@@ -2519,6 +2654,9 @@ RESPOND WITH ONLY:
             prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
             invoke-sid (preferred-session-id session-file session-id session-id-atom)
             used-sid (or invoke-sid "new")]
+        ;; Reset trace for this invocation
+        (reset! !event-trace [])
+        (reset! !invoke-start-ms (System/currentTimeMillis))
         (println (str "[invoke] " agent-id " codex exec "
                       (subs prompt-str 0 (min 80 (count prompt-str)))
                       "... (session: " (when invoke-sid (subs invoke-sid 0 (min 8 (count invoke-sid)))) ")"))
@@ -2538,8 +2676,9 @@ RESPOND WITH ONLY:
                                "\n\nStarting...")
                           {:width 80 :slot 1})
           (catch Throwable _))
-        ;; Start ticker with evidence heartbeats
-        (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
+        ;; Start ticker with evidence heartbeats + event trace
+        (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000
+                                                 :event-trace !event-trace)
               result (try
                        (inner-fn prompt invoke-sid)
                        (finally
@@ -2576,11 +2715,7 @@ RESPOND WITH ONLY:
                                  "Runtime evidence: executed=" execution-evidence?
                                  ", tool-events=" tool-events
                                  ", command-events=" command-events "\n"
-                                 (when (:result result)
-                                   (let [r (str (:result result))]
-                                     (str "\n--- response ---\n"
-                                          (subs r 0 (min 1000 (count r)))
-                                          (when (> (count r) 1000) "\n...")))))
+                                 (invoke-trace-response-block agent-id final-sid (:result result)))
                             {:width 80 :slot 1 :no-display true})
             (catch Throwable _))
           (println (str "[invoke] " agent-id
@@ -2609,9 +2744,9 @@ RESPOND WITH ONLY:
      :channel     — IRC channel (default \"#futon\")
      :from-nick   — nick to send as (default \"tickle-1\")
      :poll-ms     — poll interval in ms (default 3000)
-     :timeout-ms  — max wait for response (default 600000 = 10 min)"
+     :timeout-ms  — max wait for response (default 1800000 = 30 min)"
   [{:keys [channel from-nick poll-ms timeout-ms]
-    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 600000}}]
+    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 1800000}}]
   (fn [prompt _session-id]
     (let [prompt-str (cond
                        (string? prompt) prompt
@@ -2832,6 +2967,39 @@ RESPOND WITH ONLY:
           :else (str/trim (or text "")))
         enforce-irc-planning-guard)))
 
+(defn- invoke-error-text
+  "Render a stable human-readable invoke error string."
+  [resp]
+  (let [err (when (map? resp) (:error resp))]
+    (cond
+      (map? err) (or (:error/message err) (pr-str err))
+      (some? err) (str err)
+      :else "unknown invoke error")))
+
+(defn- invoke-response->irc-reply
+  "Convert invoke-agent! response map into a single IRC reply line.
+   Always returns a non-blank string."
+  [resp]
+  (let [[raw summarize?] (cond
+                           (and (map? resp) (:ok resp) (string? (:result resp)))
+                           [(:result resp) true]
+
+                           (and (map? resp) (:ok resp) (some? (:result resp)))
+                           [(pr-str (:result resp)) true]
+
+                           (and (map? resp) (:ok resp))
+                           ["[invoke completed with empty response]" false]
+
+                           :else
+                           [(str "[invoke failed] " (invoke-error-text resp)) false])
+        reply (if summarize?
+                (-> raw normalize-irc-result summarize-irc-result)
+                (truncate-with-ellipsis (str/trim (or raw "")) irc-summary-hard-limit))
+        trimmed (str/trim (or reply ""))]
+    (if (str/blank? trimmed)
+      "[invoke completed with empty response]"
+      trimmed)))
+
 (defn- irc-invoke-prompt
   "Wrap an IRC user message with explicit surface/delivery semantics."
   [{:keys [nick sender channel user-text]}]
@@ -2938,31 +3106,21 @@ RESPOND WITH ONLY:
                                          (Thread/sleep 1000)
                                          (recur (or soft-notified?
                                                     (and soft-timeout-ms
-                                                         (>= elapsed soft-timeout-ms)))))))]
-                          (if (and (:ok resp) (string? (:result resp)))
-                            (do
-                              (let [reply (-> (:result resp)
-                                              normalize-irc-result
-                                              summarize-irc-result)
-                                    reply* (if (str/blank? reply)
-                                             "[no textual response]"
-                                             reply)]
-                                ((:send-to-channel! irc-server) channel nick reply*)
-                                (println (str "[irc] " nick " → " channel " ("
-                                              (count reply*) " chars): "
-                                              (subs reply* 0 (min 120 (count reply*))))))
-                              (flush))
-                            (do
-                              (let [err-msg (if (map? (:error resp))
-                                              (or (:error/message (:error resp))
-                                                  (pr-str (:error resp)))
-                                              (str (:error resp)))]
-                                (println (str "[irc] " nick " invoke FAILED: " err-msg))
-                                ((:send-to-channel! irc-server) channel nick
-                                 (str "[invoke failed] " err-msg)))
-                              (flush))))
+                                                         (>= elapsed soft-timeout-ms)))))))
+                              reply* (invoke-response->irc-reply resp)]
+                          ((:send-to-channel! irc-server) channel nick reply*)
+                          (println (str "[irc] " nick " → " channel " ("
+                                        (count reply*) " chars): "
+                                        (subs reply* 0 (min 120 (count reply*)))))
+                          (flush))
                         (catch Exception e
                           (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
+                          (try
+                            ((:send-to-channel! irc-server) channel nick
+                             (str "[invoke dispatch error] " (.getMessage e)))
+                            (catch Exception send-e
+                              (println (str "[irc] " nick " dispatch ERROR while sending fallback: "
+                                            (.getMessage send-e)))))
                           (flush)))))))
                (do (println (str "[irc] " nick ": not mentioned, skipping"))
                    (flush)))))))))
@@ -3043,8 +3201,10 @@ RESPOND WITH ONLY:
                  {:xtdb-node (when direct-xtdb? (:node f1-sys))
                   :evidence-store evidence-store
                   :irc-send-base irc-send-base-hint
-                  :irc-send-fn (when irc-sys
-                                 (:send-to-channel! (:server irc-sys)))
+                  :irc-send-fn (or (when irc-sys
+                                     (:send-to-channel! (:server irc-sys)))
+                                   ;; No built-in IRC — route through ngircd bridge HTTP
+                                   (make-bridge-irc-send-fn))
                   :irc-interceptor (when irc-sys
                                      (:irc-interceptor (:relay-bridge irc-sys)))})
         _ (reset! !f3c-sys f3c-sys)
@@ -3069,12 +3229,15 @@ RESPOND WITH ONLY:
                                   "/tmp/futon-session-id"))
                   initial-sid (read-session-id sf)
                   sid-atom (atom initial-sid)
+                  claude-socket (or (env "CLAUDE_EMACS_SOCKET")
+                                    (env "FUTON3C_EMACS_SOCKET"))
                   invoke-fn (make-claude-invoke-fn
                              {:claude-bin (env "CLAUDE_BIN" "claude")
                               :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
                               :agent-id "claude-1"
                               :session-file sf
-                              :session-id-atom sid-atom})]
+                              :session-id-atom sid-atom
+                              :emacs-socket claude-socket})]
               (rt/register-claude! {:agent-id "claude-1"
                                     :invoke-fn invoke-fn})
               (reg/update-agent! "claude-1"
@@ -3084,6 +3247,8 @@ RESPOND WITH ONLY:
               (when initial-sid
                 (reg/update-agent! "claude-1" :agent/session-id initial-sid))
               (println (str "[dev] Claude agent registered: claude-1 (inline invoke)"
+                            (when claude-socket
+                              (str " (emacs: " claude-socket ")"))
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
                                                        (min 8 (count initial-sid))) ")"))))))
@@ -3113,7 +3278,7 @@ RESPOND WITH ONLY:
                               :approval-policy (or (env "CODEX_APPROVAL_POLICY")
                                                    (env "CODEX_APPROVAL" "never"))
                               :reasoning-effort (env "CODEX_REASONING_EFFORT")
-                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 600000) 600000)
+                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
                               :agent-id "codex-1"
                               :session-file sf
                               :session-id-atom sid-atom})
