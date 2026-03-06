@@ -119,39 +119,56 @@ Prefers the lowest-numbered idle claude agent. Returns agent-id or nil."
                              (string< (car a) (car b))))))
         (when sorted (caar sorted))))))
 
+(defun claude-repl--rebind-socket (agent-id socket-name)
+  "Rebind AGENT-ID's invoke-fn to use SOCKET-NAME for blackboard calls."
+  (when socket-name
+    (let* ((url (format "%s/api/alpha/agents/%s/rebind"
+                        claude-repl-api-url agent-id))
+           (json-body (json-serialize `(:emacs-socket ,socket-name))))
+      (with-temp-buffer
+        (call-process "curl" nil t nil
+                      "-sS" "--max-time" "5"
+                      "-X" "POST"
+                      "-H" "Content-Type: application/json"
+                      "-d" json-body url)))))
+
 (defun claude-repl--auto-register ()
   "Find or register a Claude agent on the futon3c server.
 First tries to reuse an existing idle claude agent (preserving identity).
-Only creates a new one via POST /agents/auto if none are idle."
-  (let ((agent-id
-         (or
-          ;; First: reuse an existing idle agent
-          (claude-repl--find-idle-agent)
-          ;; Second: register a new one
-          (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
-                 (socket-name (or (claude-repl--workspace)
-                                  (and (boundp 'server-name) server-name)))
-                 (json-body (json-serialize
-                             (if socket-name
-                                 `(:type "claude" :emacs-socket ,socket-name)
-                               '(:type "claude"))))
-                 (result (with-temp-buffer
-                           (let ((exit (call-process "curl" nil t nil
-                                                     "-sS" "--max-time" "5"
-                                                     "-H" "Content-Type: application/json"
-                                                     "-d" json-body url)))
-                             (when (= exit 0)
-                               (goto-char (point-min))
-                               (condition-case nil
-                                   (json-parse-buffer :object-type 'alist)
-                                 (error nil)))))))
-            (when (and result (alist-get 'ok result))
-              (alist-get 'agent-id result))))))
+Only creates a new one via POST /agents/auto if none are idle.
+In both cases, rebinds the agent's socket to this Emacs daemon."
+  (let* ((socket-name (or (claude-repl--workspace)
+                          (and (boundp 'server-name) server-name)))
+         (agent-id
+          (or
+           ;; First: reuse an existing idle agent
+           (claude-repl--find-idle-agent)
+           ;; Second: register a new one
+           (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
+                  (json-body (json-serialize
+                              (if socket-name
+                                  `(:type "claude" :emacs-socket ,socket-name)
+                                '(:type "claude"))))
+                  (result (with-temp-buffer
+                            (let ((exit (call-process "curl" nil t nil
+                                                      "-sS" "--max-time" "5"
+                                                      "-H" "Content-Type: application/json"
+                                                      "-d" json-body url)))
+                              (when (= exit 0)
+                                (goto-char (point-min))
+                                (condition-case nil
+                                    (json-parse-buffer :object-type 'alist)
+                                  (error nil)))))))
+             (when (and result (alist-get 'ok result))
+               (alist-get 'agent-id result))))))
     (when (and (stringp agent-id) (not (string-empty-p agent-id)))
+      ;; Rebind socket so blackboard targets this Emacs daemon
+      (claude-repl--rebind-socket agent-id socket-name)
       (setq-local claude-repl-agent-id agent-id)
       (setq-local claude-repl-session-file
                   (format "/tmp/futon-session-id-%s" agent-id))
-      (message "claude-repl: registered as %s" agent-id)
+      (message "claude-repl: registered as %s (socket: %s)" agent-id
+               (or socket-name "default"))
       agent-id)))
 
 ;;; Evidence logging

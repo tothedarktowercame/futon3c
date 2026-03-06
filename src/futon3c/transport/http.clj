@@ -734,6 +734,40 @@
                                   :err "registration-failed"
                                   :message (str "Could not register: " agent-id)}))))))))
 
+(defn- handle-agent-rebind
+  "POST /api/alpha/agents/:id/rebind — update an agent's invoke-fn socket.
+   Body: {\"emacs-socket\": \"workspace1\"}
+   Recreates the invoke-fn with the new emacs-socket so blackboard calls
+   go to the correct Emacs daemon."
+  [_config agent-id request]
+  (let [payload (parse-json-map (read-body request))
+        emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))]
+    (if (str/blank? emacs-socket)
+      (json-response 400 {:ok false :err "missing-emacs-socket"})
+      (let [agent (reg/get-agent agent-id)]
+        (if (nil? agent)
+          (json-response 404 {:ok false :err "not-found"
+                              :message (str "No agent: " agent-id)})
+          (try
+            (require 'futon3c.dev)
+            (if-let [make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)]
+              (let [sf (format "/tmp/futon-session-id-%s" agent-id)
+                    existing-sid (:agent/session-id agent)
+                    sid-atom (atom (or existing-sid
+                                       (when (.exists (java.io.File. sf))
+                                         (str/trim (slurp sf)))))
+                    invoke-fn (@make-fn {:agent-id agent-id
+                                         :session-file sf
+                                         :session-id-atom sid-atom
+                                         :emacs-socket emacs-socket})]
+                (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
+                (json-response 200 {:ok true :agent-id agent-id
+                                    :emacs-socket emacs-socket}))
+              (json-response 500 {:ok false :err "make-fn-not-found"}))
+            (catch Throwable e
+              (json-response 500 {:ok false :err "rebind-failed"
+                                  :message (.getMessage e)}))))))))
+
 (defn- emit-invoke-evidence!
   "Emit a forum-post evidence entry for an invoke prompt or response.
    Mirrors the pattern used by the IRC transport so chat messages from
@@ -1697,6 +1731,13 @@
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)
+
+          (and (= :post method) (string? uri)
+               (str/starts-with? uri "/api/alpha/agents/")
+               (str/ends-with? uri "/rebind"))
+          (let [raw (subs uri (count "/api/alpha/agents/")
+                         (- (count uri) (count "/rebind")))]
+            (handle-agent-rebind config (enc/decode-uri-component raw) request))
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")
