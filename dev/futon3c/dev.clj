@@ -2283,7 +2283,7 @@ RESPOND WITH ONLY:
    with elapsed time, file change detection, and a progress spinner.
    Also emits evidence heartbeats every 30s for long-running invocations.
    Returns a function that stops the ticker when called."
-  [buf-name agent-id prompt-str used-sid interval-ms & {:keys [bb-opts]}]
+  [buf-name agent-id prompt-str used-sid interval-ms & {:keys [bb-opts event-trace]}]
   (let [running (atom true)
         start-ms (System/currentTimeMillis)
         spinner-chars [\| \/ \- \\]
@@ -2305,6 +2305,10 @@ RESPOND WITH ONLY:
                             ;; Read current activity from registry
                             activity (some-> (get @reg/!registry aid-val)
                                              :agent/invoke-activity)
+                            trace-lines (when event-trace
+                                        (let [entries @event-trace]
+                                          (when (seq entries)
+                                            (str/join "\n" (take-last 20 entries)))))
                             content (str "Invoke: " agent-id " " spin " " elapsed-str "\n"
                                          "Session: " used-sid "\n"
                                          "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
@@ -2314,9 +2318,11 @@ RESPOND WITH ONLY:
                                            (str "Activity: " activity "\n"))
                                          (when changed-files
                                            (str "Files modified: " changed-files "\n"))
+                                         (when trace-lines
+                                           (str "\n--- trace ---\n" trace-lines "\n"))
                                          (if activity
-                                           (str "Working... (" activity ")")
-                                           "Waiting for response..."))]
+                                           (str "\nWorking... (" activity ")")
+                                           "\nWaiting for response..."))]
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
                         (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
@@ -2550,9 +2556,15 @@ RESPOND WITH ONLY:
         approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
-        on-event (when update-activity!
-                   (fn [evt]
-                     (when-let [activity (codex-cli/event->activity evt)]
+        !event-trace (atom [])
+        !invoke-start-ms (atom (System/currentTimeMillis))
+        on-event (fn [evt]
+                   (when-let [activity (codex-cli/event->activity evt)]
+                     (try
+                       (let [ts (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))]
+                         (swap! !event-trace conj (str ts " " activity)))
+                       (catch Throwable _))
+                     (when update-activity!
                        (try
                          (update-activity! aid-val activity)
                          (catch Throwable _)))))
@@ -2574,6 +2586,9 @@ RESPOND WITH ONLY:
             prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
             invoke-sid (preferred-session-id session-file session-id session-id-atom)
             used-sid (or invoke-sid "new")]
+        ;; Reset trace for this invocation
+        (reset! !event-trace [])
+        (reset! !invoke-start-ms (System/currentTimeMillis))
         (println (str "[invoke] " agent-id " codex exec "
                       (subs prompt-str 0 (min 80 (count prompt-str)))
                       "... (session: " (when invoke-sid (subs invoke-sid 0 (min 8 (count invoke-sid)))) ")"))
@@ -2593,8 +2608,9 @@ RESPOND WITH ONLY:
                                "\n\nStarting...")
                           {:width 80 :slot 1})
           (catch Throwable _))
-        ;; Start ticker with evidence heartbeats
-        (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000)
+        ;; Start ticker with evidence heartbeats + event trace
+        (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000
+                                                 :event-trace !event-trace)
               result (try
                        (inner-fn prompt invoke-sid)
                        (finally
@@ -2623,6 +2639,7 @@ RESPOND WITH ONLY:
                                  :session-id (or final-sid used-sid)
                                  :tags ["invoke-complete"])
           ;; Final blackboard update
+          (let [trace-entries @!event-trace]
           (try
             (bb/blackboard! buf-name
                             (str "Invoke: " agent-id " — DONE"
@@ -2641,7 +2658,7 @@ RESPOND WITH ONLY:
                         " tool-events=" tool-events
                         " command-events=" command-events))
           (flush)
-          result)))))
+          result))))))
 
 ;; =============================================================================
 ;; IRC-based Codex invoke — send @codex on IRC, poll for [done] response
