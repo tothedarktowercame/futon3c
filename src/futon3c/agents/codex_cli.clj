@@ -300,7 +300,7 @@
    - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
    - :reasoning-effort (optional, e.g. low|medium|high)
-   - :timeout-ms hard process timeout in milliseconds (default 600000)
+   - :timeout-ms hard process timeout in milliseconds (default 1800000)
    - :cwd (optional working directory)
    - :on-event (optional fn called with each parsed stream event)"
   [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd on-event]
@@ -308,7 +308,7 @@
          model "gpt-5-codex"
          sandbox "danger-full-access"
          approval-policy "never"
-         timeout-ms 600000}}]
+         timeout-ms 1800000}}]
   (let [!lock (Object.)]
     (fn [prompt session-id]
       (locking !lock

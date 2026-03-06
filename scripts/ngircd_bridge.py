@@ -16,7 +16,7 @@ Environment variables:
     IRC_CHANNEL     (default: #futon)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
     BRIDGE_BOTS     (default: claude,codex)  — comma-separated bot nicks
-    INVOKE_TIMEOUT_SECONDS (default: 600)    — invoke timeout in seconds
+    INVOKE_TIMEOUT_SECONDS (default: 1800)   — invoke hard-timeout in seconds
     INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
@@ -121,9 +121,14 @@ MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
     "INVOKE_TIMEOUT_SECONDS",
-    int_env("INVOKE_TIMEOUT", 600, minimum=60),
+    int_env("INVOKE_TIMEOUT", 1800, minimum=60),
     minimum=60,
-)  # seconds; matches JVM relay timeout (10 min)
+)  # seconds; aligns with futon3c hard invoke timeout (30 min)
+INVOKE_CLIENT_TIMEOUT_SECONDS = int_env(
+    "INVOKE_CLIENT_TIMEOUT_SECONDS",
+    INVOKE_TIMEOUT_SECONDS + 15,
+    minimum=1,
+)
 STATUS_TIMEOUT = int_env("AGENT_STATUS_TIMEOUT", 5, minimum=1)
 INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not in (
     "0",
@@ -615,7 +620,7 @@ class IRCBot:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=INVOKE_TIMEOUT_SECONDS) as resp:
+            with urllib.request.urlopen(req, timeout=INVOKE_CLIENT_TIMEOUT_SECONDS) as resp:
                 data = json.loads(resp.read())
                 if data.get("ok"):
                     return {
@@ -753,7 +758,7 @@ class IRCBot:
         # Claude: no [accepted] noise — just process silently
         if not self.nick.startswith("claude"):
             self._say(
-                f"[accepted {job_id}] queued ({pending} pending)",
+                f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1,
             )
 
@@ -779,7 +784,7 @@ class IRCBot:
         log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender}: {text[:80]}")
         if not self.nick.startswith("claude"):
             self._say(
-                f"[accepted {job_id}] queued ({pending} pending)",
+                f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1,
             )
 

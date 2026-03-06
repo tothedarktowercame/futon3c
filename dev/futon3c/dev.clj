@@ -32,7 +32,7 @@
                         — codex approval policy (default: never)
      CODEX_REASONING_EFFORT
                        — codex reasoning effort override (for example: low|medium|high)
-     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 600000)
+     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 1800000)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
@@ -2539,7 +2539,7 @@ RESPOND WITH ONLY:
      :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
-     :timeout-ms         — hard timeout for codex process (default 600000)
+     :timeout-ms         — hard timeout for codex process (default 1800000)
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
@@ -2547,7 +2547,7 @@ RESPOND WITH ONLY:
   [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
-        approval-policy "never" timeout-ms 600000 agent-id "codex"}}]
+        approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
         on-event (when update-activity!
@@ -2660,9 +2660,9 @@ RESPOND WITH ONLY:
      :channel     — IRC channel (default \"#futon\")
      :from-nick   — nick to send as (default \"tickle-1\")
      :poll-ms     — poll interval in ms (default 3000)
-     :timeout-ms  — max wait for response (default 600000 = 10 min)"
+     :timeout-ms  — max wait for response (default 1800000 = 30 min)"
   [{:keys [channel from-nick poll-ms timeout-ms]
-    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 600000}}]
+    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 1800000}}]
   (fn [prompt _session-id]
     (let [prompt-str (cond
                        (string? prompt) prompt
@@ -3164,7 +3164,7 @@ RESPOND WITH ONLY:
                               :approval-policy (or (env "CODEX_APPROVAL_POLICY")
                                                    (env "CODEX_APPROVAL" "never"))
                               :reasoning-effort (env "CODEX_REASONING_EFFORT")
-                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 600000) 600000)
+                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
                               :agent-id "codex-1"
                               :session-file sf
                               :session-id-atom sid-atom})
