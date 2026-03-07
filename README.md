@@ -13,6 +13,8 @@ For commit-scoped architectural proof, see
 `docs/wiring-claims.edn` + `docs/wiring-evidence.edn`.
 For Mission Peripheral / Mission Control / War Room convergence, see
 `docs/mission-contract.md` + `docs/mission-claims.edn` + `docs/mission-evidence.edn`.
+For invoke surface semantics (`bell`, `whistle`, `whistle-stream`), see
+`README-bells-and-whistles.md`.
 
 ## Quick Start
 

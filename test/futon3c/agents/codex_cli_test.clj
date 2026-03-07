@@ -76,7 +76,7 @@
             (is (some #{"--json"} cmd))
             (is (some #{"-"} cmd))
             (is (= "hello codex" prompt))
-            (is (= 600000 (:timeout-ms opts)))
+            (is (= 1800000 (:timeout-ms opts)))
             (is (= "/tmp" (:cwd opts))))))))
   (testing "non-zero exit returns error and preserves prior session-id fallback"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
@@ -137,6 +137,30 @@
          (codex-cli/event->activity
           {:type "item.started"
            :item {:type "tool_call" :name "command_execution"}})))
+  (is (= "using bash"
+         (codex-cli/event->activity
+          {:type "item.started"
+           :item {:type "command_execution"
+                  :command "/bin/bash -lc 'ls'"}})))
+  (is (= "using bash (done)"
+         (codex-cli/event->activity
+          {:type "item.completed"
+           :item {:type "command_execution"
+                  :command "/bin/bash -lc 'ls'"
+                  :status "completed"}})))
   (is (= "preparing response"
          (codex-cli/event->activity {:type "reasoning"}))))
 
+(deftest command-execution-item-events-count-as-execution-evidence
+  (let [evt-start {:type "item.started"
+                   :item {:type "command_execution"
+                          :command "/bin/bash -lc 'ls'"}}
+        evt-done {:type "item.completed"
+                  :item {:type "command_execution"
+                         :command "/bin/bash -lc 'ls'"
+                         :status "completed"
+                         :exit_code 0}}]
+    (is (true? (#'futon3c.agents.codex-cli/tool-event? evt-start)))
+    (is (true? (#'futon3c.agents.codex-cli/tool-event? evt-done)))
+    (is (true? (#'futon3c.agents.codex-cli/command-event? evt-start)))
+    (is (true? (#'futon3c.agents.codex-cli/command-event? evt-done)))))

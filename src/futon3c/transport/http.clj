@@ -13,6 +13,11 @@
      GET  /api/alpha/evidence/count — count evidence entries by filters
      GET  /api/alpha/evidence/:id — retrieve single evidence entry
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
+     GET  /api/alpha/invoke/jobs — list recent invoke jobs
+     GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
+     POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
+     POST /api/alpha/whistle — synchronous invoke (or NDJSON stream when stream=true)
+     POST /api/alpha/whistle-stream — NDJSON streaming invoke with heartbeats
      POST /api/alpha/irc/send — post a line to IRC via server relay
      POST /api/alpha/invoke-delivery — record invoke delivery receipt metadata
      GET  /api/alpha/reflect/namespaces — list loaded Clojure namespaces
@@ -168,6 +173,347 @@
         (#{"true" "1" "yes"} v) true
         (#{"false" "0" "no"} v) false
         :else nil))))
+
+(defonce ^:private !invoke-jobs-ledger (atom nil))
+
+(declare invoke-execution-evidence)
+(declare record-invoke-job-delivery!)
+
+(defn- resolve-delivery-recorder
+  "Best-effort resolver for futon3c.dev/record-invoke-delivery!.
+   Returns nil when dev ns is not loaded."
+  []
+  (try
+    (when-let [dev-ns (find-ns 'futon3c.dev)]
+      (ns-resolve dev-ns 'record-invoke-delivery!))
+    (catch Throwable _ nil)))
+
+(def ^:dynamic *resolve-delivery-recorder*
+  "Indirection for delivery-recorder lookup (test seam)."
+  resolve-delivery-recorder)
+
+(defn reset-invoke-jobs!
+  "Test/dev helper: clear in-memory invoke-job ledger so next access reloads from disk."
+  []
+  (reset! !invoke-jobs-ledger nil))
+
+(defn- invoke-jobs-store-path
+  []
+  (or (System/getenv "FUTON3C_INVOKE_JOBS_FILE")
+      "/tmp/futon3c-invoke-jobs.edn"))
+
+(defn- default-invoke-jobs-ledger
+  []
+  {:version 1
+   :next-seq 0
+   :job-order []
+   :trace->job {}
+   :jobs {}})
+
+(defn- persist-invoke-jobs-ledger!
+  [ledger]
+  (try
+    (spit (invoke-jobs-store-path) (pr-str ledger))
+    (catch Throwable t
+      (println (str "[invoke-jobs] persist failed: " (.getMessage t)))
+      (flush)))
+  ledger)
+
+(defn- load-invoke-jobs-ledger
+  []
+  (let [f (io/file (invoke-jobs-store-path))]
+    (if (.exists f)
+      (try
+        (let [parsed (edn/read-string (slurp f))]
+          (if (map? parsed)
+            (merge (default-invoke-jobs-ledger) parsed)
+            (default-invoke-jobs-ledger)))
+        (catch Throwable t
+          (println (str "[invoke-jobs] load failed: " (.getMessage t)))
+          (flush)
+          (default-invoke-jobs-ledger)))
+      (default-invoke-jobs-ledger))))
+
+(defn- append-job-event
+  [job event-type payload]
+  (let [seq-num (inc (long (or (:event-seq job) 0)))
+        event (merge {:seq seq-num
+                      :type event-type
+                      :at (str (Instant/now))}
+                     payload)]
+    (-> job
+        (assoc :event-seq seq-num)
+        (update :events (fnil conj []) event))))
+
+(defn- recover-inflight-jobs
+  [ledger]
+  (let [failed-at (str (Instant/now))
+        recover-one (fn [job]
+                      (if (#{"queued" "running"} (str (:state job)))
+                        (-> job
+                            (assoc :state "failed"
+                                   :finished-at failed-at
+                                   :terminal-code "worker-lost-on-restart"
+                                   :terminal-message "job did not reach terminal state before restart")
+                            (append-job-event "failed" {:code "worker-lost-on-restart"
+                                                        :message "recovered on startup"}))
+                        job))
+        recovered-jobs (into {}
+                             (map (fn [[jid job]] [jid (recover-one job)]))
+                             (:jobs ledger))]
+    (assoc ledger :jobs recovered-jobs)))
+
+(defn- ensure-invoke-jobs-ledger!
+  []
+  (when (nil? @!invoke-jobs-ledger)
+    (let [loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
+      (reset! !invoke-jobs-ledger loaded)
+      (persist-invoke-jobs-ledger! loaded)))
+  @!invoke-jobs-ledger)
+
+(defn- update-invoke-jobs-ledger!
+  [f]
+  (ensure-invoke-jobs-ledger!)
+  (let [updated (swap! !invoke-jobs-ledger f)]
+    (persist-invoke-jobs-ledger! updated)))
+
+(defn- next-invoke-job-id
+  [ledger]
+  (let [next-seq (inc (long (or (:next-seq ledger) 0)))
+        rand-sfx (subs (str (UUID/randomUUID)) 0 8)]
+    [(str "invoke-" (System/currentTimeMillis) "-" next-seq "-" rand-sfx)
+     next-seq]))
+
+(defn- invoke-job-mode
+  [prompt]
+  (let [p (str (or prompt ""))]
+  (cond
+    (or (re-find #"(?i)\bmode:\s*task\b" p)
+        (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b" p))
+    "work"
+
+    :else
+    "brief")))
+
+(defn- extract-trace-id
+  [invoke-meta]
+  (some (fn [k]
+          (let [v (or (get invoke-meta k) (get invoke-meta (name k)))]
+            (when (and (string? v) (not (str/blank? v)))
+              v)))
+        [:invoke-trace-id :invoke_trace_id :invokeTraceId]))
+
+(def ^:private artifact-ref-re
+  #"(?ix)
+    (https?://github\.com/\S+/(?:pull|issues)/\d+)
+    |
+    (\bPR\s*#\d+\b)
+    |
+    (\b[0-9a-f]{7,40}\b)
+    |
+    ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b))")
+
+(defn- first-artifact-ref
+  [text]
+  (when (string? text)
+    (some->> (re-find artifact-ref-re text)
+             rest
+             (remove nil?)
+             first
+             str/trim)))
+
+(defn- summarize-result-text
+  [text]
+  (let [t (str/trim (str/replace (str (or text "")) #"\s+" " "))]
+    (if (<= (count t) 220)
+      t
+      (str (subs t 0 217) "..."))))
+
+(defn- http-delivery-surface?
+  [surface]
+  (let [s (str/lower-case (str/trim (str (or surface ""))))]
+    (or (str/blank? s)
+        (= s "http")
+        (str/starts-with? s "http "))))
+
+(defn- record-http-delivery!
+  [{:keys [agent-id caller surface result]}]
+  (when (http-delivery-surface? surface)
+    (when-let [trace-id (extract-trace-id (:invoke-meta result))]
+      (let [receipt {:surface "http"
+                     :destination (str "caller " (or caller "http-caller"))
+                     :delivered? true
+                     :note "http-direct-response"}]
+        (record-invoke-job-delivery! trace-id receipt)
+        (when-let [record-fn (*resolve-delivery-recorder*)]
+          (try
+            (record-fn (str agent-id) (str trace-id)
+                       {:surface "http"
+                        :destination (str "caller " (or caller "http-caller"))
+                        :delivered? true
+                        :note "http-direct-response"})
+            (catch Throwable _)))))))
+
+(defn- classify-terminal
+  [result no-evidence?]
+  (cond
+    no-evidence?
+    ["failed" "no-execution-evidence" "codex task-mode reply had no execution evidence"]
+
+    (:ok result)
+    ["done" nil nil]
+
+    :else
+    (let [err (:error result)
+          code (if (map? err) (:error/code err) :invoke-failed)
+          msg (if (map? err) (:error/message err) (str err))]
+      [(if (= :timeout code) "timeout" "failed")
+       (name code)
+       msg])))
+
+(defn- create-invoke-job!
+  [{:keys [requested-job-id agent-id prompt caller surface]}]
+  (let [created-id (atom nil)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (let [[auto-id next-seq] (next-invoke-job-id ledger)
+             requested (some-> requested-job-id str str/trim)
+             usable-requested (and (seq requested)
+                                   (not (contains? (:jobs ledger) requested))
+                                   requested)
+             job-id (or usable-requested auto-id)
+             created-at (str (Instant/now))
+             mode (invoke-job-mode prompt)
+             job {:job-id job-id
+                  :agent-id (str agent-id)
+                  :caller (str (or caller "http-caller"))
+                  :surface (str (or surface "http"))
+                  :mode mode
+                  :state "queued"
+                  :created-at created-at
+                  :started-at nil
+                  :finished-at nil
+                  :terminal-code nil
+                  :terminal-message nil
+                  :session-id nil
+                  :trace-id nil
+                  :result-summary nil
+                  :artifact-ref nil
+                  :execution {:executed? false :tool-events 0 :command-events 0}
+                  :delivery {:status "pending"}
+                  :event-seq 0
+                  :events []}]
+         (reset! created-id job-id)
+         (-> ledger
+             (assoc :next-seq next-seq)
+             (update :job-order (fnil conj []) job-id)
+             (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))
+    @created-id))
+
+(defn- mark-invoke-job-running!
+  [job-id]
+  (update-invoke-jobs-ledger!
+   (fn [ledger]
+     (if-let [job (get-in ledger [:jobs job-id])]
+       (assoc-in ledger [:jobs job-id]
+                 (-> job
+                     (assoc :state "running"
+                            :started-at (or (:started-at job) (str (Instant/now))))
+                     (append-job-event "running" {})))
+       ledger))))
+
+(defn- finalize-invoke-job!
+  [job-id terminal-state terminal-code terminal-message result sid]
+  (let [invoke-meta (:invoke-meta result)
+        execution (invoke-execution-evidence result)
+        trace-id (extract-trace-id invoke-meta)
+        result-text (when (string? (:result result)) (:result result))
+        summary (when result-text (summarize-result-text result-text))
+        artifact-ref (or (first-artifact-ref result-text)
+                         (first-artifact-ref summary))]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (if-let [job (get-in ledger [:jobs job-id])]
+         (let [finished-at (str (Instant/now))
+               updated-job (-> job
+                               (assoc :state terminal-state
+                                      :finished-at finished-at
+                                      :terminal-code terminal-code
+                                      :terminal-message terminal-message
+                                      :session-id sid
+                                      :trace-id trace-id
+                                      :result-summary summary
+                                      :artifact-ref artifact-ref
+                                      :execution execution)
+                               (append-job-event terminal-state
+                                                 {:code terminal-code
+                                                  :message terminal-message}))]
+           (cond-> (assoc-in ledger [:jobs job-id] updated-job)
+             (and (string? trace-id) (not (str/blank? trace-id)))
+             (assoc-in [:trace->job trace-id] job-id)))
+         ledger)))))
+
+(defn- record-invoke-job-delivery!
+  [invoke-trace-id {:keys [surface destination delivered? note]}]
+  (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (if-let [job-id (get-in ledger [:trace->job invoke-trace-id])]
+         (if-let [job (get-in ledger [:jobs job-id])]
+           (let [delivered (boolean delivered?)
+                 receipt {:status (if delivered "delivered" "delivery-failed")
+                          :surface (str (or surface "unknown"))
+                          :destination (str (or destination "unknown"))
+                          :recorded-at (str (Instant/now))
+                          :note (str (or note ""))}
+                 updated-job (-> job
+                                 (assoc :delivery receipt)
+                                 (append-job-event "delivery-recorded" receipt))]
+             (assoc-in ledger [:jobs job-id] updated-job))
+           ledger)
+         ledger)))))
+
+(defn- record-invoke-job-delivery-by-job-id!
+  [job-id {:keys [surface destination delivered? note]}]
+  (when (and (string? job-id) (not (str/blank? job-id)))
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (if-let [job (get-in ledger [:jobs job-id])]
+         (let [delivered (boolean delivered?)
+               receipt {:status (if delivered "delivered" "delivery-failed")
+                        :surface (str (or surface "unknown"))
+                        :destination (str (or destination "unknown"))
+                        :recorded-at (str (Instant/now))
+                        :note (str (or note ""))}
+               updated-job (-> job
+                               (assoc :delivery receipt)
+                               (append-job-event "delivery-recorded" receipt))]
+           (assoc-in ledger [:jobs job-id] updated-job))
+         ledger)))))
+
+(defn- invoke-job-public-view
+  [job]
+  (select-keys job [:job-id :agent-id :caller :surface :mode :state
+                    :created-at :started-at :finished-at
+                    :terminal-code :terminal-message
+                    :session-id :trace-id
+                    :result-summary :artifact-ref
+                    :execution :delivery :events]))
+
+(defn- get-invoke-job
+  [job-id]
+  (ensure-invoke-jobs-ledger!)
+  (get-in @!invoke-jobs-ledger [:jobs (str job-id)]))
+
+(defn- recent-invoke-jobs
+  [limit]
+  (ensure-invoke-jobs-ledger!)
+  (let [ledger @!invoke-jobs-ledger
+        ids (take-last (max 1 (int limit)) (:job-order ledger))]
+    (->> ids
+         reverse
+         (map #(get-in ledger [:jobs %]))
+         (remove nil?))))
 
 (defn- parse-keyword
   "Parse an API parameter into a keyword (accepts optional leading :)."
@@ -918,6 +1264,113 @@
          (zero? tool-events)
          (zero? command-events))))
 
+(defn- build-invoke-response
+  "Run a direct invoke and convert it to a Ring response map."
+  [{:keys [payload agent-id prompt evidence-store]}]
+  (let [caller (or (some-> payload :caller str)
+                   (some-> payload (get "caller") str)
+                   "http-caller")
+        surface (or (some-> payload :surface str)
+                    (some-> payload (get "surface") str))
+        requested-job-id (or (:job-id payload) (get payload "job-id")
+                             (:job_id payload) (get payload "job_id"))
+        mission-id (or (:mission-id payload) (get payload "mission-id"))
+        timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                           long)
+        ev-opts (when mission-id [:mission-id mission-id])
+        job-id (create-invoke-job! {:requested-job-id requested-job-id
+                                    :agent-id agent-id
+                                    :prompt prompt
+                                    :caller caller
+                                    :surface surface})]
+    (try
+      (mark-invoke-job-running! job-id)
+      (let [effective-prompt (wrap-surface-header prompt surface caller)
+            result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+            sid (:session-id result)
+            no-evidence? (and (:ok result)
+                              (codex-task-no-execution? agent-id effective-prompt result))
+            [terminal-state terminal-code terminal-message]
+            (classify-terminal result no-evidence?)]
+        (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
+               (or ev-opts []))
+        (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
+        (record-http-delivery! {:agent-id agent-id
+                                :caller caller
+                                :surface surface
+                                :result result})
+        (if no-evidence?
+          (json-response 502 {:ok false
+                              :error "invoke-no-execution-evidence"
+                              :message "codex task-mode reply had no execution evidence"
+                              :session-id sid
+                              :job-id job-id
+                              :invoke-meta (:invoke-meta result)})
+          (if (:ok result)
+            (do
+              (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
+                     (or ev-opts []))
+              (json-response 200 (cond-> {:ok true
+                                          :job-id job-id
+                                          :result (:result result)
+                                          :session-id sid}
+                                   (:invoke-meta result)
+                                   (assoc :invoke-meta (:invoke-meta result)))))
+            (let [err (:error result)
+                  code (if (map? err) (:error/code err) :invoke-failed)
+                  msg (if (map? err) (:error/message err) (str err))]
+              (json-response (if (= :agent-not-found code) 404 502)
+                             {:ok false
+                              :job-id job-id
+                              :error (name code)
+                              :message msg})))))
+      (catch Throwable t
+        (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+        (json-response 500 {:ok false
+                            :job-id job-id
+                            :error "invoke-error"
+                            :message (.getMessage t)})))))
+
+(defn- run-invoke-job!
+  "Execute a queued invoke job to terminal state.
+   Used by async bell worker and can be reused by other async surfaces."
+  [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store]}]
+  (let [ev-opts (when mission-id [:mission-id mission-id])]
+    (try
+      (mark-invoke-job-running! job-id)
+      (let [effective-prompt (wrap-surface-header prompt surface caller)
+            result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+            sid (:session-id result)
+            no-evidence? (and (:ok result)
+                              (codex-task-no-execution? agent-id effective-prompt result))
+            [terminal-state terminal-code terminal-message]
+            (classify-terminal result no-evidence?)]
+        (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
+               (or ev-opts []))
+        (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
+        ;; HTTP direct responses are auto-delivered to caller; bell responses are not.
+        (record-http-delivery! {:agent-id agent-id
+                                :caller caller
+                                :surface surface
+                                :result result})
+        (when (and (:ok result) (not no-evidence?))
+          (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
+                 (or ev-opts [])))
+        {:ok true
+         :job-id job-id
+         :result result
+         :session-id sid
+         :no-execution-evidence? no-evidence?
+         :terminal-state terminal-state
+         :terminal-code terminal-code
+         :terminal-message terminal-message})
+      (catch Throwable t
+        (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+        {:ok false
+         :job-id job-id
+         :error "invoke-error"
+         :message (.getMessage t)}))))
+
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
    Body: {\"agent-id\": \"claude-1\", \"prompt\": \"hello\",
@@ -939,6 +1392,77 @@
                           :message "Request body must be a JSON object"})
       (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
             prompt (or (:prompt payload) (get payload "prompt"))
+            evidence-store (evidence-store-for-config config)
+            invoke-opts {:payload payload
+                         :agent-id agent-id
+                         :prompt prompt
+                         :evidence-store evidence-store}]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? prompt)
+          (json-response 400 {:ok false :err "missing-prompt"
+                              :message "prompt is required"})
+
+          (:async-channel request)
+          (hk/as-channel request
+            {:on-open
+             (fn [channel]
+               (try
+                 (.submit invoke-executor
+                          ^Runnable
+                          (fn []
+                            (try
+                              (hk/send! channel (build-invoke-response invoke-opts))
+                              (catch Throwable t
+                                (println (str "[invoke] async error: " (.getMessage t)))
+                                (flush)
+                                (hk/send! channel
+                                          (json-response 500 {:ok false
+                                                              :error "invoke-error"
+                                                              :message (.getMessage t)}))))))
+                 (catch Throwable t
+                   (println (str "[invoke] async submit error: " (.getMessage t)))
+                   (flush)
+                   (hk/send! channel
+                             (json-response 503 {:ok false
+                                                 :error "invoke-submit-failed"
+                                                 :message (.getMessage t)})))))}))
+
+          :else
+          (try
+            (build-invoke-response invoke-opts)
+            (catch Throwable t
+              (println (str "[invoke] sync error: " (.getMessage t)))
+              (flush)
+              (json-response 500 {:ok false
+                                  :error "invoke-error"
+                                  :message (.getMessage t)})))))))
+
+(defn- handle-bell
+  "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
+   Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":1800000}
+   Returns immediately with accepted job-id while execution proceeds on invoke-executor."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            prompt (or (:prompt payload) (get payload "prompt"))
+            caller (or (some-> payload :caller str)
+                       (some-> payload (get "caller") str)
+                       "http-caller")
+            surface (or (some-> payload :surface str)
+                        (some-> payload (get "surface") str)
+                        "bell")
+            requested-job-id (or (:job-id payload) (get payload "job-id")
+                                 (:job_id payload) (get payload "job_id"))
+            mission-id (or (:mission-id payload) (get payload "mission-id"))
+            timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                               long)
             evidence-store (evidence-store-for-config config)]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
@@ -950,68 +1474,42 @@
                               :message "prompt is required"})
 
           :else
-          (hk/as-channel request
-            {:on-open
-             (fn [channel]
-               (try
-                 (.submit invoke-executor
-                   ^Runnable
-                   (fn []
-                     (try
-                       (let [caller (or (some-> payload :caller str)
-                                        (some-> payload (get "caller") str)
-                                        "http-caller")
-                             surface (or (some-> payload :surface str)
-                                         (some-> payload (get "surface") str))
-                             mission-id (or (:mission-id payload) (get payload "mission-id"))
-                             timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
-                                                long)
-                             ev-opts (when mission-id [:mission-id mission-id])
-                             effective-prompt (wrap-surface-header prompt surface caller)
-                             result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
-                             sid (:session-id result)]
-                         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
-                                (or ev-opts []))
-                         (if (and (:ok result)
-                                  (codex-task-no-execution? agent-id effective-prompt result))
-                           (hk/send! channel
-                             (json-response 502 {:ok false
-                                                 :error "invoke-no-execution-evidence"
-                                                 :message "codex task-mode reply had no execution evidence"
-                                                 :session-id sid
-                                                 :invoke-meta (:invoke-meta result)}))
-                           (if (:ok result)
-                           (do
-                             (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
-                                    (or ev-opts []))
-                             (hk/send! channel
-                               (json-response 200 (cond-> {:ok true
-                                                           :result (:result result)
-                                                           :session-id sid}
-                                                    (:invoke-meta result)
-                                                    (assoc :invoke-meta (:invoke-meta result))))))
-                           (let [err (:error result)
-                                 code (if (map? err) (:error/code err) :invoke-failed)
-                                 msg (if (map? err) (:error/message err) (str err))]
-                             (hk/send! channel
-                               (json-response (if (= :agent-not-found code) 404 502)
-                                              {:ok false
-                                               :error (name code)
-                                               :message msg}))))))
-                       (catch Throwable t
-                         (println (str "[invoke] async error: " (.getMessage t)))
-                         (flush)
-                         (hk/send! channel
-                           (json-response 500 {:ok false
-                                               :error "invoke-error"
-                                               :message (.getMessage t)}))))))
-                 (catch Throwable t
-                   (println (str "[invoke] async submit error: " (.getMessage t)))
-                   (flush)
-                   (hk/send! channel
-                     (json-response 503 {:ok false
-                                         :error "invoke-submit-failed"
-                                         :message (.getMessage t)})))))}))))))
+          (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+                                            :agent-id agent-id
+                                            :prompt prompt
+                                            :caller caller
+                                            :surface surface})]
+            (try
+              (.submit invoke-executor
+                       ^Runnable
+                       (fn []
+                         (let [result (run-invoke-job! {:job-id job-id
+                                                        :agent-id agent-id
+                                                        :prompt prompt
+                                                        :caller caller
+                                                        :surface surface
+                                                        :timeout-ms timeout-ms
+                                                        :mission-id mission-id
+                                                        :evidence-store evidence-store})]
+                           ;; Bell delivery means caller can obtain terminal result via canonical job query.
+                           (record-invoke-job-delivery-by-job-id!
+                            job-id
+                            {:surface "bell"
+                             :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
+                             :delivered? true
+                             :note (if (:ok result) "bell-job-ready" "bell-job-error")}))))
+              (json-response 202 {:ok true
+                                  :accepted true
+                                  :job-id job-id
+                                  :state "queued"
+                                  :mode (invoke-job-mode prompt)
+                                  :status-url (str "/api/alpha/invoke/jobs/" job-id)})
+              (catch Throwable t
+                (finalize-invoke-job! job-id "failed" "invoke-submit-failed" (.getMessage t) {:ok false} nil)
+                (json-response 503 {:ok false
+                                    :job-id job-id
+                                    :error "invoke-submit-failed"
+                                    :message (.getMessage t)})))))))))
 
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
@@ -1127,6 +1625,182 @@
                       (reg/clear-invoke-event-sink! aid)
                       (hk/close channel))))))))))))
 
+(defn- invoke-job-terminal-state?
+  [state]
+  (not (#{"queued" "running"} (str state))))
+
+(defn- stream-flag?
+  [payload]
+  (let [v (or (:stream payload) (get payload "stream"))]
+    (cond
+      (boolean? v) v
+      (string? v) (true? (parse-bool v))
+      :else false)))
+
+(defn- send-ndjson!
+  [channel event]
+  (try
+    (hk/send! channel (str (json/generate-string event) "\n") false)
+    true
+    (catch Throwable _
+      false)))
+
+(defn- sanitize-ms
+  [v default-ms min-ms max-ms]
+  (let [n (cond
+            (integer? v) (long v)
+            (number? v) (long v)
+            (string? v) (parse-long v)
+            :else nil)]
+    (if (and (number? n) (pos? n))
+      (max min-ms (min max-ms n))
+      default-ms)))
+
+(defn- handle-whistle-stream*
+  "Long-running modem-style whistle with progressive NDJSON updates.
+   Emits: started, job-event, heartbeat, done."
+  [request config payload]
+  (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+        prompt (or (:prompt payload) (get payload "prompt"))
+        timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms")) long)
+        caller (or (some-> payload :caller str)
+                   (some-> payload (get "caller") str)
+                   "http-caller")
+        requested-job-id (or (:job-id payload) (get payload "job-id")
+                             (:job_id payload) (get payload "job_id"))
+        mission-id (or (:mission-id payload) (get payload "mission-id"))
+        poll-ms (sanitize-ms (or (:poll-ms payload) (get payload "poll-ms")) 1000 100 10000)
+        heartbeat-ms (sanitize-ms (or (:heartbeat-ms payload) (get payload "heartbeat-ms")) 5000 500 60000)
+        evidence-store (evidence-store-for-config config)]
+    (cond
+      (or (nil? agent-id) (str/blank? (str agent-id)))
+      (json-response 400 {:ok false :err "missing-agent-id"
+                          :message "agent-id is required"})
+
+      (nil? prompt)
+      (json-response 400 {:ok false :err "missing-prompt"
+                          :message "prompt is required"})
+
+      :else
+      (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+                                        :agent-id agent-id
+                                        :prompt prompt
+                                        :caller caller
+                                        :surface "whistle"})
+            mode (invoke-job-mode prompt)
+            started-ms (System/currentTimeMillis)]
+        (hk/with-channel request channel
+          (let [closed? (atom false)
+                delivery-recorded? (atom false)
+                mark-delivery!
+                (fn [delivered? note]
+                  (when (compare-and-set! delivery-recorded? false true)
+                    (record-invoke-job-delivery-by-job-id!
+                     job-id
+                     {:surface "whistle-stream"
+                      :destination (str "caller " caller " (stream)")
+                      :delivered? (boolean delivered?)
+                      :note (str note)})))
+                close-channel!
+                (fn []
+                  (try
+                    (hk/close channel)
+                    (catch Throwable _)))]
+            (hk/on-close channel
+              (fn [_]
+                (reset! closed? true)
+                (mark-delivery! false "whistle-stream-client-closed")))
+            (when-not (send-ndjson! channel
+                                    {:type "started"
+                                     :ok true
+                                     :job-id job-id
+                                     :state "queued"
+                                     :mode mode
+                                     :poll-ms poll-ms
+                                     :heartbeat-ms heartbeat-ms
+                                     :status-url (str "/api/alpha/invoke/jobs/" job-id)})
+              (mark-delivery! false "whistle-stream-start-send-failed"))
+            (.submit invoke-executor
+                     ^Runnable
+                     (fn []
+                       (run-invoke-job! {:job-id job-id
+                                         :agent-id agent-id
+                                         :prompt prompt
+                                         :caller caller
+                                         :surface "whistle"
+                                         :timeout-ms timeout-ms
+                                         :mission-id mission-id
+                                         :evidence-store evidence-store})))
+            (.submit invoke-executor
+                     ^Runnable
+                     (fn []
+                       (loop [last-seq 0
+                              last-heartbeat-ms started-ms]
+                         (if @closed?
+                           (close-channel!)
+                           (let [job (get-invoke-job job-id)
+                                 public-job (when job (invoke-job-public-view job))
+                                 state (or (:state public-job) "unknown")
+                                 events (:events public-job)
+                                 new-events (->> events
+                                                 (filter #(> (long (or (:seq %) 0)) (long last-seq)))
+                                                 vec)
+                                 next-seq (if (seq new-events)
+                                            (long (or (:seq (last new-events)) last-seq))
+                                            (long last-seq))]
+                             (doseq [evt new-events]
+                               (when-not (send-ndjson! channel
+                                                       {:type "job-event"
+                                                        :job-id job-id
+                                                        :state state
+                                                        :event evt})
+                                 (reset! closed? true)))
+                             (let [now (System/currentTimeMillis)
+                                   terminal? (invoke-job-terminal-state? state)
+                                   heartbeat-due? (and (not terminal?)
+                                                       (>= (- now last-heartbeat-ms) heartbeat-ms))
+                                   sent-heartbeat? (when heartbeat-due?
+                                                     (send-ndjson!
+                                                      channel
+                                                      {:type "heartbeat"
+                                                       :job-id job-id
+                                                       :state state
+                                                       :elapsed-ms (- now started-ms)
+                                                       :last-event-seq next-seq}))
+                                   next-heartbeat-ms (if heartbeat-due? now last-heartbeat-ms)]
+                               (cond
+                                 terminal?
+                                 (do
+                                   (if (send-ndjson! channel
+                                                     {:type "done"
+                                                      :ok (= "done" state)
+                                                      :job-id job-id
+                                                      :job public-job})
+                                     (mark-delivery! true "whistle-stream-response")
+                                     (mark-delivery! false "whistle-stream-send-failed"))
+                                   (close-channel!))
+
+                                 (false? sent-heartbeat?)
+                                 (do
+                                   (reset! closed? true)
+                                   (mark-delivery! false "whistle-stream-heartbeat-send-failed")
+                                   (close-channel!))
+
+                                 :else
+                                 (do
+                                   (Thread/sleep poll-ms)
+                                   (recur next-seq next-heartbeat-ms)))))))))))))
+        ))
+
+(defn- handle-whistle-stream
+  "POST /api/alpha/whistle-stream — NDJSON streaming whistle endpoint."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (handle-whistle-stream* request config payload))))
+
 (defn- handle-whistle
   "POST /api/alpha/whistle — synchronous request-response to a registered agent.
    Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 1800000}
@@ -1144,51 +1818,53 @@
                        (some-> payload (get "caller") str)
                        "http-caller")
             evidence-store (evidence-store-for-config config)]
-        (cond
-          (or (nil? agent-id) (str/blank? (str agent-id)))
-          (json-response 400 {:ok false :err "missing-agent-id"
-                              :message "agent-id is required"})
+        (if (stream-flag? payload)
+          (handle-whistle-stream* request config payload)
+          (cond
+            (or (nil? agent-id) (str/blank? (str agent-id)))
+            (json-response 400 {:ok false :err "missing-agent-id"
+                                :message "agent-id is required"})
 
-          (nil? prompt)
-          (json-response 400 {:ok false :err "missing-prompt"
-                              :message "prompt is required"})
+            (nil? prompt)
+            (json-response 400 {:ok false :err "missing-prompt"
+                                :message "prompt is required"})
 
-          :else
-          (hk/with-channel request channel
-            (.submit invoke-executor
-              ^Runnable
-              (fn []
-                (try
-                  (let [result (whistles/whistle!
-                                {:agent-id (str agent-id)
-                                 :prompt prompt
-                                 :author caller
-                                 :timeout-ms timeout-ms
-                                 :evidence-store evidence-store})]
-                    (if (:whistle/ok result)
-                      (hk/send! channel
-                        (json-response 200 (cond-> {:ok true
-                                                    :response (:whistle/response result)
-                                                    :agent-id (:whistle/agent-id result)
-                                                    :session-id (:whistle/session-id result)}
-                                             (:whistle/invoke-trace-id result)
-                                             (assoc :invoke-trace-id (:whistle/invoke-trace-id result)))))
-                      (let [err (:whistle/error result)]
-                        (hk/send! channel
-                          (json-response
-                           (if (and (string? err) (.contains ^String err "not registered")) 404 502)
-                           (cond-> {:ok false
-                                    :error err
-                                    :agent-id (:whistle/agent-id result)}
-                             (:whistle/invoke-trace-id result)
-                             (assoc :invoke-trace-id (:whistle/invoke-trace-id result))))))))
-                  (catch Throwable t
-                    (println (str "[whistle] async error: " (.getMessage t)))
-                    (flush)
-                    (hk/send! channel
-                      (json-response 500 {:ok false
-                                          :error "whistle-error"
-                                          :message (.getMessage t)}))))))))))))
+            :else
+            (hk/with-channel request channel
+              (.submit invoke-executor
+                       ^Runnable
+                       (fn []
+                         (try
+                           (let [result (whistles/whistle!
+                                         {:agent-id (str agent-id)
+                                          :prompt prompt
+                                          :author caller
+                                          :timeout-ms timeout-ms
+                                          :evidence-store evidence-store})]
+                             (if (:whistle/ok result)
+                               (hk/send! channel
+                                         (json-response 200 (cond-> {:ok true
+                                                                     :response (:whistle/response result)
+                                                                     :agent-id (:whistle/agent-id result)
+                                                                     :session-id (:whistle/session-id result)}
+                                                              (:whistle/invoke-trace-id result)
+                                                              (assoc :invoke-trace-id (:whistle/invoke-trace-id result)))))
+                               (let [err (:whistle/error result)]
+                                 (hk/send! channel
+                                           (json-response
+                                            (if (and (string? err) (.contains ^String err "not registered")) 404 502)
+                                            (cond-> {:ok false
+                                                     :error err
+                                                     :agent-id (:whistle/agent-id result)}
+                                              (:whistle/invoke-trace-id result)
+                                              (assoc :invoke-trace-id (:whistle/invoke-trace-id result))))))))
+                           (catch Throwable t
+                             (println (str "[whistle] async error: " (.getMessage t)))
+                             (flush)
+                             (hk/send! channel
+                                       (json-response 500 {:ok false
+                                                           :error "whistle-error"
+                                                           :message (.getMessage t)})))))))))))))
 
 (defn- handle-irc-send
   "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
@@ -1229,6 +1905,27 @@
               (json-response 502 {:ok false :err "irc-send-failed"
                                   :message (.getMessage e)}))))))))
 
+(defn- handle-invoke-jobs
+  "GET /api/alpha/invoke/jobs?limit=N — list recent invoke jobs."
+  [request]
+  (let [params (parse-query-params request)
+        limit (or (parse-int (get params "limit")) 20)
+        jobs (->> (recent-invoke-jobs limit)
+                  (mapv invoke-job-public-view))]
+    (json-response 200 {:ok true
+                        :count (count jobs)
+                        :jobs jobs})))
+
+(defn- handle-invoke-job
+  "GET /api/alpha/invoke/jobs/:id — return one invoke-job snapshot."
+  [job-id]
+  (if-let [job (get-invoke-job job-id)]
+    (json-response 200 {:ok true
+                        :job (invoke-job-public-view job)})
+    (json-response 404 {:ok false
+                        :error "invoke-job-not-found"
+                        :job-id (str job-id)})))
+
 (defn- handle-invoke-delivery
   "POST /api/alpha/invoke-delivery — record where an invoke reply was delivered.
    Body: {\"agent-id\":\"codex-1\",\"invoke-trace-id\":\"invoke-...\",\"surface\":\"irc\",
@@ -1248,7 +1945,11 @@
                         (cond
                           (boolean? v) v
                           (string? v) (if-some [b (parse-bool v)] b true)
-                          :else true))]
+                          :else true))
+            receipt {:surface (str (or surface "unknown"))
+                     :destination (str (or destination "unknown"))
+                     :delivered? delivered
+                     :note (str (or note ""))}]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -1259,14 +1960,13 @@
                               :message "invoke-trace-id is required"})
 
           :else
-          (if-let [record-fn (ns-resolve 'futon3c.dev 'record-invoke-delivery!)]
+          (do
+            (record-invoke-job-delivery! (str invoke-trace-id) receipt)
+            (if-let [record-fn (*resolve-delivery-recorder*)]
             (try
               (let [recorded? (boolean
                                (record-fn (str agent-id) (str invoke-trace-id)
-                                          {:surface (str (or surface "unknown"))
-                                           :destination (str (or destination "unknown"))
-                                           :delivered? delivered
-                                           :note (str (or note ""))}))]
+                                          receipt))]
                 (if recorded?
                   (json-response 200 {:ok true
                                       :agent-id (str agent-id)
@@ -1281,7 +1981,7 @@
                                     :message (.getMessage t)})))
             (json-response 503 {:ok false
                                 :err "invoke-delivery-unavailable"
-                                :message "invoke delivery recorder not available on this node"})))))))
+                                :message "invoke delivery recorder not available on this node"}))))))))
 
 (defn- handle-irc-history
   "GET /api/alpha/irc/history — recent IRC messages in chat-friendly format.
@@ -2019,11 +2719,25 @@
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
 
+          (and (= :post method) (= "/api/alpha/bell" uri))
+          (handle-bell request config)
+
+          (and (= :get method) (= "/api/alpha/invoke/jobs" uri))
+          (handle-invoke-jobs request)
+
+          (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/(.+)" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)
+                job-id (enc/decode-uri-component raw-id)]
+            (handle-invoke-job job-id))
+
           (and (= :post method) (= "/api/alpha/invoke-stream" uri))
           (handle-invoke-stream request config)
 
           (and (= :post method) (= "/api/alpha/whistle" uri))
           (handle-whistle request config)
+
+          (and (= :post method) (= "/api/alpha/whistle-stream" uri))
+          (handle-whistle-stream request config)
 
           (and (= :post method) (= "/api/alpha/irc/send" uri))
           (handle-irc-send request config)

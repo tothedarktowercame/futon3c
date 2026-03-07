@@ -34,6 +34,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.parse
 import urllib.request
 import urllib.error
 
@@ -121,6 +122,7 @@ INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
+INVOKE_JOBS_URL = f"{INVOKE_BASE}/api/alpha/invoke/jobs"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
@@ -614,7 +616,9 @@ class IRCBot:
             invoke_meta = None
             try:
                 with self._invoking:
-                    response = self._invoke_agent(prompt, sender, mission_id=mission_id)
+                    response = self._invoke_agent(
+                        prompt, sender, mission_id=mission_id, job_id=job_id
+                    )
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
                     # Claude: clean output (no [done]/[accepted] framing)
@@ -671,7 +675,7 @@ class IRCBot:
             finally:
                 self._invoke_queue.task_done()
 
-    def _invoke_agent(self, prompt, caller, mission_id=None):
+    def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None):
         """Call the futon3c invoke API and return structured invoke outcome."""
         status_before = self._agent_status()
         if (
@@ -692,6 +696,8 @@ class IRCBot:
             "surface": f"irc ({self.channel})",
             "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
+        if job_id:
+            payload["job-id"] = job_id
         if mission_id:
             payload["mission-id"] = mission_id
         body = json.dumps(payload).encode("utf-8")
@@ -709,6 +715,7 @@ class IRCBot:
                 if data.get("ok"):
                     return {
                         "ok": True,
+                        "job_id": data.get("job-id") or data.get("job_id"),
                         "result": data.get("result", ""),
                         "session_id": data.get("session-id") or data.get("session_id"),
                         "invoke_meta": invoke_meta,
@@ -716,6 +723,7 @@ class IRCBot:
                 else:
                     return {
                         "ok": False,
+                        "job_id": data.get("job-id") or data.get("job_id"),
                         "error": f"invoke error: {data.get('error', 'unknown')}",
                         "session_id": data.get("session-id") or data.get("session_id"),
                         "invoke_meta": invoke_meta,
@@ -741,6 +749,7 @@ class IRCBot:
                     if isinstance(status_after, dict) and status_after.get("status") == "invoking":
                         return {
                             "ok": False,
+                            "job_id": parsed.get("job-id") or parsed.get("job_id"),
                             "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
                             "session_id": status_after.get("session_id"),
                             "invoke_meta": invoke_meta,
@@ -748,11 +757,13 @@ class IRCBot:
                 if msg:
                     return {
                         "ok": False,
+                        "job_id": parsed.get("job-id") or parsed.get("job_id"),
                         "error": f"HTTP {e.code}: {err}: {msg}",
                         "invoke_meta": invoke_meta,
                     }
                 return {
                     "ok": False,
+                    "job_id": parsed.get("job-id") or parsed.get("job_id"),
                     "error": f"HTTP {e.code}: {err}",
                     "invoke_meta": invoke_meta,
                 }
@@ -918,6 +929,8 @@ class IRCBot:
             self._cmd_agent(sender, args)
         elif cmd == "!jobs":
             self._cmd_jobs(sender, args)
+        elif cmd == "!job":
+            self._cmd_job(sender, args)
         else:
             self._say(f"Unknown command: {cmd} — try !help")
 
@@ -929,12 +942,42 @@ class IRCBot:
                   "!mission focus <id> | !mission show | "
                   "!mission clear | !todo add <text> | "
                   "!todo list | !todo done <id> | "
-                  "!agent [agent-id] | !jobs | !help")
+                  "!agent [agent-id] | !jobs | !job <id> | !help")
 
     def _cmd_jobs(self, _sender, _args):
         """Show invoke queue depth for this bot."""
         pending = self._invoke_queue.qsize()
         self._say(f"Invoke queue: {pending} pending for {self.agent_id}", max_lines=1)
+
+    def _cmd_job(self, _sender, args):
+        """Show canonical invoke-job state from futon3c invoke ledger."""
+        job_id = args.strip()
+        if not job_id:
+            self._say("Usage: !job <id> (e.g. !job codex-1772899664-1)")
+            return
+        encoded = urllib.parse.quote(job_id, safe="")
+        data = api_get(f"{INVOKE_JOBS_URL}/{encoded}", timeout=STATUS_TIMEOUT)
+        if not data.get("ok"):
+            err = data.get("error", "unknown")
+            self._say(f"[job lookup error: {err}]")
+            return
+        job = data.get("job", {})
+        if not isinstance(job, dict):
+            self._say(f"[job lookup error: invalid payload for {job_id}]")
+            return
+        execution = job.get("execution") or {}
+        delivery = job.get("delivery") or {}
+        artifact = job.get("artifact-ref") or "none"
+        msg = (
+            f"{job.get('job-id', job_id)}: state={job.get('state', 'unknown')} "
+            f"mode={job.get('mode', 'unknown')} "
+            f"executed={execution.get('executed?', False)} "
+            f"tool={execution.get('tool-events', 0)} "
+            f"cmd={execution.get('command-events', 0)} "
+            f"artifact={artifact} "
+            f"delivery={delivery.get('status', 'pending')}"
+        )
+        self._say(self._truncate(msg, max_len=360), max_lines=2)
 
     def _cmd_ungate(self, sender, args):
         """Ungate a bot — it will respond to all messages, not just @mentions."""

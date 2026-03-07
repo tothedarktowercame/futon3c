@@ -3116,6 +3116,7 @@ RESPOND WITH ONLY:
         approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
+        get-event-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)
         !event-trace (atom [])
         !invoke-start-ms (atom (System/currentTimeMillis))
         on-event (fn [evt]
@@ -3129,7 +3130,13 @@ RESPOND WITH ONLY:
                      (when (and update-activity! activity)
                        (try
                          (update-activity! aid-val activity)
-                         (catch Throwable _)))))
+                         (catch Throwable _)))
+                     ;; Mirror Codex stream events to any active HTTP stream sink.
+                     (when get-event-sink
+                       (when-let [sink (get-event-sink aid-val)]
+                         (try
+                           (sink evt)
+                           (catch Throwable _))))))
         inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
                                              :model model
                                              :sandbox sandbox
