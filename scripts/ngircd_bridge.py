@@ -217,20 +217,6 @@ ARTIFACT_REF_PATTERNS = [
     ),
 ]
 
-WORK_CLAIM_RE = re.compile(
-    r"\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|"
-    r"proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b",
-    re.IGNORECASE,
-)
-
-EXECUTION_FOLLOWUP_TEMPLATE = (
-    "Your previous reply made a work/progress claim without execution evidence.\n"
-    "Execute one concrete first step now (tool/command activity is required).\n"
-    "Then reply in one short line with actual status and artifact refs.\n\n"
-    "Original request:\n{prompt}\n\n"
-    "Previous reply:\n{reply}\n"
-)
-
 # Ungated nicks receive ALL channel messages, not just @mentions.
 # Toggle with !ungate <nick> and !gate <nick>.
 ungated_nicks: set[str] = set()
@@ -565,32 +551,6 @@ class IRCBot:
         }
 
     @staticmethod
-    def _is_work_claim_text(text):
-        """True when text claims starting/owning work (not just acknowledgement)."""
-        t = (text or "").strip()
-        return bool(t and WORK_CLAIM_RE.search(t))
-
-    def _needs_execution_followup(self, response):
-        """True when Codex claimed work but produced zero execution evidence."""
-        if not self.agent_id.startswith("codex"):
-            return False
-        if not isinstance(response, dict) or not response.get("ok"):
-            return False
-        stats = self._execution_stats(response.get("invoke_meta"))
-        if not isinstance(stats, dict):
-            return False
-        if stats["executed"] or stats["tool_events"] > 0 or stats["command_events"] > 0:
-            return False
-        return self._is_work_claim_text(response.get("result", ""))
-
-    def _execution_followup_prompt(self, original_prompt, prior_reply):
-        """Build a strict follow-up prompt to force one executed first step."""
-        return EXECUTION_FOLLOWUP_TEMPLATE.format(
-            prompt=self._truncate(original_prompt or "", max_len=900),
-            reply=self._truncate(prior_reply or "", max_len=600),
-        )
-
-    @staticmethod
     def _invoke_trace_id(invoke_meta):
         """Extract invoke trace id from invoke metadata."""
         if not isinstance(invoke_meta, dict):
@@ -656,31 +616,7 @@ class IRCBot:
                 with self._invoking:
                     response = self._invoke_agent(prompt, sender, mission_id=mission_id)
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
-                forced_execution = False
-                if self._needs_execution_followup(response):
-                    forced_execution = True
-                    followup_prompt = self._execution_followup_prompt(
-                        prompt, response.get("result", "")
-                    )
-                    with self._invoking:
-                        response = self._invoke_agent(
-                            followup_prompt, sender, mission_id=mission_id
-                        )
-                    invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
-                    if self._needs_execution_followup(response):
-                        self._say(
-                            f"[failed {job_id}] work-claim had no execution evidence "
-                            "(tools=0, commands=0) after enforcement retry",
-                            max_lines=2,
-                            channel=reply_ch,
-                        )
-                        self._record_delivery_receipt(
-                            invoke_meta,
-                            delivered=True,
-                            note=f"ngircd-bridge:{job_id}:no-execution-evidence",
-                        )
-                        continue
                     # Claude: clean output (no [done]/[accepted] framing)
                     # Codex: full framing with artifact refs and session IDs
                     is_claude = self.nick.startswith("claude")
@@ -696,8 +632,6 @@ class IRCBot:
                                 f"[no execution evidence: tool-events={stats['tool_events']}, "
                                 f"command-events={stats['command_events']}]"
                             )
-                        if forced_execution:
-                            summary = f"{summary} [execution-enforced]"
                         sid = response.get("session_id")
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
