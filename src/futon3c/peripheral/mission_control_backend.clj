@@ -986,7 +986,7 @@
       :detected-at (str (java.time.Instant/now))})))
 
 ;; =============================================================================
-;; Backfill — legacy missions as evidence (D7)
+;; Backfill - legacy missions as evidence (D7)
 ;; =============================================================================
 
 (defn mission->evidence

@@ -115,6 +115,18 @@
       (not (contains? #{"0" "false" "no" "off"} v)))
     default))
 
+(defn configured-codex-agent-id
+  "Current codex agent-id, honoring FUTON3C_CODEX_AGENT_ID when set."
+  []
+  (or (some-> (env "FUTON3C_CODEX_AGENT_ID") str/trim not-empty)
+      "codex-1"))
+
+(defn configured-codex-relay-nick
+  "Codex IRC nick, honoring FUTON3C_CODEX_NICK or deriving from agent-id."
+  []
+  (or (some-> (env "FUTON3C_CODEX_NICK") str/trim not-empty)
+      (str/replace (configured-codex-agent-id) #"-\d+$" "")))
+
 (defn- nonstarter-fn
   "Resolve a nonstarter API function by symbol name.
    Returns nil when futon5/nonstarter.api is not available on classpath."
@@ -320,7 +332,7 @@
    Returns {:stop-fn fn}."
   [{:keys [agent-id invoke-fn initial-sid session-file ws-base ws-path register-http-base
            evidence-store evidence-replication? replication-interval-ms]
-    :or {agent-id "codex-1"
+    :or {agent-id (configured-codex-agent-id)
          ws-path "/agency/ws"}}]
   (let [sid* (atom initial-sid)
         running? (atom true)
@@ -1023,7 +1035,8 @@
                                      :else :unknown)
                             assignee (cond
                                        (#{:proposal-review :pr-review} status) "claude-1"
-                                       (#{:ready-to-implement :implementing :needs-rework} status) "codex-1"
+                                       (#{:ready-to-implement :implementing :needs-rework} status)
+                                       (configured-codex-agent-id)
                                        (:assignee existing) (:assignee existing)
                                        :else nil)]
                         (assoc ts tid
@@ -1084,10 +1097,18 @@
 (defn- nick->agent-id
   "Map IRC nick to agent-id (codex → codex-1, claude → claude-1)."
   [nick]
-  (cond
-    (str/starts-with? (str nick) "codex") "codex-1"
-    (str/starts-with? (str nick) "claude") "claude-1"
-    :else nil))
+  (let [nick-str (some-> nick str)
+        nick-lower (some-> nick-str str/lower-case)
+        codex-nick (configured-codex-relay-nick)
+        codex-nick-lower (some-> codex-nick str/lower-case)]
+    (cond
+      (and codex-nick-lower nick-lower
+           (str/starts-with? nick-lower codex-nick-lower))
+      (configured-codex-agent-id)
+      (and nick-lower (str/starts-with? nick-lower "codex"))
+      (configured-codex-agent-id)
+      (and nick-lower (str/starts-with? nick-lower "claude")) "claude-1"
+      :else nil)))
 
 (defn- next-queued-task
   "Find the next task that's ready for the same worker, by issue number order."
@@ -1867,7 +1888,7 @@ RESPOND WITH ONLY:
   (let [agents (reg/registered-agents)
         agent-ids (set (map :id/value agents))]
     {:agents-registered (vec agent-ids)
-     :codex-available?  (contains? agent-ids "codex-1")
+     :codex-available?  (contains? agent-ids (configured-codex-agent-id))
      :claude-available? (contains? agent-ids "claude-1")
      :evidence-store?   (some? @!evidence-store)
      :irc?              (some? @!irc-sys)}))
@@ -1887,7 +1908,7 @@ RESPOND WITH ONLY:
      (dev/tickle-smoke! :agent-id \"claude-1\")   ; kick claude-1
      (dev/tickle-smoke! :dry-run? true)           ; preflight only"
   [& {:keys [agent-id repo-dir timeout-ms dry-run?]
-      :or {agent-id "codex-1"
+      :or {agent-id (configured-codex-agent-id)
            repo-dir "/home/joe/code/futon3c"
            timeout-ms 600000}}]
   (let [preflight (tickle-preflight!)
@@ -2020,7 +2041,7 @@ RESPOND WITH ONLY:
      (dev/run-ct-entry!)                                    ; next unprocessed
      (dev/run-ct-entry! :entity-id \"pm-ct-FunctorCategory\") ; specific entry"
   [& {:keys [entity-id agent-id timeout-ms review? review-timeout-ms]
-      :or {agent-id "codex-1"
+      :or {agent-id (configured-codex-agent-id)
            timeout-ms 300000
            review? true
            review-timeout-ms 300000}}]
@@ -2142,7 +2163,7 @@ RESPOND WITH ONLY:
      (dev/run-ct-batch! :n 50 :order :desc)       ; 50 entries, longest first
      (dev/run-ct-batch! :n 313)                   ; full corpus overnight"
   [& {:keys [n cooldown-ms agent-id timeout-ms review? order]
-      :or {n 10 cooldown-ms 5000 agent-id "codex-1"
+      :or {n 10 cooldown-ms 5000 agent-id (configured-codex-agent-id)
            timeout-ms 300000 review? true order :asc}}]
   (let [evidence-store @!evidence-store
         issues (ct-queue/next-unprocessed evidence-store n)
@@ -2354,7 +2375,7 @@ RESPOND WITH ONLY:
      (dev/run-arse-entry!)                                         ; next unprocessed
      (dev/run-arse-entry! :entity-id \"p7-problem-qa-001\")         ; specific entry"
   [& {:keys [entity-id agent-id timeout-ms review? review-timeout-ms]
-      :or {agent-id "codex-1"
+      :or {agent-id (configured-codex-agent-id)
            timeout-ms 300000
            review? true
            review-timeout-ms 300000}}]
@@ -2483,7 +2504,7 @@ RESPOND WITH ONLY:
      (dev/run-arse-batch! :n 50)                    ; 50 items
      (dev/run-arse-batch! :problem 7 :n 16)         ; all P7 items"
   [& {:keys [n cooldown-ms agent-id timeout-ms review? problem]
-      :or {n 10 cooldown-ms 5000 agent-id "codex-1"
+      :or {n 10 cooldown-ms 5000 agent-id (configured-codex-agent-id)
            timeout-ms 300000 review? true}}]
   (let [evidence-store @!evidence-store
         all-issues (arse-queue/next-unprocessed evidence-store 1000)
@@ -3723,6 +3744,8 @@ RESPOND WITH ONLY:
         register-codex? (env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
         relay-claude? (env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
+        codex-agent-id (configured-codex-agent-id)
+        codex-relay-nick (configured-codex-relay-nick)
         relay-invoke-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 600000) 600000)
         relay-invoke-hard-timeout-ms (or (env-int "FUTON3C_RELAY_INVOKE_HARD_TIMEOUT_MS" 1800000) 1800000)
         codex-ws-bridge? (env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
@@ -3812,17 +3835,17 @@ RESPOND WITH ONLY:
                                   "/tmp/futon-codex-session-id"))
                   initial-sid (read-session-id sf)
                   sid-atom (atom initial-sid)
-                  invoke-fn (make-codex-invoke-fn
-                             {:codex-bin (env "CODEX_BIN" "codex")
-                              :model (env "CODEX_MODEL" "gpt-5-codex")
-                              :sandbox (env "CODEX_SANDBOX" "danger-full-access")
-                              :approval-policy (or (env "CODEX_APPROVAL_POLICY")
-                                                   (env "CODEX_APPROVAL" "never"))
-                              :reasoning-effort (env "CODEX_REASONING_EFFORT")
-                              :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
-                              :agent-id "codex-1"
-                              :session-file sf
-                              :session-id-atom sid-atom})
+                   invoke-fn (make-codex-invoke-fn
+                              {:codex-bin (env "CODEX_BIN" "codex")
+                               :model (env "CODEX_MODEL" "gpt-5-codex")
+                               :sandbox (env "CODEX_SANDBOX" "danger-full-access")
+                               :approval-policy (or (env "CODEX_APPROVAL_POLICY")
+                                                    (env "CODEX_APPROVAL" "never"))
+                               :reasoning-effort (env "CODEX_REASONING_EFFORT")
+                               :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
+                               :agent-id codex-agent-id
+                               :session-file sf
+                               :session-id-atom sid-atom})
                   ws-port (or (:port f3c-sys) (env-int "FUTON3C_PORT" 7070))
                   peer-base (or (some-> (env "FUTON3C_LINODE_URL") str/trim not-empty)
                                 (first-peer-url))
@@ -3848,11 +3871,11 @@ RESPOND WITH ONLY:
                 (let [ws-path (or (some-> (env "FUTON3C_CODEX_WS_PATH") str/trim not-empty)
                                   "/agency/ws")
                       codex-invoke-fn (when remote-ws-target? invoke-fn)
-                      codex-metadata (cond-> {:ws-bridge? true}
-                                       remote-ws-target? (assoc :skip-federation-proxy? true)
-                                       remote-ws-target? (assoc :ws-remote? true))
-                      bridge (start-codex-ws-bridge!
-                              {:agent-id "codex-1"
+                       codex-metadata (cond-> {:ws-bridge? true}
+                                        remote-ws-target? (assoc :skip-federation-proxy? true)
+                                        remote-ws-target? (assoc :ws-remote? true))
+                       bridge (start-codex-ws-bridge!
+                              {:agent-id codex-agent-id
                                :invoke-fn invoke-fn
                                :initial-sid initial-sid
                                :session-file sf
@@ -3862,42 +3885,42 @@ RESPOND WITH ONLY:
                                :evidence-store evidence-store
                                :evidence-replication? evidence-replication?
                                :replication-interval-ms replication-interval-ms})]
-                  (rt/register-codex! {:agent-id "codex-1"
+                  (rt/register-codex! {:agent-id codex-agent-id
                                        :invoke-fn codex-invoke-fn
                                        :metadata codex-metadata})
-                  (reg/update-agent! "codex-1"
+                  (reg/update-agent! codex-agent-id
                                      :agent/type :codex
                                      :agent/invoke-fn codex-invoke-fn
                                      :agent/capabilities [:edit :test :coordination/execute]
                                      :agent/metadata codex-metadata)
                   (when initial-sid
-                    (reg/update-agent! "codex-1" :agent/session-id initial-sid))
+                    (reg/update-agent! codex-agent-id :agent/session-id initial-sid))
                   (reset! !codex-ws-bridge bridge)
-                  (println (str "[dev] Codex agent registered: codex-1 (ws-bridge mode"
+                  (println (str "[dev] Codex agent registered: " codex-agent-id " (ws-bridge mode"
                                 (when remote-ws-target? ", remote")
                                 ")"
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
-                                                           (min 8 (count initial-sid))) ")")))))
+                                                            (min 8 (count initial-sid))) ")")))))
                 (do
                   (when codex-ws-bridge?
                     (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to inline invoke"))
-                  (rt/register-codex! {:agent-id "codex-1"
+                  (rt/register-codex! {:agent-id codex-agent-id
                                        :invoke-fn invoke-fn})
-                  (reg/update-agent! "codex-1"
+                  (reg/update-agent! codex-agent-id
                                      :agent/type :codex
                                      :agent/invoke-fn invoke-fn
                                      :agent/capabilities [:edit :test :coordination/execute])
                   (when initial-sid
-                    (reg/update-agent! "codex-1" :agent/session-id initial-sid))
-                  (println (str "[dev] Codex agent registered: codex-1 (inline invoke)"
+                    (reg/update-agent! codex-agent-id :agent/session-id initial-sid))
+                  (println (str "[dev] Codex agent registered: " codex-agent-id " (inline invoke)"
                                 (when initial-sid
                                   (str " (session: " (subs initial-sid 0
-                                                           (min 8 (count initial-sid))) ")"))))))))
+                                                            (min 8 (count initial-sid))) ")"))))))))
         ;; Remote codex stub
         _ (when (and (not register-codex?) relay-codex?)
             (let [proxy-invoke-fn (when codex-remote-origin
-                                    (federation/make-proxy-invoke-fn codex-remote-origin "codex-1"))
+                                    (federation/make-proxy-invoke-fn codex-remote-origin codex-agent-id))
                   note (if codex-remote-origin
                          (str "Remote proxy origin configured: " codex-remote-origin)
                          "Awaiting WS bridge from laptop; set FUTON3C_LAPTOP_URL, FUTON3C_IRC_SEND_BASE, FUTON3C_CODEX_REMOTE_BASE, or FUTON3C_PEERS for HTTP proxy fallback")
@@ -3906,13 +3929,13 @@ RESPOND WITH ONLY:
                              codex-remote-origin
                              (assoc :origin-url codex-remote-origin
                                     :remote-proxy? true))]
-              (rt/register-codex! {:agent-id "codex-1"
+              (rt/register-codex! {:agent-id codex-agent-id
                                    :invoke-fn proxy-invoke-fn
                                    :metadata metadata})
               (when-not proxy-invoke-fn
                 (println "[dev][warn] codex relay has no proxy origin; IRC invokes will fail until laptop WS bridge connects.")
                 (println "[dev][warn] set FUTON3C_LAPTOP_URL (or FUTON3C_IRC_SEND_BASE / FUTON3C_CODEX_REMOTE_BASE / FUTON3C_PEERS)."))
-              (println (str "[dev] Codex agent registered: codex-1 (remote peer"
+              (println (str "[dev] Codex agent registered: " codex-agent-id " (remote peer"
                             (if proxy-invoke-fn
                               (str ", proxy invoke via " codex-remote-origin)
                               ", no local invoke")
@@ -3930,8 +3953,8 @@ RESPOND WITH ONLY:
             (start-dispatch-relay!
              {:relay-bridge (:relay-bridge irc-sys)
               :irc-server (:server irc-sys)
-              :agent-id "codex-1"
-              :nick "codex"
+              :agent-id codex-agent-id
+              :nick codex-relay-nick
               :invoke-timeout-ms relay-invoke-timeout-ms
               :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))]
     (println "[dev] Agent layer started.")))

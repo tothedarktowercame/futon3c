@@ -2,8 +2,8 @@
   "Tests for HTTP REST adapter (Part II).
 
    Tests the Ring handler directly (no actual HTTP server for most tests)
-   to keep tests fast and deterministic. One test exercises start-server!
-   with a real port binding to verify L7 (verify-after-start)."
+   to keep tests fast and deterministic. Invoke-path tests exercise a real
+   local HTTP server because /api/alpha/invoke uses async channel semantics."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [futon3c.transport.http :as http]
@@ -67,6 +67,34 @@
   "Parse the JSON body string from a Ring response."
   [response]
   (json/parse-string (:body response) true))
+
+(defn- with-live-server
+  "Run test body against a real local HTTP server (required for async channel paths)."
+  [handler f]
+  (let [free-port (with-open [ss (java.net.ServerSocket. 0)]
+                    (.getLocalPort ss))
+        server-info (http/start-server! handler free-port)
+        base-url (str "http://localhost:" free-port)]
+    (try
+      (f base-url)
+      (finally
+        ((:server server-info))))))
+
+(defn- http-post-json
+  "POST JSON to BASE-URL + URI and return a Ring-like response map."
+  [base-url uri body-str]
+  (let [client (java.net.http.HttpClient/newHttpClient)
+        req (-> (java.net.http.HttpRequest/newBuilder
+                  (java.net.URI/create (str base-url uri)))
+                (.header "Content-Type" "application/json")
+                (.POST (java.net.http.HttpRequest$BodyPublishers/ofString body-str))
+                (.build))
+        resp (.send client req (java.net.http.HttpResponse$BodyHandlers/ofString))]
+    {:status (.statusCode resp)
+     :headers {"Content-Type" (some-> (.headers resp)
+                                      (.firstValue "content-type")
+                                      (.orElse nil))}
+     :body (.body resp)}))
 
 (defn- with-temp-dir
   [f]
@@ -265,20 +293,23 @@
           register-body (json/generate-string {"agent-id" "bridge-agent-1"
                                                "type" "codex"
                                                "ws-bridge" true})
-          register-response (post handler "/api/alpha/agents" register-body)
-          register-parsed (parse-body register-response)
           invoke-body (json/generate-string {"agent-id" "bridge-agent-1"
-                                             "prompt" "hello"})
-          invoke-response (post handler "/api/alpha/invoke" invoke-body)
-          invoke-parsed (parse-body invoke-response)
-          live (reg/get-agent {:id/value "bridge-agent-1" :id/type :continuity})]
-      (is (= 201 (:status register-response)))
-      (is (true? (:ok register-parsed)))
-      (is (true? (:ws-bridge register-parsed)))
-      (is (nil? (:agent/invoke-fn live)) "ws-bridge registration should use WS invoke fallback")
-      (is (= 502 (:status invoke-response)))
-      (is (false? (:ok invoke-parsed)))
-      (is (= "invoke-error" (:error invoke-parsed))))))
+                                             "prompt" "hello"})]
+      (with-live-server
+        handler
+        (fn [base-url]
+          (let [register-response (http-post-json base-url "/api/alpha/agents" register-body)
+                register-parsed (parse-body register-response)
+                invoke-response (http-post-json base-url "/api/alpha/invoke" invoke-body)
+                invoke-parsed (parse-body invoke-response)
+                live (reg/get-agent {:id/value "bridge-agent-1" :id/type :continuity})]
+            (is (= 201 (:status register-response)))
+            (is (true? (:ok register-parsed)))
+            (is (true? (:ws-bridge register-parsed)))
+            (is (nil? (:agent/invoke-fn live)) "ws-bridge registration should use WS invoke fallback")
+            (is (= 502 (:status invoke-response)))
+            (is (false? (:ok invoke-parsed)))
+            (is (= "invoke-error" (:error invoke-parsed)))))))))
 
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
@@ -331,23 +362,29 @@
     (register-mock-agent! "codex-1" :codex)
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "codex-1"
-                                      "prompt" "hello"})
-          response (post handler "/api/alpha/invoke" body)
-          parsed (parse-body response)]
-      (is (= 200 (:status response)))
-      (is (true? (:ok parsed)))
-      (is (= "ok" (:result parsed))))))
+                                      "prompt" "hello"})]
+      (with-live-server
+        handler
+        (fn [base-url]
+          (let [response (http-post-json base-url "/api/alpha/invoke" body)
+                parsed (parse-body response)]
+            (is (= 200 (:status response)))
+            (is (true? (:ok parsed)))
+            (is (= "ok" (:result parsed)))))))))
 
 (deftest invoke-missing-agent-returns-404
   (testing "POST /api/alpha/invoke returns 404 for unknown agent"
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "ghost-agent"
-                                      "prompt" "hello"})
-          response (post handler "/api/alpha/invoke" body)
-          parsed (parse-body response)]
-      (is (= 404 (:status response)))
-      (is (false? (:ok parsed)))
-      (is (= "agent-not-found" (:error parsed))))))
+                                      "prompt" "hello"})]
+      (with-live-server
+        handler
+        (fn [base-url]
+          (let [response (http-post-json base-url "/api/alpha/invoke" body)
+                parsed (parse-body response)]
+            (is (= 404 (:status response)))
+            (is (false? (:ok parsed)))
+            (is (= "agent-not-found" (:error parsed)))))))))
 
 (deftest invoke-includes-invoke-meta-when-available
   (testing "POST /api/alpha/invoke includes invoke-meta from registry invoke result"
@@ -363,16 +400,19 @@
       :capabilities [:edit]})
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "codex-meta-http"
-                                      "prompt" "ship it"})
-          response (post handler "/api/alpha/invoke" body)
-          parsed (parse-body response)]
-      (is (= 200 (:status response)))
-      (is (true? (:ok parsed)))
-      (is (= "done" (:result parsed)))
-      (is (= "sess-meta-http" (:session-id parsed)))
-      (is (= true (get-in parsed [:invoke-meta :execution :executed?])))
-      (is (= 1 (get-in parsed [:invoke-meta :execution :tool-events])))
-      (is (= 1 (get-in parsed [:invoke-meta :execution :command-events]))))))
+                                      "prompt" "ship it"})]
+      (with-live-server
+        handler
+        (fn [base-url]
+          (let [response (http-post-json base-url "/api/alpha/invoke" body)
+                parsed (parse-body response)]
+            (is (= 200 (:status response)))
+            (is (true? (:ok parsed)))
+            (is (= "done" (:result parsed)))
+            (is (= "sess-meta-http" (:session-id parsed)))
+            (is (= true (get-in parsed [:invoke-meta :execution :executed?])))
+            (is (= 1 (get-in parsed [:invoke-meta :execution :tool-events])))
+            (is (= 1 (get-in parsed [:invoke-meta :execution :command-events])))))))))
 
 ;; =============================================================================
 ;; POST /api/alpha/irc/send tests

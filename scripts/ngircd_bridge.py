@@ -22,7 +22,6 @@ Environment variables:
 """
 
 import atexit
-import fcntl
 import http.server
 import json
 import os
@@ -31,11 +30,22 @@ import re
 import signal
 import socket
 import sys
+import tempfile
 import threading
 import time
 import traceback
 import urllib.request
 import urllib.error
+
+try:
+    import fcntl  # POSIX only
+except ImportError:
+    fcntl = None
+
+try:
+    import msvcrt  # Windows only
+except ImportError:
+    msvcrt = None
 
 # --- Helpers ---
 
@@ -125,6 +135,8 @@ AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
 INVOKE_DELIVERY_URL = f"{INVOKE_BASE}/api/alpha/invoke-delivery"
+CODEX_BRIDGE_SUMMARY_MODE = os.environ.get("CODEX_BRIDGE_SUMMARY_MODE", "summary").strip().lower()
+CODEX_USE_RAW_OUTPUT = CODEX_BRIDGE_SUMMARY_MODE == "raw"
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
@@ -148,11 +160,29 @@ CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! com
 INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
 
 # --- Health / PID file (channel-scoped so multiple bridges can coexist) ---
-_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+_RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()
 _CHANNEL_SLUG = IRC_CHANNEL.lstrip("#").replace("/", "_")
 PIDFILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}.pid")
 HEALTH_FILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}-health.json")
 HEALTH_INTERVAL = 30  # seconds between health file writes
+
+
+def _lock_pidfile(fd):
+    """Acquire a non-blocking exclusive lock on a pidfile handle."""
+    if fcntl is not None:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return
+    if msvcrt is not None:
+        # msvcrt locks byte ranges; ensure one byte exists to lock.
+        fd.seek(0, os.SEEK_END)
+        if fd.tell() == 0:
+            fd.write("\n")
+            fd.flush()
+        fd.seek(0)
+        msvcrt.locking(fd.fileno(), msvcrt.LK_NBLCK, 1)
+        fd.seek(0)
+        return
+    raise RuntimeError("No supported pidfile locking mechanism for this platform")
 
 
 def acquire_pidfile():
@@ -162,7 +192,7 @@ def acquire_pidfile():
         open(PIDFILE, "w").close()
     fd = open(PIDFILE, "r+")
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _lock_pidfile(fd)
     except OSError:
         try:
             existing_pid = fd.read().strip() or "unknown"
@@ -172,6 +202,9 @@ def acquire_pidfile():
             f"Another bridge instance is running (PID {existing_pid}). Exiting.",
             file=sys.stderr,
         )
+        sys.exit(1)
+    except RuntimeError as e:
+        print(f"Cannot lock PID file: {e}", file=sys.stderr)
         sys.exit(1)
     fd.seek(0)
     fd.truncate()
@@ -307,6 +340,7 @@ class IRCBot:
             "queue_depth": self._invoke_queue.qsize(),
             "queue_max": INVOKE_QUEUE_MAX,
             "handle_commands": self.handle_commands,
+            "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
 
     def _is_brief(self, text):
@@ -450,30 +484,51 @@ class IRCBot:
         """Extract nick from prefix like 'nick!user@host'."""
         return prefix.split("!")[0] if "!" in prefix else prefix
 
+    def _mention_names(self):
+        """Return acceptable mention forms for this bot."""
+        names = []
+        seen = set()
+        for candidate in (self.nick, self.desired_nick, self.nick.rstrip("_")):
+            cand = (candidate or "").strip()
+            if not cand:
+                continue
+            key = cand.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            names.append(cand)
+        return names
+
     def _is_mention(self, text):
         """Check if text mentions this bot. Matches @nick anywhere in the
         text (not just line start) so mentions like 'done.@codex review'
         still trigger. Also matches 'nick: ...' at line start.
         Uses (?!\\w|-) instead of \\b so @claude doesn't match @claude-2."""
-        base_nick = self.nick.rstrip("_")
         end = r"(?!\w|-)"  # not followed by word char or hyphen
-        patterns = [
-            rf"@{re.escape(base_nick)}{end}",         # @nick anywhere
-            rf"^{re.escape(base_nick)}:\s",            # nick: at start
-            rf"^{re.escape(base_nick)},\s",            # nick, at start
-        ]
-        for p in patterns:
-            if re.search(p, text, re.IGNORECASE):
-                return True
+        for name in self._mention_names():
+            patterns = [
+                rf"@{re.escape(name)}{end}",  # @nick anywhere
+                rf"^{re.escape(name)}:\s",    # nick: at start
+                rf"^{re.escape(name)},\s",    # nick, at start
+            ]
+            for p in patterns:
+                if re.search(p, text, re.IGNORECASE):
+                    return True
         return False
 
     def _strip_mention(self, text):
         """Remove the mention prefix from the text."""
-        base_nick = self.nick.rstrip("_")
-        text = re.sub(
-            rf"^@?{re.escape(base_nick)}[,:]\s*",
-            "", text, count=1, flags=re.IGNORECASE
-        )
+        for name in self._mention_names():
+            updated = re.sub(
+                rf"^@?{re.escape(name)}[,:]\s*",
+                "",
+                text,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            if updated != text:
+                text = updated
+                break
         return text.strip()
 
     def _next_job_id(self):
@@ -626,13 +681,28 @@ class IRCBot:
                     else:
                         summary = self._summarize_invoke_result(response.get("result", ""))
                         stats = self._execution_stats(response.get("invoke_meta"))
+                        execution_note = ""
                         if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-                            summary = (
-                                f"{summary} "
+                            execution_note = (
                                 f"[no execution evidence: tool-events={stats['tool_events']}, "
                                 f"command-events={stats['command_events']}]"
                             )
+                            summary = f"{summary} {execution_note}".strip()
                         sid = response.get("session_id")
+                        if CODEX_USE_RAW_OUTPUT:
+                            raw_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
+                            if raw_text:
+                                refs = self._extract_artifact_refs(raw_text)
+                                header_parts = [f"[done {job_id}]"]
+                                if sid:
+                                    header_parts.append(f"(session {sid[:8]})")
+                                if refs:
+                                    header_parts.append(f"refs: {', '.join(refs[:3])}")
+                                if execution_note:
+                                    header_parts.append(execution_note)
+                                header = " ".join(part for part in header_parts if part).strip()
+                                self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
+                                continue
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
                                       max_lines=2, channel=reply_ch)
@@ -1302,6 +1372,8 @@ def _write_health(bots, started_at):
         "started_at": started_at,
         "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "invoke_base": INVOKE_BASE,
+        "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
+        "raw_output": CODEX_USE_RAW_OUTPUT,
         "irc_host": IRC_HOST,
         "irc_port": IRC_PORT,
         "channel": IRC_CHANNEL,
@@ -1424,6 +1496,10 @@ def main():
     )
     channels_str = ", ".join(IRC_CHANNELS) if len(IRC_CHANNELS) > 1 else IRC_CHANNEL
     print(f"IRC: {IRC_HOST}:{IRC_PORT} | Channels: {channels_str}")
+    print(
+        f"Codex bridge summary mode: {CODEX_BRIDGE_SUMMARY_MODE} "
+        f"(raw_output={'yes' if CODEX_USE_RAW_OUTPUT else 'no'})"
+    )
     print(f"Commands handled by: {bots[0].nick}")
 
     threads = []

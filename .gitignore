@@ -1,6 +1,7 @@
 .cpcache/
 .clj-config/
 .m2/
+.gitlibs/
 .nrepl-port
 .admintoken
 target/
