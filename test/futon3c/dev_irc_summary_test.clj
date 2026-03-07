@@ -28,7 +28,7 @@
       (is (.contains out "no artifact reference yet")))))
 
 (deftest invoke-trace-response-block-persists-full-payload
-  (testing "invoke trace shows a short summary and writes full payload to disk"
+  (testing "invoke trace shows only metadata and writes full payload to disk"
     (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
                             "f3c-invoke-trace-test"
                             (make-array java.nio.file.attribute.FileAttribute 0)))
@@ -39,8 +39,10 @@
                                                   default))]
                   (#'futon3c.dev/invoke-trace-response-block "codex-1" "019cc01c-b049-7ce1" payload))
           artifact-path (some->> (re-find #"Artifact: (.+)" block) second)]
-      (is (.contains block "--- response summary (trace only) ---"))
-      (is (.contains block "Summary: Structured output generated."))
+      (is (.contains block "--- response trace (metadata only) ---"))
+      (is (.contains block "Result: kind=structured"))
+      (is (.contains block ", chars="))
+      (is (.contains block "sha256="))
       (is artifact-path)
       (is (not (.contains block "thread_id")))
       (is (.exists (java.io.File. artifact-path)))

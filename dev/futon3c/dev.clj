@@ -573,19 +573,22 @@
                     (str/replace #"_+" "_"))]
     (if (str/blank? cleaned) fallback cleaned)))
 
-(defn- summarize-invoke-result-text
-  "Render invoke result text as a short trace summary."
+(defn- invoke-result-kind
+  "Classify invoke result for trace metadata."
   [text]
   (let [raw (str (or text ""))
-        compact (-> raw
-                    (str/replace #"\s+" " ")
-                    str/trim)
-        max-len 220]
+        trimmed (str/trim raw)]
     (cond
-      (str/blank? compact) "[no textual response]"
-      (re-find #"^\s*[\{\[]" raw) "Structured output generated."
-      (<= (count compact) max-len) compact
-      :else (str (subs compact 0 (- max-len 3)) "..."))))
+      (str/blank? trimmed) :empty
+      (re-find #"^[\{\[]" trimmed) :structured
+      :else :text)))
+
+(defn- sha256-hex
+  "Hex SHA-256 for TEXT."
+  [text]
+  (let [^java.security.MessageDigest md (java.security.MessageDigest/getInstance "SHA-256")
+        bytes (.digest md (.getBytes (str text) "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) bytes))))
 
 (defn- write-invoke-artifact!
   "Persist full invoke output to a local artifact file.
@@ -611,16 +614,22 @@
           nil)))))
 
 (defn- invoke-trace-response-block
-  "Build the invoke buffer response section without dumping full payloads."
+  "Build invoke-trace metadata only (never semantic response text)."
   [agent-id session-id result-text]
-  (let [summary (summarize-invoke-result-text result-text)
+  (let [payload (str (or result-text ""))
+        kind (invoke-result-kind payload)
+        chars (count payload)
+        digest (when (pos? chars) (sha256-hex payload))
         artifact-path (write-invoke-artifact! agent-id session-id result-text)]
-    (str "\n--- response summary (trace only) ---\n"
-         "Summary: " summary "\n"
+    (str "\n--- response trace (metadata only) ---\n"
+         "Result: kind=" (name kind)
+         ", chars=" chars
+         (when digest (str ", sha256=" digest))
+         "\n"
          (if artifact-path
            (str "Artifact: " artifact-path "\n")
            "Artifact: [not written]\n")
-         "Note: full payload omitted from this buffer.\n")))
+         "Delivery: invoke trace buffer does not deliver messages to peers.\n")))
 
 ;; =============================================================================
 ;; ngircd IRC sender — persistent connection for Tickle paging
