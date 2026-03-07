@@ -173,17 +173,33 @@ A7. A first-class durable invoke job abstraction with explicit state transitions
 
 ### 3.4 Data Flow
 
+**Ownership principle:** The job state machine is a futon3c invoke-layer
+concern, not a bridge concern. Per I-2 (Transport Routes, It Does Not
+Create), the bridge is a surface that calls the API and projects results
+to IRC. It does not create job entities, assign job IDs, manage state
+transitions, or decide whether work was "real." All of that is
+engine/peripheral responsibility.
+
+The bridge's current `_next_job_id()` is a local workaround that gets
+replaced by server-assigned IDs. The bridge gets simpler, not more complex.
+
 1. IRC mention arrives (`@codex ...`) at bridge.
-2. Bridge requests job creation from futon3c (`invoke start` endpoint) and receives `job-id` immediately.
-3. futon3c writes `invoke-job(state=queued)` + `accepted` event, returns accepted projection.
-4. Worker future transitions job to `running`, records `started-at`, emits `running` event.
-5. Codex invoke executes; structured runtime events update `progress` and execution counters.
-6. Completion path:
+2. Bridge calls `POST /api/alpha/invoke` with prompt and surface metadata.
+3. futon3c invoke layer creates `invoke-job(state=queued)`, assigns `job-id`, persists `accepted` event, returns `{job-id, state}` immediately.
+4. Bridge projects `[accepted <job-id>]` to IRC using the server-assigned ID.
+5. Invoke layer transitions job to `running`, records `started-at`, emits `running` event.
+6. Codex invoke executes; structured runtime events update `progress` and execution counters.
+7. Completion path:
    - If no invoke error and evidence gate passes: `done`.
    - Else: `failed|timeout|cancelled` (including `no-execution-evidence`).
-7. Terminal event writes artifact/summary, updates job snapshot, delivers runtime promise.
-8. Delivery subsystem attempts IRC post and records `delivery-recorded`.
-9. Bridge (or any surface) can query canonical status via `!job <id>` / API.
+8. Terminal event writes artifact/summary, updates job snapshot, delivers runtime promise.
+9. Delivery subsystem attempts IRC post and records `delivery-recorded`.
+10. Bridge (or any surface) can query canonical status via `!job <id>` / API.
+
+**Implementation path:** Extend the invoke endpoint to return a durable
+job-id, manage the state machine in the invoke layer (new `invoke_jobs.clj`
+or extension of `dev.clj`), and simplify the bridge to consume rather than
+construct job state.
 
 ### 3.5 Promise/Future Model
 
