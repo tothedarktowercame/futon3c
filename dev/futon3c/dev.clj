@@ -53,6 +53,7 @@
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.mission-control.service :as mcs]
+            [futon3c.peripheral.mentor :as mentor]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
@@ -740,9 +741,10 @@
 (defn- parse-irc-privmsg
   "Parse a raw IRC PRIVMSG line into {:nick :channel :text :at}."
   [raw-line]
-  (when-let [[_ prefix _ trailing] (re-matches #":([^ ]+) PRIVMSG ([^ ]+) :(.*)" raw-line)]
+  (when-let [[_ prefix channel trailing] (re-matches #":([^ ]+) PRIVMSG ([^ ]+) :(.*)" raw-line)]
     (let [nick (first (str/split prefix #"!"))]
       {:nick nick
+       :channel channel
        :text trailing
        :at (str (Instant/now))})))
 
@@ -759,6 +761,7 @@
     (.println out (str "USER " nick " 0 * :" nick))
     (Thread/sleep 500)
     (.println out "JOIN #futon")
+    (.println out "JOIN #math")
     (Thread/sleep 300)
     ;; Background thread: respond to PINGs + capture PRIVMSG to ring buffer
     (let [running (atom true)
@@ -859,11 +862,12 @@
    connections (which would conflict with the bridge's nicks)."
   ([] (make-bridge-irc-send-fn 6769))
   ([port]
-   (fn [_channel from-nick message]
+   (fn [channel from-nick message]
      (let [url (str "http://127.0.0.1:" port "/say")
-           payload (json/generate-string {"from" (or from-nick "claude")
-                                           "text" (str message)
-                                           "max_lines" 4})
+           payload (json/generate-string (cond-> {"from" (or from-nick "claude")
+                                                   "text" (str message)
+                                                   "max_lines" 4}
+                                           channel (assoc "channel" (str channel))))
            conn (doto (-> (java.net.URI. url) .toURL .openConnection)
                   (.setRequestMethod "POST")
                   (.setRequestProperty "Content-Type" "application/json")
@@ -1641,7 +1645,155 @@ RESPOND WITH ONLY:
     (println "[dev] Tickle stopped.")))
 
 ;; =============================================================================
-;; Tickle orchestration — REPL helpers
+;; FM-001 task dispatch — Tickle assigns proof obligations on #math
+;; =============================================================================
+
+(defn fm-assignable-obligations
+  "Find FM-001 ledger obligations that are assignable (open, all deps met).
+   Returns them sorted by DAG impact (highest first)."
+  [problem-id]
+  (let [ledger-result (require 'futon3c.proof.bridge)
+        pb (find-ns 'futon3c.proof.bridge)
+        ledger-fn (ns-resolve pb 'ledger)
+        dag-fn (ns-resolve pb 'dag-impact)
+        ledger-items (:result (ledger-fn problem-id))
+        dag-scores (into {} (map (fn [{:keys [id score]}] [id score])
+                                 (:result (dag-fn problem-id))))
+        open-items (if (map? ledger-items)
+                     (vals ledger-items)
+                     ledger-items)
+        ;; Filter to open items whose dependencies are all non-open
+        resolved-ids (->> open-items
+                          (remove #(= :open (:item/status %)))
+                          (map :item/id)
+                          set)
+        assignable (->> open-items
+                        (filter #(= :open (:item/status %)))
+                        (filter (fn [item]
+                                  (every? #(or (contains? resolved-ids %)
+                                               ;; self-dependency (shouldn't happen)
+                                               (= % (:item/id item)))
+                                          (:item/depends-on item #{}))))
+                        (sort-by #(- (get dag-scores (:item/id %) 0))))]
+    assignable))
+
+(defn fm-dispatch!
+  "Have Tickle assign the top FM-001 obligation on #math.
+   Reads the proof ledger, finds the highest-impact assignable task,
+   and posts the assignment as tickle-1."
+  ([] (fm-dispatch! "FM-001"))
+  ([problem-id]
+   (let [tasks (fm-assignable-obligations problem-id)]
+     (if (empty? tasks)
+       (do (println "[tickle-fm] No assignable obligations for " problem-id)
+           nil)
+       (let [{:item/keys [id label]} (first tasks)
+             msg (str "TASK ASSIGNMENT [" problem-id " / " id "]: " label
+                      ". Current mode: FALSIFY. "
+                      "Who wants to take this? Claim with @tickle I'll take " id)]
+         ((make-bridge-irc-send-fn) "#math" "tickle" msg)
+         (println (str "[tickle-fm] Assigned " id " on #math"))
+         {:assigned id :label label})))))
+
+(defn fm-status!
+  "Print FM-001 ledger status for Tickle's view."
+  ([] (fm-status! "FM-001"))
+  ([problem-id]
+   (let [tasks (fm-assignable-obligations problem-id)]
+     (println (str "FM-001 assignable obligations (" (count tasks) "):"))
+     (doseq [{:item/keys [id label]} tasks]
+       (println (str "  " id ": " label))))))
+
+(defn irc-recent-channel
+  "Return last N messages from a specific channel."
+  [channel n]
+  (->> (irc-recent (* n 3))  ;; over-fetch since we're filtering
+       (filter #(= channel (:channel %)))
+       (take-last n)
+       vec))
+
+(defonce !fm-conductor (atom nil))
+
+(defn fm-conduct!
+  "Run one FM-001 conductor cycle. Checks #math for activity,
+   decides whether to nudge or assign next task.
+   Uses Tickle's Haiku agent for natural-language decisions."
+  ([] (fm-conduct! "FM-001"))
+  ([problem-id]
+   (let [math-msgs (irc-recent-channel "#math" 20)
+         assignable (fm-assignable-obligations problem-id)
+         bridge-send (make-bridge-irc-send-fn)
+         ;; Build context for Tickle's decision
+         recent-text (str/join "\n"
+                       (map (fn [{:keys [nick text at]}]
+                              (str (when at (subs at 11 19)) " <" nick "> " text))
+                            math-msgs))
+         task-text (str/join "\n"
+                     (map (fn [{:item/keys [id label]}]
+                            (str "  " id ": " label))
+                          assignable))
+         context (str "You are Tickle, task coordinator for FM-001 (Ramsey numbers for book graphs) on #math.\n\n"
+                      "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
+                      "Current mode: FALSIFY (must try to disprove before constructing).\n\n"
+                      "ASSIGNABLE OBLIGATIONS:\n" (if (seq task-text) task-text "  (none — all blocked by dependencies)") "\n\n"
+                      "RECENT #math (" (count math-msgs) " messages):\n"
+                      (if (seq recent-text) recent-text "(no messages captured)") "\n\n"
+                      "RULES:\n"
+                      "1. If an agent claimed work and is actively working — PASS (don't interrupt)\n"
+                      "2. If an agent seems stuck or silent for a while — brief nudge\n"
+                      "3. If work is completed — acknowledge and dispatch next obligation\n"
+                      "4. Max 1-2 lines, <400 chars. Always @mention target. Post to #math.\n"
+                      "5. Do NOT repeat the full problem statement — agents know it.\n\n"
+                      "RESPOND WITH ONLY:\n"
+                      "- A short IRC message (start with @agent-name), OR\n"
+                      "- PASS")
+         ;; Use tickle-1's invoke-fn if registered
+         agent (reg/get-agent "tickle-1")
+         invoke-fn (:invoke-fn agent)]
+     (if-not invoke-fn
+       (do (println "[fm-conductor] tickle-1 not registered, can't decide")
+           {:action :error})
+       (let [{:keys [result]} (invoke-fn context nil)
+             response (str/trim (or result "PASS"))
+             first-line (first (str/split-lines response))]
+         (if (or (str/blank? response) (= "PASS" (str/upper-case first-line)))
+           (do (println "[fm-conductor] PASS")
+               {:action :pass})
+           (do (println (str "[fm-conductor] → " first-line))
+               (bridge-send "#math" "tickle" first-line)
+               {:action :message :text first-line})))))))
+
+(defn start-fm-conductor!
+  "Start the FM-001 conductor loop. Checks #math every interval-ms.
+   Default: every 10 minutes (proof work is slower than CT batches)."
+  ([] (start-fm-conductor! {}))
+  ([{:keys [interval-ms] :or {interval-ms 600000}}]
+   (when-let [old @!fm-conductor]
+     ((:stop-fn old))
+     (println "[fm-conductor] Stopped previous conductor."))
+   (let [running (atom true)]
+     (future
+       (while @running
+         (try
+           (Thread/sleep interval-ms)
+           (when @running (fm-conduct!))
+           (catch Exception e
+             (println (str "[fm-conductor] Error: " (.getMessage e)))))))
+     (let [handle {:stop-fn #(do (reset! running false) (println "[fm-conductor] Stopped."))
+                   :started-at (Instant/now)}]
+       (reset! !fm-conductor handle)
+       (println (str "[fm-conductor] Started (interval=" (/ interval-ms 60000) "min)"))
+       handle))))
+
+(defn stop-fm-conductor!
+  "Stop the FM-001 conductor loop."
+  []
+  (when-let [h @!fm-conductor]
+    ((:stop-fn h))
+    (reset! !fm-conductor nil)))
+
+;; =============================================================================
+;; Tickle orchestration — REPL helpers (CT work)
 ;; =============================================================================
 
 (defn fetch-futon4-issues!
@@ -2057,11 +2209,130 @@ RESPOND WITH ONLY:
        :elapsed-ms elapsed
        :results results})))
 
+;; =============================================================================
+;; Mentor peripheral — claude-2 on #math
+;; =============================================================================
+
+(defonce !mentor (atom nil))
+
+(defn make-math-irc-read-fn
+  "Create an irc-read-fn that pulls #math messages from the evidence store.
+   Returns a fn that returns all #math messages as [{:nick :text :at}]."
+  []
+  (fn []
+    (when-let [store @!evidence-store]
+      (->> (estore/query* store {:evidence/tags [:irc]})
+           (filter (fn [e]
+                     (= "#math" (get-in e [:evidence/body :channel]))))
+           (sort-by :evidence/at)
+           (mapv (fn [e]
+                   {:nick (get-in e [:evidence/body :from])
+                    :text (get-in e [:evidence/body :text])
+                    :at (:evidence/at e)}))))))
+
+(defn make-math-irc-send-fn
+  "Create an irc-send-fn that posts to #math via the IRC server.
+   Falls back to the bridge HTTP send endpoint."
+  []
+  (fn [channel from-nick message]
+    (if-let [send-fn (some-> @!irc-sys :server :send-to-channel!)]
+      (send-fn channel from-nick message)
+      ((make-bridge-irc-send-fn) channel from-nick message))))
+
+(defn start-mentor!
+  "Start the mentor peripheral for claude-2 on #math.
+   Uses the evidence store to read IRC messages and the IRC server to post.
+   Returns the peripheral + state map, stored in !mentor.
+
+   Options:
+     :problem-id — FM problem to track (default \"FM-001\")
+     :channel    — IRC channel to observe (default \"#math\")"
+  [& {:keys [problem-id channel]
+      :or {problem-id "FM-001"
+           channel "#math"}}]
+  (let [backend (futon3c.peripheral.tools/make-mock-backend)
+        irc-read-fn (make-math-irc-read-fn)
+        irc-send-fn (make-math-irc-send-fn)
+        peripheral (mentor/make-mentor backend {:irc-read-fn irc-read-fn
+                                                :irc-send-fn irc-send-fn})
+        context {:session-id (str "mentor-" (UUID/randomUUID))
+                 :agent-id "claude-2"
+                 :problem-id problem-id
+                 :channel channel
+                 :evidence-store @!evidence-store}
+        start-result (futon3c.peripheral.runner/start peripheral context)]
+    (if (:ok start-result)
+      (do
+        (reset! !mentor {:peripheral peripheral
+                         :state (atom (:state start-result))})
+        ;; Register claude-2 as mentor agent
+        (reg/update-agent! "claude-2"
+                           :agent/type :claude
+                           :agent/capabilities [:mentor/observe :mentor/intervene])
+        (println (str "[dev] Mentor started: claude-2 on " channel " tracking " problem-id))
+        :ok)
+      (do
+        (println (str "[dev] Mentor start failed: " start-result))
+        start-result))))
+
+(defn mentor-observe!
+  "Run one observation cycle: pull new #math messages.
+   Returns the observation result."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-observe :args []})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn mentor-evaluate!
+  "Evaluate triggers against accumulated conversation.
+   Returns the trigger checklist and conversation window."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-evaluate :args []})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn mentor-intervene!
+  "Post an intervention to #math. Only call when a trigger fires.
+   trigger-id: keyword e.g. :QP-1
+   message: string to post"
+  [trigger-id message]
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-intervene :args [trigger-id message]})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn mentor-status
+  "Get current mentor state summary."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-status :args []})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn stop-mentor!
+  "Stop the mentor peripheral."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (futon3c.peripheral.runner/stop peripheral @state "session ended")
+    (reset! !mentor nil)
+    (println "[dev] Mentor stopped.")))
+
 (defn status
   "Quick runtime status for the REPL."
   []
   {:agents (reg/registered-agents)
    :tickle (when @!tickle {:running true :started-at (:started-at @!tickle)})
+   :mentor (when @!mentor {:running true})
    :irc (when @!irc-sys {:port (:port @!irc-sys)})
    :evidence-count (when @!evidence-store
                      (count (futon3c.evidence.store/query* @!evidence-store {})))
@@ -2601,8 +2872,10 @@ RESPOND WITH ONLY:
      :timeout-ms       — hard process timeout in ms (default 1800000 = 30 min).
                          Set high because Emacs sessions replace the CLI and should
                          not be arbitrarily killed. IRC relay enforces its own
-                         shorter timeout (120s) via invoke-timeout-ms."
-  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket]
+                         shorter timeout (120s) via invoke-timeout-ms.
+     :model            — Claude model override (e.g. \"claude-haiku-4-5-20251001\").
+                         When nil, uses the CLI default."
+  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
          timeout-ms 1800000}}]
   (let [!lock (Object.)
@@ -2619,6 +2892,7 @@ RESPOND WITH ONLY:
               args (cond-> [claude-bin "-p"
                             "--permission-mode" permission-mode
                             "--output-format" "stream-json" "--verbose"]
+                     model      (into ["--model" model])
                      session-id (into ["--resume" (str session-id)])
                      new-sid    (into ["--session-id" new-sid])
                      :always    (into ["--" prompt-str]))
@@ -2765,6 +3039,80 @@ RESPOND WITH ONLY:
             (finally
               (stop-ticker!))))))))
 
+(def ^:private codex-work-claim-re
+  #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
+
+(def ^:private codex-planning-only-re
+  #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
+
+(defn- codex-task-mode-prompt?
+  "True when prompt came from IRC bridge task-mode envelope."
+  [prompt]
+  (boolean (re-find #"(?i)\bmode:\s*task\b" (str (or prompt "")))))
+
+(defn- codex-mission-work-prompt?
+  "True when prompt is a mission/work request that should require execution evidence.
+   Keeps this enforcement in the invoke engine, independent of bridge classification."
+  [prompt]
+  (boolean
+   (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b"
+            (str (or prompt "")))))
+
+(defn- codex-no-execution-evidence?
+  "True when invoke result reports no executed/tool/command evidence."
+  [result]
+  (let [execution (:execution result)
+        executed? (boolean (:executed? execution))
+        tool-events (long (or (:tool-events execution) 0))
+        command-events (long (or (:command-events execution) 0))]
+    (and (nil? (:error result))
+         (not executed?)
+         (zero? tool-events)
+         (zero? command-events))))
+
+(defn- codex-planning-only-text?
+  "True when response explicitly declares planning-only / blocked state."
+  [text]
+  (let [t (str/trim (or text ""))]
+    (and (not (str/blank? t))
+         (boolean (re-find codex-planning-only-re t)))))
+
+(defn- codex-work-claim-without-execution?
+  "True when Codex returned work/progress claim text with no execution evidence."
+  [result]
+  (let [text (str/trim (or (:result result) ""))]
+    (and (codex-no-execution-evidence? result)
+         (not (str/blank? text))
+         (boolean (re-find codex-work-claim-re text)))))
+
+(defn- codex-task-reply-without-execution?
+  "True when execution-required reply has no execution evidence and is not planning-only.
+   This prevents non-evidenced 'done' text from being emitted for work turns."
+  [prompt result]
+  (let [text (str/trim (or (:result result) ""))]
+    (and (or (codex-task-mode-prompt? prompt)
+             (codex-mission-work-prompt? prompt))
+         (codex-no-execution-evidence? result)
+         (not (str/blank? text))
+         (not (codex-planning-only-text? text)))))
+
+(defn- codex-execution-followup-prompt
+  "Prompt used when Codex claimed work without execution evidence.
+   Keeps the invariant at the invoke engine (not transport bridge)."
+  [original-prompt prior-reply]
+  (letfn [(clip [s max-len]
+            (let [txt (str (or s ""))]
+              (if (<= (count txt) max-len)
+                txt
+                (str (subs txt 0 (max 0 (- max-len 3))) "..."))))]
+    (str "Your previous reply made a work/progress claim without execution evidence.\n"
+         "Execute one concrete first step now (tool/command activity is required).\n"
+         "Then reply in one short line with actual status and artifact refs.\n\n"
+         "Original request:\n"
+         (clip original-prompt 900)
+         "\n\nPrevious reply:\n"
+         (clip prior-reply 600))))
+
 (defn make-codex-invoke-fn
   "Create an invoke-fn that calls `codex exec` for real Codex interaction.
 
@@ -2848,7 +3196,27 @@ RESPOND WITH ONLY:
         (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000
                                                  :event-trace !event-trace)
               result (try
-                       (inner-fn prompt invoke-sid)
+                       (let [initial (inner-fn prompt invoke-sid)]
+                         (if (or (codex-work-claim-without-execution? initial)
+                                 (codex-task-reply-without-execution? prompt-str initial))
+                           (let [retry-prompt (codex-execution-followup-prompt prompt-str (:result initial))
+                                 retry-sid (or (:session-id initial) invoke-sid)]
+                             (println (str "[invoke] " agent-id
+                                           " claimed work without execution evidence; retrying with enforcement prompt"))
+                             (flush)
+                             (let [retry (inner-fn retry-prompt retry-sid)]
+                               (if (or (codex-work-claim-without-execution? retry)
+                                       (codex-task-reply-without-execution? prompt-str retry))
+                                 {:result nil
+                                  :session-id (or (:session-id retry) retry-sid used-sid)
+                                  :execution (assoc (or (:execution retry) {})
+                                                    :enforced-retry? true
+                                                    :executed? false
+                                                    :tool-events (long (or (:tool-events (:execution retry)) 0))
+                                                    :command-events (long (or (:command-events (:execution retry)) 0)))
+                                  :error "work-claim without execution evidence after enforcement retry"}
+                                 (update retry :execution #(assoc (or % {}) :enforced-retry? true)))))
+                           initial))
                        (finally
                          (stop-ticker!)))
               final-sid (:session-id result)

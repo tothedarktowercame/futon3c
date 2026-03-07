@@ -136,7 +136,16 @@
           (str/trim (second m))))))
 
 (defn classify-status
-  "Classify a raw status string into a MissionStatus keyword."
+  "Classify a raw status string into a MissionStatus keyword.
+
+   Recognised statuses:
+   - :complete   — done, pass, complete, or derivation phase marked complete
+   - :in-progress — active, open, in-progress, or any derivation phase
+   - :blocked    — explicitly blocked on a dependency
+   - :ready      — ready to start, greenfield
+   - :deferred   — scope was right but timing is wrong; not active
+   - :nonstarter — gap turned out not to be real or approach is wrong
+   - :unknown    — could not classify"
   [raw]
   (when raw
     (let [s (-> raw str/trim str/lower-case (str/replace #"^:" ""))]
@@ -146,10 +155,15 @@
         (str/starts-with? s "blocked")          :blocked
         (str/starts-with? s "ready")            :ready
         (str/starts-with? s "pass")             :complete
+        (str/starts-with? s "deferred")         :deferred
+        (str/starts-with? s "nonstarter")       :nonstarter
+        (str/starts-with? s "proposed")         :ready
+        (str/starts-with? s "idea")             :ready
         (str/starts-with? s "in-progress")      :in-progress
         (str/starts-with? s "in progress")      :in-progress
         (str/starts-with? s "active")           :in-progress
         (str/starts-with? s "open")             :in-progress
+        (str/starts-with? s "re-opened")        :in-progress
         (str/starts-with? s "greenfield")       :ready
         ;; Derivation keywords: check if the *derivation step itself* is marked complete.
         ;; "INSTANTIATE complete" → :complete (the mission finished its last step)

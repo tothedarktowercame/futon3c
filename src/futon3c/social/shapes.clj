@@ -278,7 +278,7 @@
 
 (def ArtifactRefType
   "Universal reference types for any artifact that can accumulate evidence."
-  [:enum :pattern :mission :component :gate :session :agent :thread :evidence :proof-path :task :portfolio])
+  [:enum :pattern :mission :component :gate :session :agent :thread :evidence :proof-path :task :portfolio :arse-thread])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
@@ -289,7 +289,8 @@
 (def EvidenceType
   "Typed evidence event category (distinguishes timescale/function provenance)."
   [:enum :coordination :gate-traversal :pattern-selection :pattern-outcome
-   :reflection :forum-post :mode-transition :presence-event :correction :conjecture])
+   :reflection :forum-post :mode-transition :presence-event :correction :conjecture
+   :arse-qa])
 
 (def EvidenceEntry
   "Primary evidence shape — all other evidence projections are derived from this.

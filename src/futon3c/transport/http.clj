@@ -874,6 +874,50 @@
          prompt)
     prompt))
 
+(def ^:private task-mode-re
+  #"(?i)\bmode:\s*task\b")
+
+(def ^:private mission-work-re
+  #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b")
+
+(def ^:private planning-only-re
+  #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
+
+(defn- invoke-execution-evidence
+  "Extract execution evidence map from invoke result metadata."
+  [result]
+  (let [invoke-meta (:invoke-meta result)
+        execution (or (:execution invoke-meta) (get invoke-meta "execution"))
+        raw-executed (or (:executed? execution) (get execution "executed?")
+                         (:executed execution) (get execution "executed"))
+        executed (cond
+                   (boolean? raw-executed) raw-executed
+                   (string? raw-executed) (boolean (parse-bool raw-executed))
+                   :else (boolean raw-executed))
+        tool-events (long (or (:tool-events execution) (get execution "tool-events") 0))
+        command-events (long (or (:command-events execution) (get execution "command-events") 0))]
+    {:executed executed
+     :tool-events tool-events
+     :command-events command-events}))
+
+(defn- codex-task-no-execution?
+  "True when a codex task-mode reply reports no execution evidence and isn't planning-only."
+  [agent-id prompt result]
+  (let [aid (some-> agent-id str str/lower-case)
+        text (some-> (:result result) str str/trim)
+        {:keys [executed tool-events command-events]} (invoke-execution-evidence result)]
+    (and (string? aid)
+         (str/starts-with? aid "codex")
+         (string? prompt)
+         (or (boolean (re-find task-mode-re prompt))
+             (boolean (re-find mission-work-re prompt)))
+         (string? text)
+         (not (str/blank? text))
+         (not (boolean (re-find planning-only-re text)))
+         (not executed)
+         (zero? tool-events)
+         (zero? command-events))))
+
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
    Body: {\"agent-id\": \"claude-1\", \"prompt\": \"hello\",
@@ -906,50 +950,68 @@
                               :message "prompt is required"})
 
           :else
-          (hk/with-channel request channel
-            (.submit invoke-executor
-              ^Runnable
-              (fn []
-                (try
-                  (let [caller (or (some-> payload :caller str)
-                                   (some-> payload (get "caller") str)
-                                   "http-caller")
-                        surface (or (some-> payload :surface str)
-                                    (some-> payload (get "surface") str))
-                        mission-id (or (:mission-id payload) (get payload "mission-id"))
-                        timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
-                                           long)
-                        ev-opts (when mission-id [:mission-id mission-id])
-                        effective-prompt (wrap-surface-header prompt surface caller)
-                        result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
-                        sid (:session-id result)]
-                    (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
-                           (or ev-opts []))
-                    (if (:ok result)
-                      (do
-                        (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
-                               (or ev-opts []))
-                        (hk/send! channel
-                          (json-response 200 (cond-> {:ok true
-                                                      :result (:result result)
-                                                      :session-id sid}
-                                               (:invoke-meta result)
-                                               (assoc :invoke-meta (:invoke-meta result))))))
-                      (let [err (:error result)
-                            code (if (map? err) (:error/code err) :invoke-failed)
-                            msg (if (map? err) (:error/message err) (str err))]
-                        (hk/send! channel
-                          (json-response (if (= :agent-not-found code) 404 502)
-                                         {:ok false
-                                          :error (name code)
-                                          :message msg})))))
-                  (catch Throwable t
-                    (println (str "[invoke] async error: " (.getMessage t)))
-                    (flush)
-                    (hk/send! channel
-                      (json-response 500 {:ok false
-                                          :error "invoke-error"
-                                          :message (.getMessage t)}))))))))))))
+          (hk/as-channel request
+            {:on-open
+             (fn [channel]
+               (try
+                 (.submit invoke-executor
+                   ^Runnable
+                   (fn []
+                     (try
+                       (let [caller (or (some-> payload :caller str)
+                                        (some-> payload (get "caller") str)
+                                        "http-caller")
+                             surface (or (some-> payload :surface str)
+                                         (some-> payload (get "surface") str))
+                             mission-id (or (:mission-id payload) (get payload "mission-id"))
+                             timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                                                long)
+                             ev-opts (when mission-id [:mission-id mission-id])
+                             effective-prompt (wrap-surface-header prompt surface caller)
+                             result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+                             sid (:session-id result)]
+                         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
+                                (or ev-opts []))
+                         (if (and (:ok result)
+                                  (codex-task-no-execution? agent-id effective-prompt result))
+                           (hk/send! channel
+                             (json-response 502 {:ok false
+                                                 :error "invoke-no-execution-evidence"
+                                                 :message "codex task-mode reply had no execution evidence"
+                                                 :session-id sid
+                                                 :invoke-meta (:invoke-meta result)}))
+                           (if (:ok result)
+                           (do
+                             (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
+                                    (or ev-opts []))
+                             (hk/send! channel
+                               (json-response 200 (cond-> {:ok true
+                                                           :result (:result result)
+                                                           :session-id sid}
+                                                    (:invoke-meta result)
+                                                    (assoc :invoke-meta (:invoke-meta result))))))
+                           (let [err (:error result)
+                                 code (if (map? err) (:error/code err) :invoke-failed)
+                                 msg (if (map? err) (:error/message err) (str err))]
+                             (hk/send! channel
+                               (json-response (if (= :agent-not-found code) 404 502)
+                                              {:ok false
+                                               :error (name code)
+                                               :message msg}))))))
+                       (catch Throwable t
+                         (println (str "[invoke] async error: " (.getMessage t)))
+                         (flush)
+                         (hk/send! channel
+                           (json-response 500 {:ok false
+                                               :error "invoke-error"
+                                               :message (.getMessage t)}))))))
+                 (catch Throwable t
+                   (println (str "[invoke] async submit error: " (.getMessage t)))
+                   (flush)
+                   (hk/send! channel
+                     (json-response 503 {:ok false
+                                         :error "invoke-submit-failed"
+                                         :message (.getMessage t)})))))}))))))
 
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
