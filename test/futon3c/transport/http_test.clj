@@ -372,6 +372,51 @@
       (is (= "missing-text" (:err parsed))))))
 
 ;; =============================================================================
+;; POST /api/alpha/invoke-delivery tests
+;; =============================================================================
+
+(deftest invoke-delivery-records-receipt
+  (testing "POST /api/alpha/invoke-delivery records delivery metadata"
+    (let [calls (atom [])
+          orig-ns-resolve ns-resolve
+          handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-1"
+                                      "invoke-trace-id" "invoke-123"
+                                      "surface" "irc"
+                                      "destination" "#futon as <codex>"
+                                      "delivered" true
+                                      "note" "ngircd-bridge"})]
+      (with-redefs [ns-resolve (fn [ns-sym var-sym]
+                                 (if (and (= ns-sym 'futon3c.dev)
+                                          (= var-sym 'record-invoke-delivery!))
+                                   (fn [agent-id invoke-trace-id receipt]
+                                     (swap! calls conj {:agent-id agent-id
+                                                        :invoke-trace-id invoke-trace-id
+                                                        :receipt receipt}))
+                                   (orig-ns-resolve ns-sym var-sym)))]
+        (let [response (post handler "/api/alpha/invoke-delivery" body)
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (true? (:recorded parsed)))
+          (is (= [{:agent-id "codex-1"
+                   :invoke-trace-id "invoke-123"
+                   :receipt {:surface "irc"
+                             :destination "#futon as <codex>"
+                             :delivered? true
+                             :note "ngircd-bridge"}}]
+                 @calls)))))))
+
+(deftest invoke-delivery-validates-required-fields
+  (testing "POST /api/alpha/invoke-delivery rejects missing trace id"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-1"})
+          response (post handler "/api/alpha/invoke-delivery" body)
+          parsed (parse-body response)]
+      (is (= 400 (:status response)))
+      (is (= "missing-invoke-trace-id" (:err parsed))))))
+
+;; =============================================================================
 ;; GET /health tests
 ;; =============================================================================
 

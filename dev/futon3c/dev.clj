@@ -590,6 +590,28 @@
         bytes (.digest md (.getBytes (str text) "UTF-8"))]
     (apply str (map #(format "%02x" (bit-and % 0xff)) bytes))))
 
+(defn- escape-elisp-string
+  "Escape a string for embedding in an elisp double-quoted string."
+  [s]
+  (-> (str (or s ""))
+      (str/replace "\\" "\\\\")
+      (str/replace "\"" "\\\"")
+      (str/replace "\n" "\\n")))
+
+(defn- format-delivery-receipt-line
+  [invoke-trace-id {:keys [surface destination delivered? note]}]
+  (let [status (if (false? delivered?) "failed" "delivered")
+        note* (some-> note str str/trim not-empty)
+        note* (when note*
+                (if (> (count note*) 120)
+                  (str (subs note* 0 117) "...")
+                  note*))]
+    (str "Delivery: " status
+         " via " (or (some-> surface str str/trim not-empty) "unknown")
+         " -> " (or (some-> destination str str/trim not-empty) "unknown")
+         " (trace-id " invoke-trace-id ")"
+         (when note* (str " [" note* "]")))))
+
 (defn- write-invoke-artifact!
   "Persist full invoke output to a local artifact file.
    Returns absolute file path on success, nil on failure or blank text."
@@ -615,7 +637,7 @@
 
 (defn- invoke-trace-response-block
   "Build invoke-trace metadata only (never semantic response text)."
-  [agent-id session-id result-text]
+  [agent-id session-id invoke-trace-id result-text]
   (let [payload (str (or result-text ""))
         kind (invoke-result-kind payload)
         chars (count payload)
@@ -629,7 +651,33 @@
          (if artifact-path
            (str "Artifact: " artifact-path "\n")
            "Artifact: [not written]\n")
-         "Delivery: invoke trace buffer does not deliver messages to peers.\n")))
+         "Delivery: pending (trace-id " invoke-trace-id ")\n"
+         "Delivery guarantee: caller must record where reply was sent.\n")))
+
+(defn record-invoke-delivery!
+  "Record where an invoke reply was actually delivered.
+   Appends/updates a delivery receipt line in *invoke: <agent>* trace buffer."
+  [agent-id invoke-trace-id receipt]
+  (let [aid (some-> agent-id str str/trim)
+        tid (some-> invoke-trace-id str str/trim)]
+    (when (and (seq aid) (seq tid))
+      (let [buf-name (str "*invoke: " aid "*")
+            pending-line (str "Delivery: pending (trace-id " tid ")")
+            receipt-line (format-delivery-receipt-line tid receipt)
+            elisp (str "(let ((buf (get-buffer \"" (escape-elisp-string buf-name) "\")))"
+                       "(when buf "
+                       "(with-current-buffer buf "
+                       "(let ((inhibit-read-only t)) "
+                       "(goto-char (point-min)) "
+                       "(if (search-forward \"" (escape-elisp-string pending-line) "\" nil t) "
+                       "(replace-match \"" (escape-elisp-string receipt-line) "\" t t) "
+                       "(progn "
+                       "(goto-char (point-max)) "
+                       "(unless (bolp) (insert \"\\n\")) "
+                       "(insert \"" (escape-elisp-string receipt-line) "\\n\"))))) "
+                       "nil)")]
+        (bb/blackboard-eval! elisp)
+        true))))
 
 ;; =============================================================================
 ;; ngircd IRC sender — persistent connection for Tickle paging
@@ -2468,6 +2516,7 @@ RESPOND WITH ONLY:
                      new-sid    (into ["--session-id" new-sid])
                      :always    (into ["--" prompt-str]))
               used-sid (or session-id new-sid)
+              invoke-trace-id (str "invoke-" (UUID/randomUUID))
               prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
               _ (println (str "[invoke] " agent-id " claude -p "
                               (subs (pr-str prompt-str) 0
@@ -2590,7 +2639,7 @@ RESPOND WITH ONLY:
                                      "Output: " (count (or text "")) " chars\n"
                                      (when (not (str/blank? err))
                                        (str "\nStderr: " (subs err 0 (min 200 (count err))) "\n"))
-                                     (invoke-trace-response-block agent-id final-sid text))
+                                     (invoke-trace-response-block agent-id final-sid invoke-trace-id text))
                                 (merge {:width 80 :slot 1 :no-display true} bb-opts))
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
@@ -2601,9 +2650,11 @@ RESPOND WITH ONLY:
                 {:result (if (str/blank? text)
                            "[Claude used tools but produced no text response]"
                            text)
-                 :session-id final-sid}
+                 :session-id final-sid
+                 :invoke-trace-id invoke-trace-id}
                 {:result nil :session-id final-sid
-                 :error (str "Exit " exit ": " (str/trim (or err "")))}))
+                 :error (str "Exit " exit ": " (str/trim (or err "")))
+                 :invoke-trace-id invoke-trace-id}))
             (finally
               (stop-ticker!))))))))
 
@@ -2661,6 +2712,7 @@ RESPOND WITH ONLY:
                                               (json/generate-string prompt))
                          :else            (str prompt))
             prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
+            invoke-trace-id (str "invoke-" (UUID/randomUUID))
             invoke-sid (preferred-session-id session-file session-id session-id-atom)
             used-sid (or invoke-sid "new")]
         ;; Reset trace for this invocation
@@ -2724,7 +2776,7 @@ RESPOND WITH ONLY:
                                  "Runtime evidence: executed=" execution-evidence?
                                  ", tool-events=" tool-events
                                  ", command-events=" command-events "\n"
-                                 (invoke-trace-response-block agent-id final-sid (:result result)))
+                                 (invoke-trace-response-block agent-id final-sid invoke-trace-id (:result result)))
                             {:width 80 :slot 1 :no-display true})
             (catch Throwable _))
           (println (str "[invoke] " agent-id
@@ -2734,7 +2786,7 @@ RESPOND WITH ONLY:
                         " tool-events=" tool-events
                         " command-events=" command-events))
           (flush)
-          result)))))
+          (assoc result :invoke-trace-id invoke-trace-id))))))
 
 ;; =============================================================================
 ;; IRC-based Codex invoke — send @codex on IRC, poll for [done] response
@@ -3057,85 +3109,108 @@ RESPOND WITH ONLY:
              (when-let [[_ cmd target] (re-matches #"(?i)^!(un)?gate\s+(\S+)\s*$" text)]
                (let [target-nick (str/lower-case target)]
                  (if cmd
-                   (do (swap! !ungated-nicks conj target-nick)
-                       (println (str "[irc] UNGATED: " target-nick " — receiving all messages"))
-                       ((:send-to-channel! irc-server) channel "system"
-                        (str target-nick " is now ungated — listening to all messages")))
-                   (do (swap! !ungated-nicks disj target-nick)
-                       (println (str "[irc] GATED: " target-nick " — mention-only"))
-                       ((:send-to-channel! irc-server) channel "system"
-                        (str target-nick " is now gated — mention-only mode"))))
+                   (do
+                     (swap! !ungated-nicks conj target-nick)
+                     (println (str "[irc] UNGATED: " target-nick " — receiving all messages"))
+                     ((:send-to-channel! irc-server) channel "system"
+                      (str target-nick " is now ungated — listening to all messages")))
+                   (do
+                     (swap! !ungated-nicks disj target-nick)
+                     (println (str "[irc] GATED: " target-nick " — mention-only"))
+                     ((:send-to-channel! irc-server) channel "system"
+                      (str target-nick " is now gated — mention-only mode"))))
                  (flush)))
              (let [ungated? (contains? @!ungated-nicks (str/lower-case nick))
-                   addressed? (or ungated?
-                                  (mentioned? text nick))]
-             (if (and addressed?
-                      (not= sender nick)
-                      ;; Don't dispatch !gate/!ungate commands as prompts
-                      (not (re-matches #"(?i)^!(un)?gate\s+.*" text)))
-               (let [prompt (if ungated?
-                              text
-                              (strip-mention text nick))]
-                 (if (str/blank? prompt)
-                   (do (println (str "[irc] " nick ": mention detected but prompt empty, ignoring"))
+                   addressed? (or ungated? (mentioned? text nick))]
+               (if (and addressed?
+                        (not= sender nick)
+                        ;; Don't dispatch !gate/!ungate commands as prompts
+                        (not (re-matches #"(?i)^!(un)?gate\s+.*" text)))
+                 (let [prompt (if ungated? text (strip-mention text nick))]
+                   (if (str/blank? prompt)
+                     (do
+                       (println (str "[irc] " nick ": mention detected but prompt empty, ignoring"))
                        (flush))
-                   (do
-                    (println (str "[irc] " nick ": dispatching invoke (soft-timeout="
-                                  invoke-timeout-ms "ms, hard-timeout="
-                                  invoke-hard-timeout-ms "ms)"))
-                    (flush)
-                    (future
-                      (try
-                        (let [invoke-prompt (irc-invoke-prompt {:nick nick
-                                                                :sender sender
-                                                                :channel channel
-                                                                :user-text prompt})
-                              started-ms (System/currentTimeMillis)
-                              soft-timeout-ms (when (and invoke-timeout-ms (pos? (long invoke-timeout-ms)))
-                                                (long invoke-timeout-ms))
-                              hard-timeout-ms (cond
-                                                (and invoke-hard-timeout-ms (pos? (long invoke-hard-timeout-ms)))
-                                                (long invoke-hard-timeout-ms)
-                                                soft-timeout-ms soft-timeout-ms
-                                                :else 1800000)
-                              invoke-fut (future (reg/invoke-agent! agent-id invoke-prompt hard-timeout-ms))
-                              resp (loop [soft-notified? false]
-                                     (if (realized? invoke-fut)
-                                       @invoke-fut
-                                       (let [elapsed (- (System/currentTimeMillis) started-ms)]
-                                         (when (and soft-timeout-ms
-                                                    (not soft-notified?)
-                                                    (>= elapsed soft-timeout-ms))
-                                           (let [msg (str "[invoke still running after "
-                                                          soft-timeout-ms
-                                                          "ms] waiting for completion...")]
-                                             (println (str "[irc] " nick " invoke SOFT TIMEOUT: " msg))
-                                             ((:send-to-channel! irc-server) channel nick msg)
-                                             (flush)))
-                                         (Thread/sleep 1000)
-                                         (recur (or soft-notified?
-                                                    (and soft-timeout-ms
-                                                         (>= elapsed soft-timeout-ms)))))))
-                              reply* (invoke-response->irc-reply resp)]
-                          ((:send-to-channel! irc-server) channel nick reply*)
-                          (println (str "[irc] " nick " → " channel " ("
-                                        (count reply*) " chars): "
-                                        (subs reply* 0 (min 120 (count reply*)))))
-                          (flush))
-                        (catch Exception e
-                          (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
-                          (try
-                            ((:send-to-channel! irc-server) channel nick
-                             (str "[invoke dispatch error] " (.getMessage e)))
-                            (catch Exception send-e
-                              (println (str "[irc] " nick " dispatch ERROR while sending fallback: "
-                                            (.getMessage send-e)))))
-                          (flush)))))))
-               (do (println (str "[irc] " nick ": not mentioned, skipping"))
+                     (do
+                       (println (str "[irc] " nick ": dispatching invoke (soft-timeout="
+                                     invoke-timeout-ms "ms, hard-timeout="
+                                     invoke-hard-timeout-ms "ms)"))
+                       (flush)
+                       (future
+                         (let [!invoke-trace-id (atom nil)]
+                           (try
+                             (let [invoke-prompt (irc-invoke-prompt {:nick nick
+                                                                     :sender sender
+                                                                     :channel channel
+                                                                     :user-text prompt})
+                                   started-ms (System/currentTimeMillis)
+                                   soft-timeout-ms (when (and invoke-timeout-ms (pos? (long invoke-timeout-ms)))
+                                                     (long invoke-timeout-ms))
+                                   hard-timeout-ms (cond
+                                                     (and invoke-hard-timeout-ms (pos? (long invoke-hard-timeout-ms)))
+                                                     (long invoke-hard-timeout-ms)
+                                                     soft-timeout-ms soft-timeout-ms
+                                                     :else 1800000)
+                                   invoke-fut (future (reg/invoke-agent! agent-id invoke-prompt hard-timeout-ms))
+                                   resp (loop [soft-notified? false]
+                                          (if (realized? invoke-fut)
+                                            @invoke-fut
+                                            (let [elapsed (- (System/currentTimeMillis) started-ms)]
+                                              (when (and soft-timeout-ms
+                                                         (not soft-notified?)
+                                                         (>= elapsed soft-timeout-ms))
+                                                (let [msg (str "[invoke still running after "
+                                                               soft-timeout-ms
+                                                               "ms] waiting for completion...")]
+                                                  (println (str "[irc] " nick " invoke SOFT TIMEOUT: " msg))
+                                                  ((:send-to-channel! irc-server) channel nick msg)
+                                                  (flush)))
+                                              (Thread/sleep 1000)
+                                              (recur (or soft-notified?
+                                                         (and soft-timeout-ms
+                                                              (>= elapsed soft-timeout-ms)))))))
+                                   reply* (invoke-response->irc-reply resp)
+                                   invoke-trace-id (get-in resp [:invoke-meta :invoke-trace-id])]
+                               (reset! !invoke-trace-id invoke-trace-id)
+                               ((:send-to-channel! irc-server) channel nick reply*)
+                               (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
+                                 (record-invoke-delivery!
+                                  agent-id invoke-trace-id
+                                  {:surface "irc"
+                                   :destination (str channel " as <" nick ">")
+                                   :delivered? true
+                                   :note "dispatch-relay"}))
+                               (println (str "[irc] " nick " → " channel " ("
+                                             (count reply*) " chars): "
+                                             (subs reply* 0 (min 120 (count reply*)))))
+                               (flush))
+                             (catch Exception e
+                               (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
+                               (let [fallback-delivered?
+                                     (try
+                                       ((:send-to-channel! irc-server) channel nick
+                                        (str "[invoke dispatch error] " (.getMessage e)))
+                                       true
+                                       (catch Exception send-e
+                                         (println (str "[irc] " nick " dispatch ERROR while sending fallback: "
+                                                       (.getMessage send-e)))
+                                         false))]
+                                 (when-let [invoke-trace-id @!invoke-trace-id]
+                                   (record-invoke-delivery!
+                                    agent-id invoke-trace-id
+                                    {:surface "irc"
+                                     :destination (str channel " as <" nick ">")
+                                     :delivered? fallback-delivered?
+                                     :note (if fallback-delivered?
+                                             "dispatch-relay-error-fallback"
+                                             (str "dispatch-relay-error: " (.getMessage e)))})))
+                               (flush)))))))
+                 (do
+                   (println (str "[irc] " nick ": not mentioned, skipping"))
                    (flush)))))))))
     ((:join-virtual-nick! irc-server) "#futon" nick)
     (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon (mention-gated)"))
-    {:agent-id agent-id :nick nick}))
+    {:agent-id agent-id :nick nick})))
 
 (defn start-drawbridge!
   "Start Drawbridge endpoint used by fubar/portal style tooling.

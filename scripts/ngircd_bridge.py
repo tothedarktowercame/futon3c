@@ -118,6 +118,7 @@ INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
+INVOKE_DELIVERY_URL = f"{INVOKE_BASE}/api/alpha/invoke-delivery"
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
@@ -537,6 +538,36 @@ class IRCBot:
             "command_events": command_events,
         }
 
+    @staticmethod
+    def _invoke_trace_id(invoke_meta):
+        """Extract invoke trace id from invoke metadata."""
+        if not isinstance(invoke_meta, dict):
+            return None
+        for key in ("invoke-trace-id", "invoke_trace_id", "invokeTraceId"):
+            value = invoke_meta.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    def _record_delivery_receipt(self, invoke_meta, delivered, note):
+        """Record where an invoke reply was delivered for trace visibility."""
+        trace_id = self._invoke_trace_id(invoke_meta)
+        if not trace_id:
+            return False
+        payload = {
+            "agent-id": self.agent_id,
+            "invoke-trace-id": trace_id,
+            "surface": "irc",
+            "destination": f"{self.channel} as <{self.nick}>",
+            "delivered": bool(delivered),
+            "note": note,
+        }
+        result = api_post(INVOKE_DELIVERY_URL, payload, timeout=min(CMD_TIMEOUT, 5))
+        if not (isinstance(result, dict) and result.get("ok")):
+            log(self.nick, f"invoke-delivery record failed for {trace_id}: {result}")
+            return False
+        return True
+
     def _enqueue_invoke(self, sender, full_prompt, mission_id):
         """Queue an invoke request and return assigned job id or None when full."""
         job_id = self._next_job_id()
@@ -564,9 +595,12 @@ class IRCBot:
             sender = task["sender"]
             prompt = task["prompt"]
             mission_id = task.get("mission_id")
+            response = {"ok": False}
+            invoke_meta = None
             try:
                 with self._invoking:
                     response = self._invoke_agent(prompt, sender, mission_id=mission_id)
+                invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
                     # Claude: clean output (no [done]/[accepted] framing)
                     # Codex: full framing with artifact refs and session IDs
@@ -588,11 +622,34 @@ class IRCBot:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)
                         else:
                             self._say(f"[done {job_id}] {summary}", max_lines=2)
+                    self._record_delivery_receipt(
+                        invoke_meta,
+                        delivered=True,
+                        note=f"ngircd-bridge:{job_id}:ok",
+                    )
                 else:
                     err = self._truncate(response.get("error", "unknown invoke error"), max_len=220)
                     self._say(f"[failed {job_id}] {err}", max_lines=2)
+                    self._record_delivery_receipt(
+                        invoke_meta,
+                        delivered=True,
+                        note=f"ngircd-bridge:{job_id}:invoke-failed",
+                    )
             except Exception as e:
-                self._say(f"[failed {job_id}] worker exception: {self._truncate(str(e), max_len=180)}", max_lines=2)
+                sent = False
+                try:
+                    self._say(
+                        f"[failed {job_id}] worker exception: {self._truncate(str(e), max_len=180)}",
+                        max_lines=2,
+                    )
+                    sent = True
+                except Exception as send_error:
+                    log(self.nick, f"Failed sending worker exception for {job_id}: {send_error}")
+                self._record_delivery_receipt(
+                    invoke_meta,
+                    delivered=sent,
+                    note=f"ngircd-bridge:{job_id}:worker-exception",
+                )
                 log(self.nick, f"Worker exception for {job_id}: {traceback.format_exc()}")
             finally:
                 self._invoke_queue.task_done()
@@ -631,21 +688,23 @@ class IRCBot:
         try:
             with urllib.request.urlopen(req, timeout=INVOKE_CLIENT_TIMEOUT_SECONDS) as resp:
                 data = json.loads(resp.read())
+                invoke_meta = data.get("invoke-meta") or data.get("invoke_meta")
                 if data.get("ok"):
                     return {
                         "ok": True,
                         "result": data.get("result", ""),
                         "session_id": data.get("session-id") or data.get("session_id"),
-                        "invoke_meta": data.get("invoke-meta") or data.get("invoke_meta"),
+                        "invoke_meta": invoke_meta,
                     }
                 else:
                     return {
                         "ok": False,
                         "error": f"invoke error: {data.get('error', 'unknown')}",
                         "session_id": data.get("session-id") or data.get("session_id"),
+                        "invoke_meta": invoke_meta,
                     }
         except urllib.error.HTTPError as e:
-            body_text = e.read().decode("utf-8", errors="replace")[:200]
+            body_text = e.read().decode("utf-8", errors="replace")
             parsed = None
             try:
                 parsed = json.loads(body_text)
@@ -654,6 +713,7 @@ class IRCBot:
             if isinstance(parsed, dict):
                 err = parsed.get("error", "unknown")
                 msg = parsed.get("message", "")
+                invoke_meta = parsed.get("invoke-meta") or parsed.get("invoke_meta")
                 timed_out = (
                     e.code == 502
                     and isinstance(msg, str)
@@ -666,11 +726,20 @@ class IRCBot:
                             "ok": False,
                             "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
                             "session_id": status_after.get("session_id"),
+                            "invoke_meta": invoke_meta,
                         }
                 if msg:
-                    return {"ok": False, "error": f"HTTP {e.code}: {err}: {msg}"}
-                return {"ok": False, "error": f"HTTP {e.code}: {err}"}
-            return {"ok": False, "error": f"HTTP {e.code}: {body_text}"}
+                    return {
+                        "ok": False,
+                        "error": f"HTTP {e.code}: {err}: {msg}",
+                        "invoke_meta": invoke_meta,
+                    }
+                return {
+                    "ok": False,
+                    "error": f"HTTP {e.code}: {err}",
+                    "invoke_meta": invoke_meta,
+                }
+            return {"ok": False, "error": f"HTTP {e.code}: {body_text[:200]}"}
         except urllib.error.URLError as e:
             reason = str(getattr(e, "reason", e))
             if "timed out" in reason.lower():

@@ -14,6 +14,7 @@
      GET  /api/alpha/evidence/:id — retrieve single evidence entry
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      POST /api/alpha/irc/send — post a line to IRC via server relay
+     POST /api/alpha/invoke-delivery — record invoke delivery receipt metadata
      GET  /api/alpha/reflect/namespaces — list loaded Clojure namespaces
      GET  /api/alpha/reflect/ns/:ns — public vars in a namespace
      GET  /api/alpha/reflect/ns/:ns/full — all vars (public + private)
@@ -1153,6 +1154,55 @@
               (json-response 502 {:ok false :err "irc-send-failed"
                                   :message (.getMessage e)}))))))))
 
+(defn- handle-invoke-delivery
+  "POST /api/alpha/invoke-delivery — record where an invoke reply was delivered.
+   Body: {\"agent-id\":\"codex-1\",\"invoke-trace-id\":\"invoke-...\",\"surface\":\"irc\",
+          \"destination\":\"#futon as <codex>\",\"delivered\":true,\"note\":\"...\"}."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            invoke-trace-id (or (:invoke-trace-id payload) (get payload "invoke-trace-id")
+                                (:invoke_trace_id payload) (get payload "invoke_trace_id"))
+            surface (or (:surface payload) (get payload "surface"))
+            destination (or (:destination payload) (get payload "destination"))
+            note (or (:note payload) (get payload "note"))
+            delivered (let [v (or (:delivered payload) (get payload "delivered"))]
+                        (cond
+                          (boolean? v) v
+                          (string? v) (if-some [b (parse-bool v)] b true)
+                          :else true))]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (or (nil? invoke-trace-id) (str/blank? (str invoke-trace-id)))
+          (json-response 400 {:ok false :err "missing-invoke-trace-id"
+                              :message "invoke-trace-id is required"})
+
+          :else
+          (if-let [record-fn (ns-resolve 'futon3c.dev 'record-invoke-delivery!)]
+            (try
+              (record-fn (str agent-id) (str invoke-trace-id)
+                         {:surface (str (or surface "unknown"))
+                          :destination (str (or destination "unknown"))
+                          :delivered? delivered
+                          :note (str (or note ""))})
+              (json-response 200 {:ok true
+                                  :agent-id (str agent-id)
+                                  :invoke-trace-id (str invoke-trace-id)
+                                  :recorded true})
+              (catch Throwable t
+                (json-response 502 {:ok false
+                                    :err "invoke-delivery-record-failed"
+                                    :message (.getMessage t)})))
+            (json-response 503 {:ok false
+                                :err "invoke-delivery-unavailable"
+                                :message "invoke delivery recorder not available on this node"})))))))
+
 (defn- handle-irc-history
   "GET /api/alpha/irc/history — recent IRC messages in chat-friendly format.
    Query params: channel (default #futon), limit (default 50, max 200), since (ISO)."
@@ -1838,6 +1888,9 @@
 
           (and (= :post method) (= "/api/alpha/irc/send" uri))
           (handle-irc-send request config)
+
+          (and (= :post method) (= "/api/alpha/invoke-delivery" uri))
+          (handle-invoke-delivery request config)
 
           (and (= :get method) (= "/api/alpha/irc/history" uri))
           (handle-irc-history request config)
