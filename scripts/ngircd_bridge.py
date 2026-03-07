@@ -118,7 +118,7 @@ IRC_CHANNELS = [IRC_CHANNEL] + [
     if ch.strip() and ch.strip() != IRC_CHANNEL
 ]
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
-BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,codex").split(",")
+BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
@@ -453,12 +453,14 @@ class IRCBot:
     def _is_mention(self, text):
         """Check if text mentions this bot. Matches @nick anywhere in the
         text (not just line start) so mentions like 'done.@codex review'
-        still trigger. Also matches 'nick: ...' at line start."""
+        still trigger. Also matches 'nick: ...' at line start.
+        Uses (?!\\w|-) instead of \\b so @claude doesn't match @claude-2."""
         base_nick = self.nick.rstrip("_")
+        end = r"(?!\w|-)"  # not followed by word char or hyphen
         patterns = [
-            rf"@{re.escape(base_nick)}\b",          # @nick anywhere
-            rf"^{re.escape(base_nick)}:\s",          # nick: at start
-            rf"^{re.escape(base_nick)},\s",          # nick, at start
+            rf"@{re.escape(base_nick)}{end}",         # @nick anywhere
+            rf"^{re.escape(base_nick)}:\s",            # nick: at start
+            rf"^{re.escape(base_nick)},\s",            # nick, at start
         ]
         for p in patterns:
             if re.search(p, text, re.IGNORECASE):
@@ -1381,6 +1383,7 @@ def main():
 
     nick_to_agent = {
         "claude": "claude-1",
+        "claude-2": "claude-2",
         "codex": "codex-1",
     }
     # NICK_AGENT_MAP overrides: "zcodex:codex-1,zclaude:claude-1"
