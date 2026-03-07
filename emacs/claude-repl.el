@@ -189,6 +189,17 @@ In both cases, rebinds the agent's socket to this Emacs daemon."
       (setq-local claude-repl-agent-id agent-id)
       (setq-local claude-repl-session-file
                   (format "/tmp/futon-session-id-%s" agent-id))
+      ;; Update displayed session from the agent's session file.
+      ;; Capture path before with-temp-buffer (which loses buffer-local binding).
+      (let ((sf claude-repl-session-file))
+        (when (and (file-exists-p sf)
+                   (fboundp 'agent-chat-update-session-id))
+          (let ((sid (string-trim
+                      (with-temp-buffer
+                        (insert-file-contents-literally sf)
+                        (buffer-string)))))
+            (unless (string-empty-p sid)
+              (agent-chat-update-session-id sid)))))
       (message "claude-repl: registered as %s (socket: %s)" agent-id
                (or socket-name "default"))
       agent-id)))
@@ -874,12 +885,12 @@ Then auto-register with the server and load existing session-id."
       (setq-local claude-repl-session-file
                   (format "/tmp/futon-session-id-%s" claude-repl-agent-id))
       (setq-local claude-repl--workspace-applied t)))
-  (let ((existing-sid
-         (when (and claude-repl-session-file
-                    (file-exists-p claude-repl-session-file))
+  (let* ((sf claude-repl-session-file)
+         (existing-sid
+         (when (and sf (file-exists-p sf))
            (let ((s (string-trim
                      (with-temp-buffer
-                       (insert-file-contents claude-repl-session-file)
+                       (insert-file-contents-literally sf)
                        (buffer-string)))))
              (unless (string-empty-p s) s))))
         (ws (claude-repl--workspace))
@@ -913,6 +924,14 @@ Then auto-register with the server and load existing session-id."
         (claude-repl--init)))
     (pop-to-buffer buf)
     (goto-char (point-max))))
+
+(defun claude-repl-reconnect ()
+  "Re-register this buffer's agent with the server.
+Use after reloading claude-repl.el or when the agent binding is stale."
+  (interactive)
+  (claude-repl--auto-register)
+  (message "claude-repl: now %s (session file: %s)"
+           claude-repl-agent-id claude-repl-session-file))
 
 (provide 'claude-repl)
 ;;; claude-repl.el ends here
