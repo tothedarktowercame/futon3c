@@ -80,6 +80,11 @@ if /i "%TARGET%"=="codex-repl" (
   exit /b %ERRORLEVEL%
 )
 
+if /i "%TARGET%"=="tickle" (
+  call :run_windows_script "%SCRIPT_DIR%\tickle-windows.bat"!TARGET_ARGS!
+  exit /b %ERRORLEVEL%
+)
+
 if /i "%TARGET%"=="ngircd-bridge" (
   call :run_windows_script "%SCRIPT_DIR%\ngircd-bridge-windows.bat"!TARGET_ARGS!
   exit /b %ERRORLEVEL%

@@ -7,7 +7,7 @@ export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
 
-.PHONY: tools preflight dev dev-arxana dev-core test status repl codex codex-repl ngircd-bridge
+.PHONY: tools preflight dev dev-arxana dev-core test status repl codex codex-repl tickle ngircd-bridge
 
 tools:
 	cmd /c $(WIN_SCRIPTS)\\bootstrap-tools.bat
@@ -38,6 +38,9 @@ codex:
 
 codex-repl:
 	cmd /c $(WIN_SCRIPTS)\\codex-repl-windows.bat $(ARGS)
+
+tickle:
+	cmd /c $(WIN_SCRIPTS)\\tickle-windows.bat $(ARGS)
 
 ngircd-bridge:
 	cmd /c $(WIN_SCRIPTS)\\ngircd-bridge-windows.bat $(ARGS)

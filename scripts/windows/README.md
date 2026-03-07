@@ -18,7 +18,8 @@ Target authority:
 - this file maps each target to the implementing script for quick operator reference.
 - `scripts/windows/futon-windows.bat` may directly dispatch selected targets
   (`dev`, `dev-arxana`, `dev-core`, `test`, `status`, `repl`, `codex`,
-  `codex-repl`, `ngircd-bridge`) to avoid make/shell interop drift on Windows.
+  `codex-repl`, `tickle`, `ngircd-bridge`) to avoid make/shell interop drift
+  on Windows.
 
 ## Target Mapping
 
@@ -35,6 +36,7 @@ Target authority:
 | `repl` | `scripts/windows/repl-windows.bat` |
 | `codex` | `scripts/windows/codex-picker-windows.bat` |
 | `codex-repl` | `scripts/windows/codex-repl-windows.bat` |
+| `tickle` | `scripts/windows/tickle-windows.bat` |
 | `ngircd-bridge` | `scripts/windows/ngircd-bridge-windows.bat` |
 
 Internal lifecycle helper authority:
@@ -51,6 +53,14 @@ Codex target arg forms accepted by `futon-windows.bat`:
 - `scripts/windows/futon-windows.bat codex ARGS=--help`
 - `scripts/windows/futon-windows.bat codex-repl --new`
 - `scripts/windows/futon-windows.bat codex-repl ARGS=--new`
+
+Tickle launcher examples:
+- `scripts/windows/futon-windows.bat tickle`
+- `scripts/windows/futon-windows.bat tickle --interval 30 --threshold 120`
+- `set FUTON3C_EVIDENCE_BASE=http://127.0.0.1:7070 && scripts/windows/futon-windows.bat tickle`
+- implementation note:
+  - Windows companion uses `conda run -n codex python scripts/windows/tickle-runner.py`
+  - Unix launcher semantics remain authoritative in `scripts/tickle-start`
 
 ngircd bridge launch examples:
 - `scripts/windows/futon-windows.bat ngircd-bridge`
