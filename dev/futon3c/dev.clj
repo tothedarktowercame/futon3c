@@ -663,7 +663,10 @@
   (let [aid (some-> agent-id str str/trim)
         tid (some-> invoke-trace-id str str/trim)]
     (when (and (seq aid) (seq tid))
-      (let [buf-name (str "*invoke: " aid "*")
+      (let [agent-record (reg/get-agent aid)
+            emacs-socket (some-> agent-record :agent/metadata :emacs-socket str str/trim not-empty)
+            bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))
+            buf-name (str "*invoke: " aid "*")
             pending-line (str "Delivery: pending (trace-id " tid ")")
             receipt-line (format-delivery-receipt-line tid receipt)
             elisp (str "(let ((buf (get-buffer \"" (escape-elisp-string buf-name) "\")))"
@@ -678,7 +681,7 @@
                        "(unless (bolp) (insert \"\\n\")) "
                        "(insert \"" (escape-elisp-string receipt-line) "\\n\"))))) "
                        "nil)")]
-        (bb/blackboard-eval! elisp)
+        (bb/blackboard-eval! elisp bb-opts)
         true))))
 
 ;; =============================================================================
@@ -3326,9 +3329,12 @@ RESPOND WITH ONLY:
                               :emacs-socket claude-socket})]
               (rt/register-claude! {:agent-id "claude-1"
                                     :invoke-fn invoke-fn})
+              (let [claude-metadata (cond-> {}
+                                      claude-socket (assoc :emacs-socket claude-socket))]
               (reg/update-agent! "claude-1"
                                  :agent/type :claude
                                  :agent/invoke-fn invoke-fn
+                                 :agent/metadata claude-metadata
                                  :agent/capabilities [:explore :edit :test :coordination/execute])
               (when initial-sid
                 (reg/update-agent! "claude-1" :agent/session-id initial-sid))
@@ -3337,7 +3343,7 @@ RESPOND WITH ONLY:
                               (str " (emacs: " claude-socket ")"))
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
-                                                       (min 8 (count initial-sid))) ")"))))))
+                                                       (min 8 (count initial-sid))) ")")))))))
         ;; Register Codex — guard against missing binary
         codex-bin-name (env "CODEX_BIN" "codex")
         codex-bin-exists? (try
