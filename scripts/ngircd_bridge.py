@@ -120,7 +120,13 @@ def resolve_invoke_base():
 IRC_HOST = os.environ.get("IRC_HOST", "127.0.0.1")
 IRC_PORT = int_env("IRC_PORT", 6667, minimum=1)
 IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
+# IRC_CHANNEL is the primary channel; IRC_CHANNELS adds extras (comma-separated).
+# E.g. IRC_CHANNEL=#futon IRC_CHANNELS=#math,#ops → bot joins all three.
 IRC_CHANNEL = os.environ.get("IRC_CHANNEL", "#futon")
+IRC_CHANNELS = [IRC_CHANNEL] + [
+    ch.strip() for ch in os.environ.get("IRC_CHANNELS", "").split(",")
+    if ch.strip() and ch.strip() != IRC_CHANNEL
+]
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,codex").split(",")
 
@@ -296,11 +302,12 @@ class IRCBot:
     """Single IRC bot that connects as a nick and relays @mentions."""
 
     def __init__(self, nick, agent_id, channel, host, port, password,
-                 handle_commands=False):
+                 handle_commands=False, channels=None):
         self.desired_nick = nick  # the nick we want
         self.nick = nick
         self.agent_id = agent_id
-        self.channel = channel
+        self.channel = channel  # primary channel (for compat)
+        self.channels = channels or [channel]  # all channels to join
         self.host = host
         self.port = port
         self.password = password
@@ -309,6 +316,7 @@ class IRCBot:
         self.handle_commands = handle_commands
         self.focused_mission = None
         self.connected = False
+        self._reply_channel = channel  # channel of most recent inbound message
         self._invoking = threading.Lock()
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
         self._job_seq = 0
@@ -342,25 +350,26 @@ class IRCBot:
                 and "```" not in stripped
                 and "\n" not in stripped)
 
-    def _surface_context(self, sender, mission_part, brief):
+    def _surface_context(self, sender, mission_part, brief, channel=None):
         """Build the surface contract header for an IRC invoke."""
+        ch = channel or self.channel
         if brief:
             return (
-                f"[Surface: IRC | Channel: {self.channel} | "
+                f"[Surface: IRC | Channel: {ch} | "
                 f"Speaker: {sender}{mission_part} | Mode: brief | "
                 f"This is casual IRC chat. Respond in 1-2 short lines. "
-                f"Your reply will be posted to {self.channel} as <{self.nick}>.]"
+                f"Your reply will be posted to {ch} as <{self.nick}>.]"
             )
         return (
-            f"[Surface: IRC | Channel: {self.channel} | "
+            f"[Surface: IRC | Channel: {ch} | "
             f"Speaker: {sender}{mission_part} | Mode: task | "
-            f"Your completion update will be posted to {self.channel} as <{self.nick}>. "
+            f"Your completion update will be posted to {ch} as <{self.nick}>. "
             "Execute work asynchronously, then return a short status with artifact refs "
             "(commit/PR/issue/file path). "
             "To post progress mid-task: "
             f'curl -s -X POST {INVOKE_BASE}/api/alpha/irc/send '
             '-H "Content-Type: application/json" '
-            f'-d \'{{"channel":"{self.channel}","from":"{self.nick}","text":"..."}}\']'
+            f'-d \'{{"channel":"{ch}","from":"{self.nick}","text":"..."}}\']'
         )
 
     def _agent_status(self):
@@ -424,9 +433,10 @@ class IRCBot:
             elif cmd == "ERROR":
                 raise ConnectionError(f"Server error: {' '.join(params)}")
 
-        self._send(f"JOIN {self.channel}")
+        for ch in self.channels:
+            self._send(f"JOIN {ch}")
+            log(self.nick, f"Joined {ch}")
         self.connected = True
-        log(self.nick, f"Joined {self.channel}")
 
     def _send(self, line):
         """Send a raw IRC line."""
@@ -592,7 +602,7 @@ class IRCBot:
             "agent-id": self.agent_id,
             "invoke-trace-id": trace_id,
             "surface": "irc",
-            "destination": f"{self.channel} as <{self.nick}>",
+            "destination": f"{self._reply_channel or self.channel} as <{self.nick}>",
             "delivered": bool(delivered),
             "note": note,
         }
@@ -602,7 +612,7 @@ class IRCBot:
             return False
         return True
 
-    def _enqueue_invoke(self, sender, full_prompt, mission_id):
+    def _enqueue_invoke(self, sender, full_prompt, mission_id, reply_channel=None):
         """Queue an invoke request and return assigned job id or None when full."""
         job_id = self._next_job_id()
         task = {
@@ -610,6 +620,7 @@ class IRCBot:
             "sender": sender,
             "prompt": full_prompt,
             "mission_id": mission_id,
+            "reply_channel": reply_channel or self.channel,
             "queued_at": time.time(),
         }
         try:
@@ -629,6 +640,8 @@ class IRCBot:
             sender = task["sender"]
             prompt = task["prompt"]
             mission_id = task.get("mission_id")
+            reply_ch = task.get("reply_channel") or self.channel
+            self._reply_channel = reply_ch  # for delivery receipt
             response = {"ok": False}
             invoke_meta = None
             try:
@@ -641,7 +654,7 @@ class IRCBot:
                     is_claude = self.nick.startswith("claude")
                     if is_claude:
                         summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
-                        self._say(summary, max_lines=4)
+                        self._say(summary, max_lines=4, channel=reply_ch)
                     else:
                         summary = self._summarize_invoke_result(response.get("result", ""))
                         stats = self._execution_stats(response.get("invoke_meta"))
@@ -668,9 +681,11 @@ class IRCBot:
                                 self._say(f"{header}\n{raw_text}", max_lines=6)
                                 continue
                         if sid:
-                            self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)
+                            self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
+                                      max_lines=2, channel=reply_ch)
                         else:
-                            self._say(f"[done {job_id}] {summary}", max_lines=2)
+                            self._say(f"[done {job_id}] {summary}",
+                                      max_lines=2, channel=reply_ch)
                     self._record_delivery_receipt(
                         invoke_meta,
                         delivered=True,
@@ -678,7 +693,7 @@ class IRCBot:
                     )
                 else:
                     err = self._truncate(response.get("error", "unknown invoke error"), max_len=220)
-                    self._say(f"[failed {job_id}] {err}", max_lines=2)
+                    self._say(f"[failed {job_id}] {err}", max_lines=2, channel=reply_ch)
                     self._record_delivery_receipt(
                         invoke_meta,
                         delivered=True,
@@ -689,7 +704,7 @@ class IRCBot:
                 try:
                     self._say(
                         f"[failed {job_id}] worker exception: {self._truncate(str(e), max_len=180)}",
-                        max_lines=2,
+                        max_lines=2, channel=reply_ch,
                     )
                     sent = True
                 except Exception as send_error:
@@ -834,10 +849,11 @@ class IRCBot:
         text = re.sub(r"  +", " ", text)
         return text
 
-    def _say(self, text, max_lines=6):
-        """Send a PRIVMSG to the channel. Caps output at max_lines to keep
+    def _say(self, text, max_lines=6, channel=None):
+        """Send a PRIVMSG to a channel. Caps output at max_lines to keep
         IRC readable. If the response exceeds max_lines, the tail is dropped
         and a truncation notice is appended."""
+        channel = channel or self.channel
         text = self._sanitize_for_irc(text)
         lines = []
         for line in text.split("\n"):
@@ -852,16 +868,17 @@ class IRCBot:
 
         truncated = len(lines) > max_lines
         for line in lines[:max_lines]:
-            self._send(f"PRIVMSG {self.channel} :{line}")
+            self._send(f"PRIVMSG {channel} :{line}")
             time.sleep(0.1)  # gentle rate limit
         if truncated:
-            self._send(f"PRIVMSG {self.channel} :"
+            self._send(f"PRIVMSG {channel} :"
                        f"[truncated {len(lines) - max_lines} more lines — "
                        f"post details to GitHub instead]")
             time.sleep(0.1)
 
-    def _handle_mention(self, sender, text):
+    def _handle_mention(self, sender, text, channel=None):
         """Process a mention: queue invoke and ack immediately."""
+        channel = channel or self.channel
         prompt_text = self._strip_mention(text)
         if not prompt_text:
             return
@@ -871,26 +888,29 @@ class IRCBot:
         if self.focused_mission:
             mission_part = f" | Focused Mission: {self.focused_mission}"
         brief = self._is_brief(prompt_text)
-        surface_context = self._surface_context(sender, mission_part, brief)
+        surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
-        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission)
+        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
+                                      reply_channel=channel)
         if not job_id:
-            self._say("[queue full] invoke queue is saturated; retry in a moment", max_lines=1)
+            self._say("[queue full] invoke queue is saturated; retry in a moment",
+                      max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping invocation from {sender}")
             return
         pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
-        log(self.nick, f"Queued {job_id} ({mode}) from {sender}: {prompt_text[:80]}")
+        log(self.nick, f"Queued {job_id} ({mode}) from {sender} on {channel}: {prompt_text[:80]}")
         # Claude: no [accepted] noise — just process silently
         if not self.nick.startswith("claude"):
             self._say(
                 f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
-                max_lines=1,
+                max_lines=1, channel=channel,
             )
 
-    def _handle_ungated(self, sender, text):
+    def _handle_ungated(self, sender, text, channel=None):
         """Process an ungated message: queue invoke and ack immediately."""
+        channel = channel or self.channel
         if not text.strip():
             return
 
@@ -898,21 +918,23 @@ class IRCBot:
         if self.focused_mission:
             mission_part = f" | Focused Mission: {self.focused_mission}"
         brief = self._is_brief(text)
-        surface_context = self._surface_context(sender, mission_part, brief)
+        surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {text}"
 
-        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission)
+        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
+                                      reply_channel=channel)
         if not job_id:
-            self._say("[queue full] invoke queue is saturated; retry in a moment", max_lines=1)
+            self._say("[queue full] invoke queue is saturated; retry in a moment",
+                      max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping ungated invocation from {sender}")
             return
         pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
-        log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender}: {text[:80]}")
+        log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender} on {channel}: {text[:80]}")
         if not self.nick.startswith("claude"):
             self._say(
                 f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
-                max_lines=1,
+                max_lines=1, channel=channel,
             )
 
     # --- ! command handlers ---
@@ -1268,9 +1290,12 @@ class IRCBot:
                         text = params[1]
                         sender = self._sender_nick(prefix)
 
-                        # Only respond to channel messages, not from bots
-                        if (target.lower() == self.channel.lower()
+                        # Match any channel we've joined
+                        channels_lower = {ch.lower() for ch in self.channels}
+                        if (target.lower() in channels_lower
                                 and sender.lower() != self.nick.lower()):
+                            # Track which channel this message came from
+                            self._reply_channel = target
 
                             # ! commands — only handled by first bot
                             if self.handle_commands and text.startswith("!"):
@@ -1285,7 +1310,7 @@ class IRCBot:
                             elif self._is_mention(text):
                                 t = threading.Thread(
                                     target=self._handle_mention,
-                                    args=(sender, text),
+                                    args=(sender, text, target),
                                     daemon=True,
                                 )
                                 t.start()
@@ -1294,7 +1319,7 @@ class IRCBot:
                             elif self.nick.rstrip("_").lower() in ungated_nicks:
                                 t = threading.Thread(
                                     target=self._handle_ungated,
-                                    args=(sender, text),
+                                    args=(sender, text, target),
                                     daemon=True,
                                 )
                                 t.start()
@@ -1368,8 +1393,10 @@ def _make_say_handler(bots_by_nick):
                                  "available": list(bots_by_nick.keys())})
                 return
             max_lines = payload.get("max_lines", 4)
-            bot._say(text, max_lines=max_lines)
-            self._json(200, {"ok": True, "from": from_nick, "text": text})
+            channel = payload.get("channel")  # optional: target specific channel
+            bot._say(text, max_lines=max_lines, channel=channel)
+            self._json(200, {"ok": True, "from": from_nick, "text": text,
+                             "channel": channel or bot.channel})
 
         def _json(self, code, obj):
             body = json.dumps(obj).encode()
@@ -1428,6 +1455,7 @@ def main():
             port=IRC_PORT,
             password=IRC_PASSWORD,
             handle_commands=(i == 0),  # first bot handles ! commands
+            channels=IRC_CHANNELS,
         )
         bots.append(bot)
 
@@ -1441,7 +1469,8 @@ def main():
         f"Starting ngircd bridge: {[b.nick for b in bots]} → {INVOKE_BASE} "
         f"(source: {INVOKE_BASE_SOURCE})"
     )
-    print(f"IRC: {IRC_HOST}:{IRC_PORT} | Channel: {IRC_CHANNEL}")
+    channels_str = ", ".join(IRC_CHANNELS) if len(IRC_CHANNELS) > 1 else IRC_CHANNEL
+    print(f"IRC: {IRC_HOST}:{IRC_PORT} | Channels: {channels_str}")
     print(
         f"Codex bridge summary mode: {CODEX_BRIDGE_SUMMARY_MODE} "
         f"(raw_output={'yes' if CODEX_USE_RAW_OUTPUT else 'no'})"
