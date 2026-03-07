@@ -874,6 +874,46 @@
          prompt)
     prompt))
 
+(def ^:private task-mode-re
+  #"(?i)\bmode:\s*task\b")
+
+(def ^:private planning-only-re
+  #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
+
+(defn- invoke-execution-evidence
+  "Extract execution evidence map from invoke result metadata."
+  [result]
+  (let [invoke-meta (:invoke-meta result)
+        execution (or (:execution invoke-meta) (get invoke-meta "execution"))
+        raw-executed (or (:executed? execution) (get execution "executed?")
+                         (:executed execution) (get execution "executed"))
+        executed (cond
+                   (boolean? raw-executed) raw-executed
+                   (string? raw-executed) (boolean (parse-bool raw-executed))
+                   :else (boolean raw-executed))
+        tool-events (long (or (:tool-events execution) (get execution "tool-events") 0))
+        command-events (long (or (:command-events execution) (get execution "command-events") 0))]
+    {:executed executed
+     :tool-events tool-events
+     :command-events command-events}))
+
+(defn- codex-task-no-execution?
+  "True when a codex task-mode reply reports no execution evidence and isn't planning-only."
+  [agent-id prompt result]
+  (let [aid (some-> agent-id str str/lower-case)
+        text (some-> (:result result) str str/trim)
+        {:keys [executed tool-events command-events]} (invoke-execution-evidence result)]
+    (and (string? aid)
+         (str/starts-with? aid "codex")
+         (string? prompt)
+         (boolean (re-find task-mode-re prompt))
+         (string? text)
+         (not (str/blank? text))
+         (not (boolean (re-find planning-only-re text)))
+         (not executed)
+         (zero? tool-events)
+         (zero? command-events))))
+
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
    Body: {\"agent-id\": \"claude-1\", \"prompt\": \"hello\",
@@ -928,7 +968,15 @@
                              sid (:session-id result)]
                          (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                                 (or ev-opts []))
-                         (if (:ok result)
+                         (if (and (:ok result)
+                                  (codex-task-no-execution? agent-id effective-prompt result))
+                           (hk/send! channel
+                             (json-response 502 {:ok false
+                                                 :error "invoke-no-execution-evidence"
+                                                 :message "codex task-mode reply had no execution evidence"
+                                                 :session-id sid
+                                                 :invoke-meta (:invoke-meta result)}))
+                           (if (:ok result)
                            (do
                              (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
                                     (or ev-opts []))
@@ -945,7 +993,7 @@
                                (json-response (if (= :agent-not-found code) 404 502)
                                               {:ok false
                                                :error (name code)
-                                               :message msg})))))
+                                               :message msg}))))))
                        (catch Throwable t
                          (println (str "[invoke] async error: " (.getMessage t)))
                          (flush)
