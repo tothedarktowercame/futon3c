@@ -133,8 +133,10 @@
    isn't enough — e.g. opening magit, finding a file, arranging windows.
 
    Returns {:ok bool :output str}."
-  [elisp]
-  (run-emacsclient! elisp))
+  ([elisp]
+   (run-emacsclient! elisp))
+  ([elisp opts]
+   (run-emacsclient! elisp (:emacs-socket opts))))
 
 ;; =============================================================================
 ;; Per-peripheral render adaptors

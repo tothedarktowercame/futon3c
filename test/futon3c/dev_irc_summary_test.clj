@@ -62,6 +62,25 @@
     (is (.contains line "(trace-id invoke-42)"))
     (is (.contains line "[dispatch-relay]"))))
 
+(deftest record-invoke-delivery-uses-agent-emacs-socket
+  (testing "delivery updates target the same emacs socket used by the agent invoke buffer"
+    (let [calls (atom [])]
+      (with-redefs [futon3c.agency.registry/get-agent
+                    (fn [_agent-id] {:agent/metadata {:emacs-socket "workspace1"}})
+                    futon3c.blackboard/blackboard-eval!
+                    (fn [elisp opts]
+                      (swap! calls conj {:elisp elisp :opts opts})
+                      {:ok true :output "ok"})]
+        (is (true? (futon3c.dev/record-invoke-delivery!
+                    "claude-1"
+                    "invoke-xyz"
+                    {:surface "whistle"
+                     :destination "caller joe"
+                     :delivered? true
+                     :note "whistle-response"})))
+        (is (= 1 (count @calls)))
+        (is (= "workspace1" (get-in (first @calls) [:opts :emacs-socket])))))))
+
 (deftest invoke-response->irc-reply-covers-success-and-failure
   (testing "successful invoke with text preserves refs in summary"
     (let [out (#'futon3c.dev/invoke-response->irc-reply

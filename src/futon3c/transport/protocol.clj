@@ -292,7 +292,11 @@
           (let [invoke-id (or (:invoke_id parsed) (:invoke-id parsed))
                 session-id (or (:session_id parsed) (:session-id parsed))
                 result (:result parsed)
-                error (:error parsed)]
+                error (:error parsed)
+                invoke-meta (or (:invoke_meta parsed)
+                                (get parsed "invoke_meta")
+                                (:invoke-meta parsed)
+                                (get parsed "invoke-meta"))]
             (cond
               (or (nil? invoke-id) (not (string? invoke-id)))
               (transport-error :invalid-frame "invoke_result frame missing invoke_id")
@@ -301,11 +305,12 @@
               (transport-error :invalid-frame "invoke_result cannot contain both result and error")
 
               :else
-              {:ws/type :invoke-result
-               :invoke/id invoke-id
-               :invoke/result result
-               :invoke/error error
-               :invoke/session-id session-id}))
+              (cond-> {:ws/type :invoke-result
+                       :invoke/id invoke-id
+                       :invoke/result result
+                       :invoke/error error
+                       :invoke/session-id session-id}
+                (map? invoke-meta) (assoc :invoke/meta invoke-meta))))
 
           ;; --- Peripheral session frames (Seam 4) ---
           (= "peripheral_start" (str frame-type))

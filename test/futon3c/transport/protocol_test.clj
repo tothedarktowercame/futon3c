@@ -456,11 +456,16 @@
                   (json/generate-string {"type" "invoke_result"
                                          "invoke_id" "inv-1"
                                          "result" "ok"
-                                         "session_id" "sess-9"}))]
+                                         "session_id" "sess-9"
+                                         "invoke_meta" {"invoke-trace-id" "invoke-42"
+                                                        "execution" {"executed?" true}}}))]
       (is (= :invoke-result (:ws/type result)))
       (is (= "inv-1" (:invoke/id result)))
       (is (= "ok" (:invoke/result result)))
-      (is (= "sess-9" (:invoke/session-id result)))))
+      (is (= "sess-9" (:invoke/session-id result)))
+      (is (= {:invoke-trace-id "invoke-42"
+              :execution {:executed? true}}
+             (:invoke/meta result)))))
 
   (testing "invoke_result with missing invoke_id returns invalid-frame"
     (let [result (proto/parse-ws-message

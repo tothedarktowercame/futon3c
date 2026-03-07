@@ -434,11 +434,13 @@
                                      (when sid
                                        (reset! sid* sid)
                                        (persist-session-id! session-file sid))
-                                     (let [payload (cond-> {"type" "invoke_result"
+                                     (let [invoke-meta (not-empty (dissoc result :result :session-id :error))
+                                           payload (cond-> {"type" "invoke_result"
                                                             "invoke_id" invoke-id}
                                                      sid (assoc "session_id" sid)
                                                      (:error result) (assoc "error" (str (:error result)))
-                                                     (not (:error result)) (assoc "result" (or (:result result) "")))]
+                                                     (not (:error result)) (assoc "result" (or (:result result) ""))
+                                                     invoke-meta (assoc "invoke_meta" invoke-meta))]
                                        (try
                                          (send-json! ws payload)
                                          (catch Exception e
@@ -673,23 +675,52 @@
   (let [aid (some-> agent-id str str/trim)
         tid (some-> invoke-trace-id str str/trim)]
     (when (and (seq aid) (seq tid))
-      (let [buf-name (str "*invoke: " aid "*")
+      (let [agent-record (reg/get-agent aid)
+            emacs-socket (some-> agent-record :agent/metadata :emacs-socket str str/trim not-empty)
+            bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))
+            buf-name (str "*invoke: " aid "*")
             pending-line (str "Delivery: pending (trace-id " tid ")")
             receipt-line (format-delivery-receipt-line tid receipt)
             elisp (str "(let ((buf (get-buffer \"" (escape-elisp-string buf-name) "\")))"
-                       "(when buf "
+                       "(if (not buf) "
+                       "\"missing-buffer\" "
                        "(with-current-buffer buf "
                        "(let ((inhibit-read-only t)) "
                        "(goto-char (point-min)) "
                        "(if (search-forward \"" (escape-elisp-string pending-line) "\" nil t) "
-                       "(replace-match \"" (escape-elisp-string receipt-line) "\" t t) "
+                       "(progn (replace-match \"" (escape-elisp-string receipt-line) "\" t t) \"replaced\") "
                        "(progn "
                        "(goto-char (point-max)) "
                        "(unless (bolp) (insert \"\\n\")) "
-                       "(insert \"" (escape-elisp-string receipt-line) "\\n\"))))) "
-                       "nil)")]
-        (bb/blackboard-eval! elisp)
-        true))))
+                       "(insert \"" (escape-elisp-string receipt-line) "\\n\") "
+                       "\"appended\"))))))")]
+        (loop [attempt 1]
+          (let [{:keys [ok output]} (bb/blackboard-eval! elisp bb-opts)
+                out (some-> output str str/trim)
+                status (cond
+                         (#{"\"replaced\"" "replaced"} out) :replaced
+                         (#{"\"appended\"" "appended"} out) :appended
+                         (#{"\"missing-buffer\"" "missing-buffer"} out) :missing-buffer
+                         :else :unknown)
+                success? (and ok (#{:replaced :appended} status))]
+            (cond
+              success?
+              true
+
+              (< attempt 3)
+              (do
+                (Thread/sleep (* 120 attempt))
+                (recur (inc attempt)))
+
+              :else
+              (do
+                (println (str "[invoke-delivery] failed for " aid
+                              " trace-id=" tid
+                              " status=" (name status)
+                              " ok=" ok
+                              " output=" out))
+                (flush)
+                false))))))))
 
 ;; =============================================================================
 ;; ngircd IRC sender — persistent connection for Tickle paging
@@ -3347,9 +3378,12 @@ RESPOND WITH ONLY:
                               :emacs-socket claude-socket})]
               (rt/register-claude! {:agent-id "claude-1"
                                     :invoke-fn invoke-fn})
+              (let [claude-metadata (cond-> {}
+                                      claude-socket (assoc :emacs-socket claude-socket))]
               (reg/update-agent! "claude-1"
                                  :agent/type :claude
                                  :agent/invoke-fn invoke-fn
+                                 :agent/metadata claude-metadata
                                  :agent/capabilities [:explore :edit :test :coordination/execute])
               (when initial-sid
                 (reg/update-agent! "claude-1" :agent/session-id initial-sid))
@@ -3358,7 +3392,7 @@ RESPOND WITH ONLY:
                               (str " (emacs: " claude-socket ")"))
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
-                                                       (min 8 (count initial-sid))) ")"))))))
+                                                       (min 8 (count initial-sid))) ")")))))))
         ;; Register Codex — guard against missing binary
         codex-bin-name (env "CODEX_BIN" "codex")
         codex-bin-exists? (try

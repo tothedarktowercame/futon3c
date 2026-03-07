@@ -44,9 +44,44 @@
    :evidence/tags [:whistle :coordination]
    :evidence/session-id (or session-id (str "whistle-" (UUID/randomUUID)))})
 
+(defn- resolve-delivery-recorder
+  "Best-effort resolver for invoke delivery receipt recorder.
+   Returns (fn [agent-id invoke-trace-id receipt]) or nil."
+  []
+  (try
+    (when-let [dev-ns (find-ns 'futon3c.dev)]
+      (when-let [record-fn (ns-resolve dev-ns 'record-invoke-delivery!)]
+        (fn [agent-id invoke-trace-id receipt]
+          (record-fn agent-id invoke-trace-id receipt))))
+    (catch Throwable _
+      nil)))
+
+(def ^:dynamic *resolve-delivery-recorder*
+  "Indirection for delivery recorder lookup (test seam)."
+  resolve-delivery-recorder)
+
+(defn- record-whistle-delivery!
+  "Mark where a whistle response was delivered.
+   Delivery happens via return value to the whistle caller surface."
+  [agent-id author result]
+  (let [invoke-meta (:invoke-meta result)
+        invoke-trace-id (or (some-> invoke-meta :invoke-trace-id str str/trim not-empty)
+                            (some-> invoke-meta :invoke_trace_id str str/trim not-empty)
+                            (some-> invoke-meta (get "invoke-trace-id") str str/trim not-empty)
+                            (some-> invoke-meta (get "invoke_trace_id") str str/trim not-empty))]
+    (when invoke-trace-id
+      (when-let [record! (*resolve-delivery-recorder*)]
+        (try
+          (record! (str agent-id) invoke-trace-id
+                   {:surface "whistle"
+                    :destination (str "caller " (or (some-> author str str/trim not-empty) "unknown"))
+                    :delivered? true
+                    :note (if (:ok result) "whistle-response" "whistle-error")})
+          (catch Throwable _ nil))))))
+
 (defn whistle!
   "Send a synchronous request to an agent and wait for response.
-   Bell is 'tell', whistle is 'ask'.
+  Bell is 'tell', whistle is 'ask'.
 
    config:
      :agent-id       — target agent (string or TypedAgentId)
@@ -94,14 +129,23 @@
                          aid-val prompt response-str status
                          (or author "whistle-dispatcher")
                          (:session-id result))))
+      ;; Record delivery on whistle surface (best-effort, no impact on return value).
+      (record-whistle-delivery! aid-val author result)
+      (let [invoke-meta (:invoke-meta result)
+            invoke-trace-id (or (some-> invoke-meta :invoke-trace-id str str/trim not-empty)
+                                (some-> invoke-meta :invoke_trace_id str str/trim not-empty)
+                                (some-> invoke-meta (get "invoke-trace-id") str str/trim not-empty)
+                                (some-> invoke-meta (get "invoke_trace_id") str str/trim not-empty))]
       ;; Return whistle-shaped result
       (if (:ok result)
-        {:whistle/ok true
-         :whistle/response (:result result)
-         :whistle/agent-id aid-val
-         :whistle/session-id (:session-id result)
-         :whistle/at (now-str)}
-        {:whistle/ok false
-         :whistle/error response-str
-         :whistle/agent-id aid-val
-         :whistle/at (now-str)}))))
+        (cond-> {:whistle/ok true
+                 :whistle/response (:result result)
+                 :whistle/agent-id aid-val
+                 :whistle/session-id (:session-id result)
+                 :whistle/at (now-str)}
+          invoke-trace-id (assoc :whistle/invoke-trace-id invoke-trace-id))
+        (cond-> {:whistle/ok false
+                 :whistle/error response-str
+                 :whistle/agent-id aid-val
+                 :whistle/at (now-str)}
+          invoke-trace-id (assoc :whistle/invoke-trace-id invoke-trace-id)))))))

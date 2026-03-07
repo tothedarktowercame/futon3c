@@ -149,6 +149,75 @@
           (is (true? (:whistle/ok result)))
           (is (= 1800000 @captured-timeout)))))))
 
+(deftest whistle-records-delivery-when-invoke-trace-id-present
+  (testing "whistle! records delivery receipt for trace-id-bearing invokes"
+    (let [calls (atom [])]
+      (with-redefs [registry/invoke-agent!
+                    (fn [_aid _prompt _timeout-ms]
+                      {:ok true
+                       :result "pong"
+                       :session-id "s-codex-1"
+                       :invoke-meta {:invoke-trace-id "invoke-whistle-1"}})
+                    whistles/*resolve-delivery-recorder*
+                    (fn []
+                      (fn [agent-id invoke-trace-id receipt]
+                        (swap! calls conj {:agent-id agent-id
+                                           :invoke-trace-id invoke-trace-id
+                                           :receipt receipt})))]
+        (let [result (whistles/whistle!
+                      {:agent-id "codex-1"
+                       :prompt "ping"
+                       :author "claude-1"})]
+          (is (true? (:whistle/ok result)))
+          (is (= "invoke-whistle-1" (:whistle/invoke-trace-id result)))
+          (is (= [{:agent-id "codex-1"
+                   :invoke-trace-id "invoke-whistle-1"
+                   :receipt {:surface "whistle"
+                             :destination "caller claude-1"
+                             :delivered? true
+                             :note "whistle-response"}}]
+                 @calls)))))))
+
+(deftest whistle-records-delivery-with-string-trace-id-key
+  (testing "whistle! handles invoke-meta maps whose trace-id key is a string"
+    (let [calls (atom [])]
+      (with-redefs [registry/invoke-agent!
+                    (fn [_aid _prompt _timeout-ms]
+                      {:ok true
+                       :result "pong"
+                       :session-id "s-codex-1"
+                       :invoke-meta {"invoke-trace-id" "invoke-whistle-str"}})
+                    whistles/*resolve-delivery-recorder*
+                    (fn []
+                      (fn [agent-id invoke-trace-id receipt]
+                        (swap! calls conj {:agent-id agent-id
+                                           :invoke-trace-id invoke-trace-id
+                                           :receipt receipt})))]
+        (let [result (whistles/whistle!
+                      {:agent-id "codex-1"
+                       :prompt "ping"
+                       :author "claude-1"})]
+          (is (true? (:whistle/ok result)))
+          (is (= "invoke-whistle-str" (:whistle/invoke-trace-id result)))
+          (is (= "invoke-whistle-str" (:invoke-trace-id (first @calls)))))))))
+
+(deftest whistle-skips-delivery-recording-without-trace-id
+  (testing "whistle! does not try to record delivery when invoke-meta has no trace id"
+    (let [called? (atom false)]
+      (with-redefs [registry/invoke-agent!
+                    (fn [_aid _prompt _timeout-ms]
+                      {:ok true :result "ok" :session-id "s-1"})
+                    whistles/*resolve-delivery-recorder*
+                    (fn []
+                      (fn [_agent-id _invoke-trace-id _receipt]
+                        (reset! called? true)))]
+        (let [result (whistles/whistle!
+                      {:agent-id "codex-1"
+                       :prompt "ping"
+                       :author "joe"})]
+          (is (true? (:whistle/ok result)))
+          (is (false? @called?)))))))
+
 ;; =============================================================================
 ;; Validation guards
 ;; =============================================================================

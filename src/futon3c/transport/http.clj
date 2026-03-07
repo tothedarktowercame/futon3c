@@ -1096,17 +1096,21 @@
                                  :evidence-store evidence-store})]
                     (if (:whistle/ok result)
                       (hk/send! channel
-                        (json-response 200 {:ok true
-                                            :response (:whistle/response result)
-                                            :agent-id (:whistle/agent-id result)
-                                            :session-id (:whistle/session-id result)}))
+                        (json-response 200 (cond-> {:ok true
+                                                    :response (:whistle/response result)
+                                                    :agent-id (:whistle/agent-id result)
+                                                    :session-id (:whistle/session-id result)}
+                                             (:whistle/invoke-trace-id result)
+                                             (assoc :invoke-trace-id (:whistle/invoke-trace-id result)))))
                       (let [err (:whistle/error result)]
                         (hk/send! channel
                           (json-response
                            (if (and (string? err) (.contains ^String err "not registered")) 404 502)
-                           {:ok false
-                            :error err
-                            :agent-id (:whistle/agent-id result)})))))
+                           (cond-> {:ok false
+                                    :error err
+                                    :agent-id (:whistle/agent-id result)}
+                             (:whistle/invoke-trace-id result)
+                             (assoc :invoke-trace-id (:whistle/invoke-trace-id result))))))))
                   (catch Throwable t
                     (println (str "[whistle] async error: " (.getMessage t)))
                     (flush)
@@ -1186,15 +1190,20 @@
           :else
           (if-let [record-fn (ns-resolve 'futon3c.dev 'record-invoke-delivery!)]
             (try
-              (record-fn (str agent-id) (str invoke-trace-id)
-                         {:surface (str (or surface "unknown"))
-                          :destination (str (or destination "unknown"))
-                          :delivered? delivered
-                          :note (str (or note ""))})
-              (json-response 200 {:ok true
-                                  :agent-id (str agent-id)
-                                  :invoke-trace-id (str invoke-trace-id)
-                                  :recorded true})
+              (let [recorded? (boolean
+                               (record-fn (str agent-id) (str invoke-trace-id)
+                                          {:surface (str (or surface "unknown"))
+                                           :destination (str (or destination "unknown"))
+                                           :delivered? delivered
+                                           :note (str (or note ""))}))]
+                (if recorded?
+                  (json-response 200 {:ok true
+                                      :agent-id (str agent-id)
+                                      :invoke-trace-id (str invoke-trace-id)
+                                      :recorded true})
+                  (json-response 502 {:ok false
+                                      :err "invoke-delivery-record-failed"
+                                      :message "delivery receipt could not be written"})))
               (catch Throwable t
                 (json-response 502 {:ok false
                                     :err "invoke-delivery-record-failed"

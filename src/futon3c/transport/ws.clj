@@ -329,11 +329,16 @@
                  ;; --- Invoke result (WS bridge) ---
                  :invoke-result
                  (let [agent-id (:agent-id conn)
+                       invoke-meta (when (map? (:invoke/meta parsed))
+                                     (apply dissoc (:invoke/meta parsed)
+                                            [:result :session-id :error]))
+                       invoke-result (cond-> {:result (:invoke/result parsed)
+                                              :session-id (:invoke/session-id parsed)
+                                              :error (:invoke/error parsed)}
+                                       (seq invoke-meta) (merge invoke-meta))
                        resolved? (ws-invoke/resolve! agent-id
                                                      (:invoke/id parsed)
-                                                     {:result (:invoke/result parsed)
-                                                      :session-id (:invoke/session-id parsed)
-                                                      :error (:invoke/error parsed)})]
+                                                     invoke-result)]
                    (when-not resolved?
                      (send-fn ch (proto/render-ws-frame
                                   (transport-error :unknown-invoke

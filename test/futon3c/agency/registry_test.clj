@@ -118,6 +118,30 @@
         (is (= "hi ack" (:result result)))
         (is (= "sess-ws" (:session-id result)))))))
 
+(deftest invoke-falls-back-to-ws-with-invoke-meta
+  (testing "invoke-agent! surfaces invoke-meta from WS invoke_result payload"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-ws-meta")
+      :type :codex
+      :invoke-fn nil
+      :capabilities []})
+    (with-redefs [ws-invoke/available? (constantly true)
+                  ws-invoke/invoke! (fn [_ _ _ _]
+                                      {:result "ok"
+                                       :session-id "sess-ws-meta"
+                                       :invoke-trace-id "invoke-ws-123"
+                                       :execution {:executed? true
+                                                   :tool-events 1
+                                                   :command-events 0}})]
+      (let [result (reg/invoke-agent! (fix/make-agent-id "codex-ws-meta") "hi" 1000)]
+        (is (:ok result))
+        (is (= "sess-ws-meta" (:session-id result)))
+        (is (= {:invoke-trace-id "invoke-ws-123"
+                :execution {:executed? true
+                            :tool-events 1
+                            :command-events 0}}
+               (:invoke-meta result)))))))
+
 (deftest invoke-surfaces-invoke-meta
   (testing "invoke-agent! returns invoke-meta when invoke-fn includes extra runtime data"
     (reg/register-agent!
