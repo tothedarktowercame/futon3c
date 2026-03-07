@@ -120,17 +120,22 @@
 
 (defn- extract-header
   "Extract a Key: value from markdown text.
-   Matches three formats:
-   - **Key:** value      (bold key)
+   Matches four formats:
+   - **Key:** value      (bold key, colon inside)
+   - **Key**: value      (bold key, colon outside)
    - Key: value          (plain key)
    - ## Key: value       (heading key)"
   [text key-name]
   (let [quoted (java.util.regex.Pattern/quote key-name)
-        ;; Try bold format first: **Key:** value
-        bold-pat (re-pattern (str "(?m)^\\*\\*" quoted ":\\*\\*\\s*(.+)$"))
+        ;; Try bold format first: **Key:** value (colon inside bold)
+        bold-pat (re-pattern (str "(?mi)^\\*\\*" quoted ":\\*\\*\\s*(.+)$"))
+        ;; Also try: **Key**: value (colon outside bold)
+        bold-pat2 (re-pattern (str "(?mi)^\\*\\*" quoted "\\*\\*:\\s*(.+)$"))
         ;; Fallback: plain or heading format: Key: value or ## Key: value
         plain-pat (re-pattern (str "(?mi)^(?:#{1,3}\\s+)?" quoted ":\\s*(.+)$"))]
     (or (when-let [m (re-find bold-pat text)]
+          (str/trim (second m)))
+        (when-let [m (re-find bold-pat2 text)]
           (str/trim (second m)))
         (when-let [m (re-find plain-pat text)]
           (str/trim (second m))))))
@@ -148,7 +153,8 @@
    - :unknown    — could not classify"
   [raw]
   (when raw
-    (let [s (-> raw str/trim str/lower-case (str/replace #"^:" ""))]
+    ;; Strip markdown bold markers and leading colons, then lowercase
+    (let [s (-> raw str/trim (str/replace #"\*+" "") str/trim str/lower-case (str/replace #"^:" ""))]
       (cond
         (str/starts-with? s "complete")         :complete
         (str/starts-with? s "done")             :complete
@@ -165,6 +171,9 @@
         (str/starts-with? s "open")             :in-progress
         (str/starts-with? s "re-opened")        :in-progress
         (str/starts-with? s "greenfield")       :ready
+        (str/starts-with? s "phase 0 done")     :complete
+        (str/starts-with? s "superseded")       :complete
+        (str/starts-with? s "abandoned")        :nonstarter
         ;; Derivation keywords: check if the *derivation step itself* is marked complete.
         ;; "INSTANTIATE complete" → :complete (the mission finished its last step)
         ;; "INSTANTIATE (complete)" → :complete (parenthetical variant)
@@ -283,11 +292,15 @@
                              top-level? (= parent-path root-path)
                              canonical? (and (str/starts-with? name "M-")
                                              (str/ends-with? name ".md"))
+                             ;; Legacy: only pick up non-M-prefix files that
+                             ;; look like missions (M1-, V-, QUEUE-). Exclude
+                             ;; random specs, scorecards, and artifact docs.
                              legacy-top-level? (and top-level?
                                                     (str/ends-with? name ".md")
                                                     (not (str/starts-with? name "M-"))
                                                     (not (#{"README.md"
-                                                            "mission-template.md"} name)))]
+                                                            "mission-template.md"} name))
+                                                    (re-find #"^(?:M\d|V-|QUEUE-)" name))]
                          (or canonical? legacy-top-level?)))))
            (sort-by #(.getPath %))
            (mapv #(parse-mission-md (.getPath %) repo-name)))
