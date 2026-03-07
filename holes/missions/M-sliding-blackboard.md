@@ -65,6 +65,6 @@ When Claude emits code blocks in the chat, instead of rendering them inline
 - Transport-aware: the Emacs transport could have special handling for
   structured content, similar to how the IRC transport handles message types
 
-## Status
+## Status: DEFERRED (2026-02-15)
 
 Idea captured from live conversation. Not yet implemented.

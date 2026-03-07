@@ -1047,6 +1047,7 @@ class IRCBot:
                     by_status.setdefault(s, []).append(m)
                 emitted = False
                 for status in ["in-progress", "ready", "blocked",
+                               "deferred", "nonstarter",
                                "complete", "unknown"]:
                     items = by_status.get(status, [])
                     if items:
