@@ -135,13 +135,15 @@ IRC lane switch for `dev`:
   - joining both channels does not imply automatic cross-channel replies;
     bridge replies should return to the channel that originated the mention
     unless a separate relay mode is explicitly introduced
-  - when combined with `--remote-irc`, the Windows lane now defaults to a real
-    math-agent identity:
-    - `FUTON3C_CODEX_AGENT_ID=zcodex-1`
-    - `NICK_AGENT_MAP=zcodex:zcodex-1`
-    - `CODEX_SESSION_FILE=<repo>/.state/codex-math/session-id`
-  - this keeps the math prover lane distinct from Joe's `codex-1` and from
-    the local VS Code lane `codex-vscode`
+  - when combined with `--remote-irc`, the current Windows trial model keeps:
+    - `FUTON3C_CODEX_AGENT_ID=codex-1`
+    - `NICK_AGENT_MAP=zcodex:codex-1`
+    - `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
+  - this means `zcodex` is an IRC nick alias for the shared remote IRC codex
+    lane, not a separate local math-agent identity
+  - `codex-vscode` still remains the separate VS Code lane; this trial only
+    asks whether one shared `codex-1` worker is already sufficient for both
+    `#zabuton` and `#math`
 - you can still override IRC target defaults by setting `IRC_HOST`, `IRC_PORT`,
   and/or `IRC_CHANNEL` before launch.
 
