@@ -187,3 +187,29 @@
           (is (some? (:error result)))
           (is (.contains (str (:error result))
                          "work-claim without execution evidence after enforcement retry")))))))
+
+(deftest codex-invoke-fails-brief-mission-reply-without-execution
+  (testing "mission/work prompt still requires execution even when not explicitly mode: task"
+    (let [responses (atom
+                     [{:result "@joe FM-001 state of play captured in data/proof-state/FM-001.edn"
+                       :session-id "sess-1"
+                       :execution {:executed? false :tool-events 0 :command-events 0}}
+                      {:result "@joe FM-001 still captured."
+                       :session-id "sess-1"
+                       :execution {:executed? false :tool-events 0 :command-events 0}}])]
+      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
+                    (fn [_opts]
+                      (fn [_prompt _sid]
+                        (let [resp (first @responses)]
+                          (swap! responses subvec 1)
+                          resp)))
+                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
+                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
+                    futon3c.dev/persist-session-id! (fn [& _] nil)
+                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
+        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
+              result (invoke-fn "@codex can you give me a summary of the state of play on FM-001" nil)]
+          (is (some? (:error result)))
+          (is (.contains (str (:error result))
+                         "work-claim without execution evidence after enforcement retry")))))))

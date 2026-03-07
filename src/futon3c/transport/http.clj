@@ -877,6 +877,9 @@
 (def ^:private task-mode-re
   #"(?i)\bmode:\s*task\b")
 
+(def ^:private mission-work-re
+  #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b")
+
 (def ^:private planning-only-re
   #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
 
@@ -906,7 +909,8 @@
     (and (string? aid)
          (str/starts-with? aid "codex")
          (string? prompt)
-         (boolean (re-find task-mode-re prompt))
+         (or (boolean (re-find task-mode-re prompt))
+             (boolean (re-find mission-work-re prompt)))
          (string? text)
          (not (str/blank? text))
          (not (boolean (re-find planning-only-re text)))

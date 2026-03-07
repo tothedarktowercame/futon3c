@@ -314,6 +314,16 @@
            :result "captured plan"
            :invoke-meta {:execution {:executed? false
                                      :tool-events 0
+                                     :command-events 0}}}))))
+  (testing "mission/work prompts are blocked even without explicit mode marker"
+    (is (true?
+         (#'futon3c.transport.http/codex-task-no-execution?
+          "codex-1"
+          "@codex can you give me a summary of the state of play on FM-001"
+          {:ok true
+           :result "@joe FM-001 is in FALSIFY mode with refs"
+           :invoke-meta {:execution {:executed? false
+                                     :tool-events 0
                                      :command-events 0}}})))))
 
 (deftest invoke-registered-codex-agent

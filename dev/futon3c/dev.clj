@@ -3029,6 +3029,14 @@ RESPOND WITH ONLY:
   [prompt]
   (boolean (re-find #"(?i)\bmode:\s*task\b" (str (or prompt "")))))
 
+(defn- codex-mission-work-prompt?
+  "True when prompt is a mission/work request that should require execution evidence.
+   Keeps this enforcement in the invoke engine, independent of bridge classification."
+  [prompt]
+  (boolean
+   (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b"
+            (str (or prompt "")))))
+
 (defn- codex-no-execution-evidence?
   "True when invoke result reports no executed/tool/command evidence."
   [result]
@@ -3057,11 +3065,12 @@ RESPOND WITH ONLY:
          (boolean (re-find codex-work-claim-re text)))))
 
 (defn- codex-task-reply-without-execution?
-  "True when task-mode reply has no execution evidence and is not planning-only.
-   This prevents non-evidenced 'done' text from being emitted for task turns."
+  "True when execution-required reply has no execution evidence and is not planning-only.
+   This prevents non-evidenced 'done' text from being emitted for work turns."
   [prompt result]
   (let [text (str/trim (or (:result result) ""))]
-    (and (codex-task-mode-prompt? prompt)
+    (and (or (codex-task-mode-prompt? prompt)
+             (codex-mission-work-prompt? prompt))
          (codex-no-execution-evidence? result)
          (not (str/blank? text))
          (not (codex-planning-only-text? text)))))
