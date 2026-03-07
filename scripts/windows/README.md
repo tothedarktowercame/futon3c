@@ -60,6 +60,9 @@ ngircd bridge launch examples:
 - when `BRIDGE_BOTS=codex`, the bridge wrapper defaults
   `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
   (unless already set) so codex is the only active bot lane.
+- the Windows bridge wrapper defaults `CODEX_BRIDGE_SUMMARY_MODE=raw` so codex
+  replies can preserve multi-line IRC bodies; set it to `summary` before launch
+  to restore the older one-line summary behavior.
 
 Full-stack launch (`dev`) behavior:
 - runs `stop-futon1a-windows.bat`
@@ -91,6 +94,8 @@ Full-stack launch (`dev`) behavior:
   `stop-dev-stack-windows.bat` on exit or `Ctrl-C`, so the bridge and local
   runtime ports are torn down instead of being left behind as orphaned
   processes
+- defaults `CODEX_BRIDGE_SUMMARY_MODE=raw` unless already set so multiline
+  codex replies survive the bridge on Windows by default
 - starts `dev-core` in the background with output streamed to the same console
 - waits for runtime ports, then starts `ngircd-bridge`
 

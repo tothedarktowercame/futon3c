@@ -128,6 +128,8 @@ INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
+CODEX_BRIDGE_SUMMARY_MODE = os.environ.get("CODEX_BRIDGE_SUMMARY_MODE", "summary").strip().lower()
+CODEX_USE_RAW_OUTPUT = CODEX_BRIDGE_SUMMARY_MODE == "raw"
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
@@ -329,6 +331,7 @@ class IRCBot:
             "queue_depth": self._invoke_queue.qsize(),
             "queue_max": INVOKE_QUEUE_MAX,
             "handle_commands": self.handle_commands,
+            "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
 
     def _is_brief(self, text):
@@ -608,13 +611,28 @@ class IRCBot:
                     else:
                         summary = self._summarize_invoke_result(response.get("result", ""))
                         stats = self._execution_stats(response.get("invoke_meta"))
+                        execution_note = ""
                         if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-                            summary = (
-                                f"{summary} "
+                            execution_note = (
                                 f"[no execution evidence: tool-events={stats['tool_events']}, "
                                 f"command-events={stats['command_events']}]"
                             )
+                            summary = f"{summary} {execution_note}".strip()
                         sid = response.get("session_id")
+                        if CODEX_USE_RAW_OUTPUT:
+                            raw_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
+                            if raw_text:
+                                refs = self._extract_artifact_refs(raw_text)
+                                header_parts = [f"[done {job_id}]"]
+                                if sid:
+                                    header_parts.append(f"(session {sid[:8]})")
+                                if refs:
+                                    header_parts.append(f"refs: {', '.join(refs[:3])}")
+                                if execution_note:
+                                    header_parts.append(execution_note)
+                                header = " ".join(part for part in header_parts if part).strip()
+                                self._say(f"{header}\n{raw_text}", max_lines=6)
+                                continue
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})", max_lines=2)
                         else:
@@ -1236,6 +1254,8 @@ def _write_health(bots, started_at):
         "started_at": started_at,
         "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "invoke_base": INVOKE_BASE,
+        "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
+        "raw_output": CODEX_USE_RAW_OUTPUT,
         "irc_host": IRC_HOST,
         "irc_port": IRC_PORT,
         "channel": IRC_CHANNEL,
@@ -1353,6 +1373,10 @@ def main():
         f"(source: {INVOKE_BASE_SOURCE})"
     )
     print(f"IRC: {IRC_HOST}:{IRC_PORT} | Channel: {IRC_CHANNEL}")
+    print(
+        f"Codex bridge summary mode: {CODEX_BRIDGE_SUMMARY_MODE} "
+        f"(raw_output={'yes' if CODEX_USE_RAW_OUTPUT else 'no'})"
+    )
     print(f"Commands handled by: {bots[0].nick}")
 
     threads = []
