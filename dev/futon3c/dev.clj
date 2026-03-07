@@ -1475,9 +1475,17 @@ RESPOND WITH ONLY:
              auto-restart? (if (contains? opts :auto-restart?)
                              (:auto-restart? opts)
                              true)
+             interval-ms (or (:interval-ms opts) 60000)
+             threshold-seconds (or (:threshold-seconds opts) 300)
+             ;; Scan history for CYDER state-fn and blackboard
+             !scan-history (atom {:cycles-completed 0
+                                  :last-cycle nil
+                                  :recent-history []
+                                  :interval-ms interval-ms
+                                  :threshold-seconds threshold-seconds})
              config {:evidence-store evidence-store
-                     :interval-ms (or (:interval-ms opts) 60000)
-                     :threshold-seconds (or (:threshold-seconds opts) 300)
+                     :interval-ms interval-ms
+                     :threshold-seconds threshold-seconds
                      :page-config {;; Skip bell (always returns "paged" without actually
                                    ;; reaching the agent). Go straight to IRC, where the
                                    ;; dispatch relay invokes the agent for real.
@@ -1543,15 +1551,61 @@ RESPOND WITH ONLY:
                                            (future
                                              (when-let [restart-fn (resolve 'futon3c.dev/restart-agents!)]
                                                (restart-fn)))))}
-                     :on-cycle (fn [{:keys [stalled paged]}]
-                                 (when (seq stalled)
-                                   (println (str "[tickle] stalled: " stalled
-                                                 " paged: " paged))))}
+                     :on-cycle (fn [{:keys [scanned stalled paged escalated] :as cycle-result}]
+                                 (let [entry (assoc cycle-result :at (str (Instant/now)))]
+                                   ;; Track history (keep last 20 cycles)
+                                   (swap! !scan-history
+                                          (fn [h]
+                                            (-> h
+                                                (update :cycles-completed inc)
+                                                (assoc :last-cycle entry)
+                                                (update :recent-history
+                                                        #(vec (take-last 20 (conj % entry)))))))
+                                   ;; Project to blackboard
+                                   (bb/project! :tickle @!scan-history)
+                                   ;; Touch CYDER process
+                                   (cyder/touch! "tickle-watchdog")
+                                   ;; Console log on stalls
+                                   (when (seq stalled)
+                                     (println (str "[tickle] stalled: " stalled
+                                                   " paged: " paged)))))}
              handle (tickle/start-watchdog! config)]
          (reset! !tickle handle)
+         ;; Register tickle-1 as an agent (invoke runs a scan cycle)
+         (when-not (reg/agent-registered? "tickle-1")
+           (rt/register-tickle!
+            {:agent-id "tickle-1"
+             :invoke-fn (fn [prompt _session-id]
+                          (let [cycle-result (tickle/run-scan-cycle! config)]
+                            {:result (pr-str cycle-result) :session-id nil}))}))
+         ;; Register watchdog with CYDER for inspection
+         (cyder/deregister! "tickle-watchdog")
+         (cyder/register!
+          {:id "tickle-watchdog"
+           :type :daemon
+           :layer :repl
+           :stop-fn (fn []
+                      ((:stop-fn handle))
+                      (reset! !tickle nil))
+           :state-fn (fn [] @!scan-history)
+           :step-fn (fn []
+                      (let [cycle-result (tickle/run-scan-cycle! config)
+                            entry (assoc cycle-result :at (str (Instant/now)))]
+                        (swap! !scan-history
+                               (fn [h]
+                                 (-> h
+                                     (update :cycles-completed inc)
+                                     (assoc :last-cycle entry)
+                                     (update :recent-history
+                                             #(vec (take-last 20 (conj % entry)))))))
+                        (bb/project! :tickle @!scan-history)
+                        cycle-result))
+           :metadata {:interval-ms interval-ms
+                      :threshold-seconds threshold-seconds
+                      :auto-restart? auto-restart?}})
          (println (str "[dev] Tickle started: interval="
-                       (or (:interval-ms opts) 60000) "ms"
-                       " threshold=" (or (:threshold-seconds opts) 300) "s"
+                       interval-ms "ms"
+                       " threshold=" threshold-seconds "s"
                        " auto-restart=" auto-restart?
                        (when-not send-fn " (no IRC send-fn)")))
          handle))))
@@ -1562,6 +1616,7 @@ RESPOND WITH ONLY:
   (when-let [handle @!tickle]
     ((:stop-fn handle))
     (reset! !tickle nil)
+    (cyder/deregister! "tickle-watchdog")
     (println "[dev] Tickle stopped.")))
 
 ;; =============================================================================

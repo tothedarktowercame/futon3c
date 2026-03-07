@@ -327,6 +327,47 @@
   (format-proof-state state))
 
 ;; -----------------------------------------------------------------------------
+;; :tickle — watchdog scan results, stall/page history
+;; -----------------------------------------------------------------------------
+
+(defn- format-tickle-state
+  "Format tickle watchdog state for blackboard."
+  [state]
+  (let [cycles (:cycles-completed state 0)
+        last-cycle (:last-cycle state)
+        history (:recent-history state)
+        interval-ms (:interval-ms state)
+        threshold-s (:threshold-seconds state)]
+    (str "Tickle Watchdog\n"
+         "Cycles: " cycles
+         (when interval-ms (str "  Interval: " (quot interval-ms 1000) "s"))
+         (when threshold-s (str "  Threshold: " threshold-s "s"))
+         "\n"
+         (when last-cycle
+           (str "\nLast scan: " (:at last-cycle) "\n"
+                "  Scanned: " (:scanned last-cycle 0)
+                "  Stalled: " (count (:stalled last-cycle))
+                "  Paged: " (count (:paged last-cycle))
+                "  Escalated: " (count (:escalated last-cycle))
+                "\n"
+                (when (seq (:stalled last-cycle))
+                  (str "  Stalled agents: " (str/join ", " (:stalled last-cycle)) "\n"))))
+         (when (seq history)
+           (str "\nRecent (" (count history) " cycles):\n"
+                (str/join "\n"
+                  (map (fn [{:keys [at stalled paged]}]
+                         (str "  " at
+                              (if (seq stalled)
+                                (str " STALL [" (str/join "," stalled) "]"
+                                     (when (seq paged) (str " paged:" (count paged))))
+                                " ok")))
+                       (reverse history)))
+                "\n")))))
+
+(defmethod render-blackboard :tickle [_ state]
+  (format-tickle-state state))
+
+;; -----------------------------------------------------------------------------
 ;; :agents — registered agent status overview
 ;; -----------------------------------------------------------------------------
 
