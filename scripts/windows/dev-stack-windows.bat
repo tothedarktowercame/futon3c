@@ -11,11 +11,14 @@ set "DEV_STACK_SUPERVISOR=%SCRIPT_DIR%\dev-stack-supervisor.ps1"
 set "DEV_STACK_BODY=%SCRIPT_DIR%\dev-stack-body-windows.bat"
 
 set "REMOTE_IRC=0"
+set "MATH_IRC=0"
 set "FORWARD_ARGS="
 :parse_args
 if "%~1"=="" goto args_parsed
 if /i "%~1"=="--remote-irc" (
   set "REMOTE_IRC=1"
+) else if /i "%~1"=="--math-irc" (
+  set "MATH_IRC=1"
 ) else (
   if defined FORWARD_ARGS (
     set "FORWARD_ARGS=!FORWARD_ARGS! %1"
@@ -78,6 +81,22 @@ if /i "%FUTON3C_IRC_LANE_NORMALIZED%"=="local" (
   1>&2 echo [dev-stack-windows] ERROR: unsupported FUTON3C_IRC_LANE=%FUTON3C_IRC_LANE%.
   1>&2 echo [dev-stack-windows] Expected: local ^| linode ^(alias: joe^)
   exit /b 1
+)
+
+if "%MATH_IRC%"=="1" (
+  set "IRC_CHANNELS_NORMALIZED=%IRC_CHANNELS: =%"
+  if not defined IRC_CHANNELS (
+    set "IRC_CHANNELS=#math"
+  ) else (
+    set "IRC_CHANNELS_SCAN=%IRC_CHANNELS_NORMALIZED%"
+    set "IRC_CHANNELS_SCAN=!IRC_CHANNELS_SCAN:#math=!"
+    if "!IRC_CHANNELS_SCAN!"=="%IRC_CHANNELS_NORMALIZED%" (
+      set "IRC_CHANNELS=%IRC_CHANNELS_NORMALIZED%,#math"
+    ) else (
+      set "IRC_CHANNELS=%IRC_CHANNELS_NORMALIZED%"
+    )
+  )
+  echo [dev-stack-windows] Additional IRC channels: !IRC_CHANNELS!
 )
 
 if not defined FUTON3C_REPOS (

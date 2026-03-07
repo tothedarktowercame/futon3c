@@ -116,6 +116,12 @@ IRC lane switch for `dev`:
   - defaults `FUTON3C_IRC_PORT=0` when unset (disable local built-in IRC)
   - bridge defaults to `IRC_HOST=172.236.28.208`, `IRC_PORT=6667`,
     `IRC_CHANNEL=#zabuton`
+- `--math-irc`
+  - ensures `IRC_CHANNELS` includes `#math`
+  - preserves the primary channel selected by the active lane
+    (`#futon` local, `#zabuton` linode)
+  - intended for `README-math.md` bring-up where `zcodex` should join both
+    `#zabuton` and `#math`
 - you can still override IRC target defaults by setting `IRC_HOST`, `IRC_PORT`,
   and/or `IRC_CHANNEL` before launch.
 
@@ -124,6 +130,8 @@ Examples:
   - `scripts/windows/futon-windows.bat dev`
 - Joe/Linode IRC lane:
   - `scripts/windows/futon-windows.bat dev --remote-irc`
+- Joe/Linode IRC lane plus `#math`:
+  - `scripts/windows/futon-windows.bat dev --remote-irc --math-irc`
 - Joe/Linode IRC lane on `#futon` instead:
   - `set IRC_CHANNEL=#futon && scripts/windows/futon-windows.bat dev --remote-irc`
 
