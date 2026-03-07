@@ -44,9 +44,40 @@
    :evidence/tags [:whistle :coordination]
    :evidence/session-id (or session-id (str "whistle-" (UUID/randomUUID)))})
 
+(defn- resolve-delivery-recorder
+  "Best-effort resolver for invoke delivery receipt recorder.
+   Returns (fn [agent-id invoke-trace-id receipt]) or nil."
+  []
+  (try
+    (when-let [dev-ns (find-ns 'futon3c.dev)]
+      (when-let [record-fn (ns-resolve dev-ns 'record-invoke-delivery!)]
+        (fn [agent-id invoke-trace-id receipt]
+          (record-fn agent-id invoke-trace-id receipt))))
+    (catch Throwable _
+      nil)))
+
+(def ^:dynamic *resolve-delivery-recorder*
+  "Indirection for delivery recorder lookup (test seam)."
+  resolve-delivery-recorder)
+
+(defn- record-whistle-delivery!
+  "Mark where a whistle response was delivered.
+   Delivery happens via return value to the whistle caller surface."
+  [agent-id author result]
+  (let [invoke-trace-id (some-> result :invoke-meta :invoke-trace-id str str/trim not-empty)]
+    (when invoke-trace-id
+      (when-let [record! (*resolve-delivery-recorder*)]
+        (try
+          (record! (str agent-id) invoke-trace-id
+                   {:surface "whistle"
+                    :destination (str "caller " (or (some-> author str str/trim not-empty) "unknown"))
+                    :delivered? true
+                    :note (if (:ok result) "whistle-response" "whistle-error")})
+          (catch Throwable _ nil))))))
+
 (defn whistle!
   "Send a synchronous request to an agent and wait for response.
-   Bell is 'tell', whistle is 'ask'.
+  Bell is 'tell', whistle is 'ask'.
 
    config:
      :agent-id       — target agent (string or TypedAgentId)
@@ -94,6 +125,8 @@
                          aid-val prompt response-str status
                          (or author "whistle-dispatcher")
                          (:session-id result))))
+      ;; Record delivery on whistle surface (best-effort, no impact on return value).
+      (record-whistle-delivery! aid-val author result)
       ;; Return whistle-shaped result
       (if (:ok result)
         {:whistle/ok true
