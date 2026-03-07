@@ -70,7 +70,7 @@
                     futon3c.blackboard/blackboard-eval!
                     (fn [elisp opts]
                       (swap! calls conj {:elisp elisp :opts opts})
-                      {:ok true :output "ok"})]
+                      {:ok true :output "\"replaced\""})]
         (is (true? (futon3c.dev/record-invoke-delivery!
                     "claude-1"
                     "invoke-xyz"
@@ -98,3 +98,62 @@
                {:ok false :error {:error/message "timeout waiting for response"}})]
       (is (.contains out "[invoke failed]"))
       (is (.contains out "timeout")))))
+
+(deftest codex-invoke-enforces-execution-retry-for-work-claims
+  (testing "work claim with zero execution evidence triggers one enforced retry"
+    (let [calls (atom [])
+          responses (atom
+                     [{:result "I'll take F1-opposite."
+                       :session-id "sess-1"
+                       :execution {:executed? false :tool-events 0 :command-events 0}}
+                      {:result "Ran first search and logged notes in /tmp/f1.md"
+                       :session-id "sess-1"
+                       :execution {:executed? true :tool-events 1 :command-events 0}}])]
+      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
+                    (fn [_opts]
+                      (fn [prompt sid]
+                        (swap! calls conj {:prompt prompt :sid sid})
+                        (let [resp (first @responses)]
+                          (swap! responses subvec 1)
+                          resp)))
+                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
+                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
+                    futon3c.dev/persist-session-id! (fn [& _] nil)
+                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
+        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
+              result (invoke-fn "Take F1-opposite and start now" nil)]
+          (is (= 2 (count @calls)))
+          (is (re-find #"work/progress claim without execution evidence"
+                       (-> @calls second :prompt)))
+          (is (nil? (:error result)))
+          (is (true? (get-in result [:execution :executed?])))
+          (is (true? (get-in result [:execution :enforced-retry?]))))))))
+
+(deftest codex-invoke-fails-when-work-claim-still-has-no-execution-after-retry
+  (testing "second work-claim with zero execution evidence is surfaced as invoke error"
+    (let [responses (atom
+                     [{:result "I'll start now."
+                       :session-id "sess-1"
+                       :execution {:executed? false :tool-events 0 :command-events 0}}
+                      {:result "Still starting now."
+                       :session-id "sess-1"
+                       :execution {:executed? false :tool-events 0 :command-events 0}}])]
+      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
+                    (fn [_opts]
+                      (fn [_prompt _sid]
+                        (let [resp (first @responses)]
+                          (swap! responses subvec 1)
+                          resp)))
+                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
+                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
+                    futon3c.dev/persist-session-id! (fn [& _] nil)
+                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
+        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
+              result (invoke-fn "Take F1-opposite and start now" nil)]
+          (is (some? (:error result)))
+          (is (.contains (str (:error result))
+                         "work-claim without execution evidence after enforcement retry"))
+          (is (= 0 (get-in result [:execution :tool-events])))
+          (is (= 0 (get-in result [:execution :command-events]))))))))

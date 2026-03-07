@@ -2867,6 +2867,41 @@ RESPOND WITH ONLY:
             (finally
               (stop-ticker!))))))))
 
+(def ^:private codex-work-claim-re
+  #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
+
+(defn- codex-work-claim-without-execution?
+  "True when Codex returned a work/progress claim but emitted no execution evidence."
+  [result]
+  (let [execution (:execution result)
+        executed? (boolean (:executed? execution))
+        tool-events (long (or (:tool-events execution) 0))
+        command-events (long (or (:command-events execution) 0))
+        text (str/trim (or (:result result) ""))]
+    (and (nil? (:error result))
+         (not executed?)
+         (zero? tool-events)
+         (zero? command-events)
+         (not (str/blank? text))
+         (boolean (re-find codex-work-claim-re text)))))
+
+(defn- codex-execution-followup-prompt
+  "Prompt used when Codex claimed work without execution evidence.
+   Keeps the invariant at the invoke engine (not transport bridge)."
+  [original-prompt prior-reply]
+  (letfn [(clip [s max-len]
+            (let [txt (str (or s ""))]
+              (if (<= (count txt) max-len)
+                txt
+                (str (subs txt 0 (max 0 (- max-len 3))) "..."))))]
+    (str "Your previous reply made a work/progress claim without execution evidence.\n"
+         "Execute one concrete first step now (tool/command activity is required).\n"
+         "Then reply in one short line with actual status and artifact refs.\n\n"
+         "Original request:\n"
+         (clip original-prompt 900)
+         "\n\nPrevious reply:\n"
+         (clip prior-reply 600))))
+
 (defn make-codex-invoke-fn
   "Create an invoke-fn that calls `codex exec` for real Codex interaction.
 
@@ -2950,7 +2985,25 @@ RESPOND WITH ONLY:
         (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000
                                                  :event-trace !event-trace)
               result (try
-                       (inner-fn prompt invoke-sid)
+                       (let [initial (inner-fn prompt invoke-sid)]
+                         (if (codex-work-claim-without-execution? initial)
+                           (let [retry-prompt (codex-execution-followup-prompt prompt-str (:result initial))
+                                 retry-sid (or (:session-id initial) invoke-sid)]
+                             (println (str "[invoke] " agent-id
+                                           " claimed work without execution evidence; retrying with enforcement prompt"))
+                             (flush)
+                             (let [retry (inner-fn retry-prompt retry-sid)]
+                               (if (codex-work-claim-without-execution? retry)
+                                 {:result nil
+                                  :session-id (or (:session-id retry) retry-sid used-sid)
+                                  :execution (assoc (or (:execution retry) {})
+                                                    :enforced-retry? true
+                                                    :executed? false
+                                                    :tool-events (long (or (:tool-events (:execution retry)) 0))
+                                                    :command-events (long (or (:command-events (:execution retry)) 0)))
+                                  :error "work-claim without execution evidence after enforcement retry"}
+                                 (update retry :execution #(assoc (or % {}) :enforced-retry? true)))))
+                           initial))
                        (finally
                          (stop-ticker!)))
               final-sid (:session-id result)
