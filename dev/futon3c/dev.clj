@@ -2870,20 +2870,50 @@ RESPOND WITH ONLY:
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
 
-(defn- codex-work-claim-without-execution?
-  "True when Codex returned a work/progress claim but emitted no execution evidence."
+(def ^:private codex-planning-only-re
+  #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
+
+(defn- codex-task-mode-prompt?
+  "True when prompt came from IRC bridge task-mode envelope."
+  [prompt]
+  (boolean (re-find #"(?i)\bmode:\s*task\b" (str (or prompt "")))))
+
+(defn- codex-no-execution-evidence?
+  "True when invoke result reports no executed/tool/command evidence."
   [result]
   (let [execution (:execution result)
         executed? (boolean (:executed? execution))
         tool-events (long (or (:tool-events execution) 0))
-        command-events (long (or (:command-events execution) 0))
-        text (str/trim (or (:result result) ""))]
+        command-events (long (or (:command-events execution) 0))]
     (and (nil? (:error result))
          (not executed?)
          (zero? tool-events)
-         (zero? command-events)
+         (zero? command-events))))
+
+(defn- codex-planning-only-text?
+  "True when response explicitly declares planning-only / blocked state."
+  [text]
+  (let [t (str/trim (or text ""))]
+    (and (not (str/blank? t))
+         (boolean (re-find codex-planning-only-re t)))))
+
+(defn- codex-work-claim-without-execution?
+  "True when Codex returned work/progress claim text with no execution evidence."
+  [result]
+  (let [text (str/trim (or (:result result) ""))]
+    (and (codex-no-execution-evidence? result)
          (not (str/blank? text))
          (boolean (re-find codex-work-claim-re text)))))
+
+(defn- codex-task-reply-without-execution?
+  "True when task-mode reply has no execution evidence and is not planning-only.
+   This prevents non-evidenced 'done' text from being emitted for task turns."
+  [prompt result]
+  (let [text (str/trim (or (:result result) ""))]
+    (and (codex-task-mode-prompt? prompt)
+         (codex-no-execution-evidence? result)
+         (not (str/blank? text))
+         (not (codex-planning-only-text? text)))))
 
 (defn- codex-execution-followup-prompt
   "Prompt used when Codex claimed work without execution evidence.
@@ -2986,14 +3016,16 @@ RESPOND WITH ONLY:
                                                  :event-trace !event-trace)
               result (try
                        (let [initial (inner-fn prompt invoke-sid)]
-                         (if (codex-work-claim-without-execution? initial)
+                         (if (or (codex-work-claim-without-execution? initial)
+                                 (codex-task-reply-without-execution? prompt-str initial))
                            (let [retry-prompt (codex-execution-followup-prompt prompt-str (:result initial))
                                  retry-sid (or (:session-id initial) invoke-sid)]
                              (println (str "[invoke] " agent-id
                                            " claimed work without execution evidence; retrying with enforcement prompt"))
                              (flush)
                              (let [retry (inner-fn retry-prompt retry-sid)]
-                               (if (codex-work-claim-without-execution? retry)
+                               (if (or (codex-work-claim-without-execution? retry)
+                                       (codex-task-reply-without-execution? prompt-str retry))
                                  {:result nil
                                   :session-id (or (:session-id retry) retry-sid used-sid)
                                   :execution (assoc (or (:execution retry) {})

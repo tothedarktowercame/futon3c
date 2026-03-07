@@ -157,3 +157,33 @@
                          "work-claim without execution evidence after enforcement retry"))
           (is (= 0 (get-in result [:execution :tool-events])))
           (is (= 0 (get-in result [:execution :command-events]))))))))
+
+(deftest codex-invoke-fails-task-mode-nonplanning-reply-without-execution
+  (testing "task-mode no-evidence reply without planning-only marker is rejected after retry"
+    (let [calls (atom [])
+          task-prompt "[Surface: IRC | Channel: #math | Speaker: joe | Mode: task | Execute work asynchronously.]\\nPlease investigate."
+          responses (atom
+                     [{:result "Loaded data/proof-state/FM-001.edn; moving on."
+                       :session-id "sess-1"
+                       :execution {:executed? false :tool-events 0 :command-events 0}}
+                      {:result "Loaded data/proof-state/FM-001.edn; still moving on."
+                       :session-id "sess-1"
+                       :execution {:executed? false :tool-events 0 :command-events 0}}])]
+      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
+                    (fn [_opts]
+                      (fn [prompt sid]
+                        (swap! calls conj {:prompt prompt :sid sid})
+                        (let [resp (first @responses)]
+                          (swap! responses subvec 1)
+                          resp)))
+                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
+                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
+                    futon3c.dev/persist-session-id! (fn [& _] nil)
+                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
+        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
+              result (invoke-fn task-prompt nil)]
+          (is (= 2 (count @calls)))
+          (is (some? (:error result)))
+          (is (.contains (str (:error result))
+                         "work-claim without execution evidence after enforcement retry")))))))
