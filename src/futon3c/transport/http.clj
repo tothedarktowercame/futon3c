@@ -743,7 +743,8 @@
                          :type agent-type
                          :invoke-fn invoke-fn
                          :capabilities (get default-capabilities agent-type [])
-                         :metadata {:auto-registered? true}})]
+                         :metadata (cond-> {:auto-registered? true}
+                                     emacs-socket (assoc :emacs-socket emacs-socket))})]
             (when (and invoke-fn (map? result) (:agent/id result))
               (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
             (if (and (map? result) (:agent/id result))
@@ -780,7 +781,10 @@
                                          :session-file sf
                                          :session-id-atom sid-atom
                                          :emacs-socket emacs-socket})]
-                (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
+                (reg/update-agent! agent-id
+                                   :agent/invoke-fn invoke-fn
+                                   :agent/metadata (assoc (or (:agent/metadata agent) {})
+                                                          :emacs-socket emacs-socket))
                 (json-response 200 {:ok true :agent-id agent-id
                                     :emacs-socket emacs-socket}))
               (json-response 500 {:ok false :err "make-fn-not-found"}))

@@ -83,8 +83,12 @@
 
 (defun claude-repl--find-idle-agent ()
   "Find an existing idle claude agent from the registry.
-Prefers the lowest-numbered idle claude agent. Returns agent-id or nil."
-  (let* ((url (concat claude-repl-api-url "/api/alpha/agents"))
+Workspace-aware: prefers agents whose emacs-socket matches this
+workspace. Never steals an agent bound to a different workspace.
+Falls back to unbound idle agents, then returns nil."
+  (let* ((my-socket (or (claude-repl--workspace)
+                        (and (boundp 'server-name) server-name)))
+         (url (concat claude-repl-api-url "/api/alpha/agents"))
          (result (with-temp-buffer
                    (let ((exit (call-process "curl" nil t nil
                                              "-sS" "--max-time" "5" url)))
@@ -113,8 +117,26 @@ Prefers the lowest-numbered idle claude agent. Returns agent-id or nil."
                         (or (null status)
                             (equal status "idle")))))
                entries))
-             ;; Sort by agent number
-             (sorted (sort claude-entries
+             ;; Partition by socket affinity
+             (agent-socket (lambda (pair)
+                             (let ((meta (alist-get 'metadata (cdr pair))))
+                               (cond
+                                ((hash-table-p meta) (gethash "emacs-socket" meta))
+                                ((listp meta) (or (alist-get 'emacs-socket meta)
+                                                  (alist-get 'emacs_socket meta)))))))
+             ;; 1. Agents bound to MY workspace (best match)
+             (mine (seq-filter
+                    (lambda (pair)
+                      (equal (funcall agent-socket pair) my-socket))
+                    claude-entries))
+             ;; 2. Unbound agents (no emacs-socket set)
+             (unbound (seq-filter
+                       (lambda (pair)
+                         (null (funcall agent-socket pair)))
+                       claude-entries))
+             ;; Never consider agents bound to OTHER workspaces
+             (candidates (or mine unbound))
+             (sorted (sort candidates
                            (lambda (a b)
                              (string< (car a) (car b))))))
         (when sorted (caar sorted))))))
