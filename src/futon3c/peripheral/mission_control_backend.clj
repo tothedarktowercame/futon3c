@@ -153,8 +153,12 @@
    - :unknown    — could not classify"
   [raw]
   (when raw
-    ;; Strip markdown bold markers and leading colons, then lowercase
-    (let [s (-> raw str/trim (str/replace #"\*+" "") str/trim str/lower-case (str/replace #"^:" ""))]
+    ;; Strip markdown bold markers, emoji, leading colons, then lowercase
+    (let [s (-> raw str/trim
+               (str/replace #"\*+" "")
+               (str/replace #"[✅❌⚠️🔄]" "")
+               str/trim str/lower-case
+               (str/replace #"^:" ""))]
       (cond
         (str/starts-with? s "complete")         :complete
         (str/starts-with? s "done")             :complete
@@ -165,6 +169,7 @@
         (str/starts-with? s "nonstarter")       :nonstarter
         (str/starts-with? s "proposed")         :ready
         (str/starts-with? s "idea")             :ready
+        (str/starts-with? s "draft")            :ready
         (str/starts-with? s "in-progress")      :in-progress
         (str/starts-with? s "in progress")      :in-progress
         (str/starts-with? s "active")           :in-progress
@@ -174,6 +179,9 @@
         (str/starts-with? s "phase 0 done")     :complete
         (str/starts-with? s "superseded")       :complete
         (str/starts-with? s "abandoned")        :nonstarter
+        (str/starts-with? s "not implemented")  :ready
+        ;; "Phase N complete, Phase M pending" → in-progress (partially done)
+        (re-find #"^phase\s+\d+\s+complete" s)  :in-progress
         ;; Derivation keywords: check if the *derivation step itself* is marked complete.
         ;; "INSTANTIATE complete" → :complete (the mission finished its last step)
         ;; "INSTANTIATE (complete)" → :complete (parenthetical variant)
@@ -207,11 +215,16 @@
   [path repo-name]
   (try
     (let [text (slurp path)
+          ;; Header extraction searches only the first 40 lines to avoid
+          ;; picking up subsection **Status**: lines from the body.
+          header-text (->> (str/split-lines text)
+                           (take 40)
+                           (str/join "\n"))
           filename (.getName (io/file path))
           mission-id (str/replace filename #"^M-|\.md$" "")
-          raw-status (extract-header text "Status")
-          date (extract-header text "Date")
-          blocked-by (extract-header text "Blocked by")
+          raw-status (extract-header header-text "Status")
+          date (extract-header header-text "Date")
+          blocked-by (extract-header header-text "Blocked by")
           explicit-status (classify-status raw-status)
           checkboxes (count-checkboxes text)
           inferred-status (when (and (nil? explicit-status) checkboxes)
