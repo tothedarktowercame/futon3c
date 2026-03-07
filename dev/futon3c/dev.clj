@@ -670,19 +670,45 @@
             pending-line (str "Delivery: pending (trace-id " tid ")")
             receipt-line (format-delivery-receipt-line tid receipt)
             elisp (str "(let ((buf (get-buffer \"" (escape-elisp-string buf-name) "\")))"
-                       "(when buf "
+                       "(if (not buf) "
+                       "\"missing-buffer\" "
                        "(with-current-buffer buf "
                        "(let ((inhibit-read-only t)) "
                        "(goto-char (point-min)) "
                        "(if (search-forward \"" (escape-elisp-string pending-line) "\" nil t) "
-                       "(replace-match \"" (escape-elisp-string receipt-line) "\" t t) "
+                       "(progn (replace-match \"" (escape-elisp-string receipt-line) "\" t t) \"replaced\") "
                        "(progn "
                        "(goto-char (point-max)) "
                        "(unless (bolp) (insert \"\\n\")) "
-                       "(insert \"" (escape-elisp-string receipt-line) "\\n\"))))) "
-                       "nil)")]
-        (bb/blackboard-eval! elisp bb-opts)
-        true))))
+                       "(insert \"" (escape-elisp-string receipt-line) "\\n\") "
+                       "\"appended\"))))))")]
+        (loop [attempt 1]
+          (let [{:keys [ok output]} (bb/blackboard-eval! elisp bb-opts)
+                out (some-> output str str/trim)
+                status (cond
+                         (#{"\"replaced\"" "replaced"} out) :replaced
+                         (#{"\"appended\"" "appended"} out) :appended
+                         (#{"\"missing-buffer\"" "missing-buffer"} out) :missing-buffer
+                         :else :unknown)
+                success? (and ok (#{:replaced :appended} status))]
+            (cond
+              success?
+              true
+
+              (< attempt 3)
+              (do
+                (Thread/sleep (* 120 attempt))
+                (recur (inc attempt)))
+
+              :else
+              (do
+                (println (str "[invoke-delivery] failed for " aid
+                              " trace-id=" tid
+                              " status=" (name status)
+                              " ok=" ok
+                              " output=" out))
+                (flush)
+                false))))))))
 
 ;; =============================================================================
 ;; ngircd IRC sender — persistent connection for Tickle paging
