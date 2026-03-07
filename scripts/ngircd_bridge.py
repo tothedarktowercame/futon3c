@@ -484,28 +484,49 @@ class IRCBot:
         """Extract nick from prefix like 'nick!user@host'."""
         return prefix.split("!")[0] if "!" in prefix else prefix
 
+    def _mention_names(self):
+        """Return acceptable mention forms for this bot."""
+        names = []
+        seen = set()
+        for candidate in (self.nick, self.desired_nick, self.nick.rstrip("_")):
+            cand = (candidate or "").strip()
+            if not cand:
+                continue
+            key = cand.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            names.append(cand)
+        return names
+
     def _is_mention(self, text):
         """Check if text mentions this bot. Matches @nick anywhere in the
         text (not just line start) so mentions like 'done.@codex review'
         still trigger. Also matches 'nick: ...' at line start."""
-        base_nick = self.nick.rstrip("_")
-        patterns = [
-            rf"@{re.escape(base_nick)}\b",          # @nick anywhere
-            rf"^{re.escape(base_nick)}:\s",          # nick: at start
-            rf"^{re.escape(base_nick)},\s",          # nick, at start
-        ]
-        for p in patterns:
-            if re.search(p, text, re.IGNORECASE):
-                return True
+        for name in self._mention_names():
+            patterns = [
+                rf"@{re.escape(name)}\b",   # @nick anywhere
+                rf"^{re.escape(name)}:\s",  # nick: at start
+                rf"^{re.escape(name)},\s",  # nick, at start
+            ]
+            for p in patterns:
+                if re.search(p, text, re.IGNORECASE):
+                    return True
         return False
 
     def _strip_mention(self, text):
         """Remove the mention prefix from the text."""
-        base_nick = self.nick.rstrip("_")
-        text = re.sub(
-            rf"^@?{re.escape(base_nick)}[,:]\s*",
-            "", text, count=1, flags=re.IGNORECASE
-        )
+        for name in self._mention_names():
+            updated = re.sub(
+                rf"^@?{re.escape(name)}[,:]\s*",
+                "",
+                text,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            if updated != text:
+                text = updated
+                break
         return text.strip()
 
     def _next_job_id(self):
@@ -678,7 +699,7 @@ class IRCBot:
                                 if execution_note:
                                     header_parts.append(execution_note)
                                 header = " ".join(part for part in header_parts if part).strip()
-                                self._say(f"{header}\n{raw_text}", max_lines=6)
+                                self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
                                 continue
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})",

@@ -132,6 +132,16 @@ IRC lane switch for `dev`:
     (`#futon` local, `#zabuton` linode)
   - intended for `README-math.md` bring-up where `zcodex` should join both
     `#zabuton` and `#math`
+  - joining both channels does not imply automatic cross-channel replies;
+    bridge replies should return to the channel that originated the mention
+    unless a separate relay mode is explicitly introduced
+  - when combined with `--remote-irc`, the Windows lane now defaults to a real
+    math-agent identity:
+    - `FUTON3C_CODEX_AGENT_ID=zcodex-1`
+    - `NICK_AGENT_MAP=zcodex:zcodex-1`
+    - `CODEX_SESSION_FILE=<repo>/.state/codex-math/session-id`
+  - this keeps the math prover lane distinct from Joe's `codex-1` and from
+    the local VS Code lane `codex-vscode`
 - you can still override IRC target defaults by setting `IRC_HOST`, `IRC_PORT`,
   and/or `IRC_CHANNEL` before launch.
 

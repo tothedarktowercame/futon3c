@@ -12,6 +12,7 @@ set "DEV_STACK_BODY=%SCRIPT_DIR%\dev-stack-body-windows.bat"
 
 set "REMOTE_IRC=0"
 set "MATH_IRC=0"
+set "MATH_IRC_REMOTE_RESOURCE=0"
 set "FORWARD_ARGS="
 :parse_args
 if "%~1"=="" goto args_parsed
@@ -39,6 +40,12 @@ if "%REMOTE_IRC%"=="1" (
   if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
   if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
   if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-zabuton\session-id"
+)
+if "%REMOTE_IRC%"=="1" if "%MATH_IRC%"=="1" (
+  set "MATH_IRC_REMOTE_RESOURCE=1"
+  set "FUTON3C_CODEX_AGENT_ID=zcodex-1"
+  set "NICK_AGENT_MAP=zcodex:zcodex-1"
+  if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-math\session-id"
 )
 set "FUTON3C_IRC_LANE_NORMALIZED=%FUTON3C_IRC_LANE: =%"
 if /i "%FUTON3C_IRC_LANE_NORMALIZED%"=="joe" set "FUTON3C_IRC_LANE_NORMALIZED=linode"
@@ -97,6 +104,9 @@ if "%MATH_IRC%"=="1" (
     )
   )
   echo [dev-stack-windows] Additional IRC channels: !IRC_CHANNELS!
+  if "%MATH_IRC_REMOTE_RESOURCE%"=="1" (
+    echo [dev-stack-windows] Math IRC lane: using dedicated codex agent zcodex-1
+  )
 )
 
 if not defined FUTON3C_REPOS (
