@@ -228,10 +228,12 @@
         (on-receive ch (json/generate-string {"type" "invoke_result"
                                               "invoke_id" "inv-1"
                                               "result" "ok"
-                                              "session_id" "sess-x"}))
+                                              "session_id" "sess-x"
+                                              "invoke_meta" {"invoke-trace-id" "invoke-abc"}}))
         (is (= ["claude-1" "inv-1" {:result "ok"
                                     :session-id "sess-x"
-                                    :error nil}]
+                                    :error nil
+                                    :invoke-trace-id "invoke-abc"}]
                @resolved))
         (is (empty? @sent))))))
 

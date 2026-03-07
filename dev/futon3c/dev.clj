@@ -422,11 +422,13 @@
                                      (when sid
                                        (reset! sid* sid)
                                        (persist-session-id! session-file sid))
-                                     (let [payload (cond-> {"type" "invoke_result"
+                                     (let [invoke-meta (not-empty (dissoc result :result :session-id :error))
+                                           payload (cond-> {"type" "invoke_result"
                                                             "invoke_id" invoke-id}
                                                      sid (assoc "session_id" sid)
                                                      (:error result) (assoc "error" (str (:error result)))
-                                                     (not (:error result)) (assoc "result" (or (:result result) "")))]
+                                                     (not (:error result)) (assoc "result" (or (:result result) ""))
+                                                     invoke-meta (assoc "invoke_meta" invoke-meta))]
                                        (try
                                          (send-json! ws payload)
                                          (catch Exception e
