@@ -258,6 +258,7 @@
                     (:session-id state)
                     (:author state)
                     tool
+                    args
                     result
                     (:last-evidence-id state))
                 new-state (assoc new-state :last-evidence-id (:evidence/id ev))

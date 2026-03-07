@@ -729,9 +729,10 @@
 (defn- parse-irc-privmsg
   "Parse a raw IRC PRIVMSG line into {:nick :channel :text :at}."
   [raw-line]
-  (when-let [[_ prefix _ trailing] (re-matches #":([^ ]+) PRIVMSG ([^ ]+) :(.*)" raw-line)]
+  (when-let [[_ prefix channel trailing] (re-matches #":([^ ]+) PRIVMSG ([^ ]+) :(.*)" raw-line)]
     (let [nick (first (str/split prefix #"!"))]
       {:nick nick
+       :channel channel
        :text trailing
        :at (str (Instant/now))})))
 
@@ -748,6 +749,7 @@
     (.println out (str "USER " nick " 0 * :" nick))
     (Thread/sleep 500)
     (.println out "JOIN #futon")
+    (.println out "JOIN #math")
     (Thread/sleep 300)
     ;; Background thread: respond to PINGs + capture PRIVMSG to ring buffer
     (let [running (atom true)
@@ -848,11 +850,12 @@
    connections (which would conflict with the bridge's nicks)."
   ([] (make-bridge-irc-send-fn 6769))
   ([port]
-   (fn [_channel from-nick message]
+   (fn [channel from-nick message]
      (let [url (str "http://127.0.0.1:" port "/say")
-           payload (json/generate-string {"from" (or from-nick "claude")
-                                           "text" (str message)
-                                           "max_lines" 4})
+           payload (json/generate-string (cond-> {"from" (or from-nick "claude")
+                                                   "text" (str message)
+                                                   "max_lines" 4}
+                                           channel (assoc "channel" (str channel))))
            conn (doto (-> (java.net.URI. url) .toURL .openConnection)
                   (.setRequestMethod "POST")
                   (.setRequestProperty "Content-Type" "application/json")
@@ -1621,7 +1624,155 @@ RESPOND WITH ONLY:
     (println "[dev] Tickle stopped.")))
 
 ;; =============================================================================
-;; Tickle orchestration — REPL helpers
+;; FM-001 task dispatch — Tickle assigns proof obligations on #math
+;; =============================================================================
+
+(defn fm-assignable-obligations
+  "Find FM-001 ledger obligations that are assignable (open, all deps met).
+   Returns them sorted by DAG impact (highest first)."
+  [problem-id]
+  (let [ledger-result (require 'futon3c.proof.bridge)
+        pb (find-ns 'futon3c.proof.bridge)
+        ledger-fn (ns-resolve pb 'ledger)
+        dag-fn (ns-resolve pb 'dag-impact)
+        ledger-items (:result (ledger-fn problem-id))
+        dag-scores (into {} (map (fn [{:keys [id score]}] [id score])
+                                 (:result (dag-fn problem-id))))
+        open-items (if (map? ledger-items)
+                     (vals ledger-items)
+                     ledger-items)
+        ;; Filter to open items whose dependencies are all non-open
+        resolved-ids (->> open-items
+                          (remove #(= :open (:item/status %)))
+                          (map :item/id)
+                          set)
+        assignable (->> open-items
+                        (filter #(= :open (:item/status %)))
+                        (filter (fn [item]
+                                  (every? #(or (contains? resolved-ids %)
+                                               ;; self-dependency (shouldn't happen)
+                                               (= % (:item/id item)))
+                                          (:item/depends-on item #{}))))
+                        (sort-by #(- (get dag-scores (:item/id %) 0))))]
+    assignable))
+
+(defn fm-dispatch!
+  "Have Tickle assign the top FM-001 obligation on #math.
+   Reads the proof ledger, finds the highest-impact assignable task,
+   and posts the assignment as tickle-1."
+  ([] (fm-dispatch! "FM-001"))
+  ([problem-id]
+   (let [tasks (fm-assignable-obligations problem-id)]
+     (if (empty? tasks)
+       (do (println "[tickle-fm] No assignable obligations for " problem-id)
+           nil)
+       (let [{:item/keys [id label]} (first tasks)
+             msg (str "TASK ASSIGNMENT [" problem-id " / " id "]: " label
+                      ". Current mode: FALSIFY. "
+                      "Who wants to take this? Claim with @tickle I'll take " id)]
+         ((make-bridge-irc-send-fn) "#math" "tickle" msg)
+         (println (str "[tickle-fm] Assigned " id " on #math"))
+         {:assigned id :label label})))))
+
+(defn fm-status!
+  "Print FM-001 ledger status for Tickle's view."
+  ([] (fm-status! "FM-001"))
+  ([problem-id]
+   (let [tasks (fm-assignable-obligations problem-id)]
+     (println (str "FM-001 assignable obligations (" (count tasks) "):"))
+     (doseq [{:item/keys [id label]} tasks]
+       (println (str "  " id ": " label))))))
+
+(defn irc-recent-channel
+  "Return last N messages from a specific channel."
+  [channel n]
+  (->> (irc-recent (* n 3))  ;; over-fetch since we're filtering
+       (filter #(= channel (:channel %)))
+       (take-last n)
+       vec))
+
+(defonce !fm-conductor (atom nil))
+
+(defn fm-conduct!
+  "Run one FM-001 conductor cycle. Checks #math for activity,
+   decides whether to nudge or assign next task.
+   Uses Tickle's Haiku agent for natural-language decisions."
+  ([] (fm-conduct! "FM-001"))
+  ([problem-id]
+   (let [math-msgs (irc-recent-channel "#math" 20)
+         assignable (fm-assignable-obligations problem-id)
+         bridge-send (make-bridge-irc-send-fn)
+         ;; Build context for Tickle's decision
+         recent-text (str/join "\n"
+                       (map (fn [{:keys [nick text at]}]
+                              (str (when at (subs at 11 19)) " <" nick "> " text))
+                            math-msgs))
+         task-text (str/join "\n"
+                     (map (fn [{:item/keys [id label]}]
+                            (str "  " id ": " label))
+                          assignable))
+         context (str "You are Tickle, task coordinator for FM-001 (Ramsey numbers for book graphs) on #math.\n\n"
+                      "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
+                      "Current mode: FALSIFY (must try to disprove before constructing).\n\n"
+                      "ASSIGNABLE OBLIGATIONS:\n" (if (seq task-text) task-text "  (none — all blocked by dependencies)") "\n\n"
+                      "RECENT #math (" (count math-msgs) " messages):\n"
+                      (if (seq recent-text) recent-text "(no messages captured)") "\n\n"
+                      "RULES:\n"
+                      "1. If an agent claimed work and is actively working — PASS (don't interrupt)\n"
+                      "2. If an agent seems stuck or silent for a while — brief nudge\n"
+                      "3. If work is completed — acknowledge and dispatch next obligation\n"
+                      "4. Max 1-2 lines, <400 chars. Always @mention target. Post to #math.\n"
+                      "5. Do NOT repeat the full problem statement — agents know it.\n\n"
+                      "RESPOND WITH ONLY:\n"
+                      "- A short IRC message (start with @agent-name), OR\n"
+                      "- PASS")
+         ;; Use tickle-1's invoke-fn if registered
+         agent (reg/get-agent "tickle-1")
+         invoke-fn (:invoke-fn agent)]
+     (if-not invoke-fn
+       (do (println "[fm-conductor] tickle-1 not registered, can't decide")
+           {:action :error})
+       (let [{:keys [result]} (invoke-fn context nil)
+             response (str/trim (or result "PASS"))
+             first-line (first (str/split-lines response))]
+         (if (or (str/blank? response) (= "PASS" (str/upper-case first-line)))
+           (do (println "[fm-conductor] PASS")
+               {:action :pass})
+           (do (println (str "[fm-conductor] → " first-line))
+               (bridge-send "#math" "tickle" first-line)
+               {:action :message :text first-line})))))))
+
+(defn start-fm-conductor!
+  "Start the FM-001 conductor loop. Checks #math every interval-ms.
+   Default: every 10 minutes (proof work is slower than CT batches)."
+  ([] (start-fm-conductor! {}))
+  ([{:keys [interval-ms] :or {interval-ms 600000}}]
+   (when-let [old @!fm-conductor]
+     ((:stop-fn old))
+     (println "[fm-conductor] Stopped previous conductor."))
+   (let [running (atom true)]
+     (future
+       (while @running
+         (try
+           (Thread/sleep interval-ms)
+           (when @running (fm-conduct!))
+           (catch Exception e
+             (println (str "[fm-conductor] Error: " (.getMessage e)))))))
+     (let [handle {:stop-fn #(do (reset! running false) (println "[fm-conductor] Stopped."))
+                   :started-at (Instant/now)}]
+       (reset! !fm-conductor handle)
+       (println (str "[fm-conductor] Started (interval=" (/ interval-ms 60000) "min)"))
+       handle))))
+
+(defn stop-fm-conductor!
+  "Stop the FM-001 conductor loop."
+  []
+  (when-let [h @!fm-conductor]
+    ((:stop-fn h))
+    (reset! !fm-conductor nil)))
+
+;; =============================================================================
+;; Tickle orchestration — REPL helpers (CT work)
 ;; =============================================================================
 
 (defn fetch-futon4-issues!
