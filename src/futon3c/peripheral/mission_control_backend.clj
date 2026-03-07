@@ -215,10 +215,10 @@
   [path repo-name]
   (try
     (let [text (slurp path)
-          ;; Header extraction searches only the first 40 lines to avoid
+          ;; Header extraction searches only the first 80 lines to avoid
           ;; picking up subsection **Status**: lines from the body.
           header-text (->> (str/split-lines text)
-                           (take 40)
+                           (take 80)
                            (str/join "\n"))
           filename (.getName (io/file path))
           mission-id (str/replace filename #"^M-|\.md$" "")
