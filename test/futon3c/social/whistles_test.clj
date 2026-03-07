@@ -135,6 +135,20 @@
         (is (some? whistle-ev))
         (is (= :timeout (get-in whistle-ev [:evidence/body :status])))))))
 
+(deftest whistle-default-timeout-is-30-minutes
+  (testing "whistle! uses 30m default timeout when timeout-ms is omitted"
+    (let [captured-timeout (atom nil)]
+      (with-redefs [registry/invoke-agent!
+                    (fn [_aid _prompt timeout-ms]
+                      (reset! captured-timeout timeout-ms)
+                      {:ok true :result "ok" :session-id "s-1"})]
+        (let [result (whistles/whistle!
+                      {:agent-id "codex-1"
+                       :prompt "status?"
+                       :author "joe"})]
+          (is (true? (:whistle/ok result)))
+          (is (= 1800000 @captured-timeout)))))))
+
 ;; =============================================================================
 ;; Validation guards
 ;; =============================================================================

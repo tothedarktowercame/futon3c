@@ -52,7 +52,7 @@
      :agent-id       — target agent (string or TypedAgentId)
      :prompt         — the question/request to send
      :author         — who initiated the whistle (e.g. \"joe\", \"claude-1\")
-     :timeout-ms     — optional, default 60000
+     :timeout-ms     — optional, default 1800000 (30 minutes)
      :evidence-store — optional (emits coordination evidence if provided)
 
    Returns:
@@ -74,7 +74,7 @@
 
     :else
     (let [aid-val (if (map? agent-id) (:id/value agent-id) (str agent-id))
-          timeout (or timeout-ms 60000)
+          timeout (or timeout-ms 1800000)
           result (registry/invoke-agent! aid-val prompt timeout)
           status (cond
                    (:ok result) :completed

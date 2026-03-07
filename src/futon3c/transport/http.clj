@@ -1057,7 +1057,7 @@
 
 (defn- handle-whistle
   "POST /api/alpha/whistle — synchronous request-response to a registered agent.
-   Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 60000}
+   Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 1800000}
    Delegates to whistles/whistle! which wraps invoke-agent! with evidence."
   [request config]
   (let [payload (parse-json-map (read-body request))]
