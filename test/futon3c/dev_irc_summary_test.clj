@@ -28,23 +28,39 @@
       (is (.contains out "no artifact reference yet")))))
 
 (deftest invoke-trace-response-block-persists-full-payload
-  (testing "invoke trace shows a short summary and writes full payload to disk"
+  (testing "invoke trace shows only metadata and writes full payload to disk"
     (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
                             "f3c-invoke-trace-test"
                             (make-array java.nio.file.attribute.FileAttribute 0)))
           payload "{\"thread_id\":\"synth-p2-s3a-000\",\"title\":\"long structured payload\"}"
+          trace-id "invoke-1234"
           block (with-redefs [futon3c.dev/env (fn [k & [default]]
                                                 (if (= k "FUTON3C_INVOKE_ARTIFACT_DIR")
                                                   (.getAbsolutePath tmp-dir)
                                                   default))]
-                  (#'futon3c.dev/invoke-trace-response-block "codex-1" "019cc01c-b049-7ce1" payload))
+                  (#'futon3c.dev/invoke-trace-response-block "codex-1" "019cc01c-b049-7ce1" trace-id payload))
           artifact-path (some->> (re-find #"Artifact: (.+)" block) second)]
-      (is (.contains block "--- response summary (trace only) ---"))
-      (is (.contains block "Summary: Structured output generated."))
+      (is (.contains block "--- response trace (metadata only) ---"))
+      (is (.contains block "Result: kind=structured"))
+      (is (.contains block ", chars="))
+      (is (.contains block "sha256="))
+      (is (.contains block (str "Delivery: pending (trace-id " trace-id ")")))
+      (is (.contains block "Delivery guarantee: caller must record where reply was sent."))
       (is artifact-path)
       (is (not (.contains block "thread_id")))
       (is (.exists (java.io.File. artifact-path)))
       (is (= payload (slurp artifact-path))))))
+
+(deftest format-delivery-receipt-line-includes-surface-and-destination
+  (let [line (#'futon3c.dev/format-delivery-receipt-line
+              "invoke-42"
+              {:surface "irc"
+               :destination "#futon as <codex>"
+               :delivered? true
+               :note "dispatch-relay"})]
+    (is (.contains line "Delivery: delivered via irc -> #futon as <codex>"))
+    (is (.contains line "(trace-id invoke-42)"))
+    (is (.contains line "[dispatch-relay]"))))
 
 (deftest invoke-response->irc-reply-covers-success-and-failure
   (testing "successful invoke with text preserves refs in summary"
