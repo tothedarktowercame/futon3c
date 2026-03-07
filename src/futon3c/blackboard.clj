@@ -327,6 +327,46 @@
   (format-proof-state state))
 
 ;; -----------------------------------------------------------------------------
+;; :mentor — observation state, trigger status, interventions
+;; -----------------------------------------------------------------------------
+
+(defn- format-mentor-state
+  "Format mentor peripheral state for blackboard."
+  [state]
+  (let [seen (:messages-seen state 0)
+        conv-size (count (:conversation state))
+        obs-count (count (:observations state))
+        int-count (count (:interventions state))
+        fired (:triggers-fired state)
+        last-seen (:last-seen-at state)
+        problem-id (or (:problem-id state) "none")
+        channel (or (:channel state) "#math")
+        recent-interventions (take-last 3 (:interventions state))]
+    (str "Mentor (" channel ")\n"
+         "Problem: " problem-id
+         "  Seen: " seen " msgs"
+         "  Buffer: " conv-size "\n"
+         (when last-seen
+           (str "Last read: " last-seen "\n"))
+         "\nTriggers: " (if (seq fired)
+                          (str (count fired) " fired — " (str/join ", " (map name fired)))
+                          "none fired")
+         "\n"
+         "Interventions: " int-count
+         (when (seq recent-interventions)
+           (str "\n"
+                (str/join "\n"
+                  (map (fn [{:keys [at trigger-id message]}]
+                         (str "  [" (name trigger-id) "] "
+                              (subs (str message) 0 (min 60 (count (str message))))
+                              (when (> (count (str message)) 60) "...")))
+                       recent-interventions))))
+         "\n")))
+
+(defmethod render-blackboard :mentor [_ state]
+  (format-mentor-state state))
+
+;; -----------------------------------------------------------------------------
 ;; :tickle — watchdog scan results, stall/page history
 ;; -----------------------------------------------------------------------------
 

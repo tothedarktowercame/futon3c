@@ -53,6 +53,7 @@
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.mission-control.service :as mcs]
+            [futon3c.peripheral.mentor :as mentor]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
@@ -2036,11 +2037,130 @@ RESPOND WITH ONLY:
        :elapsed-ms elapsed
        :results results})))
 
+;; =============================================================================
+;; Mentor peripheral — claude-2 on #math
+;; =============================================================================
+
+(defonce !mentor (atom nil))
+
+(defn make-math-irc-read-fn
+  "Create an irc-read-fn that pulls #math messages from the evidence store.
+   Returns a fn that returns all #math messages as [{:nick :text :at}]."
+  []
+  (fn []
+    (when-let [store @!evidence-store]
+      (->> (estore/query* store {:evidence/tags [:irc]})
+           (filter (fn [e]
+                     (= "#math" (get-in e [:evidence/body :channel]))))
+           (sort-by :evidence/at)
+           (mapv (fn [e]
+                   {:nick (get-in e [:evidence/body :from])
+                    :text (get-in e [:evidence/body :text])
+                    :at (:evidence/at e)}))))))
+
+(defn make-math-irc-send-fn
+  "Create an irc-send-fn that posts to #math via the IRC server.
+   Falls back to the bridge HTTP send endpoint."
+  []
+  (fn [channel from-nick message]
+    (if-let [send-fn (some-> @!irc-sys :server :send-to-channel!)]
+      (send-fn channel from-nick message)
+      ((make-bridge-irc-send-fn) channel from-nick message))))
+
+(defn start-mentor!
+  "Start the mentor peripheral for claude-2 on #math.
+   Uses the evidence store to read IRC messages and the IRC server to post.
+   Returns the peripheral + state map, stored in !mentor.
+
+   Options:
+     :problem-id — FM problem to track (default \"FM-001\")
+     :channel    — IRC channel to observe (default \"#math\")"
+  [& {:keys [problem-id channel]
+      :or {problem-id "FM-001"
+           channel "#math"}}]
+  (let [backend (futon3c.peripheral.tools/make-mock-backend)
+        irc-read-fn (make-math-irc-read-fn)
+        irc-send-fn (make-math-irc-send-fn)
+        peripheral (mentor/make-mentor backend {:irc-read-fn irc-read-fn
+                                                :irc-send-fn irc-send-fn})
+        context {:session-id (str "mentor-" (UUID/randomUUID))
+                 :agent-id "claude-2"
+                 :problem-id problem-id
+                 :channel channel
+                 :evidence-store @!evidence-store}
+        start-result (futon3c.peripheral.runner/start peripheral context)]
+    (if (:ok start-result)
+      (do
+        (reset! !mentor {:peripheral peripheral
+                         :state (atom (:state start-result))})
+        ;; Register claude-2 as mentor agent
+        (reg/update-agent! "claude-2"
+                           :agent/type :claude
+                           :agent/capabilities [:mentor/observe :mentor/intervene])
+        (println (str "[dev] Mentor started: claude-2 on " channel " tracking " problem-id))
+        :ok)
+      (do
+        (println (str "[dev] Mentor start failed: " start-result))
+        start-result))))
+
+(defn mentor-observe!
+  "Run one observation cycle: pull new #math messages.
+   Returns the observation result."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-observe :args []})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn mentor-evaluate!
+  "Evaluate triggers against accumulated conversation.
+   Returns the trigger checklist and conversation window."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-evaluate :args []})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn mentor-intervene!
+  "Post an intervention to #math. Only call when a trigger fires.
+   trigger-id: keyword e.g. :QP-1
+   message: string to post"
+  [trigger-id message]
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-intervene :args [trigger-id message]})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn mentor-status
+  "Get current mentor state summary."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (let [result (futon3c.peripheral.runner/step
+                   peripheral @state {:tool :mentor-status :args []})]
+      (when (:ok result)
+        (reset! state (:state result)))
+      (:result result))))
+
+(defn stop-mentor!
+  "Stop the mentor peripheral."
+  []
+  (when-let [{:keys [peripheral state]} @!mentor]
+    (futon3c.peripheral.runner/stop peripheral @state "session ended")
+    (reset! !mentor nil)
+    (println "[dev] Mentor stopped.")))
+
 (defn status
   "Quick runtime status for the REPL."
   []
   {:agents (reg/registered-agents)
    :tickle (when @!tickle {:running true :started-at (:started-at @!tickle)})
+   :mentor (when @!mentor {:running true})
    :irc (when @!irc-sys {:port (:port @!irc-sys)})
    :evidence-count (when @!evidence-store
                      (count (futon3c.evidence.store/query* @!evidence-store {})))
@@ -2580,8 +2700,10 @@ RESPOND WITH ONLY:
      :timeout-ms       — hard process timeout in ms (default 1800000 = 30 min).
                          Set high because Emacs sessions replace the CLI and should
                          not be arbitrarily killed. IRC relay enforces its own
-                         shorter timeout (120s) via invoke-timeout-ms."
-  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket]
+                         shorter timeout (120s) via invoke-timeout-ms.
+     :model            — Claude model override (e.g. \"claude-haiku-4-5-20251001\").
+                         When nil, uses the CLI default."
+  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
          timeout-ms 1800000}}]
   (let [!lock (Object.)
@@ -2598,6 +2720,7 @@ RESPOND WITH ONLY:
               args (cond-> [claude-bin "-p"
                             "--permission-mode" permission-mode
                             "--output-format" "stream-json" "--verbose"]
+                     model      (into ["--model" model])
                      session-id (into ["--resume" (str session-id)])
                      new-sid    (into ["--session-id" new-sid])
                      :always    (into ["--" prompt-str]))
