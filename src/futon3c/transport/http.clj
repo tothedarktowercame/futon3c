@@ -49,6 +49,11 @@
             [futon3c.portfolio.core :as portfolio]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
+            [meme.schema :as meme-schema]
+            [meme.core :as meme-core]
+            [meme.arrow :as meme-arrow]
+            [next.jdbc :as meme-jdbc]
+            [next.jdbc.result-set :as meme-rs]
             [futon3c.cyder :as cyder]
             [cheshire.core :as json]
             [cheshire.generate :as json-gen]
@@ -1841,6 +1846,65 @@
                :pending (:pending state)}})))
 
 ;; =============================================================================
+;; Concept Graph (meme store)
+;; =============================================================================
+
+(defn- meme-datasource
+  "Get the meme store datasource, or nil if meme.db doesn't exist."
+  []
+  (let [path (meme-schema/db-path)]
+    (when (.exists (io/file path))
+      (meme-schema/datasource path))))
+
+(defn- handle-concepts
+  "GET /api/alpha/concepts?q=... — query concept graph from meme store.
+   Returns entities matching the query with their arrows."
+  [request]
+  (let [params (:query-string request)
+        q (some-> params
+                  (str/split #"&")
+                  (->> (some (fn [p]
+                               (when (str/starts-with? p "q=")
+                                 (enc/decode-uri-component (subs p 2)))))))]
+    (if-not q
+      (json-response 400 {:ok false :error "Missing ?q= parameter"})
+      (if-let [ds (meme-datasource)]
+        (let [entity (meme-core/find-entity-by-name ds q)
+              entities (if entity
+                         [entity]
+                         ;; Fuzzy: search by LIKE
+                         (let [like-pat (str "%" q "%")]
+                           (try
+                             (meme-jdbc/execute! ds
+                               ["SELECT * FROM entities WHERE name LIKE ? LIMIT 20" like-pat]
+                               {:builder-fn meme-rs/as-unqualified-maps})
+                             (catch Exception _ []))))
+              result (mapv (fn [ent]
+                             {:entity (select-keys ent [:id :name :kind :description])
+                              :arrows (mapv (fn [a] (select-keys a [:id :source_id :target_id :mode :rationale :confidence]))
+                                            (meme-arrow/arrows-from ds (:id ent)))
+                              :bridges []})
+                           entities)]
+          (json-response 200 {:ok true :query q :count (count result) :results result}))
+        (json-response 503 {:ok false :error "meme.db not available"})))))
+
+(defn- handle-concepts-health
+  "GET /api/alpha/concepts/health — meme store health check."
+  []
+  (if-let [ds (meme-datasource)]
+    (let [entity-count (-> (meme-jdbc/execute-one! ds ["SELECT count(*) as cnt FROM entities"]
+                             {:builder-fn meme-rs/as-unqualified-maps})
+                           :cnt)
+          arrow-count (-> (meme-jdbc/execute-one! ds ["SELECT count(*) as cnt FROM arrows"]
+                            {:builder-fn meme-rs/as-unqualified-maps})
+                          :cnt)]
+      (json-response 200 {:ok true
+                           :entities entity-count
+                           :arrows arrow-count
+                           :db-path (meme-schema/db-path)}))
+    (json-response 503 {:ok false :error "meme.db not available"})))
+
+;; =============================================================================
 ;; Public API
 ;; =============================================================================
 
@@ -2034,6 +2098,12 @@
                (str/starts-with? uri "/api/alpha/reflect/java/"))
           (let [raw (subs uri (count "/api/alpha/reflect/java/"))]
             (handle-reflect-java-class (enc/decode-uri-component raw)))
+
+          (and (= :get method) (= "/api/alpha/concepts" uri))
+          (handle-concepts request)
+
+          (and (= :get method) (= "/api/alpha/concepts/health" uri))
+          (handle-concepts-health)
 
           (and (= :get method) (= "/api/alpha/enrich/file" uri))
           (handle-enrich-file request config)
