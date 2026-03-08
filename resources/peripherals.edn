@@ -128,7 +128,7 @@
 
   :mentor
   {:peripheral/id :mentor
-   :peripheral/tools #{:mentor-observe :mentor-evaluate :mentor-intervene :mentor-status}
+   :peripheral/tools #{:mentor-observe :mentor-evaluate :mentor-intervene :mentor-status :mentor-map}
    :peripheral/scope :observation
    :peripheral/entry #{:user-request :from-any}
    :peripheral/exit #{:user-request :session-end}

@@ -18,8 +18,8 @@
 (deftest peripherals-edn-loads
   (testing "peripherals.edn is loadable and has nine peripherals"
     (let [peripherals (load-peripherals)]
-      (is (= 11 (count peripherals)))
-      (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission :mission-control}
+      (is (= 13 (count peripherals)))
+      (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission :mission-control :arse :mentor}
              (set (keys peripherals)))))))
 
 (deftest all-peripherals-validate-against-shape

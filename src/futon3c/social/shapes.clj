@@ -139,7 +139,7 @@
 
 (def PeripheralId
   "Peripheral identifier — the core peripherals plus extensions."
-  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission :mission-control])
+  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission :mission-control :arse :mentor])
 
 (def ToolSet
   "Set of tools available to a peripheral."
@@ -148,7 +148,7 @@
 (def PeripheralScope
   "Scope constraint for a peripheral — what it can access."
   [:or
-   [:enum :full-codebase :test-commands-only :git-push-only :session-log-only :discipline-records :irc-rooms :alfworld-simulation]
+   [:enum :full-codebase :test-commands-only :git-push-only :session-log-only :discipline-records :irc-rooms :alfworld-simulation :corpus-search :observation]
    [:map [:paths [:vector :string]]]])
 
 (def PeripheralSpec

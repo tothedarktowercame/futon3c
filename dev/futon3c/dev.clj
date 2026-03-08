@@ -2248,7 +2248,7 @@ RESPOND WITH ONLY:
 ;; Mentor peripheral — claude-2 on #math
 ;; =============================================================================
 
-(defonce !mentor (atom nil))
+(defonce !mentor (atom {}))
 
 (defn make-math-irc-read-fn
   "Create an irc-read-fn that pulls #math messages from the evidence store.
@@ -2275,99 +2275,134 @@ RESPOND WITH ONLY:
       ((make-bridge-irc-send-fn) channel from-nick message))))
 
 (defn start-mentor!
-  "Start the mentor peripheral for claude-2 on #math.
-   Uses the evidence store to read IRC messages and the IRC server to post.
-   Returns the peripheral + state map, stored in !mentor.
+  "Start a mentor peripheral with a handle.
+   The handle (e.g. 'mentor:FM-001') owns the map — any agent can inhabit it.
+   State persists to futon1a; restarts restore the latest checkpoint.
 
    Options:
+     :handle     — mentor handle (default \"mentor:FM-001\")
      :problem-id — FM problem to track (default \"FM-001\")
-     :channel    — IRC channel to observe (default \"#math\")"
-  [& {:keys [problem-id channel]
-      :or {problem-id "FM-001"
-           channel "#math"}}]
+     :channel    — IRC channel to observe (default \"#math\")
+     :agent-id   — agent inhabiting this mentor (default \"claude-2\")"
+  [& {:keys [handle problem-id channel agent-id]
+      :or {handle "mentor:FM-001"
+           problem-id "FM-001"
+           channel "#math"
+           agent-id "claude-2"}}]
   (let [backend (futon3c.peripheral.tools/make-mock-backend)
         irc-read-fn (make-math-irc-read-fn)
         irc-send-fn (make-math-irc-send-fn)
-        peripheral (mentor/make-mentor backend {:irc-read-fn irc-read-fn
-                                                :irc-send-fn irc-send-fn})
+        peripheral (mentor/make-mentor backend
+                     {:irc-read-fn irc-read-fn :irc-send-fn irc-send-fn}
+                     handle)
         context {:session-id (str "mentor-" (UUID/randomUUID))
-                 :agent-id "claude-2"
+                 :agent-id agent-id
                  :problem-id problem-id
                  :channel channel
                  :evidence-store @!evidence-store}
         start-result (futon3c.peripheral.runner/start peripheral context)]
     (if (:ok start-result)
       (do
-        (reset! !mentor {:peripheral peripheral
-                         :state (atom (:state start-result))})
-        ;; Register claude-2 as mentor agent
-        (reg/update-agent! "claude-2"
+        (swap! !mentor assoc handle
+               {:peripheral peripheral
+                :state (atom (:state start-result))
+                :handle handle})
+        ;; Register agent with mentor capabilities
+        (reg/update-agent! agent-id
                            :agent/type :claude
                            :agent/capabilities [:mentor/observe :mentor/intervene])
-        (println (str "[dev] Mentor started: claude-2 on " channel " tracking " problem-id))
+        (println (str "[dev] Mentor started: " agent-id " as " handle
+                      " on " channel " tracking " problem-id))
         :ok)
       (do
         (println (str "[dev] Mentor start failed: " start-result))
         start-result))))
 
+(defn- resolve-mentor
+  "Look up a mentor by handle. Defaults to 'mentor:FM-001'."
+  ([] (resolve-mentor "mentor:FM-001"))
+  ([handle] (get @!mentor handle)))
+
 (defn mentor-observe!
-  "Run one observation cycle: pull new #math messages.
+  "Run one observation cycle: pull new messages, enrich the map.
    Returns the observation result."
-  []
-  (when-let [{:keys [peripheral state]} @!mentor]
-    (let [result (futon3c.peripheral.runner/step
-                   peripheral @state {:tool :mentor-observe :args []})]
-      (when (:ok result)
-        (reset! state (:state result)))
-      (:result result))))
+  ([] (mentor-observe! "mentor:FM-001"))
+  ([handle]
+   (when-let [{:keys [peripheral state]} (resolve-mentor handle)]
+     (let [result (futon3c.peripheral.runner/step
+                    peripheral @state {:tool :mentor-observe :args []})]
+       (when (:ok result)
+         (reset! state (:state result)))
+       (:result result)))))
 
 (defn mentor-evaluate!
-  "Evaluate triggers against accumulated conversation.
-   Returns the trigger checklist and conversation window."
-  []
-  (when-let [{:keys [peripheral state]} @!mentor]
-    (let [result (futon3c.peripheral.runner/step
-                   peripheral @state {:tool :mentor-evaluate :args []})]
-      (when (:ok result)
-        (reset! state (:state result)))
-      (:result result))))
+  "Evaluate triggers against the conversation map.
+   Returns gap analysis and trigger state."
+  ([] (mentor-evaluate! "mentor:FM-001"))
+  ([handle]
+   (when-let [{:keys [peripheral state]} (resolve-mentor handle)]
+     (let [result (futon3c.peripheral.runner/step
+                    peripheral @state {:tool :mentor-evaluate :args []})]
+       (when (:ok result)
+         (reset! state (:state result)))
+       (:result result)))))
 
 (defn mentor-intervene!
-  "Post an intervention to #math. Only call when a trigger fires.
+  "Post an intervention when a trigger fires.
    trigger-id: keyword e.g. :QP-1
    message: string to post"
-  [trigger-id message]
-  (when-let [{:keys [peripheral state]} @!mentor]
-    (let [result (futon3c.peripheral.runner/step
-                   peripheral @state {:tool :mentor-intervene :args [trigger-id message]})]
-      (when (:ok result)
-        (reset! state (:state result)))
-      (:result result))))
+  ([trigger-id message] (mentor-intervene! "mentor:FM-001" trigger-id message))
+  ([handle trigger-id message]
+   (when-let [{:keys [peripheral state]} (resolve-mentor handle)]
+     (let [result (futon3c.peripheral.runner/step
+                    peripheral @state {:tool :mentor-intervene :args [trigger-id message]})]
+       (when (:ok result)
+         (reset! state (:state result)))
+       (:result result)))))
 
 (defn mentor-status
-  "Get current mentor state summary."
+  "Get current mentor map summary."
+  ([] (mentor-status "mentor:FM-001"))
+  ([handle]
+   (when-let [{:keys [peripheral state]} (resolve-mentor handle)]
+     (let [result (futon3c.peripheral.runner/step
+                    peripheral @state {:tool :mentor-status :args []})]
+       (when (:ok result)
+         (reset! state (:state result)))
+       (:result result)))))
+
+(defn mentor-map
+  "Get full conversation map for a mentor handle."
+  ([] (mentor-map "mentor:FM-001"))
+  ([handle]
+   (when-let [{:keys [peripheral state]} (resolve-mentor handle)]
+     (let [result (futon3c.peripheral.runner/step
+                    peripheral @state {:tool :mentor-map :args []})]
+       (when (:ok result)
+         (reset! state (:state result)))
+       (:result result)))))
+
+(defn mentor-handles
+  "List all active mentor handles."
   []
-  (when-let [{:keys [peripheral state]} @!mentor]
-    (let [result (futon3c.peripheral.runner/step
-                   peripheral @state {:tool :mentor-status :args []})]
-      (when (:ok result)
-        (reset! state (:state result)))
-      (:result result))))
+  (vec (keys @!mentor)))
 
 (defn stop-mentor!
-  "Stop the mentor peripheral."
-  []
-  (when-let [{:keys [peripheral state]} @!mentor]
-    (futon3c.peripheral.runner/stop peripheral @state "session ended")
-    (reset! !mentor nil)
-    (println "[dev] Mentor stopped.")))
+  "Stop a mentor peripheral by handle. Stops all if no handle given."
+  ([] (doseq [h (mentor-handles)] (stop-mentor! h)))
+  ([handle]
+   (when-let [{:keys [peripheral state]} (resolve-mentor handle)]
+     (futon3c.peripheral.runner/stop peripheral @state "session ended")
+     (swap! !mentor dissoc handle)
+     (println (str "[dev] Mentor stopped: " handle)))))
 
 (defn status
   "Quick runtime status for the REPL."
   []
   {:agents (reg/registered-agents)
    :tickle (when @!tickle {:running true :started-at (:started-at @!tickle)})
-   :mentor (when @!mentor {:running true})
+   :mentor (when (seq @!mentor)
+             {:running true :handles (mentor-handles)})
    :irc (when @!irc-sys {:port (:port @!irc-sys)})
    :evidence-count (when @!evidence-store
                      (count (futon3c.evidence.store/query* @!evidence-store {})))

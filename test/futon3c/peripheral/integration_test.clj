@@ -396,10 +396,10 @@
           (is (seq (:allowed-tools constraints))
               (str "no allowed tools for " pid)))
         ;; Mapping has at least one entry (except reflect/:alfworld/:chat which have tools with no Claude/Codex equivalent)
-        (when-not (#{:reflect :alfworld :chat} pid)
+        (when-not (#{:reflect :alfworld :chat :mentor :arse} pid)
           (is (seq claude-mapping)
               (str "empty Claude mapping for " pid)))
-        (when-not (#{:alfworld :chat} pid)
+        (when-not (#{:alfworld :chat :mentor :arse} pid)
           (is (seq codex-mapping)
               (str "empty Codex mapping for " pid)))))))
 
