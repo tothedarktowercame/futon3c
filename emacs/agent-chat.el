@@ -57,6 +57,11 @@
   "Face for thinking/progress indicator."
   :group 'agent-chat)
 
+(defface agent-chat-tool-line-face
+  '((t :foreground "#ffb86c"))
+  "Face for tool-use lines like [Read], [Edit], etc."
+  :group 'agent-chat)
+
 ;;; Buffer state
 
 (defvar-local agent-chat--prompt-marker nil
@@ -115,7 +120,20 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
           (insert (format "%s\n\n" transformed))
           (let ((text-end (point)))
             (overlay-put (make-overlay name-start name-end) 'face face)
-            (overlay-put (make-overlay name-end text-end) 'face 'agent-chat-text-face)))))
+            (overlay-put (make-overlay name-end text-end) 'face 'agent-chat-text-face)
+            ;; Highlight tool-use lines in orange.
+            ;; Matches: [Read], [Edit], [Bash], [Glob], [Grep], [Write],
+            ;; [Agent], [WebFetch], and also "Using Bash", "Reading Files", etc.
+            (save-excursion
+              (goto-char name-end)
+              (while (re-search-forward
+                      "^\\(?:\\[[A-Z][A-Za-z]*\\]\\|\\(?:Using\\|Reading\\|Editing\\|Searching\\|Inspecting\\) [A-Z][A-Za-z]*\\)"
+                      text-end t)
+                (let* ((bol (line-beginning-position))
+                       (eol (line-end-position))
+                       (ov (make-overlay bol eol)))
+                  (overlay-put ov 'face 'agent-chat-tool-line-face)
+                  (overlay-put ov 'priority 10))))))))
     (when at-end
       (goto-char (point-max))
       (agent-chat-scroll-to-bottom))))
