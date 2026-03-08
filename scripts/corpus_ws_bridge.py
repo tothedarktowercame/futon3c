@@ -231,7 +231,7 @@ async def ws_bridge():
         # Wait for ready-ack
         ack = await asyncio.wait_for(ws.recv(), timeout=10)
         ack_data = json.loads(ack)
-        if ack_data.get("type") == "ready-ack":
+        if ack_data.get("type") in ("ready-ack", "ready_ack"):
             print(f"[corpus] Connected. Waiting for invoke frames...")
         else:
             print(f"[corpus] Unexpected ack: {ack_data}")
