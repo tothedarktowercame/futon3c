@@ -797,7 +797,7 @@ class IRCBot:
                     return {
                         "ok": False,
                         "job_id": data.get("job-id") or data.get("job_id"),
-                        "error": f"invoke error: {data.get('error', 'unknown')}",
+                        "error": data.get("message") or f"invoke error: {data.get('error', 'unknown')}",
                         "session_id": data.get("session-id") or data.get("session_id"),
                         "invoke_meta": invoke_meta,
                     }
