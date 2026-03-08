@@ -41,6 +41,7 @@
      FUTON3C_CODEX_WS_REPLICATE_EVIDENCE — enable WS evidence replication (default true for remote WS target)
      EVIDENCE_REPLICATION_INTERVAL_MS — WS replication poll interval (default 30000)
      FUTON3C_REGISTER_CLAUDE — whether to register claude-1 on this host
+     FUTON3C_REGISTER_CLAUDE2 — whether to register claude-2 (mentor, workspace2)
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host
      FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)"
   (:require [futon1a.system :as f1]
@@ -275,6 +276,7 @@
     :linode {:irc-port 6667
              :irc-bind-host "0.0.0.0"
              :register-claude? true
+             :register-claude2? true
              :register-codex? false
              :direct-xtdb? true}
     :laptop {:irc-port 0
@@ -3900,6 +3902,34 @@ RESPOND WITH ONLY:
                             (when initial-sid
                               (str " (session: " (subs initial-sid 0
                                                        (min 8 (count initial-sid))) ")")))))))
+        ;; Register Claude-2 (Mentor role, workspace2)
+        _ (when (env-bool "FUTON3C_REGISTER_CLAUDE2" (:register-claude2? role-cfg))
+            (let [sf2 (io/file (or (env "CLAUDE2_SESSION_FILE")
+                                    "/tmp/futon-session-id-claude-2"))
+                  initial-sid2 (read-session-id sf2)
+                  sid-atom2 (atom initial-sid2)
+                  claude2-socket (or (env "CLAUDE2_EMACS_SOCKET") "workspace2")
+                  invoke-fn2 (make-claude-invoke-fn
+                               {:claude-bin (env "CLAUDE_BIN" "claude")
+                                :permission-mode (env "CLAUDE_PERMISSION" "bypassPermissions")
+                                :agent-id "claude-2"
+                                :session-file sf2
+                                :session-id-atom sid-atom2
+                                :emacs-socket claude2-socket})]
+              (rt/register-claude! {:agent-id "claude-2"
+                                    :invoke-fn invoke-fn2})
+              (reg/update-agent! "claude-2"
+                                 :agent/type :claude
+                                 :agent/invoke-fn invoke-fn2
+                                 :agent/metadata {:role "mentor" :emacs-socket claude2-socket}
+                                 :agent/capabilities [:explore :edit :test :coordination/execute])
+              (when initial-sid2
+                (reg/update-agent! "claude-2" :agent/session-id initial-sid2))
+              (println (str "[dev] Claude agent registered: claude-2 (mentor, inline invoke)"
+                            (str " (emacs: " claude2-socket ")")
+                            (when initial-sid2
+                              (str " (session: " (subs initial-sid2 0
+                                                       (min 8 (count initial-sid2))) ")"))))))
         ;; Register Codex — guard against missing binary
         codex-bin-name (env "CODEX_BIN" "codex")
         codex-bin-exists? (try
