@@ -178,6 +178,33 @@ def format_for_irc(result: dict) -> str:
     return "\n".join(lines)
 
 
+def extract_query_from_prompt(prompt: str) -> str:
+    """Extract the actual user query from an IRC surface-contract-wrapped prompt.
+
+    The ngircd bridge wraps messages like:
+        --- CURRENT TURN ---
+        Surface: irc (#math)
+        Caller: irc:joe
+        ---
+        [Surface: IRC | Channel: #math | ...]
+        joe: @corpus What is known about ...
+    We want just the query text after '@corpus'."""
+    import re
+    # Look for the @corpus mention and grab everything after it
+    m = re.search(r'@corpus\s+(.*)', prompt, re.DOTALL)
+    if m:
+        return m.group(1).strip()
+    # If no @corpus, look for last line after "---" separator block
+    lines = prompt.strip().split('\n')
+    # Skip surface contract framing, return last meaningful line
+    for line in reversed(lines):
+        line = line.strip()
+        if line and not line.startswith('[') and not line.startswith('---') and ':' not in line[:20]:
+            return line
+    # Fallback: return the whole thing
+    return prompt.strip()
+
+
 def handle_invoke(prompt: str) -> str:
     """Handle an invoke request. Parse the prompt as a retrieval query.
 
@@ -192,8 +219,8 @@ def handle_invoke(prompt: str) -> str:
         sources = request.get("sources", None)
         structured = True
     except (json.JSONDecodeError, TypeError):
-        # Plain text query (from IRC @mention)
-        query = prompt.strip()
+        # Plain text query (from IRC @mention) — strip surface contract framing
+        query = extract_query_from_prompt(prompt)
         top_k = 5
         sources = None
 
