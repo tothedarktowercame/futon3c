@@ -515,6 +515,71 @@
          (map #(get-in ledger [:jobs %]))
          (remove nil?))))
 
+(def ^:const stale-job-threshold-ms
+  "Jobs running longer than this are considered stale and will be reaped."
+  (* 35 60 1000))  ;; 35 minutes
+
+(defn reap-stale-invoke-jobs!
+  "Finalize jobs stuck in 'running' state past the stale threshold.
+   Returns the count of reaped jobs."
+  ([] (reap-stale-invoke-jobs! stale-job-threshold-ms))
+  ([threshold-ms]
+   (ensure-invoke-jobs-ledger!)
+   (let [now-ms (System/currentTimeMillis)
+         reaped (atom 0)]
+     (update-invoke-jobs-ledger!
+      (fn [ledger]
+        (let [jobs (:jobs ledger)
+              updated-jobs
+              (reduce-kv
+               (fn [acc jid job]
+                 (if (and (= "running" (str (:state job)))
+                          (let [started (:started-at job)]
+                            (when (string? started)
+                              (try
+                                (let [started-ms (.toEpochMilli (Instant/parse started))
+                                      age-ms (- now-ms started-ms)]
+                                  (> age-ms threshold-ms))
+                                (catch Exception _ false)))))
+                   (do
+                     (swap! reaped inc)
+                     (let [finished-at (str (Instant/now))]
+                       (assoc acc jid
+                              (-> job
+                                  (assoc :state "failed"
+                                         :finished-at finished-at
+                                         :terminal-code "stale-job-reaped"
+                                         :terminal-message (str "Job stuck in running state; reaped after "
+                                                                (/ threshold-ms 60000) " minutes"))
+                                  (append-job-event "failed" {:code "stale-job-reaped"})))))
+                   (assoc acc jid job)))
+               {}
+               jobs)]
+          (assoc ledger :jobs updated-jobs))))
+     (let [n @reaped]
+       (when (pos? n)
+         (println (str "[invoke-jobs] Reaped " n " stale job(s)"))
+         (flush))
+       n))))
+
+(defonce ^:private !stale-job-reaper
+  (let [running (atom true)
+        thread (Thread.
+                (fn []
+                  (while @running
+                    (try
+                      (Thread/sleep 300000) ;; 5 minutes
+                      (reap-stale-invoke-jobs!)
+                      (catch InterruptedException _
+                        (reset! running false))
+                      (catch Throwable t
+                        (println (str "[invoke-jobs] Reaper error: " (.getMessage t)))
+                        (flush)))))
+                "invoke-job-reaper")]
+    (.setDaemon thread true)
+    (.start thread)
+    {:stop (fn [] (reset! running false) (.interrupt thread))}))
+
 (defn- parse-keyword
   "Parse an API parameter into a keyword (accepts optional leading :)."
   [s]
@@ -2729,6 +2794,10 @@
           (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)
                 job-id (enc/decode-uri-component raw-id)]
             (handle-invoke-job job-id))
+
+          (and (= :post method) (= "/api/alpha/invoke/jobs/reap" uri))
+          (let [n (reap-stale-invoke-jobs!)]
+            (json-response 200 {:ok true :reaped n}))
 
           (and (= :post method) (= "/api/alpha/invoke-stream" uri))
           (handle-invoke-stream request config)
