@@ -376,38 +376,47 @@
   (let [created-id (atom nil)]
     (update-invoke-jobs-ledger!
      (fn [ledger]
-       (let [[auto-id next-seq] (next-invoke-job-id ledger)
-             requested (some-> requested-job-id str str/trim)
-             usable-requested (and (seq requested)
-                                   (not (contains? (:jobs ledger) requested))
-                                   requested)
-             job-id (or usable-requested auto-id)
-             created-at (str (Instant/now))
-             mode (invoke-job-mode prompt)
-             job {:job-id job-id
-                  :agent-id (str agent-id)
-                  :caller (str (or caller "http-caller"))
-                  :surface (str (or surface "http"))
-                  :mode mode
-                  :state "queued"
-                  :created-at created-at
-                  :started-at nil
-                  :finished-at nil
-                  :terminal-code nil
-                  :terminal-message nil
-                  :session-id nil
-                  :trace-id nil
-                  :result-summary nil
-                  :artifact-ref nil
-                  :execution {:executed? false :tool-events 0 :command-events 0}
-                  :delivery {:status "pending"}
-                  :event-seq 0
-                  :events []}]
-         (reset! created-id job-id)
-         (-> ledger
-             (assoc :next-seq next-seq)
-             (update :job-order (fnil conj []) job-id)
-             (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))
+       (let [requested (some-> requested-job-id str str/trim)
+             ;; Dedup: if the requested job-id already exists and is non-terminal,
+             ;; reuse it instead of creating a duplicate.
+             existing (when (seq requested)
+                        (get-in ledger [:jobs requested]))
+             reuse? (and existing
+                         (#{"queued" "running"} (str (:state existing))))]
+         (if reuse?
+           (do (reset! created-id requested)
+               ledger)  ;; no mutation — return existing job
+           (let [[auto-id next-seq] (next-invoke-job-id ledger)
+                 usable-requested (and (seq requested)
+                                       (not (contains? (:jobs ledger) requested))
+                                       requested)
+                 job-id (or usable-requested auto-id)
+                 created-at (str (Instant/now))
+                 mode (invoke-job-mode prompt)
+                 job {:job-id job-id
+                      :agent-id (str agent-id)
+                      :caller (str (or caller "http-caller"))
+                      :surface (str (or surface "http"))
+                      :mode mode
+                      :state "queued"
+                      :created-at created-at
+                      :started-at nil
+                      :finished-at nil
+                      :terminal-code nil
+                      :terminal-message nil
+                      :session-id nil
+                      :trace-id nil
+                      :result-summary nil
+                      :artifact-ref nil
+                      :execution {:executed? false :tool-events 0 :command-events 0}
+                      :delivery {:status "pending"}
+                      :event-seq 0
+                      :events []}]
+             (reset! created-id job-id)
+             (-> ledger
+                 (assoc :next-seq next-seq)
+                 (update :job-order (fnil conj []) job-id)
+                 (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
     @created-id))
 
 (defn- mark-invoke-job-running!
@@ -1472,29 +1481,31 @@
                               :message "prompt is required"})
 
           (:async-channel request)
-          (hk/as-channel request
-            {:on-open
-             (fn [channel]
-               (try
-                 (.submit invoke-executor
-                          ^Runnable
-                          (fn []
-                            (try
-                              (hk/send! channel (build-invoke-response invoke-opts))
-                              (catch Throwable t
-                                (println (str "[invoke] async error: " (.getMessage t)))
-                                (flush)
-                                (hk/send! channel
-                                          (json-response 500 {:ok false
-                                                              :error "invoke-error"
-                                                              :message (.getMessage t)}))))))
-                 (catch Throwable t
-                   (println (str "[invoke] async submit error: " (.getMessage t)))
-                   (flush)
-                   (hk/send! channel
-                             (json-response 503 {:ok false
-                                                 :error "invoke-submit-failed"
-                                                 :message (.getMessage t)})))))}))
+          (let [invoked? (atom false)]
+            (hk/as-channel request
+              {:on-open
+               (fn [channel]
+                 (when (compare-and-set! invoked? false true)
+                   (try
+                     (.submit invoke-executor
+                              ^Runnable
+                              (fn []
+                                (try
+                                  (hk/send! channel (build-invoke-response invoke-opts))
+                                  (catch Throwable t
+                                    (println (str "[invoke] async error: " (.getMessage t)))
+                                    (flush)
+                                    (hk/send! channel
+                                              (json-response 500 {:ok false
+                                                                  :error "invoke-error"
+                                                                  :message (.getMessage t)}))))))
+                     (catch Throwable t
+                       (println (str "[invoke] async submit error: " (.getMessage t)))
+                       (flush)
+                       (hk/send! channel
+                                 (json-response 503 {:ok false
+                                                     :error "invoke-submit-failed"
+                                                     :message (.getMessage t)}))))))}))
 
           :else
           (try
