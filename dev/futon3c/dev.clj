@@ -80,6 +80,7 @@
            [java.util.concurrent CompletableFuture]))
 
 (declare make-claude-invoke-fn)
+(declare record-invoke-delivery!)
 
 (defn env
   "Read an env var with optional default."
@@ -452,6 +453,21 @@
                                    (finally
                                      (mark-local-invoke-state! {:status :idle
                                                                 :session-id @final-sid*}))))))))
+        handle-invoke-delivery! (fn [frame]
+                                  (let [invoke-trace-id (or (:invoke_trace_id frame)
+                                                            (:invoke-trace-id frame)
+                                                            (:invokeTraceId frame))
+                                        delivered (let [v (:delivered frame)]
+                                                    (if (boolean? v) v (not= false v)))]
+                                    (when-let [tid (some-> invoke-trace-id str str/trim not-empty)]
+                                      (record-invoke-delivery!
+                                       agent-id
+                                       tid
+                                       {:surface (or (:surface frame) "irc")
+                                        :destination (or (:destination frame)
+                                                         (str "#futon as <" agent-id ">"))
+                                        :delivered? delivered
+                                        :note (or (:note frame) "ws-relayed-invoke-delivery")}))))
         worker (future
                  (while @running?
                    (if-not (ensure-registered!)
@@ -482,6 +498,8 @@
                                               (let [frame (json/parse-string (str data) true)]
                                                 (when (= "invoke" (:type frame))
                                                   (handle-invoke! ws frame))
+                                                (when (= "invoke_delivery" (:type frame))
+                                                  (handle-invoke-delivery! frame))
                                                 (when replication
                                                   ((:handle-frame! replication) frame)))
                                               (catch Exception e
@@ -719,6 +737,11 @@
             (cond
               success?
               true
+
+              ;; Buffer doesn't exist — expected for WS-bridged agents
+              ;; where invoke buffer lives on a different machine.
+              (= :missing-buffer status)
+              false
 
               (< attempt 3)
               (do

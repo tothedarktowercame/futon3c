@@ -561,6 +561,23 @@ The full cycle demonstrated:
 5. **Live verification:** Codex executes through the enforcement-equipped
    parsing pipeline with correct evidence
 
+**Test 3: Live IRC end-to-end (2026-03-08)**
+```
+IRC: @codex can you please run the futon0 git hygiene command and tell me
+     if we have any uncommitted files on the laptop?
+Result: [done codex-1772989663-1] Ran `bb scripts/futon-sync.clj status`
+        inside `futon0`: uncommitted work is present in futon0 (8 tracked
+        edits, 9 untracked), futon3c (10 edits, 5 untracked plus `.venv/`
+        noise)... refs: scripts/futon-sync.clj (session 019ccdc0)
+Path: IRC → Linode HTTP → WS bridge → laptop codex → WS result → IRC
+H-1: PASS (Q→A contract met — codex executed tool and returned answer)
+```
+
+Minor cleanup: `record-invoke-delivery!` on Linode logged noisy
+`[invoke-delivery] failed ... missing-buffer` because the Emacs invoke
+buffer lives on the laptop, not the server. Fixed by treating
+`missing-buffer` as a benign no-op (expected for WS-bridged agents).
+
 ### Deferred items
 
 - **Option C consolidation:** Move detection predicates and enforcement
