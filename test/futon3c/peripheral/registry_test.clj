@@ -32,14 +32,14 @@
 
 (deftest peripheral-ids-covers-all-known
   (testing "peripheral-ids contains all known runtime IDs"
-    (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :alfworld :chat :mentor}
+    (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :alfworld :arse :chat :mentor}
            reg/peripheral-ids))))
 
 (deftest load-peripherals-returns-correct-format
   (testing "load-peripherals loads from classpath and returns expected format"
     (let [p (reg/load-peripherals)]
       (is (map? (:peripherals p)))
-      (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :chat :alfworld :mentor}
+      (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :chat :alfworld :arse :mentor}
              (set (keys (:peripherals p))))))))
 
 ;; =============================================================================

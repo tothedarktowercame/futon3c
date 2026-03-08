@@ -25,6 +25,7 @@
     (persist/reset-sessions!)
     (estore/reset-store!)
     (enc/clear-cache!)
+    (http/reset-invoke-jobs!)
     (f)))
 
 ;; =============================================================================
@@ -95,6 +96,21 @@
                                       (.firstValue "content-type")
                                       (.orElse nil))}
      :body (.body resp)}))
+
+(defn- wait-for-job-state
+  "Poll /api/alpha/invoke/jobs/:id until state is no longer queued/running or timeout."
+  [handler job-id timeout-ms]
+  (let [deadline (+ (System/currentTimeMillis) timeout-ms)]
+    (loop []
+      (let [resp (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+            parsed (parse-body resp)
+            state (get-in parsed [:job :state])]
+        (if (or (not (#{"queued" "running"} state))
+                (>= (System/currentTimeMillis) deadline))
+          {:response resp :parsed parsed}
+          (do
+            (Thread/sleep 20)
+            (recur)))))))
 
 (defn- with-temp-dir
   [f]
@@ -367,10 +383,191 @@
         handler
         (fn [base-url]
           (let [response (http-post-json base-url "/api/alpha/invoke" body)
-                parsed (parse-body response)]
+                parsed (parse-body response)
+                job-id (:job-id parsed)
+                final* (wait-for-job-state handler job-id 2000)
+                final-resp (:response final*)
+                final-parsed (:parsed final*)
+                job (:job final-parsed)]
             (is (= 200 (:status response)))
             (is (true? (:ok parsed)))
-            (is (= "ok" (:result parsed)))))))))
+            (is (string? job-id))
+            (is (= 200 (:status final-resp)))
+            (is (true? (:ok final-parsed)))
+            (is (= job-id (:job-id job)))
+            (is (= "done" (:state job)))
+            (is (= "ok" (:result job)))))))))
+
+(deftest invoke-job-query-roundtrip
+  (testing "invoke response job-id can be queried via /api/alpha/invoke/jobs/:id"
+    (register-mock-agent! "codex-job-1" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-job-1"
+                                      "prompt" "hello from job query"})
+          invoke-response (post handler "/api/alpha/invoke" body)
+          invoke-parsed (parse-body invoke-response)
+          job-id (:job-id invoke-parsed)
+          job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+          job-parsed (parse-body job-response)
+          job (:job job-parsed)]
+      (is (= 200 (:status invoke-response)))
+      (is (true? (:ok invoke-parsed)))
+      (is (string? job-id))
+      (is (= 200 (:status job-response)))
+      (is (true? (:ok job-parsed)))
+      (is (= job-id (:job-id job)))
+      (is (= "done" (:state job)))
+      (is (= "codex-job-1" (:agent-id job))))))
+
+(deftest invoke-http-surface-auto-records-delivery-when-trace-present
+  (testing "direct HTTP invoke marks delivery delivered when invoke-meta includes trace-id"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-delivery"
+                                      "prompt" "hello from http delivery"})]
+      (register-mock-agent! "codex-http-delivery" :codex)
+      (with-redefs [reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result "done"
+                                         :session-id "sess-http-delivery"
+                                         :invoke-meta {:invoke-trace-id "invoke-http-delivery-1"
+                                                       :execution {:executed? true
+                                                                   :tool-events 1
+                                                                   :command-events 0}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
+          (is (= "http" (get-in job-parsed [:job :delivery :surface]))))))))
+
+(deftest invoke-job-delivery-records-on-job
+  (testing "POST /api/alpha/invoke-delivery updates invoke-job delivery state via trace-id"
+    (let [handler (make-handler)
+          invoke-body (json/generate-string {"agent-id" "codex-delivery-job"
+                                             "prompt" "ship it"})
+          delivery-body (json/generate-string {"agent-id" "codex-delivery-job"
+                                               "invoke-trace-id" "invoke-job-trace-1"
+                                               "surface" "irc"
+                                               "destination" "#futon as <codex>"
+                                               "delivered" true
+                                               "note" "bridge-test"})]
+      (register-mock-agent! "codex-delivery-job" :codex)
+      (with-redefs [reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result "done"
+                                         :session-id "sess-djob"
+                                         :invoke-meta {:invoke-trace-id "invoke-job-trace-1"
+                                                       :execution {:executed? true
+                                                                   :tool-events 1
+                                                                   :command-events 0}}})
+                    futon3c.transport.http/*resolve-delivery-recorder*
+                    (fn []
+                      (fn [_agent-id _invoke-trace-id _receipt] true))]
+        (let [invoke-response (post handler "/api/alpha/invoke" invoke-body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              delivery-response (post handler "/api/alpha/invoke-delivery" delivery-body)
+              _delivery-parsed (parse-body delivery-response)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (string? job-id))
+          (is (= 200 (:status delivery-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
+          (is (= "#futon as <codex>" (get-in job-parsed [:job :delivery :destination]))))))))
+
+(deftest invoke-job-failure-is-terminal
+  (testing "unknown agent invoke still creates a terminal failed job"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "ghost-terminal"
+                                      "prompt" "hello"})
+          invoke-response (post handler "/api/alpha/invoke" body)
+          invoke-parsed (parse-body invoke-response)
+          job-id (:job-id invoke-parsed)
+          job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+          job-parsed (parse-body job-response)]
+      (is (= 404 (:status invoke-response)))
+      (is (string? job-id))
+      (is (= 200 (:status job-response)))
+      (is (= "failed" (get-in job-parsed [:job :state])))
+      (is (= "agent-not-found" (get-in job-parsed [:job :terminal-code])))
+      (is (some? (get-in job-parsed [:job :finished-at]))))))
+
+(deftest invoke-job-recovery-marks-stale-running-failed
+  (testing "stale running jobs are recovered to terminal failure on restart/load"
+    (with-temp-dir
+      (fn [dir]
+        (let [store-file (io/file dir "invoke-jobs.edn")
+              preloaded {:version 1
+                         :next-seq 1
+                         :job-order ["job-stale-1"]
+                         :trace->job {}
+                         :jobs {"job-stale-1"
+                                {:job-id "job-stale-1"
+                                 :agent-id "codex-1"
+                                 :state "running"
+                                 :created-at "2026-03-07T20:00:00Z"
+                                 :started-at "2026-03-07T20:00:01Z"
+                                 :event-seq 1
+                                 :events [{:seq 1 :type "accepted" :at "2026-03-07T20:00:00Z"}]}}}]
+          (spit store-file (pr-str preloaded))
+          (with-redefs [futon3c.transport.http/invoke-jobs-store-path
+                        (fn [] (.getAbsolutePath store-file))]
+            (http/reset-invoke-jobs!)
+            (let [handler (make-handler)
+                  response (get-req handler "/api/alpha/invoke/jobs/job-stale-1")
+                  parsed (parse-body response)]
+              (is (= 200 (:status response)))
+              (is (= "failed" (get-in parsed [:job :state])))
+              (is (= "worker-lost-on-restart" (get-in parsed [:job :terminal-code])))
+              (is (some? (get-in parsed [:job :finished-at]))))))))))
+
+(deftest bell-accepts-and-runs-async-job
+  (testing "POST /api/alpha/bell returns accepted immediately and job reaches terminal state"
+    (register-mock-agent! "codex-bell-1" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-bell-1"
+                                      "prompt" "hello from bell async"})
+          response (post handler "/api/alpha/bell" body)
+          parsed (parse-body response)
+          job-id (:job-id parsed)
+          final* (wait-for-job-state handler job-id 2000)
+          final (:parsed final*)]
+      (is (= 202 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= true (:accepted parsed)))
+      (is (string? job-id))
+      (is (= "queued" (:state parsed)))
+      (is (or (= "done" (get-in final [:job :state]))
+              (= "failed" (get-in final [:job :state]))))
+      (is (some? (get-in final [:job :finished-at]))))))
+
+(deftest bell-no-evidence-work-turn-fails-terminally
+  (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-bell-noev"
+                                      "prompt" "@codex can you give me a summary of the state of play on FM-001"})]
+      (register-mock-agent! "codex-bell-noev" :codex)
+      (with-redefs [reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result "captured plan only"
+                                         :session-id "sess-bell-noev"
+                                         :invoke-meta {:execution {:executed? false
+                                                                   :tool-events 0
+                                                                   :command-events 0}}})]
+        (let [response (post handler "/api/alpha/bell" body)
+              parsed (parse-body response)
+              job-id (:job-id parsed)
+              final* (wait-for-job-state handler job-id 2000)
+              final (:parsed final*)]
+          (is (= 202 (:status response)))
+          (is (string? job-id))
+          (is (= "failed" (get-in final [:job :state])))
+          (is (= "no-execution-evidence" (get-in final [:job :terminal-code]))))))))
 
 (deftest invoke-missing-agent-returns-404
   (testing "POST /api/alpha/invoke returns 404 for unknown agent"
@@ -460,7 +657,6 @@
 (deftest invoke-delivery-records-receipt
   (testing "POST /api/alpha/invoke-delivery records delivery metadata"
     (let [calls (atom [])
-          orig-ns-resolve ns-resolve
           handler (make-handler)
           body (json/generate-string {"agent-id" "codex-1"
                                       "invoke-trace-id" "invoke-123"
@@ -468,14 +664,12 @@
                                       "destination" "#futon as <codex>"
                                       "delivered" true
                                       "note" "ngircd-bridge"})]
-      (with-redefs [ns-resolve (fn [ns-sym var-sym]
-                                 (if (and (= ns-sym 'futon3c.dev)
-                                          (= var-sym 'record-invoke-delivery!))
-                                   (fn [agent-id invoke-trace-id receipt]
-                                     (swap! calls conj {:agent-id agent-id
-                                                        :invoke-trace-id invoke-trace-id
-                                                        :receipt receipt}))
-                                   (orig-ns-resolve ns-sym var-sym)))]
+      (with-redefs [futon3c.transport.http/*resolve-delivery-recorder*
+                    (fn []
+                      (fn [agent-id invoke-trace-id receipt]
+                        (swap! calls conj {:agent-id agent-id
+                                           :invoke-trace-id invoke-trace-id
+                                           :receipt receipt})))]
         (let [response (post handler "/api/alpha/invoke-delivery" body)
               parsed (parse-body response)]
           (is (= 200 (:status response)))

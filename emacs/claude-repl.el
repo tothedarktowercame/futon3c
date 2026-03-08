@@ -475,9 +475,17 @@ CALLBACK is called with the final response text on completion."
                                      ;; Mid-stream tool use: append inline rather
                                      ;; than replacing progress (avoids remove-thinking
                                      ;; interfering with streamed text)
-                                     (claude-repl--stream-text
-                                      (propertize (format "\n[%s]\n" tool-names)
-                                                  'face 'agent-chat-prompt-face))
+                                     (let* ((tool-text (format "\n[%s]\n" tool-names))
+                                            (start-pos (and claude-repl--streaming-marker
+                                                            (marker-position claude-repl--streaming-marker))))
+                                       (claude-repl--stream-text tool-text)
+                                       ;; Re-overlay the tool line in orange with high priority
+                                       ;; so it wins over the text-face overlay.
+                                       (when (and start-pos claude-repl--streaming-marker)
+                                         (let ((ov (make-overlay start-pos
+                                                                 (marker-position claude-repl--streaming-marker))))
+                                           (overlay-put ov 'face 'agent-chat-tool-line-face)
+                                           (overlay-put ov 'priority 10))))
                                    (agent-chat-update-progress
                                     (format "using %s" tool-names)
                                     'agent-chat-prompt-face))))))))

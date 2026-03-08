@@ -88,12 +88,16 @@
                 :else :none)
         note (or (get-in agent [:agent/metadata :note])
                  (get-in agent [:agent/metadata "note"]))
+        agent-type (:agent/type agent)
         diagnostic (case route
                      :local "local invoke-fn registered"
                      :ws "ws bridge connected"
-                     (if (and (string? note) (not (str/blank? note)))
-                       (str "no local invoke-fn and no ws bridge (" note ")")
-                       "no local invoke-fn and no ws bridge"))]
+                     (let [base (if (= :codex agent-type)
+                                  "ws bridge not connected — start codex bridge on laptop"
+                                  "no local invoke-fn and no ws bridge")]
+                       (if (and (string? note) (not (str/blank? note)))
+                         (str base " (" note ")")
+                         base)))]
     {:invoke-route route
      :invoke-ready? (not= :none route)
      :invoke-local? local?

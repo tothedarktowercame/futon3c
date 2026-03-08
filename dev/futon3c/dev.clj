@@ -3045,6 +3045,12 @@ RESPOND WITH ONLY:
 (def ^:private codex-planning-only-re
   #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
 
+(def ^:private codex-separate-message-request-re
+  #"(?i)\b(separate\s+irc\s+messages?|one\s+per\s+message|each\s+of\s+them\s+in\s+a\s+separate\s+irc\s+message|post\s+each\s+.*\s+separate\s+message)\b")
+
+(def ^:private codex-format-excuse-re
+  #"(?i)\b(surface|interface|mode|channel|irc)\b.{0,60}\b(cap|caps|limit|limited|can't|cannot|unable)\b|\b\d+\s+lines?\s+per\s+turn\b")
+
 (defn- codex-task-mode-prompt?
   "True when prompt came from IRC bridge task-mode envelope."
   [prompt]
@@ -3096,6 +3102,26 @@ RESPOND WITH ONLY:
          (not (str/blank? text))
          (not (codex-planning-only-text? text)))))
 
+(defn- codex-separate-message-request?
+  "True when caller asked for separate multi-message IRC output."
+  [prompt]
+  (boolean (re-find codex-separate-message-request-re (str (or prompt "")))))
+
+(defn- codex-format-excuse-text?
+  "True when reply refuses feasible formatting due invented surface limits."
+  [text]
+  (let [t (str/trim (or text ""))]
+    (and (not (str/blank? t))
+         (boolean (re-find codex-format-excuse-re t)))))
+
+(defn- codex-format-refusal?
+  "True when reply refuses separate-message request using a transport/format excuse."
+  [prompt result]
+  (let [text (str/trim (or (:result result) ""))]
+    (and (codex-separate-message-request? prompt)
+         (not (str/blank? text))
+         (codex-format-excuse-text? text))))
+
 (defn- codex-execution-followup-prompt
   "Prompt used when Codex claimed work without execution evidence.
    Keeps the invariant at the invoke engine (not transport bridge)."
@@ -3108,6 +3134,24 @@ RESPOND WITH ONLY:
     (str "Your previous reply made a work/progress claim without execution evidence.\n"
          "Execute one concrete first step now (tool/command activity is required).\n"
          "Then reply in one short line with actual status and artifact refs.\n\n"
+         "Original request:\n"
+         (clip original-prompt 900)
+         "\n\nPrevious reply:\n"
+         (clip prior-reply 600))))
+
+(defn- codex-format-followup-prompt
+  "Prompt used when Codex refuses feasible output formatting with invented limits."
+  [original-prompt prior-reply]
+  (letfn [(clip [s max-len]
+            (let [txt (str (or s ""))]
+              (if (<= (count txt) max-len)
+                txt
+                (str (subs txt 0 (max 0 (- max-len 3))) "..."))))]
+    (str "Your previous reply refused a feasible output format due invented surface limits.\n"
+         "Do not claim per-turn line caps or transport limits unless an actual tool call failed.\n"
+         "Complete the user request directly.\n"
+         "If they asked for separate IRC messages, output newline-separated one-line items,\n"
+         "one intended post per line.\n\n"
          "Original request:\n"
          (clip original-prompt 900)
          "\n\nPrevious reply:\n"
@@ -3137,6 +3181,7 @@ RESPOND WITH ONLY:
         approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
+        get-event-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)
         !event-trace (atom [])
         !invoke-start-ms (atom (System/currentTimeMillis))
         on-event (fn [evt]
@@ -3150,7 +3195,13 @@ RESPOND WITH ONLY:
                      (when (and update-activity! activity)
                        (try
                          (update-activity! aid-val activity)
-                         (catch Throwable _)))))
+                         (catch Throwable _)))
+                     ;; Mirror Codex stream events to any active HTTP stream sink.
+                     (when get-event-sink
+                       (when-let [sink (get-event-sink aid-val)]
+                         (try
+                           (sink evt)
+                           (catch Throwable _))))))
         inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
                                              :model model
                                              :sandbox sandbox
@@ -3198,15 +3249,24 @@ RESPOND WITH ONLY:
               result (try
                        (let [initial (inner-fn prompt invoke-sid)]
                          (if (or (codex-work-claim-without-execution? initial)
-                                 (codex-task-reply-without-execution? prompt-str initial))
-                           (let [retry-prompt (codex-execution-followup-prompt prompt-str (:result initial))
+                                 (codex-task-reply-without-execution? prompt-str initial)
+                                 (codex-format-refusal? prompt-str initial))
+                           (let [exec-enforce? (or (codex-work-claim-without-execution? initial)
+                                                   (codex-task-reply-without-execution? prompt-str initial))
+                                 format-enforce? (codex-format-refusal? prompt-str initial)
+                                 retry-prompt (if exec-enforce?
+                                                (codex-execution-followup-prompt prompt-str (:result initial))
+                                                (codex-format-followup-prompt prompt-str (:result initial)))
                                  retry-sid (or (:session-id initial) invoke-sid)]
                              (println (str "[invoke] " agent-id
-                                           " claimed work without execution evidence; retrying with enforcement prompt"))
+                                           (if exec-enforce?
+                                             " claimed work without execution evidence; retrying with enforcement prompt"
+                                             " refused feasible output format; retrying with enforcement prompt")))
                              (flush)
                              (let [retry (inner-fn retry-prompt retry-sid)]
-                               (if (or (codex-work-claim-without-execution? retry)
-                                       (codex-task-reply-without-execution? prompt-str retry))
+                                (if (or (codex-work-claim-without-execution? retry)
+                                        (codex-task-reply-without-execution? prompt-str retry)
+                                        (codex-format-refusal? prompt-str retry))
                                  {:result nil
                                   :session-id (or (:session-id retry) retry-sid used-sid)
                                   :execution (assoc (or (:execution retry) {})
@@ -3214,7 +3274,9 @@ RESPOND WITH ONLY:
                                                     :executed? false
                                                     :tool-events (long (or (:tool-events (:execution retry)) 0))
                                                     :command-events (long (or (:command-events (:execution retry)) 0)))
-                                  :error "work-claim without execution evidence after enforcement retry"}
+                                  :error (if exec-enforce?
+                                           "work-claim without execution evidence after enforcement retry"
+                                           "format-refusal after enforcement retry")}
                                  (update retry :execution #(assoc (or % {}) :enforced-retry? true)))))
                            initial))
                        (finally
@@ -3546,8 +3608,10 @@ RESPOND WITH ONLY:
        "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
        "- Return natural chat text only; do not emit directive wrappers.\n"
        "- Keep replies short: one line, <= 220 chars before refs.\n"
+       "- If user asks for separate IRC messages, return newline-separated one-line items (one intended post per line).\n"
        "- If work happened, include refs to concrete artifacts (commit, PR/issue URL, or changed file path).\n"
        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
+       "- Do not invent per-turn line caps or transport limits.\n"
        "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
        "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
        "- Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n\n"
