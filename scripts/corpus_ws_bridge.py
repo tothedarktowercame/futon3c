@@ -162,26 +162,51 @@ def faiss_search(corpus_path: Path, query: str, top_k: int) -> list:
     return []
 
 
+def format_for_irc(result: dict) -> str:
+    """Format retrieval results as readable IRC text."""
+    neighbors = result.get("neighbors", [])
+    if not neighbors:
+        return f"No results found for: {result.get('query', '?')}"
+    lines = [f"Found {len(neighbors)} result(s) for: {result.get('query', '?')}"]
+    for n in neighbors:
+        title = n.get("title", "untitled")
+        source = n.get("source", "?")
+        score = n.get("score", 0)
+        tags = n.get("tags", [])
+        tag_str = f" [{', '.join(tags[:3])}]" if tags else ""
+        lines.append(f"  [{source}] {title} (score {score}){tag_str}")
+    return "\n".join(lines)
+
+
 def handle_invoke(prompt: str) -> str:
-    """Handle an invoke request. Parse the prompt as a retrieval query."""
+    """Handle an invoke request. Parse the prompt as a retrieval query.
+
+    JSON prompt (from ArSE peripheral) → returns JSON result.
+    Plain text prompt (from IRC) → returns human-readable text."""
+    structured = False
     try:
         # Try parsing as JSON first (structured query from ArSE peripheral)
         request = json.loads(prompt)
         query = request.get("query", "")
         top_k = request.get("top_k", 5)
         sources = request.get("sources", None)
+        structured = True
     except (json.JSONDecodeError, TypeError):
-        # Plain text query
+        # Plain text query (from IRC @mention)
         query = prompt.strip()
         top_k = 5
         sources = None
 
     if not query:
-        return json.dumps({"error": "Empty query", "ok": False})
+        return json.dumps({"error": "Empty query", "ok": False}) if structured else "Empty query — ask me a math question."
 
     result = run_retrieval(query, top_k, sources)
     result["ok"] = True
-    return json.dumps(result, default=str)
+
+    if structured:
+        return json.dumps(result, default=str)
+    else:
+        return format_for_irc(result)
 
 
 # ---------------------------------------------------------------------------
