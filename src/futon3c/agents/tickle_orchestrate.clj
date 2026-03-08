@@ -5,9 +5,9 @@
    in tickle.clj which does passive liveness detection). The two modes are
    complementary and can run concurrently.
 
-   Current topology: linear pipeline (fetch → assign → review → report).
-   This is one of many possible topologies — the module is structured so
-   the individual steps can be recomposed into different workflows later.
+   Two workflow types:
+   1. GitHub issue workflows (fetch → assign → review → report)
+   2. FM proof conductor (round-robin tickle of agents working proof obligations)
 
    REPL-driveable: each function is standalone. Compose via
    run-issue-workflow! or call steps individually."
@@ -603,3 +603,181 @@
                       issues)]
     (report-status! config)
     results))
+
+;; =============================================================================
+;; FM Proof Conductor — round-robin agent tickling for proof obligations
+;; =============================================================================
+;;
+;; The conductor cycles through agents (claude-1 → codex-1 → claude-2), invoking
+;; tickle-1 (Haiku) each cycle to decide whether to nudge/assign/pass for the
+;; target agent. State is tracked in the conductor atom so tickle doesn't re-page
+;; agents that are actively working (war-bulletin-5 finding 2: stateless noise).
+
+(def ^:private default-fm-rotation
+  "Default round-robin agent rotation."
+  ["claude-1" "codex-1" "claude-2"])
+
+(def ^:private agent-roles
+  "Role descriptions for round-robin context."
+  {"claude-1" "claude-1 (proof ledger owner, Clojure developer)"
+   "codex-1"  "codex (computational worker, runs SAT solvers and writes code)"
+   "claude-2" "claude-2 (Mentor, epistemic risk monitor, pattern reviewer)"})
+
+(defn fm-assignable-obligations
+  "Find proof obligations that are assignable (open, all deps met).
+   Reads from the proof bridge. Returns sorted by DAG impact."
+  [problem-id]
+  (try
+    (require 'futon3c.proof.bridge)
+    (let [pb (find-ns 'futon3c.proof.bridge)
+          ledger-fn (ns-resolve pb 'ledger)
+          dag-fn (ns-resolve pb 'dag-impact)
+          ledger-items (:result (ledger-fn problem-id))
+          dag-scores (into {} (map (fn [{:keys [id score]}] [id score])
+                                   (:result (dag-fn problem-id))))
+          open-items (if (map? ledger-items)
+                       (vals ledger-items)
+                       ledger-items)
+          resolved-ids (->> open-items
+                            (remove #(= :open (:item/status %)))
+                            (map :item/id)
+                            set)
+          assignable (->> open-items
+                          (filter #(= :open (:item/status %)))
+                          (filter (fn [item]
+                                    (every? #(or (contains? resolved-ids %)
+                                                 (= % (:item/id item)))
+                                            (:item/depends-on item #{}))))
+                          (sort-by #(- (get dag-scores (:item/id %) 0))))]
+      assignable)
+    (catch Exception e
+      (println (str "[fm-conductor] Error reading proof ledger: " (.getMessage e)))
+      [])))
+
+(defn build-fm-context
+  "Build the Tickle decision prompt for an FM conductor cycle."
+  [problem-id target-agent recent-msgs assignable-tasks]
+  (let [agent-role (get agent-roles target-agent target-agent)
+        recent-text (str/join "\n"
+                     (map (fn [{:keys [nick text at]}]
+                            (str (when at (subs (str at) 11 19)) " <" nick "> " text))
+                          recent-msgs))
+        task-text (str/join "\n"
+                   (map (fn [item]
+                          (str "  " (:item/id item) ": " (:item/label item)))
+                        assignable-tasks))]
+    (str "You are Tickle, task coordinator for " problem-id " (Ramsey numbers for book graphs) on #math.\n\n"
+         "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
+         "Current mode: FALSIFY (must try to disprove before constructing).\n"
+         "Strategy doc: futon6/data/frontiermath-pilot/FM-001-strategy.md\n\n"
+         "TARGET THIS CYCLE: " agent-role "\n\n"
+         "ASSIGNABLE OBLIGATIONS:\n" (if (seq task-text) task-text "  (none — all blocked by dependencies)") "\n\n"
+         "RECENT #math (" (count recent-msgs) " messages):\n"
+         (if (seq recent-text) recent-text "(no messages captured)") "\n\n"
+         "RULES:\n"
+         "1. If the target agent claimed work and is actively working — PASS (don't interrupt)\n"
+         "2. If the target agent seems stuck or silent — brief nudge\n"
+         "3. If work is completed — acknowledge and dispatch next obligation\n"
+         "4. Max 1-2 lines, <400 chars. Always @mention the target agent. Post to #math.\n"
+         "5. Do NOT repeat the full problem statement — agents know it.\n"
+         "6. Remind agents to push artifacts to git — never reference local paths or /tmp.\n\n"
+         "RESPOND WITH ONLY:\n"
+         "- A short IRC message (start with @agent-name), OR\n"
+         "- PASS")))
+
+(defn fm-conduct-cycle!
+  "Run one FM proof conductor cycle targeting a specific agent.
+   Invokes tickle-1 to decide whether to nudge/assign, then posts via bridge-send-fn.
+
+   config:
+     :problem-id       — proof problem ID (default \"FM-001\")
+     :irc-read-fn      — fn [] → [{:nick :text :at :channel}] recent IRC messages
+     :bridge-send-fn   — fn [channel from-nick message] → posts to IRC via bridge
+     :evidence-store   — for tracking conductor cycles
+
+   Returns {:action :pass|:message|:error, :target str, :text str}."
+  [target-agent config]
+  (let [{:keys [problem-id irc-read-fn bridge-send-fn evidence-store]
+         :or {problem-id "FM-001"}} config
+        recent-msgs (when (fn? irc-read-fn)
+                      (->> (irc-read-fn)
+                           (filter #(= "#math" (:channel %)))
+                           (take-last 20)))
+        assignable (fm-assignable-obligations problem-id)
+        context (build-fm-context problem-id target-agent recent-msgs assignable)
+        agent (reg/get-agent "tickle-1")
+        invoke-fn (or (:agent/invoke-fn agent) (:invoke-fn agent))]
+    (if-not invoke-fn
+      (do (println "[fm-conductor] tickle-1 not registered, can't decide")
+          {:action :error :target target-agent})
+      (let [{:keys [result]} (invoke-fn context nil)
+            response (str/trim (or result "PASS"))
+            first-line (first (str/split-lines response))
+            pass? (or (str/blank? response)
+                      (= "PASS" (str/upper-case (str first-line))))]
+        ;; Emit evidence for this cycle
+        (when evidence-store
+          (estore/append* evidence-store
+                          {:subject {:ref/type :session
+                                     :ref/id (str "fm-conductor/" problem-id)}
+                           :type :coordination
+                           :claim-type :observation
+                           :author "tickle-1"
+                           :tags [:tickle :fm-conductor :cycle]
+                           :session-id "fm-conductor"
+                           :body {:problem-id problem-id
+                                  :target target-agent
+                                  :action (if pass? :pass :message)
+                                  :message (when-not pass? first-line)
+                                  :assignable-count (count assignable)
+                                  :recent-msg-count (count recent-msgs)
+                                  :cycle-at (str (Instant/now))}}))
+        (if pass?
+          (do (println (str "[fm-conductor] " target-agent " → PASS"))
+              {:action :pass :target target-agent})
+          (do (println (str "[fm-conductor] " target-agent " → " first-line))
+              (when (fn? bridge-send-fn)
+                (bridge-send-fn "#math" "tickle" first-line))
+              {:action :message :target target-agent :text first-line}))))))
+
+(defn start-fm-conductor!
+  "Start the FM proof conductor loop with round-robin agent tickling.
+   Cycles through agents one per step. Evidence is emitted each cycle.
+
+   config:
+     :step-ms          — interval between agent checks (default 300000 = 5 min)
+     :rotation         — agent rotation vector (default [\"claude-1\" \"codex-1\" \"claude-2\"])
+     :problem-id       — proof problem ID (default \"FM-001\")
+     :irc-read-fn      — fn [] → IRC messages
+     :bridge-send-fn   — fn [channel from-nick message]
+     :evidence-store   — for tracking
+
+   Returns {:stop-fn fn, :started-at Instant}."
+  [config]
+  (let [{:keys [step-ms rotation]
+         :or {step-ms 300000
+              rotation default-fm-rotation}} config
+        running (atom true)
+        idx (atom 0)]
+    (future
+      (while @running
+        (try
+          (Thread/sleep (long step-ms))
+          (when @running
+            (let [target (nth rotation (mod @idx (count rotation)))]
+              (swap! idx inc)
+              (fm-conduct-cycle! target config)))
+          (catch Exception e
+            (println (str "[fm-conductor] Error: " (.getMessage e)))))))
+    (let [handle {:stop-fn #(do (reset! running false)
+                                (println "[fm-conductor] Stopped."))
+                  :started-at (Instant/now)}]
+      (println (str "[fm-conductor] Round-robin started (step=" (/ step-ms 60000)
+                    "min, agents=" (str/join "→" rotation) ")"))
+      handle)))
+
+(defn stop-fm-conductor!
+  "Stop a running FM conductor. Takes the handle returned by start-fm-conductor!."
+  [handle]
+  (when handle
+    ((:stop-fn handle))))

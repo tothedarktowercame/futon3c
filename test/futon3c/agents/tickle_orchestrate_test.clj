@@ -426,3 +426,110 @@
           (is (some? report)))
         ;; IRC messages include the status report (last message)
         (is (some #(re-find #"kicks" (:text %)) @irc-messages))))))
+
+;; =============================================================================
+;; FM Proof Conductor
+;; =============================================================================
+
+(deftest build-fm-context-includes-target-and-obligations
+  (testing "build-fm-context produces prompt with target agent, obligations, and recent messages"
+    (let [tasks [{:item/id "F1-opposite" :item/label "Falsification attempt"}
+                 {:item/id "F2-literature" :item/label "Literature search"}]
+          msgs [{:nick "claude-1" :text "Working on F1" :at "2026-03-08T10:00:00Z" :channel "#math"}]
+          ctx (orch/build-fm-context "FM-001" "codex-1" msgs tasks)]
+      (is (re-find #"TARGET THIS CYCLE.*codex" ctx))
+      (is (re-find #"F1-opposite" ctx))
+      (is (re-find #"F2-literature" ctx))
+      (is (re-find #"Working on F1" ctx))
+      (is (re-find #"FALSIFY" ctx))
+      (is (re-find #"FM-001-strategy" ctx)))))
+
+(deftest build-fm-context-handles-empty-state
+  (testing "build-fm-context works with no tasks and no messages"
+    (let [ctx (orch/build-fm-context "FM-001" "claude-1" [] [])]
+      (is (re-find #"none.*blocked by dependencies" ctx))
+      (is (re-find #"no messages captured" ctx)))))
+
+(deftest fm-conduct-cycle-pass
+  (testing "fm-conduct-cycle! returns :pass when tickle-1 says PASS"
+    (let [store (make-evidence-store)]
+      (register-mock-agent!
+       "tickle-1"
+       (fn [_prompt _session]
+         {:result "PASS" :session-id "t1"}))
+      (with-redefs [orch/fm-assignable-obligations (constantly [])]
+        (let [result (orch/fm-conduct-cycle!
+                      "claude-1"
+                      {:problem-id "FM-001"
+                       :irc-read-fn (constantly [])
+                       :bridge-send-fn (fn [& _])
+                       :evidence-store store})]
+          (is (= :pass (:action result)))
+          (is (= "claude-1" (:target result)))
+          ;; Evidence emitted
+          (let [entries (estore/query* store {})
+                cycle-entry (first (filter #(= :cycle (last (:evidence/tags %))) entries))]
+            (is (some? cycle-entry))
+            (is (= :pass (get-in cycle-entry [:evidence/body :action])))))))))
+
+(deftest fm-conduct-cycle-message
+  (testing "fm-conduct-cycle! posts message when tickle-1 gives one"
+    (let [store (make-evidence-store)
+          sent (atom [])]
+      (register-mock-agent!
+       "tickle-1"
+       (fn [_prompt _session]
+         {:result "@codex please pick up F1-opposite" :session-id "t1"}))
+      (with-redefs [orch/fm-assignable-obligations (constantly [])]
+        (let [result (orch/fm-conduct-cycle!
+                      "codex-1"
+                      {:problem-id "FM-001"
+                       :irc-read-fn (constantly [])
+                       :bridge-send-fn (fn [ch from msg]
+                                         (swap! sent conj {:ch ch :from from :msg msg}))
+                       :evidence-store store})]
+          (is (= :message (:action result)))
+          (is (= "codex-1" (:target result)))
+          (is (re-find #"@codex" (:text result)))
+          ;; Bridge was called
+          (is (= 1 (count @sent)))
+          (is (= "#math" (:ch (first @sent))))
+          (is (= "tickle" (:from (first @sent))))
+          ;; Evidence emitted with message
+          (let [entries (estore/query* store {})
+                cycle-entry (first (filter #(= :cycle (last (:evidence/tags %))) entries))]
+            (is (= :message (get-in cycle-entry [:evidence/body :action])))))))))
+
+(deftest fm-conduct-cycle-no-tickle-agent
+  (testing "fm-conduct-cycle! returns :error when tickle-1 is not registered"
+    (with-redefs [orch/fm-assignable-obligations (constantly [])]
+      (let [result (orch/fm-conduct-cycle!
+                    "claude-1"
+                    {:problem-id "FM-001"
+                     :irc-read-fn (constantly [])
+                     :bridge-send-fn (fn [& _])})]
+        (is (= :error (:action result)))))))
+
+(deftest start-stop-fm-conductor
+  (testing "start-fm-conductor! starts and stop-fm-conductor! stops cleanly"
+    (let [cycle-count (atom 0)]
+      (register-mock-agent!
+       "tickle-1"
+       (fn [_prompt _session]
+         (swap! cycle-count inc)
+         {:result "PASS" :session-id "t1"}))
+      ;; Stub out proof bridge access (not available in test classpath)
+      (with-redefs [orch/fm-assignable-obligations (constantly [])]
+        (let [handle (orch/start-fm-conductor!
+                       {:step-ms 50
+                        :rotation ["claude-1"]
+                        :problem-id "FM-001"
+                        :irc-read-fn (constantly [])
+                        :bridge-send-fn (fn [& _])})]
+          (is (some? (:stop-fn handle)))
+          (is (some? (:started-at handle)))
+          ;; Let it run a couple cycles
+          (Thread/sleep 300)
+          (orch/stop-fm-conductor! handle)
+          ;; Should have run at least 1 cycle
+          (is (pos? @cycle-count)))))))

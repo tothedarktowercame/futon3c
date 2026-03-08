@@ -1307,6 +1307,33 @@ RESPOND WITH ONLY:
 - A short IRC message (start with @agent-id), OR
 - PASS")
 
+(declare tickle-build-context)
+
+(defn make-tickle-invoke-fn
+  "Create an invoke-fn for tickle-1 that wraps each prompt with the tickle
+   system prompt and live context (task state, IRC log, GitHub issues).
+   This satisfies I-1: the agent always knows who it is and what it can see.
+
+   Delegates to a claude invoke-fn for actual LLM execution."
+  [claude-invoke-fn]
+  (fn [prompt session-id]
+    (let [context (try (tickle-build-context)
+                       (catch Throwable e
+                         (str "(context unavailable: " (.getMessage e) ")")))
+          wrapped (str tickle-system-prompt
+                       "\n\n---\n\n"
+                       context
+                       "\n\n---\n\n"
+                       "SURFACE: IRC #futon. Your text output will be posted as <tickle>.\n"
+                       "CONSTRAINT: Do NOT use tools, create files, run commands, or take actions.\n"
+                       "You are a read-only observer. Respond with ONLY a short text message.\n\n"
+                       "User message from IRC:\n"
+                       (cond
+                         (string? prompt) prompt
+                         (map? prompt)    (or (:prompt prompt) (:text prompt) (str prompt))
+                         :else            (str prompt)))]
+      (claude-invoke-fn wrapped session-id))))
+
 (defonce !tickle-llm-invoke (atom nil))
 
 (defn start-tickle-llm!
@@ -1684,39 +1711,19 @@ RESPOND WITH ONLY:
 ;; FM-001 task dispatch — Tickle assigns proof obligations on #math
 ;; =============================================================================
 
+;; --- FM Conductor thin wrappers (delegates to tickle_orchestrate.clj) ---
+;; See src/futon3c/agents/tickle_orchestrate.clj for the real implementation.
+;; These wrappers wire dev-specific helpers (IRC read, bridge send) into the
+;; orchestrator's config map.
+
 (defn fm-assignable-obligations
   "Find FM-001 ledger obligations that are assignable (open, all deps met).
-   Returns them sorted by DAG impact (highest first)."
+   Delegates to tickle_orchestrate."
   [problem-id]
-  (let [ledger-result (require 'futon3c.proof.bridge)
-        pb (find-ns 'futon3c.proof.bridge)
-        ledger-fn (ns-resolve pb 'ledger)
-        dag-fn (ns-resolve pb 'dag-impact)
-        ledger-items (:result (ledger-fn problem-id))
-        dag-scores (into {} (map (fn [{:keys [id score]}] [id score])
-                                 (:result (dag-fn problem-id))))
-        open-items (if (map? ledger-items)
-                     (vals ledger-items)
-                     ledger-items)
-        ;; Filter to open items whose dependencies are all non-open
-        resolved-ids (->> open-items
-                          (remove #(= :open (:item/status %)))
-                          (map :item/id)
-                          set)
-        assignable (->> open-items
-                        (filter #(= :open (:item/status %)))
-                        (filter (fn [item]
-                                  (every? #(or (contains? resolved-ids %)
-                                               ;; self-dependency (shouldn't happen)
-                                               (= % (:item/id item)))
-                                          (:item/depends-on item #{}))))
-                        (sort-by #(- (get dag-scores (:item/id %) 0))))]
-    assignable))
+  (orch/fm-assignable-obligations problem-id))
 
 (defn fm-dispatch!
-  "Have Tickle assign the top FM-001 obligation on #math.
-   Reads the proof ledger, finds the highest-impact assignable task,
-   and posts the assignment as tickle-1."
+  "Have Tickle assign the top FM-001 obligation on #math."
   ([] (fm-dispatch! "FM-001"))
   ([problem-id]
    (let [tasks (fm-assignable-obligations problem-id)]
@@ -1748,84 +1755,49 @@ RESPOND WITH ONLY:
        (take-last n)
        vec))
 
+(defn- make-fm-conductor-config
+  "Build the config map for tickle_orchestrate FM conductor functions,
+   wiring in dev-specific IRC helpers and evidence store."
+  [overrides]
+  (merge {:problem-id "FM-001"
+          :irc-read-fn #(irc-recent-channel "#math" 20)
+          :bridge-send-fn (make-bridge-irc-send-fn)
+          :evidence-store @!evidence-store}
+         overrides))
+
 (defonce !fm-conductor (atom nil))
 
+(defn fm-conduct-targeted!
+  "Run one FM-001 conductor cycle targeting a specific agent.
+   Delegates to tickle_orchestrate/fm-conduct-cycle!."
+  ([target-agent] (fm-conduct-targeted! "FM-001" target-agent))
+  ([problem-id target-agent]
+   (orch/fm-conduct-cycle! target-agent (make-fm-conductor-config {:problem-id problem-id}))))
+
 (defn fm-conduct!
-  "Run one FM-001 conductor cycle. Checks #math for activity,
-   decides whether to nudge or assign next task.
-   Uses Tickle's Haiku agent for natural-language decisions."
+  "Run one FM-001 conductor cycle (untargeted — picks first assignable)."
   ([] (fm-conduct! "FM-001"))
   ([problem-id]
-   (let [math-msgs (irc-recent-channel "#math" 20)
-         assignable (fm-assignable-obligations problem-id)
-         bridge-send (make-bridge-irc-send-fn)
-         ;; Build context for Tickle's decision
-         recent-text (str/join "\n"
-                       (map (fn [{:keys [nick text at]}]
-                              (str (when at (subs at 11 19)) " <" nick "> " text))
-                            math-msgs))
-         task-text (str/join "\n"
-                     (map (fn [{:item/keys [id label]}]
-                            (str "  " id ": " label))
-                          assignable))
-         context (str "You are Tickle, task coordinator for FM-001 (Ramsey numbers for book graphs) on #math.\n\n"
-                      "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
-                      "Current mode: FALSIFY (must try to disprove before constructing).\n\n"
-                      "ASSIGNABLE OBLIGATIONS:\n" (if (seq task-text) task-text "  (none — all blocked by dependencies)") "\n\n"
-                      "RECENT #math (" (count math-msgs) " messages):\n"
-                      (if (seq recent-text) recent-text "(no messages captured)") "\n\n"
-                      "RULES:\n"
-                      "1. If an agent claimed work and is actively working — PASS (don't interrupt)\n"
-                      "2. If an agent seems stuck or silent for a while — brief nudge\n"
-                      "3. If work is completed — acknowledge and dispatch next obligation\n"
-                      "4. Max 1-2 lines, <400 chars. Always @mention target. Post to #math.\n"
-                      "5. Do NOT repeat the full problem statement — agents know it.\n\n"
-                      "RESPOND WITH ONLY:\n"
-                      "- A short IRC message (start with @agent-name), OR\n"
-                      "- PASS")
-         ;; Use tickle-1's invoke-fn if registered
-         agent (reg/get-agent "tickle-1")
-         invoke-fn (:invoke-fn agent)]
-     (if-not invoke-fn
-       (do (println "[fm-conductor] tickle-1 not registered, can't decide")
-           {:action :error})
-       (let [{:keys [result]} (invoke-fn context nil)
-             response (str/trim (or result "PASS"))
-             first-line (first (str/split-lines response))]
-         (if (or (str/blank? response) (= "PASS" (str/upper-case first-line)))
-           (do (println "[fm-conductor] PASS")
-               {:action :pass})
-           (do (println (str "[fm-conductor] → " first-line))
-               (bridge-send "#math" "tickle" first-line)
-               {:action :message :text first-line})))))))
+   (fm-conduct-targeted! problem-id "claude-1")))
 
 (defn start-fm-conductor!
-  "Start the FM-001 conductor loop. Checks #math every interval-ms.
-   Default: every 10 minutes (proof work is slower than CT batches)."
+  "Start the FM-001 conductor loop with round-robin agent tickling.
+   Delegates to tickle_orchestrate/start-fm-conductor!."
   ([] (start-fm-conductor! {}))
-  ([{:keys [interval-ms] :or {interval-ms 600000}}]
+  ([{:keys [step-ms] :or {step-ms 300000}}]
    (when-let [old @!fm-conductor]
      ((:stop-fn old))
      (println "[fm-conductor] Stopped previous conductor."))
-   (let [running (atom true)]
-     (future
-       (while @running
-         (try
-           (Thread/sleep interval-ms)
-           (when @running (fm-conduct!))
-           (catch Exception e
-             (println (str "[fm-conductor] Error: " (.getMessage e)))))))
-     (let [handle {:stop-fn #(do (reset! running false) (println "[fm-conductor] Stopped."))
-                   :started-at (Instant/now)}]
-       (reset! !fm-conductor handle)
-       (println (str "[fm-conductor] Started (interval=" (/ interval-ms 60000) "min)"))
-       handle))))
+   (let [handle (orch/start-fm-conductor!
+                  (make-fm-conductor-config {:step-ms step-ms}))]
+     (reset! !fm-conductor handle)
+     handle)))
 
 (defn stop-fm-conductor!
   "Stop the FM-001 conductor loop."
   []
   (when-let [h @!fm-conductor]
-    ((:stop-fn h))
+    (orch/stop-fm-conductor! h)
     (reset! !fm-conductor nil)))
 
 ;; =============================================================================
@@ -2264,13 +2236,12 @@ RESPOND WITH ONLY:
          (mapv #(select-keys % [:nick :text :at])))))
 
 (defn make-math-irc-send-fn
-  "Create an irc-send-fn that posts to #math via the IRC server.
-   Falls back to the bridge HTTP send endpoint."
+  "Create an irc-send-fn that posts to #math via the bridge.
+   Always uses the bridge so the correct nick (tickle, claude-2, etc.) is used."
   []
-  (fn [channel from-nick message]
-    (if-let [send-fn (some-> @!irc-sys :server :send-to-channel!)]
-      (send-fn channel from-nick message)
-      ((make-bridge-irc-send-fn) channel from-nick message))))
+  (let [bridge-send (make-bridge-irc-send-fn)]
+    (fn [channel from-nick message]
+      (bridge-send channel from-nick message))))
 
 (defn start-mentor!
   "Start a mentor peripheral with a handle.
@@ -3006,7 +2977,11 @@ RESPOND WITH ONLY:
               ;; Drain stderr in background (prevents buffer blocking)
               stderr-future (future (drain-stream! (.getErrorStream proc)))
               ;; Parse stream-json stdout line by line
+              ;; Only keep text from the LAST assistant turn (not intermediate
+              ;; process notes between tool uses). Reset on each new text-only
+              ;; assistant message so the final result is the actual answer.
               text-acc (StringBuilder.)
+              last-had-tools? (atom false)
               result-sid (atom nil)
               result-error (atom false)
               aid-val (str agent-id)
@@ -3037,8 +3012,14 @@ RESPOND WITH ONLY:
                                                    (str "using " (str/join ", " tools))))
                                                 (when (and (not tools) text (not (str/blank? text)))
                                                   (update-activity! aid-val "composing response")))
+                                              ;; Only keep text from the last response turn.
+                                              ;; When a text-only message arrives after a tool-use
+                                              ;; turn, clear the accumulator — that's a new response.
                                               (when (and text (not (str/blank? text)))
+                                                (when (and (not tools) @last-had-tools?)
+                                                  (.setLength text-acc 0))
                                                 (.append text-acc text))
+                                              (reset! last-had-tools? (boolean tools))
                                               ;; Emit to streaming event sink (if any)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
                                                                               'get-invoke-event-sink)]
@@ -3986,13 +3967,33 @@ RESPOND WITH ONLY:
                             (when initial-sid2
                               (str " (session: " (subs initial-sid2 0
                                                        (min 8 (count initial-sid2))) ")"))))))
-        ;; Register corpus-1 (WS-only agent, connects from laptop)
+        ;; Register corpus-1 (WS-only, connects from laptop)
         _ (do (reg/register-agent! {:agent-id "corpus-1"
                                      :type :corpus
                                      :invoke-fn nil
                                      :capabilities []
                                      :metadata {:role "corpus-bot"}})
-              (println "[dev] Corpus agent registered: corpus-1 (ws-only, no local invoke)"))
+              (println "[dev] Corpus agent registered: corpus-1 (ws-only)"))
+        ;; Register tickle-1: haiku + tickle identity wrapper (I-1 compliant)
+        _ (let [sf-t (io/file "/tmp/futon-tickle-1-session-id")
+                sid-t (read-session-id sf-t)
+                sid-atom-t (atom sid-t)
+                raw-fn (make-claude-invoke-fn
+                         {:claude-bin (env "CLAUDE_BIN" "claude")
+                          :permission-mode "default"
+                          :agent-id "tickle-1"
+                          :session-file sf-t
+                          :session-id-atom sid-atom-t
+                          :model "claude-haiku-4-5-20251001"})
+                invoke-fn-t (make-tickle-invoke-fn raw-fn)]
+            (reg/register-agent! {:agent-id "tickle-1"
+                                   :type :tickle
+                                   :invoke-fn invoke-fn-t
+                                   :capabilities [:coordination/orchestrate]
+                                   :metadata {:role "watchdog"}})
+            (println (str "[dev] Tickle agent registered: tickle-1 (claude invoke)"
+                          (when sid-t
+                            (str " (session: " (subs sid-t 0 (min 8 (count sid-t))) ")")))))
         ;; Register Codex — guard against missing binary
         codex-bin-name (env "CODEX_BIN" "codex")
         codex-bin-exists? (try
