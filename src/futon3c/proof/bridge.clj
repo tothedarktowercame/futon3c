@@ -449,6 +449,155 @@
               :method (:method opts)}))))
 
 ;; =============================================================================
+;; Pólya layer: heuristic moves (meta-theoretic reasoning)
+;; =============================================================================
+;;
+;; Parallel to conjectures (Lakatos = proof moves), heuristics track the
+;; informal reasoning that guides the proof: analogies, simplifications,
+;; strategy shifts, pattern applications. These explain *why* formal moves
+;; were made and help the Mentor give contextual guidance on tickle.
+;;
+;; Heuristic types (inspired by Pólya's "How to Solve It"):
+;;
+;;   :analogy        — "this is like Paley graphs because..."
+;;   :simplification — "try n=3 first before n=25"
+;;   :generalization — "if it works for prime q, try prime-power q"
+;;   :specialization — "for n=25 specifically, q=49=7^2"
+;;   :decomposition  — "split into B_k-freeness check + complement check"
+;;   :strategy-shift — "SAT infeasible for n>=5, pivot to algebraic"
+;;   :pattern-use    — "applying landscape-scout pattern"
+;;   :related-problem — "Nikiforov 2011 solved the diagonal case"
+;;   :dead-end       — "random search at n=50 is intractable"
+
+(def heuristic-types
+  "Valid heuristic move types."
+  #{:analogy :simplification :generalization :specialization
+    :decomposition :strategy-shift :pattern-use :related-problem :dead-end})
+
+(defn heuristic-add!
+  "Record a heuristic move on a ledger item. Auto-saves.
+   heuristic: {:type keyword, :content str, :by str}
+   Optional keys: :status (:active/:retired/:superseded), :refs []"
+  [problem-id item-id heuristic]
+  (let [state-result (load-problem problem-id)]
+    (if (:ok state-result)
+      (let [state (:result state-result)
+            item (get-in state [:proof/ledger item-id])]
+        (if item
+          (let [h-type (:type heuristic)]
+            (if (and h-type (not (heuristic-types h-type)))
+              {:ok false :error (str "Invalid heuristic type: " h-type
+                                     ". Must be one of: " heuristic-types)}
+              (let [entry (merge {:status :active
+                                  :refs []
+                                  :recorded-at (str (java.time.Instant/now))}
+                                 heuristic)]
+                (ledger-upsert! problem-id item-id
+                                {:item/heuristics
+                                 (conj (vec (:item/heuristics item))
+                                       entry)}))))
+          {:ok false :error (str "No ledger item: " item-id)}))
+      state-result)))
+
+(defn heuristic-retire!
+  "Mark a heuristic as retired or superseded. Auto-saves.
+   Finds the heuristic by matching :type and :content, sets new :status."
+  [problem-id item-id h-type h-content new-status]
+  (let [state-result (load-problem problem-id)]
+    (if (:ok state-result)
+      (let [state (:result state-result)
+            item (get-in state [:proof/ledger item-id])
+            hs (vec (:item/heuristics item))
+            idx (first (keep-indexed
+                        (fn [i h] (when (and (= h-type (:type h))
+                                             (= h-content (:content h)))
+                                    i))
+                        hs))]
+        (if idx
+          (let [updated (assoc (nth hs idx)
+                               :status new-status
+                               :retired-at (str (java.time.Instant/now)))]
+            (ledger-upsert! problem-id item-id
+                            {:item/heuristics (assoc hs idx updated)}))
+          {:ok false :error (str "No matching heuristic on " item-id)}))
+      state-result)))
+
+(defn heuristics
+  "Get all heuristics for a ledger item, or all across the problem.
+   Optional status filter: :active, :retired, :superseded."
+  ([problem-id]
+   (heuristics problem-id nil nil))
+  ([problem-id item-id]
+   (heuristics problem-id item-id nil))
+  ([problem-id item-id status-filter]
+   (let [state-result (load-problem problem-id)]
+     (if (:ok state-result)
+       (let [state (:result state-result)
+             ledger (:proof/ledger state)
+             items (if item-id
+                     {item-id (get ledger item-id)}
+                     ledger)
+             all (into {}
+                       (keep (fn [[id item]]
+                               (let [hs (cond->> (vec (:item/heuristics item))
+                                          status-filter
+                                          (filterv #(= status-filter (:status %))))]
+                                 (when (seq hs)
+                                   [id hs]))))
+                       items)]
+         {:ok true :result all})
+       state-result))))
+
+(defn mentor-guidance
+  "Synthesize guidance for a Tickle dispatch. Combines Lakatosian (conjecture
+   state) and Pólya (active heuristics) layers into a briefing.
+   Returns {:conjectures [...], :heuristics [...], :recommendations [...]}."
+  [problem-id item-id]
+  (let [state-result (load-problem problem-id)]
+    (if (:ok state-result)
+      (let [state (:result state-result)
+            item (get-in state [:proof/ledger item-id])]
+        (if item
+          (let [conjs (vec (:item/conjectures item))
+                hs (filterv #(= :active (:status %))
+                            (:item/heuristics item))
+                ;; Build recommendations from current state
+                recs (cond-> []
+                       ;; Untested conjectures need testing
+                       (some #(= :untested (:status %)) conjs)
+                       (conj {:action :test-conjecture
+                              :targets (mapv :id (filter #(= :untested (:status %)) conjs))
+                              :reason "Untested conjectures should be tested before proceeding"})
+
+                       ;; Partially-tested with inconclusive results need follow-up
+                       (some #(and (= :partially-tested (:status %))
+                                   (some (fn [t] (= :inconclusive (:outcome t)))
+                                         (:tests %)))
+                             conjs)
+                       (conj {:action :follow-up-inconclusive
+                              :reason "Some tests were inconclusive — try different method or parameters"})
+
+                       ;; Active dead-ends suggest strategy shift needed
+                       (some #(= :dead-end (:type %)) hs)
+                       (conj {:action :consider-strategy-shift
+                              :dead-ends (mapv :content (filter #(= :dead-end (:type %)) hs))
+                              :reason "Dead ends recorded — explore alternative approaches"})
+
+                       ;; Active analogies should be tested
+                       (some #(= :analogy (:type %)) hs)
+                       (conj {:action :verify-analogy
+                              :analogies (mapv :content (filter #(= :analogy (:type %)) hs))
+                              :reason "Active analogies should be verified before relying on them"}))]
+            {:ok true
+             :result {:item-id item-id
+                      :label (:item/label item)
+                      :conjectures conjs
+                      :active-heuristics hs
+                      :recommendations recs}})
+          {:ok false :error (str "No ledger item: " item-id)}))
+      state-result)))
+
+;; =============================================================================
 ;; Convenience: problem summary
 ;; =============================================================================
 
@@ -460,7 +609,8 @@
     (if (:ok state-result)
       (let [state (:result state-result)]
         (let [ledger (:proof/ledger state)
-              all-conjectures (mapcat :item/conjectures (vals ledger))]
+              all-conjectures (mapcat :item/conjectures (vals ledger))
+              all-heuristics (mapcat :item/heuristics (vals ledger))]
           {:ok true
            :result {:problem-id problem-id
                     :mode (or (:proof/current-mode state) :SPEC)
@@ -470,6 +620,9 @@
                     :conjectures-count (count all-conjectures)
                     :conjectures-tested (count (filter #(not= :untested (:status %))
                                                        all-conjectures))
+                    :heuristics-count (count all-heuristics)
+                    :heuristics-active (count (filter #(= :active (:status %))
+                                                      all-heuristics))
                     :falsify-done? (boolean (:proof/falsify-completed? state))
                     :updated-at (:proof/updated-at state)
                     :statement (get-in state [:proof/canonical :statement])}}))
