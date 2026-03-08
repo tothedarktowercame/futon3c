@@ -1,5 +1,14 @@
 # Mission: Evidence Landscape
 
+## Status: DONE (2026-03-08)
+
+All four parts delivered: evidence shapes (shapes.clj), evidence store
+(store.clj + pluggable backend protocol), thread projection (threads.clj),
+and S-validate integration (validate.clj). Tests exist for all components.
+Shapes extended beyond original spec with :arse-qa, :arse-thread, and
+additional ref types. HTTP surface for evidence delivered separately by
+M-walkie-talkie. Future forum work (if any) would be a new mission.
+
 ## Derivation
 
 INSTANTIATE step of the social exotype derivation xenotype.
