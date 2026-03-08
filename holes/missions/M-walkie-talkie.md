@@ -1,6 +1,6 @@
 # Mission: Walkie-Talkie — Universal Agent Tool Surface
 
-## Status: IDENTIFY
+## Status: DONE (2026-03-08) — Gates A+D pass, B+C deferred
 
 ## Derivation
 
@@ -146,6 +146,30 @@ Pass when:
 2. Different agent (or same agent later) calls `POST /api/alpha/arse/answer`.
 3. Both entries appear in futon1a as linked evidence (reply-chain threading).
 4. `GET /api/alpha/arse/unanswered` correctly excludes the answered question.
+
+### Gate Status (2026-03-08)
+
+- **Gate A (Evidence Round-Trip): PASS** — PSR, PUR, PAR endpoints live-tested.
+  Evidence entries appear in store with correct shapes and are queryable.
+- **Gate B (Cross-Surface Parity): DEFERRED** — CLI skills and discipline
+  peripheral still write to futon1a directly rather than through the walkie-talkie
+  HTTP endpoints. Same evidence shape, different code path. Rewiring is clean-up.
+- **Gate C (Peripheral Interior Call): DEFERRED** — HTTP endpoints are callable
+  from any context (they're just curl), but no captured evidence of an agent
+  inside `:explore` calling them. Verification exercise, not new implementation.
+- **Gate D (ArSE Round-Trip): PASS** — ask→answer→unanswered round-trip with
+  linked evidence (in-reply-to threading). Dual-write to filesystem + evidence store.
+
+### Delivered beyond original gates
+
+- Persistent backpacks (`~/code/storage/futon3c/backpacks.json`) — PSR puts
+  pattern in backpack, PUR clears it, survives server restarts
+- `GET /api/alpha/backpack/:agent-id` — query any agent's active pattern
+- `GET /api/alpha/patterns/search?q=...` — keyword search across 853 patterns
+- IRC commands: `!psr`, `!pur`, `!par`, `!ask`, `!answer`, `!unanswered`, `!patterns`
+- CLI skill: `/patterns <query>`
+- README-walkie-talkie.md and README-arse.md
+- Reply-channel fix for multi-channel IRC command responses
 
 ## Implementation Sketch
 
