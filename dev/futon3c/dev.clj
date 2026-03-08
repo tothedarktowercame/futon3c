@@ -2252,19 +2252,16 @@ RESPOND WITH ONLY:
 (defonce !mentor (atom {}))
 
 (defn make-math-irc-read-fn
-  "Create an irc-read-fn that pulls #math messages from the evidence store.
+  "Create an irc-read-fn that pulls #math messages from the IRC log ring buffer.
+   Ensures the IRC connection is alive (auto-reconnects if needed).
    Returns a fn that returns all #math messages as [{:nick :text :at}]."
   []
   (fn []
-    (when-let [store @!evidence-store]
-      (->> (estore/query* store {:evidence/tags [:irc]})
-           (filter (fn [e]
-                     (= "#math" (get-in e [:evidence/body :channel]))))
-           (sort-by :evidence/at)
-           (mapv (fn [e]
-                   {:nick (get-in e [:evidence/body :from])
-                    :text (get-in e [:evidence/body :text])
-                    :at (:evidence/at e)}))))))
+    ;; Ensure we have an IRC connection reading messages
+    (ensure-irc-conn! "mentor-reader")
+    (->> @!irc-log
+         (filter #(= "#math" (:channel %)))
+         (mapv #(select-keys % [:nick :text :at])))))
 
 (defn make-math-irc-send-fn
   "Create an irc-send-fn that posts to #math via the IRC server.
@@ -3989,6 +3986,13 @@ RESPOND WITH ONLY:
                             (when initial-sid2
                               (str " (session: " (subs initial-sid2 0
                                                        (min 8 (count initial-sid2))) ")"))))))
+        ;; Register corpus-1 (WS-only agent, connects from laptop)
+        _ (do (reg/register-agent! {:agent-id "corpus-1"
+                                     :type :corpus
+                                     :invoke-fn nil
+                                     :capabilities []
+                                     :metadata {:role "corpus-bot"}})
+              (println "[dev] Corpus agent registered: corpus-1 (ws-only, no local invoke)"))
         ;; Register Codex — guard against missing binary
         codex-bin-name (env "CODEX_BIN" "codex")
         codex-bin-exists? (try
