@@ -62,6 +62,15 @@
     (is (.contains line "(trace-id invoke-42)"))
     (is (.contains line "[dispatch-relay]"))))
 
+(deftest invoke-meta-trace-id-supports-keyword-and-string-keys
+  (testing "trace-id extraction accepts invoke-meta maps from mixed JSON/Clojure sources"
+    (is (= "invoke-kw"
+           (#'futon3c.dev/invoke-meta-trace-id {:invoke-trace-id "invoke-kw"})))
+    (is (= "invoke-str"
+           (#'futon3c.dev/invoke-meta-trace-id {"invoke-trace-id" "invoke-str"})))
+    (is (= "invoke-camel"
+           (#'futon3c.dev/invoke-meta-trace-id {"invokeTraceId" "invoke-camel"})))))
+
 (deftest record-invoke-delivery-uses-agent-emacs-socket
   (testing "delivery updates target the same emacs socket used by the agent invoke buffer"
     (let [calls (atom [])]

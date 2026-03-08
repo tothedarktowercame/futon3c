@@ -627,6 +627,16 @@
          " (trace-id " invoke-trace-id ")"
          (when note* (str " [" note* "]")))))
 
+(defn- invoke-meta-trace-id
+  "Extract invoke trace id from invoke-meta maps with keyword or string keys."
+  [invoke-meta]
+  (some (fn [k]
+          (let [v (or (get invoke-meta k)
+                      (get invoke-meta (name k)))]
+            (when-let [tid (some-> v str str/trim not-empty)]
+              tid)))
+        [:invoke-trace-id :invoke_trace_id :invokeTraceId]))
+
 (defn- write-invoke-artifact!
   "Persist full invoke output to a local artifact file.
    Returns absolute file path on success, nil on failure or blank text."
@@ -3718,7 +3728,7 @@ RESPOND WITH ONLY:
                                                          (and soft-timeout-ms
                                                               (>= elapsed soft-timeout-ms)))))))
                                    reply* (invoke-response->irc-reply resp)
-                                   invoke-trace-id (get-in resp [:invoke-meta :invoke-trace-id])]
+                                   invoke-trace-id (invoke-meta-trace-id (:invoke-meta resp))]
                                (reset! !invoke-trace-id invoke-trace-id)
                                ((:send-to-channel! irc-server) channel nick reply*)
                                (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
