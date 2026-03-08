@@ -460,25 +460,37 @@ def format_for_irc(result: dict) -> str:
 def extract_query_from_prompt(prompt: str) -> str:
     """Extract the actual user query from an IRC surface-contract-wrapped prompt.
 
-    The ngircd bridge wraps messages like:
+    The ngircd bridge sends prompts like:
+        [Surface: IRC | Channel: #math | Speaker: joe | Mode: brief | ...]
+
+        joe: Why do Godement--Jacquet and Rankin--Selberg conductors match?
+
+    Or with the full CURRENT TURN header:
         --- CURRENT TURN ---
         Surface: irc (#math)
         Caller: irc:joe
         ---
-        [Surface: IRC | Channel: #math | ...]
+        [Surface: IRC | ...]
         joe: @corpus What is known about ...
-    We want just the query text after '@corpus'."""
+
+    The @corpus prefix may or may not be present (bridge strips it)."""
     import re
-    # Look for the @corpus mention and grab everything after it
+    # Look for @corpus mention and grab everything after it
     m = re.search(r'@corpus\s+(.*)', prompt, re.DOTALL)
     if m:
         return m.group(1).strip()
-    # If no @corpus, look for last line after "---" separator block
-    lines = prompt.strip().split('\n')
-    # Skip surface contract framing, return last meaningful line
+    # Look for "sender: message" pattern on the last non-empty line
+    lines = [ln.strip() for ln in prompt.strip().split('\n') if ln.strip()]
     for line in reversed(lines):
-        line = line.strip()
-        if line and not line.startswith('[') and not line.startswith('---') and ':' not in line[:20]:
+        # Skip framing lines
+        if line.startswith('[') or line.startswith('---') or line.startswith('Surface:') or line.startswith('Caller:'):
+            continue
+        # Match "nick: actual query text"
+        m = re.match(r'^[\w-]+:\s+(.+)$', line)
+        if m:
+            return m.group(1).strip()
+        # If it's a plain line without framing, use it
+        if not line.startswith('['):
             return line
     # Fallback: return the whole thing
     return prompt.strip()
