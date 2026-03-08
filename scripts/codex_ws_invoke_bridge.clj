@@ -80,6 +80,33 @@
            (str/join ""))
       :else nil)))
 
+;; =============================================================================
+;; Execution evidence — count tool/command events from NDJSON (H-2)
+;; =============================================================================
+
+(defn- tool-event?
+  [evt]
+  (let [t (:type evt)
+        item (:item evt)]
+    (or (= "command_execution" t)
+        (and (contains? #{"item.started" "item.completed"} t)
+             (= "command_execution" (:type item)))
+        (and (contains? #{"item.started" "item.completed"} t)
+             (= "tool_call" (:type item))))))
+
+(defn- command-event?
+  [evt]
+  (let [t (:type evt)
+        item (:item evt)
+        name (:name item)]
+    (or (= "command_execution" t)
+        (and (contains? #{"item.started" "item.completed"} t)
+             (= "command_execution" (:type item)))
+        (and (contains? #{"item.started" "item.completed"} t)
+             (= "tool_call" (:type item))
+             (contains? #{"command_execution" "command-execution" "bash" "shell"}
+                        (some-> name str/lower-case))))))
+
 (defn- parse-codex-output [raw-output prior-session-id]
   (let [events (keep (fn [line]
                        (try (json/parse-string line true)
@@ -90,6 +117,8 @@
                                  (or (:thread_id evt) (:session_id evt))))
                              events)
                        prior-session-id)
+        tool-events (count (filter tool-event? events))
+        command-events (count (filter command-event? events))
         text (or (some->> events
                           (filter #(= "item.completed" (:type %)))
                           (map :item)
@@ -105,7 +134,114 @@
                  (some-> raw-output str/trim not-empty)
                  "[No assistant message returned]")]
     {:session-id session-id
-     :text text}))
+     :text text
+     :execution {:tool-events tool-events
+                 :command-events command-events
+                 :executed? (pos? (+ tool-events command-events))}}))
+
+;; =============================================================================
+;; Enforcement detection predicates (H-1) — ported from dev.clj
+;; =============================================================================
+
+(def ^:private work-claim-re
+  #"(?i)\b(i['']?ll|i will|we['']?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
+
+(def ^:private planning-only-re
+  #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
+
+(def ^:private task-mode-re
+  #"(?i)\bmode:\s*task\b")
+
+(def ^:private mission-work-re
+  #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b")
+
+(def ^:private separate-message-request-re
+  #"(?i)\b(separate\s+irc\s+messages?|one\s+per\s+message|each\s+of\s+them\s+in\s+a\s+separate\s+irc\s+message|post\s+each\s+.*\s+separate\s+message)\b")
+
+(def ^:private format-excuse-re
+  #"(?i)\b(surface|interface|mode|channel|irc)\b.{0,60}\b(cap|caps|limit|limited|can't|cannot|unable)\b|\b\d+\s+lines?\s+per\s+turn\b")
+
+(defn- no-execution-evidence?
+  [result]
+  (let [execution (:execution result)
+        tool-events (long (or (:tool-events execution) 0))
+        command-events (long (or (:command-events execution) 0))]
+    (and (nil? (:error result))
+         (not (:executed? execution))
+         (zero? tool-events)
+         (zero? command-events))))
+
+(defn- work-claim-without-execution?
+  [result]
+  (let [text (str/trim (or (:result result) ""))]
+    (and (no-execution-evidence? result)
+         (not (str/blank? text))
+         (boolean (re-find work-claim-re text)))))
+
+(defn- task-reply-without-execution?
+  [prompt result]
+  (let [text (str/trim (or (:result result) ""))
+        prompt-str (str (or prompt ""))]
+    (and (or (boolean (re-find task-mode-re prompt-str))
+             (boolean (re-find mission-work-re prompt-str)))
+         (no-execution-evidence? result)
+         (not (str/blank? text))
+         (not (boolean (re-find planning-only-re text))))))
+
+(defn- format-refusal?
+  [prompt result]
+  (let [text (str/trim (or (:result result) ""))
+        prompt-str (str (or prompt ""))]
+    (and (boolean (re-find separate-message-request-re prompt-str))
+         (not (str/blank? text))
+         (boolean (re-find format-excuse-re text)))))
+
+(defn- enforcement-needed?
+  [prompt result]
+  (or (work-claim-without-execution? result)
+      (task-reply-without-execution? prompt result)
+      (format-refusal? prompt result)))
+
+(defn- enforcement-reason
+  "Returns a keyword describing why enforcement triggered, for evidence (H-2)."
+  [prompt result]
+  (cond
+    (work-claim-without-execution? result)        :work-claim-without-execution
+    (task-reply-without-execution? prompt result)  :task-reply-without-execution
+    (format-refusal? prompt result)                :format-refusal
+    :else                                          nil))
+
+;; =============================================================================
+;; Enforcement prompt builders
+;; =============================================================================
+
+(defn- clip [s max-len]
+  (let [txt (str (or s ""))]
+    (if (<= (count txt) max-len)
+      txt
+      (str (subs txt 0 (max 0 (- max-len 3))) "..."))))
+
+(defn- execution-followup-prompt
+  [original-prompt prior-reply]
+  (str "Your previous reply made a work/progress claim without execution evidence.\n"
+       "Execute one concrete first step now (tool/command activity is required).\n"
+       "Then reply in one short line with actual status and artifact refs.\n\n"
+       "Original request:\n"
+       (clip original-prompt 900)
+       "\n\nPrevious reply:\n"
+       (clip prior-reply 600)))
+
+(defn- format-followup-prompt
+  [original-prompt prior-reply]
+  (str "Your previous reply refused a feasible output format due invented surface limits.\n"
+       "Do not claim per-turn line caps or transport limits unless an actual tool call failed.\n"
+       "Complete the user request directly.\n"
+       "If they asked for separate IRC messages, output newline-separated one-line items,\n"
+       "one intended post per line.\n\n"
+       "Original request:\n"
+       (clip original-prompt 900)
+       "\n\nPrevious reply:\n"
+       (clip prior-reply 600)))
 
 (defn- build-codex-cmd [sid]
   (let [exec-opts ["--json"
@@ -132,22 +268,26 @@
   (if (= "mock" invoke-mode)
     {:ok true
      :result (str "mock: " prompt)
-     :session-id (or prior-session-id @sid*)}
+     :session-id (or prior-session-id @sid*)
+     :execution {:tool-events 0 :command-events 0 :executed? false}}
     (let [sid (or prior-session-id @sid*)
           cmd (build-codex-cmd sid)
           result (apply sh/sh (concat cmd [:in (str prompt "\n") :dir codex-cwd]))
           parsed (parse-codex-output (str (:out result) (:err result)) sid)
-          new-sid (:session-id parsed)]
+          new-sid (:session-id parsed)
+          execution (:execution parsed)]
       (when (and (string? new-sid) (not (str/blank? new-sid)))
         (reset! sid* new-sid)
         (persist-session-id! session-file new-sid))
       (if (zero? (:exit result))
         {:ok true
          :result (some-> (:text parsed) str/trim not-empty)
-         :session-id new-sid}
+         :session-id new-sid
+         :execution execution}
         {:ok false
          :error (str "codex-exit-" (:exit result) ": " (str/trim (:text parsed)))
-         :session-id sid}))))
+         :session-id sid
+         :execution execution}))))
 
 (defn- ws-url [sid]
   (str (str/replace agency-ws-base #"/$" "")
@@ -266,25 +406,68 @@
                           :tags ["invoke-start"])
           ;; Start heartbeat
           (let [stop-heartbeat! (start-heartbeat! invoke-id prompt-preview incoming-session)
-                outcome (try
+                initial (try
                           (invoke-codex! prompt-str incoming-session sid*)
                           (finally
                             (stop-heartbeat!)))
+                ;; ---- H-1: Enforcement retry ----
+                outcome (if (and (:ok initial) (enforcement-needed? prompt-str initial))
+                          (let [reason (enforcement-reason prompt-str initial)
+                                exec-enforce? (not= :format-refusal reason)
+                                retry-prompt (if exec-enforce?
+                                               (execution-followup-prompt prompt-str (:result initial))
+                                               (format-followup-prompt prompt-str (:result initial)))
+                                retry-sid (or (:session-id initial) incoming-session)]
+                            (println (str "[bridge] " agent-id
+                                          " enforcement triggered: " (name reason)
+                                          " — retrying"))
+                            (flush)
+                            ;; Evidence: enforcement retry
+                            (emit-evidence! "enforcement-retry"
+                                            {"invoke-id" invoke-id
+                                             "reason" (name reason)
+                                             "initial-result-preview" (clip (:result initial) 300)}
+                                            :session-id (or retry-sid incoming-session)
+                                            :tags ["enforcement" "retry"])
+                            (let [retry (invoke-codex! retry-prompt retry-sid sid*)]
+                              (if (enforcement-needed? prompt-str retry)
+                                ;; Retry also failed enforcement — return structured error
+                                (do
+                                  (println (str "[bridge] " agent-id
+                                                " enforcement retry also failed — returning error"))
+                                  (flush)
+                                  {:ok false
+                                   :result nil
+                                   :session-id (or (:session-id retry) retry-sid)
+                                   :execution (assoc (or (:execution retry) {})
+                                                     :enforced-retry? true
+                                                     :executed? false)
+                                   :error (str (name reason) " after enforcement retry")})
+                                ;; Retry succeeded
+                                (update retry :execution
+                                        #(assoc (or % {}) :enforced-retry? true)))))
+                          initial)
+                ;; ---- Build WS response payload ----
+                execution (:execution outcome)
                 payload (cond-> {"type" "invoke_result"
                                  "invoke_id" invoke-id}
                           (:session-id outcome) (assoc "session_id" (:session-id outcome))
                           (:ok outcome) (assoc "result" (or (:result outcome) ""))
                           (not (:ok outcome)) (assoc "error" (:error outcome)))]
-            ;; Evidence: invoke complete
+            ;; ---- H-2: Structured evidence with execution fields ----
             (emit-evidence! "invoke-complete"
                             {"invoke-id" invoke-id
-                             "ok" (:ok outcome)
+                             "ok" (boolean (:ok outcome))
+                             "executed" (boolean (:executed? execution))
+                             "tool-events" (long (or (:tool-events execution) 0))
+                             "command-events" (long (or (:command-events execution) 0))
+                             "enforced-retry" (boolean (:enforced-retry? execution))
                              "result-preview" (when (:ok outcome)
-                                                (let [r (str (:result outcome))]
-                                                  (subs r 0 (min 300 (count r)))))
+                                                (clip (:result outcome) 300))
                              "error" (when-not (:ok outcome) (:error outcome))}
                             :session-id (or (:session-id outcome) incoming-session)
-                            :tags ["invoke-complete"])
+                            :tags (cond-> ["invoke-complete"]
+                                    (:enforced-retry? execution) (conj "enforcement")))
             (try
               (send-json! ws payload)
               (catch Exception e
