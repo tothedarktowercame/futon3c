@@ -747,10 +747,14 @@ class IRCBot:
                 if response.get("ok"):
                     # Claude: clean output (no [done]/[accepted] framing)
                     # Codex: full framing with artifact refs and session IDs
-                    is_claude = self.nick.startswith("claude")
-                    if is_claude:
-                        summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
-                        self._say(summary, max_lines=4, channel=reply_ch)
+                    is_clean = self.nick.startswith("claude") or self.nick == "corpus"
+                    if is_clean:
+                        if self.nick == "corpus":
+                            summary = self._multiline_result_for_irc(response.get("result", ""))
+                            self._say(summary, max_lines=8, channel=reply_ch)
+                        else:
+                            summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
+                            self._say(summary, max_lines=4, channel=reply_ch)
                     else:
                         if multi_message:
                             summary = self._multiline_result_for_irc(response.get("result", ""))

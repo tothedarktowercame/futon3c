@@ -433,18 +433,18 @@ def faiss_search(corpus_path: Path, query: str, top_k: int) -> list:
 
 
 def format_for_irc(result: dict) -> str:
-    """Format retrieval results as readable IRC text."""
+    """Format retrieval results as compact IRC text (one line per result)."""
     neighbors = result.get("neighbors", [])
     if not neighbors:
-        return f"No results found for: {result.get('query', '?')}"
-    lines = [f"Found {len(neighbors)} result(s) for: {result.get('query', '?')}"]
-    for n in neighbors:
-        title = n.get("title", "untitled")
+        return f"No results for: {result.get('query', '?')}"
+    lines = [f"{len(neighbors)} results for: {result.get('query', '?')}"]
+    for n in neighbors[:3]:  # top 3 only for IRC
+        title = n.get("title", "untitled")[:80]
         source = n.get("source", "?")
         score = n.get("score", 0)
-        tags = n.get("tags", [])
-        tag_str = f" [{', '.join(tags[:3])}]" if tags else ""
-        lines.append(f"  [{source}] {title} (score {score}){tag_str}")
+        lines.append(f"[{source}] {title} ({score:.2f})")
+    if len(neighbors) > 3:
+        lines.append(f"(+{len(neighbors) - 3} more)")
     return "\n".join(lines)
 
 
