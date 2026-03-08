@@ -27,6 +27,12 @@
      GET  /api/alpha/reflect/deps/:ns — namespace dependency graph
      GET  /api/alpha/reflect/java/:class — Java class reflection
      GET  /api/alpha/enrich/file?path=... — composite enrichment for a source file
+     POST /api/alpha/evidence/psr — Pattern Selection Record (walkie-talkie)
+     POST /api/alpha/evidence/pur — Pattern Use Record (walkie-talkie)
+     POST /api/alpha/evidence/par — Post-Action Review (walkie-talkie)
+     POST /api/alpha/arse/ask — post ArSE question (walkie-talkie)
+     POST /api/alpha/arse/answer — answer ArSE question (walkie-talkie)
+     GET  /api/alpha/arse/unanswered — list unanswered ArSE questions
      POST /api/alpha/todo — lightweight todo management (add/list/done)
      POST /api/alpha/portfolio/step — run one AIF portfolio step
      POST /api/alpha/portfolio/heartbeat — weekly heartbeat with bid/clear
@@ -1037,6 +1043,450 @@
                          {:ok false
                           :err (name (:error/code result))
                           :error result}))))))
+
+;; =============================================================================
+;; ArSE (Artificial Stack Exchange) endpoints — walkie-talkie surface
+;; =============================================================================
+
+(def ^:private arse-store-dir
+  "Filesystem store directory for ArSE entities."
+  (str (System/getProperty "user.home") "/code/storage/arse"))
+
+(defn- arse-load-entities
+  "Load ArSE entities from filesystem store."
+  []
+  (let [path (str arse-store-dir "/entities.json")]
+    (if (.exists (io/file path))
+      (json/parse-string (slurp path) true)
+      [])))
+
+(defn- arse-save-entities
+  "Save ArSE entities to filesystem store."
+  [entities]
+  (let [dir (io/file arse-store-dir)]
+    (.mkdirs dir)
+    (spit (str arse-store-dir "/entities.json")
+          (json/generate-string entities {:pretty true}))))
+
+(defn- arse-update-manifest
+  "Update ArSE manifest with current count and timestamp."
+  [entity-count]
+  (let [path (str arse-store-dir "/manifest.json")
+        manifest (if (.exists (io/file path))
+                   (json/parse-string (slurp path) true)
+                   {})
+        updated (assoc manifest
+                       :entity_count entity-count
+                       :last_updated (.toString (Instant/now)))]
+    (spit path (json/generate-string updated {:pretty true}))))
+
+(defn- handle-arse-ask
+  "POST /api/alpha/arse/ask — post a new ArSE question.
+   Body: {\"title\": \"...\", \"question\": \"...\", \"tags\": [...], \"author\": \"...\"}
+   Dual-writes to filesystem store + evidence landscape."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [title (or (:title payload) "")
+            question (or (:question payload) "")
+            tags (or (:tags payload) [])
+            author (or (:author payload) "agent")
+            entities (arse-load-entities)
+            thread-id (str "ask-" (quot (System/currentTimeMillis) 1000)
+                           "-" (count entities))
+            entity {:entity/id thread-id
+                    :entity/type "QAPair"
+                    :entity/source "artificial-stack-exchange"
+                    :title title
+                    :question-body question
+                    :answer-body ""
+                    :tags tags
+                    :score 0
+                    :answer-score 0
+                    :synthetic true
+                    :source_node ""
+                    :source_problem ""
+                    :unanswered true
+                    :author author}]
+        (if (str/blank? title)
+          (json-response 400 {:ok false :err "title-required"
+                              :message "Question title is required"})
+          (do
+            ;; Write to filesystem store
+            (arse-save-entities (conj entities entity))
+            (arse-update-manifest (inc (count entities)))
+            ;; Write question evidence entry
+            (let [evidence-store (evidence-store-for-config config)
+                  q-id (str "arse-q-" thread-id)
+                  q-entry {:evidence-id q-id
+                           :subject {:ref/type :arse-thread :ref/id thread-id}
+                           :type :arse-qa
+                           :claim-type :question
+                           :author author
+                           :body {:title title :text question}
+                           :tags (mapv keyword tags)}
+                  result (estore/append* evidence-store q-entry)]
+              (json-response 201 {:ok true
+                                  :thread-id thread-id
+                                  :evidence-id q-id
+                                  :evidence-ok (:ok result)}))))))))
+
+(defn- handle-arse-answer
+  "POST /api/alpha/arse/answer — answer an existing ArSE question.
+   Body: {\"thread-id\": \"...\", \"answer\": \"...\", \"author\": \"...\"}
+   Dual-writes to filesystem store + evidence landscape."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [thread-id (or (:thread-id payload) (get payload "thread-id") "")
+            answer-text (or (:answer payload) "")
+            author (or (:author payload) "agent")]
+        (if (str/blank? thread-id)
+          (json-response 400 {:ok false :err "thread-id-required"
+                              :message "thread-id is required"})
+          (let [entities (arse-load-entities)
+                target-idx (first (keep-indexed
+                                   (fn [i e]
+                                     (when (= (or (:entity/id e) (:thread_id e))
+                                              thread-id)
+                                       i))
+                                   entities))]
+            (if (nil? target-idx)
+              (json-response 404 {:ok false :err "not-found"
+                                  :message (str "Question not found: " thread-id)})
+              (let [target (nth entities target-idx)
+                    updated (-> target
+                                (assoc :answer-body answer-text)
+                                (dissoc :unanswered))
+                    entities' (assoc (vec entities) target-idx updated)]
+                ;; Write to filesystem store
+                (arse-save-entities entities')
+                ;; Write answer evidence entry
+                (let [evidence-store (evidence-store-for-config config)
+                      q-id (str "arse-q-" thread-id)
+                      a-id (str "arse-a-" thread-id)
+                      a-entry {:evidence-id a-id
+                               :subject {:ref/type :arse-thread :ref/id thread-id}
+                               :type :arse-qa
+                               :claim-type :conclusion
+                               :author author
+                               :body {:text answer-text}
+                               :tags (mapv keyword (or (:tags target) []))
+                               :in-reply-to q-id}
+                      result (estore/append* evidence-store a-entry)]
+                  (json-response 200 {:ok true
+                                      :thread-id thread-id
+                                      :evidence-id a-id
+                                      :evidence-ok (:ok result)}))))))))))
+
+(defn- handle-arse-unanswered
+  "GET /api/alpha/arse/unanswered — list unanswered ArSE questions."
+  [_request _config]
+  (let [entities (arse-load-entities)
+        unanswered (filterv :unanswered entities)]
+    (json-response 200 {:ok true
+                        :count (count unanswered)
+                        :questions (mapv (fn [e]
+                                          {:thread-id (or (:entity/id e) (:thread_id e))
+                                           :title (:title e)
+                                           :tags (:tags e)
+                                           :author (:author e)})
+                                        unanswered)})))
+
+;; =============================================================================
+;; Pattern search — futon3x tool surface
+;; =============================================================================
+
+(def ^:private patterns-tsv-path
+  (str (System/getProperty "user.home") "/code/futon3/resources/sigils/patterns-index.tsv"))
+
+(defonce ^:private !patterns-cache
+  (atom nil))
+
+(defn- load-patterns-tsv
+  "Load and cache patterns from TSV. Returns vector of maps."
+  []
+  (or @!patterns-cache
+      (let [f (io/file patterns-tsv-path)]
+        (when (.exists f)
+          (let [lines (->> (str/split-lines (slurp f))
+                           (remove #(str/starts-with? % "#"))
+                           (remove str/blank?))
+                parsed (mapv (fn [line]
+                               (let [cols (str/split line #"\t" -1)]
+                                 {:pattern (nth cols 0 "")
+                                  :tokipona (nth cols 1 "")
+                                  :sigil (nth cols 2 "")
+                                  :rationale (nth cols 3 "")
+                                  :hotwords (nth cols 4 "")}))
+                             lines)]
+            (reset! !patterns-cache parsed)
+            parsed)))))
+
+(defn- search-patterns
+  "Search patterns by keyword matching against pattern ID, rationale, and hotwords."
+  [query limit]
+  (let [patterns (or (load-patterns-tsv) [])
+        terms (str/split (str/lower-case (str query)) #"\s+")
+        scored (keep (fn [p]
+                       (let [text (str/lower-case
+                                   (str (:pattern p) " " (:rationale p) " " (:hotwords p)))
+                             hits (count (filter #(str/includes? text %) terms))]
+                         (when (pos? hits)
+                           (assoc p :score hits))))
+                     patterns)]
+    (->> scored
+         (sort-by :score >)
+         (take (or limit 5))
+         vec)))
+
+(defn- handle-patterns-search
+  "GET /api/alpha/patterns/search?q=...&limit=N — search pattern catalog."
+  [request]
+  (let [params (:query-string request)
+        q (some-> params
+                  (str/split #"&")
+                  (->> (some (fn [p]
+                               (when (str/starts-with? p "q=")
+                                 (enc/decode-uri-component (subs p 2)))))))
+        limit (some-> params
+                      (str/split #"&")
+                      (->> (some (fn [p]
+                                   (when (str/starts-with? p "limit=")
+                                     (try (Integer/parseInt (subs p 6))
+                                          (catch Exception _ nil)))))))]
+    (if-not q
+      (json-response 400 {:ok false :err "missing-query"
+                          :message "Provide ?q=<search terms>"})
+      (let [results (search-patterns q limit)]
+        (json-response 200 {:ok true
+                            :query q
+                            :count (count results)
+                            :patterns results})))))
+
+;; =============================================================================
+;; Backpack persistence — survives server restarts
+;; =============================================================================
+
+(def ^:private backpack-file
+  (str (System/getProperty "user.home") "/code/storage/futon3c/backpacks.json"))
+
+(defonce ^:private !backpacks
+  (atom (try
+          (when (.exists (io/file backpack-file))
+            (json/parse-string (slurp backpack-file) true))
+          (catch Exception _ {}))))
+
+(defn- save-backpacks!
+  "Persist backpacks to disk."
+  []
+  (let [dir (io/file (str (System/getProperty "user.home") "/code/storage/futon3c"))]
+    (.mkdirs dir)
+    (spit backpack-file (json/generate-string @!backpacks {:pretty true}))))
+
+(defn- backpack-put!
+  "Store a pattern in an agent's backpack (memory + disk + registry)."
+  [agent-id pattern-id psr-evidence-id]
+  (let [entry {:active-pattern pattern-id
+               :psr-evidence-id psr-evidence-id
+               :psr-at (.toString (Instant/now))}]
+    (swap! !backpacks assoc agent-id entry)
+    (save-backpacks!)
+    ;; Also update registry if agent is online
+    (when (reg/agent-registered? agent-id)
+      (reg/update-agent! agent-id
+        :agent/metadata
+        (merge (or (:agent/metadata (reg/get-agent agent-id)) {})
+               {:backpack/active-pattern pattern-id
+                :backpack/psr-evidence-id psr-evidence-id
+                :backpack/psr-at (:psr-at entry)})))))
+
+(defn- backpack-clear!
+  "Clear the pattern from an agent's backpack (memory + disk + registry)."
+  [agent-id]
+  (swap! !backpacks dissoc agent-id)
+  (save-backpacks!)
+  ;; Also update registry if agent is online
+  (when (reg/agent-registered? agent-id)
+    (reg/update-agent! agent-id
+      :agent/metadata
+      (-> (or (:agent/metadata (reg/get-agent agent-id)) {})
+          (dissoc :backpack/active-pattern
+                  :backpack/psr-evidence-id
+                  :backpack/psr-at)))))
+
+(defn- backpack-get
+  "Get an agent's backpack from persistent store (primary) or registry (fallback)."
+  [agent-id]
+  (or (get @!backpacks agent-id)
+      (when-let [agent (reg/get-agent agent-id)]
+        (let [m (or (:agent/metadata agent) {})]
+          (when (:backpack/active-pattern m)
+            {:active-pattern (:backpack/active-pattern m)
+             :psr-evidence-id (:backpack/psr-evidence-id m)
+             :psr-at (:backpack/psr-at m)})))))
+
+;; =============================================================================
+;; PSR/PUR/PAR endpoints — walkie-talkie evidence surface
+;; =============================================================================
+
+(defn- handle-psr
+  "POST /api/alpha/evidence/psr — record a Pattern Selection Record.
+   Body: {\"pattern-id\": \"agent/pause-is-not-failure\",
+          \"query\": \"stuck on testing\",
+          \"candidates\": [\"pattern-a\", \"pattern-b\"],
+          \"rationale\": \"...\", \"confidence\": \"medium\",
+          \"author\": \"claude-1\", \"session-id\": \"...\"}"
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [pattern-id (or (:pattern-id payload) (get payload "pattern-id") "")
+            query (or (:query payload) (get payload "query") "")
+            candidates (or (:candidates payload) (get payload "candidates") [])
+            rationale (or (:rationale payload) (get payload "rationale") "")
+            confidence (or (:confidence payload) (get payload "confidence") "medium")
+            author (or (:author payload) (get payload "author") "agent")
+            session-id (or (:session-id payload) (get payload "session-id"))
+            sigil (or (:sigil payload) (get payload "sigil"))]
+        (if (str/blank? pattern-id)
+          (json-response 400 {:ok false :err "pattern-id-required"
+                              :message "pattern-id is required"})
+          (let [evidence-store (evidence-store-for-config config)
+                e-id (str "psr-" (UUID/randomUUID))
+                entry (cond-> {:evidence-id e-id
+                               :subject {:ref/type :pattern
+                                         :ref/id pattern-id}
+                               :type :pattern-selection
+                               :claim-type :observation
+                               :author author
+                               :pattern-id (keyword pattern-id)
+                               :body {:query query
+                                      :selected pattern-id
+                                      :candidates candidates
+                                      :rationale rationale
+                                      :confidence confidence}
+                               :tags [:psr]}
+                        session-id (assoc :session-id session-id)
+                        sigil (assoc-in [:body :sigil] sigil))
+                result (estore/append* evidence-store entry)]
+            ;; Put pattern in agent's backpack (persisted to disk)
+            (backpack-put! author pattern-id e-id)
+            (json-response 201 {:ok true
+                                :evidence-id e-id
+                                :pattern-id pattern-id
+                                :evidence-ok (:ok result)})))))))
+
+(defn- handle-pur
+  "POST /api/alpha/evidence/pur — record a Pattern Use Record.
+   Body: {\"pattern-id\": \"agent/pause-is-not-failure\",
+          \"outcome\": \"success\", \"actions\": \"...\",
+          \"prediction-error\": \"low\",
+          \"in-reply-to\": \"psr-...\",
+          \"author\": \"claude-1\", \"session-id\": \"...\"}"
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [pattern-id (or (:pattern-id payload) (get payload "pattern-id") "")
+            outcome (or (:outcome payload) (get payload "outcome") "")
+            actions (or (:actions payload) (get payload "actions") "")
+            expected (or (:expected payload) (get payload "expected") "")
+            actual (or (:actual payload) (get payload "actual") "")
+            prediction-error (or (:prediction-error payload) (get payload "prediction-error") "")
+            notes (or (:notes payload) (get payload "notes") "")
+            in-reply-to (or (:in-reply-to payload) (get payload "in-reply-to"))
+            author (or (:author payload) (get payload "author") "agent")
+            session-id (or (:session-id payload) (get payload "session-id"))]
+        (if (str/blank? pattern-id)
+          (json-response 400 {:ok false :err "pattern-id-required"
+                              :message "pattern-id is required"})
+          (let [evidence-store (evidence-store-for-config config)
+                e-id (str "pur-" (UUID/randomUUID))
+                entry (cond-> {:evidence-id e-id
+                               :subject {:ref/type :pattern
+                                         :ref/id pattern-id}
+                               :type :pattern-outcome
+                               :claim-type :conclusion
+                               :author author
+                               :pattern-id (keyword pattern-id)
+                               :body {:outcome outcome
+                                      :actions actions
+                                      :expected expected
+                                      :actual actual
+                                      :prediction-error prediction-error
+                                      :notes notes}
+                               :tags [:pur]}
+                        session-id (assoc :session-id session-id)
+                        in-reply-to (assoc :in-reply-to in-reply-to))
+                result (estore/append* evidence-store entry)]
+            ;; Clear pattern from agent's backpack (persisted to disk)
+            (backpack-clear! author)
+            (json-response 201 {:ok true
+                                :evidence-id e-id
+                                :pattern-id pattern-id
+                                :evidence-ok (:ok result)})))))))
+
+(defn- handle-par
+  "POST /api/alpha/evidence/par — record a Post-Action Review.
+   Body: {\"summary\": \"Fixed vitality endpoint\",
+          \"patterns-used\": [{\"pattern\": \"...\", \"count\": 1}],
+          \"what-went-well\": [\"...\"], \"what-could-improve\": [\"...\"],
+          \"prediction-errors\": [{\"expected\": \"...\", \"actual\": \"...\", \"magnitude\": 0.5}],
+          \"suggestions\": [\"...\"],
+          \"commits\": [\"abc123\"], \"files-touched\": [\"src/foo.clj\"],
+          \"author\": \"claude-1\", \"session-id\": \"...\"}"
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [summary (or (:summary payload) (get payload "summary") "")
+            patterns-used (or (:patterns-used payload) (get payload "patterns-used") [])
+            what-went-well (or (:what-went-well payload) (get payload "what-went-well") [])
+            what-could-improve (or (:what-could-improve payload) (get payload "what-could-improve") [])
+            prediction-errors (or (:prediction-errors payload) (get payload "prediction-errors") [])
+            suggestions (or (:suggestions payload) (get payload "suggestions") [])
+            commits (or (:commits payload) (get payload "commits") [])
+            files-touched (or (:files-touched payload) (get payload "files-touched") [])
+            author (or (:author payload) (get payload "author") "agent")
+            session-id (or (:session-id payload) (get payload "session-id") "")]
+        (if (str/blank? summary)
+          (json-response 400 {:ok false :err "summary-required"
+                              :message "summary is required"})
+          (let [evidence-store (evidence-store-for-config config)
+                e-id (str "par-" (UUID/randomUUID))
+                entry (cond-> {:evidence-id e-id
+                               :subject {:ref/type :session
+                                         :ref/id (or session-id (str "par-" (UUID/randomUUID)))}
+                               :type :reflection
+                               :claim-type :observation
+                               :author author
+                               :body {:summary summary
+                                      :patterns-used patterns-used
+                                      :what-went-well what-went-well
+                                      :what-could-improve what-could-improve
+                                      :prediction-errors prediction-errors
+                                      :suggestions suggestions
+                                      :commits commits
+                                      :files-touched files-touched}
+                               :tags [:par]}
+                        (not (str/blank? session-id))
+                        (assoc :session-id session-id))
+                result (estore/append* evidence-store entry)]
+            (json-response 201 {:ok true
+                                :evidence-id e-id
+                                :evidence-ok (:ok result)})))))))
+
+(defn- handle-backpack
+  "GET /api/alpha/backpack/:agent-id — view an agent's backpack contents.
+   Reads from persistent store (survives restarts), not just registry."
+  [agent-id]
+  (let [bp (backpack-get agent-id)]
+    (json-response 200 {:ok true
+                        :agent-id agent-id
+                        :backpack (or bp {})})))
 
 ;; =============================================================================
 ;; Agent registration endpoints
@@ -2792,6 +3242,36 @@
           (let [[_ raw-id] (re-find #"/api/alpha/evidence/(.+)" uri)
                 evidence-id (enc/decode-uri-component raw-id)]
             (handle-evidence-entry config evidence-id))
+
+          ;; Walkie-talkie: pattern search
+          (and (= :get method) (= "/api/alpha/patterns/search" uri))
+          (handle-patterns-search request)
+
+          ;; Walkie-talkie: PSR/PUR/PAR evidence endpoints
+          (and (= :post method) (= "/api/alpha/evidence/psr" uri))
+          (handle-psr request config)
+
+          (and (= :post method) (= "/api/alpha/evidence/pur" uri))
+          (handle-pur request config)
+
+          (and (= :post method) (= "/api/alpha/evidence/par" uri))
+          (handle-par request config)
+
+          ;; Walkie-talkie: backpack
+          (and (= :get method) (string? uri)
+               (str/starts-with? uri "/api/alpha/backpack/"))
+          (let [raw (subs uri (count "/api/alpha/backpack/"))]
+            (handle-backpack (enc/decode-uri-component raw)))
+
+          ;; Walkie-talkie: ArSE endpoints
+          (and (= :post method) (= "/api/alpha/arse/ask" uri))
+          (handle-arse-ask request config)
+
+          (and (= :post method) (= "/api/alpha/arse/answer" uri))
+          (handle-arse-answer request config)
+
+          (and (= :get method) (= "/api/alpha/arse/unanswered" uri))
+          (handle-arse-unanswered request config)
 
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)

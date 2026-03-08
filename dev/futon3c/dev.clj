@@ -43,7 +43,8 @@
      FUTON3C_REGISTER_CLAUDE — whether to register claude-1 on this host
      FUTON3C_REGISTER_CLAUDE2 — whether to register claude-2 (mentor, workspace2)
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host
-     FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)"
+     FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)
+     MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon1a.system :as f1]
             [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.tickle :as tickle]
@@ -4141,6 +4142,14 @@ RESPOND WITH ONLY:
   (let [role-info (deployment-role-info)
         role (:role role-info)
         role-cfg (role-defaults role)
+        ;; Wire meme.db path for concepts API (futon3a on classpath)
+        _ (when-not (System/getenv "MEME_DB_PATH")
+            (let [candidates ["/home/joe/code/futon3a/meme.db"
+                              (str (System/getProperty "user.dir") "/meme.db")]]
+              (when-let [found (first (filter #(.exists (io/file %)) candidates))]
+                (alter-var-root (requiring-resolve 'meme.schema/db-path)
+                                (constantly (fn [] found)))
+                (println (str "  meme.db → " found " (auto-detected)")))))
         direct-xtdb? (direct-xtdb-enabled? role-cfg)
         f1-sys (start-futon1a! direct-xtdb?)
         evidence-store (make-evidence-store f1-sys direct-xtdb?)

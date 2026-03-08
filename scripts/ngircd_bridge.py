@@ -173,6 +173,13 @@ AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
 INVOKE_DELIVERY_URL = f"{INVOKE_BASE}/api/alpha/invoke-delivery"
+ARSE_ASK_URL = f"{INVOKE_BASE}/api/alpha/arse/ask"
+ARSE_ANSWER_URL = f"{INVOKE_BASE}/api/alpha/arse/answer"
+ARSE_UNANSWERED_URL = f"{INVOKE_BASE}/api/alpha/arse/unanswered"
+PSR_URL = f"{INVOKE_BASE}/api/alpha/evidence/psr"
+PUR_URL = f"{INVOKE_BASE}/api/alpha/evidence/pur"
+PAR_URL = f"{INVOKE_BASE}/api/alpha/evidence/par"
+PATTERNS_SEARCH_URL = f"{INVOKE_BASE}/api/alpha/patterns/search"
 CODEX_BRIDGE_SUMMARY_MODE = os.environ.get("CODEX_BRIDGE_SUMMARY_MODE", "summary").strip().lower()
 CODEX_USE_RAW_OUTPUT = CODEX_BRIDGE_SUMMARY_MODE == "raw"
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
@@ -964,7 +971,7 @@ class IRCBot:
         """Send a PRIVMSG to a channel. Caps output at max_lines to keep
         IRC readable. If the response exceeds max_lines, the tail is dropped
         and a truncation notice is appended."""
-        channel = channel or self.channel
+        channel = channel or self._reply_channel or self.channel
         text = self._sanitize_for_irc(text)
         lines = []
         for line in text.split("\n"):
@@ -1096,6 +1103,20 @@ class IRCBot:
             self._cmd_todo(sender, args)
         elif cmd == "!agent":
             self._cmd_agent(sender, args)
+        elif cmd == "!patterns":
+            self._cmd_patterns(sender, args)
+        elif cmd == "!psr":
+            self._cmd_psr(sender, args)
+        elif cmd == "!pur":
+            self._cmd_pur(sender, args)
+        elif cmd == "!par":
+            self._cmd_par(sender, args)
+        elif cmd == "!ask":
+            self._cmd_ask(sender, args)
+        elif cmd == "!answer":
+            self._cmd_answer(sender, args)
+        elif cmd == "!unanswered":
+            self._cmd_unanswered(sender, args)
         elif cmd == "!jobs":
             self._cmd_jobs(sender, args)
         elif cmd == "!job":
@@ -1111,6 +1132,12 @@ class IRCBot:
                   "!mission focus <id> | !mission show | "
                   "!mission clear | !todo add <text> | "
                   "!todo list | !todo done <id> | "
+                  "!patterns <query> | "
+                  "!psr <pattern-id> [rationale] | "
+                  "!pur <pattern-id> <outcome> [notes] | "
+                  "!par <summary> | "
+                  "!ask <question> | !answer <id> <text> | "
+                  "!unanswered | "
                   "!agent [agent-id] | !jobs | !job <id> | !help")
 
     def _cmd_jobs(self, _sender, _args):
@@ -1391,6 +1418,138 @@ class IRCBot:
         else:
             self._say(f"Unknown !todo subcommand: {sub} — "
                       "try: add, list, done")
+
+    def _cmd_patterns(self, _sender, args):
+        """Handle !patterns <query> — search the pattern catalog."""
+        query = args.strip()
+        if not query:
+            self._say("Usage: !patterns <search terms>")
+            return
+        encoded = urllib.parse.quote(query)
+        data = api_get(f"{PATTERNS_SEARCH_URL}?q={encoded}&limit=5",
+                       timeout=STATUS_TIMEOUT)
+        if not data.get("ok"):
+            self._say(f"[patterns error: {data.get('error', 'unknown')}]")
+            return
+        patterns = data.get("patterns", [])
+        if not patterns:
+            self._say(f"No patterns matching: {query}")
+            return
+        for p in patterns[:5]:
+            pid = p.get("pattern", "?")
+            sigil = p.get("sigil", "")
+            rationale = p.get("rationale", "")[:120]
+            self._say(f"  [{sigil}] {pid} — {rationale}")
+
+    def _cmd_psr(self, sender, args):
+        """Handle !psr <pattern-id> [rationale] — record a Pattern Selection Record."""
+        parts = args.split(None, 1)
+        if not parts:
+            self._say("Usage: !psr <pattern-id> [rationale]")
+            return
+        pattern_id = parts[0]
+        rationale = parts[1] if len(parts) > 1 else ""
+        data = api_post(PSR_URL, {
+            "pattern-id": pattern_id,
+            "query": rationale,
+            "rationale": rationale,
+            "author": sender,
+        })
+        if data.get("ok"):
+            eid = data.get("evidence-id", "?")
+            self._say(f"PSR: {pattern_id} [{eid}]")
+        else:
+            self._say(f"[psr error: {data.get('err', data.get('error', 'unknown'))}]")
+
+    def _cmd_pur(self, sender, args):
+        """Handle !pur <pattern-id> <outcome> [notes] — record a Pattern Use Record."""
+        parts = args.split(None, 2)
+        if len(parts) < 2:
+            self._say("Usage: !pur <pattern-id> <outcome> [notes]")
+            return
+        pattern_id = parts[0]
+        outcome = parts[1]
+        notes = parts[2] if len(parts) > 2 else ""
+        data = api_post(PUR_URL, {
+            "pattern-id": pattern_id,
+            "outcome": outcome,
+            "notes": notes,
+            "author": sender,
+        })
+        if data.get("ok"):
+            eid = data.get("evidence-id", "?")
+            self._say(f"PUR: {pattern_id} ({outcome}) [{eid}]")
+        else:
+            self._say(f"[pur error: {data.get('err', data.get('error', 'unknown'))}]")
+
+    def _cmd_par(self, sender, args):
+        """Handle !par <summary> — record a Post-Action Review."""
+        summary = args.strip()
+        if not summary:
+            self._say("Usage: !par <summary>")
+            return
+        data = api_post(PAR_URL, {
+            "summary": summary,
+            "author": sender,
+        })
+        if data.get("ok"):
+            eid = data.get("evidence-id", "?")
+            self._say(f"PAR: {eid} — {summary[:150]}")
+        else:
+            self._say(f"[par error: {data.get('err', data.get('error', 'unknown'))}]")
+
+    def _cmd_ask(self, sender, args):
+        """Handle !ask <question> — post an ArSE question."""
+        question = args.strip()
+        if not question:
+            self._say("Usage: !ask <question>")
+            return
+        data = api_post(ARSE_ASK_URL, {
+            "title": question,
+            "question": question,
+            "tags": ["irc"],
+            "author": sender,
+        })
+        if data.get("ok"):
+            tid = data.get("thread-id", "?")
+            self._say(f"Q: {tid} — {question[:200]}")
+        else:
+            self._say(f"[ask error: {data.get('err', data.get('error', 'unknown'))}]")
+
+    def _cmd_answer(self, sender, args):
+        """Handle !answer <thread-id> <answer-text> — answer an ArSE question."""
+        parts = args.split(None, 1)
+        if len(parts) < 2:
+            self._say("Usage: !answer <thread-id> <answer-text>")
+            return
+        thread_id, answer_text = parts[0], parts[1]
+        data = api_post(ARSE_ANSWER_URL, {
+            "thread-id": thread_id,
+            "answer": answer_text,
+            "author": sender,
+        })
+        if data.get("ok"):
+            self._say(f"A: {thread_id} answered by {sender}")
+        else:
+            self._say(f"[answer error: {data.get('err', data.get('error', 'unknown'))}]")
+
+    def _cmd_unanswered(self, _sender, _args):
+        """Handle !unanswered — list unanswered ArSE questions."""
+        data = api_get(ARSE_UNANSWERED_URL, timeout=STATUS_TIMEOUT)
+        if not data.get("ok"):
+            self._say(f"[unanswered error: {data.get('error', 'unknown')}]")
+            return
+        questions = data.get("questions", [])
+        if not questions:
+            self._say("No unanswered questions.")
+            return
+        for q in questions[:5]:
+            tid = q.get("thread-id", "?")
+            title = q.get("title", "")[:200]
+            author = q.get("author", "?")
+            self._say(f"  {tid} [{author}] {title}")
+        if len(questions) > 5:
+            self._say(f"  ... and {len(questions) - 5} more")
 
     def _cmd_agent(self, _sender, args):
         """Show live agent status from /api/alpha/agents/:id."""
