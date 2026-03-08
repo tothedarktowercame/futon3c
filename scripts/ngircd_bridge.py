@@ -318,14 +318,34 @@ class IRCBot:
                 and "```" not in stripped
                 and "\n" not in stripped)
 
-    def _surface_context(self, sender, mission_part, brief, channel=None):
+    @staticmethod
+    def _wants_multi_message_reply(text):
+        """True when caller explicitly requests separate/multi IRC messages."""
+        src = (text or "").strip().lower()
+        if not src:
+            return False
+        patterns = [
+            r"\bseparate\s+irc\s+messages?\b",
+            r"\beach\b.*\bseparate\b.*\bmessage\b",
+            r"\bone\s+per\s+message\b",
+            r"\bpost\b.*\beach\b.*\bmessage\b",
+            r"\bsplit\b.*\bmessages?\b",
+        ]
+        return any(re.search(pat, src) for pat in patterns)
+
+    def _surface_context(self, sender, mission_part, brief, multi_message=False, channel=None):
         """Build the surface contract header for an IRC invoke."""
         ch = channel or self.channel
         if brief:
+            extra = (" User explicitly requested multiple IRC posts. "
+                     "If needed, return one short line per intended message."
+                     if multi_message else "")
             return (
                 f"[Surface: IRC | Channel: {ch} | "
                 f"Speaker: {sender}{mission_part} | Mode: brief | "
-                f"This is casual IRC chat. Respond in 1-2 short lines. "
+                "This is casual IRC chat. Keep replies short and concrete. "
+                "Do not claim transport line caps or posting limits unless the call actually failed."
+                f"{extra} "
                 f"Your reply will be posted to {ch} as <{self.nick}>.]"
             )
         return (
@@ -582,7 +602,8 @@ class IRCBot:
             return False
         return True
 
-    def _enqueue_invoke(self, sender, full_prompt, mission_id, reply_channel=None):
+    def _enqueue_invoke(self, sender, full_prompt, mission_id, reply_channel=None,
+                        multi_message=False):
         """Queue an invoke request and return assigned job id or None when full."""
         job_id = self._next_job_id()
         task = {
@@ -592,6 +613,7 @@ class IRCBot:
             "mission_id": mission_id,
             "reply_channel": reply_channel or self.channel,
             "queued_at": time.time(),
+            "multi_message": bool(multi_message),
         }
         try:
             self._invoke_queue.put_nowait(task)
@@ -611,6 +633,7 @@ class IRCBot:
             prompt = task["prompt"]
             mission_id = task.get("mission_id")
             reply_ch = task.get("reply_channel") or self.channel
+            multi_message = bool(task.get("multi_message"))
             self._reply_channel = reply_ch  # for delivery receipt
             response = {"ok": False}
             invoke_meta = None
@@ -628,7 +651,10 @@ class IRCBot:
                         summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
                         self._say(summary, max_lines=4, channel=reply_ch)
                     else:
-                        summary = self._summarize_invoke_result(response.get("result", ""))
+                        if multi_message:
+                            summary = self._multiline_result_for_irc(response.get("result", ""))
+                        else:
+                            summary = self._summarize_invoke_result(response.get("result", ""))
                         stats = self._execution_stats(response.get("invoke_meta"))
                         if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
                             summary = (
@@ -637,12 +663,13 @@ class IRCBot:
                                 f"command-events={stats['command_events']}]"
                             )
                         sid = response.get("session_id")
+                        max_lines = 8 if multi_message else 2
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
-                                      max_lines=2, channel=reply_ch)
+                                      max_lines=max_lines, channel=reply_ch)
                         else:
                             self._say(f"[done {job_id}] {summary}",
-                                      max_lines=2, channel=reply_ch)
+                                      max_lines=max_lines, channel=reply_ch)
                     self._record_delivery_receipt(
                         invoke_meta,
                         delivered=True,
@@ -840,6 +867,24 @@ class IRCBot:
                        f"post details to GitHub instead]")
             time.sleep(0.1)
 
+    def _multiline_result_for_irc(self, result_text):
+        """Render result for explicit multi-message requests.
+        Returns short newline-delimited lines; each line becomes one IRC PRIVMSG."""
+        text = self._sanitize_for_irc(result_text or "")
+        lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
+        if not lines:
+            return "[no textual response]"
+
+        # If Codex returned a compressed key:value list on one line, explode it.
+        if len(lines) == 1:
+            kv_pairs = re.findall(r"\b[A-Za-z0-9._/-]+:\d+\b", lines[0])
+            if len(kv_pairs) >= 2:
+                lines = kv_pairs
+
+        # Keep line payloads concise for IRC.
+        clipped = [self._truncate(ln, max_len=180) for ln in lines]
+        return "\n".join(clipped)
+
     def _handle_mention(self, sender, text, channel=None):
         """Process a mention: queue invoke and ack immediately."""
         channel = channel or self.channel
@@ -852,11 +897,15 @@ class IRCBot:
         if self.focused_mission:
             mission_part = f" | Focused Mission: {self.focused_mission}"
         brief = self._is_brief(prompt_text)
-        surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
+        multi_message = self._wants_multi_message_reply(prompt_text)
+        surface_context = self._surface_context(sender, mission_part, brief,
+                                                multi_message=multi_message,
+                                                channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
         job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
-                                      reply_channel=channel)
+                                      reply_channel=channel,
+                                      multi_message=multi_message)
         if not job_id:
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
