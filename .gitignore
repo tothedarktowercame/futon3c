@@ -11,7 +11,8 @@ target/
 log/
 .alleycat-drop/
 storage/
-data/
+data/*
+!data/proof-state/
 
 bb
 clojure
