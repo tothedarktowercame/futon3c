@@ -1,6 +1,6 @@
 # M-codex-irc-execution — Guaranteed IRC Execution Contract for Codex
 
-**Status:** INSTANTIATE (2026-03-07)
+**Status:** DONE (2026-03-08)
 
 ## 1. IDENTIFY
 
@@ -382,13 +382,13 @@ A coding agent is not a chatbot that sounds plausible; it is a system that turns
    - Reason: avoids fake `done` synthesis and preserves explicit terminal outcome invariants without speculative replay.
    - Impact: correctness first; resumable workers can be a future enhancement.
 
-## 6. INSTANTIATE (2026-03-07, pass 1)
+## 6. INSTANTIATE (2026-03-08, complete)
 
 - [x] Run local end-to-end demo (API surface, assistant-driven).
 - [x] Demonstrate terminal delivery recording with evidence.
 - [x] Demonstrate no-evidence mission/work rejection.
 - [x] Demonstrate restart and `!job` recovery path.
-- [ ] Run operator-driven IRC demo on live channel.
+- [x] Run operator-driven IRC demo on live channel.
 - [x] Append checkpoint with commands and artifacts.
 
 ### 6.1 Demo A — Local, assistant-driven (completed)
@@ -430,19 +430,14 @@ Artifacts:
    - terminal-code `worker-lost-on-restart`,
    - appended failed event with message `recovered on startup`.
 
-### 6.3 Demo C — Operator-driven IRC (pending execution)
+### 6.3 Demo C — Operator-driven IRC (completed 2026-03-08)
 
-Planned live channel script (uses canonical IDs + `!job`):
-1. `@codex are you here`
-2. capture `[accepted <job-id>] ...`
-3. run `!job <job-id>`:
-   - expect `state=running|done`, execution counters, delivery status.
-4. send work-mode task prompt (`FM-001` state/play variant).
-5. if rejected for no evidence, verify:
-   - IRC shows `[failed <job-id>] ... invoke-no-execution-evidence ...`
-   - `!job <job-id>` shows `state=failed`, `terminal-code=no-execution-evidence`.
-6. run a real executable task and verify:
-   - `!job <job-id>` ends with `state=done` + non-empty delivery record.
+Live channel evidence:
+1. `@codex testing IRC invocation` produced accepted + done terminal framing with session continuity.
+2. Real execution task (`LOC per futon* repo`) returned computed results from command execution.
+3. Behavior parity gap surfaced (`separate IRC messages` request): Codex produced a format-limit refusal while Claude executed multi-line postings.
+4. Fixed at invoke-engine contract layer (behavior enforcement) and bridge/repl transport guidance.
+5. Re-test confirmed corrected behavior: Codex posted multiple separate IRC lines successfully and no longer relied on fabricated transport constraints.
 
 ### 6.4 Checkpoint
 
@@ -501,8 +496,17 @@ This confirms bell/whistle semantic split and canonical terminal observability i
      - destination `caller <id> (stream)`
      - note `whistle-stream-response` (or failure note on disconnect/send failure).
 
-## 7. DOCUMENT (skeleton)
+## 7. DOCUMENT (2026-03-08, complete)
 
-- [ ] Update README/docs with final execution contract and operator runbook.
-- [ ] Add cross-references from mission-control and IRC docs.
-- [ ] Document deferred follow-ons as candidate missions.
+- [x] Update README/docs with final execution contract and operator runbook.
+- [x] Add cross-references from mission-control and IRC docs.
+- [x] Document deferred follow-ons as candidate missions.
+
+Documented outputs:
+1. `README-codex-code.md` captures the core coding-agent contract (`work proposed -> work done` with evidence or explicit failure).
+2. `README-bells-and-whistles.md` defines bell/whistle/whistle-stream transport contracts and delivery semantics.
+3. `README.md` includes Codex WS bridge and codex-repl routing expectations for IRC delivery.
+
+Deferred follow-ons (new mission candidates):
+1. Add first-class progress-event projection (`[running]/[progress]`) for Codex on IRC parity with long-running CLI UX.
+2. Extend canonical `!job` UX with richer queue views (`!jobs`) and compact per-job progress snapshots.
