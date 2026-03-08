@@ -7,6 +7,7 @@ invoke corpus-1 via the ArSE peripheral; results flow back over WS.
 
 Usage:
     python3 scripts/corpus_ws_bridge.py
+    python3 scripts/corpus_ws_bridge.py --semantic-rerank
 
 Env:
     AGENCY_WS_URL       ws://linode:7070/agency/ws  (required)
@@ -16,11 +17,16 @@ Env:
     CORPUS_MATH_SE      ~/code/storage/math-processed-gpu
     CORPUS_MO           ~/code/storage/mo-processed-gpu
     RETRIEVAL_SCRIPT    ~/code/futon6/scripts/retrieve-proof-context.py
+    CORPUS_SEMANTIC_RERANK=0|1
+    CORPUS_SEMANTIC_CANDIDATES=120
+    CORPUS_KEYWORD_WEIGHT=0.55
 """
+import argparse
 import asyncio
+import heapq
 import json
 import os
-import subprocess
+import re
 import sys
 import time
 from pathlib import Path
@@ -48,6 +54,59 @@ RETRIEVAL_SCRIPT = Path(os.environ.get("RETRIEVAL_SCRIPT",
 
 RECONNECT_DELAY = 5  # seconds between reconnection attempts
 
+SOURCE_CONFIGS = {
+    "math-se": {"path": CORPUS_MATH_SE, "id_prefix": "se-math-"},
+    "mathoverflow": {"path": CORPUS_MO, "id_prefix": "se-mo-"},
+}
+
+SOURCE_ALIASES = {
+    "math-se": "math-se",
+    "math": "math-se",
+    "se-math": "math-se",
+    "mathoverflow": "mathoverflow",
+    "mo": "mathoverflow",
+    "se-mo": "mathoverflow",
+}
+
+_SOURCE_CACHE = {}
+_EMBEDDINGS_CACHE = {}
+
+
+def parse_bool_env(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def parse_int_env(name: str, default: int, low: int, high: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(low, min(high, value))
+
+
+def parse_float_env(name: str, default: float, low: float, high: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return max(low, min(high, value))
+
+
+RETRIEVAL_OPTIONS = {
+    "semantic_rerank": parse_bool_env("CORPUS_SEMANTIC_RERANK", default=False),
+    "semantic_candidates": parse_int_env("CORPUS_SEMANTIC_CANDIDATES", default=120, low=20, high=1000),
+    "keyword_weight": parse_float_env("CORPUS_KEYWORD_WEIGHT", default=0.55, low=0.0, high=1.0),
+}
+
 # ---------------------------------------------------------------------------
 # Corpus sources
 # ---------------------------------------------------------------------------
@@ -57,9 +116,11 @@ def check_sources():
     for name, path in [("math-se", CORPUS_MATH_SE), ("mathoverflow", CORPUS_MO)]:
         faiss_path = path / "structural-similarity-index.faiss"
         embeddings_path = path / "embeddings.npy"
+        compact_path = path / "entities.compact.jsonl"
         sources[name] = {
             "path": str(path),
             "exists": path.exists(),
+            "compact_entities": compact_path.exists(),
             "faiss": faiss_path.exists(),
             "embeddings": embeddings_path.exists(),
             "entities": (path / "entities.json").exists() or (path / "entities.compact.jsonl").exists(),
@@ -73,36 +134,285 @@ def check_sources():
 # ---------------------------------------------------------------------------
 # Retrieval
 # ---------------------------------------------------------------------------
-def run_retrieval(query: str, top_k: int = 5, sources: list = None) -> dict:
+def normalize_sources(sources):
+    """Normalize source names from request payload to bridge source keys."""
+    if not sources:
+        return ["mathoverflow", "math-se"]
+    normalized = []
+    for raw in sources:
+        key = SOURCE_ALIASES.get(str(raw).strip().lower())
+        if key and key not in normalized:
+            normalized.append(key)
+    return normalized or ["mathoverflow", "math-se"]
+
+
+def tokenize_query(query: str):
+    tokens = [t for t in re.split(r"[^a-z0-9]+", query.lower()) if len(t) >= 3]
+    if len(tokens) > 16:
+        return tokens[:16]
+    return tokens
+
+
+def parse_top_k(value, default=5):
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(n, 50))
+
+
+def parse_semantic_candidates(value, default):
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(20, min(n, 1000))
+
+
+def parse_keyword_weight(value, default):
+    try:
+        x = float(value)
+    except (TypeError, ValueError):
+        return default
+    return max(0.0, min(x, 1.0))
+
+
+def load_source_cache(source_name: str):
+    """Load compact corpus entries for SOURCE-NAME once (lazy cache)."""
+    if source_name in _SOURCE_CACHE:
+        return _SOURCE_CACHE[source_name]
+
+    cfg = SOURCE_CONFIGS[source_name]
+    corpus_path = cfg["path"]
+    compact_path = corpus_path / "entities.compact.jsonl"
+    if not compact_path.exists():
+        _SOURCE_CACHE[source_name] = []
+        return []
+
+    entries = []
+    with compact_path.open() as f:
+        for line in f:
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            thread_id = obj.get("thread_id")
+            if thread_id is None:
+                continue
+            try:
+                thread_id = int(thread_id)
+            except (TypeError, ValueError):
+                continue
+            title = str(obj.get("title", "")).strip()
+            tags = [str(t).strip() for t in (obj.get("tags") or []) if str(t).strip()]
+            if not title and not tags:
+                continue
+            entries.append({
+                "id": f"{cfg['id_prefix']}{thread_id}",
+                "thread_id": thread_id,
+                "title": title,
+                "title_lc": title.lower(),
+                "tags": tags[:12],
+                "tags_lc": [t.lower() for t in tags[:12]],
+            })
+
+    _SOURCE_CACHE[source_name] = entries
+    return entries
+
+
+def load_embeddings_cache(source_name: str):
+    """Load source embeddings lazily (memmap) for semantic reranking."""
+    if source_name in _EMBEDDINGS_CACHE:
+        return _EMBEDDINGS_CACHE[source_name]
+    try:
+        import numpy as np
+    except ImportError:
+        _EMBEDDINGS_CACHE[source_name] = {"array": None, "error": "numpy-missing"}
+        return _EMBEDDINGS_CACHE[source_name]
+
+    emb_path = SOURCE_CONFIGS[source_name]["path"] / "embeddings.npy"
+    if not emb_path.exists():
+        _EMBEDDINGS_CACHE[source_name] = {"array": None, "error": "embeddings-missing"}
+        return _EMBEDDINGS_CACHE[source_name]
+    try:
+        arr = np.load(emb_path, mmap_mode="r")
+        _EMBEDDINGS_CACHE[source_name] = {"array": arr, "error": None}
+    except Exception as e:
+        _EMBEDDINGS_CACHE[source_name] = {"array": None, "error": str(e)}
+    return _EMBEDDINGS_CACHE[source_name]
+
+
+def keyword_candidates(source_name: str, query: str, candidate_limit: int):
+    """Collect keyword-scored candidates for one source."""
+    entries = load_source_cache(source_name)
+    if not entries:
+        return []
+
+    tokens = tokenize_query(query)
+    if not tokens:
+        return []
+    phrase = " ".join(tokens) if len(tokens) >= 2 else ""
+
+    best = []  # min-heap of (score, tie_breaker, row_idx, entry)
+    for row_idx, ent in enumerate(entries):
+        title_lc = ent["title_lc"]
+        tags_lc = ent["tags_lc"]
+        score = 0.0
+        if phrase and phrase in title_lc:
+            score += 6.0
+        for tok in tokens:
+            if tok in title_lc:
+                score += 3.0
+            for tag in tags_lc:
+                if tok == tag or tok in tag:
+                    score += 2.0
+                    break
+        if score <= 0:
+            continue
+        item = (score, ent["thread_id"], row_idx, ent)
+        if len(best) < candidate_limit:
+            heapq.heappush(best, item)
+        elif item[:2] > best[0][:2]:
+            heapq.heapreplace(best, item)
+
+    ranked = sorted(best, key=lambda x: (-x[0], -x[1]))
+    out = []
+    for score, _tid, row_idx, ent in ranked:
+        out.append({
+            "row_idx": row_idx,
+            "kw_score": float(score),
+            "id": ent["id"],
+            "title": ent["title"],
+            "source": source_name,
+            "tags": ent["tags"],
+            "thread_id": ent["thread_id"],
+        })
+    return out
+
+
+def top_keyword_results(candidates, top_k):
+    out = []
+    for rank, c in enumerate(candidates[:top_k], start=1):
+        out.append({
+            "id": c["id"],
+            "title": c["title"],
+            "score": round(float(c["kw_score"]), 4),
+            "rank": rank,
+            "source": c["source"],
+            "tags": c["tags"],
+            "kw_score": round(float(c["kw_score"]), 4),
+            "retrieval_mode": "keyword",
+        })
+    return out
+
+
+def semantic_rerank_candidates(source_name, candidates, top_k, keyword_weight):
+    """Rerank keyword candidates by embedding similarity using centroid query."""
+    cache = load_embeddings_cache(source_name)
+    embeddings = cache.get("array")
+    if embeddings is None:
+        return None, cache.get("error") or "embeddings-unavailable"
+
+    try:
+        import numpy as np
+    except ImportError:
+        return None, "numpy-missing"
+
+    valid = [c for c in candidates if c["row_idx"] < len(embeddings)]
+    if len(valid) < max(2, min(top_k, 3)):
+        return None, "not-enough-embedding-candidates"
+
+    idxs = np.array([c["row_idx"] for c in valid], dtype=np.int64)
+    kw = np.array([max(c["kw_score"], 0.0) for c in valid], dtype=np.float32)
+    kw_sum = float(kw.sum())
+    if kw_sum <= 0:
+        return None, "zero-keyword-score"
+
+    cand_embs = np.asarray(embeddings[idxs], dtype=np.float32)
+    norms = np.linalg.norm(cand_embs, axis=1, keepdims=True)
+    norms = np.maximum(norms, 1e-8)
+    cand_norm = cand_embs / norms
+
+    weights = kw / kw_sum
+    q = (cand_norm * weights[:, None]).sum(axis=0, keepdims=True)
+    q_norm = np.linalg.norm(q)
+    if q_norm <= 1e-8:
+        return None, "degenerate-query-vector"
+    q /= q_norm
+
+    sims = (cand_norm @ q.T).flatten()
+    sim01 = (sims + 1.0) / 2.0
+    kw_norm = kw / max(float(kw.max()), 1e-8)
+    combined = keyword_weight * kw_norm + (1.0 - keyword_weight) * sim01
+    order = np.argsort(-combined)
+
+    out = []
+    for rank_pos, idx in enumerate(order[:top_k], start=1):
+        c = valid[int(idx)]
+        out.append({
+            "id": c["id"],
+            "title": c["title"],
+            "score": round(float(combined[int(idx)]), 4),
+            "rank": rank_pos,
+            "source": c["source"],
+            "tags": c["tags"],
+            "kw_score": round(float(kw_norm[int(idx)]), 4),
+            "semantic_similarity": round(float(sim01[int(idx)]), 4),
+            "retrieval_mode": "semantic-rerank",
+        })
+    return out, None
+
+
+def run_retrieval(query: str, top_k: int = 5, sources: list = None,
+                  semantic_rerank=None, semantic_candidates=None,
+                  keyword_weight=None) -> dict:
     """Run the retrieval pipeline for a query.
 
     Strategy:
-    1. If retrieve-proof-context.py exists, use the full 4-stage pipeline
-    2. Otherwise, do direct FAISS search via faiss_index.py
-    3. Fall back to keyword search on entities.json
+    1. Keyword retrieval over local compact entities (title + tags)
+    2. Optional semantic rerank over keyword candidates
+    2. Merge source results and rank globally by score
+    3. Include retrieval-script compatibility note for debugging
     """
     results = {"query": query, "top_k": top_k, "neighbors": [], "source": "corpus-1"}
+    selected_sources = normalize_sources(sources)
+    use_semantic = RETRIEVAL_OPTIONS["semantic_rerank"] if semantic_rerank is None else bool(semantic_rerank)
+    candidate_limit = (RETRIEVAL_OPTIONS["semantic_candidates"]
+                       if semantic_candidates is None
+                       else parse_semantic_candidates(semantic_candidates, RETRIEVAL_OPTIONS["semantic_candidates"]))
+    kw_weight = (RETRIEVAL_OPTIONS["keyword_weight"]
+                 if keyword_weight is None
+                 else parse_keyword_weight(keyword_weight, RETRIEVAL_OPTIONS["keyword_weight"]))
+    results["semantic_rerank"] = use_semantic
 
+    # Retrieval-script is batch-mode (proof-node precompute), not per-query.
     if RETRIEVAL_SCRIPT.exists():
-        try:
-            result = run_retrieval_script(query, top_k, sources)
-            if result:
-                return result
-        except Exception as e:
-            results["retrieval_script_error"] = str(e)
+        results["retrieval_script_note"] = (
+            "retrieve-proof-context.py is batch-mode and does not accept "
+            "--query/--output-format; using compact keyword retrieval."
+        )
 
-    # Fallback: direct FAISS search
-    for name, path in [("mathoverflow", CORPUS_MO), ("math-se", CORPUS_MATH_SE)]:
-        if sources and name not in sources:
-            continue
-        faiss_path = path / "structural-similarity-index.faiss"
-        if faiss_path.exists():
-            try:
-                neighbors = faiss_search(path, query, top_k)
-                results["neighbors"].extend(neighbors)
-                results["source"] = name
-            except Exception as e:
-                results.setdefault("errors", []).append(f"{name}: {e}")
+    for source_name in selected_sources:
+        try:
+            candidates = keyword_candidates(source_name, query, candidate_limit)
+            if not candidates:
+                continue
+            if use_semantic:
+                reranked, semantic_err = semantic_rerank_candidates(
+                    source_name, candidates, top_k, kw_weight
+                )
+                if reranked is not None:
+                    neighbors = reranked
+                else:
+                    neighbors = top_keyword_results(candidates, top_k)
+                    results.setdefault("semantic_fallbacks", []).append(
+                        f"{source_name}: {semantic_err}"
+                    )
+            else:
+                neighbors = top_keyword_results(candidates, top_k)
+            results["neighbors"].extend(neighbors)
+        except Exception as e:
+            results.setdefault("errors", []).append(f"{source_name}: {e}")
 
     # Sort by score, take top_k
     results["neighbors"] = sorted(
@@ -113,52 +423,12 @@ def run_retrieval(query: str, top_k: int = 5, sources: list = None) -> dict:
 
 
 def run_retrieval_script(query: str, top_k: int = 5, sources: list = None) -> dict:
-    """Run retrieve-proof-context.py as a subprocess."""
-    cmd = [
-        sys.executable, str(RETRIEVAL_SCRIPT),
-        "--query", query,
-        "--top-k", str(top_k),
-        "--output-format", "json",
-    ]
-    if sources:
-        for s in sources:
-            cmd.extend(["--source", s])
-
-    env = os.environ.copy()
-    env["CORPUS_MATH_SE"] = str(CORPUS_MATH_SE)
-    env["CORPUS_MO"] = str(CORPUS_MO)
-
-    proc = subprocess.run(
-        cmd, capture_output=True, text=True, timeout=60, env=env
-    )
-    if proc.returncode == 0 and proc.stdout.strip():
-        try:
-            return json.loads(proc.stdout)
-        except json.JSONDecodeError:
-            return None
+    """Legacy shim: script is batch-mode and unsupported for ad-hoc query retrieval."""
     return None
 
 
 def faiss_search(corpus_path: Path, query: str, top_k: int) -> list:
-    """Direct FAISS search using faiss_index.py from futon6."""
-    faiss_script = HOME / "code/futon6/src/futon6/faiss_index.py"
-    if not faiss_script.exists():
-        return []
-
-    cmd = [
-        sys.executable, str(faiss_script),
-        "query",
-        "--index", str(corpus_path / "structural-similarity-index.faiss"),
-        "--ids", str(corpus_path / "structural-similarity-index.ids.json"),
-        "--query", query,
-        "--top-k", str(top_k),
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    if proc.returncode == 0 and proc.stdout.strip():
-        try:
-            return json.loads(proc.stdout)
-        except json.JSONDecodeError:
-            return []
+    """Deprecated text->FAISS path (FAISS expects embedding vectors, not raw text)."""
     return []
 
 
@@ -215,19 +485,28 @@ def handle_invoke(prompt: str) -> str:
         # Try parsing as JSON first (structured query from ArSE peripheral)
         request = json.loads(prompt)
         query = request.get("query", "")
-        top_k = request.get("top_k", 5)
+        top_k = parse_top_k(request.get("top_k", 5))
         sources = request.get("sources", None)
+        semantic_rerank = request.get("semantic_rerank", None)
+        semantic_candidates = request.get("semantic_candidates", None)
+        keyword_weight = request.get("keyword_weight", None)
         structured = True
     except (json.JSONDecodeError, TypeError):
         # Plain text query (from IRC @mention) — strip surface contract framing
         query = extract_query_from_prompt(prompt)
         top_k = 5
         sources = None
+        semantic_rerank = None
+        semantic_candidates = None
+        keyword_weight = None
 
     if not query:
         return json.dumps({"error": "Empty query", "ok": False}) if structured else "Empty query — ask me a math question."
 
-    result = run_retrieval(query, top_k, sources)
+    result = run_retrieval(query, top_k, sources,
+                           semantic_rerank=semantic_rerank,
+                           semantic_candidates=semantic_candidates,
+                           keyword_weight=keyword_weight)
     result["ok"] = True
 
     if structured:
@@ -349,5 +628,59 @@ async def main():
         await asyncio.sleep(RECONNECT_DELAY)
 
 
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Corpus WS bridge for retrieval over Agency WS."
+    )
+    parser.add_argument(
+        "--semantic-rerank",
+        action="store_true",
+        help="Enable semantic reranking over keyword candidates.",
+    )
+    parser.add_argument(
+        "--keyword-only",
+        action="store_true",
+        help="Force keyword-only retrieval (disables semantic rerank).",
+    )
+    parser.add_argument(
+        "--semantic-candidates",
+        type=int,
+        default=None,
+        help="Candidate pool size before semantic rerank (default from env or 120).",
+    )
+    parser.add_argument(
+        "--keyword-weight",
+        type=float,
+        default=None,
+        help="Keyword weight in [0,1] for hybrid score (default 0.55).",
+    )
+    return parser.parse_args(argv)
+
+
+def apply_cli_args(args):
+    semantic = RETRIEVAL_OPTIONS["semantic_rerank"]
+    if args.semantic_rerank:
+        semantic = True
+    if args.keyword_only:
+        semantic = False
+    RETRIEVAL_OPTIONS["semantic_rerank"] = semantic
+    if args.semantic_candidates is not None:
+        RETRIEVAL_OPTIONS["semantic_candidates"] = parse_semantic_candidates(
+            args.semantic_candidates, RETRIEVAL_OPTIONS["semantic_candidates"]
+        )
+    if args.keyword_weight is not None:
+        RETRIEVAL_OPTIONS["keyword_weight"] = parse_keyword_weight(
+            args.keyword_weight, RETRIEVAL_OPTIONS["keyword_weight"]
+        )
+
+
 if __name__ == "__main__":
+    cli_args = parse_args()
+    apply_cli_args(cli_args)
+    mode = "semantic-rerank" if RETRIEVAL_OPTIONS["semantic_rerank"] else "keyword-only"
+    print(
+        f"[corpus] retrieval mode={mode} "
+        f"candidates={RETRIEVAL_OPTIONS['semantic_candidates']} "
+        f"keyword-weight={RETRIEVAL_OPTIONS['keyword_weight']}"
+    )
     asyncio.run(main())
