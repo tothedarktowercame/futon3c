@@ -48,6 +48,8 @@ if not defined FUTON3C_PORT set "FUTON3C_PORT=7070"
 if not defined FUTON3C_DRAWBRIDGE_PORT set "FUTON3C_DRAWBRIDGE_PORT=6768"
 if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-irc\session-id"
 if not defined FUTON3C_CODEX_WS_BRIDGE set "FUTON3C_CODEX_WS_BRIDGE=false"
+if not defined FUTON3C_RELAY_CODEX set "FUTON3C_RELAY_CODEX=false"
+if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
 if not defined CODEX_BRIDGE_SUMMARY_MODE set "CODEX_BRIDGE_SUMMARY_MODE=raw"
 
 if not defined FUTON3C_IRC_USE_VSCODE_THREAD set "FUTON3C_IRC_USE_VSCODE_THREAD=0"
@@ -133,11 +135,11 @@ if "%USES_ZCODEX%"=="1" (
 )
 if /i "%BRIDGE_BOTS_NORMALIZED%"=="codex" (
   if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
-  if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
   echo [dev-stack-windows] codex-only mode: FUTON3C_REGISTER_CLAUDE=!FUTON3C_REGISTER_CLAUDE! FUTON3C_RELAY_CLAUDE=!FUTON3C_RELAY_CLAUDE!
 )
 echo [dev-stack-windows] Codex invoke lane: FUTON3C_CODEX_WS_BRIDGE=%FUTON3C_CODEX_WS_BRIDGE%
 echo [dev-stack-windows] Codex agent id: %FUTON3C_CODEX_AGENT_ID%
+echo [dev-stack-windows] IRC dispatch relays: FUTON3C_RELAY_CODEX=!FUTON3C_RELAY_CODEX! FUTON3C_RELAY_CLAUDE=!FUTON3C_RELAY_CLAUDE!
 if defined NICK_AGENT_MAP echo [dev-stack-windows] NICK_AGENT_MAP=!NICK_AGENT_MAP!
 
 if not exist "%STOP_DEV_STACK%" (
@@ -154,5 +156,6 @@ if not exist "%DEV_STACK_BODY%" (
 )
 
 set "FUTON_DEV_STACK_BRIDGE_ARGS=%FORWARD_ARGS%"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%DEV_STACK_SUPERVISOR%" -ChildScript "%DEV_STACK_BODY%" -CleanupScript "%STOP_DEV_STACK%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+  "& '%DEV_STACK_SUPERVISOR%' -ChildScript '%DEV_STACK_BODY%' -CleanupScript '%STOP_DEV_STACK%'"
 exit /b %ERRORLEVEL%

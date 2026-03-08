@@ -2675,6 +2675,14 @@ RESPOND WITH ONLY:
               :when (and (:connected? conn)
                          (not (:connected? (get old-conns ch))))]
         (let [agent-id (:agent-id conn)
+              agent-record (reg/get-agent agent-id)
+              agent-metadata (:agent/metadata agent-record)
+              irc-auto-join? (cond
+                               (contains? agent-metadata :irc-auto-join?)
+                               (boolean (:irc-auto-join? agent-metadata))
+                               (:ws-bridge? agent-metadata)
+                               false
+                               :else true)
               nick (let [aid (str agent-id)]
                      (or (some-> aid
                                  (str/replace #"-\d+$" "")
@@ -2682,16 +2690,17 @@ RESPOND WITH ONLY:
                                  not-empty)
                          aid))
               send-fn (fn [msg] (hk/send! ch msg))]
-          (try
-            ;; Do not clobber dispatch-relay callbacks (e.g. codex/claude mention handlers)
-            ;; when a WS connection reconnects.
-            ((:join-agent! relay-bridge) agent-id nick "#futon" send-fn {:overwrite? false})
-            ;; Remove raw agent-id virtual nick (e.g. codex-1) if it was added earlier.
-            (when-let [part-virtual-nick! (:part-virtual-nick! irc-server)]
-              (part-virtual-nick! "#futon" (str agent-id)))
-            ((:join-virtual-nick! irc-server) "#futon" nick)
-            (catch Exception e
-              (println (str "[dev] IRC auto-join failed for " agent-id ": " (.getMessage e))))))))))
+          (when irc-auto-join?
+            (try
+              ;; Do not clobber dispatch-relay callbacks (e.g. codex/claude mention handlers)
+              ;; when a WS connection reconnects.
+              ((:join-agent! relay-bridge) agent-id nick "#futon" send-fn {:overwrite? false})
+              ;; Remove raw agent-id virtual nick (e.g. codex-1) if it was added earlier.
+              (when-let [part-virtual-nick! (:part-virtual-nick! irc-server)]
+                (part-virtual-nick! "#futon" (str agent-id)))
+              ((:join-virtual-nick! irc-server) "#futon" nick)
+              (catch Exception e
+                (println (str "[dev] IRC auto-join failed for " agent-id ": " (.getMessage e)))))))))))
 
 ;; =============================================================================
 ;; Claude invoke-fn — real CLI invocation via `claude -p`
@@ -3744,12 +3753,13 @@ RESPOND WITH ONLY:
                                              "dispatch-relay-error-fallback"
                                              (str "dispatch-relay-error: " (.getMessage e)))})))
                                (flush)))))))
-                 (do
-                   (println (str "[irc] " nick ": not mentioned, skipping"))
-                   (flush)))))))))
+                  (do
+                    (println (str "[irc] " nick ": not mentioned, skipping"))
+                    (flush)))))))))
+    )
     ((:join-virtual-nick! irc-server) "#futon" nick)
     (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon (mention-gated)"))
-    {:agent-id agent-id :nick nick})))
+    {:agent-id agent-id :nick nick}))
 
 (defn start-drawbridge!
   "Start Drawbridge endpoint used by fubar/portal style tooling.

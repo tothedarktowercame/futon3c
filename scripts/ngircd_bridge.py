@@ -1629,7 +1629,7 @@ def main():
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     print(
-        f"Starting ngircd bridge: {[b.nick for b in bots]} → {INVOKE_BASE} "
+        f"Starting ngircd bridge: {[b.nick for b in bots]} -> {INVOKE_BASE} "
         f"(source: {INVOKE_BASE_SOURCE})"
     )
     channels_str = ", ".join(IRC_CHANNELS) if len(IRC_CHANNELS) > 1 else IRC_CHANNEL

@@ -84,6 +84,9 @@ Full-stack launch (`dev`) behavior:
 - defaults `FUTON3C_CODEX_WS_BRIDGE=false` so codex invokes run local/inline
   for this stack (prevents WS routing from collapsing into the active VS Code
   codex chat lane)
+- defaults `FUTON3C_RELAY_CODEX=false` and `FUTON3C_RELAY_CLAUDE=false`
+  so the external `ngircd-bridge` is the IRC invoke authority for this
+  launcher and the JVM-side dispatch relays do not double-handle mentions
 - clears inherited `CODEX_THREAD_ID` and `CODEX_INTERNAL_ORIGINATOR_OVERRIDE`
   by default so IRC invokes do not bind to the active VS Code chat thread
   (set `FUTON3C_IRC_USE_VSCODE_THREAD=1` to opt back in)
@@ -94,7 +97,7 @@ Full-stack launch (`dev`) behavior:
   - `FUTON3C_CODEX_AGENT_ID=codex-1` (unless already set)
   - `NICK_AGENT_MAP=zcodex:codex-1` (unless already set)
 - if `BRIDGE_BOTS=codex`, applies `FUTON3C_REGISTER_CLAUDE=false` and
-  `FUTON3C_RELAY_CLAUDE=false` before runtime startup
+  leaves `FUTON3C_RELAY_CLAUDE=false` before runtime startup
 - if `FUTON3C_REPOS` is unset and a local installation root exists at
   `..\..\gh\mfuton`, `dev` temporarily injects:
   `FUTON3C_REPOS=installation=<that-root>`

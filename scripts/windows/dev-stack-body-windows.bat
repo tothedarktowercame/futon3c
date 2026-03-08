@@ -42,11 +42,8 @@ set "WAIT_TIMEOUT=%~2"
 set "WAIT_NAME=%~3"
 set /a WAIT_SECS=0
 :wait_for_port_loop
-set "WAIT_FOUND="
-for /f "delims=" %%L in ('netstat -ano ^| findstr /R /C:":!WAIT_PORT! .*LISTENING"') do (
-  if not defined WAIT_FOUND set "WAIT_FOUND=1"
-)
-if defined WAIT_FOUND (
+call :port_accepts_local !WAIT_PORT!
+if not errorlevel 1 (
   endlocal & exit /b 0
 )
 if !WAIT_SECS! GEQ !WAIT_TIMEOUT! (
@@ -57,6 +54,11 @@ if !WAIT_SECS! EQU 0 echo [dev-stack-windows] Waiting for !WAIT_NAME! on port !W
 call :sleep_1s
 set /a WAIT_SECS+=1
 goto wait_for_port_loop
+
+:port_accepts_local
+powershell -NoProfile -Command ^
+  "$client = New-Object System.Net.Sockets.TcpClient; try { $iar = $client.BeginConnect('127.0.0.1', %~1, $null, $null); if (-not $iar.AsyncWaitHandle.WaitOne(1000)) { exit 1 }; $client.EndConnect($iar) | Out-Null; exit 0 } catch { exit 1 } finally { $client.Close() }" >nul 2>nul
+exit /b %ERRORLEVEL%
 
 :sleep_1s
 ping -n 2 127.0.0.1 >nul 2>nul
