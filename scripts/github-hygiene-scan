@@ -1,0 +1,390 @@
+#!/usr/bin/env python3
+"""GitHub hygiene scan for open issues and PRs.
+
+Analogue to filesystem-facing git hygiene checks, but focused on hosted
+coordination objects: open issues and pull requests.
+
+Requires:
+- gh CLI authenticated for the target repo
+
+Usage:
+  ./scripts/github-hygiene-scan
+  ./scripts/github-hygiene-scan --repo owner/name --limit 200
+  ./scripts/github-hygiene-scan --strict
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import re
+import subprocess
+import sys
+from typing import Any
+
+UTC = dt.timezone.utc
+ISSUE_LINK_RE = re.compile(r"(?i)(close[sd]?|fix(e[sd])?|resolve[sd]?)\s*:?\s*(#\d+|https?://github\.com/\S+/issues/\d+)")
+
+
+class ScanError(RuntimeError):
+    pass
+
+
+def run_cmd(cmd: list[str]) -> str:
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        stderr = (proc.stderr or "").strip()
+        raise ScanError(f"Command failed ({proc.returncode}): {' '.join(cmd)}\n{stderr}")
+    return (proc.stdout or "").strip()
+
+
+def detect_repo_from_origin() -> str:
+    remote = run_cmd(["git", "remote", "get-url", "origin"])
+    ssh = re.search(r"github\.com:([^/]+/[^/.]+?)(?:\.git)?$", remote)
+    https = re.search(r"github\.com/([^/]+/[^/.]+?)(?:\.git)?$", remote)
+    if ssh:
+        return ssh.group(1)
+    if https:
+        return https.group(1)
+    raise ScanError(f"Could not infer GitHub repo from origin remote: {remote}")
+
+
+def parse_iso8601(ts: str) -> dt.datetime:
+    return dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
+def days_ago(ts: str, now: dt.datetime) -> int:
+    then = parse_iso8601(ts)
+    if then.tzinfo is None:
+        then = then.replace(tzinfo=UTC)
+    return max(0, int((now - then).total_seconds() // 86400))
+
+
+def gh_issue_list(repo: str, limit: int) -> list[dict[str, Any]]:
+    fields = [
+        "number",
+        "title",
+        "url",
+        "state",
+        "createdAt",
+        "updatedAt",
+        "assignees",
+        "labels",
+        "comments",
+        "author",
+    ]
+    raw = run_cmd([
+        "gh",
+        "issue",
+        "list",
+        "--repo",
+        repo,
+        "--state",
+        "open",
+        "--limit",
+        str(limit),
+        "--json",
+        ",".join(fields),
+    ])
+    return json.loads(raw) if raw else []
+
+
+def gh_pr_list(repo: str, limit: int) -> list[dict[str, Any]]:
+    fields = [
+        "number",
+        "title",
+        "url",
+        "state",
+        "createdAt",
+        "updatedAt",
+        "isDraft",
+        "mergeStateStatus",
+        "reviewDecision",
+        "statusCheckRollup",
+        "assignees",
+        "labels",
+        "body",
+        "author",
+    ]
+    raw = run_cmd([
+        "gh",
+        "pr",
+        "list",
+        "--repo",
+        repo,
+        "--state",
+        "open",
+        "--limit",
+        str(limit),
+        "--json",
+        ",".join(fields),
+    ])
+    return json.loads(raw) if raw else []
+
+
+def check_rollup_state(rollup: Any) -> str:
+    if not isinstance(rollup, list) or not rollup:
+        return "none"
+
+    seen_pending = False
+    seen_success = False
+    for item in rollup:
+        if not isinstance(item, dict):
+            continue
+        status = ""
+        for k in ("conclusion", "state", "status", "statusState"):
+            v = item.get(k)
+            if isinstance(v, str) and v.strip():
+                status = v.strip().upper()
+                break
+
+        if status in {"FAILURE", "FAILED", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"}:
+            return "failing"
+        if status in {"PENDING", "QUEUED", "IN_PROGRESS", "WAITING", "EXPECTED"}:
+            seen_pending = True
+        if status in {"SUCCESS", "PASSED", "NEUTRAL", "SKIPPED", "COMPLETED"}:
+            seen_success = True
+
+    if seen_pending:
+        return "pending"
+    if seen_success:
+        return "passing"
+    return "unknown"
+
+
+def has_linked_issue(pr_body: str) -> bool:
+    if not pr_body:
+        return False
+    if ISSUE_LINK_RE.search(pr_body):
+        return True
+    # Also accept plain issue URL references in body text.
+    return bool(re.search(r"https?://github\.com/\S+/issues/\d+", pr_body, flags=re.IGNORECASE))
+
+
+def scan_issues(
+    issues: list[dict[str, Any]],
+    *,
+    now: dt.datetime,
+    stale_days: int,
+    old_days: int,
+) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for issue in issues:
+        number = issue.get("number")
+        title = issue.get("title", "")
+        url = issue.get("url", "")
+        updated_days = days_ago(str(issue.get("updatedAt")), now)
+        age_days = days_ago(str(issue.get("createdAt")), now)
+        labels = issue.get("labels") or []
+        assignees = issue.get("assignees") or []
+        comments = issue.get("comments") or []
+
+        flags: list[str] = []
+        if not labels:
+            flags.append("no-label")
+        if not assignees:
+            flags.append("no-assignee")
+        if updated_days >= stale_days:
+            flags.append(f"stale>{stale_days}d")
+        if age_days >= old_days:
+            flags.append(f"old>{old_days}d")
+        if age_days >= 2 and not comments:
+            flags.append("no-discussion")
+
+        if flags:
+            findings.append(
+                {
+                    "kind": "issue",
+                    "number": number,
+                    "title": title,
+                    "url": url,
+                    "flags": flags,
+                    "age_days": age_days,
+                    "updated_days": updated_days,
+                }
+            )
+    return findings
+
+
+def scan_prs(
+    prs: list[dict[str, Any]],
+    *,
+    now: dt.datetime,
+    stale_days: int,
+    draft_stale_days: int,
+) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for pr in prs:
+        number = pr.get("number")
+        title = pr.get("title", "")
+        url = pr.get("url", "")
+        body = pr.get("body") or ""
+        is_draft = bool(pr.get("isDraft"))
+        review_decision = (pr.get("reviewDecision") or "").strip().upper()
+        merge_state = (pr.get("mergeStateStatus") or "").strip().upper()
+        updated_days = days_ago(str(pr.get("updatedAt")), now)
+        age_days = days_ago(str(pr.get("createdAt")), now)
+        labels = pr.get("labels") or []
+        assignees = pr.get("assignees") or []
+
+        checks = check_rollup_state(pr.get("statusCheckRollup"))
+        flags: list[str] = []
+
+        if not labels:
+            flags.append("no-label")
+        if not assignees:
+            flags.append("no-assignee")
+
+        if is_draft:
+            if age_days >= draft_stale_days:
+                flags.append(f"draft-old>{draft_stale_days}d")
+        else:
+            if updated_days >= stale_days:
+                flags.append(f"stale>{stale_days}d")
+
+            if review_decision in {"", "REVIEW_REQUIRED"} and age_days >= 2:
+                flags.append("needs-review")
+            elif review_decision == "CHANGES_REQUESTED":
+                flags.append("changes-requested")
+
+            if checks == "failing":
+                flags.append("checks-failing")
+            elif checks in {"none", "unknown"} and age_days >= 2:
+                flags.append("checks-missing")
+
+            if merge_state in {"DIRTY", "BLOCKED"}:
+                flags.append(f"merge-{merge_state.lower()}")
+
+            if not has_linked_issue(body):
+                flags.append("no-linked-issue")
+
+        if flags:
+            findings.append(
+                {
+                    "kind": "pr",
+                    "number": number,
+                    "title": title,
+                    "url": url,
+                    "flags": flags,
+                    "age_days": age_days,
+                    "updated_days": updated_days,
+                    "checks": checks,
+                    "merge_state": merge_state,
+                    "review_decision": review_decision or "NONE",
+                    "is_draft": is_draft,
+                }
+            )
+
+    return findings
+
+
+def print_report(
+    repo: str,
+    issues: list[dict[str, Any]],
+    prs: list[dict[str, Any]],
+    issue_findings: list[dict[str, Any]],
+    pr_findings: list[dict[str, Any]],
+    now: dt.datetime,
+) -> None:
+    print(f"GitHub Hygiene Scan: {repo}")
+    print(f"Generated: {now.isoformat()}")
+    print()
+    print(f"Open issues: {len(issues)}  |  flagged: {len(issue_findings)}")
+    print(f"Open PRs:    {len(prs)}  |  flagged: {len(pr_findings)}")
+    print()
+
+    print("Issue findings")
+    if not issue_findings:
+        print("- none")
+    else:
+        for f in sorted(issue_findings, key=lambda x: (x.get("updated_days", 0), x.get("age_days", 0)), reverse=True):
+            flags = ", ".join(f["flags"])
+            print(
+                f"- #{f['number']} ({flags}) age={f['age_days']}d updated={f['updated_days']}d | {f['title']}\n"
+                f"  {f['url']}"
+            )
+    print()
+
+    print("PR findings")
+    if not pr_findings:
+        print("- none")
+    else:
+        for f in sorted(pr_findings, key=lambda x: (x.get("updated_days", 0), x.get("age_days", 0)), reverse=True):
+            flags = ", ".join(f["flags"])
+            trailer = (
+                f"draft={str(f.get('is_draft', False)).lower()} "
+                f"review={f.get('review_decision')} checks={f.get('checks')} merge={f.get('merge_state')}"
+            )
+            print(
+                f"- #{f['number']} ({flags}) age={f['age_days']}d updated={f['updated_days']}d | {f['title']}\n"
+                f"  {trailer}\n"
+                f"  {f['url']}"
+            )
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Scan open GitHub issues/PRs for coordination hygiene risks.")
+    p.add_argument("--repo", default="", help="GitHub repo in owner/name form. Defaults to origin remote.")
+    p.add_argument("--limit", type=int, default=200, help="Max open issues/PRs to scan per type.")
+    p.add_argument("--issue-stale-days", type=int, default=14, help="Issue stale threshold by last update.")
+    p.add_argument("--issue-old-days", type=int, default=30, help="Issue old-age threshold by creation time.")
+    p.add_argument("--pr-stale-days", type=int, default=7, help="PR stale threshold by last update.")
+    p.add_argument("--draft-pr-old-days", type=int, default=14, help="Draft PR old-age threshold by creation time.")
+    p.add_argument("--strict", action="store_true", help="Exit non-zero if any findings are detected.")
+    p.add_argument("--json", action="store_true", help="Emit machine-readable JSON report.")
+    return p.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    now = dt.datetime.now(tz=UTC)
+
+    try:
+        repo = args.repo or detect_repo_from_origin()
+        issues = gh_issue_list(repo, args.limit)
+        prs = gh_pr_list(repo, args.limit)
+
+        issue_findings = scan_issues(
+            issues,
+            now=now,
+            stale_days=args.issue_stale_days,
+            old_days=args.issue_old_days,
+        )
+        pr_findings = scan_prs(
+            prs,
+            now=now,
+            stale_days=args.pr_stale_days,
+            draft_stale_days=args.draft_pr_old_days,
+        )
+
+        if args.json:
+            payload = {
+                "repo": repo,
+                "generated_at": now.isoformat(),
+                "counts": {
+                    "open_issues": len(issues),
+                    "open_prs": len(prs),
+                    "issue_findings": len(issue_findings),
+                    "pr_findings": len(pr_findings),
+                },
+                "issue_findings": issue_findings,
+                "pr_findings": pr_findings,
+            }
+            print(json.dumps(payload, indent=2))
+        else:
+            print_report(repo, issues, prs, issue_findings, pr_findings, now)
+
+        if args.strict and (issue_findings or pr_findings):
+            return 2
+        return 0
+    except ScanError as e:
+        print(f"[github-hygiene] {e}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"[github-hygiene] Invalid JSON from gh CLI: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

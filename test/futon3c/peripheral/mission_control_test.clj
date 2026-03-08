@@ -11,6 +11,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.peripheral.common :as common]
+            [futon3c.peripheral.issue-holes :as issue-holes]
             [futon3c.peripheral.mission-control :as mc]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.peripheral.round-trip :as rt]
@@ -274,6 +275,27 @@
           (is (= :conclusion (:evidence/claim-type (:evidence stop-result))))
           ;; Fruit should record steps taken
           (is (= 1 (:steps-taken (:fruit stop-result)))))))))
+
+(deftest peripheral-mc-issue-holes-step
+  (testing "mission-control can project open issues into EDN issue-hole export"
+    (let [spec {:peripheral/id :mission-control
+                :peripheral/tools #{:mc-issue-holes}
+                :peripheral/scope :full-codebase}
+          p (mc/make-mission-control spec (tools/make-mock-backend))
+          start-result (runner/start p {:session-id "test-mc-issue-holes"
+                                        :author "tester"})]
+      (is (:ok start-result))
+      (with-redefs [issue-holes/build-issue-hole-export
+                    (fn [_opts]
+                      {:issue-hole-export/version 1
+                       :summary {:open-issues 2}
+                       :issues [{:issue/id "x#1"} {:issue/id "x#2"}]})]
+        (let [step-result (runner/step p (:state start-result)
+                                       {:tool :mc-issue-holes
+                                        :args [{:limit 20}]})]
+          (is (:ok step-result))
+          (is (= 2 (get-in step-result [:result :summary :open-issues])))
+          (is (= 2 (count (get-in step-result [:result :issues])))))))))
 
 (deftest peripheral-mc-review-stores-in-state
   (testing "mc-review result is captured in state as latest-review"

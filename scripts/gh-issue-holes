@@ -1,0 +1,386 @@
+#!/usr/bin/env bb
+
+(ns gh-issue-holes
+  (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
+            [babashka.process :as p]
+            [clojure.edn :as edn]
+            [clojure.pprint :as pprint]
+            [clojure.string :as str]))
+
+(defn die! [msg]
+  (binding [*out* *err*]
+    (println (str "gh-issue-holes: " msg)))
+  (System/exit 1))
+
+(defn run-cmd! [& args]
+  (let [{:keys [exit out err]} (apply p/sh {:out :string :err :string} args)]
+    (if (zero? exit)
+      (str/trim (or out ""))
+      (die! (str "command failed: " (str/join " " args) "\n" (str/trim (or err "")))))))
+
+(defn repo-from-origin []
+  (let [remote (run-cmd! "git" "remote" "get-url" "origin")]
+    (or (second (re-find #"github\.com[:/]([^/\s]+/[^/.\s]+?)(?:\.git)?$" remote))
+        (die! (str "cannot infer GitHub repo slug from origin: " remote)))))
+
+(def claim-ledger-paths ["docs/wiring-claims.edn" "docs/mission-claims.edn"])
+
+(defn load-claim-ids [repo-root]
+  (->> claim-ledger-paths
+       (map #(fs/path repo-root %))
+       (filter fs/exists?)
+       (mapcat (fn [f]
+                 (->> (slurp (str f))
+                      edn/read-string
+                      :claims
+                      (keep :claim/id)
+                      (map name))))
+       set))
+
+(defn mission-id-from-path [p]
+  (let [name (fs/file-name p)]
+    (when-let [[_ mid] (re-find #"(?i)^M-([A-Za-z0-9][A-Za-z0-9-]*)\.md$" name)]
+      (str/lower-case mid))))
+
+(defn load-mission-ids [repo-root]
+  (let [dir (fs/path repo-root "holes" "missions")]
+    (if (fs/exists? dir)
+      (->> (fs/glob dir "M-*.md")
+           (keep mission-id-from-path)
+           set)
+      #{})))
+
+(defn extract-mission-refs [text known-mission-ids]
+  (let [txt (or text "")
+        eligible-mentions (->> known-mission-ids
+                               (filter (fn [mid]
+                                         (or (str/includes? mid "-")
+                                             (>= (count mid) 8)))))
+        explicit (->> (re-seq #"(?i)\bM-[A-Za-z0-9][A-Za-z0-9-]*\b" txt)
+                      (map #(-> % str/lower-case (str/replace #"^m-" "")))
+                      (filter #(>= (count %) 5)))
+        mentioned (->> eligible-mentions
+                       (filter (fn [mid]
+                                 (boolean
+                                  (re-find (re-pattern (str "(?i)\\b"
+                                                            (java.util.regex.Pattern/quote mid)
+                                                            "\\b"))
+                                           txt)))))]
+    (->> (concat explicit mentioned) distinct sort vec)))
+
+(defn extract-claim-refs [text known-claim-ids]
+  (let [tokens (->> (re-seq #"(?i):[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*" (or text ""))
+                    (map #(-> % str/lower-case (subs 1)))
+                    set)]
+    (->> tokens (filter known-claim-ids) sort vec)))
+
+(defn parse-inst [s fallback]
+  (if (string? s)
+    (try (java.time.Instant/parse s)
+         (catch Exception _ fallback))
+    fallback))
+
+(defn days-since [then now]
+  (max 0 (long (.toDays (java.time.Duration/between then now)))))
+
+(defn issue->hole [issue {:keys [repo now known-mission-ids known-claim-ids stale-days old-days]}]
+  (let [created-at (parse-inst (:createdAt issue) now)
+        updated-at (parse-inst (:updatedAt issue) now)
+        age-days (days-since created-at now)
+        updated-days (days-since updated-at now)
+        labels (->> (:labels issue) (keep :name) (map str/lower-case) distinct vec)
+        assignees (->> (:assignees issue) (keep :login) (map str/lower-case) distinct vec)
+        comment-count (count (:comments issue))
+        text (str (or (:title issue) "") "\n\n" (or (:body issue) ""))
+        mission-refs (extract-mission-refs text known-mission-ids)
+        claim-refs (extract-claim-refs text known-claim-ids)
+        unanchored? (and (empty? mission-refs) (empty? claim-refs))
+        no-label? (empty? labels)
+        no-assignee? (empty? assignees)
+        stale? (>= updated-days stale-days)
+        old? (>= age-days old-days)
+        no-discussion? (and (>= age-days 2) (zero? comment-count))
+        flags (cond-> []
+                no-label? (conj :no-label)
+                no-assignee? (conj :no-assignee)
+                stale? (conj :stale)
+                old? (conj :old)
+                no-discussion? (conj :no-discussion)
+                unanchored? (conj :unanchored))
+        hole-status (cond
+                      (and unanchored? no-label? no-assignee? stale? no-discussion?) :spam-candidate
+                      stale? :stale
+                      (or no-label? no-assignee?) :untriaged
+                      :else :active)
+        suggested-actions (cond-> []
+                            (= hole-status :spam-candidate) (conj :close-or-reframe)
+                            no-label? (conj :add-label)
+                            no-assignee? (conj :assign-owner)
+                            stale? (conj :request-next-step)
+                            unanchored? (conj :link-mission-or-claim))]
+    {:issue/id (str repo "#" (:number issue))
+     :issue/number (:number issue)
+     :issue/title (:title issue)
+     :issue/url (:url issue)
+     :issue/state :open
+     :issue/author (get-in issue [:author :login])
+     :issue/created-at (str created-at)
+     :issue/updated-at (str updated-at)
+     :issue/age-days age-days
+     :issue/updated-days updated-days
+     :issue/labels labels
+     :issue/assignees assignees
+     :issue/comment-count comment-count
+     :hole/status hole-status
+     :hole/flags flags
+     :hole/anchors {:missions mission-refs :claims claim-refs}
+     :hole/suggested-actions suggested-actions}))
+
+(defn hole->tensions [hole now]
+  (let [base {:tension/type :issue-open
+              :tension/source :github-issue
+              :tension/issue-id (:issue/id hole)
+              :tension/issue-number (:issue/number hole)
+              :tension/detected-at (str now)
+              :tension/summary (str "Issue #" (:issue/number hole) " -- " (:issue/title hole))}
+        flags (set (:hole/flags hole))]
+    (cond-> [base]
+      (= :stale (:hole/status hole))
+      (conj {:tension/type :issue-stale
+             :tension/source :github-issue
+             :tension/issue-id (:issue/id hole)
+             :tension/detected-at (str now)
+             :tension/summary (str "Issue #" (:issue/number hole) " stale for " (:issue/updated-days hole) " days")})
+
+      (= :spam-candidate (:hole/status hole))
+      (conj {:tension/type :issue-spam-candidate
+             :tension/source :github-issue
+             :tension/issue-id (:issue/id hole)
+             :tension/detected-at (str now)
+             :tension/summary (str "Issue #" (:issue/number hole) " looks unanchored/unowned; candidate for close-or-reframe")})
+
+      (contains? flags :unanchored)
+      (conj {:tension/type :issue-unanchored
+             :tension/source :github-issue
+             :tension/issue-id (:issue/id hole)
+             :tension/detected-at (str now)
+             :tension/summary (str "Issue #" (:issue/number hole) " has no mission/claim anchors")}))))
+
+(def blocker-title-re
+  #"(?i)\b(block(?:ed|er)?|broken|regression|fails?|failure|timeout|stuck|can't|cannot|error|bug)\b")
+
+(defn hole-priority-score [hole]
+  (let [flags (set (:hole/flags hole))
+        anchored? (or (seq (get-in hole [:hole/anchors :missions]))
+                      (seq (get-in hole [:hole/anchors :claims])))
+        status (:hole/status hole)]
+    (+ (* 2 (if (= :stale status) 1 0))
+       (* 3 (if (= :spam-candidate status) 1 0))
+       (if (contains? flags :no-assignee) 2 0)
+       (if (contains? flags :no-label) 1 0)
+       (if (contains? flags :unanchored) 1 0)
+       (if anchored? 1 0)
+       (min 3 (long (/ (or (:issue/updated-days hole) 0) 14))))))
+
+(defn cluster-stats [holes anchor-path]
+  (let [pairs (for [h holes
+                    anchor (get-in h anchor-path)]
+                [anchor h])]
+    (->> pairs
+         (group-by first)
+         (map (fn [[anchor pair-rows]]
+                (let [hs (mapv second pair-rows)
+                      stale (count (filter #(contains? (set (:hole/flags %)) :stale) hs))
+                      unowned (count (filter #(contains? (set (:hole/flags %)) :no-assignee) hs))
+                      unlabeled (count (filter #(contains? (set (:hole/flags %)) :no-label) hs))
+                      score (+ (* 3 stale) (* 2 unowned) unlabeled (count hs))]
+                  {:anchor anchor
+                   :issues hs
+                   :count (count hs)
+                   :stale stale
+                   :unowned unowned
+                   :unlabeled unlabeled
+                   :score score})))
+         (sort-by (juxt (comp - :score) (comp - :count) :anchor))
+         vec)))
+
+(defn derive-strategic-intelligence [holes]
+  (let [mission-clusters (cluster-stats holes [:hole/anchors :missions])
+        claim-clusters (cluster-stats holes [:hole/anchors :claims])
+        stale-count (count (filter #(contains? (set (:hole/flags %)) :stale) holes))
+        unowned-count (count (filter #(contains? (set (:hole/flags %)) :no-assignee) holes))
+        unanchored-count (count (filter #(contains? (set (:hole/flags %)) :unanchored) holes))
+        spam-count (count (filter #(= :spam-candidate (:hole/status %)) holes))
+        top-priority (->> holes
+                          (sort-by (juxt (comp - hole-priority-score)
+                                         (comp - :issue/updated-days)
+                                         :issue/number))
+                          (take 5)
+                          vec)
+        blocker-candidates (->> holes
+                                (filter (fn [h]
+                                          (or (re-find blocker-title-re (or (:issue/title h) ""))
+                                              (contains? (set (:hole/flags h)) :stale))))
+                                (sort-by (juxt (comp - hole-priority-score)
+                                               (comp - :issue/updated-days)
+                                               :issue/number))
+                                (take 5)
+                                vec)
+        why-these-now
+        (->> (concat
+              (map (fn [{:keys [anchor count stale unowned]}]
+                     (str "M-" anchor " cluster has " count " open issue(s)"
+                          (when (pos? stale) (str " (" stale " stale"))
+                          (when (pos? unowned) (str ", " unowned " unassigned"))
+                          (when (pos? (or stale unowned)) ")")
+                          " -- concentrated coordination debt."))
+                   (take 3 mission-clusters))
+              (when (and (empty? mission-clusters) (seq claim-clusters))
+                (map (fn [{:keys [anchor count stale]}]
+                       (str "Claim :" anchor " has " count " open issue(s)"
+                            (when (pos? stale) (str " (" stale " stale)"))
+                            " -- evidence/implementation drift risk."))
+                     (take 2 claim-clusters)))
+              (when (pos? unanchored-count)
+                [(str unanchored-count " issue(s) are unanchored to mission/claim ids -- argument traceability gap.")])
+              (when (pos? unowned-count)
+                [(str unowned-count " issue(s) are unassigned -- ownership bottleneck on execution flow.")])
+              (when (pos? stale-count)
+                [(str stale-count " issue(s) are stale -- backlog entropy is compounding unless triaged.")]))
+             (remove nil?)
+             distinct
+             (take 6)
+             vec)
+        blockers-risks
+        (->> (concat
+              (map (fn [h]
+                     (let [flags (set (:hole/flags h))
+                           reasons (cond-> []
+                                     (re-find blocker-title-re (or (:issue/title h) "")) (conj "blocker-wording")
+                                     (contains? flags :stale) (conj "stale")
+                                     (contains? flags :no-assignee) (conj "unowned")
+                                     (contains? flags :unanchored) (conj "unanchored"))]
+                       (str "#" (:issue/number h) " " (:issue/title h)
+                            " (" (str/join ", " reasons) ").")))
+                   blocker-candidates)
+              (when (pos? spam-count)
+                [(str spam-count " issue(s) match spam-candidate profile -- close-or-reframe to reduce noise.")])
+              (when (pos? unanchored-count)
+                [(str "Unanchored issues: " unanchored-count
+                      " -- these can't be routed through mission/devmap governance yet.")]))
+             (remove nil?)
+             distinct
+             (take 7)
+             vec)]
+    {:why-these-now why-these-now
+     :blockers-risks blockers-risks
+     :priority-issues (mapv :issue/id top-priority)
+     :clusters {:missions (mapv #(select-keys % [:anchor :count :stale :unowned :unlabeled :score])
+                                (take 10 mission-clusters))
+                :claims (mapv #(select-keys % [:anchor :count :stale :unowned :unlabeled :score])
+                              (take 10 claim-clusters))}
+     :metrics {:stale-count stale-count
+               :unowned-count unowned-count
+               :unanchored-count unanchored-count
+               :spam-candidate-count spam-count}}))
+
+(defn fetch-open-issues [repo limit]
+  (let [payload (run-cmd! "gh" "issue" "list"
+                      "--repo" repo
+                      "--state" "open"
+                      "--limit" (str limit)
+                      "--json" "number,title,body,url,state,createdAt,updatedAt,labels,assignees,comments,author")]
+    (if (str/blank? payload)
+      []
+      (json/parse-string payload true))))
+
+(defn build-export [{:keys [repo repo-root limit stale-days old-days now]
+                     :or {repo-root "."
+                          limit 200
+                          stale-days 14
+                          old-days 30
+                          now (java.time.Instant/now)}}]
+  (let [repo (or repo (repo-from-origin))
+        known-mission-ids (load-mission-ids repo-root)
+        known-claim-ids (load-claim-ids repo-root)
+        issues (fetch-open-issues repo limit)
+        holes (mapv #(issue->hole % {:repo repo
+                                     :now now
+                                     :known-mission-ids known-mission-ids
+                                     :known-claim-ids known-claim-ids
+                                     :stale-days stale-days
+                                     :old-days old-days})
+                    issues)
+        tensions (mapv identity (mapcat #(hole->tensions % now) holes))
+        status-counts (frequencies (map :hole/status holes))
+        flag-counts (frequencies (mapcat :hole/flags holes))
+        anchored-count (count (filter (fn [h]
+                                        (or (seq (get-in h [:hole/anchors :missions]))
+                                            (seq (get-in h [:hole/anchors :claims]))))
+                                      holes))
+        strategic (derive-strategic-intelligence holes)]
+    {:issue-hole-export/version 1
+     :repo repo
+     :generated-at (str now)
+     :summary {:open-issues (count holes)
+               :anchored anchored-count
+               :unanchored (- (count holes) anchored-count)
+               :by-status status-counts
+               :flags flag-counts}
+     :issues holes
+     :tensions tensions
+     :strategic/intelligence strategic}))
+
+(defn parse-int [s d]
+  (try (Integer/parseInt (str s)) (catch Exception _ d)))
+
+(defn parse-args [argv]
+  (loop [args (seq argv) acc {}]
+    (if-let [a (first args)]
+      (case a
+        "--repo" (recur (nnext args) (assoc acc :repo (second args)))
+        "--repo-root" (recur (nnext args) (assoc acc :repo-root (second args)))
+        "--limit" (recur (nnext args) (assoc acc :limit (parse-int (second args) 200)))
+        "--stale-days" (recur (nnext args) (assoc acc :stale-days (parse-int (second args) 14)))
+        "--old-days" (recur (nnext args) (assoc acc :old-days (parse-int (second args) 30)))
+        "--out" (recur (nnext args) (assoc acc :out (second args)))
+        "--hud" (recur (next args) (assoc acc :hud? true))
+        "--help" (assoc acc :help? true)
+        (die! (str "unknown argument: " a)))
+      acc)))
+
+(defn usage []
+  (println "Usage: ./scripts/gh-issue-holes [options]")
+  (println "  --repo owner/name")
+  (println "  --repo-root /path")
+  (println "  --limit N")
+  (println "  --stale-days N")
+  (println "  --old-days N")
+  (println "  --out path.edn")
+  (println "  --hud")
+  (println "  --help"))
+
+(defn -main [& argv]
+  (let [{:keys [help? out hud?] :as opts} (parse-args argv)]
+    (if help?
+      (usage)
+      (let [export (build-export opts)]
+        (when out
+          (spit out (with-out-str (pprint/pprint export)))
+          (println (str "Wrote issue-hole export: " out)))
+        (if hud?
+          (let [intel (:strategic/intelligence export)]
+            (println "WHY THESE NOW")
+            (if (seq (:why-these-now intel))
+              (doseq [line (:why-these-now intel)] (println " " line))
+              (println "  (none)"))
+            (println)
+            (println "BLOCKERS/RISKS")
+            (if (seq (:blockers-risks intel))
+              (doseq [line (:blockers-risks intel)] (println " " line))
+              (println "  (none)")))
+          (when-not out
+            (pprint/pprint export)))))))
+
+(apply -main *command-line-args*)

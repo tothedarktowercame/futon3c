@@ -24,9 +24,17 @@ make dev       # Boot futon1a (XTDB) + futon3c transport
 make claude    # Pick a session or start fresh
 make codex     # Pick a Codex session or start fresh
 make codex-repl # Open Codex Emacs REPL launcher
+make gh-hygiene # Scan open GitHub issues/PRs for hygiene risks
+make gh-issue-holes # Export open issues as Holistic-Argument EDN holes/tensions
 make fresh     # Clear local agent continuity/session files
 make test      # Run all tests
 make repl      # Start nREPL with CIDER middleware
+```
+
+Issue-hole variants:
+```bash
+make gh-issue-holes ARGS="--hud"                          # strategic WHY NOW / BLOCKERS summary
+make gh-issue-holes ARGS="--out holes/qa/issue-holes.edn" # full EDN export for tooling
 ```
 
 ## ALFWorld

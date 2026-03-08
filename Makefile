@@ -13,7 +13,7 @@ export CODEX_APPROVAL_POLICY
 export NONSTARTER_DB
 export FUTON3C_REPOS
 
-.PHONY: tools dev dev-linode test claude claude-repl codex codex-repl codex-autowake tickle status repl \
+.PHONY: tools dev dev-linode test claude claude-repl codex codex-repl codex-autowake tickle status gh-hygiene gh-issue-holes repl \
 	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
 
 tools:
@@ -62,6 +62,16 @@ status:
 	@echo
 	@echo "=== Git Log (last 5) ==="
 	@git log --oneline -5 2>/dev/null || echo "(not a git repo)"
+
+gh-hygiene:
+	./scripts/github-hygiene-scan $(ARGS)
+
+gh-issue-holes:
+	@if command -v bb >/dev/null 2>&1; then \
+		./scripts/gh-issue-holes $(ARGS); \
+	else \
+		$(CLOJURE) -M -m futon3c.peripheral.issue-holes $(ARGS); \
+	fi
 
 repl:
 	$(CLOJURE) -M:dev:repl
