@@ -118,6 +118,14 @@
    :peripheral/exit #{:review-complete :hop-reflect :hop-explore :user-request}
    :peripheral/context {:session-id :inherit}}
 
+  :arse
+  {:peripheral/id :arse
+   :peripheral/tools #{:arse-query :arse-browse :arse-history}
+   :peripheral/scope :corpus-search
+   :peripheral/entry #{:from-proof :from-any :user-request}
+   :peripheral/exit #{:user-request :found-answer :hop-proof}
+   :peripheral/context {:session-id :inherit :problem-id :optional}}
+
   :mentor
   {:peripheral/id :mentor
    :peripheral/tools #{:mentor-observe :mentor-evaluate :mentor-intervene :mentor-status}

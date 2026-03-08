@@ -367,6 +367,33 @@
   (format-mentor-state state))
 
 ;; -----------------------------------------------------------------------------
+;; :arse — ArSE corpus query session
+;; -----------------------------------------------------------------------------
+
+(defn- format-arse-state
+  "Format ArSE peripheral state for blackboard."
+  [state]
+  (let [queries (:queries state)
+        q-count (count queries)
+        problem-id (or (:problem-id state) "—")]
+    (str "ArSE — Artificial Stack Exchange\n"
+         "Problem: " problem-id
+         "  Queries: " q-count "\n"
+         (when (seq queries)
+           (str "\nRecent queries:\n"
+                (str/join "\n"
+                  (map (fn [{:keys [query result-count sources]}]
+                         (str "  \"" (subs query 0 (min 60 (count query)))
+                              (when (> (count query) 60) "...")
+                              "\" → " result-count " results"
+                              (when sources (str " [" (str/join "," (map name sources)) "]"))))
+                       (take-last 5 queries)))))
+         "\n")))
+
+(defmethod render-blackboard :arse [_ state]
+  (format-arse-state state))
+
+;; -----------------------------------------------------------------------------
 ;; :tickle — watchdog scan results, stall/page history
 ;; -----------------------------------------------------------------------------
 

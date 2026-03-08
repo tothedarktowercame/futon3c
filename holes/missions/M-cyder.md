@@ -1,6 +1,6 @@
 # Mission: CYDER — Cybernetic Development Environment that Rocks
 
-## Status: Phase 0 DONE, Phase 1 scoped
+## Status: IN-PROGRESS — Phase 0 done (audit + registration, 17 tests, 2026-03-01). Phase 1 (ops surface) scoped, not yet started.
 
 ## Motivation
 

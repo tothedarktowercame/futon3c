@@ -78,6 +78,11 @@
             item-type (:type item)
             name (:name item)]
         (cond
+          (= "command_execution" item-type)
+          (if (= "item.completed" evt-type)
+            "using bash (done)"
+            "using bash")
+
           (= "tool_call" item-type)
           (if (= "item.completed" evt-type)
             (str (humanize-tool-name name) " (done)")
@@ -127,6 +132,8 @@
         item (:item evt)]
     (or (= "command_execution" t)
         (and (contains? #{"item.started" "item.completed"} t)
+             (= "command_execution" (:type item)))
+        (and (contains? #{"item.started" "item.completed"} t)
              (= "tool_call" (:type item))))))
 
 (defn- command-event?
@@ -135,6 +142,8 @@
         item (:item evt)
         name (:name item)]
     (or (= "command_execution" t)
+        (and (contains? #{"item.started" "item.completed"} t)
+             (= "command_execution" (:type item)))
         (and (contains? #{"item.started" "item.completed"} t)
              (= "tool_call" (:type item))
              (contains? #{"command_execution" "command-execution" "bash" "shell"}

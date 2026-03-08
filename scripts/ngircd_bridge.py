@@ -34,6 +34,7 @@ import tempfile
 import threading
 import time
 import traceback
+import urllib.parse
 import urllib.request
 import urllib.error
 
@@ -117,6 +118,41 @@ def resolve_invoke_base():
     return deduped[0], "fallback"
 
 
+def _normalize_base(raw):
+    """Normalize raw URL-ish base by trimming and removing trailing slash."""
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip()
+    if not value:
+        return None
+    return value.rstrip("/")
+
+
+def _dedupe_nonblank(items):
+    out = []
+    for item in items:
+        norm = _normalize_base(item)
+        if norm and norm not in out:
+            out.append(norm)
+    return out
+
+
+def resolve_progress_send_bases(invoke_base):
+    """Return ordered Agency bases for agent-initiated IRC POST hints.
+
+    Priority prefers externally reachable hints before local invoke base.
+    """
+    return _dedupe_nonblank(
+        [
+            os.environ.get("IRC_SEND_BASE"),
+            os.environ.get("FUTON3C_IRC_SEND_BASE"),
+            os.environ.get("FUTON3C_SELF_URL"),
+            os.environ.get("FUTON3C_LINODE_URL"),
+            invoke_base,
+        ]
+    )
+
+
 IRC_HOST = os.environ.get("IRC_HOST", "127.0.0.1")
 IRC_PORT = int_env("IRC_PORT", 6667, minimum=1)
 IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
@@ -128,9 +164,11 @@ IRC_CHANNELS = [IRC_CHANNEL] + [
     if ch.strip() and ch.strip() != IRC_CHANNEL
 ]
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
+PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
+INVOKE_JOBS_URL = f"{INVOKE_BASE}/api/alpha/invoke/jobs"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
@@ -350,15 +388,47 @@ class IRCBot:
                 and "```" not in stripped
                 and "\n" not in stripped)
 
-    def _surface_context(self, sender, mission_part, brief, channel=None):
+    @staticmethod
+    def _wants_multi_message_reply(text):
+        """True when caller explicitly requests separate/multi IRC messages."""
+        src = (text or "").strip().lower()
+        if not src:
+            return False
+        patterns = [
+            r"\bseparate\s+irc\s+messages?\b",
+            r"\beach\b.*\bseparate\b.*\bmessage\b",
+            r"\bone\s+per\s+message\b",
+            r"\bpost\b.*\beach\b.*\bmessage\b",
+            r"\bsplit\b.*\bmessages?\b",
+        ]
+        return any(re.search(pat, src) for pat in patterns)
+
+    def _surface_context(self, sender, mission_part, brief, multi_message=False, channel=None):
         """Build the surface contract header for an IRC invoke."""
         ch = channel or self.channel
         if brief:
+            extra = (" User explicitly requested multiple IRC posts. "
+                     "If needed, return one short line per intended message."
+                     if multi_message else "")
             return (
                 f"[Surface: IRC | Channel: {ch} | "
                 f"Speaker: {sender}{mission_part} | Mode: brief | "
-                f"This is casual IRC chat. Respond in 1-2 short lines. "
+                "This is casual IRC chat. Keep replies short and concrete. "
+                "Do not claim transport line caps or posting limits unless the call actually failed."
+                f"{extra} "
                 f"Your reply will be posted to {ch} as <{self.nick}>.]"
+            )
+        send_bases = PROGRESS_SEND_BASES[:3]
+        if send_bases:
+            send_hint = (
+                f"To post progress mid-task, POST /api/alpha/irc/send to Agency base "
+                f"(try in order): {', '.join(send_bases)}. "
+                "Do not assume localhost unless verified from this runtime."
+            )
+        else:
+            send_hint = (
+                "To post progress mid-task, POST /api/alpha/irc/send to an Agency base "
+                "that is reachable from this runtime."
             )
         return (
             f"[Surface: IRC | Channel: {ch} | "
@@ -366,10 +436,8 @@ class IRCBot:
             f"Your completion update will be posted to {ch} as <{self.nick}>. "
             "Execute work asynchronously, then return a short status with artifact refs "
             "(commit/PR/issue/file path). "
-            "To post progress mid-task: "
-            f'curl -s -X POST {INVOKE_BASE}/api/alpha/irc/send '
-            '-H "Content-Type: application/json" '
-            f'-d \'{{"channel":"{ch}","from":"{self.nick}","text":"..."}}\']'
+            f"{send_hint} "
+            f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )
 
     def _agent_status(self):
@@ -635,7 +703,8 @@ class IRCBot:
             return False
         return True
 
-    def _enqueue_invoke(self, sender, full_prompt, mission_id, reply_channel=None):
+    def _enqueue_invoke(self, sender, full_prompt, mission_id, reply_channel=None,
+                        multi_message=False):
         """Queue an invoke request and return assigned job id or None when full."""
         job_id = self._next_job_id()
         task = {
@@ -645,6 +714,7 @@ class IRCBot:
             "mission_id": mission_id,
             "reply_channel": reply_channel or self.channel,
             "queued_at": time.time(),
+            "multi_message": bool(multi_message),
         }
         try:
             self._invoke_queue.put_nowait(task)
@@ -664,12 +734,15 @@ class IRCBot:
             prompt = task["prompt"]
             mission_id = task.get("mission_id")
             reply_ch = task.get("reply_channel") or self.channel
+            multi_message = bool(task.get("multi_message"))
             self._reply_channel = reply_ch  # for delivery receipt
             response = {"ok": False}
             invoke_meta = None
             try:
                 with self._invoking:
-                    response = self._invoke_agent(prompt, sender, mission_id=mission_id)
+                    response = self._invoke_agent(
+                        prompt, sender, mission_id=mission_id, job_id=job_id
+                    )
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
                     # Claude: clean output (no [done]/[accepted] framing)
@@ -679,7 +752,10 @@ class IRCBot:
                         summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
                         self._say(summary, max_lines=4, channel=reply_ch)
                     else:
-                        summary = self._summarize_invoke_result(response.get("result", ""))
+                        if multi_message:
+                            summary = self._multiline_result_for_irc(response.get("result", ""))
+                        else:
+                            summary = self._summarize_invoke_result(response.get("result", ""))
                         stats = self._execution_stats(response.get("invoke_meta"))
                         execution_note = ""
                         if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
@@ -703,12 +779,13 @@ class IRCBot:
                                 header = " ".join(part for part in header_parts if part).strip()
                                 self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
                                 continue
+                        max_lines = 8 if multi_message else 2
                         if sid:
                             self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
-                                      max_lines=2, channel=reply_ch)
+                                      max_lines=max_lines, channel=reply_ch)
                         else:
                             self._say(f"[done {job_id}] {summary}",
-                                      max_lines=2, channel=reply_ch)
+                                      max_lines=max_lines, channel=reply_ch)
                     self._record_delivery_receipt(
                         invoke_meta,
                         delivered=True,
@@ -741,7 +818,7 @@ class IRCBot:
             finally:
                 self._invoke_queue.task_done()
 
-    def _invoke_agent(self, prompt, caller, mission_id=None):
+    def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None):
         """Call the futon3c invoke API and return structured invoke outcome."""
         status_before = self._agent_status()
         if (
@@ -762,6 +839,8 @@ class IRCBot:
             "surface": f"irc ({self.channel})",
             "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
+        if job_id:
+            payload["job-id"] = job_id
         if mission_id:
             payload["mission-id"] = mission_id
         body = json.dumps(payload).encode("utf-8")
@@ -779,6 +858,7 @@ class IRCBot:
                 if data.get("ok"):
                     return {
                         "ok": True,
+                        "job_id": data.get("job-id") or data.get("job_id"),
                         "result": data.get("result", ""),
                         "session_id": data.get("session-id") or data.get("session_id"),
                         "invoke_meta": invoke_meta,
@@ -786,6 +866,7 @@ class IRCBot:
                 else:
                     return {
                         "ok": False,
+                        "job_id": data.get("job-id") or data.get("job_id"),
                         "error": f"invoke error: {data.get('error', 'unknown')}",
                         "session_id": data.get("session-id") or data.get("session_id"),
                         "invoke_meta": invoke_meta,
@@ -811,6 +892,7 @@ class IRCBot:
                     if isinstance(status_after, dict) and status_after.get("status") == "invoking":
                         return {
                             "ok": False,
+                            "job_id": parsed.get("job-id") or parsed.get("job_id"),
                             "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
                             "session_id": status_after.get("session_id"),
                             "invoke_meta": invoke_meta,
@@ -818,11 +900,13 @@ class IRCBot:
                 if msg:
                     return {
                         "ok": False,
+                        "job_id": parsed.get("job-id") or parsed.get("job_id"),
                         "error": f"HTTP {e.code}: {err}: {msg}",
                         "invoke_meta": invoke_meta,
                     }
                 return {
                     "ok": False,
+                    "job_id": parsed.get("job-id") or parsed.get("job_id"),
                     "error": f"HTTP {e.code}: {err}",
                     "invoke_meta": invoke_meta,
                 }
@@ -899,6 +983,24 @@ class IRCBot:
                        f"post details to GitHub instead]")
             time.sleep(0.1)
 
+    def _multiline_result_for_irc(self, result_text):
+        """Render result for explicit multi-message requests.
+        Returns short newline-delimited lines; each line becomes one IRC PRIVMSG."""
+        text = self._sanitize_for_irc(result_text or "")
+        lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
+        if not lines:
+            return "[no textual response]"
+
+        # If Codex returned a compressed key:value list on one line, explode it.
+        if len(lines) == 1:
+            kv_pairs = re.findall(r"\b[A-Za-z0-9._/-]+:\d+\b", lines[0])
+            if len(kv_pairs) >= 2:
+                lines = kv_pairs
+
+        # Keep line payloads concise for IRC.
+        clipped = [self._truncate(ln, max_len=180) for ln in lines]
+        return "\n".join(clipped)
+
     def _handle_mention(self, sender, text, channel=None):
         """Process a mention: queue invoke and ack immediately."""
         channel = channel or self.channel
@@ -911,11 +1013,15 @@ class IRCBot:
         if self.focused_mission:
             mission_part = f" | Focused Mission: {self.focused_mission}"
         brief = self._is_brief(prompt_text)
-        surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
+        multi_message = self._wants_multi_message_reply(prompt_text)
+        surface_context = self._surface_context(sender, mission_part, brief,
+                                                multi_message=multi_message,
+                                                channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
         job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
-                                      reply_channel=channel)
+                                      reply_channel=channel,
+                                      multi_message=multi_message)
         if not job_id:
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
@@ -988,6 +1094,8 @@ class IRCBot:
             self._cmd_agent(sender, args)
         elif cmd == "!jobs":
             self._cmd_jobs(sender, args)
+        elif cmd == "!job":
+            self._cmd_job(sender, args)
         else:
             self._say(f"Unknown command: {cmd} — try !help")
 
@@ -999,12 +1107,42 @@ class IRCBot:
                   "!mission focus <id> | !mission show | "
                   "!mission clear | !todo add <text> | "
                   "!todo list | !todo done <id> | "
-                  "!agent [agent-id] | !jobs | !help")
+                  "!agent [agent-id] | !jobs | !job <id> | !help")
 
     def _cmd_jobs(self, _sender, _args):
         """Show invoke queue depth for this bot."""
         pending = self._invoke_queue.qsize()
         self._say(f"Invoke queue: {pending} pending for {self.agent_id}", max_lines=1)
+
+    def _cmd_job(self, _sender, args):
+        """Show canonical invoke-job state from futon3c invoke ledger."""
+        job_id = args.strip()
+        if not job_id:
+            self._say("Usage: !job <id> (e.g. !job codex-1772899664-1)")
+            return
+        encoded = urllib.parse.quote(job_id, safe="")
+        data = api_get(f"{INVOKE_JOBS_URL}/{encoded}", timeout=STATUS_TIMEOUT)
+        if not data.get("ok"):
+            err = data.get("error", "unknown")
+            self._say(f"[job lookup error: {err}]")
+            return
+        job = data.get("job", {})
+        if not isinstance(job, dict):
+            self._say(f"[job lookup error: invalid payload for {job_id}]")
+            return
+        execution = job.get("execution") or {}
+        delivery = job.get("delivery") or {}
+        artifact = job.get("artifact-ref") or "none"
+        msg = (
+            f"{job.get('job-id', job_id)}: state={job.get('state', 'unknown')} "
+            f"mode={job.get('mode', 'unknown')} "
+            f"executed={execution.get('executed?', False)} "
+            f"tool={execution.get('tool-events', 0)} "
+            f"cmd={execution.get('command-events', 0)} "
+            f"artifact={artifact} "
+            f"delivery={delivery.get('status', 'pending')}"
+        )
+        self._say(self._truncate(msg, max_len=360), max_lines=2)
 
     def _cmd_ungate(self, sender, args):
         """Ungate a bot — it will respond to all messages, not just @mentions."""
