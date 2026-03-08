@@ -432,6 +432,13 @@ def faiss_search(corpus_path: Path, query: str, top_k: int) -> list:
     return []
 
 
+def _se_url(source: str, thread_id) -> str:
+    """Build a short Stack Exchange URL from source and thread_id."""
+    if source == "mathoverflow":
+        return f"mathoverflow.net/q/{thread_id}"
+    return f"math.stackexchange.com/q/{thread_id}"
+
+
 def format_for_irc(result: dict) -> str:
     """Format retrieval results as compact IRC text (one line per result)."""
     neighbors = result.get("neighbors", [])
@@ -440,9 +447,11 @@ def format_for_irc(result: dict) -> str:
     lines = [f"{len(neighbors)} results for: {result.get('query', '?')}"]
     for n in neighbors[:3]:  # top 3 only for IRC
         title = n.get("title", "untitled")[:80]
-        source = n.get("source", "?")
         score = n.get("score", 0)
-        lines.append(f"[{source}] {title} ({score:.2f})")
+        tid = n.get("thread_id")
+        source = n.get("source", "?")
+        url = _se_url(source, tid) if tid else source
+        lines.append(f"{title} ({score:.2f}) — {url}")
     if len(neighbors) > 3:
         lines.append(f"(+{len(neighbors) - 3} more)")
     return "\n".join(lines)
