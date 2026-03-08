@@ -747,10 +747,8 @@ Returns plist (:channel :text), or nil."
           (let ((result (codex-repl--send-irc-via-base base channel text)))
             (if (plist-get result :ok)
                 (throw 'done result)
-              (setq last-failure result)
-              ;; Retry on irc-unavailable only; other failures are terminal.
-              (unless (= 503 (plist-get result :status))
-                (throw 'done result)))))
+              ;; Always try all candidates before failing; stale local bases can 404.
+              (setq last-failure result))))
         last-failure))))
 
 (defun codex-repl--routing-bases ()
@@ -1189,6 +1187,7 @@ Returns plist: (:session-id sid :text response :error err)."
       "- Any progress claim must include concrete evidence (artifact path, commit SHA, or PR/issue URL)."
       "- If the user asks you to tell/ping/message someone, treat it as an IRC-send request."
       "- For IRC-send requests, output only the single-line message text to send (no wrappers)."
+      "- For IRC-send transport, do not assume http://127.0.0.1:7070; prefer routing hint / health irc-send-base."
       "- For transport debugging requests, you SHOULD run verification commands (curl/ss/ps) and quote actual outputs."
       (format "- Telemetry snapshot: agency=%s irc=%s." agency irc)
       (format "- Invoke routing snapshot: %s" routing))

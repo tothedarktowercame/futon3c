@@ -108,6 +108,41 @@ def resolve_invoke_base():
     return deduped[0], "fallback"
 
 
+def _normalize_base(raw):
+    """Normalize raw URL-ish base by trimming and removing trailing slash."""
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip()
+    if not value:
+        return None
+    return value.rstrip("/")
+
+
+def _dedupe_nonblank(items):
+    out = []
+    for item in items:
+        norm = _normalize_base(item)
+        if norm and norm not in out:
+            out.append(norm)
+    return out
+
+
+def resolve_progress_send_bases(invoke_base):
+    """Return ordered Agency bases for agent-initiated IRC POST hints.
+
+    Priority prefers externally reachable hints before local invoke base.
+    """
+    return _dedupe_nonblank(
+        [
+            os.environ.get("IRC_SEND_BASE"),
+            os.environ.get("FUTON3C_IRC_SEND_BASE"),
+            os.environ.get("FUTON3C_SELF_URL"),
+            os.environ.get("FUTON3C_LINODE_URL"),
+            invoke_base,
+        ]
+    )
+
+
 IRC_HOST = os.environ.get("IRC_HOST", "127.0.0.1")
 IRC_PORT = int_env("IRC_PORT", 6667, minimum=1)
 IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
@@ -119,6 +154,7 @@ IRC_CHANNELS = [IRC_CHANNEL] + [
     if ch.strip() and ch.strip() != IRC_CHANNEL
 ]
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
+PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
@@ -348,16 +384,26 @@ class IRCBot:
                 f"{extra} "
                 f"Your reply will be posted to {ch} as <{self.nick}>.]"
             )
+        send_bases = PROGRESS_SEND_BASES[:3]
+        if send_bases:
+            send_hint = (
+                f"To post progress mid-task, POST /api/alpha/irc/send to Agency base "
+                f"(try in order): {', '.join(send_bases)}. "
+                "Do not assume localhost unless verified from this runtime."
+            )
+        else:
+            send_hint = (
+                "To post progress mid-task, POST /api/alpha/irc/send to an Agency base "
+                "that is reachable from this runtime."
+            )
         return (
             f"[Surface: IRC | Channel: {ch} | "
             f"Speaker: {sender}{mission_part} | Mode: task | "
             f"Your completion update will be posted to {ch} as <{self.nick}>. "
             "Execute work asynchronously, then return a short status with artifact refs "
             "(commit/PR/issue/file path). "
-            "To post progress mid-task: "
-            f'curl -s -X POST {INVOKE_BASE}/api/alpha/irc/send '
-            '-H "Content-Type: application/json" '
-            f'-d \'{{"channel":"{ch}","from":"{self.nick}","text":"..."}}\']'
+            f"{send_hint} "
+            f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )
 
     def _agent_status(self):
