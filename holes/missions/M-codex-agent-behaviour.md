@@ -1,6 +1,6 @@
 # M-codex-agent-behaviour — Codex Execution Enforcement Across Invoke Paths
 
-**Status:** IN-PROGRESS (INSTANTIATE phase, 2026-03-08)
+**Status:** COMPLETE (2026-03-08)
 **Predecessor:** M-codex-irc-execution (DONE — established job state machine and evidence gating)
 
 ## Problem Statement

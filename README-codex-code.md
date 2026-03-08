@@ -63,3 +63,79 @@ No superficial "work claimed" replies are allowed to complete a job.
    - accepted -> failed on no-execution-evidence,
    - accepted -> timeout with receipt,
    - restart recovery for in-flight jobs.
+
+---
+
+## Why This Wasn't Enough (M-codex-agent-behaviour, 2026-03-08)
+
+The contract above solved the **plumbing**: durable job records, execution
+evidence gating, delivery receipts. But Codex still didn't execute reliably
+on IRC. It would write plans, prep local files, and claim completion — with
+zero tool events. The plumbing faithfully recorded `executed?=false`, but
+that was cold comfort when the user got "I prepped a file" on IRC.
+
+### The gap was in the harness, not the agent
+
+Codex works fine on the vanilla CLI. Ask a question, get an answer with tool
+execution. The failure was in our invoke harness — specifically, the WebSocket
+bridge path that IRC uses.
+
+The local invoke path (`make-codex-invoke-fn` in dev.clj) already had
+enforcement: detect when Codex claims work without execution evidence, retry
+with a firmer prompt, cap at one retry. But the WS bridge
+(`scripts/codex_ws_invoke_bridge.clj`) called Codex and returned the raw
+result with no enforcement and no execution evidence tracking. The plumbing
+contract gated `done` on evidence — but the bridge never produced the
+evidence in the first place.
+
+### Two failure modes
+
+1. **Plans instead of executing.** Codex describes what it would do but
+   fires zero tools. The text looks like work; the evidence says nothing
+   happened.
+
+2. **Ships artifacts to local buffers.** Codex does real work but writes
+   output to its own context (`/tmp` files, local buffers) instead of
+   emitting it through the coordination surface. From our side this looks
+   identical to (1): we asked a question and got no real answer.
+
+### What was added
+
+**H-1: Q→A completeness.** The WS bridge now parses execution evidence from
+Codex's NDJSON output stream (tool-events, command-events) and checks three
+enforcement predicates after each invoke:
+
+- `work-claim-without-execution?` — "I'll do X" with zero tool events
+- `task-reply-without-execution?` — task-mode prompt, non-planning reply, no evidence
+- `format-refusal?` — refuses feasible output format with invented limits
+
+When triggered, the bridge retries once with an enforcement prompt that says
+"execute one concrete first step now." If the retry also fails, a structured
+error is returned instead of surfacing fake completion text.
+
+**H-2: Diagnosability.** Every invoke outcome emits structured evidence:
+`executed`, `tool-events`, `command-events`, `enforced-retry`. When
+enforcement triggers, a separate `enforcement-retry` evidence entry records
+the reason and initial result. A human reviewing the evidence trail can
+diagnose what happened without reproducing the failure.
+
+### Files
+
+| File | What changed |
+|------|-------------|
+| `scripts/codex_ws_invoke_bridge.clj` | Execution counting, enforcement predicates, retry wiring, enriched evidence |
+| `test/futon3c/agents/codex_enforcement_test.clj` | 16 tests / 103 assertions covering H-1 and H-2 |
+| `holes/missions/M-codex-agent-behaviour.md` | Full mission record (IDENTIFY → INSTANTIATE) |
+
+### Is this enough?
+
+Probably. The enforcement retry matches the proven pattern from the local
+invoke path, where it has been effective. The live IRC test (2026-03-08)
+showed Codex executing correctly through the full path: IRC → Linode HTTP →
+WS bridge → laptop Codex → tool execution → result back to IRC.
+
+The remaining risk is that enforcement is duplicated across three places
+(bridge script, dev.clj, test file). A follow-up (Option C in the mission
+doc) would consolidate enforcement into the `codex-cli` adapter so all
+invoke paths get it automatically. Until then, changes to enforcement
+regexes need to be updated in all three locations.
