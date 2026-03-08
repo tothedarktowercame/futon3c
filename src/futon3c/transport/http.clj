@@ -1515,7 +1515,8 @@
               (flush)
               (json-response 500 {:ok false
                                   :error "invoke-error"
-                                  :message (.getMessage t)})))))))
+                                  :message (.getMessage t)}))))))))
+
 
 (defn- handle-bell
   "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
