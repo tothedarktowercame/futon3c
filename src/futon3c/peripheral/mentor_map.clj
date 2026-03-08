@@ -96,7 +96,7 @@
   [speaker text]
   (let [text-lower (str/lower-case (or text ""))]
     (cond
-      (re-find #"(?:i'm )?(?:sure|certain|definitely|clearly|obviously|trivially)" text-lower)
+      (re-find #"(?:i'm )?(?:sure|certain|definitely|clearly|trivially)|(?:obviously|clearly)\s+(?:true|false|holds|works|correct)" text-lower)
       {:agent speaker :claim (subs text 0 (min 120 (count text)))
        :certainty :high :tested? false :at (str (Instant/now))}
 
@@ -135,14 +135,41 @@
       (re-find #"try.*harder|stuck|same.*approach.*again" text-lower)
       (update :relevant conj :try-harder-break))))
 
+(defn- coalesce-messages
+  "Merge consecutive messages from the same speaker within 3 seconds.
+   IRC bridges split long messages into multiple PRIVMSG lines — this
+   reassembles them so the mentor sees coherent utterances."
+  [msgs]
+  (when (seq msgs)
+    (reduce
+      (fn [acc {:keys [nick text at] :as msg}]
+        (let [prev (peek acc)]
+          (if (and prev
+                   (= nick (:nick prev))
+                   at (:at prev)
+                   ;; Within 3 seconds = same logical message
+                   (let [t1 (str (:at prev))
+                         t2 (str at)]
+                     (and (>= (count t1) 19) (>= (count t2) 19)
+                          (= (subs t1 0 17) (subs t2 0 17)))))
+            ;; Merge: append text to previous message
+            (conj (pop acc) (update prev :text #(str % " " text)))
+            ;; New speaker or time gap: new entry
+            (conj acc msg))))
+      []
+      msgs)))
+
 (defn enrich
   "Enrich the conversation map with new messages.
    new-msgs: [{:nick str :text str :at str}]
+   Coalesces split IRC lines from the same speaker, then extracts
+   topics, patterns, confidence, and effort from each utterance.
    Returns updated map."
   [cmap new-msgs]
   (if (empty? new-msgs)
     cmap
-    (let [now (str (Instant/now))]
+    (let [now (str (Instant/now))
+          msgs (coalesce-messages new-msgs)]
       (reduce
         (fn [m {:keys [nick text at]}]
           (let [topics (extract-topic-mentions text)
@@ -176,11 +203,11 @@
               (and nick (not= nick "joe"))
               (update-in [:map/effort nick] (fnil into #{}) topics)
 
-              ;; Add to digest
+              ;; Add to digest (keep full text, cap at 500 chars for storage)
               true
               (update :map/digest conj
                       {:at (or at now) :speaker nick
-                       :summary (subs (or text "") 0 (min 120 (count (or text ""))))
+                       :summary (subs (or text "") 0 (min 500 (count (or text ""))))
                        :tags topics})
 
               ;; Update seen counter
@@ -188,7 +215,7 @@
               (-> (update :map/messages-seen inc)
                   (assoc :map/last-seen-at (or at now))))))
         cmap
-        new-msgs))))
+        msgs))))
 
 ;; =============================================================================
 ;; Gap detection — what the triggers check against
