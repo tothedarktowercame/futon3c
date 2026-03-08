@@ -369,6 +369,7 @@ class IRCBot:
         self.focused_mission = None
         self.connected = False
         self._reply_channel = channel  # channel of most recent inbound message
+        self._thread_context = threading.local()
         self._invoking = threading.Lock()
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
         self._job_seq = 0
@@ -1192,7 +1193,8 @@ class IRCBot:
         """Send a PRIVMSG to a channel. Caps output at max_lines to keep
         IRC readable. If the response exceeds max_lines, the tail is dropped
         and a truncation notice is appended."""
-        channel = channel or self._reply_channel or self.channel
+        thread_channel = getattr(self._thread_context, "reply_channel", None)
+        channel = channel or thread_channel or self._reply_channel or self.channel
         text = self._sanitize_for_irc(text)
         lines = []
         for line in text.split("\n"):
@@ -1337,50 +1339,62 @@ class IRCBot:
 
     # --- ! command handlers ---
 
-    def _handle_command(self, sender, text):
+    def _handle_command(self, sender, text, channel=None):
         """Route ! commands to the appropriate handler."""
         parts = text.split(None, 1)
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
+        reply_channel = channel or self.channel
 
-        log(self.nick, f"Command from {sender}: {text}")
+        log(self.nick, f"Command from {sender} on {reply_channel}: {text}")
 
-        if cmd == "!help":
-            self._cmd_help()
-        elif cmd == "!ungate":
-            self._cmd_ungate(sender, args)
-        elif cmd == "!gate":
-            self._cmd_gate(sender, args)
-        elif cmd == "!mc":
-            self._cmd_mc(sender, args)
-        elif cmd == "!mission":
-            self._cmd_mission(sender, args)
-        elif cmd == "!reset":
-            self._cmd_reset(sender, args)
-        elif cmd == "!todo":
-            self._cmd_todo(sender, args)
-        elif cmd == "!agent":
-            self._cmd_agent(sender, args)
-        elif cmd == "!patterns":
-            self._cmd_patterns(sender, args)
-        elif cmd == "!psr":
-            self._cmd_psr(sender, args)
-        elif cmd == "!pur":
-            self._cmd_pur(sender, args)
-        elif cmd == "!par":
-            self._cmd_par(sender, args)
-        elif cmd == "!ask":
-            self._cmd_ask(sender, args)
-        elif cmd == "!answer":
-            self._cmd_answer(sender, args)
-        elif cmd == "!unanswered":
-            self._cmd_unanswered(sender, args)
-        elif cmd == "!jobs":
-            self._cmd_jobs(sender, args)
-        elif cmd == "!job":
-            self._cmd_job(sender, args)
-        else:
-            self._say(f"Unknown command: {cmd} — try !help")
+        previous_channel = getattr(self._thread_context, "reply_channel", None)
+        self._thread_context.reply_channel = reply_channel
+        try:
+            if cmd == "!help":
+                self._cmd_help()
+            elif cmd == "!ungate":
+                self._cmd_ungate(sender, args)
+            elif cmd == "!gate":
+                self._cmd_gate(sender, args)
+            elif cmd == "!mc":
+                self._cmd_mc(sender, args)
+            elif cmd == "!mission":
+                self._cmd_mission(sender, args)
+            elif cmd == "!reset":
+                self._cmd_reset(sender, args)
+            elif cmd == "!todo":
+                self._cmd_todo(sender, args)
+            elif cmd == "!agent":
+                self._cmd_agent(sender, args)
+            elif cmd == "!patterns":
+                self._cmd_patterns(sender, args)
+            elif cmd == "!psr":
+                self._cmd_psr(sender, args)
+            elif cmd == "!pur":
+                self._cmd_pur(sender, args)
+            elif cmd == "!par":
+                self._cmd_par(sender, args)
+            elif cmd == "!ask":
+                self._cmd_ask(sender, args)
+            elif cmd == "!answer":
+                self._cmd_answer(sender, args)
+            elif cmd == "!unanswered":
+                self._cmd_unanswered(sender, args)
+            elif cmd == "!jobs":
+                self._cmd_jobs(sender, args)
+            elif cmd == "!job":
+                self._cmd_job(sender, args)
+            else:
+                self._say(f"Unknown command: {cmd} — try !help")
+        finally:
+            if previous_channel is None:
+                try:
+                    del self._thread_context.reply_channel
+                except AttributeError:
+                    pass
+            else:
+                self._thread_context.reply_channel = previous_channel
 
     def _cmd_help(self):
         """List available commands."""
@@ -1884,7 +1898,7 @@ class IRCBot:
                             if self.handle_commands and text.startswith("!"):
                                 t = threading.Thread(
                                     target=self._handle_command,
-                                    args=(sender, text),
+                                    args=(sender, text, target),
                                     daemon=True,
                                 )
                                 t.start()
