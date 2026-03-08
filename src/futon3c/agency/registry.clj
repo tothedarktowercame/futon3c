@@ -513,7 +513,9 @@
 (defn registry-status
   "Return status of all registered agents."
   []
-  (let [codex-session-ids (running-codex-session-ids)]
+  (let [registry @!registry
+        codex-session-ids (running-codex-session-ids)
+        ws-connected (ws-invoke/connected-agent-ids)]
     {:agents
      (into {}
            (map (fn [[aid agent]]
@@ -554,8 +556,12 @@
                                   :invoke-prompt-preview invoke-prompt-preview)
                            invoke-activity
                            (assoc :invoke-activity invoke-activity))]))
-                @!registry))
-     :count (count @!registry)}))
+                registry))
+     :count (count registry)
+     :ws-connected ws-connected
+     :ws-unregistered (->> ws-connected
+                           (remove #(contains? registry %))
+                           vec)}))
 
 (defn registered-agents
   "Return list of registered TypedAgentId maps."

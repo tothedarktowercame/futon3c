@@ -30,6 +30,14 @@
   [agent-id]
   (contains? @!agents agent-id))
 
+(defn connected-agent-ids
+  "Return a sorted vector of agent-ids with active WS invoke bridges."
+  []
+  (->> (keys @!agents)
+       (filter string?)
+       sort
+       vec))
+
 (defn- deliver-timeout! [pending invoke-id]
   (when-let [p (get @pending invoke-id)]
     (swap! pending dissoc invoke-id)

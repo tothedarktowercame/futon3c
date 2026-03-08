@@ -465,8 +465,13 @@
    Takes the registry-status map from registry/registry-status."
   [registry-status]
   (let [agents (:agents registry-status)
+        ws-connected (vec (or (:ws-connected registry-status) []))
+        ws-unregistered (vec (or (:ws-unregistered registry-status) []))
         now-ms (System/currentTimeMillis)]
-    (str "Agents (" (:count registry-status) " registered)\n"
+    (str "Agents (" (:count registry-status) " registered"
+         (when (seq ws-connected)
+           (str ", " (count ws-connected) " ws-connected"))
+         ")\n"
          (str/join "\n"
                    (map (fn [[aid info]]
                           (let [status (or (:status info) :idle)
@@ -501,7 +506,10 @@
                                         (when last-active-str
                                           (str " (" last-active-str ")")))
                                    (name status)))))
-                        agents))
+                        (sort-by key agents)))
+         (when (seq ws-unregistered)
+           (str "\n\nWS Connected (Unregistered):\n"
+                (str/join "\n" (map #(str "  " %) ws-unregistered))))
          "\n")))
 
 (defn project-agents!

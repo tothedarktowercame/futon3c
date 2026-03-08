@@ -275,6 +275,20 @@
         (is (= "codex exec running (external surface)"
                (:invoke-activity info)))))))
 
+(deftest registry-status-includes-ws-connected-unregistered
+  (testing "registry-status surfaces ws-connected agent ids that are not registered locally"
+    (with-redefs [reg/running-codex-session-ids (constantly #{})
+                  futon3c.transport.ws.invoke/connected-agent-ids
+                  (constantly ["claude-remote" "codex-1"])]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "codex-1")
+        :type :codex
+        :invoke-fn nil
+        :capabilities [:edit]})
+      (let [status (reg/registry-status)]
+        (is (= ["claude-remote" "codex-1"] (:ws-connected status)))
+        (is (= ["claude-remote"] (:ws-unregistered status)))))))
+
 (deftest shutdown-all-clears-registry
   (testing "shutdown-all! removes all agents"
     (doseq [i (range 5)]
