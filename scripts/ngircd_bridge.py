@@ -413,7 +413,11 @@ class IRCBot:
     def _surface_context(self, sender, mission_part, brief, multi_message=False, channel=None):
         """Build the surface contract header for an IRC invoke."""
         ch = channel or self.channel
-        if brief:
+        is_clean = self.nick.startswith("claude") or self.nick in ("corpus", "tickle")
+        if brief or is_clean:
+            # Clean agents (claude, corpus, tickle): always use brief-style
+            # surface contract. Their output is posted by the bridge — they
+            # must NOT post progress via /api/alpha/irc/send (causes duplicates).
             extra = (" User explicitly requested multiple IRC posts. "
                      "If needed, return one short line per intended message."
                      if multi_message else "")
@@ -421,7 +425,9 @@ class IRCBot:
                 f"[Surface: IRC | Channel: {ch} | "
                 f"Speaker: {sender}{mission_part} | Mode: brief | "
                 "This is casual IRC chat. Keep replies short and concrete. "
-                "Do not claim transport line caps or posting limits unless the call actually failed."
+                "Do not claim transport line caps or posting limits unless the call actually failed. "
+                "Reference commits/PRs/issues — never local paths like /tmp or localhost URLs. "
+                "Do NOT post progress mid-task via HTTP — your returned text is your only output."
                 f"{extra} "
                 f"Your reply will be posted to {ch} as <{self.nick}>.]"
             )
@@ -442,7 +448,7 @@ class IRCBot:
             f"Speaker: {sender}{mission_part} | Mode: task | "
             f"Your completion update will be posted to {ch} as <{self.nick}>. "
             "Execute work asynchronously, then return a short status with artifact refs "
-            "(commit/PR/issue/file path). "
+            "(commit/PR/issue). Push artifacts to git before referencing — never cite local paths or /tmp. "
             f"{send_hint} "
             f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )
