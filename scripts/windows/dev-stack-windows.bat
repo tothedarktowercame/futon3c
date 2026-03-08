@@ -36,6 +36,7 @@ if "%REMOTE_IRC%"=="1" (
   set "BRIDGE_BOTS=zcodex"
   set "FUTON3C_CODEX_AGENT_ID=codex-1"
   set "NICK_AGENT_MAP=zcodex:codex-1"
+  if not defined IRC_COMMAND_OWNER_AGENT_MAP set "IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1"
   if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
   if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
   if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-zabuton\session-id"
@@ -101,6 +102,7 @@ if "%MATH_IRC%"=="1" (
   echo [dev-stack-windows] Additional IRC channels: !IRC_CHANNELS!
   if "%REMOTE_IRC%"=="1" (
     echo [dev-stack-windows] Math IRC lane: using shared codex agent codex-1 with zcodex IRC nick
+    echo [dev-stack-windows] Bare ! commands remain owner-mapped only; unmapped shared rooms are mention-only on this bridge.
   )
 )
 
@@ -141,6 +143,7 @@ echo [dev-stack-windows] Codex invoke lane: FUTON3C_CODEX_WS_BRIDGE=%FUTON3C_COD
 echo [dev-stack-windows] Codex agent id: %FUTON3C_CODEX_AGENT_ID%
 echo [dev-stack-windows] IRC dispatch relays: FUTON3C_RELAY_CODEX=!FUTON3C_RELAY_CODEX! FUTON3C_RELAY_CLAUDE=!FUTON3C_RELAY_CLAUDE!
 if defined NICK_AGENT_MAP echo [dev-stack-windows] NICK_AGENT_MAP=!NICK_AGENT_MAP!
+if defined IRC_COMMAND_OWNER_AGENT_MAP echo [dev-stack-windows] IRC_COMMAND_OWNER_AGENT_MAP=!IRC_COMMAND_OWNER_AGENT_MAP!
 
 if not exist "%STOP_DEV_STACK%" (
   1>&2 echo [dev-stack-windows] ERROR: missing cleanup script %STOP_DEV_STACK%.

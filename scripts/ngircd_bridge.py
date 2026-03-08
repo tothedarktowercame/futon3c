@@ -14,8 +14,10 @@ Environment variables:
     IRC_PORT        (default: 6667)
     IRC_PASSWORD    (default: MonsterMountain)
     IRC_CHANNEL     (default: #futon)
+    IRC_COMMAND_OWNER_AGENT_MAP
+                    (optional: #channel:agent-id,#channel2:agent-id)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
-    BRIDGE_BOTS     (default: claude,codex)  — comma-separated bot nicks
+    BRIDGE_BOTS     (default: claude,codex)  - comma-separated bot nicks
     INVOKE_TIMEOUT_SECONDS (default: 1800)   — invoke hard-timeout in seconds
     INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
@@ -137,6 +139,21 @@ def _dedupe_nonblank(items):
     return out
 
 
+def _parse_channel_agent_map(raw):
+    """Parse #channel:agent-id pairs into a normalized lookup map."""
+    mapping = {}
+    for pair in (raw or "").split(","):
+        pair = pair.strip()
+        if not pair or ":" not in pair:
+            continue
+        channel, agent_id = pair.split(":", 1)
+        channel = channel.strip().lower()
+        agent_id = agent_id.strip()
+        if channel and agent_id:
+            mapping[channel] = agent_id
+    return mapping
+
+
 def resolve_progress_send_bases(invoke_base):
     """Return ordered Agency bases for agent-initiated IRC POST hints.
 
@@ -166,6 +183,9 @@ IRC_CHANNELS = [IRC_CHANNEL] + [
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
 PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
+IRC_COMMAND_OWNER_AGENT_MAP = _parse_channel_agent_map(
+    os.environ.get("IRC_COMMAND_OWNER_AGENT_MAP", "")
+)
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
 INVOKE_JOBS_URL = f"{INVOKE_BASE}/api/alpha/invoke/jobs"
@@ -347,7 +367,8 @@ class IRCBot:
     """Single IRC bot that connects as a nick and relays @mentions."""
 
     def __init__(self, nick, agent_id, channel, host, port, password,
-                 handle_commands=False, channels=None):
+                 handle_commands=False, channels=None,
+                 command_owner_agent_map=None):
         self.desired_nick = nick  # the nick we want
         self.nick = nick
         self.agent_id = agent_id
@@ -362,6 +383,7 @@ class IRCBot:
         self.focused_mission = None
         self.connected = False
         self._reply_channel = channel  # channel of most recent inbound message
+        self.command_owner_agent_map = command_owner_agent_map or {}
         self._thread_context = threading.local()
         self._invoking = threading.Lock()
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
@@ -386,8 +408,22 @@ class IRCBot:
             "queue_depth": self._invoke_queue.qsize(),
             "queue_max": INVOKE_QUEUE_MAX,
             "handle_commands": self.handle_commands,
+            "command_owner_agent_map": self.command_owner_agent_map,
             "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
+
+    def _bare_command_owner_agent_id(self, channel):
+        """Return the configured bare ! owner for a room, if any."""
+        if not isinstance(channel, str):
+            return None
+        return self.command_owner_agent_map.get(channel.strip().lower())
+
+    def _handles_bare_command(self, channel):
+        """True when this bot should handle a bare ! command for channel."""
+        if self.command_owner_agent_map:
+            owner_agent_id = self._bare_command_owner_agent_id(channel)
+            return owner_agent_id == self.agent_id
+        return self.handle_commands
 
     def _is_brief(self, text):
         """True when the message looks like casual IRC chat, not a task."""
@@ -1636,8 +1672,9 @@ class IRCBot:
                             # Track which channel this message came from
                             self._reply_channel = target
 
-                            # ! commands — only handled by first bot
-                            if self.handle_commands and text.startswith("!"):
+                            # ! commands - room owner when configured,
+                            # otherwise fallback to first bot.
+                            if text.startswith("!") and self._handles_bare_command(target):
                                 t = threading.Thread(
                                     target=self._handle_command,
                                     args=(sender, text, target),
@@ -1794,8 +1831,9 @@ def main():
             host=IRC_HOST,
             port=IRC_PORT,
             password=IRC_PASSWORD,
-            handle_commands=(i == 0),  # first bot handles ! commands
+            handle_commands=(i == 0),  # fallback bare ! owner when no room map is configured
             channels=IRC_CHANNELS,
+            command_owner_agent_map=IRC_COMMAND_OWNER_AGENT_MAP,
         )
         bots.append(bot)
 
@@ -1815,7 +1853,16 @@ def main():
         f"Codex bridge summary mode: {CODEX_BRIDGE_SUMMARY_MODE} "
         f"(raw_output={'yes' if CODEX_USE_RAW_OUTPUT else 'no'})"
     )
-    print(f"Commands handled by: {bots[0].nick}")
+    fallback_owner = f"{bots[0].nick} ({bots[0].agent_id})"
+    if IRC_COMMAND_OWNER_AGENT_MAP:
+        owners = ", ".join(
+            f"{channel}->{agent_id}"
+            for channel, agent_id in sorted(IRC_COMMAND_OWNER_AGENT_MAP.items())
+        )
+        print(f"Bare ! room owners (authoritative allowlist): {owners}")
+        print("Bare ! commands are disabled for unmapped rooms on this bridge")
+    else:
+        print(f"Bare ! commands handled by fallback owner: {fallback_owner}")
 
     threads = []
     for bot in bots:
