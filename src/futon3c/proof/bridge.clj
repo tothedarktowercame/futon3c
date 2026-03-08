@@ -254,6 +254,201 @@
   (exec problem-id :corpus-check [problem-id query]))
 
 ;; =============================================================================
+;; Lakatosian layer: conjectures and proof moves
+;; =============================================================================
+;;
+;; Each ledger item can carry conjectures — explicit hypotheses with a
+;; dialectical history of tests and outcomes. This gives agents a shared
+;; vocabulary for proof-theoretic moves:
+;;
+;;   CONJECTURE — an explicit hypothesis to test
+;;   TEST       — a specific check (computational, analytical, literature)
+;;   OUTCOME    — confirmed / refuted / inconclusive + evidence ref
+;;   REFINEMENT — when refuted, what replaces the conjecture
+;;
+;; The proof-move envelope is the format Tickle uses to dispatch work:
+;;
+;;   {:move      :TEST           ; proof move type
+;;    :item-id   "F1-opposite"   ; ledger obligation
+;;    :conjecture-id "H-F1"      ; which hypothesis
+;;    :method    "SAT encoding"  ; how
+;;    :params    {:n [5 6]}      ; specifics
+;;    :report-format {:outcome [:confirmed :refuted :inconclusive]
+;;                    :evidence-ref "commit hash or file path"}}
+
+(def proof-move-types
+  "Valid proof move types for dispatch envelopes."
+  #{:CONJECTURE :TEST :OUTCOME :REFINEMENT :PROOF-ATTEMPT})
+
+(defn conjecture-add!
+  "Add a conjecture to a ledger item. Auto-saves.
+   conjecture: {:id str, :hypothesis str, :status :untested, :tests [], :refinements []}
+   The conjecture is appended to the item's :item/conjectures vector."
+  [problem-id item-id conjecture]
+  (let [state-result (load-problem problem-id)]
+    (if (:ok state-result)
+      (let [state (:result state-result)
+            item (get-in state [:proof/ledger item-id])]
+        (if item
+          (let [conj-id (or (:id conjecture) (str (gensym "H-")))
+                conj-entry (merge {:id conj-id
+                                   :hypothesis ""
+                                   :status :untested
+                                   :tests []
+                                   :refinements []
+                                   :created-at (str (java.time.Instant/now))}
+                                  conjecture
+                                  {:id conj-id})]
+            (ledger-upsert! problem-id item-id
+                            {:item/conjectures
+                             (conj (vec (:item/conjectures item))
+                                   conj-entry)}))
+          {:ok false :error (str "No ledger item: " item-id)}))
+      state-result)))
+
+(defn conjecture-test!
+  "Record a test result against a conjecture. Auto-saves.
+   conjecture-id: string ID of the conjecture
+   test-record: {:method str, :params map, :outcome keyword, :evidence-ref str, :agent str}
+   outcome must be one of: :confirmed :refuted :inconclusive"
+  [problem-id item-id conjecture-id test-record]
+  (let [state-result (load-problem problem-id)]
+    (if (:ok state-result)
+      (let [state (:result state-result)
+            item (get-in state [:proof/ledger item-id])
+            conjectures (vec (:item/conjectures item))
+            idx (first (keep-indexed
+                        (fn [i c] (when (= (:id c) conjecture-id) i))
+                        conjectures))]
+        (if idx
+          (let [conj-entry (nth conjectures idx)
+                test-entry (merge {:method "unknown"
+                                   :outcome :inconclusive
+                                   :tested-at (str (java.time.Instant/now))}
+                                  test-record)
+                ;; Ensure :tests is always a vector (EDN round-trip can collapse single-element vectors)
+                existing-tests (let [t (:tests conj-entry)]
+                                 (cond (vector? t) t
+                                       (map? t) [t]
+                                       :else []))
+                all-tests (conj existing-tests test-entry)
+                new-status (cond
+                             (some #(= :confirmed (:outcome %)) all-tests) :confirmed
+                             (every? #(= :refuted (:outcome %)) all-tests) :refuted
+                             :else :partially-tested)
+                updated-conj (assoc conj-entry
+                                    :tests all-tests
+                                    :status new-status)]
+            (ledger-upsert! problem-id item-id
+                            {:item/conjectures
+                             (assoc conjectures idx updated-conj)}))
+          {:ok false :error (str "No conjecture " conjecture-id " on item " item-id)}))
+      state-result)))
+
+(defn conjecture-refine!
+  "Record a refinement when a conjecture is refuted. Auto-saves.
+   Creates a new conjecture linked to the old one.
+   refinement: {:id str, :hypothesis str, :reason str, :replaces conjecture-id}"
+  [problem-id item-id conjecture-id refinement]
+  (let [state-result (load-problem problem-id)]
+    (if (:ok state-result)
+      (let [state (:result state-result)
+            item (get-in state [:proof/ledger item-id])
+            conjectures (vec (:item/conjectures item))
+            idx (first (keep-indexed
+                        (fn [i c] (when (= (:id c) conjecture-id) i))
+                        conjectures))]
+        (if idx
+          (let [old-conj (nth conjectures idx)
+                ;; Mark old conjecture as refined-away
+                updated-old (update old-conj :refinements conj
+                                    {:to (:id refinement)
+                                     :reason (:reason refinement)
+                                     :at (str (java.time.Instant/now))})
+                conjectures' (assoc conjectures idx updated-old)
+                ;; Add new conjecture
+                new-conj {:id (or (:id refinement) (str (gensym "H-")))
+                          :hypothesis (:hypothesis refinement)
+                          :status :untested
+                          :tests []
+                          :refinements []
+                          :replaces conjecture-id
+                          :created-at (str (java.time.Instant/now))}]
+            (ledger-upsert! problem-id item-id
+                            {:item/conjectures (conj conjectures' new-conj)}))
+          {:ok false :error (str "No conjecture " conjecture-id " on item " item-id)}))
+      state-result)))
+
+(defn conjectures
+  "Get all conjectures for a ledger item, or all conjectures across all items."
+  ([problem-id]
+   (let [state-result (load-problem problem-id)]
+     (if (:ok state-result)
+       (let [state (:result state-result)
+             all (into {}
+                       (keep (fn [[item-id item]]
+                               (when (seq (:item/conjectures item))
+                                 [item-id (:item/conjectures item)])))
+                       (:proof/ledger state))]
+         {:ok true :result all})
+       state-result)))
+  ([problem-id item-id]
+   (let [state-result (load-problem problem-id)]
+     (if (:ok state-result)
+       (let [item (get-in (:result state-result) [:proof/ledger item-id])]
+         (if item
+           {:ok true :result (vec (:item/conjectures item))}
+           {:ok false :error (str "No ledger item: " item-id)}))
+       state-result))))
+
+(defn make-dispatch-envelope
+  "Create a proof-move dispatch envelope for Tickle to send to agents.
+   move-type: one of proof-move-types
+   opts: {:item-id str, :conjecture-id str, :method str, :params map}
+   Returns a structured envelope that carries the proof context."
+  [problem-id move-type opts]
+  (when-not (proof-move-types move-type)
+    (throw (ex-info (str "Invalid move type: " move-type
+                         ". Must be one of: " proof-move-types)
+                    {:move-type move-type})))
+  (let [base {:move move-type
+              :problem-id problem-id
+              :item-id (:item-id opts)
+              :created-at (str (java.time.Instant/now))}]
+    (case move-type
+      :TEST
+      (merge base
+             {:conjecture-id (:conjecture-id opts)
+              :method (:method opts)
+              :params (:params opts)
+              :report-format {:outcome [:confirmed :refuted :inconclusive]
+                              :evidence-ref "commit hash, file path, or artifact URL"}})
+
+      :CONJECTURE
+      (merge base
+             {:hypothesis (:hypothesis opts)
+              :conjecture-id (:conjecture-id opts)})
+
+      :OUTCOME
+      (merge base
+             {:conjecture-id (:conjecture-id opts)
+              :outcome (:outcome opts)
+              :evidence-ref (:evidence-ref opts)
+              :agent (:agent opts)})
+
+      :REFINEMENT
+      (merge base
+             {:conjecture-id (:conjecture-id opts)
+              :new-hypothesis (:hypothesis opts)
+              :reason (:reason opts)})
+
+      :PROOF-ATTEMPT
+      (merge base
+             {:conjecture-id (:conjecture-id opts)
+              :approach (:approach opts)
+              :method (:method opts)}))))
+
+;; =============================================================================
 ;; Convenience: problem summary
 ;; =============================================================================
 
@@ -264,13 +459,18 @@
   (let [state-result (load-problem problem-id)]
     (if (:ok state-result)
       (let [state (:result state-result)]
-        {:ok true
-         :result {:problem-id problem-id
-                  :mode (or (:proof/current-mode state) :SPEC)
-                  :version (:proof/version state)
-                  :cycles-count (count (:proof/cycles state))
-                  :ledger-count (count (:proof/ledger state))
-                  :falsify-done? (boolean (:proof/falsify-completed? state))
-                  :updated-at (:proof/updated-at state)
-                  :statement (get-in state [:proof/canonical :statement])}})
+        (let [ledger (:proof/ledger state)
+              all-conjectures (mapcat :item/conjectures (vals ledger))]
+          {:ok true
+           :result {:problem-id problem-id
+                    :mode (or (:proof/current-mode state) :SPEC)
+                    :version (:proof/version state)
+                    :cycles-count (count (:proof/cycles state))
+                    :ledger-count (count ledger)
+                    :conjectures-count (count all-conjectures)
+                    :conjectures-tested (count (filter #(not= :untested (:status %))
+                                                       all-conjectures))
+                    :falsify-done? (boolean (:proof/falsify-completed? state))
+                    :updated-at (:proof/updated-at state)
+                    :statement (get-in state [:proof/canonical :statement])}}))
       state-result)))
