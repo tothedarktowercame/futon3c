@@ -255,6 +255,10 @@ ARTIFACT_REF_PATTERNS = [
     ),
 ]
 
+IRC_SEND_DIRECTIVE_RE = re.compile(
+    r"(?i)^\s*IRC_SEND\s+(\S+)\s*::\s*(.+?)\s*$"
+)
+
 # Ungated nicks receive ALL channel messages, not just @mentions.
 # Toggle with !ungate <nick> and !gate <nick>.
 ungated_nicks: set[str] = set()
@@ -384,26 +388,15 @@ class IRCBot:
                 f"{extra} "
                 f"Your reply will be posted to {ch} as <{self.nick}>.]"
             )
-        send_bases = PROGRESS_SEND_BASES[:3]
-        if send_bases:
-            send_hint = (
-                f"To post progress mid-task, POST /api/alpha/irc/send to Agency base "
-                f"(try in order): {', '.join(send_bases)}. "
-                "Do not assume localhost unless verified from this runtime."
-            )
-        else:
-            send_hint = (
-                "To post progress mid-task, POST /api/alpha/irc/send to an Agency base "
-                "that is reachable from this runtime."
-            )
         return (
             f"[Surface: IRC | Channel: {ch} | "
             f"Speaker: {sender}{mission_part} | Mode: task | "
             f"Your completion update will be posted to {ch} as <{self.nick}>. "
             "Execute work asynchronously, then return a short status with artifact refs "
             "(commit/PR/issue/file path). "
-            f"{send_hint} "
-            f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
+            "Do not call IRC HTTP endpoints directly. "
+            f"If you need extra IRC posts, emit lines like: IRC_SEND {ch} :: <message>. "
+            "The bridge will deliver those lines.]"
         )
 
     def _agent_status(self):
@@ -577,6 +570,24 @@ class IRCBot:
                     return refs
         return refs
 
+    @staticmethod
+    def _extract_irc_send_directives(result_text, default_channel):
+        """Extract IRC_SEND directives and return (directives, residual_text)."""
+        directives = []
+        residual_lines = []
+        for raw_line in (result_text or "").splitlines():
+            line = raw_line.strip()
+            match = IRC_SEND_DIRECTIVE_RE.match(line)
+            if match:
+                channel = (match.group(1) or "").strip() or default_channel
+                message = (match.group(2) or "").strip()
+                if message:
+                    directives.append((channel, message))
+                continue
+            residual_lines.append(raw_line)
+        residual = "\n".join(residual_lines).strip()
+        return directives, residual
+
     def _summarize_invoke_result(self, result_text, clean=False):
         """Return a short IRC-safe summary with artifact refs when available.
         If clean=True, return the text without artifact ref annotations."""
@@ -696,11 +707,31 @@ class IRCBot:
                     if is_claude:
                         summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
                         self._say(summary, max_lines=4, channel=reply_ch)
+                        delivered_ok = True
+                        delivery_note = f"ngircd-bridge:{job_id}:ok"
                     else:
+                        raw_result = response.get("result", "")
+                        directives, residual = self._extract_irc_send_directives(raw_result, reply_ch)
+                        delivered_ok = False
+                        posted_directives = 0
+                        for target_channel, message in directives:
+                            try:
+                                self._say(message, max_lines=2, channel=target_channel)
+                                posted_directives += 1
+                                delivered_ok = True
+                            except Exception as send_error:
+                                log(
+                                    self.nick,
+                                    f"IRC_SEND delivery failed for {job_id} to {target_channel}: {send_error}",
+                                )
+
+                        result_for_summary = residual if directives else raw_result
                         if multi_message:
-                            summary = self._multiline_result_for_irc(response.get("result", ""))
+                            summary = self._multiline_result_for_irc(result_for_summary)
                         else:
-                            summary = self._summarize_invoke_result(response.get("result", ""))
+                            summary = self._summarize_invoke_result(result_for_summary)
+                        if directives and not residual:
+                            summary = f"posted {posted_directives} IRC message(s)"
                         stats = self._execution_stats(response.get("invoke_meta"))
                         if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
                             summary = (
@@ -716,17 +747,25 @@ class IRCBot:
                         else:
                             self._say(f"[done {job_id}] {summary}",
                                       max_lines=max_lines, channel=reply_ch)
+                        delivered_ok = True
+                        if directives:
+                            delivery_note = (
+                                f"ngircd-bridge:{job_id}:ok:irc-send={posted_directives}/{len(directives)}"
+                            )
+                        else:
+                            delivery_note = f"ngircd-bridge:{job_id}:ok"
                     self._record_delivery_receipt(
                         invoke_meta,
-                        delivered=True,
-                        note=f"ngircd-bridge:{job_id}:ok",
+                        delivered=delivered_ok,
+                        note=delivery_note,
                     )
                 else:
                     err = self._truncate(response.get("error", "unknown invoke error"), max_len=220)
                     self._say(f"[failed {job_id}] {err}", max_lines=2, channel=reply_ch)
+                    delivered_ok = True
                     self._record_delivery_receipt(
                         invoke_meta,
-                        delivered=True,
+                        delivered=delivered_ok,
                         note=f"ngircd-bridge:{job_id}:invoke-failed",
                     )
             except Exception as e:
