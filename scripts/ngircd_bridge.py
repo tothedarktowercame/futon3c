@@ -791,7 +791,11 @@ class IRCBot:
             try:
                 with self._invoking:
                     response = self._invoke_agent(
-                        prompt, sender, mission_id=mission_id, job_id=job_id
+                        prompt,
+                        sender,
+                        mission_id=mission_id,
+                        job_id=job_id,
+                        reply_channel=reply_ch,
                     )
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
@@ -872,7 +876,7 @@ class IRCBot:
             finally:
                 self._invoke_queue.task_done()
 
-    def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None):
+    def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None, reply_channel=None):
         """Call the futon3c invoke API and return structured invoke outcome."""
         status_before = self._agent_status()
         if (
@@ -885,12 +889,12 @@ class IRCBot:
                 "error": f"invoke skipped: {self._agent_busy_summary(status_before)}",
                 "session_id": status_before.get("session_id"),
             }
-
+        active_channel = reply_channel or self._reply_channel or self.channel
         payload = {
             "agent-id": self.agent_id,
             "prompt": prompt,
             "caller": f"irc:{caller}",
-            "surface": f"irc ({self.channel})",
+            "surface": f"irc ({active_channel})",
             "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
         if job_id:
