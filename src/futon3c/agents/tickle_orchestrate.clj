@@ -765,6 +765,19 @@
                                       :cycle-at (str (Instant/now))}}))
             (if pass?
               (do (println (str "[fm-conductor] " target-agent " → PASS"))
+                  ;; Whistle: if PASS and no assignable work, notify mentor
+                  (let [mentor "claude-2"
+                        whistle? (and (empty? assignable)
+                                      (not= target-agent mentor)
+                                      (cooldown-elapsed? conductor-state
+                                                         (str "whistle:" mentor)
+                                                         cooldown-ms))]
+                    (when (and whistle? (fn? bridge-send-fn))
+                      (println (str "[fm-conductor] whistling " mentor " (no obligations for " target-agent ")"))
+                      (record-page! conductor-state (str "whistle:" mentor))
+                      (bridge-send-fn "#math" "tickle"
+                                      (str "@" mentor " [whistle] No assignable obligations for "
+                                           target-agent " — ledger review needed?"))))
                   {:action :pass :target target-agent})
               (do (println (str "[fm-conductor] " target-agent " → " first-line))
                   (record-page! conductor-state target-agent)
@@ -798,7 +811,8 @@
            :rotation rotation
            :idx 0
            :cycles-completed 0
-           :last-cycle nil)
+           :last-cycle nil
+           :started-at-ms (System/currentTimeMillis))
     (future
       (while @running
         (try
@@ -815,7 +829,8 @@
                      :last-cycle {:target target
                                   :action (:action result)
                                   :text (:text result)
-                                  :at (str (Instant/now))})
+                                  :at (str (Instant/now))}
+                     :last-cycle-ms (System/currentTimeMillis))
               ;; Notify caller (e.g. for blackboard refresh)
               (when (fn? on-cycle-fn)
                 (try (on-cycle-fn result) (catch Exception _ nil)))))

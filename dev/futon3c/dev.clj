@@ -1309,6 +1309,7 @@ RESPOND WITH ONLY:
 - PASS")
 
 (declare tickle-build-context)
+(declare !fm-conductor)
 
 (defn make-tickle-invoke-fn
   "Create an invoke-fn for tickle-1 that wraps each prompt with the tickle
@@ -1794,13 +1795,20 @@ RESPOND WITH ONLY:
                                                 (str marker a " → cooldown " remaining "s")
                                                 (str marker a " → ready (paged " ago-s "s ago)")))
                                             (str marker a " → ready"))))]
-                           {:problem-id (or (:problem-id s) "FM-001")
-                            :cycles (:cycles-completed s 0)
-                            :step-ms "300s"
-                            :rotation rotation
-                            :agents (mapv fmt-cd rotation)
-                            :idx idx
-                            :last-cycle (:last-cycle s)}))
+                           (let [base-ms (or (:last-cycle-ms s) (:started-at-ms s))
+                                 step-ms-raw 300000
+                                 next-at (when base-ms
+                                           (str (.truncatedTo
+                                                  (Instant/ofEpochMilli (+ base-ms step-ms-raw))
+                                                  java.time.temporal.ChronoUnit/SECONDS)))]
+                             (cond-> {:problem-id (or (:problem-id s) "FM-001")
+                                      :cycles (:cycles-completed s 0)
+                                      :step-ms "300s"
+                                      :rotation rotation
+                                      :agents (mapv fmt-cd rotation)
+                                      :idx idx
+                                      :last-cycle (:last-cycle s)}
+                               next-at (assoc :next-at next-at)))))
                   watchdog-state (assoc :watchdog watchdog-state))]
       (bb/project! :tickle state))
     (catch Exception _ nil)))
@@ -1867,6 +1875,12 @@ RESPOND WITH ONLY:
                          next-agent (nth rotation (mod idx (count rotation)))
                          cycles (or (:cycles-completed state) 0)
                          last-cycle (:last-cycle state)
+                         last-cycle-ms (:last-cycle-ms state)
+                         base-ms (or last-cycle-ms (:started-at-ms state))
+                         next-at (when base-ms
+                                   (str (.truncatedTo
+                                          (Instant/ofEpochMilli (+ base-ms step-ms))
+                                          java.time.temporal.ChronoUnit/SECONDS)))
                          fmt-cd (fn [agent-id]
                                   (let [marker (if (= agent-id next-agent) "▶ " "  ")]
                                     (if-let [ts (get cooldowns agent-id)]
@@ -1881,6 +1895,7 @@ RESPOND WITH ONLY:
                               :step-ms (str (quot step-ms 1000) "s")
                               :cycles cycles
                               :agents (mapv fmt-cd rotation)}
+                       next-at (assoc :next-at next-at)
                        last-cycle (assoc :last (str (:target last-cycle) " "
                                                     (name (:action last-cycle))
                                                     (when (:text last-cycle)

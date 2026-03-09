@@ -416,7 +416,11 @@
            (str/join (repeat 40 "─")) "\n"
            "Cycles: " cycles
            (when step-ms (str "  Step: " step-ms))
-           "\n\n"
+           "\n"
+           (if-let [next-at (:next-at conductor)]
+             (str "Next:   " next-at "\n")
+             "")
+           "\n"
            "Agents:\n"
            (if (seq agents)
              (str/join "\n"
