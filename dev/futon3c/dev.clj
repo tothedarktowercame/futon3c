@@ -1804,12 +1804,24 @@ RESPOND WITH ONLY:
                   (orch/stop-fm-conductor! handle)
                   (reset! !fm-conductor nil))
        :state-fn (fn []
-                   (let [state @(:conductor-state handle)]
-                     {:started-at (str (:started-at handle))
+                   (let [state @(:conductor-state handle)
+                         now-ms (System/currentTimeMillis)
+                         cooldowns (:last-paged state)
+                         rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
+                         fmt-cd (fn [agent-id]
+                                  (if-let [ts (get cooldowns agent-id)]
+                                    (let [ago-s (quot (- now-ms ts) 1000)
+                                          cooldown-s (quot (or (:cooldown-ms config) (* 15 60 1000)) 1000)
+                                          remaining (- cooldown-s ago-s)]
+                                      (if (pos? remaining)
+                                        (str agent-id " → cooldown " remaining "s")
+                                        (str agent-id " → ready (paged " ago-s "s ago)")))
+                                    (str agent-id " → ready (never paged)")))]
+                     {:problem-id (or (:problem-id config) "FM-001")
+                      :started-at (str (:started-at handle))
                       :step-ms step-ms
-                      :cooldown-state (:last-paged state)
-                      :rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
-                      :problem-id (or (:problem-id config) "FM-001")}))
+                      :rotation rotation
+                      :agents (mapv fmt-cd rotation)}))
        :step-fn (fn []
                   ;; Single-step: run one cycle for the first agent in rotation.
                   ;; Cooldown is bypassed for manual steps (deliberate action).

@@ -527,31 +527,61 @@
 ;; :processes — CYDER process registry overview
 ;; -----------------------------------------------------------------------------
 
+(defn- format-state-lines
+  "Format a state map as indented key-value lines for the process buffer.
+   Handles vectors (one item per sub-line) and scalars."
+  [state-map indent]
+  (when (and state-map (map? state-map))
+    (->> (dissoc state-map :phase)
+         (mapcat (fn [[k v]]
+                   (cond
+                     (and (sequential? v) (seq v))
+                     (into [(str indent (name k) ":")]
+                           (map #(str indent "  " %) v))
+                     (some? v)
+                     [(str indent (name k) ": " v)]
+                     :else nil)))
+         (str/join "\n"))))
+
 (defn format-process-status
   "Format CYDER process registry for blackboard display.
-   Takes raw registry entries (with :process/state-fn) so it can read live state."
+   Separates running daemons/peripherals (with live state) from
+   infrastructure and mission docs."
   [registry-entries]
   (let [now-ms (System/currentTimeMillis)
-        by-layer (group-by :process/layer registry-entries)]
-    (str "Processes (" (count registry-entries) " registered)\n"
-         (when-let [repls (seq (get by-layer :repl))]
-           (str "\n  REPL-like (" (count repls) ")\n"
-                (str/join "\n"
-                  (map (fn [p]
-                         (let [last-active (format-relative-time
-                                            (str (:process/last-active p))
-                                            now-ms)
-                               phase (or (when-let [sf (:process/state-fn p)]
-                                           (try (:phase (sf)) (catch Exception _ nil)))
-                                         (get-in p [:process/metadata :phase]))]
-                           (str "  " (:process/id p)
-                                " [" (name (:process/type p)) "]"
-                                (when phase (str " " phase))
-                                (when last-active (str " (" last-active ")")))))
-                       repls))
-                "\n"))
-         (when-let [infras (seq (get by-layer :infra))]
-           (str "\n  Infrastructure (" (count infras) ")\n"
+        by-type (group-by :process/type registry-entries)
+        ;; Running processes: daemons, peripherals (not state-machines which are mission docs)
+        running (concat (get by-type :daemon)
+                        (get by-type :peripheral))
+        infra (get (group-by :process/layer registry-entries) :infra)
+        missions (get by-type :state-machine)]
+    (str "Processes\n"
+         (str/join (repeat 40 "─")) "\n"
+         ;; Running daemons/peripherals with live state
+         (if (seq running)
+           (str/join "\n\n"
+             (map (fn [p]
+                    (let [state (when-let [sf (:process/state-fn p)]
+                                  (try (sf) (catch Exception _ nil)))
+                          last-active (format-relative-time
+                                        (str (:process/last-active p))
+                                        now-ms)
+                          phase (or (:phase state)
+                                    (get-in p [:process/metadata :phase]))
+                          state-text (format-state-lines state "    ")]
+                      (str "  ● " (:process/id p)
+                           " [" (name (:process/type p)) "]"
+                           (when last-active (str " (" last-active ")"))
+                           (when phase (str "\n    phase: " phase))
+                           (when (and state-text (not (str/blank? state-text)))
+                             (str "\n" state-text)))))
+                  running))
+           "  (no running daemons)")
+         "\n"
+         ;; Infrastructure
+         (when (seq infra)
+           (str "\n" (str/join (repeat 40 "─")) "\n"
+                "Infrastructure (" (count infra) ")\n"
                 (str/join "\n"
                   (map (fn [p]
                          (let [last-active (format-relative-time
@@ -560,8 +590,16 @@
                            (str "  " (:process/id p)
                                 " [" (name (:process/type p)) "]"
                                 (when last-active (str " (" last-active ")")))))
-                       infras))
-                "\n")))))
+                       infra))
+                "\n"))
+         ;; Missions — just a count, don't clutter
+         (when (seq missions)
+           (let [active (filter (fn [m]
+                                  (let [phase (get-in m [:process/metadata :phase] "")]
+                                    (not (re-find #"(?i)done|complete|closed" phase))))
+                                missions)]
+             (str "\nMissions: " (count active) " active, "
+                  (- (count missions) (count active)) " done\n"))))))
 
 (defn project-processes!
   "Project CYDER process registry to the *processes* blackboard buffer.
