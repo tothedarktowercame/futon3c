@@ -1782,15 +1782,42 @@ RESPOND WITH ONLY:
 
 (defn start-fm-conductor!
   "Start the FM-001 conductor loop with round-robin agent tickling.
-   Delegates to tickle_orchestrate/start-fm-conductor!."
+   Delegates to tickle_orchestrate/start-fm-conductor!.
+   Registers with CYDER (I-6..I-10) for inspectability."
   ([] (start-fm-conductor! {}))
   ([{:keys [step-ms] :or {step-ms 300000}}]
    (when-let [old @!fm-conductor]
      ((:stop-fn old))
+     (cyder/deregister! "fm-conductor")
      (println "[fm-conductor] Stopped previous conductor."))
-   (let [handle (orch/start-fm-conductor!
-                  (make-fm-conductor-config {:step-ms step-ms}))]
+   (let [config (make-fm-conductor-config {:step-ms step-ms})
+         handle (orch/start-fm-conductor! config)]
      (reset! !fm-conductor handle)
+     ;; Register with CYDER for inspection (M-cyder I-6..I-10)
+     (cyder/deregister! "fm-conductor")
+     (cyder/register!
+      {:id "fm-conductor"
+       :type :daemon
+       :layer :repl
+       :stop-fn (fn []
+                  (orch/stop-fm-conductor! handle)
+                  (reset! !fm-conductor nil))
+       :state-fn (fn []
+                   (let [state @(:conductor-state handle)]
+                     {:started-at (str (:started-at handle))
+                      :step-ms step-ms
+                      :cooldown-state (:last-paged state)
+                      :rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
+                      :problem-id (or (:problem-id config) "FM-001")}))
+       :step-fn (fn []
+                  ;; Single-step: run one cycle for the first agent in rotation.
+                  ;; Cooldown is bypassed for manual steps (deliberate action).
+                  (let [rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
+                        target (first rotation)]
+                    (orch/fm-conduct-cycle! target
+                                            (assoc config :cooldown-ms 0))))
+       :metadata {:step-ms step-ms
+                  :problem-id (or (:problem-id config) "FM-001")}})
      handle)))
 
 (defn stop-fm-conductor!
@@ -1798,7 +1825,8 @@ RESPOND WITH ONLY:
   []
   (when-let [h @!fm-conductor]
     (orch/stop-fm-conductor! h)
-    (reset! !fm-conductor nil)))
+    (reset! !fm-conductor nil)
+    (cyder/deregister! "fm-conductor")))
 
 ;; =============================================================================
 ;; Tickle orchestration — REPL helpers (CT work)
