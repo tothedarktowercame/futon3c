@@ -548,6 +548,7 @@
                                 type-str (some-> (:type info) name)
                                 metadata (:metadata info)
                                 remote? (:remote? metadata)
+                                queued-jobs (long (or (:queued-jobs info) 0))
                                 elapsed (when (and (= status :invoking)
                                                    (:invoke-started-at info))
                                           (try
@@ -567,14 +568,23 @@
                                    :invoking
                                    (str "INVOKING"
                                         (when elapsed (str " (" elapsed ")"))
+                                        (when (pos? queued-jobs)
+                                          (str " [" queued-jobs " queued]"))
                                         (when activity
                                           (str "\n    " activity))
                                         "\n    "
                                         (:invoke-prompt-preview info))
                                    :idle
                                    (str "idle"
-                                        (when last-active-str
-                                          (str " (" last-active-str ")")))
+                                        (when (or (pos? queued-jobs) last-active-str)
+                                          (str " ("
+                                               (str/join
+                                                ", "
+                                                (remove nil?
+                                                        [(when (pos? queued-jobs)
+                                                           (str queued-jobs " queued"))
+                                                         last-active-str]))
+                                               ")")))
                                    (name status)))))
                         (sort-by key agents)))
          (when (seq ws-unregistered)

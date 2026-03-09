@@ -210,3 +210,28 @@
       (is (some? tickle-entry))
       (is (= 42 (get-in tickle-entry [:evidence/body :threshold-seconds])))
       (is (string? (get-in tickle-entry [:evidence/body :cycle-at]))))))
+
+(deftest invoke-records-agent-availability-bell
+  (testing "tickle invoke accepts agent-availability-bell payloads without running a scan cycle"
+    (let [store (make-evidence-store)
+          result (tickle/invoke!
+                  {:evidence-store store}
+                  {:coord/type :agent-availability-bell
+                   :agent-id "codex-1"
+                   :availability :available
+                   :invoke-status :done
+                   :session-id "sess-codex"
+                   :trace-id "invoke-123"
+                   :message "I'm available"}
+                  nil)
+          entries (estore/query* store {:query/type :coordination})
+          bell-entry (first (filter #(= [:tickle :availability-bell :coordination]
+                                        (:evidence/tags %))
+                                    entries))]
+      (is (= "tickle noted availability from codex-1: I'm available" (:result result)))
+      (is (= "sess-codex" (:session-id result)))
+      (is (true? (:availability-bell? result)))
+      (is (some? bell-entry))
+      (is (= :agent-availability-bell (get-in bell-entry [:evidence/body :event])))
+      (is (= "codex-1" (get-in bell-entry [:evidence/body :agent-id])))
+      (is (= :done (get-in bell-entry [:evidence/body :invoke-status]))))))

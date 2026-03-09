@@ -83,6 +83,9 @@
 (declare make-claude-invoke-fn)
 (declare record-invoke-delivery!)
 
+(defonce !agents-blackboard-ticker-stop
+  (atom nil))
+
 (defn env
   "Read an env var with optional default."
   ([k] (System/getenv k))
@@ -553,6 +556,7 @@
 (defonce !f3c-sys (atom nil))
 (defonce !tickle (atom nil))
 (defonce !codex-ws-bridge (atom nil))
+(defonce !codex-status (atom {}))
 
 (defn- direct-xtdb-enabled?
   "Whether futon3c may write evidence directly to XTDB.
@@ -1661,13 +1665,17 @@ RESPOND WITH ONLY:
                                                    " paged: " paged)))))}
              handle (tickle/start-watchdog! config)]
          (reset! !tickle handle)
-         ;; Register tickle-1 as an agent (invoke runs a scan cycle)
-         (when-not (reg/agent-registered? "tickle-1")
-           (rt/register-tickle!
-            {:agent-id "tickle-1"
-             :invoke-fn (fn [prompt _session-id]
-                          (let [cycle-result (tickle/run-scan-cycle! config)]
-                            {:result (pr-str cycle-result) :session-id nil}))}))
+         ;; Ensure tickle-1's invoke path matches the current watchdog config.
+         (let [tickle-invoke-fn (fn [prompt session-id]
+                                  (tickle/invoke! config prompt session-id))]
+           (if-not (reg/agent-registered? "tickle-1")
+             (rt/register-tickle!
+              {:agent-id "tickle-1"
+               :invoke-fn tickle-invoke-fn})
+             (reg/update-agent! "tickle-1"
+                                :agent/type :tickle
+                                :agent/invoke-fn tickle-invoke-fn
+                                :agent/capabilities [:mission-control :discipline :coordination/execute])))
          ;; Register watchdog with CYDER for inspection
          (cyder/deregister! "tickle-watchdog")
          (cyder/register!
@@ -2938,6 +2946,169 @@ RESPOND WITH ONLY:
             (str/join ", " changed)))))
     (catch Throwable _ nil)))
 
+(defn- codex-agent?
+  [agent-id]
+  (str/starts-with? (str agent-id) "codex"))
+
+(defn- compact-single-line
+  [text max-len]
+  (let [s (-> (str (or text ""))
+              (str/replace #"\s+" " ")
+              str/trim)]
+    (if (<= (count s) max-len)
+      s
+      (str (subs s 0 (max 0 (- max-len 3))) "..."))))
+
+(defn- codex-board-status
+  [{:keys [lifecycle-status]}]
+  (case lifecycle-status
+    :invoking "invoking"
+    :resting "resting"
+    :failed "resting"
+    :done "resting"
+    :idle "resting"
+    (name (or lifecycle-status :resting))))
+
+(defn- codex-board-phase
+  [{:keys [phase lifecycle-status]}]
+  (or (some-> phase name)
+      (case lifecycle-status
+        :invoking "starting"
+        :done "completed"
+        :failed "failed"
+        :idle "resting"
+        "resting")))
+
+(defn- codex-terminal-snapshot
+  [{:keys [last-terminal last-terminal-status finished-at result-preview error
+           invoke-trace-id changed-files execution]}]
+  (or last-terminal
+      (when (or last-terminal-status
+                finished-at
+                result-preview
+                error
+                invoke-trace-id
+                changed-files
+                execution)
+        {:status (or last-terminal-status
+                     (when (or finished-at result-preview error invoke-trace-id execution)
+                       (if error :failed :done)))
+         :finished-at finished-at
+         :result-preview result-preview
+         :error error
+         :invoke-trace-id invoke-trace-id
+         :changed-files changed-files
+         :execution execution})))
+
+(defn- format-codex-status-board
+  [status-map]
+  (let [entries (->> status-map
+                     (filter (fn [[aid _]] (codex-agent? aid)))
+                     (sort-by key))]
+    (str "Codex Code\n"
+         "==========\n\n"
+         (if (seq entries)
+           (str/join
+            "\n\n"
+            (map (fn [[aid {:keys [lifecycle-status phase updated-at started-at session-id
+                                   prompt-preview activity trace] :as state}]]
+                   (let [status-label (codex-board-status {:lifecycle-status lifecycle-status})
+                         phase-label (codex-board-phase {:phase phase
+                                                         :lifecycle-status lifecycle-status})
+                         terminal (codex-terminal-snapshot state)
+                         terminal-status (:status terminal)
+                         terminal-execution (:execution terminal)
+                         executed? (boolean (or (:executed? terminal-execution)
+                                                (:executed terminal-execution)))
+                         tool-events (long (or (:tool-events terminal-execution) 0))
+                         command-events (long (or (:command-events terminal-execution) 0))
+                         enforced-retry? (boolean (:enforced-retry? terminal-execution))
+                         trace-lines (seq (take-last 4 (or trace [])))]
+                     (str aid "\n"
+                          "  Status: " status-label "\n"
+                          "  Phase: " phase-label "\n"
+                          (when updated-at
+                            (str "  Last updated: " updated-at "\n"))
+                          (when started-at
+                            (str "  Started: " started-at "\n"))
+                          (when session-id
+                            (str "  Session: " session-id "\n"))
+                          (when prompt-preview
+                            (str "  Prompt: " (compact-single-line prompt-preview 180) "\n"))
+                          (when activity
+                            (str "  Detail: " activity "\n"))
+                          (when trace-lines
+                            (str "  Recent transitions:\n"
+                                 (str/join "\n" (map #(str "    " %) trace-lines))
+                                 "\n"))
+                          (when terminal
+                            (str "  Last terminal: "
+                                 (or (some-> terminal-status name) "unknown")
+                                 (when-let [finished-at (:finished-at terminal)]
+                                   (str " at " finished-at))
+                                 "\n"
+                                 (when-let [invoke-trace-id (:invoke-trace-id terminal)]
+                                   (str "  Last trace: " invoke-trace-id "\n"))
+                                 (when-let [changed-files (:changed-files terminal)]
+                                   (str "  Last files modified: " changed-files "\n"))
+                                 "  Last evidence: executed=" executed?
+                                 ", tool-events=" tool-events
+                                 ", command-events=" command-events
+                                 (when enforced-retry? ", enforced-retry=true")
+                                 "\n"
+                                 (when-let [result-preview (:result-preview terminal)]
+                                   (str "  Last outcome: " (compact-single-line result-preview 180) "\n"))
+                                 (when-let [error (:error terminal)]
+                                   (str "  Last error: " (compact-single-line error 180) "\n")))))))
+                 entries))
+           "No Codex invokes recorded yet.\n"))))
+
+(defn- project-codex-status!
+  []
+  (try
+    (bb/blackboard! "*Codex Code*"
+                    (format-codex-status-board @!codex-status)
+                    {:width 72 :slot 2 :no-display true})
+    (catch Throwable _ nil)))
+
+(defn- update-codex-status!
+  [agent-id updates]
+  (when (codex-agent? agent-id)
+    (let [aid (str agent-id)]
+      (swap! !codex-status
+             (fn [m]
+               (update m aid
+                       (fn [prev]
+                         (merge {:agent-id aid}
+                                prev
+                                updates
+                                {:updated-at (str (Instant/now))})))))
+      (project-codex-status!))))
+
+(defn- bell-tickle-available!
+  [agent-id {:keys [ok? session-id invoke-trace-id]}]
+  (when (reg/agent-registered? "tickle-1")
+    (future
+      (try
+        (let [payload {:coord/type :agent-availability-bell
+                       :agent-id (str agent-id)
+                       :availability :available
+                       :invoke-status (if ok? :done :failed)
+                       :session-id session-id
+                       :trace-id invoke-trace-id
+                       :message "I'm available"}
+              result (reg/invoke-agent! "tickle-1" payload 10000)]
+          (when-not (:ok result)
+            (println (str "[codex-availability] failed to bell tickle-1 for "
+                          agent-id ": "
+                          (or (get-in result [:error :error/message])
+                              result)))
+            (flush)))
+        (catch Throwable t
+          (println (str "[codex-availability] exception for " agent-id ": "
+                        (.getMessage t)))
+          (flush))))))
+
 (defn- start-invoke-ticker!
   "Start a background thread that updates both *agents* and the invoke buffer
    with elapsed time, file change detection, and a progress spinner.
@@ -2995,6 +3166,20 @@ RESPOND WITH ONLY:
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
                         (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                        (update-codex-status!
+                         agent-id
+                         {:lifecycle-status :invoking
+                          :phase (cond
+                                   activity :executing
+                                   (seq trace-entries) :streaming
+                                   :else :awaiting-response)
+                          :session-id used-sid
+                          :prompt-preview prompt-preview
+                          :started-at (str (Instant/ofEpochMilli start-ms))
+                          :elapsed-ms elapsed
+                          :activity activity
+                          :changed-files changed-files
+                          :trace (vec (or trace-entries []))})
                         ;; Update agents buffer
                         (bb/project-agents! (reg/registry-status))
                         ;; Evidence heartbeat (every 30s, not every tick)
@@ -3014,6 +3199,35 @@ RESPOND WITH ONLY:
     (fn []
       (reset! running false)
       (.interrupt thread))))
+
+(defn- start-agents-blackboard-ticker!
+  "Keep *agents* aligned with the current registry view, including polled
+   external state such as ProcessHandle-based Codex detection and expiring
+   external invoke heartbeats."
+  ([] (start-agents-blackboard-ticker! 5000))
+  ([interval-ms]
+   (when-let [stop-fn @!agents-blackboard-ticker-stop]
+     (try
+       (stop-fn)
+       (catch Throwable _)))
+   (let [running (atom true)
+         thread (Thread.
+                 (fn []
+                   (while @running
+                     (try
+                       (Thread/sleep interval-ms)
+                       (bb/project-agents! (reg/registry-status))
+                       (catch InterruptedException _
+                         (reset! running false))
+                       (catch Throwable _))))
+                 "agents-blackboard-ticker")
+         stop-fn (fn []
+                   (reset! running false)
+                   (.interrupt thread))]
+     (.setDaemon thread true)
+     (.start thread)
+     (reset! !agents-blackboard-ticker-stop stop-fn)
+     stop-fn)))
 
 (defn make-claude-invoke-fn
   "Create an invoke-fn that calls `claude -p` for real Claude interaction.
@@ -3406,6 +3620,21 @@ RESPOND WITH ONLY:
                       (subs prompt-str 0 (min 80 (count prompt-str)))
                       "... (session: " (when invoke-sid (subs invoke-sid 0 (min 8 (count invoke-sid)))) ")"))
         (flush)
+        (update-codex-status!
+         agent-id
+         {:lifecycle-status :invoking
+          :phase :starting
+          :session-id used-sid
+          :prompt-preview prompt-preview
+          :started-at (str (Instant/now))
+          :finished-at nil
+          :result-preview nil
+          :error nil
+          :invoke-trace-id nil
+          :execution nil
+          :changed-files nil
+          :activity "starting"
+          :trace []})
         ;; Evidence: invoke started
         (emit-invoke-evidence! agent-id "invoke-start"
                                {"prompt-preview" prompt-preview}
@@ -3441,6 +3670,14 @@ RESPOND WITH ONLY:
                                              " claimed work without execution evidence; retrying with enforcement prompt"
                                              " refused feasible output format; retrying with enforcement prompt")))
                              (flush)
+                             (update-codex-status!
+                              agent-id
+                              {:lifecycle-status :invoking
+                               :phase (if exec-enforce? :enforcement-retry :format-retry)
+                               :activity (if exec-enforce?
+                                           "retrying after no execution evidence"
+                                           "retrying after format refusal")
+                               :trace (vec @!event-trace)})
                              (let [retry (inner-fn retry-prompt retry-sid)]
                                 (if (or (codex-work-claim-without-execution? retry)
                                         (codex-task-reply-without-execution? prompt-str retry)
@@ -3464,7 +3701,8 @@ RESPOND WITH ONLY:
               tool-events (long (or (:tool-events execution) 0))
               command-events (long (or (:command-events execution) 0))
               execution-evidence? (boolean (:executed? execution))
-              ok? (nil? (:error result))]
+              ok? (nil? (:error result))
+              finished-at (str (Instant/now))]
           ;; Persist session ID
           (when (and session-file final-sid (not (str/blank? final-sid)))
             (persist-session-id! session-file final-sid))
@@ -3494,6 +3732,30 @@ RESPOND WITH ONLY:
                                  (invoke-trace-response-block agent-id final-sid invoke-trace-id (:result result)))
                             {:width 80 :slot 1 :no-display true})
             (catch Throwable _))
+          (update-codex-status!
+           agent-id
+           {:lifecycle-status :resting
+            :phase (if ok? :completed :failed)
+            :last-terminal-status (if ok? :done :failed)
+            :last-terminal {:status (if ok? :done :failed)
+                            :finished-at finished-at
+                            :result-preview (when ok? (:result result))
+                            :error (:error result)
+                            :execution execution
+                            :invoke-trace-id invoke-trace-id
+                            :changed-files (detect-file-changes @!invoke-start-ms)}
+            :session-id final-sid
+            :finished-at finished-at
+            :activity nil
+            :result-preview (when ok? (:result result))
+            :error (:error result)
+            :execution execution
+            :invoke-trace-id invoke-trace-id
+            :changed-files (detect-file-changes @!invoke-start-ms)
+            :trace (vec @!event-trace)})
+          (bell-tickle-available! agent-id {:ok? ok?
+                                            :session-id final-sid
+                                            :invoke-trace-id invoke-trace-id})
           (println (str "[invoke] " agent-id
                         (if ok? " ok" (str " error: " (:error result)))
                         " result-len=" (count (or (:result result) ""))
@@ -4349,6 +4611,9 @@ RESPOND WITH ONLY:
         _ (doseq [typed-id (reg/registered-agents)]
             (when-let [agent-record (reg/get-agent typed-id)]
               (federation/announce! agent-record)))
+        ;; Import already-running peer agents so the local registry and *agents*
+        ;; reflect the full federated surface, not only post-start announcements.
+        fed-sync-results (federation/sync-peers!)
         fed-peers (federation/peers)
         fed-self (federation/self-url)
         ;; CYDER: register active missions from holes/missions/
@@ -4358,6 +4623,8 @@ RESPOND WITH ONLY:
             (fn [_ _ _ new-val]
               (bb/project-processes!
                 (sort-by :process/id (vals new-val)))))
+        _ (start-agents-blackboard-ticker! 5000)
+        _ (bb/project-agents! (reg/registry-status))
         ;; Initial projection so the buffer appears on startup
         _ (bb/project-processes! (sort-by :process/id (vals @cyder/!processes)))]
     (println)
@@ -4398,6 +4665,8 @@ RESPOND WITH ONLY:
       (println))
     (if (seq fed-peers)
       (do (println (str "[dev] Federation: self=" fed-self " peers=" fed-peers))
+          (when (seq fed-sync-results)
+            (println (str "[dev]   Peer sync results: " fed-sync-results)))
           (println "[dev]   Agents registered locally will be announced to peers."))
       (println "[dev] Federation: no peers configured (set FUTON3C_PEERS, FUTON3C_SELF_URL)"))
     (println)
