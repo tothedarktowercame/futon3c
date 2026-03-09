@@ -397,7 +397,53 @@
 ;; :tickle — watchdog scan results, stall/page history
 ;; -----------------------------------------------------------------------------
 
-(defn- format-tickle-state
+(defn- format-tickle-conductor
+  "Format FM conductor state for the tickle blackboard."
+  [conductor]
+  (when conductor
+    (let [now-ms (System/currentTimeMillis)
+          agents (:agents conductor)
+          cycles (:cycles conductor 0)
+          step-ms (:step-ms conductor)
+          last-cycle (:last-cycle conductor)
+          problem-id (:problem-id conductor "FM-001")
+          rotation (:rotation conductor)
+          cooldowns (:cooldowns conductor)
+          idx (:idx conductor 0)
+          next-agent (when (seq rotation)
+                       (nth rotation (mod idx (count rotation))))]
+      (str "FM Conductor — " problem-id "\n"
+           (str/join (repeat 40 "─")) "\n"
+           "Cycles: " cycles
+           (when step-ms (str "  Step: " step-ms))
+           "\n\n"
+           "Agents:\n"
+           (if (seq agents)
+             (str/join "\n"
+               (map (fn [line] (str "  " line)) agents))
+             (str/join "\n"
+               (map (fn [a]
+                      (let [marker (if (= a next-agent) "▶ " "  ")
+                            cd-ms (get cooldowns a)
+                            cd-text (if cd-ms
+                                      (let [ago-s (quot (- now-ms cd-ms) 1000)]
+                                        (str "(paged " ago-s "s ago)"))
+                                      "ready")]
+                        (str "  " marker a " → " cd-text)))
+                    rotation)))
+           "\n"
+           (when last-cycle
+             (str "\nLast: " (:target last-cycle) " "
+                  (name (or (:action last-cycle) :unknown))
+                  (when-let [text (:text last-cycle)]
+                    (str "\n  \"" (subs text 0 (min 70 (count text)))
+                         (when (> (count text) 70) "...") "\""))
+                  (when (:at last-cycle)
+                    (let [at-str (str (:at last-cycle))]
+                      (str "\n  at " (if (> (count at-str) 19) (subs at-str 11 19) at-str))))
+                  "\n"))))))
+
+(defn- format-tickle-watchdog
   "Format tickle watchdog state for blackboard."
   [state]
   (let [cycles (:cycles-completed state 0)
@@ -405,7 +451,8 @@
         history (:recent-history state)
         interval-ms (:interval-ms state)
         threshold-s (:threshold-seconds state)]
-    (str "Tickle Watchdog\n"
+    (str "Watchdog\n"
+         (str/join (repeat 40 "─")) "\n"
          "Cycles: " cycles
          (when interval-ms (str "  Interval: " (quot interval-ms 1000) "s"))
          (when threshold-s (str "  Threshold: " threshold-s "s"))
@@ -430,6 +477,25 @@
                                 " ok")))
                        (reverse history)))
                 "\n")))))
+
+(defn- format-tickle-state
+  "Format combined tickle state for blackboard.
+   State may contain :conductor (FM conductor) and/or :watchdog sections."
+  [state]
+  (let [conductor (:conductor state)
+        watchdog (:watchdog state)
+        ;; Backwards compat: if state has :cycles-completed at top level, it's pure watchdog
+        pure-watchdog? (and (not conductor) (:cycles-completed state))]
+    (str "Tickle\n"
+         (str/join (repeat 40 "═")) "\n\n"
+         (if pure-watchdog?
+           (format-tickle-watchdog state)
+           (str (when conductor
+                  (str (format-tickle-conductor conductor) "\n"))
+                (when watchdog
+                  (str (format-tickle-watchdog watchdog) "\n"))
+                (when (and (not conductor) (not watchdog) (not pure-watchdog?))
+                  "  (no active tickle processes)\n"))))))
 
 (defmethod render-blackboard :tickle [_ state]
   (format-tickle-state state))

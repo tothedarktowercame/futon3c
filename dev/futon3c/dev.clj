@@ -1764,6 +1764,47 @@ RESPOND WITH ONLY:
       (bb/project-processes! entries))
     (catch Exception _ nil)))
 
+(defn project-tickle-state!
+  "Project combined tickle state (conductor + watchdog) to the *tickle* blackboard."
+  []
+  (try
+    (let [conductor-handle @!fm-conductor
+          conductor-state (when conductor-handle
+                            @(:conductor-state conductor-handle))
+          watchdog-state (when @!tickle
+                            (when-let [p (get @cyder/!processes "tickle-watchdog")]
+                              (when-let [sf (:process/state-fn p)]
+                                (try (sf) (catch Exception _ nil)))))
+          now-ms (System/currentTimeMillis)
+          state (cond-> {}
+                  conductor-state
+                  (assoc :conductor
+                         (let [s conductor-state
+                               rotation (or (:rotation s) ["claude-1" "codex-1" "claude-2"])
+                               idx (or (:idx s) 0)
+                               next-agent (nth rotation (mod idx (count rotation)))
+                               cooldowns (:last-paged s)
+                               cooldown-ms 900000
+                               fmt-cd (fn [a]
+                                        (let [marker (if (= a next-agent) "▶ " "  ")]
+                                          (if-let [ts (get cooldowns a)]
+                                            (let [ago-s (quot (- now-ms ts) 1000)
+                                                  remaining (- (quot cooldown-ms 1000) ago-s)]
+                                              (if (pos? remaining)
+                                                (str marker a " → cooldown " remaining "s")
+                                                (str marker a " → ready (paged " ago-s "s ago)")))
+                                            (str marker a " → ready"))))]
+                           {:problem-id (or (:problem-id s) "FM-001")
+                            :cycles (:cycles-completed s 0)
+                            :step-ms "300s"
+                            :rotation rotation
+                            :agents (mapv fmt-cd rotation)
+                            :idx idx
+                            :last-cycle (:last-cycle s)}))
+                  watchdog-state (assoc :watchdog watchdog-state))]
+      (bb/project! :tickle state))
+    (catch Exception _ nil)))
+
 (defn- make-fm-conductor-config
   "Build the config map for tickle_orchestrate FM conductor functions,
    wiring in dev-specific IRC helpers and evidence store."
@@ -1774,7 +1815,8 @@ RESPOND WITH ONLY:
           :evidence-store @!evidence-store
           :on-cycle-fn (fn [_result]
                          (cyder/touch! "fm-conductor")
-                         (refresh-processes-buffer!))}
+                         (refresh-processes-buffer!)
+                         (project-tickle-state!))}
          overrides))
 
 (defonce !fm-conductor (atom nil))
