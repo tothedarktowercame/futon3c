@@ -1235,21 +1235,22 @@ AGENTS:
 
 REPO: tothedarktowercame/18_Category_theory_homological_algebra
 LOCAL PATH: /home/joe/code/18_Category_theory_homological_algebra
-Always include the local path when paging codex-1 about implementation work.
+When paging codex-1, include an explicit filesystem path only when the path
+itself is operationally required; otherwise prefer repo/corpus names in IRC-visible text.
 
 LOCAL DATA SOURCES (all on laptop, accessible to codex-1):
-  1. arXiv math.CT eprints: ~/code/futon6/data/arxiv-math-ct-eprints/
-     ~9900 paper sources (.tex/.tar.gz). Grep for CT concepts here.
-  2. math.SE processed: ~/code/storage/math-processed-gpu/
+  1. arXiv math.CT eprints corpus (\"arxiv-math-ct-eprints\")
+     Workspace-local paper sources (~9900 .tex/.tar.gz files). Grep for CT concepts here.
+  2. math.SE processed corpus (\"math-processed-gpu\")
      entities.json, relations.json, hypergraphs.json, thread-wiring-ct.json
      GPU-processed StackExchange math data with CT patterns and NER terms.
-  3. MathOverflow processed: ~/code/storage/mo-processed-gpu/
+  3. MathOverflow processed corpus (\"mo-processed-gpu\")
      Same structure as math-processed-gpu. Research-level Q&A.
-  4. PlanetMath dictionary: ~/code/futon6/data/pm-all-terms/pm-full-dictionary.json
+  4. PlanetMath dictionary corpus (\"pm-full-dictionary.json\")
      26944 terms with MSC codes, domains, confidence. Use to avoid duplicates.
-  5. nLab CT patterns: ~/code/futon6/data/nlab-ct-reference.json
+  5. nLab CT patterns corpus (\"nlab-ct-reference.json\")
      8 CT pattern types mapped to ~20k nLab pages.
-  6. arXiv metadata: ~/code/futon6/data/arxiv-ct-metadata.jsonl
+  6. arXiv metadata corpus (\"arxiv-ct-metadata.jsonl\")
      Title, abstract, authors, categories for ~9900 math.CT papers.
 
 RESEARCH WORKFLOW:
@@ -3556,6 +3557,19 @@ RESPOND WITH ONLY:
 (def ^:private irc-ref-path-re
   #"(?i)(?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b")
 
+(defn- surface-safe-local-paths
+  "Normalize local filesystem prefixes before projecting text to IRC."
+  [text]
+  (let [raw (str (or text ""))
+        home (some-> (System/getProperty "user.home") str str/trim not-empty)
+        replacements (cond-> []
+                       home (conj [(str home "/code/") "~/code/"])
+                       home (conj [(str home "/") "~/"]))]
+    (reduce (fn [s [prefix replacement]]
+              (str/replace s (re-pattern (java.util.regex.Pattern/quote prefix)) replacement))
+            raw
+            replacements)))
+
 (defn- truncate-with-ellipsis
   [s max-len]
   (let [txt (str (or s ""))]
@@ -3565,7 +3579,7 @@ RESPOND WITH ONLY:
 
 (defn- extract-artifact-refs
   [text]
-  (let [raw (or text "")
+  (let [raw (surface-safe-local-paths text)
         github-refs (re-seq irc-ref-github-re raw)
         pr-refs (re-seq irc-ref-pr-re raw)
         commit-refs (map second (re-seq irc-ref-commit-re raw))
@@ -3580,7 +3594,7 @@ RESPOND WITH ONLY:
 (defn- summarize-irc-result
   "Render agent text as a short IRC-friendly line with artifact refs."
   [text]
-  (let [raw (str (or text ""))
+  (let [raw (surface-safe-local-paths text)
         normalized (-> raw
                        (str/replace #"\s+" " ")
                        str/trim)
@@ -3643,6 +3657,7 @@ RESPOND WITH ONLY:
           (not (str/blank? stripped)) stripped
           (not (str/blank? directive-msg)) directive-msg
           :else (str/trim (or text "")))
+        surface-safe-local-paths
         enforce-irc-planning-guard)))
 
 (defn- invoke-error-text

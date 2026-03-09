@@ -38,6 +38,18 @@
        sort
        vec))
 
+(defn send-frame!
+  "Send a best-effort JSON frame to AGENT-ID over its WS bridge.
+   Returns true when the frame was accepted by the WS sender."
+  [agent-id frame]
+  (if-let [{:keys [send]} (get @!agents agent-id)]
+    (try
+      (send (json/generate-string frame))
+      true
+      (catch Throwable _
+        false))
+    false))
+
 (defn- deliver-timeout! [pending invoke-id]
   (when-let [p (get @pending invoke-id)]
     (swap! pending dissoc invoke-id)

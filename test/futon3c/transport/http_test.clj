@@ -443,6 +443,33 @@
           (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
           (is (= "http" (get-in job-parsed [:job :delivery :surface]))))))))
 
+(deftest invoke-emacs-surface-auto-records-delivery-when-trace-present
+  (testing "direct Emacs invoke marks delivery delivered and keeps the Emacs surface label"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-emacs-delivery"
+                                      "prompt" "hello from emacs delivery"
+                                      "surface" "emacs-repl"
+                                      "caller" "joe"})]
+      (register-mock-agent! "codex-emacs-delivery" :codex)
+      (with-redefs [reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result "done"
+                                         :session-id "sess-emacs-delivery"
+                                         :invoke-meta {:invoke-trace-id "invoke-emacs-delivery-1"
+                                                       :execution {:executed? true
+                                                                   :tool-events 1
+                                                                   :command-events 0}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
+          (is (= "emacs-repl" (get-in job-parsed [:job :delivery :surface])))
+          (is (= "caller joe" (get-in job-parsed [:job :delivery :destination]))))))))
+
 (deftest invoke-job-delivery-records-on-job
   (testing "POST /api/alpha/invoke-delivery updates invoke-job delivery state via trace-id"
     (let [handler (make-handler)
@@ -681,6 +708,37 @@
                              :destination "#futon as <codex>"
                              :delivered? true
                              :note "ngircd-bridge"}}]
+                 @calls)))))))
+
+(deftest invoke-delivery-relays-over-ws-when-local-recorder-unavailable
+  (testing "POST /api/alpha/invoke-delivery succeeds via WS relay fallback"
+    (let [calls (atom [])
+          handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-1"
+                                      "invoke-trace-id" "invoke-456"
+                                      "surface" "irc"
+                                      "destination" "#futon as <codex>"
+                                      "delivered" true
+                                      "note" "ngircd-bridge"})]
+      (with-redefs [futon3c.transport.http/*resolve-delivery-recorder* (fn [] nil)
+                    futon3c.transport.ws.invoke/send-frame!
+                    (fn [agent-id payload]
+                      (swap! calls conj {:agent-id agent-id :payload payload})
+                      true)]
+        (let [response (post handler "/api/alpha/invoke-delivery" body)
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (false? (:recorded parsed)))
+          (is (true? (:relayed parsed)))
+          (is (= [{:agent-id "codex-1"
+                   :payload {"type" "invoke_delivery"
+                             "agent_id" "codex-1"
+                             "invoke_trace_id" "invoke-456"
+                             "surface" "irc"
+                             "destination" "#futon as <codex>"
+                             "delivered" true
+                             "note" "ngircd-bridge"}}]
                  @calls)))))))
 
 (deftest invoke-delivery-validates-required-fields
