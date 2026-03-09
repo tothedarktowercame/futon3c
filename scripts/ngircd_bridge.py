@@ -168,6 +168,7 @@ PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
+INVOKE_ANNOUNCE_URL = f"{INVOKE_BASE}/api/alpha/invoke/announce"
 INVOKE_JOBS_URL = f"{INVOKE_BASE}/api/alpha/invoke/jobs"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
@@ -710,10 +711,41 @@ class IRCBot:
             return False
         return True
 
-    def _enqueue_invoke(self, sender, full_prompt, mission_id, reply_channel=None,
+    def _announce_invoke(self, sender, full_prompt, mission_id, reply_channel=None):
+        """Record a canonical queued job in the server before any IRC acceptance."""
+        requested_job_id = self._next_job_id()
+        payload = {
+            "agent-id": self.agent_id,
+            "prompt": full_prompt,
+            "caller": f"irc:{sender}",
+            "surface": f"irc ({reply_channel or self.channel})",
+            "job-id": requested_job_id,
+        }
+        if mission_id:
+            payload["mission-id"] = mission_id
+        result = api_post(INVOKE_ANNOUNCE_URL, payload, timeout=min(CMD_TIMEOUT, 5))
+        if not (isinstance(result, dict) and result.get("ok")):
+            if isinstance(result, dict):
+                err = result.get("error") or result.get("message") or result.get("err")
+            else:
+                err = None
+            return {"ok": False, "error": err or "announce-failed"}
+        job_id = result.get("job-id") or requested_job_id
+        queued_jobs = result.get("queued-jobs")
+        try:
+            queued_jobs = int(queued_jobs)
+        except Exception:
+            queued_jobs = None
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "queued_jobs": queued_jobs,
+            "status_url": result.get("status-url"),
+        }
+
+    def _enqueue_invoke(self, job_id, sender, full_prompt, mission_id, reply_channel=None,
                         multi_message=False):
-        """Queue an invoke request and return assigned job id or None when full."""
-        job_id = self._next_job_id()
+        """Queue an already-announced invoke request. Returns job id or None when full."""
         task = {
             "job_id": job_id,
             "sender": sender,
@@ -1041,15 +1073,30 @@ class IRCBot:
                                                 channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
-        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
-                                      reply_channel=channel,
-                                      multi_message=multi_message)
-        if not job_id:
+        if self._invoke_queue.full():
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping invocation from {sender}")
             return
-        pending = self._invoke_queue.qsize()
+        announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
+                                          reply_channel=channel)
+        if not announced.get("ok"):
+            err = announced.get("error", "announce-failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Announce failed for {sender} on {channel}: {err}")
+            return
+        job_id = self._enqueue_invoke(announced["job_id"], sender, full_prompt, self.focused_mission,
+                                      reply_channel=channel,
+                                      multi_message=multi_message)
+        if not job_id:
+            self._say("[bridge enqueue failed] invoke queue changed after announce; inspect job ledger",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Unexpected post-announce enqueue failure for {job_id} from {sender}")
+            return
+        pending = announced.get("queued_jobs")
+        if pending is None:
+            pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
         log(self.nick, f"Queued {job_id} ({mode}) from {sender} on {channel}: {prompt_text[:80]}")
         # Claude: no [accepted] noise — just process silently
@@ -1072,14 +1119,29 @@ class IRCBot:
         surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {text}"
 
-        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
-                                      reply_channel=channel)
-        if not job_id:
+        if self._invoke_queue.full():
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping ungated invocation from {sender}")
             return
-        pending = self._invoke_queue.qsize()
+        announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
+                                          reply_channel=channel)
+        if not announced.get("ok"):
+            err = announced.get("error", "announce-failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Announce failed for ungated invoke from {sender} on {channel}: {err}")
+            return
+        job_id = self._enqueue_invoke(announced["job_id"], sender, full_prompt, self.focused_mission,
+                                      reply_channel=channel)
+        if not job_id:
+            self._say("[bridge enqueue failed] invoke queue changed after announce; inspect job ledger",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Unexpected post-announce enqueue failure for {job_id} from {sender}")
+            return
+        pending = announced.get("queued_jobs")
+        if pending is None:
+            pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
         log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender} on {channel}: {text[:80]}")
         if not self.nick.startswith("claude"):

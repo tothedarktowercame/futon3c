@@ -106,6 +106,78 @@
       (is (.contains prompt "arxiv-math-ct-eprints"))
       (is (.contains prompt "pm-full-dictionary.json")))))
 
+(deftest format-codex-status-board-renders-last-invoke-snapshot
+  (testing "Codex status board preserves last invoke details after the agent returns idle"
+    (let [board (#'futon3c.dev/format-codex-status-board
+                 {"codex-1" {:lifecycle-status :resting
+                             :phase :completed
+                             :updated-at "2026-03-09T21:00:00Z"
+                             :started-at "2026-03-09T20:59:00Z"
+                             :session-id "sess-codex"
+                             :prompt-preview "Investigate delivery pending in invoke window"
+                             :last-terminal {:status :done
+                                             :finished-at "2026-03-09T21:00:00Z"
+                                             :result-preview "Recorded delivery and projected refs"
+                                             :invoke-trace-id "invoke-abc"
+                                             :execution {:executed? true
+                                                         :tool-events 2
+                                                         :command-events 1}}
+                             :trace ["1s using Read" "4s using Edit"]}})]
+      (is (.contains board "Codex Code"))
+      (is (.contains board "codex-1"))
+      (is (.contains board "Status: resting"))
+      (is (.contains board "Phase: completed"))
+      (is (.contains board "Last terminal: done at 2026-03-09T21:00:00Z"))
+      (is (.contains board "Session: sess-codex"))
+      (is (.contains board "Last trace: invoke-abc"))
+      (is (.contains board "Last evidence: executed=true, tool-events=2, command-events=1"))
+      (is (.contains board "Last outcome: Recorded delivery and projected refs"))
+      (is (.contains board "Recent transitions:")))))
+
+(deftest format-codex-status-board-accepts-executed-without-question-mark
+  (testing "Codex status board accepts remote invoke-job execution maps and infers terminal status from old snapshots"
+    (let [board (#'futon3c.dev/format-codex-status-board
+                 {"codex-1" {:lifecycle-status :resting
+                             :finished-at "2026-03-09T21:03:00Z"
+                             :execution {:executed true
+                                         :tool-events 3
+                                         :command-events 4}}})]
+      (is (.contains board "Last terminal: done at 2026-03-09T21:03:00Z"))
+      (is (.contains board "Last evidence: executed=true, tool-events=3, command-events=4")))))
+
+(deftest format-codex-status-board-separates-active-state-from-last-terminal
+  (testing "Active Codex invokes render previous completion as last terminal, not as the current run"
+    (let [board (#'futon3c.dev/format-codex-status-board
+                 {"codex-1" {:lifecycle-status :invoking
+                             :phase :executing
+                             :updated-at "2026-03-09T21:25:05Z"
+                             :started-at "2026-03-09T21:24:50Z"
+                             :session-id "sess-live"
+                             :prompt-preview "Current prompt"
+                             :activity "preparing response"
+                             :trace ["7s preparing response"]
+                             :finished-at "2026-03-09T20:54:58Z"
+                             :result-preview "Old outcome"
+                             :invoke-trace-id "invoke-old"
+                             :execution {:executed true
+                                         :tool-events 10
+                                         :command-events 10}
+                             :last-terminal-status :done}})]
+      (is (.contains board "Status: invoking"))
+      (is (.contains board "Phase: executing"))
+      (is (.contains board "Detail: preparing response"))
+      (is (.contains board "Last terminal: done at 2026-03-09T20:54:58Z"))
+      (is (.contains board "Last trace: invoke-old"))
+      (is (.contains board "Last outcome: Old outcome"))
+      (is (not (.contains board "\n  Finished: ")))
+      (is (not (.contains board "\n  Outcome: ")))
+      (is (not (.contains board "\n  Trace: "))))))
+
+(deftest format-codex-status-board-handles-empty-state
+  (testing "Codex status board is explicit when nothing has been recorded yet"
+    (let [board (#'futon3c.dev/format-codex-status-board {})]
+      (is (.contains board "No Codex invokes recorded yet.")))))
+
 (deftest invoke-response->irc-reply-covers-success-and-failure
   (testing "successful invoke with text preserves refs in summary"
     (let [out (#'futon3c.dev/invoke-response->irc-reply
@@ -182,6 +254,33 @@
                          "work-claim without execution evidence after enforcement retry"))
           (is (= 0 (get-in result [:execution :tool-events])))
           (is (= 0 (get-in result [:execution :command-events]))))))))
+
+(deftest codex-invoke-bells-tickle-when-returning-to-idle
+  (testing "Codex emits an availability bell to tickle-1 before returning idle"
+    (let [bell-calls (atom [])]
+      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
+                    (fn [_opts]
+                      (fn [_prompt _sid]
+                        {:result "Completed work."
+                         :session-id "sess-1"
+                         :execution {:executed? true :tool-events 1 :command-events 1}}))
+                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
+                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
+                    futon3c.dev/persist-session-id! (fn [& _] nil)
+                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                    futon3c.dev/bell-tickle-available!
+                    (fn [agent-id payload]
+                      (swap! bell-calls conj {:agent-id agent-id :payload payload})
+                      nil)
+                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
+        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
+              result (invoke-fn "Take F1-opposite and start now" nil)]
+          (is (= "Completed work." (:result result)))
+          (is (= 1 (count @bell-calls)))
+          (is (= "codex-1" (:agent-id (first @bell-calls))))
+          (is (= true (get-in (first @bell-calls) [:payload :ok?])))
+          (is (= "sess-1" (get-in (first @bell-calls) [:payload :session-id])))
+          (is (string? (get-in (first @bell-calls) [:payload :invoke-trace-id]))))))))
 
 (deftest codex-invoke-fails-task-mode-nonplanning-reply-without-execution
   (testing "task-mode no-evidence reply without planning-only marker is rejected after retry"

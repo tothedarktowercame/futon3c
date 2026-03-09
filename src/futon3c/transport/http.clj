@@ -15,6 +15,7 @@
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      GET  /api/alpha/invoke/jobs — list recent invoke jobs
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
+     POST /api/alpha/invoke/announce — record a queued invoke before external acceptance
      POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
      POST /api/alpha/whistle — synchronous invoke (or NDJSON stream when stream=true)
      POST /api/alpha/whistle-stream — NDJSON streaming invoke with heartbeats
@@ -61,6 +62,7 @@
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
             [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.blackboard :as bb]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
             [meme.arrow :as meme-arrow]
@@ -440,7 +442,27 @@
                  (assoc :next-seq next-seq)
                  (update :job-order (fnil conj []) job-id)
                  (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
+    (bb/project-agents! (reg/registry-status))
     @created-id))
+
+(defn active-invoke-job-counts
+  "Return canonical non-terminal invoke-job counts keyed by agent-id.
+   Example:
+   {\"codex-1\" {:queued-jobs 1 :running-jobs 0 :nonterminal-jobs 1}}"
+  []
+  (ensure-invoke-jobs-ledger!)
+  (reduce
+   (fn [acc job]
+     (let [aid (some-> (:agent-id job) str str/trim not-empty)
+           state (some-> (:state job) str)]
+       (if-not (and aid (#{"queued" "running"} state))
+         acc
+         (-> acc
+             (update-in [aid :queued-jobs] (fnil + 0) (if (= "queued" state) 1 0))
+             (update-in [aid :running-jobs] (fnil + 0) (if (= "running" state) 1 0))
+             (update-in [aid :nonterminal-jobs] (fnil inc 0))))))
+   {}
+   (vals (get @!invoke-jobs-ledger :jobs {}))))
 
 (defn- mark-invoke-job-running!
   [job-id]
@@ -2055,6 +2077,57 @@
                                     :error "invoke-submit-failed"
                                     :message (.getMessage t)})))))))))
 
+(defn- handle-invoke-announce
+  "POST /api/alpha/invoke/announce — record a canonical queued invoke before any
+   external surface announces acceptance.
+   Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"job-id\":\"optional\"}
+   Returns immediately with the canonical queued job id and status URL."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            prompt (or (:prompt payload) (get payload "prompt"))
+            caller (or (some-> payload :caller str)
+                       (some-> payload (get "caller") str)
+                       "http-caller")
+            surface (or (some-> payload :surface str)
+                        (some-> payload (get "surface") str)
+                        "announce")
+            requested-job-id (or (:job-id payload) (get payload "job-id")
+                                 (:job_id payload) (get payload "job_id"))]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? prompt)
+          (json-response 400 {:ok false :err "missing-prompt"
+                              :message "prompt is required"})
+
+          (nil? (reg/get-agent (str agent-id)))
+          (json-response 404 {:ok false :err "agent-not-found"
+                              :message (str "Agent not registered: " agent-id)})
+
+          :else
+          (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+                                            :agent-id agent-id
+                                            :prompt prompt
+                                            :caller caller
+                                            :surface surface})
+                queued-jobs (get-in (active-invoke-job-counts)
+                                    [(str agent-id) :queued-jobs]
+                                    0)
+                job (some-> job-id get-invoke-job invoke-job-public-view)]
+            (json-response 202 {:ok true
+                                :accepted true
+                                :job-id job-id
+                                :state "queued"
+                                :queued-jobs queued-jobs
+                                :status-url (str "/api/alpha/invoke/jobs/" job-id)
+                                :job job})))))))
+
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
    Same request body as /invoke. Returns application/x-ndjson with chunked events:
@@ -2080,6 +2153,7 @@
                               :message "prompt is required"})
 
           :else
+          #_{:clj-kondo/ignore [:unresolved-symbol]}
           (hk/with-channel request channel
             ;; Send initial response with a keepalive comment to start chunked stream
             (hk/send! channel
@@ -3328,6 +3402,9 @@
 
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
+
+          (and (= :post method) (= "/api/alpha/invoke/announce" uri))
+          (handle-invoke-announce request config)
 
           (and (= :post method) (= "/api/alpha/bell" uri))
           (handle-bell request config)

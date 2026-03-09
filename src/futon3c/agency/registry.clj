@@ -33,6 +33,14 @@
   !on-register (atom nil))
 
 (def ^:private ws-invoke-timeout-ms 120000)
+(def ^:private external-invoke-fresh-ms 15000)
+
+(def ^:dynamic *resolve-invoke-job-counts*
+  "Best-effort resolver for futon3c.transport.http/active-invoke-job-counts.
+   Returns a 0-arity fn or nil."
+  (fn []
+    (when-let [http-ns (find-ns 'futon3c.transport.http)]
+      (ns-resolve http-ns 'active-invoke-job-counts))))
 
 (defonce ^{:doc "Registry of agents.
 
@@ -50,6 +58,8 @@
     :agent/metadata   map}"}
   !registry
   (atom {}))
+
+(declare registry-status)
 
 ;; =============================================================================
 ;; Helpers
@@ -461,6 +471,72 @@
                     (assoc a :agent/invoke-activity activity-str))
              m))))
 
+(defn report-external-invoke!
+  "Record or clear externally-driven invoke state for AGENT-ID-VAL.
+
+   SOURCE is a stable surface key such as \"emacs-codex-repl\".
+   STATE may include:
+   {:status \"invoking\"|\"idle\"|:invoking|:idle
+    :session-id string
+    :prompt-preview string
+    :activity string}
+
+   Invoking state is treated as live only while refreshed within
+   `external-invoke-fresh-ms`; callers should heartbeat during long runs."
+  [agent-id-val source state]
+  (let [aid-val (agent-id-value agent-id-val)
+        source-key (some-> source str str/trim not-empty)
+        now* (now)
+        status (let [raw (:status state)]
+                 (cond
+                   (keyword? raw) raw
+                   (string? raw) (keyword (str/lower-case raw))
+                   :else nil))
+        clear? (or (nil? source-key)
+                   (nil? status)
+                   (= :idle status))]
+    (when source-key
+      (swap! !registry
+             (fn [m]
+               (if-let [agent (get m aid-val)]
+                 (let [existing (get-in agent [:agent/external-invokes source-key])
+                       next-external
+                       (if clear?
+                         (let [remaining (dissoc (:agent/external-invokes agent) source-key)]
+                           (when (seq remaining) remaining))
+                         (assoc (or (:agent/external-invokes agent) {})
+                                source-key
+                                (cond-> {:source source-key
+                                         :status :invoking
+                                         :started-at (or (:started-at existing) now*)
+                                         :updated-at now*}
+                                  (some-> (:session-id state) str str/trim not-empty)
+                                  (assoc :session-id (some-> (:session-id state) str str/trim))
+                                  (some-> (:prompt-preview state) str str/trim not-empty)
+                                  (assoc :prompt-preview (some-> (:prompt-preview state) str str/trim))
+                                  (some-> (:activity state) str str/trim not-empty)
+                                  (assoc :activity (some-> (:activity state) str str/trim)))))
+                       agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
+                                next-external
+                                (assoc :agent/external-invokes next-external)
+                                (nil? next-external)
+                                (dissoc :agent/external-invokes)
+                                (and (not clear?)
+                                     (some-> (:session-id state) str str/trim not-empty))
+                                (assoc :agent/session-id (some-> (:session-id state) str str/trim)))]
+                   (assoc m aid-val agent*))
+                 m)))
+      (bb/project-agents! (registry-status)))
+    {:ok true
+     :agent-id aid-val
+     :source source-key
+     :status (or status :idle)}))
+
+(defn clear-external-invoke!
+  "Clear externally-driven invoke state for AGENT-ID-VAL and SOURCE."
+  [agent-id-val source]
+  (report-external-invoke! agent-id-val source {:status :idle}))
+
 (defn set-invoke-event-sink!
   "Set a streaming event callback for an agent. sink-fn: (fn [event-map])."
   [agent-id-val sink-fn]
@@ -510,33 +586,75 @@
     (catch Throwable _
       #{})))
 
+(defn- external-invoke-live?
+  [entry]
+  (let [updated-at ^Instant (:updated-at entry)]
+    (and (= :invoking (:status entry))
+         (instance? Instant updated-at)
+         (<= (- (.toEpochMilli (now))
+                (.toEpochMilli updated-at))
+             external-invoke-fresh-ms))))
+
+(defn- freshest-external-invoke
+  [agent]
+  (->> (:agent/external-invokes agent)
+       vals
+       (filter external-invoke-live?)
+       (sort-by (fn [entry]
+                  (.toEpochMilli ^Instant (:updated-at entry))))
+       last))
+
 (defn registry-status
   "Return status of all registered agents."
   []
   (let [registry @!registry
+        now* (now)
         codex-session-ids (running-codex-session-ids)
-        ws-connected (ws-invoke/connected-agent-ids)]
+        ws-connected (ws-invoke/connected-agent-ids)
+        job-counts-fn (*resolve-invoke-job-counts*)
+        invoke-job-counts (if job-counts-fn
+                            (try
+                              (or (job-counts-fn) {})
+                              (catch Throwable _ {}))
+                            {})]
     {:agents
      (into {}
            (map (fn [[aid agent]]
                   (let [base-status (or (:agent/status agent) :idle)
                         routing-info (invoke-routing-info aid agent)
-                        session-id (:agent/session-id agent)
+                        external-invoke (freshest-external-invoke agent)
+                        last-heartbeat (:agent/external-heartbeat-at agent)
+                        recent-heartbeat?
+                        (and (instance? Instant last-heartbeat)
+                             (<= (- (.toEpochMilli ^Instant now*)
+                                    (.toEpochMilli ^Instant last-heartbeat))
+                                 external-invoke-fresh-ms))
+                        session-id (or (:session-id external-invoke)
+                                       (:agent/session-id agent))
                         external-codex-invoking?
                         (and (= :codex (:agent/type agent))
                              (not= base-status :invoking)
+                             (not recent-heartbeat?)
                              (string? session-id)
                              (contains? codex-session-ids session-id))
-                        status (if external-codex-invoking? :invoking base-status)
+                        external-invoking? (or (some? external-invoke)
+                                               external-codex-invoking?)
+                        status (if external-invoking? :invoking base-status)
                         invoke-started-at (or (:agent/invoke-started-at agent)
+                                              (:started-at external-invoke)
                                               (when external-codex-invoking?
-                                                (:agent/last-active agent)))
+                                                (or last-heartbeat
+                                                    (:agent/last-active agent))))
                         invoke-prompt-preview (or (:agent/invoke-prompt-preview agent)
+                                                  (:prompt-preview external-invoke)
                                                   (when external-codex-invoking?
                                                     "[external invoke]"))
                         invoke-activity (or (:agent/invoke-activity agent)
+                                            (:activity external-invoke)
                                             (when external-codex-invoking?
-                                              "codex exec running (external surface)"))]
+                                              "codex exec running (external surface)"))
+                        {:keys [queued-jobs running-jobs nonterminal-jobs]}
+                        (get invoke-job-counts aid {})]
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id
@@ -551,6 +669,12 @@
                                   :invoke-ws-available? (:invoke-ws-available? routing-info)
                                   :invoke-diagnostic (:invoke-diagnostic routing-info)
                                   :status status}
+                           queued-jobs
+                           (assoc :queued-jobs queued-jobs)
+                           running-jobs
+                           (assoc :running-jobs running-jobs)
+                           nonterminal-jobs
+                           (assoc :nonterminal-jobs nonterminal-jobs)
                            invoke-started-at
                            (assoc :invoke-started-at (str invoke-started-at)
                                   :invoke-prompt-preview invoke-prompt-preview)
