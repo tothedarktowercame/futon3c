@@ -952,10 +952,21 @@ class IRCBot:
             return {"ok": False, "error": f"invoke failed: {e}"}
 
     @staticmethod
+    def _surface_safe_text(text):
+        """Normalize local filesystem prefixes before projecting to IRC."""
+        text = text or ""
+        home = os.path.expanduser("~")
+        if home:
+            text = text.replace(f"{home}/code/", "~/code/")
+            text = text.replace(f"{home}/", "~/")
+        return text
+
+    @staticmethod
     def _sanitize_for_irc(text):
         """Strip markdown formatting that doesn't render in IRC.
         Agents sometimes emit markdown despite surface contract instructions;
         this ensures it never reaches the wire."""
+        text = BridgeBot._surface_safe_text(text)
         # Strip code fences (``` ... ```)
         text = re.sub(r"```\w*\n?", "", text)
         # Strip bold **text** or __text__
