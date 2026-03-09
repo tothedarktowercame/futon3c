@@ -98,8 +98,12 @@ if not defined BRIDGE_PID if "!BRIDGE_FAILED!"=="0" (
     set "BRIDGE_PID=!BRIDGE_SOCKET_PID!"
     set "BRIDGE_PID_SOURCE=irc-socket"
   ) else if exist "!PID_FILE!" (
-    echo [stop-dev-stack] WARN: bridge pid unresolved for !BRIDGE_CHANNEL!; leaving markers in place.
-    set "BRIDGE_MARKERS_UNCERTAIN=1"
+    echo [stop-dev-stack] Removing stale bridge pid markers for !BRIDGE_CHANNEL!.
+    if exist "!PID_FILE!" del /q "!PID_FILE!" >nul 2>nul
+    if exist "!HEALTH_FILE!" del /q "!HEALTH_FILE!" >nul 2>nul
+  ) else if exist "!HEALTH_FILE!" (
+    echo [stop-dev-stack] Removing stale bridge health markers for !BRIDGE_CHANNEL!.
+    if exist "!HEALTH_FILE!" del /q "!HEALTH_FILE!" >nul 2>nul
   )
 )
 if defined BRIDGE_PID if "!BRIDGE_FAILED!"=="0" (
@@ -117,6 +121,7 @@ if defined BRIDGE_PID if "!BRIDGE_FAILED!"=="0" (
         echo [stop-dev-stack] Bridge PID !BRIDGE_PID! already exited.
       )
     ) else (
+      call :wait_for_pid_exit !BRIDGE_PID! 10
       echo [stop-dev-stack] Stopped bridge PID !BRIDGE_PID!.
     )
   ) else if "!PID_CHECK_RC!"=="2" (
@@ -188,6 +193,7 @@ if "!FOUND!"=="0" (
   echo [stop-dev-stack] No listener on port !KILL_PORT!.
 )
 call :is_port_listening !KILL_PORT!
+if not errorlevel 1 call :wait_for_port_closed !KILL_PORT! 10
 if not errorlevel 1 (
   1>&2 echo [stop-dev-stack] ERROR: !KILL_NAME! is still listening on port !KILL_PORT!.
   set "FAILED=1"
@@ -225,6 +231,46 @@ if defined PORT_LISTENING (
 ) else (
   endlocal & exit /b 1
 )
+
+:wait_for_port_closed
+setlocal EnableDelayedExpansion
+set "WAIT_PORT=%~1"
+set "WAIT_TIMEOUT=%~2"
+if not defined WAIT_TIMEOUT set "WAIT_TIMEOUT=10"
+set /a WAIT_SECS=0
+:wait_for_port_closed_loop
+call :is_port_listening !WAIT_PORT!
+if errorlevel 1 (
+  endlocal & exit /b 1
+)
+if !WAIT_SECS! GEQ !WAIT_TIMEOUT! (
+  endlocal & exit /b 0
+)
+call :sleep_1s
+set /a WAIT_SECS+=1
+goto wait_for_port_closed_loop
+
+:wait_for_pid_exit
+setlocal EnableDelayedExpansion
+set "WAIT_PID=%~1"
+set "WAIT_TIMEOUT=%~2"
+if not defined WAIT_TIMEOUT set "WAIT_TIMEOUT=10"
+set /a WAIT_SECS=0
+:wait_for_pid_exit_loop
+call :is_pid_running !WAIT_PID!
+if errorlevel 1 (
+  endlocal & exit /b 1
+)
+if !WAIT_SECS! GEQ !WAIT_TIMEOUT! (
+  endlocal & exit /b 0
+)
+call :sleep_1s
+set /a WAIT_SECS+=1
+goto wait_for_pid_exit_loop
+
+:sleep_1s
+ping -n 2 127.0.0.1 >nul 2>nul
+exit /b 0
 
 :classify_bridge_pid
 setlocal EnableDelayedExpansion

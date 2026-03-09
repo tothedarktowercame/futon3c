@@ -113,10 +113,28 @@ Full-stack launch (`dev`) behavior:
 - waits for runtime ports, then starts `ngircd-bridge`
 
 IRC lane switch for `dev`:
+- unsupported positional args or unknown switches now fail fast with usage
+  guidance instead of being silently forwarded
 - default (no flag) -> local lane
   - starts/waits for local futon3c IRC listener on `FUTON3C_IRC_PORT` (default `6667`)
   - bridge defaults to `IRC_HOST=127.0.0.1`, `IRC_PORT=<FUTON3C_IRC_PORT>`,
     `IRC_CHANNEL=#futon`
+- `--frontiermath-local` -> local FrontierMath onboarding lane
+  - keeps the runtime fully local (no remote IRC)
+  - uses local built-in IRC on `FUTON3C_IRC_PORT` (default `6667`)
+  - preserves the baseline room as `IRC_CHANNEL=#futon` when unset
+  - ensures `IRC_CHANNELS` includes `#math`
+  - defaults `BRIDGE_BOTS=codex`
+  - defaults `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
+    when unset
+  - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-frontiermath-local/session-id`
+    when unset, to keep solo/local FrontierMath continuity separate from both
+    the normal local IRC lane and the peer-collaboration lane
+  - defaults `IRC_COMMAND_OWNER_AGENT_MAP=#futon:codex-1,#math:codex-1`
+    when unset so both the baseline room and the added local `#math` room
+    have explicit bare-command ownership on this bridge
+  - intended for solo/local FrontierMath enactment, not for joining Joe's
+    live shared `#math` substrate
 - `--remote-irc` -> linode lane (alias: joe lane)
   - skips local IRC port kill/wait in `dev-stack-windows.bat`
   - forces `BRIDGE_BOTS=zcodex`
@@ -132,7 +150,7 @@ IRC lane switch for `dev`:
 - `--math-irc`
   - ensures `IRC_CHANNELS` includes `#math`
   - preserves the primary channel selected by the active lane
-    (`#futon` local, `#zabuton` linode)
+    (`#futon` local, `#futon` plus `#math` frontiermath-local, `#zabuton` linode)
   - intended for `README-math.md` bring-up where `zcodex` should join both
     `#zabuton` and `#math`
   - joining both channels does not imply automatic cross-channel replies;
@@ -153,6 +171,12 @@ IRC lane switch for `dev`:
 Examples:
 - local IRC (current behavior):
   - `scripts/windows/futon-windows.bat dev`
+- local FrontierMath onboarding lane:
+  - `scripts/windows/futon-windows.bat dev --frontiermath-local`
+- launcher help / validation:
+  - `scripts/windows/dev-stack-windows.bat --help`
+  - `scripts/windows/dev-stack-windows.bat --frontier-math`
+    - now fails fast and suggests `--frontiermath-local`
 - Joe/Linode IRC lane:
   - `scripts/windows/futon-windows.bat dev --remote-irc`
 - Joe/Linode IRC lane plus `#math`:
