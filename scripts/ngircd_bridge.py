@@ -966,7 +966,7 @@ class IRCBot:
         """Strip markdown formatting that doesn't render in IRC.
         Agents sometimes emit markdown despite surface contract instructions;
         this ensures it never reaches the wire."""
-        text = BridgeBot._surface_safe_text(text)
+        text = IRCBot._surface_safe_text(text)
         # Strip code fences (``` ... ```)
         text = re.sub(r"```\w*\n?", "", text)
         # Strip bold **text** or __text__
