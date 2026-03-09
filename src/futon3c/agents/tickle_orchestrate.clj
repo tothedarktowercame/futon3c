@@ -786,21 +786,39 @@
 
    Returns {:stop-fn fn, :started-at Instant, :conductor-state atom}."
   [config]
-  (let [{:keys [step-ms rotation]
+  (let [{:keys [step-ms rotation on-cycle-fn]
          :or {step-ms 300000
               rotation default-fm-rotation}} config
         conductor-state (or (:conductor-state config) (atom {}))
         config (assoc config :conductor-state conductor-state)
         running (atom true)
         idx (atom 0)]
+    ;; Seed conductor-state with rotation metadata
+    (swap! conductor-state assoc
+           :rotation rotation
+           :idx 0
+           :cycles-completed 0
+           :last-cycle nil)
     (future
       (while @running
         (try
           (Thread/sleep (long step-ms))
           (when @running
-            (let [target (nth rotation (mod @idx (count rotation)))]
-              (swap! idx inc)
-              (fm-conduct-cycle! target config)))
+            (let [i @idx
+                  target (nth rotation (mod i (count rotation)))
+                  _ (swap! idx inc)
+                  result (fm-conduct-cycle! target config)]
+              ;; Update conductor state for inspectability
+              (swap! conductor-state assoc
+                     :idx (inc i)
+                     :cycles-completed (inc (or (:cycles-completed @conductor-state) 0))
+                     :last-cycle {:target target
+                                  :action (:action result)
+                                  :text (:text result)
+                                  :at (str (Instant/now))})
+              ;; Notify caller (e.g. for blackboard refresh)
+              (when (fn? on-cycle-fn)
+                (try (on-cycle-fn result) (catch Exception _ nil)))))
           (catch Exception e
             (println (str "[fm-conductor] Error: " (.getMessage e)))))))
     (let [handle {:stop-fn #(do (reset! running false)

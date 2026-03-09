@@ -1756,6 +1756,14 @@ RESPOND WITH ONLY:
        (take-last n)
        vec))
 
+(defn- refresh-processes-buffer!
+  "Re-project the *processes* buffer to all connected Emacs instances."
+  []
+  (try
+    (let [entries (vals @cyder/!processes)]
+      (bb/project-processes! entries))
+    (catch Exception _ nil)))
+
 (defn- make-fm-conductor-config
   "Build the config map for tickle_orchestrate FM conductor functions,
    wiring in dev-specific IRC helpers and evidence store."
@@ -1763,7 +1771,10 @@ RESPOND WITH ONLY:
   (merge {:problem-id "FM-001"
           :irc-read-fn #(irc-recent-channel "#math" 20)
           :bridge-send-fn (make-bridge-irc-send-fn)
-          :evidence-store @!evidence-store}
+          :evidence-store @!evidence-store
+          :on-cycle-fn (fn [_result]
+                         (cyder/touch! "fm-conductor")
+                         (refresh-processes-buffer!))}
          overrides))
 
 (defonce !fm-conductor (atom nil))
@@ -1807,21 +1818,32 @@ RESPOND WITH ONLY:
                    (let [state @(:conductor-state handle)
                          now-ms (System/currentTimeMillis)
                          cooldowns (:last-paged state)
-                         rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
+                         rotation (or (:rotation state)
+                                      (:rotation config)
+                                      ["claude-1" "codex-1" "claude-2"])
+                         idx (or (:idx state) 0)
+                         next-agent (nth rotation (mod idx (count rotation)))
+                         cycles (or (:cycles-completed state) 0)
+                         last-cycle (:last-cycle state)
                          fmt-cd (fn [agent-id]
-                                  (if-let [ts (get cooldowns agent-id)]
-                                    (let [ago-s (quot (- now-ms ts) 1000)
-                                          cooldown-s (quot (or (:cooldown-ms config) (* 15 60 1000)) 1000)
-                                          remaining (- cooldown-s ago-s)]
-                                      (if (pos? remaining)
-                                        (str agent-id " → cooldown " remaining "s")
-                                        (str agent-id " → ready (paged " ago-s "s ago)")))
-                                    (str agent-id " → ready (never paged)")))]
-                     {:problem-id (or (:problem-id config) "FM-001")
-                      :started-at (str (:started-at handle))
-                      :step-ms step-ms
-                      :rotation rotation
-                      :agents (mapv fmt-cd rotation)}))
+                                  (let [marker (if (= agent-id next-agent) "▶ " "  ")]
+                                    (if-let [ts (get cooldowns agent-id)]
+                                      (let [ago-s (quot (- now-ms ts) 1000)
+                                            cooldown-s (quot (or (:cooldown-ms config) (* 15 60 1000)) 1000)
+                                            remaining (- cooldown-s ago-s)]
+                                        (if (pos? remaining)
+                                          (str marker agent-id " → cooldown " remaining "s")
+                                          (str marker agent-id " → ready (paged " ago-s "s ago)")))
+                                      (str marker agent-id " → ready"))))]
+                     (cond-> {:problem-id (or (:problem-id config) "FM-001")
+                              :step-ms (str (quot step-ms 1000) "s")
+                              :cycles cycles
+                              :agents (mapv fmt-cd rotation)}
+                       last-cycle (assoc :last (str (:target last-cycle) " "
+                                                    (name (:action last-cycle))
+                                                    (when (:text last-cycle)
+                                                      (str ": " (subs (:text last-cycle)
+                                                                       0 (min 50 (count (:text last-cycle)))))))))))
        :step-fn (fn []
                   ;; Single-step: run one cycle for the first agent in rotation.
                   ;; Cooldown is bypassed for manual steps (deliberate action).
