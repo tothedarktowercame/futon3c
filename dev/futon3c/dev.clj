@@ -57,6 +57,7 @@
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mentor :as mentor]
             [futon3c.peripheral.mission-control-backend :as mcb]
+            [futon3c.social.whistles :as whistles]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
             [futon3c.runtime.agents :as rt]
@@ -1315,6 +1316,25 @@ RESPOND WITH ONLY:
 (declare tickle-build-context)
 (declare !fm-conductor)
 
+(defn backpack-add!
+  "Add a pattern to an agent's backpack (stored in registry metadata).
+   Pattern is {:pattern \"f0/p2\" :sigil \"才\" :query \"...\" :at \"...\"}."
+  [agent-id pattern-entry]
+  (swap! reg/!registry
+         update-in [agent-id :agent/metadata :backpack]
+         (fn [bp] (vec (conj (or bp []) pattern-entry)))))
+
+(defn backpack-clear!
+  "Clear an agent's pattern backpack."
+  [agent-id]
+  (swap! reg/!registry
+         assoc-in [agent-id :agent/metadata :backpack] []))
+
+(defn backpack
+  "Read an agent's current pattern backpack."
+  [agent-id]
+  (get-in @reg/!registry [agent-id :agent/metadata :backpack]))
+
 (defn make-tickle-invoke-fn
   "Create an invoke-fn for tickle-1 that wraps each prompt with the tickle
    system prompt and live context (task state, IRC log, GitHub issues).
@@ -1564,8 +1584,8 @@ RESPOND WITH ONLY:
      (let [irc-sys @!irc-sys
            send-fn (or (:send-to-channel! (:server irc-sys))
                        (:send-fn opts)
-                       ;; Fallback: ephemeral socket to ngircd (external IRC daemon)
-                       (make-irc-send-fn "tickle-bot"))
+                       ;; Fallback: use bridge HTTP /say (correct per-nick routing)
+                       (make-bridge-irc-send-fn))
              auto-restart? (if (contains? opts :auto-restart?)
                              (:auto-restart? opts)
                              true)
@@ -1588,21 +1608,7 @@ RESPOND WITH ONLY:
                                    :room (or (:room opts) "#futon")
                                    :make-page-message
                                    (fn [agent-id]
-                                     (cond
-                                       ;; Codex (laptop): search arXiv, propose encyclopedia extensions
-                                       (str/includes? agent-id "codex")
-                                       (str "@" agent-id " search local copy of arXiv math.CT, propose PlanetMath extensions. "
-                                            "See gh issue tothedarktowercame/18_Category_theory_homological_algebra#1 for full instructions.")
-
-                                       ;; Claude (Linode): review Codex's proposals
-                                       (str/includes? agent-id "claude")
-                                       (str "@" agent-id " review ct-proposal issues on "
-                                            "tothedarktowercame/18_Category_theory_homological_algebra. "
-                                            "APPROVE/REJECT with reasoning.")
-
-                                       ;; Unknown agent
-                                       :else
-                                       (str "@" agent-id " check #futon for current tasks")))}
+                                     (str "@" agent-id " you appear stalled — check #futon and #math for current tasks"))}
                      :escalate-config {:notify-fn
                                        (fn [agent-id reason]
                                          ;; 1. Blackboard notification
@@ -1829,6 +1835,22 @@ RESPOND WITH ONLY:
           :irc-read-fn #(irc-recent-channel "#math" 20)
           :bridge-send-fn (make-bridge-irc-send-fn)
           :evidence-store @!evidence-store
+          :whistle-fn (fn [{:keys [to] :as msg}]
+                        (println (str "[fm-conductor] whistle → " to ": " (:reason msg)))
+                        (try
+                          (let [result (whistles/whistle!
+                                         {:agent-id to
+                                          :prompt (str "[whistle from tickle-1] " (:reason msg)
+                                                       "\nPlease review the proof ledger for " (:problem-id msg)
+                                                       " and either unblock existing obligations or create new ones.")
+                                          :author "tickle-1"
+                                          :timeout-ms 120000
+                                          :evidence-store @!evidence-store})]
+                            (println (str "[fm-conductor] whistle response: "
+                                          (if (:whistle/ok result) "ok" (:whistle/error result))))
+                            result)
+                          (catch Exception e
+                            (println (str "[fm-conductor] whistle delivery failed: " (.getMessage e))))))
           :on-cycle-fn (fn [_result]
                          (cyder/touch! "fm-conductor")
                          (refresh-processes-buffer!)
@@ -2358,7 +2380,8 @@ RESPOND WITH ONLY:
   []
   (fn []
     ;; Ensure we have an IRC connection reading messages
-    (ensure-irc-conn! "mentor-reader")
+    ;; Nick is read-only listener; all sends go through bridge /say
+    (ensure-irc-conn! "futon3c")
     (->> @!irc-log
          (filter #(= "#math" (:channel %)))
          (mapv #(select-keys % [:nick :text :at])))))
@@ -3151,8 +3174,16 @@ RESPOND WITH ONLY:
 
                                           :else
                                           "\nWaiting for response...")
+                            backpack (some-> (get @reg/!registry aid-val)
+                                              :agent/metadata :backpack seq)
                             content (str "Invoke: " agent-id " " spin " " elapsed-str "\n"
                                          "Session: " used-sid "\n"
+                                         (when (seq backpack)
+                                           (str "Patterns: "
+                                                (str/join " " (map (fn [{:keys [sigil pattern]}]
+                                                                     (str "[" sigil "] " pattern))
+                                                                   backpack))
+                                                "\n"))
                                          "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                          (when (> (count prompt-str) 300) "...")
                                          "\n\n"
@@ -4591,9 +4622,12 @@ RESPOND WITH ONLY:
         ;; Agent layer: WS transport + Claude/Codex + dispatch relays
         ;; Uses start-agents! so it can be restarted independently via REPL
         _ (start-agents!)
-        ;; Tickle watchdog — auto-start if FUTON3C_TICKLE_AUTOSTART=true
-        _ (when (env-bool "FUTON3C_TICKLE_AUTOSTART" false)
+        ;; Tickle watchdog — auto-start unless FUTON3C_TICKLE_AUTOSTART=false
+        _ (when (env-bool "FUTON3C_TICKLE_AUTOSTART" true)
             (start-tickle! {:auto-restart? true}))
+        ;; FM conductor — auto-start unless FUTON3C_FM_CONDUCTOR_AUTOSTART=false
+        _ (when (env-bool "FUTON3C_FM_CONDUCTOR_AUTOSTART" true)
+            (start-fm-conductor!))
         bridge-sys (start-drawbridge!)
         ;; CYDER: register drawbridge (if started)
         _ (when bridge-sys

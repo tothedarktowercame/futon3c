@@ -128,17 +128,37 @@ When Tickle PASSes on an agent AND there are zero assignable obligations,
 the problem isn't "agent is busy" — it's "the ledger is empty." Tickle
 whistles the Mentor to trigger a ledger review.
 
+**Transport**: Whistles use `social.whistles/whistle!` — a synchronous
+"modem-style" connection through Agency. The originating agent sends a
+request and blocks until it gets a response or a timeout (default 2 min).
+This is NOT public IRC — whistles are internal coordination backchannel.
+Evidence is recorded for both request and response.
+
+See `README-bells-and-whistles.md` for the bell/whistle/whistle-stream
+surface contract. The `whistle-fn` config key wires the delivery mechanism.
+
 Conditions for whistle:
 - Tickle PASS (not MESSAGE, not COOLDOWN)
 - `assignable` count is 0 (no open, unblocked obligations)
 - Target agent is not the Mentor (no circular whistle)
 - Whistle cooldown not active (same 15-min window as page cooldown)
 
-Message format: `@claude-2 [whistle] No assignable obligations for <agent> — ledger review needed?`
+Payload: `{:from "tickle-1" :to "claude-2" :type :whistle :problem-id ... :reason ... :action :ledger-review}`
 
 **Why this matters**: Without the whistle, an empty ledger means all agents
-idle and nobody notices. The Mentor owns the ledger; only the Mentor can
+idle and nobody notices (silent coordination death — observed at cycle 7
+with zero claude-2 pages). The Mentor owns the ledger; only the Mentor can
 create new obligations or unblock existing ones.
+
+### Whistle chain (full escalation)
+If the Mentor is also stuck, it whistles the Lab Manager. The Lab Manager
+escalates to joe (Principal) only when a human decision is needed.
+
+```
+Tickle → Mentor: "ledger empty, review needed?"
+Mentor → Lab Manager: "stuck on X, need architectural input"
+Lab Manager → joe: "need human decision on Y"
+```
 
 **File**: `src/futon3c/agents/tickle_orchestrate.clj` — whistle block in `fm-conduct-cycle!`
 

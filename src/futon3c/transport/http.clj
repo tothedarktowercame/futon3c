@@ -1772,16 +1772,28 @@
 (defn- wrap-surface-header
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
    This ensures the agent sees a consistent, unambiguous surface declaration
-   on every turn — even when session history has messages from other surfaces."
-  [prompt surface caller]
-  (if (and surface (not (str/blank? (str surface))))
-    (str "--- CURRENT TURN ---\n"
-         "Surface: " surface "\n"
-         (when (and caller (not (str/blank? (str caller))))
-           (str "Caller: " caller "\n"))
-         "---\n\n"
-         prompt)
-    prompt))
+   on every turn — even when session history has messages from other surfaces.
+   Also includes the agent's pattern backpack if any patterns are active."
+  ([prompt surface caller]
+   (wrap-surface-header prompt surface caller nil))
+  ([prompt surface caller agent-id]
+   (if (and surface (not (str/blank? (str surface))))
+     (let [backpack (when agent-id
+                      (some-> (get @reg/!registry (str agent-id))
+                              :agent/metadata :backpack seq))]
+       (str "--- CURRENT TURN ---\n"
+            "Surface: " surface "\n"
+            (when (and caller (not (str/blank? (str caller))))
+              (str "Caller: " caller "\n"))
+            (when (seq backpack)
+              (str "Backpack: "
+                   (str/join ", " (map (fn [{:keys [sigil pattern]}]
+                                         (str "[" sigil "] " pattern))
+                                       backpack))
+                   "\n"))
+            "---\n\n"
+            prompt))
+     prompt)))
 
 (def ^:private task-mode-re
   #"(?i)\bmode:\s*task\b")
@@ -1848,7 +1860,7 @@
                                     :surface surface})]
     (try
       (mark-invoke-job-running! job-id)
-      (let [effective-prompt (wrap-surface-header prompt surface caller)
+      (let [effective-prompt (wrap-surface-header prompt surface caller agent-id)
             result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
             sid (:session-id result)
             no-evidence? (and (:ok result)
@@ -1901,7 +1913,7 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
-      (let [effective-prompt (wrap-surface-header prompt surface caller)
+      (let [effective-prompt (wrap-surface-header prompt surface caller agent-id)
             result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
             sid (:session-id result)
             no-evidence? (and (:ok result)
@@ -2192,7 +2204,7 @@
                                              long)
                           evidence-store (evidence-store-for-config config)
                           ev-opts (when mission-id [:mission-id mission-id])
-                          effective-prompt (wrap-surface-header prompt surface caller)
+                          effective-prompt (wrap-surface-header prompt surface caller agent-id)
                           result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
                           sid (:session-id result)]
                       ;; Emit evidence (same as handle-invoke)
