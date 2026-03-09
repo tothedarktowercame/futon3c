@@ -623,6 +623,23 @@
    "codex-1"  "codex (computational worker, runs SAT solvers and writes code)"
    "claude-2" "claude-2 (Mentor, epistemic risk monitor, pattern reviewer)"})
 
+(def ^:private default-cooldown-ms
+  "Minimum interval between pages to the same agent (15 minutes).
+   War-bulletin-5 finding: stateless orchestrator caused ~40% noise."
+  (* 15 60 1000))
+
+(defn- cooldown-elapsed?
+  "True if enough time has passed since last page to this agent."
+  [conductor-state target-agent cooldown-ms]
+  (if-let [last-paged (get-in @conductor-state [:last-paged target-agent])]
+    (> (- (System/currentTimeMillis) last-paged) cooldown-ms)
+    true))
+
+(defn- record-page!
+  "Record that we paged an agent at the current time."
+  [conductor-state target-agent]
+  (swap! conductor-state assoc-in [:last-paged target-agent] (System/currentTimeMillis)))
+
 (defn fm-assignable-obligations
   "Find proof obligations that are assignable (open, all deps met).
    Reads from the proof bridge. Returns sorted by DAG impact."
@@ -680,7 +697,8 @@
          "3. If work is completed — acknowledge and dispatch next obligation\n"
          "4. Max 1-2 lines, <400 chars. Always @mention the target agent. Post to #math.\n"
          "5. Do NOT repeat the full problem statement — agents know it.\n"
-         "6. Remind agents to push artifacts to git — never reference local paths or /tmp.\n\n"
+         "6. Remind agents to push artifacts to git — never reference local paths or /tmp.\n"
+         "7. If YOU (tickle) already said something similar in RECENT #math — PASS. Do not re-page.\n\n"
          "RESPOND WITH ONLY:\n"
          "- A short IRC message (start with @agent-name), OR\n"
          "- PASS")))
@@ -689,56 +707,70 @@
   "Run one FM proof conductor cycle targeting a specific agent.
    Invokes tickle-1 to decide whether to nudge/assign, then posts via bridge-send-fn.
 
+   Two-layer anti-noise guard (war-bulletin-5):
+   1. Mechanical cooldown: skip if agent was paged within :cooldown-ms
+   2. Prompt rule 7: tells Haiku to PASS if it already said something similar
+
    config:
      :problem-id       — proof problem ID (default \"FM-001\")
      :irc-read-fn      — fn [] → [{:nick :text :at :channel}] recent IRC messages
      :bridge-send-fn   — fn [channel from-nick message] → posts to IRC via bridge
      :evidence-store   — for tracking conductor cycles
+     :conductor-state  — atom tracking per-agent cooldown state
+     :cooldown-ms      — min interval between pages to same agent (default 15 min)
 
-   Returns {:action :pass|:message|:error, :target str, :text str}."
+   Returns {:action :pass|:cooldown|:message|:error, :target str, :text str}."
   [target-agent config]
-  (let [{:keys [problem-id irc-read-fn bridge-send-fn evidence-store]
-         :or {problem-id "FM-001"}} config
-        recent-msgs (when (fn? irc-read-fn)
-                      (->> (irc-read-fn)
-                           (filter #(= "#math" (:channel %)))
-                           (take-last 20)))
-        assignable (fm-assignable-obligations problem-id)
-        context (build-fm-context problem-id target-agent recent-msgs assignable)
-        agent (reg/get-agent "tickle-1")
-        invoke-fn (or (:agent/invoke-fn agent) (:invoke-fn agent))]
-    (if-not invoke-fn
-      (do (println "[fm-conductor] tickle-1 not registered, can't decide")
-          {:action :error :target target-agent})
-      (let [{:keys [result]} (invoke-fn context nil)
-            response (str/trim (or result "PASS"))
-            first-line (first (str/split-lines response))
-            pass? (or (str/blank? response)
-                      (= "PASS" (str/upper-case (str first-line))))]
-        ;; Emit evidence for this cycle
-        (when evidence-store
-          (estore/append* evidence-store
-                          {:subject {:ref/type :session
-                                     :ref/id (str "fm-conductor/" problem-id)}
-                           :type :coordination
-                           :claim-type :observation
-                           :author "tickle-1"
-                           :tags [:tickle :fm-conductor :cycle]
-                           :session-id "fm-conductor"
-                           :body {:problem-id problem-id
-                                  :target target-agent
-                                  :action (if pass? :pass :message)
-                                  :message (when-not pass? first-line)
-                                  :assignable-count (count assignable)
-                                  :recent-msg-count (count recent-msgs)
-                                  :cycle-at (str (Instant/now))}}))
-        (if pass?
-          (do (println (str "[fm-conductor] " target-agent " → PASS"))
-              {:action :pass :target target-agent})
-          (do (println (str "[fm-conductor] " target-agent " → " first-line))
-              (when (fn? bridge-send-fn)
-                (bridge-send-fn "#math" "tickle" first-line))
-              {:action :message :target target-agent :text first-line}))))))
+  (let [{:keys [problem-id irc-read-fn bridge-send-fn evidence-store
+                conductor-state cooldown-ms]
+         :or {problem-id "FM-001"
+              cooldown-ms default-cooldown-ms}} config
+        conductor-state (or conductor-state (atom {}))]
+    ;; Layer 1: mechanical cooldown guard
+    (if-not (cooldown-elapsed? conductor-state target-agent cooldown-ms)
+      (do (println (str "[fm-conductor] " target-agent " → COOLDOWN (paged recently)"))
+          {:action :cooldown :target target-agent})
+      (let [recent-msgs (when (fn? irc-read-fn)
+                          (->> (irc-read-fn)
+                               (filter #(= "#math" (:channel %)))
+                               (take-last 20)))
+            assignable (fm-assignable-obligations problem-id)
+            context (build-fm-context problem-id target-agent recent-msgs assignable)
+            agent (reg/get-agent "tickle-1")
+            invoke-fn (or (:agent/invoke-fn agent) (:invoke-fn agent))]
+        (if-not invoke-fn
+          (do (println "[fm-conductor] tickle-1 not registered, can't decide")
+              {:action :error :target target-agent})
+          (let [{:keys [result]} (invoke-fn context nil)
+                response (str/trim (or result "PASS"))
+                first-line (first (str/split-lines response))
+                pass? (or (str/blank? response)
+                          (= "PASS" (str/upper-case (str first-line))))]
+            ;; Emit evidence for this cycle
+            (when evidence-store
+              (estore/append* evidence-store
+                              {:subject {:ref/type :session
+                                         :ref/id (str "fm-conductor/" problem-id)}
+                               :type :coordination
+                               :claim-type :observation
+                               :author "tickle-1"
+                               :tags [:tickle :fm-conductor :cycle]
+                               :session-id "fm-conductor"
+                               :body {:problem-id problem-id
+                                      :target target-agent
+                                      :action (if pass? :pass :message)
+                                      :message (when-not pass? first-line)
+                                      :assignable-count (count assignable)
+                                      :recent-msg-count (count recent-msgs)
+                                      :cycle-at (str (Instant/now))}}))
+            (if pass?
+              (do (println (str "[fm-conductor] " target-agent " → PASS"))
+                  {:action :pass :target target-agent})
+              (do (println (str "[fm-conductor] " target-agent " → " first-line))
+                  (record-page! conductor-state target-agent)
+                  (when (fn? bridge-send-fn)
+                    (bridge-send-fn "#math" "tickle" first-line))
+                  {:action :message :target target-agent :text first-line}))))))))
 
 (defn start-fm-conductor!
   "Start the FM proof conductor loop with round-robin agent tickling.
@@ -752,11 +784,13 @@
      :bridge-send-fn   — fn [channel from-nick message]
      :evidence-store   — for tracking
 
-   Returns {:stop-fn fn, :started-at Instant}."
+   Returns {:stop-fn fn, :started-at Instant, :conductor-state atom}."
   [config]
   (let [{:keys [step-ms rotation]
          :or {step-ms 300000
               rotation default-fm-rotation}} config
+        conductor-state (or (:conductor-state config) (atom {}))
+        config (assoc config :conductor-state conductor-state)
         running (atom true)
         idx (atom 0)]
     (future
@@ -771,7 +805,8 @@
             (println (str "[fm-conductor] Error: " (.getMessage e)))))))
     (let [handle {:stop-fn #(do (reset! running false)
                                 (println "[fm-conductor] Stopped."))
-                  :started-at (Instant/now)}]
+                  :started-at (Instant/now)
+                  :conductor-state conductor-state}]
       (println (str "[fm-conductor] Round-robin started (step=" (/ step-ms 60000)
                     "min, agents=" (str/join "→" rotation) ")"))
       handle)))
