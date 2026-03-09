@@ -761,9 +761,20 @@ Type after the prompt, RET to send, C-c C-n for fresh session.
          :on-response #'claude-repl--emit-assistant-turn-evidence!)))
 
 (defun claude-repl-clear ()
-  "Clear display and re-draw header. Session continues."
+  "Clear display and re-draw header. Session and agent identity continue."
   (interactive)
-  (agent-chat-clear #'claude-repl--init))
+  (let ((agent-id claude-repl-agent-id)
+        (session-file claude-repl-session-file)
+        (ws-applied (and (local-variable-p 'claude-repl--workspace-applied)
+                         claude-repl--workspace-applied)))
+    (agent-chat-clear
+     (lambda ()
+       ;; Restore identity before init redraws the buffer
+       (setq-local claude-repl-agent-id agent-id)
+       (setq-local claude-repl-session-file session-file)
+       (when ws-applied
+         (setq-local claude-repl--workspace-applied t))
+       (claude-repl--init-display)))))
 
 (defcustom claude-repl-drawbridge-url "http://localhost:6768"
   "Drawbridge REPL URL for direct registry access."
@@ -878,8 +889,33 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
     (message "claude-repl: session reset (server=%s, was %s)"
              (if ok "yes" "no") (or old-sid "nil"))))
 
+(defun claude-repl--init-display ()
+  "Draw the buffer header and prompt. Does NOT register or change identity.
+Used by `claude-repl-clear' to redraw without losing the agent binding."
+  (let* ((sf claude-repl-session-file)
+         (existing-sid
+          (when (and sf (file-exists-p sf))
+            (let ((s (string-trim
+                      (with-temp-buffer
+                        (insert-file-contents-literally sf)
+                        (buffer-string)))))
+              (unless (string-empty-p s) s))))
+         (title (if (claude-repl--workspace)
+                    (format "claude repl [%s]" (claude-repl--workspace))
+                  "claude repl")))
+    (agent-chat-init-buffer
+     (list :title title
+           :session-id (or existing-sid
+                           (format "%s (awaiting session)" claude-repl-agent-id))
+           :modeline-fn #'claude-repl--build-modeline
+           :face-alist `(("claude" . claude-repl-claude-face))
+           :agent-name "claude"
+           :agent-id claude-repl-agent-id
+           :thinking-text "claude is thinking..."
+           :thinking-prop 'claude-repl-thinking))))
+
 (defun claude-repl--init ()
-  "Initialize.
+  "Initialize: register agent, set up workspace, draw buffer.
 When running inside a named daemon (e.g. workspace1), use the
 workspace name to disambiguate agent-id, session file, and buffer.
 Then auto-register with the server and load existing session-id."
@@ -893,27 +929,15 @@ Then auto-register with the server and load existing session-id."
       (setq-local claude-repl-session-file
                   (format "/tmp/futon-session-id-%s" claude-repl-agent-id))
       (setq-local claude-repl--workspace-applied t)))
+  (claude-repl--init-display)
   (let* ((sf claude-repl-session-file)
          (existing-sid
-         (when (and sf (file-exists-p sf))
-           (let ((s (string-trim
-                     (with-temp-buffer
-                       (insert-file-contents-literally sf)
-                       (buffer-string)))))
-             (unless (string-empty-p s) s))))
-        (ws (claude-repl--workspace))
-        (title (if (claude-repl--workspace)
-                   (format "claude repl [%s]" (claude-repl--workspace))
-                 "claude repl")))
-    (agent-chat-init-buffer
-     (list :title title
-           :session-id (or existing-sid
-                           (format "%s (awaiting session)" claude-repl-agent-id))
-           :modeline-fn #'claude-repl--build-modeline
-           :face-alist `(("claude" . claude-repl-claude-face))
-           :agent-name "claude"
-           :thinking-text "claude is thinking..."
-           :thinking-prop 'claude-repl-thinking))
+          (when (and sf (file-exists-p sf))
+            (let ((s (string-trim
+                      (with-temp-buffer
+                        (insert-file-contents-literally sf)
+                        (buffer-string)))))
+              (unless (string-empty-p s) s)))))
     (when existing-sid
       (claude-repl--emit-session-start-evidence! existing-sid))))
 
@@ -940,6 +964,32 @@ Use after reloading claude-repl.el or when the agent binding is stale."
   (claude-repl--auto-register)
   (message "claude-repl: now %s (session file: %s)"
            claude-repl-agent-id claude-repl-session-file))
+
+(defun claude-repl-connect (agent-id)
+  "Open a repl buffer connected to an existing AGENT-ID.
+Skips auto-registration — binds directly to the named agent.
+Use this to reconnect to an agent whose buffer was killed."
+  (interactive
+   (list (read-string "Agent ID: " "claude-2")))
+  (let* ((ws (claude-repl--workspace))
+         (bufname (format "*claude-repl:%s*" agent-id))
+         (buf (get-buffer-create bufname)))
+    (with-current-buffer buf
+      (unless (eq major-mode 'claude-repl-mode)
+        (claude-repl-mode))
+      (let ((inhibit-read-only t))
+        (erase-buffer))
+      (setq-local claude-repl-agent-id agent-id)
+      (setq-local claude-repl-session-file
+                  (format "/tmp/futon-session-id-%s" agent-id))
+      (setq-local claude-repl--workspace-applied t)
+      ;; Rebind socket so the agent routes blackboard calls here
+      (claude-repl--rebind-socket agent-id
+                                  (or ws (and (boundp 'server-name) server-name)))
+      (claude-repl--init-display))
+    (pop-to-buffer buf)
+    (goto-char (point-max))
+    (message "claude-repl: connected to %s" agent-id)))
 
 (provide 'claude-repl)
 ;;; claude-repl.el ends here

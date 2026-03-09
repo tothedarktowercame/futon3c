@@ -1742,6 +1742,7 @@ Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh sess
          :modeline-fn #'codex-repl--build-modeline
          :face-alist `(("codex" . codex-repl-codex-face))
          :agent-name "codex"
+         :agent-id "codex-1"
          :thinking-text "codex is thinking..."
          :thinking-prop 'codex-repl-thinking))
   (codex-repl--ensure-header-line!))

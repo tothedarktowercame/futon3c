@@ -23,6 +23,8 @@
             [futon3c.evidence.store :as estore])
   (:import [java.util UUID]))
 
+(declare emit-blackboard-evidence!)
+
 ;; =============================================================================
 ;; Enable/disable — bind *enabled* to false in tests or non-interactive contexts
 ;; =============================================================================
@@ -118,12 +120,15 @@
                                     (name side)
                                     width
                                     (or slot-form "")))))
+         post-elisp (:post-elisp opts)
          elisp (str "(let ((buf (get-buffer-create \"" buf-escaped "\")))"
                     "(with-current-buffer buf"
                     "(let ((inhibit-read-only t))"
                     "(erase-buffer)"
                     "(insert \"" escaped "\")"
-                    "(goto-char (point-min))))"
+                    "(goto-char (point-min))"
+                    (or post-elisp "")
+                    "))"
                     (or display-form "")
                     "nil)")]
      (run-emacsclient! elisp (:emacs-socket opts)))))
@@ -331,40 +336,113 @@
 ;; -----------------------------------------------------------------------------
 
 (defn- format-mentor-state
-  "Format mentor peripheral state for blackboard."
+  "Format mentor peripheral state for blackboard.
+   State shape: top-level has :cmap (conversation map), :handle, :problem-id,
+   :channel, :interventions, :steps. The cmap holds :map/messages-seen,
+   :map/topics, :map/effort, :map/digest, :triggers/fired, :map/last-seen-at."
   [state]
-  (let [seen (:messages-seen state 0)
-        conv-size (count (:conversation state))
-        obs-count (count (:observations state))
-        int-count (count (:interventions state))
-        fired (:triggers-fired state)
-        last-seen (:last-seen-at state)
-        problem-id (or (:problem-id state) "none")
-        channel (or (:channel state) "#math")
-        recent-interventions (take-last 3 (:interventions state))]
-    (str "Mentor (" channel ")\n"
-         "Problem: " problem-id
-         "  Seen: " seen " msgs"
-         "  Buffer: " conv-size "\n"
-         (when last-seen
-           (str "Last read: " last-seen "\n"))
-         "\nTriggers: " (if (seq fired)
-                          (str (count fired) " fired — " (str/join ", " (map name fired)))
-                          "none fired")
+  (let [cmap (or (:cmap state) {})
+        seen (get cmap :map/messages-seen 0)
+        topics (get cmap :map/topics [])
+        effort (get cmap :map/effort {})
+        digest (get cmap :map/digest [])
+        interventions (or (:interventions cmap) (:interventions state) [])
+        int-count (count interventions)
+        fired (or (:triggers/fired cmap) #{})
+        last-seen (get cmap :map/last-seen-at)
+        problem-id (or (:problem-id state)
+                       (:mentor/problem cmap) "none")
+        channel (or (:channel state)
+                    (:mentor/channel cmap) "#math")
+        handle (or (:handle state) (:mentor/handle cmap))
+        version (get cmap :mentor/version 0)
+        recent-digest (take-last 3 digest)
+        recent-interventions (take-last 3 interventions)
+        ;; Format last-seen as relative time
+        last-seen-rel (when last-seen
+                        (try
+                          (let [then (.toEpochMilli (java.time.Instant/parse last-seen))
+                                secs (quot (- (System/currentTimeMillis) then) 1000)]
+                            (cond
+                              (< secs 60) (str secs "s ago")
+                              (< secs 3600) (str (quot secs 60) "m ago")
+                              :else (str (quot secs 3600) "h ago")))
+                          (catch Exception _ last-seen)))]
+    (str "Mentor"
+         (when handle (str " — " handle))
          "\n"
+         (str/join (repeat 40 "─")) "\n"
+         "Problem: " problem-id
+         "  Channel: " channel "\n"
+         "Seen: " seen " msgs"
+         "  Map v" version "\n"
+         (when last-seen-rel
+           (str "Last msg: " last-seen-rel "\n"))
+         "\n"
+         ;; Topics
+         (when (seq topics)
+           (str "Topics (" (count topics) "):\n"
+                (str/join "\n"
+                  (map (fn [{:keys [id status by]}]
+                         (str "  " (name id) " [" (name (or status :unknown)) "] by " by))
+                       topics))
+                "\n\n"))
+         ;; Effort distribution
+         (when (seq effort)
+           (str "Effort:\n"
+                (str/join "\n"
+                  (map (fn [[agent topics]]
+                         (let [topic-names (if (set? topics)
+                                            (map name topics)
+                                            (map name (vec topics)))]
+                           (str "  " agent " (" (count topic-names) "): "
+                                (str/join ", " (take 4 (sort topic-names)))
+                                (when (> (count topic-names) 4) "..."))))
+                       (sort-by (comp count val) > effort)))
+                "\n\n"))
+         ;; Triggers
+         "Triggers: " (if (seq fired)
+                        (str (count fired) " fired — " (str/join ", " (map name fired)))
+                        "none fired")
+         "\n"
+         ;; Interventions
          "Interventions: " int-count
          (when (seq recent-interventions)
            (str "\n"
                 (str/join "\n"
-                  (map (fn [{:keys [at trigger-id message]}]
+                  (map (fn [{:keys [trigger-id message]}]
                          (str "  [" (name trigger-id) "] "
                               (subs (str message) 0 (min 60 (count (str message))))
                               (when (> (count (str message)) 60) "...")))
                        recent-interventions))))
-         "\n")))
+         "\n"
+         ;; Recent digest (last 3 conversation entries)
+         (when (seq recent-digest)
+           (str "\n" (str/join (repeat 40 "─")) "\n"
+                "Recent:\n"
+                (str/join "\n"
+                  (map (fn [{:keys [speaker summary]}]
+                         (let [preview (subs (str summary) 0
+                                            (min 70 (count (str summary))))]
+                           (str "  <" speaker "> " preview
+                                (when (> (count (str summary)) 70) "..."))))
+                       recent-digest))
+                "\n")))))
 
 (defmethod render-blackboard :mentor [_ state]
   (format-mentor-state state))
+
+(defn project-mentor!
+  "Project mentor state to the *mentor* blackboard buffer.
+   Uses slot 2 (after *agents* slot 0, *invoke* slot 1)."
+  [state]
+  (when *enabled*
+    (try
+      (when-let [content (render-blackboard :mentor state)]
+        (blackboard! "*mentor*" content {:width 55 :slot 2})
+        (emit-blackboard-evidence! :mentor state content)
+        nil)
+      (catch Throwable _ nil))))
 
 ;; -----------------------------------------------------------------------------
 ;; :arse — ArSE corpus query session
@@ -623,20 +701,32 @@
                      :else nil)))
          (str/join "\n"))))
 
+(def ^:private expected-daemons
+  "Process IDs that should normally be running. Shows ✖ DOWN when absent."
+  #{"fm-conductor" "tickle-watchdog"})
+
 (defn format-process-status
   "Format CYDER process registry for blackboard display.
    Separates running daemons/peripherals (with live state) from
-   infrastructure and mission docs."
+   infrastructure and mission docs. Shows ✖ DOWN for expected processes
+   that are missing."
   [registry-entries]
   (let [now-ms (System/currentTimeMillis)
         by-type (group-by :process/type registry-entries)
         ;; Running processes: daemons, peripherals (not state-machines which are mission docs)
         running (concat (get by-type :daemon)
                         (get by-type :peripheral))
+        running-ids (set (map :process/id running))
+        missing (remove running-ids expected-daemons)
         infra (get (group-by :process/layer registry-entries) :infra)
         missions (get by-type :state-machine)]
     (str "Processes\n"
          (str/join (repeat 40 "─")) "\n"
+         ;; Missing expected processes (red warning)
+         (when (seq missing)
+           (str (str/join "\n"
+                  (map #(str "  ✖ " % " DOWN") (sort missing)))
+                "\n\n"))
          ;; Running daemons/peripherals with live state
          (if (seq running)
            (str/join "\n\n"
@@ -681,6 +771,19 @@
              (str "\nMissions: " (count active) " active, "
                   (- (count missions) (count active)) " done\n"))))))
 
+(def ^:private processes-highlight-elisp
+  "Elisp to apply faces to process buffer status markers after insert."
+  (str "(goto-char (point-min))"
+       "(while (re-search-forward \"●\" nil t)"
+       "  (put-text-property (match-beginning 0) (match-end 0) 'face '(:foreground \"green\")))"
+       "(goto-char (point-min))"
+       "(while (re-search-forward \"✖[^\n]*\" nil t)"
+       "  (put-text-property (match-beginning 0) (match-end 0) 'face '(:foreground \"red\" :weight bold)))"
+       "(goto-char (point-min))"
+       "(while (re-search-forward \"⚠[^\n]*\" nil t)"
+       "  (put-text-property (match-beginning 0) (match-end 0) 'face '(:foreground \"orange\" :weight bold)))"
+       "(goto-char (point-min))"))
+
 (defn project-processes!
   "Project CYDER process registry to the *processes* blackboard buffer.
    Reads raw registry entries (not list-processes) so state-fn can provide live data."
@@ -688,7 +791,8 @@
   (when *enabled*
     (try
       (let [content (format-process-status registry-entries)]
-        (blackboard! "*processes*" content {:width 60 :slot 1}))
+        (blackboard! "*processes*" content {:width 60 :slot 1
+                                           :post-elisp processes-highlight-elisp}))
       (catch Throwable _ nil))))
 
 ;; =============================================================================
