@@ -533,3 +533,70 @@
           (orch/stop-fm-conductor! handle)
           ;; Should have run at least 1 cycle
           (is (pos? @cycle-count)))))))
+
+(deftest fm-conduct-cycle-cooldown-suppresses-repeat-page
+  (testing "fm-conduct-cycle! returns :cooldown if agent was paged recently"
+    (let [store (make-evidence-store)
+          invoked (atom 0)
+          state (atom {:last-paged {"claude-1" (System/currentTimeMillis)}})]
+      (register-mock-agent!
+       "tickle-1"
+       (fn [_prompt _session]
+         (swap! invoked inc)
+         {:result "@claude-1 what's the status?" :session-id "t1"}))
+      (with-redefs [orch/fm-assignable-obligations (constantly [])]
+        (let [result (orch/fm-conduct-cycle!
+                      "claude-1"
+                      {:problem-id "FM-001"
+                       :irc-read-fn (constantly [])
+                       :bridge-send-fn (fn [& _])
+                       :evidence-store store
+                       :conductor-state state
+                       :cooldown-ms (* 15 60 1000)})]
+          ;; Should be suppressed — no LLM invocation
+          (is (= :cooldown (:action result)))
+          (is (= 0 @invoked)))))))
+
+(deftest fm-conduct-cycle-cooldown-allows-after-expiry
+  (testing "fm-conduct-cycle! allows page after cooldown expires"
+    (let [store (make-evidence-store)
+          sent (atom [])
+          ;; Last paged 20 minutes ago
+          state (atom {:last-paged {"claude-1" (- (System/currentTimeMillis) (* 20 60 1000))}})]
+      (register-mock-agent!
+       "tickle-1"
+       (fn [_prompt _session]
+         {:result "@claude-1 status update?" :session-id "t1"}))
+      (with-redefs [orch/fm-assignable-obligations (constantly [])]
+        (let [result (orch/fm-conduct-cycle!
+                      "claude-1"
+                      {:problem-id "FM-001"
+                       :irc-read-fn (constantly [])
+                       :bridge-send-fn (fn [ch from msg]
+                                         (swap! sent conj msg))
+                       :evidence-store store
+                       :conductor-state state
+                       :cooldown-ms (* 15 60 1000)})]
+          ;; Should proceed — cooldown expired
+          (is (= :message (:action result)))
+          (is (= 1 (count @sent)))
+          ;; State updated with new page time
+          (is (some? (get-in @state [:last-paged "claude-1"]))))))))
+
+(deftest fm-conduct-cycle-cooldown-per-agent
+  (testing "Cooldown is per-agent — paging claude-1 doesn't block codex-1"
+    (let [state (atom {:last-paged {"claude-1" (System/currentTimeMillis)}})]
+      (register-mock-agent!
+       "tickle-1"
+       (fn [_prompt _session]
+         {:result "@codex pick up F2" :session-id "t1"}))
+      (with-redefs [orch/fm-assignable-obligations (constantly [])]
+        (let [result (orch/fm-conduct-cycle!
+                      "codex-1"
+                      {:problem-id "FM-001"
+                       :irc-read-fn (constantly [])
+                       :bridge-send-fn (fn [& _])
+                       :conductor-state state
+                       :cooldown-ms (* 15 60 1000)})]
+          ;; codex-1 has no cooldown — should proceed
+          (is (= :message (:action result))))))))

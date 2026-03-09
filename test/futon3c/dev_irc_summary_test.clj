@@ -27,6 +27,14 @@
                "Ran checks locally and prepared a candidate fix for review.")]
       (is (.contains out "no artifact reference yet")))))
 
+(deftest summarize-irc-result-normalizes-absolute-local-paths
+  (testing "absolute local paths are rendered in a surface-safe form for IRC"
+    (let [out (#'futon3c.dev/summarize-irc-result
+               "Indexed /home/joe/code/futon6/data/arxiv-ct-metadata.jsonl and updated /home/joe/code/futon3c/dev/futon3c/dev.clj")]
+      (is (not (.contains out "/home/joe/code/")))
+      (is (.contains out "~/code/futon6/data/arxiv-ct-metadata.jsonl"))
+      (is (.contains out "~/code/futon3c/dev/futon3c/dev.clj")))))
+
 (deftest invoke-trace-response-block-persists-full-payload
   (testing "invoke trace shows only metadata and writes full payload to disk"
     (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
@@ -89,6 +97,14 @@
                      :note "whistle-response"})))
         (is (= 1 (count @calls)))
         (is (= "workspace1" (get-in (first @calls) [:opts :emacs-socket])))))))
+
+(deftest tickle-system-prompt-prefers-corpus-names-over-futon6-paths
+  (testing "Tickle prompt no longer seeds absolute futon6 data paths into IRC-visible coordination"
+    (let [prompt @#'futon3c.dev/tickle-system-prompt]
+      (is (not (.contains prompt "/home/joe/code/futon6/data/")))
+      (is (not (.contains prompt "~/code/futon6/data/")))
+      (is (.contains prompt "arxiv-math-ct-eprints"))
+      (is (.contains prompt "pm-full-dictionary.json")))))
 
 (deftest invoke-response->irc-reply-covers-success-and-failure
   (testing "successful invoke with text preserves refs in summary"

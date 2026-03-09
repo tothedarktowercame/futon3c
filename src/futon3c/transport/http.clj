@@ -60,6 +60,7 @@
             [futon3c.portfolio.core :as portfolio]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
+            [futon3c.transport.ws.invoke :as ws-invoke]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
             [meme.arrow :as meme-arrow]
@@ -335,18 +336,34 @@
       t
       (str (subs t 0 217) "..."))))
 
-(defn- http-delivery-surface?
+(defn- auto-record-direct-delivery-surface?
+  "True when /api/alpha/invoke should auto-record delivery to the caller.
+   Direct Emacs callers receive the terminal response in-band over HTTP, while
+   IRC/bell/whistle surfaces have an additional projection step that records
+   delivery explicitly."
   [surface]
   (let [s (str/lower-case (str/trim (str (or surface ""))))]
     (or (str/blank? s)
         (= s "http")
-        (str/starts-with? s "http "))))
+        (str/starts-with? s "http ")
+        (str/starts-with? s "emacs"))))
+
+(defn- direct-delivery-surface-label
+  [surface]
+  (let [s (some-> surface str str/trim not-empty)
+        lower (some-> s str/lower-case)]
+    (if (or (nil? s)
+            (str/blank? s)
+            (= lower "http")
+            (str/starts-with? (or lower "") "http "))
+      "http"
+      s)))
 
 (defn- record-http-delivery!
   [{:keys [agent-id caller surface result]}]
-  (when (http-delivery-surface? surface)
+  (when (auto-record-direct-delivery-surface? surface)
     (when-let [trace-id (extract-trace-id (:invoke-meta result))]
-      (let [receipt {:surface "http"
+      (let [receipt {:surface (direct-delivery-surface-label surface)
                      :destination (str "caller " (or caller "http-caller"))
                      :delivered? true
                      :note "http-direct-response"}]
@@ -354,7 +371,7 @@
         (when-let [record-fn (*resolve-delivery-recorder*)]
           (try
             (record-fn (str agent-id) (str trace-id)
-                       {:surface "http"
+                       {:surface (direct-delivery-surface-label surface)
                         :destination (str "caller " (or caller "http-caller"))
                         :delivered? true
                         :note "http-direct-response"})
@@ -2453,6 +2470,22 @@
                         :error "invoke-job-not-found"
                         :job-id (str job-id)})))
 
+(defn- relay-invoke-delivery-over-ws!
+  "Best-effort relay of a delivery receipt to a WS-connected agent node."
+  [agent-id invoke-trace-id {:keys [surface destination delivered? note]}]
+  (try
+    (ws-invoke/send-frame!
+     (str agent-id)
+     {"type" "invoke_delivery"
+      "agent_id" (str agent-id)
+      "invoke_trace_id" (str invoke-trace-id)
+      "surface" (str (or surface "unknown"))
+      "destination" (str (or destination "unknown"))
+      "delivered" (boolean delivered?)
+      "note" (str (or note ""))})
+    (catch Throwable _
+      false)))
+
 (defn- handle-invoke-delivery
   "POST /api/alpha/invoke-delivery — record where an invoke reply was delivered.
    Body: {\"agent-id\":\"codex-1\",\"invoke-trace-id\":\"invoke-...\",\"surface\":\"irc\",
@@ -2487,28 +2520,48 @@
                               :message "invoke-trace-id is required"})
 
           :else
-          (do
-            (record-invoke-job-delivery! (str invoke-trace-id) receipt)
-            (if-let [record-fn (*resolve-delivery-recorder*)]
-            (try
-              (let [recorded? (boolean
-                               (record-fn (str agent-id) (str invoke-trace-id)
-                                          receipt))]
-                (if recorded?
-                  (json-response 200 {:ok true
-                                      :agent-id (str agent-id)
-                                      :invoke-trace-id (str invoke-trace-id)
-                                      :recorded true})
-                  (json-response 502 {:ok false
-                                      :err "invoke-delivery-record-failed"
-                                      :message "delivery receipt could not be written"})))
-              (catch Throwable t
-                (json-response 502 {:ok false
-                                    :err "invoke-delivery-record-failed"
-                                    :message (.getMessage t)})))
-            (json-response 503 {:ok false
-                                :err "invoke-delivery-unavailable"
-                                :message "invoke delivery recorder not available on this node"}))))))))
+          (let [trace-id (str invoke-trace-id)
+                aid (str agent-id)
+                _ (record-invoke-job-delivery! trace-id receipt)
+                record-fn (*resolve-delivery-recorder*)
+                local-record
+                (if record-fn
+                  (try
+                    {:attempted? true
+                     :recorded? (boolean (record-fn aid trace-id receipt))}
+                    (catch Throwable t
+                      {:attempted? true
+                       :recorded? false
+                       :error (.getMessage t)}))
+                  {:attempted? false
+                   :recorded? false})
+                ws-relayed? (when-not (:recorded? local-record)
+                              (relay-invoke-delivery-over-ws! aid trace-id receipt))]
+            (cond
+              (:recorded? local-record)
+              (json-response 200 {:ok true
+                                  :agent-id aid
+                                  :invoke-trace-id trace-id
+                                  :recorded true
+                                  :relayed false})
+
+              ws-relayed?
+              (json-response 200 {:ok true
+                                  :agent-id aid
+                                  :invoke-trace-id trace-id
+                                  :recorded false
+                                  :relayed true})
+
+              (:attempted? local-record)
+              (json-response 502 {:ok false
+                                  :err "invoke-delivery-record-failed"
+                                  :message (or (:error local-record)
+                                               "delivery receipt could not be written")})
+
+              :else
+              (json-response 503 {:ok false
+                                  :err "invoke-delivery-unavailable"
+                                  :message "invoke delivery recorder not available on this node"}))))))))
 
 (defn- handle-irc-history
   "GET /api/alpha/irc/history — recent IRC messages in chat-friendly format.

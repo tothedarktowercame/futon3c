@@ -397,7 +397,57 @@
 ;; :tickle — watchdog scan results, stall/page history
 ;; -----------------------------------------------------------------------------
 
-(defn- format-tickle-state
+(defn- format-tickle-conductor
+  "Format FM conductor state for the tickle blackboard."
+  [conductor]
+  (when conductor
+    (let [now-ms (System/currentTimeMillis)
+          agents (:agents conductor)
+          cycles (:cycles conductor 0)
+          step-ms (:step-ms conductor)
+          last-cycle (:last-cycle conductor)
+          problem-id (:problem-id conductor "FM-001")
+          rotation (:rotation conductor)
+          cooldowns (:cooldowns conductor)
+          idx (:idx conductor 0)
+          next-agent (when (seq rotation)
+                       (nth rotation (mod idx (count rotation))))]
+      (str "FM Conductor — " problem-id "\n"
+           (str/join (repeat 40 "─")) "\n"
+           "Cycles: " cycles
+           (when step-ms (str "  Step: " step-ms))
+           "\n"
+           (if-let [next-at (:next-at conductor)]
+             (str "Next:   " next-at "\n")
+             "")
+           "\n"
+           "Agents:\n"
+           (if (seq agents)
+             (str/join "\n"
+               (map (fn [line] (str "  " line)) agents))
+             (str/join "\n"
+               (map (fn [a]
+                      (let [marker (if (= a next-agent) "▶ " "  ")
+                            cd-ms (get cooldowns a)
+                            cd-text (if cd-ms
+                                      (let [ago-s (quot (- now-ms cd-ms) 1000)]
+                                        (str "(paged " ago-s "s ago)"))
+                                      "ready")]
+                        (str "  " marker a " → " cd-text)))
+                    rotation)))
+           "\n"
+           (when last-cycle
+             (str "\nLast: " (:target last-cycle) " "
+                  (name (or (:action last-cycle) :unknown))
+                  (when-let [text (:text last-cycle)]
+                    (str "\n  \"" (subs text 0 (min 70 (count text)))
+                         (when (> (count text) 70) "...") "\""))
+                  (when (:at last-cycle)
+                    (let [at-str (str (:at last-cycle))]
+                      (str "\n  at " (if (> (count at-str) 19) (subs at-str 11 19) at-str))))
+                  "\n"))))))
+
+(defn- format-tickle-watchdog
   "Format tickle watchdog state for blackboard."
   [state]
   (let [cycles (:cycles-completed state 0)
@@ -405,7 +455,8 @@
         history (:recent-history state)
         interval-ms (:interval-ms state)
         threshold-s (:threshold-seconds state)]
-    (str "Tickle Watchdog\n"
+    (str "Watchdog\n"
+         (str/join (repeat 40 "─")) "\n"
          "Cycles: " cycles
          (when interval-ms (str "  Interval: " (quot interval-ms 1000) "s"))
          (when threshold-s (str "  Threshold: " threshold-s "s"))
@@ -430,6 +481,25 @@
                                 " ok")))
                        (reverse history)))
                 "\n")))))
+
+(defn- format-tickle-state
+  "Format combined tickle state for blackboard.
+   State may contain :conductor (FM conductor) and/or :watchdog sections."
+  [state]
+  (let [conductor (:conductor state)
+        watchdog (:watchdog state)
+        ;; Backwards compat: if state has :cycles-completed at top level, it's pure watchdog
+        pure-watchdog? (and (not conductor) (:cycles-completed state))]
+    (str "Tickle\n"
+         (str/join (repeat 40 "═")) "\n\n"
+         (if pure-watchdog?
+           (format-tickle-watchdog state)
+           (str (when conductor
+                  (str (format-tickle-conductor conductor) "\n"))
+                (when watchdog
+                  (str (format-tickle-watchdog watchdog) "\n"))
+                (when (and (not conductor) (not watchdog) (not pure-watchdog?))
+                  "  (no active tickle processes)\n"))))))
 
 (defmethod render-blackboard :tickle [_ state]
   (format-tickle-state state))
@@ -527,31 +597,61 @@
 ;; :processes — CYDER process registry overview
 ;; -----------------------------------------------------------------------------
 
+(defn- format-state-lines
+  "Format a state map as indented key-value lines for the process buffer.
+   Handles vectors (one item per sub-line) and scalars."
+  [state-map indent]
+  (when (and state-map (map? state-map))
+    (->> (dissoc state-map :phase)
+         (mapcat (fn [[k v]]
+                   (cond
+                     (and (sequential? v) (seq v))
+                     (into [(str indent (name k) ":")]
+                           (map #(str indent "  " %) v))
+                     (some? v)
+                     [(str indent (name k) ": " v)]
+                     :else nil)))
+         (str/join "\n"))))
+
 (defn format-process-status
   "Format CYDER process registry for blackboard display.
-   Takes raw registry entries (with :process/state-fn) so it can read live state."
+   Separates running daemons/peripherals (with live state) from
+   infrastructure and mission docs."
   [registry-entries]
   (let [now-ms (System/currentTimeMillis)
-        by-layer (group-by :process/layer registry-entries)]
-    (str "Processes (" (count registry-entries) " registered)\n"
-         (when-let [repls (seq (get by-layer :repl))]
-           (str "\n  REPL-like (" (count repls) ")\n"
-                (str/join "\n"
-                  (map (fn [p]
-                         (let [last-active (format-relative-time
-                                            (str (:process/last-active p))
-                                            now-ms)
-                               phase (or (when-let [sf (:process/state-fn p)]
-                                           (try (:phase (sf)) (catch Exception _ nil)))
-                                         (get-in p [:process/metadata :phase]))]
-                           (str "  " (:process/id p)
-                                " [" (name (:process/type p)) "]"
-                                (when phase (str " " phase))
-                                (when last-active (str " (" last-active ")")))))
-                       repls))
-                "\n"))
-         (when-let [infras (seq (get by-layer :infra))]
-           (str "\n  Infrastructure (" (count infras) ")\n"
+        by-type (group-by :process/type registry-entries)
+        ;; Running processes: daemons, peripherals (not state-machines which are mission docs)
+        running (concat (get by-type :daemon)
+                        (get by-type :peripheral))
+        infra (get (group-by :process/layer registry-entries) :infra)
+        missions (get by-type :state-machine)]
+    (str "Processes\n"
+         (str/join (repeat 40 "─")) "\n"
+         ;; Running daemons/peripherals with live state
+         (if (seq running)
+           (str/join "\n\n"
+             (map (fn [p]
+                    (let [state (when-let [sf (:process/state-fn p)]
+                                  (try (sf) (catch Exception _ nil)))
+                          last-active (format-relative-time
+                                        (str (:process/last-active p))
+                                        now-ms)
+                          phase (or (:phase state)
+                                    (get-in p [:process/metadata :phase]))
+                          state-text (format-state-lines state "    ")]
+                      (str "  ● " (:process/id p)
+                           " [" (name (:process/type p)) "]"
+                           (when last-active (str " (" last-active ")"))
+                           (when phase (str "\n    phase: " phase))
+                           (when (and state-text (not (str/blank? state-text)))
+                             (str "\n" state-text)))))
+                  running))
+           "  (no running daemons)")
+         "\n"
+         ;; Infrastructure
+         (when (seq infra)
+           (str "\n" (str/join (repeat 40 "─")) "\n"
+                "Infrastructure (" (count infra) ")\n"
                 (str/join "\n"
                   (map (fn [p]
                          (let [last-active (format-relative-time
@@ -560,8 +660,16 @@
                            (str "  " (:process/id p)
                                 " [" (name (:process/type p)) "]"
                                 (when last-active (str " (" last-active ")")))))
-                       infras))
-                "\n")))))
+                       infra))
+                "\n"))
+         ;; Missions — just a count, don't clutter
+         (when (seq missions)
+           (let [active (filter (fn [m]
+                                  (let [phase (get-in m [:process/metadata :phase] "")]
+                                    (not (re-find #"(?i)done|complete|closed" phase))))
+                                missions)]
+             (str "\nMissions: " (count active) " active, "
+                  (- (count missions) (count active)) " done\n"))))))
 
 (defn project-processes!
   "Project CYDER process registry to the *processes* blackboard buffer.

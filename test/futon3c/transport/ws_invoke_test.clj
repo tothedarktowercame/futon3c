@@ -23,3 +23,16 @@
     (is (= ws-invoke/timeout-sentinel
            (ws-invoke/invoke! "agent-2" "slow" nil 10)))
     (ws-invoke/unregister! "agent-2")))
+
+(deftest ws-send-frame-best-effort
+  (testing "send-frame! serializes JSON over an active WS sender"
+    (let [sent (atom nil)]
+      (ws-invoke/register! "agent-3" #(reset! sent %))
+      (is (true? (ws-invoke/send-frame! "agent-3" {"type" "invoke_delivery"
+                                                   "invoke_trace_id" "invoke-xyz"})))
+      (is (= {"type" "invoke_delivery"
+              "invoke_trace_id" "invoke-xyz"}
+             (some-> @sent (json/parse-string))))
+      (ws-invoke/unregister! "agent-3")))
+  (testing "send-frame! returns false when no WS sender exists"
+    (is (false? (ws-invoke/send-frame! "agent-missing" {"type" "invoke_delivery"})))))

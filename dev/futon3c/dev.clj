@@ -1235,21 +1235,22 @@ AGENTS:
 
 REPO: tothedarktowercame/18_Category_theory_homological_algebra
 LOCAL PATH: /home/joe/code/18_Category_theory_homological_algebra
-Always include the local path when paging codex-1 about implementation work.
+When paging codex-1, include an explicit filesystem path only when the path
+itself is operationally required; otherwise prefer repo/corpus names in IRC-visible text.
 
 LOCAL DATA SOURCES (all on laptop, accessible to codex-1):
-  1. arXiv math.CT eprints: ~/code/futon6/data/arxiv-math-ct-eprints/
-     ~9900 paper sources (.tex/.tar.gz). Grep for CT concepts here.
-  2. math.SE processed: ~/code/storage/math-processed-gpu/
+  1. arXiv math.CT eprints corpus (\"arxiv-math-ct-eprints\")
+     Workspace-local paper sources (~9900 .tex/.tar.gz files). Grep for CT concepts here.
+  2. math.SE processed corpus (\"math-processed-gpu\")
      entities.json, relations.json, hypergraphs.json, thread-wiring-ct.json
      GPU-processed StackExchange math data with CT patterns and NER terms.
-  3. MathOverflow processed: ~/code/storage/mo-processed-gpu/
+  3. MathOverflow processed corpus (\"mo-processed-gpu\")
      Same structure as math-processed-gpu. Research-level Q&A.
-  4. PlanetMath dictionary: ~/code/futon6/data/pm-all-terms/pm-full-dictionary.json
+  4. PlanetMath dictionary corpus (\"pm-full-dictionary.json\")
      26944 terms with MSC codes, domains, confidence. Use to avoid duplicates.
-  5. nLab CT patterns: ~/code/futon6/data/nlab-ct-reference.json
+  5. nLab CT patterns corpus (\"nlab-ct-reference.json\")
      8 CT pattern types mapped to ~20k nLab pages.
-  6. arXiv metadata: ~/code/futon6/data/arxiv-ct-metadata.jsonl
+  6. arXiv metadata corpus (\"arxiv-ct-metadata.jsonl\")
      Title, abstract, authors, categories for ~9900 math.CT papers.
 
 RESEARCH WORKFLOW:
@@ -1308,6 +1309,7 @@ RESPOND WITH ONLY:
 - PASS")
 
 (declare tickle-build-context)
+(declare !fm-conductor)
 
 (defn make-tickle-invoke-fn
   "Create an invoke-fn for tickle-1 that wraps each prompt with the tickle
@@ -1755,6 +1757,62 @@ RESPOND WITH ONLY:
        (take-last n)
        vec))
 
+(defn- refresh-processes-buffer!
+  "Re-project the *processes* buffer to all connected Emacs instances."
+  []
+  (try
+    (let [entries (vals @cyder/!processes)]
+      (bb/project-processes! entries))
+    (catch Exception _ nil)))
+
+(defn project-tickle-state!
+  "Project combined tickle state (conductor + watchdog) to the *tickle* blackboard."
+  []
+  (try
+    (let [conductor-handle @!fm-conductor
+          conductor-state (when conductor-handle
+                            @(:conductor-state conductor-handle))
+          watchdog-state (when @!tickle
+                            (when-let [p (get @cyder/!processes "tickle-watchdog")]
+                              (when-let [sf (:process/state-fn p)]
+                                (try (sf) (catch Exception _ nil)))))
+          now-ms (System/currentTimeMillis)
+          state (cond-> {}
+                  conductor-state
+                  (assoc :conductor
+                         (let [s conductor-state
+                               rotation (or (:rotation s) ["claude-1" "codex-1" "claude-2"])
+                               idx (or (:idx s) 0)
+                               next-agent (nth rotation (mod idx (count rotation)))
+                               cooldowns (:last-paged s)
+                               cooldown-ms 900000
+                               fmt-cd (fn [a]
+                                        (let [marker (if (= a next-agent) "▶ " "  ")]
+                                          (if-let [ts (get cooldowns a)]
+                                            (let [ago-s (quot (- now-ms ts) 1000)
+                                                  remaining (- (quot cooldown-ms 1000) ago-s)]
+                                              (if (pos? remaining)
+                                                (str marker a " → cooldown " remaining "s")
+                                                (str marker a " → ready (paged " ago-s "s ago)")))
+                                            (str marker a " → ready"))))]
+                           (let [base-ms (or (:last-cycle-ms s) (:started-at-ms s))
+                                 step-ms-raw 300000
+                                 next-at (when base-ms
+                                           (str (.truncatedTo
+                                                  (Instant/ofEpochMilli (+ base-ms step-ms-raw))
+                                                  java.time.temporal.ChronoUnit/SECONDS)))]
+                             (cond-> {:problem-id (or (:problem-id s) "FM-001")
+                                      :cycles (:cycles-completed s 0)
+                                      :step-ms "300s"
+                                      :rotation rotation
+                                      :agents (mapv fmt-cd rotation)
+                                      :idx idx
+                                      :last-cycle (:last-cycle s)}
+                               next-at (assoc :next-at next-at)))))
+                  watchdog-state (assoc :watchdog watchdog-state))]
+      (bb/project! :tickle state))
+    (catch Exception _ nil)))
+
 (defn- make-fm-conductor-config
   "Build the config map for tickle_orchestrate FM conductor functions,
    wiring in dev-specific IRC helpers and evidence store."
@@ -1762,7 +1820,11 @@ RESPOND WITH ONLY:
   (merge {:problem-id "FM-001"
           :irc-read-fn #(irc-recent-channel "#math" 20)
           :bridge-send-fn (make-bridge-irc-send-fn)
-          :evidence-store @!evidence-store}
+          :evidence-store @!evidence-store
+          :on-cycle-fn (fn [_result]
+                         (cyder/touch! "fm-conductor")
+                         (refresh-processes-buffer!)
+                         (project-tickle-state!))}
          overrides))
 
 (defonce !fm-conductor (atom nil))
@@ -1782,15 +1844,72 @@ RESPOND WITH ONLY:
 
 (defn start-fm-conductor!
   "Start the FM-001 conductor loop with round-robin agent tickling.
-   Delegates to tickle_orchestrate/start-fm-conductor!."
+   Delegates to tickle_orchestrate/start-fm-conductor!.
+   Registers with CYDER (I-6..I-10) for inspectability."
   ([] (start-fm-conductor! {}))
   ([{:keys [step-ms] :or {step-ms 300000}}]
    (when-let [old @!fm-conductor]
      ((:stop-fn old))
+     (cyder/deregister! "fm-conductor")
      (println "[fm-conductor] Stopped previous conductor."))
-   (let [handle (orch/start-fm-conductor!
-                  (make-fm-conductor-config {:step-ms step-ms}))]
+   (let [config (make-fm-conductor-config {:step-ms step-ms})
+         handle (orch/start-fm-conductor! config)]
      (reset! !fm-conductor handle)
+     ;; Register with CYDER for inspection (M-cyder I-6..I-10)
+     (cyder/deregister! "fm-conductor")
+     (cyder/register!
+      {:id "fm-conductor"
+       :type :daemon
+       :layer :repl
+       :stop-fn (fn []
+                  (orch/stop-fm-conductor! handle)
+                  (reset! !fm-conductor nil))
+       :state-fn (fn []
+                   (let [state @(:conductor-state handle)
+                         now-ms (System/currentTimeMillis)
+                         cooldowns (:last-paged state)
+                         rotation (or (:rotation state)
+                                      (:rotation config)
+                                      ["claude-1" "codex-1" "claude-2"])
+                         idx (or (:idx state) 0)
+                         next-agent (nth rotation (mod idx (count rotation)))
+                         cycles (or (:cycles-completed state) 0)
+                         last-cycle (:last-cycle state)
+                         last-cycle-ms (:last-cycle-ms state)
+                         base-ms (or last-cycle-ms (:started-at-ms state))
+                         next-at (when base-ms
+                                   (str (.truncatedTo
+                                          (Instant/ofEpochMilli (+ base-ms step-ms))
+                                          java.time.temporal.ChronoUnit/SECONDS)))
+                         fmt-cd (fn [agent-id]
+                                  (let [marker (if (= agent-id next-agent) "▶ " "  ")]
+                                    (if-let [ts (get cooldowns agent-id)]
+                                      (let [ago-s (quot (- now-ms ts) 1000)
+                                            cooldown-s (quot (or (:cooldown-ms config) (* 15 60 1000)) 1000)
+                                            remaining (- cooldown-s ago-s)]
+                                        (if (pos? remaining)
+                                          (str marker agent-id " → cooldown " remaining "s")
+                                          (str marker agent-id " → ready (paged " ago-s "s ago)")))
+                                      (str marker agent-id " → ready"))))]
+                     (cond-> {:problem-id (or (:problem-id config) "FM-001")
+                              :step-ms (str (quot step-ms 1000) "s")
+                              :cycles cycles
+                              :agents (mapv fmt-cd rotation)}
+                       next-at (assoc :next-at next-at)
+                       last-cycle (assoc :last (str (:target last-cycle) " "
+                                                    (name (:action last-cycle))
+                                                    (when (:text last-cycle)
+                                                      (str ": " (subs (:text last-cycle)
+                                                                       0 (min 50 (count (:text last-cycle)))))))))))
+       :step-fn (fn []
+                  ;; Single-step: run one cycle for the first agent in rotation.
+                  ;; Cooldown is bypassed for manual steps (deliberate action).
+                  (let [rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
+                        target (first rotation)]
+                    (orch/fm-conduct-cycle! target
+                                            (assoc config :cooldown-ms 0))))
+       :metadata {:step-ms step-ms
+                  :problem-id (or (:problem-id config) "FM-001")}})
      handle)))
 
 (defn stop-fm-conductor!
@@ -1798,7 +1917,8 @@ RESPOND WITH ONLY:
   []
   (when-let [h @!fm-conductor]
     (orch/stop-fm-conductor! h)
-    (reset! !fm-conductor nil)))
+    (reset! !fm-conductor nil)
+    (cyder/deregister! "fm-conductor")))
 
 ;; =============================================================================
 ;; Tickle orchestration — REPL helpers (CT work)
@@ -3534,6 +3654,19 @@ RESPOND WITH ONLY:
 (def ^:private irc-ref-path-re
   #"(?i)(?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b")
 
+(defn- surface-safe-local-paths
+  "Normalize local filesystem prefixes before projecting text to IRC."
+  [text]
+  (let [raw (str (or text ""))
+        home (some-> (System/getProperty "user.home") str str/trim not-empty)
+        replacements (cond-> []
+                       home (conj [(str home "/code/") "~/code/"])
+                       home (conj [(str home "/") "~/"]))]
+    (reduce (fn [s [prefix replacement]]
+              (str/replace s (re-pattern (java.util.regex.Pattern/quote prefix)) replacement))
+            raw
+            replacements)))
+
 (defn- truncate-with-ellipsis
   [s max-len]
   (let [txt (str (or s ""))]
@@ -3543,7 +3676,7 @@ RESPOND WITH ONLY:
 
 (defn- extract-artifact-refs
   [text]
-  (let [raw (or text "")
+  (let [raw (surface-safe-local-paths text)
         github-refs (re-seq irc-ref-github-re raw)
         pr-refs (re-seq irc-ref-pr-re raw)
         commit-refs (map second (re-seq irc-ref-commit-re raw))
@@ -3558,7 +3691,7 @@ RESPOND WITH ONLY:
 (defn- summarize-irc-result
   "Render agent text as a short IRC-friendly line with artifact refs."
   [text]
-  (let [raw (str (or text ""))
+  (let [raw (surface-safe-local-paths text)
         normalized (-> raw
                        (str/replace #"\s+" " ")
                        str/trim)
@@ -3621,6 +3754,7 @@ RESPOND WITH ONLY:
           (not (str/blank? stripped)) stripped
           (not (str/blank? directive-msg)) directive-msg
           :else (str/trim (or text "")))
+        surface-safe-local-paths
         enforce-irc-planning-guard)))
 
 (defn- invoke-error-text
