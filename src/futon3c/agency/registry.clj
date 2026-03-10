@@ -23,6 +23,8 @@
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
+(declare registry-status)
+
 ;; =============================================================================
 ;; Agent Registry — single atom, single routing authority (R2)
 ;; =============================================================================
@@ -165,6 +167,24 @@
       (try (on-idle agent-id outcome)
            (catch Exception e
              (println "[registry] on-idle callback error:" (.getMessage e)))))))
+
+(defn- broadcast-agents-ws!
+  "Broadcast agent status summary to all connected WS bridges."
+  []
+  (future
+    (try
+      (let [status (registry-status)
+            summary (into {}
+                          (map (fn [[aid info]]
+                                 [aid {:status (:status info)
+                                       :type (:type info)
+                                       :invoke-activity (:invoke-activity info)}]))
+                          (:agents status))]
+        (ws-invoke/broadcast-frame!
+         {"type" "agents_status"
+          "agents" summary
+          "count" (:count status)}))
+      (catch Throwable _ nil))))
 
 (def ^:private bell-file "/tmp/futon-bell.edn")
 
@@ -376,7 +396,8 @@
                                                              (:agent/invoke-activity a)
                                                              (assoc :invoke-activity (:agent/invoke-activity a)))])
                                                     @!registry))
-                                 :count (count @!registry)}))
+                                 :count (count @!registry)})
+                               (broadcast-agents-ws!))
              mark-invoking! (fn []
                               (swap! !registry
                                      (fn [m]
@@ -604,7 +625,8 @@
                                 (assoc :agent/session-id (some-> (:session-id state) str str/trim)))]
                    (assoc m aid-val agent*))
                  m)))
-      (bb/project-agents! (registry-status)))
+      (bb/project-agents! (registry-status))
+      (broadcast-agents-ws!))
     {:ok true
      :agent-id aid-val
      :source source-key

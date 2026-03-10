@@ -50,6 +50,15 @@
         false))
     false))
 
+(defn broadcast-frame!
+  "Send FRAME to all connected WS agents. Best-effort, fire-and-forget."
+  [frame]
+  (let [json-str (json/generate-string frame)]
+    (doseq [[_aid {:keys [send]}] @!agents]
+      (try
+        (send json-str)
+        (catch Throwable _ nil)))))
+
 (defn- deliver-timeout! [pending invoke-id]
   (when-let [p (get @pending invoke-id)]
     (swap! pending dissoc invoke-id)
