@@ -19,6 +19,8 @@ export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
 # --- Agents: Codex runs here, Claude runs on Linode ---
 export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-true}"
 export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-false}"
+export FUTON3C_TICKLE_AUTOSTART="${FUTON3C_TICKLE_AUTOSTART:-false}"
+export FUTON3C_FM_CONDUCTOR_AUTOSTART="${FUTON3C_FM_CONDUCTOR_AUTOSTART:-false}"
 
 # --- Codex settings ---
 export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"

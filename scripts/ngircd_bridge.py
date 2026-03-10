@@ -720,6 +720,62 @@ class IRCBot:
             return False
         return True
 
+    def _emit_success_reply(self, response, reply_ch, job_id, multi_message=False):
+        """Render and send a successful invoke reply to IRC."""
+        # Claude/corpus/codex: clean IRC output with no queue/done framing.
+        is_clean = self._uses_clean_irc_output()
+        if is_clean:
+            if self.nick == "corpus":
+                summary = self._multiline_result_for_irc(response.get("result", ""))
+                self._say(summary, max_lines=8, channel=reply_ch)
+            else:
+                if multi_message:
+                    summary = self._multiline_result_for_irc(response.get("result", ""))
+                    max_lines = 8
+                else:
+                    summary = self._summarize_invoke_result(
+                        response.get("result", ""),
+                        clean=True,
+                    )
+                    max_lines = 2
+                self._say(summary, max_lines=max_lines, channel=reply_ch)
+            return
+
+        if multi_message:
+            summary = self._multiline_result_for_irc(response.get("result", ""))
+        else:
+            summary = self._summarize_invoke_result(response.get("result", ""))
+        stats = self._execution_stats(response.get("invoke_meta"))
+        execution_note = ""
+        if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
+            execution_note = (
+                f"[no execution evidence: tool-events={stats['tool_events']}, "
+                f"command-events={stats['command_events']}]"
+            )
+            summary = f"{summary} {execution_note}".strip()
+        sid = response.get("session_id")
+        if CODEX_USE_RAW_OUTPUT:
+            raw_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
+            if raw_text:
+                refs = self._extract_artifact_refs(raw_text)
+                header_parts = [f"[done {job_id}]"]
+                if sid:
+                    header_parts.append(f"(session {sid[:8]})")
+                if refs:
+                    header_parts.append(f"refs: {', '.join(refs[:3])}")
+                if execution_note:
+                    header_parts.append(execution_note)
+                header = " ".join(part for part in header_parts if part).strip()
+                self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
+                return
+        max_lines = 8 if multi_message else 2
+        if sid:
+            self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
+                      max_lines=max_lines, channel=reply_ch)
+        else:
+            self._say(f"[done {job_id}] {summary}",
+                      max_lines=max_lines, channel=reply_ch)
+
     def _announce_invoke(self, sender, full_prompt, mission_id, reply_channel=None):
         """Record a canonical queued job in the server before any IRC acceptance."""
         requested_job_id = self._next_job_id()
@@ -793,51 +849,7 @@ class IRCBot:
                     )
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
-                    # Claude: clean output (no [done]/[accepted] framing)
-                    # Codex: full framing with artifact refs and session IDs
-                    is_clean = self.nick.startswith("claude") or self.nick == "corpus"
-                    if is_clean:
-                        if self.nick == "corpus":
-                            summary = self._multiline_result_for_irc(response.get("result", ""))
-                            self._say(summary, max_lines=8, channel=reply_ch)
-                        else:
-                            summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
-                            self._say(summary, max_lines=4, channel=reply_ch)
-                    else:
-                        if multi_message:
-                            summary = self._multiline_result_for_irc(response.get("result", ""))
-                        else:
-                            summary = self._summarize_invoke_result(response.get("result", ""))
-                        stats = self._execution_stats(response.get("invoke_meta"))
-                        execution_note = ""
-                        if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-                            execution_note = (
-                                f"[no execution evidence: tool-events={stats['tool_events']}, "
-                                f"command-events={stats['command_events']}]"
-                            )
-                            summary = f"{summary} {execution_note}".strip()
-                        sid = response.get("session_id")
-                        if CODEX_USE_RAW_OUTPUT:
-                            raw_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
-                            if raw_text:
-                                refs = self._extract_artifact_refs(raw_text)
-                                header_parts = [f"[done {job_id}]"]
-                                if sid:
-                                    header_parts.append(f"(session {sid[:8]})")
-                                if refs:
-                                    header_parts.append(f"refs: {', '.join(refs[:3])}")
-                                if execution_note:
-                                    header_parts.append(execution_note)
-                                header = " ".join(part for part in header_parts if part).strip()
-                                self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
-                                continue
-                        max_lines = 8 if multi_message else 2
-                        if sid:
-                            self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
-                                      max_lines=max_lines, channel=reply_ch)
-                        else:
-                            self._say(f"[done {job_id}] {summary}",
-                                      max_lines=max_lines, channel=reply_ch)
+                    self._emit_success_reply(response, reply_ch, job_id, multi_message=multi_message)
                     self._record_delivery_receipt(
                         invoke_meta,
                         delivered=True,
@@ -1064,6 +1076,14 @@ class IRCBot:
         clipped = [self._truncate(ln, max_len=180) for ln in lines]
         return "\n".join(clipped)
 
+    def _uses_clean_irc_output(self):
+        """Return true when this bot should avoid queue/done framing on IRC."""
+        return (
+            self.nick.startswith("claude")
+            or self.nick == "corpus"
+            or self.agent_id.startswith("codex")
+        )
+
     def _handle_mention(self, sender, text, channel=None):
         """Process a mention: queue invoke and ack immediately."""
         channel = channel or self.channel
@@ -1108,8 +1128,7 @@ class IRCBot:
             pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
         log(self.nick, f"Queued {job_id} ({mode}) from {sender} on {channel}: {prompt_text[:80]}")
-        # Claude: no [accepted] noise — just process silently
-        if not self.nick.startswith("claude"):
+        if not self._uses_clean_irc_output():
             self._say(
                 f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1, channel=channel,
@@ -1153,7 +1172,7 @@ class IRCBot:
             pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
         log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender} on {channel}: {text[:80]}")
-        if not self.nick.startswith("claude"):
+        if not self._uses_clean_irc_output():
             self._say(
                 f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1, channel=channel,
