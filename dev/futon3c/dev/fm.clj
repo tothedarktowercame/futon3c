@@ -388,10 +388,7 @@
            (when @running
              ;; Drain any bells that weren't consumed by the immediate dispatch
              (let [queue-results (dispatch-from-queue! config conductor-state)
-                   ;; Also scan rotation for idle agents (catches agents that
-                   ;; went idle before the watcher was installed)
-                   scan-results (fm-dispatch-idle-agents! config)
-                   results (concat queue-results scan-results)]
+                   results queue-results]
                (swap! conductor-state assoc
                       :cycles-completed (inc (or (:cycles-completed @conductor-state) 0))
                       :last-cycle (when (seq results) (last results))
@@ -450,7 +447,7 @@
                                                       (str ": " (subs (:text last-cycle)
                                                                        0 (min 50 (count (:text last-cycle)))))))))))
        :step-fn (fn []
-                  (fm-dispatch-idle-agents! (assoc config :cooldown-ms 0)))
+                  (dispatch-from-queue! config conductor-state))
        :metadata {:step-ms step-ms
                   :problem-id (or (:problem-id config) "FM-001")}})
      handle)))
