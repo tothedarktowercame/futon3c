@@ -18,8 +18,7 @@
   (:require [futon3c.agency.registry :as reg]
             [clojure.string :as str]
             [cheshire.core :as json]
-            [org.httpkit.client :as http])
-  (:import [java.util UUID]))
+            [org.httpkit.client :as http]))
 
 (def ^:private default-proxy-timeout-ms 600000)
 
@@ -63,6 +62,27 @@
   "Return this Agency's self URL."
   []
   (:self-url @!config))
+
+(defn- parse-agent-type
+  [x]
+  (cond
+    (keyword? x) x
+    (string? x) (when-not (str/blank? x) (keyword x))
+    :else nil))
+
+(defn- parse-capability
+  [x]
+  (cond
+    (keyword? x) x
+    (string? x) (when-not (str/blank? x) (keyword x))
+    :else nil))
+
+(defn- parse-agent-id
+  [x]
+  (cond
+    (keyword? x) (name x)
+    (string? x) (when-not (str/blank? x) (str/trim x))
+    :else nil))
 
 ;; =============================================================================
 ;; Proxy invoke-fn — forwards dispatch to origin Agency
@@ -170,3 +190,102 @@
   "Remove the federation announcement hook."
   []
   (reg/set-on-register! nil))
+
+;; =============================================================================
+;; Peer import / sync
+;; =============================================================================
+
+(defn- proxy-metadata
+  [origin-url]
+  {:proxy? true
+   :remote? true
+   :origin-url origin-url})
+
+(defn- upsert-proxy-agent!
+  [origin-url agent-id agent-info]
+  (let [aid (parse-agent-id agent-id)
+        agent-type (parse-agent-type (:type agent-info))
+        capabilities (->> (:capabilities agent-info)
+                          (keep parse-capability)
+                          vec)
+        existing (when (seq aid) (reg/get-agent aid))]
+    (cond
+      (str/blank? aid)
+      {:ok false :action :invalid-agent-id}
+
+      (nil? agent-type)
+      {:ok false :agent-id aid :action :invalid-type}
+
+      ;; Never overwrite a real local agent with a proxy import.
+      (and existing (not (get-in existing [:agent/metadata :proxy?])))
+      {:ok true :agent-id aid :action :skipped-local}
+
+      ;; Existing proxy from another origin is a real conflict; keep the current one.
+      (and existing
+           (get-in existing [:agent/metadata :proxy?])
+           (not= origin-url (get-in existing [:agent/metadata :origin-url])))
+      {:ok false
+       :agent-id aid
+       :action :origin-conflict
+       :origin-url (get-in existing [:agent/metadata :origin-url])}
+
+      existing
+      (do
+        (reg/update-agent! aid
+                           :agent/type agent-type
+                           :agent/invoke-fn (make-proxy-invoke-fn origin-url aid)
+                           :agent/capabilities capabilities
+                           :agent/metadata (proxy-metadata origin-url))
+        {:ok true :agent-id aid :action :updated})
+
+      :else
+      (let [result (reg/register-agent!
+                    {:agent-id {:id/value aid :id/type :continuity}
+                     :type agent-type
+                     :invoke-fn (make-proxy-invoke-fn origin-url aid)
+                     :capabilities capabilities
+                     :metadata (proxy-metadata origin-url)})]
+        (if (and (map? result) (= false (:ok result)))
+          {:ok false
+           :agent-id aid
+           :action :register-failed
+           :error result}
+          {:ok true :agent-id aid :action :registered})))))
+
+(defn sync-peer!
+  "Fetch currently registered agents from PEER-URL and mirror them locally as proxies.
+   Real local agents always win over imported proxy state."
+  [peer-url]
+  (try
+    (let [resp @(http/get (str peer-url "/api/alpha/agents")
+                          {:headers {"Accept" "application/json"}
+                           :timeout 5000})
+          status (:status resp)
+          parsed (try
+                   (json/parse-string (or (:body resp) "{}") true)
+                   (catch Exception _
+                     {}))]
+      (if (and status (< status 400) (= true (:ok parsed)))
+        (let [results (->> (:agents parsed)
+                           (map (fn [[agent-id agent-info]]
+                                  (upsert-proxy-agent! peer-url agent-id agent-info)))
+                           vec)]
+          {:ok true
+           :peer peer-url
+           :count (count results)
+           :results results})
+        {:ok false
+         :peer peer-url
+         :status status
+         :error (or (:error parsed)
+                    (:message parsed)
+                    "peer-sync-failed")}))
+    (catch Exception e
+      {:ok false
+       :peer peer-url
+       :error (.getMessage e)})))
+
+(defn sync-peers!
+  "Mirror currently registered agents from all configured peers into the local registry."
+  []
+  (mapv sync-peer! (peers)))

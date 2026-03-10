@@ -7,6 +7,7 @@
    typed-identifiers (R6)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
+            [futon3c.blackboard]
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.ws.invoke :as ws-invoke]))
@@ -275,6 +276,55 @@
         (is (= "codex exec running (external surface)"
                (:invoke-activity info)))))))
 
+(deftest registry-status-surfaces-explicit-external-invoke-state
+  (testing "explicit external invoke heartbeats mark an agent invoking even without resume process detection"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-repl")
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]})
+    (with-redefs [reg/running-codex-session-ids (constantly #{})
+                  futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                  futon3c.blackboard/project-agents! (fn [_] nil)]
+      (reg/report-external-invoke!
+       "codex-repl"
+       "emacs-codex-repl"
+       {:status :invoking
+        :session-id "019cd4ad-c5b9-76c0-af08-50d8af0803c7"
+        :prompt-preview "Hi Codex please recover"
+        :activity "Command Execution"})
+      (let [info (get-in (reg/registry-status) [:agents "codex-repl"])]
+        (is (= :invoking (:status info)))
+        (is (= "019cd4ad-c5b9-76c0-af08-50d8af0803c7" (:session-id info)))
+        (is (= "Hi Codex please recover" (:invoke-prompt-preview info)))
+        (is (= "Command Execution" (:invoke-activity info))))
+      (reg/clear-external-invoke! "codex-repl" "emacs-codex-repl")
+      (is (= :idle (get-in (reg/registry-status) [:agents "codex-repl" :status]))))))
+
+(deftest registry-status-treats-heartbeating-codex-as-idle-when-clear
+  (testing "codex agent stays idle after clear even if resume process is running"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-heartbeat")
+      :type :codex
+      :invoke-fn nil
+      :session-id "019cd4ad-c5b9-76c0-af08-50d8af0803c7"
+      :capabilities [:edit]})
+    (with-redefs [reg/running-codex-session-ids
+                  (constantly #{"019cd4ad-c5b9-76c0-af08-50d8af0803c7"})
+                  futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                  futon3c.blackboard/project-agents! (fn [_] nil)]
+      ;; Start heartbeat, then clear as if invoke finished
+      (reg/report-external-invoke!
+       "codex-heartbeat"
+       "emacs-codex-repl"
+       {:status :invoking
+        :session-id "019cd4ad-c5b9-76c0-af08-50d8af0803c7"
+        :prompt-preview "doing work"})
+      (reg/clear-external-invoke! "codex-heartbeat" "emacs-codex-repl")
+      (let [info (get-in (reg/registry-status) [:agents "codex-heartbeat"])]
+        (is (= :idle (:status info)))
+        (is (= "019cd4ad-c5b9-76c0-af08-50d8af0803c7" (:session-id info)))))))
+
 (deftest registry-status-includes-ws-connected-unregistered
   (testing "registry-status surfaces ws-connected agent ids that are not registered locally"
     (with-redefs [reg/running-codex-session-ids (constantly #{})
@@ -288,6 +338,27 @@
       (let [status (reg/registry-status)]
         (is (= ["claude-remote" "codex-1"] (:ws-connected status)))
         (is (= ["claude-remote"] (:ws-unregistered status)))))))
+
+(deftest registry-status-merges-canonical-queued-job-counts
+  (testing "registry-status surfaces queued work from the invoke ledger"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-queued")
+      :type :codex
+      :invoke-fn (fn [_ _] {:result "ok"})
+      :capabilities [:edit]})
+    (with-redefs [reg/running-codex-session-ids (constantly #{})
+                  futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                  reg/*resolve-invoke-job-counts*
+                  (fn []
+                    (fn []
+                      {"codex-queued" {:queued-jobs 1
+                                       :running-jobs 0
+                                       :nonterminal-jobs 1}}))]
+      (let [info (get-in (reg/registry-status) [:agents "codex-queued"])]
+        (is (= :idle (:status info)))
+        (is (= 1 (:queued-jobs info)))
+        (is (= 0 (:running-jobs info)))
+        (is (= 1 (:nonterminal-jobs info)))))))
 
 (deftest shutdown-all-clears-registry
   (testing "shutdown-all! removes all agents"

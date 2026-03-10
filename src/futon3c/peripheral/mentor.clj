@@ -333,8 +333,8 @@
                                   {:tool tool :result result :at (str (Instant/now))})]
             ;; Checkpoint to futon1a if requested
             (when checkpoint? (checkpoint! new-state))
-            ;; Project to blackboard
-            (bb/project! :mentor new-state)
+            ;; Project to blackboard (stable slot 2)
+            (bb/project-mentor! new-state)
             (common/maybe-append-evidence! new-state ev)
             {:ok true :state new-state :result result :evidence ev})))))
 

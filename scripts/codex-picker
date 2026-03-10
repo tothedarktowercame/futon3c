@@ -287,6 +287,10 @@ launch_repl() {
   fi
 
   elisp="(progn
+    ;; Ensure agent chat sees the launcher-probed Agency base before it loads,
+    ;; so availability checks hit the actual futon3c port (47070 on laptops).
+    (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\")
+    (setq agent-chat-agency-base-url \"${escaped_agency_base}\")
     (load \"${escaped_ui}\")
     (load \"${escaped_repl}\")
     (when ${new_form}
@@ -297,7 +301,8 @@ launch_repl() {
           (delete-process p)))
       (when (get-buffer \"*codex-repl*\")
         (kill-buffer \"*codex-repl*\")))
-    (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\")
+    (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\"
+          agent-chat-agency-base-url \"${escaped_agency_base}\")
     (setq codex-repl-session-file \"${escaped_session_file}\")
     (setq codex-repl-evidence-url \"${escaped_evidence_url}\")
     (setq codex-repl-irc-send-base-url ${irc_send_form})

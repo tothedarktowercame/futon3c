@@ -4,7 +4,6 @@
             [cheshire.core :as json]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as fed]
-            [futon3c.social.test-fixtures :as fix]
             [org.httpkit.client :as http]))
 
 (use-fixtures
@@ -193,3 +192,53 @@
         :capabilities [:edit]})
       (Thread/sleep 100)
       (is (= 0 (count @announced))))))
+
+;; =============================================================================
+;; Peer import / sync
+;; =============================================================================
+
+(deftest sync-peer-registers-remote-agent-proxies
+  (testing "sync-peer! imports remote agents as local proxy records"
+    (with-redefs [http/get (fn [_url _opts]
+                             (doto (promise)
+                               (deliver {:status 200
+                                         :body "{\"ok\":true,\"agents\":{\"tickle-1\":{\"type\":\"tickle\",\"capabilities\":[\"coordination/orchestrate\"]}}}"})))]
+      (let [result (fed/sync-peer! "http://peer:7070")
+            tickle (reg/get-agent "tickle-1")]
+        (is (:ok result))
+        (is (= 1 (:count result)))
+        (is (= :tickle (:agent/type tickle)))
+        (is (= [:coordination/orchestrate] (:agent/capabilities tickle)))
+        (is (= true (get-in tickle [:agent/metadata :proxy?])))
+        (is (= true (get-in tickle [:agent/metadata :remote?])))
+        (is (= "http://peer:7070" (get-in tickle [:agent/metadata :origin-url])))))))
+
+(deftest sync-peer-does-not-overwrite-local-agent
+  (testing "sync-peer! leaves real local agents untouched when peer reports the same id"
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-1" :id/type :continuity}
+      :type :codex
+      :invoke-fn (fn [_ _] {:result "local"})
+      :capabilities [:edit]
+      :metadata {:local? true}})
+    (with-redefs [http/get (fn [_url _opts]
+                             (doto (promise)
+                               (deliver {:status 200
+                                         :body "{\"ok\":true,\"agents\":{\"codex-1\":{\"type\":\"codex\",\"capabilities\":[\"test\"]}}}"})))]
+      (let [result (fed/sync-peer! "http://peer:7070")
+            codex (reg/get-agent "codex-1")]
+        (is (:ok result))
+        (is (= :skipped-local (get-in result [:results 0 :action])))
+        (is (= [:edit] (:agent/capabilities codex)))
+        (is (nil? (get-in codex [:agent/metadata :proxy?])))))))
+
+(deftest sync-peers-imports-from-configured-peer-list
+  (testing "sync-peers! pulls all configured peers"
+    (fed/configure! {:peers ["http://peer-a:7070" "http://peer-b:7070"] :self-url nil})
+    (let [calls (atom [])]
+      (with-redefs [fed/sync-peer! (fn [peer-url]
+                                     (swap! calls conj peer-url)
+                                     {:ok true :peer peer-url :count 0 :results []})]
+        (let [results (fed/sync-peers!)]
+          (is (= ["http://peer-a:7070" "http://peer-b:7070"] @calls))
+          (is (= 2 (count results))))))))

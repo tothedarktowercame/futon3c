@@ -24,6 +24,7 @@
   :each
   (fn [f]
     (reg/reset-registry!)
+    (reg/set-on-invoke-complete! nil)
     (f)))
 
 ;; =============================================================================
@@ -166,3 +167,46 @@
       (reg/unregister-agent! (fix/make-agent-id "r5-race"))
       (deref f 3000 :timeout)
       (is (nil? (reg/get-agent (fix/make-agent-id "r5-race")))))))
+
+;; =============================================================================
+;; R7: Completion Bell Contract — contracted agents signal availability on done
+;; =============================================================================
+
+(deftest r7-contracted-agent-fires-completion-hook
+  (testing "successful invoke of a contracted agent triggers the registry completion hook"
+    (let [calls (atom [])]
+      (reg/set-on-invoke-complete!
+       (fn [agent result-map]
+         (swap! calls conj [(get-in agent [:agent/id :id/value])
+                            (:result result-map)])))
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "r7-agent")
+        :type :codex
+        :invoke-fn (fn [_p _s] {:result "done"})
+        :capabilities [:edit]})
+      (is (= {:ok true :result "done" :session-id nil}
+             (reg/invoke-agent! (fix/make-agent-id "r7-agent") "hi")))
+      (Thread/sleep 50)
+      (is (= [["r7-agent" "done"]] @calls))
+      (is (true? (get-in (reg/registry-status)
+                         [:agents "r7-agent" :completion-bell-required?]))))))
+
+(deftest r7-contract-opt-out-suppresses-completion-hook
+  (testing "agent metadata can explicitly opt out of the completion-bell contract"
+    (let [calls (atom [])]
+      (reg/set-on-invoke-complete!
+       (fn [agent result-map]
+         (swap! calls conj [(get-in agent [:agent/id :id/value])
+                            (:result result-map)])))
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "r7-opt-out")
+        :type :mock
+        :invoke-fn (fn [_p _s] {:result "done"})
+        :capabilities []
+        :metadata {:agency/contracts {:bell-on-complete? false}}})
+      (is (= {:ok true :result "done" :session-id nil}
+             (reg/invoke-agent! (fix/make-agent-id "r7-opt-out") "hi")))
+      (Thread/sleep 50)
+      (is (empty? @calls))
+      (is (false? (get-in (reg/registry-status)
+                          [:agents "r7-opt-out" :completion-bell-required?]))))))

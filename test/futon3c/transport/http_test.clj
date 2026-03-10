@@ -335,43 +335,47 @@
   (testing "task-mode codex reply without execution evidence is rejected"
     (is (true?
          (#'futon3c.transport.http/codex-task-no-execution?
-          "codex-1"
-          "--- CURRENT TURN ---\nSurface: irc (#math)\n---\n\n[Surface: IRC | Mode: task]\nInvestigate."
-          {:ok true
-           :result "captured plan in data/proof-state/FM-001-falsify-plan.md"
-           :invoke-meta {:execution {:executed? false
-                                     :tool-events 0
-                                     :command-events 0}}}))))
+         "codex-1"
+         "--- CURRENT TURN ---\nSurface: irc (#math)\n---\n\n[Surface: IRC | Mode: task]\nInvestigate."
+         {:ok true
+          :result "captured plan in data/proof-state/FM-001-falsify-plan.md"
+          :invoke-meta {:execution {:executed? false
+                                    :tool-events 0
+                                    :command-events 0}}}
+          true))))
   (testing "planning-only task-mode reply is allowed"
     (is (false?
          (#'futon3c.transport.http/codex-task-no-execution?
           "codex-1"
-          "[Surface: IRC | Mode: task]\nInvestigate."
-          {:ok true
-           :result "Planning-only: need clarification before executing."
-           :invoke-meta {:execution {:executed? false
-                                     :tool-events 0
-                                     :command-events 0}}}))))
+         "[Surface: IRC | Mode: task]\nInvestigate."
+         {:ok true
+          :result "Planning-only: need clarification before executing."
+          :invoke-meta {:execution {:executed? false
+                                    :tool-events 0
+                                    :command-events 0}}}
+          true))))
   (testing "non-task prompts are not blocked by this gate"
     (is (false?
          (#'futon3c.transport.http/codex-task-no-execution?
-          "codex-1"
-          "hello"
-          {:ok true
+         "codex-1"
+         "hello"
+         {:ok true
            :result "captured plan"
            :invoke-meta {:execution {:executed? false
                                      :tool-events 0
-                                     :command-events 0}}}))))
+                                     :command-events 0}}}
+          true))))
   (testing "mission/work prompts are blocked even without explicit mode marker"
     (is (true?
          (#'futon3c.transport.http/codex-task-no-execution?
           "codex-1"
-          "@codex can you give me a summary of the state of play on FM-001"
-          {:ok true
-           :result "@joe FM-001 is in FALSIFY mode with refs"
-           :invoke-meta {:execution {:executed? false
+         "@codex can you give me a summary of the state of play on FM-001"
+         {:ok true
+          :result "@joe FM-001 is in FALSIFY mode with refs"
+          :invoke-meta {:execution {:executed? false
                                      :tool-events 0
-                                     :command-events 0}}})))))
+                                     :command-events 0}}}
+          true)))))
 
 (deftest invoke-registered-codex-agent
   (testing "POST /api/alpha/invoke invokes codex agent via registry"
@@ -396,7 +400,7 @@
             (is (true? (:ok final-parsed)))
             (is (= job-id (:job-id job)))
             (is (= "done" (:state job)))
-            (is (= "ok" (:result job)))))))))
+            (is (= "ok" (:result-summary job)))))))))
 
 (deftest invoke-job-query-roundtrip
   (testing "invoke response job-id can be queried via /api/alpha/invoke/jobs/:id"
@@ -572,6 +576,58 @@
       (is (or (= "done" (get-in final [:job :state]))
               (= "failed" (get-in final [:job :state]))))
       (is (some? (get-in final [:job :finished-at]))))))
+
+(deftest invoke-announce-creates-canonical-queued-job
+  (testing "POST /api/alpha/invoke/announce records a queued job before external acceptance"
+    (register-mock-agent! "codex-announce-1" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-announce-1"
+                                      "prompt" "hello from announce"
+                                      "caller" "irc:joe"
+                                      "surface" "irc (#math)"})
+          response (post handler "/api/alpha/invoke/announce" body)
+          parsed (parse-body response)
+          job-id (:job-id parsed)
+          job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+          job-parsed (parse-body job-response)]
+      (is (= 202 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (true? (:accepted parsed)))
+      (is (= "queued" (:state parsed)))
+      (is (= 1 (:queued-jobs parsed)))
+      (is (string? job-id))
+      (is (= 200 (:status job-response)))
+      (is (= "queued" (get-in job-parsed [:job :state])))
+      (is (= "pending" (get-in job-parsed [:job :delivery :status]))))))
+
+(deftest invoke-announce-job-is-reused-by-direct-invoke
+  (testing "announced queued jobs are reused by /api/alpha/invoke instead of duplicating ledger state"
+    (register-mock-agent! "codex-announce-2" :codex)
+    (let [handler (make-handler)
+          announce-body (json/generate-string {"agent-id" "codex-announce-2"
+                                               "prompt" "queued first"
+                                               "caller" "irc:joe"
+                                               "surface" "irc (#math)"})
+          announce-response (post handler "/api/alpha/invoke/announce" announce-body)
+          announce-parsed (parse-body announce-response)
+          job-id (:job-id announce-parsed)
+          invoke-body (json/generate-string {"agent-id" "codex-announce-2"
+                                             "prompt" "queued first"
+                                             "caller" "irc:joe"
+                                             "surface" "irc (#math)"
+                                             "job-id" job-id})
+          invoke-response (post handler "/api/alpha/invoke" invoke-body)
+          invoke-parsed (parse-body invoke-response)
+          job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+          job-parsed (parse-body job-response)
+          job (:job job-parsed)]
+      (is (= 202 (:status announce-response)))
+      (is (= 200 (:status invoke-response)))
+      (is (= job-id (:job-id invoke-parsed)))
+      (is (= 200 (:status job-response)))
+      (is (= job-id (:job-id job)))
+      (is (= "done" (:state job)))
+      (is (= 1 (count (filter #(= "accepted" (:type %)) (:events job))))))))
 
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"

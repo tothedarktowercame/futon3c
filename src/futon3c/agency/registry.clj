@@ -23,6 +23,8 @@
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
+(declare registry-status)
+
 ;; =============================================================================
 ;; Agent Registry — single atom, single routing authority (R2)
 ;; =============================================================================
@@ -32,7 +34,29 @@
    Signature: (fn [agent-record] ...) — called asynchronously."}
   !on-register (atom nil))
 
+(defonce ^{:doc "Optional callback invoked after a successful invoke completes
+   for an agent that declares the completion-bell contract.
+   Set via set-on-invoke-complete! to wire post-invoke coordination.
+   Signature: (fn [agent-record result-map] ...) — called asynchronously."}
+  !on-invoke-complete (atom nil))
+
+(defonce ^{:doc "Optional callback invoked (async, in a future) whenever ANY agent
+   transitions from :invoking to :idle. Unlike !on-invoke-complete, this fires
+   for all agents regardless of the completion-bell contract.
+   Set via set-on-idle! to wire bell-driven dispatch.
+   Signature: (fn [agent-id outcome] ...) where outcome is
+   {:ok bool :error str-or-nil :session-id str-or-nil}."}
+  !on-idle (atom nil))
+
 (def ^:private ws-invoke-timeout-ms 120000)
+(def ^:private external-invoke-fresh-ms 15000)
+
+(def ^:dynamic *resolve-invoke-job-counts*
+  "Best-effort resolver for futon3c.transport.http/active-invoke-job-counts.
+   Returns a 0-arity fn or nil."
+  (fn []
+    (when-let [http-ns (find-ns 'futon3c.transport.http)]
+      (ns-resolve http-ns 'active-invoke-job-counts))))
 
 (defonce ^{:doc "Registry of agents.
 
@@ -50,6 +74,8 @@
     :agent/metadata   map}"}
   !registry
   (atom {}))
+
+(declare registry-status)
 
 ;; =============================================================================
 ;; Helpers
@@ -119,6 +145,72 @@
   [f]
   (reset! !on-register f))
 
+(defn set-on-invoke-complete!
+  "Set callback invoked asynchronously after successful invoke completion for
+   agents whose metadata declares the completion-bell contract.
+   Pass nil to clear. Signature: (fn [agent-record result-map] ...)."
+  [f]
+  (reset! !on-invoke-complete f))
+
+(defn set-on-idle!
+  "Set callback invoked (in a future) whenever any agent transitions to :idle.
+   Pass nil to clear. Signature: (fn [agent-id outcome] ...) where outcome is
+   {:ok bool :error str-or-nil :session-id str-or-nil}."
+  [f]
+  (reset! !on-idle f))
+
+(defn- fire-on-idle!
+  "Fire the !on-idle callback with agent-id and invoke outcome."
+  [agent-id outcome]
+  (when-let [on-idle @!on-idle]
+    (future
+      (try (on-idle agent-id outcome)
+           (catch Exception e
+             (println "[registry] on-idle callback error:" (.getMessage e)))))))
+
+(defn- broadcast-agents-ws!
+  "Broadcast agent status summary to all connected WS bridges."
+  []
+  (future
+    (try
+      (let [status (registry-status)
+            summary (into {}
+                          (map (fn [[aid info]]
+                                 [aid {:status (:status info)
+                                       :type (:type info)
+                                       :invoke-activity (:invoke-activity info)}]))
+                          (:agents status))]
+        (ws-invoke/broadcast-frame!
+         {"type" "agents_status"
+          "agents" summary
+          "count" (:count status)}))
+      (catch Throwable _ nil))))
+
+(def ^:private bell-file "/tmp/futon-bell.edn")
+
+(defn ring-bell-file!
+  "Write a turn-completed event to the bell file as a plist.
+   Uses plist syntax so Emacs `read` can parse it directly.
+   Emacs watches this file and fires joe/visible-bell on change."
+  [agent-id]
+  (try
+    (let [nonce (rand-int 1000000)
+          ts (str (java.time.Instant/now))]
+      (spit bell-file
+            (str "(:agent-id \"" agent-id "\" :timestamp \"" ts "\" :nonce " nonce ")")))
+    (catch Throwable _ nil)))
+
+(defn- completion-bell-contract?
+  [agent]
+  (let [metadata (:agent/metadata agent)
+        contracts (or (:agency/contracts metadata)
+                      (get metadata "agency/contracts")
+                      {})]
+    (true? (or (:bell-on-complete? contracts)
+               (get contracts "bell-on-complete?")
+               (:bell-on-complete? metadata)
+               (get metadata "bell-on-complete?")))))
+
 (defn get-agent
   "Get agent record by typed ID, or nil if not registered."
   [typed-id]
@@ -158,7 +250,8 @@
                       :agent/registered-at ts
                       :agent/last-active ts
                       :agent/ttl-ms ttl-ms
-                      :agent/metadata (or metadata {})}
+                      :agent/metadata (merge {:agency/contracts {:bell-on-complete? (boolean invoke-fn)}}
+                                             (or metadata {}))}
         ;; R2: Atomic check-and-set — reject duplicate, don't overwrite
         result (atom nil)]
     (swap! !registry
@@ -303,7 +396,8 @@
                                                              (:agent/invoke-activity a)
                                                              (assoc :invoke-activity (:agent/invoke-activity a)))])
                                                     @!registry))
-                                 :count (count @!registry)}))
+                                 :count (count @!registry)})
+                               (broadcast-agents-ws!))
              mark-invoking! (fn []
                               (swap! !registry
                                      (fn [m]
@@ -330,89 +424,104 @@
                                                     :agent/invoke-activity nil
                                                     :agent/invoke-event-sink nil}))
                                      m)))
-                          (project-agents!))]
+                          (project-agents!)
+                          ;; Agency bell: write turn-completed to file.
+                          ;; Emacs watches this file → joe/visible-bell.
+                          (future (ring-bell-file! aid-val)))]
          (mark-invoking!)
-         (try
-           (cond
-             invoke-fn
-                   (let [call-invoke (fn []
-                                 (try
-                                   (invoke-fn prompt current-session)
-                                   (catch clojure.lang.ArityException _
-                                     (invoke-fn prompt))))
-                   result-map (if timeout-ms
-                                (let [f (future (call-invoke))
-                                      v (deref f timeout-ms ::timeout)]
-                                  (if (= v ::timeout)
-                                    (do (future-cancel f)
-                                        {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
-                                    v))
-                                (call-invoke))
-                   {:keys [result session-id error]} result-map]
-               (mark-idle! session-id)
-               (if error
+         (let [invoke-result
+           (try
+             (cond
+               invoke-fn
+                     (let [call-invoke (fn []
+                                   (try
+                                     (invoke-fn prompt current-session)
+                                     (catch clojure.lang.ArityException _
+                                       (invoke-fn prompt))))
+                     result-map (if timeout-ms
+                                  (let [f (future (call-invoke))
+                                        v (deref f timeout-ms ::timeout)]
+                                    (if (= v ::timeout)
+                                      (do (future-cancel f)
+                                          {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
+                                      v))
+                                  (call-invoke))
+                     {:keys [result session-id error]} result-map]
+                 (mark-idle! session-id)
+                 (if error
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            (str error)
+                            :agent-id aid-val
+                            :timeout-ms (:timeout-ms result-map))}
+                   (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))
+                         final-agent (get @!registry aid-val)]
+                     (when (and final-agent
+                                (completion-bell-contract? final-agent))
+                       (when-let [hook @!on-invoke-complete]
+                         (future
+                           (try
+                             (hook final-agent result-map)
+                             (catch Exception _)))))
+                     (cond-> {:ok true :result result :session-id session-id}
+                       invoke-meta (assoc :invoke-meta invoke-meta)))))
+
+               (:invoke-ws-available? routing-info)
+               (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
+                     response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
+                     session-id (when (map? response) (:session-id response))]
+                 (mark-idle! session-id)
+                 (cond
+                   (= response ws-invoke/timeout-sentinel)
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            (str "WS invoke timeout after " (or timeout-ms ws-invoke-timeout-ms) "ms")
+                            :agent-id aid-val
+                            :timeout-ms (or timeout-ms ws-invoke-timeout-ms))}
+
+                   (and (map? response) (:error response))
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            (str (:error response))
+                            :agent-id aid-val)}
+
+                   (map? response)
+                   (let [invoke-meta (not-empty (dissoc response :result :session-id :error))]
+                     (cond-> {:ok true :result (:result response) :session-id (:session-id response)}
+                       invoke-meta (assoc :invoke-meta invoke-meta)))
+
+                   :else
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            "Unknown WS invoke failure"
+                            :agent-id aid-val)}))
+
+               :else
+               (do
+                 (mark-idle! nil)
                  {:ok false
                   :error (make-social-error
                           :invoke-error
-                          (str error)
+                          (str "Agent has no invoke handler (" (:invoke-diagnostic routing-info) ")")
                           :agent-id aid-val
-                          :timeout-ms (:timeout-ms result-map))}
-                 (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))]
-                   (cond-> {:ok true :result result :session-id session-id}
-                     invoke-meta (assoc :invoke-meta invoke-meta)))))
-
-             (:invoke-ws-available? routing-info)
-             (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
-                   response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
-                   session-id (when (map? response) (:session-id response))]
-               (mark-idle! session-id)
-               (cond
-                 (= response ws-invoke/timeout-sentinel)
-                 {:ok false
-                  :error (make-social-error
-                          :invoke-error
-                          (str "WS invoke timeout after " (or timeout-ms ws-invoke-timeout-ms) "ms")
-                          :agent-id aid-val
-                          :timeout-ms (or timeout-ms ws-invoke-timeout-ms))}
-
-                 (and (map? response) (:error response))
-                 {:ok false
-                  :error (make-social-error
-                          :invoke-error
-                          (str (:error response))
-                          :agent-id aid-val)}
-
-                 (map? response)
-                 (let [invoke-meta (not-empty (dissoc response :result :session-id :error))]
-                   (cond-> {:ok true :result (:result response) :session-id (:session-id response)}
-                     invoke-meta (assoc :invoke-meta invoke-meta)))
-
-                 :else
-                 {:ok false
-                  :error (make-social-error
-                          :invoke-error
-                          "Unknown WS invoke failure"
-                          :agent-id aid-val)}))
-
-             :else
-             (do
+                          :invoke-route (:invoke-route routing-info)
+                          :invoke-local? (:invoke-local? routing-info)
+                          :invoke-ws-available? (:invoke-ws-available? routing-info))}))
+             (catch Exception e
                (mark-idle! nil)
                {:ok false
                 :error (make-social-error
-                        :invoke-error
-                        (str "Agent has no invoke handler (" (:invoke-diagnostic routing-info) ")")
+                        :invoke-exception
+                        (.getMessage e)
                         :agent-id aid-val
-                        :invoke-route (:invoke-route routing-info)
-                        :invoke-local? (:invoke-local? routing-info)
-                        :invoke-ws-available? (:invoke-ws-available? routing-info))}))
-           (catch Exception e
-             (mark-idle! nil)
-             {:ok false
-              :error (make-social-error
-                      :invoke-exception
-                      (.getMessage e)
-                      :agent-id aid-val
-                      :exception-class (.getName (class e)))})))
+                        :exception-class (.getName (class e)))}))]
+           ;; Fire on-idle with outcome — after result is known.
+           (fire-on-idle! aid-val invoke-result)
+           invoke-result))
        {:ok false
         :error (make-social-error
                 :agent-not-found
@@ -460,6 +569,73 @@
              (assoc m agent-id-val
                     (assoc a :agent/invoke-activity activity-str))
              m))))
+
+(defn report-external-invoke!
+  "Record or clear externally-driven invoke state for AGENT-ID-VAL.
+
+   SOURCE is a stable surface key such as \"emacs-codex-repl\".
+   STATE may include:
+   {:status \"invoking\"|\"idle\"|:invoking|:idle
+    :session-id string
+    :prompt-preview string
+    :activity string}
+
+   Invoking state is treated as live only while refreshed within
+   `external-invoke-fresh-ms`; callers should heartbeat during long runs."
+  [agent-id-val source state]
+  (let [aid-val (agent-id-value agent-id-val)
+        source-key (some-> source str str/trim not-empty)
+        now* (now)
+        status (let [raw (:status state)]
+                 (cond
+                   (keyword? raw) raw
+                   (string? raw) (keyword (str/lower-case raw))
+                   :else nil))
+        clear? (or (nil? source-key)
+                   (nil? status)
+                   (= :idle status))]
+    (when source-key
+      (swap! !registry
+             (fn [m]
+               (if-let [agent (get m aid-val)]
+                 (let [existing (get-in agent [:agent/external-invokes source-key])
+                       next-external
+                       (if clear?
+                         (let [remaining (dissoc (:agent/external-invokes agent) source-key)]
+                           (when (seq remaining) remaining))
+                         (assoc (or (:agent/external-invokes agent) {})
+                                source-key
+                                (cond-> {:source source-key
+                                         :status :invoking
+                                         :started-at (or (:started-at existing) now*)
+                                         :updated-at now*}
+                                  (some-> (:session-id state) str str/trim not-empty)
+                                  (assoc :session-id (some-> (:session-id state) str str/trim))
+                                  (some-> (:prompt-preview state) str str/trim not-empty)
+                                  (assoc :prompt-preview (some-> (:prompt-preview state) str str/trim))
+                                  (some-> (:activity state) str str/trim not-empty)
+                                  (assoc :activity (some-> (:activity state) str str/trim)))))
+                       agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
+                                next-external
+                                (assoc :agent/external-invokes next-external)
+                                (nil? next-external)
+                                (dissoc :agent/external-invokes)
+                                (and (not clear?)
+                                     (some-> (:session-id state) str str/trim not-empty))
+                                (assoc :agent/session-id (some-> (:session-id state) str str/trim)))]
+                   (assoc m aid-val agent*))
+                 m)))
+      (bb/project-agents! (registry-status))
+      (broadcast-agents-ws!))
+    {:ok true
+     :agent-id aid-val
+     :source source-key
+     :status (or status :idle)}))
+
+(defn clear-external-invoke!
+  "Clear externally-driven invoke state for AGENT-ID-VAL and SOURCE."
+  [agent-id-val source]
+  (report-external-invoke! agent-id-val source {:status :idle}))
 
 (defn set-invoke-event-sink!
   "Set a streaming event callback for an agent. sink-fn: (fn [event-map])."
@@ -510,33 +686,75 @@
     (catch Throwable _
       #{})))
 
+(defn- external-invoke-live?
+  [entry]
+  (let [updated-at ^Instant (:updated-at entry)]
+    (and (= :invoking (:status entry))
+         (instance? Instant updated-at)
+         (<= (- (.toEpochMilli (now))
+                (.toEpochMilli updated-at))
+             external-invoke-fresh-ms))))
+
+(defn- freshest-external-invoke
+  [agent]
+  (->> (:agent/external-invokes agent)
+       vals
+       (filter external-invoke-live?)
+       (sort-by (fn [entry]
+                  (.toEpochMilli ^Instant (:updated-at entry))))
+       last))
+
 (defn registry-status
   "Return status of all registered agents."
   []
   (let [registry @!registry
+        now* (now)
         codex-session-ids (running-codex-session-ids)
-        ws-connected (ws-invoke/connected-agent-ids)]
+        ws-connected (ws-invoke/connected-agent-ids)
+        job-counts-fn (*resolve-invoke-job-counts*)
+        invoke-job-counts (if job-counts-fn
+                            (try
+                              (or (job-counts-fn) {})
+                              (catch Throwable _ {}))
+                            {})]
     {:agents
      (into {}
            (map (fn [[aid agent]]
                   (let [base-status (or (:agent/status agent) :idle)
                         routing-info (invoke-routing-info aid agent)
-                        session-id (:agent/session-id agent)
+                        external-invoke (freshest-external-invoke agent)
+                        last-heartbeat (:agent/external-heartbeat-at agent)
+                        recent-heartbeat?
+                        (and (instance? Instant last-heartbeat)
+                             (<= (- (.toEpochMilli ^Instant now*)
+                                    (.toEpochMilli ^Instant last-heartbeat))
+                                 external-invoke-fresh-ms))
+                        session-id (or (:session-id external-invoke)
+                                       (:agent/session-id agent))
                         external-codex-invoking?
                         (and (= :codex (:agent/type agent))
                              (not= base-status :invoking)
+                             (not recent-heartbeat?)
                              (string? session-id)
                              (contains? codex-session-ids session-id))
-                        status (if external-codex-invoking? :invoking base-status)
+                        external-invoking? (or (some? external-invoke)
+                                               external-codex-invoking?)
+                        status (if external-invoking? :invoking base-status)
                         invoke-started-at (or (:agent/invoke-started-at agent)
+                                              (:started-at external-invoke)
                                               (when external-codex-invoking?
-                                                (:agent/last-active agent)))
+                                                (or last-heartbeat
+                                                    (:agent/last-active agent))))
                         invoke-prompt-preview (or (:agent/invoke-prompt-preview agent)
+                                                  (:prompt-preview external-invoke)
                                                   (when external-codex-invoking?
                                                     "[external invoke]"))
                         invoke-activity (or (:agent/invoke-activity agent)
+                                            (:activity external-invoke)
                                             (when external-codex-invoking?
-                                              "codex exec running (external surface)"))]
+                                              "codex exec running (external surface)"))
+                        {:keys [queued-jobs running-jobs nonterminal-jobs]}
+                        (get invoke-job-counts aid {})]
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id
@@ -550,7 +768,14 @@
                                   :invoke-local? (:invoke-local? routing-info)
                                   :invoke-ws-available? (:invoke-ws-available? routing-info)
                                   :invoke-diagnostic (:invoke-diagnostic routing-info)
+                                  :completion-bell-required? (completion-bell-contract? agent)
                                   :status status}
+                           queued-jobs
+                           (assoc :queued-jobs queued-jobs)
+                           running-jobs
+                           (assoc :running-jobs running-jobs)
+                           nonterminal-jobs
+                           (assoc :nonterminal-jobs nonterminal-jobs)
                            invoke-started-at
                            (assoc :invoke-started-at (str invoke-started-at)
                                   :invoke-prompt-preview invoke-prompt-preview)

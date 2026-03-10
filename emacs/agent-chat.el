@@ -7,6 +7,8 @@
 (require 'cl-lib)
 (require 'json)
 (require 'subr-x)
+(require 'url)
+(require 'url-util)
 
 ;;; Faces
 
@@ -85,16 +87,42 @@
 (defvar-local agent-chat--agent-name nil
   "Name of the agent in this buffer (\"claude\" or \"codex\").")
 
+(defvar-local agent-chat--agent-id nil
+  "Registry agent-id for walkie-talkie calls (e.g. \"claude-1\", \"codex-1\").
+Distinct from agent-name which is the display name.")
+
 (defvar-local agent-chat--thinking-text nil
   "The thinking indicator text, e.g. \"claude is thinking...\".")
 
 (defvar-local agent-chat--thinking-property nil
   "Text property symbol used to mark thinking lines.")
 
+(defvar-local agent-chat--turn-start-time nil
+  "Epoch time (float) when the current turn started.")
+
+(defvar-local agent-chat--on-turn-end nil
+  "Function called with elapsed seconds (float) after each turn completes.
+Set by agent-chat-invariants or other modules.")
+
 (defvar-local agent-chat--insert-message-hook nil
   "Hook called with (NAME TEXT) before inserting a message.
 Functions on this hook may modify TEXT by returning a replacement string.
 If a function returns nil, the original TEXT is used.")
+
+(defvar-local agent-chat--streaming-marker nil
+  "Point marker for appending streamed agent output.")
+
+(defvar-local agent-chat--streaming-started nil
+  "Non-nil when streaming output has started for the current turn.")
+
+(defvar-local agent-chat--last-evidence-id nil
+  "Last evidence entry ID for the current chat buffer.")
+
+(defvar-local agent-chat--evidence-session-id nil
+  "Session ID associated with `agent-chat--last-evidence-id`.")
+
+(defvar-local agent-chat--last-emitted-session-id nil
+  "Last session ID for which a session-start evidence entry was emitted.")
 
 ;;; Display
 
@@ -190,6 +218,52 @@ Optional FACE overrides `agent-chat-thinking-face'."
                           'face (or face 'agent-chat-thinking-face)
                           prop t)))))
 
+(defun agent-chat-begin-streaming-message (name &optional face)
+  "Insert NAME prefix above prompt and set streaming marker."
+  (let ((inhibit-read-only t)
+        (name-face (or face
+                       (cdr (assoc name agent-chat--face-alist))
+                       'agent-chat-joe-face)))
+    (agent-chat-remove-thinking)
+    (save-excursion
+      (goto-char (marker-position agent-chat--prompt-marker))
+      (let ((name-start (point)))
+        (insert (format "%s: " name))
+        (let ((name-end (point)))
+          (overlay-put (make-overlay name-start name-end) 'face name-face)
+          (setq agent-chat--streaming-marker (copy-marker (point)))
+          (setq agent-chat--streaming-started t))))))
+
+(defun agent-chat-stream-text (text &optional face)
+  "Insert TEXT at the streaming marker with FACE or text face."
+  (when (and (stringp text)
+             (not (string-empty-p text))
+             agent-chat--streaming-marker
+             (marker-position agent-chat--streaming-marker))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (marker-position agent-chat--streaming-marker))
+        (let ((start (point)))
+          (insert text)
+          (overlay-put (make-overlay start (point))
+                       'face (or face 'agent-chat-text-face))
+          (set-marker agent-chat--streaming-marker (point))))
+      (agent-chat-scroll-to-bottom))))
+
+(defun agent-chat-end-streaming-message ()
+  "Finalize streamed message and clear streaming state."
+  (when (and agent-chat--streaming-marker
+             (marker-position agent-chat--streaming-marker))
+    (let ((inhibit-read-only t))
+      (agent-chat-remove-thinking)
+      (save-excursion
+        (goto-char (marker-position agent-chat--streaming-marker))
+        (insert "\n\n"))))
+  (when agent-chat--streaming-marker
+    (set-marker agent-chat--streaming-marker nil))
+  (setq agent-chat--streaming-marker nil
+        agent-chat--streaming-started nil))
+
 ;;; Streaming filter
 
 (defun agent-chat-make-streaming-filter (parse-event-fn chat-buffer)
@@ -220,6 +294,343 @@ The filter also appends raw output to the process buffer for the sentinel."
                     (agent-chat-update-progress status)))
               (error nil))))))))
 
+;;; Walkie-talkie commands (!par, !psr, !pur, etc.)
+;;
+;; The ! prefix is for walkie-talkie actions — the infrastructure does
+;; the tool work (HTTP calls, pattern search, backpack management) and
+;; the agent does the judgement work (selecting patterns, writing
+;; reflections).  Prompts use plain language to avoid triggering the
+;; agent's own slash-command skills.
+
+(defvar-local agent-chat--walkie-talkie-base-url nil
+  "Base URL for walkie-talkie HTTP endpoints.
+Falls back to `agent-chat-agency-base-url' if nil.")
+
+(defun agent-chat--walkie-talkie-url ()
+  "Return the base URL for walkie-talkie endpoints."
+  (or agent-chat--walkie-talkie-base-url
+      agent-chat-agency-base-url))
+
+(defun agent-chat--walkie-command-p (text)
+  "Return (COMMAND . ARGS) if TEXT starts with !, else nil."
+  (when (string-match "\\`!\\([a-z]+\\)\\(?:[[:space:]]+\\(.*\\)\\)?\\'" text)
+    (cons (match-string 1 text)
+          (match-string 2 text))))
+
+(defun agent-chat--extract-conversation ()
+  "Extract conversation history from the chat buffer as plain text.
+Returns the buffer content up to the separator line."
+  (buffer-substring-no-properties
+   (point-min)
+   (if agent-chat--separator-start
+       (marker-position agent-chat--separator-start)
+     (point-max))))
+
+;; --- HTTP helpers ---
+
+(defun agent-chat--walkie-post (path payload callback)
+  "POST PAYLOAD (alist) to PATH under the walkie-talkie base URL.
+CALLBACK is called with (STATUS-SYMBOL BODY-STRING).
+STATUS-SYMBOL is `ok' or `error'."
+  (let* ((url (concat (agent-chat--walkie-talkie-url) path))
+         (url-request-method "POST")
+         (url-request-extra-headers
+          '(("Content-Type" . "application/json")))
+         (url-request-data (encode-coding-string
+                            (json-serialize payload) 'utf-8)))
+    (url-retrieve
+     url
+     (lambda (status)
+       (if (plist-get status :error)
+           (let ((msg (format "%s" (plist-get status :error))))
+             (kill-buffer)
+             (funcall callback 'error msg))
+         (goto-char url-http-end-of-headers)
+         (let ((body (buffer-substring-no-properties (point) (point-max))))
+           (kill-buffer)
+           (funcall callback 'ok body))))
+     nil t t)))
+
+(defun agent-chat--walkie-get (path callback)
+  "GET PATH under the walkie-talkie base URL.
+CALLBACK is called with (STATUS-SYMBOL BODY-STRING)."
+  (let ((url (concat (agent-chat--walkie-talkie-url) path)))
+    (url-retrieve
+     url
+     (lambda (status)
+       (if (plist-get status :error)
+           (progn (kill-buffer)
+                  (funcall callback 'error
+                           (format "%s" (plist-get status :error))))
+         (goto-char url-http-end-of-headers)
+         (let ((body (buffer-substring-no-properties (point) (point-max))))
+           (kill-buffer)
+           (funcall callback 'ok body))))
+     nil t t)))
+
+;; --- !par: session reflection ---
+
+(defun agent-chat--par-prompt (&optional hint)
+  "Build a reflection prompt from conversation context.
+Uses plain language to avoid triggering agent slash-command skills."
+  (let ((conversation (agent-chat--extract-conversation)))
+    (concat
+     "Reflect on this session. Analyze the conversation below and produce "
+     "a structured reflection with:\n"
+     "- summary: one-line summary of the session\n"
+     "- patterns_used: any recurring approaches applied (explicit or inferred)\n"
+     "- what_went_well: specific successes (list)\n"
+     "- what_could_improve: friction points (list)\n"
+     "- suggestions: actionable improvements (list)\n\n"
+     "IMPORTANT: Do NOT use any slash commands or tool calls. "
+     "Just write the reflection directly as markdown text.\n\n"
+     (if hint (format "Summary hint: %s\n\n" hint) "")
+     "Conversation:\n"
+     "```\n"
+     (truncate-string-to-width conversation 8000 nil nil "...")
+     "\n```\n\n"
+     "Output in readable markdown. Keep it concise — focus on learning, "
+     "not narration.")))
+
+(defun agent-chat--handle-par (call-async-fn agent-name hint chat-buffer hooks)
+  "Handle !par walkie-talkie command.
+Sends a reflection prompt to the agent, displays the result, and
+posts it to the evidence landscape as a PAR."
+  (let ((prompt (agent-chat--par-prompt hint))
+        (on-response (plist-get hooks :on-response))
+        (author (or agent-chat--agent-id agent-chat--agent-name agent-name "unknown")))
+    (setq agent-chat--pending-process
+          (funcall call-async-fn
+                   prompt
+                   (lambda (response)
+                     (when (buffer-live-p chat-buffer)
+                       (with-current-buffer chat-buffer
+                         (agent-chat-remove-thinking)
+                         (agent-chat-insert-message agent-name response)
+                         ;; Post to evidence endpoint
+                         (agent-chat--walkie-post
+                          "/api/alpha/evidence/par"
+                          `(:summary ,response :author ,author)
+                          (lambda (status body)
+                            (when (buffer-live-p chat-buffer)
+                              (with-current-buffer chat-buffer
+                                (agent-chat-insert-message
+                                 "system"
+                                 (if (eq status 'ok)
+                                     (format "[Reflection logged: %s]"
+                                             (string-trim body))
+                                   (format "[Failed to log reflection: %s]"
+                                           body)))))))
+                         (when (functionp on-response)
+                           (funcall on-response response))
+                         (goto-char (point-max))
+                         (agent-chat-scroll-to-bottom))))))))
+
+;; --- !psr: pattern selection ---
+
+(defun agent-chat--psr-select-prompt (query candidates-text)
+  "Build a pattern selection prompt from search results.
+QUERY is the user's search term. CANDIDATES-TEXT is the formatted
+list of matching patterns from the pattern library."
+  (let ((conversation (agent-chat--extract-conversation)))
+    (concat
+     "The user wants to select a working pattern for their current task.\n\n"
+     "Search query: " query "\n\n"
+     "Matching patterns from the library:\n"
+     candidates-text "\n\n"
+     "Recent conversation context:\n"
+     "```\n"
+     (truncate-string-to-width conversation 4000 nil nil "...")
+     "\n```\n\n"
+     "Pick the SINGLE most relevant pattern from the candidates above. "
+     "Reply with EXACTLY this format (no other text before it):\n\n"
+     "SELECTED: <pattern-id>\n"
+     "CONFIDENCE: high|medium|low\n"
+     "RATIONALE: <one paragraph explaining why this pattern fits>\n\n"
+     "IMPORTANT: Do NOT use any slash commands or tool calls. "
+     "Just write the selection directly as plain text.")))
+
+(defun agent-chat--parse-psr-response (response)
+  "Parse SELECTED/CONFIDENCE/RATIONALE from agent response.
+Returns alist with :pattern-id :confidence :rationale, or nil on failure."
+  (let ((pattern-id nil)
+        (confidence nil)
+        (rationale nil))
+    (when (string-match "SELECTED:[[:space:]]*\\(.+\\)" response)
+      (setq pattern-id (string-trim (match-string 1 response))))
+    (when (string-match "CONFIDENCE:[[:space:]]*\\(high\\|medium\\|low\\)" response)
+      (setq confidence (string-trim (match-string 1 response))))
+    (when (string-match "RATIONALE:[[:space:]]*\\(.+\\)" response)
+      (setq rationale (string-trim (match-string 1 response))))
+    (when pattern-id
+      `((:pattern-id . ,pattern-id)
+        (:confidence . ,(or confidence "medium"))
+        (:rationale . ,(or rationale ""))))))
+
+(defun agent-chat--handle-psr (call-async-fn agent-name query chat-buffer hooks)
+  "Handle !psr walkie-talkie command.
+Searches the pattern library via HTTP, presents candidates to the
+agent for selection, and posts the result as evidence."
+  (if (not query)
+      (when (buffer-live-p chat-buffer)
+        (with-current-buffer chat-buffer
+          (agent-chat-remove-thinking)
+          (agent-chat-insert-message "system" "[Usage: !psr <search query>]")))
+    (let ((on-response (plist-get hooks :on-response))
+          (author (or agent-chat--agent-id agent-chat--agent-name agent-name "unknown")))
+      (agent-chat--walkie-get
+       (format "/api/alpha/patterns/search?q=%s" (url-hexify-string query))
+       (lambda (status body)
+         (when (buffer-live-p chat-buffer)
+           (with-current-buffer chat-buffer
+             (if (eq status 'error)
+                 (progn
+                   (agent-chat-remove-thinking)
+                   (agent-chat-insert-message
+                    "system" (format "[Pattern search failed: %s]" body)))
+               (let ((prompt (agent-chat--psr-select-prompt query body)))
+                 (setq agent-chat--pending-process
+                       (funcall
+                        call-async-fn prompt
+                        (lambda (response)
+                          (when (buffer-live-p chat-buffer)
+                            (with-current-buffer chat-buffer
+                              (agent-chat-remove-thinking)
+                              (agent-chat-insert-message agent-name response)
+                              (let ((parsed (agent-chat--parse-psr-response response)))
+                                (if parsed
+                                    (agent-chat--walkie-post
+                                     "/api/alpha/evidence/psr"
+                                     `(:pattern-id ,(alist-get :pattern-id parsed)
+                                       :query ,query
+                                       :rationale ,(alist-get :rationale parsed)
+                                       :confidence ,(alist-get :confidence parsed)
+                                       :author ,author)
+                                     (lambda (st bd)
+                                       (when (buffer-live-p chat-buffer)
+                                         (with-current-buffer chat-buffer
+                                           (agent-chat-insert-message
+                                            "system"
+                                            (if (eq st 'ok)
+                                                (format "[Pattern selected: %s — %s]"
+                                                        (alist-get :pattern-id parsed)
+                                                        (string-trim bd))
+                                              (format "[Failed to log: %s]" bd)))))))
+                                  (agent-chat-insert-message
+                                   "system"
+                                   "[Could not parse pattern selection from response]")))
+                              (when (functionp on-response)
+                                (funcall on-response response))
+                              (goto-char (point-max))
+                              (agent-chat-scroll-to-bottom)))))))))))))))
+
+;; --- !pur: pattern use record ---
+
+(defun agent-chat--pur-prompt (pattern-id)
+  "Build a pattern outcome prompt.
+PATTERN-ID is the active pattern from the backpack."
+  (let ((conversation (agent-chat--extract-conversation)))
+    (concat
+     "You have been working with the pattern: " pattern-id "\n\n"
+     "Review the conversation below and assess the outcome of "
+     "applying this pattern.\n\n"
+     "Conversation:\n"
+     "```\n"
+     (truncate-string-to-width conversation 4000 nil nil "...")
+     "\n```\n\n"
+     "Reply with EXACTLY this format (no other text before it):\n\n"
+     "OUTCOME: success|partial|failure\n"
+     "ACTIONS: <what was done while using this pattern>\n"
+     "PREDICTION-ERROR: low|medium|high\n"
+     "NOTES: <brief reflection on how well the pattern fit>\n\n"
+     "IMPORTANT: Do NOT use any slash commands or tool calls. "
+     "Just write the assessment directly as plain text.")))
+
+(defun agent-chat--parse-pur-response (response)
+  "Parse OUTCOME/ACTIONS/PREDICTION-ERROR/NOTES from agent response."
+  (let ((outcome nil) (actions nil) (pred-err nil) (notes nil))
+    (when (string-match "OUTCOME:[[:space:]]*\\(success\\|partial\\|failure\\)" response)
+      (setq outcome (match-string 1 response)))
+    (when (string-match "ACTIONS:[[:space:]]*\\(.+\\)" response)
+      (setq actions (string-trim (match-string 1 response))))
+    (when (string-match "PREDICTION-ERROR:[[:space:]]*\\(low\\|medium\\|high\\)" response)
+      (setq pred-err (match-string 1 response)))
+    (when (string-match "NOTES:[[:space:]]*\\(.+\\)" response)
+      (setq notes (string-trim (match-string 1 response))))
+    (when outcome
+      `((:outcome . ,outcome)
+        (:actions . ,(or actions ""))
+        (:prediction-error . ,(or pred-err "medium"))
+        (:notes . ,(or notes ""))))))
+
+(defun agent-chat--handle-pur (call-async-fn agent-name _args chat-buffer hooks)
+  "Handle !pur walkie-talkie command.
+Checks the agent's backpack for an active pattern, asks the agent
+to assess the outcome, and posts the result as evidence."
+  (let ((on-response (plist-get hooks :on-response))
+        (author (or agent-chat--agent-id agent-chat--agent-name agent-name "unknown")))
+    ;; Step 1: check backpack
+    (agent-chat--walkie-get
+     (format "/api/alpha/backpack/%s" (url-hexify-string author))
+     (lambda (status body)
+       (when (buffer-live-p chat-buffer)
+         (with-current-buffer chat-buffer
+           (if (eq status 'error)
+               (progn
+                 (agent-chat-remove-thinking)
+                 (agent-chat-insert-message
+                  "system" (format "[Backpack check failed: %s]" body)))
+             (let* ((parsed (ignore-errors
+                              (json-parse-string body :object-type 'alist)))
+                    (backpack (alist-get 'backpack parsed))
+                    (pattern-id (or (alist-get 'backpack/active-pattern backpack)
+                                    (and (hash-table-p backpack)
+                                         (gethash "backpack/active-pattern" backpack)))))
+               (if (not pattern-id)
+                   (progn
+                     (agent-chat-remove-thinking)
+                     (agent-chat-insert-message
+                      "system" "[No active pattern in backpack. Use !psr first.]"))
+                 ;; Step 2: ask agent to assess outcome
+                 (let ((prompt (agent-chat--pur-prompt pattern-id)))
+                   (setq agent-chat--pending-process
+                         (funcall call-async-fn
+                                  prompt
+                                  (lambda (response)
+                                    (when (buffer-live-p chat-buffer)
+                                      (with-current-buffer chat-buffer
+                                        (agent-chat-remove-thinking)
+                                        (agent-chat-insert-message agent-name response)
+                                        ;; Step 3: parse and post evidence
+                                        (let ((result (agent-chat--parse-pur-response response)))
+                                          (if result
+                                              (agent-chat--walkie-post
+                                               "/api/alpha/evidence/pur"
+                                               `(:pattern-id ,pattern-id
+                                                 :outcome ,(alist-get :outcome result)
+                                                 :actions ,(alist-get :actions result)
+                                                 :prediction-error ,(alist-get :prediction-error result)
+                                                 :author ,author)
+                                               (lambda (status body)
+                                                 (when (buffer-live-p chat-buffer)
+                                                   (with-current-buffer chat-buffer
+                                                     (agent-chat-insert-message
+                                                      "system"
+                                                      (if (eq status 'ok)
+                                                          (format "[Outcome recorded for %s: %s — %s]"
+                                                                  pattern-id
+                                                                  (alist-get :outcome result)
+                                                                  (string-trim body))
+                                                        (format "[Failed to log outcome: %s]"
+                                                                body)))))))
+                                            (agent-chat-insert-message
+                                             "system"
+                                             "[Could not parse outcome from response]")))
+                                        (when (functionp on-response)
+                                          (funcall on-response response))
+                                        (goto-char (point-max))
+                                        (agent-chat-scroll-to-bottom))))))))))))))))
+
 ;;; Send
 
 (defun agent-chat-send-input (call-async-fn agent-name &optional hooks)
@@ -229,7 +640,11 @@ AGENT-NAME: \"claude\" or \"codex\", used for display.
 Optional HOOKS plist supports:
   :before-send   (fn text) called after user text is inserted.
   :on-response   (fn text) called after agent response is inserted.
-  :on-launch-error (fn text) called when process launch fails."
+  :on-launch-error (fn text) called when process launch fails.
+
+Walkie-talkie commands (e.g. !par) are intercepted: the agent
+generates the content (same as /par on CLI), and the result is
+additionally posted to the evidence HTTP endpoint."
   (when (process-live-p agent-chat--pending-process)
     (user-error "%s is still responding; wait for current turn to finish"
                 (capitalize agent-name)))
@@ -237,30 +652,55 @@ Optional HOOKS plist supports:
                (marker-position agent-chat--input-start)
                (point-max))))
     (when (not (string-empty-p (string-trim text)))
-      (let ((trimmed (string-trim text))
-            (chat-buffer (current-buffer))
-            (before-send (plist-get hooks :before-send))
-            (on-response (plist-get hooks :on-response))
-            (on-launch-error (plist-get hooks :on-launch-error)))
+      (let* ((trimmed (string-trim text))
+             (walkie (agent-chat--walkie-command-p trimmed))
+             (chat-buffer (current-buffer))
+             (before-send (plist-get hooks :before-send))
+             (on-response (plist-get hooks :on-response))
+             (on-launch-error (plist-get hooks :on-launch-error)))
         (delete-region (marker-position agent-chat--input-start) (point-max))
         (agent-chat-insert-message "joe" trimmed)
         (when (functionp before-send)
           (funcall before-send trimmed))
         (agent-chat-insert-thinking)
+        (setq agent-chat--turn-start-time (float-time))
         (redisplay)
         (condition-case err
-            (setq agent-chat--pending-process
-                  (funcall call-async-fn
-                           trimmed
-                           (lambda (response)
-                             (when (buffer-live-p chat-buffer)
-                               (with-current-buffer chat-buffer
-                                 (agent-chat-remove-thinking)
-                                 (agent-chat-insert-message agent-name response)
-                                 (when (functionp on-response)
-                                   (funcall on-response response))
-                                 (goto-char (point-max))
-                                 (agent-chat-scroll-to-bottom))))))
+            (pcase (car walkie)
+              ("par"
+               (agent-chat--handle-par call-async-fn agent-name
+                                       (cdr walkie) chat-buffer hooks))
+              ("psr"
+               (agent-chat--handle-psr call-async-fn agent-name
+                                       (cdr walkie) chat-buffer hooks))
+              ("pur"
+               (agent-chat--handle-pur call-async-fn agent-name
+                                       (cdr walkie) chat-buffer hooks))
+              (_
+               (setq agent-chat--pending-process
+                     (funcall call-async-fn
+                              trimmed
+                              (lambda (response)
+                                (when (buffer-live-p chat-buffer)
+                                  (with-current-buffer chat-buffer
+                                    (agent-chat-remove-thinking)
+                                    (agent-chat-insert-message agent-name response)
+                                    (when (functionp on-response)
+                                      (funcall on-response response))
+                                    ;; Turn timing and invariants
+                                    (let ((elapsed (if agent-chat--turn-start-time
+                                                       (- (float-time)
+                                                          agent-chat--turn-start-time)
+                                                     0)))
+                                      (setq agent-chat--turn-start-time nil)
+                                      (when (functionp agent-chat--on-turn-end)
+                                        (condition-case turn-err
+                                            (funcall agent-chat--on-turn-end elapsed)
+                                          (error
+                                           (message "agent-chat turn-end hook error: %s"
+                                                    (error-message-string turn-err))))))
+                                    (goto-char (point-max))
+                                    (agent-chat-scroll-to-bottom))))))))
           (error
            (setq agent-chat--pending-process nil)
            (agent-chat-remove-thinking)
@@ -270,6 +710,39 @@ Optional HOOKS plist supports:
              (agent-chat-insert-message agent-name msg)
              (when (functionp on-launch-error)
                (funcall on-launch-error msg)))))))))
+
+(defun agent-chat--handle-par (call-async-fn agent-name hint chat-buffer hooks)
+  "Handle !par walkie-talkie command.
+Builds a PAR prompt from conversation context, sends it to the agent
+via CALL-ASYNC-FN (agent generates the PAR, same as /par on CLI),
+and additionally posts the result to the evidence HTTP endpoint.
+HINT is the optional user-supplied text after !par.
+CHAT-BUFFER is the chat buffer. HOOKS is the hooks plist."
+  (let ((par-prompt (agent-chat--par-prompt hint))
+        (on-response (plist-get hooks :on-response)))
+    (setq agent-chat--pending-process
+          (funcall call-async-fn
+                   par-prompt
+                   (lambda (response)
+                     (when (buffer-live-p chat-buffer)
+                       (with-current-buffer chat-buffer
+                         (agent-chat-remove-thinking)
+                         (agent-chat-insert-message agent-name response)
+                         ;; Post to evidence endpoint
+                         (agent-chat--post-par
+                          response
+                          (or agent-name "unknown")
+                          (lambda (result)
+                            (when (buffer-live-p chat-buffer)
+                              (with-current-buffer chat-buffer
+                                (agent-chat-insert-message
+                                 "system"
+                                 (format "[PAR logged to evidence landscape: %s]"
+                                         (string-trim result)))))))
+                         (when (functionp on-response)
+                           (funcall on-response response))
+                         (goto-char (point-max))
+                         (agent-chat-scroll-to-bottom))))))))
 
 ;;; Init / Clear
 
@@ -290,6 +763,7 @@ CONFIG keys:
   :prompt-face - face for the \"> \" prompt
   :face-alist  - alist of (name . face) for speakers
   :agent-name  - \"claude\" or \"codex\"
+  :agent-id    - registry agent-id (e.g. \"claude-1\") for walkie-talkie
   :thinking-text   - e.g. \"claude is thinking...\"
   :thinking-prop   - symbol for text property"
   (let ((title (plist-get config :title))
@@ -298,12 +772,14 @@ CONFIG keys:
         (prompt-face (or (plist-get config :prompt-face) 'agent-chat-prompt-face))
         (face-alist (plist-get config :face-alist))
         (agent-name (plist-get config :agent-name))
+        (agent-id (plist-get config :agent-id))
         (thinking-text (plist-get config :thinking-text))
         (thinking-prop (plist-get config :thinking-prop)))
     ;; Set buffer-local state
     (setq agent-chat--face-alist
           (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
     (setq agent-chat--agent-name agent-name)
+    (setq agent-chat--agent-id agent-id)
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
@@ -356,6 +832,157 @@ Replaces the `(session: ...)' text in the first line."
         (when (search-forward old-text (line-end-position 2) t)
           (replace-match (propertize new-text 'face 'font-lock-comment-face) t t)))
       (setq agent-chat--session-id new-id))))
+
+;;; Evidence helpers
+
+(defun agent-chat-evidence-enabled-p (evidence-url)
+  "Return non-nil when EVIDENCE-URL is configured."
+  (and (stringp evidence-url)
+       (not (string-empty-p evidence-url))))
+
+(defun agent-chat-evidence-base-url (evidence-url)
+  "Return evidence API base URL without trailing /api/alpha/evidence."
+  (let ((value (string-remove-suffix "/" (or evidence-url ""))))
+    (replace-regexp-in-string "/api/alpha/evidence\\'" "" value)))
+
+(defun agent-chat--parse-json-string (text)
+  "Parse TEXT as JSON plist, or nil on error."
+  (when (and (stringp text) (not (string-empty-p text)))
+    (condition-case nil
+        (json-parse-string text :object-type 'plist)
+      (error nil))))
+
+(defun agent-chat-evidence-request-json (method url timeout &optional payload)
+  "Send METHOD to URL with JSON PAYLOAD and return plist with :status and :json."
+  (let* ((url-request-method method)
+         (url-request-extra-headers
+          '(("Content-Type" . "application/json")
+            ("Accept" . "application/json")))
+         (url-request-data (when payload
+                             (encode-coding-string (json-encode payload) 'utf-8)))
+         (buffer (condition-case nil
+                     (url-retrieve-synchronously url t t timeout)
+                   (error nil))))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (goto-char (point-min))
+        (let ((status (or (and (boundp 'url-http-response-status) url-http-response-status) 0)))
+          (re-search-forward "\n\n" nil 'move)
+          (let* ((body (buffer-substring-no-properties (point) (point-max)))
+                 (parsed (agent-chat--parse-json-string body)))
+            (kill-buffer buffer)
+            (list :status status :json parsed)))))))
+
+(defun agent-chat-evidence-post-entry-id (evidence-url timeout payload)
+  "POST PAYLOAD to evidence API and return created evidence id, or nil."
+  (when (agent-chat-evidence-enabled-p evidence-url)
+    (let* ((url (format "%s/api/alpha/evidence"
+                        (agent-chat-evidence-base-url evidence-url)))
+           (response (agent-chat-evidence-request-json "POST" url timeout payload))
+           (status (plist-get response :status))
+           (parsed (plist-get response :json)))
+      (when (and (integerp status) (<= 200 status) (< status 300))
+        (or (plist-get parsed :evidence/id)
+            (plist-get (plist-get parsed :entry) :evidence/id))))))
+
+(defun agent-chat-evidence-fetch-latest-id (evidence-url timeout sid)
+  "Fetch most recent evidence id for session SID."
+  (when (and (agent-chat-evidence-enabled-p evidence-url)
+             (stringp sid)
+             (not (string-empty-p sid)))
+    (let* ((query (format "session-id=%s&limit=1"
+                          (url-hexify-string sid)))
+           (url (format "%s/api/alpha/evidence?%s"
+                        (agent-chat-evidence-base-url evidence-url)
+                        query))
+           (response (agent-chat-evidence-request-json "GET" url timeout nil))
+           (status (plist-get response :status))
+           (entries (and (integerp status)
+                         (<= 200 status)
+                         (< status 300)
+                         (plist-get (plist-get response :json) :entries)))
+           (entry (and (listp entries) (car entries))))
+      (and (listp entry)
+           (plist-get entry :evidence/id)))))
+
+(defun agent-chat-sync-evidence-anchor! (evidence-url timeout sid session-var last-id-var &optional force)
+  "Refresh evidence anchor state for SID into SESSION-VAR and LAST-ID-VAR."
+  (when (and (stringp sid)
+             (not (string-empty-p sid))
+             (or force
+                 (not (equal sid (symbol-value session-var)))
+                 (null (symbol-value last-id-var))))
+    (set session-var sid)
+    (set last-id-var (agent-chat-evidence-fetch-latest-id evidence-url timeout sid))))
+
+(defun agent-chat-emit-session-start-evidence!
+    (evidence-url timeout sid session-var last-id-var last-emitted-var source tags)
+  "Emit a lightweight session-start evidence entry for SID."
+  (when (and (stringp sid) (not (string-empty-p sid)))
+    (unless (equal sid (symbol-value session-var))
+      (set session-var sid)
+      (set last-id-var nil))
+    (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t)
+    (when (and (not (equal sid (symbol-value last-emitted-var)))
+               (not (and (stringp (symbol-value last-id-var))
+                         (not (string-empty-p (symbol-value last-id-var)))))
+               (agent-chat-evidence-enabled-p evidence-url))
+      (let ((payload `((subject . ((ref/type . "session")
+                                   (ref/id . ,sid)))
+                       (type . "coordination")
+                       (claim-type . "goal")
+                       (author . ,(or (getenv "USER") user-login-name "joe"))
+                       (session-id . ,sid)
+                       (body . ((event . "session-start")
+                                (source . ,source)
+                                (mode . "emacs")))
+                       (tags . ,(apply #'vector tags)))))
+        (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+          (set last-id-var new-id))
+        (set last-emitted-var sid)))
+    (unless (and (stringp (symbol-value last-id-var))
+                 (not (string-empty-p (symbol-value last-id-var))))
+      (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t))))
+
+(defun agent-chat-emit-turn-evidence!
+    (evidence-url timeout log-turns sid role text assistant-author transport tags session-var last-id-var)
+  "Emit turn evidence for ROLE and TEXT using the shared evidence helpers."
+  (when (and log-turns
+             (stringp text)
+             (not (string-empty-p (string-trim text)))
+             (stringp sid)
+             (not (string-empty-p sid))
+             (agent-chat-evidence-enabled-p evidence-url))
+    (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var)
+    (let* ((trimmed (string-trim text))
+           (is-user (string= role "user"))
+           (is-error (string-prefix-p "[Error" trimmed))
+           (claim-type (cond
+                        (is-user "question")
+                        (is-error "correction")
+                        (t "observation")))
+           (author (if is-user
+                       (or (getenv "USER") user-login-name "joe")
+                     assistant-author))
+           (role-tag (if is-user "user" "assistant"))
+           (payload `((subject . ((ref/type . "session")
+                                  (ref/id . ,sid)))
+                      (type . "coordination")
+                      (claim-type . ,claim-type)
+                      (author . ,author)
+                      (session-id . ,sid)
+                      (body . ((event . "chat-turn")
+                               (transport . ,transport)
+                               (role . ,role)
+                               (text . ,trimmed)))
+                      (tags . ,(apply #'vector (append tags (list role-tag)))))))
+      (when (and (stringp (symbol-value last-id-var))
+                 (not (string-empty-p (symbol-value last-id-var))))
+        (setq payload (append payload
+                              `((in-reply-to . ,(symbol-value last-id-var))))))
+      (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+        (set session-var sid)
+        (set last-id-var new-id)))))
 
 ;;; Transport availability checks (shared)
 

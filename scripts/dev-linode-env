@@ -99,4 +99,32 @@ if [[ "$_any_bridge" != "true" ]]; then
   fi
 fi
 
-exec make dev "$@"
+# --- Tickle / FM conductor CLI flags ---
+# Neither starts by default. Use flags to opt in.
+#   --start-tickle   Start a fresh tickle watchdog at boot
+#   --resume-tickle  Resume tickle from persisted state (NYI — same as start for now)
+#   --start-fm       Start the FM conductor at boot
+#   --start-all      Start both tickle and FM conductor
+remaining_args=()
+for arg in "$@"; do
+  case "$arg" in
+    --start-tickle|--resume-tickle)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      echo "[dev] Tickle watchdog: will start at boot"
+      ;;
+    --start-fm)
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] FM conductor: will start at boot"
+      ;;
+    --start-all)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] Tickle + FM conductor: will start at boot"
+      ;;
+    *)
+      remaining_args+=("$arg")
+      ;;
+  esac
+done
+
+exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"

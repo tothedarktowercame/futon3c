@@ -343,6 +343,18 @@
           {:ws/type :peripheral-stop
            :reason (or (:reason parsed) "client-requested")}
 
+          ;; --- Status update frame ---
+          (= "status" (str frame-type))
+          (let [status-raw (or (:status parsed) (get parsed "status"))
+                activity (or (:activity parsed) (get parsed "activity"))
+                session-id (or (:session_id parsed) (:session-id parsed))]
+            (if (nil? status-raw)
+              (transport-error :invalid-frame "status frame missing 'status' field")
+              (cond-> {:ws/type :status
+                       :status/value (str status-raw)}
+                activity (assoc :status/activity activity)
+                session-id (assoc :status/session-id session-id))))
+
           ;; --- Evidence replication frame ---
           (= "evidence" (str frame-type))
           (let [entry (:entry parsed)]

@@ -23,6 +23,8 @@
             [futon3c.evidence.store :as estore])
   (:import [java.util UUID]))
 
+(declare emit-blackboard-evidence!)
+
 ;; =============================================================================
 ;; Enable/disable — bind *enabled* to false in tests or non-interactive contexts
 ;; =============================================================================
@@ -32,11 +34,59 @@
    Bind to false in tests to avoid spawning emacsclient processes."
   true)
 
+(defn- detect-emacs-socket
+  "Auto-detect Emacs server socket from the process tree.
+   Finds emacsclient processes with -s <socket>, sorted by PID (oldest first).
+   If in a tmux session, prefers sockets from emacsclient siblings in the
+   same session. Returns the first socket found, or nil."
+  []
+  (try
+    (let [;; Find all emacsclient processes with -s arg, sorted by PID
+          proc (-> (ProcessBuilder. ["pgrep" "-a" "emacsclient"])
+                   (.redirectErrorStream true)
+                   .start)
+          output (slurp (.getInputStream proc))
+          parsed (->> (str/split-lines output)
+                      (keep (fn [line]
+                              (when-let [[_ pid] (re-find #"^(\d+)\s" line)]
+                                (when-let [[_ socket] (re-find #"-s\s+(\S+)" line)]
+                                  {:pid (parse-long pid) :socket socket}))))
+                      (sort-by :pid))
+          ;; Try to narrow to our tmux session
+          session-pids (try
+                         (let [p (-> (ProcessBuilder.
+                                       ["tmux" "list-panes" "-s" "-F" "#{pane_pid}"])
+                                     (.redirectErrorStream true)
+                                     .start)
+                               out (str/trim (slurp (.getInputStream p)))]
+                           (when (zero? (.waitFor p))
+                             (set (map parse-long (str/split-lines out)))))
+                         (catch Exception _ nil))
+          ;; Filter to emacsclient whose PPID is a session pane
+          in-session (when session-pids
+                       (->> parsed
+                            (filter (fn [{:keys [pid]}]
+                                      (try
+                                        (let [ppid (-> (str "/proc/" pid "/status")
+                                                       slurp
+                                                       (->> (re-find #"PPid:\s+(\d+)"))
+                                                       second
+                                                       parse-long)]
+                                          (contains? session-pids ppid))
+                                        (catch Exception _ false))))))]
+      ;; Prefer session-scoped, fall back to all
+      (-> (if (seq in-session) in-session parsed)
+          first
+          :socket))
+    (catch Exception _ nil)))
+
 (def !emacs-socket
-  "Emacs server socket name. Set at runtime when the daemon uses a named socket,
-   e.g. (reset! bb/!emacs-socket \"workspace1\").
+  "Emacs server socket name. Auto-detected from process tree at load time,
+   or set at runtime: (reset! bb/!emacs-socket \"workspace1\").
    Falls back to FUTON3C_EMACS_SOCKET or EMACS_SOCKET_NAME env vars."
-  (atom nil))
+  (atom (or (System/getenv "FUTON3C_EMACS_SOCKET")
+            (System/getenv "EMACS_SOCKET_NAME")
+            (detect-emacs-socket))))
 
 ;; =============================================================================
 ;; Emacsclient primitive
@@ -118,12 +168,15 @@
                                     (name side)
                                     width
                                     (or slot-form "")))))
+         post-elisp (:post-elisp opts)
          elisp (str "(let ((buf (get-buffer-create \"" buf-escaped "\")))"
                     "(with-current-buffer buf"
                     "(let ((inhibit-read-only t))"
                     "(erase-buffer)"
                     "(insert \"" escaped "\")"
-                    "(goto-char (point-min))))"
+                    "(goto-char (point-min))"
+                    (or post-elisp "")
+                    "))"
                     (or display-form "")
                     "nil)")]
      (run-emacsclient! elisp (:emacs-socket opts)))))
@@ -331,40 +384,131 @@
 ;; -----------------------------------------------------------------------------
 
 (defn- format-mentor-state
-  "Format mentor peripheral state for blackboard."
+  "Format mentor peripheral state for blackboard.
+   State shape: top-level has :cmap (conversation map), :handle, :problem-id,
+   :channel, :interventions, :steps. The cmap holds :map/messages-seen,
+   :map/topics, :map/effort, :map/digest, :triggers/fired, :map/last-seen-at."
   [state]
-  (let [seen (:messages-seen state 0)
-        conv-size (count (:conversation state))
-        obs-count (count (:observations state))
-        int-count (count (:interventions state))
-        fired (:triggers-fired state)
-        last-seen (:last-seen-at state)
-        problem-id (or (:problem-id state) "none")
-        channel (or (:channel state) "#math")
-        recent-interventions (take-last 3 (:interventions state))]
-    (str "Mentor (" channel ")\n"
-         "Problem: " problem-id
-         "  Seen: " seen " msgs"
-         "  Buffer: " conv-size "\n"
-         (when last-seen
-           (str "Last read: " last-seen "\n"))
-         "\nTriggers: " (if (seq fired)
-                          (str (count fired) " fired — " (str/join ", " (map name fired)))
-                          "none fired")
+  (let [cmap (or (:cmap state) {})
+        seen (get cmap :map/messages-seen 0)
+        topics (get cmap :map/topics [])
+        effort (get cmap :map/effort {})
+        digest (get cmap :map/digest [])
+        interventions (or (:interventions cmap) (:interventions state) [])
+        int-count (count interventions)
+        fired (or (:triggers/fired cmap) #{})
+        last-seen (get cmap :map/last-seen-at)
+        problem-id (or (:problem-id state)
+                       (:mentor/problem cmap) "none")
+        channel (or (:channel state)
+                    (:mentor/channel cmap) "#math")
+        handle (or (:handle state) (:mentor/handle cmap))
+        version (get cmap :mentor/version 0)
+        recent-digest (take-last 3 digest)
+        recent-interventions (take-last 3 interventions)
+        ;; Format last-seen as relative time
+        last-seen-rel (when last-seen
+                        (try
+                          (let [then (.toEpochMilli (java.time.Instant/parse last-seen))
+                                secs (quot (- (System/currentTimeMillis) then) 1000)]
+                            (cond
+                              (< secs 60) (str secs "s ago")
+                              (< secs 3600) (str (quot secs 60) "m ago")
+                              :else (str (quot secs 3600) "h ago")))
+                          (catch Exception _ last-seen)))]
+    (str "Mentor"
+         (when handle (str " — " handle))
          "\n"
+         (str/join (repeat 40 "─")) "\n"
+         "Problem: " problem-id
+         "  Channel: " channel "\n"
+         "Seen: " seen " msgs"
+         "  Map v" version "\n"
+         (when last-seen-rel
+           (str "Last msg: " last-seen-rel "\n"))
+         "\n"
+         ;; Topics
+         (when (seq topics)
+           (str "Topics (" (count topics) "):\n"
+                (str/join "\n"
+                  (map (fn [{:keys [id status by]}]
+                         (str "  " (name id) " [" (name (or status :unknown)) "] by " by))
+                       topics))
+                "\n\n"))
+         ;; Effort distribution
+         (when (seq effort)
+           (str "Effort:\n"
+                (str/join "\n"
+                  (map (fn [[agent topics]]
+                         (let [topic-names (if (set? topics)
+                                            (map name topics)
+                                            (map name (vec topics)))]
+                           (str "  " agent " (" (count topic-names) "): "
+                                (str/join ", " (take 4 (sort topic-names)))
+                                (when (> (count topic-names) 4) "..."))))
+                       (sort-by (comp count val) > effort)))
+                "\n\n"))
+         ;; Triggers
+         "Triggers: " (if (seq fired)
+                        (str (count fired) " fired — " (str/join ", " (map name fired)))
+                        "none fired")
+         "\n"
+         ;; Interventions
          "Interventions: " int-count
          (when (seq recent-interventions)
            (str "\n"
                 (str/join "\n"
-                  (map (fn [{:keys [at trigger-id message]}]
+                  (map (fn [{:keys [trigger-id message]}]
                          (str "  [" (name trigger-id) "] "
                               (subs (str message) 0 (min 60 (count (str message))))
                               (when (> (count (str message)) 60) "...")))
                        recent-interventions))))
-         "\n")))
+         "\n"
+         ;; Task queue (from tickle-queue, resolved to avoid cyclic dep)
+         (try
+           (when-let [fmt-fn (resolve 'futon3c.agents.tickle-queue/format-queue)]
+             (let [q-str (fmt-fn)]
+               (when (and q-str (not (str/blank? q-str)))
+                 (str "\n" q-str "\n"))))
+           (catch Exception e
+             (println "[blackboard] tickle-queue format-queue error:" (.getMessage e))
+             nil))
+         ;; Recent digest (last 3 conversation entries)
+         (when (seq recent-digest)
+           (str "\n" (str/join (repeat 40 "─")) "\n"
+                "Recent:\n"
+                (str/join "\n"
+                  (map (fn [{:keys [speaker summary]}]
+                         (let [preview (subs (str summary) 0
+                                            (min 70 (count (str summary))))]
+                           (str "  <" speaker "> " preview
+                                (when (> (count (str summary)) 70) "..."))))
+                       recent-digest))
+                "\n")))))
 
 (defmethod render-blackboard :mentor [_ state]
   (format-mentor-state state))
+
+(defn project-mentor!
+  "Project mentor state to the *mentor* blackboard buffer.
+   Uses slot 2 (after *agents* slot 0, *invoke* slot 1).
+   Reads emacs-socket from state :emacs-socket key, or falls back to
+   the agent's registered socket in the registry."
+  [state]
+  (when *enabled*
+    (try
+      (when-let [content (render-blackboard :mentor state)]
+        (let [socket (or (:emacs-socket state)
+                         (try
+                           (get-in @(resolve 'futon3c.agency.registry/!registry)
+                                   [(:author state) :agent/metadata :emacs-socket])
+                           (catch Exception _ nil)))]
+          (blackboard! "*mentor*" content
+                       (cond-> {:width 55 :slot 2}
+                         socket (assoc :emacs-socket socket)))
+          (emit-blackboard-evidence! :mentor state content))
+        nil)
+      (catch Throwable _ nil))))
 
 ;; -----------------------------------------------------------------------------
 ;; :arse — ArSE corpus query session
@@ -548,6 +692,7 @@
                                 type-str (some-> (:type info) name)
                                 metadata (:metadata info)
                                 remote? (:remote? metadata)
+                                queued-jobs (long (or (:queued-jobs info) 0))
                                 elapsed (when (and (= status :invoking)
                                                    (:invoke-started-at info))
                                           (try
@@ -567,14 +712,23 @@
                                    :invoking
                                    (str "INVOKING"
                                         (when elapsed (str " (" elapsed ")"))
+                                        (when (pos? queued-jobs)
+                                          (str " [" queued-jobs " queued]"))
                                         (when activity
                                           (str "\n    " activity))
                                         "\n    "
                                         (:invoke-prompt-preview info))
                                    :idle
                                    (str "idle"
-                                        (when last-active-str
-                                          (str " (" last-active-str ")")))
+                                        (when (or (pos? queued-jobs) last-active-str)
+                                          (str " ("
+                                               (str/join
+                                                ", "
+                                                (remove nil?
+                                                        [(when (pos? queued-jobs)
+                                                           (str queued-jobs " queued"))
+                                                         last-active-str]))
+                                               ")")))
                                    (name status)))))
                         (sort-by key agents)))
          (when (seq ws-unregistered)
@@ -584,13 +738,21 @@
 
 (defn project-agents!
   "Project agent registry status to the *agents* blackboard buffer.
-   Call this from anywhere — it reads directly from the registry."
+   Sends to ALL known Emacs sockets (extracted from agent metadata)
+   so every workspace sees the full agent roster."
   [registry-status]
   (when *enabled*
     (try
-      (let [content (format-agent-status registry-status)]
-        ;; Keep *agents* in a stable side-window slot.
-        (blackboard! "*agents*" content {:width 60 :slot 0}))
+      (let [content (format-agent-status registry-status)
+            opts {:width 60 :slot 0}
+            ;; Collect distinct sockets from agent metadata + default
+            sockets (->> (:agents registry-status)
+                         (keep (fn [[_ info]] (get-in info [:metadata :emacs-socket])))
+                         (into #{})
+                         (#(conj % nil)))]  ;; nil = default socket
+        (doseq [socket sockets]
+          (blackboard! "*agents*" content
+                       (if socket (assoc opts :emacs-socket socket) opts))))
       (catch Throwable _ nil))))
 
 ;; -----------------------------------------------------------------------------
@@ -613,20 +775,32 @@
                      :else nil)))
          (str/join "\n"))))
 
+(def ^:private expected-daemons
+  "Process IDs that should normally be running. Shows ✖ DOWN when absent."
+  #{"fm-conductor" "tickle-watchdog"})
+
 (defn format-process-status
   "Format CYDER process registry for blackboard display.
    Separates running daemons/peripherals (with live state) from
-   infrastructure and mission docs."
+   infrastructure and mission docs. Shows ✖ DOWN for expected processes
+   that are missing."
   [registry-entries]
   (let [now-ms (System/currentTimeMillis)
         by-type (group-by :process/type registry-entries)
         ;; Running processes: daemons, peripherals (not state-machines which are mission docs)
         running (concat (get by-type :daemon)
                         (get by-type :peripheral))
+        running-ids (set (map :process/id running))
+        missing (remove running-ids expected-daemons)
         infra (get (group-by :process/layer registry-entries) :infra)
         missions (get by-type :state-machine)]
     (str "Processes\n"
          (str/join (repeat 40 "─")) "\n"
+         ;; Missing expected processes (red warning)
+         (when (seq missing)
+           (str (str/join "\n"
+                  (map #(str "  ✖ " % " DOWN") (sort missing)))
+                "\n\n"))
          ;; Running daemons/peripherals with live state
          (if (seq running)
            (str/join "\n\n"
@@ -671,6 +845,19 @@
              (str "\nMissions: " (count active) " active, "
                   (- (count missions) (count active)) " done\n"))))))
 
+(def ^:private processes-highlight-elisp
+  "Elisp to apply faces to process buffer status markers after insert."
+  (str "(goto-char (point-min))"
+       "(while (re-search-forward \"●\" nil t)"
+       "  (put-text-property (match-beginning 0) (match-end 0) 'face '(:foreground \"green\")))"
+       "(goto-char (point-min))"
+       "(while (re-search-forward \"✖[^\n]*\" nil t)"
+       "  (put-text-property (match-beginning 0) (match-end 0) 'face '(:foreground \"red\" :weight bold)))"
+       "(goto-char (point-min))"
+       "(while (re-search-forward \"⚠[^\n]*\" nil t)"
+       "  (put-text-property (match-beginning 0) (match-end 0) 'face '(:foreground \"orange\" :weight bold)))"
+       "(goto-char (point-min))"))
+
 (defn project-processes!
   "Project CYDER process registry to the *processes* blackboard buffer.
    Reads raw registry entries (not list-processes) so state-fn can provide live data."
@@ -678,7 +865,8 @@
   (when *enabled*
     (try
       (let [content (format-process-status registry-entries)]
-        (blackboard! "*processes*" content {:width 60 :slot 1}))
+        (blackboard! "*processes*" content {:width 60 :slot 1
+                                           :post-elisp processes-highlight-elisp}))
       (catch Throwable _ nil))))
 
 ;; =============================================================================

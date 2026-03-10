@@ -19,6 +19,8 @@ export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
 # --- Agents: Codex runs here, Claude runs on Linode ---
 export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-true}"
 export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-false}"
+export FUTON3C_TICKLE_AUTOSTART="${FUTON3C_TICKLE_AUTOSTART:-false}"
+export FUTON3C_FM_CONDUCTOR_AUTOSTART="${FUTON3C_FM_CONDUCTOR_AUTOSTART:-false}"
 
 # --- Codex settings ---
 export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
@@ -37,8 +39,8 @@ export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 
-# --- Federation: peer with Linode ---
-if [[ -z "${FUTON3C_PEERS:-}" ]]; then
+# --- Federation: peer with Linode unless explicitly disabled ---
+if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}" ]]; then
   export FUTON3C_PEERS="${FUTON3C_LINODE_URL}"
 fi
 
@@ -61,4 +63,27 @@ if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   fi
 fi
 
-exec make dev "$@"
+# --- Tickle / FM conductor CLI flags ---
+remaining_args=()
+for arg in "$@"; do
+  case "$arg" in
+    --start-tickle|--resume-tickle)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      echo "[dev] Tickle watchdog: will start at boot"
+      ;;
+    --start-fm)
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] FM conductor: will start at boot"
+      ;;
+    --start-all)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] Tickle + FM conductor: will start at boot"
+      ;;
+    *)
+      remaining_args+=("$arg")
+      ;;
+  esac
+done
+
+exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"

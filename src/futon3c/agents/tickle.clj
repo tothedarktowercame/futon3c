@@ -59,6 +59,13 @@
    {}
    entries))
 
+(defn- stringify-instants
+  [activity-map]
+  (into {}
+        (map (fn [[agent-id info]]
+               [agent-id (update info :last-active #(when % (str %)))]))
+        activity-map))
+
 (defn scan-activity
   "Check evidence store for recent activity per registered agent.
    Returns map of {agent-id {:last-active Instant :stale? bool :stale-seconds long}}.
@@ -143,7 +150,7 @@
           {:escalated? false :agent-id agent-id})))))
 
 (defn- emit-scan-evidence!
-  [evidence-store cycle-result threshold-seconds]
+  [evidence-store activity-map cycle-result threshold-seconds]
   (when evidence-store
     (estore/append* evidence-store
                     {:subject {:ref/type :session
@@ -154,8 +161,89 @@
                      :tags [:tickle :scan]
                      :session-id "tickle-watchdog"
                      :body (assoc cycle-result
+                                  :event :scan
+                                  :activity (stringify-instants activity-map)
                                   :threshold-seconds (int threshold-seconds)
                                   :cycle-at (str (Instant/now)))})))
+
+(defn- emit-page-evidence!
+  [evidence-store {:keys [paged? agent-id method]}]
+  (when (and evidence-store paged? agent-id)
+    (estore/append* evidence-store
+                    {:subject {:ref/type :agent
+                               :ref/id agent-id}
+                     :type :coordination
+                     :claim-type :observation
+                     :author "tickle-1"
+                     :tags [:tickle :page]
+                     :session-id "tickle-watchdog"
+                     :body {:event :page
+                            :agent-id agent-id
+                            :method method
+                            :at (str (Instant/now))}})))
+
+(defn- emit-escalation-evidence!
+  [evidence-store {:keys [escalated? agent-id]}]
+  (when (and evidence-store escalated? agent-id)
+    (estore/append* evidence-store
+                    {:subject {:ref/type :agent
+                               :ref/id agent-id}
+                     :type :coordination
+                     :claim-type :observation
+                     :author "tickle-1"
+                     :tags [:tickle :escalation]
+                     :session-id "tickle-watchdog"
+                     :body {:event :escalation
+                            :agent-id agent-id
+                            :cause :page-failed
+                            :at (str (Instant/now))}})))
+
+(defn- availability-bell-payload
+  [prompt]
+  (when (map? prompt)
+    (let [bell-type (or (:coord/type prompt)
+                        (get prompt "coord/type")
+                        (:type prompt)
+                        (get prompt "type"))
+          normalized-type (cond
+                            (keyword? bell-type) bell-type
+                            (string? bell-type) (keyword bell-type)
+                            :else nil)]
+      (when (= :agent-availability-bell normalized-type)
+        {:agent-id (agent-id->string (or (:agent-id prompt)
+                                         (get prompt "agent-id")
+                                         (:from prompt)
+                                         (get prompt "from")))
+         :message (or (:message prompt)
+                      (get prompt "message")
+                      "I'm available")
+         :availability (or (:availability prompt)
+                           (get prompt "availability")
+                           :available)
+         :invoke-status (or (:invoke-status prompt)
+                            (get prompt "invoke-status"))
+         :session-id (or (:session-id prompt)
+                         (get prompt "session-id"))
+         :trace-id (or (:trace-id prompt)
+                       (get prompt "trace-id"))}))))
+
+(defn- emit-availability-evidence!
+  [evidence-store {:keys [agent-id message availability invoke-status session-id trace-id]}]
+  (when (and evidence-store agent-id)
+    (estore/append* evidence-store
+                    {:subject {:ref/type :agent :ref/id agent-id}
+                     :type :coordination
+                     :claim-type :observation
+                     :author "tickle-1"
+                     :tags [:tickle :availability-bell :coordination]
+                     :session-id (or session-id "tickle-availability")
+                     :body {:event :agent-availability-bell
+                            :agent-id agent-id
+                            :availability availability
+                            :invoke-status invoke-status
+                            :message message
+                            :trace-id trace-id
+                            :at (str (Instant/now))}})))
 
 (defn run-scan-cycle!
   "Single scan-page-escalate cycle. Pure orchestration.
@@ -164,7 +252,8 @@
   (let [threshold-seconds (long (or (:threshold-seconds config) 300))
         evidence-store (:evidence-store config)
         self-id (or (:self-id config) "tickle-1")
-        registry-snapshot (or (:registry-snapshot config)
+        registry-snapshot (or (when-let [f (:registry-snapshot-fn config)] (f))
+                              (:registry-snapshot config)
                               (reg/registered-agents))
         activity-map (scan-activity evidence-store registry-snapshot threshold-seconds
                                     :self-id self-id)
@@ -186,8 +275,35 @@
                       :stalled stalled
                       :paged paged
                       :escalated escalated}]
-    (emit-scan-evidence! evidence-store cycle-result threshold-seconds)
+    (doseq [page-result page-results]
+      (emit-page-evidence! evidence-store page-result))
+    (doseq [escalated-result escalated-results]
+      (emit-escalation-evidence! evidence-store escalated-result))
+    (emit-scan-evidence! evidence-store activity-map cycle-result threshold-seconds)
     cycle-result))
+
+(defn invoke!
+  "Tickle invoke entry point.
+
+   Supported prompts:
+   - {:coord/type :agent-availability-bell ...} records an availability bell
+     from another agent and returns an acknowledgement.
+   - all other prompts run the normal scan cycle."
+  [config prompt _session-id]
+  (if-let [{:keys [agent-id message availability invoke-status session-id trace-id] :as payload}
+           (availability-bell-payload prompt)]
+    (do
+      (emit-availability-evidence! (:evidence-store config) payload)
+      {:result (str "tickle noted availability from "
+                    (or agent-id "unknown-agent")
+                    ": " message)
+       :session-id session-id
+       :availability-bell? true
+       :availability availability
+       :invoke-status invoke-status
+       :trace-id trace-id})
+    (let [cycle-result (run-scan-cycle! config)]
+      {:result (pr-str cycle-result) :session-id nil})))
 
 (defn start-watchdog!
   "Start the Tickle watchdog loop. Runs scan cycles every interval-ms.

@@ -208,5 +208,57 @@
           entries (estore/query* store {:query/type :coordination})
           tickle-entry (first (filter #(= [:tickle :scan] (:evidence/tags %)) entries))]
       (is (some? tickle-entry))
+      (is (= :scan (get-in tickle-entry [:evidence/body :event])))
       (is (= 42 (get-in tickle-entry [:evidence/body :threshold-seconds])))
-      (is (string? (get-in tickle-entry [:evidence/body :cycle-at]))))))
+      (is (string? (get-in tickle-entry [:evidence/body :cycle-at])))
+      (is (map? (get-in tickle-entry [:evidence/body :activity]))))))
+
+(deftest scan-cycle-emits-page-and-escalation-evidence
+  (testing "run-scan-cycle! records watchdog pages and escalations as evidence"
+    (register-agent! "paged-1")
+    (register-agent! "escalate-1")
+    (let [store (make-evidence-store)
+          _ (tickle/run-scan-cycle!
+             {:evidence-store store
+              :threshold-seconds 60
+              :page-config {:ring-test-bell! (fn [{:keys [agent-id]}]
+                                               (if (= agent-id "paged-1")
+                                                 {:bell/type :test-bell}
+                                                 {:ok false :error :no-ack}))}
+              :escalate-config {:notify-fn (fn [_ _] true)}})
+          entries (estore/query* store {:query/type :coordination})
+          page-entry (first (filter #(= [:tickle :page] (:evidence/tags %)) entries))
+          escalation-entry (first (filter #(= [:tickle :escalation] (:evidence/tags %)) entries))]
+      (is (some? page-entry))
+      (is (= :page (get-in page-entry [:evidence/body :event])))
+      (is (= "paged-1" (get-in page-entry [:evidence/body :agent-id])))
+      (is (= :bell (get-in page-entry [:evidence/body :method])))
+      (is (some? escalation-entry))
+      (is (= :escalation (get-in escalation-entry [:evidence/body :event])))
+      (is (= "escalate-1" (get-in escalation-entry [:evidence/body :agent-id])))
+      (is (= :page-failed (get-in escalation-entry [:evidence/body :cause]))))))
+
+(deftest invoke-records-agent-availability-bell
+  (testing "tickle invoke accepts agent-availability-bell payloads without running a scan cycle"
+    (let [store (make-evidence-store)
+          result (tickle/invoke!
+                  {:evidence-store store}
+                  {:coord/type :agent-availability-bell
+                   :agent-id "codex-1"
+                   :availability :available
+                   :invoke-status :done
+                   :session-id "sess-codex"
+                   :trace-id "invoke-123"
+                   :message "I'm available"}
+                  nil)
+          entries (estore/query* store {:query/type :coordination})
+          bell-entry (first (filter #(= [:tickle :availability-bell :coordination]
+                                        (:evidence/tags %))
+                                    entries))]
+      (is (= "tickle noted availability from codex-1: I'm available" (:result result)))
+      (is (= "sess-codex" (:session-id result)))
+      (is (true? (:availability-bell? result)))
+      (is (some? bell-entry))
+      (is (= :agent-availability-bell (get-in bell-entry [:evidence/body :event])))
+      (is (= "codex-1" (get-in bell-entry [:evidence/body :agent-id])))
+      (is (= :done (get-in bell-entry [:evidence/body :invoke-status]))))))

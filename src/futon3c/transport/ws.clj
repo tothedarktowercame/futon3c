@@ -326,6 +326,23 @@
                          (send-fn ch (proto/render-peripheral-stopped
                                       pid (:fruit stop-result) reason))))))
 
+                 ;; --- Status update (remote agent reporting invoke state) ---
+                 :status
+                 (let [agent-id (:agent-id conn)
+                       status-val (:status/value parsed)
+                       activity (:status/activity parsed)
+                       session-id (:status/session-id parsed)]
+                   (reg/report-external-invoke!
+                    agent-id
+                    "ws-bridge"
+                    (cond-> {:status status-val}
+                      session-id (assoc :session-id session-id)
+                      activity (assoc :activity activity)))
+                   (send-fn ch (proto/render-ws-frame
+                                {:type "status_ack"
+                                 :agent-id agent-id
+                                 :status status-val})))
+
                  ;; --- Invoke result (WS bridge) ---
                  :invoke-result
                  (let [agent-id (:agent-id conn)

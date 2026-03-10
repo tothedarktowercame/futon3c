@@ -83,7 +83,8 @@
     :invoke-fn invoke-fn
     :capabilities (vec (or capabilities (get default-capabilities type [])))
     :ttl-ms ttl-ms
-    :metadata metadata}))
+    :metadata (merge {:agency/contracts {:bell-on-complete? (boolean invoke-fn)}}
+                     metadata)}))
 
 (defn register-codex!
   "Convenience wrapper for registering a Codex agent."
@@ -94,7 +95,8 @@
                     :invoke-fn invoke-fn
                     :capabilities capabilities
                     :ttl-ms ttl-ms
-                    :metadata metadata}))
+                    :metadata (assoc (or metadata {})
+                                     :require-execution? true)}))
 
 (defn register-claude!
   "Convenience wrapper for registering a Claude agent."

@@ -623,6 +623,13 @@
    "codex-1"  "codex (computational worker, runs SAT solvers and writes code)"
    "claude-2" "claude-2 (Mentor, epistemic risk monitor, pattern reviewer)"})
 
+(def ^:private agent-irc-nicks
+  "Agent ID → IRC nick mapping. Agents may have different IRC nicks than their
+   registry IDs. Tickle must @-mention the correct nick for IRC delivery."
+  {"claude-1" "claude"
+   "codex-1"  "codex"
+   "claude-2" "claude-2"})
+
 (def ^:private default-cooldown-ms
   "Minimum interval between pages to the same agent (15 minutes).
    War-bulletin-5 finding: stateless orchestrator caused ~40% noise."
@@ -675,6 +682,7 @@
   "Build the Tickle decision prompt for an FM conductor cycle."
   [problem-id target-agent recent-msgs assignable-tasks]
   (let [agent-role (get agent-roles target-agent target-agent)
+        irc-nick (get agent-irc-nicks target-agent target-agent)
         recent-text (str/join "\n"
                      (map (fn [{:keys [nick text at]}]
                             (str (when at (subs (str at) 11 19)) " <" nick "> " text))
@@ -687,7 +695,8 @@
          "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
          "Current mode: FALSIFY (must try to disprove before constructing).\n"
          "Strategy doc: futon6/data/frontiermath-pilot/FM-001-strategy.md\n\n"
-         "TARGET THIS CYCLE: " agent-role "\n\n"
+         "TARGET THIS CYCLE: " agent-role "\n"
+         "IRC NICK: " irc-nick " (use @" irc-nick " when mentioning this agent)\n\n"
          "ASSIGNABLE OBLIGATIONS:\n" (if (seq task-text) task-text "  (none — all blocked by dependencies)") "\n\n"
          "RECENT #math (" (count recent-msgs) " messages):\n"
          (if (seq recent-text) recent-text "(no messages captured)") "\n\n"
@@ -695,7 +704,7 @@
          "1. If the target agent claimed work and is actively working — PASS (don't interrupt)\n"
          "2. If the target agent seems stuck or silent — brief nudge\n"
          "3. If work is completed — acknowledge and dispatch next obligation\n"
-         "4. Max 1-2 lines, <400 chars. Always @mention the target agent. Post to #math.\n"
+         "4. Max 1-2 lines, <400 chars. Always @mention the target using their IRC NICK (not agent ID). Post to #math.\n"
          "5. Do NOT repeat the full problem statement — agents know it.\n"
          "6. Remind agents to push artifacts to git — never reference local paths or /tmp.\n"
          "7. If YOU (tickle) already said something similar in RECENT #math — PASS. Do not re-page.\n\n"
@@ -718,14 +727,20 @@
      :evidence-store   — for tracking conductor cycles
      :conductor-state  — atom tracking per-agent cooldown state
      :cooldown-ms      — min interval between pages to same agent (default 15 min)
+     :whistle-fn       — fn [map] → escalates via Agency when PASS + empty ledger
+                          map has {:from :to :type :problem-id :reason :action}
 
    Returns {:action :pass|:cooldown|:message|:error, :target str, :text str}."
   [target-agent config]
   (let [{:keys [problem-id irc-read-fn bridge-send-fn evidence-store
-                conductor-state cooldown-ms]
+                conductor-state cooldown-ms whistle-fn invoke-fn]
          :or {problem-id "FM-001"
               cooldown-ms default-cooldown-ms}} config
-        conductor-state (or conductor-state (atom {}))]
+        conductor-state (or conductor-state (atom {}))
+        ;; Prefer explicit invoke-fn from config; fall back to tickle-1 registry
+        invoke-fn (or invoke-fn
+                      (let [agent (reg/get-agent "tickle-1")]
+                        (or (:agent/invoke-fn agent) (:invoke-fn agent))))]
     ;; Layer 1: mechanical cooldown guard
     (if-not (cooldown-elapsed? conductor-state target-agent cooldown-ms)
       (do (println (str "[fm-conductor] " target-agent " → COOLDOWN (paged recently)"))
@@ -735,11 +750,9 @@
                                (filter #(= "#math" (:channel %)))
                                (take-last 20)))
             assignable (fm-assignable-obligations problem-id)
-            context (build-fm-context problem-id target-agent recent-msgs assignable)
-            agent (reg/get-agent "tickle-1")
-            invoke-fn (or (:agent/invoke-fn agent) (:invoke-fn agent))]
+            context (build-fm-context problem-id target-agent recent-msgs assignable)]
         (if-not invoke-fn
-          (do (println "[fm-conductor] tickle-1 not registered, can't decide")
+          (do (println "[fm-conductor] no invoke-fn configured and tickle-1 not registered")
               {:action :error :target target-agent})
           (let [{:keys [result]} (invoke-fn context nil)
                 response (str/trim (or result "PASS"))
@@ -765,19 +778,22 @@
                                       :cycle-at (str (Instant/now))}}))
             (if pass?
               (do (println (str "[fm-conductor] " target-agent " → PASS"))
-                  ;; Whistle: if PASS and no assignable work, notify mentor
+                  ;; Whistle: if PASS and no assignable work, escalate via Agency
                   (let [mentor "claude-2"
                         whistle? (and (empty? assignable)
                                       (not= target-agent mentor)
                                       (cooldown-elapsed? conductor-state
                                                          (str "whistle:" mentor)
                                                          cooldown-ms))]
-                    (when (and whistle? (fn? bridge-send-fn))
+                    (when (and whistle? (fn? whistle-fn))
                       (println (str "[fm-conductor] whistling " mentor " (no obligations for " target-agent ")"))
                       (record-page! conductor-state (str "whistle:" mentor))
-                      (bridge-send-fn "#math" "tickle"
-                                      (str "@" mentor " [whistle] No assignable obligations for "
-                                           target-agent " — ledger review needed?"))))
+                      (whistle-fn {:from "tickle-1"
+                                   :to mentor
+                                   :type :whistle
+                                   :problem-id problem-id
+                                   :reason (str "No assignable obligations for " target-agent)
+                                   :action :ledger-review})))
                   {:action :pass :target target-agent})
               (do (println (str "[fm-conductor] " target-agent " → " first-line))
                   (record-page! conductor-state target-agent)

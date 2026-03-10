@@ -15,6 +15,7 @@
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      GET  /api/alpha/invoke/jobs — list recent invoke jobs
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
+     POST /api/alpha/invoke/announce — record a queued invoke before external acceptance
      POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
      POST /api/alpha/whistle — synchronous invoke (or NDJSON stream when stream=true)
      POST /api/alpha/whistle-stream — NDJSON streaming invoke with heartbeats
@@ -61,6 +62,7 @@
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
             [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.blackboard :as bb]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
             [meme.arrow :as meme-arrow]
@@ -440,7 +442,27 @@
                  (assoc :next-seq next-seq)
                  (update :job-order (fnil conj []) job-id)
                  (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
+    (bb/project-agents! (reg/registry-status))
     @created-id))
+
+(defn active-invoke-job-counts
+  "Return canonical non-terminal invoke-job counts keyed by agent-id.
+   Example:
+   {\"codex-1\" {:queued-jobs 1 :running-jobs 0 :nonterminal-jobs 1}}"
+  []
+  (ensure-invoke-jobs-ledger!)
+  (reduce
+   (fn [acc job]
+     (let [aid (some-> (:agent-id job) str str/trim not-empty)
+           state (some-> (:state job) str)]
+       (if-not (and aid (#{"queued" "running"} state))
+         acc
+         (-> acc
+             (update-in [aid :queued-jobs] (fnil + 0) (if (= "queued" state) 1 0))
+             (update-in [aid :running-jobs] (fnil + 0) (if (= "running" state) 1 0))
+             (update-in [aid :nonterminal-jobs] (fnil inc 0))))))
+   {}
+   (vals (get @!invoke-jobs-ledger :jobs {}))))
 
 (defn- mark-invoke-job-running!
   [job-id]
@@ -1750,16 +1772,28 @@
 (defn- wrap-surface-header
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
    This ensures the agent sees a consistent, unambiguous surface declaration
-   on every turn — even when session history has messages from other surfaces."
-  [prompt surface caller]
-  (if (and surface (not (str/blank? (str surface))))
-    (str "--- CURRENT TURN ---\n"
-         "Surface: " surface "\n"
-         (when (and caller (not (str/blank? (str caller))))
-           (str "Caller: " caller "\n"))
-         "---\n\n"
-         prompt)
-    prompt))
+   on every turn — even when session history has messages from other surfaces.
+   Also includes the agent's pattern backpack if any patterns are active."
+  ([prompt surface caller]
+   (wrap-surface-header prompt surface caller nil))
+  ([prompt surface caller agent-id]
+   (if (and surface (not (str/blank? (str surface))))
+     (let [backpack (when agent-id
+                      (some-> (get @reg/!registry (str agent-id))
+                              :agent/metadata :backpack seq))]
+       (str "--- CURRENT TURN ---\n"
+            "Surface: " surface "\n"
+            (when (and caller (not (str/blank? (str caller))))
+              (str "Caller: " caller "\n"))
+            (when (seq backpack)
+              (str "Backpack: "
+                   (str/join ", " (map (fn [{:keys [sigil pattern]}]
+                                         (str "[" sigil "] " pattern))
+                                       backpack))
+                   "\n"))
+            "---\n\n"
+            prompt))
+     prompt)))
 
 (def ^:private task-mode-re
   #"(?i)\bmode:\s*task\b")
@@ -1787,14 +1821,29 @@
      :tool-events tool-events
      :command-events command-events}))
 
+(defn- agent-requires-execution?
+  "Return true when the agent metadata requests execution evidence enforcement."
+  [agent-id]
+  (let [record (reg/get-agent agent-id)
+        metadata (:agent/metadata record)
+        aid (some-> agent-id str str/lower-case)]
+    (boolean (or (get metadata :require-execution?)
+                 (get metadata "require-execution?")
+                 (and (string? aid)
+                      (str/starts-with? aid "codex"))))))
+
 (defn- codex-task-no-execution?
-  "True when a codex task-mode reply reports no execution evidence and isn't planning-only."
-  [agent-id prompt result]
-  (let [aid (some-> agent-id str str/lower-case)
-        text (some-> (:result result) str str/trim)
-        {:keys [executed tool-events command-events]} (invoke-execution-evidence result)]
-    (and (string? aid)
-         (str/starts-with? aid "codex")
+  "True when an execution-enforced agent returns a task-mode reply with no evidence.
+   Optional REQUIRE-EXECUTION? bypasses metadata lookup for pure tests."
+  ([agent-id prompt result]
+   (codex-task-no-execution? agent-id prompt result nil))
+  ([agent-id prompt result require-execution?]
+   (let [text (some-> (:result result) str str/trim)
+         {:keys [executed tool-events command-events]} (invoke-execution-evidence result)
+         enforced? (if (some? require-execution?)
+                     (boolean require-execution?)
+                     (agent-requires-execution? agent-id))]
+    (and enforced?
          (string? prompt)
          (or (boolean (re-find task-mode-re prompt))
              (boolean (re-find mission-work-re prompt)))
@@ -1803,7 +1852,7 @@
          (not (boolean (re-find planning-only-re text)))
          (not executed)
          (zero? tool-events)
-         (zero? command-events))))
+         (zero? command-events)))))
 
 (defn- build-invoke-response
   "Run a direct invoke and convert it to a Ring response map."
@@ -1826,7 +1875,7 @@
                                     :surface surface})]
     (try
       (mark-invoke-job-running! job-id)
-      (let [effective-prompt (wrap-surface-header prompt surface caller)
+      (let [effective-prompt (wrap-surface-header prompt surface caller agent-id)
             result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
             sid (:session-id result)
             no-evidence? (and (:ok result)
@@ -1879,7 +1928,7 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
-      (let [effective-prompt (wrap-surface-header prompt surface caller)
+      (let [effective-prompt (wrap-surface-header prompt surface caller agent-id)
             result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
             sid (:session-id result)
             no-evidence? (and (:ok result)
@@ -2055,6 +2104,57 @@
                                     :error "invoke-submit-failed"
                                     :message (.getMessage t)})))))))))
 
+(defn- handle-invoke-announce
+  "POST /api/alpha/invoke/announce — record a canonical queued invoke before any
+   external surface announces acceptance.
+   Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"job-id\":\"optional\"}
+   Returns immediately with the canonical queued job id and status URL."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
+            prompt (or (:prompt payload) (get payload "prompt"))
+            caller (or (some-> payload :caller str)
+                       (some-> payload (get "caller") str)
+                       "http-caller")
+            surface (or (some-> payload :surface str)
+                        (some-> payload (get "surface") str)
+                        "announce")
+            requested-job-id (or (:job-id payload) (get payload "job-id")
+                                 (:job_id payload) (get payload "job_id"))]
+        (cond
+          (or (nil? agent-id) (str/blank? (str agent-id)))
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? prompt)
+          (json-response 400 {:ok false :err "missing-prompt"
+                              :message "prompt is required"})
+
+          (nil? (reg/get-agent (str agent-id)))
+          (json-response 404 {:ok false :err "agent-not-found"
+                              :message (str "Agent not registered: " agent-id)})
+
+          :else
+          (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+                                            :agent-id agent-id
+                                            :prompt prompt
+                                            :caller caller
+                                            :surface surface})
+                queued-jobs (get-in (active-invoke-job-counts)
+                                    [(str agent-id) :queued-jobs]
+                                    0)
+                job (some-> job-id get-invoke-job invoke-job-public-view)]
+            (json-response 202 {:ok true
+                                :accepted true
+                                :job-id job-id
+                                :state "queued"
+                                :queued-jobs queued-jobs
+                                :status-url (str "/api/alpha/invoke/jobs/" job-id)
+                                :job job})))))))
+
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
    Same request body as /invoke. Returns application/x-ndjson with chunked events:
@@ -2080,6 +2180,7 @@
                               :message "prompt is required"})
 
           :else
+          #_{:clj-kondo/ignore [:unresolved-symbol]}
           (hk/with-channel request channel
             ;; Send initial response with a keepalive comment to start chunked stream
             (hk/send! channel
@@ -2118,7 +2219,7 @@
                                              long)
                           evidence-store (evidence-store-for-config config)
                           ev-opts (when mission-id [:mission-id mission-id])
-                          effective-prompt (wrap-surface-header prompt surface caller)
+                          effective-prompt (wrap-surface-header prompt surface caller agent-id)
                           result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
                           sid (:session-id result)]
                       ;; Emit evidence (same as handle-invoke)
@@ -2641,6 +2742,28 @@
                                  (if (map? err)
                                    (:error/message err)
                                    (str err)))})))))
+
+(defn- handle-agent-status
+  "POST /api/alpha/agents/:id/status — report external invoke state.
+   Body: {\"source\": \"emacs-agent-chat\", \"status\": \"invoking\"|\"idle\",
+          \"activity\": \"optional description\", \"session_id\": \"optional\"}
+   Emacs (or any surface) calls this to tell the server an agent is busy."
+  [_config agent-id request]
+  (let [payload (parse-json-map (read-body request))
+        source (or (:source payload) (get payload "source") "http-api")
+        status-val (or (:status payload) (get payload "status"))
+        activity (or (:activity payload) (get payload "activity"))
+        session-id (or (:session_id payload) (get payload "session_id")
+                       (:session-id payload) (get payload "session-id"))]
+    (if (str/blank? (str status-val))
+      (json-response 400 {:ok false :err "missing-status"
+                          :message "Body must include \"status\": \"invoking\" or \"idle\""})
+      (let [result (reg/report-external-invoke!
+                    agent-id source
+                    (cond-> {:status status-val}
+                      activity (assoc :activity activity)
+                      session-id (assoc :session-id session-id)))]
+        (json-response 200 result)))))
 
 ;; =============================================================================
 ;; CYDER process endpoints
@@ -3329,6 +3452,9 @@
           (and (= :post method) (= "/api/alpha/invoke" uri))
           (handle-invoke request config)
 
+          (and (= :post method) (= "/api/alpha/invoke/announce" uri))
+          (handle-invoke-announce request config)
+
           (and (= :post method) (= "/api/alpha/bell" uri))
           (handle-bell request config)
 
@@ -3417,6 +3543,13 @@
           (let [raw (subs uri (count "/api/alpha/agents/")
                          (- (count uri) (count "/rebind")))]
             (handle-agent-rebind config (enc/decode-uri-component raw) request))
+
+          (and (= :post method) (string? uri)
+               (str/starts-with? uri "/api/alpha/agents/")
+               (str/ends-with? uri "/status"))
+          (let [raw (subs uri (count "/api/alpha/agents/")
+                         (- (count uri) (count "/status")))]
+            (handle-agent-status config (enc/decode-uri-component raw) request))
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")

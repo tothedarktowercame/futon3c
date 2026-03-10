@@ -188,6 +188,7 @@ IRC_COMMAND_OWNER_AGENT_MAP = _parse_channel_agent_map(
 )
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
+INVOKE_ANNOUNCE_URL = f"{INVOKE_BASE}/api/alpha/invoke/announce"
 INVOKE_JOBS_URL = f"{INVOKE_BASE}/api/alpha/invoke/jobs"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
@@ -484,8 +485,11 @@ class IRCBot:
             f"[Surface: IRC | Channel: {ch} | "
             f"Speaker: {sender}{mission_part} | Mode: task | "
             f"Your completion update will be posted to {ch} as <{self.nick}>. "
-            "Execute work asynchronously, then return a short status with artifact refs "
-            "(commit/PR/issue). Push artifacts to git before referencing — never cite local paths or /tmp. "
+            "Prefer completing one bounded unit of work in this turn. "
+            "Do not stop at reconnaissance-only updates like grepping, mapping, or an initial step. "
+            "Execute work asynchronously, then return a short completion/blocker status with artifact refs "
+            "(commit/PR/issue/file path), or explicitly say planning-only/blocked with blocker evidence. "
+            "Push artifacts to git before referencing them, and never cite local paths or /tmp. "
             f"{send_hint} "
             f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )
@@ -683,7 +687,7 @@ class IRCBot:
         return refs
 
     def _summarize_invoke_result(self, result_text, clean=False):
-        """Return a short IRC-safe summary with artifact refs when available.
+        """Return a short IRC-safe summary.
         If clean=True, return the text without artifact ref annotations."""
         text = self._sanitize_for_irc(result_text or "")
         compact = re.sub(r"\s+", " ", text).strip()
@@ -698,7 +702,7 @@ class IRCBot:
             summary = "[no textual response]"
         if refs:
             return f"{summary} refs: {', '.join(refs)}"
-        return f"{summary} (no artifact refs)"
+        return summary
 
     @staticmethod
     def _execution_stats(invoke_meta):
@@ -753,10 +757,87 @@ class IRCBot:
             return False
         return True
 
-    def _enqueue_invoke(self, sender, full_prompt, mission_id, reply_channel=None,
+    def _emit_success_reply(self, response, reply_ch, job_id, multi_message=False):
+        """Render and send a successful invoke reply to IRC."""
+        # Claude/corpus/codex: clean IRC output with no queue/done framing.
+        is_clean = self._uses_clean_irc_output()
+        if is_clean:
+            if self.nick == "corpus":
+                summary = self._multiline_result_for_irc(response.get("result", ""))
+                self._say(summary, max_lines=8, channel=reply_ch)
+            else:
+                if multi_message:
+                    summary = self._multiline_result_for_irc(response.get("result", ""))
+                    max_lines = 8
+                else:
+                    summary = self._summarize_invoke_result(
+                        response.get("result", ""),
+                        clean=True,
+                    )
+                    max_lines = 2
+                self._say(summary, max_lines=max_lines, channel=reply_ch)
+            return
+
+        if multi_message:
+            summary = self._multiline_result_for_irc(response.get("result", ""))
+        else:
+            summary = self._summarize_invoke_result(response.get("result", ""))
+        sid = response.get("session_id")
+        if CODEX_USE_RAW_OUTPUT:
+            raw_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
+            if raw_text:
+                refs = self._extract_artifact_refs(raw_text)
+                header_parts = [f"[done {job_id}]"]
+                if sid:
+                    header_parts.append(f"(session {sid[:8]})")
+                if refs:
+                    header_parts.append(f"refs: {', '.join(refs[:3])}")
+                header = " ".join(part for part in header_parts if part).strip()
+                self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
+                return
+        max_lines = 8 if multi_message else 2
+        if sid:
+            self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
+                      max_lines=max_lines, channel=reply_ch)
+        else:
+            self._say(f"[done {job_id}] {summary}",
+                      max_lines=max_lines, channel=reply_ch)
+
+    def _announce_invoke(self, sender, full_prompt, mission_id, reply_channel=None):
+        """Record a canonical queued job in the server before any IRC acceptance."""
+        requested_job_id = self._next_job_id()
+        payload = {
+            "agent-id": self.agent_id,
+            "prompt": full_prompt,
+            "caller": f"irc:{sender}",
+            "surface": f"irc ({reply_channel or self.channel})",
+            "job-id": requested_job_id,
+        }
+        if mission_id:
+            payload["mission-id"] = mission_id
+        result = api_post(INVOKE_ANNOUNCE_URL, payload, timeout=min(CMD_TIMEOUT, 5))
+        if not (isinstance(result, dict) and result.get("ok")):
+            if isinstance(result, dict):
+                err = result.get("error") or result.get("message") or result.get("err")
+            else:
+                err = None
+            return {"ok": False, "error": err or "announce-failed"}
+        job_id = result.get("job-id") or requested_job_id
+        queued_jobs = result.get("queued-jobs")
+        try:
+            queued_jobs = int(queued_jobs)
+        except Exception:
+            queued_jobs = None
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "queued_jobs": queued_jobs,
+            "status_url": result.get("status-url"),
+        }
+
+    def _enqueue_invoke(self, job_id, sender, full_prompt, mission_id, reply_channel=None,
                         multi_message=False):
-        """Queue an invoke request and return assigned job id or None when full."""
-        job_id = self._next_job_id()
+        """Queue an already-announced invoke request. Returns job id or None when full."""
         task = {
             "job_id": job_id,
             "sender": sender,
@@ -799,51 +880,7 @@ class IRCBot:
                     )
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
-                    # Claude: clean output (no [done]/[accepted] framing)
-                    # Codex: full framing with artifact refs and session IDs
-                    is_clean = self.nick.startswith("claude") or self.nick == "corpus"
-                    if is_clean:
-                        if self.nick == "corpus":
-                            summary = self._multiline_result_for_irc(response.get("result", ""))
-                            self._say(summary, max_lines=8, channel=reply_ch)
-                        else:
-                            summary = self._summarize_invoke_result(response.get("result", ""), clean=True)
-                            self._say(summary, max_lines=4, channel=reply_ch)
-                    else:
-                        if multi_message:
-                            summary = self._multiline_result_for_irc(response.get("result", ""))
-                        else:
-                            summary = self._summarize_invoke_result(response.get("result", ""))
-                        stats = self._execution_stats(response.get("invoke_meta"))
-                        execution_note = ""
-                        if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-                            execution_note = (
-                                f"[no execution evidence: tool-events={stats['tool_events']}, "
-                                f"command-events={stats['command_events']}]"
-                            )
-                            summary = f"{summary} {execution_note}".strip()
-                        sid = response.get("session_id")
-                        if CODEX_USE_RAW_OUTPUT:
-                            raw_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
-                            if raw_text:
-                                refs = self._extract_artifact_refs(raw_text)
-                                header_parts = [f"[done {job_id}]"]
-                                if sid:
-                                    header_parts.append(f"(session {sid[:8]})")
-                                if refs:
-                                    header_parts.append(f"refs: {', '.join(refs[:3])}")
-                                if execution_note:
-                                    header_parts.append(execution_note)
-                                header = " ".join(part for part in header_parts if part).strip()
-                                self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
-                                continue
-                        max_lines = 8 if multi_message else 2
-                        if sid:
-                            self._say(f"[done {job_id}] {summary} (session {sid[:8]})",
-                                      max_lines=max_lines, channel=reply_ch)
-                        else:
-                            self._say(f"[done {job_id}] {summary}",
-                                      max_lines=max_lines, channel=reply_ch)
+                    self._emit_success_reply(response, reply_ch, job_id, multi_message=multi_message)
                     self._record_delivery_receipt(
                         invoke_meta,
                         delivered=True,
@@ -1071,6 +1108,14 @@ class IRCBot:
         clipped = [self._truncate(ln, max_len=180) for ln in lines]
         return "\n".join(clipped)
 
+    def _uses_clean_irc_output(self):
+        """Return true when this bot should avoid queue/done framing on IRC."""
+        return (
+            self.nick.startswith("claude")
+            or self.nick == "corpus"
+            or self.agent_id.startswith("codex")
+        )
+
     def _handle_mention(self, sender, text, channel=None):
         """Process a mention: queue invoke and ack immediately."""
         channel = channel or self.channel
@@ -1089,19 +1134,33 @@ class IRCBot:
                                                 channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {prompt_text}"
 
-        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
-                                      reply_channel=channel,
-                                      multi_message=multi_message)
-        if not job_id:
+        if self._invoke_queue.full():
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping invocation from {sender}")
             return
-        pending = self._invoke_queue.qsize()
+        announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
+                                          reply_channel=channel)
+        if not announced.get("ok"):
+            err = announced.get("error", "announce-failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Announce failed for {sender} on {channel}: {err}")
+            return
+        job_id = self._enqueue_invoke(announced["job_id"], sender, full_prompt, self.focused_mission,
+                                      reply_channel=channel,
+                                      multi_message=multi_message)
+        if not job_id:
+            self._say("[bridge enqueue failed] invoke queue changed after announce; inspect job ledger",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Unexpected post-announce enqueue failure for {job_id} from {sender}")
+            return
+        pending = announced.get("queued_jobs")
+        if pending is None:
+            pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
         log(self.nick, f"Queued {job_id} ({mode}) from {sender} on {channel}: {prompt_text[:80]}")
-        # Claude: no [accepted] noise — just process silently
-        if not self.nick.startswith("claude"):
+        if not self._uses_clean_irc_output():
             self._say(
                 f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1, channel=channel,
@@ -1120,17 +1179,32 @@ class IRCBot:
         surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
         full_prompt = f"{surface_context}\n\n{sender}: {text}"
 
-        job_id = self._enqueue_invoke(sender, full_prompt, self.focused_mission,
-                                      reply_channel=channel)
-        if not job_id:
+        if self._invoke_queue.full():
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping ungated invocation from {sender}")
             return
-        pending = self._invoke_queue.qsize()
+        announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
+                                          reply_channel=channel)
+        if not announced.get("ok"):
+            err = announced.get("error", "announce-failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Announce failed for ungated invoke from {sender} on {channel}: {err}")
+            return
+        job_id = self._enqueue_invoke(announced["job_id"], sender, full_prompt, self.focused_mission,
+                                      reply_channel=channel)
+        if not job_id:
+            self._say("[bridge enqueue failed] invoke queue changed after announce; inspect job ledger",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Unexpected post-announce enqueue failure for {job_id} from {sender}")
+            return
+        pending = announced.get("queued_jobs")
+        if pending is None:
+            pending = self._invoke_queue.qsize()
         mode = "brief" if brief else "task"
         log(self.nick, f"Queued {job_id} ({mode}/ungated) from {sender} on {channel}: {text[:80]}")
-        if not self.nick.startswith("claude"):
+        if not self._uses_clean_irc_output():
             self._say(
                 f"[accepted {job_id}] queued ({pending} pending, timeout {INVOKE_TIMEOUT_SECONDS}s)",
                 max_lines=1, channel=channel,
