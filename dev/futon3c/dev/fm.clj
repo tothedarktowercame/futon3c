@@ -161,13 +161,11 @@
         nick (get fm-agent-nicks agent-id agent-id)]
     (cond
       (not (agent-idle? agent-id))
-      (do (println (str "[conductor] " agent-id " invoking — skip"))
-          {:action :skip :target agent-id})
+      {:action :skip :target agent-id}
 
       (let [last-paged (get-in @conductor-state [:last-paged agent-id])]
         (and last-paged (<= (- (System/currentTimeMillis) last-paged) cooldown-ms)))
-      (do (println (str "[conductor] " agent-id " cooldown — skip"))
-          {:action :cooldown :target agent-id})
+      {:action :cooldown :target agent-id}
 
       :else
       (let [assignable (orch/fm-assignable-obligations problem-id)
@@ -180,7 +178,7 @@
                 ob-label (:item/label ob)
                 msg (str "@" nick " " ob-id ": " ob-label
                          ". Push results to git when done.")]
-            (println (str "[conductor] " agent-id " idle + work available → PAGE " ob-id))
+            (println (str "[conductor] " agent-id " → PAGE " ob-id))
             (swap! conductor-state
                    (fn [s]
                      (-> s
@@ -196,7 +194,6 @@
   (let [rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
         idle (idle-agents rotation)]
     (when (seq idle)
-      (println (str "[conductor] idle agents: " (str/join ", " idle)))
       (mapv #(fm-dispatch-mechanical! % config) idle))))
 
 ;; ---------------------------------------------------------------------------
