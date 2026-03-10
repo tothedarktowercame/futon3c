@@ -5,11 +5,18 @@ clean design — replacing the accumulated layers described in README-tickle.md.
 
 ## Core Principle
 
-**Dispatch decisions are mechanical, not LLM-generated.**
+**Normal coordination is pull-driven; watchdog behavior is secondary.**
 
-An idle agent + an available obligation = PAGE. That's the entire decision.
-No Haiku invoke, no prompt engineering, no "should I page or pass?" deliberation.
-The conductor reads state from the registry and the proof ledger, and acts.
+The main loop is:
+
+1. an agent finishes work
+2. it signals availability / asks for more work
+3. the FM regulator assigns the next obligation if one exists
+
+Mechanical dispatch is still the right rule for assignment, but it should be
+entered through the agent's own completion/availability signal in the normal
+case. The watchdog exists for silence, drift, and repair, not as the primary
+scheduler.
 
 ## Architecture
 
@@ -20,11 +27,12 @@ The conductor reads state from the registry and the proof ledger, and acts.
                     └────────┬────────────┘
                              │ reads status
                     ┌────────▼────────────┐
-                    │  Mechanical         │
-  60s tick ────────►│  Conductor          │────► IRC page (@codex T2-single: ...)
+                    │  FM Regulator       │
+ availability bell ─►│  (mechanical       │────► IRC page / whistle /
+ post-invoke hook    │   assignment)      │      direct next obligation
                     │                     │
-  post-invoke ────►│  idle + obligation   │
-  hook              │  = PAGE             │
+ audit timer  ─────►│  idle + obligation  │
+ (secondary)        │  = ASSIGN           │
                     └────────┬────────────┘
                              │ reads obligations
                     ┌────────▼────────────┐
@@ -33,18 +41,19 @@ The conductor reads state from the registry and the proof ledger, and acts.
                     └─────────────────────┘
 ```
 
-Two triggers fire the conductor:
+Two triggers may reach the regulator:
 
-1. **Clock** (60s tick): scan all agents in rotation, dispatch to any that are idle.
-2. **Event** (post-invoke hook): when an agent finishes work, immediately try to
-   dispatch new work to it. No waiting for the next tick.
+1. **Primary**: availability / completion signal from the agent.
+2. **Secondary**: low-rate audit timer or watchdog probe when the normal loop
+   appears broken.
 
 ## Components
 
-### Mechanical Conductor (`start-fm-conductor!`)
+### FM Regulator (`start-fm-conductor!`)
 
-The only dispatch mechanism. Replaces the watchdog, the LLM conductor, and
-the bell-driven dispatch queue from v1.
+This is the sole assignment mechanism for FM work. Despite the current symbol
+name, it behaves more like a regulator/scheduler than an orchestral conductor.
+It replaces the LLM conductor and should eventually own all normal dispatch.
 
 **State**: one atom with:
 - `:last-paged {agent-id → epoch-ms}` — cooldown tracking
@@ -63,28 +72,58 @@ until the cooldown expires, even if they go idle again immediately.
 be paged again to that same agent. If all obligations have been paged,
 the conductor passes. The dedup set resets when the conductor restarts.
 
-### Tickle-1 Agent (IRC conversational)
+### Tickle-1 Agent (stateful coordination memory + IRC conversational shell)
 
-Tickle-1 remains registered as an agent with a Haiku invoke-fn. It responds
-to direct `@tickle` mentions from humans on IRC. It does NOT:
+Tickle-1 remains useful because it can keep state about recent coordination:
+who asked for work, who said "back off", who was just paged, and what repair
+attempts have already happened. It also responds to direct `@tickle` mentions
+from humans on IRC.
 
-- Self-initiate messages (no watchdog scan)
-- Make dispatch decisions (no "should I page?" prompts)
-- Get invoked by agent completion bells
+In the intended end-state, it does NOT own normal assignment. It does:
+
+- record / remember coordination context
+- accept availability bells from agents
+- mediate backoff / "I'm already working on it" style signals
+- participate in repair when the normal loop goes silent
+
+It does NOT:
+
+- decide FM assignment policy by LLM prompt
+- replace the FM regulator as the assignment source
 
 If a human asks `@tickle status?` on IRC, tickle-1 responds. That's all.
 
-### Post-Invoke Hook (`!post-invoke-hook`)
+### Availability Bells / Post-Invoke Hook (`!post-invoke-hook`)
 
 Set by `start-fm-conductor!`, cleared by `stop-fm-conductor!`.
 
-When any agent finishes an IRC invoke (via the dispatch relay), the hook fires
-with the agent-id. The hook calls `fm-dispatch-mechanical!` for that agent,
-which checks idle status + available obligations and pages if appropriate.
+When any agent finishes work, the normal path should be:
+
+1. the agent signals `"I'm available"`
+2. Tickle/regulator records that availability
+3. the FM regulator checks idle status + available obligations and assigns if appropriate
+
+Today the existing post-invoke hook is the closest implementation of that
+model. It is the right seam to keep.
 
 This replaces `bell-tickle-available!` invoking tickle-1's Haiku, which caused
 feedback loops (codex output contained `@tickle` → tickle invoke → more IRC
 noise → codex sees noise → ...).
+
+### Watchdog (audit / repair only)
+
+The watchdog is not meant to be the primary dispatcher.
+
+Its role is:
+
+- detect silence or contradictory state
+- ask "are you OK?" after a context-sensitive threshold
+- initiate a bounded repair sequence or escalate if the pull loop appears broken
+
+This means watchdog timing has to be interpreted in context:
+- an agent actively invoking is different from an idle agent
+- an explicit backoff is different from unexplained silence
+- a missing availability bell is different from a crash
 
 ### CYDER Registration
 
@@ -125,24 +164,31 @@ Visible in `*processes*` Emacs buffer and via `/api/alpha/processes/fm-conductor
 
 ## Invariants
 
-**T-1: No LLM for dispatch.** The conductor never invokes a language model
+**T-1: No LLM for dispatch.** The regulator never invokes a language model
 to decide whether to page. State + obligations → deterministic action.
 
-**T-2: Workers only.** Mentors (claude-2) and Lab Managers (claude-1) are
-never in the conductor rotation. They receive work through different channels
+**T-2: Pull-first.** Normal work assignment is triggered by agent completion /
+availability, not by a periodic polling loop.
+
+**T-3: Workers only.** Mentors (claude-2) and Lab Managers (claude-1) are
+never in the regulator rotation. They receive work through different channels
 (whistles, direct requests from joe).
 
-**T-3: No feedback loops.** The conductor posts to IRC as "tickle" but never
+**T-4: No feedback loops.** The regulator posts to IRC as "tickle" but never
 reads its own output. Agent completion triggers the hook, not an IRC mention
 parse. No mechanism exists for conductor output to re-trigger the conductor.
 
-**T-4: Obligation dedup.** An obligation is paged to an agent at most once
-per conductor lifetime. If the agent needs the same work re-assigned (e.g.
-after a failure), restart the conductor or use `fm-conduct-targeted!` manually.
+**T-5: Stateful backoff.** If an agent says "back off" or "I'm working on it",
+Tickle's coordination state must remember that and suppress redundant probing or
+reassignment for an appropriate window.
 
-**T-5: Registry is truth.** Agent idle/invoking status comes from the agency
+**T-6: Registry is truth.** Agent idle/invoking status comes from the agency
 registry, not from evidence timestamps or IRC message parsing. The registry
 is updated by the invoke machinery in real time.
+
+**T-7: Watchdog is audit-only.** The watchdog may probe, repair, or escalate
+when the normal pull loop fails, but it does not become a second primary
+assignment mechanism.
 
 ## Outstanding Issues
 
@@ -156,15 +202,14 @@ not fully converged yet.
 
 2. `tickle_logic.clj` is now evidence-backed, but it is still only a diagnostic
    layer.
-   It checks scan/page/escalation ordering and stall-evidence alignment against
-   registry + evidence snapshots, but it is not yet wired into a shared
-   invariant runner or surfaced through `check-invariants` / HTTP.
+   It checks scan/page/escalation ordering, availability-bell context, and
+   stall-evidence alignment against registry + evidence snapshots, but it is
+   not yet wired into a shared invariant runner or surfaced through
+   `check-invariants` / HTTP.
 
-3. The watchdog and the mechanical conductor still coexist.
-   `src/futon3c/agents/tickle.clj` now emits better scan/page/escalation
-   evidence for invariant checking, but the README's intended end-state remains:
-   the mechanical conductor should own dispatch, and watchdog behavior should be
-   either clearly diagnostic or fully retired.
+3. The watchdog and the regulator still coexist in code.
+   The intended end-state is not "delete watchdog", but "demote watchdog to
+   audit/repair." The boot defaults and runtime behavior should reflect that.
 
 4. FM obligation sourcing is still specialized.
    The conductor works against the current FM obligation pipeline, but the work
@@ -184,8 +229,8 @@ not fully converged yet.
 | `dev/futon3c/dev/bootstrap.clj` | Startup/bootstrap orchestration extracted from `dev.clj` |
 | `dev/futon3c/dev/agents.clj` | Core agent registration/startup extracted from `dev.clj` |
 | `dev/futon3c/dev/peripheral_agents.clj` | Peripheral agent registration (`tickle-1`, mentor Claude) |
-| `dev/futon3c/dev/fm.clj` | Mechanical conductor and FM dispatch helpers |
-| `src/futon3c/agents/tickle.clj` | Watchdog scan/page/escalate runtime; now emits evidence-backed scan/page/escalation events |
-| `src/futon3c/agents/tickle_logic.clj` | Core.logic invariant layer over registry + evidence snapshots |
+| `dev/futon3c/dev/fm.clj` | FM regulator / mechanical assignment helpers |
+| `src/futon3c/agents/tickle.clj` | Watchdog + availability-bell runtime; emits evidence-backed scan/page/escalation/availability events |
+| `src/futon3c/agents/tickle_logic.clj` | Core.logic invariant layer over registry + evidence snapshots for pull-loop + watchdog checks |
 | `src/futon3c/agents/tickle_orchestrate.clj` | `fm-assignable-obligations` (used by v2), LLM conductor (v1, not used) |
 | `src/futon3c/agency/registry.clj` | Agent status tracking (`:agent/status`, `:agent/invoke-started-at`) |

@@ -277,32 +277,23 @@
           (is (= 0 (get-in result [:execution :tool-events])))
           (is (= 0 (get-in result [:execution :command-events]))))))))
 
-(deftest codex-invoke-bells-tickle-when-returning-to-idle
-  (testing "Codex emits an availability bell to tickle-1 before returning idle"
+(deftest agent-invoke-complete-hook-bells-tickle-when-returning-to-idle
+  (testing "registry completion hook delegates to the availability bell"
     (let [bell-calls (atom [])]
-      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
-                    (fn [_opts]
-                      (fn [_prompt _sid]
-                        {:result "Completed work."
-                         :session-id "sess-1"
-                         :execution {:executed? true :tool-events 1 :command-events 1}}))
-                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
-                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
-                    futon3c.dev/persist-session-id! (fn [& _] nil)
-                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
-                    futon3c.dev/bell-tickle-available!
+      (with-redefs [futon3c.dev/bell-tickle-available!
                     (fn [agent-id payload]
                       (swap! bell-calls conj {:agent-id agent-id :payload payload})
-                      nil)
-                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
-        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
-              result (invoke-fn "Take F1-opposite and start now" nil)]
-          (is (= "Completed work." (:result result)))
-          (is (= 1 (count @bell-calls)))
-          (is (= "codex-1" (:agent-id (first @bell-calls))))
-          (is (= true (get-in (first @bell-calls) [:payload :ok?])))
-          (is (= "sess-1" (get-in (first @bell-calls) [:payload :session-id])))
-          (is (string? (get-in (first @bell-calls) [:payload :invoke-trace-id]))))))))
+                      nil)]
+        (#'futon3c.dev/on-agent-invoke-complete!
+         {:agent/id {:id/value "codex-1" :id/type :continuity}}
+         {:result "Completed work."
+          :session-id "sess-1"
+          :invoke-trace-id "invoke-123"})
+        (is (= 1 (count @bell-calls)))
+        (is (= "codex-1" (:agent-id (first @bell-calls))))
+        (is (= true (get-in (first @bell-calls) [:payload :ok?])))
+        (is (= "sess-1" (get-in (first @bell-calls) [:payload :session-id])))
+        (is (= "invoke-123" (get-in (first @bell-calls) [:payload :invoke-trace-id])))))))
 
 (deftest codex-invoke-fails-task-mode-nonplanning-reply-without-execution
   (testing "task-mode no-evidence reply without planning-only marker is rejected after retry"

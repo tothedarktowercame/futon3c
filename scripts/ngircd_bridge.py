@@ -650,7 +650,7 @@ class IRCBot:
         return refs
 
     def _summarize_invoke_result(self, result_text, clean=False):
-        """Return a short IRC-safe summary with artifact refs when available.
+        """Return a short IRC-safe summary.
         If clean=True, return the text without artifact ref annotations."""
         text = self._sanitize_for_irc(result_text or "")
         compact = re.sub(r"\s+", " ", text).strip()
@@ -665,7 +665,7 @@ class IRCBot:
             summary = "[no textual response]"
         if refs:
             return f"{summary} refs: {', '.join(refs)}"
-        return f"{summary} (no artifact refs)"
+        return summary
 
     @staticmethod
     def _execution_stats(invoke_meta):
@@ -745,14 +745,6 @@ class IRCBot:
             summary = self._multiline_result_for_irc(response.get("result", ""))
         else:
             summary = self._summarize_invoke_result(response.get("result", ""))
-        stats = self._execution_stats(response.get("invoke_meta"))
-        execution_note = ""
-        if self.agent_id.startswith("codex") and isinstance(stats, dict) and not stats["executed"]:
-            execution_note = (
-                f"[no execution evidence: tool-events={stats['tool_events']}, "
-                f"command-events={stats['command_events']}]"
-            )
-            summary = f"{summary} {execution_note}".strip()
         sid = response.get("session_id")
         if CODEX_USE_RAW_OUTPUT:
             raw_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
@@ -763,8 +755,6 @@ class IRCBot:
                     header_parts.append(f"(session {sid[:8]})")
                 if refs:
                     header_parts.append(f"refs: {', '.join(refs[:3])}")
-                if execution_note:
-                    header_parts.append(execution_note)
                 header = " ".join(part for part in header_parts if part).strip()
                 self._say(f"{header}\n{raw_text}", max_lines=6, channel=reply_ch)
                 return

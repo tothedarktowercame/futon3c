@@ -32,6 +32,12 @@
    Signature: (fn [agent-record] ...) — called asynchronously."}
   !on-register (atom nil))
 
+(defonce ^{:doc "Optional callback invoked after a successful invoke completes
+   for an agent that declares the completion-bell contract.
+   Set via set-on-invoke-complete! to wire post-invoke coordination.
+   Signature: (fn [agent-record result-map] ...) — called asynchronously."}
+  !on-invoke-complete (atom nil))
+
 (def ^:private ws-invoke-timeout-ms 120000)
 (def ^:private external-invoke-fresh-ms 15000)
 
@@ -129,6 +135,24 @@
   [f]
   (reset! !on-register f))
 
+(defn set-on-invoke-complete!
+  "Set callback invoked asynchronously after successful invoke completion for
+   agents whose metadata declares the completion-bell contract.
+   Pass nil to clear. Signature: (fn [agent-record result-map] ...)."
+  [f]
+  (reset! !on-invoke-complete f))
+
+(defn- completion-bell-contract?
+  [agent]
+  (let [metadata (:agent/metadata agent)
+        contracts (or (:agency/contracts metadata)
+                      (get metadata "agency/contracts")
+                      {})]
+    (true? (or (:bell-on-complete? contracts)
+               (get contracts "bell-on-complete?")
+               (:bell-on-complete? metadata)
+               (get metadata "bell-on-complete?")))))
+
 (defn get-agent
   "Get agent record by typed ID, or nil if not registered."
   [typed-id]
@@ -168,7 +192,8 @@
                       :agent/registered-at ts
                       :agent/last-active ts
                       :agent/ttl-ms ttl-ms
-                      :agent/metadata (or metadata {})}
+                      :agent/metadata (merge {:agency/contracts {:bell-on-complete? (boolean invoke-fn)}}
+                                             (or metadata {}))}
         ;; R2: Atomic check-and-set — reject duplicate, don't overwrite
         result (atom nil)]
     (swap! !registry
@@ -367,7 +392,15 @@
                           (str error)
                           :agent-id aid-val
                           :timeout-ms (:timeout-ms result-map))}
-                 (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))]
+                 (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))
+                       final-agent (get @!registry aid-val)]
+                   (when (and final-agent
+                              (completion-bell-contract? final-agent))
+                     (when-let [hook @!on-invoke-complete]
+                       (future
+                         (try
+                           (hook final-agent result-map)
+                           (catch Exception _)))))
                    (cond-> {:ok true :result result :session-id session-id}
                      invoke-meta (assoc :invoke-meta invoke-meta)))))
 
@@ -668,6 +701,7 @@
                                   :invoke-local? (:invoke-local? routing-info)
                                   :invoke-ws-available? (:invoke-ws-available? routing-info)
                                   :invoke-diagnostic (:invoke-diagnostic routing-info)
+                                  :completion-bell-required? (completion-bell-contract? agent)
                                   :status status}
                            queued-jobs
                            (assoc :queued-jobs queued-jobs)

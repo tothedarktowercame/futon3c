@@ -1944,6 +1944,16 @@ RESPOND WITH ONLY:
                         (.getMessage t)))
           (flush))))))
 
+(defn- on-agent-invoke-complete!
+  "Registry-level completion hook for Agency's completion-bell contract.
+   Successful invokes of contracted agents are translated into the existing
+   post-invoke availability signal."
+  [agent-record result-map]
+  (let [agent-id (get-in agent-record [:agent/id :id/value])]
+    (bell-tickle-available! agent-id {:ok? true
+                                      :session-id (:session-id result-map)
+                                      :invoke-trace-id (:invoke-trace-id result-map)})))
+
 (defn- start-invoke-ticker!
   "Start a background thread that updates both *agents* and the invoke buffer
    with elapsed time, file change detection, and a progress spinner.
@@ -2668,9 +2678,6 @@ RESPOND WITH ONLY:
             :invoke-trace-id invoke-trace-id
             :changed-files (detect-file-changes @!invoke-start-ms)
             :trace (vec @!event-trace)})
-          (bell-tickle-available! agent-id {:ok? ok?
-                                            :session-id final-sid
-                                            :invoke-trace-id invoke-trace-id})
           (println (str "[invoke] " agent-id
                         (if ok? " ok" (str " error: " (:error result)))
                         " result-len=" (count (or (:result result) ""))
@@ -3204,5 +3211,6 @@ RESPOND WITH ONLY:
     :start-fm-conductor! start-fm-conductor!
     :start-drawbridge! start-drawbridge!
     :start-agents-blackboard-ticker! start-agents-blackboard-ticker!
+    :on-agent-invoke-complete! on-agent-invoke-complete!
     :nonstarter-fn nonstarter-fn
     :stop-agents! stop-agents!}))

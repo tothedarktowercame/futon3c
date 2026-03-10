@@ -164,7 +164,8 @@
            direct-xtdb-enabled? make-evidence-store
            start-futon1a! start-futon5! start-irc! start-agents!
            start-tickle! start-fm-conductor! start-drawbridge!
-           start-agents-blackboard-ticker! nonstarter-fn stop-agents!]
+           start-agents-blackboard-ticker! nonstarter-fn stop-agents!
+           on-agent-invoke-complete!]
     :as _deps}]
   (let [role-info (config/deployment-role-info)
         role (:role role-info)
@@ -208,8 +209,9 @@
               :state-fn #(let [s @!irc-sys]
                            {:port (:port s)
                             :relay-bridge? (boolean (:relay-bridge s))})}))
+        _ (reg/set-on-invoke-complete! on-agent-invoke-complete!)
         _ (start-agents!)
-        _ (when (config/env-bool "FUTON3C_TICKLE_AUTOSTART" true)
+        _ (when (config/env-bool "FUTON3C_TICKLE_AUTOSTART" false)
             (start-tickle! {:auto-restart? true}))
         _ (when (config/env-bool "FUTON3C_FM_CONDUCTOR_AUTOSTART" true)
             (start-fm-conductor!))

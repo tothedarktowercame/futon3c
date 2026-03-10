@@ -73,6 +73,21 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
         self.assertNotIn("artifact refs", text)
         self.assertTrue(text.startswith("Re-running `kissat --time=3600 FM001-n6.cnf` now."))
 
+    def test_fallback_summary_omits_no_artifact_and_execution_suffixes(self):
+        bot = bridge.IRCBot("helper", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_uses_clean_irc_output", return_value=False), \
+             mock.patch.object(bot, "_say") as say:
+            bot._emit_success_reply({
+                "ok": True,
+                "result": "@joe yep, loud and clear.",
+                "session_id": "019ccdc0abcdef",
+                "invoke_meta": {"execution": {"executed?": False, "tool-events": 0, "command-events": 0}},
+            }, "#math", "codex-job-3", multi_message=False)
+        say.assert_called_once()
+        text = say.call_args.args[0]
+        self.assertNotIn("no artifact refs", text)
+        self.assertNotIn("no execution evidence", text)
+
 
 if __name__ == "__main__":
     unittest.main()

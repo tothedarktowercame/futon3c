@@ -83,7 +83,8 @@
     :invoke-fn invoke-fn
     :capabilities (vec (or capabilities (get default-capabilities type [])))
     :ttl-ms ttl-ms
-    :metadata metadata}))
+    :metadata (merge {:agency/contracts {:bell-on-complete? (boolean invoke-fn)}}
+                     metadata)}))
 
 (defn register-codex!
   "Convenience wrapper for registering a Codex agent."
