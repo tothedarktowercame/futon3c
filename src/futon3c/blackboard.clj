@@ -729,13 +729,21 @@
 
 (defn project-agents!
   "Project agent registry status to the *agents* blackboard buffer.
-   Call this from anywhere — it reads directly from the registry."
+   Sends to ALL known Emacs sockets (extracted from agent metadata)
+   so every workspace sees the full agent roster."
   [registry-status]
   (when *enabled*
     (try
-      (let [content (format-agent-status registry-status)]
-        ;; Keep *agents* in a stable side-window slot.
-        (blackboard! "*agents*" content {:width 60 :slot 0}))
+      (let [content (format-agent-status registry-status)
+            opts {:width 60 :slot 0}
+            ;; Collect distinct sockets from agent metadata + default
+            sockets (->> (:agents registry-status)
+                         (keep (fn [[_ info]] (get-in info [:metadata :emacs-socket])))
+                         (into #{})
+                         (#(conj % nil)))]  ;; nil = default socket
+        (doseq [socket sockets]
+          (blackboard! "*agents*" content
+                       (if socket (assoc opts :emacs-socket socket) opts))))
       (catch Throwable _ nil))))
 
 ;; -----------------------------------------------------------------------------
