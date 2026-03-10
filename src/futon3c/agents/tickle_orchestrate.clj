@@ -733,10 +733,14 @@
    Returns {:action :pass|:cooldown|:message|:error, :target str, :text str}."
   [target-agent config]
   (let [{:keys [problem-id irc-read-fn bridge-send-fn evidence-store
-                conductor-state cooldown-ms whistle-fn]
+                conductor-state cooldown-ms whistle-fn invoke-fn]
          :or {problem-id "FM-001"
               cooldown-ms default-cooldown-ms}} config
-        conductor-state (or conductor-state (atom {}))]
+        conductor-state (or conductor-state (atom {}))
+        ;; Prefer explicit invoke-fn from config; fall back to tickle-1 registry
+        invoke-fn (or invoke-fn
+                      (let [agent (reg/get-agent "tickle-1")]
+                        (or (:agent/invoke-fn agent) (:invoke-fn agent))))]
     ;; Layer 1: mechanical cooldown guard
     (if-not (cooldown-elapsed? conductor-state target-agent cooldown-ms)
       (do (println (str "[fm-conductor] " target-agent " → COOLDOWN (paged recently)"))
@@ -746,11 +750,9 @@
                                (filter #(= "#math" (:channel %)))
                                (take-last 20)))
             assignable (fm-assignable-obligations problem-id)
-            context (build-fm-context problem-id target-agent recent-msgs assignable)
-            agent (reg/get-agent "tickle-1")
-            invoke-fn (or (:agent/invoke-fn agent) (:invoke-fn agent))]
+            context (build-fm-context problem-id target-agent recent-msgs assignable)]
         (if-not invoke-fn
-          (do (println "[fm-conductor] tickle-1 not registered, can't decide")
+          (do (println "[fm-conductor] no invoke-fn configured and tickle-1 not registered")
               {:action :error :target target-agent})
           (let [{:keys [result]} (invoke-fn context nil)
                 response (str/trim (or result "PASS"))

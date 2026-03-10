@@ -790,7 +790,7 @@
        :at (str (Instant/now))})))
 
 (defn- irc-connect!
-  "Open a persistent connection to ngircd. JOINs #futon and stays connected.
+  "Open a persistent connection to ngircd. JOINs #math and stays connected.
    Background thread handles PINGs and captures PRIVMSG lines to !irc-log."
   [nick]
   (let [nick (str/replace (str nick) #"[^a-zA-Z0-9_-]" "")
@@ -801,7 +801,6 @@
     (.println out (str "NICK " nick))
     (.println out (str "USER " nick " 0 * :" nick))
     (Thread/sleep 500)
-    (.println out "JOIN #futon")
     (.println out "JOIN #math")
     (Thread/sleep 300)
     ;; Background thread: respond to PINGs + capture PRIVMSG to ring buffer
@@ -829,15 +828,21 @@
       {:socket sock :out out :nick nick :running running})))
 
 (defn- ensure-irc-conn!
-  "Return the persistent IRC connection, reconnecting if needed."
+  "Return the persistent IRC connection, reconnecting if needed.
+   If connected but with the wrong nick, close and reconnect."
   [nick]
   (let [conn @!irc-conn]
-    (if (irc-conn-alive? conn)
+    (if (and (irc-conn-alive? conn)
+             (= (:nick conn) nick))
       conn
-      (let [new-conn (irc-connect! nick)]
-        (reset! !irc-conn new-conn)
-        (println (str "[irc] Connected to ngircd as " nick))
-        new-conn))))
+      (do
+        ;; Close stale connection if alive but wrong nick
+        (when (irc-conn-alive? conn)
+          (close-irc-conn!))
+        (let [new-conn (irc-connect! nick)]
+          (reset! !irc-conn new-conn)
+          (println (str "[irc] Connected to ngircd as " nick))
+          new-conn)))))
 
 (defn close-irc-conn!
   "Close the persistent IRC connection."
@@ -1232,82 +1237,27 @@
 ;; =============================================================================
 
 (def ^:private tickle-system-prompt
-  "You are Tickle, the stateful orchestrator for a multi-agent math research system.
+  "You are Tickle, the mechanical conductor for a multi-agent fulab system.
 
 AGENTS:
-  codex-1 (laptop): searches local corpus, writes .tex PlanetMath entries, opens PRs
-  claude-1 (Linode): reviews proposals and PRs with APPROVE/REQUEST_CHANGES/REJECT
+  claude-1 (Lab Manager): infra, wiring, coordination design
+  claude-2 (Mentor): epistemic oversight, proof ledger (per-mission)
+  codex-1 (Worker): scoped task execution via GitHub issues
+  corpus-1 (Corpus): data/search agent (ws-only, no invoke)
 
-REPO: tothedarktowercame/18_Category_theory_homological_algebra
-LOCAL PATH: /home/joe/code/18_Category_theory_homological_algebra
-When paging codex-1, include an explicit filesystem path only when the path
-itself is operationally required; otherwise prefer repo/corpus names in IRC-visible text.
+CURRENT MISSION: FM-001 (FrontierMath)
+  The FM conductor handles proof obligation assignment separately.
+  You handle general coordination: stall detection, agent availability, escalation.
 
-LOCAL DATA SOURCES (all on laptop, accessible to codex-1):
-  1. arXiv math.CT eprints corpus (\"arxiv-math-ct-eprints\")
-     Workspace-local paper sources (~9900 .tex/.tar.gz files). Grep for CT concepts here.
-  2. math.SE processed corpus (\"math-processed-gpu\")
-     entities.json, relations.json, hypergraphs.json, thread-wiring-ct.json
-     GPU-processed StackExchange math data with CT patterns and NER terms.
-  3. MathOverflow processed corpus (\"mo-processed-gpu\")
-     Same structure as math-processed-gpu. Research-level Q&A.
-  4. PlanetMath dictionary corpus (\"pm-full-dictionary.json\")
-     26944 terms with MSC codes, domains, confidence. Use to avoid duplicates.
-  5. nLab CT patterns corpus (\"nlab-ct-reference.json\")
-     8 CT pattern types mapped to ~20k nLab pages.
-  6. arXiv metadata corpus (\"arxiv-ct-metadata.jsonl\")
-     Title, abstract, authors, categories for ~9900 math.CT papers.
-
-RESEARCH WORKFLOW:
-  When assigning a batch, tell codex-1 to:
-  1. Search the local corpus (arXiv eprints, math.SE, MathOverflow) for CT topics
-     not already covered by the 322 existing entries
-  2. Cross-check pm-full-dictionary.json to avoid duplicating existing PlanetMath terms
-  3. Write .tex entries in PlanetMath format (pmmeta, MSC classification, definitions)
-  4. Cite the source material (arXiv ID, SE question, MO thread) in each entry
-  5. Open one PR with all entries in the batch
-
-LIFECYCLE (labels auto-promoted by Tickle):
-  ct-proposal → ct-approved → ct-implementing → ct-pr-open → ct-merged
-  (also: ct-needs-rework loops back when REQUEST_CHANGES)
-
-WHO DOES WHAT:
-  proposal-review: claude-1 reviews the proposal issue
-  ready-to-implement: codex-1 edits .tex file, opens PR linking the issue
-  needs-rework: codex-1 addresses review feedback, updates issue/PR
-  pr-review: claude-1 reviews the PR diff
-  implementing: codex-1 is working (don't nudge)
-  merged: done
-
-YOU HAVE STATE. Below you'll see task status per issue + tasks needing nudge.
-
-BATCH MODE — work in batches of 5 entries for efficiency:
-- Codex: search local data sources, pick 5 CT topics, write .tex files, open ONE PR.
-  No individual proposal issues needed — just the PR with all 5 entries.
-  Mix sources: some from arXiv eprints, some from math.SE/MO threads.
-- Claude: review the whole batch PR in one pass.
-- This collapses the pipeline: one PR per batch, one review per batch.
-
-DONE SIGNAL: When assigning work, tell agents to signal completion with:
-  DONE #N :: <artifact-url>
-  Example: DONE #5 :: https://github.com/.../pull/8
-  This triggers immediate queue advancement — no waiting for next poll cycle.
+SURFACE: IRC #futon. Your text output will be posted as <tickle>.
 
 RULES:
-1. Only nudge tasks in 'needs nudge'. Never re-page implementing/merged work.
-2. Delta prompts only — reference what changed, never repeat full instructions.
-   Good: '@codex-1 PR #7 merged. Next batch: 5 new entries from local corpus
-          (arXiv eprints + math.SE/MO). Check pm-full-dictionary.json for dupes.'
-   Good: '@claude-1 PR #8 open with 5 new entries — review the batch.'
-   Bad: full repeat of all data source paths (codex already knows them)
-3. Keep BOTH agents busy. Page codex-1 for implementation, page claude-1 for reviews.
-4. When all current PRs are merged, immediately assign the next batch to codex-1.
-5. Max 1-2 lines, <400 chars. Always @mention target. No markdown.
-6. PASS only if agents are actively working (implementing/pr-review in progress).
-7. If tasks are in 'needs nudge', you MUST nudge them — never PASS when there are tasks needing nudge.
-   An IRC ack ('on it', 'will do') without a concrete result (PR, commit) does NOT count as progress.
-8. If ALL tasks are merged and queue is empty, assign the next batch to codex-1 immediately.
-   This is NOT a PASS situation — idle workers must be given new work.
+1. Only nudge agents that appear stalled (no recent activity).
+2. Keep messages short: 1-2 lines, <400 chars. Always @mention target.
+3. Do NOT assign math tasks — the FM conductor handles proof obligations.
+4. Do NOT reference Category Theory, PlanetMath, or arXiv — those are stale context.
+5. If all agents are active, respond PASS.
+6. If an agent is stalled, ask them to check #futon or report status.
 
 RESPOND WITH ONLY:
 - A short IRC message (start with @agent-id), OR
@@ -1410,34 +1360,18 @@ RESPOND WITH ONLY:
                              (map (fn [{:keys [nick text at]}]
                                     (str (when at (subs at 11 19)) " <" nick "> " text))
                                   msgs)))
-        gh-issues (try
-                    (-> (shell/sh "gh" "issue" "list"
-                                  "--repo" "tothedarktowercame/18_Category_theory_homological_algebra"
-                                  "--state" "open" "--json" "number,title,labels"
-                                  "--limit" "20")
-                        :out
-                        (json/parse-string true))
-                    (catch Exception _ []))
-        needs-nudge (tickle-tasks-needing-nudge)]
+        agents (reg/registered-agents)
+        agent-summary (str/join "\n"
+                        (map (fn [[id a]]
+                               (str "  " id " (" (name (or (:agent/type a) :unknown)) ")"
+                                    (when-let [ws (:agent/ws-connected? a)] " [ws]")))
+                             agents))]
     (str "Current time: " (Instant/now) "\n\n"
-         "## Task state machine\n"
-         (tickle-tasks-summary) "\n\n"
-         "## Tasks needing nudge (" (count needs-nudge) ")\n"
-         (if (empty? needs-nudge)
-           "(none — all tasks are progressing or complete)"
-           (str/join "\n" (map (fn [t]
-                                 (str "#" (:gh-issue t) " " (name (:status t))
-                                      " → " (or (:assignee t) "unassigned")
-                                      " — " (:title t)))
-                               needs-nudge)))
-         "\n\n## IRC log (last " (count msgs) " messages)\n"
+         "## Registered agents\n"
+         agent-summary "\n\n"
+         "## IRC log (last " (count msgs) " messages)\n"
          irc-text "\n\n"
-         "## Open GitHub issues\n"
-         (if (empty? gh-issues)
-           "(none)"
-           (str/join "\n" (map (fn [i] (str "#" (:number i) " " (:title i)))
-                               gh-issues)))
-         "\n\nWhat should Tickle do next?")))
+         "What should Tickle do next?")))
 
 (defn tickle-think!
   "Tickle reads state + IRC + GitHub, decides whether to intervene.
@@ -1810,14 +1744,16 @@ RESPOND WITH ONLY:
                                                 (str marker a " → ready (paged " ago-s "s ago)")))
                                             (str marker a " → ready"))))]
                            (let [base-ms (or (:last-cycle-ms s) (:started-at-ms s))
-                                 step-ms-raw 300000
+                                 step-ms-raw (or (some-> (get @cyder/!processes "fm-conductor")
+                                                         :process/metadata :step-ms)
+                                                 300000)
                                  next-at (when base-ms
                                            (str (.truncatedTo
                                                   (Instant/ofEpochMilli (+ base-ms step-ms-raw))
                                                   java.time.temporal.ChronoUnit/SECONDS)))]
                              (cond-> {:problem-id (or (:problem-id s) "FM-001")
                                       :cycles (:cycles-completed s 0)
-                                      :step-ms "300s"
+                                      :step-ms (str (quot step-ms-raw 1000) "s")
                                       :rotation rotation
                                       :agents (mapv fmt-cd rotation)
                                       :idx idx
@@ -1835,6 +1771,17 @@ RESPOND WITH ONLY:
           :irc-read-fn #(irc-recent-channel "#math" 20)
           :bridge-send-fn (make-bridge-irc-send-fn)
           :evidence-store @!evidence-store
+          :invoke-fn (let [sf (io/file "/tmp/futon-fm-conductor-session-id")
+                           sid (read-session-id sf)
+                           sid-atom (atom sid)]
+                       (make-claude-invoke-fn
+                         {:claude-bin (env "CLAUDE_BIN" "claude")
+                          :permission-mode "default"
+                          :agent-id "fm-conductor"
+                          :session-file sf
+                          :session-id-atom sid-atom
+                          :model "claude-haiku-4-5-20251001"
+                          :timeout-ms 120000}))
           :whistle-fn (fn [{:keys [to] :as msg}]
                         (println (str "[fm-conductor] whistle → " to ": " (:reason msg)))
                         (try
@@ -2381,7 +2328,7 @@ RESPOND WITH ONLY:
   (fn []
     ;; Ensure we have an IRC connection reading messages
     ;; Nick is read-only listener; all sends go through bridge /say
-    (ensure-irc-conn! "futon3c")
+    (ensure-irc-conn! "listener")
     (->> @!irc-log
          (filter #(= "#math" (:channel %)))
          (mapv #(select-keys % [:nick :text :at])))))

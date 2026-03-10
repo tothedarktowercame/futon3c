@@ -34,11 +34,59 @@
    Bind to false in tests to avoid spawning emacsclient processes."
   true)
 
+(defn- detect-emacs-socket
+  "Auto-detect Emacs server socket from the process tree.
+   Finds emacsclient processes with -s <socket>, sorted by PID (oldest first).
+   If in a tmux session, prefers sockets from emacsclient siblings in the
+   same session. Returns the first socket found, or nil."
+  []
+  (try
+    (let [;; Find all emacsclient processes with -s arg, sorted by PID
+          proc (-> (ProcessBuilder. ["pgrep" "-a" "emacsclient"])
+                   (.redirectErrorStream true)
+                   .start)
+          output (slurp (.getInputStream proc))
+          parsed (->> (str/split-lines output)
+                      (keep (fn [line]
+                              (when-let [[_ pid] (re-find #"^(\d+)\s" line)]
+                                (when-let [[_ socket] (re-find #"-s\s+(\S+)" line)]
+                                  {:pid (parse-long pid) :socket socket}))))
+                      (sort-by :pid))
+          ;; Try to narrow to our tmux session
+          session-pids (try
+                         (let [p (-> (ProcessBuilder.
+                                       ["tmux" "list-panes" "-s" "-F" "#{pane_pid}"])
+                                     (.redirectErrorStream true)
+                                     .start)
+                               out (str/trim (slurp (.getInputStream p)))]
+                           (when (zero? (.waitFor p))
+                             (set (map parse-long (str/split-lines out)))))
+                         (catch Exception _ nil))
+          ;; Filter to emacsclient whose PPID is a session pane
+          in-session (when session-pids
+                       (->> parsed
+                            (filter (fn [{:keys [pid]}]
+                                      (try
+                                        (let [ppid (-> (str "/proc/" pid "/status")
+                                                       slurp
+                                                       (->> (re-find #"PPid:\s+(\d+)"))
+                                                       second
+                                                       parse-long)]
+                                          (contains? session-pids ppid))
+                                        (catch Exception _ false))))))]
+      ;; Prefer session-scoped, fall back to all
+      (-> (if (seq in-session) in-session parsed)
+          first
+          :socket))
+    (catch Exception _ nil)))
+
 (def !emacs-socket
-  "Emacs server socket name. Set at runtime when the daemon uses a named socket,
-   e.g. (reset! bb/!emacs-socket \"workspace1\").
+  "Emacs server socket name. Auto-detected from process tree at load time,
+   or set at runtime: (reset! bb/!emacs-socket \"workspace1\").
    Falls back to FUTON3C_EMACS_SOCKET or EMACS_SOCKET_NAME env vars."
-  (atom nil))
+  (atom (or (System/getenv "FUTON3C_EMACS_SOCKET")
+            (System/getenv "EMACS_SOCKET_NAME")
+            (detect-emacs-socket))))
 
 ;; =============================================================================
 ;; Emacsclient primitive
@@ -434,13 +482,22 @@
 
 (defn project-mentor!
   "Project mentor state to the *mentor* blackboard buffer.
-   Uses slot 2 (after *agents* slot 0, *invoke* slot 1)."
+   Uses slot 2 (after *agents* slot 0, *invoke* slot 1).
+   Reads emacs-socket from state :emacs-socket key, or falls back to
+   the agent's registered socket in the registry."
   [state]
   (when *enabled*
     (try
       (when-let [content (render-blackboard :mentor state)]
-        (blackboard! "*mentor*" content {:width 55 :slot 2})
-        (emit-blackboard-evidence! :mentor state content)
+        (let [socket (or (:emacs-socket state)
+                         (try
+                           (get-in @(resolve 'futon3c.agency.registry/!registry)
+                                   [(:author state) :agent/metadata :emacs-socket])
+                           (catch Exception _ nil)))]
+          (blackboard! "*mentor*" content
+                       (cond-> {:width 55 :slot 2}
+                         socket (assoc :emacs-socket socket)))
+          (emit-blackboard-evidence! :mentor state content))
         nil)
       (catch Throwable _ nil))))
 
