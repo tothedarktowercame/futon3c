@@ -52,6 +52,7 @@ if "%FRONTIERMATH_LOCAL%"=="1" (
   if not defined BRIDGE_BOTS set "BRIDGE_BOTS=codex"
   if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
   if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
+  if not defined FUTON3C_REGISTER_CORPUS set "FUTON3C_REGISTER_CORPUS=true"
   if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-frontiermath-local\session-id"
   if not defined IRC_COMMAND_OWNER_AGENT_MAP set "IRC_COMMAND_OWNER_AGENT_MAP=#futon:codex-1,#math:codex-1"
 )
@@ -62,7 +63,11 @@ if not defined FUTON1A_PORT set "FUTON1A_PORT=7071"
 if not defined FUTON3C_PORT set "FUTON3C_PORT=7070"
 if not defined FUTON3C_DRAWBRIDGE_PORT set "FUTON3C_DRAWBRIDGE_PORT=6768"
 if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-irc\session-id"
+if not defined FUTON3C_REGISTER_CORPUS set "FUTON3C_REGISTER_CORPUS=false"
 if not defined FUTON3C_CODEX_WS_BRIDGE set "FUTON3C_CODEX_WS_BRIDGE=false"
+if not defined FUTON3C_REGISTER_VSCODE_CODEX set "FUTON3C_REGISTER_VSCODE_CODEX=true"
+if not defined FUTON3C_VSCODE_AGENT_ID set "FUTON3C_VSCODE_AGENT_ID=codex-vscode"
+if not defined FUTON3C_VSCODE_CODEX_SESSION_FILE set "FUTON3C_VSCODE_CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-vscode\session-id"
 if not defined FUTON3C_RELAY_CODEX set "FUTON3C_RELAY_CODEX=false"
 if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
 if not defined CODEX_BRIDGE_SUMMARY_MODE set "CODEX_BRIDGE_SUMMARY_MODE=raw"
@@ -164,6 +169,8 @@ if /i "%BRIDGE_BOTS_NORMALIZED%"=="codex" (
 )
 echo [dev-stack-windows] Codex invoke lane: FUTON3C_CODEX_WS_BRIDGE=%FUTON3C_CODEX_WS_BRIDGE%
 echo [dev-stack-windows] Codex agent id: %FUTON3C_CODEX_AGENT_ID%
+echo [dev-stack-windows] VS Code Codex lane: FUTON3C_REGISTER_VSCODE_CODEX=%FUTON3C_REGISTER_VSCODE_CODEX% agent=%FUTON3C_VSCODE_AGENT_ID%
+echo [dev-stack-windows] Corpus lane: FUTON3C_REGISTER_CORPUS=%FUTON3C_REGISTER_CORPUS%
 echo [dev-stack-windows] IRC dispatch relays: FUTON3C_RELAY_CODEX=!FUTON3C_RELAY_CODEX! FUTON3C_RELAY_CLAUDE=!FUTON3C_RELAY_CLAUDE!
 if defined NICK_AGENT_MAP echo [dev-stack-windows] NICK_AGENT_MAP=!NICK_AGENT_MAP!
 if defined IRC_COMMAND_OWNER_AGENT_MAP echo [dev-stack-windows] IRC_COMMAND_OWNER_AGENT_MAP=!IRC_COMMAND_OWNER_AGENT_MAP!

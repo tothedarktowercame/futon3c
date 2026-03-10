@@ -81,9 +81,15 @@ Full-stack launch (`dev`) behavior:
 - defaults `CODEX_SESSION_FILE` to `<repo>/.state/codex-irc/session-id`
   for a dedicated IRC codex continuity lane
 - defaults `FUTON3C_CODEX_AGENT_ID=codex-1` (Unix-compatible behavior)
+- defaults `FUTON3C_REGISTER_VSCODE_CODEX=true`
+- defaults `FUTON3C_VSCODE_AGENT_ID=codex-vscode`
+- defaults `FUTON3C_VSCODE_CODEX_SESSION_FILE=<repo>/.state/codex-vscode/session-id`
+  so the separate VS Code codex lane stays live in every Windows dev-stack mode
 - defaults `FUTON3C_CODEX_WS_BRIDGE=false` so codex invokes run local/inline
   for this stack (prevents WS routing from collapsing into the active VS Code
   codex chat lane)
+- defaults `FUTON3C_REGISTER_CORPUS=false`; `corpus-1` is reserved for the
+  FrontierMath-local lane instead of appearing in every generic dev bring-up
 - defaults `FUTON3C_RELAY_CODEX=false` and `FUTON3C_RELAY_CLAUDE=false`
   so the external `ngircd-bridge` is the IRC invoke authority for this
   launcher and the JVM-side dispatch relays do not double-handle mentions
@@ -132,6 +138,8 @@ IRC lane switch for `dev`:
   - defaults `BRIDGE_BOTS=codex`
   - defaults `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
     when unset
+  - defaults `FUTON3C_REGISTER_CORPUS=true` when unset so `corpus-1` is only
+    created for this FrontierMath-specific local mode
   - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-frontiermath-local/session-id`
     when unset, to keep solo/local FrontierMath continuity separate from both
     the normal local IRC lane and the peer-collaboration lane
