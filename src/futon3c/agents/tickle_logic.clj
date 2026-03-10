@@ -9,8 +9,14 @@
 
    - registry eligibility and routing
    - page/escalation bookkeeping supplied by callers
+   - agent availability bells in the pull-driven work loop
    - watchdog scan/page/escalation chains derived from evidence
-   - umwelt-darkness alignment between stall judgements and public evidence"
+   - umwelt-darkness alignment between stall judgements and public evidence
+
+   The intended control model is now:
+   - normal work flow is pull-driven (`agent finished -> ask for more work`)
+   - Tickle retains state about recent coordination / backoff
+   - watchdog logic is secondary and only probes or repairs broken silence"
   (:require [clojure.core.logic :as l]
             [clojure.core.logic.pldb :as pldb]
             [futon3c.agency.registry :as reg]
@@ -39,6 +45,7 @@
 (pldb/db-rel pagedo agent-id page-at method)
 (pldb/db-rel escalatedo agent-id escalate-at cause)
 (pldb/db-rel last-evidenceo agent-id evidence-at)
+(pldb/db-rel availability-bello agent-id bell-at availability invoke-status)
 
 (def ^:private allowed-authorities
   #{:registry :evidence :manual})
@@ -197,6 +204,18 @@
              (pldb/db-fact db* escalatedo agent-id escalate-at cause)
              db*))
 
+         (and (= "tickle-1" (:evidence/author entry))
+              (contains? tags :tickle)
+              (contains? tags :availability-bell)
+              (= :agent-availability-bell (:event body)))
+         (let [bell-at (or (:at body) (event-at entry))
+               agent-id (:agent-id body)
+               availability (or (:availability body) :available)
+               invoke-status (:invoke-status body)]
+           (if (and agent-id bell-at)
+             (pldb/db-fact db* availability-bello agent-id bell-at availability invoke-status)
+             db*))
+
          :else
          db*)))
    db
@@ -340,6 +359,17 @@
                  :escalate-at escalate-at
                  :cause cause})))))
 
+(defn- all-availability-bell-facts
+  [db]
+  (pldb/with-db db
+    (l/run* [q]
+      (l/fresh [agent-id bell-at availability invoke-status]
+        (availability-bello agent-id bell-at availability invoke-status)
+        (l/== q {:agent-id agent-id
+                 :bell-at bell-at
+                 :availability availability
+                 :invoke-status invoke-status})))))
+
 (defn- registered-agent-ids
   [db]
   (set
@@ -395,6 +425,15 @@
             (l/fresh [agent-id evidence-at]
               (last-evidenceo agent-id evidence-at)
               (l/== q [agent-id evidence-at]))))))
+
+(defn- status-map
+  [db]
+  (into {}
+        (pldb/with-db db
+          (l/run* [q]
+            (l/fresh [agent-id status]
+              (statuso agent-id status)
+              (l/== q [agent-id status]))))))
 
 (defn- prior-event?
   [earlier later]
@@ -524,6 +563,39 @@
                       :actual-stale? actual-stale?
                       :last-evidence-at (get last-evidence agent-id)}))))
          vec)))
+
+(defn query-watchdog-probe-candidates
+  "Return agents whose normal pull-driven coordination appears to have gone
+   silent and therefore warrant a watchdog probe.
+
+   Context matters here, so the caller must provide or accept an explicit
+   threshold and reference time. The intended use is audit/recovery, not
+   primary dispatch."
+  ([db] (query-watchdog-probe-candidates db {}))
+  ([db {:keys [now threshold-seconds]
+        :or {now (Instant/now)
+             threshold-seconds 600}}]
+   (let [now (if (instance? Instant now) now (or (parse-instant now) (Instant/now)))
+         threshold-seconds (long threshold-seconds)
+         statuses (status-map db)
+         last-evidence (last-evidence-map db)
+         bells-by-agent (group-by :agent-id (all-availability-bell-facts db))]
+     (->> statuses
+          (keep (fn [[agent-id status]]
+                  (when (and (not= status :idle)
+                             (not= status :done))
+                    (let [last-at (parse-instant (get last-evidence agent-id))
+                          silent-seconds (if last-at
+                                           (max 0 (.getSeconds (Duration/between last-at now)))
+                                           Long/MAX_VALUE)
+                          latest-bell (last (sort-by :bell-at (get bells-by-agent agent-id)))]
+                      (when (>= silent-seconds threshold-seconds)
+                        {:agent-id agent-id
+                         :status status
+                         :silent-seconds silent-seconds
+                         :last-evidence-at (get last-evidence agent-id)
+                         :latest-availability-bell latest-bell})))))
+          vec))))
 
 (defn query-violations
   "Aggregate the current checks into a map of violation vectors."

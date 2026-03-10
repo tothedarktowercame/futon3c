@@ -158,3 +158,39 @@
                 :actual-stale? false
                 :last-evidence-at nil}}
              (set (tickle-logic/query-stall-evidence-mismatches db)))))))
+
+(deftest query-watchdog-probe-candidates-prefers-silence-context
+  (testing "watchdog probe candidates are long-silent non-idle agents, not recently-finished ones"
+    (let [db (tickle-logic/build-db
+              {:registry-status
+               {:agents {"codex-1" {:type :codex
+                                    :status :invoking
+                                    :invoke-ready? true
+                                    :invoke-route :local
+                                    :capabilities [:coordination/execute :edit]}
+                         "claude-1" {:type :claude
+                                     :status :idle
+                                     :invoke-ready? true
+                                     :invoke-route :local
+                                     :capabilities [:coordination/execute]}}}
+               :evidence-entries
+               [{:evidence/author "codex-1"
+                 :evidence/at (ts 0)}
+                {:evidence/author "tickle-1"
+                 :evidence/at (ts 500)
+                 :evidence/tags [:tickle :availability-bell :coordination]
+                 :evidence/body {:event :agent-availability-bell
+                                 :agent-id "claude-1"
+                                 :availability :available
+                                 :invoke-status :done
+                                 :message "I'm available"
+                                 :at (ts 500)}}]})]
+      (is (= [{:agent-id "codex-1"
+               :status :invoking
+               :silent-seconds 1000
+               :last-evidence-at (ts 0)
+               :latest-availability-bell nil}]
+             (tickle-logic/query-watchdog-probe-candidates
+              db
+              {:now (ts 1000)
+               :threshold-seconds 600}))))))

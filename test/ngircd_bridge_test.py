@@ -46,5 +46,33 @@ class NgircdBridgeAnnounceTest(unittest.TestCase):
         self.assertEqual("FM-001", payload["mission-id"])
 
 
+class NgircdBridgeCodexFormattingTest(unittest.TestCase):
+    def test_codex_mention_does_not_emit_accepted_ack(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_announce_invoke", return_value={
+            "ok": True,
+            "job_id": "codex-job-1",
+            "queued_jobs": 1,
+        }), mock.patch.object(bot, "_enqueue_invoke", return_value="codex-job-1"), mock.patch.object(bot, "_say") as say:
+            bot._handle_mention("joe", "@codex check the solver", channel="#math")
+        say.assert_not_called()
+
+    def test_codex_clean_summary_omits_done_prefix_and_session_suffix(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_say") as say:
+            bot._emit_success_reply({
+            "ok": True,
+            "result": "Re-running `kissat --time=3600 FM001-n6.cnf` now.",
+            "session_id": "019ccdc0abcdef",
+            "invoke_meta": {"execution": {"executed?": True, "tool-events": 1, "command-events": 1}},
+        }, "#math", "codex-job-2", multi_message=False)
+        say.assert_called_once()
+        text = say.call_args.args[0]
+        self.assertNotIn("[done", text)
+        self.assertNotIn("(session ", text)
+        self.assertNotIn("artifact refs", text)
+        self.assertTrue(text.startswith("Re-running `kissat --time=3600 FM001-n6.cnf` now."))
+
+
 if __name__ == "__main__":
     unittest.main()
