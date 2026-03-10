@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+futon3c_root="$(cd "${script_dir}/.." && pwd)"
+workspace_root="$(cd "${futon3c_root}/.." && pwd)"
+
+reference_commit="${FUTON5_REFERENCE_COMMIT:-ada2533}"
+profile_name="${CODEX_TEST_PROFILE_NAME:-futon5-${reference_commit}}"
+futon5_root="${FUTON5_ROOT:-${workspace_root}/futon5}"
+worktree_dir="${CODEX_TEST_WORKTREE_DIR:-${workspace_root}/.worktrees/${profile_name}}"
+session_file="${CODEX_SESSION_FILE:-${futon3c_root}/.state/codex-tests/${profile_name}/session-id}"
+agent_id="${FUTON3C_CODEX_AGENT_ID:-codex-${profile_name}}"
+futon3c_port="${FUTON3C_PORT:-47170}"
+futon1a_port="${FUTON1A_PORT:-7171}"
+
+ensure_reference_worktree() {
+  if [[ ! -d "${futon5_root}" ]]; then
+    printf '[dev-ref][ERROR] futon5 repo not found: %s\n' "${futon5_root}" >&2
+    exit 1
+  fi
+
+  local target_commit
+  target_commit="$(git -C "${futon5_root}" rev-parse --verify "${reference_commit}^{commit}")"
+
+  if [[ -e "${worktree_dir}" ]]; then
+    if [[ ! -e "${worktree_dir}/.git" ]]; then
+      printf '[dev-ref][ERROR] existing path is not a git worktree: %s\n' "${worktree_dir}" >&2
+      exit 1
+    fi
+
+    local actual_commit
+    actual_commit="$(git -C "${worktree_dir}" rev-parse HEAD)"
+    if [[ "${actual_commit}" != "${target_commit}" ]]; then
+      printf '[dev-ref][ERROR] existing worktree is at %s, expected %s\n' \
+        "${actual_commit}" "${target_commit}" >&2
+      printf '[dev-ref][ERROR] refusing to repoint %s implicitly\n' "${worktree_dir}" >&2
+      exit 1
+    fi
+    return 0
+  fi
+
+  mkdir -p "$(dirname "${worktree_dir}")"
+  git -C "${futon5_root}" worktree add --detach "${worktree_dir}" "${target_commit}"
+}
+
+ensure_reference_worktree
+mkdir -p "$(dirname "${session_file}")"
+
+export FUTON3C_PORT="${futon3c_port}"
+export FUTON1A_PORT="${futon1a_port}"
+export FUTON3C_CODEX_AGENT_ID="${agent_id}"
+export AGENCY_AGENT_ID="${agent_id}"
+export CODEX_CWD="${worktree_dir}"
+export CODEX_SESSION_FILE="${session_file}"
+export FUTON3C_TICKLE_AUTOSTART="${FUTON3C_TICKLE_AUTOSTART:-false}"
+export FUTON3C_FM_CONDUCTOR_AUTOSTART="${FUTON3C_FM_CONDUCTOR_AUTOSTART:-false}"
+
+printf '[dev-ref] futon5 worktree: %s\n' "${worktree_dir}"
+printf '[dev-ref] futon5 commit:   %s\n' "${reference_commit}"
+printf '[dev-ref] codex agent:     %s\n' "${agent_id}"
+printf '[dev-ref] session file:    %s\n' "${session_file}"
+printf '[dev-ref] futon3c api:     http://127.0.0.1:%s\n' "${futon3c_port}"
+
+exec "${script_dir}/dev-laptop-env" "$@"

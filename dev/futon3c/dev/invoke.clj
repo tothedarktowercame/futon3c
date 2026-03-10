@@ -149,23 +149,20 @@
           nil)))))
 
 (defn invoke-trace-response-block
-  "Build invoke-trace metadata only (never semantic response text)."
+  "Build a compact invoke-trace footer for human-facing invoke boards."
   [agent-id session-id invoke-trace-id result-text]
   (let [payload (str (or result-text ""))
         kind (invoke-result-kind payload)
         chars (count payload)
         digest (when (pos? chars) (sha256-hex payload))
         artifact-path (write-invoke-artifact! agent-id session-id result-text)]
-    (str "\n--- response trace (metadata only) ---\n"
-         "Result: kind=" (name kind)
-         ", chars=" chars
-         (when digest (str ", sha256=" digest))
-         "\n"
-         (if artifact-path
-           (str "Artifact: " artifact-path "\n")
-           "Artifact: [not written]\n")
-         "Delivery: pending (trace-id " invoke-trace-id ")\n"
-         "Delivery guarantee: caller must record where reply was sent.\n")))
+    (str "\nTrace: "
+         (or invoke-trace-id "unknown")
+         " | result=" (name kind)
+         " | chars=" chars
+         (when digest (str " | sha256=" digest))
+         (when artifact-path (str "\nArtifact: " artifact-path))
+         "\n")))
 
 ;; ---------------------------------------------------------------------------
 ;; Delivery recording (Emacs blackboard)

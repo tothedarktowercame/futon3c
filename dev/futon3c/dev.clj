@@ -1801,6 +1801,229 @@ RESPOND WITH ONLY:
       s
       (str (subs s 0 (max 0 (- max-len 3))) "..."))))
 
+(def ^:private terminal-runtime-states
+  #{:exited :failed-launch :launch-error})
+
+(defn- parse-instant-safe
+  [s]
+  (when (and (string? s) (not (str/blank? s)))
+    (try
+      (Instant/parse s)
+      (catch Throwable _
+        nil))))
+
+(defn- process-handle-for-pid
+  [pid]
+  (when (number? pid)
+    (let [opt (java.lang.ProcessHandle/of (long pid))]
+      (when (.isPresent opt)
+        (.get opt)))))
+
+(defn- process-command-summary
+  [^java.lang.ProcessHandle handle]
+  (let [info (.info handle)
+        command-line (some-> (.commandLine info) (.orElse nil))
+        command (or command-line
+                    (some-> (.command info) (.orElse nil))
+                    "[command unavailable]")]
+    {:pid (.pid handle)
+     :command command}))
+
+(defn- sample-live-process-tree
+  [root-pid]
+  (when-let [^java.lang.ProcessHandle root (process-handle-for-pid root-pid)]
+    (when (.isAlive root)
+      (let [descendants (with-open [stream (.descendants root)]
+                          (->> (iterator-seq (.iterator stream))
+                               (filter #(.isAlive ^java.lang.ProcessHandle %))
+                               (mapv process-command-summary)))
+            root-summary (process-command-summary root)]
+        {:root-pid root-pid
+         :root-alive? true
+         :child-pids (mapv :pid descendants)
+         :live-pids (vec (cons root-pid (map :pid descendants)))
+         :processes (vec (cons root-summary descendants))}))))
+
+(defn- codex-runtime-command
+  [runtime]
+  (or (some-> (:last-command runtime) str str/trim not-empty)
+      (when-let [argv (seq (:argv runtime))]
+        (compact-single-line (str/join " " argv) 180))
+      (when-let [command (some->> (:processes runtime)
+                                  (map :command)
+                                  (remove str/blank?)
+                                  first)]
+        (compact-single-line command 180))))
+
+(defn- codex-event-command-snippet
+  [evt]
+  (let [item (if (= "command_execution" (:type evt))
+               evt
+               (:item evt))
+        item-type (:type item)
+        name (some-> (:name item) str/lower-case)
+        command (:command item)
+        args-raw (or (:arguments item) (:input item) (:params item) (:payload item))
+        args (cond
+               (map? args-raw) args-raw
+               (and (string? args-raw)
+                    (not (str/blank? args-raw))
+                    (or (str/starts-with? args-raw "{")
+                        (str/starts-with? args-raw "[")))
+               (try
+                 (json/parse-string args-raw true)
+                 (catch Throwable _
+                   nil))
+               :else nil)
+        cmd (or command
+                (:cmd args)
+                (:command args))]
+    (when (or (= "command_execution" item-type)
+              (and (= "tool_call" item-type)
+                   (contains? #{"command_execution" "command-execution" "bash" "shell"} name)))
+      (some-> cmd (compact-single-line 180)))))
+
+(defn- refresh-runtime-state!
+  [!runtime-state]
+  (when !runtime-state
+    (let [current @!runtime-state
+          root-pid (:root-pid current)
+          process-state (:process-state current)]
+      (if (or (nil? root-pid)
+              (terminal-runtime-states process-state))
+        current
+        (let [now-str (str (Instant/now))
+              snapshot (sample-live-process-tree root-pid)]
+          (swap! !runtime-state
+                 (fn [state]
+                   (cond
+                     snapshot
+                     (-> state
+                         (assoc :updated-at now-str
+                                :root-alive? true
+                                :child-pids (:child-pids snapshot)
+                                :live-pids (:live-pids snapshot)
+                                :processes (:processes snapshot))
+                         (update :process-state
+                                 (fn [prev]
+                                   (if (or (nil? prev) (= :starting prev))
+                                     :running
+                                     prev))))
+
+                     :else
+                     (cond-> (assoc state
+                               :updated-at now-str
+                               :root-alive? false
+                               :child-pids []
+                               :live-pids []
+                               :processes [])
+                       (nil? (:exit-code state))
+                       (assoc :process-state (if (pos? (long (or (:total-output-lines state) 0)))
+                                               :exited
+                                               :failed-launch)))))))))))
+
+(defn- runtime-state-label
+  [runtime]
+  (case (:process-state runtime)
+    :starting "starting"
+    :running "running"
+    :background-running "background-running"
+    :exited "exited"
+    :failed-launch "failed-launch"
+    :launch-error "launch-error"
+    "unknown"))
+
+(defn- runtime-last-output-line
+  [runtime now-ms]
+  (when-let [ts (parse-instant-safe (:last-output-at runtime))]
+    (let [age-s (max 0 (quot (- now-ms (.toEpochMilli ts)) 1000))
+          stream-name (some-> (:last-output-stream runtime) name)
+          bytes (:last-output-bytes runtime)
+          total (:total-output-bytes runtime)]
+      (str (or stream-name "output")
+           " " age-s "s ago"
+           (when (or bytes total)
+             (str " ("
+                  (str/join ", "
+                            (remove nil?
+                                    [(when bytes (str "+" bytes " bytes"))
+                                     (when total (str "total " total))]))
+                  ")"))))))
+
+(defn- runtime-summary-block
+  [runtime now-ms indent]
+  (when runtime
+    (let [root-pid (:root-pid runtime)
+          live-pids (:live-pids runtime)
+          child-pids (:child-pids runtime)
+          processes (take 6 (or (:processes runtime) []))
+          command (codex-runtime-command runtime)
+          last-output (runtime-last-output-line runtime now-ms)]
+      (str indent "Runtime: " (runtime-state-label runtime)
+           (when root-pid
+             (str " (root pid " root-pid
+                  (when (seq live-pids)
+                    (str ", live " (count live-pids)))
+                  (when (seq child-pids)
+                    (str ", children " (count child-pids)))
+                  ")"))
+           "\n"
+           (when command
+             (str indent "Command: " command "\n"))
+           (when last-output
+             (str indent "Last output: " last-output "\n"))
+           (when (seq processes)
+             (str indent "Live processes:\n"
+                  (str/join "\n"
+                            (map (fn [{:keys [pid command]}]
+                                   (str indent "  " pid " "
+                                        (compact-single-line command 140)))
+                                 processes))
+                  "\n"))))))
+
+(defn- runtime-state->event
+  [runtime]
+  (when runtime
+    (cond-> {:type "runtime.process"
+             :state (runtime-state-label runtime)}
+      (:updated-at runtime)
+      (assoc :updated-at (:updated-at runtime))
+      (:root-pid runtime)
+      (assoc :root-pid (:root-pid runtime))
+      (contains? runtime :root-alive?)
+      (assoc :root-alive (boolean (:root-alive? runtime)))
+      (seq (:argv runtime))
+      (assoc :argv (vec (:argv runtime)))
+      (some-> (:cwd runtime) str str/trim not-empty)
+      (assoc :cwd (:cwd runtime))
+      (seq (:child-pids runtime))
+      (assoc :child-pids (vec (:child-pids runtime)))
+      (seq (:live-pids runtime))
+      (assoc :live-pids (vec (:live-pids runtime)))
+      (seq (:processes runtime))
+      (assoc :processes (mapv (fn [{:keys [pid command]}]
+                                {:pid pid
+                                 :command command})
+                              (:processes runtime)))
+      (some-> (codex-runtime-command runtime) str str/trim not-empty)
+      (assoc :command (codex-runtime-command runtime))
+      (:last-output-at runtime)
+      (assoc :last-output-at (:last-output-at runtime))
+      (:last-output-stream runtime)
+      (assoc :last-output-stream (name (:last-output-stream runtime)))
+      (:last-output-bytes runtime)
+      (assoc :last-output-bytes (:last-output-bytes runtime))
+      (:total-output-bytes runtime)
+      (assoc :total-output-bytes (:total-output-bytes runtime))
+      (:total-output-lines runtime)
+      (assoc :total-output-lines (:total-output-lines runtime))
+      (contains? runtime :exit-code)
+      (assoc :exit-code (:exit-code runtime))
+      (contains? runtime :timed-out?)
+      (assoc :timed-out (boolean (:timed-out? runtime)))
+      (:error runtime)
+      (assoc :error (:error runtime)))))
+
 (defn- codex-board-status
   [{:keys [lifecycle-status]}]
   (case lifecycle-status
@@ -1853,10 +2076,11 @@ RESPOND WITH ONLY:
            (str/join
             "\n\n"
             (map (fn [[aid {:keys [lifecycle-status phase updated-at started-at session-id
-                                   prompt-preview activity trace] :as state}]]
+                                   prompt-preview activity trace runtime] :as state}]]
                    (let [status-label (codex-board-status {:lifecycle-status lifecycle-status})
                          phase-label (codex-board-phase {:phase phase
                                                          :lifecycle-status lifecycle-status})
+                         now-ms (System/currentTimeMillis)
                          terminal (codex-terminal-snapshot state)
                          terminal-status (:status terminal)
                          terminal-execution (:execution terminal)
@@ -1879,6 +2103,8 @@ RESPOND WITH ONLY:
                             (str "  Prompt: " (compact-single-line prompt-preview 180) "\n"))
                           (when activity
                             (str "  Detail: " activity "\n"))
+                          (when (and (= :invoking lifecycle-status) runtime)
+                            (runtime-summary-block runtime now-ms "  "))
                           (when trace-lines
                             (str "  Recent transitions:\n"
                                  (str/join "\n" (map #(str "    " %) trace-lines))
@@ -1959,7 +2185,8 @@ RESPOND WITH ONLY:
    with elapsed time, file change detection, and a progress spinner.
    Also emits evidence heartbeats every 30s for long-running invocations.
    Returns a function that stops the ticker when called."
-  [buf-name agent-id prompt-str used-sid interval-ms & {:keys [bb-opts event-trace]}]
+  [buf-name agent-id prompt-str used-sid interval-ms
+   & {:keys [bb-opts event-trace runtime-state publish-runtime!]}]
   (let [running (atom true)
         start-ms (System/currentTimeMillis)
         spinner-chars [\| \/ \- \\]
@@ -1985,11 +2212,18 @@ RESPOND WITH ONLY:
                                             (let [entries @event-trace]
                                               (when (seq entries)
                                                 (take-last 20 entries))))
+                            runtime (when runtime-state
+                                      (refresh-runtime-state! runtime-state))
                             trace-lines (when (seq trace-entries)
                                           (str/join "\n" trace-entries))
                             status-line (cond
                                           activity
                                           (str "\nWorking... (" activity ")")
+
+                                          (and runtime
+                                               (contains? #{:starting :running :background-running}
+                                                          (:process-state runtime)))
+                                          "\nVerified runtime active."
 
                                           (seq trace-entries)
                                           "\nReceiving stream events..."
@@ -2011,11 +2245,16 @@ RESPOND WITH ONLY:
                                          "\n\n"
                                          (when activity
                                            (str "Activity: " activity "\n"))
+                                         (runtime-summary-block runtime now-ms "")
                                          (when changed-files
                                            (str "Files modified: " changed-files "\n"))
                                          (when trace-lines
                                            (str "\n--- trace ---\n" trace-lines "\n"))
                                          status-line)]
+                        (when (and publish-runtime! runtime)
+                          (try
+                            (publish-runtime! runtime)
+                            (catch Throwable _)))
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
                         (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
@@ -2031,6 +2270,7 @@ RESPOND WITH ONLY:
                           :started-at (str (Instant/ofEpochMilli start-ms))
                           :elapsed-ms elapsed
                           :activity activity
+                          :runtime runtime
                           :changed-files changed-files
                           :trace (vec (or trace-entries []))})
                         ;; Update agents buffer
@@ -2476,14 +2716,28 @@ RESPOND WITH ONLY:
         get-event-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)
         !event-trace (atom [])
         !invoke-start-ms (atom (System/currentTimeMillis))
+        !runtime-state (atom nil)
+        !last-runtime-event (atom nil)
+        publish-runtime! (fn [runtime]
+                           (when get-event-sink
+                             (when-let [sink (get-event-sink aid-val)]
+                               (let [payload (runtime-state->event runtime)]
+                                 (when (and payload (not= payload @!last-runtime-event))
+                                   (reset! !last-runtime-event payload)
+                                   (try
+                                     (sink payload)
+                                     (catch Throwable _)))))))
         on-event (fn [evt]
                    (let [activity (codex-cli/event->activity evt)
-                         summary (or activity (codex-fallback-event-summary evt))]
+                         summary (or activity (codex-fallback-event-summary evt))
+                         command-snippet (codex-event-command-snippet evt)]
                      (when summary
                        (try
                          (let [ts (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))]
                            (append-trace-entry! !event-trace (str ts " " summary) 200))
                          (catch Throwable _)))
+                     (when command-snippet
+                       (swap! !runtime-state assoc :last-command command-snippet))
                      (when (and update-activity! activity)
                        (try
                          (update-activity! aid-val activity)
@@ -2494,6 +2748,87 @@ RESPOND WITH ONLY:
                          (try
                            (sink evt)
                            (catch Throwable _))))))
+        on-runtime-event (fn [{:keys [kind] :as evt}]
+                           (let [timestamp (or (:at evt) (str (Instant/now)))]
+                             (case kind
+                               :process-started
+                               (do
+                                 (swap! !runtime-state
+                                        (fn [state]
+                                          (merge state
+                                                 {:process-state :starting
+                                                  :root-pid (:pid evt)
+                                                  :argv (:argv evt)
+                                                  :cwd (:cwd evt)
+                                                  :started-at timestamp
+                                                  :updated-at timestamp
+                                                  :root-alive? true
+                                                  :child-pids []
+                                                  :live-pids (vec (remove nil? [(:pid evt)]))
+                                                  :processes []})))
+                                 (append-trace-entry! !event-trace
+                                                      (str (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))
+                                                           " process started pid=" (:pid evt))
+                                                      200))
+
+                               :output
+                               (swap! !runtime-state
+                                      (fn [state]
+                                        (-> state
+                                            (assoc :updated-at timestamp
+                                                   :last-output-at timestamp
+                                                   :last-output-stream (:stream evt)
+                                                   :last-output-bytes (:bytes evt)
+                                                   :total-output-lines (:total-lines evt)
+                                                   :total-output-bytes (:total-bytes evt))
+                                            (update :process-state
+                                                    (fn [prev]
+                                                      (if (or (nil? prev) (= :starting prev))
+                                                        :running
+                                                        prev))))))
+
+                               :process-exit
+                               (do
+                                 (swap! !runtime-state
+                                        (fn [state]
+                                          (-> state
+                                              (assoc :updated-at timestamp
+                                                     :finished-at timestamp
+                                                     :root-alive? false
+                                                     :child-pids []
+                                                     :live-pids []
+                                                     :processes []
+                                                     :exit-code (:exit evt)
+                                                     :timed-out? (boolean (:timed-out? evt))
+                                                     :total-output-lines (:total-lines evt)
+                                                     :total-output-bytes (:total-bytes evt)
+                                                     :process-state (if (and (not (zero? (long (or (:exit evt) 0))))
+                                                                             (zero? (long (or (:total-lines evt) 0))))
+                                                                      :failed-launch
+                                                                      :exited)))))
+                                 (append-trace-entry! !event-trace
+                                                      (str (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))
+                                                           " process exited code=" (:exit evt)
+                                                           (when (:timed-out? evt) " (timeout)"))
+                                                      200))
+
+                               :launch-error
+                               (do
+                                 (swap! !runtime-state
+                                        (fn [state]
+                                          (merge state
+                                                 {:process-state :launch-error
+                                                  :argv (:argv evt)
+                                                  :cwd (:cwd evt)
+                                                  :updated-at timestamp
+                                                  :error (:error evt)})))
+                                 (append-trace-entry! !event-trace
+                                                      (str (format-elapsed (- (System/currentTimeMillis) @!invoke-start-ms))
+                                                           " process launch error: "
+                                                           (compact-single-line (:error evt) 160))
+                                                      200))
+                               nil))
+                           (publish-runtime! @!runtime-state))
         inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
                                              :model model
                                              :sandbox sandbox
@@ -2501,7 +2836,8 @@ RESPOND WITH ONLY:
                                              :reasoning-effort reasoning-effort
                                              :timeout-ms timeout-ms
                                              :cwd cwd
-                                             :on-event on-event})
+                                             :on-event on-event
+                                             :on-runtime-event on-runtime-event})
         buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]
       (let [prompt-str (cond
@@ -2516,6 +2852,8 @@ RESPOND WITH ONLY:
         ;; Reset trace for this invocation
         (reset! !event-trace [])
         (reset! !invoke-start-ms (System/currentTimeMillis))
+        (reset! !runtime-state nil)
+        (reset! !last-runtime-event nil)
         (println (str "[invoke] " agent-id " codex exec "
                       (subs prompt-str 0 (min 80 (count prompt-str)))
                       "... (session: " (when invoke-sid (subs invoke-sid 0 (min 8 (count invoke-sid)))) ")"))
@@ -2532,6 +2870,7 @@ RESPOND WITH ONLY:
           :error nil
           :invoke-trace-id nil
           :execution nil
+          :runtime nil
           :changed-files nil
           :activity "starting"
           :trace []})
@@ -2552,7 +2891,9 @@ RESPOND WITH ONLY:
           (catch Throwable _))
         ;; Start ticker with evidence heartbeats + event trace
         (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000
-                                                 :event-trace !event-trace)
+                                                 :event-trace !event-trace
+                                                 :runtime-state !runtime-state
+                                                 :publish-runtime! publish-runtime!)
               result (try
                        (let [initial (inner-fn prompt invoke-sid)]
                          (if (or (codex-work-claim-without-execution? initial)
@@ -2675,6 +3016,7 @@ RESPOND WITH ONLY:
             :result-preview (when ok? (:result result))
             :error (:error result)
             :execution execution
+            :runtime @!runtime-state
             :invoke-trace-id invoke-trace-id
             :changed-files (detect-file-changes @!invoke-start-ms)
             :trace (vec @!event-trace)})

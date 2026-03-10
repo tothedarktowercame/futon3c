@@ -36,7 +36,7 @@
       (is (.contains out "~/code/futon3c/dev/futon3c/dev.clj")))))
 
 (deftest invoke-trace-response-block-persists-full-payload
-  (testing "invoke trace shows only metadata and writes full payload to disk"
+  (testing "invoke trace stays compact and writes full payload to disk"
     (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
                             "f3c-invoke-trace-test"
                             (make-array java.nio.file.attribute.FileAttribute 0)))
@@ -48,14 +48,13 @@
                                                   default))]
                   (#'futon3c.dev/invoke-trace-response-block "codex-1" "019cc01c-b049-7ce1" trace-id payload))
           artifact-path (some->> (re-find #"Artifact: (.+)" block) second)]
-      (is (.contains block "--- response trace (metadata only) ---"))
-      (is (.contains block "Result: kind=structured"))
-      (is (.contains block ", chars="))
-      (is (.contains block "sha256="))
-      (is (.contains block (str "Delivery: pending (trace-id " trace-id ")")))
-      (is (.contains block "Delivery guarantee: caller must record where reply was sent."))
+      (is (.contains block (str "Trace: " trace-id " | result=structured")))
+      (is (.contains block " | chars="))
+      (is (.contains block " | sha256="))
       (is artifact-path)
       (is (not (.contains block "thread_id")))
+      (is (not (.contains block "Delivery: pending")))
+      (is (not (.contains block "Delivery guarantee: caller must record where reply was sent.")))
       (is (.exists (java.io.File. artifact-path)))
       (is (= payload (slurp artifact-path))))))
 
@@ -194,6 +193,36 @@
       (is (not (.contains board "\n  Finished: ")))
       (is (not (.contains board "\n  Outcome: ")))
       (is (not (.contains board "\n  Trace: "))))))
+
+(deftest format-codex-status-board-renders-verified-runtime-state
+  (testing "Active Codex invokes expose verified PID/output/process-tree facts"
+    (let [board (#'futon3c.dev/format-codex-status-board
+                 {"codex-1" {:lifecycle-status :invoking
+                             :phase :executing
+                             :session-id "sess-runtime"
+                             :prompt-preview "Run the solver for n=8"
+                             :runtime {:process-state :running
+                                       :root-pid 2478123
+                                       :child-pids [2478124 2478125]
+                                       :live-pids [2478123 2478124 2478125]
+                                       :processes [{:pid 2478123
+                                                    :command "codex exec --json"}
+                                                   {:pid 2478124
+                                                    :command "python3 scripts/fm001/ramsey_book_sat.py --n 8"}
+                                                   {:pid 2478125
+                                                    :command "z3 -smt2 /tmp/fm001.smt2"}]
+                                       :last-command "python3 scripts/fm001/ramsey_book_sat.py --n 8"
+                                       :last-output-at "2026-03-10T10:13:45Z"
+                                       :last-output-stream :stderr
+                                       :last-output-bytes 128
+                                       :total-output-bytes 4096}
+                             :trace ["5s Using Bash"]}})]
+      (is (.contains board "Runtime: running (root pid 2478123, live 3, children 2)"))
+      (is (.contains board "Command: python3 scripts/fm001/ramsey_book_sat.py --n 8"))
+      (is (.contains board "Last output: stderr"))
+      (is (.contains board "Live processes:"))
+      (is (.contains board "2478124 python3 scripts/fm001/ramsey_book_sat.py --n 8"))
+      (is (.contains board "2478125 z3 -smt2 /tmp/fm001.smt2")))))
 
 (deftest format-codex-status-board-handles-empty-state
   (testing "Codex status board is explicit when nothing has been recorded yet"

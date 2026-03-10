@@ -164,3 +164,33 @@
     (is (true? (#'futon3c.agents.codex-cli/tool-event? evt-done)))
     (is (true? (#'futon3c.agents.codex-cli/command-event? evt-start)))
     (is (true? (#'futon3c.agents.codex-cli/command-event? evt-done)))))
+
+(deftest run-codex-stream-emits-runtime-events
+  (testing "real subprocess launch emits verified process/output lifecycle callbacks"
+    (let [events (atom [])
+          result (codex-cli/run-codex-stream!
+                  ["bash" "-lc"
+                   "printf '{\"type\":\"thread.started\",\"thread_id\":\"sid-runtime\"}\\n'; printf 'stderr-line\\n' 1>&2"]
+                  "ignored"
+                  {:timeout-ms 5000
+                   :on-runtime-event #(swap! events conj %)})
+          kinds (map :kind @events)
+          start-event (some #(when (= :process-started (:kind %)) %) @events)
+          stdout-event (some #(when (and (= :output (:kind %))
+                                         (= :stdout (:stream %))) %)
+                             @events)
+          stderr-event (some #(when (and (= :output (:kind %))
+                                         (= :stderr (:stream %))) %)
+                             @events)
+          exit-event (some #(when (= :process-exit (:kind %)) %) @events)]
+      (is (= 0 (:exit result)))
+      (is (= "sid-runtime" (:session-id result)))
+      (is (some #{:process-started} kinds))
+      (is (some #{:output} kinds))
+      (is (some #{:process-exit} kinds))
+      (is (number? (:pid start-event)))
+      (is (= (:pid start-event) (:pid exit-event)))
+      (is (= :stdout (:stream stdout-event)))
+      (is (= :stderr (:stream stderr-event)))
+      (is (pos? (or (:bytes stdout-event) 0)))
+      (is (pos? (or (:bytes stderr-event) 0))))))

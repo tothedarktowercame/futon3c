@@ -43,7 +43,7 @@
   [token]
   (if (and (string? token) (not (str/blank? token)))
     (->> (str/replace token #"[-_]+" " ")
-         (str/split #"\s+")
+         (#(str/split % #"\s+"))
          (remove str/blank?)
          (map str/capitalize)
          (str/join " "))
@@ -205,16 +205,31 @@
 (defn run-codex-stream!
   "Run CMD with PROMPT-STR on stdin, streaming Codex JSONL output.
    Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
-  [cmd prompt-str {:keys [timeout-ms cwd on-event]}]
+  [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
         _ (when (and (string? cwd) (not (str/blank? cwd)))
             (.directory pb (io/file cwd)))
-        proc (.start pb)
+        emit-runtime! (fn [evt]
+                        (when on-runtime-event
+                          (try
+                            (on-runtime-event evt)
+                            (catch Throwable _))))
+        proc (try
+               (.start pb)
+               (catch Exception e
+                 (emit-runtime! {:kind :launch-error
+                                 :argv (vec cmd)
+                                 :cwd cwd
+                                 :error (.getMessage e)
+                                 :at (str (java.time.Instant/now))})
+                 (throw e)))
         sid* (atom nil)
         text* (atom nil)
         error* (atom nil)
         tool-events* (atom 0)
         command-events* (atom 0)
+        output-lines* (atom 0)
+        output-bytes* (atom 0)
         out-buf (StringBuilder.)
         err-buf (StringBuilder.)
         handle-event! (fn [evt]
@@ -257,11 +272,26 @@
                              (when-let [line (.readLine rdr)]
                                (line-handler line)
                                (recur)))))
+        _ (emit-runtime! {:kind :process-started
+                          :pid (.pid proc)
+                          :argv (vec cmd)
+                          :cwd cwd
+                          :at (str (java.time.Instant/now))})
         stdout-fut (future
                      (consume-lines!
                       (.getInputStream proc)
                       (fn [line]
                         (append-line! out-buf line)
+                        (let [bytes (count (.getBytes (str line "\n") java.nio.charset.StandardCharsets/UTF_8))]
+                          (swap! output-lines* inc)
+                          (swap! output-bytes* + bytes)
+                          (emit-runtime! {:kind :output
+                                          :pid (.pid proc)
+                                          :stream :stdout
+                                          :bytes bytes
+                                          :total-lines @output-lines*
+                                          :total-bytes @output-bytes*
+                                          :at (str (java.time.Instant/now))}))
                         (when-let [evt (parse-json-line line)]
                           (handle-event! evt)))))
         stderr-fut (future
@@ -269,6 +299,16 @@
                       (.getErrorStream proc)
                       (fn [line]
                         (append-line! err-buf line)
+                        (let [bytes (count (.getBytes (str line "\n") java.nio.charset.StandardCharsets/UTF_8))]
+                          (swap! output-lines* inc)
+                          (swap! output-bytes* + bytes)
+                          (emit-runtime! {:kind :output
+                                          :pid (.pid proc)
+                                          :stream :stderr
+                                          :bytes bytes
+                                          :total-lines @output-lines*
+                                          :total-bytes @output-bytes*
+                                          :at (str (java.time.Instant/now))}))
                         (when-let [evt (parse-json-line line)]
                           (handle-event! evt)))))]
     (with-open [w (io/writer (.getOutputStream proc))]
@@ -291,6 +331,13 @@
                                         (pos? (.length err-buf)))
                                "\n")
                              (str err-buf)))]
+        (emit-runtime! {:kind :process-exit
+                        :pid (.pid proc)
+                        :exit exit
+                        :timed-out? (not finished?)
+                        :total-lines @output-lines*
+                        :total-bytes @output-bytes*
+                        :at (str (java.time.Instant/now))})
         {:exit exit
          :timed-out? (not finished?)
          :session-id @sid*
@@ -312,7 +359,8 @@
    - :timeout-ms hard process timeout in milliseconds (default 1800000)
    - :cwd (optional working directory)
    - :on-event (optional fn called with each parsed stream event)"
-  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd on-event]
+  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd
+           on-event on-runtime-event]
     :or {codex-bin "codex"
          model "gpt-5-codex"
          sandbox "danger-full-access"
@@ -333,7 +381,8 @@
                  :as stream-result}
                 (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
                                                    :cwd cwd
-                                                   :on-event on-event})
+                                                   :on-event on-event
+                                                   :on-runtime-event on-runtime-event})
                 stream-sid (:session-id stream-result)
                 parsed (parse-output raw-output (or stream-sid session-id))
                 final-sid (or stream-sid (:session-id parsed))
@@ -359,7 +408,8 @@
                                            :session-id nil})
                     r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms
                                                            :cwd cwd
-                                                           :on-event on-event})
+                                                           :on-event on-event
+                                                           :on-runtime-event on-runtime-event})
                     p2 (parse-output (:raw-output r2) (:session-id r2))
                     sid2 (or (:session-id r2) (:session-id p2))
                     txt2 (or (some-> (:text r2) str/trim not-empty)
