@@ -1532,21 +1532,23 @@ RESPOND WITH ONLY:
              config {:evidence-store evidence-store
                      :interval-ms interval-ms
                      :threshold-seconds threshold-seconds
-                     ;; Only scan agents that are reachable (have invoke-fn or ws).
-                     ;; Evaluated fresh each cycle via the watchdog's scan call.
+                     ;; Scan all agents except those that are truly unreachable
+                     ;; (no invoke-fn, no ws, no IRC relay). Agents on IRC are
+                     ;; reachable via @mention dispatch relay even without invoke-fn.
                      :registry-snapshot-fn
                      (fn []
-                       (->> @reg/!registry
-                            (filter (fn [[_id a]]
-                                      (or (:agent/invoke-fn a)
-                                          (:agent/ws-connected? a))))
-                            keys
-                            vec))
+                       (let [skip #{"corpus-1"}] ;; ws-only, no relay
+                         (->> (keys @reg/!registry)
+                              (remove skip)
+                              vec)))
                      :page-config {;; Skip bell (always returns "paged" without actually
                                    ;; reaching the agent). Go straight to IRC, where the
                                    ;; dispatch relay invokes the agent for real.
                                    :ring-test-bell! (constantly {:ok false :error :skip-to-irc})
-                                   :send-to-channel! send-fn
+                                   ;; Wrap send-fn to fix nick: page-agent! passes "tickle-1"
+                                   ;; but the bridge knows "tickle". Force the correct nick.
+                                   :send-to-channel! (fn [channel _from-nick msg]
+                                                       (send-fn channel "tickle" msg))
                                    :room (or (:room opts) "#futon")
                                    :make-page-message
                                    (fn [agent-id]
@@ -1776,20 +1778,19 @@ RESPOND WITH ONLY:
    wiring in dev-specific IRC helpers and evidence store."
   [overrides]
   (merge {:problem-id "FM-001"
+          :cooldown-ms (* 3 60 1000) ;; 3 min (default was 15 min)
           :irc-read-fn #(irc-recent-channel "#math" 20)
           :bridge-send-fn (make-bridge-irc-send-fn)
           :evidence-store @!evidence-store
-          :invoke-fn (let [sf (io/file "/tmp/futon-fm-conductor-session-id")
-                           sid (read-session-id sf)
-                           sid-atom (atom sid)]
-                       (make-claude-invoke-fn
-                         {:claude-bin (env "CLAUDE_BIN" "claude")
-                          :permission-mode "default"
-                          :agent-id "fm-conductor"
-                          :session-file sf
-                          :session-id-atom sid-atom
-                          :model "claude-haiku-4-5-20251001"
-                          :timeout-ms 120000}))
+          ;; No session-file or session-id-atom — each cycle is a fresh Haiku
+          ;; call. build-fm-context provides full context every time, so session
+          ;; continuity would only accumulate stale obligation state.
+          :invoke-fn (make-claude-invoke-fn
+                       {:claude-bin (env "CLAUDE_BIN" "claude")
+                        :permission-mode "default"
+                        :agent-id "fm-conductor"
+                        :model "claude-haiku-4-5-20251001"
+                        :timeout-ms 120000})
           :whistle-fn (fn [{:keys [to] :as msg}]
                         (println (str "[fm-conductor] whistle → " to ": " (:reason msg)))
                         (try
@@ -4061,6 +4062,11 @@ RESPOND WITH ONLY:
        "User message:\n"
        user-text))
 
+;; Dynamic hook called when any agent finishes an IRC invoke.
+;; Set to (fn [agent-id] ...) to react to agent idle transitions.
+;; Used by the FM conductor to hand off work immediately.
+(defonce !post-invoke-hook (atom nil))
+
 (defn start-dispatch-relay!
   "Wire IRC messages to agent dispatch via invoke-agent!.
 
@@ -4162,7 +4168,14 @@ RESPOND WITH ONLY:
                                (println (str "[irc] " nick " → " channel " ("
                                              (count reply*) " chars): "
                                              (subs reply* 0 (min 120 (count reply*)))))
-                               (flush))
+                               (flush)
+                               ;; Post-invoke hook: agent just went idle.
+                               ;; Calls the dynamic hook fn if set.
+                               (when-let [hook @!post-invoke-hook]
+                                 (future
+                                   (try (hook agent-id)
+                                        (catch Exception e
+                                          (println (str "[post-invoke] hook error: " (.getMessage e))))))))
                              (catch Exception e
                                (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
                                (let [fallback-delivered?
