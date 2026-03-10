@@ -45,21 +45,31 @@
      :git-push-only — no restrictions on git commands
      :session-log-only — no restrictions on session log access
      {:paths [...]} — file paths must start with one of the allowed paths"
-  [_tool-id args peripheral-spec]
+  [tool-id args peripheral-spec]
   (let [scope (:peripheral/scope peripheral-spec)]
     (cond
       ;; Keyword scopes are unrestricted for their allowed tools
       (keyword? scope) true
 
-      ;; Path-scoped: check the first arg (file path) against allowed paths.
-      ;; File tools always take the path as the first arg; subsequent string
-      ;; args are content (e.g. old-string/new-string for :edit).
+      ;; Path-scoped: check only path-bearing args against allowed paths.
+      ;; Most file tools use the first arg as the path. Grep is the main
+      ;; exception here: the pattern is first and the path target is second.
       (and (map? scope) (:paths scope))
       (let [scope-paths (:paths scope)
-            path-arg (first args)]
-        (if (string? path-arg)
-          (boolean (path-in-scope? path-arg scope-paths))
-          true))
+            path-args (case tool-id
+                        (:read :write :edit :musn-log)
+                        (if (string? (first args))
+                          [(first args)]
+                          [])
+
+                        :grep
+                        (if (string? (second args))
+                          [(second args)]
+                          [])
+
+                        ;; Conservative fallback: any string could be a path.
+                        (->> args (filter string?) vec))]
+        (every? #(path-in-scope? % scope-paths) path-args))
 
       :else true)))
 
