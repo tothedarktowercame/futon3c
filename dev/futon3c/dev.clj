@@ -875,23 +875,7 @@
              (println (str "  " time-part " <" nick "> " text))))
          (count msgs))))))
 
-(def ^:private bridge-send-fn*
-  "Singleton bridge send fn. All IRC sends route through the bridge HTTP /say
-   endpoint, which handles per-nick routing. The raw !irc-conn is read-only."
-  (make-bridge-irc-send-fn))
-
-(defn send-irc!
-  "Send a message to IRC via the bridge HTTP /say endpoint.
-   Signature matches send-to-channel!: (send-irc! channel from-nick message).
-   The from-nick determines which IRC nick posts the message.
-   Returns true on success, false on error."
-  [channel from-nick message]
-  (try
-    (bridge-send-fn* channel from-nick message)
-    true
-    (catch Exception e
-      (println (str "[irc] send-irc! error: " (.getMessage e)))
-      false)))
+(declare send-irc!)
 
 (defn make-irc-send-fn
   "Create a send-to-channel! function backed by persistent ngircd connection."
@@ -925,6 +909,19 @@
            (throw (ex-info (str "bridge /say returned " code)
                            {:status code :from from-nick})))
          {:ok true :status code})))))
+
+(def ^:private bridge-send-fn*
+  (make-bridge-irc-send-fn))
+
+(defn send-irc!
+  "Send a message to IRC via the bridge HTTP /say endpoint."
+  [channel from-nick message]
+  (try
+    (bridge-send-fn* channel from-nick message)
+    true
+    (catch Exception e
+      (println (str "[irc] send-irc! error: " (.getMessage e)))
+      false)))
 
 ;; =============================================================================
 ;; Tickle task state machine — full lifecycle tracking
@@ -1814,86 +1811,176 @@ RESPOND WITH ONLY:
          overrides))
 
 (defonce !fm-conductor (atom nil))
+(defonce !post-invoke-hook (atom nil))
 
 (defn fm-conduct-targeted!
-  "Run one FM-001 conductor cycle targeting a specific agent.
-   Delegates to tickle_orchestrate/fm-conduct-cycle!."
+  "Run one FM-001 mechanical dispatch targeting a specific agent."
   ([target-agent] (fm-conduct-targeted! "FM-001" target-agent))
   ([problem-id target-agent]
-   (orch/fm-conduct-cycle! target-agent (make-fm-conductor-config {:problem-id problem-id}))))
+   (fm-dispatch-mechanical! target-agent (make-fm-conductor-config {:problem-id problem-id}))))
 
 (defn fm-conduct!
-  "Run one FM-001 conductor cycle (untargeted — picks first assignable)."
+  "Run one FM-001 conductor cycle — dispatches to all idle workers."
   ([] (fm-conduct! "FM-001"))
   ([problem-id]
-   (fm-conduct-targeted! problem-id "claude-1")))
+   (fm-dispatch-idle-agents! (make-fm-conductor-config {:problem-id problem-id}))))
+
+;; =============================================================================
+;; Mechanical conductor — state-driven, no LLM needed for dispatch decisions
+;; =============================================================================
+
+(def ^:private fm-agent-nicks
+  {"claude-1" "claude" "claude-2" "claude-2" "codex-1" "codex"
+   "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
+
+(defn- agent-idle?
+  "Check if an agent is idle (not currently invoking).
+   Returns false for agents not in the registry."
+  [agent-id]
+  (let [a (get @reg/!registry agent-id)]
+    (and (some? a)
+         (not= :invoking (:agent/status a)))))
+
+(defn- idle-agents
+  "Return agent IDs from the rotation that are currently idle."
+  [rotation]
+  (filterv agent-idle? rotation))
+
+(defn- fm-dispatch-mechanical!
+  "Mechanical FM conductor dispatch. No LLM — just state + obligations.
+   If agent is idle and obligations exist, page with a templated message.
+   Tracks paged obligations to avoid re-paging the same work."
+  [agent-id {:keys [problem-id bridge-send-fn conductor-state cooldown-ms]
+             :or {problem-id "FM-001" cooldown-ms (* 3 60 1000)}}]
+  (let [conductor-state (or conductor-state (atom {}))
+        nick (get fm-agent-nicks agent-id agent-id)]
+    (cond
+      (not (agent-idle? agent-id))
+      {:action :skip :target agent-id}
+
+      (let [last-paged (get-in @conductor-state [:last-paged agent-id])]
+        (and last-paged (<= (- (System/currentTimeMillis) last-paged) cooldown-ms)))
+      {:action :cooldown :target agent-id}
+
+      :else
+      (let [assignable (orch/fm-assignable-obligations problem-id)
+            already-paged (get-in @conductor-state [:paged-obligations agent-id] #{})
+            fresh (remove #(contains? already-paged (:item/id %)) assignable)]
+        (if (empty? fresh)
+          {:action :pass :target agent-id}
+          (let [ob (first fresh)
+                ob-id (:item/id ob)
+                ob-label (:item/label ob)
+                msg (str "@" nick " " ob-id ": " ob-label
+                         ". Push results to git when done.")]
+            (println (str "[conductor] " agent-id " → PAGE " ob-id))
+            (swap! conductor-state
+                   (fn [s]
+                     (-> s
+                         (assoc-in [:last-paged agent-id] (System/currentTimeMillis))
+                         (update-in [:paged-obligations agent-id] (fnil conj #{}) ob-id))))
+            (when (fn? bridge-send-fn)
+              (bridge-send-fn "#math" "tickle" msg))
+            {:action :page :target agent-id :text msg :obligation ob-id}))))))
+
+(defn- fm-dispatch-idle-agents!
+  "Scan all agents in rotation, dispatch work to any that are idle."
+  [config]
+  (let [rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
+        idle (idle-agents rotation)]
+    (when (seq idle)
+      (mapv #(fm-dispatch-mechanical! % config) idle))))
 
 (defn start-fm-conductor!
-  "Start the FM-001 conductor loop with round-robin agent tickling.
-   Delegates to tickle_orchestrate/start-fm-conductor!.
+  "Start the mechanical FM conductor loop.
+   Scans all agents each tick — idle + obligations = PAGE.
+   No LLM needed for dispatch. Workers only (no Mentor).
    Registers with CYDER (I-6..I-10) for inspectability."
   ([] (start-fm-conductor! {}))
-  ([{:keys [step-ms] :or {step-ms 300000}}]
+  ([{:keys [step-ms] :or {step-ms 60000}}]
    (when-let [old @!fm-conductor]
      ((:stop-fn old))
      (cyder/deregister! "fm-conductor")
      (println "[fm-conductor] Stopped previous conductor."))
    (let [config (make-fm-conductor-config {:step-ms step-ms})
-         handle (orch/start-fm-conductor! config)]
+         conductor-state (atom {:cycles-completed 0
+                                :last-cycle nil
+                                :started-at-ms (System/currentTimeMillis)})
+         config (assoc config :conductor-state conductor-state)
+         running (atom true)
+         rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
+         cooldown-ms (or (:cooldown-ms config) (* 3 60 1000))
+         handle {:stop-fn #(reset! running false)
+                 :conductor-state conductor-state
+                 :running running}]
+     (future
+       (while @running
+         (try
+           (Thread/sleep (long step-ms))
+           (when @running
+             (let [results (fm-dispatch-idle-agents! config)]
+               (swap! conductor-state assoc
+                      :cycles-completed (inc (or (:cycles-completed @conductor-state) 0))
+                      :last-cycle (when (seq results) (last results))
+                      :last-cycle-ms (System/currentTimeMillis))
+               (cyder/touch! "fm-conductor")
+               (refresh-processes-buffer!)
+               (project-tickle-state!)))
+           (catch Exception e
+             (println (str "[fm-conductor] Error: " (.getMessage e)))))))
      (reset! !fm-conductor handle)
-     ;; Register with CYDER for inspection (M-cyder I-6..I-10)
+     (reset! !post-invoke-hook
+       (fn [agent-id]
+         (when @running
+           (println (str "[post-invoke] " agent-id " idle → mechanical dispatch"))
+           (let [result (fm-dispatch-mechanical! agent-id config)]
+             (when result
+               (swap! conductor-state assoc :last-cycle result :last-cycle-ms (System/currentTimeMillis))
+               (cyder/touch! "fm-conductor")
+               (refresh-processes-buffer!))))))
      (cyder/deregister! "fm-conductor")
      (cyder/register!
       {:id "fm-conductor"
        :type :daemon
        :layer :repl
        :stop-fn (fn []
-                  (orch/stop-fm-conductor! handle)
+                  (reset! running false)
+                  (reset! !post-invoke-hook nil)
                   (reset! !fm-conductor nil))
        :state-fn (fn []
-                   (let [state @(:conductor-state handle)
+                   (let [state @conductor-state
                          now-ms (System/currentTimeMillis)
                          cooldowns (:last-paged state)
-                         rotation (or (:rotation state)
-                                      (:rotation config)
-                                      ["claude-1" "codex-1" "claude-2"])
-                         idx (or (:idx state) 0)
-                         next-agent (nth rotation (mod idx (count rotation)))
                          cycles (or (:cycles-completed state) 0)
                          last-cycle (:last-cycle state)
-                         last-cycle-ms (:last-cycle-ms state)
-                         base-ms (or last-cycle-ms (:started-at-ms state))
-                         next-at (when base-ms
-                                   (str (.truncatedTo
-                                          (Instant/ofEpochMilli (+ base-ms step-ms))
-                                          java.time.temporal.ChronoUnit/SECONDS)))
-                         fmt-cd (fn [agent-id]
-                                  (let [marker (if (= agent-id next-agent) "▶ " "  ")]
-                                    (if-let [ts (get cooldowns agent-id)]
-                                      (let [ago-s (quot (- now-ms ts) 1000)
-                                            cooldown-s (quot (or (:cooldown-ms config) (* 15 60 1000)) 1000)
-                                            remaining (- cooldown-s ago-s)]
-                                        (if (pos? remaining)
-                                          (str marker agent-id " → cooldown " remaining "s")
-                                          (str marker agent-id " → ready (paged " ago-s "s ago)")))
-                                      (str marker agent-id " → ready"))))]
+                         fmt-agent (fn [agent-id]
+                                     (let [a (get @reg/!registry agent-id)
+                                           status (or (:agent/status a) :unknown)
+                                           idle? (not= :invoking status)
+                                           cd-ts (get cooldowns agent-id)
+                                           cd-remaining (when cd-ts
+                                                          (let [r (- cooldown-ms (- now-ms cd-ts))]
+                                                            (when (pos? r) r)))]
+                                       (str "  " agent-id
+                                            " [" (name status) "]"
+                                            (if idle?
+                                              (if cd-remaining
+                                                (str " cooldown " (quot cd-remaining 1000) "s")
+                                                " ready")
+                                              (when-let [t (:agent/invoke-started-at a)]
+                                                (str " for " (quot (- now-ms (.toEpochMilli t)) 1000) "s"))))))]
                      (cond-> {:problem-id (or (:problem-id config) "FM-001")
                               :step-ms (str (quot step-ms 1000) "s")
+                              :cooldown (str (quot cooldown-ms 1000) "s")
                               :cycles cycles
-                              :agents (mapv fmt-cd rotation)}
-                       next-at (assoc :next-at next-at)
+                              :agents (mapv fmt-agent rotation)}
                        last-cycle (assoc :last (str (:target last-cycle) " "
                                                     (name (:action last-cycle))
                                                     (when (:text last-cycle)
                                                       (str ": " (subs (:text last-cycle)
                                                                        0 (min 50 (count (:text last-cycle)))))))))))
        :step-fn (fn []
-                  ;; Single-step: run one cycle for the first agent in rotation.
-                  ;; Cooldown is bypassed for manual steps (deliberate action).
-                  (let [rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
-                        target (first rotation)]
-                    (orch/fm-conduct-cycle! target
-                                            (assoc config :cooldown-ms 0))))
+                  (fm-dispatch-idle-agents! (assoc config :cooldown-ms 0)))
        :metadata {:step-ms step-ms
                   :problem-id (or (:problem-id config) "FM-001")}})
      handle)))
@@ -1902,7 +1989,8 @@ RESPOND WITH ONLY:
   "Stop the FM-001 conductor loop."
   []
   (when-let [h @!fm-conductor]
-    (orch/stop-fm-conductor! h)
+    ((:stop-fn h))
+    (reset! !post-invoke-hook nil)
     (reset! !fm-conductor nil)
     (cyder/deregister! "fm-conductor")))
 
@@ -4061,11 +4149,6 @@ RESPOND WITH ONLY:
        "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
        "User message:\n"
        user-text))
-
-;; Dynamic hook called when any agent finishes an IRC invoke.
-;; Set to (fn [agent-id] ...) to react to agent idle transitions.
-;; Used by the FM conductor to hand off work immediately.
-(defonce !post-invoke-hook (atom nil))
 
 (defn start-dispatch-relay!
   "Wire IRC messages to agent dispatch via invoke-agent!.

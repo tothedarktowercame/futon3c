@@ -103,8 +103,8 @@
     (let [prompt @#'futon3c.dev/tickle-system-prompt]
       (is (not (.contains prompt "/home/joe/code/futon6/data/")))
       (is (not (.contains prompt "~/code/futon6/data/")))
-      (is (.contains prompt "arxiv-math-ct-eprints"))
-      (is (.contains prompt "pm-full-dictionary.json")))))
+      (is (.contains prompt "FM-001"))
+      (is (.contains prompt "AGENTS:")))))
 
 (deftest format-codex-status-board-renders-last-invoke-snapshot
   (testing "Codex status board preserves last invoke details after the agent returns idle"
