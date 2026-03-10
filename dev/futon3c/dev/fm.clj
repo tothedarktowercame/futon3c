@@ -338,7 +338,7 @@
    Periodic loop drains any un-consumed bells as safety net.
    Registers with CYDER for inspectability."
   ([deps] (start-fm-conductor! deps {}))
-  ([deps {:keys [step-ms] :or {step-ms 60000}}]
+  ([deps {:keys [step-ms] :or {step-ms (* 20 60 1000)}}]
    (when-let [old @!fm-conductor]
      ((:stop-fn old))
      (cyder/deregister! "fm-conductor")
@@ -380,13 +380,14 @@
                                (when-let [f (tq/agent-failures agent-id)]
                                  (str (:consecutive f) " consecutive failures"))))
                  (project-tickle-state! !tickle)))))))
-     ;; Periodic safety-net loop: drain any un-consumed bells + scan for idle agents
+     ;; Periodic safety-net (20 min default): drain unconsumed bells.
+     ;; TODO: make this do something useful — e.g. detect stuck agents,
+     ;; escalate to mentor, or reprioritize stale tasks.
      (future
        (while @running
          (try
            (Thread/sleep (long step-ms))
            (when @running
-             ;; Drain any bells that weren't consumed by the immediate dispatch
              (let [queue-results (dispatch-from-queue! config conductor-state)
                    results queue-results]
                (swap! conductor-state assoc
