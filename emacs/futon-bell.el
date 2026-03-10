@@ -21,12 +21,12 @@
   "Running stats for bell delivery.")
 
 (defun futon-bell--write-receipt (agent-id nonce)
-  "Write a signed receipt confirming the bell was delivered."
-  (let ((receipt (format "(:agent-id %S :nonce %s :received-at %S :emacs-socket %S)"
+  "Append a signed receipt confirming the bell was delivered."
+  (let ((receipt (format "(:agent-id %S :nonce %s :received-at %S :emacs-socket %S)\n"
                          agent-id nonce
                          (format-time-string "%FT%T%z")
                          (or (daemonp) "default"))))
-    (write-region receipt nil futon-bell-receipt-file nil 'silent)))
+    (write-region receipt nil futon-bell-receipt-file t 'silent)))
 
 (defun futon-bell--poll ()
   "Check bell file for new events. Called by timer."

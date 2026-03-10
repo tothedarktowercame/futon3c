@@ -63,4 +63,27 @@ if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   fi
 fi
 
-exec make dev "$@"
+# --- Tickle / FM conductor CLI flags ---
+remaining_args=()
+for arg in "$@"; do
+  case "$arg" in
+    --start-tickle|--resume-tickle)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      echo "[dev] Tickle watchdog: will start at boot"
+      ;;
+    --start-fm)
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] FM conductor: will start at boot"
+      ;;
+    --start-all)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] Tickle + FM conductor: will start at boot"
+      ;;
+    *)
+      remaining_args+=("$arg")
+      ;;
+  esac
+done
+
+exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"

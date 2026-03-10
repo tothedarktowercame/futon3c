@@ -262,27 +262,70 @@
   ([deps problem-id]
    (fm-dispatch-idle-agents! (make-fm-conductor-config deps {:problem-id problem-id}))))
 
+;; ---------------------------------------------------------------------------
+;; Task-pool dispatch (bell-driven)
+;; ---------------------------------------------------------------------------
+
+(defn task->prompt
+  "Build an invoke prompt from a task map."
+  [{:keys [id label source depends-on]}]
+  (str "Task assignment from the conductor queue.\n\n"
+       "Task ID: " id "\n"
+       "Task: " label "\n"
+       (when source (str "Source: " source "\n"))
+       (when (seq depends-on)
+         (str "Depends on (completed): " (pr-str depends-on) "\n"))
+       "\nWork this task. Push results to git when done. "
+       "Keep your response concise — report what you did and what the outcome was."))
+
+(defn dispatch-task!
+  "Pick the highest-priority task from the pool and invoke the agent with it.
+   Returns {:action :dispatch|:pass|:error, :task-id str, :agent-id str}."
+  [agent-id {:keys [bridge-send-fn conductor-state] :as _config}]
+  (if-let [task (tq/pick-task! agent-id)]
+    (let [tid (:id task)
+          nick (get fm-agent-nicks agent-id agent-id)]
+      (println (str "[conductor] " agent-id " → DISPATCH " tid ": " (:label task)))
+      (when (fn? bridge-send-fn)
+        (bridge-send-fn "#futon" "tickle"
+                        (str "@" nick " dispatched: " tid " — " (:label task))))
+      (when conductor-state
+        (swap! conductor-state assoc-in [:last-paged agent-id] (System/currentTimeMillis)))
+      ;; Invoke in a future — the agent will bell idle when done,
+      ;; which re-enters this dispatch loop
+      (future
+        (try
+          (let [prompt (task->prompt task)
+                result (reg/invoke-agent! agent-id prompt 600000)]
+            (if (:ok result)
+              (do
+                (println (str "[conductor] " agent-id " completed " tid))
+                (tq/complete-task! agent-id))
+              (do
+                (println (str "[conductor] " agent-id " failed " tid ": " (:error result)))
+                (tq/fail-task! agent-id))))
+          (catch Exception e
+            (println (str "[conductor] " agent-id " exception on " tid ": " (.getMessage e)))
+            (tq/fail-task! agent-id))))
+      {:action :dispatch :task-id tid :agent-id agent-id :label (:label task)})
+    (do
+      (println (str "[conductor] " agent-id " → no tasks available"))
+      {:action :pass :agent-id agent-id})))
+
 (defn- dispatch-from-queue!
-  "Consume pending bells from the task queue, dispatch work to each idle agent.
-   Dispatches to ANY registered agent that bells, not just the rotation.
+  "Consume pending bells from the task queue, dispatch tasks to idle agents.
+   Safety net for bells not consumed by the immediate on-idle handler.
    Returns seq of dispatch results."
   [config conductor-state]
   (let [bells (tq/drain-pending!)]
     (when (seq bells)
       (->> bells
-           ;; Deduplicate: if same agent belled multiple times, keep latest
+           (filter :ok?)
            (group-by :agent-id)
            vals
            (map last)
            (mapv (fn [{:keys [agent-id]}]
-                   ;; Complete any previous assignment for this agent
-                   (tq/complete! agent-id)
-                   (let [result (fm-dispatch-mechanical! agent-id config)]
-                     ;; Track assignment in queue
-                     (when (= :page (:action result))
-                       (tq/assign! agent-id (:obligation result)
-                                   (:text result)
-                                   (or (:problem-id config) "FM-001")))
+                   (let [result (dispatch-task! agent-id config)]
                      (when result
                        (swap! conductor-state assoc
                               :last-cycle result
@@ -312,7 +355,7 @@
          handle {:stop-fn #(reset! running false)
                  :conductor-state conductor-state
                  :running running}]
-     ;; Wire bell-driven dispatch: agents idle → enqueue + immediate dispatch
+     ;; Wire bell-driven dispatch: agents idle → enqueue + dispatch from task pool
      ;; on-idle signature: (fn [agent-id outcome]) where outcome is
      ;; {:ok bool :error str-or-nil :session-id str-or-nil}
      (reg/set-on-idle!
@@ -322,13 +365,8 @@
            (let [ok? (:ok outcome true)]
              (if ok?
                (do
-                 (println (str "[bell→queue] " agent-id " idle (ok) → dispatching"))
-                 (tq/complete! agent-id)
-                 (let [result (fm-dispatch-mechanical! agent-id config)]
-                   (when (= :page (:action result))
-                     (tq/assign! agent-id (:obligation result)
-                                 (:text result)
-                                 (or (:problem-id config) "FM-001")))
+                 (println (str "[bell→queue] " agent-id " idle (ok) → checking task pool"))
+                 (let [result (dispatch-task! agent-id config)]
                    (when result
                      (swap! conductor-state assoc
                             :last-cycle result

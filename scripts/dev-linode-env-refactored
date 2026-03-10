@@ -108,6 +108,29 @@ if [[ "$_any_bridge" != "true" ]]; then
   fi
 fi
 
+# --- Tickle / FM conductor CLI flags ---
+remaining_args=()
+for arg in "$@"; do
+  case "$arg" in
+    --start-tickle|--resume-tickle)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      echo "[dev] Tickle watchdog: will start at boot"
+      ;;
+    --start-fm)
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] FM conductor: will start at boot"
+      ;;
+    --start-all)
+      export FUTON3C_TICKLE_AUTOSTART=true
+      export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
+      echo "[dev] Tickle + FM conductor: will start at boot"
+      ;;
+    *)
+      remaining_args+=("$arg")
+      ;;
+  esac
+done
+
 echo "[dev] Refactored mode: will load futon3c.dev.{config,invoke,irc,fm,ct,arse,mentor}"
 
 # --- Boot JVM, then load refactored modules via Drawbridge ---
@@ -117,7 +140,7 @@ _db_url="http://${_db_bind}:${_db_port}/eval"
 _admin_token="$(cat .admintoken 2>/dev/null || true)"
 
 # Start the JVM in background, forwarding signals
-make dev "$@" &
+make dev "${remaining_args[@]+"${remaining_args[@]}"}" &
 _jvm_pid=$!
 trap 'kill -TERM $_jvm_pid 2>/dev/null; wait $_jvm_pid' EXIT INT TERM
 

@@ -213,7 +213,7 @@
         _ (start-agents!)
         _ (when (config/env-bool "FUTON3C_TICKLE_AUTOSTART" false)
             (start-tickle! {:auto-restart? true}))
-        _ (when (config/env-bool "FUTON3C_FM_CONDUCTOR_AUTOSTART" true)
+        _ (when (config/env-bool "FUTON3C_FM_CONDUCTOR_AUTOSTART" false)
             (start-fm-conductor!))
         bridge-sys (start-drawbridge!)
         _ (when bridge-sys
