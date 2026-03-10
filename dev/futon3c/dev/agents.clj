@@ -65,6 +65,38 @@
                         :metadata {:role "corpus-bot"}})
   (println "[dev] Corpus agent registered: corpus-1 (ws-only)"))
 
+(defn- register-inline-codex-agent!
+  [{:keys [agent-id session-file metadata make-codex-invoke-fn read-session-id]}]
+  (let [initial-sid (read-session-id session-file)
+        sid-atom (atom initial-sid)
+        invoke-fn (make-codex-invoke-fn
+                   {:codex-bin (config/env "CODEX_BIN" "codex")
+                    :model (config/env "CODEX_MODEL" "gpt-5-codex")
+                    :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
+                    :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
+                                         (config/env "CODEX_APPROVAL" "never"))
+                    :reasoning-effort (config/env "CODEX_REASONING_EFFORT")
+                    :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
+                    :cwd (config/configured-codex-cwd)
+                    :agent-id agent-id
+                    :session-file session-file
+                    :session-id-atom sid-atom})]
+    (rt/register-codex! {:agent-id agent-id
+                         :invoke-fn invoke-fn
+                         :metadata metadata})
+    (reg/update-agent! agent-id
+                       :agent/type :codex
+                       :agent/invoke-fn invoke-fn
+                       :agent/capabilities [:edit :test :coordination/execute]
+                       :agent/metadata metadata)
+    (when initial-sid
+      (reg/update-agent! agent-id :agent/session-id initial-sid))
+    (println (str "[dev] Codex agent registered: " agent-id " (inline invoke)"
+                  (when initial-sid
+                    (str " (session: " (short-session initial-sid) ")"))))
+    {:invoke-fn invoke-fn
+     :session-id initial-sid}))
+
 (defn- codex-registration-config
   [{:keys [f3c-sys role codex-ws-bridge?]}]
   (let [ws-port (or (:port f3c-sys) (config/env-int "FUTON3C_PORT" 7070))
@@ -107,6 +139,10 @@
         role-cfg (config/role-defaults role)
         register-claude? (config/env-bool "FUTON3C_REGISTER_CLAUDE" (:register-claude? role-cfg))
         register-codex? (config/env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
+        register-corpus? (config/env-bool "FUTON3C_REGISTER_CORPUS" false)
+        register-vscode-codex? (config/env-bool "FUTON3C_REGISTER_VSCODE_CODEX" true)
+        vscode-codex-agent-id (or (some-> (config/env "FUTON3C_VSCODE_AGENT_ID") str/trim not-empty)
+                                  "codex-vscode")
         relay-claude? (config/env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (config/env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
         codex-agent-id (config/configured-codex-agent-id)
@@ -169,7 +205,8 @@
                    :emacs-socket (or (config/env "CLAUDE2_EMACS_SOCKET") "workspace2")}
         :make-claude-invoke-fn make-claude-invoke-fn
         :read-session-id read-session-id}))
-    (register-corpus-agent!)
+    (when register-corpus?
+      (register-corpus-agent!))
     (peripheral-agents/register-tickle-agent!
      {:make-claude-invoke-fn make-claude-invoke-fn
       :make-tickle-invoke-fn make-tickle-invoke-fn
@@ -182,7 +219,13 @@
                                             codex-bin-name "` not found on PATH."))
                               (println "[dev][WARN] Falling back to relay mode. Remove FUTON3C_REGISTER_CODEX override.")
                               false)
-                            register-codex?)]
+                            register-codex?)
+          register-vscode-codex? (if (and register-vscode-codex? (not codex-bin-exists?))
+                                   (do
+                                     (println (str "[dev][WARN] FUTON3C_REGISTER_VSCODE_CODEX=true but `"
+                                                   codex-bin-name "` not found on PATH."))
+                                     (println "[dev][WARN] Skipping separate VS Code codex lane registration."))
+                                   register-vscode-codex?)]
       (when register-codex?
         (let [session-file (io/file (or (config/env "CODEX_SESSION_FILE")
                                         "/tmp/futon-codex-session-id"))
@@ -257,6 +300,17 @@
               (println (str "[dev] Codex agent registered: " codex-agent-id " (inline invoke)"
                             (when initial-sid
                               (str " (session: " (short-session initial-sid) ")"))))))))
+      (when (and register-vscode-codex?
+                 (or (not register-codex?)
+                     (not= vscode-codex-agent-id codex-agent-id)))
+        (register-inline-codex-agent!
+         {:agent-id vscode-codex-agent-id
+          :session-file (io/file (or (config/env "FUTON3C_VSCODE_CODEX_SESSION_FILE")
+                                     "/tmp/futon-vscode-codex-session-id"))
+          :metadata {:surface "VS Code"
+                     :lane "vscode"}
+          :make-codex-invoke-fn make-codex-invoke-fn
+          :read-session-id read-session-id}))
       (when (and (not register-codex?) relay-codex?)
         (let [proxy-invoke-fn (when codex-remote-origin
                                 (federation/make-proxy-invoke-fn codex-remote-origin codex-agent-id))
