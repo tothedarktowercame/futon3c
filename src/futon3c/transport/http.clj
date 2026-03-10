@@ -2743,6 +2743,28 @@
                                    (:error/message err)
                                    (str err)))})))))
 
+(defn- handle-agent-status
+  "POST /api/alpha/agents/:id/status — report external invoke state.
+   Body: {\"source\": \"emacs-agent-chat\", \"status\": \"invoking\"|\"idle\",
+          \"activity\": \"optional description\", \"session_id\": \"optional\"}
+   Emacs (or any surface) calls this to tell the server an agent is busy."
+  [_config agent-id request]
+  (let [payload (parse-json-map (read-body request))
+        source (or (:source payload) (get payload "source") "http-api")
+        status-val (or (:status payload) (get payload "status"))
+        activity (or (:activity payload) (get payload "activity"))
+        session-id (or (:session_id payload) (get payload "session_id")
+                       (:session-id payload) (get payload "session-id"))]
+    (if (str/blank? (str status-val))
+      (json-response 400 {:ok false :err "missing-status"
+                          :message "Body must include \"status\": \"invoking\" or \"idle\""})
+      (let [result (reg/report-external-invoke!
+                    agent-id source
+                    (cond-> {:status status-val}
+                      activity (assoc :activity activity)
+                      session-id (assoc :session-id session-id)))]
+        (json-response 200 result)))))
+
 ;; =============================================================================
 ;; CYDER process endpoints
 ;; =============================================================================
@@ -3521,6 +3543,13 @@
           (let [raw (subs uri (count "/api/alpha/agents/")
                          (- (count uri) (count "/rebind")))]
             (handle-agent-rebind config (enc/decode-uri-component raw) request))
+
+          (and (= :post method) (string? uri)
+               (str/starts-with? uri "/api/alpha/agents/")
+               (str/ends-with? uri "/status"))
+          (let [raw (subs uri (count "/api/alpha/agents/")
+                         (- (count uri) (count "/status")))]
+            (handle-agent-status config (enc/decode-uri-component raw) request))
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")
