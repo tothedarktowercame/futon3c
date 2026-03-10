@@ -1852,6 +1852,8 @@ RESPOND WITH ONLY:
 (defonce !fm-conductor (atom nil))
 (defonce !post-invoke-hook (atom nil))
 
+(declare fm-dispatch-mechanical! fm-dispatch-idle-agents!)
+
 (defn fm-conduct-targeted!
   "Run one FM-001 mechanical dispatch targeting a specific agent."
   ([target-agent] (fm-conduct-targeted! "FM-001" target-agent))

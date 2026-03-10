@@ -11,7 +11,7 @@
             [futon3c.dev.config :as config]
             [futon3c.dev.irc :as dev-irc]
             [futon3c.social.whistles :as whistles]
-            [clojure.string :as str])
+)
   (:import [java.time Instant]
            [java.time.temporal ChronoUnit]))
 
@@ -109,23 +109,23 @@
                                               (if (pos? remaining)
                                                 (str marker a " → cooldown " remaining "s")
                                                 (str marker a " → ready (paged " ago-s "s ago)")))
-                                            (str marker a " → ready"))))]
-                           (let [base-ms (or (:last-cycle-ms s) (:started-at-ms s))
-                                 step-ms-raw (or (some-> (get @cyder/!processes "fm-conductor")
-                                                         :process/metadata :step-ms)
-                                                 300000)
-                                 next-at (when base-ms
-                                           (str (.truncatedTo
-                                                  (Instant/ofEpochMilli (+ base-ms step-ms-raw))
-                                                  ChronoUnit/SECONDS)))]
-                             (cond-> {:problem-id (or (:problem-id s) "FM-001")
-                                      :cycles (:cycles-completed s 0)
-                                      :step-ms (str (quot step-ms-raw 1000) "s")
-                                      :rotation rotation
-                                      :agents (mapv fmt-cd rotation)
-                                      :idx idx
-                                      :last-cycle (:last-cycle s)}
-                               next-at (assoc :next-at next-at)))))
+                                            (str marker a " → ready"))))
+                               base-ms (or (:last-cycle-ms s) (:started-at-ms s))
+                               step-ms-raw (or (some-> (get @cyder/!processes "fm-conductor")
+                                                       :process/metadata :step-ms)
+                                               300000)
+                               next-at (when base-ms
+                                         (str (.truncatedTo
+                                                (Instant/ofEpochMilli (+ base-ms step-ms-raw))
+                                                ChronoUnit/SECONDS)))]
+                           (cond-> {:problem-id (or (:problem-id s) "FM-001")
+                                    :cycles (:cycles-completed s 0)
+                                    :step-ms (str (quot step-ms-raw 1000) "s")
+                                    :rotation rotation
+                                    :agents (mapv fmt-cd rotation)
+                                    :idx idx
+                                    :last-cycle (:last-cycle s)}
+                             next-at (assoc :next-at next-at))))
                   watchdog-state (assoc :watchdog watchdog-state))]
       (bb/project! :tickle state))
     (catch Exception _ nil)))
@@ -203,7 +203,7 @@
 (defn make-fm-conductor-config
   "Build the config map for FM conductor functions.
    Requires :make-claude-invoke-fn and :evidence-store to be supplied."
-  [{:keys [make-claude-invoke-fn evidence-store !tickle] :as deps} overrides]
+  [{:keys [make-claude-invoke-fn evidence-store !tickle]} overrides]
   (merge {:problem-id "FM-001"
           :cooldown-ms (* 3 60 1000)
           :irc-read-fn #(irc-recent-channel "#math" 20)

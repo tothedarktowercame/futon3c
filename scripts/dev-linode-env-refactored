@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Linode authority profile using the refactored dev.* modules.
+# Boots via futon3c.dev/-main (same as dev-linode-env), then loads
+# the extracted Phase 1+2 namespaces so they're available in
+# Drawbridge REPL alongside the monolithic futon3c.dev surface.
+#
+# Usage: ./scripts/dev-linode-env-refactored
+#
+# The extracted modules are:
+#   futon3c.dev.config  — env parsing, deployment role, session ID
+#   futon3c.dev.invoke  — evidence store, artifact writing, delivery
+#   futon3c.dev.irc     — persistent ngircd connection, bridge /say
+#   futon3c.dev.fm      — FM-001 mechanical conductor
+#   futon3c.dev.ct      — CT work queue + Tickle orchestration helpers
+#   futon3c.dev.arse    — ArSE generate→review pipeline
+#   futon3c.dev.mentor  — mentor peripheral lifecycle
+
+# --- Role & network ---
+export FUTON3C_ROLE="${FUTON3C_ROLE:-linode}"
+export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
+export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
+export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://172.236.28.208:7070}"
+
+# --- IRC: ngircd runs externally; built-in IRC disabled ---
+export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
+
+# --- Agents: Claude runs here, Codex runs on laptop ---
+export CLAUDE_EMACS_SOCKET="${CLAUDE_EMACS_SOCKET:-workspace1}"
+export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
+export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
+export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-true}"
+
+# --- Codex settings (for relay/proxy, not local execution) ---
+export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
+export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
+export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
+
+# --- Futon1a/Futon4 compatibility ---
+export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
+export FUTON1A_STATIC_DIR="${FUTON1A_STATIC_DIR:-${HOME}/code/futon4/dev/web}"
+export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
+if [[ -z "${FUTON1A_ALLOWED_PENHOLDERS:-}" ]]; then
+  export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_COMPAT_PENHOLDER}"
+elif [[ ",${FUTON1A_ALLOWED_PENHOLDERS}," != *",${FUTON1A_COMPAT_PENHOLDER},"* ]]; then
+  export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_ALLOWED_PENHOLDERS},${FUTON1A_COMPAT_PENHOLDER}"
+fi
+export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/alpha}"
+export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
+export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
+
+# --- Signal: load refactored modules after boot ---
+export FUTON3C_LOAD_REFACTORED=true
+
+# --- Federation: auto-peer with laptop if URL provided ---
+if [[ -n "${FUTON3C_LAPTOP_URL:-}" && -z "${FUTON3C_PEERS:-}" ]]; then
+  export FUTON3C_PEERS="${FUTON3C_LAPTOP_URL}"
+fi
+
+# --- Emacs daemon socket auto-detection (for blackboard) ---
+if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
+  _emacs_dir="/run/user/$(id -u)/emacs"
+  if [[ -d "$_emacs_dir" ]]; then
+    _sockets=("$_emacs_dir"/*)
+    if [[ ${#_sockets[@]} -eq 1 && -S "${_sockets[0]}" ]]; then
+      export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
+    elif [[ ${#_sockets[@]} -gt 1 ]]; then
+      _newest="$(ls -t "$_emacs_dir" | head -1)"
+      if [[ -n "$_newest" ]]; then
+        export FUTON3C_EMACS_SOCKET="$_newest"
+      fi
+    fi
+  fi
+  if [[ -n "${FUTON3C_EMACS_SOCKET:-}" ]]; then
+    echo "[dev] Emacs socket: ${FUTON3C_EMACS_SOCKET}"
+  fi
+fi
+
+# --- IRC infrastructure health check ---
+if systemctl is-active ngircd.service >/dev/null 2>&1; then
+  echo "[dev] ngircd: running"
+else
+  echo -e "[dev] \033[1;31m██ ngircd: DOWN ██\033[0m"
+  echo -e "[dev] \033[31m   restart with: sudo systemctl restart ngircd\033[0m"
+fi
+
+_any_bridge=false
+for _envfile in /home/joe/.config/futon3c/bridge-*.env; do
+  [[ -f "$_envfile" ]] || continue
+  _chan=$(basename "$_envfile" .env)
+  _chan=${_chan#bridge-}
+  if systemctl --user is-active "ngircd-bridge@${_chan}.service" >/dev/null 2>&1; then
+    echo "[dev] ngircd bridge #${_chan}: running"
+    _any_bridge=true
+  else
+    echo -e "[dev] \033[1;31m██ ngircd bridge #${_chan}: DOWN ██\033[0m"
+    echo -e "[dev] \033[31m   restart with: systemctl --user restart ngircd-bridge@${_chan}\033[0m"
+  fi
+done
+if [[ "$_any_bridge" != "true" ]]; then
+  if systemctl --user is-active ngircd-bridge.service >/dev/null 2>&1; then
+    echo -e "[dev] \033[33mngircd bridge: running (legacy unit — migrate to template)\033[0m"
+  elif pgrep -f ngircd_bridge.py >/dev/null 2>&1; then
+    echo -e "[dev] \033[33mngircd bridge: running outside systemd (orphan?)\033[0m"
+  else
+    echo -e "[dev] \033[1;31m██ ngircd bridge: no bridges running ██\033[0m"
+  fi
+fi
+
+echo "[dev] Refactored mode: will load futon3c.dev.{config,invoke,irc,fm,ct,arse,mentor}"
+
+# --- Boot JVM, then load refactored modules via Drawbridge ---
+_db_port="${FUTON3C_DRAWBRIDGE_PORT:-6768}"
+_db_bind="${FUTON3C_DRAWBRIDGE_BIND:-127.0.0.1}"
+_db_url="http://${_db_bind}:${_db_port}/eval"
+_admin_token="$(cat .admintoken 2>/dev/null || true)"
+
+# Start the JVM in background, forwarding signals
+make dev "$@" &
+_jvm_pid=$!
+trap 'kill -TERM $_jvm_pid 2>/dev/null; wait $_jvm_pid' EXIT INT TERM
+
+# Wait for Drawbridge to accept connections (up to 90s)
+echo "[dev-refactored] Waiting for Drawbridge on port ${_db_port}..."
+_waited=0
+while ! curl -sf -o /dev/null "${_db_url}" -H "x-admin-token: ${_admin_token}" \
+       -d '(str "ping")' 2>/dev/null; do
+  if ! kill -0 $_jvm_pid 2>/dev/null; then
+    echo "[dev-refactored] JVM exited before Drawbridge came up."
+    exit 1
+  fi
+  sleep 2
+  _waited=$((_waited + 2))
+  if [[ $_waited -ge 90 ]]; then
+    echo "[dev-refactored] Drawbridge did not come up in 90s, skipping module load."
+    wait $_jvm_pid
+    exit $?
+  fi
+done
+echo "[dev-refactored] Drawbridge ready after ${_waited}s."
+
+# Write the switchover script to a temp file (avoids shell escaping issues with !)
+_switchover="/tmp/futon3c-refactored-switchover.clj"
+cat > "$_switchover" <<'EOF'
+(do
+  ;; --- Step 1: Require all extracted modules ---
+  (require '[futon3c.dev.config :as dev.config])
+  (require '[futon3c.dev.invoke :as dev.invoke])
+  (require '[futon3c.dev.irc    :as dev.irc])
+  (require '[futon3c.dev.fm     :as dev.fm])
+  (require '[futon3c.dev.ct     :as dev.ct])
+  (require '[futon3c.dev.arse   :as dev.arse])
+  (require '[futon3c.dev.mentor :as dev.mentor])
+  (println "[dev-refactored] All 7 modules loaded.")
+
+  ;; --- Step 2: Switch FM conductor to extracted module ---
+  (futon3c.dev/stop-fm-conductor!)
+  (let [deps {:make-claude-invoke-fn futon3c.dev/make-claude-invoke-fn
+              :evidence-store       @futon3c.dev/!evidence-store
+              :!tickle              futon3c.dev/!tickle}]
+    (futon3c.dev.fm/start-fm-conductor! deps))
+  (println "[dev-refactored] FM conductor: switched to futon3c.dev.fm")
+
+  ;; --- Step 3: Rebind dev.clj facade vars to extracted implementations ---
+  ;; config
+  (alter-var-root #'futon3c.dev/env (constantly @#'futon3c.dev.config/env))
+  (alter-var-root #'futon3c.dev/env-int (constantly @#'futon3c.dev.config/env-int))
+  (alter-var-root #'futon3c.dev/env-bool (constantly @#'futon3c.dev.config/env-bool))
+  (alter-var-root #'futon3c.dev/env-list (constantly @#'futon3c.dev.config/env-list))
+  (alter-var-root #'futon3c.dev/deployment-role (constantly @#'futon3c.dev.config/deployment-role))
+  (alter-var-root #'futon3c.dev/deployment-role-info (constantly @#'futon3c.dev.config/deployment-role-info))
+  (alter-var-root #'futon3c.dev/configured-codex-agent-id (constantly @#'futon3c.dev.config/configured-codex-agent-id))
+  (alter-var-root #'futon3c.dev/read-admin-token (constantly @#'futon3c.dev.config/read-admin-token))
+  ;; invoke
+  (alter-var-root #'futon3c.dev/sha256-hex (constantly @#'futon3c.dev.invoke/sha256-hex))
+  (alter-var-root #'futon3c.dev/escape-elisp-string (constantly @#'futon3c.dev.invoke/escape-elisp-string))
+  (alter-var-root #'futon3c.dev/invoke-trace-response-block (constantly @#'futon3c.dev.invoke/invoke-trace-response-block))
+  ;; IRC
+  (alter-var-root #'futon3c.dev/irc-recent (constantly @#'futon3c.dev.irc/irc-recent))
+  (alter-var-root #'futon3c.dev/make-bridge-irc-send-fn (constantly @#'futon3c.dev.irc/make-bridge-irc-send-fn))
+  (alter-var-root #'futon3c.dev/ensure-irc-conn! (constantly @#'futon3c.dev.irc/ensure-irc-conn!))
+  ;; FM
+  (alter-var-root #'futon3c.dev/fm-status! (constantly @#'futon3c.dev.fm/fm-status!))
+  (alter-var-root #'futon3c.dev/fm-assignable-obligations (constantly @#'futon3c.dev.fm/fm-assignable-obligations))
+  (alter-var-root #'futon3c.dev/fm-dispatch! (constantly @#'futon3c.dev.fm/fm-dispatch!))
+  (alter-var-root #'futon3c.dev/stop-fm-conductor! (constantly @#'futon3c.dev.fm/stop-fm-conductor!))
+  ;; mentor
+  (alter-var-root #'futon3c.dev/mentor-status (constantly @#'futon3c.dev.mentor/mentor-status))
+  (alter-var-root #'futon3c.dev/mentor-map (constantly @#'futon3c.dev.mentor/mentor-map))
+  (alter-var-root #'futon3c.dev/start-mentor! (constantly @#'futon3c.dev.mentor/start-mentor!))
+  (alter-var-root #'futon3c.dev/stop-mentor! (constantly @#'futon3c.dev.mentor/stop-mentor!))
+  (alter-var-root #'futon3c.dev/mentor-observe! (constantly @#'futon3c.dev.mentor/mentor-observe!))
+  (alter-var-root #'futon3c.dev/mentor-evaluate! (constantly @#'futon3c.dev.mentor/mentor-evaluate!))
+  (alter-var-root #'futon3c.dev/mentor-intervene! (constantly @#'futon3c.dev.mentor/mentor-intervene!))
+  ;; CT + ArSE
+  (alter-var-root #'futon3c.dev/ct-progress! (constantly @#'futon3c.dev.ct/ct-progress!))
+  (alter-var-root #'futon3c.dev/arse-progress! (constantly @#'futon3c.dev.arse/arse-progress!))
+
+  (println "[dev-refactored] Facade vars rebound to extracted modules.")
+
+  ;; --- Step 4: Set up REPL aliases ---
+  (in-ns 'futon3c.dev)
+  (alias 'config  'futon3c.dev.config)
+  (alias 'dev.irc 'futon3c.dev.irc)
+  (alias 'fm      'futon3c.dev.fm)
+  (alias 'ct      'futon3c.dev.ct)
+  (alias 'arse    'futon3c.dev.arse)
+  (alias 'mentor  'futon3c.dev.mentor)
+
+  (println)
+  (println "[dev-refactored] REPL aliases: config/ fm/ dev.irc/ ct/ arse/ mentor/")
+  (println "[dev-refactored] Switchover complete — system running on extracted modules.")
+  :ok)
+EOF
+
+echo "[dev-refactored] Switching to extracted modules..."
+curl -sf "${_db_url}" -H "x-admin-token: ${_admin_token}" -d @"${_switchover}" \
+  && echo "[dev-refactored] Switchover complete." \
+  || echo "[dev-refactored] Switchover failed (system still running on dev.clj)."
+rm -f "$_switchover"
+
+# Wait on the JVM — it runs until Ctrl-C
+wait $_jvm_pid

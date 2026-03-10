@@ -330,9 +330,9 @@
 (defn run-ct-batch!
   "Process N CT entries overnight. Resumable — skips already-processed entries."
   [evidence-store !irc-sys
-   & {:keys [n cooldown-ms agent-id timeout-ms review? order]
+   & {:keys [n cooldown-ms agent-id timeout-ms review?]
       :or {n 10 cooldown-ms 5000 agent-id (config/configured-codex-agent-id)
-           timeout-ms 300000 review? true order :asc}}]
+           timeout-ms 300000 review? true}}]
   (let [issues (ct-queue/next-unprocessed evidence-store n)
         total (count issues)
         start (System/currentTimeMillis)]
