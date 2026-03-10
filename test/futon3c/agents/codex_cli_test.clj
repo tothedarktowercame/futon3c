@@ -18,6 +18,14 @@
       (is (= "sid-prior" (:session-id parsed)))
       (is (= "boom" (:text parsed))))))
 
+(deftest parse-output-ignores-placeholder-agent-messages
+  (testing "tool narration placeholders do not count as final assistant text"
+    (let [raw (str "{\"type\":\"thread.started\",\"thread_id\":\"tid-456\"}\n"
+                   "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"Using Bash\"}}\n")
+          parsed (codex-cli/parse-output raw nil)]
+      (is (= "tid-456" (:session-id parsed)))
+      (is (= "[No assistant message returned]" (:text parsed))))))
+
 (deftest build-exec-args-new-and-resume
   (testing "new session appends '-'"
     (let [args (codex-cli/build-exec-args {:codex-bin "codex"
@@ -78,6 +86,24 @@
             (is (= "hello codex" prompt))
             (is (= 1800000 (:timeout-ms opts)))
             (is (= "/tmp" (:cwd opts))))))))
+  (testing "placeholder tool narration does not leak as final response text"
+    (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
+                                            :model nil
+                                            :sandbox "workspace-write"
+                                            :approval-policy "never"})]
+      (with-redefs [codex-cli/run-codex-stream! (fn [& _]
+                                                  {:exit 0
+                                                   :timed-out? false
+                                                   :session-id "sid-placeholder"
+                                                   :text "Using Bash"
+                                                   :error-text nil
+                                                   :stderr ""
+                                                   :raw-output (str "{\"type\":\"thread.started\",\"thread_id\":\"sid-placeholder\"}\n"
+                                                                    "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"Using Bash\"}}\n")})]
+        (let [resp (invoke "status?" nil)]
+          (is (= "[Codex produced no text response]" (:result resp)))
+          (is (= "sid-placeholder" (:session-id resp)))
+          (is (nil? (:error resp)))))))
   (testing "non-zero exit returns error and preserves prior session-id fallback"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
                                             :model nil

@@ -38,6 +38,29 @@
     (catch Exception _
       nil)))
 
+(def ^:private activity-placeholder-texts
+  #{"using bash"
+    "using bash (done)"
+    "reading files"
+    "reading files (done)"
+    "editing files"
+    "editing files (done)"
+    "searching code"
+    "searching code (done)"
+    "inspecting files"
+    "inspecting files (done)"
+    "preparing response"})
+
+(def ^:private no-assistant-message-sentinel
+  "[No assistant message returned]")
+
+(defn- meaningful-agent-text
+  [text]
+  (when-let [t (some-> text str str/trim not-empty)]
+    (when-not (or (= no-assistant-message-sentinel t)
+                  (contains? activity-placeholder-texts (str/lower-case t)))
+      t)))
+
 
 (defn- titleize-token
   [token]
@@ -114,15 +137,16 @@
                           (map :item)
                           (filter #(= "agent_message" (:type %)))
                           (map extract-agent-text)
-                          (remove str/blank?)
+                          (keep meaningful-agent-text)
                           last)
                  (some->> events
                           (filter #(= "error" (:type %)))
                           (map :message)
                           (remove str/blank?)
                           last)
-                 (some-> raw-output str/trim not-empty)
-                 "[No assistant message returned]")]
+                 (when-not (seq events)
+                   (some-> raw-output str/trim not-empty))
+                 no-assistant-message-sentinel)]
     {:session-id session-id
      :text text}))
 
@@ -250,7 +274,7 @@
                           (let [item (:item evt)
                                 item-type (:type item)]
                             (when (= "agent_message" item-type)
-                              (when-let [msg (some-> (extract-agent-text item) str/trim not-empty)]
+                              (when-let [msg (meaningful-agent-text (extract-agent-text item))]
                                 (reset! text* msg))))
 
                           "error"
@@ -386,8 +410,8 @@
                 stream-sid (:session-id stream-result)
                 parsed (parse-output raw-output (or stream-sid session-id))
                 final-sid (or stream-sid (:session-id parsed))
-                final-text (or (some-> text str/trim not-empty)
-                               (some-> (:text parsed) str/trim not-empty))
+                final-text (or (meaningful-agent-text text)
+                               (meaningful-agent-text (:text parsed)))
                 final-error (or (some-> error-text str/trim not-empty)
                                 (when-not (zero? exit)
                                   (some-> (:text parsed) str/trim not-empty))

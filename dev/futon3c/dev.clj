@@ -175,6 +175,61 @@
   [session-file incoming-session-id session-id-atom]
   (config/preferred-session-id session-file incoming-session-id session-id-atom))
 
+(defn- parse-json-body-safe
+  [body]
+  (when (and (string? body) (not (str/blank? body)))
+    (try
+      (json/parse-string body true)
+      (catch Exception _
+        nil))))
+
+(defn- compatible-codex-ws-bridge-agent?
+  "True when GET /api/alpha/agents/:id returned a compatible existing codex
+   ws-bridge registration that can be reused without replacing the record."
+  [agent-id response-body]
+  (let [parsed (parse-json-body-safe response-body)
+        agent (or (:agent parsed) parsed)
+        metadata (or (:metadata agent) {})
+        response-agent-id (or (:agent-id parsed)
+                              (get-in agent [:id :id/value])
+                              (:id/value (:id agent)))
+        agent-type (or (:type agent)
+                       (:agent/type agent))]
+    (and (= (str agent-id) (some-> response-agent-id str))
+         (= :codex (cond
+                     (keyword? agent-type) agent-type
+                     (string? agent-type) (keyword agent-type)
+                     :else nil))
+         (true? (or (:ws-bridge? metadata)
+                    (get metadata "ws-bridge?"))))))
+
+(defn- classify-codex-ws-bridge-registration
+  "Classify the outcome of the bridge's HTTP registration handshake.
+   Duplicate registration is accepted only when the existing remote record is a
+   compatible codex ws-bridge entry, preserving any in-flight agent state."
+  [agent-id register-status register-body existing-status existing-body]
+  (cond
+    (= 201 register-status)
+    {:ok? true :action :registered}
+
+    (= 409 register-status)
+    (if (and (= 200 existing-status)
+             (compatible-codex-ws-bridge-agent? agent-id existing-body))
+      {:ok? true :action :kept-existing}
+      {:ok? false
+       :action :conflict
+       :message (str "remote agent conflict for " agent-id
+                     " (register-status=" register-status
+                     ", existing-status=" existing-status ")")
+       :detail {:register-body register-body
+                :existing-body existing-body}})
+
+    :else
+    {:ok? false
+     :action :failed
+     :message (str "registration failed: status=" register-status)
+     :detail {:register-body register-body}}))
+
 (defn- start-codex-ws-bridge!
   "Start an in-process Codex WS bridge.
 
@@ -219,29 +274,28 @@
                                                                       "type" "codex"
                                                                       "ws-bridge" true})
                                        attempt-register! #(request-json! :post url payload)
-                                       {:keys [status body]} (attempt-register!)]
-                                   (cond
-                                     (= 201 status) true
-                                     (= 409 status)
-                                     (let [{del-status :status del-body :body} (request-json! :delete agent-url nil)
-                                           _ (when-not (contains? #{200 404} del-status)
-                                               (println (str "[dev] codex ws bridge remote delete failed: "
-                                                             del-status " " del-body))
-                                               (flush))
-                                           {status2 :status body2 :body} (attempt-register!)]
-                                       (if (or (= 201 status2) (= 409 status2))
-                                         true
-                                         (do
-                                           (println (str "[dev] codex ws bridge registration failed after replace: "
-                                                         status2 " " body2))
-                                           (flush)
-                                           false)))
-                                     :else
-                                     (do
-                                       (println (str "[dev] codex ws bridge registration failed: "
-                                                     status " " body))
-                                       (flush)
-                                       false)))
+                                       {register-status :status register-body :body} (attempt-register!)
+                                       existing (when (= 409 register-status)
+                                                  (request-json! :get agent-url nil))
+                                       {:keys [ok? action message detail]}
+                                       (classify-codex-ws-bridge-registration
+                                        agent-id
+                                        register-status
+                                        register-body
+                                        (:status existing)
+                                        (:body existing))]
+                                   (when (and ok? (= :kept-existing action))
+                                     (println (str "[dev] codex ws bridge reusing existing remote registration for "
+                                                   agent-id))
+                                     (flush))
+                                   (when-not ok?
+                                     (println (str "[dev] codex ws bridge registration failed: " message))
+                                     (when-let [register-body (:register-body detail)]
+                                       (println (str "[dev] register response: " register-body)))
+                                     (when-let [existing-body (:existing-body detail)]
+                                       (println (str "[dev] existing agent response: " existing-body)))
+                                     (flush))
+                                   ok?)
                                  (catch Exception e
                                    (println (str "[dev] codex ws bridge registration exception: "
                                                  (.getMessage e)))

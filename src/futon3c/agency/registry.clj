@@ -731,15 +731,20 @@
                                  external-invoke-fresh-ms))
                         session-id (or (:session-id external-invoke)
                                        (:agent/session-id agent))
+                        {:keys [queued-jobs running-jobs nonterminal-jobs]}
+                        (get invoke-job-counts aid {})
                         external-codex-invoking?
                         (and (= :codex (:agent/type agent))
                              (not= base-status :invoking)
                              (not recent-heartbeat?)
                              (string? session-id)
                              (contains? codex-session-ids session-id))
+                        job-running? (pos? (long (or running-jobs 0)))
                         external-invoking? (or (some? external-invoke)
                                                external-codex-invoking?)
-                        status (if external-invoking? :invoking base-status)
+                        status (if (or external-invoking? job-running?)
+                                 :invoking
+                                 base-status)
                         invoke-started-at (or (:agent/invoke-started-at agent)
                                               (:started-at external-invoke)
                                               (when external-codex-invoking?
@@ -752,9 +757,7 @@
                         invoke-activity (or (:agent/invoke-activity agent)
                                             (:activity external-invoke)
                                             (when external-codex-invoking?
-                                              "codex exec running (external surface)"))
-                        {:keys [queued-jobs running-jobs nonterminal-jobs]}
-                        (get invoke-job-counts aid {})]
+                                              "codex exec running (external surface)"))]
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id

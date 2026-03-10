@@ -195,6 +195,12 @@ INVOKE_CLIENT_TIMEOUT_SECONDS = int_env(
     INVOKE_TIMEOUT_SECONDS + 15,
     minimum=1,
 )
+INVOKE_PENDING_POLL_SECONDS = int_env("INVOKE_PENDING_POLL_SECONDS", 5, minimum=1)
+INVOKE_PENDING_GRACE_SECONDS = int_env(
+    "INVOKE_PENDING_GRACE_SECONDS",
+    INVOKE_TIMEOUT_SECONDS,
+    minimum=30,
+)
 STATUS_TIMEOUT = int_env("AGENT_STATUS_TIMEOUT", 5, minimum=1)
 INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not in (
     "0",
@@ -704,6 +710,10 @@ class IRCBot:
     def _record_delivery_receipt(self, invoke_meta, delivered, note):
         """Record where an invoke reply was delivered for trace visibility."""
         trace_id = self._invoke_trace_id(invoke_meta)
+        return self._record_trace_delivery_receipt(trace_id, delivered, note)
+
+    def _record_trace_delivery_receipt(self, trace_id, delivered, note):
+        """Record where an invoke reply was delivered for trace visibility."""
         if not trace_id:
             return False
         payload = {
@@ -719,6 +729,13 @@ class IRCBot:
             log(self.nick, f"invoke-delivery record failed for {trace_id}: {result}")
             return False
         return True
+
+    def _record_job_delivery_receipt(self, job, delivered, note):
+        """Record delivery using a canonical invoke-job snapshot."""
+        if not isinstance(job, dict):
+            return False
+        trace_id = job.get("trace-id") or job.get("trace_id")
+        return self._record_trace_delivery_receipt(trace_id, delivered, note)
 
     def _emit_success_reply(self, response, reply_ch, job_id, multi_message=False):
         """Render and send a successful invoke reply to IRC."""
@@ -765,6 +782,144 @@ class IRCBot:
         else:
             self._say(f"[done {job_id}] {summary}",
                       max_lines=max_lines, channel=reply_ch)
+
+    def _fetch_job(self, job_id):
+        """Fetch canonical invoke-job snapshot from futon3c, or None."""
+        if not job_id:
+            return None
+        encoded = urllib.parse.quote(str(job_id), safe="")
+        data = api_get(f"{INVOKE_JOBS_URL}/{encoded}", timeout=STATUS_TIMEOUT)
+        if not (isinstance(data, dict) and data.get("ok")):
+            return None
+        job = data.get("job")
+        return job if isinstance(job, dict) else None
+
+    @staticmethod
+    def _job_state(job):
+        if not isinstance(job, dict):
+            return "unknown"
+        return str(job.get("state", "unknown")).strip().lower()
+
+    @staticmethod
+    def _job_terminal_code(job):
+        if not isinstance(job, dict):
+            return ""
+        return str(job.get("terminal-code") or job.get("terminal_code") or "").strip().lower()
+
+    @staticmethod
+    def _job_terminal_message(job):
+        if not isinstance(job, dict):
+            return ""
+        value = job.get("terminal-message") or job.get("terminal_message") or ""
+        return str(value).strip()
+
+    def _job_timeout_while_agent_still_invoking(self, job, status):
+        """Treat timeout terminal states as provisional while the agent is still invoking."""
+        if not (isinstance(job, dict) and isinstance(status, dict)):
+            return False
+        if status.get("status") != "invoking":
+            return False
+        state = self._job_state(job)
+        code = self._job_terminal_code(job)
+        message = self._job_terminal_message(job).lower()
+        return (
+            state == "timeout"
+            or code == "timeout"
+            or ("timeout" in message and state in {"failed", "timeout"})
+        )
+
+    def _wait_for_pending_invoke_terminal(self, job_id):
+        """Wait for a still-running invoke to reach a real terminal state."""
+        deadline = time.time() + INVOKE_PENDING_GRACE_SECONDS
+        last_status = None
+        last_job = None
+        while time.time() < deadline:
+            status = self._agent_status()
+            if isinstance(status, dict):
+                last_status = status
+            job = self._fetch_job(job_id)
+            if isinstance(job, dict):
+                last_job = job
+                state = self._job_state(job)
+                if state not in {"queued", "running"}:
+                    if self._job_timeout_while_agent_still_invoking(job, last_status):
+                        time.sleep(INVOKE_PENDING_POLL_SECONDS)
+                        continue
+                    return {"kind": "job", "job": job, "status": last_status}
+            if isinstance(last_status, dict) and last_status.get("status") != "invoking":
+                return {"kind": "idle", "job": last_job, "status": last_status}
+            time.sleep(INVOKE_PENDING_POLL_SECONDS)
+        return {"kind": "deadline", "job": last_job, "status": last_status}
+
+    def _emit_job_terminal_reply(self, job, reply_ch, multi_message=False):
+        """Emit IRC output for a canonical terminal invoke-job snapshot."""
+        job_id = job.get("job-id") or job.get("job_id") or "unknown-job"
+        state = self._job_state(job)
+        session_id = job.get("session-id") or job.get("session_id")
+        result_summary = job.get("result-summary") or job.get("result_summary")
+        artifact_ref = job.get("artifact-ref") or job.get("artifact_ref")
+        terminal_message = self._job_terminal_message(job)
+        if state == "done":
+            result_text = result_summary or artifact_ref or f"job {job_id} completed"
+            self._emit_success_reply(
+                {"ok": True, "result": result_text, "session_id": session_id},
+                reply_ch,
+                job_id,
+                multi_message=multi_message,
+            )
+            return True
+        message = terminal_message or result_summary or artifact_ref or state
+        prefix = "timeout" if state == "timeout" else "failed"
+        self._say(
+            f"[{prefix} {job_id}] {self._truncate(str(message), max_len=220)}",
+            max_lines=2,
+            channel=reply_ch,
+        )
+        return True
+
+    def _handle_pending_invoke(self, response, reply_ch, job_id, multi_message=False):
+        """Handle timeout responses that are provisional because the agent is still invoking."""
+        summary = self._truncate(
+            response.get("error", f"{self.agent_id} still invoking"),
+            max_len=220,
+        )
+        self._say(
+            f"[still running {job_id}] {summary}",
+            max_lines=2,
+            channel=reply_ch,
+        )
+        awaited = self._wait_for_pending_invoke_terminal(job_id)
+        kind = awaited.get("kind")
+        if kind == "job" and isinstance(awaited.get("job"), dict):
+            delivered = self._emit_job_terminal_reply(
+                awaited["job"],
+                reply_ch,
+                multi_message=multi_message,
+            )
+            self._record_job_delivery_receipt(
+                awaited["job"],
+                delivered=delivered,
+                note=f"ngircd-bridge:{job_id}:pending-terminal",
+            )
+            return
+        status = awaited.get("status") or {}
+        if kind == "idle":
+            msg = (
+                f"[pending {job_id}] agent returned idle after timeout; "
+                f"use !job {job_id} for canonical state"
+            )
+        else:
+            busy = self._agent_busy_summary(status) if isinstance(status, dict) else self.agent_id
+            msg = (
+                f"[pending {job_id}] still running after timeout window; "
+                f"{self._truncate(busy, max_len=180)}"
+            )
+        self._say(msg, max_lines=2, channel=reply_ch)
+
+    @staticmethod
+    def _response_is_pending_timeout(response):
+        """Return True when RESPONSE is a provisional timeout, not a terminal failure."""
+        return isinstance(response, dict) and bool(response.get("pending"))
 
     def _announce_invoke(self, sender, full_prompt, mission_id, reply_channel=None):
         """Record a canonical queued job in the server before any IRC acceptance."""
@@ -844,6 +999,13 @@ class IRCBot:
                         invoke_meta,
                         delivered=True,
                         note=f"ngircd-bridge:{job_id}:ok",
+                    )
+                elif self._response_is_pending_timeout(response):
+                    self._handle_pending_invoke(
+                        response,
+                        reply_ch,
+                        job_id,
+                        multi_message=multi_message,
                     )
                 else:
                     err = self._truncate(response.get("error", "unknown invoke error"), max_len=220)
@@ -946,6 +1108,7 @@ class IRCBot:
                     if isinstance(status_after, dict) and status_after.get("status") == "invoking":
                         return {
                             "ok": False,
+                            "pending": True,
                             "job_id": parsed.get("job-id") or parsed.get("job_id"),
                             "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
                             "session_id": status_after.get("session_id"),
@@ -972,6 +1135,8 @@ class IRCBot:
                 if isinstance(status_after, dict) and status_after.get("status") == "invoking":
                     return {
                         "ok": False,
+                        "pending": True,
+                        "job_id": job_id,
                         "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
                         "session_id": status_after.get("session_id"),
                     }
@@ -981,6 +1146,8 @@ class IRCBot:
             if isinstance(status_after, dict) and status_after.get("status") == "invoking":
                 return {
                     "ok": False,
+                    "pending": True,
+                    "job_id": job_id,
                     "error": f"invoke timeout: {self._agent_busy_summary(status_after)}",
                     "session_id": status_after.get("session_id"),
                 }

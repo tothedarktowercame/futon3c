@@ -360,6 +360,26 @@
         (is (= 0 (:running-jobs info)))
         (is (= 1 (:nonterminal-jobs info)))))))
 
+(deftest registry-status-promotes-running-jobs-to-invoking
+  (testing "running jobs mark an agent invoking even if its base registry status is idle"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-running")
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]})
+    (with-redefs [reg/running-codex-session-ids (constantly #{})
+                  futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                  reg/*resolve-invoke-job-counts*
+                  (fn []
+                    (fn []
+                      {"codex-running" {:queued-jobs 0
+                                        :running-jobs 1
+                                        :nonterminal-jobs 1}}))]
+      (let [info (get-in (reg/registry-status) [:agents "codex-running"])]
+        (is (= :invoking (:status info)))
+        (is (= 1 (:running-jobs info)))
+        (is (= 1 (:nonterminal-jobs info)))))))
+
 (deftest shutdown-all-clears-registry
   (testing "shutdown-all! removes all agents"
     (doseq [i (range 5)]
