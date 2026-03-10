@@ -309,6 +309,7 @@
        :layer :repl
        :stop-fn (fn []
                   (reset! running false)
+                  (reset! !post-invoke-hook nil)
                   (reset! !fm-conductor nil))
        :state-fn (fn []
                    (let [state @conductor-state

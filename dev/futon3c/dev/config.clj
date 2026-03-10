@@ -63,6 +63,28 @@
   (or (some-> (env "FUTON3C_CODEX_NICK") str/trim not-empty)
       (str/replace (configured-codex-agent-id) #"-\d+$" "")))
 
+(defn workspace-root-dir
+  "Return the nearest ancestor of START-DIR that contains AGENTS.md, or nil."
+  [start-dir]
+  (when (and (string? start-dir) (not (str/blank? start-dir)))
+    (loop [cur (.getAbsoluteFile (io/file start-dir))]
+      (when cur
+        (if (.exists (io/file cur "AGENTS.md"))
+          (.getAbsolutePath cur)
+          (recur (.getParentFile cur)))))))
+
+(defn configured-codex-cwd
+  "Resolve the default working directory for Codex execution.
+
+   Priority:
+   1. CODEX_CWD env override
+   2. nearest ancestor containing AGENTS.md
+   3. current JVM user.dir"
+  []
+  (or (some-> (env "CODEX_CWD") str/trim not-empty)
+      (workspace-root-dir (System/getProperty "user.dir"))
+      (System/getProperty "user.dir")))
+
 ;; ---------------------------------------------------------------------------
 ;; Nonstarter (futon5) integration
 ;; ---------------------------------------------------------------------------

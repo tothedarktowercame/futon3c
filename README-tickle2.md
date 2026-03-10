@@ -144,12 +144,48 @@ after a failure), restart the conductor or use `fm-conduct-targeted!` manually.
 registry, not from evidence timestamps or IRC message parsing. The registry
 is updated by the invoke machinery in real time.
 
+## Outstanding Issues
+
+The mechanical-conductor direction is still correct, but the implementation is
+not fully converged yet.
+
+1. `futon3c.dev` decomposition is still in progress.
+   The startup/orchestration code now delegates into extracted `dev.*`
+   namespaces, but there are still compatibility wrappers in
+   `dev/futon3c/dev.clj` and the facade can be simplified further.
+
+2. `tickle_logic.clj` is now evidence-backed, but it is still only a diagnostic
+   layer.
+   It checks scan/page/escalation ordering and stall-evidence alignment against
+   registry + evidence snapshots, but it is not yet wired into a shared
+   invariant runner or surfaced through `check-invariants` / HTTP.
+
+3. The watchdog and the mechanical conductor still coexist.
+   `src/futon3c/agents/tickle.clj` now emits better scan/page/escalation
+   evidence for invariant checking, but the README's intended end-state remains:
+   the mechanical conductor should own dispatch, and watchdog behavior should be
+   either clearly diagnostic or fully retired.
+
+4. FM obligation sourcing is still specialized.
+   The conductor works against the current FM obligation pipeline, but the work
+   queue / obligation interface is not yet generalized enough to make Tickle v2
+   a clean coordination substrate across domains.
+
+5. Invariant coverage is still uneven.
+   The new Tickle logic checks registry/evidence coherence, but we still do not
+   have the full cross-domain invariant runner promised in
+   `M-fulab-logic.md`.
+
 ## Files
 
 | File | What |
 |------|------|
-| `dev/futon3c/dev.clj` | `start-fm-conductor!`, `fm-dispatch-mechanical!`, `fm-dispatch-idle-agents!`, post-invoke hook wiring |
-| `dev/futon3c/dev/fm.clj` | Extracted module (same mechanical conductor, dependency-injected) |
-| `src/futon3c/agents/tickle.clj` | Watchdog scan (v1, not used by v2) |
+| `dev/futon3c/dev.clj` | Top-level facade/orchestrator; delegates startup and conductor helpers into extracted modules |
+| `dev/futon3c/dev/bootstrap.clj` | Startup/bootstrap orchestration extracted from `dev.clj` |
+| `dev/futon3c/dev/agents.clj` | Core agent registration/startup extracted from `dev.clj` |
+| `dev/futon3c/dev/peripheral_agents.clj` | Peripheral agent registration (`tickle-1`, mentor Claude) |
+| `dev/futon3c/dev/fm.clj` | Mechanical conductor and FM dispatch helpers |
+| `src/futon3c/agents/tickle.clj` | Watchdog scan/page/escalate runtime; now emits evidence-backed scan/page/escalation events |
+| `src/futon3c/agents/tickle_logic.clj` | Core.logic invariant layer over registry + evidence snapshots |
 | `src/futon3c/agents/tickle_orchestrate.clj` | `fm-assignable-obligations` (used by v2), LLM conductor (v1, not used) |
 | `src/futon3c/agency/registry.clj` | Agent status tracking (`:agent/status`, `:agent/invoke-started-at`) |

@@ -59,6 +59,13 @@
    {}
    entries))
 
+(defn- stringify-instants
+  [activity-map]
+  (into {}
+        (map (fn [[agent-id info]]
+               [agent-id (update info :last-active #(when % (str %)))]))
+        activity-map))
+
 (defn scan-activity
   "Check evidence store for recent activity per registered agent.
    Returns map of {agent-id {:last-active Instant :stale? bool :stale-seconds long}}.
@@ -143,7 +150,7 @@
           {:escalated? false :agent-id agent-id})))))
 
 (defn- emit-scan-evidence!
-  [evidence-store cycle-result threshold-seconds]
+  [evidence-store activity-map cycle-result threshold-seconds]
   (when evidence-store
     (estore/append* evidence-store
                     {:subject {:ref/type :session
@@ -154,8 +161,42 @@
                      :tags [:tickle :scan]
                      :session-id "tickle-watchdog"
                      :body (assoc cycle-result
+                                  :event :scan
+                                  :activity (stringify-instants activity-map)
                                   :threshold-seconds (int threshold-seconds)
                                   :cycle-at (str (Instant/now)))})))
+
+(defn- emit-page-evidence!
+  [evidence-store {:keys [paged? agent-id method]}]
+  (when (and evidence-store paged? agent-id)
+    (estore/append* evidence-store
+                    {:subject {:ref/type :agent
+                               :ref/id agent-id}
+                     :type :coordination
+                     :claim-type :observation
+                     :author "tickle-1"
+                     :tags [:tickle :page]
+                     :session-id "tickle-watchdog"
+                     :body {:event :page
+                            :agent-id agent-id
+                            :method method
+                            :at (str (Instant/now))}})))
+
+(defn- emit-escalation-evidence!
+  [evidence-store {:keys [escalated? agent-id]}]
+  (when (and evidence-store escalated? agent-id)
+    (estore/append* evidence-store
+                    {:subject {:ref/type :agent
+                               :ref/id agent-id}
+                     :type :coordination
+                     :claim-type :observation
+                     :author "tickle-1"
+                     :tags [:tickle :escalation]
+                     :session-id "tickle-watchdog"
+                     :body {:event :escalation
+                            :agent-id agent-id
+                            :cause :page-failed
+                            :at (str (Instant/now))}})))
 
 (defn- availability-bell-payload
   [prompt]
@@ -234,7 +275,11 @@
                       :stalled stalled
                       :paged paged
                       :escalated escalated}]
-    (emit-scan-evidence! evidence-store cycle-result threshold-seconds)
+    (doseq [page-result page-results]
+      (emit-page-evidence! evidence-store page-result))
+    (doseq [escalated-result escalated-results]
+      (emit-escalation-evidence! evidence-store escalated-result))
+    (emit-scan-evidence! evidence-store activity-map cycle-result threshold-seconds)
     cycle-result))
 
 (defn invoke!

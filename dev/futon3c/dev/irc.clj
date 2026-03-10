@@ -169,16 +169,16 @@
 (def ^:private bridge-send-fn*
   "Singleton bridge send fn. All IRC sends route through the bridge HTTP /say
    endpoint, which handles per-nick routing. The raw !irc-conn is read-only."
-  (make-bridge-irc-send-fn))
+  (delay (make-bridge-irc-send-fn)))
 
 (defn send-irc!
   "Send a message to IRC via the bridge HTTP /say endpoint.
    Signature matches send-to-channel!: (send-irc! channel from-nick message).
    The from-nick determines which IRC nick posts the message.
-   Returns true on success, false on error."
+  Returns true on success, false on error."
   [channel from-nick message]
   (try
-    (bridge-send-fn* channel from-nick message)
+    (@bridge-send-fn* channel from-nick message)
     true
     (catch Exception e
       (println (str "[irc] send-irc! error: " (.getMessage e)))
