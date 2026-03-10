@@ -3192,26 +3192,19 @@ RESPOND WITH ONLY:
       (project-codex-status!))))
 
 (defn- bell-tickle-available!
+  "Notify mechanical conductor that an agent is now available.
+   Uses the post-invoke hook (if set) instead of invoking tickle-1's Haiku.
+   The hook does mechanical dispatch: idle + obligations = PAGE."
   [agent-id {:keys [ok? session-id invoke-trace-id]}]
-  (when (reg/agent-registered? "tickle-1")
+  ;; The post-invoke hook is set by start-fm-conductor! and does the right thing.
+  ;; We do NOT invoke tickle-1's Haiku here — that caused feedback loops where
+  ;; codex output @tickle → tickle invoke → more IRC noise.
+  (when-let [hook @!post-invoke-hook]
     (future
       (try
-        (let [payload {:coord/type :agent-availability-bell
-                       :agent-id (str agent-id)
-                       :availability :available
-                       :invoke-status (if ok? :done :failed)
-                       :session-id session-id
-                       :trace-id invoke-trace-id
-                       :message "I'm available"}
-              result (reg/invoke-agent! "tickle-1" payload 10000)]
-          (when-not (:ok result)
-            (println (str "[codex-availability] failed to bell tickle-1 for "
-                          agent-id ": "
-                          (or (get-in result [:error :error/message])
-                              result)))
-            (flush)))
+        (hook (str agent-id))
         (catch Throwable t
-          (println (str "[codex-availability] exception for " agent-id ": "
+          (println (str "[bell] post-invoke hook error for " agent-id ": "
                         (.getMessage t)))
           (flush))))))
 
