@@ -96,7 +96,7 @@
                   conductor-state
                   (assoc :conductor
                          (let [s conductor-state
-                               rotation (or (:rotation s) ["claude-1" "codex-1" "claude-2"])
+                               rotation (or (:rotation s) ["codex-1" "claude-3" "codex-2" "codex-3"])
                                idx (or (:idx s) 0)
                                next-agent (nth rotation (mod idx (count rotation)))
                                cooldowns (:last-paged s)
@@ -139,10 +139,12 @@
    "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
 
 (defn- agent-idle?
-  "Check if an agent is idle (not currently invoking)."
+  "Check if an agent is idle (not currently invoking).
+   Returns false for agents not in the registry."
   [agent-id]
   (let [a (get @reg/!registry agent-id)]
-    (not= :invoking (:agent/status a))))
+    (and (some? a)
+         (not= :invoking (:agent/status a)))))
 
 (defn- idle-agents
   "Return agent IDs from the rotation that are currently idle."
@@ -168,17 +170,22 @@
           {:action :cooldown :target agent-id})
 
       :else
-      (let [assignable (orch/fm-assignable-obligations problem-id)]
-        (if (empty? assignable)
-          (do (println (str "[conductor] " agent-id " idle but no obligations — pass"))
-              {:action :pass :target agent-id})
-          (let [ob (first assignable)
+      (let [assignable (orch/fm-assignable-obligations problem-id)
+            already-paged (get-in @conductor-state [:paged-obligations agent-id] #{})
+            fresh (remove #(contains? already-paged (:item/id %)) assignable)]
+        (if (empty? fresh)
+          {:action :pass :target agent-id}
+          (let [ob (first fresh)
                 ob-id (:item/id ob)
                 ob-label (:item/label ob)
                 msg (str "@" nick " " ob-id ": " ob-label
                          ". Push results to git when done.")]
             (println (str "[conductor] " agent-id " idle + work available → PAGE " ob-id))
-            (swap! conductor-state assoc-in [:last-paged agent-id] (System/currentTimeMillis))
+            (swap! conductor-state
+                   (fn [s]
+                     (-> s
+                         (assoc-in [:last-paged agent-id] (System/currentTimeMillis))
+                         (update-in [:paged-obligations agent-id] (fnil conj #{}) ob-id))))
             (when (fn? bridge-send-fn)
               (bridge-send-fn "#math" "tickle" msg))
             {:action :page :target agent-id :text msg :obligation ob-id}))))))
@@ -186,7 +193,7 @@
 (defn- fm-dispatch-idle-agents!
   "Scan all agents in rotation, dispatch work to any that are idle."
   [config]
-  (let [rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
+  (let [rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
         idle (idle-agents rotation)]
     (when (seq idle)
       (println (str "[conductor] idle agents: " (str/join ", " idle)))
@@ -266,7 +273,7 @@
                                 :started-at-ms (System/currentTimeMillis)})
          config (assoc config :conductor-state conductor-state)
          running (atom true)
-         rotation (or (:rotation config) ["claude-1" "codex-1" "claude-2"])
+         rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
          cooldown-ms (or (:cooldown-ms config) (* 3 60 1000))
          !tickle (:!tickle deps)
          handle {:stop-fn #(reset! running false)
