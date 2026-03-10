@@ -79,6 +79,27 @@
     (is (= "invoke-camel"
            (#'futon3c.dev/invoke-meta-trace-id {"invokeTraceId" "invoke-camel"})))))
 
+(deftest configured-codex-cwd-prefers-workspace-root
+  (testing "Codex defaults to the nearest AGENTS.md ancestor instead of repo-local user.dir"
+    (let [original-user-dir (System/getProperty "user.dir")]
+      (with-redefs [futon3c.dev/env (fn [_k & [_default]] nil)]
+        (is (= "/home/joe/code"
+               (#'futon3c.dev/workspace-root-dir "/home/joe/code/futon3c")))
+        (System/setProperty "user.dir" "/home/joe/code/futon3c")
+        (try
+          (is (= "/home/joe/code"
+                 (dev/configured-codex-cwd)))
+          (finally
+            (System/setProperty "user.dir" original-user-dir)))))))
+
+(deftest configured-codex-cwd-allows-env-override
+  (testing "CODEX_CWD overrides workspace-root auto-detection"
+    (with-redefs [futon3c.dev/env (fn [k & [_default]]
+                                    (when (= k "CODEX_CWD")
+                                      "/tmp/codex-override"))]
+      (is (= "/tmp/codex-override"
+             (dev/configured-codex-cwd))))))
+
 (deftest record-invoke-delivery-uses-agent-emacs-socket
   (testing "delivery updates target the same emacs socket used by the agent invoke buffer"
     (let [calls (atom [])]
@@ -99,12 +120,13 @@
         (is (= "workspace1" (get-in (first @calls) [:opts :emacs-socket])))))))
 
 (deftest tickle-system-prompt-prefers-corpus-names-over-futon6-paths
-  (testing "Tickle prompt no longer seeds absolute futon6 data paths into IRC-visible coordination"
+  (testing "Tickle prompt no longer seeds stale corpus context or absolute futon6 data paths into IRC-visible coordination"
     (let [prompt @#'futon3c.dev/tickle-system-prompt]
       (is (not (.contains prompt "/home/joe/code/futon6/data/")))
       (is (not (.contains prompt "~/code/futon6/data/")))
-      (is (.contains prompt "arxiv-math-ct-eprints"))
-      (is (.contains prompt "pm-full-dictionary.json")))))
+      (is (.contains prompt "Do NOT reference Category Theory, PlanetMath, or arXiv"))
+      (is (not (.contains prompt "arxiv-math-ct-eprints")))
+      (is (not (.contains prompt "pm-full-dictionary.json"))))))
 
 (deftest format-codex-status-board-renders-last-invoke-snapshot
   (testing "Codex status board preserves last invoke details after the agent returns idle"
@@ -311,6 +333,38 @@
           (is (some? (:error result)))
           (is (.contains (str (:error result))
                          "work-claim without execution evidence after enforcement retry")))))))
+
+(deftest codex-invoke-retries-micro-increment-task-update
+  (testing "task-mode reconnaissance-only update with execution evidence is retried for closure"
+    (let [calls (atom [])
+          task-prompt "[Surface: IRC | Channel: #futon | Speaker: joe | Mode: task | Prefer completing one bounded unit of work in this turn.]\\n@codex I think tickle-llm is stale"
+          responses (atom
+                     [{:result "@joe logged an initial #56 step by grepping for `tickle-llm` to map every registration/startup call before we disable the stale agent entry."
+                       :session-id "sess-1"
+                       :execution {:executed? true :tool-events 1 :command-events 1}}
+                      {:result "@joe removed stale tickle-llm registration in ~/code/futon3c/dev/futon3c/dev.clj refs: ~/code/futon3c/dev/futon3c/dev.clj"
+                       :session-id "sess-1"
+                       :execution {:executed? true :tool-events 2 :command-events 1}}])]
+      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
+                    (fn [_opts]
+                      (fn [prompt sid]
+                        (swap! calls conj {:prompt prompt :sid sid})
+                        (let [resp (first @responses)]
+                          (swap! responses subvec 1)
+                          resp)))
+                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
+                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
+                    futon3c.dev/persist-session-id! (fn [& _] nil)
+                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
+        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
+              result (invoke-fn task-prompt nil)]
+          (is (= 2 (count @calls)))
+          (is (re-find #"too small for a task/work turn"
+                       (-> @calls second :prompt)))
+          (is (nil? (:error result)))
+          (is (true? (get-in result [:execution :enforced-retry?])))
+          (is (.contains (:result result) "removed stale tickle-llm registration")))))))
 
 (deftest codex-invoke-fails-brief-mission-reply-without-execution
   (testing "mission/work prompt still requires execution even when not explicitly mode: task"

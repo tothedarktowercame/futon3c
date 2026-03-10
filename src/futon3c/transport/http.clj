@@ -1821,14 +1821,29 @@
      :tool-events tool-events
      :command-events command-events}))
 
+(defn- agent-requires-execution?
+  "Return true when the agent metadata requests execution evidence enforcement."
+  [agent-id]
+  (let [record (reg/get-agent agent-id)
+        metadata (:agent/metadata record)
+        aid (some-> agent-id str str/lower-case)]
+    (boolean (or (get metadata :require-execution?)
+                 (get metadata "require-execution?")
+                 (and (string? aid)
+                      (str/starts-with? aid "codex"))))))
+
 (defn- codex-task-no-execution?
-  "True when a codex task-mode reply reports no execution evidence and isn't planning-only."
-  [agent-id prompt result]
-  (let [aid (some-> agent-id str str/lower-case)
-        text (some-> (:result result) str str/trim)
-        {:keys [executed tool-events command-events]} (invoke-execution-evidence result)]
-    (and (string? aid)
-         (str/starts-with? aid "codex")
+  "True when an execution-enforced agent returns a task-mode reply with no evidence.
+   Optional REQUIRE-EXECUTION? bypasses metadata lookup for pure tests."
+  ([agent-id prompt result]
+   (codex-task-no-execution? agent-id prompt result nil))
+  ([agent-id prompt result require-execution?]
+   (let [text (some-> (:result result) str str/trim)
+         {:keys [executed tool-events command-events]} (invoke-execution-evidence result)
+         enforced? (if (some? require-execution?)
+                     (boolean require-execution?)
+                     (agent-requires-execution? agent-id))]
+    (and enforced?
          (string? prompt)
          (or (boolean (re-find task-mode-re prompt))
              (boolean (re-find mission-work-re prompt)))
@@ -1837,7 +1852,7 @@
          (not (boolean (re-find planning-only-re text)))
          (not executed)
          (zero? tool-events)
-         (zero? command-events))))
+         (zero? command-events)))))
 
 (defn- build-invoke-response
   "Run a direct invoke and convert it to a Ring response map."

@@ -448,8 +448,11 @@ class IRCBot:
             f"[Surface: IRC | Channel: {ch} | "
             f"Speaker: {sender}{mission_part} | Mode: task | "
             f"Your completion update will be posted to {ch} as <{self.nick}>. "
-            "Execute work asynchronously, then return a short status with artifact refs "
-            "(commit/PR/issue). Push artifacts to git before referencing — never cite local paths or /tmp. "
+            "Prefer completing one bounded unit of work in this turn. "
+            "Do not stop at reconnaissance-only updates like grepping, mapping, or an initial step. "
+            "Execute work asynchronously, then return a short completion/blocker status with artifact refs "
+            "(commit/PR/issue/file path), or explicitly say planning-only/blocked with blocker evidence. "
+            "Push artifacts to git before referencing them, and never cite local paths or /tmp. "
             f"{send_hint} "
             f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )

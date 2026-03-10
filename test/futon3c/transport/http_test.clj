@@ -335,43 +335,47 @@
   (testing "task-mode codex reply without execution evidence is rejected"
     (is (true?
          (#'futon3c.transport.http/codex-task-no-execution?
-          "codex-1"
-          "--- CURRENT TURN ---\nSurface: irc (#math)\n---\n\n[Surface: IRC | Mode: task]\nInvestigate."
-          {:ok true
-           :result "captured plan in data/proof-state/FM-001-falsify-plan.md"
-           :invoke-meta {:execution {:executed? false
-                                     :tool-events 0
-                                     :command-events 0}}}))))
+         "codex-1"
+         "--- CURRENT TURN ---\nSurface: irc (#math)\n---\n\n[Surface: IRC | Mode: task]\nInvestigate."
+         {:ok true
+          :result "captured plan in data/proof-state/FM-001-falsify-plan.md"
+          :invoke-meta {:execution {:executed? false
+                                    :tool-events 0
+                                    :command-events 0}}}
+          true))))
   (testing "planning-only task-mode reply is allowed"
     (is (false?
          (#'futon3c.transport.http/codex-task-no-execution?
           "codex-1"
-          "[Surface: IRC | Mode: task]\nInvestigate."
-          {:ok true
-           :result "Planning-only: need clarification before executing."
-           :invoke-meta {:execution {:executed? false
-                                     :tool-events 0
-                                     :command-events 0}}}))))
+         "[Surface: IRC | Mode: task]\nInvestigate."
+         {:ok true
+          :result "Planning-only: need clarification before executing."
+          :invoke-meta {:execution {:executed? false
+                                    :tool-events 0
+                                    :command-events 0}}}
+          true))))
   (testing "non-task prompts are not blocked by this gate"
     (is (false?
          (#'futon3c.transport.http/codex-task-no-execution?
-          "codex-1"
-          "hello"
-          {:ok true
+         "codex-1"
+         "hello"
+         {:ok true
            :result "captured plan"
            :invoke-meta {:execution {:executed? false
                                      :tool-events 0
-                                     :command-events 0}}}))))
+                                     :command-events 0}}}
+          true))))
   (testing "mission/work prompts are blocked even without explicit mode marker"
     (is (true?
          (#'futon3c.transport.http/codex-task-no-execution?
           "codex-1"
-          "@codex can you give me a summary of the state of play on FM-001"
-          {:ok true
-           :result "@joe FM-001 is in FALSIFY mode with refs"
-           :invoke-meta {:execution {:executed? false
+         "@codex can you give me a summary of the state of play on FM-001"
+         {:ok true
+          :result "@joe FM-001 is in FALSIFY mode with refs"
+          :invoke-meta {:execution {:executed? false
                                      :tool-events 0
-                                     :command-events 0}}})))))
+                                     :command-events 0}}}
+          true)))))
 
 (deftest invoke-registered-codex-agent
   (testing "POST /api/alpha/invoke invokes codex agent via registry"

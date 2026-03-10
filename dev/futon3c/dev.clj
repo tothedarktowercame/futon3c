@@ -83,6 +83,7 @@
 
 (declare make-claude-invoke-fn)
 (declare record-invoke-delivery!)
+(declare make-bridge-irc-send-fn)
 
 (defonce !agents-blackboard-ticker-stop
   (atom nil))
@@ -133,6 +134,28 @@
   []
   (or (some-> (env "FUTON3C_CODEX_NICK") str/trim not-empty)
       (str/replace (configured-codex-agent-id) #"-\d+$" "")))
+
+(defn- workspace-root-dir
+  "Return the nearest ancestor of START-DIR that contains AGENTS.md, or nil."
+  [start-dir]
+  (when (and (string? start-dir) (not (str/blank? start-dir)))
+    (loop [cur (.getAbsoluteFile (io/file start-dir))]
+      (when cur
+        (if (.exists (io/file cur "AGENTS.md"))
+          (.getAbsolutePath cur)
+          (recur (.getParentFile cur)))))))
+
+(defn configured-codex-cwd
+  "Resolve the default working directory for Codex execution.
+
+   Priority:
+   1. CODEX_CWD env override
+   2. nearest ancestor containing AGENTS.md
+   3. current JVM user.dir"
+  []
+  (or (some-> (env "CODEX_CWD") str/trim not-empty)
+      (workspace-root-dir (System/getProperty "user.dir"))
+      (System/getProperty "user.dir")))
 
 (defn- nonstarter-fn
   "Resolve a nonstarter API function by symbol name.
@@ -878,16 +901,16 @@
 (def ^:private bridge-send-fn*
   "Singleton bridge send fn. All IRC sends route through the bridge HTTP /say
    endpoint, which handles per-nick routing. The raw !irc-conn is read-only."
-  (make-bridge-irc-send-fn))
+  (delay (make-bridge-irc-send-fn)))
 
 (defn send-irc!
   "Send a message to IRC via the bridge HTTP /say endpoint.
    Signature matches send-to-channel!: (send-irc! channel from-nick message).
    The from-nick determines which IRC nick posts the message.
-   Returns true on success, false on error."
+  Returns true on success, false on error."
   [channel from-nick message]
   (try
-    (bridge-send-fn* channel from-nick message)
+    (@bridge-send-fn* channel from-nick message)
     true
     (catch Exception e
       (println (str "[irc] send-irc! error: " (.getMessage e)))
@@ -3424,6 +3447,19 @@ RESPOND WITH ONLY:
 (def ^:private codex-planning-only-re
   #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
 
+(def ^:private codex-task-micro-progress-re
+  #"(?i)\b(initial|first)\s+step\b|\bgrep(?:ped|ping)?\b|\bmapp(?:ed|ing)\b|\bscann(?:ed|ing)\b|\binspect(?:ed|ing)?\b|\btrac(?:ed|ing)\b|\blogged\b.{0,30}\bstep\b|\bstarted by\b|\blook(?:ed)?\s+at\b")
+
+(def ^:private codex-artifact-ref-re
+  #"(?ix)
+    (https?://github\.com/\S+/(?:pull|issues)/\d+)
+    |
+    (\bPR\s*\#\d+\b)
+    |
+    (\b[0-9a-f]{7,40}\b)
+    |
+    ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b)")
+
 (def ^:private codex-separate-message-request-re
   #"(?i)\b(separate\s+irc\s+messages?|one\s+per\s+message|each\s+of\s+them\s+in\s+a\s+separate\s+irc\s+message|post\s+each\s+.*\s+separate\s+message)\b")
 
@@ -3481,6 +3517,20 @@ RESPOND WITH ONLY:
          (not (str/blank? text))
          (not (codex-planning-only-text? text)))))
 
+(defn- codex-task-micro-update?
+  "True when a task-mode reply reports only reconnaissance / initial movement.
+   These updates may include tool activity, but they are still insufficient for
+   bounded execution turns unless they cite a concrete artifact or blocker."
+  [prompt result]
+  (let [text (str/trim (or (:result result) ""))]
+    (and (or (codex-task-mode-prompt? prompt)
+             (codex-mission-work-prompt? prompt))
+         (nil? (:error result))
+         (not (str/blank? text))
+         (not (codex-planning-only-text? text))
+         (not (boolean (re-find codex-artifact-ref-re text)))
+         (boolean (re-find codex-task-micro-progress-re text)))))
+
 (defn- codex-separate-message-request?
   "True when caller asked for separate multi-message IRC output."
   [prompt]
@@ -3511,8 +3561,28 @@ RESPOND WITH ONLY:
                 txt
                 (str (subs txt 0 (max 0 (- max-len 3))) "..."))))]
     (str "Your previous reply made a work/progress claim without execution evidence.\n"
-         "Execute one concrete first step now (tool/command activity is required).\n"
-         "Then reply in one short line with actual status and artifact refs.\n\n"
+         "Do not stop at an initial grep/map/inspection step.\n"
+         "If the task is feasible now, complete one bounded unit of work in this turn and cite concrete artifacts.\n"
+         "If blocked, explicitly say planning-only/blocked and name the blocker evidence.\n"
+         "Tool/command activity is required for any started-work claim.\n\n"
+         "Original request:\n"
+         (clip original-prompt 900)
+         "\n\nPrevious reply:\n"
+         (clip prior-reply 600))))
+
+(defn- codex-task-closure-followup-prompt
+  "Prompt used when Codex returned a micro-increment task update instead of a bounded outcome."
+  [original-prompt prior-reply]
+  (letfn [(clip [s max-len]
+            (let [txt (str (or s ""))]
+              (if (<= (count txt) max-len)
+                txt
+                (str (subs txt 0 (max 0 (- max-len 3))) "..."))))]
+    (str "Your previous reply was too small for a task/work turn.\n"
+         "Do not return reconnaissance-only updates like grepping, mapping, or \"logged an initial step\".\n"
+         "Either:\n"
+         "1. complete a bounded unit of work in this turn and cite concrete artifacts (commit/PR/issue URL/file path), or\n"
+         "2. explicitly say planning-only/blocked and cite the blocker evidence.\n\n"
          "Original request:\n"
          (clip original-prompt 900)
          "\n\nPrevious reply:\n"
@@ -3644,30 +3714,49 @@ RESPOND WITH ONLY:
                        (let [initial (inner-fn prompt invoke-sid)]
                          (if (or (codex-work-claim-without-execution? initial)
                                  (codex-task-reply-without-execution? prompt-str initial)
+                                 (codex-task-micro-update? prompt-str initial)
                                  (codex-format-refusal? prompt-str initial))
                            (let [exec-enforce? (or (codex-work-claim-without-execution? initial)
                                                    (codex-task-reply-without-execution? prompt-str initial))
+                                 micro-enforce? (codex-task-micro-update? prompt-str initial)
                                  format-enforce? (codex-format-refusal? prompt-str initial)
-                                 retry-prompt (if exec-enforce?
+                                 retry-prompt (cond
+                                                exec-enforce?
                                                 (codex-execution-followup-prompt prompt-str (:result initial))
+
+                                                micro-enforce?
+                                                (codex-task-closure-followup-prompt prompt-str (:result initial))
+
+                                                :else
                                                 (codex-format-followup-prompt prompt-str (:result initial)))
                                  retry-sid (or (:session-id initial) invoke-sid)]
                              (println (str "[invoke] " agent-id
-                                           (if exec-enforce?
+                                           (cond
+                                             exec-enforce?
                                              " claimed work without execution evidence; retrying with enforcement prompt"
+
+                                             micro-enforce?
+                                             " returned a micro-increment task update; retrying with closure prompt"
+
+                                             :else
                                              " refused feasible output format; retrying with enforcement prompt")))
                              (flush)
                              (update-codex-status!
                               agent-id
                               {:lifecycle-status :invoking
-                               :phase (if exec-enforce? :enforcement-retry :format-retry)
-                               :activity (if exec-enforce?
-                                           "retrying after no execution evidence"
-                                           "retrying after format refusal")
+                               :phase (cond
+                                        exec-enforce? :enforcement-retry
+                                        micro-enforce? :closure-retry
+                                        :else :format-retry)
+                               :activity (cond
+                                           exec-enforce? "retrying after no execution evidence"
+                                           micro-enforce? "retrying after micro-update"
+                                           :else "retrying after format refusal")
                                :trace (vec @!event-trace)})
                              (let [retry (inner-fn retry-prompt retry-sid)]
                                 (if (or (codex-work-claim-without-execution? retry)
                                         (codex-task-reply-without-execution? prompt-str retry)
+                                        (codex-task-micro-update? prompt-str retry)
                                         (codex-format-refusal? prompt-str retry))
                                  {:result nil
                                   :session-id (or (:session-id retry) retry-sid used-sid)
@@ -3676,8 +3765,14 @@ RESPOND WITH ONLY:
                                                     :executed? false
                                                     :tool-events (long (or (:tool-events (:execution retry)) 0))
                                                     :command-events (long (or (:command-events (:execution retry)) 0)))
-                                  :error (if exec-enforce?
+                                  :error (cond
+                                           exec-enforce?
                                            "work-claim without execution evidence after enforcement retry"
+
+                                           micro-enforce?
+                                           "micro-increment task reply after enforcement retry"
+
+                                           :else
                                            "format-refusal after enforcement retry")}
                                  (update retry :execution #(assoc (or % {}) :enforced-retry? true)))))
                            initial))
@@ -4051,6 +4146,8 @@ RESPOND WITH ONLY:
        "- Keep replies short: one line, <= 220 chars before refs.\n"
        "- If user asks for separate IRC messages, return newline-separated one-line items (one intended post per line).\n"
        "- If work happened, include refs to concrete artifacts (commit, PR/issue URL, or changed file path).\n"
+       "- For bounded fix/issue tasks, do not stop at reconnaissance-only updates like grep/map/inspect.\n"
+       "- Either finish one bounded unit of work with artifact refs, or explicitly say planning-only/blocked and cite blocker evidence.\n"
        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
        "- Do not invent per-turn line caps or transport limits.\n"
        "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
@@ -4416,6 +4513,7 @@ RESPOND WITH ONLY:
                                                     (env "CODEX_APPROVAL" "never"))
                                :reasoning-effort (env "CODEX_REASONING_EFFORT")
                                :timeout-ms (or (env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
+                               :cwd (configured-codex-cwd)
                                :agent-id codex-agent-id
                                :session-file sf
                                :session-id-atom sid-atom})

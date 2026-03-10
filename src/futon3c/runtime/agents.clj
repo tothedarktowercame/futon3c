@@ -94,7 +94,8 @@
                     :invoke-fn invoke-fn
                     :capabilities capabilities
                     :ttl-ms ttl-ms
-                    :metadata metadata}))
+                    :metadata (assoc (or metadata {})
+                                     :require-execution? true)}))
 
 (defn register-claude!
   "Convenience wrapper for registering a Claude agent."
