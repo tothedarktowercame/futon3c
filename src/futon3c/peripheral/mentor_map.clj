@@ -88,8 +88,8 @@
       (re-find #"complement|B_n.*free|freeness" text-lower)
       (conj :complement-freeness)
 
-      (re-find #"arse|stack.exchange|corpus|question" text-lower)
-      (conj :arse-query))))
+      (re-find #"stack.exchange|mathoverflow|corpus|search.for" text-lower)
+      (conj :external-query))))
 
 (defn- extract-confidence
   "Detect confidence claims in a message. Returns nil or a confidence entry."

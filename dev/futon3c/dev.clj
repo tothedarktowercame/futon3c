@@ -825,24 +825,23 @@
                              (catch Exception _))))]
       (.setDaemon reader-thread true)
       (.start reader-thread)
-      {:socket sock :out out :nick nick :running running})))
+      ;; :out is intentionally omitted — this connection is read-only.
+      ;; PONG responses use the writer internally via the reader thread.
+      ;; All sends must go through the bridge HTTP /say endpoint.
+      {:socket sock :nick nick :running running})))
 
 (defn- ensure-irc-conn!
   "Return the persistent IRC connection, reconnecting if needed.
-   If connected but with the wrong nick, close and reconnect."
+   Nick is always 'listener' — a read-only observer. All sends go through
+   the bridge HTTP /say endpoint with correct per-nick routing."
   [nick]
   (let [conn @!irc-conn]
-    (if (and (irc-conn-alive? conn)
-             (= (:nick conn) nick))
+    (if (irc-conn-alive? conn)
       conn
-      (do
-        ;; Close stale connection if alive but wrong nick
-        (when (irc-conn-alive? conn)
-          (close-irc-conn!))
-        (let [new-conn (irc-connect! nick)]
-          (reset! !irc-conn new-conn)
-          (println (str "[irc] Connected to ngircd as " nick))
-          new-conn)))))
+      (let [new-conn (irc-connect! nick)]
+        (reset! !irc-conn new-conn)
+        (println (str "[irc] Connected to ngircd as " nick))
+        new-conn))))
 
 (defn close-irc-conn!
   "Close the persistent IRC connection."
@@ -876,22 +875,21 @@
              (println (str "  " time-part " <" nick "> " text))))
          (count msgs))))))
 
+(def ^:private bridge-send-fn*
+  "Singleton bridge send fn. All IRC sends route through the bridge HTTP /say
+   endpoint, which handles per-nick routing. The raw !irc-conn is read-only."
+  (make-bridge-irc-send-fn))
+
 (defn send-irc!
-  "Send a message to ngircd via persistent connection.
+  "Send a message to IRC via the bridge HTTP /say endpoint.
    Signature matches send-to-channel!: (send-irc! channel from-nick message).
+   The from-nick determines which IRC nick posts the message.
    Returns true on success, false on error."
   [channel from-nick message]
   (try
-    (let [{:keys [^PrintWriter out]} (ensure-irc-conn! (or from-nick "tickle-1"))]
-      (doseq [line (str/split-lines message)
-              chunk (if (> (count line) 400)
-                      (mapv #(apply str %) (partition-all 400 line))
-                      [line])]
-        (.println out (str "PRIVMSG " channel " :" chunk))))
+    (bridge-send-fn* channel from-nick message)
     true
     (catch Exception e
-      ;; Connection died — clear it so next call reconnects
-      (reset! !irc-conn nil)
       (println (str "[irc] send-irc! error: " (.getMessage e)))
       false)))
 
@@ -1534,6 +1532,16 @@ RESPOND WITH ONLY:
              config {:evidence-store evidence-store
                      :interval-ms interval-ms
                      :threshold-seconds threshold-seconds
+                     ;; Only scan agents that are reachable (have invoke-fn or ws).
+                     ;; Evaluated fresh each cycle via the watchdog's scan call.
+                     :registry-snapshot-fn
+                     (fn []
+                       (->> @reg/!registry
+                            (filter (fn [[_id a]]
+                                      (or (:agent/invoke-fn a)
+                                          (:agent/ws-connected? a))))
+                            keys
+                            vec))
                      :page-config {;; Skip bell (always returns "paged" without actually
                                    ;; reaching the agent). Go straight to IRC, where the
                                    ;; dispatch relay invokes the agent for real.

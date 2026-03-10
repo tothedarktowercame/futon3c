@@ -211,7 +211,8 @@
   (let [threshold-seconds (long (or (:threshold-seconds config) 300))
         evidence-store (:evidence-store config)
         self-id (or (:self-id config) "tickle-1")
-        registry-snapshot (or (:registry-snapshot config)
+        registry-snapshot (or (when-let [f (:registry-snapshot-fn config)] (f))
+                              (:registry-snapshot config)
                               (reg/registered-agents))
         activity-map (scan-activity evidence-store registry-snapshot threshold-seconds
                                     :self-id self-id)
