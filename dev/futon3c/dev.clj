@@ -2177,20 +2177,12 @@ RESPOND WITH ONLY:
 
 (defn- bell-tickle-available!
   "Notify mechanical conductor that an agent is now available.
-   Uses the post-invoke hook (if set) instead of invoking tickle-1's Haiku.
-   The hook does mechanical dispatch: idle + obligations = PAGE."
+   DEPRECATED: Registry !on-idle now fires tickle-queue/enqueue! directly.
+   Kept for backwards compatibility — calls enqueue! if available."
   [agent-id {:keys [ok? session-id invoke-trace-id]}]
-  ;; The post-invoke hook is set by start-fm-conductor! and does the right thing.
-  ;; We do NOT invoke tickle-1's Haiku here — that caused feedback loops where
-  ;; codex output @tickle → tickle invoke → more IRC noise.
-  (when-let [hook @!post-invoke-hook]
-    (future
-      (try
-        (hook (str agent-id))
-        (catch Throwable t
-          (println (str "[bell] post-invoke hook error for " agent-id ": "
-                        (.getMessage t)))
-          (flush))))))
+  ;; Bell-driven dispatch: registry mark-idle! → !on-idle → enqueue! → dispatch.
+  ;; This function is now a no-op; the registry handles it.
+  nil)
 
 (defn- on-agent-invoke-complete!
   "Registry-level completion hook for Agency's completion-bell contract.
@@ -3473,13 +3465,10 @@ RESPOND WITH ONLY:
                                              (count reply*) " chars): "
                                              (subs reply* 0 (min 120 (count reply*)))))
                                (flush)
-                               ;; Post-invoke hook: agent just went idle.
-                               ;; Calls the dynamic hook fn if set.
-                               (when-let [hook @!post-invoke-hook]
-                                 (future
-                                   (try (hook agent-id)
-                                        (catch Exception e
-                                          (println (str "[post-invoke] hook error: " (.getMessage e))))))))
+                               ;; Bell-driven dispatch: registry mark-idle! fires
+                               ;; !on-idle → tickle-queue/enqueue! → conductor dispatch.
+                               ;; No manual hook needed here.
+                               )
                              (catch Exception e
                                (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
                                (let [fallback-delivered?

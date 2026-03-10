@@ -5,13 +5,13 @@
    Manages the event-driven conductor loop that assigns FM obligations
    to idle agents via IRC. Registers with CYDER for inspectability."
   (:require [futon3c.agents.tickle-orchestrate :as orch]
+            [futon3c.agents.tickle-queue :as tq]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
             [futon3c.dev.irc :as dev-irc]
-            [futon3c.social.whistles :as whistles]
-)
+            [futon3c.social.whistles :as whistles])
   (:import [java.time Instant]
            [java.time.temporal ChronoUnit]))
 
@@ -126,7 +126,15 @@
                                     :idx idx
                                     :last-cycle (:last-cycle s)}
                              next-at (assoc :next-at next-at))))
-                  watchdog-state (assoc :watchdog watchdog-state))]
+                  watchdog-state (assoc :watchdog watchdog-state)
+                  ;; Task queue state
+                  true (assoc :queue (let [q (tq/snapshot)]
+                                       {:pending (count (:pending q))
+                                        :assigned (into {}
+                                                        (map (fn [[aid info]]
+                                                               [aid (:obligation info)]))
+                                                        (:assigned q))
+                                        :completed-count (count (:completed q))})))]
       (bb/project! :tickle state))
     (catch Exception _ nil)))
 
@@ -254,9 +262,37 @@
   ([deps problem-id]
    (fm-dispatch-idle-agents! (make-fm-conductor-config deps {:problem-id problem-id}))))
 
+(defn- dispatch-from-queue!
+  "Consume pending bells from the task queue, dispatch work to each idle agent.
+   Dispatches to ANY registered agent that bells, not just the rotation.
+   Returns seq of dispatch results."
+  [config conductor-state]
+  (let [bells (tq/drain-pending!)]
+    (when (seq bells)
+      (->> bells
+           ;; Deduplicate: if same agent belled multiple times, keep latest
+           (group-by :agent-id)
+           vals
+           (map last)
+           (mapv (fn [{:keys [agent-id]}]
+                   ;; Complete any previous assignment for this agent
+                   (tq/complete! agent-id)
+                   (let [result (fm-dispatch-mechanical! agent-id config)]
+                     ;; Track assignment in queue
+                     (when (= :page (:action result))
+                       (tq/assign! agent-id (:obligation result)
+                                   (:text result)
+                                   (or (:problem-id config) "FM-001")))
+                     (when result
+                       (swap! conductor-state assoc
+                              :last-cycle result
+                              :last-cycle-ms (System/currentTimeMillis)))
+                     result)))))))
+
 (defn start-fm-conductor!
   "Start the mechanical FM conductor loop.
-   Scans all agents each tick — idle + obligations = PAGE.
+   Bell-driven: agents idle → queue bell → dispatch obligation.
+   Periodic loop drains any un-consumed bells as safety net.
    Registers with CYDER for inspectability."
   ([deps] (start-fm-conductor! deps {}))
   ([deps {:keys [step-ms] :or {step-ms 60000}}]
@@ -276,16 +312,51 @@
          handle {:stop-fn #(reset! running false)
                  :conductor-state conductor-state
                  :running running}]
+     ;; Wire bell-driven dispatch: agents idle → enqueue + immediate dispatch
+     ;; on-idle signature: (fn [agent-id outcome]) where outcome is
+     ;; {:ok bool :error str-or-nil :session-id str-or-nil}
+     (reg/set-on-idle!
+       (fn [agent-id outcome]
+         (tq/enqueue! agent-id outcome)
+         (when @running
+           (let [ok? (:ok outcome true)]
+             (if ok?
+               (do
+                 (println (str "[bell→queue] " agent-id " idle (ok) → dispatching"))
+                 (tq/complete! agent-id)
+                 (let [result (fm-dispatch-mechanical! agent-id config)]
+                   (when (= :page (:action result))
+                     (tq/assign! agent-id (:obligation result)
+                                 (:text result)
+                                 (or (:problem-id config) "FM-001")))
+                   (when result
+                     (swap! conductor-state assoc
+                            :last-cycle result
+                            :last-cycle-ms (System/currentTimeMillis))
+                     (cyder/touch! "fm-conductor")
+                     (refresh-processes-buffer!)
+                     (project-tickle-state! !tickle))))
+               ;; Error: don't dispatch new work, just log and project
+               (do
+                 (println (str "[bell→queue] " agent-id " idle (ERROR) — "
+                               (when-let [f (tq/agent-failures agent-id)]
+                                 (str (:consecutive f) " consecutive failures"))))
+                 (project-tickle-state! !tickle)))))))
+     ;; Periodic safety-net loop: drain any un-consumed bells + scan for idle agents
      (future
        (while @running
          (try
            (Thread/sleep (long step-ms))
            (when @running
-             (let [results (fm-dispatch-idle-agents! config)]
+             ;; Drain any bells that weren't consumed by the immediate dispatch
+             (let [queue-results (dispatch-from-queue! config conductor-state)
+                   ;; Also scan rotation for idle agents (catches agents that
+                   ;; went idle before the watcher was installed)
+                   scan-results (fm-dispatch-idle-agents! config)
+                   results (concat queue-results scan-results)]
                (swap! conductor-state assoc
                       :cycles-completed (inc (or (:cycles-completed @conductor-state) 0))
-                      :last-cycle (when (seq results)
-                                    (last results))
+                      :last-cycle (when (seq results) (last results))
                       :last-cycle-ms (System/currentTimeMillis))
                (cyder/touch! "fm-conductor")
                (refresh-processes-buffer!)
@@ -293,15 +364,6 @@
            (catch Exception e
              (println (str "[fm-conductor] Error: " (.getMessage e)))))))
      (reset! !fm-conductor handle)
-     (reset! !post-invoke-hook
-       (fn [agent-id]
-         (when @running
-           (println (str "[post-invoke] " agent-id " idle → mechanical dispatch"))
-           (let [result (fm-dispatch-mechanical! agent-id config)]
-             (when result
-               (swap! conductor-state assoc :last-cycle result :last-cycle-ms (System/currentTimeMillis))
-               (cyder/touch! "fm-conductor")
-               (refresh-processes-buffer!))))))
      (cyder/deregister! "fm-conductor")
      (cyder/register!
       {:id "fm-conductor"
@@ -309,7 +371,7 @@
        :layer :repl
        :stop-fn (fn []
                   (reset! running false)
-                  (reset! !post-invoke-hook nil)
+                  (reg/set-on-idle! nil)
                   (reset! !fm-conductor nil))
        :state-fn (fn []
                    (let [state @conductor-state
@@ -317,10 +379,12 @@
                          cooldowns (:last-paged state)
                          cycles (or (:cycles-completed state) 0)
                          last-cycle (:last-cycle state)
+                         queue (tq/snapshot)
                          fmt-agent (fn [agent-id]
                                      (let [a (get @reg/!registry agent-id)
                                            status (or (:agent/status a) :unknown)
                                            idle? (not= :invoking status)
+                                           assignment (get-in queue [:assigned agent-id])
                                            cd-ts (get cooldowns agent-id)
                                            cd-remaining (when cd-ts
                                                           (let [r (- cooldown-ms (- now-ms cd-ts))]
@@ -332,11 +396,15 @@
                                                 (str " cooldown " (quot cd-remaining 1000) "s")
                                                 " ready")
                                               (when-let [t (:agent/invoke-started-at a)]
-                                                (str " for " (quot (- now-ms (.toEpochMilli t)) 1000) "s"))))))]
+                                                (str " for " (quot (- now-ms (.toEpochMilli t)) 1000) "s")))
+                                            (when assignment
+                                              (str " → " (:obligation assignment))))))]
                      (cond-> {:problem-id (or (:problem-id config) "FM-001")
                               :step-ms (str (quot step-ms 1000) "s")
                               :cooldown (str (quot cooldown-ms 1000) "s")
                               :cycles cycles
+                              :queue {:pending (tq/pending-count)
+                                      :assigned (tq/assigned-count)}
                               :agents (mapv fmt-agent rotation)}
                        last-cycle (assoc :last (str (:target last-cycle) " "
                                                     (name (:action last-cycle))
@@ -354,6 +422,6 @@
   []
   (when-let [h @!fm-conductor]
     ((:stop-fn h))
-    (reset! !post-invoke-hook nil)
+    (reg/set-on-idle! nil)
     (reset! !fm-conductor nil)
     (cyder/deregister! "fm-conductor")))

@@ -38,6 +38,14 @@
    Signature: (fn [agent-record result-map] ...) — called asynchronously."}
   !on-invoke-complete (atom nil))
 
+(defonce ^{:doc "Optional callback invoked (async, in a future) whenever ANY agent
+   transitions from :invoking to :idle. Unlike !on-invoke-complete, this fires
+   for all agents regardless of the completion-bell contract.
+   Set via set-on-idle! to wire bell-driven dispatch.
+   Signature: (fn [agent-id outcome] ...) where outcome is
+   {:ok bool :error str-or-nil :session-id str-or-nil}."}
+  !on-idle (atom nil))
+
 (def ^:private ws-invoke-timeout-ms 120000)
 (def ^:private external-invoke-fresh-ms 15000)
 
@@ -141,6 +149,22 @@
    Pass nil to clear. Signature: (fn [agent-record result-map] ...)."
   [f]
   (reset! !on-invoke-complete f))
+
+(defn set-on-idle!
+  "Set callback invoked (in a future) whenever any agent transitions to :idle.
+   Pass nil to clear. Signature: (fn [agent-id outcome] ...) where outcome is
+   {:ok bool :error str-or-nil :session-id str-or-nil}."
+  [f]
+  (reset! !on-idle f))
+
+(defn- fire-on-idle!
+  "Fire the !on-idle callback with agent-id and invoke outcome."
+  [agent-id outcome]
+  (when-let [on-idle @!on-idle]
+    (future
+      (try (on-idle agent-id outcome)
+           (catch Exception e
+             (println "[registry] on-idle callback error:" (.getMessage e)))))))
 
 (def ^:private bell-file "/tmp/futon-bell.edn")
 
@@ -384,95 +408,99 @@
                           ;; Emacs watches this file → joe/visible-bell.
                           (future (ring-bell-file! aid-val)))]
          (mark-invoking!)
-         (try
-           (cond
-             invoke-fn
-                   (let [call-invoke (fn []
-                                 (try
-                                   (invoke-fn prompt current-session)
-                                   (catch clojure.lang.ArityException _
-                                     (invoke-fn prompt))))
-                   result-map (if timeout-ms
-                                (let [f (future (call-invoke))
-                                      v (deref f timeout-ms ::timeout)]
-                                  (if (= v ::timeout)
-                                    (do (future-cancel f)
-                                        {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
-                                    v))
-                                (call-invoke))
-                   {:keys [result session-id error]} result-map]
-               (mark-idle! session-id)
-               (if error
+         (let [invoke-result
+           (try
+             (cond
+               invoke-fn
+                     (let [call-invoke (fn []
+                                   (try
+                                     (invoke-fn prompt current-session)
+                                     (catch clojure.lang.ArityException _
+                                       (invoke-fn prompt))))
+                     result-map (if timeout-ms
+                                  (let [f (future (call-invoke))
+                                        v (deref f timeout-ms ::timeout)]
+                                    (if (= v ::timeout)
+                                      (do (future-cancel f)
+                                          {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
+                                      v))
+                                  (call-invoke))
+                     {:keys [result session-id error]} result-map]
+                 (mark-idle! session-id)
+                 (if error
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            (str error)
+                            :agent-id aid-val
+                            :timeout-ms (:timeout-ms result-map))}
+                   (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))
+                         final-agent (get @!registry aid-val)]
+                     (when (and final-agent
+                                (completion-bell-contract? final-agent))
+                       (when-let [hook @!on-invoke-complete]
+                         (future
+                           (try
+                             (hook final-agent result-map)
+                             (catch Exception _)))))
+                     (cond-> {:ok true :result result :session-id session-id}
+                       invoke-meta (assoc :invoke-meta invoke-meta)))))
+
+               (:invoke-ws-available? routing-info)
+               (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
+                     response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
+                     session-id (when (map? response) (:session-id response))]
+                 (mark-idle! session-id)
+                 (cond
+                   (= response ws-invoke/timeout-sentinel)
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            (str "WS invoke timeout after " (or timeout-ms ws-invoke-timeout-ms) "ms")
+                            :agent-id aid-val
+                            :timeout-ms (or timeout-ms ws-invoke-timeout-ms))}
+
+                   (and (map? response) (:error response))
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            (str (:error response))
+                            :agent-id aid-val)}
+
+                   (map? response)
+                   (let [invoke-meta (not-empty (dissoc response :result :session-id :error))]
+                     (cond-> {:ok true :result (:result response) :session-id (:session-id response)}
+                       invoke-meta (assoc :invoke-meta invoke-meta)))
+
+                   :else
+                   {:ok false
+                    :error (make-social-error
+                            :invoke-error
+                            "Unknown WS invoke failure"
+                            :agent-id aid-val)}))
+
+               :else
+               (do
+                 (mark-idle! nil)
                  {:ok false
                   :error (make-social-error
                           :invoke-error
-                          (str error)
+                          (str "Agent has no invoke handler (" (:invoke-diagnostic routing-info) ")")
                           :agent-id aid-val
-                          :timeout-ms (:timeout-ms result-map))}
-                 (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))
-                       final-agent (get @!registry aid-val)]
-                   (when (and final-agent
-                              (completion-bell-contract? final-agent))
-                     (when-let [hook @!on-invoke-complete]
-                       (future
-                         (try
-                           (hook final-agent result-map)
-                           (catch Exception _)))))
-                   (cond-> {:ok true :result result :session-id session-id}
-                     invoke-meta (assoc :invoke-meta invoke-meta)))))
-
-             (:invoke-ws-available? routing-info)
-             (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
-                   response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
-                   session-id (when (map? response) (:session-id response))]
-               (mark-idle! session-id)
-               (cond
-                 (= response ws-invoke/timeout-sentinel)
-                 {:ok false
-                  :error (make-social-error
-                          :invoke-error
-                          (str "WS invoke timeout after " (or timeout-ms ws-invoke-timeout-ms) "ms")
-                          :agent-id aid-val
-                          :timeout-ms (or timeout-ms ws-invoke-timeout-ms))}
-
-                 (and (map? response) (:error response))
-                 {:ok false
-                  :error (make-social-error
-                          :invoke-error
-                          (str (:error response))
-                          :agent-id aid-val)}
-
-                 (map? response)
-                 (let [invoke-meta (not-empty (dissoc response :result :session-id :error))]
-                   (cond-> {:ok true :result (:result response) :session-id (:session-id response)}
-                     invoke-meta (assoc :invoke-meta invoke-meta)))
-
-                 :else
-                 {:ok false
-                  :error (make-social-error
-                          :invoke-error
-                          "Unknown WS invoke failure"
-                          :agent-id aid-val)}))
-
-             :else
-             (do
+                          :invoke-route (:invoke-route routing-info)
+                          :invoke-local? (:invoke-local? routing-info)
+                          :invoke-ws-available? (:invoke-ws-available? routing-info))}))
+             (catch Exception e
                (mark-idle! nil)
                {:ok false
                 :error (make-social-error
-                        :invoke-error
-                        (str "Agent has no invoke handler (" (:invoke-diagnostic routing-info) ")")
+                        :invoke-exception
+                        (.getMessage e)
                         :agent-id aid-val
-                        :invoke-route (:invoke-route routing-info)
-                        :invoke-local? (:invoke-local? routing-info)
-                        :invoke-ws-available? (:invoke-ws-available? routing-info))}))
-           (catch Exception e
-             (mark-idle! nil)
-             {:ok false
-              :error (make-social-error
-                      :invoke-exception
-                      (.getMessage e)
-                      :agent-id aid-val
-                      :exception-class (.getName (class e)))})))
+                        :exception-class (.getName (class e)))}))]
+           ;; Fire on-idle with outcome — after result is known.
+           (fire-on-idle! aid-val invoke-result)
+           invoke-result))
        {:ok false
         :error (make-social-error
                 :agent-not-found

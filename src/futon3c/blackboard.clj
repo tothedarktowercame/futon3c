@@ -464,6 +464,15 @@
                               (when (> (count (str message)) 60) "...")))
                        recent-interventions))))
          "\n"
+         ;; Task queue (from tickle-queue, resolved to avoid cyclic dep)
+         (try
+           (when-let [fmt-fn (resolve 'futon3c.agents.tickle-queue/format-queue)]
+             (let [q-str (fmt-fn)]
+               (when (and q-str (not (str/blank? q-str)))
+                 (str "\n" q-str "\n"))))
+           (catch Exception e
+             (println "[blackboard] tickle-queue format-queue error:" (.getMessage e))
+             nil))
          ;; Recent digest (last 3 conversation entries)
          (when (seq recent-digest)
            (str "\n" (str/join (repeat 40 "─")) "\n"
