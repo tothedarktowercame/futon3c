@@ -142,6 +142,20 @@
   [f]
   (reset! !on-invoke-complete f))
 
+(def ^:private bell-file "/tmp/futon-bell.edn")
+
+(defn ring-bell-file!
+  "Write a turn-completed event to the bell file as a plist.
+   Uses plist syntax so Emacs `read` can parse it directly.
+   Emacs watches this file and fires joe/visible-bell on change."
+  [agent-id]
+  (try
+    (let [nonce (rand-int 1000000)
+          ts (str (java.time.Instant/now))]
+      (spit bell-file
+            (str "(:agent-id \"" agent-id "\" :timestamp \"" ts "\" :nonce " nonce ")")))
+    (catch Throwable _ nil)))
+
 (defn- completion-bell-contract?
   [agent]
   (let [metadata (:agent/metadata agent)
@@ -365,7 +379,10 @@
                                                     :agent/invoke-activity nil
                                                     :agent/invoke-event-sink nil}))
                                      m)))
-                          (project-agents!))]
+                          (project-agents!)
+                          ;; Agency bell: write turn-completed to file.
+                          ;; Emacs watches this file → joe/visible-bell.
+                          (future (ring-bell-file! aid-val)))]
          (mark-invoking!)
          (try
            (cond
