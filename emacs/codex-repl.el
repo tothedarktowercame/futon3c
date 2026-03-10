@@ -194,6 +194,9 @@ Interpreted as width on left/right and height on top/bottom."
 (defvar-local codex-repl--runtime-state nil
   "Latest verified runtime.process event for the current invoke turn.")
 
+(defvar-local codex-repl--last-runtime-state nil
+  "Most recent verified runtime.process event, preserved after completion.")
+
 (defvar-local codex-repl--last-stream-summary nil
   "Last inline narration summary emitted for the current turn.")
 
@@ -567,6 +570,7 @@ Returns non-nil when prompt markers were restored."
            (last-output-stream (alist-get 'last-output-stream runtime))
            (last-output-bytes (alist-get 'last-output-bytes runtime))
            (total-output-bytes (alist-get 'total-output-bytes runtime))
+           (background-command (alist-get 'background-command runtime))
            (age-s (codex-repl--runtime-age-seconds last-output-at)))
       (concat
        (format "\nRuntime: %s%s\n"
@@ -596,6 +600,10 @@ Returns non-nil when prompt markers were restored."
                                    (format ", total %s" total-output-bytes)
                                  ""))
                      ""))
+         "")
+       (if (and (stringp background-command) (not (string-empty-p background-command)))
+           (format "Detached launch observed: %s (not verified after invoke exit)\n"
+                   (codex-repl--truncate-single-line background-command 120))
          "")
        (if processes
            (concat "Live processes:\n"
@@ -631,7 +639,8 @@ Returns non-nil when prompt markers were restored."
              (elapsed (with-current-buffer source
                         (if running (codex-repl--thinking-elapsed-seconds) 0)))
              (done (buffer-local-value 'codex-repl--invoke-done-info source))
-             (runtime (buffer-local-value 'codex-repl--runtime-state source))
+             (runtime (or (buffer-local-value 'codex-repl--runtime-state source)
+                          (buffer-local-value 'codex-repl--last-runtime-state source)))
              (activity (or (buffer-local-value 'codex-repl--last-progress-status source)
                            (and running "working")))
              (spin (when running
@@ -1038,7 +1047,8 @@ Returns non-nil when prompt markers were restored."
                (codex-repl--stream-error-progress-status msg))
               (t "failed")))))
          ((string= type "runtime.process")
-          (setq codex-repl--runtime-state evt)
+          (setq codex-repl--runtime-state evt
+                codex-repl--last-runtime-state evt)
           (when-let ((status (codex-repl--runtime-progress-status evt)))
             (codex-repl--set-progress-status status)))
          ((string= type "thread.started")
@@ -1546,6 +1556,8 @@ When FORCE is non-nil, refresh immediately."
           (list :exit-code exit-code
                 :elapsed elapsed
                 :error (unless ok err-msg)))
+    (setq codex-repl--last-runtime-state
+          (or codex-repl--runtime-state codex-repl--last-runtime-state))
     (codex-repl--append-invoke-trace
      (format "invoke done exit=%d elapsed=%ds session=%s"
              exit-code elapsed trace-session)
@@ -1617,7 +1629,8 @@ CALLBACK receives the final response text."
     (setq codex-repl--invoke-prompt-preview
           (codex-repl--truncate-single-line text 300))
     (setq codex-repl--invoke-done-info nil)
-    (setq codex-repl--runtime-state nil)
+    (setq codex-repl--runtime-state nil
+          codex-repl--last-runtime-state nil)
     (setq codex-repl--invoke-trace-entries nil)
     (setq codex-repl--last-stream-summary nil
           codex-repl--final-message-text nil

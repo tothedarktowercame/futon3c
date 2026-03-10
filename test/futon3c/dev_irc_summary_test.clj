@@ -224,6 +224,25 @@
       (is (.contains board "2478124 python3 scripts/fm001/ramsey_book_sat.py --n 8"))
       (is (.contains board "2478125 z3 -smt2 /tmp/fm001.smt2")))))
 
+(deftest format-codex-status-board-persists-detached-launch-evidence
+  (testing "terminal snapshots keep detached/background launch commands without claiming liveness"
+    (let [board (#'futon3c.dev/format-codex-status-board
+                 {"codex-1" {:lifecycle-status :resting
+                             :phase :completed
+                             :last-terminal {:status :done
+                                             :finished-at "2026-03-10T11:35:00Z"
+                                             :result-preview "solver launched in tmux"
+                                             :execution {:executed? true
+                                                         :tool-events 1
+                                                         :command-events 1}
+                                             :runtime {:process-state :exited
+                                                       :root-pid 2501000
+                                                       :background-command "tmux new-session -d -s fm8 'python3 scripts/fm001/ramsey_book_sat.py --n 8'"
+                                                       :last-command "tmux new-session -d -s fm8 'python3 scripts/fm001/ramsey_book_sat.py --n 8'"}}}})]
+      (is (.contains board "Runtime: exited (root pid 2501000"))
+      (is (.contains board "Detached launch observed: tmux new-session -d -s fm8"))
+      (is (.contains board "not verified after invoke exit")))))
+
 (deftest format-codex-status-board-handles-empty-state
   (testing "Codex status board is explicit when nothing has been recorded yet"
     (let [board (#'futon3c.dev/format-codex-status-board {})]

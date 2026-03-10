@@ -39,8 +39,8 @@ export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 
-# --- Federation: peer with Linode ---
-if [[ -z "${FUTON3C_PEERS:-}" ]]; then
+# --- Federation: peer with Linode unless explicitly disabled ---
+if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}" ]]; then
   export FUTON3C_PEERS="${FUTON3C_LINODE_URL}"
 fi
 

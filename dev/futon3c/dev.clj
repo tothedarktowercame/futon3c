@@ -1883,6 +1883,14 @@ RESPOND WITH ONLY:
                    (contains? #{"command_execution" "command-execution" "bash" "shell"} name)))
       (some-> cmd (compact-single-line 180)))))
 
+(def ^:private detached-launch-command-re
+  #"(?i)\b(tmux|screen|nohup|disown|setsid)\b|(^|[[:space:]])bg($|[[:space:]])|[[:space:]]&$")
+
+(defn- detached-launch-command?
+  [command-snippet]
+  (boolean (and (string? command-snippet)
+                (re-find detached-launch-command-re command-snippet))))
+
 (defn- refresh-runtime-state!
   [!runtime-state]
   (when !runtime-state
@@ -1958,7 +1966,8 @@ RESPOND WITH ONLY:
           child-pids (:child-pids runtime)
           processes (take 6 (or (:processes runtime) []))
           command (codex-runtime-command runtime)
-          last-output (runtime-last-output-line runtime now-ms)]
+          last-output (runtime-last-output-line runtime now-ms)
+          detached-command (some-> (:background-command runtime) str str/trim not-empty)]
       (str indent "Runtime: " (runtime-state-label runtime)
            (when root-pid
              (str " (root pid " root-pid
@@ -1972,6 +1981,11 @@ RESPOND WITH ONLY:
              (str indent "Command: " command "\n"))
            (when last-output
              (str indent "Last output: " last-output "\n"))
+           (when detached-command
+             (str indent "Detached launch observed: "
+                  (compact-single-line detached-command 160)
+                  " (not verified after invoke exit)"
+                  "\n"))
            (when (seq processes)
              (str indent "Live processes:\n"
                   (str/join "\n"
@@ -2007,6 +2021,10 @@ RESPOND WITH ONLY:
                               (:processes runtime)))
       (some-> (codex-runtime-command runtime) str str/trim not-empty)
       (assoc :command (codex-runtime-command runtime))
+      (some-> (:background-command runtime) str str/trim not-empty)
+      (assoc :background-command (:background-command runtime))
+      (contains? runtime :claimed-background?)
+      (assoc :claimed-background (boolean (:claimed-background? runtime)))
       (:last-output-at runtime)
       (assoc :last-output-at (:last-output-at runtime))
       (:last-output-stream runtime)
@@ -2046,7 +2064,7 @@ RESPOND WITH ONLY:
 
 (defn- codex-terminal-snapshot
   [{:keys [last-terminal last-terminal-status finished-at result-preview error
-           invoke-trace-id changed-files execution]}]
+           invoke-trace-id changed-files execution runtime]}]
   (or last-terminal
       (when (or last-terminal-status
                 finished-at
@@ -2054,7 +2072,8 @@ RESPOND WITH ONLY:
                 error
                 invoke-trace-id
                 changed-files
-                execution)
+                execution
+                runtime)
         {:status (or last-terminal-status
                      (when (or finished-at result-preview error invoke-trace-id execution)
                        (if error :failed :done)))
@@ -2063,7 +2082,8 @@ RESPOND WITH ONLY:
          :error error
          :invoke-trace-id invoke-trace-id
          :changed-files changed-files
-         :execution execution})))
+         :execution execution
+         :runtime runtime})))
 
 (defn- format-codex-status-board
   [status-map]
@@ -2084,6 +2104,7 @@ RESPOND WITH ONLY:
                          terminal (codex-terminal-snapshot state)
                          terminal-status (:status terminal)
                          terminal-execution (:execution terminal)
+                         terminal-runtime (:runtime terminal)
                          executed? (boolean (or (:executed? terminal-execution)
                                                 (:executed terminal-execution)))
                          tool-events (long (or (:tool-events terminal-execution) 0))
@@ -2119,6 +2140,7 @@ RESPOND WITH ONLY:
                                    (str "  Last trace: " invoke-trace-id "\n"))
                                  (when-let [changed-files (:changed-files terminal)]
                                    (str "  Last files modified: " changed-files "\n"))
+                                 (runtime-summary-block terminal-runtime now-ms "  ")
                                  "  Last evidence: executed=" executed?
                                  ", tool-events=" tool-events
                                  ", command-events=" command-events
@@ -2737,7 +2759,12 @@ RESPOND WITH ONLY:
                            (append-trace-entry! !event-trace (str ts " " summary) 200))
                          (catch Throwable _)))
                      (when command-snippet
-                       (swap! !runtime-state assoc :last-command command-snippet))
+                       (swap! !runtime-state
+                              (fn [state]
+                                (cond-> (assoc state :last-command command-snippet)
+                                  (detached-launch-command? command-snippet)
+                                  (assoc :claimed-background? true
+                                         :background-command command-snippet)))))
                      (when (and update-activity! activity)
                        (try
                          (update-activity! aid-val activity)
@@ -2968,7 +2995,8 @@ RESPOND WITH ONLY:
               command-events (long (or (:command-events execution) 0))
               execution-evidence? (boolean (:executed? execution))
               ok? (nil? (:error result))
-              finished-at (str (Instant/now))]
+              finished-at (str (Instant/now))
+              final-runtime @!runtime-state]
           ;; Persist session ID
           (when (and session-file final-sid (not (str/blank? final-sid)))
             (persist-session-id! session-file final-sid))
@@ -2995,6 +3023,7 @@ RESPOND WITH ONLY:
                                  "Runtime evidence: executed=" execution-evidence?
                                  ", tool-events=" tool-events
                                  ", command-events=" command-events "\n"
+                                 (runtime-summary-block final-runtime (System/currentTimeMillis) "")
                                  (invoke-trace-response-block agent-id final-sid invoke-trace-id (:result result)))
                             {:width 80 :slot 1 :no-display true})
             (catch Throwable _))
@@ -3008,6 +3037,7 @@ RESPOND WITH ONLY:
                             :result-preview (when ok? (:result result))
                             :error (:error result)
                             :execution execution
+                            :runtime final-runtime
                             :invoke-trace-id invoke-trace-id
                             :changed-files (detect-file-changes @!invoke-start-ms)}
             :session-id final-sid
@@ -3016,7 +3046,7 @@ RESPOND WITH ONLY:
             :result-preview (when ok? (:result result))
             :error (:error result)
             :execution execution
-            :runtime @!runtime-state
+            :runtime final-runtime
             :invoke-trace-id invoke-trace-id
             :changed-files (detect-file-changes @!invoke-start-ms)
             :trace (vec @!event-trace)})
