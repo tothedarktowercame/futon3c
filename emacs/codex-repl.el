@@ -1,9 +1,9 @@
-;;; codex-repl.el --- Chat with Codex via codex exec -*- lexical-binding: t; -*-
+;;; codex-repl.el --- Chat with Codex via futon3c API -*- lexical-binding: t; -*-
 
 ;; Author: Codex + Joe
-;; Description: Emacs chat buffer backed by `codex exec --json`.
+;; Description: Emacs chat buffer backed by futon3c's Codex invoke API.
 ;; Asynchronous: type, RET, Codex responds without blocking Emacs UI.
-;; Session continuity via Codex thread id + `codex exec resume <id>`.
+;; Session continuity is owned by the server-side Codex agent registry state.
 ;;
 ;; Usage:
 ;;   (load "/home/joe/code/futon3c/emacs/agent-chat.el")
@@ -12,6 +12,7 @@
 
 (require 'cl-lib)
 (require 'agent-chat)
+(require 'agent-chat-invariants)
 (require 'json)
 (require 'subr-x)
 (require 'url)
@@ -21,12 +22,11 @@
 ;;; Configuration
 
 (defgroup codex-repl nil
-  "Chat with Codex via CLI."
+  "Chat with Codex via futon3c API."
   :group 'agent-chat)
 
-(defcustom codex-repl-codex-command
-  (or (executable-find "codex") "codex")
-  "Path to codex CLI."
+(defcustom codex-repl-api-url agent-chat-agency-base-url
+  "Base URL for the futon3c API server."
   :type 'string
   :group 'codex-repl)
 
@@ -38,28 +38,6 @@
 (defcustom codex-repl-session-id nil
   "Current Codex thread ID for resume.
 If nil, no resume is used until Codex returns thread.started."
-  :type '(choice (const nil) string)
-  :group 'codex-repl)
-
-(defcustom codex-repl-sandbox "danger-full-access"
-  "Sandbox mode passed to `codex exec --sandbox`."
-  :type 'string
-  :group 'codex-repl)
-
-(defcustom codex-repl-approval-policy "never"
-  "Approval policy passed as `-c approval_policy=\"...\"`."
-  :type 'string
-  :group 'codex-repl)
-
-(defcustom codex-repl-model "gpt-5-codex"
-  "Model passed to `codex exec --model`.
-Set to nil to use the Codex CLI/user config default."
-  :type '(choice (const nil) string)
-  :group 'codex-repl)
-
-(defcustom codex-repl-reasoning-effort "high"
-  "Reasoning effort passed as `-c model_reasoning_effort=\"...\"`.
-Set to nil to use the Codex CLI/user config default."
   :type '(choice (const nil) string)
   :group 'codex-repl)
 
@@ -181,6 +159,9 @@ Interpreted as width on left/right and height on top/bottom."
 (defvar codex-repl--routing-diagnostic-cached-at 0
   "Epoch seconds when routing diagnostics were last refreshed.")
 
+(defvar codex-repl--resolved-api-base-cache nil
+  "Cached reachable futon3c API base URL for Codex REPL.")
+
 ;;; Invoke dashboard state
 
 (defvar codex-repl--invoke-trace-entries nil
@@ -191,6 +172,21 @@ Interpreted as width on left/right and height on top/bottom."
 
 (defvar codex-repl--invoke-done-info nil
   "Plist with :exit-code :elapsed :error on completion, nil while running.")
+
+(defvar-local codex-repl--last-stream-summary nil
+  "Last inline narration summary emitted for the current turn.")
+
+(defvar-local codex-repl--final-message-text nil
+  "Final assistant message text observed in stream events for current turn.")
+
+(defvar-local codex-repl--final-text-rendered nil
+  "Non-nil when the current turn's assistant text has already been rendered inline.")
+
+(defvar-local codex-repl--streamed-text-seen nil
+  "Non-nil when text chunks have already been rendered for the current turn.")
+
+(defvar-local codex-repl--rendered-assistant-text ""
+  "Assistant text rendered for the current turn, excluding tool narration.")
 
 (defconst codex-repl--registry-source "emacs-codex-repl"
   "Stable source key used when publishing Codex REPL invoke state to the JVM registry.")
@@ -227,14 +223,24 @@ When ELAPSED-SECONDS is non-nil, include it in the display."
 (defun codex-repl--drawbridge-token ()
   "Return the Drawbridge admin token, reading .admintoken if needed."
   (or codex-repl-drawbridge-token
-      (let ((root (locate-dominating-file default-directory ".admintoken")))
-        (when root
-          (let ((f (expand-file-name ".admintoken" root)))
-            (when (file-exists-p f)
-              (setq codex-repl-drawbridge-token
-                    (string-trim (with-temp-buffer
-                                   (insert-file-contents f)
-                                   (buffer-string))))))))))
+      (let* ((roots (delete-dups
+                     (delq nil
+                           (list (locate-dominating-file default-directory ".admintoken")
+                                 (and load-file-name
+                                      (locate-dominating-file load-file-name ".admintoken"))
+                                 (locate-dominating-file
+                                  "/home/joe/code/futon3c/emacs/codex-repl.el"
+                                  ".admintoken")))))
+             (token-file (cl-find-if
+                          #'file-exists-p
+                          (mapcar (lambda (root)
+                                    (expand-file-name ".admintoken" root))
+                                  roots))))
+        (when token-file
+          (setq codex-repl-drawbridge-token
+                (string-trim (with-temp-buffer
+                               (insert-file-contents token-file)
+                               (buffer-string))))))))
 
 (defun codex-repl--drawbridge-eval (clj-code &optional timeout-seconds)
   "Evaluate CLJ-CODE via Drawbridge and return parsed JSON response, or nil."
@@ -253,10 +259,60 @@ When ELAPSED-SECONDS is non-nil, include it in the display."
       (with-current-buffer buffer
         (goto-char (point-min))
         (re-search-forward "\n\n" nil 'move)
-        (let ((parsed (codex-repl--parse-json-string
-                       (buffer-substring-no-properties (point) (point-max)))))
+        (let* ((body (buffer-substring-no-properties (point) (point-max)))
+               (parsed
+                (or (agent-chat--parse-json-string body)
+                    (let* ((ok (and (string-match-p ":ok[[:space:]]+true" body) t))
+                           (value
+                            (cond
+                             ((string-match ":value[[:space:]]+\"\\([^\"]*\\)\"" body)
+                              (match-string 1 body))
+                             ((string-match ":value[[:space:]]+\\([^,}\n]+\\)" body)
+                              (let ((raw (string-trim (match-string 1 body))))
+                                (cond
+                                 ((string= raw "nil") nil)
+                                 ((string= raw "true") t)
+                                 ((string= raw "false") nil)
+                                 ((string-match-p "\\`[0-9]+\\'" raw) (string-to-number raw))
+                                 (t raw))))
+                             (t nil))))
+                      (list :ok ok :value value)))))
           (kill-buffer buffer)
           parsed)))))
+
+(defun codex-repl--drawbridge-api-base ()
+  "Return local futon3c API base discovered from Drawbridge, or nil."
+  (let* ((result (codex-repl--drawbridge-eval
+                  "(when-let [s @futon3c.dev/!f3c-sys] (str \"http://127.0.0.1:\" (:port s)))"
+                  2))
+         (value (plist-get result :value)))
+    (when (and (plist-get result :ok)
+               (stringp value)
+               (not (string-empty-p value)))
+      (string-remove-suffix "/" value))))
+
+(defun codex-repl--base-reachable-p (base)
+  "Return non-nil when BASE responds successfully to /health."
+  (when (and (stringp base) (not (string-empty-p base)))
+    (let* ((response (codex-repl--request-json
+                      "GET" (format "%s/health" (string-remove-suffix "/" base)) nil))
+           (status (plist-get response :status)))
+      (and (integerp status) (<= 200 status) (< status 300)))))
+
+(defun codex-repl--resolved-api-base (&optional force)
+  "Return the best reachable futon3c API base URL.
+When FORCE is non-nil, refresh cached discovery."
+  (when (or force
+            (null codex-repl--resolved-api-base-cache)
+            (not (codex-repl--base-reachable-p codex-repl--resolved-api-base-cache)))
+    (let* ((candidates (delete-dups
+                        (delq nil
+                              (list (codex-repl--normalize-base-url codex-repl-api-url)
+                                    (codex-repl--normalize-base-url agent-chat-agency-base-url)
+                                    (codex-repl--drawbridge-api-base)))))
+           (reachable (cl-find-if #'codex-repl--base-reachable-p candidates)))
+      (setq codex-repl--resolved-api-base-cache (or reachable (car candidates)))))
+  codex-repl--resolved-api-base-cache)
 
 (defun codex-repl--report-registry-invoke-state! (status &optional activity)
   "Publish current Codex REPL invoke STATUS to the JVM registry.
@@ -324,7 +380,6 @@ short human-readable progress string to surface in *agents*."
                   (codex-repl--progress-line
                    (or codex-repl--last-progress-status "working")
                    (codex-repl--thinking-elapsed-seconds)))
-                 (codex-repl--maybe-heartbeat-registry-invoke!)
                  (codex-repl--refresh-invoke-dashboard))))))))
 
 (defun codex-repl--ui-state-valid-p ()
@@ -557,10 +612,63 @@ Returns non-nil when prompt markers were restored."
            (t nil))))
     detail))
 
+(defun codex-repl--extract-agent-text (item)
+  "Extract assistant text from Codex ITEM payload."
+  (let ((content (or (alist-get 'text item)
+                     (alist-get 'content item))))
+    (cond
+     ((stringp content)
+      (let ((trimmed (string-trim content)))
+        (unless (string-empty-p trimmed)
+          trimmed)))
+     ((listp content)
+      (let ((joined
+             (string-join
+              (delq nil
+                    (mapcar (lambda (part)
+                              (when (and (listp part)
+                                         (string= (alist-get 'type part) "text"))
+                                (alist-get 'text part)))
+                            content))
+              "")))
+        (let ((trimmed (string-trim joined)))
+          (unless (string-empty-p trimmed)
+            trimmed))))
+     (t nil))))
+
+(defun codex-repl--record-rendered-assistant-text! (text)
+  "Append assistant TEXT rendered for the current turn."
+  (when (stringp text)
+    (setq codex-repl--rendered-assistant-text
+          (concat (or codex-repl--rendered-assistant-text "") text))))
+
 (defun codex-repl--stream-event-summary (evt)
   "Render one-line summary for Codex stream event EVT."
   (let ((type (alist-get 'type evt)))
     (cond
+     ((string= type "started")
+      "invoke stream started")
+     ((string= type "tool_use")
+      (let* ((tools (alist-get 'tools evt))
+             (tool-list (cond
+                         ((vectorp tools) (append tools nil))
+                         ((listp tools) tools)
+                         (t nil)))
+             (tool-text (and tool-list
+                             (mapconcat #'identity tool-list ", "))))
+        (if (and (stringp tool-text) (not (string-empty-p tool-text)))
+            (format "using %s" tool-text)
+          "using tool")))
+     ((string= type "text")
+      "text")
+     ((string= type "done")
+      (if (alist-get 'ok evt)
+          "invoke done"
+        (let ((msg (or (alist-get 'message evt)
+                       (alist-get 'error evt))))
+          (if (stringp msg)
+              (format "invoke failed %s" (truncate-string-to-width msg 100))
+            "invoke failed"))))
      ((string= type "thread.started")
       (let ((sid (or (alist-get 'thread_id evt)
                      (alist-get 'session_id evt)
@@ -573,9 +681,16 @@ Returns non-nil when prompt markers were restored."
              (name (and (listp item) (alist-get 'name item)))
              (detail (and codex-repl-invoke-show-tool-details
                           (stringp item-type)
-                          (string= item-type "tool_call")
+                          (member item-type '("tool_call" "command_execution"))
                           (codex-repl--tool-call-detail item))))
         (cond
+         ((and (stringp item-type) (string= item-type "command_execution"))
+          (if (stringp detail)
+              (format "Using Bash (%s): %s"
+                      (if (string= type "item.started") "started" "done")
+                      detail)
+            (format "Using Bash (%s)"
+                    (if (string= type "item.started") "started" "done"))))
          ((and (stringp item-type) (string= item-type "tool_call"))
           (if (stringp detail)
               (format "%s (%s): %s"
@@ -623,6 +738,85 @@ Returns non-nil when prompt markers were restored."
      (format "raw %s" (codex-repl--truncate-single-line json-line 500))
      'shadow)))
 
+(defun codex-repl--inline-stream-summary (evt)
+  "Return a compact narration line for main-buffer rendering of EVT."
+  (let ((type (alist-get 'type evt)))
+    (cond
+     ((string= type "reasoning")
+      "Preparing Response")
+     ((string= type "tool_use")
+      nil)
+     ((string= type "item.started")
+      (let* ((item (alist-get 'item evt))
+             (item-type (and (listp item) (alist-get 'type item)))
+             (name (and (listp item) (alist-get 'name item)))
+             (detail (and codex-repl-invoke-show-tool-details
+                          (stringp item-type)
+                          (member item-type '("tool_call" "command_execution"))
+                          (codex-repl--tool-call-detail item))))
+        (cond
+         ((and (stringp item-type) (string= item-type "command_execution"))
+          (if (stringp detail)
+              (format "Using Bash: %s" detail)
+            "Using Bash"))
+         ((and (stringp item-type) (string= item-type "tool_call"))
+          (if (stringp detail)
+              (format "%s: %s"
+                      (codex-repl--humanize-tool-name name)
+                      detail)
+            (codex-repl--humanize-tool-name name)))
+         ((and (stringp item-type)
+               (member item-type '("reasoning" "agent_message")))
+          "Preparing Response")
+         (t nil))))
+     ((string= type "command_execution")
+      (let ((detail (and codex-repl-invoke-show-tool-details
+                         (codex-repl--tool-call-detail evt))))
+        (if (stringp detail)
+            (format "Using Bash: %s" detail)
+          "Using Bash")))
+     (t nil))))
+
+(defun codex-repl--stream-inline-event (evt)
+  "Render selected Codex stream events inline in the main chat buffer."
+  (let* ((type (alist-get 'type evt))
+         (summary (codex-repl--inline-stream-summary evt)))
+    (cond
+     ((and (string= type "text")
+           (stringp (alist-get 'text evt))
+           (not (string-empty-p (string-trim (alist-get 'text evt)))))
+      (unless agent-chat--streaming-started
+        (agent-chat-begin-streaming-message "codex")
+        (setq codex-repl--last-stream-summary nil))
+      (setq codex-repl--streamed-text-seen t
+            codex-repl--final-text-rendered t)
+      (codex-repl--record-rendered-assistant-text! (alist-get 'text evt))
+      (agent-chat-stream-text (alist-get 'text evt)))
+     ((string= type "item.completed")
+      (let* ((item (alist-get 'item evt))
+             (item-type (and (listp item) (alist-get 'type item)))
+             (message-text (and (stringp item-type)
+                                (string= item-type "agent_message")
+                                (codex-repl--extract-agent-text item))))
+        (when (stringp message-text)
+          (setq codex-repl--final-message-text message-text)
+          (unless codex-repl--streamed-text-seen
+            (unless agent-chat--streaming-started
+              (agent-chat-begin-streaming-message "codex")
+              (setq codex-repl--last-stream-summary nil))
+            (setq codex-repl--final-text-rendered t)
+            (codex-repl--record-rendered-assistant-text! message-text)
+            (agent-chat-stream-text message-text)))))
+     ((and (member type '("tool_use" "item.started" "command_execution" "reasoning"))
+           (stringp summary)
+           (not (string-empty-p summary))
+           (not (equal summary codex-repl--last-stream-summary)))
+      (unless agent-chat--streaming-started
+        (agent-chat-begin-streaming-message "codex")
+        (setq codex-repl--last-stream-summary nil))
+      (setq codex-repl--last-stream-summary summary)
+      (agent-chat-stream-text (concat summary "\n"))))))
+
 ;;; Streaming event parser (for progress display)
 
 (defun codex-repl--parse-stream-event (json-line)
@@ -636,6 +830,44 @@ Returns non-nil when prompt markers were restored."
              (type (alist-get 'type evt)))
          (codex-repl--log-stream-event evt json-line)
          (cond
+         ((string= type "started")
+          (codex-repl--set-progress-status "starting"))
+         ((string= type "tool_use")
+          (let* ((tools (alist-get 'tools evt))
+                 (tool-list (cond
+                             ((vectorp tools) (append tools nil))
+                             ((listp tools) tools)
+                             (t nil)))
+                 (tool-text (and tool-list
+                                 (mapconcat #'identity tool-list ", "))))
+            (codex-repl--set-progress-status
+             (if (and (stringp tool-text) (not (string-empty-p tool-text)))
+                 (format "using %s" tool-text)
+               "using tool"))))
+         ((string= type "text")
+          (codex-repl--set-progress-status "Preparing Response"))
+         ((string= type "done")
+          (let ((sid (alist-get 'session-id evt))
+                (ok (alist-get 'ok evt))
+                (msg (or (alist-get 'message evt)
+                         (alist-get 'error evt))))
+            (when (and (stringp sid)
+                       (not (string-empty-p sid))
+                       (not (equal sid codex-repl-session-id)))
+              (condition-case persist-err
+                  (codex-repl--persist-session-id! sid)
+                (error
+                 (codex-repl--append-invoke-trace
+                  (format "session persist warning: %s"
+                          (error-message-string persist-err))
+                  'font-lock-warning-face))))
+            (codex-repl--set-progress-status
+             (cond
+              (ok "done")
+              ((and (stringp msg)
+                    (codex-repl--stream-error-progress-status msg))
+               (codex-repl--stream-error-progress-status msg))
+              (t "failed")))))
          ((string= type "thread.started")
           (let ((thread-id (or (alist-get 'thread_id evt)
                                (alist-get 'session_id evt))))
@@ -658,6 +890,8 @@ Returns non-nil when prompt markers were restored."
           (let* ((item (alist-get 'item evt))
                  (item-type (and (listp item) (alist-get 'type item))))
             (cond
+             ((and (stringp item-type) (string= item-type "command_execution"))
+              (codex-repl--set-progress-status "Using Bash"))
              ((and (stringp item-type) (string= item-type "tool_call"))
               (let ((name (alist-get 'name item)))
                 (codex-repl--set-progress-status
@@ -670,6 +904,8 @@ Returns non-nil when prompt markers were restored."
           (let* ((item (alist-get 'item evt))
                  (item-type (and (listp item) (alist-get 'type item))))
             (cond
+             ((and (stringp item-type) (string= item-type "command_execution"))
+              (codex-repl--set-progress-status "Using Bash (done)"))
              ((and (stringp item-type) (string= item-type "tool_call"))
               (let ((name (alist-get 'name item)))
                 (codex-repl--set-progress-status
@@ -693,7 +929,8 @@ Returns non-nil when prompt markers were restored."
           (let ((msg (alist-get 'message evt)))
             (when-let ((status (codex-repl--stream-error-progress-status msg)))
               (codex-repl--set-progress-status status))))
-         (t nil)))
+         (t nil))
+         (codex-repl--stream-inline-event evt))
     (error
      (codex-repl--append-invoke-trace
       (format "event parse error: %s"
@@ -701,62 +938,10 @@ Returns non-nil when prompt markers were restored."
       'font-lock-warning-face)
      nil)))
 
-(defun codex-repl--parse-json-string (text)
-  "Parse TEXT as JSON and return a plist/list structure, or nil."
-  (when (and (stringp text) (not (string-empty-p text)))
-    (condition-case nil
-        (if (fboundp 'json-parse-string)
-            (json-parse-string text
-                               :object-type 'plist
-                               :array-type 'list
-                               :null-object nil
-                               :false-object nil)
-          (let ((json-object-type 'plist)
-                (json-array-type 'list)
-                (json-null nil)
-                (json-false nil))
-            (json-read-from-string text)))
-      (error nil))))
-
-(defun codex-repl--evidence-enabled-p ()
-  "Return non-nil when evidence logging is configured."
-  (and (stringp codex-repl-evidence-url)
-       (not (string-empty-p codex-repl-evidence-url))))
-
-(defun codex-repl--evidence-base-url ()
-  "Return evidence API base URL without trailing /api/alpha/evidence."
-  (let ((value (string-remove-suffix "/" (or codex-repl-evidence-url ""))))
-    (replace-regexp-in-string "/api/alpha/evidence\\'" "" value)))
-
-(defun codex-repl--evidence-query-string (pairs)
-  "Encode PAIRS as URL query string."
-  (mapconcat (lambda (pair)
-               (format "%s=%s"
-                       (url-hexify-string (format "%s" (car pair)))
-                       (url-hexify-string (format "%s" (cdr pair)))))
-             pairs "&"))
-
-(defun codex-repl--evidence-request-json (method url &optional payload)
-  "Send evidence METHOD request to URL with optional JSON PAYLOAD.
-Returns plist with keys :status and :json. Returns nil on transport failure."
-  (let* ((url-request-method method)
-         (url-request-extra-headers
-          '(("Content-Type" . "application/json")
-            ("Accept" . "application/json")))
-         (url-request-data (when payload
-                             (encode-coding-string (json-encode payload) 'utf-8)))
-         (buffer (condition-case nil
-                     (url-retrieve-synchronously url t t codex-repl-evidence-timeout)
-                   (error nil))))
-    (when (buffer-live-p buffer)
-      (with-current-buffer buffer
-        (goto-char (point-min))
-        (let ((status (or (and (boundp 'url-http-response-status) url-http-response-status) 0)))
-          (re-search-forward "\n\n" nil 'move)
-          (let* ((body (buffer-substring-no-properties (point) (point-max)))
-                 (parsed (codex-repl--parse-json-string body)))
-            (kill-buffer buffer)
-            (list :status status :json parsed)))))))
+(defun codex-repl--request-json (method url &optional payload)
+  "Send METHOD to URL with JSON PAYLOAD using the shared HTTP helper."
+  (agent-chat-evidence-request-json
+   method url codex-repl-evidence-timeout payload))
 
 (defconst codex-repl--irc-send-regex
   "^IRC_SEND[[:space:]]+\\([^[:space:]]+\\)[[:space:]]*::[[:space:]]*\\(.+\\)$"
@@ -790,10 +975,11 @@ Returns plist (:channel :text), or nil."
 
 (defun codex-repl--health-irc-send-base ()
   "Fetch IRC send base hint from local Agency /health."
-  (let ((local (codex-repl--normalize-base-url agent-chat-agency-base-url)))
+  (let ((local (or (codex-repl--resolved-api-base)
+                   (codex-repl--normalize-base-url agent-chat-agency-base-url))))
     (when local
       (let* ((url (format "%s/health" local))
-             (response (codex-repl--evidence-request-json "GET" url nil))
+             (response (codex-repl--request-json "GET" url nil))
              (status (plist-get response :status))
              (parsed (plist-get response :json))
              (hint (plist-get parsed :irc-send-base)))
@@ -817,7 +1003,7 @@ Returns plist (:channel :text), or nil."
 (defun codex-repl--send-irc-via-base (base channel text)
   "Send TEXT to IRC CHANNEL through Agency BASE."
   (let* ((url (format "%s/api/alpha/irc/send" base))
-         (response (codex-repl--evidence-request-json
+         (response (codex-repl--request-json
                     "POST" url
                     `((channel . ,channel)
                       (text . ,text)
@@ -849,7 +1035,8 @@ Returns plist (:channel :text), or nil."
 
 (defun codex-repl--routing-bases ()
   "Return distinct Agency base URLs to probe for routing diagnostics."
-  (let* ((local (codex-repl--normalize-base-url agent-chat-agency-base-url))
+  (let* ((local (or (codex-repl--resolved-api-base)
+                    (codex-repl--normalize-base-url agent-chat-agency-base-url)))
          (fallback (or (codex-repl--normalize-base-url codex-repl-irc-send-base-url)
                        codex-repl--cached-irc-send-base
                        (setq codex-repl--cached-irc-send-base
@@ -861,7 +1048,7 @@ Returns plist (:channel :text), or nil."
   (let* ((agent-id (or codex-repl-agency-agent-id "codex-1"))
          (url (format "%s/api/alpha/agents/%s"
                       base (url-hexify-string agent-id)))
-         (response (codex-repl--evidence-request-json "GET" url nil))
+         (response (codex-repl--request-json "GET" url nil))
          (status (or (plist-get response :status) 0))
          (parsed (plist-get response :json))
          (agent (and (plist-get parsed :ok) (plist-get parsed :agent))))
@@ -994,87 +1181,20 @@ When FORCE is non-nil, refresh immediately."
     (cl-some (lambda (re) (string-match-p re s))
              codex-repl--irc-send-request-regexes)))
 
-(defun codex-repl--evidence-post-entry-id (payload)
-  "POST PAYLOAD to evidence API and return created evidence id, or nil."
-  (when (codex-repl--evidence-enabled-p)
-    (let* ((url (format "%s/api/alpha/evidence" (codex-repl--evidence-base-url)))
-           (response (codex-repl--evidence-request-json "POST" url payload))
-           (status (plist-get response :status))
-           (parsed (plist-get response :json)))
-      (when (and (integerp status) (<= 200 status) (< status 300))
-        (or (plist-get parsed :evidence/id)
-            (plist-get (plist-get parsed :entry) :evidence/id))))))
-
-(defun codex-repl--evidence-fetch-latest-id (sid)
-  "Fetch most recent evidence id for session SID."
-  (when (and (codex-repl--evidence-enabled-p)
-             (stringp sid)
-             (not (string-empty-p sid)))
-    (let* ((query (codex-repl--evidence-query-string
-                   `(("session-id" . ,sid)
-                     ("limit" . "1"))))
-           (url (format "%s/api/alpha/evidence?%s"
-                        (codex-repl--evidence-base-url)
-                        query))
-           (response (codex-repl--evidence-request-json "GET" url nil))
-           (status (plist-get response :status))
-           (entries (and (integerp status)
-                         (<= 200 status)
-                         (< status 300)
-                         (plist-get (plist-get response :json) :entries)))
-           (entry (and (listp entries) (car entries))))
-      (and (listp entry)
-           (plist-get entry :evidence/id)))))
-
-(defun codex-repl--sync-evidence-anchor! (&optional sid force)
-  "Refresh last evidence anchor from API for SID.
-When FORCE is non-nil, refresh even when session is unchanged."
-  (let ((target-sid (or sid codex-repl-session-id)))
-    (when (and (stringp target-sid) (not (string-empty-p target-sid))
-               (or force
-                   (not (equal target-sid codex-repl--evidence-session-id))
-                   (null codex-repl--last-evidence-id)))
-      (setq codex-repl--evidence-session-id target-sid
-            codex-repl--last-evidence-id (codex-repl--evidence-fetch-latest-id target-sid)))))
-
 (defun codex-repl--emit-turn-evidence! (role text)
   "Emit a turn evidence event for ROLE (\"user\" or \"assistant\") and TEXT."
-  (when (and codex-repl-evidence-log-turns
-             (stringp text)
-             (not (string-empty-p (string-trim text)))
-             (stringp codex-repl-session-id)
-             (not (string-empty-p codex-repl-session-id))
-             (codex-repl--evidence-enabled-p))
-    (codex-repl--sync-evidence-anchor! codex-repl-session-id)
-    (let* ((trimmed (string-trim text))
-           (is-user (string= role "user"))
-           (is-error (string-prefix-p "[Error" trimmed))
-           (claim-type (cond
-                        (is-user "question")
-                        (is-error "correction")
-                        (t "observation")))
-           (author (if is-user
-                       (or (getenv "USER") user-login-name "joe")
-                     "codex"))
-           (role-tag (if is-user "user" "assistant"))
-           (payload `((subject . ((ref/type . "session")
-                                  (ref/id . ,codex-repl-session-id)))
-                      (type . "coordination")
-                      (claim-type . ,claim-type)
-                      (author . ,author)
-                      (session-id . ,codex-repl-session-id)
-                      (body . ((event . "chat-turn")
-                               (transport . "emacs-codex-repl")
-                               (role . ,role)
-                               (text . ,trimmed)))
-                      (tags . ["codex" "repl" "turn" ,role-tag]))))
-      (when (and (stringp codex-repl--last-evidence-id)
-                 (not (string-empty-p codex-repl--last-evidence-id)))
-        (setq payload (append payload
-                              `((in-reply-to . ,codex-repl--last-evidence-id)))))
-      (when-let ((new-id (codex-repl--evidence-post-entry-id payload)))
-        (setq codex-repl--evidence-session-id codex-repl-session-id
-              codex-repl--last-evidence-id new-id)))))
+  (agent-chat-emit-turn-evidence!
+   codex-repl-evidence-url
+   codex-repl-evidence-timeout
+   codex-repl-evidence-log-turns
+   codex-repl-session-id
+   role
+   text
+   "codex"
+   "emacs-codex-repl"
+   '("codex" "repl" "turn")
+   'codex-repl--evidence-session-id
+   'codex-repl--last-evidence-id))
 
 (defun codex-repl--emit-user-turn-evidence! (text)
   "Emit evidence for user TEXT."
@@ -1125,31 +1245,15 @@ When FORCE is non-nil, refresh even when session is unchanged."
 
 (defun codex-repl--emit-session-start-evidence! (sid)
   "Emit a lightweight session-start evidence entry for SID."
-  (when (and (stringp sid) (not (string-empty-p sid)))
-    (unless (equal sid codex-repl--evidence-session-id)
-      (setq codex-repl--evidence-session-id sid
-            codex-repl--last-evidence-id nil))
-    (codex-repl--sync-evidence-anchor! sid t)
-    (when (and (not (equal sid codex-repl--last-emitted-session-id))
-               (not (and (stringp codex-repl--last-evidence-id)
-                         (not (string-empty-p codex-repl--last-evidence-id))))
-               (codex-repl--evidence-enabled-p))
-      (let ((payload `((subject . ((ref/type . "session")
-                                   (ref/id . ,sid)))
-                       (type . "coordination")
-                       (claim-type . "goal")
-                       (author . ,(or (getenv "USER") user-login-name "codex"))
-                       (session-id . ,sid)
-                       (body . ((event . "session-start")
-                                (source . "codex-repl")
-                                (mode . "emacs")))
-                       (tags . ["codex" "session-start" "repl"]))))
-        (when-let ((new-id (codex-repl--evidence-post-entry-id payload)))
-          (setq codex-repl--last-evidence-id new-id))
-        (setq codex-repl--last-emitted-session-id sid)))
-    (unless (and (stringp codex-repl--last-evidence-id)
-                 (not (string-empty-p codex-repl--last-evidence-id)))
-      (codex-repl--sync-evidence-anchor! sid t))))
+  (agent-chat-emit-session-start-evidence!
+   codex-repl-evidence-url
+   codex-repl-evidence-timeout
+   sid
+   'codex-repl--evidence-session-id
+   'codex-repl--last-evidence-id
+   'codex-repl--last-emitted-session-id
+   "codex-repl"
+   '("codex" "session-start" "repl")))
 
 (defun codex-repl--ensure-session-id ()
   "Load existing Codex session id from file, if present."
@@ -1159,90 +1263,6 @@ When FORCE is non-nil, refresh even when session is unchanged."
    (lambda (sid)
      (setq codex-repl-session-id sid)
      (codex-repl--emit-session-start-evidence! sid))))
-
-;;; Codex output parsing
-
-(defun codex-repl--extract-agent-text (item)
-  "Extract assistant text from a Codex item.completed payload ITEM."
-  (let ((content (or (alist-get 'text item)
-                     (alist-get 'content item))))
-    (cond
-      ((stringp content)
-       content)
-      ((listp content)
-       (string-join
-        (delq nil
-              (mapcar (lambda (part)
-                        (when (and (listp part)
-                                   (string= (alist-get 'type part) "text"))
-                          (alist-get 'text part)))
-                      content))
-        ""))
-      (t nil))))
-
-(defun codex-repl--parse-codex-json-output (output)
-  "Parse OUTPUT JSONL from `codex exec --json`.
-Returns plist: (:session-id sid :text response :error err)."
-  (let ((sid codex-repl-session-id)
-        (last-message nil)
-        (last-error nil))
-    (dolist (line (split-string output "\n" t))
-      (condition-case _
-          (let* ((evt (json-parse-string line
-                                         :object-type 'alist
-                                         :array-type 'list
-                                         :null-object nil
-                                         :false-object nil))
-                 (type (alist-get 'type evt)))
-            (cond
-              ((string= type "thread.started")
-               (let ((thread-id (or (alist-get 'thread_id evt)
-                                    (alist-get 'session_id evt))))
-                 (when (and (stringp thread-id) (not (string-empty-p thread-id)))
-                   (setq sid thread-id))))
-              ((string= type "error")
-               (let ((msg (alist-get 'message evt)))
-                 (when (and (stringp msg) (not (string-empty-p msg)))
-                   (setq last-error msg))))
-              ((string= type "turn.failed")
-               (let* ((err (alist-get 'error evt))
-                      (msg (and (listp err) (alist-get 'message err))))
-                 (when (and (stringp msg) (not (string-empty-p msg)))
-                   (setq last-error msg))))
-              ((string= type "item.completed")
-               (let* ((item (alist-get 'item evt))
-                      (item-type (and (listp item) (alist-get 'type item))))
-                 (when (and (stringp item-type) (string= item-type "agent_message"))
-                   (let ((msg (codex-repl--extract-agent-text item)))
-                     (when (and (stringp msg) (not (string-empty-p msg)))
-                       (setq last-message msg))))))))
-        (error nil)))
-    (list :session-id sid
-          :text (or last-message
-                    (string-trim output)
-                    "[No assistant message returned]")
-          :error last-error)))
-
-;;; Codex CLI call
-
-(defun codex-repl--build-codex-args (session-id)
-  "Build argv for `codex exec --json` using SESSION-ID when present."
-  (let* ((exec-args (list "exec"
-                          "--json"
-                          "--sandbox" codex-repl-sandbox
-                          "-c" (format "approval_policy=\"%s\"" codex-repl-approval-policy)))
-         (exec-args (if (and codex-repl-reasoning-effort
-                             (not (string-empty-p codex-repl-reasoning-effort)))
-                        (append exec-args
-                                (list "-c" (format "model_reasoning_effort=\"%s\""
-                                                   codex-repl-reasoning-effort)))
-                      exec-args))
-         (exec-args (if (and codex-repl-model (not (string-empty-p codex-repl-model)))
-                        (append exec-args (list "--model" codex-repl-model))
-                      exec-args)))
-    (if (and session-id (not (string-empty-p session-id)))
-        (append exec-args (list "resume" session-id "-"))
-      (append exec-args (list "-")))))
 
 (defun codex-repl--stale-session-error-p (text)
   "Return non-nil when TEXT indicates a stale/resume-corrupted Codex session."
@@ -1302,53 +1322,138 @@ Returns plist: (:session-id sid :text response :error err)."
       (format "- Invoke routing snapshot: %s" routing))
      "\n")))
 
-(defun codex-repl--call-codex-async (text callback &optional retry-attempt)
-  "Call `codex exec --json` with TEXT asynchronously.
-Invoke CALLBACK with the final response text."
-  (let* ((args (codex-repl--build-codex-args codex-repl-session-id))
-         (repl-buffer (current-buffer))
-         (outbuf (generate-new-buffer " *codex-repl-codex*"))
-         (process-environment process-environment)
-         (proc nil)
-         (runtime-preamble (codex-repl--surface-contract))
-         (extra-preamble (and codex-repl-chat-preamble
-                              (not (string-empty-p codex-repl-chat-preamble))
-                              codex-repl-chat-preamble))
-         (turn-directive (when (codex-repl--likely-irc-send-request-p text)
-                           (string-join
-                            '("Turn-specific directive:"
-                              "- Interpret this as an IRC-send request."
-                              "- Output only the single-line message text (no wrappers)."
-                              "- Do not run tools/curl for this turn.")
-                            "\n")))
-         (prompt-text (format "%s\n\nUser message:\n%s"
-                              (cond
-                               ((and extra-preamble turn-directive)
-                                (format "%s\n\n%s\n\n%s" runtime-preamble extra-preamble turn-directive))
-                               (extra-preamble
-                                (format "%s\n\n%s" runtime-preamble extra-preamble))
-                               (turn-directive
-                                (format "%s\n\n%s" runtime-preamble turn-directive))
-                               (t runtime-preamble))
-                              text))
-         (payload (if (string-suffix-p "\n" prompt-text)
-                      prompt-text
-                    (concat prompt-text "\n"))))
+(defun codex-repl--find-done-event (raw)
+  "Return the final NDJSON done event parsed from RAW, or nil."
+  (let ((done-event nil))
+    (dolist (line (split-string (or raw "") "\n"))
+      (when (and (not (string-empty-p (string-trim line)))
+                 (string-match-p "\"type\"[[:space:]]*:[[:space:]]*\"done\"" line))
+        (condition-case nil
+            (setq done-event
+                  (json-parse-string line
+                                     :object-type 'alist
+                                     :array-type 'list
+                                     :null-object nil
+                                     :false-object nil))
+          (error nil))))
+    done-event))
+
+(defun codex-repl--finish-invoke (proc done-event raw callback)
+  "Finalize invoke state for PROC using DONE-EVENT and RAW, then run CALLBACK."
+  (let* ((exit-code (process-exit-status proc))
+         (elapsed (codex-repl--thinking-elapsed-seconds))
+         (ok (and done-event (alist-get 'ok done-event)))
+         (sid (and done-event (alist-get 'session-id done-event)))
+         (result-text (and done-event (alist-get 'result done-event)))
+         (err-msg (and done-event
+                       (or (alist-get 'message done-event)
+                           (alist-get 'error done-event))))
+         (final-text (cond
+                      (ok
+                       (codex-repl--apply-irc-send-directive
+                        (string-trim (or result-text
+                                         codex-repl--final-message-text
+                                         "[empty response]"))))
+                      (done-event
+                       (format "[Error: %s]" (or err-msg "invoke failed")))
+                      (t
+                       (format "[curl error (exit %d): %s]"
+                               exit-code
+                               (string-trim (truncate-string-to-width raw 200))))))
+         (trace-session (or sid codex-repl-session-id "unknown"))
+         (rendered-text (string-trim (or codex-repl--rendered-assistant-text "")))
+         (needs-terminal-insert?
+          (and ok
+               (stringp final-text)
+               (not (string-empty-p final-text))
+               (not (string= rendered-text (string-trim final-text))))))
+    (setq codex-repl--invoke-done-info
+          (list :exit-code exit-code
+                :elapsed elapsed
+                :error (unless ok err-msg)))
+    (codex-repl--append-invoke-trace
+     (format "invoke done exit=%d elapsed=%ds session=%s"
+             exit-code elapsed trace-session)
+     (if ok 'font-lock-string-face 'font-lock-warning-face))
+    (when (and err-msg (not (string-empty-p (string-trim err-msg))))
+      (codex-repl--append-invoke-trace
+       (format "invoke error %s"
+               (codex-repl--truncate-single-line err-msg 240))
+       'font-lock-warning-face))
+    (unwind-protect
+        (progn
+          (when (and (stringp sid) (not (string-empty-p sid)))
+            (condition-case persist-err
+                (codex-repl--persist-session-id! sid)
+              (error
+               (message "codex-repl persist warning: %s"
+                        (error-message-string persist-err)))))
+          (when (eq agent-chat--pending-process proc)
+            (setq agent-chat--pending-process nil))
+          (condition-case callback-err
+              (if (and ok agent-chat--streaming-started)
+                  (progn
+                    (when needs-terminal-insert?
+                      (when (and (stringp codex-repl--last-stream-summary)
+                                 (not (string-empty-p codex-repl--last-stream-summary)))
+                        (agent-chat-stream-text "\n"))
+                      (agent-chat-stream-text final-text)
+                      (codex-repl--record-rendered-assistant-text! final-text)
+                      (setq codex-repl--final-text-rendered t))
+                    (agent-chat-end-streaming-message)
+                    (setq codex-repl--last-stream-summary nil)
+                    (codex-repl--emit-assistant-turn-evidence! final-text)
+                    (agent-chat-invariants-turn-ended)
+                    (goto-char (point-max))
+                    (agent-chat-scroll-to-bottom))
+                (progn
+                  (when agent-chat--streaming-started
+                    (agent-chat-end-streaming-message)
+                    (setq codex-repl--last-stream-summary nil))
+                  (funcall callback final-text)))
+            (error
+             (message "codex-repl callback warning: %s"
+                      (error-message-string callback-err)))))
+      (codex-repl--stop-thinking-heartbeat)
+      (setq codex-repl--thinking-start-time nil
+            codex-repl--last-progress-status nil
+            codex-repl--final-message-text nil
+            codex-repl--final-text-rendered nil
+            codex-repl--streamed-text-seen nil
+            codex-repl--rendered-assistant-text ""))))
+
+(defun codex-repl--call-codex-async (text callback &optional _retry-attempt)
+  "Invoke server-managed Codex asynchronously for TEXT.
+CALLBACK receives the final response text."
+  (let* ((repl-buffer (current-buffer))
+         (api-base (or (codex-repl--resolved-api-base)
+                       (string-remove-suffix "/" codex-repl-api-url)))
+         (url (concat api-base
+                      "/api/alpha/invoke-stream"))
+         (json-body (json-serialize
+                     `(:agent-id ,codex-repl-agency-agent-id
+                       :prompt ,text
+                       :surface "emacs-repl"
+                       :caller ,(or (getenv "USER") user-login-name "joe"))))
+         (outbuf (generate-new-buffer " *codex-repl-stream*"))
+         (line-buffer ""))
     (setq codex-repl--invoke-turn-id (1+ codex-repl--invoke-turn-id))
     (setq codex-repl--invoke-prompt-preview
           (codex-repl--truncate-single-line text 300))
     (setq codex-repl--invoke-done-info nil)
     (setq codex-repl--invoke-trace-entries nil)
+    (setq codex-repl--last-stream-summary nil
+          codex-repl--final-message-text nil
+          codex-repl--final-text-rendered nil
+          codex-repl--streamed-text-seen nil
+          codex-repl--rendered-assistant-text "")
     (codex-repl--display-invoke-buffer)
+    (codex-repl--append-invoke-trace (make-string 72 ?-) 'shadow)
     (codex-repl--append-invoke-trace
-     (make-string 72 ?-)
-     'shadow)
-    (codex-repl--append-invoke-trace
-     (format "invoke start turn=%d session=%s model=%s effort=%s"
+     (format "invoke start turn=%d session=%s transport=%s"
              codex-repl--invoke-turn-id
              (or codex-repl-session-id "new")
-             (or codex-repl-model "default")
-             (or codex-repl-reasoning-effort "default"))
+             "server-managed")
      'font-lock-keyword-face)
     (codex-repl--append-invoke-trace
      (format "user prompt %s"
@@ -1356,119 +1461,56 @@ Invoke CALLBACK with the final response text."
      'shadow)
     (setq codex-repl--thinking-start-time (float-time)
           codex-repl--last-progress-status "starting")
-    (codex-repl--report-registry-invoke-state! :invoking "starting")
-    (setq proc
-          (make-process
-           :name "codex-repl-codex"
-           :buffer outbuf
-           :command (cons codex-repl-codex-command args)
-           :noquery t
-           :connection-type 'pipe
-           :filter (agent-chat-make-streaming-filter
-                    #'codex-repl--parse-stream-event
-                    repl-buffer)
-           :sentinel
-           (lambda (p _event)
-             (when (and (memq (process-status p) '(exit signal))
-                        (buffer-live-p repl-buffer))
-               (let ((raw (if (buffer-live-p (process-buffer p))
-                              (with-current-buffer (process-buffer p)
-                                (buffer-string))
-                            "")))
-                 (with-current-buffer repl-buffer
-                   (let* ((interrupted? (not (eq agent-chat--pending-process p)))
-                          (exit-code (process-exit-status p))
-                          (elapsed (codex-repl--thinking-elapsed-seconds)))
-                     (if interrupted?
-                         (progn
-                           (codex-repl--append-invoke-trace
-                            (format "invoke interrupted elapsed=%ds" elapsed)
-                            'font-lock-warning-face)
-                           (codex-repl--clear-registry-invoke-state!)
-                           (codex-repl--stop-thinking-heartbeat)
-                           (setq codex-repl--thinking-start-time nil
-                                 codex-repl--last-progress-status nil)
-                           (when (buffer-live-p (process-buffer p))
-                             (kill-buffer (process-buffer p))))
-                       (let* ((parsed (codex-repl--parse-codex-json-output raw))
-                              (sid (plist-get parsed :session-id))
-                              (response (plist-get parsed :text))
-                              (err (plist-get parsed :error))
-                              (retry-count (or retry-attempt 0))
-                              (session-id-attempt codex-repl-session-id)
-                              (resume-active?
-                               (and (stringp session-id-attempt)
-                                    (not (string-empty-p session-id-attempt))))
-                              (stale-session?
-                               (and resume-active?
-                                    (codex-repl--stale-session-error-p
-                                     (string-join (delq nil (list err response raw)) "\n"))))
-                              (retryable? (and resume-active?
-                                               (< retry-count 1)
-                                               (or stale-session?
-                                                   (not (= exit-code 0))))))
-                         (if retryable?
-                             (progn
-                               (codex-repl--append-invoke-trace
-                                (format "invoke resume recovery (exit=%d%s); retrying without resume"
-                                        exit-code
-                                        (if stale-session? ", stale-signature" ""))
-                                'font-lock-warning-face)
-                               (codex-repl--clear-session-state!)
-                               (codex-repl--stop-thinking-heartbeat)
-                               (setq codex-repl--thinking-start-time nil
-                                     codex-repl--last-progress-status "retrying")
-                               (when (eq agent-chat--pending-process p)
-                                 (setq agent-chat--pending-process nil))
-                               (setq agent-chat--pending-process
-                                     (codex-repl--call-codex-async
-                                      text callback (1+ retry-count))))
-                           (let ((final-text (if (= exit-code 0)
-                                                 (codex-repl--apply-irc-send-directive
-                                                  (string-trim response))
-                                               (format "[Error (exit %d): %s]"
-                                                       exit-code
-                                                       (string-trim (or err response))))))
-                             (setq codex-repl--invoke-done-info
-                                   (list :exit-code exit-code
-                                         :elapsed elapsed
-                                         :error err))
-                             (codex-repl--append-invoke-trace
-                              (format "invoke done exit=%d elapsed=%ds session=%s"
-                                      exit-code elapsed (or sid codex-repl-session-id "unknown"))
-                              (if (= exit-code 0)
-                                  'font-lock-string-face
-                                'font-lock-warning-face))
-                             (when (and err (not (string-empty-p (string-trim err))))
-                               (codex-repl--append-invoke-trace
-                                (format "invoke error %s"
-                                        (codex-repl--truncate-single-line err 240))
-                                'font-lock-warning-face))
-                             (unwind-protect
-                                 (progn
-                                   (when (and (stringp sid) (not (string-empty-p sid)))
-                                     (condition-case persist-err
-                                         (codex-repl--persist-session-id! sid)
-                                       (error
-                                        (message "codex-repl persist warning: %s"
-                                                 (error-message-string persist-err)))))
-                                   (when (eq agent-chat--pending-process p)
-                                     (setq agent-chat--pending-process nil))
-                                   (codex-repl--clear-registry-invoke-state!)
-                                   (condition-case callback-err
-                                       (funcall callback final-text)
-                                     (error
-                                      (message "codex-repl callback warning: %s"
-                                               (error-message-string callback-err)))))
-                               (codex-repl--stop-thinking-heartbeat)
-                               (setq codex-repl--thinking-start-time nil
-                                     codex-repl--last-progress-status nil)))))
-                         (when (buffer-live-p (process-buffer p))
-                           (kill-buffer (process-buffer p)))))))))))
-    (codex-repl--start-thinking-heartbeat repl-buffer)
-    (process-send-string proc payload)
-    (process-send-eof proc)
-    proc))
+    (let ((proc
+           (make-process
+            :name "codex-repl-stream"
+            :buffer outbuf
+            :command (list "curl" "-N" "-sS" "--max-time" "1800"
+                           "-H" "Content-Type: application/json"
+                           "-d" json-body url)
+            :noquery t
+            :connection-type 'pipe
+            :filter
+            (lambda (p output)
+              (when (buffer-live-p (process-buffer p))
+                (with-current-buffer (process-buffer p)
+                  (goto-char (point-max))
+                  (insert output)))
+              (setq line-buffer (concat line-buffer output))
+              (let ((lines (split-string line-buffer "\n")))
+                (setq line-buffer (car (last lines)))
+                (dolist (line (butlast lines))
+                  (when (and (not (string-empty-p (string-trim line)))
+                             (buffer-live-p repl-buffer))
+                    (with-current-buffer repl-buffer
+                      (codex-repl--parse-stream-event line))))))
+            :sentinel
+            (lambda (p _event)
+              (when (and (memq (process-status p) '(exit signal))
+                         (buffer-live-p repl-buffer))
+                (let ((raw (if (buffer-live-p (process-buffer p))
+                               (with-current-buffer (process-buffer p)
+                                 (buffer-string))
+                             "")))
+                  (with-current-buffer repl-buffer
+                    (if (not (eq agent-chat--pending-process p))
+                        (progn
+                          (when agent-chat--streaming-started
+                            (agent-chat-end-streaming-message)
+                            (setq codex-repl--last-stream-summary nil))
+                          (codex-repl--append-invoke-trace
+                           (format "invoke interrupted elapsed=%ds"
+                                   (codex-repl--thinking-elapsed-seconds))
+                           'font-lock-warning-face)
+                          (codex-repl--stop-thinking-heartbeat)
+                          (setq codex-repl--thinking-start-time nil
+                                codex-repl--last-progress-status nil))
+                      (codex-repl--finish-invoke
+                       p (codex-repl--find-done-event raw) raw callback)))
+                  (when (buffer-live-p (process-buffer p))
+                    (kill-buffer (process-buffer p)))))))))
+      (codex-repl--start-thinking-heartbeat repl-buffer)
+      proc)))
 
 ;;; Modeline
 
@@ -1478,26 +1520,26 @@ Invoke CALLBACK with the final response text."
 (defun codex-repl--compute-modeline-state ()
   "Return plist describing current transport/modeline state."
   (let* ((session (or codex-repl-session-id "pending"))
-         (agency-up (agent-chat-agency-available-p))
+         (api-base (codex-repl--resolved-api-base))
+         (agency-up (codex-repl--base-reachable-p api-base))
          (irc-up (agent-chat-irc-available-p))
          (transports
           (append
-           (list (list :key 'codex-repl
-                       :label (format "emacs-codex-repl (active, session %s)" session)
-                       :status 'active
+           (list (list :key 'agency
+                       :label (format "agency (%s/api/alpha/invoke-stream, session %s)"
+                                      (or api-base "unresolved")
+                                      session)
+                       :status (if agency-up 'active 'configured)
                        :session session)
-                 (list :key 'agency
-                       :label "agency (/api/alpha/invoke)"
-                       :status (if agency-up 'available 'configured))
-                 (list :key 'cli
-                       :label "cli (codex exec --json)"
+                 (list :key 'codex-repl
+                       :label "emacs-codex-repl (UI)"
                        :status 'available))
            (when irc-up
              (list (list :key 'irc
                          :label "irc (#futon :6667, available)"
                          :status 'available))))))
-    (list :current 'codex-repl
-          :current-label "emacs-codex-repl"
+    (list :current 'agency
+          :current-label "agency (/api/alpha/invoke-stream)"
           :session-id session
           :agency-available? agency-up
           :irc-available? irc-up
@@ -1654,7 +1696,6 @@ With REFRESH non-nil, force an immediate refresh."
          (format "interrupt requested pid=%s"
                  (or (process-id proc) "?"))
          'font-lock-warning-face)
-        (codex-repl--clear-registry-invoke-state!)
         (codex-repl--stop-thinking-heartbeat)
         (setq codex-repl--thinking-start-time nil
               codex-repl--last-progress-status "interrupted")
@@ -1664,12 +1705,57 @@ With REFRESH non-nil, force an immediate refresh."
      'shadow)
     (message "Nothing to interrupt")))
 
+(defun codex-repl--reset-via-api ()
+  "Try to reset Codex session via the agent reset-session HTTP endpoint.
+Returns (ok . old-session-id) on success, nil on failure."
+  (let* ((api-base (or (codex-repl--resolved-api-base)
+                       (string-remove-suffix "/" codex-repl-api-url)))
+         (url (format "%s/api/alpha/agents/%s/reset-session"
+                      api-base
+                      codex-repl-agency-agent-id))
+         (url-request-method "POST")
+         (url-request-extra-headers
+          '(("Content-Type" . "application/json")))
+         (url-request-data "{}")
+         (buffer (condition-case nil
+                     (url-retrieve-synchronously url t t 10)
+                   (error nil)))
+         (result nil))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (goto-char (point-min))
+        (when (re-search-forward "\n\n" nil t)
+          (condition-case nil
+              (let* ((json-obj (json-parse-string
+                                (buffer-substring (point) (point-max))
+                                :object-type 'alist
+                                :null-object nil)))
+                (when (alist-get 'ok json-obj)
+                  (setq result (cons t (alist-get 'old-session-id json-obj)))))
+            (error nil))))
+      (kill-buffer buffer))
+    result))
+
+(defun codex-repl--reset-via-drawbridge ()
+  "Try to reset Codex session via Drawbridge as a fallback.
+Returns (ok . old-session-id) on success, nil on failure."
+  (let* ((clj-code (format "(futon3c.agency.registry/reset-session! %S)"
+                           codex-repl-agency-agent-id))
+         (result (codex-repl--drawbridge-eval clj-code 10))
+         (ok (plist-get result :ok))
+         (value (plist-get result :value)))
+    (when ok
+      (cons t value))))
+
 (defun codex-repl-new-session ()
-  "Clear local Codex session state so next turn starts a fresh thread."
+  "Reset the server-managed Codex session so the next turn starts fresh."
   (interactive)
   (when (process-live-p agent-chat--pending-process)
     (user-error "Codex is still responding; interrupt first (C-c C-c)"))
-  (let ((old-sid codex-repl-session-id))
+  (let* ((api-result (codex-repl--reset-via-api))
+         (result (or api-result (codex-repl--reset-via-drawbridge)))
+         (ok (car result))
+         (old-sid (or (cdr result) codex-repl-session-id)))
     (setq codex-repl-session-id nil
           agent-chat--session-id nil
           codex-repl--evidence-session-id nil
@@ -1682,12 +1768,21 @@ With REFRESH non-nil, force an immediate refresh."
     (codex-repl-refresh-header-line t (current-buffer))
     (agent-chat-insert-message
      "system"
-     (format "[Session reset locally%s. Next message starts fresh.]"
-             (if (and (stringp old-sid) (not (string-empty-p old-sid)))
-                 (format " (was %s)" old-sid)
-               "")))
+     (cond
+      (ok
+       (format "[Session reset on server%s. Next message starts fresh.]"
+               (if (and (stringp old-sid) (not (string-empty-p old-sid)))
+                   (format " (was %s)" old-sid)
+                 "")))
+      (t
+       (format "[Local session cleared; server reset unconfirmed%s.]"
+               (if (and (stringp old-sid) (not (string-empty-p old-sid)))
+                   (format " (was %s)" old-sid)
+                 "")))))
     (goto-char (point-max))
-    (message "codex-repl: session reset (was %s)" (or old-sid "nil"))))
+    (message "codex-repl: session reset %s (was %s)"
+             (if ok "via server" "locally only")
+             (or old-sid "nil"))))
 
 ;;; Mode
 
@@ -1725,8 +1820,6 @@ Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh sess
 (defun codex-repl-clear ()
   "Clear display and re-draw header. Session continues."
   (interactive)
-  (when (process-live-p agent-chat--pending-process)
-    (codex-repl--clear-registry-invoke-state!))
   (codex-repl--stop-thinking-heartbeat)
   (setq codex-repl--thinking-start-time nil
         codex-repl--last-progress-status nil)
@@ -1745,6 +1838,7 @@ Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh sess
          :agent-id "codex-1"
          :thinking-text "codex is thinking..."
          :thinking-prop 'codex-repl-thinking))
+  (agent-chat-invariants-setup)
   (codex-repl--ensure-header-line!))
 
 ;;;###autoload

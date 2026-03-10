@@ -7,6 +7,8 @@
 (require 'cl-lib)
 (require 'json)
 (require 'subr-x)
+(require 'url)
+(require 'url-util)
 
 ;;; Faces
 
@@ -95,10 +97,32 @@ Distinct from agent-name which is the display name.")
 (defvar-local agent-chat--thinking-property nil
   "Text property symbol used to mark thinking lines.")
 
+(defvar-local agent-chat--turn-start-time nil
+  "Epoch time (float) when the current turn started.")
+
+(defvar-local agent-chat--on-turn-end nil
+  "Function called with elapsed seconds (float) after each turn completes.
+Set by agent-chat-invariants or other modules.")
+
 (defvar-local agent-chat--insert-message-hook nil
   "Hook called with (NAME TEXT) before inserting a message.
 Functions on this hook may modify TEXT by returning a replacement string.
 If a function returns nil, the original TEXT is used.")
+
+(defvar-local agent-chat--streaming-marker nil
+  "Point marker for appending streamed agent output.")
+
+(defvar-local agent-chat--streaming-started nil
+  "Non-nil when streaming output has started for the current turn.")
+
+(defvar-local agent-chat--last-evidence-id nil
+  "Last evidence entry ID for the current chat buffer.")
+
+(defvar-local agent-chat--evidence-session-id nil
+  "Session ID associated with `agent-chat--last-evidence-id`.")
+
+(defvar-local agent-chat--last-emitted-session-id nil
+  "Last session ID for which a session-start evidence entry was emitted.")
 
 ;;; Display
 
@@ -193,6 +217,52 @@ Optional FACE overrides `agent-chat-thinking-face'."
       (insert (propertize (concat status-text "\n")
                           'face (or face 'agent-chat-thinking-face)
                           prop t)))))
+
+(defun agent-chat-begin-streaming-message (name &optional face)
+  "Insert NAME prefix above prompt and set streaming marker."
+  (let ((inhibit-read-only t)
+        (name-face (or face
+                       (cdr (assoc name agent-chat--face-alist))
+                       'agent-chat-joe-face)))
+    (agent-chat-remove-thinking)
+    (save-excursion
+      (goto-char (marker-position agent-chat--prompt-marker))
+      (let ((name-start (point)))
+        (insert (format "%s: " name))
+        (let ((name-end (point)))
+          (overlay-put (make-overlay name-start name-end) 'face name-face)
+          (setq agent-chat--streaming-marker (copy-marker (point)))
+          (setq agent-chat--streaming-started t))))))
+
+(defun agent-chat-stream-text (text &optional face)
+  "Insert TEXT at the streaming marker with FACE or text face."
+  (when (and (stringp text)
+             (not (string-empty-p text))
+             agent-chat--streaming-marker
+             (marker-position agent-chat--streaming-marker))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (marker-position agent-chat--streaming-marker))
+        (let ((start (point)))
+          (insert text)
+          (overlay-put (make-overlay start (point))
+                       'face (or face 'agent-chat-text-face))
+          (set-marker agent-chat--streaming-marker (point))))
+      (agent-chat-scroll-to-bottom))))
+
+(defun agent-chat-end-streaming-message ()
+  "Finalize streamed message and clear streaming state."
+  (when (and agent-chat--streaming-marker
+             (marker-position agent-chat--streaming-marker))
+    (let ((inhibit-read-only t))
+      (agent-chat-remove-thinking)
+      (save-excursion
+        (goto-char (marker-position agent-chat--streaming-marker))
+        (insert "\n\n"))))
+  (when agent-chat--streaming-marker
+    (set-marker agent-chat--streaming-marker nil))
+  (setq agent-chat--streaming-marker nil
+        agent-chat--streaming-started nil))
 
 ;;; Streaming filter
 
@@ -593,6 +663,7 @@ additionally posted to the evidence HTTP endpoint."
         (when (functionp before-send)
           (funcall before-send trimmed))
         (agent-chat-insert-thinking)
+        (setq agent-chat--turn-start-time (float-time))
         (redisplay)
         (condition-case err
             (pcase (car walkie)
@@ -616,6 +687,18 @@ additionally posted to the evidence HTTP endpoint."
                                     (agent-chat-insert-message agent-name response)
                                     (when (functionp on-response)
                                       (funcall on-response response))
+                                    ;; Turn timing and invariants
+                                    (let ((elapsed (if agent-chat--turn-start-time
+                                                       (- (float-time)
+                                                          agent-chat--turn-start-time)
+                                                     0)))
+                                      (setq agent-chat--turn-start-time nil)
+                                      (when (functionp agent-chat--on-turn-end)
+                                        (condition-case turn-err
+                                            (funcall agent-chat--on-turn-end elapsed)
+                                          (error
+                                           (message "agent-chat turn-end hook error: %s"
+                                                    (error-message-string turn-err))))))
                                     (goto-char (point-max))
                                     (agent-chat-scroll-to-bottom))))))))
           (error
@@ -749,6 +832,157 @@ Replaces the `(session: ...)' text in the first line."
         (when (search-forward old-text (line-end-position 2) t)
           (replace-match (propertize new-text 'face 'font-lock-comment-face) t t)))
       (setq agent-chat--session-id new-id))))
+
+;;; Evidence helpers
+
+(defun agent-chat-evidence-enabled-p (evidence-url)
+  "Return non-nil when EVIDENCE-URL is configured."
+  (and (stringp evidence-url)
+       (not (string-empty-p evidence-url))))
+
+(defun agent-chat-evidence-base-url (evidence-url)
+  "Return evidence API base URL without trailing /api/alpha/evidence."
+  (let ((value (string-remove-suffix "/" (or evidence-url ""))))
+    (replace-regexp-in-string "/api/alpha/evidence\\'" "" value)))
+
+(defun agent-chat--parse-json-string (text)
+  "Parse TEXT as JSON plist, or nil on error."
+  (when (and (stringp text) (not (string-empty-p text)))
+    (condition-case nil
+        (json-parse-string text :object-type 'plist)
+      (error nil))))
+
+(defun agent-chat-evidence-request-json (method url timeout &optional payload)
+  "Send METHOD to URL with JSON PAYLOAD and return plist with :status and :json."
+  (let* ((url-request-method method)
+         (url-request-extra-headers
+          '(("Content-Type" . "application/json")
+            ("Accept" . "application/json")))
+         (url-request-data (when payload
+                             (encode-coding-string (json-encode payload) 'utf-8)))
+         (buffer (condition-case nil
+                     (url-retrieve-synchronously url t t timeout)
+                   (error nil))))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (goto-char (point-min))
+        (let ((status (or (and (boundp 'url-http-response-status) url-http-response-status) 0)))
+          (re-search-forward "\n\n" nil 'move)
+          (let* ((body (buffer-substring-no-properties (point) (point-max)))
+                 (parsed (agent-chat--parse-json-string body)))
+            (kill-buffer buffer)
+            (list :status status :json parsed)))))))
+
+(defun agent-chat-evidence-post-entry-id (evidence-url timeout payload)
+  "POST PAYLOAD to evidence API and return created evidence id, or nil."
+  (when (agent-chat-evidence-enabled-p evidence-url)
+    (let* ((url (format "%s/api/alpha/evidence"
+                        (agent-chat-evidence-base-url evidence-url)))
+           (response (agent-chat-evidence-request-json "POST" url timeout payload))
+           (status (plist-get response :status))
+           (parsed (plist-get response :json)))
+      (when (and (integerp status) (<= 200 status) (< status 300))
+        (or (plist-get parsed :evidence/id)
+            (plist-get (plist-get parsed :entry) :evidence/id))))))
+
+(defun agent-chat-evidence-fetch-latest-id (evidence-url timeout sid)
+  "Fetch most recent evidence id for session SID."
+  (when (and (agent-chat-evidence-enabled-p evidence-url)
+             (stringp sid)
+             (not (string-empty-p sid)))
+    (let* ((query (format "session-id=%s&limit=1"
+                          (url-hexify-string sid)))
+           (url (format "%s/api/alpha/evidence?%s"
+                        (agent-chat-evidence-base-url evidence-url)
+                        query))
+           (response (agent-chat-evidence-request-json "GET" url timeout nil))
+           (status (plist-get response :status))
+           (entries (and (integerp status)
+                         (<= 200 status)
+                         (< status 300)
+                         (plist-get (plist-get response :json) :entries)))
+           (entry (and (listp entries) (car entries))))
+      (and (listp entry)
+           (plist-get entry :evidence/id)))))
+
+(defun agent-chat-sync-evidence-anchor! (evidence-url timeout sid session-var last-id-var &optional force)
+  "Refresh evidence anchor state for SID into SESSION-VAR and LAST-ID-VAR."
+  (when (and (stringp sid)
+             (not (string-empty-p sid))
+             (or force
+                 (not (equal sid (symbol-value session-var)))
+                 (null (symbol-value last-id-var))))
+    (set session-var sid)
+    (set last-id-var (agent-chat-evidence-fetch-latest-id evidence-url timeout sid))))
+
+(defun agent-chat-emit-session-start-evidence!
+    (evidence-url timeout sid session-var last-id-var last-emitted-var source tags)
+  "Emit a lightweight session-start evidence entry for SID."
+  (when (and (stringp sid) (not (string-empty-p sid)))
+    (unless (equal sid (symbol-value session-var))
+      (set session-var sid)
+      (set last-id-var nil))
+    (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t)
+    (when (and (not (equal sid (symbol-value last-emitted-var)))
+               (not (and (stringp (symbol-value last-id-var))
+                         (not (string-empty-p (symbol-value last-id-var)))))
+               (agent-chat-evidence-enabled-p evidence-url))
+      (let ((payload `((subject . ((ref/type . "session")
+                                   (ref/id . ,sid)))
+                       (type . "coordination")
+                       (claim-type . "goal")
+                       (author . ,(or (getenv "USER") user-login-name "joe"))
+                       (session-id . ,sid)
+                       (body . ((event . "session-start")
+                                (source . ,source)
+                                (mode . "emacs")))
+                       (tags . ,(apply #'vector tags)))))
+        (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+          (set last-id-var new-id))
+        (set last-emitted-var sid)))
+    (unless (and (stringp (symbol-value last-id-var))
+                 (not (string-empty-p (symbol-value last-id-var))))
+      (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t))))
+
+(defun agent-chat-emit-turn-evidence!
+    (evidence-url timeout log-turns sid role text assistant-author transport tags session-var last-id-var)
+  "Emit turn evidence for ROLE and TEXT using the shared evidence helpers."
+  (when (and log-turns
+             (stringp text)
+             (not (string-empty-p (string-trim text)))
+             (stringp sid)
+             (not (string-empty-p sid))
+             (agent-chat-evidence-enabled-p evidence-url))
+    (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var)
+    (let* ((trimmed (string-trim text))
+           (is-user (string= role "user"))
+           (is-error (string-prefix-p "[Error" trimmed))
+           (claim-type (cond
+                        (is-user "question")
+                        (is-error "correction")
+                        (t "observation")))
+           (author (if is-user
+                       (or (getenv "USER") user-login-name "joe")
+                     assistant-author))
+           (role-tag (if is-user "user" "assistant"))
+           (payload `((subject . ((ref/type . "session")
+                                  (ref/id . ,sid)))
+                      (type . "coordination")
+                      (claim-type . ,claim-type)
+                      (author . ,author)
+                      (session-id . ,sid)
+                      (body . ((event . "chat-turn")
+                               (transport . ,transport)
+                               (role . ,role)
+                               (text . ,trimmed)))
+                      (tags . ,(apply #'vector (append tags (list role-tag)))))))
+      (when (and (stringp (symbol-value last-id-var))
+                 (not (string-empty-p (symbol-value last-id-var))))
+        (setq payload (append payload
+                              `((in-reply-to . ,(symbol-value last-id-var))))))
+      (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+        (set session-var sid)
+        (set last-id-var new-id)))))
 
 ;;; Transport availability checks (shared)
 
