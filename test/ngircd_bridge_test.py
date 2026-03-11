@@ -89,5 +89,57 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
         self.assertNotIn("no execution evidence", text)
 
 
+class NgircdBridgePendingTimeoutTest(unittest.TestCase):
+    def test_response_is_pending_timeout(self):
+        self.assertTrue(bridge.IRCBot._response_is_pending_timeout({"pending": True}))
+        self.assertFalse(bridge.IRCBot._response_is_pending_timeout({"pending": False}))
+
+    def test_job_timeout_is_provisional_while_agent_invoking(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        job = {"state": "timeout", "terminal-code": "timeout"}
+        status = {"status": "invoking"}
+        self.assertTrue(bot._job_timeout_while_agent_still_invoking(job, status))
+        self.assertFalse(bot._job_timeout_while_agent_still_invoking(job, {"status": "idle"}))
+
+    def test_pending_invoke_waits_past_timeout_until_agent_is_idle(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_agent_status", side_effect=[
+            {"status": "invoking"},
+            {"status": "idle"},
+        ]), mock.patch.object(bot, "_fetch_job", side_effect=[
+            {"job-id": "codex-job-9", "state": "timeout", "terminal-code": "timeout"},
+            {"job-id": "codex-job-9", "state": "timeout", "terminal-code": "timeout"},
+        ]), mock.patch.object(bridge.time, "sleep"):
+            result = bot._wait_for_pending_invoke_terminal("codex-job-9")
+        self.assertEqual("job", result["kind"])
+        self.assertEqual("timeout", result["job"]["state"])
+
+    def test_pending_invoke_emits_still_running_then_terminal_reply(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        response = {
+            "ok": False,
+            "pending": True,
+            "job_id": "codex-job-11",
+            "error": "invoke timeout: codex-1 is already invoking",
+        }
+        awaited = {
+            "kind": "job",
+            "job": {
+                "job-id": "codex-job-11",
+                "state": "done",
+                "result-summary": "SAT check finished; artifact refs: abc123",
+                "trace-id": "invoke-123",
+            },
+        }
+        with mock.patch.object(bot, "_say") as say, \
+             mock.patch.object(bot, "_wait_for_pending_invoke_terminal", return_value=awaited), \
+             mock.patch.object(bot, "_record_job_delivery_receipt") as record:
+            bot._handle_pending_invoke(response, "#math", "codex-job-11")
+        self.assertEqual(2, say.call_count)
+        self.assertIn("[still running codex-job-11]", say.call_args_list[0].args[0])
+        self.assertIn("SAT check finished; artifact refs: abc123", say.call_args_list[1].args[0])
+        record.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
