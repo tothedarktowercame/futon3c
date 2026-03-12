@@ -80,10 +80,20 @@ Full-stack launch (`dev`) behavior:
 - defaults `FUTON1A_STATIC_DIR` to `..\futon4\dev\web` when unset and assets exist
 - defaults `CODEX_SESSION_FILE` to `<repo>/.state/codex-irc/session-id`
   for a dedicated IRC codex continuity lane
+- defaults `CODEX_SANDBOX=read-only` when unset (most constrained sandbox)
+- defaults `CODEX_APPROVAL_POLICY=untrusted` when unset; if `CODEX_APPROVAL`
+  is set and `CODEX_APPROVAL_POLICY` is unset, launcher maps `CODEX_APPROVAL`
+  into `CODEX_APPROVAL_POLICY`
 - defaults `FUTON3C_CODEX_AGENT_ID=codex-1` (Unix-compatible behavior)
+- defaults `FUTON3C_REGISTER_VSCODE_CODEX=true`
+- defaults `FUTON3C_VSCODE_AGENT_ID=codex-vscode`
+- defaults `FUTON3C_VSCODE_CODEX_SESSION_FILE=<repo>/.state/codex-vscode/session-id`
+  so the separate VS Code codex lane stays live in every Windows dev-stack mode
 - defaults `FUTON3C_CODEX_WS_BRIDGE=false` so codex invokes run local/inline
   for this stack (prevents WS routing from collapsing into the active VS Code
   codex chat lane)
+- defaults `FUTON3C_REGISTER_CORPUS=false`; `corpus-1` is reserved for the
+  FrontierMath-local lane instead of appearing in every generic dev bring-up
 - defaults `FUTON3C_RELAY_CODEX=false` and `FUTON3C_RELAY_CLAUDE=false`
   so the external `ngircd-bridge` is the IRC invoke authority for this
   launcher and the JVM-side dispatch relays do not double-handle mentions
@@ -96,6 +106,11 @@ Full-stack launch (`dev`) behavior:
 - if `BRIDGE_BOTS` includes `zcodex`, launcher auto-defaults:
   - `FUTON3C_CODEX_AGENT_ID=codex-1` (unless already set)
   - `NICK_AGENT_MAP=zcodex:codex-1` (unless already set)
+- bridge bare `!` ownership can be overridden per room with:
+  - `IRC_COMMAND_OWNER_AGENT_MAP=#channel:agent-id,...`
+  - this is keyed by internal agent id, not IRC nick
+  - when this map is set, it is authoritative for that bridge:
+    unmapped rooms get no bare `!` response from that bridge
 - if `BRIDGE_BOTS=codex`, applies `FUTON3C_REGISTER_CLAUDE=false` and
   leaves `FUTON3C_RELAY_CLAUDE=false` before runtime startup
 - if `FUTON3C_REPOS` is unset and a local installation root exists at
@@ -113,10 +128,34 @@ Full-stack launch (`dev`) behavior:
 - waits for runtime ports, then starts `ngircd-bridge`
 
 IRC lane switch for `dev`:
+- unsupported positional args or unknown switches now fail fast with usage
+  guidance instead of being silently forwarded
 - default (no flag) -> local lane
   - starts/waits for local futon3c IRC listener on `FUTON3C_IRC_PORT` (default `6667`)
   - bridge defaults to `IRC_HOST=127.0.0.1`, `IRC_PORT=<FUTON3C_IRC_PORT>`,
     `IRC_CHANNEL=#futon`
+- `--frontiermath-local` -> local FrontierMath onboarding lane
+  - keeps the runtime fully local (no remote IRC)
+  - uses local built-in IRC on `FUTON3C_IRC_PORT` (default `6667`)
+  - preserves the baseline room as `IRC_CHANNEL=#futon` when unset
+  - ensures `IRC_CHANNELS` includes `#math`
+  - defaults `BRIDGE_BOTS=codex`
+  - defaults `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
+    when unset
+  - defaults `FUTON3C_REGISTER_CORPUS=true` when unset so `corpus-1` is only
+    created for this FrontierMath-specific local mode
+  - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-frontiermath-local/session-id`
+    when unset, to keep solo/local FrontierMath continuity separate from both
+    the normal local IRC lane and the peer-collaboration lane
+  - reasserts constrained Codex defaults at lane setup time:
+    - `CODEX_SANDBOX=read-only` when unset
+    - `CODEX_APPROVAL_POLICY=untrusted` when unset
+    - `CODEX_APPROVAL` is mapped into `CODEX_APPROVAL_POLICY` when needed
+  - defaults `IRC_COMMAND_OWNER_AGENT_MAP=#futon:codex-1,#math:codex-1`
+    when unset so both the baseline room and the added local `#math` room
+    have explicit bare-command ownership on this bridge
+  - intended for solo/local FrontierMath enactment, not for joining Joe's
+    live shared `#math` substrate
 - `--remote-irc` -> linode lane (alias: joe lane)
   - skips local IRC port kill/wait in `dev-stack-windows.bat`
   - forces `BRIDGE_BOTS=zcodex`
@@ -126,13 +165,16 @@ IRC lane switch for `dev`:
     when unset (no `zclaude` lane)
   - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
     when unset, to keep Zabuton invokes out of the active developer chat session
+  - defaults `IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1`
+    when unset, so Rob-owned `#zabuton` remains bare-command-owned by
+    `codex-1`
   - defaults `FUTON3C_IRC_PORT=0` when unset (disable local built-in IRC)
   - bridge defaults to `IRC_HOST=172.236.28.208`, `IRC_PORT=6667`,
     `IRC_CHANNEL=#zabuton`
 - `--math-irc`
   - ensures `IRC_CHANNELS` includes `#math`
   - preserves the primary channel selected by the active lane
-    (`#futon` local, `#zabuton` linode)
+    (`#futon` local, `#futon` plus `#math` frontiermath-local, `#zabuton` linode)
   - intended for `README-math.md` bring-up where `zcodex` should join both
     `#zabuton` and `#math`
   - joining both channels does not imply automatic cross-channel replies;
@@ -141,9 +183,13 @@ IRC lane switch for `dev`:
   - when combined with `--remote-irc`, the current Windows trial model keeps:
     - `FUTON3C_CODEX_AGENT_ID=codex-1`
     - `NICK_AGENT_MAP=zcodex:codex-1`
+    - `IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1`
     - `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
   - this means `zcodex` is an IRC nick alias for the shared remote IRC codex
     lane, not a separate local math-agent identity
+  - bare `!` command ownership is room-scoped and keyed by internal agent id;
+    because `#math` is intentionally left unmapped on this bridge,
+    `@zcodex ...` still works there but bare `!` commands do not
   - `codex-vscode` still remains the separate VS Code lane; this trial only
     asks whether one shared `codex-1` worker is already sufficient for both
     `#zabuton` and `#math`
@@ -153,6 +199,12 @@ IRC lane switch for `dev`:
 Examples:
 - local IRC (current behavior):
   - `scripts/windows/futon-windows.bat dev`
+- local FrontierMath onboarding lane:
+  - `scripts/windows/futon-windows.bat dev --frontiermath-local`
+- launcher help / validation:
+  - `scripts/windows/dev-stack-windows.bat --help`
+  - `scripts/windows/dev-stack-windows.bat --frontier-math`
+    - now fails fast and suggests `--frontiermath-local`
 - Joe/Linode IRC lane:
   - `scripts/windows/futon-windows.bat dev --remote-irc`
 - Joe/Linode IRC lane plus `#math`:

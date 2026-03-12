@@ -37,7 +37,7 @@ if "!FOUND!"=="0" (
   echo [stop-futon1a] No process listening on port %PORT%.
 )
 
-call :is_port_listening %PORT%
+call :wait_for_port_closed %PORT% 10
 if not errorlevel 1 (
   1>&2 echo [stop-futon1a] ERROR: port %PORT% is still listening after stop attempt.
   set "FAILED=1"
@@ -63,3 +63,25 @@ if defined PORT_LISTENING (
 ) else (
   exit /b 1
 )
+
+:wait_for_port_closed
+setlocal EnableDelayedExpansion
+set "WAIT_PORT=%~1"
+set "WAIT_TIMEOUT=%~2"
+if not defined WAIT_TIMEOUT set "WAIT_TIMEOUT=10"
+set /a WAIT_SECS=0
+:wait_for_port_closed_loop
+call :is_port_listening !WAIT_PORT!
+if errorlevel 1 (
+  endlocal & exit /b 1
+)
+if !WAIT_SECS! GEQ !WAIT_TIMEOUT! (
+  endlocal & exit /b 0
+)
+call :sleep_1s
+set /a WAIT_SECS+=1
+goto wait_for_port_closed_loop
+
+:sleep_1s
+ping -n 2 127.0.0.1 >nul 2>nul
+exit /b 0

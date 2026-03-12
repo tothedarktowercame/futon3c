@@ -11,12 +11,12 @@ if defined FUTON3C_REPOS (
   echo [dev-windows] FUTON3C_REPOS unset; using futon3c runtime defaults.
 )
 
-if not defined CODEX_SANDBOX set "CODEX_SANDBOX=danger-full-access"
+if not defined CODEX_SANDBOX set "CODEX_SANDBOX=read-only"
 if not defined CODEX_APPROVAL_POLICY (
   if defined CODEX_APPROVAL (
     set "CODEX_APPROVAL_POLICY=%CODEX_APPROVAL%"
   ) else (
-    set "CODEX_APPROVAL_POLICY=never"
+    set "CODEX_APPROVAL_POLICY=untrusted"
   )
 )
 if not defined CODEX_REASONING_EFFORT set "CODEX_REASONING_EFFORT=high"
