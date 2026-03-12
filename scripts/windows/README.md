@@ -80,6 +80,10 @@ Full-stack launch (`dev`) behavior:
 - defaults `FUTON1A_STATIC_DIR` to `..\futon4\dev\web` when unset and assets exist
 - defaults `CODEX_SESSION_FILE` to `<repo>/.state/codex-irc/session-id`
   for a dedicated IRC codex continuity lane
+- defaults `CODEX_SANDBOX=read-only` when unset (most constrained sandbox)
+- defaults `CODEX_APPROVAL_POLICY=untrusted` when unset; if `CODEX_APPROVAL`
+  is set and `CODEX_APPROVAL_POLICY` is unset, launcher maps `CODEX_APPROVAL`
+  into `CODEX_APPROVAL_POLICY`
 - defaults `FUTON3C_CODEX_AGENT_ID=codex-1` (Unix-compatible behavior)
 - defaults `FUTON3C_REGISTER_VSCODE_CODEX=true`
 - defaults `FUTON3C_VSCODE_AGENT_ID=codex-vscode`
@@ -143,6 +147,10 @@ IRC lane switch for `dev`:
   - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-frontiermath-local/session-id`
     when unset, to keep solo/local FrontierMath continuity separate from both
     the normal local IRC lane and the peer-collaboration lane
+  - reasserts constrained Codex defaults at lane setup time:
+    - `CODEX_SANDBOX=read-only` when unset
+    - `CODEX_APPROVAL_POLICY=untrusted` when unset
+    - `CODEX_APPROVAL` is mapped into `CODEX_APPROVAL_POLICY` when needed
   - defaults `IRC_COMMAND_OWNER_AGENT_MAP=#futon:codex-1,#math:codex-1`
     when unset so both the baseline room and the added local `#math` room
     have explicit bare-command ownership on this bridge
