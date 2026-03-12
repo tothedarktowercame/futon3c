@@ -43,6 +43,22 @@
         (is (:ok reload))
         (is (= 2 (get-in reload [:result :proof/version])))))))
 
+(deftest explicit-proof-state-root-overrides-default-path
+  (let [cwd (fix/temp-dir!)
+        override-root (io/file cwd "mfuton-proof-state")
+        default-root (io/file cwd "data" "proof-state")
+        override-file (io/file override-root "P-override.edn")
+        default-file (io/file default-root "P-override.edn")
+        config {:cwd cwd
+                :proof-state-root (.getPath override-root)}
+        backend (pb/make-proof-backend config (tools/make-mock-backend))]
+    (pb/init-problem! config "P-override" "Override root problem" "All cases verified")
+    (is (.exists override-file))
+    (is (not (.exists default-file)))
+    (let [load-result (tools/execute-tool backend :proof-load ["P-override"])]
+      (is (:ok load-result))
+      (is (= "P-override" (get-in load-result [:result :proof/problem-id]))))))
+
 (deftest load-nonexistent-problem
   (let [{:keys [backend]} (make-test-backend)
         result (tools/execute-tool backend :proof-load ["P-nonexistent"])]

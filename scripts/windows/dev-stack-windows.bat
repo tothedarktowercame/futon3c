@@ -53,6 +53,7 @@ if "%FRONTIERMATH_LOCAL%"=="1" (
   if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
   if not defined FUTON3C_REGISTER_CORPUS set "FUTON3C_REGISTER_CORPUS=true"
   if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-frontiermath-local\session-id"
+  if not defined FUTON3C_PROOF_STATE_ROOT set "FUTON3C_PROOF_STATE_ROOT=%LOCAL_INSTALLATION_ROOT%\data\frontiermath-local\FM-001\active"
   rem FrontierMath local lane defaults to the most constrained Codex execution mode.
   rem Operators can still override via env before launch.
   if not defined CODEX_SANDBOX set "CODEX_SANDBOX=read-only"
