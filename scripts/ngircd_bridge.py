@@ -154,6 +154,22 @@ def _parse_channel_agent_map(raw):
     return mapping
 
 
+def _dedupe_channels(channels):
+    """Deduplicate channel list while preserving first-seen order."""
+    seen = set()
+    out = []
+    for channel in channels:
+        normalized = (channel or "").strip()
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(normalized)
+    return out
+
+
 def resolve_progress_send_bases(invoke_base):
     """Return ordered Agency bases for agent-initiated IRC POST hints.
 
@@ -176,10 +192,14 @@ IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
 # IRC_CHANNEL is the primary channel; IRC_CHANNELS adds extras (comma-separated).
 # E.g. IRC_CHANNEL=#futon IRC_CHANNELS=#math,#ops → bot joins all three.
 IRC_CHANNEL = os.environ.get("IRC_CHANNEL", "#futon")
-IRC_CHANNELS = [IRC_CHANNEL] + [
-    ch.strip() for ch in os.environ.get("IRC_CHANNELS", "").split(",")
-    if ch.strip() and ch.strip() != IRC_CHANNEL
-]
+IRC_CHANNELS = _dedupe_channels(
+    [IRC_CHANNEL]
+    + [
+        ch.strip()
+        for ch in os.environ.get("IRC_CHANNELS", "").split(",")
+        if ch.strip() and ch.strip() != IRC_CHANNEL
+    ]
+)
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
 PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
@@ -235,6 +255,13 @@ INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
 _RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()
 _CHANNEL_SLUG = IRC_CHANNEL.lstrip("#").replace("/", "_")
 PIDFILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}.pid")
+HEALTH_FILES = [
+    os.path.join(
+        _RUNTIME_DIR,
+        f"ngircd-bridge-{channel.lstrip('#').replace('/', '_')}-health.json",
+    )
+    for channel in IRC_CHANNELS
+]
 HEALTH_FILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}-health.json")
 HEALTH_INTERVAL = 30  # seconds between health file writes
 
@@ -287,7 +314,7 @@ def acquire_pidfile():
 
 def _cleanup():
     """Remove health and PID files on clean shutdown."""
-    for path in [HEALTH_FILE, PIDFILE]:
+    for path in list(HEALTH_FILES) + [PIDFILE]:
         try:
             os.unlink(path)
         except OSError:
@@ -1980,7 +2007,7 @@ class IRCBot:
 
 
 def _write_health(bots, started_at):
-    """Atomically write bridge health JSON to HEALTH_FILE."""
+    """Atomically write bridge health JSON to all channel-scoped health files."""
     health = {
         "pid": os.getpid(),
         "started_at": started_at,
@@ -1991,15 +2018,17 @@ def _write_health(bots, started_at):
         "irc_host": IRC_HOST,
         "irc_port": IRC_PORT,
         "channel": IRC_CHANNEL,
+        "channels": IRC_CHANNELS,
         "bots": [b.health_snapshot() for b in bots],
     }
-    tmp = HEALTH_FILE + ".tmp"
-    try:
-        with open(tmp, "w") as f:
-            json.dump(health, f)
-        os.replace(tmp, HEALTH_FILE)
-    except Exception as e:
-        log("bridge", f"Health file write failed: {e}")
+    for path in HEALTH_FILES:
+        tmp = path + ".tmp"
+        try:
+            with open(tmp, "w") as f:
+                json.dump(health, f)
+            os.replace(tmp, path)
+        except Exception as e:
+            log("bridge", f"Health file write failed for {path}: {e}")
 
 
 BRIDGE_HTTP_PORT = int_env("BRIDGE_HTTP_PORT", 6769, minimum=1)
