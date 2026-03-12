@@ -46,10 +46,15 @@
   {:ok false :error (cond-> {:code code :message message}
                       context (assoc :context context))})
 
+(def ^:dynamic *proof-state-root*
+  "Optional dynamic override for proof-state persistence."
+  nil)
+
 (defn- state-path
   "Resolve the EDN file path for a problem's proof state."
   [cwd problem-id]
-  (let [dir (io/file cwd "data" "proof-state")]
+  (let [dir (or *proof-state-root*
+                (io/file cwd "data" "proof-state"))]
     (.mkdirs dir)
     (io/file dir (str problem-id ".edn"))))
 
@@ -1110,41 +1115,43 @@
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (let [cwd (or (:cwd config) (System/getProperty "user.dir"))]
-      (cond
-        ;; Proof-domain tools
-        (= tool-id :proof-load)       (tool-proof-load cache cwd args)
-        (= tool-id :proof-save)       (tool-proof-save cache cwd args)
-        (= tool-id :ledger-query)     (tool-ledger-query cache cwd args)
-        (= tool-id :ledger-upsert)    (tool-ledger-upsert cache cwd args)
-        (= tool-id :dag-check)        (tool-dag-check cache cwd args)
-        (= tool-id :dag-impact)       (tool-dag-impact cache cwd args)
-        (= tool-id :canonical-get)    (tool-canonical-get cache cwd args)
-        (= tool-id :canonical-update) (tool-canonical-update cache cwd args)
-        (= tool-id :cycle-begin)      (tool-cycle-begin cache cwd args)
-        (= tool-id :cycle-advance)    (tool-cycle-advance cache cwd args)
-        (= tool-id :cycle-get)        (tool-cycle-get cache cwd args)
-        (= tool-id :cycle-list)       (tool-cycle-list cache cwd args)
-        (= tool-id :failed-route-add) (tool-failed-route-add cache cwd args)
-        (= tool-id :status-validate)  (tool-status-validate cache cwd args)
-        (= tool-id :gate-check)       (tool-gate-check cache cwd args)
-        (= tool-id :corpus-check)     (tool-corpus-check cache cwd args config)
-        (= tool-id :proof-mode-get)   (tool-proof-mode-get cache cwd args)
-        (= tool-id :proof-mode-set)   (tool-proof-mode-set cache cwd args)
-        (= tool-id :tryharder-license) (tool-tryharder-license cache cwd args)
+      (binding [*proof-state-root* (some-> (:proof-state-root config) io/file)]
+        (cond
+          ;; Proof-domain tools
+          (= tool-id :proof-load)       (tool-proof-load cache cwd args)
+          (= tool-id :proof-save)       (tool-proof-save cache cwd args)
+          (= tool-id :ledger-query)     (tool-ledger-query cache cwd args)
+          (= tool-id :ledger-upsert)    (tool-ledger-upsert cache cwd args)
+          (= tool-id :dag-check)        (tool-dag-check cache cwd args)
+          (= tool-id :dag-impact)       (tool-dag-impact cache cwd args)
+          (= tool-id :canonical-get)    (tool-canonical-get cache cwd args)
+          (= tool-id :canonical-update) (tool-canonical-update cache cwd args)
+          (= tool-id :cycle-begin)      (tool-cycle-begin cache cwd args)
+          (= tool-id :cycle-advance)    (tool-cycle-advance cache cwd args)
+          (= tool-id :cycle-get)        (tool-cycle-get cache cwd args)
+          (= tool-id :cycle-list)       (tool-cycle-list cache cwd args)
+          (= tool-id :failed-route-add) (tool-failed-route-add cache cwd args)
+          (= tool-id :status-validate)  (tool-status-validate cache cwd args)
+          (= tool-id :gate-check)       (tool-gate-check cache cwd args)
+          (= tool-id :corpus-check)     (tool-corpus-check cache cwd args config)
+          (= tool-id :proof-mode-get)   (tool-proof-mode-get cache cwd args)
+          (= tool-id :proof-mode-set)   (tool-proof-mode-set cache cwd args)
+          (= tool-id :tryharder-license) (tool-tryharder-license cache cwd args)
 
-        ;; Delegated tools
-        (contains? delegated-tools tool-id)
-        (tools/execute-tool real-backend tool-id args)
+          ;; Delegated tools
+          (contains? delegated-tools tool-id)
+          (tools/execute-tool real-backend tool-id args)
 
-        :else
-        {:ok false :error (str "Unknown proof tool: " tool-id)}))))
+          :else
+          {:ok false :error (str "Unknown proof tool: " tool-id)})))))
 
 (defn make-proof-backend
   "Create a ProofBackend wrapping a RealBackend.
 
    config:
-     :cwd — working directory for proof state persistence
-     :timeout-ms — command timeout for delegated bash tools"
+     :cwd - working directory for delegated tools and default proof-state persistence
+     :proof-state-root - optional proof-state directory override
+     :timeout-ms - command timeout for delegated bash tools"
   ([]
    (make-proof-backend {}))
   ([config]
@@ -1181,6 +1188,11 @@
 (defn init-problem!
   "Initialize a new proof problem, saving initial state to disk.
    Returns the initial ProofState."
-  [cwd problem-id statement closure-criterion]
-  (let [state (make-initial-state problem-id statement closure-criterion)]
-    (save-state! cwd state)))
+  [cwd-or-config problem-id statement closure-criterion]
+  (let [config (if (map? cwd-or-config)
+                 cwd-or-config
+                 {:cwd cwd-or-config})
+        cwd (or (:cwd config) (System/getProperty "user.dir"))
+        state (make-initial-state problem-id statement closure-criterion)]
+    (binding [*proof-state-root* (some-> (:proof-state-root config) io/file)]
+      (save-state! cwd state))))
