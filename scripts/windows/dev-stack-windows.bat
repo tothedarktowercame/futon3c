@@ -53,6 +53,16 @@ if "%FRONTIERMATH_LOCAL%"=="1" (
   if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
   if not defined FUTON3C_REGISTER_CORPUS set "FUTON3C_REGISTER_CORPUS=true"
   if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-frontiermath-local\session-id"
+  rem FrontierMath local lane defaults to the most constrained Codex execution mode.
+  rem Operators can still override via env before launch.
+  if not defined CODEX_SANDBOX set "CODEX_SANDBOX=read-only"
+  if not defined CODEX_APPROVAL_POLICY (
+    if defined CODEX_APPROVAL (
+      set "CODEX_APPROVAL_POLICY=%CODEX_APPROVAL%"
+    ) else (
+      set "CODEX_APPROVAL_POLICY=untrusted"
+    )
+  )
   if not defined IRC_COMMAND_OWNER_AGENT_MAP set "IRC_COMMAND_OWNER_AGENT_MAP=#futon:codex-1,#math:codex-1"
 )
 set "FUTON3C_IRC_LANE_NORMALIZED=%FUTON3C_IRC_LANE: =%"
@@ -148,6 +158,7 @@ if not defined FUTON1A_STATIC_DIR (
 if "%FRONTIERMATH_LOCAL%"=="1" (
   echo [dev-stack-windows] FrontierMath local mode: preserve #futon baseline and add local #math room with isolated codex continuity.
   echo [dev-stack-windows] This mode is distinct from peer-IRC --remote-irc and shared-room --math-irc bring-up.
+  echo [dev-stack-windows] FrontierMath local codex policy: sandbox=!CODEX_SANDBOX! approval=!CODEX_APPROVAL_POLICY!
 )
 
 set "BRIDGE_BOTS_NORMALIZED=%BRIDGE_BOTS: =%"
