@@ -1,7 +1,7 @@
 # Mission: Structural Law — Universal Invariants as Self-Representing Stack Layer
 
 **Date:** 2026-03-10
-**Status:** MAP
+**Status:** DERIVE
 **Cross-ref:** M-self-representing-stack (predecessor), M-three-column-stack (three
 columns), M-fulab-logic (domain-specific invariants), M-invariant-violations (ledger)
 **Owner:** futon3c (core.logic infrastructure), with dependencies on futon4 (Arxana
@@ -19,8 +19,12 @@ We now have five operational core.logic invariant layers:
 | Proof | `peripheral/proof_logic.clj` | Operational, tested |
 | Codex Code | `agents/codex_code_logic.clj` | Operational, tested |
 
-All four follow the same pattern: snapshot → build-db → goals → query-violations.
-And all four express the same small set of structural properties, just projected
+All five follow the same broad pattern: snapshot → build-db → goals →
+query-violations. The table below shows the clearest recurring projections from
+three of the domains, with Portfolio and Codex Code now serving as additional
+evidence that the pattern is not confined to one subsystem vocabulary.
+
+The same small set of structural properties keeps recurring, just projected
 onto different vocabularies:
 
 | Meta-invariant | Tickle | Agency | Proof |
@@ -65,6 +69,10 @@ This mission sits at the intersection of several prior lines of work:
   that a lawful system should constrain action without collapsing discovery.
   Structural law therefore has to account for both conformance and legitimate
   excursion into adjacent possible structure.
+- **Modular self-representation:** the stack should be able to load and unload
+  subsystems without pretending their law disappears. An invariant can remain
+  part of the canonical inventory even when the corresponding feature is not an
+  active runtime surface.
 
 ## Scope In
 
@@ -431,6 +439,177 @@ start now without waiting for a dedicated Invariant Peripheral.
 **Goal:** Factor the meta-invariants into reusable goal combinators that
 domain logic files can call, reducing each domain to a thin projection.
 
+### DERIVE Posture
+
+DERIVE should use three inputs together, but not treat them as equal kinds of
+authority:
+
+- `holes/missions/M-structural-law.md` — the canonical mission control document.
+  This is where sequencing, scope, MAP findings, and handoff boundaries live.
+- `docs/structural-law-inventory.sexp` — the canonical law registry. This is
+  where family classification, exemplars, candidate status, and promotion
+  pressure are decided.
+- `docs/structural-crystallization.md` — the companion narrative. This is the
+  explanatory surface that says why the law layers matter, how the
+  crystallization is progressing, and how the local derivations fit the
+  larger stack story.
+
+So DERIVE should proceed as follows:
+
+- use the MAP material in this mission to decide what infrastructure and data
+  surfaces already exist;
+- use the inventory to decide which laws are firm enough to extract into
+  `mission_logic.clj` and later `structural_law.clj`;
+- use the crystallization narrative as interpretive pressure and explanatory
+  guidance, not as the canonical source of factual classification.
+
+This matters because the risk in DERIVE is not only weak abstraction. It is
+also narrative drift: building elegant combinators that are no longer grounded
+in the controlled inventory, or letting a good story outrun the live law
+surface. The mission doc and the inventory stay authoritative; the narrative
+keeps the derivation intelligible.
+
+### DERIVE Design
+
+#### Entity Types
+
+- **Domain snapshot** — the raw input map for a structural-law pass. This is
+  always domain-owned and already exists in some form today: portfolio state,
+  tickle scan state, agency registry snapshot, proof state, codex runtime
+  snapshot, and mission state.
+- **Logic database** — the domain-specific `pldb` fact database built from the
+  snapshot. Each domain keeps its own fact vocabulary rather than forcing one
+  global schema.
+- **Load profile** — the declaration of which domain surfaces are active in the
+  current runtime or workspace slice. This determines which domain logic files
+  are expected to emit live violation reports without deleting dormant law
+  families from the inventory.
+- **Structural law combinator** — a parameterized `core.logic` goal or query
+  helper that expresses one meta-invariant family independently of any one
+  domain's fact names.
+- **Domain projection** — the thin adapter layer inside each `*_logic.clj`
+  namespace that maps domain facts onto combinator inputs.
+- **Violation report** — the query result surface returned by each domain logic
+  namespace. In Phase 3 it remains a code-level report; promotion into typed
+  obligations belongs to Phase 4.
+
+#### Relation Types
+
+- **Symmetry relations** — paired binary relations such as `depends-ono` /
+  `unlockso` or hop-exit / hop-entry.
+- **Status relations** — entity-to-status relations with optional supporting
+  evidence or count relations.
+- **Phase relations** — entity-to-phase relations plus a declared total order.
+- **Output relations** — relations expressing that a phase produced a required
+  output key or artifact.
+- **Existence relations** — relations from a reference-bearing entity to a
+  required target entity.
+- **Dependency relations** — relations that connect an achieved state to its
+  prerequisite states or thresholds.
+
+These relation types are the target vocabulary for `structural_law.clj`. A
+domain does not need to use every relation type; it only binds the ones its
+law surface actually instantiates.
+
+#### Invariant Rules
+
+The first derived combinator set should cover only the law families already
+firm in the inventory:
+
+- **graph-symmetry** — if relation A holds, inverse/support relation B must also
+  hold for the corresponding pair.
+- **status-discipline** — statuses must be legal, and supporting evidence or
+  auxiliary state must not contradict the claimed status.
+- **phase-ordering** — phases may advance only along the declared order.
+- **required-outputs** — a phase transition is valid only if the required output
+  keys for the prior phase are present.
+- **existence** — references that claim another entity must point to something
+  present in the current domain snapshot.
+- **dependency-satisfaction** — higher achievement states require prerequisites
+  that already meet the declared bar.
+
+The mission-specific extraction target for `mission_logic.clj` is narrower on
+purpose: blocker existence, phase ordering, required outputs, and obligation
+status discipline. DAG acyclicity and GF/GD remain gate/query surfaces unless
+the runtime is strengthened first.
+
+Load state needs one explicit rule even though it is not itself a new law
+family: unloading a feature suppresses its live checks, but does not erase its
+entry from the inventory or make its abstract invariants false. Phase 3 should
+therefore distinguish "law is part of the stack vocabulary" from "this runtime
+instance currently loads the domain that checks it."
+
+#### Data Flow
+
+The intended Phase 3 data flow is:
+
+1. Domain-owned live state or persisted artifact is captured as a snapshot map.
+2. The domain `build-db` function materializes a `pldb` fact database.
+3. Domain projection code binds the appropriate structural-law combinators.
+4. Domain `query-violations` returns a domain-scoped violation report.
+5. Later phases consume those reports for aggregation, obligation mapping, and
+   Arxana projection.
+
+The load profile gates step 4: unloaded or dormant domains are recorded as not
+currently participating in live violation emission rather than being treated as
+clean by default.
+
+For missions specifically:
+
+1. `mission_backend.clj` / `mission_shapes.clj` define the operational mission
+   law surface.
+2. `mission_logic.clj` snapshots mission state into facts mirroring that
+   already-bound surface.
+3. `structural_law.clj` combinators are applied where they actually compress
+   the mission logic rather than obscuring it.
+
+#### IF/HOWEVER/THEN/BECAUSE
+
+- IF a law family is already operational in live code, HOWEVER some nearby
+  checks are only optional gates, THEN only the already-binding portion should
+  enter `mission_logic.clj` and `structural_law.clj`, BECAUSE DERIVE must not
+  silently upgrade optional validation into foundational law. Pattern support:
+  `sidecar/validation-enforcement-gate`, `futon-theory/stop-the-line`.
+- IF the existing logic namespaces use different fact schemas, HOWEVER the same
+  meta-invariants recur across them, THEN `structural_law.clj` should accept
+  relation bindings rather than impose one canonical fact schema, BECAUSE thin
+  projections are cheaper and less abandonment-prone than a full relational
+  rewrite. Pattern support: `software-design/adapter-pattern`,
+  `enrichment/extend-not-rewrite`, `math-informal/find-the-right-abstraction`.
+- IF futon3b already provides useful gate behavior, HOWEVER that path is not
+  yet unavoidable in ordinary live work, THEN it should remain an external
+  quality-gate consumer of structural law rather than the source of
+  foundational classifications, BECAUSE otherwise DERIVE would rebuild a center
+  of gravity the runtime does not yet honor. Pattern support:
+  `storage/guardrails-vs-tooling`, `sidecar/validation-enforcement-gate`.
+- IF the crystallization narrative gives the best stack-level explanation,
+  HOWEVER narratives can outrun the controlled inventory, THEN design authority
+  stays with this mission and `structural-law-inventory.sexp`, BECAUSE the
+  implementation must track evidenced law rather than rhetorical coherence
+  alone. Pattern support: `futon-theory/single-source-of-truth`,
+  `futon-theory/retroactive-canonicalization`.
+- IF a subsystem is not currently loaded, HOWEVER its invariant families remain
+  part of the stack's structural vocabulary, THEN the runtime should mark those
+  checks as dormant rather than deleting them from the registry, BECAUSE a
+  modular stack needs reversible loading without losing self-knowledge. Pattern
+  support: `vsatlas/non-destructive-relational-layers`,
+  `futon-theory/theory-as-exotype`.
+
+#### View / UI Specifications
+
+- **Primary interface in Phase 3:** code namespaces and tests, not a new UI.
+  The required surfaces are `build-db`, `query-violations`, and combinator
+  functions that other namespaces can call directly.
+- **REPL surface:** enough function shape should exist that a developer can load
+  a snapshot and inspect violations from the REPL without hidden runtime
+  dependencies.
+- **Registry surface:** the inventory remains the human-readable view for family
+  classification, exemplar status, and active-vs-dormant distinction while code
+  derivation proceeds.
+- **Deferred UI:** aggregate invariant dashboards, conductor integration, and
+  Arxana navigation stay out of Phase 3 unless they are strictly required to
+  validate the derivation.
+
 ### Handoff 2.1: Structural law combinators
 
 Extract the meta-invariants as parameterized core.logic goals.
@@ -467,6 +646,85 @@ is the predecessor and may stay as-is.
 **Goal:** Close the loop: violations detected by structural law become
 dispatchable obligations. The FM conductor can assign work to idle agents
 based on what the invariant layers surface.
+
+### Pattern Cross-Reference for DERIVE
+
+This is the first ARGUE pass: the non-obvious DERIVE decisions above now carry
+explicit pattern ancestry rather than standing as unsupported design taste.
+
+| DERIVE decision | Supporting patterns | How they apply |
+|---|---|---|
+| Only promote already-binding law, not nearby optional gates | `sidecar/validation-enforcement-gate`, `futon-theory/stop-the-line` | Distinguishes always-on enforcement from optional validation and keeps invariant promotion tied to real rejection boundaries. |
+| Use thin domain projections instead of one global fact schema | `software-design/adapter-pattern`, `enrichment/extend-not-rewrite`, `math-informal/find-the-right-abstraction` | Favors a small translation boundary and minimal shared assumptions over a full rewrite. |
+| Keep futon3b as a gate consumer until the runtime truly depends on it | `storage/guardrails-vs-tooling`, `sidecar/validation-enforcement-gate` | Useful tooling should pass through guardrails, but optional tooling should not be mistaken for the already-authoritative substrate. |
+| Keep authority with the mission doc and inventory, not the narrative | `futon-theory/single-source-of-truth`, `futon-theory/retroactive-canonicalization` | Classification authority should be singular and evidence-backed, while explanatory theory remains traceable to practice. |
+| Mark unloaded domains dormant rather than deleting their laws | `vsatlas/non-destructive-relational-layers`, `futon-theory/theory-as-exotype` | The canonical layer can persist while overlays or runtime instantiations vary, preserving modularity without losing structural memory. |
+| Use code, REPL, and registry surfaces first; defer a new browser UI | `portal/first-class-query-interface`, `stack-coherence/evidence-ledger`, `pattern-coherence/scope-boundaries` | Keeps inspection first-class and evidence-backed while explicitly bounding Phase 3 away from premature interface expansion. |
+
+### Pattern Coverage Check
+
+The current DERIVE design now has pattern support for each non-obvious
+architectural choice that changes scope, authority, enforcement level, or
+interface posture.
+
+What is intentionally not given separate pattern citations:
+
+- the relation-type list, because it is a direct compression of the currently
+  evidenced law families in `structural-law-inventory.sexp`, not an
+  independent design leap;
+- the entity-type list, except where it introduces a real design commitment
+  such as `Load profile`, because most of it is descriptive of surfaces already
+  present in the five existing logic layers plus mission state;
+- the mission-specific narrowing to blocker existence, phase ordering,
+  required outputs, and status discipline, because that decision is already
+  justified by the "operational law, not optional gate" argument above.
+
+Current result: no obvious DERIVE decision remains unsupported by either
+inventory evidence or explicit pattern ancestry. If later refactors introduce a
+new authority boundary, new UI surface, or stronger gate/foundation promotion,
+this table should be revised before the design is treated as settled.
+
+### Theoretical Coherence
+
+The DERIVE design is coherent with the IDENTIFY framing because it treats
+structural law as a self-representing stack layer rather than as a fresh
+subsystem with its own isolated theory. The inventory supplies the canonical
+law families, domain logic files remain the places where local vocabulary lives,
+and `structural_law.clj` only factors out what has already proven recurrent
+across domains. The loaded-versus-dormant distinction also preserves the
+adjacent-possible framing: the stack can tighten constraints where runtime law
+is real without pretending every candidate or unloaded surface is equally live.
+
+### Trade-off Summary
+
+This design gives up three tempting simplifications. It does not force one
+global fact schema across every domain, because thin projections are cheaper
+and safer than a stack-wide rewrite. It does not promote every useful gate into
+foundational law, because optional validation and always-on rejection are
+different kinds of structure. And it does not build a new browser or conductor
+surface first, because Phase 3 needs a code-and-registry proof that the
+abstraction compresses before more interface weight is added.
+
+### Generalization Notes
+
+The derivation should generalize to any FUTON domain that can expose a snapshot,
+materialize a fact database, and report violations against relation bindings.
+That includes the current logic layers and likely future domains in code,
+mission, and portfolio space. What should not be generalized blindly is the
+exact relation inventory for domains that do not yet have firm exemplars, or
+the assumption that every useful gate belongs in the always-on substrate.
+
+### Plain-Language Argument
+
+This mission builds a small shared law layer for the stack by extracting the
+checks that already recur across several working subsystems. It is necessary
+because right now the same structural problems are being found and fixed in
+separate places, with no common inventory and no common way to turn violations
+into work. The design stays modest on purpose: it keeps each domain's own
+language, only lifts the laws that are already real in running code, and keeps
+unloaded parts of the stack visible without pretending they are active. If this
+works, the stack gets stricter and more legible at the same time, instead of
+becoming either a bag of local rules or one brittle monolith.
 
 ### Handoff 3.1: Violation → Obligation mapping
 
