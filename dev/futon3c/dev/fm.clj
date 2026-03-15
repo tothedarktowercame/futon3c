@@ -11,6 +11,7 @@
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
             [futon3c.dev.irc :as dev-irc]
+            [futon3c.logic.invariant-runner :as ir]
             [futon3c.social.whistles :as whistles])
   (:import [java.time Instant]
            [java.time.temporal ChronoUnit]))
@@ -211,12 +212,18 @@
 (defn make-fm-conductor-config
   "Build the config map for FM conductor functions.
    Requires :make-claude-invoke-fn and :evidence-store to be supplied."
-  [{:keys [make-claude-invoke-fn evidence-store !tickle]} overrides]
+  [{:keys [make-claude-invoke-fn evidence-store !tickle
+           invariant-aggregate-fn invariant-domains invariant-load-profile]} overrides]
   (merge {:problem-id "FM-001"
           :cooldown-ms (* 3 60 1000)
           :irc-read-fn #(irc-recent-channel "#math" 20)
           :bridge-send-fn (dev-irc/make-bridge-irc-send-fn)
           :evidence-store evidence-store
+          :invariant-aggregate-fn (or invariant-aggregate-fn
+                                      (when (seq invariant-domains)
+                                        (fn []
+                                          (ir/run-aggregate (or invariant-load-profile {})
+                                                            invariant-domains))))
           :invoke-fn (when make-claude-invoke-fn
                        (make-claude-invoke-fn
                          {:claude-bin (config/env "CLAUDE_BIN" "claude")
@@ -278,10 +285,65 @@
        "\nWork this task. Push results to git when done. "
        "Keep your response concise — report what you did and what the outcome was."))
 
+(defn structural-law-task?
+  [task]
+  (let [source (:source task)]
+    (and (string? source)
+         (.startsWith source "structural-law/"))))
+
+(defn sync-structural-law-tasks!
+  "Upsert dispatchable invariant tasks into the queue.
+
+   Pending structural-law tasks that disappear from the latest aggregate are
+   removed. Assigned tasks remain assigned while the agent is working."
+  [aggregate]
+  (let [desired (vec (:dispatchable-tasks aggregate))
+        desired-by-id (into {} (map (juxt :id identity)) desired)
+        desired-ids (set (keys desired-by-id))
+        existing (into {} (map (juxt :id identity)) (tq/all-tasks))
+        now (Instant/now)]
+    (doseq [[task-id task] desired-by-id]
+      (let [existing-task (get existing task-id)
+            assigned? (= :assigned (:status existing-task))
+            upserted (merge existing-task
+                            task
+                            {:status (if assigned? :assigned :pending)
+                             :assignee (when assigned? (:assignee existing-task))
+                             :created-at (or (:created-at existing-task) now)
+                             :completed-at nil})]
+        (tq/add-task! upserted)))
+    (doseq [{:keys [id status] :as task} (tq/all-tasks)
+            :when (and (structural-law-task? task)
+                       (= :pending status)
+                       (not (contains? desired-ids id)))]
+      (tq/remove-task! id))
+    {:desired-count (count desired)
+     :task-ids (sort desired-ids)}))
+
+(defn refresh-structural-law-tasks!
+  "Run the configured invariant aggregate and sync its dispatchable tasks into
+   the conductor queue."
+  [{:keys [invariant-aggregate-fn conductor-state]}]
+  (when (fn? invariant-aggregate-fn)
+    (let [aggregate (invariant-aggregate-fn)
+          sync-result (sync-structural-law-tasks! aggregate)
+          summary (:summary aggregate)
+          result {:summary summary
+                  :sync sync-result
+                  :dispatchable-count (count (:dispatchable-tasks aggregate))
+                  :needs-review-count (count (get-in aggregate [:obligations-by-actionability :needs-review]))
+                  :informational-count (count (get-in aggregate [:obligations-by-actionability :informational]))}]
+      (when conductor-state
+        (swap! conductor-state assoc
+               :last-invariant-sync result
+               :last-invariant-sync-ms (System/currentTimeMillis)))
+      result)))
+
 (defn dispatch-task!
   "Pick the highest-priority task from the pool and invoke the agent with it.
    Returns {:action :dispatch|:pass|:error, :task-id str, :agent-id str}."
-  [agent-id {:keys [bridge-send-fn conductor-state] :as _config}]
+  [agent-id {:keys [bridge-send-fn conductor-state] :as config}]
+  (refresh-structural-law-tasks! config)
   (if-let [task (tq/pick-task! agent-id)]
     (let [tid (:id task)
           nick (get fm-agent-nicks agent-id agent-id)]
@@ -388,6 +450,7 @@
          (try
            (Thread/sleep (long step-ms))
            (when @running
+             (refresh-structural-law-tasks! config)
              (let [queue-results (dispatch-from-queue! config conductor-state)
                    results queue-results]
                (swap! conductor-state assoc
@@ -415,6 +478,7 @@
                          cooldowns (:last-paged state)
                          cycles (or (:cycles-completed state) 0)
                          last-cycle (:last-cycle state)
+                         invariant-sync (:last-invariant-sync state)
                          queue (tq/snapshot)
                          fmt-agent (fn [agent-id]
                                      (let [a (get @reg/!registry agent-id)
@@ -439,6 +503,7 @@
                               :step-ms (str (quot step-ms 1000) "s")
                               :cooldown (str (quot cooldown-ms 1000) "s")
                               :cycles cycles
+                              :invariants invariant-sync
                               :queue {:pending (tq/pending-count)
                                       :assigned (tq/assigned-count)}
                               :agents (mapv fmt-agent rotation)}

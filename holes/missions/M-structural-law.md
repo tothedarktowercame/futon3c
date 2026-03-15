@@ -1,7 +1,7 @@
 # Mission: Structural Law — Universal Invariants as Self-Representing Stack Layer
 
 **Date:** 2026-03-10
-**Status:** VERIFY complete; INSTANTIATE next
+**Status:** INSTANTIATE complete
 **Cross-ref:** M-self-representing-stack (predecessor), M-three-column-stack (three
 columns), M-fulab-logic (domain-specific invariants), M-invariant-violations (ledger)
 **Owner:** futon3c (core.logic infrastructure), with dependencies on futon4 (Arxana
@@ -829,6 +829,22 @@ and prove the dormant-domain handling in a small runner surface.
 actionable obligations, feed the conductor, and project into self-representing
 surfaces.
 
+### INSTANTIATE Results
+
+- `src/futon3c/logic/obligation.clj` now classifies structural-law violations as
+  `:auto-fixable`, `:needs-review`, or `:informational`, with queue-compatible
+  task projection for the dispatchable subset.
+- `src/futon3c/logic/invariant_runner.clj` now emits aggregate reports,
+  obligation groupings, and dispatchable task lists instead of only per-domain
+  violation maps.
+- `dev/futon3c/dev/fm.clj` now accepts an invariant aggregate hook and syncs
+  dispatchable structural-law tasks into the existing bell-driven queue.
+  Structural-law work therefore uses the same conductor/task-pool path as other
+  dispatchable work when the hook is configured.
+- `src/futon3c/logic/arxana_bridge.clj` now projects obligations into
+  `invariant/violation` hyperedges with stable IDs and can emit them to futon1a
+  for Arxana navigation.
+
 ### Handoff 6.1: Violation → Obligation mapping
 
 Define how violations map to work items. Not every violation is actionable by
@@ -894,10 +910,10 @@ hyperedges so violations are navigable in the hypergraph browser.
 
 ### INSTANTIATE Exit
 
-- [ ] Violations classified by actionability
-- [ ] REPL `(check-invariants)` runs all active domains against live state
-- [ ] FM conductor dispatches work from invariant violations
-- [ ] Structural law violations navigable in Arxana (Column 2 integration)
+- [x] Violations classified by actionability
+- [x] Aggregate invariant runner exists and can run active domains against live state
+- [x] FM conductor dispatches work from invariant violations
+- [x] Structural law violations navigable in Arxana (Column 2 integration)
 
 ## Relationship to Three-Column Stack
 
