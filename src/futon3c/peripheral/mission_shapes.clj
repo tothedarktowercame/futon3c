@@ -12,7 +12,8 @@
    - Table 24 (Corneli 2014): X=project, P=problem, S=solution, H=heuristic
    - Futonic logic: 象=MissionState, 部=phase-order, 味=required-outputs
    - mission-lifecycle.flexiarg: :greenfield → :scoped → :active → :done"
-  (:require [malli.core :as m]
+  (:require [clojure.set]
+            [malli.core :as m]
             [malli.error :as me]))
 
 ;; =============================================================================
@@ -261,6 +262,46 @@
 
 (defn valid-status? [status]
   (contains? #{:done :partial :open :blocked :abandoned} status))
+
+;; =============================================================================
+;; Prediction enrichment (D-3 in M-aif-head)
+;; =============================================================================
+
+(defn compute-prediction-divergence
+  "Compare :propose prediction against :execute actuals.
+   Returns [0,1] divergence score.
+
+   Structured predictions make cross-phase learning computable
+   (agent/state-is-hypothesis, aif/belief-state-operational-hypotheses).
+   Without structured predictions, returns nil (no divergence signal)."
+  [propose-data execute-data]
+  (when (and (map? propose-data) (map? execute-data))
+    (let [pred-artifacts (set (:predicted-artifacts propose-data))
+          actual-artifacts (set (:artifacts execute-data))
+          all-artifacts (clojure.set/union pred-artifacts actual-artifacts)
+          shared (clojure.set/intersection pred-artifacts actual-artifacts)
+          artifact-div (if (empty? pred-artifacts) nil
+                         (/ (double (- (count all-artifacts) (count shared)))
+                            (max 1.0 (double (count all-artifacts)))))
+          criteria (vec (:success-criteria propose-data))
+          criteria-met (when (seq criteria)
+                         (count (filter (fn [c]
+                                          ;; Check if criterion text appears in evidence
+                                          (some #(and (string? %)
+                                                      (.contains ^String % (str c)))
+                                                (:validation-artifacts execute-data)))
+                                        criteria)))
+          criteria-total (count criteria)
+          criteria-div (when (and criteria-met (pos? criteria-total))
+                         (- 1.0 (/ (double criteria-met) (double criteria-total))))]
+      ;; Return weighted average of available signals, or nil if no signals
+      (cond
+        (and artifact-div criteria-div)
+        (* 0.5 (+ artifact-div criteria-div))
+
+        artifact-div artifact-div
+        criteria-div criteria-div
+        :else nil))))
 
 (defn valid-status-transition?
   "Check if a status transition is valid given the evidence class.

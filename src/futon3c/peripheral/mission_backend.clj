@@ -271,18 +271,75 @@
       (mission-error :not-found (str "No mission state for " mission-id)))))
 
 (defn- validate-phase-advance
-  "Check that all required outputs for the current phase are present."
-  [cycle phase-data]
-  (let [current-phase (:cycle/phase cycle)
-        required (get ms/phase-required-outputs current-phase #{})
-        provided (set (keys phase-data))
-        missing (clojure.set/difference required provided)]
-    (when (seq missing)
-      (mission-error :missing-phase-outputs
-                     (str "Phase " current-phase " requires: "
-                          (pr-str missing) " before advancing")
-                     :phase current-phase
-                     :missing (vec missing)))))
+  "Check that all required outputs for the current phase are present,
+   and consult AIF head structural law check if available.
+
+   The aif-head parameter is optional for backward compatibility.
+   When provided, check-law is called before allowing the transition.
+   This is the refusal surface (D-5 in M-aif-head): structural law
+   violations produce structured refusals, not generic exceptions.
+
+   Error catalog:
+     :missing-phase-outputs       — required phase outputs absent
+     :structural-law-violation    — candidate invariant would be violated
+     :foundational-invariant-breach — operational invariant violated (reflex)
+     :prediction-divergence-high  — propose/execute divergence above threshold"
+  ([cycle phase-data]
+   (validate-phase-advance cycle phase-data nil nil))
+  ([cycle phase-data aif-head state]
+   (let [current-phase (:cycle/phase cycle)
+         required (get ms/phase-required-outputs current-phase #{})
+         provided (set (keys phase-data))
+         missing (clojure.set/difference required provided)]
+     (cond
+       ;; Check required outputs first
+       (seq missing)
+       (mission-error :missing-phase-outputs
+                      (str "Phase " current-phase " requires: "
+                           (pr-str missing) " before advancing")
+                      :phase current-phase
+                      :missing (vec missing))
+
+       ;; Consult AIF head law check if available
+       aif-head
+       (let [next-phases (into {} (map vector ms/phase-order (rest ms/phase-order)))
+             next-phase (get next-phases current-phase)
+             transition {:type :phase-advance
+                         :from current-phase
+                         :to next-phase
+                         :context {:phase-data phase-data
+                                   :cycle-id (:cycle/id cycle)}}
+             ;; Check prediction divergence when transitioning from :execute
+             divergence (when (= current-phase :execute)
+                          (let [propose-data (get-in cycle [:cycle/phase-data :propose])]
+                            (ms/compute-prediction-divergence propose-data phase-data)))
+             law-result (try
+                          (.check_law aif-head state transition)
+                          (catch Exception e
+                            {:ok false
+                             :error {:code :foundational-invariant-breach
+                                     :message (.getMessage e)}}))]
+         (cond
+           ;; Law check failed
+           (and law-result (not (:ok law-result)))
+           (mission-error (get-in law-result [:error :code] :structural-law-violation)
+                          (get-in law-result [:error :message] "Structural law violation")
+                          :law-family (get-in law-result [:error :law-family])
+                          :law-id (get-in law-result [:error :law-id])
+                          :transition transition)
+
+           ;; Prediction divergence above threshold
+           (and divergence (> divergence 0.7))
+           (mission-error :prediction-divergence-high
+                          (str "Prediction divergence " (format "%.2f" divergence)
+                               " exceeds threshold 0.7")
+                          :divergence divergence
+                          :phase current-phase)
+
+           :else nil))
+
+       ;; No AIF head — backward compatible
+       :else nil))))
 
 (defn- tool-cycle-advance
   "Advance a cycle to the next phase.
