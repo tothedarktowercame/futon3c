@@ -2,10 +2,11 @@
 
 *How a software system learns to maintain itself*
 
-**Companion documents**: [The Holistic Argument](holistic-argument.md)
+**Companion documents**: [The Holistic
+Argument](https://github.com/tothedarktowercame/futon3/blob/main/holes/holistic-argument.md)
 (the full technical argument with support claims, attack relations,
 and falsifiability conditions) and its [machine-readable
-form](holistic-argument.sexp).
+form](https://github.com/tothedarktowercame/futon3/blob/main/holes/holistic-argument.sexp).
 
 ---
 
