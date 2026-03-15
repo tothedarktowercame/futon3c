@@ -210,7 +210,19 @@
               (invariant :id replenishment-has-evidence
                          :summary "Budget replenishment should follow explicit signals, evidence, or policy rather than vibes.")
               (invariant :id budget-state-visible
-                         :summary "Current budget state should be inspectable by the operator or peripheral.")))))
+                         :summary "Current budget state should be inspectable by the operator or peripheral.")))
+     (family :id cross-store-agreement
+             :status candidate
+             :summary "When one operational story is mirrored across registry, ledger, and announcement stores, the mirrors should agree about identity, continuity, and canonical backing."
+             :candidate-invariants
+             ((invariant :id canonical-ledger-backs-public-claim
+                         :summary "Public announcements should point to canonical jobs or receipts.")
+              (invariant :id mirrored-actor-agreement
+                         :summary "Mirrored records naming the same work item should agree about the responsible agent or actor.")
+              (invariant :id session-continuity-alignment
+                         :summary "Running work mirrored across stores should agree on the active session or continuity token.")
+              (invariant :id aggregate-count-backed-by-ledger
+                         :summary "Registry-level running or queued counts should be backed by the canonical job ledger rather than drifting independently.")))))
 
   (repo-seeds
     ((devmap :id futon0
@@ -638,27 +650,27 @@
             :domains (portfolio tickle agency proof)
             :firm-exemplar (:repo futon3c
                             :artifact "src/futon3c/peripheral/proof_logic.clj")
-            :gap "Mission still lacks a logic-layer projection for this family.")
+            :gap "Mission intentionally stops short of a graph-symmetry layer today; Codex also leaves adjacent cross-store agreement pressure rather than a clean paired-edge projection.")
        (map :family status-discipline
-            :domains (tickle agency proof mission futon1a)
+            :domains (tickle agency proof mission codex futon1a)
             :firm-exemplar (:repo futon3c
-                            :artifact "src/futon3c/peripheral/mission_backend.clj")
-            :gap "The family is present across domains, but the mission logic file is not yet extracted.")
+                            :artifact "src/futon3c/peripheral/mission_logic.clj")
+            :gap "Shared status helpers exist now; the remaining open pressure is Codex session continuity, which promoted into the candidate family below.")
        (map :family phase-ordering
             :domains (tickle proof mission)
             :firm-exemplar (:repo futon3c
-                            :artifact "src/futon3c/peripheral/mission_backend.clj")
-            :gap "Mission has backend enforcement now; the logic-layer form is the next step.")
+                            :artifact "src/futon3c/peripheral/mission_logic.clj")
+            :gap "Mission now has a logic-layer projection; the next question is whether any additional live domains should adopt the same prefix check.")
        (map :family required-outputs
             :domains (proof mission futon1a)
             :firm-exemplar (:repo futon3c
-                            :artifact "src/futon3c/peripheral/mission_shapes.clj")
-            :gap "Mission and proof have explicit phase-output contracts; the shared combinator layer does not yet exist.")
+                            :artifact "src/futon3c/logic/structural_law.clj")
+            :gap "The shared combinator now exists; remaining work is deciding where else explicit phase-output discipline belongs.")
        (map :family existence
-            :domains (agency proof mission futon1a)
+            :domains (agency proof mission codex futon1a)
             :firm-exemplar (:repo futon3c
-                            :artifact "src/futon3c/peripheral/mission_backend.clj")
-            :gap "Mission currently checks blocker existence, but not the full dependency/reference surface as always-on law.")
+                            :artifact "src/futon3c/peripheral/mission_logic.clj")
+            :gap "Mission blocker existence is now projected; full obligation dependency/reference existence is still not an always-on law.")
        (map :family dependency-satisfaction
             :domains (portfolio proof)
             :firm-exemplar (:repo futon3c
@@ -719,7 +731,12 @@
                :best-current-exemplar none-yet
                :repo futon5
                :strength candidate
-               :note "Discussed and partially sketched, but no fully operational exemplar yet."))))
+               :note "Discussed and partially sketched, but no fully operational exemplar yet.")
+       (family :id cross-store-agreement
+               :best-current-exemplar session-continuity-alignment
+               :repo futon3c
+               :strength candidate-with-live-exemplar
+               :note "Codex Code proves the pressure is real: existence and status discipline cover part of the surface, but session continuity and mirrored metadata still form their own candidate family."))))
 
   (cleanup-evidence
     ((repo :id futon0

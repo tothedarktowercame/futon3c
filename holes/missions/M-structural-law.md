@@ -1,7 +1,7 @@
 # Mission: Structural Law — Universal Invariants as Self-Representing Stack Layer
 
 **Date:** 2026-03-10
-**Status:** DERIVE
+**Status:** VERIFY complete; INSTANTIATE next
 **Cross-ref:** M-self-representing-stack (predecessor), M-three-column-stack (three
 columns), M-fulab-logic (domain-specific invariants), M-invariant-violations (ledger)
 **Owner:** futon3c (core.logic infrastructure), with dependencies on futon4 (Arxana
@@ -9,7 +9,7 @@ hypergraph for Column 2 representation), futon1a (evidence store)
 
 ## Motivation
 
-We now have five operational core.logic invariant layers:
+We now have six operational core.logic invariant layers:
 
 | Domain | File | Status |
 |--------|------|--------|
@@ -17,27 +17,32 @@ We now have five operational core.logic invariant layers:
 | Tickle | `agents/tickle_logic.clj` | Operational, 0 violations |
 | Agency | `agency/logic.clj` | Operational, 5 violations cataloged |
 | Proof | `peripheral/proof_logic.clj` | Operational, tested |
+| Mission | `peripheral/mission_logic.clj` | Operational, extracted in VERIFY |
 | Codex Code | `agents/codex_code_logic.clj` | Operational, tested |
 
-All five follow the same broad pattern: snapshot → build-db → goals →
+All six follow the same broad pattern: snapshot → build-db → goals →
 query-violations. The table below shows the clearest recurring projections from
-three of the domains, with Portfolio and Codex Code now serving as additional
-evidence that the pattern is not confined to one subsystem vocabulary.
+the live domains, including the newly extracted mission layer.
 
 The same small set of structural properties keeps recurring, just projected
 onto different vocabularies:
 
-| Meta-invariant | Tickle | Agency | Proof |
-|---|---|---|---|
-| Graph symmetry | escalation backed by page | hop exit ↔ entry | depends-on ↔ unlocks |
-| Status discipline | scan → page → escalate | idle ↔ invoking | open → partial → proved |
-| Phase ordering | scan before page before escalate | entry before work before exit | observe → ... → completed |
-| Required outputs | page needs scan evidence | — | each phase needs outputs |
-| Existence | scanned agents registered | hop targets exist | deps exist in ledger |
-| Dependency satisfaction | — | — | proved needs proved deps |
+| Meta-invariant | Tickle | Agency | Proof | Mission | Codex Code |
+|---|---|---|---|---|---|
+| Graph symmetry | escalation backed by page | hop exit ↔ entry | depends-on ↔ unlocks | — | announcement agent ↔ canonical job agent |
+| Status discipline | scan → page → escalate | idle ↔ invoking | open → partial → proved | `:assertion` cannot yield `:done` | running job/count implies `:invoking` |
+| Phase ordering | scan before page before escalate | entry before work before exit | observe → ... → completed | completed phases form current-phase prefix | — |
+| Required outputs | page needs scan evidence | — | each phase needs outputs | each passed phase records outputs | — |
+| Existence | scanned agents registered | hop targets exist | deps exist in ledger | cycle blocker exists in obligations | jobs/announcements point to real agents/jobs |
+| Dependency satisfaction | — | — | proved needs proved deps | — | — |
 
-That's five or six patterns total. The domain-specific files are projections of
-these patterns onto domain-specific fact databases.
+That's six recurring families with one visible residual pressure. The domain-
+specific files are projections of these patterns onto domain-specific fact
+databases, but `codex_code_logic.clj` also exposes a cross-store
+referential-agreement / session-continuity pressure that does not yet map
+cleanly onto the six-family set. VERIFY resolved that residual as a new
+candidate family, `cross-store-agreement`, rather than pretending it is already
+fully captured by the existing six.
 
 **The insight from M-self-representing-stack:** these meta-invariants are a layer
 of the self-representing stack. They're how the stack checks its own structural
@@ -61,10 +66,10 @@ This mission sits at the intersection of several prior lines of work:
   which structural law can eventually project across knowledge, development,
   and code reflection rather than staying trapped in one domain vocabulary.
 - **Domain-specific invariant layers:** `portfolio/logic.clj`,
-  `agents/tickle_logic.clj`, `agency/logic.clj`, and
-  `peripheral/proof_logic.clj` are evidence that recurring law families already
-  exist in operational form, even if they have not yet been normalized into one
-  shared inventory.
+  `agents/tickle_logic.clj`, `agency/logic.clj`,
+  `peripheral/proof_logic.clj`, and `agents/codex_code_logic.clj` are evidence
+  that recurring law families already exist in operational form, even if they
+  have not yet been normalized into one shared inventory.
 - **Adjacent possible / excursion discipline:** the mission inherits the idea
   that a lawful system should constrain action without collapsing discovery.
   Structural law therefore has to account for both conformance and legitimate
@@ -243,6 +248,8 @@ So the discipline for the rest of Phase 1 is:
 - `futon3c/test/futon3c/peripheral/mission_test.clj`
 - `futon3c/test/futon3c/peripheral/mission_backend_test.clj`
 - `futon3c/docs/structural-law-inventory.sexp`
+- `futon3c/docs/structural-crystallization.md`
+- `futon3c/holes/missions/structural-law-wiring.edn`
 - `futon7/provisional-ledger.md`
 - `futon4/holes/mission-lifecycle.md`
 - `futon2/holes/M-aif-head.md` as a downstream consumer reference, not Phase 1
@@ -297,9 +304,9 @@ proto-Invariant Peripheral, but not yet a cycle machine. The canonical source
 for that surface remains `docs/structural-law-inventory.sexp`.
 
 As `mission_logic.clj` comes online, diff the five existing domain logic files
-plus the new mission logic file. At that point there should be six domain
-logic files in view. Are
-there invariants in any domain that don't map to a meta-invariant? Are there
+plus the new mission logic file. At that point there should be six domain logic
+files in view. Are there invariants in any domain that do not map to a
+meta-invariant? Are there
 candidate families in the inventory that now have enough firm exemplars to
 promote? If so, the meta-invariant set or its classifications need extending.
 
@@ -610,7 +617,7 @@ For missions specifically:
   Arxana navigation stay out of Phase 3 unless they are strictly required to
   validate the derivation.
 
-### Handoff 2.1: Structural law combinators
+### Handoff 3.1: Structural law combinators
 
 Extract the meta-invariants as parameterized core.logic goals.
 
@@ -624,7 +631,7 @@ Extract the meta-invariants as parameterized core.logic goals.
   - `(existence-checko ref-rel entity-rel ref-id)` — referenced things exist
   - `(dependency-satisfaction-checko dep-rel status-rel required-status)` — deps meet bar
 
-### Handoff 2.2: Refactor one domain to use combinators
+### Handoff 3.2: Refactor one domain to use combinators
 
 Pick the simplest domain (probably Agency — fewest invariants) and refactor it
 to call `structural_law.clj` combinators. Prove the abstraction compresses
@@ -633,7 +640,7 @@ without losing domain specificity.
 - `:in` — `agency/logic.clj`, `structural_law.clj`
 - `:out` — modified `agency/logic.clj` + green tests
 
-### Handoff 2.3: Refactor remaining domains
+### Handoff 3.3: Refactor remaining domains
 
 Apply the same refactor to tickle_logic, proof_logic, mission_logic. Portfolio
 is the predecessor and may stay as-is.
@@ -641,11 +648,10 @@ is the predecessor and may stay as-is.
 - `:in` — `structural_law.clj`, all domain logic files
 - `:out` — modified domain files + green tests
 
-## Phase 4: ARGUE — Violations as Obligations, Conductor Integration
+## Phase 4: ARGUE — Why This Design Is Right
 
-**Goal:** Close the loop: violations detected by structural law become
-dispatchable obligations. The FM conductor can assign work to idle agents
-based on what the invariant layers surface.
+**Goal:** Show that the derived structural-law layer is the right compression of
+the existing invariant surfaces, not just a plausible refactor.
 
 ### Pattern Cross-Reference for DERIVE
 
@@ -726,28 +732,127 @@ unloaded parts of the stack visible without pretending they are active. If this
 works, the stack gets stricter and more legible at the same time, instead of
 becoming either a bag of local rules or one brittle monolith.
 
-### Handoff 3.1: Violation → Obligation mapping
+## Phase 5: VERIFY — Prove the Compression on Live Code
+
+**Goal:** Implement the thin law layer and demonstrate that it actually
+compresses live code, covers the current invariant families, and handles loaded
+versus dormant domains without cheating.
+
+Companion structural diagram: `holes/missions/structural-law-wiring.edn`.
+
+### VERIFY Questions
+
+- Do the combinator signatures actually shorten at least one existing domain
+  logic file without erasing domain vocabulary?
+- Do the six current meta-invariant families cover all five existing logic
+  layers plus `mission_logic.clj`, or does the Codex Code residual pressure need
+  to be promoted into a new candidate family?
+- Does the load-profile concept work in code, so an unloaded domain is treated
+  as dormant rather than falsely clean?
+- Is `mission_logic.clj` a thin extraction from the live Mission Peripheral
+  rather than a redesign that outruns the backend?
+
+### VERIFY Results
+
+- `src/futon3c/logic/structural_law.clj` now holds the shared helper surface:
+  paired-edge symmetry, dangling-target detection, enum validity, required
+  phase outputs, and phase-prefix checks.
+- `src/futon3c/peripheral/mission_logic.clj` now projects the live mission
+  backend laws thinly: blocker existence, status discipline, phase ordering,
+  and required outputs. DAG acyclicity and GF/GD remain outside this
+  foundational subset.
+- The first real compression landed in `peripheral/proof_logic.clj`, not
+  `agency/logic.clj`. Proof was the cleaner first target because its repeated
+  structural queries already matched the shared helper shapes directly.
+- That refactor reduced `proof_logic.clj` from 405 lines at `HEAD` to 381 lines
+  while preserving the proof-domain vocabulary and test surface.
+- `src/futon3c/logic/invariant_runner.clj` now proves the load-profile rule in
+  code: dormant domains are reported as `:dormant`, not silently clean.
+- The Codex residual was classified explicitly as candidate family
+  `cross-store-agreement`, with `running-session-mismatches` as the first firm
+  live exemplar.
+
+### Handoff 5.1: Implement structural law combinators
+
+Implement `structural_law.clj` from the Phase 3 design and prove the basic goal
+surface with direct tests.
+
+- `:in` — `docs/structural-law-inventory.sexp`, the five existing
+  `*_logic.clj` files
+- `:out` — `src/futon3c/logic/structural_law.clj` + test
+- `:verify` — each combinator has at least one positive and one negative test
+  tied to an already-evidenced family exemplar
+
+### Handoff 5.2: Extract mission logic thinly
+
+Build `mission_logic.clj` as a projection of the already-binding mission laws,
+not as a greenfield rewrite of the Mission Peripheral.
+
+- `:in` — `src/futon3c/peripheral/mission_backend.clj`,
+  `src/futon3c/peripheral/mission_shapes.clj`,
+  `test/futon3c/peripheral/mission_backend_test.clj`,
+  `docs/structural-law-inventory.sexp`
+- `:out` — `src/futon3c/peripheral/mission_logic.clj` + test
+- `:verify` — the logic surface covers blocker existence, phase ordering,
+  required outputs, and status discipline, while DAG/GF/GD remain outside the
+  foundational subset unless runtime enforcement changed first
+
+### Handoff 5.3: Prove one real compression
+
+Refactor the simplest live domain to use the shared combinators and check that
+the result is genuinely thinner rather than merely more indirect.
+
+- `:in` — `peripheral/proof_logic.clj`, `structural_law.clj`
+- `:out` — modified `peripheral/proof_logic.clj` + green tests + short
+  before/after comparison note in this mission
+- `:verify` — domain-specific names remain legible, and the refactor removes
+  duplicated invariant machinery rather than moving it around; in practice this
+  dropped the file from 405 lines to 381
+
+### Handoff 5.4: Coverage and dormancy audit
+
+Run the coverage pass promised by Handoff 1.2 against all current logic layers
+and prove the dormant-domain handling in a small runner surface.
+
+- `:in` — all five existing `*_logic.clj` files,
+  `src/futon3c/peripheral/mission_logic.clj`, `structural_law.clj`,
+  `docs/structural-law-inventory.sexp`
+- `:out` — updated inventory classification + `src/futon3c/logic/invariant_runner.clj`
+  + test
+- `:verify` — every live invariant in the six logic layers is mapped, Codex
+  residuals are explicitly classified, and a dormant domain is reported as
+  dormant rather than silently clean
+
+## Phase 6: INSTANTIATE — Violations as Obligations, Conductor Integration
+
+**Goal:** Close the loop in the live system: structural-law violations become
+actionable obligations, feed the conductor, and project into self-representing
+surfaces.
+
+### Handoff 6.1: Violation → Obligation mapping
 
 Define how violations map to work items. Not every violation is actionable by
 an agent — some need human judgment (the V-1..V-5 "should :explore accept
 entry from anywhere?" is a design question). Classify violations by
 actionability.
 
-- `:in` — `M-invariant-violations.md`, all domain logic files
+- `:in` — `M-invariant-violations.md`, all domain logic files,
+  `invariant_runner.clj`
 - `:out` — `src/futon3c/logic/obligation.clj` + test
 - Key types: `:auto-fixable` (agent can resolve), `:needs-review` (human),
   `:informational` (context only)
 
-### Handoff 3.2: Aggregate invariant runner
+### Handoff 6.2: Aggregate invariant runner
 
-A thin runner that calls all domain logic modules and produces a unified
-violation/obligation report.
+Extend the VERIFY runner so it calls all active domain logic modules and
+produces a unified violation/obligation report.
 
-- `:in` — all domain logic files, `obligation.clj`
-- `:out` — `src/futon3c/logic/invariant_runner.clj` + test
+- `:in` — all domain logic files, existing `invariant_runner.clj`,
+  `obligation.clj`
+- `:out` — modified `src/futon3c/logic/invariant_runner.clj` + test
 - Wire into: REPL helper `(check-invariants)`, HTTP endpoint (optional)
 
-### Handoff 3.3: FM conductor integration
+### Handoff 6.3: FM conductor integration
 
 Connect the invariant runner to `fm.clj`'s dispatch loop. When an agent goes
 idle, the conductor checks for actionable violations (`:auto-fixable`
@@ -756,24 +861,42 @@ obligations) and pages the agent with the highest-priority one.
 - `:in` — `fm.clj`, `invariant_runner.clj`, `obligation.clj`
 - `:out` — modified `fm.clj` + integration test
 
-### Handoff 3.4: Self-representing stack wiring
+### Handoff 6.4: Self-representing stack wiring
 
 The structural law layer IS the self-representing stack layer for Column 2
 (development process). Wire the invariant runner's output into Arxana
 hyperedges so violations are navigable in the hypergraph browser.
 
-- `:in` — `invariant_runner.clj`, Arxana hyperedge API
+- `:in` — `invariant_runner.clj`, Arxana hyperedge API,
+  `holes/missions/structural-law-wiring.edn`
 - `:out` — `src/futon3c/logic/arxana_bridge.clj` + test
 
-## Completion Criteria
+## Completion Criteria by Phase
 
-- [ ] Meta-invariant set enumerated and verified against 5+ domains, with firm
+### Through ARGUE
+
+- [x] Meta-invariant set enumerated against 5+ live domains, with firm
   exemplars recorded for each active family
-- [ ] `structural_law.clj` provides reusable combinators
-- [ ] At least 3 domain logic files refactored to use combinators
+- [x] DERIVE decisions recorded with explicit IF/HOWEVER/THEN/BECAUSE support
+- [x] Pattern ancestry, trade-offs, generalization notes, and plain-language
+  argument recorded in the mission doc
+
+### VERIFY Exit
+
+- [x] `structural_law.clj` provides reusable combinators with direct tests
+- [x] `mission_logic.clj` exists and is demonstrably a thin extraction of the
+  already-binding mission laws
+- [x] At least one existing domain logic file is refactored to use combinators
+  and gets measurably thinner or clearer
+- [x] The six current families cover all six logic layers in view, or any
+  residual Codex-style pressure is explicitly promoted to a candidate family
+- [x] A load-profile-aware runner handles dormant domains as dormant, not clean
+
+### INSTANTIATE Exit
+
 - [ ] Violations classified by actionability
+- [ ] REPL `(check-invariants)` runs all active domains against live state
 - [ ] FM conductor dispatches work from invariant violations
-- [ ] REPL `(check-invariants)` runs all domains against live state
 - [ ] Structural law violations navigable in Arxana (Column 2 integration)
 
 ## Relationship to Three-Column Stack
@@ -789,10 +912,17 @@ proof DAGs, mission dependency graphs, and namespace dependency graphs. The
 self-representing stack is the stack checking all three columns with the same
 structural law.
 
-## Risk: Premature Abstraction
+## Risk: Premature Abstraction and Coupling Cost
 
 The five domain logic files may not actually share as much structure as the
 table above suggests. Phase 1 (IDENTIFY) exists specifically to test this
-before committing to Phase 2 (DERIVE). If the meta-invariant mapping is
-forced or lossy, we stop at Phase 1 and keep domain-specific files as-is.
-The domain files already work. Abstraction is only worth it if it compresses.
+before committing domains to the shared combinator layer. If the
+meta-invariant mapping is forced or lossy, we stop and keep domain-specific
+files as-is. The domain files already work. Abstraction is only worth it if it
+compresses.
+
+There is also a coupling risk: once multiple domains depend on
+`structural_law.clj`, a careless combinator change can break all of them at
+once. The shared layer therefore has to stabilize before broad adoption.
+VERIFY should treat API churn in the combinator layer as a structural warning,
+not as harmless refactoring noise.
