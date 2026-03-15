@@ -5,7 +5,8 @@ Where that document describes what the FUTON stack **is**, this one
 describes how it is **coming into being** — specifically, how running
 code becomes structural law through progressive crystallization.*
 
-*The machine-readable companion is `docs/structural-law-inventory.sexp`.*
+*The machine-readable companion is `docs/structural-law-inventory.sexp`.
+This narrative is regenerable from the sexp as the inventory evolves.*
 
 ---
 
