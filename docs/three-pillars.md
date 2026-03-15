@@ -2,6 +2,11 @@
 
 *How a software system learns to maintain itself*
 
+**Companion documents**: [The Holistic Argument](holistic-argument.md)
+(the full technical argument with support claims, attack relations,
+and falsifiability conditions) and its [machine-readable
+form](holistic-argument.sexp).
+
 ---
 
 ## The problem
