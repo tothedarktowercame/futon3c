@@ -235,3 +235,125 @@ The AIF (Active Inference) framing gives mathematical precision to
 these ideas — generative models, precision-weighted priors, free energy
 minimization — but the ideas themselves are older than the mathematics.
 They are, at root, about building things that know what they are.
+
+---
+
+## Appendix: This isn't just theory
+
+The three-pillar structure described above isn't a plan — it's
+running. The futon stack currently tracks 84 missions across 10
+repositories. Here's what that looks like in practice.
+
+### ~30 completed missions form the platform
+
+These are finished: designed through all seven phases, implemented,
+documented, and producing evidence. They include:
+
+- **The peripheral stack** — the workspace model where agents operate.
+  Six missions built it layer by layer: from the abstract peripheral
+  model, through dispatch bridging, phenomenology (how peripherals
+  appear to agents), the gauntlet (capability envelopes), transport
+  adapters, and IRC stability.
+
+- **Mission infrastructure** — the mission peripheral itself (where
+  missions are tracked), mission control (the operational dashboard),
+  and portfolio inference (the slow-timescale AIF loop that recommends
+  what to work on next).
+
+- **Coordination** — pattern selection records, walkie-talkie
+  (agent-to-agent messaging), Codex agent behaviour, overnight
+  automation, and the coordination rewrite that unified the gate
+  pipeline.
+
+- **Evidence and self-representation** — the evidence viewer, the
+  self-representing stack (where the system can inspect its own
+  structure), and the three-column stack (code, evidence, and
+  documentation side by side).
+
+Each completed mission left behind not just working code but a
+permanent evidence trail: what patterns were selected, whether they
+worked, and what was learned. This trail feeds back into the Argument
+and the Invariants.
+
+### ~10 missions are in progress, building out the thesis
+
+The current growth edge includes:
+
+- **M-structural-law** — extracting the structural law inventory from
+  documentation into enforceable code. This is the Invariants pillar
+  becoming self-enforcing.
+- **M-cyder** — cybernetic operations, the economics layer that
+  manages resource budgets across missions.
+- **M-stepper-calibration** — tuning the cycle engine that drives
+  mission phases.
+- **M-tpg-coupling-evolution** and **M-xor-coupling-probe** — formal
+  methods work in futon5, investigating how components couple and
+  decouple.
+- **M-distributed-frontiermath** and **M-artificial-stack-exchange** —
+  knowledge infrastructure in futon6.
+
+These aren't isolated features. Each one is building out a specific
+aspect of the three-pillar architecture: making the Argument more
+precise, crystallizing new Invariants, or improving the Mission
+process itself.
+
+### Working this way is fast, not slow
+
+A natural worry is that seven-phase missions with evidence trails and
+structural law checking must be enormously slow. In practice, the
+opposite is true. The structure *removes* overhead by eliminating the
+most common time sinks in software development:
+
+- **No "what should I build?" paralysis** — IDENTIFY and MAP answer
+  this before any code is written.
+- **No design arguments mid-implementation** — DERIVE and ARGUE
+  resolve design decisions before INSTANTIATE begins.
+- **No "does this actually work?" anxiety** — VERIFY catches structural
+  problems before code exists.
+- **No lost context** — every decision is recorded, so returning to a
+  mission after weeks away takes minutes, not hours.
+
+A recent example: **M-aif-head** went from conception to completion
+(all seven phases plus a pre-instantiation review) in a single
+evening session — about two hours. That mission produced:
+
+- 9 handoff tasks designed and implemented
+- 1,072 lines of code across 8 files in two repositories
+- 6 documentation entries in the docbook
+- A reusable protocol (AifHead) that every future peripheral will
+  implement
+- A complete evidence trail, including the mission's own
+  self-verification against its AIF framework
+
+The full mission document is public:
+[M-aif-head](https://github.com/tothedarktowercame/futon2/blob/main/holes/M-aif-head.md)
+
+### The landscape at a glance
+
+```
+SOLIDIFIED — the platform stands on these         ████████████████████  ~30
+  Peripheral stack, mission infrastructure,
+  coordination, evidence, self-representation
+
+CURING — current print layer                      ████████░░░░░░░░░░░░  ~10
+  Structural law, cybernetics, calibration,
+  coupling probes, knowledge infrastructure
+
+POWDER BED — ready to solidify next               ████░░░░░░░░░░░░░░░░   ~6
+  Autonomous pattern lifecycle, last-mile
+  porting, sliding blackboard
+
+SUPERSEDED — absorbed into current repos                                 ~8
+  Original futon3 missions, now ported
+
+GRAY ZONE — pre-split, needs triage                                     ~26
+  Mostly futon3 missions awaiting review
+                                                  ─────────────────────
+                                                  Total: ~84 missions
+```
+
+This is a 3D printing metaphor: completed missions are the solid
+platform, in-progress missions are the layer currently being printed,
+and ready missions are the powder waiting to be fused. The platform
+grows one layer at a time, and each layer is structurally sound before
+the next begins — because the Invariants enforce it.
