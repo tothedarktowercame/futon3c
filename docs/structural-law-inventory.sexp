@@ -499,6 +499,10 @@
                          :family peripheral-custody
                          :status candidate
                          :summary "Peripheral sessions should carry enough custody information to prevent repo/domain drift.")
+              (invariant :id repl-turns-emit-evidence
+                         :family human-visible-inspectability
+                         :status candidate
+                         :summary "Claude and Codex REPL turns should emit session-chained evidence entries on the normal live path rather than remaining only in transient Emacs buffers.")
               (invariant :id violations-become-obligations
                          :family atomic-inspectable-units
                          :status candidate

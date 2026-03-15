@@ -223,3 +223,32 @@
 ;; Note: project! with a real peripheral-id would call emacsclient,
 ;; which we don't want in the test suite. The render tests above
 ;; validate the content; the emacsclient integration is tested manually.
+
+(deftest project-agents-defaults-to-displaying-window
+  (testing "*agents* projection force-displays by default"
+    (let [calls (atom [])]
+      (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (reset! bb/!display-agents-window true)
+        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (is (= 1 (count @calls)))
+        (is (= "*agents*" (:buffer-name (first @calls))))
+        (is (not (contains? (:opts (first @calls)) :no-display)))))))
+
+(deftest project-agents-can-update-without-forcing-popup
+  (testing "*agents* projection honors the popup toggle"
+    (let [calls (atom [])]
+      (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (bb/set-agents-window-display! false)
+        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (is (= 1 (count @calls)))
+        (is (= "*agents*" (:buffer-name (first @calls))))
+        (is (true? (get-in @calls [0 :opts :no-display]))))
+      (bb/set-agents-window-display! true))))
