@@ -651,7 +651,7 @@ Then auto-register with the server and load existing session-id."
                         (buffer-string)))))
               (unless (string-empty-p s) s)))))
     (when existing-sid
-      (claude-repl--emit-session-start-evidence! existing-sid))))
+      (claude-repl--emit-session-start-evidence! existing-sid)))))
 
 ;;;###autoload
 (defun claude-repl ()

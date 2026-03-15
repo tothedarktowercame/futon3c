@@ -9,7 +9,7 @@ hypergraph for Column 2 representation), futon1a (evidence store)
 
 ## Motivation
 
-We now have four operational core.logic invariant layers:
+We now have five operational core.logic invariant layers:
 
 | Domain | File | Status |
 |--------|------|--------|
@@ -17,6 +17,7 @@ We now have four operational core.logic invariant layers:
 | Tickle | `agents/tickle_logic.clj` | Operational, 0 violations |
 | Agency | `agency/logic.clj` | Operational, 5 violations cataloged |
 | Proof | `peripheral/proof_logic.clj` | Operational, tested |
+| Codex Code | `agents/codex_code_logic.clj` | Operational, tested |
 
 All four follow the same pattern: snapshot → build-db → goals → query-violations.
 And all four express the same small set of structural properties, just projected
@@ -226,9 +227,11 @@ So the discipline for the rest of Phase 1 is:
 - `futon3c/src/futon3c/agents/tickle_logic.clj`
 - `futon3c/src/futon3c/agency/logic.clj`
 - `futon3c/src/futon3c/peripheral/proof_logic.clj`
+- `futon3c/src/futon3c/agents/codex_code_logic.clj`
 - `futon3c/src/futon3c/peripheral/mission.clj`
 - `futon3c/src/futon3c/peripheral/mission_backend.clj`
 - `futon3c/src/futon3c/peripheral/mission_shapes.clj`
+- `futon3c/test/futon3c/agents/codex_code_logic_test.clj`
 - `futon3c/test/futon3c/peripheral/mission_test.clj`
 - `futon3c/test/futon3c/peripheral/mission_backend_test.clj`
 - `futon3c/docs/structural-law-inventory.sexp`
@@ -285,14 +288,14 @@ pressure from candidate law to operational law. In that limited sense it is a
 proto-Invariant Peripheral, but not yet a cycle machine. The canonical source
 for that surface remains `docs/structural-law-inventory.sexp`.
 
-As `mission_logic.clj` comes online, diff the four existing domain logic files
-plus the new mission logic file. At that point there should be five domain
+As `mission_logic.clj` comes online, diff the five existing domain logic files
+plus the new mission logic file. At that point there should be six domain
 logic files in view. Are
 there invariants in any domain that don't map to a meta-invariant? Are there
 candidate families in the inventory that now have enough firm exemplars to
 promote? If so, the meta-invariant set or its classifications need extending.
 
-- `:in` — the four existing `*_logic.clj` files plus
+- `:in` — the five existing `*_logic.clj` files plus
   `src/futon3c/peripheral/mission_logic.clj`
 - `:out` — `docs/structural-law-inventory.sexp` (enumeration + mapping table,
   including cleanup-derived candidate invariants)
@@ -313,9 +316,10 @@ be built.
 
 ### Infrastructure Inventory
 
-- **Live invariant logic layers:** four `core.logic` projections already exist:
-  `portfolio/logic.clj`, `agents/tickle_logic.clj`, `agency/logic.clj`, and
-  `peripheral/proof_logic.clj`. Each uses the same broad pattern:
+- **Live invariant logic layers:** five `core.logic` projections already exist:
+  `portfolio/logic.clj`, `agents/tickle_logic.clj`, `agency/logic.clj`,
+  `peripheral/proof_logic.clj`, and `agents/codex_code_logic.clj`. Each uses
+  the same broad pattern:
   snapshot/build-db → logic relations/goals → query-violations.
 - **Mission-layer pre-logic surface:** the Mission Peripheral already enforces
   blocker existence, phase order, required outputs, status discipline, and
@@ -364,7 +368,7 @@ be built.
 
 | Ready (no new code needed) | Missing (actual work) |
 |---|---|
-| Four operational invariant logic files already exist. | `src/futon3c/peripheral/mission_logic.clj` does not exist yet. |
+| Five operational invariant logic files already exist. | `src/futon3c/peripheral/mission_logic.clj` does not exist yet. |
 | Mission backend already enforces a core mission-law subset. | No shared `structural_law.clj` combinator layer yet. |
 | Canonical registry seed exists in `docs/structural-law-inventory.sexp`. | No `invariant_runner.clj` aggregating all domains yet. |
 | Evidence storage/query protocol already exists via `EvidenceBackend` and `store.clj`. | No `obligation.clj` mapping violations into actionability classes yet. |
@@ -377,9 +381,10 @@ be built.
 
 **Q1. Which invariant domains already have operational logic projections?**
 
-Answer: Portfolio, Tickle, Agency, and Proof already have `core.logic`
-projections. Mission does not yet have a logic file, but it does have live
-backend enforcement that is strong enough to serve as an evidence source.
+Answer: Portfolio, Tickle, Agency, Proof, and Codex Code already have
+`core.logic` projections. Mission does not yet have a logic file, but it does
+have live backend enforcement that is strong enough to serve as an evidence
+source.
 
 **Q2. What persistence and evidence APIs already exist for structural law?**
 
@@ -430,7 +435,7 @@ domain logic files can call, reducing each domain to a thin projection.
 
 Extract the meta-invariants as parameterized core.logic goals.
 
-- `:in` — the four existing `*_logic.clj` files plus
+- `:in` — the five existing `*_logic.clj` files plus
   `src/futon3c/peripheral/mission_logic.clj`, `docs/structural-law-inventory.sexp`
 - `:out` — `src/futon3c/logic/structural_law.clj` + test
 - Functions (sketch):
