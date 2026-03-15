@@ -404,6 +404,194 @@
    :blocks [:preference-exogeneity]}])
 
 ;; =============================================================================
+;; JOE (the sovereign as participant — exogenous agent, observable effects)
+;; =============================================================================
+;;
+;; Status: OBSERVABLE (joe-terminal-vocabulary.md defines the events)
+;; Timescale: slow-glacial (days to weeks)
+;; AIF template: none — Joe is not "run" by the engine; the engine
+;;   models Joe's participation and generates prediction error when
+;;   behavioral traces diverge from what the stack needs.
+;;
+;; Key distinction: Joe cannot be "inhabited" by an LLM agent. But Joe
+;; IS inhabited by a human consciousness, and the stack instantiates
+;; into Joe's wetware as another engine that emits affect signals,
+;; makes commitments, and produces behavioral traces. The AIF head
+;; for the Joe peripheral doesn't control Joe — it models what Joe's
+;; participation looks like when the stack is healthy, and detects
+;; when it isn't.
+;;
+;; Why this matters beyond philosophy: Joe's behavioral constraints
+;; are not verified with core.logic, but their DOWNSTREAM EFFECTS are.
+;; "Joe didn't upload recordings" → evidence-velocity drops →
+;; portfolio inference sees stale review-age → same diagnostic path
+;; as "agent didn't emit PUR." The metaphor becomes computational.
+;;
+;; I4 implication: The sovereign is also a participant in the model.
+;; Preference exogeneity applies to Joe too — that's what "I'm sorry,
+;; Joe" means. The structural law inventory is the constitution;
+;; the AIF head enforces it against all actors.
+
+(:peripheral/id :joe
+ :peripheral/status :observable
+ :peripheral/timescale :slow-glacial
+ :peripheral/agent-type :exogenous-human  ;; unique: not LLM-inhabited
+ :peripheral/pillar-connections
+ {:argument   :embodied  ;; Joe IS the argument's author; traces are indirect
+  :invariants :sovereign ;; Joe sets invariants but is also constrained by them
+  :missions   :direct}   ;; Joe creates, prioritizes, and works on missions
+
+ ;; ── Observables (o) ──────────────────────────────────────────────
+ ;; Source: joe-terminal-vocabulary.md events + downstream effects
+ ;; These channels are NOT read from Joe's internal states (unknowable)
+ ;; but from behavioral traces the stack can observe.
+
+ :observation-channels
+ [{:id :evidence-emission-rate
+   :source :evidence-store
+   :type :rate
+   :range [0.0 1.0]  ;; capped at evidence-per-day-cap
+   :precision 0.8
+   :pillar :argument
+   :description "Evidence entries per day attributed to Joe's sessions"
+   :joe-vocab-terminal "life/commit, life/coding-session"}
+
+  {:id :recording-currency
+   :source :life-events
+   :type :duration
+   :range [0.0 1.0]  ;; 0=stale (>7 days), 1=fresh (today)
+   :precision 0.7
+   :pillar :argument  ;; recordings feed the generative model (Joe's thinking)
+   :description "Freshness of uploaded recordings (ZoomR4 → evidence)"
+   :joe-vocab-terminal "life/recording"}
+
+  {:id :review-cadence
+   :source :evidence-store
+   :type :duration
+   :range [0.0 1.0]  ;; normalized by review-age-cap (14 days)
+   :precision 1.0
+   :pillar :missions
+   :description "Days since last portfolio review (inverse: 1=fresh)"
+   :joe-vocab-terminal "implicit — portfolio review evidence"}
+
+  {:id :bid-completion-rate
+   :source :heartbeat
+   :type :ratio
+   :range [0.0 1.0]
+   :precision 0.7
+   :pillar :missions
+   :description "Fraction of committed bids actually completed"
+   :joe-vocab-terminal "life/bid, life/clear"}
+
+  {:id :unplanned-work-ratio
+   :source :heartbeat
+   :type :ratio
+   :range [0.0 1.0]
+   :precision 0.5
+   :pillar :missions
+   :description "Fraction of work that wasn't bid (reactive vs planned)"
+   :joe-vocab-terminal "life/commit without matching bid"}
+
+  {:id :morning-protocol-adherence
+   :source :life-events
+   :type :binary
+   :range [0.0 1.0]  ;; 0=skipped, 1=complete
+   :precision 0.6
+   :pillar :none  ;; personal viability, not stack-specific
+   :description "Did the morning protocol happen (recording + be-human)?"
+   :joe-vocab-terminal "life/recording, life/be-human"}
+
+  {:id :mission-scoping-discipline
+   :source :git-events
+   :type :binary
+   :range [0.0 1.0]
+   :precision 0.9
+   :pillar :missions
+   :description "Did implementation work have a preceding IDENTIFY→DERIVE?"
+   :joe-vocab-terminal "implicit — git commits vs mission phase"}
+
+  {:id :preference-stability
+   :source :structural-law-inventory
+   :type :rate
+   :range [0.0 1.0]  ;; 0=no changes, 1=high churn
+   :precision 0.8
+   :pillar :invariants
+   :description "Rate of structural law changes (I4: shouldn't be fast)"
+   :joe-vocab-terminal "implicit — inventory.sexp git history"}
+
+  {:id :agent-engagement
+   :source :evidence-store
+   :type :count
+   :range [0.0 1.0]  ;; normalized by agent count
+   :precision 0.5
+   :pillar :missions
+   :description "Are agents being dispatched and producing evidence?"
+   :joe-vocab-terminal "implicit — conductor dispatch + agent evidence"}
+
+  {:id :quadrant-balance
+   :source :life-events
+   :type :distribution
+   :range [0.0 1.0]  ;; entropy of Q1-Q4 allocation
+   :precision 0.4
+   :pillar :none  ;; personal viability
+   :description "Evenness of time across quadrants (Q1-Q4)"
+   :joe-vocab-terminal "life/coding-session, life/meeting, etc."}]
+
+ ;; ── Beliefs (μ) ──────────────────────────────────────────────────
+
+ :belief-state
+ {:sens "Per-channel predictions of Joe's behavioral traces"
+  :mode "Inferred engagement mode: :ACTIVE, :REVIEWING, :PLANNING, :AWAY"
+  :focus "Current mission or quadrant focus (nil = diffuse)"
+  :urgency "Scalar [0,1]: how urgently Joe's attention is needed"
+  :viability "Scalar [0,1]: is the morning protocol / life admin on track?"}
+
+ ;; ── Preferences (C) ──────────────────────────────────────────────
+ ;; These are what the stack needs from Joe, expressed as preferred
+ ;; observation ranges. NOT what Joe wants — what the stack requires.
+
+ :preferences
+ {:current-source :joe-terminal-vocabulary
+  :target-source  [:structural-law-inventory :bid-clear-mechanics]
+  :preferred      "High evidence rate, fresh reviews, bids completed, morning done"
+  :avoided        "Dark work (no evidence), stale reviews, preference churn, Q4-only"
+  :mode-prior     {:ACTIVE 0.5 :REVIEWING 0.2 :PLANNING 0.2 :AWAY 0.1}}
+
+ ;; ── Actions (a) ──────────────────────────────────────────────────
+ ;; The "actions" here are the stack's responses to Joe's behavior,
+ ;; not actions Joe takes. The stack nudges, alerts, and refuses.
+
+ :action-arena
+ {:arena/id :joe-engagement
+  :arena/participants [:stack]  ;; stack acts toward Joe, not vice versa
+  :arena/actions [:nudge :alert :refuse :acknowledge :recalibrate]
+  :arena/rules {:reflex-gate true   ;; hard alerts for critical failures
+                :default-mode true   ;; gentle nudges for drift
+                :i4-enforcement true}} ;; "I'm sorry, Joe"
+
+ ;; ── Three-tier responses ────────────────────────────────────────
+
+ :tiers
+ {:reflex    "No evidence in 7 days → hard alert (infrastructure broken?)"
+  :default   "Review-age climbing, stall-count rising → gentle nudge"
+  :deliberative "Effort-prediction-error high → recalibrate bid expectations"}
+
+ ;; ── Gaps ────────────────────────────────────────────────────────
+
+ :gaps
+ [{:id :no-life-event-ingestion
+   :description "joe-terminal-vocabulary events not yet flowing into evidence store"
+   :blocks [:recording-currency :morning-protocol :quadrant-balance]}
+
+  {:id :no-downstream-verification
+   :description "Behavioral constraints not checked via core.logic on effects"
+   :blocks [:mission-scoping-discipline :preference-stability]}
+
+  {:id :no-nudge-mechanism
+   :description "Stack has no channel to signal Joe (no push notifications)"
+   :blocks [:nudge :alert]}])
+
+;; =============================================================================
 ;; TEMPLATE for remaining peripherals (Phase 2)
 ;; =============================================================================
 ;;
