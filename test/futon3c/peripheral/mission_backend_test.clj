@@ -91,6 +91,43 @@ Closed and shipped.
 - [x] Model descriptor system rebuilt (Section 2.11)
 ")
 
+(deftest cycle-begin-rejects-nonexistent-blocker
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-loaded-mission! ctx)
+        result (tools/execute-tool backend :cycle-begin ["M-test" "O-missing"])]
+    (is (not (:ok result)))
+    (is (= :invalid-blocker (get-in result [:error :code])))))
+
+(deftest cycle-advance-requires-phase-outputs
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-loaded-mission! ctx)
+        _ (tools/execute-tool backend :obligation-upsert
+                              ["M-test" "O-main" {:item/label "Main obligation"
+                                                  :item/status :open
+                                                  :item/depends-on #{}
+                                                  :item/unlocks #{}
+                                                  :item/artifact-paths []}])
+        begin (tools/execute-tool backend :cycle-begin ["M-test" "O-main"])
+        cycle-id (get-in begin [:result :cycle/id])
+        advance (tools/execute-tool backend :cycle-advance ["M-test" cycle-id {}])]
+    (is (not (:ok advance)))
+    (is (= :missing-phase-outputs (get-in advance [:error :code])))))
+
+(deftest obligation-upsert-rejects-assertion-only-done
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-loaded-mission! ctx)
+        _ (tools/execute-tool backend :obligation-upsert
+                              ["M-test" "O-main" {:item/label "Main obligation"
+                                                  :item/status :open
+                                                  :item/evidence-type :assertion
+                                                  :item/depends-on #{}
+                                                  :item/unlocks #{}
+                                                  :item/artifact-paths []}])
+        result (tools/execute-tool backend :obligation-upsert
+                                   ["M-test" "O-main" {:item/status :done}])]
+    (is (not (:ok result)))
+    (is (= :invalid-transition (get-in result [:error :code])))))
+
 (deftest mission-doc-audit-reports-open-honest-interval
   (let [{:keys [backend cwd] :as ctx} (make-test-backend)
         _ (init-loaded-mission! ctx)

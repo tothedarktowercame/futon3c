@@ -1,0 +1,170 @@
+;; M-structural-law as a futon5 mission wiring diagram
+;;
+;; This diagram models the current mission state after DERIVE and ARGUE:
+;; inventory-driven law extraction, mission-law extraction, shared combinator
+;; derivation, verification, and AIF+ diagram production.
+;;
+;; Intended validator:
+;;   futon5.ct.mission/validate
+
+{:mission/id :structural-law
+ :mission/state :argue
+
+ :ports
+ {:input
+  [{:id :I-preferences
+    :name "Human steering preferences"
+    :type :edn-document
+    :source "human"
+    :timescale :glacial
+    :constraint true}
+
+   {:id :I-lifecycle
+    :name "Mission lifecycle rubric"
+    :type :edn-document
+    :source "futon4/holes/mission-lifecycle.md"
+    :timescale :slow
+    :constraint true}
+
+   {:id :I-patterns
+    :name "Pattern library conclusions"
+    :type :edn-document
+    :source "futon3/library"
+    :timescale :slow
+    :constraint true}
+
+   {:id :I-inventory
+    :name "Structural law inventory"
+    :type :type-registry
+    :source "docs/structural-law-inventory.sexp"
+    :timescale :medium}
+
+   {:id :I-logic-layers
+    :name "Existing logic layers"
+    :type :clj-namespace
+    :source "futon3c logic namespaces"
+    :timescale :medium}
+
+   {:id :I-mission-backend
+    :name "Mission backend law surface"
+    :type :clj-namespace
+    :source "mission backend + shapes"
+    :timescale :medium}
+
+   {:id :I-crystallization
+    :name "Structural crystallization narrative"
+    :type :edn-document
+    :source "docs/structural-crystallization.md"
+    :timescale :slow}]
+
+  :output
+  [{:id :O-registry
+    :name "Updated law registry"
+    :type :type-registry
+    :consumer "future derivations"
+    :spec-ref "phase-5.4"}
+
+   {:id :O-structural-law
+    :name "Shared combinator namespace"
+    :type :clj-namespace
+    :consumer "futon3c.logic"
+    :spec-ref "phase-5.1"}
+
+   {:id :O-mission-logic
+    :name "Mission logic projection"
+    :type :clj-namespace
+    :consumer "Mission Peripheral"
+    :spec-ref "phase-5.2"}
+
+   {:id :O-verify-evidence
+    :name "Verification evidence"
+    :type :evidence-entry
+    :consumer "mission doc + tests"
+    :spec-ref "phase-5.verify"}
+
+   {:id :O-mission-doc
+    :name "Updated mission argument"
+    :type :edn-document
+    :consumer "human + Codex"
+    :spec-ref "phase-4.argue"}
+
+   {:id :O-wiring
+    :name "Mission wiring diagram"
+    :type :edn-document
+    :consumer "futon5 validator + mission control"
+    :spec-ref "phase-6.4"}]}
+
+ :components
+ [{:id :C-family-map
+   :name "Inventory and coverage map"
+   :accepts #{:type-registry :clj-namespace}
+   :produces #{:type-registry :evidence-entry}
+   :timescale :medium}
+
+  {:id :C-mission-extract
+   :name "Mission law extraction"
+   :accepts #{:clj-namespace :type-registry}
+   :produces #{:clj-namespace :evidence-entry}
+   :timescale :medium}
+
+  {:id :C-combinators
+   :name "Structural law derivation"
+   :accepts #{:type-registry :clj-namespace :edn-document}
+   :produces #{:clj-namespace :test-suite}
+   :timescale :slow}
+
+  {:id :C-verify
+   :name "Compression verifier"
+   :accepts #{:clj-namespace :test-suite :type-registry}
+   :produces #{:evidence-entry}
+   :timescale :medium}
+
+  {:id :C-argue
+   :name "Argument synthesis"
+   :accepts #{:type-registry :evidence-entry :edn-document}
+   :produces #{:edn-document}
+   :timescale :slow}
+
+  {:id :C-aif
+   :name "AIF+ mission diagram"
+   :accepts #{:edn-document :type-registry :evidence-entry}
+   :produces #{:edn-document}
+   :timescale :slow}]
+
+ :edges
+ [{:from :I-inventory       :to :C-family-map      :type :type-registry}
+  {:from :I-logic-layers    :to :C-family-map      :type :clj-namespace}
+  {:from :C-family-map      :to :O-registry        :type :type-registry}
+  {:from :C-family-map      :to :C-combinators     :type :type-registry}
+  {:from :C-family-map      :to :C-verify          :type :type-registry}
+  {:from :C-family-map      :to :C-argue           :type :type-registry}
+  {:from :C-family-map      :to :C-argue           :type :evidence-entry}
+  {:from :C-family-map      :to :C-aif             :type :type-registry}
+  {:from :C-family-map      :to :C-aif             :type :evidence-entry}
+
+  {:from :I-mission-backend :to :C-mission-extract :type :clj-namespace}
+  {:from :I-inventory       :to :C-mission-extract :type :type-registry}
+  {:from :C-mission-extract :to :O-mission-logic   :type :clj-namespace}
+  {:from :C-mission-extract :to :C-combinators     :type :clj-namespace}
+  {:from :C-mission-extract :to :C-verify          :type :clj-namespace}
+  {:from :C-mission-extract :to :C-argue           :type :evidence-entry}
+
+  {:from :I-logic-layers    :to :C-combinators     :type :clj-namespace}
+  {:from :I-preferences     :to :C-combinators     :type :edn-document}
+  {:from :I-lifecycle       :to :C-combinators     :type :edn-document}
+  {:from :I-patterns        :to :C-combinators     :type :edn-document}
+  {:from :C-combinators     :to :O-structural-law  :type :clj-namespace}
+  {:from :C-combinators     :to :C-verify          :type :clj-namespace}
+  {:from :C-combinators     :to :C-verify          :type :test-suite}
+
+  {:from :C-verify          :to :O-verify-evidence :type :evidence-entry}
+  {:from :C-verify          :to :C-argue           :type :evidence-entry}
+  {:from :C-verify          :to :C-aif             :type :evidence-entry}
+
+  {:from :I-crystallization :to :C-argue           :type :edn-document}
+  {:from :I-lifecycle       :to :C-argue           :type :edn-document}
+  {:from :C-argue           :to :O-mission-doc     :type :edn-document}
+  {:from :C-argue           :to :C-aif             :type :edn-document}
+
+  {:from :I-crystallization :to :C-aif             :type :edn-document}
+  {:from :C-aif             :to :O-wiring          :type :edn-document}]}

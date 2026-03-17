@@ -159,6 +159,10 @@
                               (= new-phase last-phase)
                               (-> (dissoc :current-phase :current-cycle-id)
                                   (update :cycles-completed inc)))
+                  ;; Fire on-cycle-complete callback if cycle just finished
+                  _ (when (and (= new-phase last-phase)
+                               (:on-cycle-complete config))
+                      ((:on-cycle-complete config) new-state))
                   append-err (common/maybe-append-evidence! new-state ev)]
               (if append-err
                 append-err

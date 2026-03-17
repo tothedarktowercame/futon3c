@@ -22,7 +22,7 @@
    snapshot → build-db → goals → query-violations."
   (:require [clojure.core.logic :as l]
             [clojure.core.logic.pldb :as pldb]
-            [clojure.set]))
+            [futon3c.logic.structural-law :as law]))
 
 ;; =============================================================================
 ;; Relations (fact schema)
@@ -64,9 +64,6 @@
 
 (def ^:private phase-order
   [:observe :propose :execute :validate :classify :integrate :commit :gate-review :completed])
-
-(def ^:private phase-index
-  (into {} (map-indexed (fn [i p] [p i]) phase-order)))
 
 (def ^:private phase-required-outputs
   {:observe     #{:blocker-id}
@@ -256,56 +253,39 @@
    Returns [[a b direction] ...] where direction is :unlocks-without-dep
    or :dep-without-unlock."
   [db]
-  (let [missing-dep
-        (pldb/with-db db
-          (l/run* [q]
-            (l/fresh [a b]
-              (unlockso a b)
-              (l/nafc depends-ono b a)
-              (l/== q [a b :unlocks-without-dep]))))
-        missing-unlock
-        (pldb/with-db db
-          (l/run* [q]
-            (l/fresh [a b]
-              (depends-ono a b)
-              (l/nafc unlockso b a)
-              (l/== q [a b :dep-without-unlock]))))]
-    (vec (concat missing-dep missing-unlock))))
+  (law/query-paired-edge-mismatches
+   db
+   {:forward-rel unlockso
+    :backward-rel depends-ono
+    :forward-label :unlocks-without-dep
+    :backward-label :dep-without-unlock}))
 
 (defn query-dangling-refs
   "Items referenced in depends-on or unlocks that don't exist in the ledger.
    Returns [[referencing-item missing-item direction] ...]."
   [db]
-  (let [dangling-deps
-        (pldb/with-db db
-          (l/run* [q]
-            (l/fresh [a dep]
-              (depends-ono a dep)
-              (l/nafc itemo dep)
-              (l/== q [a dep :depends-on]))))
-        dangling-unlocks
-        (pldb/with-db db
-          (l/run* [q]
-            (l/fresh [a u]
-              (unlockso a u)
-              (l/nafc itemo u)
-              (l/== q [a u :unlocks]))))]
-    (vec (concat dangling-deps dangling-unlocks))))
+  (vec
+   (concat
+    (law/query-dangling-targets
+     db
+     {:entity-rel itemo
+      :ref-rel depends-ono
+      :direction :depends-on})
+    (law/query-dangling-targets
+     db
+     {:entity-rel itemo
+      :ref-rel unlockso
+      :direction :unlocks}))))
 
 ;; --- Status discipline ---
 
 (defn query-invalid-statuses
   "Items with unrecognized status values."
   [db]
-  (pldb/with-db db
-    (l/run* [q]
-      (l/fresh [iid s]
-        (item-statuso iid s)
-        (l/project [s]
-          (if (contains? valid-statuses s)
-            l/fail
-            l/succeed))
-        (l/== q [iid s])))))
+  (law/query-invalid-enum-values
+   db
+   {:value-rel item-statuso
+    :allowed-values valid-statuses}))
 
 (defn query-proved-without-analytical
   "Items marked :proved but with only :numerical evidence (SR-5 violation)."
@@ -330,20 +310,12 @@
   "Cycles that have advanced past a phase without recording required outputs.
    Returns [{:cycle phase :missing #{keys}} ...]."
   [db]
-  (pldb/with-db db
-    (let [cycles (l/run* [q] (l/fresh [cid phase] (cycle-phaseo cid phase) (l/== q [cid phase])))]
-      (vec
-        (for [[cid current-phase] cycles
-              :let [current-idx (get phase-index current-phase -1)]
-              [req-phase req-keys] phase-required-outputs
-              :let [req-idx (get phase-index req-phase -1)]
-              :when (> current-idx req-idx)  ; cycle has passed this phase
-              :let [present (set (pldb/with-db db
-                                   (l/run* [k]
-                                     (cycle-has-outputo cid req-phase k))))
-                    missing (clojure.set/difference req-keys present)]
-              :when (seq missing)]
-          {:cycle cid :phase req-phase :missing missing})))))
+  (law/query-missing-phase-outputs
+   db
+   {:cycle-phase-rel cycle-phaseo
+    :cycle-output-rel cycle-has-outputo
+    :phase-order phase-order
+    :phase-required-outputs phase-required-outputs}))
 
 ;; --- Mode gating ---
 
