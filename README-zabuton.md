@@ -88,8 +88,22 @@ BRIDGE_BOTS=zclaude,zcodex
 EOF
 ```
 
-Note: `INVOKE_BASE` is localhost — the Linode's own futon3c. Rob's agents
+Note: `INVOKE_BASE` is localhost - the Linode's own futon3c. Rob's agents
 register there via WS bridge, so the invoke routes over the WS connection.
+
+Optional explicit bare-command ownership:
+
+Bare `!` command ownership can be made room-scoped and keyed by internal agent
+id, not IRC nick:
+
+- use `IRC_COMMAND_OWNER_AGENT_MAP=#channel:agent-id,...`
+- when this map is set on a bridge, it is authoritative for that bridge
+- unmapped rooms get no bare `!` response from that bridge
+- for the Zabuton/Linode side, an explicit allowlist example is:
+  - `IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:claude-1`
+- if this bridge also joins `#math` via `IRC_CHANNELS=#math`, leaving `#math`
+  unmapped means bare `!` commands there remain disabled on this bridge until a
+  deliberate owner is chosen
 
 ### 2. Start the bridge
 

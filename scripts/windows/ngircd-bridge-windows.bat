@@ -57,6 +57,7 @@ echo [ngircd-bridge-windows] IRC=%IRC_HOST%:%IRC_PORT% channel=%IRC_CHANNEL%
 echo [ngircd-bridge-windows] invoke=%INVOKE_BASE% bots=%BRIDGE_BOTS%
 echo [ngircd-bridge-windows] CODEX_BRIDGE_SUMMARY_MODE=%CODEX_BRIDGE_SUMMARY_MODE%
 if defined NICK_AGENT_MAP echo [ngircd-bridge-windows] NICK_AGENT_MAP=%NICK_AGENT_MAP%
+if defined IRC_COMMAND_OWNER_AGENT_MAP echo [ngircd-bridge-windows] IRC_COMMAND_OWNER_AGENT_MAP=%IRC_COMMAND_OWNER_AGENT_MAP%
 if defined FUTON3C_REGISTER_CLAUDE echo [ngircd-bridge-windows] FUTON3C_REGISTER_CLAUDE=%FUTON3C_REGISTER_CLAUDE%
 if defined FUTON3C_RELAY_CLAUDE echo [ngircd-bridge-windows] FUTON3C_RELAY_CLAUDE=%FUTON3C_RELAY_CLAUDE%
 echo [ngircd-bridge-windows] python=%PYTHON_EXE%
