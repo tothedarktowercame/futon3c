@@ -174,6 +174,36 @@ class NgircdBridgePendingTimeoutTest(unittest.TestCase):
         self.assertIn("SAT check finished; artifact refs: abc123", say.call_args_list[1].args[0])
         record.assert_called_once()
 
+    def test_pending_invoke_terminal_reply_appends_canonical_local_artifact_ref(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        response = {
+            "ok": False,
+            "pending": True,
+            "job_id": "codex-job-12",
+            "error": "invoke timeout: codex-1 is already invoking",
+        }
+        awaited = {
+            "kind": "job",
+            "job": {
+                "job-id": "codex-job-12",
+                "state": "done",
+                "result-summary": "Bounded FM local run bundle recorded",
+                "artifact-ref": "mfuton/data/frontiermath-local/FM-001/runs/2026-03-12-live-runtime-proof-root-cycle-230802Z/",
+                "trace-id": "invoke-124",
+            },
+        }
+        with mock.patch.object(bot, "_say") as say, \
+             mock.patch.object(bot, "_wait_for_pending_invoke_terminal", return_value=awaited), \
+             mock.patch.object(bot, "_record_job_delivery_receipt") as record:
+            bot._handle_pending_invoke(response, "#math", "codex-job-12")
+        self.assertEqual(2, say.call_count)
+        self.assertIn("Bounded FM local run bundle recorded", say.call_args_list[1].args[0])
+        self.assertIn(
+            "mfuton/data/frontiermath-local/FM-001/runs/2026-03-12-live-runtime-proof-root-cycle-230802Z/",
+            say.call_args_list[1].args[0],
+        )
+        record.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

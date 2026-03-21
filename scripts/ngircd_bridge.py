@@ -928,7 +928,10 @@ class IRCBot:
         artifact_ref = job.get("artifact-ref") or job.get("artifact_ref")
         terminal_message = self._job_terminal_message(job)
         if state == "done":
-            result_text = result_summary or artifact_ref or f"job {job_id} completed"
+            if result_summary and artifact_ref and artifact_ref not in result_summary:
+                result_text = f"{result_summary} canonical ref: {artifact_ref}"
+            else:
+                result_text = result_summary or artifact_ref or f"job {job_id} completed"
             self._emit_success_reply(
                 {"ok": True, "result": result_text, "session_id": session_id},
                 reply_ch,
