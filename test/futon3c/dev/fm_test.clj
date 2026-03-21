@@ -1,5 +1,6 @@
 (ns futon3c.dev.fm-test
   (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agents.tickle-queue :as tq]
             [futon3c.dev.fm :as fm]))
 
@@ -120,3 +121,32 @@
       (is (= 1 (get-in aggregate [:summary :dispatchable-tasks])))
       (is (= "Repair mission cycle blocker reference: [\"C1\" \"O-x\" :blocker]"
              (get-in aggregate [:dispatchable-tasks 0 :label]))))))
+
+(deftest task->prompt-mfuton-mode-rewrites-git-language
+  (testing "mfuton mode keeps Git as truth while rewriting publication toward the gh commit algorithm"
+    (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")]
+      (let [prompt (fm/task->prompt {:id "F1-opposite"
+                                     :label "Falsification attempt"
+                                     :source "proof-ledger"
+                                     :depends-on #{"F0-root"}})]
+        (is (re-find #"Git is truth" prompt))
+        (is (re-find #"run the commit algorithm for gh when done" prompt))
+        (is (not (re-find #"Push results to git when done" prompt)))))))
+
+(deftest fm-dispatch-message-override-keeps-git-as-truth
+  (testing "the page-style assignment message keeps Git as truth while redirecting publication wording"
+    (let [message (mfuton-prompt-override/fm-dispatch-message-override
+                   "@codex F1-opposite: Falsification attempt. Push results to git when done.")]
+      (is (re-find #"Git is truth" message))
+      (is (re-find #"run the commit algorithm for gh when done" message))
+      (is (not (re-find #"Push results to git when done" message))))))
+
+(deftest task->prompt-default-mode-preserves-original-git-language
+  (testing "default mfuton mode leaves the original futon task prompt unchanged"
+    (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "futon")]
+      (let [prompt (fm/task->prompt {:id "F1-opposite"
+                                     :label "Falsification attempt"
+                                     :source "proof-ledger"
+                                     :depends-on #{"F0-root"}})]
+        (is (re-find #"Push results to git when done" prompt))
+        (is (not (re-find #"run the commit algorithm for gh when done" prompt)))))))

@@ -6,6 +6,7 @@ if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
 for %%I in ("%REPO_ROOT%\..\futon4\dev\web") do set "DEFAULT_FUTON1A_STATIC_DIR=%%~fI"
 for %%I in ("%REPO_ROOT%\..\..\gh\mfuton") do set "LOCAL_INSTALLATION_ROOT=%%~fI"
+for %%I in ("%REPO_ROOT%\..\futon6\scripts\frontiermath\local-futon3c-windows.bat") do set "DEFAULT_FRONTIERMATH_LOCAL_WRAPPER=%%~fI"
 set "STOP_DEV_STACK=%SCRIPT_DIR%\stop-dev-stack-windows.bat"
 set "DEV_STACK_SUPERVISOR=%SCRIPT_DIR%\dev-stack-supervisor.ps1"
 set "DEV_STACK_BODY=%SCRIPT_DIR%\dev-stack-body-windows.bat"
@@ -36,35 +37,31 @@ if "%REMOTE_IRC%"=="1" if "%FRONTIERMATH_LOCAL%"=="1" (
   exit /b 1
 )
 
+if "%FRONTIERMATH_LOCAL%"=="1" (
+  if not defined FUTON3C_FRONTIERMATH_LOCAL_WRAPPER (
+    set "FUTON3C_FRONTIERMATH_LOCAL_WRAPPER=%DEFAULT_FRONTIERMATH_LOCAL_WRAPPER%"
+  )
+  if not exist "%FUTON3C_FRONTIERMATH_LOCAL_WRAPPER%" (
+    1>&2 echo [dev-stack-windows] ERROR: FrontierMath local bring-up is now owned by futon6.
+    1>&2 echo [dev-stack-windows] Missing wrapper: %FUTON3C_FRONTIERMATH_LOCAL_WRAPPER%
+    1>&2 echo [dev-stack-windows] Set FUTON3C_FRONTIERMATH_LOCAL_WRAPPER or run futon6/scripts/frontiermath/local-futon3c-windows.bat directly.
+    exit /b 1
+  )
+  echo [dev-stack-windows] Delegating --frontiermath-local to %FUTON3C_FRONTIERMATH_LOCAL_WRAPPER%
+  call "%FUTON3C_FRONTIERMATH_LOCAL_WRAPPER%"
+  exit /b %ERRORLEVEL%
+)
+
 set "FUTON3C_IRC_LANE=local"
 if "%REMOTE_IRC%"=="1" (
   set "FUTON3C_IRC_LANE=linode"
   set "BRIDGE_BOTS=zcodex"
   set "FUTON3C_CODEX_AGENT_ID=codex-1"
   set "NICK_AGENT_MAP=zcodex:codex-1"
+  if not defined IRC_COMMAND_OWNER_AGENT_MAP set "IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1"
   if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
   if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
   if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-zabuton\session-id"
-)
-if "%FRONTIERMATH_LOCAL%"=="1" (
-  set "FUTON3C_IRC_LANE=frontiermath-local"
-  if not defined BRIDGE_BOTS set "BRIDGE_BOTS=codex"
-  if not defined FUTON3C_REGISTER_CLAUDE set "FUTON3C_REGISTER_CLAUDE=false"
-  if not defined FUTON3C_RELAY_CLAUDE set "FUTON3C_RELAY_CLAUDE=false"
-  if not defined FUTON3C_REGISTER_CORPUS set "FUTON3C_REGISTER_CORPUS=true"
-  if not defined CODEX_SESSION_FILE set "CODEX_SESSION_FILE=%REPO_ROOT%\.state\codex-frontiermath-local\session-id"
-  if not defined FUTON3C_PROOF_STATE_ROOT set "FUTON3C_PROOF_STATE_ROOT=%LOCAL_INSTALLATION_ROOT%\data\frontiermath-local\FM-001\active"
-  rem FrontierMath local lane defaults to the most constrained Codex execution mode.
-  rem Operators can still override via env before launch.
-  if not defined CODEX_SANDBOX set "CODEX_SANDBOX=read-only"
-  if not defined CODEX_APPROVAL_POLICY (
-    if defined CODEX_APPROVAL (
-      set "CODEX_APPROVAL_POLICY=%CODEX_APPROVAL%"
-    ) else (
-      set "CODEX_APPROVAL_POLICY=untrusted"
-    )
-  )
-  if not defined IRC_COMMAND_OWNER_AGENT_MAP set "IRC_COMMAND_OWNER_AGENT_MAP=#futon:codex-1,#math:codex-1"
 )
 set "FUTON3C_IRC_LANE_NORMALIZED=%FUTON3C_IRC_LANE: =%"
 if /i "%FUTON3C_IRC_LANE_NORMALIZED%"=="joe" set "FUTON3C_IRC_LANE_NORMALIZED=linode"
@@ -103,13 +100,6 @@ if /i "%FUTON3C_IRC_LANE_NORMALIZED%"=="local" (
   if not defined IRC_HOST set "IRC_HOST=127.0.0.1"
   if not defined IRC_PORT set "IRC_PORT=%FUTON3C_IRC_PORT%"
   if not defined IRC_CHANNEL set "IRC_CHANNEL=#futon"
-) else if /i "%FUTON3C_IRC_LANE_NORMALIZED%"=="frontiermath-local" (
-  set "USE_LOCAL_IRC=1"
-  if not defined BRIDGE_BOTS set "BRIDGE_BOTS=codex"
-  if not defined FUTON3C_IRC_PORT set "FUTON3C_IRC_PORT=6667"
-  if not defined IRC_HOST set "IRC_HOST=127.0.0.1"
-  if not defined IRC_PORT set "IRC_PORT=%FUTON3C_IRC_PORT%"
-  if not defined IRC_CHANNEL set "IRC_CHANNEL=#futon"
 ) else if /i "%FUTON3C_IRC_LANE_NORMALIZED%"=="linode" (
   if not defined BRIDGE_BOTS set "BRIDGE_BOTS=zcodex"
   if not defined FUTON3C_IRC_PORT set "FUTON3C_IRC_PORT=0"
@@ -118,23 +108,16 @@ if /i "%FUTON3C_IRC_LANE_NORMALIZED%"=="local" (
   if not defined IRC_CHANNEL set "IRC_CHANNEL=#zabuton"
 ) else (
   1>&2 echo [dev-stack-windows] ERROR: unsupported FUTON3C_IRC_LANE=%FUTON3C_IRC_LANE%.
-  1>&2 echo [dev-stack-windows] Expected: local ^| frontiermath-local ^| linode ^(alias: joe^)
+  1>&2 echo [dev-stack-windows] Expected: local ^| linode ^(alias: joe^)
   exit /b 1
 )
 
-if "%FRONTIERMATH_LOCAL%"=="1" (
-  call :ensure_channel_in_list "#math"
-  if defined IRC_CHANNELS echo [dev-stack-windows] FrontierMath local extra IRC channels: !IRC_CHANNELS!
-)
-
 if "%MATH_IRC%"=="1" (
-  if "%FRONTIERMATH_LOCAL%"=="1" (
-    echo [dev-stack-windows] WARN: --math-irc is redundant in --frontiermath-local mode; #math is already joined as an extra room.
-  )
   call :ensure_channel_in_list "#math"
   echo [dev-stack-windows] Additional IRC channels: !IRC_CHANNELS!
   if "%REMOTE_IRC%"=="1" (
     echo [dev-stack-windows] Math IRC lane: using shared codex agent codex-1 with zcodex IRC nick
+    echo [dev-stack-windows] Bare ! commands remain owner-mapped only; unmapped shared rooms are mention-only on this bridge.
   )
 )
 
@@ -154,12 +137,6 @@ if not defined FUTON1A_STATIC_DIR (
   )
 ) else (
   echo [dev-stack-windows] FUTON1A_STATIC_DIR preset: %FUTON1A_STATIC_DIR%
-)
-
-if "%FRONTIERMATH_LOCAL%"=="1" (
-  echo [dev-stack-windows] FrontierMath local mode: preserve #futon baseline and add local #math room with isolated codex continuity.
-  echo [dev-stack-windows] This mode is distinct from peer-IRC --remote-irc and shared-room --math-irc bring-up.
-  echo [dev-stack-windows] FrontierMath local codex policy: sandbox=!CODEX_SANDBOX! approval=!CODEX_APPROVAL_POLICY!
 )
 
 set "BRIDGE_BOTS_NORMALIZED=%BRIDGE_BOTS: =%"
@@ -183,6 +160,7 @@ echo [dev-stack-windows] VS Code Codex lane: FUTON3C_REGISTER_VSCODE_CODEX=%FUTO
 echo [dev-stack-windows] Corpus lane: FUTON3C_REGISTER_CORPUS=%FUTON3C_REGISTER_CORPUS%
 echo [dev-stack-windows] IRC dispatch relays: FUTON3C_RELAY_CODEX=!FUTON3C_RELAY_CODEX! FUTON3C_RELAY_CLAUDE=!FUTON3C_RELAY_CLAUDE!
 if defined NICK_AGENT_MAP echo [dev-stack-windows] NICK_AGENT_MAP=!NICK_AGENT_MAP!
+if defined IRC_COMMAND_OWNER_AGENT_MAP echo [dev-stack-windows] IRC_COMMAND_OWNER_AGENT_MAP=!IRC_COMMAND_OWNER_AGENT_MAP!
 
 if not exist "%STOP_DEV_STACK%" (
   1>&2 echo [dev-stack-windows] ERROR: missing cleanup script %STOP_DEV_STACK%.
@@ -219,7 +197,7 @@ endlocal & exit /b 0
 echo Usage: dev-stack-windows.bat [--frontiermath-local] [--remote-irc] [--math-irc]
 echo.
 echo Supported flags:
-echo   --frontiermath-local  local FrontierMath onboarding lane ^(#futon + #math^)
+echo   --frontiermath-local  delegate to the futon6 FrontierMath local wrapper
 echo   --remote-irc          Joe/Linode IRC lane
 echo   --math-irc            add #math as an extra joined room
 echo   --help                show this usage

@@ -6,6 +6,7 @@
    to idle agents via IRC. Registers with CYDER for inspectability."
   (:require [futon3c.agents.tickle-orchestrate :as orch]
             [futon3c.agents.tickle-queue :as tq]
+            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
@@ -68,6 +69,11 @@
        (filter #(= channel (:channel %)))
        (take-last n)
        vec))
+
+(defn- fm-dispatch-message-original
+  [nick ob-id ob-label]
+  (str "@" nick " " ob-id ": " ob-label
+       ". Push results to git when done."))
 
 ;; ---------------------------------------------------------------------------
 ;; Display projection
@@ -185,8 +191,10 @@
           (let [ob (first fresh)
                 ob-id (:item/id ob)
                 ob-label (:item/label ob)
-                msg (str "@" nick " " ob-id ": " ob-label
-                         ". Push results to git when done.")]
+                original-msg (fm-dispatch-message-original nick ob-id ob-label)
+                msg (if (mfuton-prompt-override/mfuton-mode?)
+                      (mfuton-prompt-override/fm-dispatch-message-override original-msg)
+                      original-msg)]
             (println (str "[conductor] " agent-id " → PAGE " ob-id))
             (swap! conductor-state
                    (fn [s]
@@ -273,7 +281,7 @@
 ;; Task-pool dispatch (bell-driven)
 ;; ---------------------------------------------------------------------------
 
-(defn task->prompt
+(defn- task->prompt-original
   "Build an invoke prompt from a task map."
   [{:keys [id label source depends-on]}]
   (str "Task assignment from the conductor queue.\n\n"
@@ -284,6 +292,14 @@
          (str "Depends on (completed): " (pr-str depends-on) "\n"))
        "\nWork this task. Push results to git when done. "
        "Keep your response concise — report what you did and what the outcome was."))
+
+(defn task->prompt
+  "Build an invoke prompt from a task map."
+  [task]
+  (let [original-prompt (task->prompt-original task)]
+    (if (mfuton-prompt-override/mfuton-mode?)
+      (mfuton-prompt-override/task-prompt-override original-prompt)
+      original-prompt)))
 
 (defn structural-law-task?
   [task]

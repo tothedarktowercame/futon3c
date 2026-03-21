@@ -6,6 +6,7 @@
    local HTTP server because /api/alpha/invoke uses async channel semantics."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
+            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.transport.http :as http]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
@@ -422,6 +423,54 @@
       (is (= job-id (:job-id job)))
       (is (= "done" (:state job)))
       (is (= "codex-job-1" (:agent-id job))))))
+
+(deftest invoke-job-artifact-ref-preserves-default-futon-matching
+  (testing "default futon mode does not treat mfuton gitlab issue URLs as canonical artifact refs"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-artifact-default"
+                                      "prompt" "hello from artifact default"})]
+      (register-mock-agent! "codex-http-artifact-default" :codex)
+      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "futon")
+                    reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result "Blocked; see http://192.168.165.188/mfuton/-/issues/2"
+                                         :session-id "sess-http-artifact-default"
+                                         :invoke-meta {:invoke-trace-id "invoke-http-artifact-default-1"
+                                                       :execution {:executed? true
+                                                                   :tool-events 1
+                                                                   :command-events 0}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (nil? (get-in job-parsed [:job :artifact-ref]))))))))
+
+(deftest invoke-job-artifact-ref-mfuton-mode-preserves-generic-matching
+  (testing "mfuton mode still leaves gitlab issue URLs outside the generic canonical artifact-ref slot"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-artifact-mfuton"
+                                      "prompt" "hello from artifact mfuton"})]
+      (register-mock-agent! "codex-http-artifact-mfuton" :codex)
+      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")
+                    reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result "Blocked; see http://192.168.165.188/mfuton/-/issues/2"
+                                         :session-id "sess-http-artifact-mfuton"
+                                         :invoke-meta {:invoke-trace-id "invoke-http-artifact-mfuton-1"
+                                                       :execution {:executed? true
+                                                                   :tool-events 1
+                                                                   :command-events 0}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (nil? (get-in job-parsed [:job :artifact-ref]))))))))
 
 (deftest invoke-http-surface-auto-records-delivery-when-trace-present
   (testing "direct HTTP invoke marks delivery delivered when invoke-meta includes trace-id"

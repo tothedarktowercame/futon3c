@@ -14,8 +14,10 @@ Environment variables:
     IRC_PORT        (default: 6667)
     IRC_PASSWORD    (default: MonsterMountain)
     IRC_CHANNEL     (default: #futon)
+    IRC_COMMAND_OWNER_AGENT_MAP
+                    (optional: #channel:agent-id,#channel2:agent-id)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
-    BRIDGE_BOTS     (default: claude,codex)  — comma-separated bot nicks
+    BRIDGE_BOTS     (default: claude,codex)  - comma-separated bot nicks
     INVOKE_TIMEOUT_SECONDS (default: 1800)   — invoke hard-timeout in seconds
     INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
@@ -137,6 +139,37 @@ def _dedupe_nonblank(items):
     return out
 
 
+def _parse_channel_agent_map(raw):
+    """Parse #channel:agent-id pairs into a normalized lookup map."""
+    mapping = {}
+    for pair in (raw or "").split(","):
+        pair = pair.strip()
+        if not pair or ":" not in pair:
+            continue
+        channel, agent_id = pair.split(":", 1)
+        channel = channel.strip().lower()
+        agent_id = agent_id.strip()
+        if channel and agent_id:
+            mapping[channel] = agent_id
+    return mapping
+
+
+def _dedupe_channels(channels):
+    """Deduplicate channel list while preserving first-seen order."""
+    seen = set()
+    out = []
+    for channel in channels:
+        normalized = (channel or "").strip()
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(normalized)
+    return out
+
+
 def resolve_progress_send_bases(invoke_base):
     """Return ordered Agency bases for agent-initiated IRC POST hints.
 
@@ -159,13 +192,20 @@ IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
 # IRC_CHANNEL is the primary channel; IRC_CHANNELS adds extras (comma-separated).
 # E.g. IRC_CHANNEL=#futon IRC_CHANNELS=#math,#ops → bot joins all three.
 IRC_CHANNEL = os.environ.get("IRC_CHANNEL", "#futon")
-IRC_CHANNELS = [IRC_CHANNEL] + [
-    ch.strip() for ch in os.environ.get("IRC_CHANNELS", "").split(",")
-    if ch.strip() and ch.strip() != IRC_CHANNEL
-]
+IRC_CHANNELS = _dedupe_channels(
+    [IRC_CHANNEL]
+    + [
+        ch.strip()
+        for ch in os.environ.get("IRC_CHANNELS", "").split(",")
+        if ch.strip() and ch.strip() != IRC_CHANNEL
+    ]
+)
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
 PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
+IRC_COMMAND_OWNER_AGENT_MAP = _parse_channel_agent_map(
+    os.environ.get("IRC_COMMAND_OWNER_AGENT_MAP", "")
+)
 
 INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
 INVOKE_ANNOUNCE_URL = f"{INVOKE_BASE}/api/alpha/invoke/announce"
@@ -215,6 +255,13 @@ INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
 _RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()
 _CHANNEL_SLUG = IRC_CHANNEL.lstrip("#").replace("/", "_")
 PIDFILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}.pid")
+HEALTH_FILES = [
+    os.path.join(
+        _RUNTIME_DIR,
+        f"ngircd-bridge-{channel.lstrip('#').replace('/', '_')}-health.json",
+    )
+    for channel in IRC_CHANNELS
+]
 HEALTH_FILE = os.path.join(_RUNTIME_DIR, f"ngircd-bridge-{_CHANNEL_SLUG}-health.json")
 HEALTH_INTERVAL = 30  # seconds between health file writes
 
@@ -267,7 +314,7 @@ def acquire_pidfile():
 
 def _cleanup():
     """Remove health and PID files on clean shutdown."""
-    for path in [HEALTH_FILE, PIDFILE]:
+    for path in list(HEALTH_FILES) + [PIDFILE]:
         try:
             os.unlink(path)
         except OSError:
@@ -354,7 +401,8 @@ class IRCBot:
     """Single IRC bot that connects as a nick and relays @mentions."""
 
     def __init__(self, nick, agent_id, channel, host, port, password,
-                 handle_commands=False, channels=None):
+                 handle_commands=False, channels=None,
+                 command_owner_agent_map=None):
         self.desired_nick = nick  # the nick we want
         self.nick = nick
         self.agent_id = agent_id
@@ -369,6 +417,8 @@ class IRCBot:
         self.focused_mission = None
         self.connected = False
         self._reply_channel = channel  # channel of most recent inbound message
+        self.command_owner_agent_map = command_owner_agent_map or {}
+        self._thread_context = threading.local()
         self._invoking = threading.Lock()
         self._invoke_queue = queue.Queue(maxsize=INVOKE_QUEUE_MAX)
         self._job_seq = 0
@@ -392,8 +442,22 @@ class IRCBot:
             "queue_depth": self._invoke_queue.qsize(),
             "queue_max": INVOKE_QUEUE_MAX,
             "handle_commands": self.handle_commands,
+            "command_owner_agent_map": self.command_owner_agent_map,
             "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
+
+    def _bare_command_owner_agent_id(self, channel):
+        """Return the configured bare ! owner for a room, if any."""
+        if not isinstance(channel, str):
+            return None
+        return self.command_owner_agent_map.get(channel.strip().lower())
+
+    def _handles_bare_command(self, channel):
+        """True when this bot should handle a bare ! command for channel."""
+        if self.command_owner_agent_map:
+            owner_agent_id = self._bare_command_owner_agent_id(channel)
+            return owner_agent_id == self.agent_id
+        return self.handle_commands
 
     def _is_brief(self, text):
         """True when the message looks like casual IRC chat, not a task."""
@@ -457,8 +521,8 @@ class IRCBot:
             "Prefer completing one bounded unit of work in this turn. "
             "Do not stop at reconnaissance-only updates like grepping, mapping, or an initial step. "
             "Execute work asynchronously, then return a short completion/blocker status with artifact refs "
-            "(commit/PR/issue/file path), or explicitly say planning-only/blocked with blocker evidence. "
-            "Push artifacts to git before referencing them, and never cite local paths or /tmp. "
+            "(commit/tracked work item/file path), or explicitly say planning-only/blocked with blocker evidence. "
+            "Run the commit algorithm for gh before referencing commit artifacts, use tracked work-item refs for blocker/work-item continuity, and never cite local paths or /tmp. "
             f"{send_hint} "
             f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )
@@ -990,7 +1054,11 @@ class IRCBot:
             try:
                 with self._invoking:
                     response = self._invoke_agent(
-                        prompt, sender, mission_id=mission_id, job_id=job_id
+                        prompt,
+                        sender,
+                        mission_id=mission_id,
+                        job_id=job_id,
+                        reply_channel=reply_ch,
                     )
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
@@ -1034,7 +1102,7 @@ class IRCBot:
             finally:
                 self._invoke_queue.task_done()
 
-    def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None):
+    def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None, reply_channel=None):
         """Call the futon3c invoke API and return structured invoke outcome."""
         status_before = self._agent_status()
         if (
@@ -1047,12 +1115,12 @@ class IRCBot:
                 "error": f"invoke skipped: {self._agent_busy_summary(status_before)}",
                 "session_id": status_before.get("session_id"),
             }
-
+        active_channel = reply_channel or self._reply_channel or self.channel
         payload = {
             "agent-id": self.agent_id,
             "prompt": prompt,
             "caller": f"irc:{caller}",
-            "surface": f"irc ({self.channel})",
+            "surface": f"irc ({active_channel})",
             "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
         if job_id:
@@ -1192,7 +1260,8 @@ class IRCBot:
         """Send a PRIVMSG to a channel. Caps output at max_lines to keep
         IRC readable. If the response exceeds max_lines, the tail is dropped
         and a truncation notice is appended."""
-        channel = channel or self._reply_channel or self.channel
+        thread_channel = getattr(self._thread_context, "reply_channel", None)
+        channel = channel or thread_channel or self._reply_channel or self.channel
         text = self._sanitize_for_irc(text)
         lines = []
         for line in text.split("\n"):
@@ -1212,7 +1281,7 @@ class IRCBot:
         if truncated:
             self._send(f"PRIVMSG {channel} :"
                        f"[truncated {len(lines) - max_lines} more lines — "
-                       f"post details to GitHub instead]")
+                       f"post details to tracked work item instead]")
             time.sleep(0.1)
 
     def _multiline_result_for_irc(self, result_text):
@@ -1337,50 +1406,62 @@ class IRCBot:
 
     # --- ! command handlers ---
 
-    def _handle_command(self, sender, text):
+    def _handle_command(self, sender, text, channel=None):
         """Route ! commands to the appropriate handler."""
         parts = text.split(None, 1)
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
+        reply_channel = channel or self.channel
 
-        log(self.nick, f"Command from {sender}: {text}")
+        log(self.nick, f"Command from {sender} on {reply_channel}: {text}")
 
-        if cmd == "!help":
-            self._cmd_help()
-        elif cmd == "!ungate":
-            self._cmd_ungate(sender, args)
-        elif cmd == "!gate":
-            self._cmd_gate(sender, args)
-        elif cmd == "!mc":
-            self._cmd_mc(sender, args)
-        elif cmd == "!mission":
-            self._cmd_mission(sender, args)
-        elif cmd == "!reset":
-            self._cmd_reset(sender, args)
-        elif cmd == "!todo":
-            self._cmd_todo(sender, args)
-        elif cmd == "!agent":
-            self._cmd_agent(sender, args)
-        elif cmd == "!patterns":
-            self._cmd_patterns(sender, args)
-        elif cmd == "!psr":
-            self._cmd_psr(sender, args)
-        elif cmd == "!pur":
-            self._cmd_pur(sender, args)
-        elif cmd == "!par":
-            self._cmd_par(sender, args)
-        elif cmd == "!ask":
-            self._cmd_ask(sender, args)
-        elif cmd == "!answer":
-            self._cmd_answer(sender, args)
-        elif cmd == "!unanswered":
-            self._cmd_unanswered(sender, args)
-        elif cmd == "!jobs":
-            self._cmd_jobs(sender, args)
-        elif cmd == "!job":
-            self._cmd_job(sender, args)
-        else:
-            self._say(f"Unknown command: {cmd} — try !help")
+        previous_channel = getattr(self._thread_context, "reply_channel", None)
+        self._thread_context.reply_channel = reply_channel
+        try:
+            if cmd == "!help":
+                self._cmd_help()
+            elif cmd == "!ungate":
+                self._cmd_ungate(sender, args)
+            elif cmd == "!gate":
+                self._cmd_gate(sender, args)
+            elif cmd == "!mc":
+                self._cmd_mc(sender, args)
+            elif cmd == "!mission":
+                self._cmd_mission(sender, args)
+            elif cmd == "!reset":
+                self._cmd_reset(sender, args)
+            elif cmd == "!todo":
+                self._cmd_todo(sender, args)
+            elif cmd == "!agent":
+                self._cmd_agent(sender, args)
+            elif cmd == "!patterns":
+                self._cmd_patterns(sender, args)
+            elif cmd == "!psr":
+                self._cmd_psr(sender, args)
+            elif cmd == "!pur":
+                self._cmd_pur(sender, args)
+            elif cmd == "!par":
+                self._cmd_par(sender, args)
+            elif cmd == "!ask":
+                self._cmd_ask(sender, args)
+            elif cmd == "!answer":
+                self._cmd_answer(sender, args)
+            elif cmd == "!unanswered":
+                self._cmd_unanswered(sender, args)
+            elif cmd == "!jobs":
+                self._cmd_jobs(sender, args)
+            elif cmd == "!job":
+                self._cmd_job(sender, args)
+            else:
+                self._say(f"Unknown command: {cmd} — try !help")
+        finally:
+            if previous_channel is None:
+                try:
+                    del self._thread_context.reply_channel
+                except AttributeError:
+                    pass
+            else:
+                self._thread_context.reply_channel = previous_channel
 
     def _cmd_help(self):
         """List available commands."""
@@ -1880,11 +1961,12 @@ class IRCBot:
                             # Track which channel this message came from
                             self._reply_channel = target
 
-                            # ! commands — only handled by first bot
-                            if self.handle_commands and text.startswith("!"):
+                            # ! commands - room owner when configured,
+                            # otherwise fallback to first bot.
+                            if text.startswith("!") and self._handles_bare_command(target):
                                 t = threading.Thread(
                                     target=self._handle_command,
-                                    args=(sender, text),
+                                    args=(sender, text, target),
                                     daemon=True,
                                 )
                                 t.start()
@@ -1925,7 +2007,7 @@ class IRCBot:
 
 
 def _write_health(bots, started_at):
-    """Atomically write bridge health JSON to HEALTH_FILE."""
+    """Atomically write bridge health JSON to all channel-scoped health files."""
     health = {
         "pid": os.getpid(),
         "started_at": started_at,
@@ -1936,15 +2018,17 @@ def _write_health(bots, started_at):
         "irc_host": IRC_HOST,
         "irc_port": IRC_PORT,
         "channel": IRC_CHANNEL,
+        "channels": IRC_CHANNELS,
         "bots": [b.health_snapshot() for b in bots],
     }
-    tmp = HEALTH_FILE + ".tmp"
-    try:
-        with open(tmp, "w") as f:
-            json.dump(health, f)
-        os.replace(tmp, HEALTH_FILE)
-    except Exception as e:
-        log("bridge", f"Health file write failed: {e}")
+    for path in HEALTH_FILES:
+        tmp = path + ".tmp"
+        try:
+            with open(tmp, "w") as f:
+                json.dump(health, f)
+            os.replace(tmp, path)
+        except Exception as e:
+            log("bridge", f"Health file write failed for {path}: {e}")
 
 
 BRIDGE_HTTP_PORT = int_env("BRIDGE_HTTP_PORT", 6769, minimum=1)
@@ -2038,8 +2122,9 @@ def main():
             host=IRC_HOST,
             port=IRC_PORT,
             password=IRC_PASSWORD,
-            handle_commands=(i == 0),  # first bot handles ! commands
+            handle_commands=(i == 0),  # fallback bare ! owner when no room map is configured
             channels=IRC_CHANNELS,
+            command_owner_agent_map=IRC_COMMAND_OWNER_AGENT_MAP,
         )
         bots.append(bot)
 
@@ -2059,7 +2144,16 @@ def main():
         f"Codex bridge summary mode: {CODEX_BRIDGE_SUMMARY_MODE} "
         f"(raw_output={'yes' if CODEX_USE_RAW_OUTPUT else 'no'})"
     )
-    print(f"Commands handled by: {bots[0].nick}")
+    fallback_owner = f"{bots[0].nick} ({bots[0].agent_id})"
+    if IRC_COMMAND_OWNER_AGENT_MAP:
+        owners = ", ".join(
+            f"{channel}->{agent_id}"
+            for channel, agent_id in sorted(IRC_COMMAND_OWNER_AGENT_MAP.items())
+        )
+        print(f"Bare ! room owners (authoritative allowlist): {owners}")
+        print("Bare ! commands are disabled for unmapped rooms on this bridge")
+    else:
+        print(f"Bare ! commands handled by fallback owner: {fallback_owner}")
 
     threads = []
     for bot in bots:
