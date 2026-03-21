@@ -340,6 +340,10 @@ def sd_notify(state):
 
 
 ARTIFACT_REF_PATTERNS = [
+    re.compile(
+        r"\bmfuton/data/frontiermath-local/FM-\d{3}/[^\s\]\[)>,;\"']+/?",
+        re.IGNORECASE,
+    ),
     re.compile(r"https?://github\.com/\S+/(?:pull|issues)/\d+", re.IGNORECASE),
     re.compile(r"\bPR\s*#\d+\b", re.IGNORECASE),
     re.compile(r"\b(?:commit|sha)\s*[:#]?\s*([0-9a-f]{7,40})\b", re.IGNORECASE),
@@ -710,7 +714,7 @@ class IRCBot:
                     ref = match.group(1)
                 else:
                     ref = match.group(0)
-                ref = (ref or "").strip()
+                ref = (ref or "").strip().rstrip(".,:;")
                 if not ref:
                     continue
                 if ref not in refs:

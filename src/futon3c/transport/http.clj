@@ -312,6 +312,10 @@
               v)))
         [:invoke-trace-id :invoke_trace_id :invokeTraceId]))
 
+(def ^:private frontiermath-local-artifact-ref-re
+  #"(?ix)
+    \bmfuton/data/frontiermath-local/FM-\d{3}/[^\s\]\[)>,;\"']+/?")
+
 (def ^:private artifact-ref-re
   #"(?ix)
     (https?://github\.com/\S+/(?:pull|issues)/\d+)
@@ -322,14 +326,24 @@
     |
     ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b))")
 
+(defn- first-matching-ref
+  [pattern text]
+  (when (string? text)
+    (some-> (re-find pattern text)
+            (str/replace #"[.,:;]+$" "")
+            str/trim
+            not-empty)))
+
 (defn- first-artifact-ref
   [text]
-  (when (string? text)
-    (some->> (re-find artifact-ref-re text)
-             rest
-             (remove nil?)
-             first
-             str/trim)))
+  (or (first-matching-ref frontiermath-local-artifact-ref-re text)
+      (when (string? text)
+        (some->> (re-find artifact-ref-re text)
+                 rest
+                 (remove nil?)
+                 first
+                 (#(str/replace % #"[.,:;]+$" ""))
+                 str/trim))))
 
 (defn- summarize-result-text
   [text]

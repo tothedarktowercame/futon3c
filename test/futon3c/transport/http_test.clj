@@ -472,6 +472,56 @@
           (is (= 200 (:status job-response)))
           (is (nil? (get-in job-parsed [:job :artifact-ref]))))))))
 
+(deftest invoke-job-artifact-ref-prefers-frontiermath-local-run-bundle
+  (testing "frontiermath-local receipt bundle paths become canonical artifact refs"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-artifact-frontiermath-run"
+                                      "prompt" "hello from artifact frontiermath run"})]
+      (register-mock-agent! "codex-http-artifact-frontiermath-run" :codex)
+      (with-redefs [reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result (str "Blocked; see http://192.168.165.188/mfuton/-/issues/2 "
+                                                      "and mfuton/data/frontiermath-local/FM-001/runs/"
+                                                      "2026-03-12-live-runtime-proof-root-cycle-230802Z/")
+                                         :session-id "sess-http-artifact-frontiermath-run"
+                                         :invoke-meta {:invoke-trace-id "invoke-http-artifact-frontiermath-run-1"
+                                                       :execution {:executed? true
+                                                                   :tool-events 1
+                                                                   :command-events 0}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "mfuton/data/frontiermath-local/FM-001/runs/2026-03-12-live-runtime-proof-root-cycle-230802Z/"
+                 (get-in job-parsed [:job :artifact-ref]))))))))
+
+(deftest invoke-job-artifact-ref-prefers-frontiermath-local-active-root
+  (testing "frontiermath-local active roots become canonical artifact refs"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-artifact-frontiermath-root"
+                                      "prompt" "hello from artifact frontiermath root"})]
+      (register-mock-agent! "codex-http-artifact-frontiermath-root" :codex)
+      (with-redefs [reg/invoke-agent! (fn [_ _ _]
+                                        {:ok true
+                                         :result "Verified writable proof-state authority at mfuton/data/frontiermath-local/FM-001/active"
+                                         :session-id "sess-http-artifact-frontiermath-root"
+                                         :invoke-meta {:invoke-trace-id "invoke-http-artifact-frontiermath-root-1"
+                                                       :execution {:executed? true
+                                                                   :tool-events 1
+                                                                   :command-events 0}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "mfuton/data/frontiermath-local/FM-001/active"
+                 (get-in job-parsed [:job :artifact-ref]))))))))
+
 (deftest invoke-http-surface-auto-records-delivery-when-trace-present
   (testing "direct HTTP invoke marks delivery delivered when invoke-meta includes trace-id"
     (let [handler (make-handler)

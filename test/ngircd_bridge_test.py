@@ -108,6 +108,20 @@ class NgircdBridgeSurfaceContractTest(unittest.TestCase):
         self.assertIn("post details to tracked work item instead", send.call_args_list[2].args[0])
         self.assertNotIn("post details to GitHub instead", send.call_args_list[2].args[0])
 
+    def test_extract_artifact_refs_promotes_frontiermath_local_paths(self):
+        text = (
+            "See http://192.168.165.188/mfuton/-/issues/2 and "
+            "mfuton/data/frontiermath-local/FM-001/runs/"
+            "2026-03-12-live-runtime-proof-root-cycle-230802Z/ for the receipt bundle. "
+            "Writable root is mfuton/data/frontiermath-local/FM-001/active."
+        )
+        refs = bridge.IRCBot._extract_artifact_refs(text)
+        self.assertEqual(
+            "mfuton/data/frontiermath-local/FM-001/runs/2026-03-12-live-runtime-proof-root-cycle-230802Z/",
+            refs[0],
+        )
+        self.assertIn("mfuton/data/frontiermath-local/FM-001/active", refs)
+
 
 class NgircdBridgePendingTimeoutTest(unittest.TestCase):
     def test_response_is_pending_timeout(self):
