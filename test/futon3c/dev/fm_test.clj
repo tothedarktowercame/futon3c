@@ -2,6 +2,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agents.tickle-queue :as tq]
+            [futon3c.dev.config :as config]
+            [futon3c.dev.irc :as dev-irc]
             [futon3c.dev.fm :as fm]))
 
 (defn- structural-aggregate
@@ -150,3 +152,65 @@
                                      :depends-on #{"F0-root"}})]
         (is (re-find #"Push results to git when done" prompt))
         (is (not (re-find #"run the commit algorithm for gh when done" prompt)))))))
+
+(deftest handle-claim-prompt-accepts-math-lane-claims
+  (testing "tickle honors the existing #math claim text only on the math-irc lane"
+    (let [conductor-state (atom {})
+          original @fm/!fm-conductor]
+      (reset! fm/!fm-conductor {:conductor-state conductor-state})
+      (try
+        (with-redefs [config/env-bool (fn [k default]
+                                        (if (= k "MATH_IRC") true default))
+                      fm/fm-assignable-obligations (fn [_]
+                                                     [{:item/id "T3-general"
+                                                       :item/label "Tier 3"}])]
+          (let [response (fm/handle-claim-prompt!
+                          "[Surface: IRC | Channel: #math | Speaker: codex | Mode: brief]\n\ncodex: I'll take T3-general"
+                          "fm-s-1")]
+            (is (= {:agent-id "codex-1"
+                    :nick "codex"
+                    :label "Tier 3"
+                    :claimed-at (get-in @conductor-state [:claimed-obligations "T3-general" :claimed-at])}
+                   (get-in @conductor-state [:claimed-obligations "T3-general"])))
+            (is (= :claim (get-in @conductor-state [:last-cycle :action])))
+            (is (= "codex-1" (get-in @conductor-state [:last-cycle :target])))
+            (is (= "fm-s-1" (:session-id response)))
+            (is (= "@codex T3-general: Tier 3. Push results to git when done."
+                   (:result response)))))
+        (finally
+          (reset! fm/!fm-conductor original))))))
+
+(deftest handle-claim-prompt-ignores-non-math-rooms
+  (testing "claim-like text outside #math falls through to generic tickle behavior"
+    (with-redefs [config/env-bool (fn [k default]
+                                    (if (= k "MATH_IRC") true default))]
+      (is (nil? (fm/handle-claim-prompt!
+                 "[Surface: IRC | Channel: #futon | Speaker: codex | Mode: brief]\n\ncodex: I'll take T3-general"
+                 "fm-s-2"))))))
+
+(deftest fm-dispatch-skips-claimed-obligations
+  (testing "manual FM dispatch does not re-offer an obligation that was already claimed"
+    (let [sent (atom [])
+          conductor-state (atom {:claimed-obligations
+                                 {"T3-general" {:agent-id "codex-1"
+                                                :nick "codex"
+                                                :label "Tier 3"
+                                                :claimed-at "2026-03-22T00:00:00Z"}}})
+          original @fm/!fm-conductor]
+      (reset! fm/!fm-conductor {:conductor-state conductor-state})
+      (try
+        (with-redefs [fm/fm-assignable-obligations (fn [_]
+                                                     [{:item/id "T3-general" :item/label "Tier 3"}
+                                                      {:item/id "T4-next" :item/label "Tier 4"}])
+                      dev-irc/make-bridge-irc-send-fn
+                      (fn []
+                        (fn [channel from text]
+                          (swap! sent conj {:channel channel :from from :text text})))]
+          (is (= {:assigned "T4-next" :label "Tier 4"}
+                 (fm/fm-dispatch! "FM-001")))
+          (is (= [{:channel "#math"
+                   :from "tickle"
+                   :text "TASK ASSIGNMENT [FM-001 / T4-next]: Tier 4. Current mode: FALSIFY. Who wants to take this? Claim with @tickle I'll take T4-next"}]
+                 @sent)))
+        (finally
+          (reset! fm/!fm-conductor original))))))

@@ -4,7 +4,8 @@
    Extracted from futon3c.dev (Phase 2 of TN-dev-clj-decomposition).
    Manages the event-driven conductor loop that assigns FM obligations
    to idle agents via IRC. Registers with CYDER for inspectability."
-  (:require [futon3c.agents.tickle-orchestrate :as orch]
+  (:require [clojure.string :as str]
+            [futon3c.agents.tickle-orchestrate :as orch]
             [futon3c.agents.tickle-queue :as tq]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
@@ -24,6 +25,12 @@
 (defonce !fm-conductor (atom nil))
 (defonce !post-invoke-hook (atom nil))
 
+(def ^:private fm-claim-prompt-re
+  #"(?im)^([a-z0-9._-]+):\s+I['’]ll take\s+([A-Za-z0-9._:-]+)\s*$")
+
+(def ^:private irc-surface-channel-re
+  #"(?i)\[Surface:\s*IRC\s*\|\s*Channel:\s*(#[^ |\]]+)")
+
 ;; ---------------------------------------------------------------------------
 ;; FM-001 thin wrappers (delegates to tickle_orchestrate.clj)
 ;; ---------------------------------------------------------------------------
@@ -33,11 +40,102 @@
   [problem-id]
   (orch/fm-assignable-obligations problem-id))
 
+(defn- math-irc-enabled?
+  []
+  (config/env-bool "MATH_IRC" false))
+
+(defn- prompt-channel
+  [prompt]
+  (some->> (re-find irc-surface-channel-re (str (or prompt "")))
+           second))
+
+(defn- current-conductor-state-atom
+  []
+  (some-> @!fm-conductor :conductor-state))
+
+(defn- claimed-obligations
+  [conductor-state]
+  (or (:claimed-obligations @conductor-state) {}))
+
+(defn- claimed-obligation-summary
+  [conductor-state]
+  (let [claimed (claimed-obligations conductor-state)]
+    (into {}
+          (map (fn [[obligation-id {:keys [agent-id nick]}]]
+                 [obligation-id (or nick agent-id)]))
+          claimed)))
+
+(defn- claimed-obligation-ids
+  [conductor-state]
+  (set (keys (claimed-obligations conductor-state))))
+
+(defn- unclaimed-assignable-obligations
+  [problem-id conductor-state]
+  (let [claimed-ids (if conductor-state
+                      (claimed-obligation-ids conductor-state)
+                      #{})]
+    (remove #(contains? claimed-ids (:item/id %))
+            (fm-assignable-obligations problem-id))))
+
+(defn- configured-nick-agent-map
+  []
+  (into {}
+        (keep (fn [entry]
+                (when-let [[_ nick agent-id] (re-matches #"(?i)\s*([^:,\s]+)\s*:\s*([^:,\s]+)\s*" entry)]
+                  [(str/lower-case nick) agent-id])))
+        (config/env-list "NICK_AGENT_MAP" [])))
+
+(def ^:private fm-agent-nicks
+  {"claude-1" "claude" "claude-2" "claude-2" "codex-1" "codex"
+   "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
+
+(def ^:private fm-nick-agents
+  (into {}
+        (map (fn [[agent-id nick]]
+               [(str/lower-case nick) agent-id]))
+        fm-agent-nicks))
+
+(defn- claim-nick->agent-id
+  [nick]
+  (let [nick-lower (some-> nick str str/trim str/lower-case)
+        configured-map (configured-nick-agent-map)
+        configured-codex-nick (some-> (config/configured-codex-relay-nick)
+                                      str/lower-case)]
+    (cond
+      (str/blank? nick-lower)
+      nil
+
+      (contains? configured-map nick-lower)
+      (get configured-map nick-lower)
+
+      (contains? fm-nick-agents nick-lower)
+      (get fm-nick-agents nick-lower)
+
+      (and configured-codex-nick
+           (str/starts-with? nick-lower configured-codex-nick))
+      (config/configured-codex-agent-id)
+
+      (str/starts-with? nick-lower "codex")
+      (config/configured-codex-agent-id)
+
+      (str/starts-with? nick-lower "claude")
+      "claude-1"
+
+      :else
+      nil)))
+
+(defn- parse-fm-claim-prompt
+  [prompt]
+  (when-let [[_ nick obligation-id] (re-find fm-claim-prompt-re (str (or prompt "")))]
+    {:nick (str/lower-case nick)
+     :obligation-id obligation-id
+     :channel (prompt-channel prompt)}))
+
 (defn fm-dispatch!
   "Have Tickle assign the top FM-001 obligation on #math."
   ([] (fm-dispatch! "FM-001"))
   ([problem-id]
-   (let [tasks (fm-assignable-obligations problem-id)]
+   (let [tasks (unclaimed-assignable-obligations problem-id (current-conductor-state-atom))]
      (if (empty? tasks)
        (do (println "[tickle-fm] No assignable obligations for " problem-id)
            nil)
@@ -74,6 +172,65 @@
   [nick ob-id ob-label]
   (str "@" nick " " ob-id ": " ob-label
        ". Push results to git when done."))
+
+(defn handle-claim-prompt!
+  "Honor the existing FrontierMath claim seam on the dedicated #math lane.
+   Returns nil when PROMPT is not a math-lane claim and generic tickle behavior
+   should continue."
+  [prompt session-id]
+  (when (math-irc-enabled?)
+    (when-let [{:keys [nick obligation-id channel]} (parse-fm-claim-prompt prompt)]
+      (when (= "#math" channel)
+        (if-let [conductor-state (current-conductor-state-atom)]
+          (let [agent-id (claim-nick->agent-id nick)
+                claimed (get (claimed-obligations conductor-state) obligation-id)
+                obligation (some #(when (= obligation-id (:item/id %)) %)
+                                 (unclaimed-assignable-obligations "FM-001" conductor-state))]
+            (cond
+              (nil? agent-id)
+              {:ok true
+               :session-id session-id
+               :result (str "@" nick " claim rejected: unknown agent mapping for " nick ".")}
+
+              claimed
+              {:ok true
+               :session-id session-id
+               :result (str "@" nick " " obligation-id " already claimed by "
+                            (or (:nick claimed) (:agent-id claimed)) ".")}
+
+              (nil? obligation)
+              {:ok true
+               :session-id session-id
+               :result (str "@" nick " " obligation-id " is not currently assignable.")}
+
+              :else
+              (let [ob-label (:item/label obligation)
+                    claim {:agent-id agent-id
+                           :nick nick
+                           :label ob-label
+                           :claimed-at (str (Instant/now))}
+                    original-msg (fm-dispatch-message-original nick obligation-id ob-label)
+                    msg (if (mfuton-prompt-override/mfuton-mode?)
+                          (mfuton-prompt-override/fm-dispatch-message-override original-msg)
+                          original-msg)
+                    now-ms (System/currentTimeMillis)]
+                (swap! conductor-state
+                       (fn [s]
+                         (-> s
+                             (assoc-in [:claimed-obligations obligation-id] claim)
+                             (assoc-in [:last-paged agent-id] now-ms)
+                             (update-in [:paged-obligations agent-id] (fnil conj #{}) obligation-id)
+                             (assoc :last-cycle {:action :claim
+                                                 :target agent-id
+                                                 :obligation obligation-id
+                                                 :text msg})
+                             (assoc :last-cycle-ms now-ms))))
+                {:ok true
+                 :session-id session-id
+                 :result msg})))
+          {:ok true
+           :session-id session-id
+           :result (str "@" nick " claim rejected: FM conductor is not running.")})))))
 
 ;; ---------------------------------------------------------------------------
 ;; Display projection
@@ -149,10 +306,6 @@
 ;; Mechanical conductor
 ;; ---------------------------------------------------------------------------
 
-(def ^:private fm-agent-nicks
-  {"claude-1" "claude" "claude-2" "claude-2" "codex-1" "codex"
-   "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
-
 (defn- agent-idle?
   "Check if an agent is idle (not currently invoking).
    Returns false for agents not in the registry."
@@ -183,7 +336,7 @@
       {:action :cooldown :target agent-id}
 
       :else
-      (let [assignable (orch/fm-assignable-obligations problem-id)
+      (let [assignable (unclaimed-assignable-obligations problem-id conductor-state)
             already-paged (get-in @conductor-state [:paged-obligations agent-id] #{})
             fresh (remove #(contains? already-paged (:item/id %)) assignable)]
         (if (empty? fresh)
