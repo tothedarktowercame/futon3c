@@ -188,6 +188,67 @@
                  "[Surface: IRC | Channel: #futon | Speaker: codex | Mode: brief]\n\ncodex: I'll take T3-general"
                  "fm-s-2"))))))
 
+(deftest handle-bell-prompt-acknowledges-math-lane-bells
+  (testing "tickle honors the documented BELL phrase only on the math-irc lane"
+    (let [conductor-state (atom {})
+          original @fm/!fm-conductor]
+      (reset! fm/!fm-conductor {:conductor-state conductor-state})
+      (try
+        (with-redefs [config/env-bool (fn [k default]
+                                        (if (= k "MATH_IRC") true default))
+                      config/configured-codex-agent-id (fn [] "codex-1")
+                      config/configured-codex-relay-nick (fn [] "codex")
+                      fm/fm-dispatch-mechanical!
+                      (fn [agent-id _config]
+                        {:action :page
+                         :target agent-id
+                         :text "@codex T4-next: Tier 4. Push results to git when done."})]
+          (let [response (fm/handle-bell-prompt!
+                          "[Surface: IRC | Channel: #math | Speaker: codex_probe | Mode: brief]\n\n@tickle BELL SPEC_VERIFIED"
+                          "fm-s-3")]
+            (is (= "fm-s-3" (:session-id response)))
+            (is (= "@codex_probe BELL SPEC_VERIFIED acknowledged. Next work was posted to #math."
+                   (:result response)))
+            (is (= {:action :bell
+                    :target "codex-1"
+                    :event "SPEC_VERIFIED"
+                    :dispatch-action :page
+                    :text "@codex_probe BELL SPEC_VERIFIED acknowledged. Next work was posted to #math."}
+                   (get-in @conductor-state [:last-cycle])))))
+        (finally
+          (reset! fm/!fm-conductor original))))))
+
+(deftest handle-bell-prompt-ignores-non-math-rooms
+  (testing "bell-like text outside #math falls through to generic tickle behavior"
+    (with-redefs [config/env-bool (fn [k default]
+                                    (if (= k "MATH_IRC") true default))]
+      (is (nil? (fm/handle-bell-prompt!
+                 "[Surface: IRC | Channel: #futon | Speaker: codex | Mode: brief]\n\n@tickle BELL SPEC_VERIFIED"
+                 "fm-s-4"))))))
+
+(deftest handle-bell-prompt-accepts-bare-bell-phrase
+  (testing "bridge-shaped bare BELL text still routes through the dedicated math seam"
+    (let [conductor-state (atom {})
+          original @fm/!fm-conductor]
+      (reset! fm/!fm-conductor {:conductor-state conductor-state})
+      (try
+        (with-redefs [config/env-bool (fn [k default]
+                                        (if (= k "MATH_IRC") true default))
+                      config/configured-codex-agent-id (fn [] "codex-1")
+                      config/configured-codex-relay-nick (fn [] "codex")
+                      fm/fm-dispatch-mechanical!
+                      (fn [agent-id _config]
+                        {:action :pass
+                         :target agent-id})]
+          (let [response (fm/handle-bell-prompt!
+                          "[Surface: IRC | Channel: #math | Speaker: codex_probe | Mode: brief]\n\nBELL SPEC_VERIFIED"
+                          "fm-s-5")]
+            (is (= "fm-s-5" (:session-id response)))
+            (is (= "@codex_probe BELL SPEC_VERIFIED acknowledged. No new assignable obligations right now."
+                   (:result response)))))
+        (finally
+          (reset! fm/!fm-conductor original))))))
+
 (deftest fm-dispatch-skips-claimed-obligations
   (testing "manual FM dispatch does not re-offer an obligation that was already claimed"
     (let [sent (atom [])

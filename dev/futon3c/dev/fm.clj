@@ -25,11 +25,19 @@
 (defonce !fm-conductor (atom nil))
 (defonce !post-invoke-hook (atom nil))
 
+(declare fm-dispatch-mechanical!)
+
 (def ^:private fm-claim-prompt-re
   #"(?im)^([a-z0-9._-]+):\s+I['’]ll take\s+([A-Za-z0-9._:-]+)\s*$")
 
+(def ^:private fm-bell-prompt-re
+  #"(?im)(?:@?tickle:?[ \t]+)?BELL[ \t]+([A-Za-z0-9._:-]+)")
+
 (def ^:private irc-surface-channel-re
   #"(?i)\[Surface:\s*IRC\s*\|\s*Channel:\s*(#[^ |\]]+)")
+
+(def ^:private irc-surface-speaker-re
+  #"(?i)\[Surface:\s*IRC\s*\|\s*Channel:\s*#[^|\]]+\|\s*Speaker:\s*([^ |\]]+)")
 
 ;; ---------------------------------------------------------------------------
 ;; FM-001 thin wrappers (delegates to tickle_orchestrate.clj)
@@ -47,6 +55,11 @@
 (defn- prompt-channel
   [prompt]
   (some->> (re-find irc-surface-channel-re (str (or prompt "")))
+           second))
+
+(defn- prompt-speaker
+  [prompt]
+  (some->> (re-find irc-surface-speaker-re (str (or prompt "")))
            second))
 
 (defn- current-conductor-state-atom
@@ -129,6 +142,13 @@
   (when-let [[_ nick obligation-id] (re-find fm-claim-prompt-re (str (or prompt "")))]
     {:nick (str/lower-case nick)
      :obligation-id obligation-id
+     :channel (prompt-channel prompt)}))
+
+(defn- parse-fm-bell-prompt
+  [prompt]
+  (when-let [[_ event] (re-find fm-bell-prompt-re (str (or prompt "")))]
+    {:nick (some-> (prompt-speaker prompt) str/lower-case)
+     :event event
      :channel (prompt-channel prompt)}))
 
 (defn fm-dispatch!
@@ -231,6 +251,52 @@
           {:ok true
            :session-id session-id
            :result (str "@" nick " claim rejected: FM conductor is not running.")})))))
+
+(defn handle-bell-prompt!
+  "Honor the existing FrontierMath bell phrase on the dedicated #math lane.
+   Returns nil when PROMPT is not a math-lane bell and generic tickle behavior
+   should continue."
+  [prompt session-id]
+  (when (math-irc-enabled?)
+    (when-let [{:keys [nick event channel]} (parse-fm-bell-prompt prompt)]
+      (when (= "#math" channel)
+        (if-let [conductor-state (current-conductor-state-atom)]
+          (let [agent-id (claim-nick->agent-id nick)]
+            (if (nil? agent-id)
+              {:ok true
+               :session-id session-id
+               :result (str "@" nick " BELL " event
+                            " rejected: unknown agent mapping for " nick ".")}
+              (let [dispatch-result (fm-dispatch-mechanical!
+                                     agent-id
+                                     {:problem-id "FM-001"
+                                      :bridge-send-fn (dev-irc/make-bridge-irc-send-fn)
+                                      :conductor-state conductor-state})
+                    now-ms (System/currentTimeMillis)
+                    result-text (case (:action dispatch-result)
+                                  :page (str "@" nick " BELL " event
+                                             " acknowledged. Next work was posted to #math.")
+                                  :pass (str "@" nick " BELL " event
+                                             " acknowledged. No new assignable obligations right now.")
+                                  :cooldown (str "@" nick " BELL " event
+                                                 " acknowledged. No new dispatch during cooldown.")
+                                  :skip (str "@" nick " BELL " event
+                                             " acknowledged. You're not idle for a new assignment yet.")
+                                  (str "@" nick " BELL " event " acknowledged."))]
+                (swap! conductor-state assoc
+                       :last-cycle {:action :bell
+                                    :target agent-id
+                                    :event event
+                                    :dispatch-action (:action dispatch-result)
+                                    :text result-text}
+                       :last-cycle-ms now-ms)
+                {:ok true
+                 :session-id session-id
+                 :result result-text})))
+          {:ok true
+           :session-id session-id
+           :result (str "@" nick " BELL " event
+                        " rejected: FM conductor is not running.")})))))
 
 ;; ---------------------------------------------------------------------------
 ;; Display projection

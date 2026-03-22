@@ -1252,6 +1252,7 @@ RESPOND WITH ONLY:
          ;; Ensure tickle-1's invoke path matches the current watchdog config.
         (let [tickle-invoke-fn (fn [prompt session-id]
                                  (or (dev-fm/handle-claim-prompt! prompt session-id)
+                                     (dev-fm/handle-bell-prompt! prompt session-id)
                                      (tickle/invoke! config prompt session-id)))]
            (if-not (reg/agent-registered? "tickle-1")
              (rt/register-tickle!
