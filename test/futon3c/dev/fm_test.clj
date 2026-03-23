@@ -207,13 +207,13 @@
                           "[Surface: IRC | Channel: #math | Speaker: codex_probe | Mode: brief]\n\n@tickle BELL SPEC_VERIFIED"
                           "fm-s-3")]
             (is (= "fm-s-3" (:session-id response)))
-            (is (= "@codex_probe BELL SPEC_VERIFIED acknowledged. Next work was posted to #math."
+            (is (= "BELL SPEC_VERIFIED acknowledged for codex_probe. Next work was posted to #math."
                    (:result response)))
             (is (= {:action :bell
                     :target "codex-1"
                     :event "SPEC_VERIFIED"
                     :dispatch-action :page
-                    :text "@codex_probe BELL SPEC_VERIFIED acknowledged. Next work was posted to #math."}
+                    :text "BELL SPEC_VERIFIED acknowledged for codex_probe. Next work was posted to #math."}
                    (get-in @conductor-state [:last-cycle])))))
         (finally
           (reset! fm/!fm-conductor original))))))
@@ -244,7 +244,7 @@
                           "[Surface: IRC | Channel: #math | Speaker: codex_probe | Mode: brief]\n\nBELL SPEC_VERIFIED"
                           "fm-s-5")]
             (is (= "fm-s-5" (:session-id response)))
-            (is (= "@codex_probe BELL SPEC_VERIFIED acknowledged. No new assignable obligations right now."
+            (is (= "BELL SPEC_VERIFIED acknowledged for codex_probe. No new assignable obligations right now."
                    (:result response)))))
         (finally
           (reset! fm/!fm-conductor original))))))

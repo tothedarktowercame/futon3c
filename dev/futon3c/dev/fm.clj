@@ -265,7 +265,7 @@
             (if (nil? agent-id)
               {:ok true
                :session-id session-id
-               :result (str "@" nick " BELL " event
+               :result (str "BELL " event
                             " rejected: unknown agent mapping for " nick ".")}
               (let [dispatch-result (fm-dispatch-mechanical!
                                      agent-id
@@ -274,15 +274,20 @@
                                       :conductor-state conductor-state})
                     now-ms (System/currentTimeMillis)
                     result-text (case (:action dispatch-result)
-                                  :page (str "@" nick " BELL " event
-                                             " acknowledged. Next work was posted to #math.")
-                                  :pass (str "@" nick " BELL " event
-                                             " acknowledged. No new assignable obligations right now.")
-                                  :cooldown (str "@" nick " BELL " event
-                                                 " acknowledged. No new dispatch during cooldown.")
-                                  :skip (str "@" nick " BELL " event
-                                             " acknowledged. You're not idle for a new assignment yet.")
-                                  (str "@" nick " BELL " event " acknowledged."))]
+                                  :page (str "BELL " event
+                                             " acknowledged for " nick
+                                             ". Next work was posted to #math.")
+                                  :pass (str "BELL " event
+                                             " acknowledged for " nick
+                                             ". No new assignable obligations right now.")
+                                  :cooldown (str "BELL " event
+                                                 " acknowledged for " nick
+                                                 ". No new dispatch during cooldown.")
+                                  :skip (str "BELL " event
+                                             " acknowledged for " nick
+                                             ". You're not idle for a new assignment yet.")
+                                  (str "BELL " event
+                                       " acknowledged for " nick "."))]
                 (swap! conductor-state assoc
                        :last-cycle {:action :bell
                                     :target agent-id
@@ -295,8 +300,8 @@
                  :result result-text})))
           {:ok true
            :session-id session-id
-           :result (str "@" nick " BELL " event
-                        " rejected: FM conductor is not running.")})))))
+           :result (str "BELL " event
+                        " rejected: FM conductor is not running for " nick ".")})))))
 
 ;; ---------------------------------------------------------------------------
 ;; Display projection
