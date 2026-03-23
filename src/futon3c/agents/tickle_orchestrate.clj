@@ -278,9 +278,7 @@
              (:body issue) "\n\n"
              "--- End of Issue ---\n\n"
              "Implement the changes described above. Work in " repo-dir ".\n")]
-    (if (mfuton-prompt-override/mfuton-mode?)
-      (mfuton-prompt-override/assign-prompt-override original-prompt)
-      original-prompt)))
+    (mfuton-prompt-override/maybe-assign-prompt original-prompt)))
 
 (defn- make-review-prompt
   "Build a Claude review prompt from issue + Codex result."
@@ -304,9 +302,7 @@
              "- APPROVE if the implementation looks correct\n"
              "- REQUEST_CHANGES if there are issues (explain what)\n"
              "- UNCLEAR if you cannot determine (explain why)\n")]
-    (if (mfuton-prompt-override/mfuton-mode?)
-      (mfuton-prompt-override/review-prompt-override original-prompt)
-      original-prompt)))
+    (mfuton-prompt-override/maybe-review-prompt original-prompt)))
 
 (defn- parse-verdict
   "Extract a verdict keyword from Claude's review response."
@@ -728,9 +724,7 @@
   [problem-id target-agent recent-msgs assignable-tasks]
   (let [original-prompt (build-fm-context-original
                          problem-id target-agent recent-msgs assignable-tasks)]
-    (if (mfuton-prompt-override/mfuton-mode?)
-      (mfuton-prompt-override/build-fm-context-override original-prompt)
-      original-prompt)))
+    (mfuton-prompt-override/maybe-build-fm-context original-prompt)))
 
 (defn fm-conduct-cycle!
   "Run one FM proof conductor cycle targeting a specific agent.

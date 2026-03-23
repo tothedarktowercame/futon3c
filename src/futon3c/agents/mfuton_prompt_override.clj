@@ -6,18 +6,8 @@
      `mfuton/.../frontiermath-local-github-dependency-map-2026-03-19.md`
    - keep original prompt text in the source call sites and apply bounded
      rewrites here when mfuton mode is `mfuton`."
-  (:require [clojure.string :as str]))
-
-(def ^:private mfuton-mode-env "FUTON3C_MFUTON_MODE")
-(def ^:private default-mfuton-mode "futon")
-
-(defn mfuton-mode
-  []
-  (or (System/getenv mfuton-mode-env) default-mfuton-mode))
-
-(defn mfuton-mode?
-  []
-  (= "mfuton" (mfuton-mode)))
+  (:require [clojure.string :as str]
+            [futon3c.mfuton-mode :as mfuton-mode]))
 
 ;; ---------------------------------------------------------------------------
 ;; Group 1 — Theorem Artifact Authority and Durable Citation
@@ -38,6 +28,12 @@
        "6. Remind agents to push artifacts to git — never reference local paths or /tmp."
        "6. Remind agents that Git is truth and they should run the commit algorithm for gh to publish artifacts — never reference local paths or /tmp.")))
 
+(defn maybe-build-fm-context
+  [original-prompt]
+  (if (mfuton-mode/mfuton-mode?)
+    (build-fm-context-override original-prompt)
+    original-prompt))
+
 (defn fm-dispatch-message-override
   [original-message]
   (str/replace
@@ -45,12 +41,24 @@
    ". Push results to git when done."
    ". Git is truth; run the commit algorithm for gh when done."))
 
+(defn maybe-fm-dispatch-message
+  [original-message]
+  (if (mfuton-mode/mfuton-mode?)
+    (fm-dispatch-message-override original-message)
+    original-message))
+
 (defn task-prompt-override
   [original-prompt]
   (str/replace
    original-prompt
    "\nWork this task. Push results to git when done. "
    "\nWork this task. Git is truth; run the commit algorithm for gh when done. "))
+
+(defn maybe-task-prompt
+  [original-prompt]
+  (if (mfuton-mode/mfuton-mode?)
+    (task-prompt-override original-prompt)
+    original-prompt))
 
 (defn assign-prompt-override
   [original-prompt]
@@ -62,6 +70,12 @@
        "--- GitHub Issue #"
        "--- tracked work item #")))
 
+(defn maybe-assign-prompt
+  [original-prompt]
+  (if (mfuton-mode/mfuton-mode?)
+    (assign-prompt-override original-prompt)
+    original-prompt))
+
 (defn review-prompt-override
   [original-prompt]
   (-> original-prompt
@@ -71,6 +85,12 @@
       (str/replace
        "--- GitHub Issue #"
        "--- tracked work item #")))
+
+(defn maybe-review-prompt
+  [original-prompt]
+  (if (mfuton-mode/mfuton-mode?)
+    (review-prompt-override original-prompt)
+    original-prompt))
 
 ;; ---------------------------------------------------------------------------
 ;; Group 3 — Room and Job Projection Surfaces

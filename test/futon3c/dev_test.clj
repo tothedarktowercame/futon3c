@@ -47,3 +47,22 @@
                   "codex-1" 409 "{\"ok\":false}" 200 existing-body)]
       (is (false? (:ok? result)))
       (is (= :conflict (:action result))))))
+
+(deftest make-claude-invoke-fn-delegates-to-codex-in-mfuton-mode
+  (testing "mfuton mode redirects Claude-role invoke construction through Codex"
+    (let [called (atom nil)
+          sentinel (fn [_ _] {:result "ok"})]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (fn [_]
+                      {:agent-id "claude-1"
+                       :sandbox "workspace-write"
+                       :approval-policy "untrusted"})
+                    futon3c.dev/make-codex-invoke-fn
+                    (fn [opts]
+                      (reset! called opts)
+                      sentinel)]
+        (is (identical? sentinel
+                        (dev/make-claude-invoke-fn {:agent-id "claude-1"})))
+        (is (= "claude-1" (:agent-id @called)))
+        (is (= "workspace-write" (:sandbox @called)))
+        (is (= "untrusted" (:approval-policy @called)))))))

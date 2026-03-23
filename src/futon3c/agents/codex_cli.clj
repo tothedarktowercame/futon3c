@@ -195,22 +195,25 @@
 
 (defn build-exec-args
   "Build argv for codex execution.
-   When SESSION-ID is present, uses `codex exec ... resume <sid> -`."
-  [{:keys [codex-bin model sandbox approval-policy reasoning-effort session-id]
+   When SESSION-ID is present, uses `codex ... exec resume <sid> -`."
+  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort session-id]
     :or {codex-bin "codex"
          sandbox "danger-full-access"
          approval-policy "never"}}]
-  (let [exec-opts (cond-> ["--json"
+  (let [global-opts (cond-> []
+                      (and (string? profile) (not (str/blank? profile)))
+                      (into ["-p" profile]))
+        exec-opts (cond-> ["--json"
                            "--skip-git-repo-check"
                            "--sandbox" sandbox
                            "-c" (format "approval_policy=\"%s\"" approval-policy)]
-                    (and (string? model) (not (str/blank? model)))
-                    (into ["--model" model])
-                    (and (string? reasoning-effort) (not (str/blank? reasoning-effort)))
-                    (into ["-c" (format "model_reasoning_effort=\"%s\"" reasoning-effort)]))]
+                     (and (string? model) (not (str/blank? model)))
+                     (into ["--model" model])
+                     (and (string? reasoning-effort) (not (str/blank? reasoning-effort)))
+                     (into ["-c" (format "model_reasoning_effort=\"%s\"" reasoning-effort)]))]
     (if (and (string? session-id) (not (str/blank? session-id)))
-      (into [codex-bin "exec"] (concat exec-opts ["resume" session-id "-"]))
-      (into [codex-bin "exec"] (concat exec-opts ["-"])))))
+      (into [codex-bin] (concat global-opts ["exec"] exec-opts ["resume" session-id "-"]))
+      (into [codex-bin] (concat global-opts ["exec"] exec-opts ["-"])))))
 
 (defn- windows?
   []
@@ -376,6 +379,7 @@
 
    opts:
    - :codex-bin (default \"codex\")
+   - :profile (optional Codex config profile passed as `codex -p <profile> exec`)
    - :model (optional, default \"gpt-5-codex\")
    - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
@@ -383,7 +387,7 @@
    - :timeout-ms hard process timeout in milliseconds (default 1800000)
    - :cwd (optional working directory)
    - :on-event (optional fn called with each parsed stream event)"
-  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd
+  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
            on-event on-runtime-event]
     :or {codex-bin "codex"
          model "gpt-5-codex"
@@ -395,10 +399,11 @@
       (locking !lock
         (try
           (let [prompt-str (coerce-prompt prompt)
-                cmd (build-exec-args {:codex-bin codex-bin
-                                      :model model
-                                      :sandbox sandbox
-                                      :approval-policy approval-policy
+            cmd (build-exec-args {:codex-bin codex-bin
+                                  :profile profile
+                                  :model model
+                                  :sandbox sandbox
+                                  :approval-policy approval-policy
                                       :reasoning-effort reasoning-effort
                                       :session-id session-id})
                 {:keys [exit timed-out? text error-text stderr raw-output execution]
@@ -424,10 +429,11 @@
                             (stale-action-type-error? final-error))]
             (if retry?
               ;; Fresh session retry
-              (let [cmd2 (build-exec-args {:codex-bin codex-bin
-                                           :model model
-                                           :sandbox sandbox
-                                           :approval-policy approval-policy
+          (let [cmd2 (build-exec-args {:codex-bin codex-bin
+                                       :profile profile
+                                       :model model
+                                       :sandbox sandbox
+                                       :approval-policy approval-policy
                                            :reasoning-effort reasoning-effort
                                            :session-id nil})
                     r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms

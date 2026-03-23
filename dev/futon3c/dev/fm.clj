@@ -4,10 +4,9 @@
    Extracted from futon3c.dev (Phase 2 of TN-dev-clj-decomposition).
    Manages the event-driven conductor loop that assigns FM obligations
    to idle agents via IRC. Registers with CYDER for inspectability."
-  (:require [clojure.string :as str]
-            [futon3c.agents.tickle-orchestrate :as orch]
+  (:require [futon3c.agents.tickle-orchestrate :as orch]
             [futon3c.agents.tickle-queue :as tq]
-            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
+            [futon3c.dev.mfuton-frontiermath :as mfuton-frontiermath]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
@@ -27,18 +26,6 @@
 
 (declare fm-dispatch-mechanical!)
 
-(def ^:private fm-claim-prompt-re
-  #"(?im)^([a-z0-9._-]+):\s+I['’]ll take\s+([A-Za-z0-9._:-]+)\s*$")
-
-(def ^:private fm-bell-prompt-re
-  #"(?im)(?:@?tickle:?[ \t]+)?BELL[ \t]+([A-Za-z0-9._:-]+)")
-
-(def ^:private irc-surface-channel-re
-  #"(?i)\[Surface:\s*IRC\s*\|\s*Channel:\s*(#[^ |\]]+)")
-
-(def ^:private irc-surface-speaker-re
-  #"(?i)\[Surface:\s*IRC\s*\|\s*Channel:\s*#[^|\]]+\|\s*Speaker:\s*([^ |\]]+)")
-
 ;; ---------------------------------------------------------------------------
 ;; FM-001 thin wrappers (delegates to tickle_orchestrate.clj)
 ;; ---------------------------------------------------------------------------
@@ -54,112 +41,24 @@
 
 (defn- fm-dispatch-channel
   []
-  (if (math-irc-enabled?) "#math" "#futon"))
-
-(defn- prompt-channel
-  [prompt]
-  (some->> (re-find irc-surface-channel-re (str (or prompt "")))
-           second))
-
-(defn- prompt-speaker
-  [prompt]
-  (some->> (re-find irc-surface-speaker-re (str (or prompt "")))
-           second))
+  (mfuton-frontiermath/dispatch-channel (math-irc-enabled?)))
 
 (defn- current-conductor-state-atom
   []
-  (some-> @!fm-conductor :conductor-state))
-
-(defn- claimed-obligations
-  [conductor-state]
-  (or (:claimed-obligations @conductor-state) {}))
-
-(defn- claimed-obligation-summary
-  [conductor-state]
-  (let [claimed (claimed-obligations conductor-state)]
-    (into {}
-          (map (fn [[obligation-id {:keys [agent-id nick]}]]
-                 [obligation-id (or nick agent-id)]))
-          claimed)))
-
-(defn- claimed-obligation-ids
-  [conductor-state]
-  (set (keys (claimed-obligations conductor-state))))
-
-(defn- unclaimed-assignable-obligations
-  [problem-id conductor-state]
-  (let [claimed-ids (if conductor-state
-                      (claimed-obligation-ids conductor-state)
-                      #{})]
-    (remove #(contains? claimed-ids (:item/id %))
-            (fm-assignable-obligations problem-id))))
-
-(defn- configured-nick-agent-map
-  []
-  (into {}
-        (keep (fn [entry]
-                (when-let [[_ nick agent-id] (re-matches #"(?i)\s*([^:,\s]+)\s*:\s*([^:,\s]+)\s*" entry)]
-                  [(str/lower-case nick) agent-id])))
-        (config/env-list "NICK_AGENT_MAP" [])))
+  (mfuton-frontiermath/current-conductor-state-atom @!fm-conductor))
 
 (def ^:private fm-agent-nicks
   {"claude-1" "claude" "claude-2" "claude-2" "codex-1" "codex"
    "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
 
-(def ^:private fm-nick-agents
-  (into {}
-        (map (fn [[agent-id nick]]
-               [(str/lower-case nick) agent-id]))
-        fm-agent-nicks))
-
-(defn- claim-nick->agent-id
-  [nick]
-  (let [nick-lower (some-> nick str str/trim str/lower-case)
-        configured-map (configured-nick-agent-map)
-        configured-codex-nick (some-> (config/configured-codex-relay-nick)
-                                      str/lower-case)]
-    (cond
-      (str/blank? nick-lower)
-      nil
-
-      (contains? configured-map nick-lower)
-      (get configured-map nick-lower)
-
-      (contains? fm-nick-agents nick-lower)
-      (get fm-nick-agents nick-lower)
-
-      (and configured-codex-nick
-           (str/starts-with? nick-lower configured-codex-nick))
-      (config/configured-codex-agent-id)
-
-      (str/starts-with? nick-lower "codex")
-      (config/configured-codex-agent-id)
-
-      (str/starts-with? nick-lower "claude")
-      "claude-1"
-
-      :else
-      nil)))
-
-(defn- parse-fm-claim-prompt
-  [prompt]
-  (when-let [[_ nick obligation-id] (re-find fm-claim-prompt-re (str (or prompt "")))]
-    {:nick (str/lower-case nick)
-     :obligation-id obligation-id
-     :channel (prompt-channel prompt)}))
-
-(defn- parse-fm-bell-prompt
-  [prompt]
-  (when-let [[_ event] (re-find fm-bell-prompt-re (str (or prompt "")))]
-    {:nick (some-> (prompt-speaker prompt) str/lower-case)
-     :event event
-     :channel (prompt-channel prompt)}))
-
 (defn fm-dispatch!
   "Have Tickle assign the top FM-001 obligation on #math."
   ([] (fm-dispatch! "FM-001"))
   ([problem-id]
-   (let [tasks (unclaimed-assignable-obligations problem-id (current-conductor-state-atom))]
+   (let [tasks (mfuton-frontiermath/unclaimed-assignable-obligations
+                problem-id
+                (current-conductor-state-atom)
+                fm-assignable-obligations)]
      (if (empty? tasks)
        (do (println "[tickle-fm] No assignable obligations for " problem-id)
            nil)
@@ -203,58 +102,13 @@
    should continue."
   [prompt session-id]
   (when (math-irc-enabled?)
-    (when-let [{:keys [nick obligation-id channel]} (parse-fm-claim-prompt prompt)]
-      (when (= "#math" channel)
-        (if-let [conductor-state (current-conductor-state-atom)]
-          (let [agent-id (claim-nick->agent-id nick)
-                claimed (get (claimed-obligations conductor-state) obligation-id)
-                obligation (some #(when (= obligation-id (:item/id %)) %)
-                                 (unclaimed-assignable-obligations "FM-001" conductor-state))]
-            (cond
-              (nil? agent-id)
-              {:ok true
-               :session-id session-id
-               :result (str "@" nick " claim rejected: unknown agent mapping for " nick ".")}
-
-              claimed
-              {:ok true
-               :session-id session-id
-               :result (str "@" nick " " obligation-id " already claimed by "
-                            (or (:nick claimed) (:agent-id claimed)) ".")}
-
-              (nil? obligation)
-              {:ok true
-               :session-id session-id
-               :result (str "@" nick " " obligation-id " is not currently assignable.")}
-
-              :else
-              (let [ob-label (:item/label obligation)
-                    claim {:agent-id agent-id
-                           :nick nick
-                           :label ob-label
-                           :claimed-at (str (Instant/now))}
-                    original-msg (fm-dispatch-message-original nick obligation-id ob-label)
-                    msg (if (mfuton-prompt-override/mfuton-mode?)
-                          (mfuton-prompt-override/fm-dispatch-message-override original-msg)
-                          original-msg)
-                    now-ms (System/currentTimeMillis)]
-                (swap! conductor-state
-                       (fn [s]
-                         (-> s
-                             (assoc-in [:claimed-obligations obligation-id] claim)
-                             (assoc-in [:last-paged agent-id] now-ms)
-                             (update-in [:paged-obligations agent-id] (fnil conj #{}) obligation-id)
-                             (assoc :last-cycle {:action :claim
-                                                 :target agent-id
-                                                 :obligation obligation-id
-                                                 :text msg})
-                             (assoc :last-cycle-ms now-ms))))
-                {:ok true
-                 :session-id session-id
-                 :result msg})))
-          {:ok true
-           :session-id session-id
-           :result (str "@" nick " claim rejected: FM conductor is not running.")})))))
+    (mfuton-frontiermath/handle-claim-prompt!
+     {:prompt prompt
+      :session-id session-id
+      :conductor-state (current-conductor-state-atom)
+      :problem-id "FM-001"
+      :assignable-obligations-fn fm-assignable-obligations
+      :dispatch-message-original-fn fm-dispatch-message-original})))
 
 (defn handle-bell-prompt!
   "Honor the existing FrontierMath bell phrase on the dedicated #math lane.
@@ -262,50 +116,13 @@
    should continue."
   [prompt session-id]
   (when (math-irc-enabled?)
-    (when-let [{:keys [nick event channel]} (parse-fm-bell-prompt prompt)]
-      (when (= "#math" channel)
-        (if-let [conductor-state (current-conductor-state-atom)]
-          (let [agent-id (claim-nick->agent-id nick)]
-            (if (nil? agent-id)
-              {:ok true
-               :session-id session-id
-               :result (str "BELL " event
-                            " rejected: unknown agent mapping for " nick ".")}
-              (let [dispatch-result (fm-dispatch-mechanical!
-                                     agent-id
-                                     {:problem-id "FM-001"
-                                      :bridge-send-fn (dev-irc/make-bridge-irc-send-fn)
-                                      :conductor-state conductor-state})
-                    now-ms (System/currentTimeMillis)
-                    result-text (case (:action dispatch-result)
-                                  :page (str "BELL " event
-                                             " acknowledged for " nick
-                                             ". Next work was posted to #math.")
-                                  :pass (str "BELL " event
-                                             " acknowledged for " nick
-                                             ". No new assignable obligations right now.")
-                                  :cooldown (str "BELL " event
-                                                 " acknowledged for " nick
-                                                 ". No new dispatch during cooldown.")
-                                  :skip (str "BELL " event
-                                             " acknowledged for " nick
-                                             ". You're not idle for a new assignment yet.")
-                                  (str "BELL " event
-                                       " acknowledged for " nick "."))]
-                (swap! conductor-state assoc
-                       :last-cycle {:action :bell
-                                    :target agent-id
-                                    :event event
-                                    :dispatch-action (:action dispatch-result)
-                                    :text result-text}
-                       :last-cycle-ms now-ms)
-                {:ok true
-                 :session-id session-id
-                 :result result-text})))
-          {:ok true
-           :session-id session-id
-           :result (str "BELL " event
-                        " rejected: FM conductor is not running for " nick ".")})))))
+    (mfuton-frontiermath/handle-bell-prompt!
+     {:prompt prompt
+      :session-id session-id
+      :conductor-state (current-conductor-state-atom)
+      :problem-id "FM-001"
+      :bridge-send-fn (dev-irc/make-bridge-irc-send-fn)
+      :dispatch-mechanical-fn fm-dispatch-mechanical!})))
 
 ;; ---------------------------------------------------------------------------
 ;; Display projection
@@ -411,7 +228,8 @@
       {:action :cooldown :target agent-id}
 
       :else
-      (let [assignable (unclaimed-assignable-obligations problem-id conductor-state)
+      (let [assignable (mfuton-frontiermath/unclaimed-assignable-obligations
+                        problem-id conductor-state fm-assignable-obligations)
             already-paged (get-in @conductor-state [:paged-obligations agent-id] #{})
             fresh (remove #(contains? already-paged (:item/id %)) assignable)]
         (if (empty? fresh)
@@ -420,9 +238,7 @@
                 ob-id (:item/id ob)
                 ob-label (:item/label ob)
                 original-msg (fm-dispatch-message-original nick ob-id ob-label)
-                msg (if (mfuton-prompt-override/mfuton-mode?)
-                      (mfuton-prompt-override/fm-dispatch-message-override original-msg)
-                      original-msg)]
+                msg (mfuton-frontiermath/render-dispatch-message original-msg)]
             (println (str "[conductor] " agent-id " → PAGE " ob-id))
             (swap! conductor-state
                    (fn [s]
@@ -524,10 +340,7 @@
 (defn task->prompt
   "Build an invoke prompt from a task map."
   [task]
-  (let [original-prompt (task->prompt-original task)]
-    (if (mfuton-prompt-override/mfuton-mode?)
-      (mfuton-prompt-override/task-prompt-override original-prompt)
-      original-prompt)))
+  (mfuton-frontiermath/render-task-prompt (task->prompt-original task)))
 
 (defn structural-law-task?
   [task]

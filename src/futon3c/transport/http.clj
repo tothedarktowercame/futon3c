@@ -63,6 +63,7 @@
             [futon3c.enrichment.query :as enrich]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.blackboard :as bb]
+            [futon3c.mfuton-mode :as mfuton-mode]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
             [meme.arrow :as meme-arrow]
@@ -312,10 +313,6 @@
               v)))
         [:invoke-trace-id :invoke_trace_id :invokeTraceId]))
 
-(def ^:private frontiermath-local-artifact-ref-re
-  #"(?ix)
-    \bmfuton/data/frontiermath-local/FM-\d{3}/[^\s\]\[)>,;\"']+/?")
-
 (def ^:private artifact-ref-re
   #"(?ix)
     (https?://github\.com/\S+/(?:pull|issues)/\d+)
@@ -336,7 +333,7 @@
 
 (defn- first-artifact-ref
   [text]
-  (or (first-matching-ref frontiermath-local-artifact-ref-re text)
+  (or (mfuton-mode/first-frontiermath-local-artifact-ref text)
       (when (string? text)
         (some->> (re-find artifact-ref-re text)
                  rest

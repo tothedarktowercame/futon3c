@@ -4,7 +4,8 @@
             [futon3c.agents.tickle-queue :as tq]
             [futon3c.dev.config :as config]
             [futon3c.dev.irc :as dev-irc]
-            [futon3c.dev.fm :as fm]))
+            [futon3c.dev.fm :as fm]
+            [futon3c.mfuton-mode :as mfuton-mode]))
 
 (defn- structural-aggregate
   [& {:keys [dispatchable needs-review informational]
@@ -126,7 +127,7 @@
 
 (deftest task->prompt-mfuton-mode-rewrites-git-language
   (testing "mfuton mode keeps Git as truth while rewriting publication toward the gh commit algorithm"
-    (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")]
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
       (let [prompt (fm/task->prompt {:id "F1-opposite"
                                      :label "Falsification attempt"
                                      :source "proof-ledger"
@@ -145,7 +146,7 @@
 
 (deftest task->prompt-default-mode-preserves-original-git-language
   (testing "default mfuton mode leaves the original futon task prompt unchanged"
-    (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "futon")]
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")]
       (let [prompt (fm/task->prompt {:id "F1-opposite"
                                      :label "Falsification attempt"
                                      :source "proof-ledger"
@@ -175,6 +176,31 @@
             (is (= :claim (get-in @conductor-state [:last-cycle :action])))
             (is (= "codex-1" (get-in @conductor-state [:last-cycle :target])))
             (is (= "fm-s-1" (:session-id response)))
+            (is (= "@codex T3-general: Tier 3. Push results to git when done."
+                   (:result response)))))
+        (finally
+          (reset! fm/!fm-conductor original))))))
+
+(deftest handle-claim-prompt-accepts-current-runtime-surface-claims
+  (testing "the current IRC runtime surface still routes #math claims through the dedicated seam"
+    (let [conductor-state (atom {})
+          original @fm/!fm-conductor]
+      (reset! fm/!fm-conductor {:conductor-state conductor-state})
+      (try
+        (with-redefs [config/env-bool (fn [k default]
+                                        (if (= k "MATH_IRC") true default))
+                      fm/fm-assignable-obligations (fn [_]
+                                                     [{:item/id "T3-general"
+                                                       :item/label "Tier 3"}])]
+          (let [response (fm/handle-claim-prompt!
+                          (str "Runtime surface contract:\n"
+                               "- Current surface: IRC.\n"
+                               "- Channel: #math\n"
+                               "- Sender: codex\n\n"
+                               "codex: I'll take T3-general")
+                          "fm-s-1b")]
+            (is (= "fm-s-1b" (:session-id response)))
+            (is (= "codex-1" (get-in @conductor-state [:last-cycle :target])))
             (is (= "@codex T3-general: Tier 3. Push results to git when done."
                    (:result response)))))
         (finally
@@ -215,6 +241,35 @@
                     :dispatch-action :page
                     :text "BELL SPEC_VERIFIED acknowledged for codex_probe. Next work was posted to #math."}
                    (get-in @conductor-state [:last-cycle])))))
+        (finally
+          (reset! fm/!fm-conductor original))))))
+
+(deftest handle-bell-prompt-accepts-current-runtime-surface-bells
+  (testing "the current IRC runtime surface still routes #math Bell prompts through the dedicated seam"
+    (let [conductor-state (atom {})
+          original @fm/!fm-conductor]
+      (reset! fm/!fm-conductor {:conductor-state conductor-state})
+      (try
+        (with-redefs [config/env-bool (fn [k default]
+                                        (if (= k "MATH_IRC") true default))
+                      config/configured-codex-agent-id (fn [] "codex-1")
+                      config/configured-codex-relay-nick (fn [] "codex")
+                      fm/fm-dispatch-mechanical!
+                      (fn [agent-id _config]
+                        {:action :page
+                         :target agent-id
+                         :text "@codex T4-next: Tier 4. Push results to git when done."})]
+          (let [response (fm/handle-bell-prompt!
+                          (str "Runtime surface contract:\n"
+                               "- Current surface: IRC.\n"
+                               "- Channel: #math\n"
+                               "- Sender: codex\n\n"
+                               "@tickle BELL SPEC_VERIFIED")
+                          "fm-s-3b")]
+            (is (= "fm-s-3b" (:session-id response)))
+            (is (= "BELL SPEC_VERIFIED acknowledged for codex. Next work was posted to #math."
+                   (:result response)))
+            (is (= :bell (get-in @conductor-state [:last-cycle :action])))))
         (finally
           (reset! fm/!fm-conductor original))))))
 

@@ -26,6 +26,7 @@
      CLAUDE_BIN         — path to claude CLI binary (default: claude)
      CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)
      CODEX_BIN          — path to codex CLI binary (default: codex)
+     CODEX_PROFILE      — optional Codex config profile passed as `codex -p <profile>`
      CODEX_MODEL        — codex model (default: gpt-5-codex)
      CODEX_SANDBOX      — codex sandbox (default: danger-full-access)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
@@ -46,6 +47,7 @@
      FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
+            [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
@@ -77,6 +79,7 @@
            [java.util.concurrent CompletableFuture]))
 
 (declare make-claude-invoke-fn)
+(declare make-codex-invoke-fn)
 (declare record-invoke-delivery!)
 (declare make-bridge-irc-send-fn)
 
@@ -2423,12 +2426,34 @@ RESPOND WITH ONLY:
   [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
          timeout-ms 1800000}}]
-  (let [!lock (Object.)
-        buf-name (str "*invoke: " agent-id "*")
-        bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
-    (fn [prompt session-id]
-      (locking !lock
-        (let [prompt-str (cond
+  (if-let [codex-opts (mfuton-invoke-override/claude-role-codex-opts
+                       {:agent-id agent-id
+                        :session-file session-file
+                        :session-id-atom session-id-atom
+                        :profile (env "CODEX_PROFILE")
+                        :model (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_MODEL")
+                                   (env "CODEX_MODEL" "gpt-5-codex"))
+                        :sandbox (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_SANDBOX")
+                                     (env "CODEX_SANDBOX")
+                                     "workspace-write")
+                        :approval-policy (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_APPROVAL_POLICY")
+                                             (env "CODEX_APPROVAL_POLICY")
+                                             (env "CODEX_APPROVAL")
+                                             "untrusted")
+                        :reasoning-effort (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_REASONING_EFFORT")
+                                              (env "CODEX_REASONING_EFFORT"))
+                        :timeout-ms timeout-ms
+                        :cwd (configured-codex-cwd)})]
+    (do
+      (println (str "[invoke] " agent-id " claude-role path redirected to codex in mfuton mode"))
+      (flush)
+      (make-codex-invoke-fn codex-opts))
+    (let [!lock (Object.)
+          buf-name (str "*invoke: " agent-id "*")
+          bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
+      (fn [prompt session-id]
+        (locking !lock
+          (let [prompt-str (cond
                            (string? prompt) prompt
                            (map? prompt)    (or (:prompt prompt) (:text prompt)
                                                 (json/generate-string prompt))
@@ -2592,7 +2617,7 @@ RESPOND WITH ONLY:
                  :error (str "Exit " exit ": " (str/trim (or err "")))
                  :invoke-trace-id invoke-trace-id}))
             (finally
-              (stop-ticker!))))))))
+              (stop-ticker!)))))))))
 
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
@@ -2767,9 +2792,10 @@ RESPOND WITH ONLY:
    Wraps codex-cli/make-invoke-fn with evidence emission and blackboard updates.
 
    opts:
-     :codex-bin          — path to codex CLI (default \"codex\")
-     :model              — model name (default \"gpt-5-codex\")
-     :sandbox            — sandbox mode (default \"danger-full-access\")
+      :codex-bin          — path to codex CLI (default \"codex\")
+      :profile            — optional Codex config profile passed to codex
+      :model              — model name (default \"gpt-5-codex\")
+      :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
      :timeout-ms         — hard timeout for codex process (default 1800000)
@@ -2777,10 +2803,10 @@ RESPOND WITH ONLY:
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
      :session-id-atom    — atom holding current session ID (optional)"
-  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
-           session-file session-id-atom]
+  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
+            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
-        approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
+         approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
         get-event-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)
@@ -2905,6 +2931,7 @@ RESPOND WITH ONLY:
                                nil))
                            (publish-runtime! @!runtime-state))
         inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
+                                             :profile profile
                                              :model model
                                              :sandbox sandbox
                                              :approval-policy approval-policy

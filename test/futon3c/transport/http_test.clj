@@ -6,7 +6,7 @@
    local HTTP server because /api/alpha/invoke uses async channel semantics."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
-            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
+            [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.transport.http :as http]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
@@ -430,7 +430,7 @@
           body (json/generate-string {"agent-id" "codex-http-artifact-default"
                                       "prompt" "hello from artifact default"})]
       (register-mock-agent! "codex-http-artifact-default" :codex)
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "futon")
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")
                     reg/invoke-agent! (fn [_ _ _]
                                         {:ok true
                                          :result "Blocked; see http://192.168.165.188/mfuton/-/issues/2"
@@ -454,7 +454,7 @@
           body (json/generate-string {"agent-id" "codex-http-artifact-mfuton"
                                       "prompt" "hello from artifact mfuton"})]
       (register-mock-agent! "codex-http-artifact-mfuton" :codex)
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")
                     reg/invoke-agent! (fn [_ _ _]
                                         {:ok true
                                          :result "Blocked; see http://192.168.165.188/mfuton/-/issues/2"

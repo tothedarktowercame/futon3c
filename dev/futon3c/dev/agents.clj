@@ -71,6 +71,7 @@
         sid-atom (atom initial-sid)
         invoke-fn (make-codex-invoke-fn
                    {:codex-bin (config/env "CODEX_BIN" "codex")
+                    :profile (config/env "CODEX_PROFILE")
                     :model (config/env "CODEX_MODEL" "gpt-5-codex")
                     :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
                     :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
@@ -230,14 +231,15 @@
       (when register-codex?
         (let [session-file (io/file (or (config/env "CODEX_SESSION_FILE")
                                         "/tmp/futon-codex-session-id"))
-              initial-sid (read-session-id session-file)
-              sid-atom (atom initial-sid)
-              invoke-fn (make-codex-invoke-fn
-                         {:codex-bin (config/env "CODEX_BIN" "codex")
-                          :model (config/env "CODEX_MODEL" "gpt-5-codex")
-                          :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
-                          :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
-                                               (config/env "CODEX_APPROVAL" "never"))
+               initial-sid (read-session-id session-file)
+               sid-atom (atom initial-sid)
+               invoke-fn (make-codex-invoke-fn
+                          {:codex-bin (config/env "CODEX_BIN" "codex")
+                           :profile (config/env "CODEX_PROFILE")
+                           :model (config/env "CODEX_MODEL" "gpt-5-codex")
+                           :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
+                           :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
+                                                (config/env "CODEX_APPROVAL" "never"))
                           :reasoning-effort (config/env "CODEX_REASONING_EFFORT")
                           :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
                           :cwd (config/configured-codex-cwd)

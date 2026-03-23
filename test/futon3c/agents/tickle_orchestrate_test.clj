@@ -2,6 +2,7 @@
   (:require [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
+            [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.tickle-orchestrate :as orch]
             [futon3c.blackboard :as bb]
@@ -187,7 +188,7 @@
        (fn [prompt _session]
          (reset! invoked prompt)
          {:result "Implemented." :session-id "sess-mfuton-assign"}))
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")]
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
         (let [result (orch/assign-issue!
                       sample-issue
                       {:repo-dir "/tmp/test-repo"
@@ -206,7 +207,7 @@
        (fn [prompt _session]
          (reset! invoked prompt)
          {:result "Implemented." :session-id "sess-futon-assign"}))
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "futon")]
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")]
         (let [result (orch/assign-issue!
                       sample-issue
                       {:repo-dir "/tmp/test-repo"
@@ -267,7 +268,7 @@
        (fn [prompt _session]
          (reset! invoked prompt)
          {:result "APPROVE" :session-id "sess-mfuton-review"}))
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")]
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
         (let [result (orch/request-review!
                       sample-issue
                       {:ok true :result "done"}
@@ -287,7 +288,7 @@
 (deftest fetch-issue-mfuton-mode-preserves-gh-issue-shell
   (testing "mfuton mode keeps the underlying issue fetch on gh while prompt seam changes happen elsewhere"
     (let [invoked (atom nil)]
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")
                     shell/sh
                     (fn [& args]
                       (reset! invoked args)
@@ -307,7 +308,7 @@
 (deftest fetch-open-issues-mfuton-mode-preserves-gh-queue-read
   (testing "mfuton mode keeps queue reads on gh issue list while prompt seam changes happen elsewhere"
     (let [invoked (atom nil)]
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")
                     shell/sh
                     (fn [& args]
                       (reset! invoked args)
@@ -331,7 +332,7 @@
 (deftest comment-on-issue-mfuton-mode-preserves-gh-comment-path
   (testing "mfuton mode keeps workflow note publication on gh issue comment for now"
     (let [invoked (atom nil)]
-      (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")
                     shell/sh
                     (fn [& args]
                       (reset! invoked args)
@@ -576,7 +577,7 @@
 
 (deftest build-fm-context-mfuton-mode-rewrites-git-language
   (testing "mfuton mode keeps the prompt but rewrites the git-publish instruction"
-    (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "mfuton")]
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
       (let [ctx (orch/build-fm-context "FM-001" "codex-1" [] [])]
         (is (re-find #"Git is truth" ctx))
         (is (re-find #"run the commit algorithm for gh" ctx))
@@ -584,7 +585,7 @@
 
 (deftest build-fm-context-default-mode-preserves-original-git-language
   (testing "default mfuton mode leaves the original futon prompt unchanged"
-    (with-redefs [mfuton-prompt-override/mfuton-mode (constantly "futon")]
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")]
       (let [ctx (orch/build-fm-context "FM-001" "codex-1" [] [])]
         (is (re-find #"push artifacts to git" ctx))
         (is (not (re-find #"run the commit algorithm for gh" ctx)))))))
