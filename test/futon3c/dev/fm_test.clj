@@ -275,3 +275,54 @@
                  @sent)))
         (finally
           (reset! fm/!fm-conductor original))))))
+
+(deftest dispatch-task-defaults-to-futon-room
+  (testing "legacy queue dispatch stays on #futon outside FrontierMath mode"
+    (tq/clear!)
+    (let [sent (atom [])]
+      (try
+        (tq/add-task! {:id "T3-general"
+                       :label "Tier 3"
+                       :source "proof-ledger"
+                       :priority :high})
+        (with-redefs [config/env-bool (fn [_ default] default)
+                      fm/refresh-structural-law-tasks! (fn [_] nil)
+                      futon3c.agency.registry/invoke-agent! (fn [_ _ _] {:ok true :result "ok"})]
+          (is (= {:action :dispatch
+                  :task-id "T3-general"
+                  :agent-id "codex-1"
+                  :label "Tier 3"}
+                 (fm/dispatch-task! "codex-1"
+                                    {:bridge-send-fn (fn [channel from text]
+                                                       (swap! sent conj {:channel channel
+                                                                         :from from
+                                                                         :text text}))})))
+          (is (= "#futon" (:channel (first @sent)))))
+        (finally
+          (tq/clear!))))))
+
+(deftest dispatch-task-honors-math-room-when-enabled
+  (testing "legacy queue dispatch is rebound to #math only on the FrontierMath lane"
+    (tq/clear!)
+    (let [sent (atom [])]
+      (try
+        (tq/add-task! {:id "T3-general"
+                       :label "Tier 3"
+                       :source "proof-ledger"
+                       :priority :high})
+        (with-redefs [config/env-bool (fn [k default]
+                                        (if (= k "MATH_IRC") true default))
+                      fm/refresh-structural-law-tasks! (fn [_] nil)
+                      futon3c.agency.registry/invoke-agent! (fn [_ _ _] {:ok true :result "ok"})]
+          (is (= {:action :dispatch
+                  :task-id "T3-general"
+                  :agent-id "codex-1"
+                  :label "Tier 3"}
+                 (fm/dispatch-task! "codex-1"
+                                    {:bridge-send-fn (fn [channel from text]
+                                                       (swap! sent conj {:channel channel
+                                                                         :from from
+                                                                         :text text}))})))
+          (is (= "#math" (:channel (first @sent)))))
+        (finally
+          (tq/clear!))))))

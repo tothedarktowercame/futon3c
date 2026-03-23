@@ -3428,19 +3428,20 @@ RESPOND WITH ONLY:
    and chattering with each other.
 
    Returns {:agent-id str :nick str} or nil if IRC is not running."
-  [{:keys [relay-bridge irc-server agent-id nick invoke-timeout-ms invoke-hard-timeout-ms]
+  [{:keys [relay-bridge irc-server agent-id nick channel invoke-timeout-ms invoke-hard-timeout-ms]
     :or {agent-id "claude-1" nick "claude"
+         channel "#futon"
          invoke-timeout-ms 600000
          invoke-hard-timeout-ms 1800000}}]
   (when (and relay-bridge irc-server)
-    ((:join-agent! relay-bridge) agent-id nick "#futon"
+    ((:join-agent! relay-bridge) agent-id nick channel
      (fn [data]
        (let [parsed (try (json/parse-string data true) (catch Exception _ nil))]
          (when (and parsed (= "irc_message" (:type parsed)))
            (let [text (str (:text parsed))
                  sender (or (:from parsed) (:nick parsed))
-                 channel (or (:channel parsed) "#futon")]
-             (println (str "[irc] " channel " <" sender "> " text))
+                 reply-channel (or (:channel parsed) channel)]
+             (println (str "[irc] " reply-channel " <" sender "> " text))
              (flush)
              ;; Handle !ungate / !gate commands from any user
              (when-let [[_ cmd target] (re-matches #"(?i)^!(un)?gate\s+(\S+)\s*$" text)]
@@ -3449,12 +3450,12 @@ RESPOND WITH ONLY:
                    (do
                      (swap! !ungated-nicks conj target-nick)
                      (println (str "[irc] UNGATED: " target-nick " — receiving all messages"))
-                     ((:send-to-channel! irc-server) channel "system"
+                     ((:send-to-channel! irc-server) reply-channel "system"
                       (str target-nick " is now ungated — listening to all messages")))
                    (do
                      (swap! !ungated-nicks disj target-nick)
                      (println (str "[irc] GATED: " target-nick " — mention-only"))
-                     ((:send-to-channel! irc-server) channel "system"
+                     ((:send-to-channel! irc-server) reply-channel "system"
                       (str target-nick " is now gated — mention-only mode"))))
                  (flush)))
              (let [ungated? (contains? @!ungated-nicks (str/lower-case nick))
@@ -3478,7 +3479,7 @@ RESPOND WITH ONLY:
                            (try
                              (let [invoke-prompt (irc-invoke-prompt {:nick nick
                                                                      :sender sender
-                                                                     :channel channel
+                                                                     :channel reply-channel
                                                                      :user-text prompt})
                                    started-ms (System/currentTimeMillis)
                                    soft-timeout-ms (when (and invoke-timeout-ms (pos? (long invoke-timeout-ms)))
@@ -3500,26 +3501,26 @@ RESPOND WITH ONLY:
                                                                soft-timeout-ms
                                                                "ms] waiting for completion...")]
                                                   (println (str "[irc] " nick " invoke SOFT TIMEOUT: " msg))
-                                                  ((:send-to-channel! irc-server) channel nick msg)
+                                                  ((:send-to-channel! irc-server) reply-channel nick msg)
                                                   (flush)))
                                               (Thread/sleep 1000)
                                               (recur (or soft-notified?
                                                          (and soft-timeout-ms
                                                               (>= elapsed soft-timeout-ms)))))))
-                                   reply* (invoke-response->irc-reply resp)
-                                   invoke-trace-id (invoke-meta-trace-id (:invoke-meta resp))]
-                               (reset! !invoke-trace-id invoke-trace-id)
-                               ((:send-to-channel! irc-server) channel nick reply*)
-                               (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
-                                 (record-invoke-delivery!
-                                  agent-id invoke-trace-id
-                                  {:surface "irc"
-                                   :destination (str channel " as <" nick ">")
-                                   :delivered? true
-                                   :note "dispatch-relay"}))
-                               (println (str "[irc] " nick " → " channel " ("
-                                             (count reply*) " chars): "
-                                             (subs reply* 0 (min 120 (count reply*)))))
+                                  reply* (invoke-response->irc-reply resp)
+                                  invoke-trace-id (invoke-meta-trace-id (:invoke-meta resp))]
+                              (reset! !invoke-trace-id invoke-trace-id)
+                              ((:send-to-channel! irc-server) reply-channel nick reply*)
+                              (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
+                                (record-invoke-delivery!
+                                 agent-id invoke-trace-id
+                                 {:surface "irc"
+                                  :destination (str reply-channel " as <" nick ">")
+                                  :delivered? true
+                                  :note "dispatch-relay"}))
+                              (println (str "[irc] " nick " → " reply-channel " ("
+                                            (count reply*) " chars): "
+                                            (subs reply* 0 (min 120 (count reply*)))))
                                (flush)
                                ;; Bell-driven dispatch: registry mark-idle! fires
                                ;; !on-idle → tickle-queue/enqueue! → conductor dispatch.
@@ -3527,31 +3528,31 @@ RESPOND WITH ONLY:
                                )
                              (catch Exception e
                                (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
-                               (let [fallback-delivered?
-                                     (try
-                                       ((:send-to-channel! irc-server) channel nick
-                                        (str "[invoke dispatch error] " (.getMessage e)))
-                                       true
-                                       (catch Exception send-e
+                              (let [fallback-delivered?
+                                    (try
+                                      ((:send-to-channel! irc-server) reply-channel nick
+                                       (str "[invoke dispatch error] " (.getMessage e)))
+                                      true
+                                      (catch Exception send-e
                                          (println (str "[irc] " nick " dispatch ERROR while sending fallback: "
                                                        (.getMessage send-e)))
                                          false))]
-                                 (when-let [invoke-trace-id @!invoke-trace-id]
-                                   (record-invoke-delivery!
-                                    agent-id invoke-trace-id
-                                    {:surface "irc"
-                                     :destination (str channel " as <" nick ">")
-                                     :delivered? fallback-delivered?
-                                     :note (if fallback-delivered?
-                                             "dispatch-relay-error-fallback"
+                                (when-let [invoke-trace-id @!invoke-trace-id]
+                                  (record-invoke-delivery!
+                                   agent-id invoke-trace-id
+                                   {:surface "irc"
+                                    :destination (str reply-channel " as <" nick ">")
+                                    :delivered? fallback-delivered?
+                                    :note (if fallback-delivered?
+                                            "dispatch-relay-error-fallback"
                                              (str "dispatch-relay-error: " (.getMessage e)))})))
                                (flush)))))))
                   (do
                     (println (str "[irc] " nick ": not mentioned, skipping"))
                     (flush)))))))))
     )
-    ((:join-virtual-nick! irc-server) "#futon" nick)
-    (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon (mention-gated)"))
+    ((:join-virtual-nick! irc-server) channel nick)
+    (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → " channel " (mention-gated)"))
     {:agent-id agent-id :nick nick}))
 
 (defn start-drawbridge!

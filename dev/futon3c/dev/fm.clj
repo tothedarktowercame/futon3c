@@ -52,6 +52,10 @@
   []
   (config/env-bool "MATH_IRC" false))
 
+(defn- fm-dispatch-channel
+  []
+  (if (math-irc-enabled?) "#math" "#futon"))
+
 (defn- prompt-channel
   [prompt]
   (some->> (re-find irc-surface-channel-re (str (or prompt "")))
@@ -586,10 +590,11 @@
   (refresh-structural-law-tasks! config)
   (if-let [task (tq/pick-task! agent-id)]
     (let [tid (:id task)
-          nick (get fm-agent-nicks agent-id agent-id)]
+          nick (get fm-agent-nicks agent-id agent-id)
+          dispatch-channel (fm-dispatch-channel)]
       (println (str "[conductor] " agent-id " → DISPATCH " tid ": " (:label task)))
       (when (fn? bridge-send-fn)
-        (bridge-send-fn "#futon" "tickle"
+        (bridge-send-fn dispatch-channel "tickle"
                         (str "@" nick " dispatched: " tid " — " (:label task))))
       (when conductor-state
         (swap! conductor-state assoc-in [:last-paged agent-id] (System/currentTimeMillis)))

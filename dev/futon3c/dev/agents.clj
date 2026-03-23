@@ -145,6 +145,7 @@
                                   "codex-vscode")
         relay-claude? (config/env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (config/env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
+        relay-channel (if (config/env-bool "MATH_IRC" false) "#math" "#futon")
         codex-agent-id (config/configured-codex-agent-id)
         codex-relay-nick (config/configured-codex-relay-nick)
         relay-invoke-timeout-ms (or (config/env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 600000) 600000)
@@ -339,6 +340,7 @@
         :irc-server (:server irc-sys)
         :agent-id "claude-1"
         :nick "claude"
+        :channel relay-channel
         :invoke-timeout-ms relay-invoke-timeout-ms
         :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
     (when (and irc-sys relay-codex?)
@@ -347,6 +349,7 @@
         :irc-server (:server irc-sys)
         :agent-id codex-agent-id
         :nick codex-relay-nick
+        :channel relay-channel
         :invoke-timeout-ms relay-invoke-timeout-ms
         :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
     (println "[dev] Agent layer started.")))
