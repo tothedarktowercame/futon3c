@@ -357,6 +357,10 @@ ARTIFACT_REF_PATTERNS = [
 # Toggle with !ungate <nick> and !gate <nick>.
 ungated_nicks: set[str] = set()
 
+FM_MATH_TICKLE_CONTROL_RE = re.compile(
+    r"(?im)^(?:@tickle:?[ \t]+)?(?:BELL[ \t]+[A-Za-z0-9._:-]+|I['’]ll take[ \t]+[A-Za-z0-9._:-]+)\s*$"
+)
+
 
 def log(bot_nick, msg):
     ts = time.strftime("%H:%M:%S")
@@ -1317,6 +1321,27 @@ class IRCBot:
             or self.agent_id.startswith("codex")
         )
 
+    def _is_frontiermath_room_control_message(self, text, channel=None):
+        """Reserve dedicated #math Bell/claim mention forms for the runtime seam."""
+        channel = channel or self.channel
+        normalized_channel = (channel or "").strip().lower()
+        if normalized_channel != "#math":
+            return False
+        normalized_text = (text or "").strip()
+        if not normalized_text:
+            return False
+        collapsed_text = re.sub(r"\s+", " ", normalized_text).lower()
+        if (
+            collapsed_text.startswith("@tickle bell ")
+            or collapsed_text.startswith("bell ")
+            or collapsed_text.startswith("@tickle i'll take ")
+            or collapsed_text.startswith("i'll take ")
+            or collapsed_text.startswith("@tickle i’ll take ")
+            or collapsed_text.startswith("i’ll take ")
+        ):
+            return True
+        return bool(FM_MATH_TICKLE_CONTROL_RE.match(normalized_text))
+
     def _handle_mention(self, sender, text, channel=None):
         """Process a mention: queue invoke and ack immediately."""
         channel = channel or self.channel
@@ -1378,7 +1403,10 @@ class IRCBot:
             mission_part = f" | Focused Mission: {self.focused_mission}"
         brief = self._is_brief(text)
         surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
-        full_prompt = f"{surface_context}\n\n{sender}: {text}"
+        prompt_body = text
+        if not self._is_frontiermath_room_control_message(text, channel):
+            prompt_body = f"{sender}: {text}"
+        full_prompt = f"{surface_context}\n\n{prompt_body}"
 
         if self._invoke_queue.full():
             self._say("[queue full] invoke queue is saturated; retry in a moment",
@@ -1980,12 +2008,24 @@ class IRCBot:
 
                             # @mentions — each bot handles its own
                             elif self._is_mention(text):
-                                t = threading.Thread(
-                                    target=self._handle_mention,
-                                    args=(sender, text, target),
-                                    daemon=True,
-                                )
-                                t.start()
+                                if self._is_frontiermath_room_control_message(text, target):
+                                    log(
+                                        self.nick,
+                                        f"Rerouting FrontierMath room control mention through ungated path from {sender} on {target}: {text[:80]}",
+                                    )
+                                    t = threading.Thread(
+                                        target=self._handle_ungated,
+                                        args=(sender, text, target),
+                                        daemon=True,
+                                    )
+                                    t.start()
+                                else:
+                                    t = threading.Thread(
+                                        target=self._handle_mention,
+                                        args=(sender, text, target),
+                                        daemon=True,
+                                    )
+                                    t.start()
 
                             # Ungated mode — respond to all messages
                             elif self.nick.rstrip("_").lower() in ungated_nicks:

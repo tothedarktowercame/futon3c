@@ -57,6 +57,29 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
             bot._handle_mention("joe", "@codex check the solver", channel="#math")
         say.assert_not_called()
 
+    def test_frontiermath_math_room_control_mentions_bypass_generic_bridge_queue(self):
+        bot = bridge.IRCBot("tickle", "tickle-1", "#math", "localhost", 6667, "pw")
+        self.assertTrue(
+            bot._is_frontiermath_room_control_message(
+                "@tickle BELL SPEC_VERIFIED", channel="#math"
+            )
+        )
+        self.assertTrue(
+            bot._is_frontiermath_room_control_message(
+                "@tickle I'll take T3-general", channel="#math"
+            )
+        )
+        self.assertFalse(
+            bot._is_frontiermath_room_control_message(
+                "@tickle BELL SPEC_VERIFIED", channel="#futon"
+            )
+        )
+        self.assertFalse(
+            bot._is_frontiermath_room_control_message(
+                "@codex check the solver", channel="#math"
+            )
+        )
+
     def test_codex_clean_summary_omits_done_prefix_and_session_suffix(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         with mock.patch.object(bot, "_say") as say:
