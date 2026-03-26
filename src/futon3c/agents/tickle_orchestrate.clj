@@ -17,7 +17,8 @@
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.store :as estore]
-            [futon3c.blackboard :as bb])
+            [futon3c.blackboard :as bb]
+            [futon3c.dev.config :as config])
   (:import [java.time Instant Duration]
            [java.util UUID]))
 
@@ -630,13 +631,6 @@
    "codex-1"  "codex (computational worker, runs SAT solvers and writes code)"
    "claude-2" "claude-2 (Mentor, epistemic risk monitor, pattern reviewer)"})
 
-(def ^:private agent-irc-nicks
-  "Agent ID → IRC nick mapping. Agents may have different IRC nicks than their
-   registry IDs. Tickle must @-mention the correct nick for IRC delivery."
-  {"claude-1" "claude"
-   "codex-1"  "codex"
-   "claude-2" "claude-2"})
-
 (def ^:private default-cooldown-ms
   "Minimum interval between pages to the same agent (15 minutes).
    War-bulletin-5 finding: stateless orchestrator caused ~40% noise."
@@ -689,7 +683,7 @@
   "Build the Tickle decision prompt for an FM conductor cycle."
   [problem-id target-agent recent-msgs assignable-tasks]
   (let [agent-role (get agent-roles target-agent target-agent)
-        irc-nick (get agent-irc-nicks target-agent target-agent)
+        irc-nick (config/irc-nick-for-agent-id target-agent)
         recent-text (str/join "\n"
                      (map (fn [{:keys [nick text at]}]
                             (str (when at (subs (str at) 11 19)) " <" nick "> " text))
@@ -701,6 +695,7 @@
     (str "You are Tickle, task coordinator for " problem-id " (Ramsey numbers for book graphs) on #math.\n\n"
          "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
          "Current mode: FALSIFY (must try to disprove before constructing).\n"
+         "Problem state doc: futon6/data/first-proof/frontiermath-pilot/FM-001-ramsey-book-graphs-state.md\n"
          "Strategy doc: futon6/data/frontiermath-pilot/FM-001-strategy.md\n\n"
          "TARGET THIS CYCLE: " agent-role "\n"
          "IRC NICK: " irc-nick " (use @" irc-nick " when mentioning this agent)\n\n"

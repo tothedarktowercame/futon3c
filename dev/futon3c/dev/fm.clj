@@ -14,7 +14,8 @@
             [futon3c.dev.irc :as dev-irc]
             [futon3c.logic.arxana-bridge :as bridge]
             [futon3c.logic.invariant-runner :as ir]
-            [futon3c.social.whistles :as whistles])
+            [futon3c.social.whistles :as whistles]
+            [clojure.string :as str])
   (:import [java.time Instant]
            [java.time.temporal ChronoUnit]))
 
@@ -48,9 +49,18 @@
   []
   (mfuton-frontiermath/current-conductor-state-atom @!fm-conductor))
 
-(def ^:private fm-agent-nicks
-  {"claude-1" "claude" "claude-2" "claude-2" "codex-1" "codex"
-   "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
+(def ^:private default-fm-rotation
+  ["codex-1" "claude-3" "codex-2" "codex-3"])
+
+(defn- configured-fm-rotation
+  []
+  (let [configured (->> (config/env-list "FUTON3C_FM_CONDUCTOR_ROTATION" [])
+                        (map str/trim)
+                        (remove str/blank?)
+                        vec)]
+    (if (seq configured)
+      configured
+      default-fm-rotation)))
 
 (defn fm-dispatch!
   "Have Tickle assign the top FM-001 obligation on #math."
@@ -153,7 +163,7 @@
                   conductor-state
                   (assoc :conductor
                          (let [s conductor-state
-                               rotation (or (:rotation s) ["codex-1" "claude-3" "codex-2" "codex-3"])
+                               rotation (or (:rotation s) (configured-fm-rotation))
                                idx (or (:idx s) 0)
                                next-agent (nth rotation (mod idx (count rotation)))
                                cooldowns (:last-paged s)
@@ -219,7 +229,7 @@
   [agent-id {:keys [problem-id bridge-send-fn conductor-state cooldown-ms]
              :or {problem-id "FM-001" cooldown-ms (* 3 60 1000)}}]
   (let [conductor-state (or conductor-state (atom {}))
-        nick (get fm-agent-nicks agent-id agent-id)]
+        nick (config/irc-nick-for-agent-id agent-id)]
     (cond
       (not (agent-idle? agent-id))
       {:action :skip :target agent-id}
@@ -253,7 +263,7 @@
 (defn- fm-dispatch-idle-agents!
   "Scan all agents in rotation, dispatch work to any that are idle."
   [config]
-  (let [rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
+  (let [rotation (or (:rotation config) (configured-fm-rotation))
         idle (idle-agents rotation)]
     (when (seq idle)
       (mapv #(fm-dispatch-mechanical! % config) idle))))
@@ -428,7 +438,7 @@
   (refresh-structural-law-tasks! config)
   (if-let [task (tq/pick-task! agent-id)]
     (let [tid (:id task)
-          nick (get fm-agent-nicks agent-id agent-id)
+          nick (config/irc-nick-for-agent-id agent-id)
           dispatch-channel (fm-dispatch-channel)]
       (println (str "[conductor] " agent-id " → DISPATCH " tid ": " (:label task)))
       (when (fn? bridge-send-fn)
@@ -494,7 +504,7 @@
                                 :started-at-ms (System/currentTimeMillis)})
          config (assoc config :conductor-state conductor-state)
          running (atom true)
-         rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
+         rotation (or (:rotation config) (configured-fm-rotation))
          cooldown-ms (or (:cooldown-ms config) (* 3 60 1000))
          !tickle (:!tickle deps)
          handle {:stop-fn #(reset! running false)

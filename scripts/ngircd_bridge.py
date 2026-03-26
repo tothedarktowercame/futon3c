@@ -211,6 +211,7 @@ INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
 INVOKE_ANNOUNCE_URL = f"{INVOKE_BASE}/api/alpha/invoke/announce"
 INVOKE_JOBS_URL = f"{INVOKE_BASE}/api/alpha/invoke/jobs"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
+AGENT_INTERRUPT_URL_TEMPLATE = AGENTS_URL + "/{agent_id}/interrupt-invoke"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
 INVOKE_DELIVERY_URL = f"{INVOKE_BASE}/api/alpha/invoke-delivery"
@@ -247,6 +248,22 @@ INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not
     "false",
     "no",
     "off",
+)
+INVOKE_INTERRUPT_WHEN_BUSY = os.environ.get("INVOKE_INTERRUPT_WHEN_BUSY", "0").lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
+INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS = int_env(
+    "INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS",
+    30,
+    minimum=1,
+)
+INVOKE_INTERRUPT_READY_POLL_SECONDS = int_env(
+    "INVOKE_INTERRUPT_READY_POLL_SECONDS",
+    1,
+    minimum=1,
 )
 CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! commands
 INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
@@ -323,6 +340,9 @@ def _cleanup():
 
 atexit.register(_cleanup)
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # triggers atexit
+
+BRIDGE_FATAL_STOP = threading.Event()
+BRIDGE_FATAL_STOP_REASON = {"reason": None}
 
 
 def sd_notify(state):
@@ -454,6 +474,20 @@ class IRCBot:
             "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
 
+    def _request_orchestration_stop(self, reason):
+        """Fail closed for this bridge process after a fatal orchestration seam."""
+        text = (str(reason) or "fatal orchestration stop requested").strip()
+        BRIDGE_FATAL_STOP_REASON["reason"] = text
+        BRIDGE_FATAL_STOP.set()
+        log(self.nick, f"FATAL orchestration stop requested: {text}")
+        self.connected = False
+        if self.sock is not None:
+            try:
+                self.sock.close()
+            except Exception:
+                pass
+            self.sock = None
+
     def _bare_command_owner_agent_id(self, channel):
         """Return the configured bare ! owner for a room, if any."""
         if not isinstance(channel, str):
@@ -548,6 +582,15 @@ class IRCBot:
             "session_id": agent.get("session-id")
             or agent.get("session_id")
             or "unknown",
+            "queued_jobs": agent.get("queued-jobs")
+            or agent.get("queued_jobs")
+            or 0,
+            "running_jobs": agent.get("running-jobs")
+            or agent.get("running_jobs")
+            or 0,
+            "nonterminal_jobs": agent.get("nonterminal-jobs")
+            or agent.get("nonterminal_jobs")
+            or 0,
             "invoke_started_at": agent.get("invoke-started-at")
             or agent.get("invoke_started_at"),
             "invoke_activity": agent.get("invoke-activity")
@@ -567,6 +610,104 @@ class IRCBot:
         if isinstance(started, str) and started.strip():
             parts.append(f"since={started.strip()}")
         return " | ".join(parts)
+
+    def _interrupt_when_busy_enabled(self):
+        return INVOKE_INTERRUPT_WHEN_BUSY and self.agent_id.lower().startswith("codex")
+
+    @staticmethod
+    def _busy_interrupt_eligible(status):
+        if not isinstance(status, dict):
+            return False
+        state = str(status.get("status") or "").strip().lower()
+        try:
+            running_jobs = int(status.get("running_jobs") or 0)
+        except Exception:
+            running_jobs = 0
+        return state == "invoking" and running_jobs > 0
+
+    @staticmethod
+    def _agent_ready_after_interrupt(status):
+        if not isinstance(status, dict):
+            return False
+        state = str(status.get("status") or "").strip().lower()
+        try:
+            running_jobs = int(status.get("running_jobs") or 0)
+        except Exception:
+            running_jobs = 0
+        return state != "invoking" and running_jobs == 0
+
+    def _request_invoke_interrupt(self, job_id=None):
+        payload = {}
+        if job_id:
+            payload["job-id"] = job_id
+        return api_post(
+            AGENT_INTERRUPT_URL_TEMPLATE.format(agent_id=self.agent_id),
+            payload,
+            timeout=max(STATUS_TIMEOUT, 5),
+        )
+
+    def _wait_for_agent_ready_after_interrupt(self):
+        deadline = time.time() + INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS
+        last_status = None
+        while time.time() < deadline:
+            status = self._agent_status()
+            if isinstance(status, dict):
+                last_status = status
+                if self._agent_ready_after_interrupt(status):
+                    return {"ok": True, "status": status}
+            time.sleep(INVOKE_INTERRUPT_READY_POLL_SECONDS)
+        return {"ok": False, "status": last_status}
+
+    def _prepare_agent_for_new_invoke(self, *, action_label="invoke"):
+        status_before = self._agent_status()
+        if not (
+            INVOKE_SKIP_WHEN_BUSY
+            and isinstance(status_before, dict)
+            and status_before.get("status") == "invoking"
+        ):
+            return {"ok": True, "status": status_before}
+        if self._interrupt_when_busy_enabled() and self._busy_interrupt_eligible(status_before):
+            log(self.nick, f"{self.agent_id}: busy before {action_label}; requesting interrupt")
+            interrupt = self._request_invoke_interrupt()
+            if isinstance(interrupt, dict) and interrupt.get("ok"):
+                waited = self._wait_for_agent_ready_after_interrupt()
+                if waited.get("ok"):
+                    status_before = waited.get("status") or {}
+                    log(self.nick, f"{self.agent_id}: ready after interrupt; continuing {action_label}")
+                    return {"ok": True, "status": status_before}
+                status_after = waited.get("status") or status_before
+                self._request_orchestration_stop(
+                    f"{self.agent_id} did not return ready within "
+                    f"{INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS}s after interrupt"
+                )
+                return {
+                    "ok": False,
+                    "error": (
+                        "invoke interrupt timeout: "
+                        f"{self._agent_busy_summary(status_after)}"
+                    ),
+                    "session_id": status_after.get("session_id"),
+                }
+            if isinstance(interrupt, dict):
+                detail = interrupt.get("message") or interrupt.get("error") or "interrupt failed"
+            else:
+                detail = "interrupt failed"
+            return {
+                "ok": False,
+                "error": f"invoke interrupt failed: {detail}",
+                "session_id": status_before.get("session_id"),
+            }
+        if self._interrupt_when_busy_enabled():
+            log(
+                self.nick,
+                f"{self.agent_id}: invoking without active running job; proceeding without interrupt",
+            )
+            return {"ok": True, "status": status_before}
+        return {
+            "ok": False,
+            "error": f"invoke skipped: {self._agent_busy_summary(status_before)}",
+            "session_id": status_before.get("session_id"),
+        }
 
     def connect(self):
         """Connect to IRC server, authenticate, join channel."""
@@ -1115,16 +1256,13 @@ class IRCBot:
 
     def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None, reply_channel=None):
         """Call the futon3c invoke API and return structured invoke outcome."""
-        status_before = self._agent_status()
-        if (
-            INVOKE_SKIP_WHEN_BUSY
-            and isinstance(status_before, dict)
-            and status_before.get("status") == "invoking"
-        ):
+        prepared = self._prepare_agent_for_new_invoke(action_label="invoke")
+        if not prepared.get("ok"):
             return {
                 "ok": False,
-                "error": f"invoke skipped: {self._agent_busy_summary(status_before)}",
-                "session_id": status_before.get("session_id"),
+                "job_id": job_id,
+                "error": prepared.get("error", "invoke preparation failed"),
+                "session_id": prepared.get("session_id"),
             }
         active_channel = reply_channel or self._reply_channel or self.channel
         payload = {
@@ -1365,6 +1503,13 @@ class IRCBot:
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping invocation from {sender}")
             return
+        prepared = self._prepare_agent_for_new_invoke(action_label="queue")
+        if not prepared.get("ok"):
+            err = prepared.get("error", "invoke preparation failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Pre-queue invoke preparation failed for {sender} on {channel}: {err}")
+            return
         announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
                                           reply_channel=channel)
         if not announced.get("ok"):
@@ -1412,6 +1557,13 @@ class IRCBot:
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping ungated invocation from {sender}")
+            return
+        prepared = self._prepare_agent_for_new_invoke(action_label="queue")
+        if not prepared.get("ok"):
+            err = prepared.get("error", "invoke preparation failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Pre-queue invoke preparation failed for ungated invoke from {sender} on {channel}: {err}")
             return
         announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
                                           reply_channel=channel)
@@ -1951,9 +2103,13 @@ class IRCBot:
     def run(self):
         """Main loop: read IRC messages, handle PINGs, commands, mentions."""
         while True:
+            if BRIDGE_FATAL_STOP.is_set():
+                return
             try:
                 self.connect()
                 while True:
+                    if BRIDGE_FATAL_STOP.is_set():
+                        return
                     line = self._readline()
                     if line is None:
                         log(self.nick, "Connection closed by server")
@@ -2048,6 +2204,8 @@ class IRCBot:
                 except Exception:
                     pass
                 self.sock = None
+            if BRIDGE_FATAL_STOP.is_set():
+                return
 
             log(self.nick, f"Reconnecting in {RECONNECT_DELAY}s...")
             time.sleep(RECONNECT_DELAY)
@@ -2218,7 +2376,13 @@ def main():
         while True:
             _write_health(bots, started_at)
             sd_notify("WATCHDOG=1")
-            time.sleep(HEALTH_INTERVAL)
+            if BRIDGE_FATAL_STOP.wait(HEALTH_INTERVAL):
+                reason = BRIDGE_FATAL_STOP_REASON.get("reason") or "fatal orchestration stop requested"
+                print(
+                    f"Stopping ngircd bridge after fatal orchestration stop: {reason}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
     except KeyboardInterrupt:
         print("\nShutting down bridge...")
         sys.exit(0)

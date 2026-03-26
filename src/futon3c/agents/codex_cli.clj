@@ -232,7 +232,7 @@
 (defn run-codex-stream!
   "Run CMD with PROMPT-STR on stdin, streaming Codex JSONL output.
    Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
-  [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event]}]
+  [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event on-process-started on-process-exit]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
         _ (when (and (string? cwd) (not (str/blank? cwd)))
             (.directory pb (io/file cwd)))
@@ -304,6 +304,10 @@
                           :argv (vec cmd)
                           :cwd cwd
                           :at (str (java.time.Instant/now))})
+        _ (when on-process-started
+            (try
+              (on-process-started proc)
+              (catch Throwable _)))
         stdout-fut (future
                      (consume-lines!
                       (.getInputStream proc)
@@ -365,6 +369,11 @@
                         :total-lines @output-lines*
                         :total-bytes @output-bytes*
                         :at (str (java.time.Instant/now))})
+        (when on-process-exit
+          (try
+            (on-process-exit proc {:exit exit
+                                   :timed-out? (not finished?)})
+            (catch Throwable _)))
         {:exit exit
          :timed-out? (not finished?)
          :session-id @sid*
@@ -388,7 +397,7 @@
    - :cwd (optional working directory)
    - :on-event (optional fn called with each parsed stream event)"
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
-           on-event on-runtime-event]
+           on-event on-runtime-event on-process-started on-process-exit]
     :or {codex-bin "codex"
          model "gpt-5-codex"
          sandbox "danger-full-access"
@@ -411,7 +420,9 @@
                 (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
                                                    :cwd cwd
                                                    :on-event on-event
-                                                   :on-runtime-event on-runtime-event})
+                                                   :on-runtime-event on-runtime-event
+                                                   :on-process-started on-process-started
+                                                   :on-process-exit on-process-exit})
                 stream-sid (:session-id stream-result)
                 parsed (parse-output raw-output (or stream-sid session-id))
                 final-sid (or stream-sid (:session-id parsed))
@@ -439,7 +450,9 @@
                     r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms
                                                            :cwd cwd
                                                            :on-event on-event
-                                                           :on-runtime-event on-runtime-event})
+                                                           :on-runtime-event on-runtime-event
+                                                           :on-process-started on-process-started
+                                                           :on-process-exit on-process-exit})
                     p2 (parse-output (:raw-output r2) (:session-id r2))
                     sid2 (or (:session-id r2) (:session-id p2))
                     txt2 (or (some-> (:text r2) str/trim not-empty)

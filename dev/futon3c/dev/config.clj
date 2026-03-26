@@ -47,6 +47,12 @@
       (not (contains? #{"0" "false" "no" "off"} v)))
     default))
 
+(defn direct-invoke-timeout-seconds
+  "Configured curl/client-side timeout for synchronous /api/alpha/invoke examples.
+   Default remains 10 seconds so upstream futon behavior stays unchanged."
+  []
+  (or (env-int "FUTON3C_DIRECT_INVOKE_TIMEOUT_SECONDS" 10) 10))
+
 ;; ---------------------------------------------------------------------------
 ;; Codex identity
 ;; ---------------------------------------------------------------------------
@@ -62,6 +68,112 @@
   []
   (or (some-> (env "FUTON3C_CODEX_NICK") str/trim not-empty)
       (str/replace (configured-codex-agent-id) #"-\d+$" "")))
+
+(defn parse-nick-agent-pair
+  "Parse a NICK_AGENT_MAP entry into [nick agent-id], lower-casing the nick."
+  [entry]
+  (when-let [[_ nick agent-id]
+             (and entry
+                  (re-matches #"(?i)\s*([^:,\s]+)\s*:\s*([^:,\s]+)\s*"
+                              (str entry)))]
+    [(str/lower-case nick) agent-id]))
+
+(defn configured-nick-agent-map
+  "Nick -> agent-id mapping for IRC-visible agents.
+
+   FUTON3C/NICK_AGENT_MAP entries override the built-in compatibility defaults."
+  []
+  (let [defaults {(str/lower-case (configured-codex-relay-nick))
+                  (configured-codex-agent-id)
+                  "codex-vscode" "codex-vscode"
+                  "codex-2" "codex-2"
+                  "codex-3" "codex-3"
+                  "claude" "claude-1"
+                  "claude-2" "claude-2"
+                  "claude-3" "claude-3"
+                  "tickle" "tickle-1"}
+        configured (into {}
+                         (keep parse-nick-agent-pair)
+                         (env-list "NICK_AGENT_MAP" []))]
+    (merge defaults configured)))
+
+(defn configured-agent-nick-map
+  "Agent-id -> nick mapping for IRC-visible agents.
+
+   FUTON3C/NICK_AGENT_MAP entries override the built-in compatibility defaults."
+  []
+  (let [defaults {(configured-codex-agent-id) (configured-codex-relay-nick)
+                  "codex-vscode" "codex-vscode"
+                  "codex-2" "codex-2"
+                  "codex-3" "codex-3"
+                  "claude-1" "claude"
+                  "claude-2" "claude-2"
+                  "claude-3" "claude-3"
+                  "tickle-1" "tickle"}
+        configured (into {}
+                         (keep (fn [entry]
+                                 (when-let [[nick agent-id]
+                                            (parse-nick-agent-pair entry)]
+                                   [agent-id nick])))
+                         (env-list "NICK_AGENT_MAP" []))]
+    (merge defaults configured)))
+
+(defn agent-id-for-irc-nick
+  "Resolve an IRC nick or nick-like probe sender to an agent-id."
+  [nick]
+  (let [nick-lower (some-> nick str str/trim str/lower-case)
+        configured-map (configured-nick-agent-map)
+        codex-nick-lower (some-> (configured-codex-relay-nick)
+                                 str/lower-case)]
+    (cond
+      (str/blank? nick-lower) nil
+      (contains? configured-map nick-lower) (get configured-map nick-lower)
+      (str/starts-with? nick-lower "claude-3")
+      (get configured-map "claude-3" "claude-3")
+      (str/starts-with? nick-lower "claude-2")
+      (get configured-map "claude-2" "claude-2")
+      (str/starts-with? nick-lower "claude")
+      (get configured-map "claude" "claude-1")
+      (str/starts-with? nick-lower "codex-vscode")
+      (get configured-map "codex-vscode" "codex-vscode")
+      (str/starts-with? nick-lower "codex-3")
+      (get configured-map "codex-3" "codex-3")
+      (str/starts-with? nick-lower "codex-2")
+      (get configured-map "codex-2" "codex-2")
+      (and codex-nick-lower (str/starts-with? nick-lower codex-nick-lower))
+      (configured-codex-agent-id)
+      (str/starts-with? nick-lower "codex")
+      (configured-codex-agent-id)
+      (str/starts-with? nick-lower "tickle")
+      (get configured-map "tickle" "tickle-1")
+      :else nil)))
+
+(defn irc-nick-for-agent-id
+  "Resolve an agent-id to the room-visible IRC nick used for delivery."
+  [agent-id]
+  (let [aid (some-> agent-id str str/trim)
+        aid-lower (some-> aid str/lower-case)
+        configured-map (configured-agent-nick-map)]
+    (cond
+      (str/blank? aid) nil
+      (contains? configured-map aid) (get configured-map aid)
+      (str/starts-with? aid-lower "claude-3")
+      (get configured-map "claude-3" "claude-3")
+      (str/starts-with? aid-lower "claude-2")
+      (get configured-map "claude-2" "claude-2")
+      (str/starts-with? aid-lower "claude")
+      (get configured-map "claude-1" "claude")
+      (str/starts-with? aid-lower "codex-vscode")
+      (get configured-map "codex-vscode" "codex-vscode")
+      (str/starts-with? aid-lower "codex-3")
+      (get configured-map "codex-3" "codex-3")
+      (str/starts-with? aid-lower "codex-2")
+      (get configured-map "codex-2" "codex-2")
+      (str/starts-with? aid-lower "codex")
+      (configured-codex-relay-nick)
+      (str/starts-with? aid-lower "tickle")
+      (get configured-map "tickle-1" "tickle")
+      :else aid)))
 
 (defn workspace-root-dir
   "Return the nearest ancestor of START-DIR that contains AGENTS.md, or nil."

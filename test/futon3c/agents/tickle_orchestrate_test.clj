@@ -5,6 +5,7 @@
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.tickle-orchestrate :as orch]
+            [futon3c.dev.config :as config]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.store :as estore]))
 
@@ -567,7 +568,22 @@
       (is (re-find #"F2-literature" ctx))
       (is (re-find #"Working on F1" ctx))
       (is (re-find #"FALSIFY" ctx))
-      (is (re-find #"FM-001-strategy" ctx)))))
+      (is (re-find #"FM-001-strategy" ctx))
+      (is (re-find #"FM-001-ramsey-book-graphs-state" ctx)))))
+
+(deftest build-fm-context-uses-mfuton-frontiermath-root-override
+  (testing "build-fm-context routes FrontierMath doc refs through the mfuton prompt seam"
+    (with-redefs [mfuton-mode/mfuton-mode? (constantly true)
+                  config/env (fn [k & [default]]
+                               (case k
+                                 "FUTON3C_FRONTIERMATH_ROOT"
+                                 "I:/gh/mfuton/data/frontiermath-local/source/futon6-frontiermath-local-ops"
+                                 "MFUTON_HOME"
+                                 "I:/gh/mfuton"
+                                 default))]
+      (let [ctx (orch/build-fm-context "FM-001" "codex-1" [] [])]
+        (is (re-find #"mfuton/data/frontiermath-local/source/futon6-frontiermath-local-ops/data/frontiermath-pilot/FM-001-strategy.md" ctx))
+        (is (re-find #"mfuton/data/frontiermath-local/source/futon6-frontiermath-local-ops/data/first-proof/frontiermath-pilot/FM-001-ramsey-book-graphs-state.md" ctx))))))
 
 (deftest build-fm-context-handles-empty-state
   (testing "build-fm-context works with no tasks and no messages"

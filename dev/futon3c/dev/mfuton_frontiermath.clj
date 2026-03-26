@@ -25,16 +25,6 @@
 (def ^:private irc-runtime-sender-re
   #"(?im)^\s*-\s*Sender:\s*([^\s]+)\s*$")
 
-(def ^:private fm-agent-nicks
-  {"claude-1" "claude" "claude-2" "claude-2" "codex-1" "codex"
-   "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
-
-(def ^:private fm-nick-agents
-  (into {}
-        (map (fn [[agent-id nick]]
-               [(str/lower-case nick) agent-id]))
-        fm-agent-nicks))
-
 (defn dispatch-channel
   [math-irc-enabled?]
   (if math-irc-enabled? "#math" "#futon"))
@@ -59,42 +49,9 @@
     (remove #(contains? claimed-ids (:item/id %))
             (assignable-obligations-fn problem-id))))
 
-(defn- configured-nick-agent-map
-  []
-  (into {}
-        (keep (fn [entry]
-                (when-let [[_ nick agent-id] (re-matches #"(?i)\s*([^:,\s]+)\s*:\s*([^:,\s]+)\s*" entry)]
-                  [(str/lower-case nick) agent-id])))
-        (config/env-list "NICK_AGENT_MAP" [])))
-
 (defn- claim-nick->agent-id
   [nick]
-  (let [nick-lower (some-> nick str str/trim str/lower-case)
-        configured-map (configured-nick-agent-map)
-        configured-codex-nick (some-> (config/configured-codex-relay-nick)
-                                      str/lower-case)]
-    (cond
-      (str/blank? nick-lower)
-      nil
-
-      (contains? configured-map nick-lower)
-      (get configured-map nick-lower)
-
-      (contains? fm-nick-agents nick-lower)
-      (get fm-nick-agents nick-lower)
-
-      (and configured-codex-nick
-           (str/starts-with? nick-lower configured-codex-nick))
-      (config/configured-codex-agent-id)
-
-      (str/starts-with? nick-lower "codex")
-      (config/configured-codex-agent-id)
-
-      (str/starts-with? nick-lower "claude")
-      "claude-1"
-
-      :else
-      nil)))
+  (config/agent-id-for-irc-nick nick))
 
 (defn- prompt-channel
   [prompt]

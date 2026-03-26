@@ -181,6 +181,7 @@
                                      :depends-on #{"F0-root"}})]
         (is (re-find #"Git is truth" prompt))
         (is (re-find #"run the commit algorithm for gh when done" prompt))
+        (is (re-find #"Signal @tickle BELL SPEC_VERIFIED when done" prompt))
         (is (not (re-find #"Push results to git when done" prompt)))))))
 
 (deftest fm-dispatch-message-override-keeps-git-as-truth
@@ -189,7 +190,19 @@
                    "@codex F1-opposite: Falsification attempt. Push results to git when done.")]
       (is (re-find #"Git is truth" message))
       (is (re-find #"run the commit algorithm for gh when done" message))
+      (is (re-find #"Signal @tickle BELL SPEC_VERIFIED when done" message))
       (is (not (re-find #"Push results to git when done" message))))))
+
+(deftest fm-dispatch-message-override-reroutes-local-t3-general-to-n3-control
+  (testing "the local mfuton T3-general page is rewritten to the n=3 control prompt"
+    (let [message (mfuton-prompt-override/fm-dispatch-message-override
+                   "@codex T3-general: Tier 3: general algorithm for all n, <10min for n<=100. Push results to git when done.")]
+      (is (re-find #"@codex T3-general control" message))
+      (is (re-find #"n=3 control" message))
+      (is (re-find #"--check 3 --method wesley" message))
+      (is (re-find #"2026-03-26-n3-search.md" message))
+      (is (re-find #"2026-03-26-n3-search-iterations.md" message))
+      (is (not (re-find #"general algorithm for all n, <10min for n<=100" message))))))
 
 (deftest task->prompt-default-mode-preserves-original-git-language
   (testing "default mfuton mode leaves the original futon task prompt unchanged"
@@ -201,6 +214,31 @@
         (is (re-find #"Push results to git when done" prompt))
         (is (not (re-find #"run the commit algorithm for gh when done" prompt)))))))
 
+(deftest task->prompt-mfuton-mode-reroutes-local-t3-general-to-n3-control
+  (testing "mfuton mode rewrites the local T3-general task prompt to the n=3 control"
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
+      (let [prompt (fm/task->prompt {:id "T3-general"
+                                     :label "Tier 3: general algorithm for all n, <10min for n<=100"
+                                     :source "proof-ledger"
+                                     :depends-on #{"C3-verify-G" "C4-verify-complement"}})]
+        (is (re-find #"Task ID: T3-general" prompt))
+        (is (re-find #"Task: FrontierMath local n=3 orchestration control" prompt))
+        (is (re-find #"--check 3 --method wesley" prompt))
+        (is (re-find #"2026-03-26-n3-search.md" prompt))
+        (is (re-find #"2026-03-26-n3-search-iterations.md" prompt))
+        (is (not (re-find #"Task: Tier 3: general algorithm for all n, <10min for n<=100" prompt)))))))
+
+(deftest task->prompt-default-mode-leaves-local-t3-general-unchanged
+  (testing "default futon mode keeps the upstream T3-general wording unchanged"
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")]
+      (let [prompt (fm/task->prompt {:id "T3-general"
+                                     :label "Tier 3: general algorithm for all n, <10min for n<=100"
+                                     :source "proof-ledger"
+                                     :depends-on #{"C3-verify-G" "C4-verify-complement"}})]
+        (is (re-find #"Task: Tier 3: general algorithm for all n, <10min for n<=100" prompt))
+        (is (not (re-find #"FrontierMath local n=3 orchestration control" prompt)))
+        (is (not (re-find #"--check 3 --method wesley" prompt)))))))
+
 (deftest handle-claim-prompt-accepts-math-lane-claims
   (testing "tickle honors the existing #math claim text only on the math-irc lane"
     (let [conductor-state (atom {})
@@ -209,6 +247,7 @@
       (try
         (with-redefs [config/env-bool (fn [k default]
                                         (if (= k "MATH_IRC") true default))
+                      mfuton-mode/mfuton-mode (constantly "mfuton")
                       fm/fm-assignable-obligations (fn [_]
                                                      [{:item/id "T3-general"
                                                        :item/label "Tier 3"}])]
@@ -223,7 +262,7 @@
             (is (= :claim (get-in @conductor-state [:last-cycle :action])))
             (is (= "codex-1" (get-in @conductor-state [:last-cycle :target])))
             (is (= "fm-s-1" (:session-id response)))
-            (is (= "@codex T3-general: Tier 3. Push results to git when done."
+            (is (= "@codex T3-general: Tier 3. Git is truth; run the commit algorithm for gh when done. Signal @tickle BELL SPEC_VERIFIED when done."
                    (:result response)))))
         (finally
           (reset! fm/!fm-conductor original))))))
@@ -236,6 +275,7 @@
       (try
         (with-redefs [config/env-bool (fn [k default]
                                         (if (= k "MATH_IRC") true default))
+                      mfuton-mode/mfuton-mode (constantly "mfuton")
                       fm/fm-assignable-obligations (fn [_]
                                                      [{:item/id "T3-general"
                                                        :item/label "Tier 3"}])]
@@ -248,7 +288,7 @@
                           "fm-s-1b")]
             (is (= "fm-s-1b" (:session-id response)))
             (is (= "codex-1" (get-in @conductor-state [:last-cycle :target])))
-            (is (= "@codex T3-general: Tier 3. Push results to git when done."
+            (is (= "@codex T3-general: Tier 3. Git is truth; run the commit algorithm for gh when done. Signal @tickle BELL SPEC_VERIFIED when done."
                    (:result response)))))
         (finally
           (reset! fm/!fm-conductor original))))))

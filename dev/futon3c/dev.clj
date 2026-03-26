@@ -459,6 +459,7 @@
 (defonce !tickle (atom nil))
 (defonce !codex-ws-bridge (atom nil))
 (defonce !codex-status (atom {}))
+(defonce !invoke-controls (atom {}))
 
 (defn- direct-xtdb-enabled?
   "Whether futon3c may write evidence directly to XTDB.
@@ -778,18 +779,7 @@
 (defn- nick->agent-id
   "Map IRC nick to agent-id (codex → codex-1, claude → claude-1)."
   [nick]
-  (let [nick-str (some-> nick str)
-        nick-lower (some-> nick-str str/lower-case)
-        codex-nick (configured-codex-relay-nick)
-        codex-nick-lower (some-> codex-nick str/lower-case)]
-    (cond
-      (and codex-nick-lower nick-lower
-           (str/starts-with? nick-lower codex-nick-lower))
-      (configured-codex-agent-id)
-      (and nick-lower (str/starts-with? nick-lower "codex"))
-      (configured-codex-agent-id)
-      (and nick-lower (str/starts-with? nick-lower "claude")) "claude-1"
-      :else nil)))
+  (config/agent-id-for-irc-nick nick))
 
 (defn- next-queued-task
   "Find the next task that's ready for the same worker, by issue number order."
@@ -928,22 +918,24 @@ RESPOND WITH ONLY:
    Delegates to a claude invoke-fn for actual LLM execution."
   [claude-invoke-fn]
   (fn [prompt session-id]
-    (let [context (try (tickle-build-context)
-                       (catch Throwable e
-                         (str "(context unavailable: " (.getMessage e) ")")))
-          wrapped (str tickle-system-prompt
-                       "\n\n---\n\n"
-                       context
-                       "\n\n---\n\n"
-                       "SURFACE: IRC #futon. Your text output will be posted as <tickle>.\n"
-                       "CONSTRAINT: Do NOT use tools, create files, run commands, or take actions.\n"
-                       "You are a read-only observer. Respond with ONLY a short text message.\n\n"
-                       "User message from IRC:\n"
-                       (cond
-                         (string? prompt) prompt
-                         (map? prompt)    (or (:prompt prompt) (:text prompt) (str prompt))
-                         :else            (str prompt)))]
-      (claude-invoke-fn wrapped session-id))))
+    (or (dev-fm/handle-claim-prompt! prompt session-id)
+        (dev-fm/handle-bell-prompt! prompt session-id)
+        (let [context (try (tickle-build-context)
+                           (catch Throwable e
+                             (str "(context unavailable: " (.getMessage e) ")")))
+              wrapped (str tickle-system-prompt
+                           "\n\n---\n\n"
+                           context
+                           "\n\n---\n\n"
+                           "SURFACE: IRC #futon. Your text output will be posted as <tickle>.\n"
+                           "CONSTRAINT: Do NOT use tools, create files, run commands, or take actions.\n"
+                           "You are a read-only observer. Respond with ONLY a short text message.\n\n"
+                           "User message from IRC:\n"
+                           (cond
+                             (string? prompt) prompt
+                             (map? prompt)    (or (:prompt prompt) (:text prompt) (str prompt))
+                             :else            (str prompt)))]
+          (claude-invoke-fn wrapped session-id)))))
 
 (defonce !tickle-llm-invoke (atom nil))
 
@@ -2234,6 +2226,84 @@ RESPOND WITH ONLY:
                                 {:updated-at (str (Instant/now))})))))
       (project-codex-status!))))
 
+(defn- register-invoke-control!
+  [agent-id token control]
+  (let [aid (str agent-id)]
+    (swap! !invoke-controls assoc aid {:token token
+                                       :agent-id aid
+                                       :registered-at (str (Instant/now))
+                                       :control control}))
+  true)
+
+(defn- clear-invoke-control!
+  [agent-id token]
+  (let [aid (str agent-id)]
+    (swap! !invoke-controls
+           (fn [m]
+             (let [entry (get m aid)]
+               (if (= token (:token entry))
+                 (dissoc m aid)
+                 m)))))
+  true)
+
+(defn- destroy-process-tree!
+  [^Process proc]
+  (let [handle (.toHandle proc)
+        descendants (with-open [stream (.descendants handle)]
+                      (vec (iterator-seq (.iterator stream))))]
+    (doseq [^java.lang.ProcessHandle child (reverse descendants)]
+      (when (.isAlive child)
+        (try
+          (.destroyForcibly child)
+          (catch Throwable _))))
+    (when (.isAlive handle)
+      (try
+        (.destroyForcibly handle)
+        (catch Throwable _)))
+    {:root-pid (.pid proc)
+     :descendant-count (count descendants)}))
+
+(defn interrupt-agent-invoke!
+  "Best-effort local interrupt for an agent's current invoke subprocess tree.
+   Returns {:ok bool :agent-id str :action keyword ...}."
+  [agent-id]
+  (let [aid (str agent-id)
+        entry (get @!invoke-controls aid)
+        control (:control entry)]
+    (cond
+      (nil? entry)
+      {:ok false
+       :agent-id aid
+       :action :no-active-control
+       :message "no active local invoke control registered"}
+
+      (not (map? control))
+      {:ok false
+       :agent-id aid
+       :action :invalid-control
+       :message "invalid invoke control entry"}
+
+      :else
+      (let [interrupt! (:interrupt! control)
+            result (if (fn? interrupt!)
+                     (try
+                       (interrupt!)
+                       (catch Throwable t
+                         {:ok false
+                          :agent-id aid
+                          :action :interrupt-error
+                          :message (.getMessage t)}))
+                     {:ok false
+                      :agent-id aid
+                      :action :missing-interrupt
+                      :message "interrupt function missing"})]
+        (update-codex-status!
+         aid
+         {:lifecycle-status :interrupt-requested
+          :phase :interrupt-requested
+          :activity "interrupt requested"})
+        result))))
+
 (defn- bell-tickle-available!
   "Notify mechanical conductor that an agent is now available.
    DEPRECATED: Registry !on-idle now fires tickle-queue/enqueue! directly.
@@ -2930,16 +3000,6 @@ RESPOND WITH ONLY:
                                                       200))
                                nil))
                            (publish-runtime! @!runtime-state))
-        inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
-                                             :profile profile
-                                             :model model
-                                             :sandbox sandbox
-                                             :approval-policy approval-policy
-                                             :reasoning-effort reasoning-effort
-                                             :timeout-ms timeout-ms
-                                             :cwd cwd
-                                             :on-event on-event
-                                             :on-runtime-event on-runtime-event})
         buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]
       (let [prompt-str (cond
@@ -2950,7 +3010,9 @@ RESPOND WITH ONLY:
             prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
             invoke-trace-id (str "invoke-" (UUID/randomUUID))
             invoke-sid (preferred-session-id session-file session-id session-id-atom)
-            used-sid (or invoke-sid "new")]
+            used-sid (or invoke-sid "new")
+            control-token (str (UUID/randomUUID))
+            !interrupted? (atom false)]
         ;; Reset trace for this invocation
         (reset! !event-trace [])
         (reset! !invoke-start-ms (System/currentTimeMillis))
@@ -2997,7 +3059,40 @@ RESPOND WITH ONLY:
                                                  :runtime-state !runtime-state
                                                  :publish-runtime! publish-runtime!)
               result (try
-                       (let [initial (inner-fn prompt invoke-sid)]
+                       (let [call-codex (fn [next-prompt next-session-id]
+                                          ((codex-cli/make-invoke-fn
+                                            {:codex-bin codex-bin
+                                             :profile profile
+                                             :model model
+                                             :sandbox sandbox
+                                             :approval-policy approval-policy
+                                             :reasoning-effort reasoning-effort
+                                             :timeout-ms timeout-ms
+                                             :cwd cwd
+                                             :on-event on-event
+                                             :on-runtime-event on-runtime-event
+                                             :on-process-started
+                                             (fn [proc]
+                                               (register-invoke-control!
+                                                aid-val
+                                                control-token
+                                                {:interrupt!
+                                                 (fn []
+                                                   (reset! !interrupted? true)
+                                                   (let [details (destroy-process-tree! proc)]
+                                                     {:ok true
+                                                      :agent-id aid-val
+                                                      :action :interrupt-issued
+                                                      :message "interrupt issued"
+                                                      :interrupted? true
+                                                      :root-pid (:root-pid details)
+                                                      :descendant-count (:descendant-count details)}))}))
+                                             :on-process-exit
+                                             (fn [_proc _exit]
+                                               (clear-invoke-control! aid-val control-token))})
+                                           next-prompt
+                                           next-session-id))
+                             initial (call-codex prompt invoke-sid)]
                          (if (or (codex-work-claim-without-execution? initial)
                                  (codex-task-reply-without-execution? prompt-str initial)
                                  (codex-task-micro-update? prompt-str initial)
@@ -3039,7 +3134,7 @@ RESPOND WITH ONLY:
                                            micro-enforce? "retrying after micro-update"
                                            :else "retrying after format refusal")
                                :trace (vec @!event-trace)})
-                             (let [retry (inner-fn retry-prompt retry-sid)]
+                             (let [retry (call-codex retry-prompt retry-sid)]
                                 (if (or (codex-work-claim-without-execution? retry)
                                         (codex-task-reply-without-execution? prompt-str retry)
                                         (codex-task-micro-update? prompt-str retry)
@@ -3063,8 +3158,16 @@ RESPOND WITH ONLY:
                                  (update retry :execution #(assoc (or % {}) :enforced-retry? true)))))
                            initial))
                        (finally
+                         (clear-invoke-control! aid-val control-token)
                          (stop-ticker!)))
               final-sid (:session-id result)
+              result (if (and @!interrupted?
+                              (or (:error result) (not (:result result))))
+                       (-> result
+                           (assoc :error "invoke interrupted"
+                                  :interrupted? true)
+                           (update :execution #(assoc (or % {}) :interrupted? true)))
+                       result)
               execution (:execution result)
               tool-events (long (or (:tool-events execution) 0))
               command-events (long (or (:command-events execution) 0))

@@ -396,6 +396,13 @@
     no-evidence?
     ["failed" "no-execution-evidence" "codex task-mode reply had no execution evidence"]
 
+    (and (not (:ok result))
+         (map? (:error result))
+         (let [msg (some-> (:error result) :error/message str str/lower-case)]
+           (and (string? msg)
+                (str/includes? msg "invoke interrupted"))))
+    ["cancelled" "invoke-interrupted" (some-> result :error :error/message)]
+
     (:ok result)
     ["done" nil nil]
 
@@ -474,6 +481,19 @@
              (update-in [aid :nonterminal-jobs] (fnil inc 0))))))
    {}
    (vals (get @!invoke-jobs-ledger :jobs {}))))
+
+(defn- running-invoke-job-for-agent
+  [agent-id]
+  (ensure-invoke-jobs-ledger!)
+  (let [aid (some-> agent-id str str/trim)]
+    (->> (get @!invoke-jobs-ledger :job-order [])
+         reverse
+         (keep (fn [job-id]
+                 (let [job (get-in @!invoke-jobs-ledger [:jobs job-id])]
+                   (when (and (= aid (some-> job :agent-id str str/trim))
+                              (= "running" (some-> job :state str)))
+                     job))))
+         first)))
 
 (defn- mark-invoke-job-running!
   [job-id]
@@ -2776,6 +2796,43 @@
                       session-id (assoc :session-id session-id)))]
         (json-response 200 result)))))
 
+(defn- handle-agent-interrupt-invoke
+  "POST /api/alpha/agents/:id/interrupt-invoke — request a best-effort
+   interruption of the agent's current local invoke subprocess tree."
+  [_config agent-id request]
+  (let [payload (or (parse-json-map (read-body request)) {})
+        requested-job-id (or (:job-id payload) (get payload "job-id")
+                             (:job_id payload) (get payload "job_id"))
+        running-job (running-invoke-job-for-agent agent-id)
+        running-job-id (some-> running-job :job-id str)
+        requested-job-id (some-> requested-job-id str str/trim not-empty)]
+    (cond
+      (and requested-job-id running-job-id (not= requested-job-id running-job-id))
+      (json-response 409 {:ok false
+                          :agent-id (str agent-id)
+                          :error "running-job-mismatch"
+                          :requested-job-id requested-job-id
+                          :running-job-id running-job-id})
+
+      :else
+      (try
+        (require 'futon3c.dev)
+        (if-let [interrupt-fn (resolve 'futon3c.dev/interrupt-agent-invoke!)]
+          (let [result (interrupt-fn (str agent-id))]
+            (json-response (if (:ok result) 200 409)
+                           (cond-> (assoc result :running-job-id running-job-id)
+                             requested-job-id
+                             (assoc :requested-job-id requested-job-id))))
+          (json-response 503 {:ok false
+                              :agent-id (str agent-id)
+                              :error "interrupt-unavailable"
+                              :message "local invoke interrupt surface is unavailable"}))
+        (catch Throwable t
+          (json-response 500 {:ok false
+                              :agent-id (str agent-id)
+                              :error "interrupt-error"
+                              :message (.getMessage t)}))))))
+
 ;; =============================================================================
 ;; CYDER process endpoints
 ;; =============================================================================
@@ -3561,6 +3618,13 @@
           (let [raw (subs uri (count "/api/alpha/agents/")
                          (- (count uri) (count "/status")))]
             (handle-agent-status config (enc/decode-uri-component raw) request))
+
+          (and (= :post method) (string? uri)
+               (str/starts-with? uri "/api/alpha/agents/")
+               (str/ends-with? uri "/interrupt-invoke"))
+          (let [raw (subs uri (count "/api/alpha/agents/")
+                         (- (count uri) (count "/interrupt-invoke")))]
+            (handle-agent-interrupt-invoke config (enc/decode-uri-component raw) request))
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")

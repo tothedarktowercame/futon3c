@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import pathlib
 import unittest
 from unittest import mock
@@ -20,7 +21,8 @@ bridge = _load_bridge_module()
 class NgircdBridgeSanitizeTest(unittest.TestCase):
     def test_sanitize_for_irc_uses_ircbot_helper(self):
         text = "/home/joe/code/futon3c/scripts/ngircd_bridge.py"
-        sanitized = bridge.IRCBot._sanitize_for_irc(text)
+        with mock.patch.object(bridge.os.path, "expanduser", return_value="/home/joe"):
+            sanitized = bridge.IRCBot._sanitize_for_irc(text)
         self.assertEqual("~/code/futon3c/scripts/ngircd_bridge.py", sanitized)
 
 
@@ -44,6 +46,131 @@ class NgircdBridgeAnnounceTest(unittest.TestCase):
         self.assertEqual("irc:joe", payload["caller"])
         self.assertEqual("irc (#math)", payload["surface"])
         self.assertEqual("FM-001", payload["mission-id"])
+
+
+class NgircdBridgeBusyInterruptTest(unittest.TestCase):
+    def tearDown(self):
+        bridge.BRIDGE_FATAL_STOP.clear()
+        bridge.BRIDGE_FATAL_STOP_REASON["reason"] = None
+
+    def test_prepare_agent_for_new_invoke_interrupts_running_codex(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
+             mock.patch.object(bot, "_agent_status", return_value={
+                 "status": "invoking",
+                 "session_id": "sid-busy",
+                 "running_jobs": 1,
+             }), \
+             mock.patch.object(bot, "_request_invoke_interrupt", return_value={"ok": True}) as interrupt, \
+             mock.patch.object(bot, "_wait_for_agent_ready_after_interrupt", return_value={
+                 "ok": True,
+                 "status": {"status": "idle", "session_id": "sid-busy", "running_jobs": 0},
+             }):
+            result = bot._prepare_agent_for_new_invoke(action_label="queue")
+        self.assertTrue(result["ok"])
+        interrupt.assert_called_once_with()
+
+    def test_busy_codex_without_running_job_proceeds_without_interrupt(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        response = mock.MagicMock()
+        response.read.return_value = json.dumps(
+            {
+                "ok": True,
+                "job-id": "codex-job-21",
+                "result": "done",
+                "session-id": "sid-21",
+            }
+        ).encode("utf-8")
+        response.status = 200
+        context = mock.MagicMock()
+        context.__enter__.return_value = response
+        with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
+             mock.patch.object(bot, "_agent_status", return_value={
+                 "status": "invoking",
+                 "session_id": "sid-transition",
+                 "running_jobs": 0,
+             }), \
+             mock.patch.object(bot, "_request_invoke_interrupt") as interrupt, \
+             mock.patch.object(bridge.urllib.request, "urlopen", return_value=context) as urlopen:
+            result = bot._invoke_agent(
+                "finish T3-general",
+                "joe",
+                mission_id="FM-001",
+                job_id="codex-job-21",
+                reply_channel="#math",
+            )
+        self.assertTrue(result["ok"])
+        interrupt.assert_not_called()
+        request = urlopen.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual("codex-job-21", payload["job-id"])
+        self.assertEqual("irc:joe", payload["caller"])
+
+    def test_busy_codex_interrupts_then_retries_same_job(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        response = mock.MagicMock()
+        response.read.return_value = json.dumps(
+            {
+                "ok": True,
+                "job-id": "codex-job-22",
+                "result": "done",
+                "session-id": "sid-22",
+            }
+        ).encode("utf-8")
+        response.status = 200
+        context = mock.MagicMock()
+        context.__enter__.return_value = response
+        with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
+             mock.patch.object(bot, "_agent_status", return_value={
+                 "status": "invoking",
+                 "session_id": "sid-busy",
+                 "running_jobs": 1,
+             }), \
+             mock.patch.object(bot, "_request_invoke_interrupt", return_value={"ok": True}) as interrupt, \
+             mock.patch.object(bot, "_wait_for_agent_ready_after_interrupt", return_value={
+                 "ok": True,
+                 "status": {"status": "idle", "session_id": "sid-busy", "running_jobs": 0},
+             }), \
+             mock.patch.object(bridge.urllib.request, "urlopen", return_value=context) as urlopen:
+            result = bot._invoke_agent(
+                "finish T3-general",
+                "joe",
+                mission_id="FM-001",
+                job_id="codex-job-22",
+                reply_channel="#math",
+            )
+        self.assertTrue(result["ok"])
+        self.assertEqual("codex-job-22", result["job_id"])
+        interrupt.assert_called_once_with()
+        request = urlopen.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual("codex-job-22", payload["job-id"])
+        self.assertEqual("irc:joe", payload["caller"])
+
+    def test_busy_codex_interrupt_timeout_requests_fatal_stop(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
+             mock.patch.object(bot, "_agent_status", return_value={
+                 "status": "invoking",
+                 "session_id": "sid-busy",
+                 "running_jobs": 1,
+             }), \
+             mock.patch.object(bot, "_request_invoke_interrupt", return_value={"ok": True}), \
+             mock.patch.object(bot, "_wait_for_agent_ready_after_interrupt", return_value={
+                 "ok": False,
+                 "status": {"status": "invoking", "session_id": "sid-busy", "running_jobs": 1},
+             }), \
+             mock.patch.object(bot, "_request_orchestration_stop") as stop:
+            result = bot._invoke_agent(
+                "finish T3-general",
+                "joe",
+                mission_id="FM-001",
+                job_id="codex-job-23",
+                reply_channel="#math",
+            )
+        self.assertFalse(result["ok"])
+        self.assertIn("invoke interrupt timeout", result["error"])
+        stop.assert_called_once()
 
 
 class NgircdBridgeCodexFormattingTest(unittest.TestCase):
