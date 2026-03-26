@@ -242,11 +242,11 @@
                                 :summary "A session ends only when claimed repos are clean.")
                           (rule :id bounded-exit-paths
                                 :summary "If dirty near session end, the only legal exits are commit, park, abandon-with-reason, or handoff."))
-                         :note "This would effectively turn ~/code into a constrained workspace peripheral rather than an unconstrained directory."))
+                         :note "This would effectively turn ~/code into a constrained workspace peripheral rather than an unconstrained directory.")
               (invariant :id reporting-pipeline-legibility
                          :family human-visible-inspectability
                          :status candidate
-                         :summary "Derivative reports should remain readable and inspectable from stable local artifacts.")))
+                         :summary "Derivative reports should remain readable and inspectable from stable local artifacts."))))
 
      (devmap :id futon1a
              :role "deterministic substrate with unresolved devmap relationship"
@@ -406,7 +406,7 @@
                          :status operational-but-bypassable
                          :kind :process-law
                          :home (:repo "futon3b")
-                         :summary "Task-significant work should normally traverse futon3b's gate boundary, but ordinary live entrypoints still bypass it.")
+                         :summary "Task-significant work should normally traverse futon3b's gate boundary, but ordinary live entrypoints still bypass it."
                          :evidenced-by ("futon3/holes/war-room.md"
                                         "futon3/holes/missions/M-futon3x-e2e.md"
                                         "futon3c/emacs/agent-chat.el"))
@@ -418,7 +418,7 @@
                          :home (:cross-repo "futon3b->futon3c")
                          :summary "Proof-paths should become evidence-landscape entries on the normal live path, not only in isolated integrations.")
                          :evidenced-by ("futon3/holes/war-room.md"
-                                        "futon3/holes/war-bulletin-2.md"))))
+                                        "futon3/holes/war-bulletin-2.md")))))
 
      (devmap :id futon3
              :role "canon layer plus retained legacy tooling"
@@ -499,6 +499,10 @@
                          :family peripheral-custody
                          :status candidate
                          :summary "Peripheral sessions should carry enough custody information to prevent repo/domain drift.")
+              (invariant :id repl-turns-emit-evidence
+                         :family human-visible-inspectability
+                         :status candidate
+                         :summary "Claude and Codex REPL turns should emit session-chained evidence entries on the normal live path rather than remaining only in transient Emacs buffers.")
               (invariant :id violations-become-obligations
                          :family atomic-inspectable-units
                          :status candidate

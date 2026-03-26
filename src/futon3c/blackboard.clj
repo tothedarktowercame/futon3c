@@ -88,6 +88,30 @@
             (System/getenv "EMACS_SOCKET_NAME")
             (detect-emacs-socket))))
 
+(defn- env-bool
+  "Parse a conservative boolean env var.
+   Only explicit false-like values disable the feature."
+  [s]
+  (not (#{"0" "false" "no" "off"}
+        (some-> s str/trim str/lower-case))))
+
+(def !display-agents-window
+  "Whether *agents* updates should force-display the side window.
+   When false, the buffer is still updated but projected with :no-display.
+   Can be toggled at runtime with `set-agents-window-display!`."
+  (atom (env-bool (System/getenv "FUTON3C_DISPLAY_AGENTS_WINDOW"))))
+
+(defn agents-window-display-enabled?
+  "Return true when *agents* should be force-displayed."
+  []
+  @!display-agents-window)
+
+(defn set-agents-window-display!
+  "Enable or disable force-display of the *agents* side window.
+   Returns the new boolean state."
+  [enabled?]
+  (reset! !display-agents-window (boolean enabled?)))
+
 ;; =============================================================================
 ;; Emacsclient primitive
 ;; =============================================================================
@@ -744,7 +768,9 @@
   (when *enabled*
     (try
       (let [content (format-agent-status registry-status)
-            opts {:width 60 :slot 0}
+            opts (cond-> {:width 60 :slot 0}
+                   (not (agents-window-display-enabled?))
+                   (assoc :no-display true))
             ;; Collect distinct sockets from agent metadata + default
             sockets (->> (:agents registry-status)
                          (keep (fn [[_ info]] (get-in info [:metadata :emacs-socket])))
