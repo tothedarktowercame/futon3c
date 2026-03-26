@@ -563,8 +563,8 @@ class IRCBot:
             "Prefer completing one bounded unit of work in this turn. "
             "Do not stop at reconnaissance-only updates like grepping, mapping, or an initial step. "
             "Execute work asynchronously, then return a short completion/blocker status with artifact refs "
-            "(commit/tracked work item/file path), or explicitly say planning-only/blocked with blocker evidence. "
-            "Run the commit algorithm for gh before referencing commit artifacts, use tracked work-item refs for blocker/work-item continuity, and never cite local paths or /tmp. "
+            "(commit/mfuton gitlab issue/file path), or explicitly say planning-only/blocked with blocker evidence. "
+            "Run the commit algorithm for gh before referencing commit artifacts, use mfuton gitlab issue refs for blocker/work-item continuity, and never cite local paths or /tmp. "
             f"{send_hint} "
             f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )
@@ -1430,7 +1430,7 @@ class IRCBot:
         if truncated:
             self._send(f"PRIVMSG {channel} :"
                        f"[truncated {len(lines) - max_lines} more lines — "
-                       f"post details to tracked work item instead]")
+                       f"post details to mfuton gitlab issue instead]")
             time.sleep(0.1)
 
     def _multiline_result_for_irc(self, result_text):

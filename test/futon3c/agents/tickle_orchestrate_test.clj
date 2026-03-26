@@ -182,7 +182,7 @@
           (is (= 2 (count entries))))))))
 
 (deftest assign-issue-mfuton-mode-rewrites-github-issue-language
-  (testing "mfuton mode rewrites assignment prompt issue language to tracked work item"
+  (testing "mfuton mode rewrites assignment prompt issue language to mfuton gitlab issue"
     (let [invoked (atom nil)]
       (register-mock-agent!
        "codex-1"
@@ -196,8 +196,8 @@
                        :timeout-ms 5000
                        :session-id "tko-test-mfuton-assign"})]
           (is (true? (:ok result)))
-          (is (re-find #"tracked work item #99" @invoked))
-          (is (not (re-find #"mfuton gitlab issue #99" @invoked)))
+          (is (re-find #"mfuton gitlab issue #99" @invoked))
+          (is (not (re-find #"tracked work item #99" @invoked)))
           (is (not (re-find #"GitHub issue #99" @invoked))))))))
 
 (deftest assign-issue-default-mode-preserves-github-issue-language
@@ -262,7 +262,7 @@
         (is (= :request-changes (:verdict result)))))))
 
 (deftest request-review-mfuton-mode-rewrites-github-issue-language
-  (testing "mfuton mode rewrites review prompt issue language to tracked work item"
+  (testing "mfuton mode rewrites review prompt issue language to mfuton gitlab issue"
     (let [invoked (atom nil)]
       (register-mock-agent!
        "claude-1"
@@ -278,8 +278,8 @@
                       :session-id "tko-test-mfuton-review"})]
           (is (true? (:ok result)))
           (is (= :approve (:verdict result)))
-          (is (re-find #"tracked work item #99" @invoked))
-          (is (not (re-find #"mfuton gitlab issue #99" @invoked)))
+          (is (re-find #"mfuton gitlab issue #99" @invoked))
+          (is (not (re-find #"tracked work item #99" @invoked)))
           (is (not (re-find #"GitHub issue #99" @invoked))))))))
 
 ;; =============================================================================

@@ -240,22 +240,22 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
 
 
 class NgircdBridgeSurfaceContractTest(unittest.TestCase):
-    def test_task_surface_context_uses_commit_algorithm_and_tracked_work_item(self):
+    def test_task_surface_context_uses_commit_algorithm_and_mfuton_gitlab_issue(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         text = bot._surface_context("joe", "", brief=False, multi_message=False, channel="#math")
-        self.assertIn("(commit/tracked work item/file path)", text)
+        self.assertIn("(commit/mfuton gitlab issue/file path)", text)
         self.assertIn("Run the commit algorithm for gh before referencing commit artifacts", text)
-        self.assertIn("use tracked work-item refs for blocker/work-item continuity", text)
+        self.assertIn("use mfuton gitlab issue refs for blocker/work-item continuity", text)
         self.assertNotIn("(commit/PR/issue/file path)", text)
         self.assertNotIn("Push artifacts to git before referencing them", text)
-        self.assertNotIn("mfuton gitlab issue", text)
+        self.assertNotIn("tracked work item", text)
 
-    def test_say_truncation_points_to_tracked_work_item(self):
+    def test_say_truncation_points_to_mfuton_gitlab_issue(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         with mock.patch.object(bot, "_send") as send, mock.patch.object(bridge.time, "sleep"):
             bot._say("line1\nline2\nline3", max_lines=2, channel="#math")
         self.assertEqual(3, send.call_count)
-        self.assertIn("post details to tracked work item instead", send.call_args_list[2].args[0])
+        self.assertIn("post details to mfuton gitlab issue instead", send.call_args_list[2].args[0])
         self.assertNotIn("post details to GitHub instead", send.call_args_list[2].args[0])
 
     def test_extract_artifact_refs_promotes_frontiermath_local_paths(self):

@@ -25,6 +25,9 @@
 (def ^:private generic-git-tail
   ". Git is truth; run the commit algorithm for gh when done. Signal @tickle BELL SPEC_VERIFIED when done.")
 
+(def ^:private local-mfuton-gitlab-issue-ref
+  "mfuton gitlab issue #")
+
 (def ^:private upstream-frontiermath-source-root-ref
   "futon6")
 
@@ -185,10 +188,10 @@
   (-> original-prompt
       (str/replace
        "- Task: Implement GitHub issue #"
-       "- Task: Implement tracked work item #")
+       (str "- Task: Implement " local-mfuton-gitlab-issue-ref))
       (str/replace
        "--- GitHub Issue #"
-       "--- tracked work item #")))
+       (str "--- " local-mfuton-gitlab-issue-ref))))
 
 (defn maybe-assign-prompt
   [original-prompt]
@@ -201,10 +204,10 @@
   (-> original-prompt
       (str/replace
        "- Task: Review implementation of GitHub issue #"
-       "- Task: Review implementation of tracked work item #")
+       (str "- Task: Review implementation of " local-mfuton-gitlab-issue-ref))
       (str/replace
        "--- GitHub Issue #"
-       "--- tracked work item #")))
+       (str "--- " local-mfuton-gitlab-issue-ref))))
 
 (defn maybe-review-prompt
   [original-prompt]
