@@ -12,6 +12,7 @@
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
             [futon3c.dev.irc :as dev-irc]
+            [futon3c.logic.arxana-bridge :as bridge]
             [futon3c.logic.invariant-runner :as ir]
             [futon3c.social.whistles :as whistles])
   (:import [java.time Instant]
@@ -265,7 +266,8 @@
   "Build the config map for FM conductor functions.
    Requires :make-claude-invoke-fn and :evidence-store to be supplied."
   [{:keys [make-claude-invoke-fn evidence-store !tickle
-           invariant-aggregate-fn invariant-domains invariant-load-profile]} overrides]
+           invariant-aggregate-fn invariant-domains invariant-load-profile
+           invariant-emit-fn invariant-futon1a-url invariant-penholder]} overrides]
   (merge {:problem-id "FM-001"
           :cooldown-ms (* 3 60 1000)
           :irc-read-fn #(irc-recent-channel "#math" 20)
@@ -276,6 +278,16 @@
                                         (fn []
                                           (ir/run-aggregate (or invariant-load-profile {})
                                                             invariant-domains))))
+          :invariant-emit-fn (or invariant-emit-fn
+                                 (when (or invariant-aggregate-fn (seq invariant-domains))
+                                   (fn [{:keys [aggregate previous-hyperedges]}]
+                                     (bridge/reconcile-aggregate!
+                                      aggregate
+                                      {:previous-hyperedges previous-hyperedges
+                                       :futon1a-url (or invariant-futon1a-url
+                                                        "http://localhost:7071")
+                                       :penholder (or invariant-penholder
+                                                      "fm-conductor")}))))
           :invoke-fn (when make-claude-invoke-fn
                        (make-claude-invoke-fn
                          {:claude-bin (config/env "CLAUDE_BIN" "claude")
@@ -380,20 +392,33 @@
 (defn refresh-structural-law-tasks!
   "Run the configured invariant aggregate and sync its dispatchable tasks into
    the conductor queue."
-  [{:keys [invariant-aggregate-fn conductor-state]}]
+  [{:keys [invariant-aggregate-fn invariant-emit-fn conductor-state]}]
   (when (fn? invariant-aggregate-fn)
     (let [aggregate (invariant-aggregate-fn)
+          previous-hyperedges (when conductor-state
+                                (:last-invariant-hyperedges @conductor-state))
           sync-result (sync-structural-law-tasks! aggregate)
+          emit-result (when (fn? invariant-emit-fn)
+                        (invariant-emit-fn {:aggregate aggregate
+                                            :previous-hyperedges previous-hyperedges}))
           summary (:summary aggregate)
           result {:summary summary
                   :sync sync-result
                   :dispatchable-count (count (:dispatchable-tasks aggregate))
                   :needs-review-count (count (get-in aggregate [:obligations-by-actionability :needs-review]))
-                  :informational-count (count (get-in aggregate [:obligations-by-actionability :informational]))}]
+                  :informational-count (count (get-in aggregate [:obligations-by-actionability :informational]))
+                  :emission (when emit-result
+                              {:current-count (:current-count emit-result (:count emit-result))
+                               :cleared-count (:cleared-count emit-result 0)
+                               :ok-count (:ok-count emit-result)
+                               :count (:count emit-result)})}]
       (when conductor-state
         (swap! conductor-state assoc
                :last-invariant-sync result
-               :last-invariant-sync-ms (System/currentTimeMillis)))
+               :last-invariant-sync-ms (System/currentTimeMillis)
+               :last-invariant-hyperedges (or (:current-hyperedges emit-result)
+                                              previous-hyperedges)
+               :last-invariant-emission emit-result))
       result)))
 
 (defn dispatch-task!

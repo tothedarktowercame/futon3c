@@ -111,6 +111,53 @@
       (is (number? (:last-invariant-sync-ms @state)))
       (is (= "Repair orphan announcement" (:label (tq/task "INV-1")))))))
 
+(deftest refresh-structural-law-tasks-emits-and-remembers-live-hyperedges
+  (testing "the refresh path emits the same aggregate it uses for task sync and carries previous ids forward for reconciliation"
+    (tq/clear!)
+    (let [calls (atom [])
+          state (atom {:last-invariant-hyperedges [{:hx/id "hx:stale"
+                                                   :hx/type "invariant/violation"
+                                                   :hx/endpoints ["inv:existence/missing-blockers"
+                                                                  "mission-cycle:old"]
+                                                   :props {:active true}}]})
+          result (fm/refresh-structural-law-tasks!
+                  {:conductor-state state
+                   :invariant-aggregate-fn
+                   (fn []
+                     (structural-aggregate
+                      :dispatchable [{:id "INV-1"
+                                      :label "Repair orphan announcement"
+                                      :priority :high
+                                      :source "structural-law/codex"
+                                      :depends-on #{}
+                                      :domain-id :codex
+                                      :violation-key :orphan-announcements
+                                      :actionability :auto-fixable
+                                      :family :cross-store-agreement
+                                      :payload ["a-1" "missing-job"]}]
+                      :needs-review [{:id "INV-2"}])) 
+                   :invariant-emit-fn
+                   (fn [{:keys [aggregate previous-hyperedges]}]
+                     (swap! calls conj {:aggregate aggregate
+                                        :previous-hyperedges previous-hyperedges})
+                     {:current-hyperedges [{:hx/id "hx:current"}]
+                      :stale-hyperedges [{:hx/id "hx:stale"}]
+                      :current-count 1
+                      :cleared-count 1
+                      :count 2
+                      :ok-count 2})})]
+      (is (= 1 (count @calls)))
+      (is (= ["hx:stale"]
+             (mapv :hx/id (:previous-hyperedges (first @calls)))))
+      (is (= {:current-count 1
+              :cleared-count 1
+              :ok-count 2
+              :count 2}
+             (:emission result)))
+      (is (= [{:hx/id "hx:current"}]
+             (:last-invariant-hyperedges @state)))
+      (is (= 2 (get-in @state [:last-invariant-emission :count]))))))
+
 (deftest make-fm-conductor-config-builds-default-invariant-hook
   (testing "domain specs can be injected and compiled into an aggregate hook"
     (let [cfg (fm/make-fm-conductor-config

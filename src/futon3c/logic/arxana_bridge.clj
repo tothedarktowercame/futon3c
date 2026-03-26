@@ -147,6 +147,8 @@
              :message message
              :label (:label obligation)
              :detected-at detected-at
+             :state "active"
+             :active true
              :actionability (name (or (:actionability obligation) :needs-review))
              :domain (name (or (:domain-id obligation) :unknown))
              :obligation-id (:id obligation)
@@ -158,6 +160,20 @@
 (defn aggregate->hyperedges
   [aggregate]
   (mapv obligation->hyperedge (:obligations aggregate)))
+
+(defn activate-hyperedge
+  [hyperedge]
+  (-> hyperedge
+      (assoc-in [:props :state] "active")
+      (assoc-in [:props :active] true)
+      (update :props dissoc :cleared-at)))
+
+(defn deactivate-hyperedge
+  [hyperedge]
+  (-> hyperedge
+      (assoc-in [:props :state] "cleared")
+      (assoc-in [:props :active] false)
+      (assoc-in [:props :cleared-at] (str (Instant/now)))))
 
 (defn- http-post-json
   [client url body]
@@ -184,14 +200,39 @@
                     :props (:props hyperedge)
                     :hx/labels (:hx/labels hyperedge)})))
 
-(defn emit-aggregate!
-  "Emit all obligation-derived hyperedges to futon1a."
-  ([aggregate] (emit-aggregate! aggregate {}))
-  ([aggregate opts]
-   (let [hyperedges (aggregate->hyperedges aggregate)
-         results (mapv #(post-hyperedge! % opts) hyperedges)
+(defn emit-hyperedges!
+  ([hyperedges] (emit-hyperedges! hyperedges {}))
+  ([hyperedges opts]
+   (let [results (mapv #(post-hyperedge! % opts) hyperedges)
          ok-count (count (filter #(<= 200 (:status %) 299) results))]
      {:hyperedges hyperedges
       :results results
       :count (count hyperedges)
       :ok-count ok-count})))
+
+(defn emit-aggregate!
+  "Emit all obligation-derived hyperedges to futon1a."
+  ([aggregate] (emit-aggregate! aggregate {}))
+  ([aggregate opts]
+   (emit-hyperedges! (mapv activate-hyperedge (aggregate->hyperedges aggregate)) opts)))
+
+(defn reconcile-aggregate!
+  "Emit the current live aggregate and mark previously emitted-but-now-cleared
+   hyperedges inactive.
+
+   `previous-hyperedges` should be the last active set emitted by the caller."
+  ([aggregate] (reconcile-aggregate! aggregate {}))
+  ([aggregate {:keys [previous-hyperedges] :as opts}]
+   (let [current-hyperedges (mapv activate-hyperedge (aggregate->hyperedges aggregate))
+         current-ids (set (map :hx/id current-hyperedges))
+         stale-hyperedges (->> previous-hyperedges
+                              (filter :hx/id)
+                              (remove #(contains? current-ids (:hx/id %)))
+                              (mapv deactivate-hyperedge))
+         all-hyperedges (vec (concat current-hyperedges stale-hyperedges))
+         emitted (emit-hyperedges! all-hyperedges (dissoc opts :previous-hyperedges))]
+     (assoc emitted
+            :current-hyperedges current-hyperedges
+            :stale-hyperedges stale-hyperedges
+            :current-count (count current-hyperedges)
+            :cleared-count (count stale-hyperedges)))))

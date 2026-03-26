@@ -25,6 +25,17 @@ So `IRC_CHANNELS=#math` means the bot joins both `#zabuton` and `#math`.
 It responds to @mentions on both and routes replies back to whichever
 channel the mention came from.
 
+Bare `!` commands are a separate control path:
+
+- room ownership should be configured by internal agent id, not IRC nick
+- use `IRC_COMMAND_OWNER_AGENT_MAP=#channel:agent-id,...` when shared rooms
+  need a single designated bare-command owner
+- when this map is set on a bridge, it is authoritative for that bridge:
+  unmapped rooms get no bare `!` response there
+- in the current shared-room Rob/Joe trial, Rob's bridge can map only
+  `#zabuton:codex-1`, leaving `#math` unmapped so bare commands stay Joe-owned
+  while `@zcodex ...` still works from Rob's side
+
 Then restart the bridge:
 
 ```
@@ -51,7 +62,7 @@ curl -X POST http://<agency-host>:7070/api/alpha/agents \
 | claude-2 | claude-2  | Mentor  | IRC + REPL  |
 | codex    | codex-1   | Prover  | IRC + WS    |
 | tickle   | tickle-1  | Tickle  | IRC         |
-| zcodex   | zcodex-1  | Prover  | IRC + WS    |
+| zcodex   | codex-1   | Prover  | IRC + WS    |
 
 ## How it works
 

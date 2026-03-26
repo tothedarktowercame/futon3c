@@ -106,6 +106,11 @@ Full-stack launch (`dev`) behavior:
 - if `BRIDGE_BOTS` includes `zcodex`, launcher auto-defaults:
   - `FUTON3C_CODEX_AGENT_ID=codex-1` (unless already set)
   - `NICK_AGENT_MAP=zcodex:codex-1` (unless already set)
+- bridge bare `!` ownership can be overridden per room with:
+  - `IRC_COMMAND_OWNER_AGENT_MAP=#channel:agent-id,...`
+  - this is keyed by internal agent id, not IRC nick
+  - when this map is set, it is authoritative for that bridge:
+    unmapped rooms get no bare `!` response from that bridge
 - if `BRIDGE_BOTS=codex`, applies `FUTON3C_REGISTER_CLAUDE=false` and
   leaves `FUTON3C_RELAY_CLAUDE=false` before runtime startup
 - if `FUTON3C_REPOS` is unset and a local installation root exists at
@@ -147,6 +152,9 @@ IRC lane switch for `dev`:
     when unset (no `zclaude` lane)
   - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
     when unset, to keep Zabuton invokes out of the active developer chat session
+  - defaults `IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1`
+    when unset, so Rob-owned `#zabuton` remains bare-command-owned by
+    `codex-1`
   - defaults `FUTON3C_IRC_PORT=0` when unset (disable local built-in IRC)
   - bridge defaults to `IRC_HOST=172.236.28.208`, `IRC_PORT=6667`,
     `IRC_CHANNEL=#zabuton`
@@ -162,9 +170,13 @@ IRC lane switch for `dev`:
   - when combined with `--remote-irc`, the current Windows trial model keeps:
     - `FUTON3C_CODEX_AGENT_ID=codex-1`
     - `NICK_AGENT_MAP=zcodex:codex-1`
+    - `IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1`
     - `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
   - this means `zcodex` is an IRC nick alias for the shared remote IRC codex
     lane, not a separate local math-agent identity
+  - bare `!` command ownership is room-scoped and keyed by internal agent id;
+    because `#math` is intentionally left unmapped on this bridge,
+    `@zcodex ...` still works there but bare `!` commands do not
   - `codex-vscode` still remains the separate VS Code lane; this trial only
     asks whether one shared `codex-1` worker is already sufficient for both
     `#zabuton` and `#math`
