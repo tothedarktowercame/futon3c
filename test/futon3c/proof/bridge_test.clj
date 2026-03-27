@@ -4,6 +4,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.peripheral.proof-backend :as proof-backend]
             [futon3c.proof.bridge :as pb]))
 
 ;; =============================================================================
@@ -18,6 +19,8 @@
   (pb/reload! "BRIDGE-TEST-TMP"))
 
 (use-fixtures :each reset-backends)
+
+(declare make-tmp-problem! cleanup-tmp-problem!)
 
 ;; =============================================================================
 ;; FM-001 exists on disk — test against real state
@@ -57,6 +60,18 @@
   (testing "cycles list returns cycles (may be empty)"
     (let [result (pb/cycles "FM-001")]
       (is (:ok result) (str "Expected ok, got: " result)))))
+
+(deftest status-validate-uses-ledger-item-status
+  (let [pid (make-tmp-problem! "STATUS-VALIDATE-TEST")]
+    (try
+      (testing "bridge-facing status validation looks up the current ledger status"
+        (let [result (pb/status-validate pid "L-1" :proved :analytical)]
+          (is (:ok result) (str "Expected ok, got: " result))
+          (is (true? (get-in result [:result :valid?])))
+          (is (= :open (get-in result [:result :from])))
+          (is (= :proved (get-in result [:result :to])))))
+      (finally
+        (cleanup-tmp-problem! pid)))))
 
 (deftest nonexistent-problem-returns-error
   (testing "loading a nonexistent problem returns an error"
@@ -126,6 +141,74 @@
         (finally
           (pb/reload! tmp-id)
           (.delete tmp-file))))))
+
+(deftest bridge-respects-proof-state-root-property
+  (testing "bridge uses the configured proof-state-root override when present"
+    (let [tmp-id "BRIDGE-TEST-ROOT"
+          temp-root (doto (java.io.File/createTempFile "bridge-proof-root" "")
+                      (.delete)
+                      (.mkdirs))
+          state-root (io/file temp-root "active")
+          default-file (io/file "data/proof-state" (str tmp-id ".edn"))
+          override-file (io/file state-root (str tmp-id ".edn"))
+          property-name "futon3c.proof-state-root"]
+      (try
+        (proof-backend/init-problem!
+          {:cwd (System/getProperty "user.dir")
+           :proof-state-root (.getPath state-root)}
+          tmp-id
+          "Bridge override statement"
+          "Test criterion")
+        (System/setProperty property-name (.getPath state-root))
+        (pb/reload! tmp-id)
+        (let [read-result (pb/canonical tmp-id)]
+          (is (:ok read-result) (str "Read failed: " read-result))
+          (is (= "Bridge override statement" (get-in read-result [:result :statement]))))
+        (is (.exists override-file))
+        (is (not (.exists default-file)))
+        (finally
+          (System/clearProperty property-name)
+          (pb/reload! tmp-id)
+          (.delete override-file)
+          (.delete state-root)
+          (.delete temp-root))))))
+
+(deftest bridge-fails-closed-on-proof-state-root-mismatch
+  (testing "bridge rejects a proof-state-root change until the cached backend is reloaded"
+    (let [tmp-id "BRIDGE-TEST-MISMATCH"
+          temp-root-a (doto (java.io.File/createTempFile "bridge-proof-root-a" "")
+                        (.delete)
+                        (.mkdirs))
+          temp-root-b (doto (java.io.File/createTempFile "bridge-proof-root-b" "")
+                        (.delete)
+                        (.mkdirs))
+          state-root-a (io/file temp-root-a "active")
+          state-root-b (io/file temp-root-b "active")
+          property-name "futon3c.proof-state-root"]
+      (try
+        (proof-backend/init-problem!
+          {:cwd (System/getProperty "user.dir")
+           :proof-state-root (.getPath state-root-a)}
+          tmp-id
+          "Bridge mismatch statement"
+          "Test criterion")
+        (System/setProperty property-name (.getPath state-root-a))
+        (pb/reload! tmp-id)
+        (let [read-result (pb/canonical tmp-id)]
+          (is (:ok read-result) (str "Initial read failed: " read-result)))
+        (System/setProperty property-name (.getPath state-root-b))
+        (is (thrown-with-msg?
+              clojure.lang.ExceptionInfo
+              #"Proof-state root changed"
+              (pb/canonical tmp-id)))
+        (finally
+          (System/clearProperty property-name)
+          (pb/reload! tmp-id)
+          (.delete (io/file state-root-a (str tmp-id ".edn")))
+          (.delete state-root-a)
+          (.delete temp-root-a)
+          (.delete state-root-b)
+          (.delete temp-root-b))))))
 
 (deftest reset-forces-reload
   (testing "reset! discards cached backend, next call reloads from disk"

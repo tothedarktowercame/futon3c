@@ -6,6 +6,7 @@
    to idle agents via IRC. Registers with CYDER for inspectability."
   (:require [futon3c.agents.tickle-orchestrate :as orch]
             [futon3c.agents.tickle-queue :as tq]
+            [futon3c.dev.mfuton-frontiermath :as mfuton-frontiermath]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
@@ -13,7 +14,8 @@
             [futon3c.dev.irc :as dev-irc]
             [futon3c.logic.arxana-bridge :as bridge]
             [futon3c.logic.invariant-runner :as ir]
-            [futon3c.social.whistles :as whistles])
+            [futon3c.social.whistles :as whistles]
+            [clojure.string :as str])
   (:import [java.time Instant]
            [java.time.temporal ChronoUnit]))
 
@@ -24,6 +26,8 @@
 (defonce !fm-conductor (atom nil))
 (defonce !post-invoke-hook (atom nil))
 
+(declare fm-dispatch-mechanical!)
+
 ;; ---------------------------------------------------------------------------
 ;; FM-001 thin wrappers (delegates to tickle_orchestrate.clj)
 ;; ---------------------------------------------------------------------------
@@ -33,11 +37,39 @@
   [problem-id]
   (orch/fm-assignable-obligations problem-id))
 
+(defn- math-irc-enabled?
+  []
+  (config/env-bool "MATH_IRC" false))
+
+(defn- fm-dispatch-channel
+  []
+  (mfuton-frontiermath/dispatch-channel (math-irc-enabled?)))
+
+(defn- current-conductor-state-atom
+  []
+  (mfuton-frontiermath/current-conductor-state-atom @!fm-conductor))
+
+(def ^:private default-fm-rotation
+  ["codex-1" "claude-3" "codex-2" "codex-3"])
+
+(defn- configured-fm-rotation
+  []
+  (let [configured (->> (config/env-list "FUTON3C_FM_CONDUCTOR_ROTATION" [])
+                        (map str/trim)
+                        (remove str/blank?)
+                        vec)]
+    (if (seq configured)
+      configured
+      default-fm-rotation)))
+
 (defn fm-dispatch!
   "Have Tickle assign the top FM-001 obligation on #math."
   ([] (fm-dispatch! "FM-001"))
   ([problem-id]
-   (let [tasks (fm-assignable-obligations problem-id)]
+   (let [tasks (mfuton-frontiermath/unclaimed-assignable-obligations
+                problem-id
+                (current-conductor-state-atom)
+                fm-assignable-obligations)]
      (if (empty? tasks)
        (do (println "[tickle-fm] No assignable obligations for " problem-id)
            nil)
@@ -70,6 +102,39 @@
        (take-last n)
        vec))
 
+(defn- fm-dispatch-message-original
+  [nick ob-id ob-label]
+  (str "@" nick " " ob-id ": " ob-label
+       ". Push results to git when done."))
+
+(defn handle-claim-prompt!
+  "Honor the existing FrontierMath claim seam on the dedicated #math lane.
+   Returns nil when PROMPT is not a math-lane claim and generic tickle behavior
+   should continue."
+  [prompt session-id]
+  (when (math-irc-enabled?)
+    (mfuton-frontiermath/handle-claim-prompt!
+     {:prompt prompt
+      :session-id session-id
+      :conductor-state (current-conductor-state-atom)
+      :problem-id "FM-001"
+      :assignable-obligations-fn fm-assignable-obligations
+      :dispatch-message-original-fn fm-dispatch-message-original})))
+
+(defn handle-bell-prompt!
+  "Honor the existing FrontierMath bell phrase on the dedicated #math lane.
+   Returns nil when PROMPT is not a math-lane bell and generic tickle behavior
+   should continue."
+  [prompt session-id]
+  (when (math-irc-enabled?)
+    (mfuton-frontiermath/handle-bell-prompt!
+     {:prompt prompt
+      :session-id session-id
+      :conductor-state (current-conductor-state-atom)
+      :problem-id "FM-001"
+      :bridge-send-fn (dev-irc/make-bridge-irc-send-fn)
+      :dispatch-mechanical-fn fm-dispatch-mechanical!})))
+
 ;; ---------------------------------------------------------------------------
 ;; Display projection
 ;; ---------------------------------------------------------------------------
@@ -98,7 +163,7 @@
                   conductor-state
                   (assoc :conductor
                          (let [s conductor-state
-                               rotation (or (:rotation s) ["codex-1" "claude-3" "codex-2" "codex-3"])
+                               rotation (or (:rotation s) (configured-fm-rotation))
                                idx (or (:idx s) 0)
                                next-agent (nth rotation (mod idx (count rotation)))
                                cooldowns (:last-paged s)
@@ -144,10 +209,6 @@
 ;; Mechanical conductor
 ;; ---------------------------------------------------------------------------
 
-(def ^:private fm-agent-nicks
-  {"claude-1" "claude" "claude-2" "claude-2" "codex-1" "codex"
-   "claude-3" "claude-3" "codex-2" "codex-2" "codex-3" "codex-3"})
-
 (defn- agent-idle?
   "Check if an agent is idle (not currently invoking).
    Returns false for agents not in the registry."
@@ -168,7 +229,7 @@
   [agent-id {:keys [problem-id bridge-send-fn conductor-state cooldown-ms]
              :or {problem-id "FM-001" cooldown-ms (* 3 60 1000)}}]
   (let [conductor-state (or conductor-state (atom {}))
-        nick (get fm-agent-nicks agent-id agent-id)]
+        nick (config/irc-nick-for-agent-id agent-id)]
     (cond
       (not (agent-idle? agent-id))
       {:action :skip :target agent-id}
@@ -178,7 +239,8 @@
       {:action :cooldown :target agent-id}
 
       :else
-      (let [assignable (orch/fm-assignable-obligations problem-id)
+      (let [assignable (mfuton-frontiermath/unclaimed-assignable-obligations
+                        problem-id conductor-state fm-assignable-obligations)
             already-paged (get-in @conductor-state [:paged-obligations agent-id] #{})
             fresh (remove #(contains? already-paged (:item/id %)) assignable)]
         (if (empty? fresh)
@@ -186,8 +248,8 @@
           (let [ob (first fresh)
                 ob-id (:item/id ob)
                 ob-label (:item/label ob)
-                msg (str "@" nick " " ob-id ": " ob-label
-                         ". Push results to git when done.")]
+                original-msg (fm-dispatch-message-original nick ob-id ob-label)
+                msg (mfuton-frontiermath/render-dispatch-message original-msg)]
             (println (str "[conductor] " agent-id " → PAGE " ob-id))
             (swap! conductor-state
                    (fn [s]
@@ -201,7 +263,7 @@
 (defn- fm-dispatch-idle-agents!
   "Scan all agents in rotation, dispatch work to any that are idle."
   [config]
-  (let [rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
+  (let [rotation (or (:rotation config) (configured-fm-rotation))
         idle (idle-agents rotation)]
     (when (seq idle)
       (mapv #(fm-dispatch-mechanical! % config) idle))))
@@ -285,7 +347,7 @@
 ;; Task-pool dispatch (bell-driven)
 ;; ---------------------------------------------------------------------------
 
-(defn task->prompt
+(defn- task->prompt-original
   "Build an invoke prompt from a task map."
   [{:keys [id label source depends-on]}]
   (str "Task assignment from the conductor queue.\n\n"
@@ -296,6 +358,11 @@
          (str "Depends on (completed): " (pr-str depends-on) "\n"))
        "\nWork this task. Push results to git when done. "
        "Keep your response concise — report what you did and what the outcome was."))
+
+(defn task->prompt
+  "Build an invoke prompt from a task map."
+  [task]
+  (mfuton-frontiermath/render-task-prompt (task->prompt-original task)))
 
 (defn structural-law-task?
   [task]
@@ -371,10 +438,11 @@
   (refresh-structural-law-tasks! config)
   (if-let [task (tq/pick-task! agent-id)]
     (let [tid (:id task)
-          nick (get fm-agent-nicks agent-id agent-id)]
+          nick (config/irc-nick-for-agent-id agent-id)
+          dispatch-channel (fm-dispatch-channel)]
       (println (str "[conductor] " agent-id " → DISPATCH " tid ": " (:label task)))
       (when (fn? bridge-send-fn)
-        (bridge-send-fn "#futon" "tickle"
+        (bridge-send-fn dispatch-channel "tickle"
                         (str "@" nick " dispatched: " tid " — " (:label task))))
       (when conductor-state
         (swap! conductor-state assoc-in [:last-paged agent-id] (System/currentTimeMillis)))
@@ -436,7 +504,7 @@
                                 :started-at-ms (System/currentTimeMillis)})
          config (assoc config :conductor-state conductor-state)
          running (atom true)
-         rotation (or (:rotation config) ["codex-1" "claude-3" "codex-2" "codex-3"])
+         rotation (or (:rotation config) (configured-fm-rotation))
          cooldown-ms (or (:cooldown-ms config) (* 3 60 1000))
          !tickle (:!tickle deps)
          handle {:stop-fn #(reset! running false)

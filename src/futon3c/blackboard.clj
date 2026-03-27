@@ -124,6 +124,11 @@
       (str/replace "\"" "\\\"")
       (str/replace "\n" "\\n")))
 
+(defn- emacsclient-bin
+  []
+  (or (some-> (System/getenv "EMACSCLIENT_BIN") str/trim not-empty)
+      "emacsclient"))
+
 (defn- run-emacsclient!
   "Run emacsclient --eval with the given elisp. Returns {:ok bool :output str}.
    Non-blocking: uses a short timeout. Failures are swallowed (the blackboard
@@ -136,9 +141,10 @@
                      @!emacs-socket
                      (System/getenv "FUTON3C_EMACS_SOCKET")
                      (System/getenv "EMACS_SOCKET_NAME"))
+          emacs-bin (emacsclient-bin)
           cmd (if socket
-                ["emacsclient" "-s" socket "--eval" elisp]
-                ["emacsclient" "--eval" elisp])
+                [emacs-bin "-s" socket "--eval" elisp]
+                [emacs-bin "--eval" elisp])
           pb (ProcessBuilder. cmd)
           _ (.redirectErrorStream pb true)
           proc (.start pb)

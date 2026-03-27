@@ -5,6 +5,7 @@
    Manages a read-only IRC listener and routes all sends through
    the bridge HTTP /say endpoint."
   (:require [cheshire.core :as json]
+            [futon3c.dev.config :as config]
             [clojure.java.io :as io]
             [clojure.string :as str])
   (:import [java.io PrintWriter]
@@ -140,14 +141,22 @@
    (fn [channel from-nick message]
      (send-irc! channel (or from-nick default-nick) message))))
 
+(defn- configured-bridge-http-port
+  []
+  (config/env-int "BRIDGE_HTTP_PORT" 6769))
+
+(defn- bridge-say-url
+  [port]
+  (str "http://127.0.0.1:" port "/say"))
+
 (defn make-bridge-irc-send-fn
   "Create a send-fn that posts via the ngircd bridge's HTTP /say endpoint.
    This lets agents post as 'claude' or 'codex' without opening separate IRC
    connections (which would conflict with the bridge's nicks)."
-  ([] (make-bridge-irc-send-fn 6769))
+  ([] (make-bridge-irc-send-fn (configured-bridge-http-port)))
   ([port]
    (fn [channel from-nick message]
-     (let [url (str "http://127.0.0.1:" port "/say")
+     (let [url (bridge-say-url port)
            payload (json/generate-string (cond-> {"from" (or from-nick "claude")
                                                    "text" (str message)
                                                    "max_lines" 4}

@@ -80,13 +80,22 @@ Full-stack launch (`dev`) behavior:
 - defaults `FUTON1A_STATIC_DIR` to `..\futon4\dev\web` when unset and assets exist
 - defaults `CODEX_SESSION_FILE` to `<repo>/.state/codex-irc/session-id`
   for a dedicated IRC codex continuity lane
+- defaults `CODEX_SANDBOX=read-only` when unset (most constrained sandbox)
+- defaults `CODEX_APPROVAL_POLICY=untrusted` when unset; if `CODEX_APPROVAL`
+  is set and `CODEX_APPROVAL_POLICY` is unset, launcher maps `CODEX_APPROVAL`
+  into `CODEX_APPROVAL_POLICY`
 - defaults `FUTON3C_CODEX_AGENT_ID=codex-1` (Unix-compatible behavior)
+- defaults `FUTON3C_REGISTER_VSCODE_CODEX=true`
+- defaults `FUTON3C_VSCODE_AGENT_ID=codex-vscode`
+- defaults `FUTON3C_VSCODE_CODEX_SESSION_FILE=<repo>/.state/codex-vscode/session-id`
+  so the separate VS Code codex lane stays live in every Windows dev-stack mode
 - defaults `FUTON3C_CODEX_WS_BRIDGE=false` so codex invokes run local/inline
   for this stack (prevents WS routing from collapsing into the active VS Code
   codex chat lane)
-- defaults `FUTON3C_RELAY_CODEX=false` and `FUTON3C_RELAY_CLAUDE=false`
-  so the external `ngircd-bridge` is the IRC invoke authority for this
-  launcher and the JVM-side dispatch relays do not double-handle mentions
+- defaults `FUTON3C_REGISTER_CORPUS=false`; `corpus-1` is reserved for the
+  FrontierMath-local lane instead of appearing in every generic dev bring-up
+- keeps `FUTON3C_RELAY_CLAUDE=false` in the Windows-owned overlay so the
+  external `ngircd-bridge` remains the IRC invoke authority for this launcher
 - clears inherited `CODEX_THREAD_ID` and `CODEX_INTERNAL_ORIGINATOR_OVERRIDE`
   by default so IRC invokes do not bind to the active VS Code chat thread
   (set `FUTON3C_IRC_USE_VSCODE_THREAD=1` to opt back in)
@@ -118,29 +127,65 @@ Full-stack launch (`dev`) behavior:
 - waits for runtime ports, then starts `ngircd-bridge`
 
 IRC lane switch for `dev`:
-- default (no flag) -> local lane
-  - starts/waits for local futon3c IRC listener on `FUTON3C_IRC_PORT` (default `6667`)
-  - bridge defaults to `IRC_HOST=127.0.0.1`, `IRC_PORT=<FUTON3C_IRC_PORT>`,
-    `IRC_CHANNEL=#futon`
-- `--remote-irc` -> linode lane (alias: joe lane)
-  - skips local IRC port kill/wait in `dev-stack-windows.bat`
-  - forces `BRIDGE_BOTS=zcodex`
-  - forces `FUTON3C_CODEX_AGENT_ID=codex-1`
-  - forces `NICK_AGENT_MAP=zcodex:codex-1`
-  - defaults `FUTON3C_REGISTER_CLAUDE=false` and `FUTON3C_RELAY_CLAUDE=false`
-    when unset (no `zclaude` lane)
-  - defaults `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
-    when unset, to keep Zabuton invokes out of the active developer chat session
-  - defaults `IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1`
-    when unset, so Rob-owned `#zabuton` remains bare-command-owned by
-    `codex-1`
-  - defaults `FUTON3C_IRC_PORT=0` when unset (disable local built-in IRC)
-  - bridge defaults to `IRC_HOST=172.236.28.208`, `IRC_PORT=6667`,
-    `IRC_CHANNEL=#zabuton`
+- unsupported positional args or unknown switches now fail fast with usage
+  guidance instead of being silently forwarded
+- explicit environment selector:
+  - `--env windows-local`
+    - the restored default when omitted
+    - keeps the Windows-local runtime posture
+  - `--env dev-laptop-env`
+    - selects the typed reference copy of Joe's Unix `dev-laptop-env`
+  - `--env dev-linode-env`
+    - selects the typed reference copy of Joe's Unix `dev-linode-env`
+  - when omitted, `dev` behaves as though `--env windows-local` was supplied
+- default (no flag) -> Windows local base profile
+  - keeps the Windows-local runtime posture:
+    - `FUTON3C_PORT=7070`
+    - `FUTON3C_IRC_PORT=6667`
+    - `BRIDGE_BOTS=codex`
+    - `IRC_HOST=127.0.0.1`
+    - `IRC_PORT=6667`
+    - `IRC_CHANNEL=#futon`
+    - `CODEX_SESSION_FILE=<repo>/.state/codex-irc/session-id`
+    - `USE_LOCAL_IRC=1`
+  - the local runtime remains the base behavior; no Joe Unix authority profile
+    is selected here
+- `--frontiermath-local` -> compatibility redirect to the `futon6` FrontierMath wrapper
+  - `dev-stack-windows.bat` no longer owns FrontierMath-local bring-up policy
+  - it now delegates immediately to:
+    - `futon6/scripts/frontiermath/local-futon3c-windows.bat`
+  - default delegated wrapper path:
+    - `<repo>/../futon6/scripts/frontiermath/local-futon3c-windows.bat`
+  - optional override:
+    - `FUTON3C_FRONTIERMATH_LOCAL_WRAPPER=<path to wrapper>`
+  - use the `futon6` wrapper directly when you want the canonical owner path
+- `--remote-irc` -> remote IRC overlay over that same Windows local base
+  - changes only the IRC/bridge lane:
+    - `BRIDGE_BOTS=zcodex`
+    - `FUTON3C_IRC_LANE=linode`
+    - `FUTON3C_IRC_LANE_NORMALIZED=linode`
+    - `FUTON3C_IRC_PORT=0`
+    - `IRC_HOST=172.236.28.208`
+    - `IRC_PORT=6667`
+    - `IRC_CHANNEL=#zabuton`
+    - `CODEX_SESSION_FILE=<repo>/.state/codex-zabuton/session-id`
+    - `FUTON3C_CODEX_AGENT_ID=codex-1`
+    - `NICK_AGENT_MAP=zcodex:codex-1`
+    - `IRC_COMMAND_OWNER_AGENT_MAP=#zabuton:codex-1`
+    - `USE_LOCAL_IRC=0`
+  - it does not, by itself, select Joe's full `dev-linode-env` runtime profile
+  - the Windows launcher still runs on the local runtime base unless a later
+    broader profile selector is added explicitly
+  - currently only supported with `--env windows-local`
+- modeled Unix reference envs:
+  - the Windows config also preserves typed reference copies of Joe's
+    `dev-laptop-env` and `dev-linode-env`
+  - those are now direct operator-facing selectors through `--env`, while
+    remaining separate from the narrower `--remote-irc` overlay
 - `--math-irc`
   - ensures `IRC_CHANNELS` includes `#math`
-  - preserves the primary channel selected by the active lane
-    (`#futon` local, `#zabuton` linode)
+  - preserves the primary channel selected by the active parity profile
+    (currently `#zabuton` for both Windows dev-shell parity profiles)
   - intended for `README-math.md` bring-up where `zcodex` should join both
     `#zabuton` and `#math`
   - joining both channels does not imply automatic cross-channel replies;
@@ -159,18 +204,53 @@ IRC lane switch for `dev`:
   - `codex-vscode` still remains the separate VS Code lane; this trial only
     asks whether one shared `codex-1` worker is already sufficient for both
     `#zabuton` and `#math`
+- start-mode flags:
+  - these are orthogonal overlays on top of the selected `--env` profile
+  - `--start-tickle`
+    - sets `FUTON3C_TICKLE_AUTOSTART=true`
+  - `--resume-tickle`
+    - currently the same as `--start-tickle` on Windows, matching the current
+      Unix shell behavior
+  - `--start-fm`
+    - sets `FUTON3C_FM_CONDUCTOR_AUTOSTART=true`
+  - `--start-all`
+    - sets both:
+      - `FUTON3C_TICKLE_AUTOSTART=true`
+      - `FUTON3C_FM_CONDUCTOR_AUTOSTART=true`
+  - these flags are supported on the generic `dev` launcher surface
+  - they are not supported with `--frontiermath-local`, because that lane is
+    owned by the separate futon6 wrapper
 - you can still override IRC target defaults by setting `IRC_HOST`, `IRC_PORT`,
   and/or `IRC_CHANNEL` before launch.
 
 Examples:
-- local IRC (current behavior):
+- Windows local base profile:
   - `scripts/windows/futon-windows.bat dev`
-- Joe/Linode IRC lane:
+- explicit Windows local base profile:
+  - `scripts/windows/futon-windows.bat dev --env windows-local`
+- Unix laptop authority profile:
+  - `scripts/windows/futon-windows.bat dev --env dev-laptop-env`
+- Unix linode authority profile:
+  - `scripts/windows/futon-windows.bat dev --env dev-linode-env`
+- Windows local base with both tickle and FM conductor autostarted:
+  - `scripts/windows/futon-windows.bat dev --start-all`
+- Unix laptop authority profile with both tickle and FM conductor autostarted:
+  - `scripts/windows/futon-windows.bat dev --env dev-laptop-env --start-all`
+- local FrontierMath onboarding lane:
+  - `scripts/windows/futon-windows.bat dev --frontiermath-local`
+    - now delegates to the `futon6` wrapper rather than owning the lane locally
+- launcher help / validation:
+  - `scripts/windows/dev-stack-windows.bat --help`
+  - `scripts/windows/dev-stack-windows.bat --frontier-math`
+    - now fails fast and suggests `--frontiermath-local`
+- Windows local base plus remote IRC overlay:
   - `scripts/windows/futon-windows.bat dev --remote-irc`
-- Joe/Linode IRC lane plus `#math`:
+- Windows local base explicitly named plus remote IRC overlay:
+  - `scripts/windows/futon-windows.bat dev --env windows-local --remote-irc`
+- Windows local base plus remote IRC overlay and `#math`:
   - `scripts/windows/futon-windows.bat dev --remote-irc --math-irc`
-- Joe/Linode IRC lane on `#futon` instead:
-  - `set IRC_CHANNEL=#futon && scripts/windows/futon-windows.bat dev --remote-irc`
+- Windows local base with a different channel override:
+  - `set IRC_CHANNEL=#math && scripts/windows/futon-windows.bat dev`
 
 Arxana full-stack launch (`dev-arxana`) behavior:
 - forces/validates `FUTON1A_STATIC_DIR` and fails fast if viewer assets are missing

@@ -6,17 +6,19 @@
    complementary and can run concurrently.
 
    Two workflow types:
-   1. GitHub issue workflows (fetch → assign → review → report)
+   1. Issue or work-item workflows (fetch → assign → review → report)
    2. FM proof conductor (round-robin tickle of agents working proof obligations)
 
    REPL-driveable: each function is standalone. Compose via
-   run-issue-workflow! or call steps individually."
+  run-issue-workflow! or call steps individually."
   (:require [clojure.java.shell :as shell]
             [clojure.string :as str]
             [cheshire.core :as json]
+            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.store :as estore]
-            [futon3c.blackboard :as bb])
+            [futon3c.blackboard :as bb]
+            [futon3c.dev.config :as config])
   (:import [java.time Instant Duration]
            [java.util UUID]))
 
@@ -211,7 +213,8 @@
    Returns {:ok true :issue {:number int :title str :body str :labels [str]}}
    or {:ok false :error str}.
 
-   Uses `gh issue view` — requires gh CLI authenticated."
+   Prompt rewrites may generalize outward issue language, but the current
+   recovery path keeps the underlying fetch on `gh issue view`."
   [repo-dir issue-number]
   (try
     (let [{:keys [exit out err]}
@@ -234,7 +237,8 @@
   "Fetch open issues with a given label from a repo directory.
    Returns {:ok true :issues [{:number :title :body :labels} ...]}.
 
-   Uses `gh issue list`."
+   Prompt rewrites may generalize outward issue language, but the current
+   recovery path keeps queue reads on `gh issue list`."
   [repo-dir & {:keys [label limit] :or {label "codex" limit 20}}]
   (try
     (let [{:keys [exit out err]}
@@ -264,38 +268,42 @@
 (defn- make-assign-prompt
   "Build an assignment prompt from an issue map. Includes surface contract."
   [issue repo-dir agent-id]
-  (str "Runtime surface contract:\n"
-       "- Agent: " agent-id " (Tickle orchestration)\n"
-       "- Working directory: " repo-dir "\n"
-       "- Task: Implement GitHub issue #" (:number issue) "\n"
-       "- Your changes will be reviewed by another agent after completion.\n"
-       "- Do not claim changes you did not make.\n\n"
-       "--- GitHub Issue #" (:number issue) ": " (:title issue) " ---\n\n"
-       (:body issue) "\n\n"
-       "--- End of Issue ---\n\n"
-       "Implement the changes described above. Work in " repo-dir ".\n"))
+  (let [original-prompt
+        (str "Runtime surface contract:\n"
+             "- Agent: " agent-id " (Tickle orchestration)\n"
+             "- Working directory: " repo-dir "\n"
+             "- Task: Implement GitHub issue #" (:number issue) "\n"
+             "- Your changes will be reviewed by another agent after completion.\n"
+             "- Do not claim changes you did not make.\n\n"
+             "--- GitHub Issue #" (:number issue) ": " (:title issue) " ---\n\n"
+             (:body issue) "\n\n"
+             "--- End of Issue ---\n\n"
+             "Implement the changes described above. Work in " repo-dir ".\n")]
+    (mfuton-prompt-override/maybe-assign-prompt original-prompt)))
 
 (defn- make-review-prompt
   "Build a Claude review prompt from issue + Codex result."
   [issue codex-result repo-dir]
-  (str "Runtime surface contract:\n"
-       "- Agent: claude-1 (Tickle orchestration — review mode)\n"
-       "- Working directory: " repo-dir "\n"
-       "- Task: Review implementation of GitHub issue #" (:number issue) "\n"
-       "- Your verdict will be reported to Joe.\n\n"
-       "--- GitHub Issue #" (:number issue) ": " (:title issue) " ---\n\n"
-       (:body issue) "\n\n"
-       "--- Codex Result ---\n\n"
-       (:result codex-result) "\n\n"
-       "--- End ---\n\n"
-       "Review the changes Codex made for this issue in " repo-dir ". Check:\n"
-       "1. Do the files contain the expected changes?\n"
-       "2. Does the implementation match the criteria checklist?\n"
-       "3. Are there obvious bugs or missing pieces?\n\n"
-       "Respond with:\n"
-       "- APPROVE if the implementation looks correct\n"
-       "- REQUEST_CHANGES if there are issues (explain what)\n"
-       "- UNCLEAR if you cannot determine (explain why)\n"))
+  (let [original-prompt
+        (str "Runtime surface contract:\n"
+             "- Agent: claude-1 (Tickle orchestration — review mode)\n"
+             "- Working directory: " repo-dir "\n"
+             "- Task: Review implementation of GitHub issue #" (:number issue) "\n"
+             "- Your verdict will be reported to Joe.\n\n"
+             "--- GitHub Issue #" (:number issue) ": " (:title issue) " ---\n\n"
+             (:body issue) "\n\n"
+             "--- Codex Result ---\n\n"
+             (:result codex-result) "\n\n"
+             "--- End ---\n\n"
+             "Review the changes Codex made for this issue in " repo-dir ". Check:\n"
+             "1. Do the files contain the expected changes?\n"
+             "2. Does the implementation match the criteria checklist?\n"
+             "3. Are there obvious bugs or missing pieces?\n\n"
+             "Respond with:\n"
+             "- APPROVE if the implementation looks correct\n"
+             "- REQUEST_CHANGES if there are issues (explain what)\n"
+             "- UNCLEAR if you cannot determine (explain why)\n")]
+    (mfuton-prompt-override/maybe-review-prompt original-prompt)))
 
 (defn- parse-verdict
   "Extract a verdict keyword from Claude's review response."
@@ -623,13 +631,6 @@
    "codex-1"  "codex (computational worker, runs SAT solvers and writes code)"
    "claude-2" "claude-2 (Mentor, epistemic risk monitor, pattern reviewer)"})
 
-(def ^:private agent-irc-nicks
-  "Agent ID → IRC nick mapping. Agents may have different IRC nicks than their
-   registry IDs. Tickle must @-mention the correct nick for IRC delivery."
-  {"claude-1" "claude"
-   "codex-1"  "codex"
-   "claude-2" "claude-2"})
-
 (def ^:private default-cooldown-ms
   "Minimum interval between pages to the same agent (15 minutes).
    War-bulletin-5 finding: stateless orchestrator caused ~40% noise."
@@ -678,11 +679,11 @@
       (println (str "[fm-conductor] Error reading proof ledger: " (.getMessage e)))
       [])))
 
-(defn build-fm-context
+(defn- build-fm-context-original
   "Build the Tickle decision prompt for an FM conductor cycle."
   [problem-id target-agent recent-msgs assignable-tasks]
   (let [agent-role (get agent-roles target-agent target-agent)
-        irc-nick (get agent-irc-nicks target-agent target-agent)
+        irc-nick (config/irc-nick-for-agent-id target-agent)
         recent-text (str/join "\n"
                      (map (fn [{:keys [nick text at]}]
                             (str (when at (subs (str at) 11 19)) " <" nick "> " text))
@@ -694,6 +695,7 @@
     (str "You are Tickle, task coordinator for " problem-id " (Ramsey numbers for book graphs) on #math.\n\n"
          "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
          "Current mode: FALSIFY (must try to disprove before constructing).\n"
+         "Problem state doc: futon6/data/first-proof/frontiermath-pilot/FM-001-ramsey-book-graphs-state.md\n"
          "Strategy doc: futon6/data/frontiermath-pilot/FM-001-strategy.md\n\n"
          "TARGET THIS CYCLE: " agent-role "\n"
          "IRC NICK: " irc-nick " (use @" irc-nick " when mentioning this agent)\n\n"
@@ -711,6 +713,13 @@
          "RESPOND WITH ONLY:\n"
          "- A short IRC message (start with @agent-name), OR\n"
          "- PASS")))
+
+(defn build-fm-context
+  "Build the Tickle decision prompt for an FM conductor cycle."
+  [problem-id target-agent recent-msgs assignable-tasks]
+  (let [original-prompt (build-fm-context-original
+                         problem-id target-agent recent-msgs assignable-tasks)]
+    (mfuton-prompt-override/maybe-build-fm-context original-prompt)))
 
 (defn fm-conduct-cycle!
   "Run one FM proof conductor cycle targeting a specific agent.

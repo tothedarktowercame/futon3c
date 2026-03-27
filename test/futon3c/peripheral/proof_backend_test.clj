@@ -43,6 +43,22 @@
         (is (:ok reload))
         (is (= 2 (get-in reload [:result :proof/version])))))))
 
+(deftest explicit-proof-state-root-overrides-default-path
+  (let [cwd (fix/temp-dir!)
+        override-root (io/file cwd "mfuton-proof-state")
+        default-root (io/file cwd "data" "proof-state")
+        override-file (io/file override-root "P-override.edn")
+        default-file (io/file default-root "P-override.edn")
+        config {:cwd cwd
+                :proof-state-root (.getPath override-root)}
+        backend (pb/make-proof-backend config (tools/make-mock-backend))]
+    (pb/init-problem! config "P-override" "Override root problem" "All cases verified")
+    (is (.exists override-file))
+    (is (not (.exists default-file)))
+    (let [load-result (tools/execute-tool backend :proof-load ["P-override"])]
+      (is (:ok load-result))
+      (is (= "P-override" (get-in load-result [:result :proof/problem-id]))))))
+
 (deftest load-nonexistent-problem
   (let [{:keys [backend]} (make-test-backend)
         result (tools/execute-tool backend :proof-load ["P-nonexistent"])]
@@ -76,7 +92,16 @@
     (is (= :invalid-transition (get-in result [:error :code])))))
 
 (deftest status-validate-tool
-  (let [{:keys [backend]} (make-test-backend)]
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-1" {:item/label "test item"
+                             :item/status :open
+                             :item/evidence-type :analytical}])
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-false" {:item/label "false item"
+                                 :item/status :false
+                                 :item/evidence-type :analytical}])]
     (testing "numerical cannot yield proved"
       (let [r (tools/execute-tool backend :status-validate [:open :proved :numerical])]
         (is (:ok r))
@@ -88,7 +113,25 @@
     (testing "cannot leave :false"
       (let [r (tools/execute-tool backend :status-validate [:false :open :analytical])]
         (is (:ok r))
-        (is (not (get-in r [:result :valid?])))))))
+        (is (not (get-in r [:result :valid?])))))
+    (testing "bridge-facing shape reads source status from the ledger"
+      (let [r (tools/execute-tool backend :status-validate
+                ["P-test" "L-1" :proved :analytical])]
+        (is (:ok r))
+        (is (true? (get-in r [:result :valid?])))
+        (is (= :open (get-in r [:result :from])))
+        (is (= :proved (get-in r [:result :to])))))
+    (testing "bridge-facing shape rejects missing ledger items"
+      (let [r (tools/execute-tool backend :status-validate
+                ["P-test" "L-missing" :proved :analytical])]
+        (is (false? (:ok r)))
+        (is (= :item-not-found (get-in r [:error :code])))))
+    (testing "bridge-facing shape preserves false-status refusal"
+      (let [r (tools/execute-tool backend :status-validate
+                ["P-test" "L-false" :open :analytical])]
+        (is (:ok r))
+        (is (false? (get-in r [:result :valid?])))
+        (is (= :false (get-in r [:result :from])))))))
 
 ;; =============================================================================
 ;; Ledger upsert

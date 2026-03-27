@@ -211,6 +211,7 @@ INVOKE_URL = f"{INVOKE_BASE}/api/alpha/invoke"
 INVOKE_ANNOUNCE_URL = f"{INVOKE_BASE}/api/alpha/invoke/announce"
 INVOKE_JOBS_URL = f"{INVOKE_BASE}/api/alpha/invoke/jobs"
 AGENTS_URL = f"{INVOKE_BASE}/api/alpha/agents"
+AGENT_INTERRUPT_URL_TEMPLATE = AGENTS_URL + "/{agent_id}/interrupt-invoke"
 MC_URL = f"{INVOKE_BASE}/api/alpha/mission-control"
 TODO_URL = f"{INVOKE_BASE}/api/alpha/todo"
 INVOKE_DELIVERY_URL = f"{INVOKE_BASE}/api/alpha/invoke-delivery"
@@ -247,6 +248,22 @@ INVOKE_SKIP_WHEN_BUSY = os.environ.get("INVOKE_SKIP_WHEN_BUSY", "1").lower() not
     "false",
     "no",
     "off",
+)
+INVOKE_INTERRUPT_WHEN_BUSY = os.environ.get("INVOKE_INTERRUPT_WHEN_BUSY", "0").lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
+INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS = int_env(
+    "INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS",
+    30,
+    minimum=1,
+)
+INVOKE_INTERRUPT_READY_POLL_SECONDS = int_env(
+    "INVOKE_INTERRUPT_READY_POLL_SECONDS",
+    1,
+    minimum=1,
 )
 CMD_TIMEOUT = int_env("CMD_TIMEOUT_SECONDS", 30, minimum=1)  # seconds for ! commands
 INVOKE_QUEUE_MAX = int_env("INVOKE_QUEUE_MAX", 20, minimum=1)
@@ -324,6 +341,9 @@ def _cleanup():
 atexit.register(_cleanup)
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # triggers atexit
 
+BRIDGE_FATAL_STOP = threading.Event()
+BRIDGE_FATAL_STOP_REASON = {"reason": None}
+
 
 def sd_notify(state):
     """Send sd_notify state if running under systemd."""
@@ -340,6 +360,10 @@ def sd_notify(state):
 
 
 ARTIFACT_REF_PATTERNS = [
+    re.compile(
+        r"\bmfuton/data/frontiermath-local/FM-\d{3}/[^\s\]\[)>,;\"']+/?",
+        re.IGNORECASE,
+    ),
     re.compile(r"https?://github\.com/\S+/(?:pull|issues)/\d+", re.IGNORECASE),
     re.compile(r"\bPR\s*#\d+\b", re.IGNORECASE),
     re.compile(r"\b(?:commit|sha)\s*[:#]?\s*([0-9a-f]{7,40})\b", re.IGNORECASE),
@@ -352,6 +376,10 @@ ARTIFACT_REF_PATTERNS = [
 # Ungated nicks receive ALL channel messages, not just @mentions.
 # Toggle with !ungate <nick> and !gate <nick>.
 ungated_nicks: set[str] = set()
+
+FM_MATH_TICKLE_CONTROL_RE = re.compile(
+    r"(?im)^(?:@tickle:?[ \t]+)?(?:BELL[ \t]+[A-Za-z0-9._:-]+|I['’]ll take[ \t]+[A-Za-z0-9._:-]+)\s*$"
+)
 
 
 def log(bot_nick, msg):
@@ -446,6 +474,20 @@ class IRCBot:
             "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
 
+    def _request_orchestration_stop(self, reason):
+        """Fail closed for this bridge process after a fatal orchestration seam."""
+        text = (str(reason) or "fatal orchestration stop requested").strip()
+        BRIDGE_FATAL_STOP_REASON["reason"] = text
+        BRIDGE_FATAL_STOP.set()
+        log(self.nick, f"FATAL orchestration stop requested: {text}")
+        self.connected = False
+        if self.sock is not None:
+            try:
+                self.sock.close()
+            except Exception:
+                pass
+            self.sock = None
+
     def _bare_command_owner_agent_id(self, channel):
         """Return the configured bare ! owner for a room, if any."""
         if not isinstance(channel, str):
@@ -481,14 +523,28 @@ class IRCBot:
         ]
         return any(re.search(pat, src) for pat in patterns)
 
+    def _uses_brief_style_surface(self):
+        """Return true when surface output should stay on brief-style IRC framing.
+
+        This keys off stable agent identity rather than visible local nicknames,
+        so local room aliases like math-curator/math-mentor can still inherit
+        the Claude-family behavior.
+        """
+        return (
+            self.agent_id.startswith("claude")
+            or self.agent_id.startswith("tickle")
+            or self.nick in ("corpus", "tickle")
+        )
+
     def _surface_context(self, sender, mission_part, brief, multi_message=False, channel=None):
         """Build the surface contract header for an IRC invoke."""
         ch = channel or self.channel
-        is_clean = self.nick.startswith("claude") or self.nick in ("corpus", "tickle")
+        is_clean = self._uses_brief_style_surface()
         if brief or is_clean:
-            # Clean agents (claude, corpus, tickle): always use brief-style
-            # surface contract. Their output is posted by the bridge — they
-            # must NOT post progress via /api/alpha/irc/send (causes duplicates).
+            # Clean brief-style agents (Claude-family, corpus, tickle): always
+            # use brief-style surface contract. Their output is posted by the
+            # bridge — they must NOT post progress via /api/alpha/irc/send
+            # (causes duplicates).
             extra = (" User explicitly requested multiple IRC posts. "
                      "If needed, return one short line per intended message."
                      if multi_message else "")
@@ -521,8 +577,8 @@ class IRCBot:
             "Prefer completing one bounded unit of work in this turn. "
             "Do not stop at reconnaissance-only updates like grepping, mapping, or an initial step. "
             "Execute work asynchronously, then return a short completion/blocker status with artifact refs "
-            "(commit/PR/issue/file path), or explicitly say planning-only/blocked with blocker evidence. "
-            "Push artifacts to git before referencing them, and never cite local paths or /tmp. "
+            "(commit/mfuton gitlab issue/file path), or explicitly say planning-only/blocked with blocker evidence. "
+            "Run the commit algorithm for gh before referencing commit artifacts, use mfuton gitlab issue refs for blocker/work-item continuity, and never cite local paths or /tmp. "
             f"{send_hint} "
             f'Example payload: {{"channel":"{ch}","from":"{self.nick}","text":"..."}}]'
         )
@@ -540,6 +596,15 @@ class IRCBot:
             "session_id": agent.get("session-id")
             or agent.get("session_id")
             or "unknown",
+            "queued_jobs": agent.get("queued-jobs")
+            or agent.get("queued_jobs")
+            or 0,
+            "running_jobs": agent.get("running-jobs")
+            or agent.get("running_jobs")
+            or 0,
+            "nonterminal_jobs": agent.get("nonterminal-jobs")
+            or agent.get("nonterminal_jobs")
+            or 0,
             "invoke_started_at": agent.get("invoke-started-at")
             or agent.get("invoke_started_at"),
             "invoke_activity": agent.get("invoke-activity")
@@ -559,6 +624,104 @@ class IRCBot:
         if isinstance(started, str) and started.strip():
             parts.append(f"since={started.strip()}")
         return " | ".join(parts)
+
+    def _interrupt_when_busy_enabled(self):
+        return INVOKE_INTERRUPT_WHEN_BUSY and self.agent_id.lower().startswith("codex")
+
+    @staticmethod
+    def _busy_interrupt_eligible(status):
+        if not isinstance(status, dict):
+            return False
+        state = str(status.get("status") or "").strip().lower()
+        try:
+            running_jobs = int(status.get("running_jobs") or 0)
+        except Exception:
+            running_jobs = 0
+        return state == "invoking" and running_jobs > 0
+
+    @staticmethod
+    def _agent_ready_after_interrupt(status):
+        if not isinstance(status, dict):
+            return False
+        state = str(status.get("status") or "").strip().lower()
+        try:
+            running_jobs = int(status.get("running_jobs") or 0)
+        except Exception:
+            running_jobs = 0
+        return state != "invoking" and running_jobs == 0
+
+    def _request_invoke_interrupt(self, job_id=None):
+        payload = {}
+        if job_id:
+            payload["job-id"] = job_id
+        return api_post(
+            AGENT_INTERRUPT_URL_TEMPLATE.format(agent_id=self.agent_id),
+            payload,
+            timeout=max(STATUS_TIMEOUT, 5),
+        )
+
+    def _wait_for_agent_ready_after_interrupt(self):
+        deadline = time.time() + INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS
+        last_status = None
+        while time.time() < deadline:
+            status = self._agent_status()
+            if isinstance(status, dict):
+                last_status = status
+                if self._agent_ready_after_interrupt(status):
+                    return {"ok": True, "status": status}
+            time.sleep(INVOKE_INTERRUPT_READY_POLL_SECONDS)
+        return {"ok": False, "status": last_status}
+
+    def _prepare_agent_for_new_invoke(self, *, action_label="invoke"):
+        status_before = self._agent_status()
+        if not (
+            INVOKE_SKIP_WHEN_BUSY
+            and isinstance(status_before, dict)
+            and status_before.get("status") == "invoking"
+        ):
+            return {"ok": True, "status": status_before}
+        if self._interrupt_when_busy_enabled() and self._busy_interrupt_eligible(status_before):
+            log(self.nick, f"{self.agent_id}: busy before {action_label}; requesting interrupt")
+            interrupt = self._request_invoke_interrupt()
+            if isinstance(interrupt, dict) and interrupt.get("ok"):
+                waited = self._wait_for_agent_ready_after_interrupt()
+                if waited.get("ok"):
+                    status_before = waited.get("status") or {}
+                    log(self.nick, f"{self.agent_id}: ready after interrupt; continuing {action_label}")
+                    return {"ok": True, "status": status_before}
+                status_after = waited.get("status") or status_before
+                self._request_orchestration_stop(
+                    f"{self.agent_id} did not return ready within "
+                    f"{INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS}s after interrupt"
+                )
+                return {
+                    "ok": False,
+                    "error": (
+                        "invoke interrupt timeout: "
+                        f"{self._agent_busy_summary(status_after)}"
+                    ),
+                    "session_id": status_after.get("session_id"),
+                }
+            if isinstance(interrupt, dict):
+                detail = interrupt.get("message") or interrupt.get("error") or "interrupt failed"
+            else:
+                detail = "interrupt failed"
+            return {
+                "ok": False,
+                "error": f"invoke interrupt failed: {detail}",
+                "session_id": status_before.get("session_id"),
+            }
+        if self._interrupt_when_busy_enabled():
+            log(
+                self.nick,
+                f"{self.agent_id}: invoking without active running job; proceeding without interrupt",
+            )
+            return {"ok": True, "status": status_before}
+        return {
+            "ok": False,
+            "error": f"invoke skipped: {self._agent_busy_summary(status_before)}",
+            "session_id": status_before.get("session_id"),
+        }
 
     def connect(self):
         """Connect to IRC server, authenticate, join channel."""
@@ -710,7 +873,7 @@ class IRCBot:
                     ref = match.group(1)
                 else:
                     ref = match.group(0)
-                ref = (ref or "").strip()
+                ref = (ref or "").strip().rstrip(".,:;")
                 if not ref:
                     continue
                 if ref not in refs:
@@ -924,7 +1087,10 @@ class IRCBot:
         artifact_ref = job.get("artifact-ref") or job.get("artifact_ref")
         terminal_message = self._job_terminal_message(job)
         if state == "done":
-            result_text = result_summary or artifact_ref or f"job {job_id} completed"
+            if result_summary and artifact_ref and artifact_ref not in result_summary:
+                result_text = f"{result_summary} canonical ref: {artifact_ref}"
+            else:
+                result_text = result_summary or artifact_ref or f"job {job_id} completed"
             self._emit_success_reply(
                 {"ok": True, "result": result_text, "session_id": session_id},
                 reply_ch,
@@ -1104,16 +1270,13 @@ class IRCBot:
 
     def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None, reply_channel=None):
         """Call the futon3c invoke API and return structured invoke outcome."""
-        status_before = self._agent_status()
-        if (
-            INVOKE_SKIP_WHEN_BUSY
-            and isinstance(status_before, dict)
-            and status_before.get("status") == "invoking"
-        ):
+        prepared = self._prepare_agent_for_new_invoke(action_label="invoke")
+        if not prepared.get("ok"):
             return {
                 "ok": False,
-                "error": f"invoke skipped: {self._agent_busy_summary(status_before)}",
-                "session_id": status_before.get("session_id"),
+                "job_id": job_id,
+                "error": prepared.get("error", "invoke preparation failed"),
+                "session_id": prepared.get("session_id"),
             }
         active_channel = reply_channel or self._reply_channel or self.channel
         payload = {
@@ -1281,7 +1444,7 @@ class IRCBot:
         if truncated:
             self._send(f"PRIVMSG {channel} :"
                        f"[truncated {len(lines) - max_lines} more lines — "
-                       f"post details to GitHub instead]")
+                       f"post details to mfuton gitlab issue instead]")
             time.sleep(0.1)
 
     def _multiline_result_for_irc(self, result_text):
@@ -1305,10 +1468,31 @@ class IRCBot:
     def _uses_clean_irc_output(self):
         """Return true when this bot should avoid queue/done framing on IRC."""
         return (
-            self.nick.startswith("claude")
+            self._uses_brief_style_surface()
             or self.nick == "corpus"
             or self.agent_id.startswith("codex")
         )
+
+    def _is_frontiermath_room_control_message(self, text, channel=None):
+        """Reserve dedicated #math Bell/claim mention forms for the runtime seam."""
+        channel = channel or self.channel
+        normalized_channel = (channel or "").strip().lower()
+        if normalized_channel != "#math":
+            return False
+        normalized_text = (text or "").strip()
+        if not normalized_text:
+            return False
+        collapsed_text = re.sub(r"\s+", " ", normalized_text).lower()
+        if (
+            collapsed_text.startswith("@tickle bell ")
+            or collapsed_text.startswith("bell ")
+            or collapsed_text.startswith("@tickle i'll take ")
+            or collapsed_text.startswith("i'll take ")
+            or collapsed_text.startswith("@tickle i’ll take ")
+            or collapsed_text.startswith("i’ll take ")
+        ):
+            return True
+        return bool(FM_MATH_TICKLE_CONTROL_RE.match(normalized_text))
 
     def _handle_mention(self, sender, text, channel=None):
         """Process a mention: queue invoke and ack immediately."""
@@ -1332,6 +1516,13 @@ class IRCBot:
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping invocation from {sender}")
+            return
+        prepared = self._prepare_agent_for_new_invoke(action_label="queue")
+        if not prepared.get("ok"):
+            err = prepared.get("error", "invoke preparation failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Pre-queue invoke preparation failed for {sender} on {channel}: {err}")
             return
         announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
                                           reply_channel=channel)
@@ -1371,12 +1562,22 @@ class IRCBot:
             mission_part = f" | Focused Mission: {self.focused_mission}"
         brief = self._is_brief(text)
         surface_context = self._surface_context(sender, mission_part, brief, channel=channel)
-        full_prompt = f"{surface_context}\n\n{sender}: {text}"
+        prompt_body = text
+        if not self._is_frontiermath_room_control_message(text, channel):
+            prompt_body = f"{sender}: {text}"
+        full_prompt = f"{surface_context}\n\n{prompt_body}"
 
         if self._invoke_queue.full():
             self._say("[queue full] invoke queue is saturated; retry in a moment",
                       max_lines=1, channel=channel)
             log(self.nick, f"Queue full — dropping ungated invocation from {sender}")
+            return
+        prepared = self._prepare_agent_for_new_invoke(action_label="queue")
+        if not prepared.get("ok"):
+            err = prepared.get("error", "invoke preparation failed")
+            self._say(f"[accept failed] {self._truncate(str(err), max_len=180)}",
+                      max_lines=1, channel=channel)
+            log(self.nick, f"Pre-queue invoke preparation failed for ungated invoke from {sender} on {channel}: {err}")
             return
         announced = self._announce_invoke(sender, full_prompt, self.focused_mission,
                                           reply_channel=channel)
@@ -1916,9 +2117,13 @@ class IRCBot:
     def run(self):
         """Main loop: read IRC messages, handle PINGs, commands, mentions."""
         while True:
+            if BRIDGE_FATAL_STOP.is_set():
+                return
             try:
                 self.connect()
                 while True:
+                    if BRIDGE_FATAL_STOP.is_set():
+                        return
                     line = self._readline()
                     if line is None:
                         log(self.nick, "Connection closed by server")
@@ -1973,12 +2178,24 @@ class IRCBot:
 
                             # @mentions — each bot handles its own
                             elif self._is_mention(text):
-                                t = threading.Thread(
-                                    target=self._handle_mention,
-                                    args=(sender, text, target),
-                                    daemon=True,
-                                )
-                                t.start()
+                                if self._is_frontiermath_room_control_message(text, target):
+                                    log(
+                                        self.nick,
+                                        f"Rerouting FrontierMath room control mention through ungated path from {sender} on {target}: {text[:80]}",
+                                    )
+                                    t = threading.Thread(
+                                        target=self._handle_ungated,
+                                        args=(sender, text, target),
+                                        daemon=True,
+                                    )
+                                    t.start()
+                                else:
+                                    t = threading.Thread(
+                                        target=self._handle_mention,
+                                        args=(sender, text, target),
+                                        daemon=True,
+                                    )
+                                    t.start()
 
                             # Ungated mode — respond to all messages
                             elif self.nick.rstrip("_").lower() in ungated_nicks:
@@ -2001,6 +2218,8 @@ class IRCBot:
                 except Exception:
                     pass
                 self.sock = None
+            if BRIDGE_FATAL_STOP.is_set():
+                return
 
             log(self.nick, f"Reconnecting in {RECONNECT_DELAY}s...")
             time.sleep(RECONNECT_DELAY)
@@ -2171,7 +2390,13 @@ def main():
         while True:
             _write_health(bots, started_at)
             sd_notify("WATCHDOG=1")
-            time.sleep(HEALTH_INTERVAL)
+            if BRIDGE_FATAL_STOP.wait(HEALTH_INTERVAL):
+                reason = BRIDGE_FATAL_STOP_REASON.get("reason") or "fatal orchestration stop requested"
+                print(
+                    f"Stopping ngircd bridge after fatal orchestration stop: {reason}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
     except KeyboardInterrupt:
         print("\nShutting down bridge...")
         sys.exit(0)

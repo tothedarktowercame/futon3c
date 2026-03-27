@@ -29,21 +29,27 @@
 (deftest build-exec-args-new-and-resume
   (testing "new session appends '-'"
     (let [args (codex-cli/build-exec-args {:codex-bin "codex"
+                                           :profile "frontiermath_worker"
                                            :model "gpt-5-codex"
                                            :sandbox "workspace-write"
                                            :approval-policy "never"})]
       (is (= "codex" (first args)))
+      (is (= "-p" (second args)))
+      (is (= "frontiermath_worker" (nth args 2)))
       (is (some #{"exec"} args))
       (is (some #{"--json"} args))
       (is (some #{"--model"} args))
       (is (= "-" (last args)))))
   (testing "resume session includes resume <sid> -"
     (let [args (codex-cli/build-exec-args {:codex-bin "codex"
+                                           :profile "frontiermath_worker"
                                            :model nil
                                            :sandbox "workspace-write"
                                            :approval-policy "never"
                                            :session-id "sid-1"})
           idx (.indexOf args "resume")]
+      (is (= "-p" (second args)))
+      (is (= "frontiermath_worker" (nth args 2)))
       (is (>= idx 0))
       (is (= "sid-1" (nth args (inc idx))))
       (is (= "-" (last args))))))

@@ -17,6 +17,14 @@ if "%USE_LOCAL_IRC%"=="0" (
   )
 )
 
+set "BRIDGE_LOG_IRC_HOST=%IRC_HOST%"
+if not defined BRIDGE_LOG_IRC_HOST set "BRIDGE_LOG_IRC_HOST=127.0.0.1"
+set "BRIDGE_LOG_IRC_PORT=%IRC_PORT%"
+if not defined BRIDGE_LOG_IRC_PORT set "BRIDGE_LOG_IRC_PORT=%FUTON3C_IRC_PORT%"
+if not defined BRIDGE_LOG_IRC_PORT set "BRIDGE_LOG_IRC_PORT=6667"
+set "BRIDGE_LOG_IRC_CHANNEL=%IRC_CHANNEL%"
+if not defined BRIDGE_LOG_IRC_CHANNEL set "BRIDGE_LOG_IRC_CHANNEL=#futon"
+
 echo [dev-stack-windows] Starting futon runtime lane...
 start "futon-dev-core" /b cmd.exe /c call "%SCRIPT_DIR%\dev-windows.bat"
 
@@ -28,7 +36,8 @@ if "%USE_LOCAL_IRC%"=="1" (
 )
 
 echo [dev-stack-windows] Starting ngircd bridge...
-echo [dev-stack-windows] Bridge target IRC=%IRC_HOST%:%IRC_PORT% channel=%IRC_CHANNEL% lane=%FUTON3C_IRC_LANE_NORMALIZED%
+echo [dev-stack-windows] Bridge target IRC=!BRIDGE_LOG_IRC_HOST!:!BRIDGE_LOG_IRC_PORT! channel=!BRIDGE_LOG_IRC_CHANNEL! lane=!FUTON3C_IRC_LANE_NORMALIZED!
+if defined IRC_CHANNELS echo [dev-stack-windows] Bridge extra IRC channels=!IRC_CHANNELS!
 set "AUTO_START_DEV=0"
 set "AUTO_STOP_FUTON1A=0"
 call "%SCRIPT_DIR%\ngircd-bridge-windows.bat" %FUTON_DEV_STACK_BRIDGE_ARGS%

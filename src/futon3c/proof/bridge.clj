@@ -43,13 +43,30 @@
 (defn- cwd []
   (System/getProperty "user.dir"))
 
+(defn- configured-proof-state-root []
+  (or (not-empty (System/getProperty "futon3c.proof-state-root"))
+      (not-empty (System/getenv "FUTON3C_PROOF_STATE_ROOT"))))
+
 (defn- get-backend
   "Get or create a shared backend for a problem."
   [problem-id]
-  (or (get @!backends problem-id)
-      (let [backend (pb/make-proof-backend {:cwd (cwd)})]
-        (swap! !backends assoc problem-id backend)
-        backend)))
+  (let [proof-state-root (configured-proof-state-root)]
+    (if-let [entry (get @!backends problem-id)]
+      (let [cached-root (:proof-state-root entry)]
+        (if (= cached-root proof-state-root)
+          (:backend entry)
+          (throw (ex-info (str "Proof-state root changed for " problem-id
+                               ". Call (pb/reload! \"" problem-id "\") or restart before continuing.")
+                          {:problem-id problem-id
+                           :cached-proof-state-root cached-root
+                           :requested-proof-state-root proof-state-root}))))
+      (let [backend (pb/make-proof-backend (cond-> {:cwd (cwd)}
+                                             proof-state-root
+                                             (assoc :proof-state-root proof-state-root)))
+            entry {:backend backend
+                   :proof-state-root proof-state-root}]
+        (swap! !backends assoc problem-id entry)
+        backend))))
 
 (defn- exec
   "Execute a proof tool using the shared backend for the problem.
