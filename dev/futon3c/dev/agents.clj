@@ -226,7 +226,8 @@
                                    (do
                                      (println (str "[dev][WARN] FUTON3C_REGISTER_VSCODE_CODEX=true but `"
                                                    codex-bin-name "` not found on PATH."))
-                                     (println "[dev][WARN] Skipping separate VS Code codex lane registration."))
+                                     (println "[dev][WARN] Skipping separate VS Code codex lane registration.")
+                                     false)
                                    register-vscode-codex?)]
       (when register-codex?
         (let [session-file (io/file (or (config/env "CODEX_SESSION_FILE")
