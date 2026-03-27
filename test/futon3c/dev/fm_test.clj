@@ -239,6 +239,25 @@
         (is (not (re-find #"FrontierMath local n=3 orchestration control" prompt)))
         (is (not (re-find #"--check 3 --method wesley" prompt)))))))
 
+(deftest build-fm-context-override-pins-local-scope-to-n3
+  (testing "mfuton local FM context explicitly narrows the slice to n=3 and mfuton artifact paths"
+    (with-redefs [config/env (fn [k]
+                               (case k
+                                 "FUTON3C_FRONTIERMATH_ROOT"
+                                 "I:/gh/mfuton/data/frontiermath-local/source/futon6-frontiermath-local-ops"
+                                 "MFUTON_HOME"
+                                 "I:/gh/mfuton"
+                                 nil))]
+      (let [prompt (mfuton-prompt-override/build-fm-context-override
+                    (str "Problem state doc: futon6/data/first-proof/frontiermath-pilot/FM-001-ramsey-book-graphs-state.md\n"
+                         "Strategy doc: futon6/data/frontiermath-pilot/FM-001-strategy.md\n"
+                         "6. Remind agents to push artifacts to git — never reference local paths or /tmp."))]
+        (is (re-find #"n=3 orchestration control" prompt))
+        (is (re-find #"mfuton/data/frontiermath-local/FM-001/artifacts/T3-search/2026-03-26-generated-witness/scripts/fm001/generate_witness.py" prompt))
+        (is (re-find #"2026-03-26-n3-search.md" prompt))
+        (is (re-find #"2026-03-26-n3-search-iterations.md" prompt))
+        (is (re-find #"Do not propose or execute n=11" prompt))))))
+
 (deftest handle-claim-prompt-accepts-math-lane-claims
   (testing "tickle honors the existing #math claim text only on the math-irc lane"
     (let [conductor-state (atom {})

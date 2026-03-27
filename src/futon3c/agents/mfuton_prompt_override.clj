@@ -22,6 +22,16 @@
 (def ^:private local-t3-iterations-path
   "mfuton/data/frontiermath-local/FM-001/artifacts/T3-search/2026-03-26-n3-search-iterations.md")
 
+(def ^:private local-frontiermath-scope-guard
+  (str "Local FrontierMath contract (mfuton mode only):\n"
+       "- For this local slice, FM-001 is narrowed to the n=3 orchestration control already staged in mfuton.\n"
+       "- Do not propose or execute n=11, n=6 SAT/harness, or any broader FM-001 lane unless the operator explicitly widens scope.\n"
+       "- Do not use futon6 harness paths, ~/code/futon6/..., or relative data/frontiermath-local/... paths.\n"
+       "- Use only these mfuton artifact paths for the current local control slice:\n"
+       "  - " local-t3-helper-path "\n"
+       "  - " local-t3-note-path "\n"
+       "  - " local-t3-iterations-path))
+
 (def ^:private generic-git-tail
   ". Git is truth; run the commit algorithm for gh when done. Signal @tickle BELL SPEC_VERIFIED when done.")
 
@@ -145,12 +155,28 @@
        (str "Strategy doc: " (frontiermath-strategy-doc-ref)))
       (str/replace
        "6. Remind agents to push artifacts to git — never reference local paths or /tmp."
-       "6. Remind agents that Git is truth and they should run the commit algorithm for gh to publish artifacts — never reference local paths or /tmp.")))
+       "6. Remind agents that Git is truth and they should run the commit algorithm for gh to publish artifacts — never reference local paths or /tmp.")
+      (str "\n\n" local-frontiermath-scope-guard "\n")))
 
 (defn maybe-build-fm-context
   [original-prompt]
   (if (mfuton-mode/mfuton-mode?)
     (build-fm-context-override original-prompt)
+    original-prompt))
+
+(defn math-irc-invoke-prompt-override
+  [original-prompt]
+  (if (str/includes? original-prompt "User message:\n")
+    (str/replace original-prompt
+                 "User message:\n"
+                 (str local-frontiermath-scope-guard "\n\nUser message:\n"))
+    (str original-prompt "\n\n" local-frontiermath-scope-guard)))
+
+(defn maybe-math-irc-invoke-prompt
+  [{:keys [channel] :as _context} original-prompt]
+  (if (and (mfuton-mode/mfuton-mode?)
+           (= "#math" channel))
+    (math-irc-invoke-prompt-override original-prompt)
     original-prompt))
 
 (defn fm-dispatch-message-override

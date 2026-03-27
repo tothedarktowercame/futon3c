@@ -1,6 +1,7 @@
 (ns futon3c.dev-test
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is testing]]
+            [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.dev :as dev]))
 
 (deftest compatible-codex-ws-bridge-agent-detection
@@ -66,3 +67,28 @@
         (is (= "claude-1" (:agent-id @called)))
         (is (= "workspace-write" (:sandbox @called)))
         (is (= "untrusted" (:approval-policy @called)))))))
+
+(deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
+  (testing "mfuton mode injects the n=3-only local contract on #math"
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
+      (let [prompt (#'dev/irc-invoke-prompt
+                    {:nick "claude-2"
+                     :sender "bobprobe-live"
+                     :channel "#math"
+                     :user-text "what is the next FM-001 step?"})]
+        (is (re-find #"Local FrontierMath contract \(mfuton mode only\)" prompt))
+        (is (re-find #"n=3 orchestration control" prompt))
+        (is (re-find #"Do not propose or execute n=11, n=6 SAT/harness" prompt))
+        (is (re-find #"mfuton/data/frontiermath-local/FM-001/artifacts/T3-search/2026-03-26-generated-witness/scripts/fm001/generate_witness.py" prompt))
+        (is (re-find #"~/code/futon6" prompt))))))
+
+(deftest irc-invoke-prompt-default-mode-leaves-math-lane-unpinned
+  (testing "default futon mode leaves the generic IRC prompt unchanged"
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")]
+      (let [prompt (#'dev/irc-invoke-prompt
+                    {:nick "claude-2"
+                     :sender "bobprobe-live"
+                     :channel "#math"
+                     :user-text "what is the next FM-001 step?"})]
+        (is (not (re-find #"Local FrontierMath contract \(mfuton mode only\)" prompt)))
+        (is (not (re-find #"Do not propose or execute n=11, n=6 SAT/harness" prompt)))))))

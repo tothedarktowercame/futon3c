@@ -240,6 +240,16 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
 
 
 class NgircdBridgeSurfaceContractTest(unittest.TestCase):
+    def test_local_math_mentor_nick_keeps_brief_surface_contract(self):
+        bot = bridge.IRCBot("math-mentor", "claude-2", "#math", "localhost", 6667, "pw")
+        text = bot._surface_context("joe", "", brief=False, multi_message=False, channel="#math")
+        self.assertIn("Mode: brief", text)
+        self.assertNotIn("Mode: task", text)
+
+    def test_local_math_curator_nick_keeps_clean_irc_output(self):
+        bot = bridge.IRCBot("math-curator", "claude-1", "#math", "localhost", 6667, "pw")
+        self.assertTrue(bot._uses_clean_irc_output())
+
     def test_task_surface_context_uses_commit_algorithm_and_mfuton_gitlab_issue(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         text = bot._surface_context("joe", "", brief=False, multi_message=False, channel="#math")

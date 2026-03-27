@@ -523,14 +523,28 @@ class IRCBot:
         ]
         return any(re.search(pat, src) for pat in patterns)
 
+    def _uses_brief_style_surface(self):
+        """Return true when surface output should stay on brief-style IRC framing.
+
+        This keys off stable agent identity rather than visible local nicknames,
+        so local room aliases like math-curator/math-mentor can still inherit
+        the Claude-family behavior.
+        """
+        return (
+            self.agent_id.startswith("claude")
+            or self.agent_id.startswith("tickle")
+            or self.nick in ("corpus", "tickle")
+        )
+
     def _surface_context(self, sender, mission_part, brief, multi_message=False, channel=None):
         """Build the surface contract header for an IRC invoke."""
         ch = channel or self.channel
-        is_clean = self.nick.startswith("claude") or self.nick in ("corpus", "tickle")
+        is_clean = self._uses_brief_style_surface()
         if brief or is_clean:
-            # Clean agents (claude, corpus, tickle): always use brief-style
-            # surface contract. Their output is posted by the bridge — they
-            # must NOT post progress via /api/alpha/irc/send (causes duplicates).
+            # Clean brief-style agents (Claude-family, corpus, tickle): always
+            # use brief-style surface contract. Their output is posted by the
+            # bridge — they must NOT post progress via /api/alpha/irc/send
+            # (causes duplicates).
             extra = (" User explicitly requested multiple IRC posts. "
                      "If needed, return one short line per intended message."
                      if multi_message else "")
@@ -1454,7 +1468,7 @@ class IRCBot:
     def _uses_clean_irc_output(self):
         """Return true when this bot should avoid queue/done framing on IRC."""
         return (
-            self.nick.startswith("claude")
+            self._uses_brief_style_surface()
             or self.nick == "corpus"
             or self.agent_id.startswith("codex")
         )

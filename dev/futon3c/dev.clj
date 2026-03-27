@@ -48,6 +48,7 @@
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
+            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
@@ -3527,27 +3528,31 @@ RESPOND WITH ONLY:
 (defn- irc-invoke-prompt
   "Wrap an IRC user message with explicit surface/delivery semantics."
   [{:keys [nick sender channel user-text]}]
-  (str "Runtime surface contract:\n"
-       "- Current surface: IRC.\n"
-       "- Channel: " channel "\n"
-       "- Sender: " sender "\n"
-       "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
-       "- Return natural chat text only; do not emit directive wrappers.\n"
-       "- Keep replies short: one line, <= 220 chars before refs.\n"
-       "- If user asks for separate IRC messages, return newline-separated one-line items (one intended post per line).\n"
-       "- If work happened, include refs to concrete artifacts (commit, PR/issue URL, or changed file path).\n"
-       "- For bounded fix/issue tasks, do not stop at reconnaissance-only updates like grep/map/inspect.\n"
-       "- Either finish one bounded unit of work with artifact refs, or explicitly say planning-only/blocked and cite blocker evidence.\n"
-       "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
-       "- Do not invent per-turn line caps or transport limits.\n"
-       "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
-       "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
-       "- Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n\n"
-       "- If you cannot cite an artifact, do not use future-commitment phrasing like \"I'll start now\".\n\n"
-       "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
-       "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
-       "User message:\n"
-       user-text))
+  (mfuton-prompt-override/maybe-math-irc-invoke-prompt
+   {:channel channel
+    :nick nick
+    :sender sender}
+   (str "Runtime surface contract:\n"
+        "- Current surface: IRC.\n"
+        "- Channel: " channel "\n"
+        "- Sender: " sender "\n"
+        "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
+        "- Return natural chat text only; do not emit directive wrappers.\n"
+        "- Keep replies short: one line, <= 220 chars before refs.\n"
+        "- If user asks for separate IRC messages, return newline-separated one-line items (one intended post per line).\n"
+        "- If work happened, include refs to concrete artifacts (commit, PR/issue URL, or changed file path).\n"
+        "- For bounded fix/issue tasks, do not stop at reconnaissance-only updates like grep/map/inspect.\n"
+        "- Either finish one bounded unit of work with artifact refs, or explicitly say planning-only/blocked and cite blocker evidence.\n"
+        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
+        "- Do not invent per-turn line caps or transport limits.\n"
+        "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
+        "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
+        "- Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n\n"
+        "- If you cannot cite an artifact, do not use future-commitment phrasing like \"I'll start now\".\n\n"
+        "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
+        "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
+        "User message:\n"
+        user-text)))
 
 (defn start-dispatch-relay!
   "Wire IRC messages to agent dispatch via invoke-agent!.
