@@ -116,7 +116,45 @@
                      :delivered? true
                      :note "whistle-response"})))
         (is (= 1 (count @calls)))
-        (is (= "workspace1" (get-in (first @calls) [:opts :emacs-socket])))))))
+        (is (= "workspace1" (get-in (first @calls) [:opts :emacs-socket])))
+        (is (.contains (get-in (first @calls) [:elisp]) "insert-file-contents"))
+        (is (not (.contains (get-in (first @calls) [:elisp]) " via whistle -> caller joe")))))))
+
+(deftest record-invoke-delivery-uses-irc-in-mfuton-mode
+  (testing "mfuton mode projects invoke delivery receipts to the primary IRC room instead of Emacs"
+    (let [irc-calls (atom [])
+          emacs-calls (atom [])]
+      (with-redefs [futon3c.mfuton-mode/mfuton-mode? (constantly true)
+                    futon3c.dev.config/env (fn [k & [default]]
+                                             (if (= k "IRC_CHANNEL")
+                                               "#futon"
+                                               default))
+                    futon3c.agency.registry/get-agent
+                    (fn [_agent-id] {:agent/metadata {:emacs-socket "workspace1"}})
+                    futon3c.blackboard/blackboard-eval!
+                    (fn [_elisp _opts]
+                      (swap! emacs-calls conj :called)
+                      {:ok true :output "\"replaced\""})
+                    futon3c.dev.irc/send-irc!
+                    (fn [channel from-nick message]
+                      (swap! irc-calls conj {:channel channel
+                                             :from-nick from-nick
+                                             :message message})
+                      true)]
+        (is (true? (futon3c.dev/record-invoke-delivery!
+                    "codex-1"
+                    "invoke-xyz"
+                    {:surface "whistle"
+                     :destination "caller joe"
+                     :delivered? true
+                     :note "whistle-response"})))
+        (is (empty? @emacs-calls))
+        (is (= 1 (count @irc-calls)))
+        (is (= "#futon" (get-in (first @irc-calls) [:channel])))
+        (is (= "codex" (get-in (first @irc-calls) [:from-nick])))
+        (is (.contains (get-in (first @irc-calls) [:message])
+                       "[invoke-delivery] codex-1 Delivery: delivered via whistle -> caller joe"))
+        (is (.contains (get-in (first @irc-calls) [:message]) "(trace-id invoke-xyz)"))))))
 
 (deftest tickle-system-prompt-prefers-corpus-names-over-futon6-paths
   (testing "Tickle prompt no longer seeds stale corpus context or absolute futon6 data paths into IRC-visible coordination"

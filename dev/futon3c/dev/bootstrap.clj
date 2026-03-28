@@ -282,7 +282,14 @@
           (println "[dev]   Agents registered locally will be announced to peers."))
       (println "[dev] Federation: no peers configured (set FUTON3C_PEERS, FUTON3C_SELF_URL)"))
     (println)
-    (println "[dev] Invoke: curl -X POST http://localhost:7070/api/alpha/invoke \\")
+    (when-let [port (config/env-int "FUTON3C_PORT" 7070)]
+      (when (pos? port)
+        (println
+         (str "[dev] Invoke: curl --max-time "
+              (config/direct-invoke-timeout-seconds)
+              " -X POST http://localhost:"
+              port
+              "/api/alpha/invoke \\"))))
     (println "[dev]   -H 'Content-Type: application/json' \\")
     (println "[dev]   -d '{\"agent-id\":\"claude-1\",\"prompt\":\"hello\"}'")
     (println "[dev]   -d '{\"agent-id\":\"codex-1\",\"prompt\":\"hello\"}'")

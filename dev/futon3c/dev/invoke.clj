@@ -6,6 +6,7 @@
    does not own runtime state."
   (:require [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
             [futon3c.dev.config :as config]
@@ -164,13 +165,35 @@
          (when artifact-path (str "\nArtifact: " artifact-path))
          "\n")))
 
+(defn write-invoke-delivery-artifact!
+  "Persist a delivery receipt line to a local artifact file and return the path."
+  [agent-id invoke-trace-id receipt-line]
+  (let [payload (str (or receipt-line ""))]
+    (when-not (str/blank? (str/trim payload))
+      (try
+        (let [root (io/file (or (some-> (config/env "FUTON3C_INVOKE_ARTIFACT_DIR") str/trim not-empty)
+                                "/tmp/futon-invoke-artifacts"))
+              _ (.mkdirs root)
+              agent-frag (sanitize-file-fragment agent-id "agent")
+              tid-frag (sanitize-file-fragment invoke-trace-id "trace")
+              file (io/file root (format "%s-delivery-%s-%d.txt"
+                                         agent-frag
+                                         tid-frag
+                                         (System/currentTimeMillis)))]
+          (spit file payload)
+          (.getAbsolutePath file))
+        (catch Exception e
+          (println (str "[dev] invoke delivery artifact write error: " (.getMessage e)))
+          nil)))))
+
 ;; ---------------------------------------------------------------------------
 ;; Delivery recording (Emacs blackboard)
 ;; ---------------------------------------------------------------------------
 
 (defn record-invoke-delivery!
   "Record where an invoke reply was actually delivered.
-   Appends/updates a delivery receipt line in *invoke: <agent>* trace buffer."
+   mfuton-specific projection is handled by the mfuton invoke seam.
+   Generic behavior appends/updates a delivery receipt line in *invoke: <agent>*."
   [agent-id invoke-trace-id receipt]
   (let [aid (some-> agent-id str str/trim)
         tid (some-> invoke-trace-id str str/trim)]
@@ -180,49 +203,63 @@
             bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))
             buf-name (str "*invoke: " aid "*")
             pending-line (str "Delivery: pending (trace-id " tid ")")
-            receipt-line (format-delivery-receipt-line tid receipt)
-            elisp (str "(let ((buf (get-buffer \"" (escape-elisp-string buf-name) "\")))"
-                       "(if (not buf) "
-                       "\"missing-buffer\" "
-                       "(with-current-buffer buf "
-                       "(let ((inhibit-read-only t)) "
-                       "(goto-char (point-min)) "
-                       "(if (search-forward \"" (escape-elisp-string pending-line) "\" nil t) "
-                       "(progn (replace-match \"" (escape-elisp-string receipt-line) "\" t t) \"replaced\") "
-                       "(progn "
-                       "(goto-char (point-max)) "
-                       "(unless (bolp) (insert \"\\n\")) "
-                       "(insert \"" (escape-elisp-string receipt-line) "\\n\") "
-                       "\"appended\"))))))")]
-        (loop [attempt 1]
-          (let [{:keys [ok output]} (bb/blackboard-eval! elisp bb-opts)
-                out (some-> output str str/trim)
-                status (cond
-                         (#{"\"replaced\"" "replaced"} out) :replaced
-                         (#{"\"appended\"" "appended"} out) :appended
-                         (#{"\"missing-buffer\"" "missing-buffer"} out) :missing-buffer
-                         :else :unknown)
-                success? (and ok (#{:replaced :appended} status))]
-            (cond
-              success?
-              true
+            receipt-line (format-delivery-receipt-line tid receipt)]
+        (if-some [handled? (mfuton-invoke-override/maybe-record-delivery!
+                            {:agent-id aid
+                             :invoke-trace-id tid
+                             :receipt-line receipt-line})]
+          handled?
+          (let [receipt-artifact-path (write-invoke-delivery-artifact! aid tid receipt-line)
+                elisp (str "(let ((buf (get-buffer \"" (escape-elisp-string buf-name) "\")))"
+                           "(if (not buf) "
+                           "\"missing-buffer\" "
+                           "(with-current-buffer buf "
+                           "(let ((inhibit-read-only t)) "
+                           "(goto-char (point-min)) "
+                           "(if (search-forward \"" (escape-elisp-string pending-line) "\" nil t) "
+                           (if receipt-artifact-path
+                             (str "(progn "
+                                  "(delete-region (match-beginning 0) (match-end 0)) "
+                                  "(insert-file-contents \"" (escape-elisp-string receipt-artifact-path) "\") "
+                                  "\"replaced\") ")
+                             (str "(progn (replace-match \"" (escape-elisp-string receipt-line) "\" t t) \"replaced\") "))
+                           "(progn "
+                           "(goto-char (point-max)) "
+                           "(unless (bolp) (insert \"\\n\")) "
+                           (if receipt-artifact-path
+                             (str "(insert-file-contents \"" (escape-elisp-string receipt-artifact-path) "\") "
+                                  "(insert \"\\n\") ")
+                             (str "(insert \"" (escape-elisp-string receipt-line) "\\n\") "))
+                           "\"appended\"))))))")]
+            (loop [attempt 1]
+              (let [{:keys [ok output]} (bb/blackboard-eval! elisp bb-opts)
+                    out (some-> output str str/trim)
+                    status (cond
+                             (#{"\"replaced\"" "replaced"} out) :replaced
+                             (#{"\"appended\"" "appended"} out) :appended
+                             (#{"\"missing-buffer\"" "missing-buffer"} out) :missing-buffer
+                             :else :unknown)
+                    success? (and ok (#{:replaced :appended} status))]
+                (cond
+                  success?
+                  true
 
-              ;; Buffer doesn't exist — expected for WS-bridged agents
-              ;; where invoke buffer lives on a different machine.
-              (= :missing-buffer status)
-              false
+                  ;; Buffer doesn't exist — expected for WS-bridged agents
+                  ;; where invoke buffer lives on a different machine.
+                  (= :missing-buffer status)
+                  false
 
-              (< attempt 3)
-              (do
-                (Thread/sleep (* 120 attempt))
-                (recur (inc attempt)))
+                  (< attempt 3)
+                  (do
+                    (Thread/sleep (* 120 attempt))
+                    (recur (inc attempt)))
 
-              :else
-              (do
-                (println (str "[invoke-delivery] failed for " aid
-                              " trace-id=" tid
-                              " status=" (name status)
-                              " ok=" ok
-                              " output=" out))
-                (flush)
-                false))))))))
+                  :else
+                  (do
+                    (println (str "[invoke-delivery] failed for " aid
+                                  " trace-id=" tid
+                                  " status=" (name status)
+                                  " ok=" ok
+                                  " output=" out))
+                    (flush)
+                    false))))))))))

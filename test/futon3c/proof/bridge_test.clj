@@ -20,6 +20,8 @@
 
 (use-fixtures :each reset-backends)
 
+(declare make-tmp-problem! cleanup-tmp-problem!)
+
 ;; =============================================================================
 ;; FM-001 exists on disk — test against real state
 ;; =============================================================================
@@ -58,6 +60,18 @@
   (testing "cycles list returns cycles (may be empty)"
     (let [result (pb/cycles "FM-001")]
       (is (:ok result) (str "Expected ok, got: " result)))))
+
+(deftest status-validate-uses-ledger-item-status
+  (let [pid (make-tmp-problem! "STATUS-VALIDATE-TEST")]
+    (try
+      (testing "bridge-facing status validation looks up the current ledger status"
+        (let [result (pb/status-validate pid "L-1" :proved :analytical)]
+          (is (:ok result) (str "Expected ok, got: " result))
+          (is (true? (get-in result [:result :valid?])))
+          (is (= :open (get-in result [:result :from])))
+          (is (= :proved (get-in result [:result :to])))))
+      (finally
+        (cleanup-tmp-problem! pid)))))
 
 (deftest nonexistent-problem-returns-error
   (testing "loading a nonexistent problem returns an error"

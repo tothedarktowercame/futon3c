@@ -26,6 +26,7 @@
      CLAUDE_BIN         — path to claude CLI binary (default: claude)
      CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)
      CODEX_BIN          — path to codex CLI binary (default: codex)
+     CODEX_PROFILE      — optional Codex config profile passed as `codex -p <profile>`
      CODEX_MODEL        — codex model (default: gpt-5-codex)
      CODEX_SANDBOX      — codex sandbox (default: danger-full-access)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
@@ -46,6 +47,8 @@
      FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
+            [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
+            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
@@ -77,6 +80,7 @@
            [java.util.concurrent CompletableFuture]))
 
 (declare make-claude-invoke-fn)
+(declare make-codex-invoke-fn)
 (declare record-invoke-delivery!)
 (declare make-bridge-irc-send-fn)
 
@@ -456,6 +460,7 @@
 (defonce !tickle (atom nil))
 (defonce !codex-ws-bridge (atom nil))
 (defonce !codex-status (atom {}))
+(defonce !invoke-controls (atom {}))
 
 (defn- direct-xtdb-enabled?
   "Whether futon3c may write evidence directly to XTDB.
@@ -775,18 +780,7 @@
 (defn- nick->agent-id
   "Map IRC nick to agent-id (codex → codex-1, claude → claude-1)."
   [nick]
-  (let [nick-str (some-> nick str)
-        nick-lower (some-> nick-str str/lower-case)
-        codex-nick (configured-codex-relay-nick)
-        codex-nick-lower (some-> codex-nick str/lower-case)]
-    (cond
-      (and codex-nick-lower nick-lower
-           (str/starts-with? nick-lower codex-nick-lower))
-      (configured-codex-agent-id)
-      (and nick-lower (str/starts-with? nick-lower "codex"))
-      (configured-codex-agent-id)
-      (and nick-lower (str/starts-with? nick-lower "claude")) "claude-1"
-      :else nil)))
+  (config/agent-id-for-irc-nick nick))
 
 (defn- next-queued-task
   "Find the next task that's ready for the same worker, by issue number order."
@@ -925,22 +919,24 @@ RESPOND WITH ONLY:
    Delegates to a claude invoke-fn for actual LLM execution."
   [claude-invoke-fn]
   (fn [prompt session-id]
-    (let [context (try (tickle-build-context)
-                       (catch Throwable e
-                         (str "(context unavailable: " (.getMessage e) ")")))
-          wrapped (str tickle-system-prompt
-                       "\n\n---\n\n"
-                       context
-                       "\n\n---\n\n"
-                       "SURFACE: IRC #futon. Your text output will be posted as <tickle>.\n"
-                       "CONSTRAINT: Do NOT use tools, create files, run commands, or take actions.\n"
-                       "You are a read-only observer. Respond with ONLY a short text message.\n\n"
-                       "User message from IRC:\n"
-                       (cond
-                         (string? prompt) prompt
-                         (map? prompt)    (or (:prompt prompt) (:text prompt) (str prompt))
-                         :else            (str prompt)))]
-      (claude-invoke-fn wrapped session-id))))
+    (or (dev-fm/handle-claim-prompt! prompt session-id)
+        (dev-fm/handle-bell-prompt! prompt session-id)
+        (let [context (try (tickle-build-context)
+                           (catch Throwable e
+                             (str "(context unavailable: " (.getMessage e) ")")))
+              wrapped (str tickle-system-prompt
+                           "\n\n---\n\n"
+                           context
+                           "\n\n---\n\n"
+                           "SURFACE: IRC #futon. Your text output will be posted as <tickle>.\n"
+                           "CONSTRAINT: Do NOT use tools, create files, run commands, or take actions.\n"
+                           "You are a read-only observer. Respond with ONLY a short text message.\n\n"
+                           "User message from IRC:\n"
+                           (cond
+                             (string? prompt) prompt
+                             (map? prompt)    (or (:prompt prompt) (:text prompt) (str prompt))
+                             :else            (str prompt)))]
+          (claude-invoke-fn wrapped session-id)))))
 
 (defonce !tickle-llm-invoke (atom nil))
 
@@ -1250,8 +1246,10 @@ RESPOND WITH ONLY:
              handle (tickle/start-watchdog! config)]
          (reset! !tickle handle)
          ;; Ensure tickle-1's invoke path matches the current watchdog config.
-         (let [tickle-invoke-fn (fn [prompt session-id]
-                                  (tickle/invoke! config prompt session-id))]
+        (let [tickle-invoke-fn (fn [prompt session-id]
+                                 (or (dev-fm/handle-claim-prompt! prompt session-id)
+                                     (dev-fm/handle-bell-prompt! prompt session-id)
+                                     (tickle/invoke! config prompt session-id)))]
            (if-not (reg/agent-registered? "tickle-1")
              (rt/register-tickle!
               {:agent-id "tickle-1"
@@ -2229,6 +2227,84 @@ RESPOND WITH ONLY:
                                 {:updated-at (str (Instant/now))})))))
       (project-codex-status!))))
 
+(defn- register-invoke-control!
+  [agent-id token control]
+  (let [aid (str agent-id)]
+    (swap! !invoke-controls assoc aid {:token token
+                                       :agent-id aid
+                                       :registered-at (str (Instant/now))
+                                       :control control}))
+  true)
+
+(defn- clear-invoke-control!
+  [agent-id token]
+  (let [aid (str agent-id)]
+    (swap! !invoke-controls
+           (fn [m]
+             (let [entry (get m aid)]
+               (if (= token (:token entry))
+                 (dissoc m aid)
+                 m)))))
+  true)
+
+(defn- destroy-process-tree!
+  [^Process proc]
+  (let [handle (.toHandle proc)
+        descendants (with-open [stream (.descendants handle)]
+                      (vec (iterator-seq (.iterator stream))))]
+    (doseq [^java.lang.ProcessHandle child (reverse descendants)]
+      (when (.isAlive child)
+        (try
+          (.destroyForcibly child)
+          (catch Throwable _))))
+    (when (.isAlive handle)
+      (try
+        (.destroyForcibly handle)
+        (catch Throwable _)))
+    {:root-pid (.pid proc)
+     :descendant-count (count descendants)}))
+
+(defn interrupt-agent-invoke!
+  "Best-effort local interrupt for an agent's current invoke subprocess tree.
+   Returns {:ok bool :agent-id str :action keyword ...}."
+  [agent-id]
+  (let [aid (str agent-id)
+        entry (get @!invoke-controls aid)
+        control (:control entry)]
+    (cond
+      (nil? entry)
+      {:ok false
+       :agent-id aid
+       :action :no-active-control
+       :message "no active local invoke control registered"}
+
+      (not (map? control))
+      {:ok false
+       :agent-id aid
+       :action :invalid-control
+       :message "invalid invoke control entry"}
+
+      :else
+      (let [interrupt! (:interrupt! control)
+            result (if (fn? interrupt!)
+                     (try
+                       (interrupt!)
+                       (catch Throwable t
+                         {:ok false
+                          :agent-id aid
+                          :action :interrupt-error
+                          :message (.getMessage t)}))
+                     {:ok false
+                      :agent-id aid
+                      :action :missing-interrupt
+                      :message "interrupt function missing"})]
+        (update-codex-status!
+         aid
+         {:lifecycle-status :interrupt-requested
+          :phase :interrupt-requested
+          :activity "interrupt requested"})
+        result))))
+
 (defn- bell-tickle-available!
   "Notify mechanical conductor that an agent is now available.
    DEPRECATED: Registry !on-idle now fires tickle-queue/enqueue! directly.
@@ -2421,12 +2497,34 @@ RESPOND WITH ONLY:
   [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
          timeout-ms 1800000}}]
-  (let [!lock (Object.)
-        buf-name (str "*invoke: " agent-id "*")
-        bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
-    (fn [prompt session-id]
-      (locking !lock
-        (let [prompt-str (cond
+  (if-let [codex-opts (mfuton-invoke-override/claude-role-codex-opts
+                       {:agent-id agent-id
+                        :session-file session-file
+                        :session-id-atom session-id-atom
+                        :profile (env "CODEX_PROFILE")
+                        :model (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_MODEL")
+                                   (env "CODEX_MODEL" "gpt-5-codex"))
+                        :sandbox (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_SANDBOX")
+                                     (env "CODEX_SANDBOX")
+                                     "workspace-write")
+                        :approval-policy (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_APPROVAL_POLICY")
+                                             (env "CODEX_APPROVAL_POLICY")
+                                             (env "CODEX_APPROVAL")
+                                             "untrusted")
+                        :reasoning-effort (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_REASONING_EFFORT")
+                                              (env "CODEX_REASONING_EFFORT"))
+                        :timeout-ms timeout-ms
+                        :cwd (configured-codex-cwd)})]
+    (do
+      (println (str "[invoke] " agent-id " claude-role path redirected to codex in mfuton mode"))
+      (flush)
+      (make-codex-invoke-fn codex-opts))
+    (let [!lock (Object.)
+          buf-name (str "*invoke: " agent-id "*")
+          bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
+      (fn [prompt session-id]
+        (locking !lock
+          (let [prompt-str (cond
                            (string? prompt) prompt
                            (map? prompt)    (or (:prompt prompt) (:text prompt)
                                                 (json/generate-string prompt))
@@ -2590,7 +2688,7 @@ RESPOND WITH ONLY:
                  :error (str "Exit " exit ": " (str/trim (or err "")))
                  :invoke-trace-id invoke-trace-id}))
             (finally
-              (stop-ticker!))))))))
+              (stop-ticker!)))))))))
 
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
@@ -2765,9 +2863,10 @@ RESPOND WITH ONLY:
    Wraps codex-cli/make-invoke-fn with evidence emission and blackboard updates.
 
    opts:
-     :codex-bin          — path to codex CLI (default \"codex\")
-     :model              — model name (default \"gpt-5-codex\")
-     :sandbox            — sandbox mode (default \"danger-full-access\")
+      :codex-bin          — path to codex CLI (default \"codex\")
+      :profile            — optional Codex config profile passed to codex
+      :model              — model name (default \"gpt-5-codex\")
+      :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
      :timeout-ms         — hard timeout for codex process (default 1800000)
@@ -2775,10 +2874,10 @@ RESPOND WITH ONLY:
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
      :session-id-atom    — atom holding current session ID (optional)"
-  [{:keys [codex-bin model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
-           session-file session-id-atom]
+  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
+            session-file session-id-atom]
     :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
-        approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
+         approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
         get-event-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)
@@ -2902,15 +3001,6 @@ RESPOND WITH ONLY:
                                                       200))
                                nil))
                            (publish-runtime! @!runtime-state))
-        inner-fn (codex-cli/make-invoke-fn {:codex-bin codex-bin
-                                             :model model
-                                             :sandbox sandbox
-                                             :approval-policy approval-policy
-                                             :reasoning-effort reasoning-effort
-                                             :timeout-ms timeout-ms
-                                             :cwd cwd
-                                             :on-event on-event
-                                             :on-runtime-event on-runtime-event})
         buf-name (str "*invoke: " agent-id "*")]
     (fn [prompt session-id]
       (let [prompt-str (cond
@@ -2921,7 +3011,9 @@ RESPOND WITH ONLY:
             prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
             invoke-trace-id (str "invoke-" (UUID/randomUUID))
             invoke-sid (preferred-session-id session-file session-id session-id-atom)
-            used-sid (or invoke-sid "new")]
+            used-sid (or invoke-sid "new")
+            control-token (str (UUID/randomUUID))
+            !interrupted? (atom false)]
         ;; Reset trace for this invocation
         (reset! !event-trace [])
         (reset! !invoke-start-ms (System/currentTimeMillis))
@@ -2968,7 +3060,40 @@ RESPOND WITH ONLY:
                                                  :runtime-state !runtime-state
                                                  :publish-runtime! publish-runtime!)
               result (try
-                       (let [initial (inner-fn prompt invoke-sid)]
+                       (let [call-codex (fn [next-prompt next-session-id]
+                                          ((codex-cli/make-invoke-fn
+                                            {:codex-bin codex-bin
+                                             :profile profile
+                                             :model model
+                                             :sandbox sandbox
+                                             :approval-policy approval-policy
+                                             :reasoning-effort reasoning-effort
+                                             :timeout-ms timeout-ms
+                                             :cwd cwd
+                                             :on-event on-event
+                                             :on-runtime-event on-runtime-event
+                                             :on-process-started
+                                             (fn [proc]
+                                               (register-invoke-control!
+                                                aid-val
+                                                control-token
+                                                {:interrupt!
+                                                 (fn []
+                                                   (reset! !interrupted? true)
+                                                   (let [details (destroy-process-tree! proc)]
+                                                     {:ok true
+                                                      :agent-id aid-val
+                                                      :action :interrupt-issued
+                                                      :message "interrupt issued"
+                                                      :interrupted? true
+                                                      :root-pid (:root-pid details)
+                                                      :descendant-count (:descendant-count details)}))}))
+                                             :on-process-exit
+                                             (fn [_proc _exit]
+                                               (clear-invoke-control! aid-val control-token))})
+                                           next-prompt
+                                           next-session-id))
+                             initial (call-codex prompt invoke-sid)]
                          (if (or (codex-work-claim-without-execution? initial)
                                  (codex-task-reply-without-execution? prompt-str initial)
                                  (codex-task-micro-update? prompt-str initial)
@@ -3010,7 +3135,7 @@ RESPOND WITH ONLY:
                                            micro-enforce? "retrying after micro-update"
                                            :else "retrying after format refusal")
                                :trace (vec @!event-trace)})
-                             (let [retry (inner-fn retry-prompt retry-sid)]
+                             (let [retry (call-codex retry-prompt retry-sid)]
                                 (if (or (codex-work-claim-without-execution? retry)
                                         (codex-task-reply-without-execution? prompt-str retry)
                                         (codex-task-micro-update? prompt-str retry)
@@ -3034,8 +3159,16 @@ RESPOND WITH ONLY:
                                  (update retry :execution #(assoc (or % {}) :enforced-retry? true)))))
                            initial))
                        (finally
+                         (clear-invoke-control! aid-val control-token)
                          (stop-ticker!)))
               final-sid (:session-id result)
+              result (if (and @!interrupted?
+                              (or (:error result) (not (:result result))))
+                       (-> result
+                           (assoc :error "invoke interrupted"
+                                  :interrupted? true)
+                           (update :execution #(assoc (or % {}) :interrupted? true)))
+                       result)
               execution (:execution result)
               tool-events (long (or (:tool-events execution) 0))
               command-events (long (or (:command-events execution) 0))
@@ -3395,27 +3528,31 @@ RESPOND WITH ONLY:
 (defn- irc-invoke-prompt
   "Wrap an IRC user message with explicit surface/delivery semantics."
   [{:keys [nick sender channel user-text]}]
-  (str "Runtime surface contract:\n"
-       "- Current surface: IRC.\n"
-       "- Channel: " channel "\n"
-       "- Sender: " sender "\n"
-       "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
-       "- Return natural chat text only; do not emit directive wrappers.\n"
-       "- Keep replies short: one line, <= 220 chars before refs.\n"
-       "- If user asks for separate IRC messages, return newline-separated one-line items (one intended post per line).\n"
-       "- If work happened, include refs to concrete artifacts (commit, PR/issue URL, or changed file path).\n"
-       "- For bounded fix/issue tasks, do not stop at reconnaissance-only updates like grep/map/inspect.\n"
-       "- Either finish one bounded unit of work with artifact refs, or explicitly say planning-only/blocked and cite blocker evidence.\n"
-       "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
-       "- Do not invent per-turn line caps or transport limits.\n"
-       "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
-       "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
-       "- Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n\n"
-       "- If you cannot cite an artifact, do not use future-commitment phrasing like \"I'll start now\".\n\n"
-       "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
-       "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
-       "User message:\n"
-       user-text))
+  (mfuton-prompt-override/maybe-math-irc-invoke-prompt
+   {:channel channel
+    :nick nick
+    :sender sender}
+   (str "Runtime surface contract:\n"
+        "- Current surface: IRC.\n"
+        "- Channel: " channel "\n"
+        "- Sender: " sender "\n"
+        "- Your returned text will be posted to IRC by the server as <" nick ">.\n"
+        "- Return natural chat text only; do not emit directive wrappers.\n"
+        "- Keep replies short: one line, <= 220 chars before refs.\n"
+        "- If user asks for separate IRC messages, return newline-separated one-line items (one intended post per line).\n"
+        "- If work happened, include refs to concrete artifacts (commit, PR/issue URL, or changed file path).\n"
+        "- For bounded fix/issue tasks, do not stop at reconnaissance-only updates like grep/map/inspect.\n"
+        "- Either finish one bounded unit of work with artifact refs, or explicitly say planning-only/blocked and cite blocker evidence.\n"
+        "- Do not claim to write relay files (/tmp/futon-irc-*.jsonl) or send network traffic unless this turn actually executed such a tool.\n\n"
+        "- Do not invent per-turn line caps or transport limits.\n"
+        "- Do not claim to be actively starting/running work unless this turn executed tools/commands.\n"
+        "- If no execution happened in this turn, explicitly say it is planning-only and not started yet.\n"
+        "- Any progress claim must include an artifact reference (commit SHA, PR URL, issue comment URL, or changed file path).\n\n"
+        "- If you cannot cite an artifact, do not use future-commitment phrasing like \"I'll start now\".\n\n"
+        "- Before claiming DNS/network/git connectivity failure, run a command that verifies it and quote the actual output.\n"
+        "- Do not recommend exporting `CODEX_SANDBOX`/`CODEX_APPROVAL` on IRC; this runtime already applies project defaults.\n\n"
+        "User message:\n"
+        user-text)))
 
 (defn start-dispatch-relay!
   "Wire IRC messages to agent dispatch via invoke-agent!.
@@ -3426,19 +3563,20 @@ RESPOND WITH ONLY:
    and chattering with each other.
 
    Returns {:agent-id str :nick str} or nil if IRC is not running."
-  [{:keys [relay-bridge irc-server agent-id nick invoke-timeout-ms invoke-hard-timeout-ms]
+  [{:keys [relay-bridge irc-server agent-id nick channel invoke-timeout-ms invoke-hard-timeout-ms]
     :or {agent-id "claude-1" nick "claude"
+         channel "#futon"
          invoke-timeout-ms 600000
          invoke-hard-timeout-ms 1800000}}]
   (when (and relay-bridge irc-server)
-    ((:join-agent! relay-bridge) agent-id nick "#futon"
+    ((:join-agent! relay-bridge) agent-id nick channel
      (fn [data]
        (let [parsed (try (json/parse-string data true) (catch Exception _ nil))]
          (when (and parsed (= "irc_message" (:type parsed)))
            (let [text (str (:text parsed))
                  sender (or (:from parsed) (:nick parsed))
-                 channel (or (:channel parsed) "#futon")]
-             (println (str "[irc] " channel " <" sender "> " text))
+                 reply-channel (or (:channel parsed) channel)]
+             (println (str "[irc] " reply-channel " <" sender "> " text))
              (flush)
              ;; Handle !ungate / !gate commands from any user
              (when-let [[_ cmd target] (re-matches #"(?i)^!(un)?gate\s+(\S+)\s*$" text)]
@@ -3447,12 +3585,12 @@ RESPOND WITH ONLY:
                    (do
                      (swap! !ungated-nicks conj target-nick)
                      (println (str "[irc] UNGATED: " target-nick " — receiving all messages"))
-                     ((:send-to-channel! irc-server) channel "system"
+                     ((:send-to-channel! irc-server) reply-channel "system"
                       (str target-nick " is now ungated — listening to all messages")))
                    (do
                      (swap! !ungated-nicks disj target-nick)
                      (println (str "[irc] GATED: " target-nick " — mention-only"))
-                     ((:send-to-channel! irc-server) channel "system"
+                     ((:send-to-channel! irc-server) reply-channel "system"
                       (str target-nick " is now gated — mention-only mode"))))
                  (flush)))
              (let [ungated? (contains? @!ungated-nicks (str/lower-case nick))
@@ -3476,7 +3614,7 @@ RESPOND WITH ONLY:
                            (try
                              (let [invoke-prompt (irc-invoke-prompt {:nick nick
                                                                      :sender sender
-                                                                     :channel channel
+                                                                     :channel reply-channel
                                                                      :user-text prompt})
                                    started-ms (System/currentTimeMillis)
                                    soft-timeout-ms (when (and invoke-timeout-ms (pos? (long invoke-timeout-ms)))
@@ -3498,26 +3636,26 @@ RESPOND WITH ONLY:
                                                                soft-timeout-ms
                                                                "ms] waiting for completion...")]
                                                   (println (str "[irc] " nick " invoke SOFT TIMEOUT: " msg))
-                                                  ((:send-to-channel! irc-server) channel nick msg)
+                                                  ((:send-to-channel! irc-server) reply-channel nick msg)
                                                   (flush)))
                                               (Thread/sleep 1000)
                                               (recur (or soft-notified?
                                                          (and soft-timeout-ms
                                                               (>= elapsed soft-timeout-ms)))))))
-                                   reply* (invoke-response->irc-reply resp)
-                                   invoke-trace-id (invoke-meta-trace-id (:invoke-meta resp))]
-                               (reset! !invoke-trace-id invoke-trace-id)
-                               ((:send-to-channel! irc-server) channel nick reply*)
-                               (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
-                                 (record-invoke-delivery!
-                                  agent-id invoke-trace-id
-                                  {:surface "irc"
-                                   :destination (str channel " as <" nick ">")
-                                   :delivered? true
-                                   :note "dispatch-relay"}))
-                               (println (str "[irc] " nick " → " channel " ("
-                                             (count reply*) " chars): "
-                                             (subs reply* 0 (min 120 (count reply*)))))
+                                  reply* (invoke-response->irc-reply resp)
+                                  invoke-trace-id (invoke-meta-trace-id (:invoke-meta resp))]
+                              (reset! !invoke-trace-id invoke-trace-id)
+                              ((:send-to-channel! irc-server) reply-channel nick reply*)
+                              (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
+                                (record-invoke-delivery!
+                                 agent-id invoke-trace-id
+                                 {:surface "irc"
+                                  :destination (str reply-channel " as <" nick ">")
+                                  :delivered? true
+                                  :note "dispatch-relay"}))
+                              (println (str "[irc] " nick " → " reply-channel " ("
+                                            (count reply*) " chars): "
+                                            (subs reply* 0 (min 120 (count reply*)))))
                                (flush)
                                ;; Bell-driven dispatch: registry mark-idle! fires
                                ;; !on-idle → tickle-queue/enqueue! → conductor dispatch.
@@ -3525,31 +3663,31 @@ RESPOND WITH ONLY:
                                )
                              (catch Exception e
                                (println (str "[irc] " nick " dispatch ERROR: " (.getMessage e)))
-                               (let [fallback-delivered?
-                                     (try
-                                       ((:send-to-channel! irc-server) channel nick
-                                        (str "[invoke dispatch error] " (.getMessage e)))
-                                       true
-                                       (catch Exception send-e
+                              (let [fallback-delivered?
+                                    (try
+                                      ((:send-to-channel! irc-server) reply-channel nick
+                                       (str "[invoke dispatch error] " (.getMessage e)))
+                                      true
+                                      (catch Exception send-e
                                          (println (str "[irc] " nick " dispatch ERROR while sending fallback: "
                                                        (.getMessage send-e)))
                                          false))]
-                                 (when-let [invoke-trace-id @!invoke-trace-id]
-                                   (record-invoke-delivery!
-                                    agent-id invoke-trace-id
-                                    {:surface "irc"
-                                     :destination (str channel " as <" nick ">")
-                                     :delivered? fallback-delivered?
-                                     :note (if fallback-delivered?
-                                             "dispatch-relay-error-fallback"
+                                (when-let [invoke-trace-id @!invoke-trace-id]
+                                  (record-invoke-delivery!
+                                   agent-id invoke-trace-id
+                                   {:surface "irc"
+                                    :destination (str reply-channel " as <" nick ">")
+                                    :delivered? fallback-delivered?
+                                    :note (if fallback-delivered?
+                                            "dispatch-relay-error-fallback"
                                              (str "dispatch-relay-error: " (.getMessage e)))})))
                                (flush)))))))
                   (do
                     (println (str "[irc] " nick ": not mentioned, skipping"))
                     (flush)))))))))
     )
-    ((:join-virtual-nick! irc-server) "#futon" nick)
-    (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → #futon (mention-gated)"))
+    ((:join-virtual-nick! irc-server) channel nick)
+    (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → " channel " (mention-gated)"))
     {:agent-id agent-id :nick nick}))
 
 (defn start-drawbridge!

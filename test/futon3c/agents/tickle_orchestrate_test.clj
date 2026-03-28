@@ -1,7 +1,11 @@
 (ns futon3c.agents.tickle-orchestrate-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.java.shell :as shell]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
+            [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.tickle-orchestrate :as orch]
+            [futon3c.dev.config :as config]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.store :as estore]))
 
@@ -177,6 +181,44 @@
         (let [entries (estore/query* store {})]
           (is (= 2 (count entries))))))))
 
+(deftest assign-issue-mfuton-mode-rewrites-github-issue-language
+  (testing "mfuton mode rewrites assignment prompt issue language to mfuton gitlab issue"
+    (let [invoked (atom nil)]
+      (register-mock-agent!
+       "codex-1"
+       (fn [prompt _session]
+         (reset! invoked prompt)
+         {:result "Implemented." :session-id "sess-mfuton-assign"}))
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
+        (let [result (orch/assign-issue!
+                      sample-issue
+                      {:repo-dir "/tmp/test-repo"
+                       :timeout-ms 5000
+                       :session-id "tko-test-mfuton-assign"})]
+          (is (true? (:ok result)))
+          (is (re-find #"mfuton gitlab issue #99" @invoked))
+          (is (not (re-find #"tracked work item #99" @invoked)))
+          (is (not (re-find #"GitHub issue #99" @invoked))))))))
+
+(deftest assign-issue-default-mode-preserves-github-issue-language
+  (testing "default mfuton mode preserves the original GitHub issue assignment prompt"
+    (let [invoked (atom nil)]
+      (register-mock-agent!
+       "codex-1"
+       (fn [prompt _session]
+         (reset! invoked prompt)
+         {:result "Implemented." :session-id "sess-futon-assign"}))
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")]
+        (let [result (orch/assign-issue!
+                      sample-issue
+                      {:repo-dir "/tmp/test-repo"
+                       :timeout-ms 5000
+                       :session-id "tko-test-futon-assign"})]
+          (is (true? (:ok result)))
+          (is (re-find #"GitHub issue #99" @invoked))
+          (is (not (re-find #"tracked work item #99" @invoked)))
+          (is (not (re-find #"mfuton gitlab issue #99" @invoked))))))))
+
 (deftest request-review-invokes-and-parses-verdict
   (testing "request-review! invokes claude-1 and parses APPROVE verdict"
     (let [store (make-evidence-store)]
@@ -218,6 +260,90 @@
                      :timeout-ms 5000
                      :session-id "tko-test-4"})]
         (is (= :request-changes (:verdict result)))))))
+
+(deftest request-review-mfuton-mode-rewrites-github-issue-language
+  (testing "mfuton mode rewrites review prompt issue language to mfuton gitlab issue"
+    (let [invoked (atom nil)]
+      (register-mock-agent!
+       "claude-1"
+       (fn [prompt _session]
+         (reset! invoked prompt)
+         {:result "APPROVE" :session-id "sess-mfuton-review"}))
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
+        (let [result (orch/request-review!
+                      sample-issue
+                      {:ok true :result "done"}
+                      {:repo-dir "/tmp/test-repo"
+                       :timeout-ms 5000
+                      :session-id "tko-test-mfuton-review"})]
+          (is (true? (:ok result)))
+          (is (= :approve (:verdict result)))
+          (is (re-find #"mfuton gitlab issue #99" @invoked))
+          (is (not (re-find #"tracked work item #99" @invoked)))
+          (is (not (re-find #"GitHub issue #99" @invoked))))))))
+
+;; =============================================================================
+;; mfuton issue/workflow adapter
+;; =============================================================================
+
+(deftest fetch-issue-mfuton-mode-preserves-gh-issue-shell
+  (testing "mfuton mode keeps the underlying issue fetch on gh while prompt seam changes happen elsewhere"
+    (let [invoked (atom nil)]
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")
+                    shell/sh
+                    (fn [& args]
+                      (reset! invoked args)
+                      {:exit 0
+                       :out "{\"number\":99,\"title\":\"Test issue: add a button\",\"body\":\"## Scope\\n\\nAdd a button to index.html.\",\"labels\":[{\"name\":\"codex\"},{\"name\":\"operator\"}]}"
+                       :err ""})]
+        (let [result (orch/fetch-issue! "/tmp/test-repo" 99)]
+          (is (true? (:ok result)))
+          (is (= ["gh" "issue" "view" "99" "--json" "number,title,body,labels" :dir "/tmp/test-repo"]
+                 @invoked))
+          (is (= {:number 99
+                  :title "Test issue: add a button"
+                  :body "## Scope\n\nAdd a button to index.html."
+                  :labels ["codex" "operator"]}
+                 (:issue result))))))))
+
+(deftest fetch-open-issues-mfuton-mode-preserves-gh-queue-read
+  (testing "mfuton mode keeps queue reads on gh issue list while prompt seam changes happen elsewhere"
+    (let [invoked (atom nil)]
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")
+                    shell/sh
+                    (fn [& args]
+                      (reset! invoked args)
+                      {:exit 0
+                       :out "[{\"number\":99,\"title\":\"Test issue: add a button\",\"body\":\"## Scope\\n\\nAdd a button to index.html.\",\"labels\":[{\"name\":\"codex\"},{\"name\":\"operator\"}]},{\"number\":100,\"title\":\"Test issue: fix the footer\",\"body\":\"\",\"labels\":[{\"name\":\"codex\"}]}]"
+                       :err ""})]
+        (let [result (orch/fetch-open-issues! "/tmp/test-repo" :label "codex" :limit 10)]
+          (is (true? (:ok result)))
+          (is (= ["gh" "issue" "list" "--label" "codex" "--state" "open" "--limit" "10" "--json" "number,title,body,labels" :dir "/tmp/test-repo"]
+                 @invoked))
+          (is (= [{:number 99
+                   :title "Test issue: add a button"
+                   :body "## Scope\n\nAdd a button to index.html."
+                   :labels ["codex" "operator"]}
+                  {:number 100
+                   :title "Test issue: fix the footer"
+                   :body ""
+                   :labels ["codex"]}]
+                 (:issues result))))))))
+
+(deftest comment-on-issue-mfuton-mode-preserves-gh-comment-path
+  (testing "mfuton mode keeps workflow note publication on gh issue comment for now"
+    (let [invoked (atom nil)]
+      (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")
+                    shell/sh
+                    (fn [& args]
+                      (reset! invoked args)
+                      {:exit 0
+                       :out ""
+                       :err ""})]
+        (let [result (orch/comment-on-issue! "/tmp/test-repo" 99 "workflow note")]
+          (is (true? (:ok result)))
+          (is (= ["gh" "issue" "comment" "99" "--body" "workflow note" :dir "/tmp/test-repo"]
+                 @invoked)))))))
 
 (deftest run-issue-workflow-happy-path
   (testing "run-issue-workflow! runs full pipeline and emits 6 evidence entries"
@@ -442,13 +568,43 @@
       (is (re-find #"F2-literature" ctx))
       (is (re-find #"Working on F1" ctx))
       (is (re-find #"FALSIFY" ctx))
-      (is (re-find #"FM-001-strategy" ctx)))))
+      (is (re-find #"FM-001-strategy" ctx))
+      (is (re-find #"FM-001-ramsey-book-graphs-state" ctx)))))
+
+(deftest build-fm-context-uses-mfuton-frontiermath-root-override
+  (testing "build-fm-context routes FrontierMath doc refs through the mfuton prompt seam"
+    (with-redefs [mfuton-mode/mfuton-mode? (constantly true)
+                  config/env (fn [k & [default]]
+                               (case k
+                                 "FUTON3C_FRONTIERMATH_ROOT"
+                                 "I:/gh/mfuton/data/frontiermath-local/source/futon6-frontiermath-local-ops"
+                                 "MFUTON_HOME"
+                                 "I:/gh/mfuton"
+                                 default))]
+      (let [ctx (orch/build-fm-context "FM-001" "codex-1" [] [])]
+        (is (re-find #"mfuton/data/frontiermath-local/source/futon6-frontiermath-local-ops/data/frontiermath-pilot/FM-001-strategy.md" ctx))
+        (is (re-find #"mfuton/data/frontiermath-local/source/futon6-frontiermath-local-ops/data/first-proof/frontiermath-pilot/FM-001-ramsey-book-graphs-state.md" ctx))))))
 
 (deftest build-fm-context-handles-empty-state
   (testing "build-fm-context works with no tasks and no messages"
     (let [ctx (orch/build-fm-context "FM-001" "claude-1" [] [])]
       (is (re-find #"none.*blocked by dependencies" ctx))
       (is (re-find #"no messages captured" ctx)))))
+
+(deftest build-fm-context-mfuton-mode-rewrites-git-language
+  (testing "mfuton mode keeps the prompt but rewrites the git-publish instruction"
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
+      (let [ctx (orch/build-fm-context "FM-001" "codex-1" [] [])]
+        (is (re-find #"Git is truth" ctx))
+        (is (re-find #"run the commit algorithm for gh" ctx))
+        (is (not (re-find #"push artifacts to git" ctx)))))))
+
+(deftest build-fm-context-default-mode-preserves-original-git-language
+  (testing "default mfuton mode leaves the original futon prompt unchanged"
+    (with-redefs [mfuton-mode/mfuton-mode (constantly "futon")]
+      (let [ctx (orch/build-fm-context "FM-001" "codex-1" [] [])]
+        (is (re-find #"push artifacts to git" ctx))
+        (is (not (re-find #"run the commit algorithm for gh" ctx)))))))
 
 (deftest fm-conduct-cycle-pass
   (testing "fm-conduct-cycle! returns :pass when tickle-1 says PASS"

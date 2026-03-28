@@ -71,6 +71,7 @@
         sid-atom (atom initial-sid)
         invoke-fn (make-codex-invoke-fn
                    {:codex-bin (config/env "CODEX_BIN" "codex")
+                    :profile (config/env "CODEX_PROFILE")
                     :model (config/env "CODEX_MODEL" "gpt-5-codex")
                     :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
                     :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
@@ -145,6 +146,7 @@
                                   "codex-vscode")
         relay-claude? (config/env-bool "FUTON3C_RELAY_CLAUDE" (or register-claude? (= role :linode)))
         relay-codex? (config/env-bool "FUTON3C_RELAY_CODEX" (or register-codex? (= role :linode)))
+        relay-channel (if (config/env-bool "MATH_IRC" false) "#math" "#futon")
         codex-agent-id (config/configured-codex-agent-id)
         codex-relay-nick (config/configured-codex-relay-nick)
         relay-invoke-timeout-ms (or (config/env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 600000) 600000)
@@ -224,19 +226,21 @@
                                    (do
                                      (println (str "[dev][WARN] FUTON3C_REGISTER_VSCODE_CODEX=true but `"
                                                    codex-bin-name "` not found on PATH."))
-                                     (println "[dev][WARN] Skipping separate VS Code codex lane registration."))
+                                     (println "[dev][WARN] Skipping separate VS Code codex lane registration.")
+                                     false)
                                    register-vscode-codex?)]
       (when register-codex?
         (let [session-file (io/file (or (config/env "CODEX_SESSION_FILE")
                                         "/tmp/futon-codex-session-id"))
-              initial-sid (read-session-id session-file)
-              sid-atom (atom initial-sid)
-              invoke-fn (make-codex-invoke-fn
-                         {:codex-bin (config/env "CODEX_BIN" "codex")
-                          :model (config/env "CODEX_MODEL" "gpt-5-codex")
-                          :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
-                          :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
-                                               (config/env "CODEX_APPROVAL" "never"))
+               initial-sid (read-session-id session-file)
+               sid-atom (atom initial-sid)
+               invoke-fn (make-codex-invoke-fn
+                          {:codex-bin (config/env "CODEX_BIN" "codex")
+                           :profile (config/env "CODEX_PROFILE")
+                           :model (config/env "CODEX_MODEL" "gpt-5-codex")
+                           :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
+                           :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
+                                                (config/env "CODEX_APPROVAL" "never"))
                           :reasoning-effort (config/env "CODEX_REASONING_EFFORT")
                           :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
                           :cwd (config/configured-codex-cwd)
@@ -339,6 +343,7 @@
         :irc-server (:server irc-sys)
         :agent-id "claude-1"
         :nick "claude"
+        :channel relay-channel
         :invoke-timeout-ms relay-invoke-timeout-ms
         :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
     (when (and irc-sys relay-codex?)
@@ -347,6 +352,7 @@
         :irc-server (:server irc-sys)
         :agent-id codex-agent-id
         :nick codex-relay-nick
+        :channel relay-channel
         :invoke-timeout-ms relay-invoke-timeout-ms
         :invoke-hard-timeout-ms relay-invoke-hard-timeout-ms}))
     (println "[dev] Agent layer started.")))

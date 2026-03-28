@@ -374,13 +374,9 @@
                 {:ok true :result route})))))
       (proof-error :not-found (str "No proof state for " problem-id)))))
 
-(defn- tool-status-validate
-  "Validate a status transition (SR-5)."
-  [_cache _cwd args]
-  (let [from (first args)
-        to (second args)
-        evidence-type (nth args 2)
-        valid? (ps/valid-status-transition? from to evidence-type)]
+(defn- status-validation-result
+  [from to evidence-type]
+  (let [valid? (ps/valid-status-transition? from to evidence-type)]
     {:ok true :result {:valid? valid?
                        :from from
                        :to to
@@ -400,6 +396,42 @@
                                    (str "Invalid target status: " to)
 
                                    :else "Unknown validation failure"))}}))
+
+(defn- tool-status-validate
+  "Validate a status transition (SR-5).
+
+   Supports both the legacy direct-tool shape:
+     [from-status to-status evidence-type]
+
+   And the bridge-facing shape:
+     [problem-id item-id to-status evidence-type]"
+  [cache cwd args]
+  (case (count args)
+    3
+    (let [from (first args)
+          to (second args)
+          evidence-type (nth args 2)]
+      (status-validation-result from to evidence-type))
+
+    4
+    (let [problem-id (first args)
+          item-id (second args)
+          to (nth args 2)
+          evidence-type (nth args 3)]
+      (if-let [state (get-state cache cwd problem-id)]
+        (if-let [item (get-in state [:proof/ledger item-id])]
+          (status-validation-result (:item/status item)
+                                    to
+                                    (or evidence-type (:item/evidence-type item)))
+          (proof-error :item-not-found
+                       (str "Ledger item " item-id " not found in " problem-id)))
+        (proof-error :not-found (str "No proof state for " problem-id))))
+
+    (proof-error :invalid-args
+                 (str "status-validate expects either 3 args "
+                      "[from to evidence-type] or 4 args "
+                      "[problem-id item-id to evidence-type], got "
+                      (count args)))))
 
 (defn- cycle->gate-receipt
   "Convert proof cycle state into a DispatchReceipt-like map for the bridge."
