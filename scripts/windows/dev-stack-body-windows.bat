@@ -4,6 +4,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "STOP_DEV_STACK=%SCRIPT_DIR%\stop-dev-stack-windows.bat"
+set "DEV_CORE_SUPERVISOR=%SCRIPT_DIR%\dev-stack-core-supervisor.ps1"
 
 echo [dev-stack-windows] Preparing clean runtime start...
 call "%STOP_DEV_STACK%"
@@ -25,8 +26,20 @@ if not defined BRIDGE_LOG_IRC_PORT set "BRIDGE_LOG_IRC_PORT=6667"
 set "BRIDGE_LOG_IRC_CHANNEL=%IRC_CHANNEL%"
 if not defined BRIDGE_LOG_IRC_CHANNEL set "BRIDGE_LOG_IRC_CHANNEL=#futon"
 
+set "DEV_STACK_RUNTIME_DIR=%XDG_RUNTIME_DIR%"
+if not defined DEV_STACK_RUNTIME_DIR set "DEV_STACK_RUNTIME_DIR=%TEMP%"
+if not defined DEV_STACK_RUNTIME_DIR set "DEV_STACK_RUNTIME_DIR=%TMP%"
+if not defined DEV_STACK_RUNTIME_DIR set "DEV_STACK_RUNTIME_DIR=%SCRIPT_DIR%\..\..\.state\runtime"
+if not exist "%DEV_STACK_RUNTIME_DIR%" mkdir "%DEV_STACK_RUNTIME_DIR%" >nul 2>nul
+if errorlevel 1 (
+  1>&2 echo [dev-stack-windows] ERROR: unable to create runtime dir %DEV_STACK_RUNTIME_DIR%.
+  exit /b 1
+)
+set "DEV_CORE_PID_FILE=%DEV_STACK_RUNTIME_DIR%\futon3c-dev-core-supervisor.json"
+if exist "%DEV_CORE_PID_FILE%" del /f /q "%DEV_CORE_PID_FILE%" >nul 2>nul
+
 echo [dev-stack-windows] Starting futon runtime lane...
-start "futon-dev-core" /b cmd.exe /c call "%SCRIPT_DIR%\dev-windows.bat"
+start "futon-dev-core" /b powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%DEV_CORE_SUPERVISOR%" -ChildScript "%SCRIPT_DIR%\dev-windows.bat" -PidFile "%DEV_CORE_PID_FILE%"
 
 call :wait_for_port %FUTON3C_PORT% 120 futon3c-http
 if errorlevel 1 exit /b 1
@@ -54,6 +67,10 @@ set /a WAIT_SECS=0
 call :port_accepts_local !WAIT_PORT!
 if not errorlevel 1 (
   endlocal & exit /b 0
+)
+if defined DEV_CORE_PID_FILE if not exist "!DEV_CORE_PID_FILE!" (
+  1>&2 echo [dev-stack-windows] ERROR: futon runtime lane exited before !WAIT_NAME! became available on port !WAIT_PORT!.
+  endlocal & exit /b 1
 )
 if !WAIT_SECS! GEQ !WAIT_TIMEOUT! (
   1>&2 echo [dev-stack-windows] ERROR: timed out waiting for !WAIT_NAME! on port !WAIT_PORT!.

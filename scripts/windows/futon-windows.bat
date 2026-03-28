@@ -41,12 +41,12 @@ if /i "%TARGET%"=="kill-futon1a" (
 )
 
 if /i "%TARGET%"=="dev" (
-  call :run_windows_script "%SCRIPT_DIR%\dev-stack-windows.bat"!TARGET_ARGS!
+  call :run_windows_script "%SCRIPT_DIR%\dev-stack-windows.bat" dev!TARGET_ARGS!
   exit /b %ERRORLEVEL%
 )
 
 if /i "%TARGET%"=="dev-arxana" (
-  call :run_windows_script "%SCRIPT_DIR%\dev-stack-arxana-windows.bat"!TARGET_ARGS!
+  call :run_windows_script "%SCRIPT_DIR%\dev-stack-arxana-windows.bat" dev!TARGET_ARGS!
   exit /b %ERRORLEVEL%
 )
 

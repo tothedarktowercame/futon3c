@@ -42,7 +42,7 @@
        :at (str (Instant/now))})))
 
 (defn- irc-connect!
-  "Open a persistent connection to ngircd. JOINs #math and stays connected.
+  "Open a persistent connection to ngircd. JOINs the configured FrontierMath room and stays connected.
    Background thread handles PINGs and captures PRIVMSG lines to !irc-log."
   [nick]
   (let [nick (str/replace (str nick) #"[^a-zA-Z0-9_-]" "")
@@ -53,7 +53,7 @@
     (.println out (str "NICK " nick))
     (.println out (str "USER " nick " 0 * :" nick))
     (Thread/sleep 500)
-    (.println out "JOIN #math")
+    (.println out (str "JOIN " (config/frontiermath-room)))
     (Thread/sleep 300)
     ;; Background thread: respond to PINGs + capture PRIVMSG to ring buffer
     (let [running (atom true)

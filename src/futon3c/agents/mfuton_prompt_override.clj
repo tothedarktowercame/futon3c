@@ -175,7 +175,7 @@
 (defn maybe-math-irc-invoke-prompt
   [{:keys [channel] :as _context} original-prompt]
   (if (and (mfuton-mode/mfuton-mode?)
-           (= "#math" channel))
+           (= (config/frontiermath-room) channel))
     (math-irc-invoke-prompt-override original-prompt)
     original-prompt))
 
