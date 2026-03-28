@@ -190,8 +190,9 @@ IRC_HOST = os.environ.get("IRC_HOST", "127.0.0.1")
 IRC_PORT = int_env("IRC_PORT", 6667, minimum=1)
 IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
 # IRC_CHANNEL is the primary channel; IRC_CHANNELS adds extras (comma-separated).
-# E.g. IRC_CHANNEL=#futon IRC_CHANNELS=#math,#ops → bot joins all three.
+# E.g. IRC_CHANNEL=#futon IRC_CHANNELS=<frontiermath-room>,#ops → bot joins all three.
 IRC_CHANNEL = os.environ.get("IRC_CHANNEL", "#futon")
+FRONTIERMATH_ROOM = (os.environ.get("FUTON3C_FRONTIERMATH_ROOM", "#math") or "#math").strip()
 IRC_CHANNELS = _dedupe_channels(
     [IRC_CHANNEL]
     + [
@@ -341,9 +342,6 @@ def _cleanup():
 atexit.register(_cleanup)
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # triggers atexit
 
-BRIDGE_FATAL_STOP = threading.Event()
-BRIDGE_FATAL_STOP_REASON = {"reason": None}
-
 
 def sd_notify(state):
     """Send sd_notify state if running under systemd."""
@@ -473,20 +471,6 @@ class IRCBot:
             "command_owner_agent_map": self.command_owner_agent_map,
             "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
-
-    def _request_orchestration_stop(self, reason):
-        """Fail closed for this bridge process after a fatal orchestration seam."""
-        text = (str(reason) or "fatal orchestration stop requested").strip()
-        BRIDGE_FATAL_STOP_REASON["reason"] = text
-        BRIDGE_FATAL_STOP.set()
-        log(self.nick, f"FATAL orchestration stop requested: {text}")
-        self.connected = False
-        if self.sock is not None:
-            try:
-                self.sock.close()
-            except Exception:
-                pass
-            self.sock = None
 
     def _bare_command_owner_agent_id(self, channel):
         """Return the configured bare ! owner for a room, if any."""
@@ -690,10 +674,6 @@ class IRCBot:
                     log(self.nick, f"{self.agent_id}: ready after interrupt; continuing {action_label}")
                     return {"ok": True, "status": status_before}
                 status_after = waited.get("status") or status_before
-                self._request_orchestration_stop(
-                    f"{self.agent_id} did not return ready within "
-                    f"{INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS}s after interrupt"
-                )
                 return {
                     "ok": False,
                     "error": (
@@ -1474,10 +1454,10 @@ class IRCBot:
         )
 
     def _is_frontiermath_room_control_message(self, text, channel=None):
-        """Reserve dedicated #math Bell/claim mention forms for the runtime seam."""
+        """Reserve dedicated FrontierMath-room Bell/claim mention forms for the runtime seam."""
         channel = channel or self.channel
         normalized_channel = (channel or "").strip().lower()
-        if normalized_channel != "#math":
+        if normalized_channel != FRONTIERMATH_ROOM.lower():
             return False
         normalized_text = (text or "").strip()
         if not normalized_text:
@@ -2117,13 +2097,9 @@ class IRCBot:
     def run(self):
         """Main loop: read IRC messages, handle PINGs, commands, mentions."""
         while True:
-            if BRIDGE_FATAL_STOP.is_set():
-                return
             try:
                 self.connect()
                 while True:
-                    if BRIDGE_FATAL_STOP.is_set():
-                        return
                     line = self._readline()
                     if line is None:
                         log(self.nick, "Connection closed by server")
@@ -2218,8 +2194,6 @@ class IRCBot:
                 except Exception:
                     pass
                 self.sock = None
-            if BRIDGE_FATAL_STOP.is_set():
-                return
 
             log(self.nick, f"Reconnecting in {RECONNECT_DELAY}s...")
             time.sleep(RECONNECT_DELAY)
@@ -2390,13 +2364,7 @@ def main():
         while True:
             _write_health(bots, started_at)
             sd_notify("WATCHDOG=1")
-            if BRIDGE_FATAL_STOP.wait(HEALTH_INTERVAL):
-                reason = BRIDGE_FATAL_STOP_REASON.get("reason") or "fatal orchestration stop requested"
-                print(
-                    f"Stopping ngircd bridge after fatal orchestration stop: {reason}",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
+            time.sleep(HEALTH_INTERVAL)
     except KeyboardInterrupt:
         print("\nShutting down bridge...")
         sys.exit(0)

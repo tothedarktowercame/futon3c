@@ -27,6 +27,7 @@
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.blackboard :as bb]
+            [futon3c.dev.config :as config]
             [futon3c.evidence.store :as estore]
             [clojure.string :as str])
   (:import [java.time Instant]))
@@ -82,15 +83,16 @@
   "Create initial mentor state from context.
    If a checkpoint exists in the evidence store, restore from it."
   [context handle]
-  (let [base {:session-id (:session-id context)
+  (let [channel (or (:channel context) (config/frontiermath-room))
+        base {:session-id (:session-id context)
               :author (common/resolve-author context)
               :handle handle
               :problem-id (:problem-id context)
-              :channel (or (:channel context) "#math")
+              :channel channel
               ;; The space-like map (core state)
               :cmap (mmap/empty-map handle
                                     (:problem-id context)
-                                    (or (:channel context) "#math"))
+                                    channel)
               ;; Injected functions (runtime, not persisted)
               :irc-read-fn nil
               :irc-send-fn nil
@@ -213,7 +215,7 @@
   (let [[trigger-id message] args
         trigger-kw (if (keyword? trigger-id) trigger-id (keyword trigger-id))
         send-fn (:irc-send-fn state)
-        channel (:channel state "#math")
+        channel (or (:channel state) (config/frontiermath-room))
         handle (:handle state)
         author (:author state "claude-2")]
     (cond

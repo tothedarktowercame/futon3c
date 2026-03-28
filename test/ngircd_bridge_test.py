@@ -49,10 +49,6 @@ class NgircdBridgeAnnounceTest(unittest.TestCase):
 
 
 class NgircdBridgeBusyInterruptTest(unittest.TestCase):
-    def tearDown(self):
-        bridge.BRIDGE_FATAL_STOP.clear()
-        bridge.BRIDGE_FATAL_STOP_REASON["reason"] = None
-
     def test_prepare_agent_for_new_invoke_interrupts_running_codex(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
@@ -147,7 +143,7 @@ class NgircdBridgeBusyInterruptTest(unittest.TestCase):
         self.assertEqual("codex-job-22", payload["job-id"])
         self.assertEqual("irc:joe", payload["caller"])
 
-    def test_busy_codex_interrupt_timeout_requests_fatal_stop(self):
+    def test_busy_codex_interrupt_timeout_returns_error_without_stopping_bridge(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
              mock.patch.object(bot, "_agent_status", return_value={
@@ -159,8 +155,7 @@ class NgircdBridgeBusyInterruptTest(unittest.TestCase):
              mock.patch.object(bot, "_wait_for_agent_ready_after_interrupt", return_value={
                  "ok": False,
                  "status": {"status": "invoking", "session_id": "sid-busy", "running_jobs": 1},
-             }), \
-             mock.patch.object(bot, "_request_orchestration_stop") as stop:
+             }):
             result = bot._invoke_agent(
                 "finish T3-general",
                 "joe",
@@ -170,7 +165,6 @@ class NgircdBridgeBusyInterruptTest(unittest.TestCase):
             )
         self.assertFalse(result["ok"])
         self.assertIn("invoke interrupt timeout", result["error"])
-        stop.assert_called_once()
 
 
 class NgircdBridgeCodexFormattingTest(unittest.TestCase):
