@@ -44,6 +44,8 @@ Internal lifecycle helper authority:
   - operator-facing full-stack entrypoint
 - `scripts/windows/stop-dev-stack-windows.bat`
   - canonical full-stack cleanup authority for Windows lane bring-up/teardown
+- `scripts/windows/dev-stack-core-supervisor.ps1`
+  - internal runtime-lane tracker for the `dev-core` process under `dev`
 - `scripts/windows/dev-stack-supervisor.ps1`
   - internal lifecycle wrapper that preserves cleanup on launcher exit and `Ctrl-C`
   - do not treat this as a separate operator target; invoke `dev` instead
@@ -123,7 +125,17 @@ Full-stack launch (`dev`) behavior:
   processes
 - defaults `CODEX_BRIDGE_SUMMARY_MODE=raw` unless already set so multiline
   codex replies survive the bridge on Windows by default
-- starts `dev-core` in the background with output streamed to the same console
+- starts `dev-core` through a tracked runtime-lane supervisor
+- writes runtime-lane trace artifacts under `XDG_RUNTIME_DIR`, `TEMP`, or `TMP`
+  (whichever is available first):
+  - `futon3c-dev-core-supervisor.json` while the runtime lane is alive
+  - `futon3c-dev-core-supervisor-exit.json` after the runtime lane exits
+  - `futon3c-dev-core.log` as the combined runtime log
+- waits for runtime ports while that tracked runtime lane is still alive
+- if the tracked runtime lane exits before the expected port becomes available,
+  `dev` now reports that as an early runtime-lane exit and prints the exit
+  receipt path plus the tail of the combined runtime log, instead of reducing
+  everything to a generic port-wait timeout
 - waits for runtime ports, then starts `ngircd-bridge`
 
 IRC lane switch for `dev`:

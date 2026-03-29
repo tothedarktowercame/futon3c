@@ -36,10 +36,16 @@ if errorlevel 1 (
   exit /b 1
 )
 set "DEV_CORE_PID_FILE=%DEV_STACK_RUNTIME_DIR%\futon3c-dev-core-supervisor.json"
+set "DEV_CORE_EXIT_FILE=%DEV_STACK_RUNTIME_DIR%\futon3c-dev-core-supervisor-exit.json"
+set "DEV_CORE_COMBINED_LOG=%DEV_STACK_RUNTIME_DIR%\futon3c-dev-core.log"
 if exist "%DEV_CORE_PID_FILE%" del /f /q "%DEV_CORE_PID_FILE%" >nul 2>nul
+if exist "%DEV_CORE_EXIT_FILE%" del /f /q "%DEV_CORE_EXIT_FILE%" >nul 2>nul
+if exist "%DEV_CORE_COMBINED_LOG%" del /f /q "%DEV_CORE_COMBINED_LOG%" >nul 2>nul
 
 echo [dev-stack-windows] Starting futon runtime lane...
-start "futon-dev-core" /b powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%DEV_CORE_SUPERVISOR%" -ChildScript "%SCRIPT_DIR%\dev-windows.bat" -PidFile "%DEV_CORE_PID_FILE%"
+start "futon-dev-core" /b powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%DEV_CORE_SUPERVISOR%" -ChildScript "%SCRIPT_DIR%\dev-windows.bat" -PidFile "%DEV_CORE_PID_FILE%" -ExitFile "%DEV_CORE_EXIT_FILE%" -CombinedLog "%DEV_CORE_COMBINED_LOG%"
+call :wait_for_runtime_marker 10
+if errorlevel 1 exit /b 1
 
 call :wait_for_port %FUTON3C_PORT% 120 futon3c-http
 if errorlevel 1 exit /b 1
@@ -69,17 +75,62 @@ if not errorlevel 1 (
   endlocal & exit /b 0
 )
 if defined DEV_CORE_PID_FILE if not exist "!DEV_CORE_PID_FILE!" (
-  1>&2 echo [dev-stack-windows] ERROR: futon runtime lane exited before !WAIT_NAME! became available on port !WAIT_PORT!.
-  endlocal & exit /b 1
+  endlocal & call :report_runtime_exit %~1 %~3 & exit /b 1
 )
 if !WAIT_SECS! GEQ !WAIT_TIMEOUT! (
-  1>&2 echo [dev-stack-windows] ERROR: timed out waiting for !WAIT_NAME! on port !WAIT_PORT!.
+  1>&2 echo [dev-stack-windows] ERROR: timed out waiting for !WAIT_NAME! on port !WAIT_PORT! while the futon runtime lane was still loading.
   endlocal & exit /b 1
 )
 if !WAIT_SECS! EQU 0 echo [dev-stack-windows] Waiting for !WAIT_NAME! on port !WAIT_PORT!...
 call :sleep_1s
 set /a WAIT_SECS+=1
 goto wait_for_port_loop
+
+:wait_for_runtime_marker
+setlocal EnableDelayedExpansion
+set "WAIT_MARKER_TIMEOUT=%~1"
+set /a WAIT_MARKER_SECS=0
+:wait_for_runtime_marker_loop
+if exist "!DEV_CORE_PID_FILE!" (
+  endlocal & exit /b 0
+)
+if exist "!DEV_CORE_EXIT_FILE!" (
+  endlocal & call :report_runtime_exit %FUTON3C_PORT% futon3c-http & exit /b 1
+)
+if !WAIT_MARKER_SECS! GEQ !WAIT_MARKER_TIMEOUT! (
+  1>&2 echo [dev-stack-windows] ERROR: futon runtime lane did not publish startup trace state under !DEV_STACK_RUNTIME_DIR!.
+  1>&2 echo [dev-stack-windows] Expected marker: !DEV_CORE_PID_FILE!
+  1>&2 echo [dev-stack-windows] Expected exit receipt: !DEV_CORE_EXIT_FILE!
+  endlocal & exit /b 1
+)
+call :sleep_1s
+set /a WAIT_MARKER_SECS+=1
+goto wait_for_runtime_marker_loop
+
+:report_runtime_exit
+setlocal EnableDelayedExpansion
+set "FAILED_WAIT_PORT=%~1"
+set "FAILED_WAIT_NAME=%~2"
+set "DEV_CORE_EXIT_CODE="
+if exist "!DEV_CORE_EXIT_FILE!" (
+  for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "$receipt = Get-Content -Raw '%DEV_CORE_EXIT_FILE%' | ConvertFrom-Json; [Console]::Out.WriteLine($receipt.exit_code)" 2^>nul`) do set "DEV_CORE_EXIT_CODE=%%I"
+)
+1>&2 echo [dev-stack-windows] ERROR: futon runtime lane exited before !FAILED_WAIT_NAME! became available on port !FAILED_WAIT_PORT!.
+if defined DEV_CORE_EXIT_CODE (
+  1>&2 echo [dev-stack-windows] Runtime lane exit code=!DEV_CORE_EXIT_CODE!
+)
+if exist "!DEV_CORE_EXIT_FILE!" (
+  1>&2 echo [dev-stack-windows] Runtime exit receipt=!DEV_CORE_EXIT_FILE!
+) else (
+  1>&2 echo [dev-stack-windows] Runtime exit receipt missing: !DEV_CORE_EXIT_FILE!
+)
+if exist "!DEV_CORE_COMBINED_LOG!" (
+  1>&2 echo [dev-stack-windows] Runtime combined log=!DEV_CORE_COMBINED_LOG!
+  powershell -NoProfile -Command "Get-Content -LiteralPath '%DEV_CORE_COMBINED_LOG%' -Tail 40 | ForEach-Object { [Console]::Error.WriteLine('[dev-stack-windows] runtime> {0}' -f $_) }"
+) else (
+  1>&2 echo [dev-stack-windows] Runtime combined log missing: !DEV_CORE_COMBINED_LOG!
+)
+endlocal & exit /b 1
 
 :port_accepts_local
 powershell -NoProfile -Command ^
