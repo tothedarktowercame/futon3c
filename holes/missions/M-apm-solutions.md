@@ -1345,6 +1345,118 @@ Gate F: **PASS** (batch runs, resumes, filters by subject, 0 failures,
 
 ---
 
+## Excursion T: Typesetting (unplanned, 2026-03-29)
+
+This excursion was not in the original mission plan. It emerged from
+the deferred items: the cheatsheet output had bare `_` and `^` outside
+math mode, raw `<,>` instead of `$\langle,\rangle$`, and no semantic
+colours. Joe pointed out that all of this was already solved for First
+Proof in futon6, and we should reuse it rather than reinvent.
+
+**MAP — What exists?**
+
+The First Proof typesetting pipeline is a three-stage system:
+
+1. **Normalizer** (`futon6/scripts/normalize-math-prose.py`, 1,300 lines):
+   - 60+ regex patterns converting prose math to `$...$`-wrapped LaTeX
+   - Protected regions: never rewrites code blocks, inline code, or
+     existing math (`split_inline_code`, `split_inline_math_dollar`)
+   - `_sub_outside_inline_dollar()`: ensures patterns fire only outside math
+   - Domain-specific: L-functions, Whittaker models, GL groups (number theory)
+   - `process_line()` is the top-level entry point
+
+2. **Lua filter** (`futon6/scripts/pandoc-mathify.lua`, 600+ lines):
+   - Markdown → LaTeX with semantic colour macros
+   - `normalize_expr()`, `normalize_infix_ops()`, `is_math_atom()`
+   - Integer literal marking via `\mNumber{}`
+
+3. **Style file** (`futon6/data/first-proof/latex/math-proofread-style.sty`, 456 lines):
+   - 17 semantic colour classes: Greek (Mulberry), operators (Purple),
+     bridge operators (SeaGreen), named operators (BurntOrange),
+     comparisons (British Racing Green), arrows (TealBlue),
+     delimiters (Magenta), numbers (Red), etc.
+   - `\mGreek{}`, `\mOperator{}`, `\mOpName{}`, `\mNumber{}` macros
+   - `\EnableMathProofColors` / `\DisableMathProofColors`
+   - Preserves originals via `\let\MP@orig@alpha\alpha` before redefining
+
+*Validation:*
+- `check-ratchet-fixedw-typesetting.py`: 549 assertions, 26 test snippets.
+  Ratchet property: once a test passes, it must never regress.
+- `check-latex-escaped-prose-math.py`: 7 leak patterns detecting bare math
+  outside `$...$` (escaped markers, bare Greek, variable lists, inequalities).
+- Invariant: **no `_` or `^` outside `$...$`**
+
+*Reusability:*
+
+| Component | Reusable | APM work needed |
+|-----------|----------|-----------------|
+| Protected regions | 100% | None |
+| Pattern registry architecture | 100% | None |
+| Ratchet validation framework | 95% | Extend test snippets |
+| Semantic colour `.sty` | 85% | Add domain colour classes |
+| Lua filter | 90% | Extend symbol tables |
+| Domain patterns (60+ regexes) | 5% | Add topology/algebra/analysis |
+| Test snippets | 0% | Build from APM canaries |
+
+**DERIVE — Design decisions**
+
+1. **Extend `normalize-math-prose.py`, don't fork.** IF the normalizer
+   is a shared dependency (futon6), HOWEVER it currently only handles
+   number theory notation, THEN we add APM-domain patterns to the same
+   file behind a domain flag or as additional pattern blocks, BECAUSE
+   maintaining one normalizer is better than two forks.
+
+2. **Add APM domain patterns for four subject areas:**
+   - **Topology**: `$\pi_1$`, `$\mathbb{R}P^n$`, `$S^n$`,
+     `$\langle\cdot,\cdot\rangle$`, homotopy/covering space terms
+   - **Algebra**: `$R[x]$`, `$K[x,y]$`, ideal notation `$(a,x)$`,
+     PID/UFD, Sylow, Galois
+   - **Analysis**: `$L^p$`, `$C_c$`, `$\|f\|_p$`, DCT, Fatou,
+     a.e. convergence, weak convergence
+   - **Functional analysis**: `$\langle Ax, y\rangle$`, Hilbert/Banach,
+     CGT, adjoint, bounded/unbounded operators
+
+3. **Use `math-proofread-style.sty` in cheatsheet preamble.** IF the
+   colour system already handles Greek, operators, comparisons, etc.,
+   HOWEVER it needs `\EnableMathProofColors` called in the document,
+   THEN `project-cheatsheet.py` includes the `.sty` and activates
+   colours, BECAUSE this gives us semantic colouring for free on all
+   math content.
+
+4. **Add ratchet test snippets from APM canaries.** Create test cases
+   from the four canary problems (the specific patterns that broke:
+   `<Ax,y>`, `pi_1`, `RP^2`, `||f||_2`, `R[x]`, `Hom(Z/2,Z)`).
+   Once these pass, they can never regress.
+
+5. **Enforce the invariant: no `_` or `^` outside `$...$`.** Use
+   `check-latex-escaped-prose-math.py` as a gate on cheatsheet output.
+   If any `\_` or `\^{}` appears in the rendered TeX, the cheatsheet
+   fails the ratchet and must be fixed.
+
+**ARGUE — Why is this right?**
+
+The First Proof pipeline was built to solve exactly this problem: mixed
+prose/math text that needs to become clean LaTeX. The architecture
+(protected regions, pattern registry, ratchet validation) is generic.
+Only the domain patterns are specific. Extending the existing system
+rather than forking it means:
+
+- Fixes to the architecture benefit both domains
+- The ratchet grows monotonically (more invariants = more safety)
+- The colour system is consistent across projects
+- Future domains (PDE theory, combinatorics) can extend further
+
+The key lesson from today's debugging: ad-hoc regex replacement creates
+nesting bugs (double `$...$`, escaped braces inside math). The
+normalizer's `_sub_outside_inline_dollar()` function exists precisely
+to prevent this. By using it, we inherit years of bug fixes.
+
+Plain-language: use the First Proof math typesetter for APM cheatsheets.
+Add topology/algebra/analysis patterns. Enforce "no bare math" via
+ratchet tests. Get semantic colours for free.
+
+**VERIFY — (pending: extend normalizer and rebuild canaries)**
+
 ## Resolved Questions (2026-03-29)
 
 1. **Problem sub-parts**: One session with a DAG. Sub-parts often depend
