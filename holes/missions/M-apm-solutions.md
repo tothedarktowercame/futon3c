@@ -1590,3 +1590,51 @@ research mathematics, but because running the discipline at scale
 teaches the discipline what its own strengths and failure modes are.
 That self-knowledge is the prerequisite for attempting harder problems
 with justified (not inflated) confidence.
+
+## Reproduction Baseline (2026-03-29)
+
+### Commits
+
+The following commits mark the reproduction baseline for the 490-problem
+pipeline run. Any comparison run (Codex baseline, altered prompts,
+no-discipline control) should start from these exact commits.
+
+| Repo | Commit | Description |
+|------|--------|-------------|
+| `apm-lean` | `18e89f9` | Four canaries: Lean proofs + tutoring report (zero sorry) |
+| `apm-lean` | `e265b0c` | Pipeline scripts: runner, manifest, retrospective driver |
+| `futon3c` | `87730a2` | M-apm-solutions: 15-minute Lean budget |
+| `futon3c` | `4d5c56c` | M-apm-solutions: Retrospective phase + post-canary assessment |
+
+### Pipeline entry point
+
+```
+cd ~/code/apm-lean/pipeline
+./run-pipeline.sh --batch 1    # smoke test (first 10 problems)
+./run-pipeline.sh              # full run (490 problems, ~49 retrospectives)
+```
+
+### Planned comparison runs
+
+1. **Futonic run** (this pipeline): Claude Code with phase discipline,
+   QP patterns, retrospectives every 10 problems, 15-minute Lean budget.
+   Outputs in `pipeline/{solutions,lean-proofs,evidence,retrospectives}/`.
+
+2. **Codex baseline**: Same 490 problems, generic prompt ("solve and
+   explain at a level a strong undergrad can follow"), no phase
+   discipline, no QP patterns, no retrospectives. Run on a clean Codex
+   system. Outputs in a separate directory for side-by-side comparison.
+
+3. **Raw Claude baseline** (optional): Same problems, same Claude model,
+   single prompt per problem with no futonic framing. Tests whether the
+   discipline or the model is doing the pedagogical work.
+
+### What the comparison measures
+
+- Do the futonic outputs have more structured pedagogy (dead ends,
+  "where you'd get stuck," tool explanations)?
+- Do the Lean formalisation rates differ (closed/partial/timed-out)?
+- Do the retrospectives produce actionable discipline improvements
+  that compound across batches?
+- Does the futonic run's Lean success rate *improve* over 490 problems
+  while the baseline's stays flat?
