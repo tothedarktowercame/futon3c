@@ -1487,3 +1487,84 @@ ratchet tests. Get semantic colours for free.
    Fine for learning if artifacts live on disk/XTDB — agents learn in a
    distributed way. However, parallelism is an *optimisation*, not a
    dependency for the mission. Build serial first, parallelise later.
+
+## Retrospective Phase (added 2026-03-29)
+
+### The phase
+
+Add a **Retrospective** phase to the proof peripheral cycle, triggered
+every 10 problems (approximately). This is not a per-problem phase; it
+is a batch-level debrief in the Lakatos + Wittgenstein style — a seminar
+on the seminar.
+
+The retrospective produces a structured debrief document addressing:
+
+1. **Pattern recurrence.** Which QP types dominated this batch? Which
+   dead ends repeated from previous batches? If the same dead end
+   appears twice, the pipeline should have learned to avoid it — flag
+   the failure to learn as a discipline gap.
+
+2. **Question-pattern evolution.** Did a new question type emerge that
+   isn't in the QP-1 through QP-8 palette? If so, name it and add it.
+   The palette should grow with the corpus, not stay frozen.
+
+3. **Pedagogical quality.** Did the pedagogical rotation produce
+   something genuinely useful for a reader, or was it formulaic? Sample
+   test: would this explanation help Joe (strong undergrad, naive about
+   graduate prerequisites) learn the technique, or is it just correct?
+
+4. **Phase difficulty prediction.** Are we getting better at predicting
+   which phase will be hard before we start? If C2-type problems
+   (massive API composition) are predictable from the problem statement,
+   the pipeline can allocate effort differently.
+
+5. **Mathlib boundary map.** Which Mathlib gaps blocked formalisation
+   in this batch? Is the boundary moving (new Mathlib releases covering
+   gaps) or stable? Which gaps are worth contributing upstream?
+
+6. **Discipline adaptation.** What should change about the proof
+   peripheral, the QP patterns, or the pedagogical rotation for the
+   next batch? The retrospective is the mechanism for the discipline
+   to improve itself.
+
+### Yield
+
+489 problems / 10 per batch = ~49 retrospectives. Each retrospective
+is a data point about the discipline's performance, not just the
+mathematics. The retrospectives are the meta-data that makes the
+489-problem run useful for First Proof II and FrontierMath preparation,
+not the proofs themselves.
+
+### Why this matters for First Proof II and FrontierMath
+
+Solving 489 prelim problems will not teach the pipeline to solve open
+research problems. The content does not transfer — prelim techniques
+are known; research techniques may need to be invented.
+
+What transfers is the *discipline*: the phases (Observe/Propose/
+Execute/Validate), the question patterns (QP-1 through QP-8), the
+failed-route ledger, and the confidence calibration. Running the
+discipline 489 times, with 49 retrospectives, produces evidence about:
+
+- **Reliability.** Does the discipline produce correct results at
+  scale, or does error rate increase with volume?
+- **Self-improvement.** Does the pipeline get better over 489 problems,
+  or does it plateau? The retrospectives are the mechanism for
+  self-improvement; without them, it's just repetition.
+- **Confidence calibration.** Prelim problems always have solutions.
+  Research problems may not. The retrospectives should track
+  *confidence accuracy*: when the pipeline says "this proof is
+  complete," how often is it actually complete? False confidence on
+  prelims is a warning sign for false confidence on research problems.
+- **Transfer readiness.** By problem 489, the pipeline should know
+  which of its components are domain-specific (prelim heuristics)
+  and which are domain-general (phase discipline, QP patterns, ledger).
+  The domain-general components are what transfer to FrontierMath.
+  The retrospectives make this distinction explicit.
+
+The honest answer: 489 prelim problems make the pipeline *more ready*
+for First Proof II, not because solving textbook problems teaches
+research mathematics, but because running the discipline at scale
+teaches the discipline what its own strengths and failure modes are.
+That self-knowledge is the prerequisite for attempting harder problems
+with justified (not inflated) confidence.
