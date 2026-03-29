@@ -16,6 +16,56 @@
   (testing "Unknown peripheral returns nil"
     (is (nil? (bb/render-blackboard :nonexistent {:some "state"})))))
 
+(deftest format-agent-status-distinguishes-registration-from-readiness
+  (testing "agent blackboard shows route/readiness rather than bare idle"
+    (let [result (bb/format-agent-status
+                  {:count 3
+                   :ws-connected []
+                   :agents {"codex-1" {:type :codex
+                                       :status :idle
+                                       :last-active "2026-03-29T13:33:33Z"
+                                       :invoke-route :local
+                                       :invoke-ready? true
+                                       :metadata {:ws-bridge? true}}
+                            "codex-vscode" {:type :codex
+                                            :status :idle
+                                            :last-active "2026-03-29T13:33:33Z"
+                                            :invoke-route :local
+                                            :invoke-ready? true
+                                            :metadata {:surface "VS Code"
+                                                       :lane "vscode"}}
+                            "slot-1" {:type :codex
+                                      :status :idle
+                                      :last-active "2026-03-29T13:33:33Z"
+                                      :invoke-route :none
+                                      :invoke-ready? false
+                                      :metadata {}}}})]
+      (is (str/includes? result "Agents (3 registered, 2 invocable: 2 local, 0 ws, 1 unreachable)"))
+      (is (str/includes? result "codex-1 [codex, local, ws-bridge] idle"))
+      (is (str/includes? result "— ready"))
+      (is (str/includes? result "codex-vscode [codex, local, VS Code, lane=vscode] idle"))
+      (is (str/includes? result "slot-1 [codex, unreachable] idle"))
+      (is (str/includes? result "— registered-only")))))
+
+(deftest format-process-status-shows-headless-codex-lanes
+  (testing "process blackboard renders agent-lane state distinctly"
+    (let [result (bb/format-process-status
+                  [{:process/id "codex-1"
+                    :process/type :agent-lane
+                    :process/layer :repl
+                    :process/started-at "2026-03-29T13:18:59Z"
+                    :process/last-active "2026-03-29T13:33:33Z"
+                    :process/state-fn (fn []
+                                        {:phase "completed"
+                                         :backing "headless resumable codex session"
+                                         :session-file "/tmp/futon-codex-session-id"
+                                         :turn-count 2
+                                         :last-result "153578"})}])]
+      (is (str/includes? result "codex-1 [agent-lane]"))
+      (is (str/includes? result "phase: completed"))
+      (is (str/includes? result "backing: headless resumable codex session"))
+      (is (str/includes? result "turn-count: 2")))))
+
 ;; -----------------------------------------------------------------------------
 ;; :mission adaptor
 ;; -----------------------------------------------------------------------------

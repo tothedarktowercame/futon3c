@@ -179,6 +179,67 @@
   [session-file incoming-session-id session-id-atom]
   (config/preferred-session-id session-file incoming-session-id session-id-atom))
 
+(defonce ^:private !codex-rollout-summary-cache
+  (atom {}))
+
+(defn- codex-sessions-root
+  []
+  (io/file (or (config/env "CODEX_SESSIONS_ROOT")
+               (str (System/getProperty "user.home") "/.codex/sessions"))))
+
+(defn- locate-codex-rollout-file
+  [session-id]
+  (when (and (string? session-id) (not (str/blank? session-id)))
+    (let [root (codex-sessions-root)
+          suffix (str session-id ".jsonl")]
+      (when (.exists ^java.io.File root)
+        (->> (file-seq root)
+             (filter #(.isFile ^java.io.File %))
+             (filter #(str/ends-with? (.getName ^java.io.File %) suffix))
+             (sort-by #(.lastModified ^java.io.File %))
+             last)))))
+
+(defn- count-codex-rollout-turns
+  [^java.io.File rollout-file]
+  (with-open [reader (io/reader rollout-file)]
+    (reduce
+     (fn [n line]
+       (if-let [entry (when (and (string? line) (not (str/blank? line)))
+                        (try
+                          (json/parse-string line true)
+                          (catch Exception _
+                            nil)))]
+         (let [payload (:payload entry)]
+           (if (and (= "response_item" (:type entry))
+                    (= "message" (:type payload))
+                    (= "user" (:role payload)))
+             (inc n)
+             n))
+         n))
+     0
+     (line-seq reader))))
+
+(defn- codex-rollout-summary
+  [session-id]
+  (when (and (string? session-id) (not (str/blank? session-id)))
+    (let [cached (get @!codex-rollout-summary-cache session-id)
+          cached-path (:path cached)
+          cached-file (when cached-path (io/file cached-path))]
+      (if (and cached
+               cached-file
+               (.exists ^java.io.File cached-file)
+               (= (:last-modified cached) (.lastModified ^java.io.File cached-file)))
+        cached
+        (when-let [rollout-file (or (when (and cached-file (.exists ^java.io.File cached-file))
+                                      cached-file)
+                                    (locate-codex-rollout-file session-id))]
+          (let [summary {:session-id session-id
+                         :path (.getPath ^java.io.File rollout-file)
+                         :last-modified (.lastModified ^java.io.File rollout-file)
+                         :turn-count (count-codex-rollout-turns rollout-file)}]
+            (swap! !codex-rollout-summary-cache assoc session-id summary)
+            summary))))))
+
 (defn- parse-json-body-safe
   [body]
   (when (and (string? body) (not (str/blank? body)))
@@ -186,6 +247,42 @@
       (json/parse-string body true)
       (catch Exception _
         nil))))
+
+(defn- exception-summary
+  [^Throwable t]
+  (let [root (loop [current t]
+               (if-let [cause (.getCause current)]
+                 (recur cause)
+                 current))
+        message (or (some-> (.getMessage t) str/trim not-empty)
+                    (some-> (.getMessage root) str/trim not-empty))
+        class-name (.getSimpleName (class root))]
+    (if message
+      (str class-name ": " message)
+      class-name)))
+
+(defn- note-repeated-failure!
+  [state* detail interval]
+  (let [state (swap! state*
+                     (fn [current]
+                       (if (= detail (:detail current))
+                         {:detail detail
+                          :count (inc (or (:count current) 0))}
+                         {:detail detail
+                          :count 1})))
+        count (:count state)]
+    {:count count
+     :first? (= 1 count)
+     :emit? (or (= 1 count)
+                (zero? (mod count (max 1 interval))))}))
+
+(defn- clear-repeated-failure!
+  [state* label]
+  (let [{:keys [count]} @state*]
+    (reset! state* nil)
+    (when (> (or count 0) 1)
+      (println (str label " recovered after " count " attempts"))
+      (flush))))
 
 (defn- compatible-codex-ws-bridge-agent?
   "True when GET /api/alpha/agents/:id returned a compatible existing codex
@@ -248,6 +345,7 @@
   (let [sid* (atom initial-sid)
         running? (atom true)
         ws* (atom nil)
+        registration-failure* (atom nil)
         client (HttpClient/newHttpClient)
         replication-interval-ms (long (max 1 (or replication-interval-ms 30000)))
         replication-enabled? (and evidence-replication? evidence-store)
@@ -288,22 +386,42 @@
                                         register-body
                                         (:status existing)
                                         (:body existing))]
+                                   (when ok?
+                                     (clear-repeated-failure! registration-failure*
+                                                              "[dev] codex ws bridge registration"))
                                    (when (and ok? (= :kept-existing action))
                                      (println (str "[dev] codex ws bridge reusing existing remote registration for "
                                                    agent-id))
                                      (flush))
                                    (when-not ok?
-                                     (println (str "[dev] codex ws bridge registration failed: " message))
-                                     (when-let [register-body (:register-body detail)]
-                                       (println (str "[dev] register response: " register-body)))
-                                     (when-let [existing-body (:existing-body detail)]
-                                       (println (str "[dev] existing agent response: " existing-body)))
-                                     (flush))
+                                     (let [{:keys [count emit? first?]}
+                                           (note-repeated-failure! registration-failure*
+                                                                   (str "failed: " message)
+                                                                   12)]
+                                       (when emit?
+                                         (println (str "[dev] codex ws bridge registration failed: "
+                                                       message
+                                                       (when-not first?
+                                                         (str " (repeated " count " times)"))))
+                                         (when first?
+                                           (when-let [register-body (:register-body detail)]
+                                             (println (str "[dev] register response: " register-body)))
+                                           (when-let [existing-body (:existing-body detail)]
+                                             (println (str "[dev] existing agent response: " existing-body))))
+                                         (flush))))
                                    ok?)
                                  (catch Exception e
-                                   (println (str "[dev] codex ws bridge registration exception: "
-                                                 (.getMessage e)))
-                                   (flush)
+                                   (let [summary (exception-summary e)
+                                         {:keys [count emit? first?]}
+                                         (note-repeated-failure! registration-failure*
+                                                                 (str "exception: " summary)
+                                                                 12)]
+                                     (when emit?
+                                       (println (str "[dev] codex ws bridge registration exception: "
+                                                     summary
+                                                     (when-not first?
+                                                       (str " (repeated " count " times)"))))
+                                       (flush)))
                                    false))))
         ws-url (fn []
                  (str (str/replace ws-base #"/$" "")
@@ -1632,21 +1750,38 @@ RESPOND WITH ONLY:
 (defn status
   "Quick runtime status for the REPL."
   []
-  {:agents (reg/registered-agents)
-   :tickle (when @!tickle {:running true :started-at (:started-at @!tickle)})
-   :mentor (when (seq @!mentor)
-             {:running true :handles (mentor-handles)})
-   :irc (when @!irc-sys {:port (:port @!irc-sys)})
-   :evidence-count (when @!evidence-store
-                     (count (futon3c.evidence.store/query* @!evidence-store {})))
-   :ct-queue (when @!evidence-store
-               (let [s (ct-queue/queue-status @!evidence-store)]
-                 {:completed (:completed s) :remaining (:remaining s)}))
-   :arse-queue (when (and @!evidence-store
-                         (.exists (io/file "/home/joe/code/futon6/data/arse-queue/entities.json")))
-                (let [s (arse-queue/queue-status @!evidence-store)]
-                  {:completed (:completed s) :remaining (:remaining s)
-                   :by-problem (:by-problem s)}))})
+  (let [registry-status (reg/registry-status)
+        route-counts (frequencies (map :invoke-route (vals (:agents registry-status))))
+        local-count (long (or (get route-counts :local) 0))
+        ws-count (long (or (get route-counts :ws) 0))
+        unreachable-count (long (or (get route-counts :none) 0))]
+    {:agent-ids (reg/registered-agents)
+     :agents (into {}
+                   (map (fn [[aid info]]
+                          [aid (select-keys info [:type :status :last-active
+                                                  :invoke-route :invoke-ready?
+                                                  :invoke-diagnostic :metadata])]))
+                   (:agents registry-status))
+     :agent-counts {:registered (long (or (:count registry-status) 0))
+                    :invocable (+ local-count ws-count)
+                    :local local-count
+                    :ws ws-count
+                    :unreachable unreachable-count
+                    :inbound-ws-connected (count (or (:ws-connected registry-status) []))}
+     :tickle (when @!tickle {:running true :started-at (:started-at @!tickle)})
+     :mentor (when (seq @!mentor)
+               {:running true :handles (mentor-handles)})
+     :irc (when @!irc-sys {:port (:port @!irc-sys)})
+     :evidence-count (when @!evidence-store
+                       (count (futon3c.evidence.store/query* @!evidence-store {})))
+     :ct-queue (when @!evidence-store
+                 (let [s (ct-queue/queue-status @!evidence-store)]
+                   {:completed (:completed s) :remaining (:remaining s)}))
+     :arse-queue (when (and @!evidence-store
+                           (.exists (io/file "/home/joe/code/futon6/data/arse-queue/entities.json")))
+                  (let [s (arse-queue/queue-status @!evidence-store)]
+                    {:completed (:completed s) :remaining (:remaining s)
+                     :by-problem (:by-problem s)}))}))
 
 ;; =============================================================================
 ;; ArSE work queue — Artificial Stack Exchange synthetic QA generation
@@ -2226,6 +2361,38 @@ RESPOND WITH ONLY:
                                 updates
                                 {:updated-at (str (Instant/now))})))))
       (project-codex-status!))))
+
+(defn codex-lane-runtime-state
+  "Return the current runtime state for a registered Codex lane.
+   Includes invoke telemetry plus whether an interrupt control is live."
+  [agent-id]
+  (let [aid (str agent-id)
+        status (get @!codex-status aid)
+        control (get @!invoke-controls aid)
+        base-state (cond-> (or status {:agent-id aid})
+      control
+      (assoc :interrupt-available? true
+             :invoke-control-registered-at (:registered-at control)))
+        session-id (or (:session-id base-state)
+                       (:session-id (:last-terminal base-state)))
+        rollout (codex-rollout-summary session-id)]
+    (cond-> (if rollout
+              (assoc base-state
+                     :turn-count (max (long (or (:turn-count base-state) 0))
+                                      (long (or (:turn-count rollout) 0)))
+                     :rollout-file (:path rollout))
+              base-state)
+      (and (nil? (:turn-count base-state)) rollout)
+      (assoc :turn-count (long (or (:turn-count rollout) 0))))))
+
+(defn clear-codex-lane-runtime-state!
+  "Drop cached invoke/runtime state for AGENT-ID."
+  [agent-id]
+  (let [aid (str agent-id)]
+    (swap! !codex-status dissoc aid)
+    (swap! !invoke-controls dissoc aid)
+    (project-codex-status!)
+    true))
 
 (defn- register-invoke-control!
   [agent-id token control]
@@ -3011,6 +3178,9 @@ RESPOND WITH ONLY:
             prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
             invoke-trace-id (str "invoke-" (UUID/randomUUID))
             invoke-sid (preferred-session-id session-file session-id session-id-atom)
+            persisted-turn-count (long (or (:turn-count (codex-rollout-summary invoke-sid)) 0))
+            prior-turn-count (max (long (or (get-in @!codex-status [aid-val :turn-count]) 0))
+                                  persisted-turn-count)
             used-sid (or invoke-sid "new")
             control-token (str (UUID/randomUUID))
             !interrupted? (atom false)]
@@ -3028,6 +3198,7 @@ RESPOND WITH ONLY:
          {:lifecycle-status :invoking
           :phase :starting
           :session-id used-sid
+          :turn-count (inc prior-turn-count)
           :prompt-preview prompt-preview
           :started-at (str (Instant/now))
           :finished-at nil
@@ -3741,7 +3912,9 @@ RESPOND WITH ONLY:
     :start-dispatch-relay! start-dispatch-relay!
     :read-session-id read-session-id
     :direct-xtdb-enabled? direct-xtdb-enabled?
-    :make-bridge-irc-send-fn make-bridge-irc-send-fn}))
+    :make-bridge-irc-send-fn make-bridge-irc-send-fn
+    :codex-lane-runtime-state codex-lane-runtime-state
+    :clear-codex-lane-runtime-state! clear-codex-lane-runtime-state!}))
 
 (defn restart-agents!
   "Restart WS transport + agents. IRC stays up."

@@ -18,6 +18,9 @@
 (require 'url)
 (require 'url-http)
 (require 'url-util)
+(load (expand-file-name "futon3c-blackboard.el"
+                        (file-name-directory (or load-file-name (buffer-file-name))))
+      nil t)
 
 ;;; Configuration
 
@@ -266,6 +269,81 @@ Interpreted as width on left/right and height on top/bottom."
           :agent-id (format "codex-%s" slug)
           :session-file (codex-repl--profile-session-file slug)
           :working-directory working-directory)))
+
+(defun codex-repl--json-object-entries (value)
+  "Return VALUE as an alist of (KEY . VAL) pairs when it looks JSON-like."
+  (cond
+   ((and (listp value) (consp (car value)))
+    value)
+   ((and (listp value) (keywordp (car value)))
+    (let ((items value)
+          entries)
+      (while items
+        (let ((key (pop items))
+              (val (pop items)))
+          (push (cons (substring (symbol-name key) 1) val) entries)))
+      (nreverse entries)))
+   (t nil)))
+
+(defun codex-repl--lane-buffer-name (agent-id)
+  "Return the dedicated Codex REPL buffer name for AGENT-ID."
+  (format "*codex-repl:%s*" agent-id))
+
+(defun codex-repl--lane-invoke-buffer-name (agent-id)
+  "Return the dedicated invoke trace buffer name for AGENT-ID."
+  (format "*invoke: codex-repl:%s*" agent-id))
+
+(defun codex-repl--default-session-file-for-agent (agent-id)
+  "Best-effort fallback session-file path for AGENT-ID."
+  (cond
+   ((string= agent-id (or codex-repl-agency-agent-id "codex-1"))
+    codex-repl-session-file)
+   ((string= agent-id "codex-vscode")
+    "/tmp/futon-vscode-codex-session-id")
+   (t codex-repl-session-file)))
+
+(defun codex-repl--fetch-codex-agent-ids ()
+  "Return sorted registered Codex agent IDs from the live Agency API."
+  (let* ((base (or (codex-repl--resolved-api-base)
+                   (string-remove-suffix "/" codex-repl-api-url)))
+         (url (format "%s/api/alpha/agents" base))
+         (response (codex-repl--request-json "GET" url nil))
+         (status (plist-get response :status))
+         (parsed (plist-get response :json))
+         (agents (codex-repl--json-object-entries (plist-get parsed :agents))))
+    (when (and (integerp status) (<= 200 status) (< status 300))
+      (sort
+       (cl-loop for (agent-id . agent) in agents
+                when (string= (format "%s" (plist-get agent :type)) "codex")
+                collect agent-id)
+       #'string<))))
+
+(defun codex-repl--fetch-lane-process-state (agent-id)
+  "Return live CYDER lane state plist for AGENT-ID, or nil."
+  (let* ((base (or (codex-repl--resolved-api-base)
+                   (string-remove-suffix "/" codex-repl-api-url)))
+         (url (format "%s/api/alpha/processes/%s"
+                      base
+                      (url-hexify-string agent-id)))
+         (response (codex-repl--request-json "GET" url nil))
+         (status (plist-get response :status))
+         (parsed (plist-get response :json))
+         (process (plist-get parsed :process)))
+    (when (and (= status 200)
+               (plist-get parsed :ok)
+               (listp process)
+               (string= (format "%s" (plist-get process :process/type))
+                        "agent-lane"))
+      (plist-get process :process/state))))
+
+(defun codex-repl--read-attach-agent-id ()
+  "Prompt for a registered Codex lane."
+  (let* ((agent-ids (codex-repl--fetch-codex-agent-ids))
+         (default (or (car agent-ids) (or codex-repl-agency-agent-id "codex-1"))))
+    (if agent-ids
+        (completing-read (format "Attach Codex lane (default %s): " default)
+                         agent-ids nil t nil nil default)
+      (read-string "Attach Codex lane: " default))))
 
 (defun codex-repl--progress-line (status &optional elapsed-seconds)
   "Render STATUS as a codex thinking progress line.
@@ -1982,6 +2060,7 @@ Returns (ok . old-session-id) on success, nil on failure."
     (define-key map (kbd "C-c C-c") #'codex-repl-interrupt)
     (define-key map (kbd "C-c C-k") #'codex-repl-clear)
     (define-key map (kbd "C-c C-n") #'codex-repl-new-session)
+    (define-key map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-window-display)
     (define-key map (kbd "C-c C-d") #'codex-repl-diagnose-routing)
     (define-key map (kbd "C-c C-v") #'codex-repl-show-invoke-trace)
     (define-key map (kbd "C-c C-l") #'codex-repl-clear-invoke-trace)
@@ -1989,7 +2068,7 @@ Returns (ok . old-session-id) on success, nil on failure."
 
 (define-derived-mode codex-repl-mode nil "Codex-REPL"
   "Chat with Codex via CLI.
-Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh session.
+Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh session, C-c C-a to toggle `*agents*' popup.
 \\{codex-repl-mode-map}"
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
@@ -2098,6 +2177,35 @@ Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh sess
      (plist-get defaults :agent-id)
      (plist-get defaults :session-file)
      (plist-get defaults :working-directory))))
+
+;;;###autoload
+(defun codex-repl-attach-agent (agent-id)
+  "Attach a Codex REPL buffer to the live headless lane AGENT-ID."
+  (interactive (list (codex-repl--read-attach-agent-id)))
+  (let* ((state (codex-repl--fetch-lane-process-state agent-id))
+         (session-file (or (plist-get state :session-file)
+                           (codex-repl--default-session-file-for-agent agent-id)))
+         (working-directory (or (plist-get state :working-directory)
+                                default-directory))
+         (buffer (codex-repl--open-instance (codex-repl--lane-buffer-name agent-id)
+                                            (codex-repl--lane-invoke-buffer-name agent-id)
+                                            codex-repl-api-url
+                                            agent-id
+                                            session-file
+                                            working-directory)))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (codex-repl--refresh-session-header (current-buffer))))
+    (message "codex-repl: attached %s (%s)"
+             agent-id
+             (or (plist-get state :backing) "headless lane"))
+    buffer))
+
+;;;###autoload
+(defun codex-repl-attach-codex-1 ()
+  "Attach to the default live Codex lane."
+  (interactive)
+  (codex-repl-attach-agent "codex-1"))
 
 ;;;###autoload
 (defun codex-repl ()

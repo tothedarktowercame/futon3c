@@ -29,7 +29,7 @@
 
    Process record:
    {:process/id        string
-    :process/type      :server | :bridge | :daemon | :peripheral | :state-machine
+    :process/type      :server | :bridge | :daemon | :peripheral | :state-machine | :agent-lane
     :process/layer     :repl | :infra
     :process/started-at Instant
     :process/last-active Instant
@@ -49,7 +49,7 @@
 
    Required keys:
      :id       - String identifier (unique)
-     :type     - :server, :bridge, :daemon, :peripheral, :state-machine
+     :type     - :server, :bridge, :daemon, :peripheral, :state-machine, :agent-lane
      :stop-fn  - Zero-arg function that stops the process
 
    Optional keys:

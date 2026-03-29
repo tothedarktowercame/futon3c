@@ -79,6 +79,15 @@ Convenience launchers:
 - `./scripts/dev-linode-env` — Linode profile + `make dev`
 - `./scripts/dev-laptop-env` — laptop profile + `make dev`
 
+For machine-local overrides on the laptop launcher, create a gitignored
+`scripts/dev-laptop-env.local`. It is sourced automatically after the shared
+defaults, so you can set personal env overrides without changing the repo-wide
+profile. Example:
+
+```bash
+export FUTON3C_REGISTER_VSCODE_CODEX=false
+```
+
 Examples:
 ```bash
 # Linode
@@ -92,8 +101,10 @@ FUTON3C_LINODE_URL=http://172.236.28.208:7070 \
 ./scripts/dev-laptop-env
 ```
 
-No agents are registered at startup. They come alive when you launch a
-Claude or Codex session, or register them via REPL.
+Agent registration is role-dependent at startup. On the laptop profile,
+`codex-1` is registered automatically, and additional local lanes may also be
+registered if their env toggles are enabled. These are headless invoke lanes in
+the futon3c JVM, not necessarily inbound WS-connected workers.
 
 Mission control is initialized at startup and stays hot in the same JVM.
 From Drawbridge eval:
