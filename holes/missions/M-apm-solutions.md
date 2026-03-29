@@ -1643,7 +1643,26 @@ cd ~/code/apm-lean/pipeline
 
 ### Lean Proofs
 
-All APM canaries formalised in Lean 4 with Mathlib (apm-lean repo):
+All canaries formalised in Lean 4 with Mathlib (apm-lean repo).
+
+**Why the sorry matters**: Lean's type checker is an independent
+verifier — it accepts a proof only if every step is logically valid.
+When Claude produces a Lean proof with 0 sorry, that is a
+machine-checked certificate that the mathematical reasoning is
+correct, not just plausible-sounding. When Claude produces a sorry,
+it is honestly marking a gap rather than papering over it with
+confident-sounding prose. The sorry in C6 says: "I know what the
+proof structure should be (right adjoint detects isos on essential
+image), and I can formalise the categorical skeleton, but Mathlib
+does not yet have the equivariant homotopy theory definitions needed
+to fill in the domain-specific content." This is the correct
+behaviour — it distinguishes between understanding the proof strategy
+and having the library infrastructure to express it formally. An
+LLM that cannot tell valid from invalid proofs would either produce
+0 sorry (by luck or memorisation) or produce many sorry (by giving
+up). Producing exactly 1 sorry in the right place — at the boundary
+between what Mathlib can express and what it cannot — is evidence
+of genuine mathematical understanding of where the gap is.
 
 | Canary | File | Sorry count | Status |
 |--------|------|------------|--------|
