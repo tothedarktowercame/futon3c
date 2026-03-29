@@ -152,6 +152,28 @@ Different canaries catch different failures:
    subsystem produces evidence entries. The canary CI verifies evidence
    is emitted, not just that code runs without errors.
 
+6. **Time budget for Lean formalisation: 15 minutes per problem.**
+   Lean verification is not a bonus round — it is part of the standard
+   pipeline for every problem. Budget: 15 minutes wall-clock per problem.
+   This is realistic exam simulation (prelims are timed) and prevents
+   C2-type API-composition problems from consuming unbounded time at
+   scale. Outcomes within budget:
+   - **Closed.** Proof compiles, zero sorry. Record in evidence store.
+   - **Partial.** Proof compiles with sorry on identified steps. Record
+     the sorry-boundary (which Mathlib API was missing or which
+     composition step timed out). This is the Mathlib boundary map data
+     that feeds the batch retrospective.
+   - **Timed out.** No compilable proof in 15 minutes. Record the
+     problem as C2-profile (high API-composition cost) and move on.
+     The retrospective aggregates timeout patterns across batches.
+
+   The 15-minute budget also classifies problems by difficulty profile:
+   C3-type (library lookup) should close in under 2 minutes;
+   C4-type (named theorem + plumbing) in under 10;
+   C2-type (massive composition) may time out. This classification is
+   itself useful data for planning First Proof II, where time budgets
+   will be tighter and the problems harder.
+
 ## Acceptance Gates
 
 ### Gate A: Problem Loader
