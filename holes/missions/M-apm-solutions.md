@@ -1,7 +1,7 @@
 # Mission: APM Solutions — Expository Prelim Tutor
 
-**Date:** 2026-03-28 (IDENTIFY), 2026-03-29 (open questions resolved, reordered to MAP)
-**Status:** MAP (building order established, canaries selected, open questions resolved)
+**Date:** 2026-03-28 (IDENTIFY), 2026-03-29 (MAP→INSTANTIATE, all gates pass)
+**Status:** INSTANTIATE (all 6 gates pass, bonus rounds in progress)
 **Cross-ref:** M-walkie-talkie (ArSE endpoints), M-distributed-frontiermath (frame receipts), M-peripheral-behavior (proof peripheral), M-three-column-stack (three-column architecture), CORNELI-thesis.pdf (PlanetMath/Planetary ontology)
 **Repos:** futon3c (proof peripheral, Tickle, ArSE), futon4 (Arxana rendering), futon6 (frames, PlanetMath, patterns)
 
@@ -1638,3 +1638,65 @@ cd ~/code/apm-lean/pipeline
   that compound across batches?
 - Does the futonic run's Lean success rate *improve* over 490 problems
   while the baseline's stays flat?
+
+## Bonus Rounds (2026-03-29)
+
+### Lean Proofs
+
+All APM canaries formalised in Lean 4 with Mathlib (apm-lean repo):
+
+| Canary | File | Sorry count | Status |
+|--------|------|------------|--------|
+| C1 t01A01 (topology) | C1Topology.lean | 0 | Complete |
+| C2 a96A03 (analysis) | C2Analysis.lean | 0 | Complete |
+| C3 b03J02 (algebra) | C3Algebra.lean | 0 | Complete |
+| C4 m96A04 (functional) | C4Functional.lean | 0 | Complete |
+| C5 ultraproduct (CT) | LTSUltraproduct.lean | 0 | Complete |
+| C6 Borel spectra (CT) | — | — | Not started |
+| C7 monadic integration (CT) | — | — | Not started |
+
+### Learn-to-Swim Pilot
+
+Parallel pilot validating question-asking patterns on arxiv CT proofs
+(per technote-learn-to-swim.md). Infrastructure mirrors APM pipeline:
+proof peripheral + ArSE + cheatsheet projection.
+
+Three CT canaries from 9,916 math.CT superpod results:
+
+| Canary | Paper | Theorem | Retrieval useful? |
+|--------|-------|---------|-------------------|
+| C5 | arxiv-1511.02467 | Ultraproduct quotient commutation | No — standard technique |
+| C6 | arxiv-1507.06867 | Borel spectra detection lemma | No — technique was known |
+| C7 | arxiv-1108.2913 | Banach space as M-algebra via Pettis integral | **Yes** — retrieved companion paper using identical construction |
+
+### FAISS Retrieval Fix
+
+The superpod's R-GCN graph embeddings (stage 9b) had collapsed: all
+pairwise cosine similarities ~1.0, making retrieval non-discriminating.
+
+Fix: switched to BGE dense embeddings (stage 2, 1024-dim). These
+discriminate well (mean=0.71, std=0.054, range [0.44, 0.92]).
+Zero additional compute required.
+
+**Finding**: BGE retrieval helps when the technique is non-obvious and
+domain-specific. For standard arguments (ultrafilters, Borel completions),
+it's noise. For specialised constructions (monadic integration), it's signal.
+
+### Typesetting Pipeline (Excursion T)
+
+Three-column landscape cheatsheet with ratchet validation:
+- Column 1: exposition (pure math)
+- Column 2: discipline warrants (first-sentence summaries + pattern tags)
+- Column 3: cross-references (ArSE questions + PlanetMath definitions)
+
+Ratchet invariants: no bare `_`, `^`, `<`, `>` outside `$...$`.
+futon6 normalizer extended with APM + CT domain patterns.
+`check-cheatsheet.py` gates the pipeline.
+
+### Deferred Items
+
+1. `M-x apm-browse` EDN response fix (Emacs store module)
+2. `.sty` semantic colours (fontspec compatibility)
+3. C2/C3 notes re-run with LaTeX math
+4. Stage 9b R-GCN training with harder negative sampling
+5. Scale to all 489 APM problems
