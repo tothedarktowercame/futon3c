@@ -61,6 +61,8 @@
             [futon3c.dev.config :as config]
             [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.irc :as dev-irc]
+            [futon3c.dev.apm :as dev-apm]
+            [futon3c.dev.apm-conductor :as dev-apm-conductor]
             [futon3c.dev.arse :as dev-arse]
             [futon3c.dev.fm :as dev-fm]
             [futon3c.dev.ct :as dev-ct]
@@ -1846,6 +1848,83 @@ RESPOND WITH ONLY:
            timeout-ms (conj :timeout-ms timeout-ms)
            (some? review?) (conj :review? review?)
            problem (conj :problem problem))))
+
+;; =============================================================================
+;; APM work queue
+;; =============================================================================
+
+(defn apm-progress!
+  "Show APM work queue progress: how many of 489 problems have been processed."
+  []
+  (dev-apm/apm-progress! @!evidence-store))
+
+(defn run-apm-entry!
+  "Process a single APM problem through the proof-peripheral inhabitation pipeline.
+   Dispatches to agent (default claude-1) with full problem + phase instructions.
+
+   Options:
+     :problem-id — specific problem to process (e.g. \"t01A01\")
+     :agent-id   — target agent (default \"claude-1\")
+     :timeout-ms — per-problem timeout (default 900000 = 15 min)
+
+   Usage:
+     (dev/run-apm-entry!)                             ; next unprocessed
+     (dev/run-apm-entry! :problem-id \"t01A01\")      ; specific problem"
+  [& {:keys [problem-id agent-id timeout-ms]
+      :or {agent-id "claude-1" timeout-ms 900000}}]
+  (apply dev-apm/run-apm-entry! @!evidence-store !irc-sys
+         (cond-> []
+           problem-id (conj :problem-id problem-id)
+           agent-id (conj :agent-id agent-id)
+           timeout-ms (conj :timeout-ms timeout-ms))))
+
+(defn run-apm-batch!
+  "Process N APM problems. Resumable — skips already-processed problems.
+
+   Options:
+     :n           — max problems to process (default 10)
+     :subject     — filter: :topology, :analysis, :algebra, :applied
+     :canary      — if true, run only the 4 canary problems
+     :cooldown-ms — pause between problems (default 5000 = 5s)
+     :agent-id    — target agent (default \"claude-1\")
+     :timeout-ms  — per-problem timeout (default 900000 = 15 min)
+
+   Usage:
+     (dev/run-apm-batch! :canary true)                ; 4 canaries
+     (dev/run-apm-batch! :n 10 :subject :topology)    ; first 10 topology
+     (dev/run-apm-batch! :n 20)                       ; first 20 of everything"
+  [& {:keys [n cooldown-ms agent-id timeout-ms subject canary]
+      :or {n 10 cooldown-ms 5000 agent-id "claude-1"
+           timeout-ms 900000}}]
+  (apply dev-apm/run-apm-batch! @!evidence-store !irc-sys
+         (cond-> []
+           n (conj :n n)
+           cooldown-ms (conj :cooldown-ms cooldown-ms)
+           agent-id (conj :agent-id agent-id)
+           timeout-ms (conj :timeout-ms timeout-ms)
+           subject (conj :subject subject)
+           canary (conj :canary canary))))
+
+;; =============================================================================
+;; APM conductor (event-driven, bell-driven)
+;; =============================================================================
+
+(defn start-apm-conductor!
+  "Start the event-driven APM conductor. Dispatches phase-by-phase to agent,
+   advances proof cycle on completion, moves to next problem automatically.
+
+   Usage:
+     (dev/start-apm-conductor!)              ; 40 problems to claude-1
+     (dev/start-apm-conductor! :n 10)        ; 10 problems
+     (dev/start-apm-conductor! :agent-id \"claude-3\" :n 5)"
+  [& {:keys [agent-id n] :or {agent-id "claude-1" n 40}}]
+  (dev-apm-conductor/start-apm-conductor! @!evidence-store
+                                           :agent-id agent-id :n n))
+
+(defn stop-apm-conductor!
+  "Stop the APM conductor."
+  []
+  (dev-apm-conductor/stop-apm-conductor!))
 
 ;; =============================================================================
 ;; System boot

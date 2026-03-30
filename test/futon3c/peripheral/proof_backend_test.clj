@@ -276,6 +276,78 @@
     (is (not (:ok adv)))
     (is (= :missing-phase-outputs (get-in adv [:error :code])))))
 
+(deftest cycle-advance-rejects-invalid-phase-payload
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:blocker-id "L-b"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:approach "Try a structural induction"}])
+        adv (tools/execute-tool backend :cycle-advance
+              ["P-test" cycle-id
+               {:artifacts ["artifacts/step-1.txt"]
+                :step-boundary {:boundary/id "step-1"
+                                :boundary/kind :not-a-boundary}}])]
+    (is (not (:ok adv)))
+    (is (= :invalid-phase-data (get-in adv [:error :code])))))
+
+(deftest cycle-advance-applies-phase-validator-hook
+  (let [dir (fix/temp-dir!)
+        backend (pb/make-proof-backend
+                 {:cwd dir
+                  :phase-validator (fn [phase phase-data _cycle]
+                                     (when (and (= phase :observe)
+                                                (not= "ok" (:notes phase-data)))
+                                       {:ok false
+                                        :error {:code :bad-observe
+                                                :message "Observe notes must be ok"}}))}
+                 (tools/make-mock-backend))
+        _ (pb/init-problem! dir "P-test" "Prove X > 0 for all X in S" "All cases verified")
+        _ (tools/execute-tool backend :proof-load ["P-test"])
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        rejected (tools/execute-tool backend :cycle-advance
+                   ["P-test" cycle-id {:blocker-id "L-b" :notes "nope"}])
+        accepted (tools/execute-tool backend :cycle-advance
+                   ["P-test" cycle-id {:blocker-id "L-b" :notes "ok"}])]
+    (is (false? (:ok rejected)))
+    (is (= :bad-observe (get-in rejected [:error :code])))
+    (is (:ok accepted))
+    (is (= :propose (get-in accepted [:result :cycle/phase])))))
+
+(deftest cycle-advance-accepts-traceable-step-boundary
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:blocker-id "L-b"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:approach "Try a structural induction"}])
+        adv (tools/execute-tool backend :cycle-advance
+              ["P-test" cycle-id
+               {:artifacts ["artifacts/step-1.txt"]
+                :step-boundary {:boundary/id "step-1"
+                                :boundary/kind :container
+                                :boundary/trace-id "trace-1"
+                                :boundary/artifacts ["artifacts/step-1.txt"]
+                                :boundary/algorithm-ref {:ref/type :algorithm
+                                                         :ref/id "eal/algorithms/create-container.md"}
+                                :boundary/graph-refs [{:ref/type :proof-step
+                                                       :ref/id "P-test/step-1"}]}}])]
+    (is (:ok adv))
+    (is (= :validate (get-in adv [:result :cycle/phase])))
+    (is (= "step-1"
+           (get-in adv [:result :cycle/phase-data :execute :step-boundary :boundary/id])))))
+
 (deftest cycle-list-and-get
   (let [{:keys [backend] :as ctx} (make-test-backend)
         _ (init-test-problem! ctx)
@@ -353,6 +425,38 @@
     ;; G5 should pass (blocker exists)
     (is (:passed? (first (filter #(= :G5-scope (:gate %))
                                   (get-in result [:result :gates])))))))
+
+(deftest gate-check-rejects-untraceable-step-boundary
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "B" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id {:blocker-id "L-b"}])
+        _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id {:approach "Direct"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id
+             {:artifacts ["artifacts/step-1.txt"]
+              :step-boundary {:boundary/id "step-1"
+                              :boundary/kind :container
+                              :boundary/artifacts ["artifacts/step-1.txt"]}}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:validation-artifacts ["artifacts/validation.txt"]}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:classification :partial}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id
+             {:rationale "Recorded the partial result"
+              :ledger-changes [{:item/id "L-b" :change :status-update :item/status :partial}]}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:saved? true}])
+        result (tools/execute-tool backend :gate-check ["P-test" cycle-id])
+        g4 (first (filter #(= :G4-evidence (:gate %))
+                          (get-in result [:result :gates])))]
+    (is (:ok result))
+    (is (false? (:passed? g4)))
+    (is (= "Step boundary is missing graph refs" (:detail g4)))))
 
 ;; =============================================================================
 ;; Shape validation
