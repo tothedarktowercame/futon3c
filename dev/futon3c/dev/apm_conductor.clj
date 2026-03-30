@@ -27,6 +27,8 @@
 
 (declare stop-apm-conductor!)
 (declare start-next-problem!)
+(declare discover-lean-artifacts)
+(declare extract-bold-section)
 
 (def ^:private apm-phases
   [:observe :propose :execute :validate :classify :integrate])
@@ -46,6 +48,9 @@
 
 (def ^:private proof-peripheral-root
   "/home/joe/code/proof_peripheral")
+
+(def ^:private proof-state-root
+  "/home/joe/code/futon3c/data/proof-state")
 
 ;; =============================================================================
 ;; Logging
@@ -109,7 +114,7 @@
   (extract-section
    text
    (re-pattern
-    (str "(?ms)^Stage " stage-num " — .*?\n-+\n\n(.*?)(?=^Stage \\d+ — |\n\\z|\\z)"))))
+    (str "(?ms)^(?:\\*\\*)?Stage " stage-num " — .*?(?:\\*\\*)?\\s*\n(?:-+\\s*\n)?\\s*(.*?)(?=^(?:\\*\\*)?Stage \\d+ — |\\z)"))))
 
 (defn- normalize-execute-notes
   [text]
@@ -216,7 +221,10 @@
                      (extract-section body #"(?m)^\s*Informal dependency:\s*(.+)$"))
         why-now (or (extract-section body #"(?m)^\s*-\s+\*\*Why this becomes thinkable here\*\*:\s*(.+)$")
                     (extract-section body #"(?m)^\s*-\s+\*Why this becomes thinkable here\*:\s*(.+)$")
-                    (extract-section body #"(?m)^\s*Why this becomes thinkable here:\s*(.+)$"))
+                    (extract-section body #"(?m)^\s*Why this becomes thinkable here:\s*(.+)$")
+                    (extract-section body #"(?m)^\s*-\s+\*\*Why now\*\*:\s*(.+)$")
+                    (extract-section body #"(?m)^\s*-\s+\*Why now\*:\s*(.+)$")
+                    (extract-section body #"(?m)^\s*Why now:\s*(.+)$"))
         lean-type (or (extract-section body #"(?m)^\s*-\s+\*\*Lean target/type\*\*:\s*(.+)$")
                       (extract-section body #"(?m)^\s*-\s+\*Lean target/type\*:\s*(.+)$")
                       (extract-section body #"(?m)^\s*Lean target/type:\s*(.+)$")
@@ -260,17 +268,103 @@
 
 (defn- parse-arse-questions
   [text]
-  (let [section (or (extract-section text #"(?ms)\*\*ArSE Questions\*\*\s*(.*)\z")
+  (let [section (or (extract-section text #"(?ims)\*\*ArSE Questions\*\*\s*(.*)\z")
+                    (extract-section text #"(?ims)###\s*ArSE QUESTIONS\s*(.*)\z")
                     text)
-        types [:why-hard :what-crux :why-works :what-connects :confidence]]
+        infer-type (fn [idx title]
+                     (let [title (str/lower-case (or title ""))]
+                       (cond
+                         (str/includes? title "why is this hard") :why-hard
+                         (str/includes? title "key insight") :what-crux
+                         (str/includes? title "crux") :what-crux
+                         (str/includes? title "why does step") :why-works
+                         (str/includes? title "what connects") :what-connects
+                         (str/includes? title "where is intuition wrong") :confidence
+                         :else (nth [:why-hard :what-crux :why-works :what-connects :confidence]
+                                    idx :confidence))))]
     (->> (re-seq #"(?ms)^\s*(\d+)\.\s+\*(.+?)\*\s*(.*?)(?=^\s*\d+\.\s+\*|\z)" (or section ""))
          (map-indexed
-          (fn [idx [_ _ question answer]]
-            {:type (nth types idx :confidence)
-             :question (trim-to-nil question)
-             :answer (trim-to-nil (str/replace (or answer "") #"^\s*[:\-]\s*" ""))}))
+          (fn [idx [_ _ title body]]
+            (let [body (or body "")
+                  q (extract-section body #"(?ims)\*\*Q:\*\*\s*(.+?)(?=\n\s*\*\*A:\*\*|\z)")
+                  a (or (extract-section body #"(?ims)\*\*A:\*\*\s*(.+?)(?=\n\s*\*\*[A-Z]|^\s*\d+\.\s+\*|\z)")
+                        (when-not (re-find #"(?ims)\*\*Q:\*\*" body)
+                          (trim-to-nil (str/replace body #"^\s*[:\-]\s*" ""))))
+                  title (some-> title
+                                (str/replace #"\s*\([^)]*\)\s*$" "")
+                                trim-to-nil)]
+              {:type (infer-type idx title)
+               :question (or q title)
+               :answer a})))
          (filter #(and (:question %) (:answer %)))
          vec)))
+
+(defn- proof-state-path
+  [problem-base]
+  (str proof-state-root "/apm-" problem-base ".edn"))
+
+(defn- load-proof-state
+  [problem-base]
+  (let [path (proof-state-path problem-base)
+        f (io/file path)]
+    (when (.exists f)
+      (read-string (slurp f)))))
+
+(defn- save-proof-state!
+  [problem-base state]
+  (spit (proof-state-path problem-base) (pr-str state))
+  state)
+
+(defn- update-last-cycle
+  [state f]
+  (let [idx (dec (count (:proof/cycles state)))]
+    (if (neg? idx)
+      state
+      (update-in state [:proof/cycles idx] f))))
+
+(defn repair-proof-state-record!
+  "Rebuild persisted execute/integrate data from the canonical notes and sidecars.
+   This is for post-run cleanup of finished records; it does not change the proof
+   result classification or rerun any agent work."
+  [problem-base]
+  (let [problem-id (str "apm-" problem-base)
+        problem {:id problem-base}
+        state (load-proof-state problem-base)]
+    (if-not state
+      {:ok false :error (str "No proof state for " problem-id)}
+      (let [execute-sidecar (slurp-if-exists (phase-sidecar-path problem :execute))
+            propose-sidecar (slurp-if-exists (phase-sidecar-path problem :propose))
+            repaired-cycle (fn [cycle]
+                             (let [phase-data (:cycle/phase-data cycle)
+                                   execute-notes (or (some-> execute-sidecar normalize-execute-notes)
+                                                     (get-in phase-data [:execute :notes]))
+                                   integrate-notes (or (get-in phase-data [:integrate :notes])
+                                                       execute-sidecar)
+                                   execute-artifacts (or (get-in phase-data [:execute :artifacts])
+                                                         (discover-lean-artifacts problem nil execute-notes))]
+                               (-> cycle
+                                   (assoc-in [:cycle/phase-data :propose :notes]
+                                             (or (trim-to-nil propose-sidecar)
+                                                 (get-in phase-data [:propose :notes])))
+                                   (assoc-in [:cycle/phase-data :execute :notes] execute-notes)
+                                   (assoc-in [:cycle/phase-data :execute :dependency-graph]
+                                             (parse-dependency-graph execute-notes))
+                                   (assoc-in [:cycle/phase-data :execute :artifacts] execute-artifacts)
+                                   (assoc-in [:cycle/phase-data :integrate :notes] integrate-notes)
+                                   (assoc-in [:cycle/phase-data :integrate :rationale]
+                                             (or (extract-bold-section integrate-notes "Connections")
+                                                 integrate-notes))
+                                   (assoc-in [:cycle/phase-data :integrate :arse-questions]
+                                             (parse-arse-questions integrate-notes)))))
+            repaired (update-last-cycle state repaired-cycle)
+            cycle-idx (dec (count (:proof/cycles repaired)))]
+        (save-proof-state! problem-base repaired)
+        {:ok true
+         :problem-id problem-id
+         :arse-question-count (count (get-in repaired
+                                             [:proof/cycles cycle-idx :cycle/phase-data :integrate :arse-questions]))
+         :dependency-count (count (get-in repaired
+                                          [:proof/cycles cycle-idx :cycle/phase-data :execute :dependency-graph]))}))))
 
 (defn- extract-bold-section
   [text title]

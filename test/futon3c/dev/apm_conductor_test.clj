@@ -29,6 +29,19 @@
     (is (= "Why is this hard?" (:question (first parsed))))
     (is (= "Because the completion machinery is easy to forget." (:answer (first parsed))))))
 
+(deftest parse-arse-questions-handles-lowercase-heading-and-qa-format
+  (let [text "**Connections**\n- Context.\n\n**EXAM-DAY FIELD KIT**\n1. **Do not parse me**\n\n---\n\n**ArSE questions**\n\n1. *Why is this hard?* (OBSERVE)\n   **Q:** Why can’t we estimate the derivatives directly?\n   **A:** Because the pole term must be separated first.\n\n2. *What is the crux?* (PROPOSE)\n   **Q:** What idea unlocks the proof?\n   **A:** Subtract the principal part and use Cauchy estimates.\n"
+        parsed (#'conductor/parse-arse-questions text)]
+    (is (= 2 (count parsed)))
+    (is (= :why-hard (:type (first parsed))))
+    (is (= "Why can’t we estimate the derivatives directly?"
+           (:question (first parsed))))
+    (is (= "Because the pole term must be separated first."
+           (:answer (first parsed))))
+    (is (= :what-crux (:type (second parsed))))
+    (is (= "What idea unlocks the proof?"
+           (:question (second parsed))))))
+
 (deftest fully-closed-execute-rejects-placeholder-lean-artifacts
   (let [tmp (doto (java.io.File/createTempFile "apm-placeholder" ".lean")
               (.deleteOnExit))
@@ -78,4 +91,12 @@
   (let [full "Stage 1 — THE CLEAN PROOF\n--------------------------------\n\nFull proof.\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n--------------------------------\n\n1. **Main lemma**\n   - **Formal dependency**: theorem X.\n   - **Informal dependency**: recognize pattern Y.\n   - **Why this becomes thinkable here**: cue Z.\n   - **Lean target/type**: `Goal`.\n   - **Mathlib status/search terms**: search `foo`.\n   - **Critical path**: yes.\n\nStage 3 — LEAN FORMALIZATION\n--------------------------------\n\nInitial Lean skeleton.\n\nStage 4 — FORMAL-TO-INFORMAL REVISION\n--------------------------------\n\nReader-facing revision."
         record (#'conductor/merge-execute-record nil full)]
     (is (true? (#'conductor/execute-record-complete? record)))
-    (is (.contains (#'conductor/execute-record->notes record) "Reader-facing revision.")))) 
+    (is (.contains (#'conductor/execute-record->notes record) "Reader-facing revision."))))
+
+(deftest execute-record-accepts-bold-stage-headings-without-underlines
+  (let [full "**Stage 1 — THE CLEAN PROOF**\nProof text.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n1. **Main lemma**\n   - **Formal dependency**: theorem X.\n   - **Informal dependency**: recognize pattern Y.\n   - **Why this becomes thinkable here**: cue Z.\n   - **Lean target/type**: `Goal`.\n   - **Mathlib status/search terms**: search `foo`.\n   - **Critical path**: yes.\n\n**Stage 3 — LEAN FORMALIZATION**\nLean text.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\nRevision text."
+        record (#'conductor/merge-execute-record nil full)]
+    (is (true? (#'conductor/execute-record-complete? record)))
+    (is (= "Proof text." (:stage1 record)))
+    (is (= "Lean text." (:stage3 record)))
+    (is (= "Revision text." (:stage4 record)))))
