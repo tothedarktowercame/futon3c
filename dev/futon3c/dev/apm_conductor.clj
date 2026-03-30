@@ -312,7 +312,11 @@
 
 (defn- save-proof-state!
   [problem-base state]
-  (spit (proof-state-path problem-base) (pr-str state))
+  (let [path (proof-state-path problem-base)
+        parent (.getParentFile (io/file path))]
+    (when parent
+      (.mkdirs parent))
+    (spit path (pr-str state)))
   state)
 
 (defn- update-last-cycle
@@ -834,8 +838,7 @@
                     ;; Save
                     _ (let [cache @(.cache backend) state (get cache pid)]
                         (when state
-                          (spit (str "/home/joe/code/futon3c/data/proof-state/" pid ".edn")
-                                (pr-str state))))
+                          (save-proof-state! (:id current-problem) state)))
                     total-elapsed (- (System/currentTimeMillis)
                                      (or (:problem-start-ms @!apm-state) 0))]
 
