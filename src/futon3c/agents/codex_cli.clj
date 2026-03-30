@@ -38,6 +38,17 @@
     (catch Exception _
       nil)))
 
+(defn- exception-summary
+  [e]
+  (let [class-name (.getName (class e))
+        msg (some-> (.getMessage e) str not-empty)
+        cause-msg (some-> e ex-cause .getMessage str not-empty)]
+    (cond
+      (and msg cause-msg) (str class-name ": " msg " (cause: " cause-msg ")")
+      msg (str class-name ": " msg)
+      cause-msg (str class-name " (cause: " cause-msg ")")
+      :else class-name)))
+
 (def ^:private activity-placeholder-texts
   #{"using bash"
     "using bash (done)"
@@ -255,6 +266,7 @@
         error* (atom nil)
         tool-events* (atom 0)
         command-events* (atom 0)
+        stream-errors* (atom [])
         output-lines* (atom 0)
         output-bytes* (atom 0)
         out-buf (StringBuilder.)
@@ -309,39 +321,57 @@
               (on-process-started proc)
               (catch Throwable _)))
         stdout-fut (future
-                     (consume-lines!
-                      (.getInputStream proc)
-                      (fn [line]
-                        (append-line! out-buf line)
-                        (let [bytes (count (.getBytes (str line "\n") java.nio.charset.StandardCharsets/UTF_8))]
-                          (swap! output-lines* inc)
-                          (swap! output-bytes* + bytes)
-                          (emit-runtime! {:kind :output
-                                          :pid (.pid proc)
-                                          :stream :stdout
-                                          :bytes bytes
-                                          :total-lines @output-lines*
-                                          :total-bytes @output-bytes*
-                                          :at (str (java.time.Instant/now))}))
-                        (when-let [evt (parse-json-line line)]
-                          (handle-event! evt)))))
+                     (try
+                       (consume-lines!
+                        (.getInputStream proc)
+                        (fn [line]
+                          (append-line! out-buf line)
+                          (let [bytes (count (.getBytes (str line "\n") java.nio.charset.StandardCharsets/UTF_8))]
+                            (swap! output-lines* inc)
+                            (swap! output-bytes* + bytes)
+                            (emit-runtime! {:kind :output
+                                            :pid (.pid proc)
+                                            :stream :stdout
+                                            :bytes bytes
+                                            :total-lines @output-lines*
+                                            :total-bytes @output-bytes*
+                                            :at (str (java.time.Instant/now))}))
+                          (when-let [evt (parse-json-line line)]
+                            (handle-event! evt))))
+                       (catch Throwable t
+                         (let [summary (exception-summary t)]
+                           (swap! stream-errors* conj {:stream :stdout :error summary})
+                           (emit-runtime! {:kind :stream-error
+                                           :pid (.pid proc)
+                                           :stream :stdout
+                                           :error summary
+                                           :at (str (java.time.Instant/now))})))))
         stderr-fut (future
-                     (consume-lines!
-                      (.getErrorStream proc)
-                      (fn [line]
-                        (append-line! err-buf line)
-                        (let [bytes (count (.getBytes (str line "\n") java.nio.charset.StandardCharsets/UTF_8))]
-                          (swap! output-lines* inc)
-                          (swap! output-bytes* + bytes)
-                          (emit-runtime! {:kind :output
-                                          :pid (.pid proc)
-                                          :stream :stderr
-                                          :bytes bytes
-                                          :total-lines @output-lines*
-                                          :total-bytes @output-bytes*
-                                          :at (str (java.time.Instant/now))}))
-                        (when-let [evt (parse-json-line line)]
-                          (handle-event! evt)))))]
+                     (try
+                       (consume-lines!
+                        (.getErrorStream proc)
+                        (fn [line]
+                          (append-line! err-buf line)
+                          (let [bytes (count (.getBytes (str line "\n") java.nio.charset.StandardCharsets/UTF_8))]
+                            (swap! output-lines* inc)
+                            (swap! output-bytes* + bytes)
+                            (emit-runtime! {:kind :output
+                                            :pid (.pid proc)
+                                            :stream :stderr
+                                            :bytes bytes
+                                            :total-lines @output-lines*
+                                            :total-bytes @output-bytes*
+                                            :at (str (java.time.Instant/now))}))
+                          (when-let [evt (parse-json-line line)]
+                            (handle-event! evt))))
+                       (catch Throwable t
+                         (let [summary (exception-summary t)]
+                           (swap! stream-errors* conj {:stream :stderr :error summary})
+                           (emit-runtime! {:kind :stream-error
+                                           :pid (.pid proc)
+                                           :stream :stderr
+                                           :error summary
+                                           :at (str (java.time.Instant/now))}))))) ]
     (with-open [w (io/writer (.getOutputStream proc))]
       (.write w (str prompt-str "\n")))
     (let [finished? (if (and (number? timeout-ms) (pos? (long timeout-ms)))
@@ -354,7 +384,16 @@
         (.waitFor proc 5000 java.util.concurrent.TimeUnit/MILLISECONDS))
       @stdout-fut
       @stderr-fut
-      (let [exit (.exitValue proc)
+      (let [exit (try
+                   (.exitValue proc)
+                   (catch IllegalThreadStateException e
+                     (let [summary (str "process still alive after wait: " (exception-summary e))]
+                       (reset! error* summary)
+                       (emit-runtime! {:kind :process-state-error
+                                       :pid (.pid proc)
+                                       :error summary
+                                       :at (str (java.time.Instant/now))})
+                       -1)))
             stderr (str/trim (str err-buf))
             raw-output (str/trim
                         (str (str out-buf)
@@ -378,8 +417,15 @@
          :timed-out? (not finished?)
          :session-id @sid*
          :text @text*
-         :error-text @error*
+         :error-text (or @error*
+                         (when (seq @stream-errors*)
+                           (str "stream-read-failure: "
+                                (str/join "; "
+                                          (map (fn [{:keys [stream error]}]
+                                                 (str (name stream) " " error))
+                                               @stream-errors*)))))
          :execution (summarize-execution @tool-events* @command-events*)
+         :stream-errors @stream-errors*
          :stderr stderr
          :raw-output raw-output}))))
 
@@ -486,4 +532,4 @@
           (catch Exception e
             {:result nil
              :session-id session-id
-             :error (str "codex invocation error: " (.getMessage e))}))))))
+             :error (str "codex invocation error: " (exception-summary e))}))))))

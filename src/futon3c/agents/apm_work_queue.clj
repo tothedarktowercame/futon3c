@@ -371,7 +371,7 @@
   (some #(str/ends-with? (str %) ".lean") artifacts))
 
 (def ^:private indirect-notes-pattern
-  #"(?is)\b(updated|recorded|integrated|documented|captured|consolidated)\b.*\b(in|into)\b.*(\.md|\.lean|proof_peripheral|lean-proofs)|\bsee notes\b")
+  #"(?is)\bsee\s+(?:notes?|file|artifact|writeup|sidecar)\b|\b(?:documented|recorded|captured|consolidated|saved|written)\b\s+(?:in|into)\b.*(?:\.md|\.lean|proof_peripheral|lean-proofs)")
 
 (defn- indirect-notes?
   [notes]

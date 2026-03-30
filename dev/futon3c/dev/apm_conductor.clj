@@ -43,6 +43,15 @@
 (def ^:private max-phase-failures
   3)
 
+(def ^:private max-execute-redispatches
+  "Hard cap on execute re-dispatches (sorry retries + full-record retries combined).
+   After this many, force-advance with whatever notes exist."
+  8)
+
+(def ^:private problem-timeout-ms
+  "Overall problem timeout (20 minutes). If total time exceeds this, skip to next."
+  (* 20 60 1000))
+
 (def ^:private lean-proofs-root
   "/home/joe/code/apm-lean/lean-proofs")
 
@@ -97,7 +106,7 @@
         (slurp f)))))
 
 (def ^:private indirect-notes-pattern
-  #"(?is)\b(updated|recorded|integrated|documented|captured|consolidated)\b.*\b(in|into)\b.*(\.md|\.lean|proof_peripheral|lean-proofs)|\bsee notes\b")
+  #"(?is)\bsee\s+(?:notes?|file|artifact|writeup|sidecar)\b|\b(?:documented|recorded|captured|consolidated|saved|written)\b\s+(?:in|into)\b.*(?:\.md|\.lean|proof_peripheral|lean-proofs)")
 
 (defn- indirect-notes?
   [text]
@@ -303,6 +312,10 @@
   [problem-base]
   (str proof-state-root "/apm-" problem-base ".edn"))
 
+(defn- failure-report-path
+  [problem-base]
+  (str proof-state-root "/apm-" problem-base "-failure.edn"))
+
 (defn- load-proof-state
   [problem-base]
   (let [path (proof-state-path problem-base)
@@ -318,6 +331,15 @@
       (.mkdirs parent))
     (spit path (pr-str state)))
   state)
+
+(defn- save-failure-report!
+  [problem-base report]
+  (let [path (failure-report-path problem-base)
+        parent (.getParentFile (io/file path))]
+    (when parent
+      (.mkdirs parent))
+    (spit path (pr-str report))
+    report))
 
 (defn- update-last-cycle
   [state f]
@@ -613,9 +635,11 @@
         execute-record (update-execute-record! agent-output)
         full-record? (execute-record-complete? execute-record)
         artifacts (discover-lean-artifacts current-problem execute-start-ms agent-output)
-        sorry? (or (has-sorry? agent-output)
-                   (some artifact-has-sorry? artifacts))
-        fully-closed? (fully-closed-execute? current-problem execute-start-ms agent-output)]
+        sorry? (boolean (or (has-sorry? agent-output)
+                            (some artifact-has-sorry? artifacts)))
+        fully-closed? (fully-closed-execute? current-problem execute-start-ms agent-output)
+        redispatch-count (or (:execute-redispatch-count @!apm-state) 0)
+        redispatch-budget-exhausted? (>= redispatch-count max-execute-redispatches)]
 
     (log! {:event :execute-return :problem pid
            :elapsed-ms dispatch-elapsed-ms
@@ -623,16 +647,52 @@
            :artifact-count (count artifacts)
            :full-record? full-record?
            :sorry? sorry? :fully-closed? fully-closed?
-           :remaining-ms (max 0 remaining-ms)})
+           :remaining-ms (max 0 remaining-ms)
+           :redispatch-count redispatch-count})
 
     (cond
-      ;; Cannot advance execute at all until we have one authoritative
-      ;; full Stage 1-4 record.
+      ;; Zero sorry — early exit allowed (check first, before any re-dispatch logic)
+      fully-closed?
+      (do
+        (log! {:event :execute-early-exit :problem pid :elapsed-ms dispatch-elapsed-ms
+               :total-elapsed-ms total-elapsed-ms
+               :message "Zero sorry — fully closed, early exit permitted"})
+        (println (str "[apm-conductor] Execute: FULLY CLOSED in "
+                      (long (/ total-elapsed-ms 1000)) "s total — early exit"))
+        true)
+
+      ;; Re-dispatch budget exhausted — force-advance with whatever we have
+      redispatch-budget-exhausted?
+      (do
+        (log! {:event :execute-redispatch-cap :problem pid
+               :total-elapsed-ms total-elapsed-ms
+               :redispatch-count redispatch-count
+               :full-record? full-record?
+               :message (str "Hit re-dispatch cap (" max-execute-redispatches
+                             ") — force-advancing with current notes")})
+        (println (str "[apm-conductor] Execute: hit re-dispatch cap ("
+                      redispatch-count ") — force-advancing"))
+        true)
+
+      ;; Timer expired — advance with whatever we have
+      (<= remaining-ms 0)
+      (do
+        (log! {:event :execute-timer-expired :problem pid :elapsed-ms dispatch-elapsed-ms
+               :total-elapsed-ms total-elapsed-ms
+               :full-record? full-record?
+               :message "Timer expired — advancing with current notes"})
+        (println (str "[apm-conductor] Execute: timer expired ("
+                      (long (/ total-elapsed-ms 1000)) "s total) — advancing"))
+        true)
+
+      ;; Missing full Stage 1-4 record — re-dispatch for canonical record
       (not full-record?)
       (do
+        (swap! !apm-state update :execute-redispatch-count (fnil inc 0))
         (log! {:event :execute-missing-full-record :problem pid
                :elapsed-ms dispatch-elapsed-ms
                :total-elapsed-ms total-elapsed-ms
+               :redispatch-count (inc redispatch-count)
                :message "Full Stage 1-4 execute submission missing — re-dispatching for canonical record"})
         (println "[apm-conductor] Execute: missing full Stage 1-4 record — re-dispatching")
         (dispatch-phase! agent-id evidence-store
@@ -642,43 +702,24 @@
                          :timeout-override (max 60000 remaining-ms))
         false)
 
-      ;; Zero sorry — early exit allowed
-      fully-closed?
-      (do
-        (log! {:event :execute-early-exit :problem pid :elapsed-ms dispatch-elapsed-ms
-               :total-elapsed-ms total-elapsed-ms
-               :message "Zero sorry — fully closed, early exit permitted"})
-        (println (str "[apm-conductor] Execute: FULLY CLOSED in "
-                      (long (/ total-elapsed-ms 1000)) "s total — early exit"))
-        true)  ;; signal: advance
-
-      ;; Timer expired — advance with whatever we have
-      (<= remaining-ms 0)
-      (do
-        (log! {:event :execute-timer-expired :problem pid :elapsed-ms dispatch-elapsed-ms
-               :total-elapsed-ms total-elapsed-ms
-               :message "Timer expired with sorry — advancing with partial"})
-        (println (str "[apm-conductor] Execute: timer expired ("
-                      (long (/ total-elapsed-ms 1000)) "s total) with sorry — advancing"))
-        true)  ;; signal: advance
-
-      ;; Agent returned early with sorry — re-dispatch
+      ;; Agent returned early with sorry — re-dispatch with remaining time
       :else
       (do
+        (swap! !apm-state update :execute-redispatch-count (fnil inc 0))
         (log! {:event :execute-redispatch :problem pid :elapsed-ms dispatch-elapsed-ms
                :total-elapsed-ms total-elapsed-ms
                :remaining-ms remaining-ms
+               :redispatch-count (inc redispatch-count)
                :message (str "Sorry present, " (long (/ remaining-ms 1000))
                              "s remaining — re-dispatching")})
         (println (str "[apm-conductor] Execute: sorry present, "
                       (long (/ remaining-ms 1000)) "s remaining — re-dispatching"))
-        ;; Re-dispatch with remaining time
         (dispatch-phase! agent-id evidence-store
                          :prompt-override (make-lean-continue-prompt
                                            (:current-problem @!apm-state)
                                            remaining-ms agent-output)
                          :timeout-override remaining-ms)
-        false))))  ;; signal: don't advance yet, re-dispatched
+        false))))
 
 (defn- handle-phase-failure!
   [agent-id outcome evidence-store]
@@ -713,7 +754,15 @@
             {:prompt-override (make-lean-continue-prompt
                                current-problem remaining-ms "")
              :timeout-override (max 60000 remaining-ms)}))]
-    (swap! !apm-state assoc :phase-failure-count failures)
+    (swap! !apm-state
+           (fn [state]
+             (-> state
+                 (assoc :phase-failure-count failures)
+                 (update :problem-failures (fnil conj [])
+                         {:phase current-phase
+                          :failure-count failures
+                          :message message
+                          :at (str (Instant/now))}))))
     (log! {:event :phase-failure :problem pid :phase current-phase
            :failure-count failures :message message})
     (if (<= failures max-phase-failures)
@@ -726,9 +775,46 @@
                              :timeout-override (:timeout-override retry-override))
             (dispatch-phase! agent-id evidence-store))))
       (do
-        (log! {:event :conductor-stopping :problem pid :phase current-phase
-               :message (str "Exceeded retry budget after " failures " failures")})
-        (stop-apm-conductor!)))))
+        (let [{:keys [problems-done batch-results target-n execute-record execute-start-ms
+                      problem-start-ms phase-notes problem-failures]} @!apm-state
+              execute-notes (execute-record->notes execute-record)
+              artifacts (when current-problem
+                          (discover-lean-artifacts current-problem execute-start-ms execute-notes))
+              total-elapsed (max 0 (- (System/currentTimeMillis) (or problem-start-ms 0)))
+              report {:problem-id pid
+                      :problem-base (:id current-problem)
+                      :status :abandoned
+                      :reason-code :retry-budget-exhausted
+                      :reason-message (str "Exceeded retry budget after " failures " failures")
+                      :last-phase current-phase
+                      :problem-elapsed-ms total-elapsed
+                      :phase-failure-count failures
+                      :failures problem-failures
+                      :phase-notes phase-notes
+                      :execute-record execute-record
+                      :execute-notes execute-notes
+                      :artifacts artifacts
+                      :at (str (Instant/now))}
+              _ (save-failure-report! (:id current-problem) report)
+              _ (log! {:event :problem-abandoned :problem pid :phase current-phase
+                       :classification "abandoned"
+                       :total-elapsed-ms total-elapsed
+                       :message (:reason-message report)})
+              _ (println (str "[apm-conductor] === " pid " ABANDONED: "
+                              (:reason-message report) " ==="))
+              result {:ok false :problem-id pid :classification :abandoned
+                      :elapsed-ms total-elapsed
+                      :reason-code :retry-budget-exhausted}
+              done (inc problems-done)
+              results (conj (or batch-results []) result)]
+          (swap! !apm-state assoc
+                 :problems-done done
+                 :batch-results results)
+          (if (>= done target-n)
+            (do
+              (log! {:event :batch-complete :done done :target target-n})
+              (stop-apm-conductor!))
+            (start-next-problem! agent-id evidence-store)))))))
 
 (defn- handle-phase-rejection!
   [agent-id rejection-message evidence-store]
@@ -742,6 +828,13 @@
 ;; Phase advancement + next phase logic
 ;; =============================================================================
 
+(defn- problem-timed-out?
+  "Check if the overall problem timeout has been exceeded."
+  []
+  (let [{:keys [problem-start-ms]} @!apm-state]
+    (when problem-start-ms
+      (> (- (System/currentTimeMillis) problem-start-ms) problem-timeout-ms))))
+
 (defn- advance-and-dispatch-next!
   "Called when agent completes a phase. Advances the cycle and dispatches next."
   [agent-id agent-output evidence-store]
@@ -752,6 +845,28 @@
         output (or agent-output "")
         elapsed-ms (- (System/currentTimeMillis) (or phase-dispatch-ms 0))]
 
+    ;; Overall problem timeout — skip to next problem
+    (if (problem-timed-out?)
+      (let [total-ms (- (System/currentTimeMillis)
+                        (or (:problem-start-ms @!apm-state) 0))]
+        (log! {:event :problem-timed-out :problem pid :phase current-phase
+               :total-elapsed-ms total-ms
+               :message (str "Problem exceeded " (/ problem-timeout-ms 60000)
+                             "min timeout — skipping")})
+        (println (str "[apm-conductor] === " pid " TIMED OUT after "
+                      (long (/ total-ms 1000)) "s — skipping ==="))
+        (let [done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok false :problem-id pid :classification :timed-out
+                             :elapsed-ms total-ms})]
+          (swap! !apm-state assoc :problems-done done :batch-results results)
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done :target target-n})
+                (stop-apm-conductor!))
+            (start-next-problem! agent-id evidence-store))))
+
+    ;; Normal phase processing
+    (do
     ;; Log phase completion
     (log! {:event :phase-complete :problem pid :phase current-phase
            :elapsed-ms elapsed-ms})
@@ -872,7 +987,7 @@
                     (do (log! {:event :batch-complete :done done :target target-n})
                         (println (str "[apm-conductor] Batch complete: " done "/" target-n))
                         (stop-apm-conductor!))
-                    (start-next-problem! agent-id evidence-store)))))))))))))
+                    (start-next-problem! agent-id evidence-store)))))))))))))))
 
 ;; =============================================================================
 ;; Problem lifecycle
@@ -925,6 +1040,8 @@
                    :phase-dispatch-ms nil
                    :execute-start-ms nil
                    :phase-failure-count 0
+                   :execute-redispatch-count 0
+                   :problem-failures []
                    :problem-bases (if explicit-base
                                     (vec (rest problem-bases))
                                     problem-bases))

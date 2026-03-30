@@ -178,3 +178,214 @@
         (is (= 2 (count (get-in (nth @phase-history 2) [:phase-data :dependency-graph]))))
         (is (some #(= :problem-complete (:event %)) @logs))
         (is (some #(= :batch-complete (:event %)) @logs))))))
+
+;; =============================================================================
+;; Test scaffold for circuit-breaker tests
+;; =============================================================================
+
+(defn- make-test-scaffold
+  "Build reusable test scaffold with tmp dirs, atoms, and redefs bindings.
+   Returns a map of :idle-callback, :prompts, :logs, :backend, :manifest,
+   :artifact, :proof-root, and :redef-bindings (for with-redefs)."
+  [& {:keys [problem-id manifest-entries artifact-content]
+      :or {problem-id "cb01"
+           manifest-entries [{:id "cb01" :subject "Analysis"}]
+           artifact-content "import Mathlib\n\ntheorem cb_nontrivial (x : ℝ) : x = x := by rfl\n"}}]
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                          "apm-cb" (make-array java.nio.file.attribute.FileAttribute 0)))
+        proof-root (.getAbsolutePath (io/file tmp-dir "proof-state"))
+        artifact-dir (io/file tmp-dir "lean-proofs" problem-id)
+        _ (.mkdirs artifact-dir)
+        artifact (io/file artifact-dir "Main.lean")
+        _ (spit artifact artifact-content)
+        idle-callback (atom nil)
+        prompts (atom [])
+        logs (atom [])
+        phase-idx (atom 0)
+        phase-history (atom [])
+        backend (ScriptBackend. (atom {}) phase-idx phase-history)]
+    {:idle-callback idle-callback
+     :prompts prompts
+     :logs logs
+     :backend backend
+     :phase-history phase-history
+     :artifact artifact
+     :proof-root proof-root
+     :redef-bindings
+     {#'conductor/log! (fn [entry] (swap! logs conj entry))
+      #'conductor/proof-state-root proof-root
+      #'conductor/discover-lean-artifacts (fn [_ _ _] [(.getAbsolutePath artifact)])
+      #'reg/set-on-idle! (fn [f] (reset! idle-callback f))
+      #'reg/invoke-agent! (fn [_agent-id prompt _timeout-ms]
+                             (swap! prompts conj prompt)
+                             {:ok true :result ""})
+      #'apm-queue/load-apm-manifest (fn [] manifest-entries)
+      #'apm-queue/load-problem-tex (fn [_] "Problem body")
+      #'apm-queue/emit-apm-evidence! (fn [& _] nil)
+      #'pb/make-proof-backend (fn [_config] backend)}}))
+
+;; =============================================================================
+;; Circuit-breaker tests
+;; =============================================================================
+
+(deftest execute-redispatch-cap-forces-advance
+  (testing "after max-execute-redispatches, conductor force-advances past execute"
+    (let [{:keys [idle-callback logs redef-bindings]}
+          (make-test-scaffold)]
+      ;; No artifacts → fully-closed? is false, so the missing-full-record branch fires
+      (with-redefs-fn (assoc redef-bindings
+                             #'conductor/discover-lean-artifacts (fn [_ _ _] []))
+        (fn []
+          (conductor/start-apm-conductor! nil :agent-id "codex-1" :problem-ids ["cb01"])
+
+          ;; Feed observe and propose normally
+          (@idle-callback "codex-1"
+           {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+
+          ;; Now in execute: return incomplete text (missing Stage 1-4 headings) repeatedly.
+          ;; Each return should trigger a re-dispatch. After max-execute-redispatches,
+          ;; the conductor should force-advance (and the validator will then reject,
+          ;; but the cap event proves the loop terminated).
+          (let [cap @#'conductor/max-execute-redispatches]
+            (dotimes [_ (+ cap 2)]
+              (when @conductor/!apm-conductor
+                (@idle-callback "codex-1"
+                 {:ok true :result "I wrote some notes about the proof but not in Stage 1-4 format."})))
+
+            (testing "redispatch cap event was logged"
+              (is (some #(= :execute-redispatch-cap (:event %)) @logs)))
+
+            (testing "re-dispatch count reached the cap"
+              (let [cap-entry (first (filter #(= :execute-redispatch-cap (:event %)) @logs))]
+                (is (= cap (:redispatch-count cap-entry)))))))))))
+
+(deftest timer-expiry-takes-priority-over-missing-full-record
+  (testing "when lean timer expires, conductor advances even without full Stage 1-4 record"
+    (let [{:keys [idle-callback logs redef-bindings]}
+          (make-test-scaffold)]
+      ;; No artifacts → fully-closed? is false
+      (with-redefs-fn (assoc redef-bindings
+                             #'conductor/discover-lean-artifacts (fn [_ _ _] []))
+        (fn []
+          (conductor/start-apm-conductor! nil :agent-id "codex-1" :problem-ids ["cb01"])
+
+          ;; Feed observe and propose normally
+          (@idle-callback "codex-1"
+           {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+
+          ;; Backdate execute-start-ms to simulate timer expiry
+          (swap! conductor/!apm-state assoc
+                 :execute-start-ms (- (System/currentTimeMillis)
+                                      @#'conductor/lean-floor-ms
+                                      1000))
+
+          ;; Return incomplete text — timer should override the missing-record check
+          (@idle-callback "codex-1"
+           {:ok true :result "Some partial notes, not full Stage 1-4 format."})
+
+          (testing "timer-expired event was logged (not missing-full-record)"
+            (is (some #(= :execute-timer-expired (:event %)) @logs))
+            (is (not (some #(= :execute-missing-full-record (:event %)) @logs)))))))))
+
+(deftest problem-timeout-skips-to-next-problem
+  (testing "when overall problem timeout is exceeded, conductor skips to next problem"
+    (let [{:keys [idle-callback logs redef-bindings]}
+          (make-test-scaffold :manifest-entries [{:id "cb01" :subject "Analysis"}
+                                                 {:id "cb02" :subject "Analysis"}])]
+      (with-redefs-fn redef-bindings
+        (fn []
+          (conductor/start-apm-conductor! nil :agent-id "codex-1"
+                                          :problem-ids ["cb01" "cb02"])
+
+          ;; Feed observe normally
+          (@idle-callback "codex-1"
+           {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
+
+          ;; Backdate problem-start-ms to simulate timeout
+          (swap! conductor/!apm-state assoc
+                 :problem-start-ms (- (System/currentTimeMillis)
+                                      @#'conductor/problem-timeout-ms
+                                      1000))
+
+          ;; Next idle callback should trigger timeout and skip to cb02
+          (@idle-callback "codex-1"
+           {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+
+          (testing "problem-timed-out event was logged"
+            (is (some #(= :problem-timed-out (:event %)) @logs)))
+
+          (testing "conductor moved to cb02"
+            (is (= "cb02" (get-in @conductor/!apm-state [:current-problem :id]))))
+
+          (testing "problems-done was incremented"
+            (is (= 1 (:problems-done @conductor/!apm-state))))
+
+          (testing "batch result records the timeout"
+            (is (= :timed-out (-> @conductor/!apm-state :batch-results first :classification)))))))))
+
+(deftest retry-budget-abandons-problem-and-continues-to-next
+  (testing "exhausted phase retry budget writes an abandoned result and starts the next problem"
+    (let [{:keys [idle-callback logs redef-bindings proof-root]}
+          (make-test-scaffold :manifest-entries [{:id "cb01" :subject "Analysis"}
+                                                 {:id "cb02" :subject "Analysis"}])]
+      (with-redefs-fn redef-bindings
+        (fn []
+          (conductor/start-apm-conductor! nil :agent-id "codex-1"
+                                          :problem-ids ["cb01" "cb02"])
+
+          ;; Feed observe/propose for cb01
+          (@idle-callback "codex-1"
+           {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+
+          ;; Exhaust execute retry budget with repeated rejection-triggering failures
+          (dotimes [_ (inc @#'conductor/max-phase-failures)]
+            (@idle-callback "codex-1"
+             {:ok false
+              :error {:message "Execute phase notes must contain the actual Stage 1-4 content, not a file summary or 'see notes' indirection"}}))
+
+          (testing "first problem is marked abandoned"
+            (is (some #(= :problem-abandoned (:event %)) @logs))
+            (is (= :abandoned (-> @conductor/!apm-state :batch-results first :classification))))
+
+          (testing "failure report is written"
+            (is (.exists (io/file proof-root "apm-cb01-failure.edn"))))
+
+          (testing "conductor continues with second problem"
+            (is (= "cb02" (get-in @conductor/!apm-state [:current-problem :id])))
+            (is (= :observe (get-in @conductor/!apm-state [:current-phase]))))
+
+          (testing "batch itself remains active"
+            (is (some? @conductor/!apm-conductor))))))))
+
+(deftest sorry-check-returns-boolean-not-nil
+  (testing "has-sorry? and artifact checks produce boolean values in log"
+    (let [{:keys [idle-callback logs redef-bindings]}
+          (make-test-scaffold)]
+      ;; No artifacts → (some artifact-has-sorry? []) would return nil without the fix
+      (with-redefs-fn (assoc redef-bindings
+                             #'conductor/discover-lean-artifacts (fn [_ _ _] []))
+        (fn []
+          (conductor/start-apm-conductor! nil :agent-id "codex-1" :problem-ids ["cb01"])
+
+          ;; Feed observe and propose
+          (@idle-callback "codex-1"
+           {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+
+          ;; Feed execute with no sorry mention and no artifacts
+          (@idle-callback "codex-1"
+           {:ok true :result "Some notes without the word s-o-r-r-y."})
+
+          (testing "sorry? is boolean false, not nil"
+            (let [execute-returns (filter #(= :execute-return (:event %)) @logs)]
+              (is (seq execute-returns))
+              (doseq [entry execute-returns]
+                (is (boolean? (:sorry? entry))
+                    (str "sorry? should be boolean, got: " (pr-str (:sorry? entry))))))))))))

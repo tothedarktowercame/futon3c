@@ -336,6 +336,22 @@
     (is (false? (:ok result)))
     (is (= :indirect-notes (get-in result [:error :code])))))
 
+(deftest apm-phase-validator-allows-substantive-execute-records-that-mention-artifacts
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "Weighted Cauchy-Schwarz"
+                                     :formal-dependency "Cauchy-Schwarz in L²"
+                                     :informal-dependency "Split the kernel with square roots to move from L¹ slice control to an L² bound"
+                                     :why-this-now "The hypothesis only gives slice-wise integral bounds, so the right cue is to factor the kernel before squaring"
+                                     :lean-type "`|∫ k x y * u y| ≤ ...`"
+                                     :source "search `integral_mul_le_Lp_Lq`"
+                                     :on-critical-path true}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 — THE CLEAN PROOF\n--------------------------------\n\nUse weighted Cauchy-Schwarz and Tonelli.\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n--------------------------------\n\n1. **Weighted Cauchy-Schwarz**\n   - **Formal dependency**: Cauchy-Schwarz in L².\n   - **Informal dependency**: Split the kernel with square roots to move from L¹ slice control to an L² bound.\n   - **Why this becomes thinkable here**: The hypothesis only gives slice-wise integral bounds, so the right cue is to factor the kernel before squaring.\n   - **Lean target/type**: `|∫ k x y * u y| ≤ ...`.\n   - **Mathlib status/search terms**: search `integral_mul_le_Lp_Lq`.\n   - **Critical path**: yes.\n\nStage 3 — LEAN FORMALIZATION\n--------------------------------\n\n- Updated `apm-lean/lean-proofs/a02J01/Main.lean` so `ProblemData` packages the kernel data cleanly.\n- Rebuilt with `lake env lean lean-proofs/a02J01/Main.lean`; the file compiles.\n\nStage 4 — FORMAL-TO-INFORMAL REVISION\n--------------------------------\n\nThe hard part is seeing that the slice bounds should be combined through weighted Cauchy-Schwarz, not termwise estimates."}
+                nil)]
+    (is (nil? result))))
+
 (deftest apm-phase-validator-rejects-underpowered-dependency-graph
   (let [result (apm-queue/apm-phase-validator
                 :execute
