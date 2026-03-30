@@ -44,6 +44,9 @@
 (def ^:private lean-proofs-root
   "/home/joe/code/apm-lean/lean-proofs")
 
+(def ^:private proof-peripheral-root
+  "/home/joe/code/proof_peripheral")
+
 ;; =============================================================================
 ;; Logging
 ;; =============================================================================
@@ -69,6 +72,249 @@
       (str/blank? new-output) existing
       :else (str existing "\n\n---\n\n" new-output))))
 
+(defn- trim-to-nil [s]
+  (let [s (some-> s str/trim)]
+    (when (seq s) s)))
+
+(defn- phase-sidecar-path
+  [problem phase]
+  (let [pid (:id problem)]
+    (case phase
+      :propose (str proof-peripheral-root "/apm-" pid "-propose.md")
+      :execute (str proof-peripheral-root "/apm-" pid "-execute.md")
+      nil)))
+
+(defn- slurp-if-exists
+  [path]
+  (when path
+    (let [f (io/file path)]
+      (when (.exists f)
+        (slurp f)))))
+
+(def ^:private indirect-notes-pattern
+  #"(?is)\b(updated|recorded|integrated|documented|captured|consolidated)\b.*\b(in|into)\b.*(\.md|\.lean|proof_peripheral|lean-proofs)|\bsee notes\b")
+
+(defn- indirect-notes?
+  [text]
+  (boolean (re-find indirect-notes-pattern (or text ""))))
+
+(defn- extract-section
+  [text re]
+  (some-> (re-find re (or text ""))
+          second
+          trim-to-nil))
+
+(defn- extract-stage
+  [text stage-num]
+  (extract-section
+   text
+   (re-pattern
+    (str "(?ms)^Stage " stage-num " — .*?\n-+\n\n(.*?)(?=^Stage \\d+ — |\n\\z|\\z)"))))
+
+(defn- normalize-execute-notes
+  [text]
+  (if-let [stages (seq (keep #(when-let [body (extract-stage text %)]
+                                (str "Stage " % " — "
+                                     ({1 "THE CLEAN PROOF"
+                                       2 "LEMMA DEPENDENCY GRAPH"
+                                       3 "LEAN FORMALIZATION"
+                                       4 "FORMAL-TO-INFORMAL REVISION"} %)
+                                     "\n--------------------------------\n\n"
+                                     body))
+                             [1 2 3 4]))]
+    (str/join "\n\n" stages)
+    (trim-to-nil text)))
+
+(defn- execute-stage-heading
+  [stage-num]
+  (str "Stage " stage-num " — "
+       ({1 "THE CLEAN PROOF"
+         2 "LEMMA DEPENDENCY GRAPH"
+         3 "LEAN FORMALIZATION"
+         4 "FORMAL-TO-INFORMAL REVISION"} stage-num)
+       "\n--------------------------------\n\n"))
+
+(defn- empty-execute-record
+  []
+  {:stage1 nil
+   :stage2 nil
+   :stage3 nil
+   :stage4 nil
+   :lean-deltas []})
+
+(defn- full-execute-submission?
+  [text]
+  (every? #(extract-stage text %) [1 2 3 4]))
+
+(defn- execute-record-complete?
+  [record]
+  (let [{:keys [stage1 stage2 stage3 stage4]} (merge (empty-execute-record) record)]
+    (every? #(not (str/blank? %)) [stage1 stage2 stage3 stage4])))
+
+(defn- extract-lean-delta
+  [text]
+  (cond
+    (str/blank? text) nil
+    (full-execute-submission? text) (extract-stage text 3)
+    (extract-stage text 3) (extract-stage text 3)
+    :else (trim-to-nil text)))
+
+(defn- merge-execute-record
+  [record text]
+  (let [record (merge (empty-execute-record) record)
+        text (trim-to-nil text)]
+    (cond
+      (str/blank? text) record
+      (full-execute-submission? text)
+      (assoc record
+             :stage1 (extract-stage text 1)
+             :stage2 (extract-stage text 2)
+             :stage3 (extract-stage text 3)
+             :stage4 (extract-stage text 4))
+      :else
+      (if (execute-record-complete? record)
+        (if-let [delta (extract-lean-delta text)]
+          (if (indirect-notes? delta)
+            record
+            (update record :lean-deltas conj delta))
+          record)
+        record))))
+
+(defn- execute-record->notes
+  [record]
+  (let [{:keys [stage1 stage2 stage3 stage4 lean-deltas]} (merge (empty-execute-record) record)
+        stage3-body (reduce append-phase-output stage3 lean-deltas)
+        pieces (keep identity
+                     [(when stage1 (str (execute-stage-heading 1) stage1))
+                      (when stage2 (str (execute-stage-heading 2) stage2))
+                      (when stage3-body (str (execute-stage-heading 3) stage3-body))
+                      (when stage4 (str (execute-stage-heading 4) stage4))])]
+    (when (seq pieces)
+      (str/join "\n\n" pieces))))
+
+(defn- update-execute-record!
+  [output]
+  (let [new-state
+        (swap! !apm-state
+               (fn [state]
+                 (let [updated-record (merge-execute-record (:execute-record state) output)
+                       canonical-notes (execute-record->notes updated-record)]
+                   (cond-> (assoc state :execute-record updated-record)
+                     canonical-notes (assoc-in [:phase-notes :execute] canonical-notes)))))]
+    (:execute-record new-state)))
+
+(defn- parse-dependency-entry
+  [entry-text]
+  (let [[_ lemma body] (re-find #"(?ms)^\s*\d+\.\s+\*\*([^*]+)\*\*\s*\n(.*)\z" entry-text)
+        full (trim-to-nil entry-text)
+        body (or body "")
+        formal (or (extract-section body #"(?m)^\s*-\s+\*\*Formal dependency\*\*:\s*(.+)$")
+                   (extract-section body #"(?m)^\s*-\s+\*Formal dependency\*:\s*(.+)$")
+                   (extract-section body #"(?m)^\s*Formal dependency:\s*(.+)$"))
+        informal (or (extract-section body #"(?m)^\s*-\s+\*\*Informal dependency\*\*:\s*(.+)$")
+                     (extract-section body #"(?m)^\s*-\s+\*Informal dependency\*:\s*(.+)$")
+                     (extract-section body #"(?m)^\s*Informal dependency:\s*(.+)$"))
+        why-now (or (extract-section body #"(?m)^\s*-\s+\*\*Why this becomes thinkable here\*\*:\s*(.+)$")
+                    (extract-section body #"(?m)^\s*-\s+\*Why this becomes thinkable here\*:\s*(.+)$")
+                    (extract-section body #"(?m)^\s*Why this becomes thinkable here:\s*(.+)$"))
+        lean-type (or (extract-section body #"(?m)^\s*-\s+\*\*Lean target/type\*\*:\s*(.+)$")
+                      (extract-section body #"(?m)^\s*-\s+\*Lean target/type\*:\s*(.+)$")
+                      (extract-section body #"(?m)^\s*Lean target/type:\s*(.+)$")
+                      (extract-section body #"(?m)^\s*-\s+\*Type(?: \([^)]+\))?\*:\s*(.+)$")
+                      (extract-section body #"(?m)^\s*Type:\s*(.+)$"))
+        status (or (extract-section body #"(?m)^\s*-\s+\*\*Mathlib status/search terms\*\*:\s*(.+)$")
+                   (extract-section body #"(?m)^\s*-\s+\*Mathlib status/search terms\*:\s*(.+)$")
+                   (extract-section body #"(?m)^\s*Mathlib status/search terms:\s*(.+)$")
+                   (extract-section body #"(?m)^\s*-\s+\*Status\*:\s*(.+)$")
+                   (extract-section body #"(?m)^\s*Status:\s*(.+)$"))
+        critical (or (extract-section body #"(?m)^\s*-\s+\*Critical path\*:\s*(.+)$")
+                     (extract-section body #"(?m)^\s*-\s+\*\*Critical path\*\*:\s*(.+)$")
+                     (extract-section body #"(?m)^\s*Critical path:\s*(.+)$"))]
+    {:lemma (or (trim-to-nil lemma) "unparsed-lemma")
+     :formal-dependency (or formal full)
+     :informal-dependency informal
+     :why-this-now why-now
+     :lean-type (or lean-type full)
+     :source (or status "agent-output")
+     :search-terms (->> (re-seq #"`([^`]+)`" (or status ""))
+                        (map second)
+                        distinct
+                        vec)
+     :on-critical-path (boolean (re-find #"(?i)\b(yes|critical)\b" (or critical "")))
+     :notes full}))
+
+(defn- parse-dependency-graph
+  [text]
+  (let [section (or (extract-stage text 2) text)
+        entries (->> (re-seq #"(?ms)^\s*\d+\.\s+\*\*[^*]+\*\*.*?(?=^\s*\d+\.\s+\*\*|\z)" (or section ""))
+                     (map parse-dependency-entry)
+                     vec)]
+    (if (seq entries)
+      entries
+      (when-let [fallback (trim-to-nil section)]
+        [{:lemma "unparsed-dependency-graph"
+          :lean-type fallback
+          :source "agent-output"
+          :on-critical-path false
+          :notes fallback}]))))
+
+(defn- parse-arse-questions
+  [text]
+  (let [section (or (extract-section text #"(?ms)\*\*ArSE Questions\*\*\s*(.*)\z")
+                    text)
+        types [:why-hard :what-crux :why-works :what-connects :confidence]]
+    (->> (re-seq #"(?ms)^\s*(\d+)\.\s+\*(.+?)\*\s*(.*?)(?=^\s*\d+\.\s+\*|\z)" (or section ""))
+         (map-indexed
+          (fn [idx [_ _ question answer]]
+            {:type (nth types idx :confidence)
+             :question (trim-to-nil question)
+             :answer (trim-to-nil (str/replace (or answer "") #"^\s*[:\-]\s*" ""))}))
+         (filter #(and (:question %) (:answer %)))
+         vec)))
+
+(defn- extract-bold-section
+  [text title]
+  (extract-section
+   text
+   (re-pattern
+    (str "(?ms)^\\*\\*" (java.util.regex.Pattern/quote title)
+         "\\*\\*\\s*(.*?)(?=^\\*\\*|\\z)"))))
+
+(defn- classify-status
+  [text]
+  (cond
+    (re-find #"(?i)\bproved\b" (or text "")) :proved
+    (re-find #"(?i)\bbuild-failed\b" (or text "")) :inconclusive
+    (re-find #"(?i)\btimed-out\b" (or text "")) :partial
+    :else :partial))
+
+(defn- normalized-phase-notes
+  [problem phase raw-output]
+  (let [sidecar (slurp-if-exists (phase-sidecar-path problem phase))
+        execute-sidecar (slurp-if-exists (phase-sidecar-path problem :execute))]
+    (case phase
+      :propose (or (trim-to-nil sidecar) (trim-to-nil raw-output))
+      :execute (or (some-> sidecar normalize-execute-notes) (normalize-execute-notes raw-output))
+      :classify (if (indirect-notes? raw-output)
+                  (or (extract-stage execute-sidecar 5)
+                      (trim-to-nil raw-output))
+                  (trim-to-nil raw-output))
+      :integrate (if (indirect-notes? raw-output)
+                   (or (extract-stage execute-sidecar 6)
+                       (trim-to-nil raw-output))
+                   (trim-to-nil raw-output))
+      (trim-to-nil raw-output))))
+
+(defn- validation-artifacts
+  [problem execute-artifacts]
+  (->> (concat execute-artifacts
+               (keep identity [(phase-sidecar-path problem :propose)
+                               (phase-sidecar-path problem :execute)]))
+       (filter #(try (.exists (io/file %))
+                     (catch Exception _ false)))
+       distinct
+       vec))
+
 ;; =============================================================================
 ;; Phase prompt dispatch
 ;; =============================================================================
@@ -91,7 +337,9 @@
 (defn- make-lean-continue-prompt
   "Prompt for re-dispatch when agent returns early from execute with sorry."
   [problem remaining-ms previous-output]
-  (str "You are STILL in the EXECUTE phase. Timer has NOT expired.\n\n"
+  (str "Execution evidence required: yes.\n"
+       "This phase must include real Lean/tool work in Stage 3. A purely textual reply is insufficient.\n\n"
+       "You are STILL in the EXECUTE phase. Timer has NOT expired.\n\n"
        "Problem: apm-" (:id problem) "\n\n"
        "You returned with sorry instances but " (long (/ remaining-ms 1000))
        " seconds remain on your 15-minute Lean timer.\n\n"
@@ -103,8 +351,37 @@
        "2. Search Mathlib for the API you need\n"
        "3. Wire it: lake build, read error, fix, repeat\n"
        "4. If you close it, move to the next sorry\n\n"
+       "Return a LEAN DELTA ONLY: what changed in Stage 3, what artifacts now exist,\n"
+       "which sorrys closed, and what blockers remain. Do NOT replace Stage 1/2/4 with\n"
+       "a summary or 'see file' note; the conductor will merge your Lean delta into the\n"
+       "canonical execute record.\n\n"
        "When the timer expires, the conductor will advance you.\n"
        "DO NOT rewrite the informal proof — focus entirely on Lean.\n"))
+
+(defn- make-full-execute-resubmission-prompt
+  [problem remaining-ms previous-output execute-record]
+  (let [canonical (execute-record->notes execute-record)]
+    (str "Execution evidence required: no.\n"
+         "This is a record-normalization turn inside EXECUTE. The required deliverable is the full authoritative Stage 1-4 writeup inline.\n"
+         "Lean execution evidence for this EXECUTE phase must already exist in prior turns; do not rerun tools just to satisfy formatting.\n\n"
+         "You are STILL in the EXECUTE phase, but the authoritative Stage 1-4 record\n"
+         "has not yet been fully captured.\n\n"
+         "Problem: apm-" (:id problem) "\n\n"
+         "Remaining Lean timer: " (long (/ (max 0 remaining-ms) 1000)) " seconds.\n\n"
+         "You must now return ONE FULL EXECUTE SUBMISSION with all four sections inline:\n"
+         "1. Stage 1 — THE CLEAN PROOF\n"
+         "2. Stage 2 — LEMMA DEPENDENCY GRAPH\n"
+         "3. Stage 3 — LEAN FORMALIZATION\n"
+         "4. Stage 4 — FORMAL-TO-INFORMAL REVISION\n\n"
+         "Do not answer with a delta, file pointer, ellipsis, or summary. The conductor\n"
+         "will not advance execute until the full Stage 1-4 record exists.\n\n"
+         (when canonical
+           (str "Canonical execute content captured so far:\n"
+                canonical "\n\n"))
+         "Most recent execute reply:\n"
+         (subs previous-output 0 (min 1800 (count previous-output)))
+         "\n\n"
+         "Reconstruct the full authoritative record from your current work and emit it inline now.\n")))
 
 (defn- has-sorry?
   "Check if output mentions sorry (indicating incomplete Lean proof)."
@@ -155,12 +432,33 @@
     (catch Exception _
       true)))
 
+(def ^:private placeholder-artifact-pattern
+  #"(?is)\bplaceholder\b|:\s*True\s*:=\s*(?:by\s+)?trivial\b|lemma\s+\S+\s*\([^)]*\)\s*:\s*True\s*:=|theorem\s+\S+\s*\([^)]*\)\s*:\s*True\s*:=")
+
+(defn- declaration-lines
+  [text]
+  (->> (str/split-lines (or text ""))
+       (map str/trim)
+       (filter #(re-find #"^(?:lemma|theorem)\b" %))))
+
+(defn- artifact-placeholder?
+  [path]
+  (try
+    (let [text (slurp path)]
+      (or (boolean (re-find placeholder-artifact-pattern text))
+          (let [decls (declaration-lines text)]
+            (or (empty? decls)
+                (not-any? #(not (re-find #":\s*True\b" %)) decls)))))
+    (catch Exception _
+      true)))
+
 (defn- fully-closed-execute?
   [problem execute-start-ms output]
   (let [artifacts (discover-lean-artifacts problem execute-start-ms output)]
     (and (seq artifacts)
          (not (has-sorry? output))
-         (every? (complement artifact-has-sorry?) artifacts))))
+         (every? (complement artifact-has-sorry?) artifacts)
+         (every? (complement artifact-placeholder?) artifacts))))
 
 (defn- dispatch-phase!
   "Dispatch the current phase to the agent. Non-blocking (runs in future).
@@ -214,6 +512,8 @@
         dispatch-elapsed-ms (- now-ms (or phase-dispatch-ms now-ms))
         total-elapsed-ms (- now-ms (or execute-start-ms now-ms))
         remaining-ms (- lean-floor-ms total-elapsed-ms)
+        execute-record (update-execute-record! agent-output)
+        full-record? (execute-record-complete? execute-record)
         artifacts (discover-lean-artifacts current-problem execute-start-ms agent-output)
         sorry? (or (has-sorry? agent-output)
                    (some artifact-has-sorry? artifacts))
@@ -223,10 +523,27 @@
            :elapsed-ms dispatch-elapsed-ms
            :total-elapsed-ms total-elapsed-ms
            :artifact-count (count artifacts)
+           :full-record? full-record?
            :sorry? sorry? :fully-closed? fully-closed?
            :remaining-ms (max 0 remaining-ms)})
 
     (cond
+      ;; Cannot advance execute at all until we have one authoritative
+      ;; full Stage 1-4 record.
+      (not full-record?)
+      (do
+        (log! {:event :execute-missing-full-record :problem pid
+               :elapsed-ms dispatch-elapsed-ms
+               :total-elapsed-ms total-elapsed-ms
+               :message "Full Stage 1-4 execute submission missing — re-dispatching for canonical record"})
+        (println "[apm-conductor] Execute: missing full Stage 1-4 record — re-dispatching")
+        (dispatch-phase! agent-id evidence-store
+                         :prompt-override (make-full-execute-resubmission-prompt
+                                           (:current-problem @!apm-state)
+                                           remaining-ms agent-output execute-record)
+                         :timeout-override (max 60000 remaining-ms))
+        false)
+
       ;; Zero sorry — early exit allowed
       fully-closed?
       (do
@@ -235,9 +552,6 @@
                :message "Zero sorry — fully closed, early exit permitted"})
         (println (str "[apm-conductor] Execute: FULLY CLOSED in "
                       (long (/ total-elapsed-ms 1000)) "s total — early exit"))
-        ;; Accumulate output and advance
-        (swap! !apm-state update-in [:phase-notes :execute]
-               append-phase-output agent-output)
         true)  ;; signal: advance
 
       ;; Timer expired — advance with whatever we have
@@ -248,8 +562,6 @@
                :message "Timer expired with sorry — advancing with partial"})
         (println (str "[apm-conductor] Execute: timer expired ("
                       (long (/ total-elapsed-ms 1000)) "s total) with sorry — advancing"))
-        (swap! !apm-state update-in [:phase-notes :execute]
-               append-phase-output agent-output)
         true)  ;; signal: advance
 
       ;; Agent returned early with sorry — re-dispatch
@@ -262,9 +574,6 @@
                              "s remaining — re-dispatching")})
         (println (str "[apm-conductor] Execute: sorry present, "
                       (long (/ remaining-ms 1000)) "s remaining — re-dispatching"))
-        ;; Accumulate output so far
-        (swap! !apm-state update-in [:phase-notes :execute]
-               append-phase-output agent-output)
         ;; Re-dispatch with remaining time
         (dispatch-phase! agent-id evidence-store
                          :prompt-override (make-lean-continue-prompt
@@ -280,7 +589,27 @@
         failures (inc (or (:phase-failure-count @!apm-state) 0))
         message (or (get-in outcome [:error :message])
                     (some-> (:error outcome) str)
-                    "Unknown invoke failure")]
+                    "Unknown invoke failure")
+        execute-record (:execute-record @!apm-state)
+        execute-start-ms (:execute-start-ms @!apm-state)
+        phase-dispatch-ms (:phase-dispatch-ms @!apm-state)
+        total-execute-ms (when (= current-phase :execute)
+                           (- (System/currentTimeMillis)
+                              (or execute-start-ms phase-dispatch-ms 0)))
+        remaining-ms (when (= current-phase :execute)
+                       (max 0 (- lean-floor-ms (or total-execute-ms 0))))
+        retry-override
+        (when (= current-phase :execute)
+          (cond
+            (not (execute-record-complete? execute-record))
+            {:prompt-override (make-full-execute-resubmission-prompt
+                               current-problem remaining-ms "" execute-record)
+             :timeout-override (max 60000 remaining-ms)}
+
+            :else
+            {:prompt-override (make-lean-continue-prompt
+                               current-problem remaining-ms "")
+             :timeout-override (max 60000 remaining-ms)}))]
     (swap! !apm-state assoc :phase-failure-count failures)
     (log! {:event :phase-failure :problem pid :phase current-phase
            :failure-count failures :message message})
@@ -288,7 +617,11 @@
       (future
         (Thread/sleep phase-retry-delay-ms)
         (when @!apm-conductor
-          (dispatch-phase! agent-id evidence-store)))
+          (if retry-override
+            (dispatch-phase! agent-id evidence-store
+                             :prompt-override (:prompt-override retry-override)
+                             :timeout-override (:timeout-override retry-override))
+            (dispatch-phase! agent-id evidence-store))))
       (do
         (log! {:event :conductor-stopping :problem pid :phase current-phase
                :message (str "Exceeded retry budget after " failures " failures")})
@@ -322,38 +655,48 @@
       ;; For non-execute phases (or execute that passed the floor):
       (do
         (when (not= current-phase :execute)
-          (swap! !apm-state assoc-in [:phase-notes current-phase] output))
+          (swap! !apm-state assoc-in [:phase-notes current-phase]
+                 (normalized-phase-notes current-problem current-phase output)))
 
     ;; Build phase-data and advance
     (let [accumulated-execute (get-in @!apm-state [:phase-notes :execute])
+          execute-record (:execute-record @!apm-state)
+          normalized-notes (case current-phase
+                             :execute (or (execute-record->notes execute-record)
+                                          (normalized-phase-notes current-problem :execute accumulated-execute))
+                             (or (get-in @!apm-state [:phase-notes current-phase])
+                                 (normalized-phase-notes current-problem current-phase output)))
           execute-artifacts (discover-lean-artifacts current-problem execute-start-ms accumulated-execute)
           execute-total-elapsed (- (System/currentTimeMillis) (or execute-start-ms phase-dispatch-ms 0))
+          execute-notes (or (when (= current-phase :execute) normalized-notes)
+                            (get-in @!apm-state [:phase-notes :execute])
+                            (normalized-phase-notes current-problem :execute accumulated-execute))
+          execute-sidecar (slurp-if-exists (phase-sidecar-path current-problem :execute))
           phase-data
           (case current-phase
-            :observe   {:blocker-id "root" :notes output}
-            :propose   {:approach (or (first (re-seq #"(?s)KEY INSIGHT.*?(?=\n\n|\z)" output))
-                                      output)
-                        :notes output}
+            :observe   {:blocker-id "root" :notes normalized-notes}
+            :propose   {:approach (or (extract-bold-section normalized-notes "THE KEY INSIGHT")
+                                      normalized-notes)
+                        :notes normalized-notes}
             :execute   {:artifacts execute-artifacts
-                        :dependency-graph [{:lemma "see-notes" :lean-type "see-notes"
-                                           :source "tbd" :on-critical-path true}]
+                        :dependency-graph (or (some-> execute-record :stage2 parse-dependency-graph)
+                                              (parse-dependency-graph execute-notes))
                         :lean-elapsed-ms execute-total-elapsed
-                        :notes (or accumulated-execute "")
+                        :notes execute-notes
                         :lean-timed-out (when (>= execute-total-elapsed lean-floor-ms)
                                           (str "Timer expired after " (long (/ execute-total-elapsed 1000))
                                                "s — see notes for attempt details"))}
-            :validate  {:validation-artifacts ["see-notes"] :notes output}
-            :classify  {:classification (cond
-                                          (re-find #"(?i)\bproved\b" output) :proved
-                                          (re-find #"(?i)\bpartial\b" output) :partial
-                                          :else :partial)
-                        :rationale output :notes output}
-            :integrate {:rationale output :ledger-changes [] :notes output
-                        :arse-questions (vec (for [i (range 5)]
-                                              {:type (nth [:why-hard :what-crux :why-works
-                                                           :what-connects :confidence] i)
-                                               :question (str "Q" (inc i))
-                                               :answer "see notes"}))})
+            :validate  {:validation-artifacts (validation-artifacts current-problem execute-artifacts)
+                        :notes normalized-notes}
+            :classify  {:classification (classify-status normalized-notes)
+                        :rationale normalized-notes
+                        :notes normalized-notes}
+            :integrate {:rationale (or (extract-bold-section normalized-notes "Connections")
+                                       normalized-notes)
+                        :ledger-changes []
+                        :notes normalized-notes
+                        :arse-questions (parse-arse-questions
+                                         (or normalized-notes execute-sidecar))})
 
           advance-result (.execute-tool backend :cycle-advance [pid cycle-id phase-data])]
 
@@ -376,10 +719,7 @@
             (do
               (log! {:event :mechanical-gates :problem pid})
               (.execute-tool backend :cycle-advance [pid cycle-id {:saved? true}])
-              (let [classification (let [cls (get-in @!apm-state [:phase-notes :classify])]
-                                    (cond
-                                      (and cls (re-find #"(?i)\bproved\b" cls)) :proved
-                                      :else :partial))
+              (let [classification (classify-status (get-in @!apm-state [:phase-notes :classify]))
                     _ (.execute-tool backend :cycle-advance
                         [pid cycle-id {:gates-passed true :result-status classification}])
                     ;; Save
@@ -428,12 +768,15 @@
 
 (defn- start-next-problem!
   [agent-id evidence-store]
-  (let [issues (apm-queue/next-unprocessed evidence-store 1)]
-    (if (empty? issues)
+  (let [{:keys [problem-bases]} @!apm-state
+        explicit-base (first problem-bases)
+        issue (if explicit-base
+                {:problem-base explicit-base}
+                (first (apm-queue/next-unprocessed evidence-store 1)))]
+    (if-not issue
       (do (log! {:event :queue-empty})
           (stop-apm-conductor!))
-      (let [issue (first issues)
-            base (:problem-base issue)
+      (let [base (:problem-base issue)
             pid (str "apm-" base)
             manifest (apm-queue/load-apm-manifest)
             problem (first (filter #(= base (:id %)) manifest))
@@ -451,10 +794,14 @@
           (swap! !apm-state assoc
                  :current-problem problem :current-phase :observe
                  :cycle-id cid :backend backend :phase-notes {}
+                 :execute-record (empty-execute-record)
                  :problem-start-ms (System/currentTimeMillis)
                  :phase-dispatch-ms nil
                  :execute-start-ms nil
-                 :phase-failure-count 0)
+                 :phase-failure-count 0
+                 :problem-bases (if explicit-base
+                                  (vec (rest problem-bases))
+                                  problem-bases))
           (dispatch-phase! agent-id evidence-store))))))
 
 ;; =============================================================================
@@ -475,24 +822,36 @@
    If agent returns early with sorry, re-dispatched with remaining time.
    Zero-sorry proof can exit immediately.
    All timings logged to data/apm-conductor-log.edn."
-  [evidence-store & {:keys [agent-id n] :or {agent-id "claude-1" n 40}}]
+  [evidence-store & {:keys [agent-id n problem-ids]
+                     :or {agent-id "claude-1" n 40}}]
   (stop-apm-conductor!)
 
   ;; Init log file header
   (spit log-path (str ";; APM Conductor Log — " (Instant/now) "\n") :append true)
 
-  (reset! !apm-state {:problems-done 0 :batch-results [] :target-n n})
+  (let [problem-bases (some->> problem-ids
+                               (mapv #(if (str/starts-with? (str %) "apm-")
+                                        (subs (str %) 4)
+                                        (str %))))]
+    (reset! !apm-state {:problems-done 0
+                        :batch-results []
+                        :target-n (or (some-> problem-bases count) n)
+                        :problem-bases problem-bases})
 
-  (reg/set-on-idle!
-    (fn [idle-agent-id outcome]
-      (when (and (= idle-agent-id agent-id) @!apm-conductor)
-        (if (:ok outcome true)
-          (let [output (:result outcome)]
-            (advance-and-dispatch-next! agent-id output evidence-store))
-          (handle-phase-failure! agent-id outcome evidence-store)))))
+    (reg/set-on-idle!
+      (fn [idle-agent-id outcome]
+        (when (and (= idle-agent-id agent-id) @!apm-conductor)
+          (if (:ok outcome true)
+            (let [output (:result outcome)]
+              (advance-and-dispatch-next! agent-id output evidence-store))
+            (handle-phase-failure! agent-id outcome evidence-store)))))
 
-  (reset! !apm-conductor {:agent-id agent-id :started-at (System/currentTimeMillis)})
-  (log! {:event :conductor-started :agent agent-id :target n})
+    (reset! !apm-conductor {:agent-id agent-id :started-at (System/currentTimeMillis)})
+    (log! (cond-> {:event :conductor-started :agent agent-id :target (or (some-> problem-bases count) n)}
+            (seq problem-bases) (assoc :problem-bases problem-bases)))
 
-  (start-next-problem! agent-id evidence-store)
-  {:ok true :agent-id agent-id :target n})
+    (start-next-problem! agent-id evidence-store)
+    {:ok true
+     :agent-id agent-id
+     :target (or (some-> problem-bases count) n)
+     :problem-bases problem-bases}))

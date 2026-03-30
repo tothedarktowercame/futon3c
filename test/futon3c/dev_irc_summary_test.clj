@@ -411,6 +411,32 @@
           (is (.contains (str (:error result))
                          "work-claim without execution evidence after enforcement retry")))))))
 
+(deftest codex-invoke-allows-proof-authoring-turn-without-execution-evidence
+  (testing "text-authoring proof-peripheral phases do not trigger execution enforcement"
+    (let [calls (atom [])
+          prompt (str "[Surface: IRC | Channel: #math | Speaker: joe | Mode: task | Execute work asynchronously.]\n"
+                      "Execution evidence required: no.\n"
+                      "You are in the OBSERVE phase of the proof peripheral.\n"
+                      "Your reply is the authoritative phase record.")
+          response {:result "**WHAT IS REALLY BEING ASKED**\n- This asks how the residue controls derivative asymptotics.\n\n**WHY IT IS HARD**\n- The trap is forgetting to subtract the principal part before using Cauchy estimates."
+                    :session-id "sess-1"
+                    :execution {:executed? false :tool-events 0 :command-events 0}}]
+      (with-redefs [futon3c.agents.codex-cli/make-invoke-fn
+                    (fn [_opts]
+                      (fn [seen-prompt sid]
+                        (swap! calls conj {:prompt seen-prompt :sid sid})
+                        response))
+                    futon3c.dev/emit-invoke-evidence! (fn [& _] nil)
+                    futon3c.dev/preferred-session-id (fn [& _] "sess-1")
+                    futon3c.dev/persist-session-id! (fn [& _] nil)
+                    futon3c.dev/start-invoke-ticker! (fn [& _] (fn [] nil))
+                    futon3c.blackboard/blackboard! (fn [& _] {:ok true})]
+        (let [invoke-fn (dev/make-codex-invoke-fn {:agent-id "codex-1"})
+              result (invoke-fn prompt nil)]
+          (is (= 1 (count @calls)))
+          (is (nil? (:error result)))
+          (is (.contains (:result result) "WHAT IS REALLY BEING ASKED")))))))
+
 (deftest codex-invoke-retries-micro-increment-task-update
   (testing "task-mode reconnaissance-only update with execution evidence is retried for closure"
     (let [calls (atom [])

@@ -113,10 +113,21 @@
          "**Stage 2 — LEMMA DEPENDENCY GRAPH**: Before touching Lean, extract\n"
          "the proof's logical structure as an explicit build plan:\n"
          "- List each lemma/fact the proof uses, in dependency order.\n"
-         "- For each, write the Lean type signature you expect (input → output).\n"
-         "- Mark which are likely in Mathlib (search terms to try) vs. which\n"
-         "  you will need to prove from scratch.\n"
-         "- Identify the critical path: which lemma, if closed, unblocks the\n"
+         "- For each entry, distinguish the FORMAL dependency from the INFORMAL\n"
+         "  strategy trigger. We are not only recording 'what theorem is used',\n"
+         "  but also 'how did you know to reach for it here?'\n"
+         "- Use this exact template for every dependency entry:\n"
+         "  1. **Dependency Name**\n"
+         "     - **Formal dependency**: the theorem/lemma/definition actually used\n"
+         "     - **Informal dependency**: the recognition heuristic, pattern, or\n"
+         "       hidden proof strategy that made this move visible\n"
+         "     - **Why this becomes thinkable here**: the local cue in this problem\n"
+         "       that tells you the formal dependency is relevant\n"
+         "     - **Lean target/type**: the type signature or goal shape you expect\n"
+         "     - **Mathlib status/search terms**: likely in Mathlib vs custom,\n"
+         "       plus concrete search terms\n"
+         "     - **Critical path**: yes/no + why\n"
+         "- Identify the critical path: which dependency, if closed, unblocks the\n"
          "  most downstream work?\n"
          "This is HtDP step 1 for the entire proof. The informal proof IS your\n"
          "design document — this stage makes the connection explicit.\n\n"
@@ -239,23 +250,34 @@
            (str "\nSub-parts: " (str/join ", " (map :label subparts)) "\n")))))
 
 (defn make-observe-prompt [problem tex-body]
-  (str "You are in the OBSERVE phase of the proof peripheral.\n\n"
+  (str "Execution evidence required: no.\n"
+       "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
+       "You are in the OBSERVE phase of the proof peripheral.\n\n"
        (problem-header problem tex-body)
        "\nWrite two labeled sections:\n"
        "- **WHAT IS REALLY BEING ASKED**: Restate the problem. What mathematical objects? What is the real question?\n"
        "- **WHY IT IS HARD**: Where do students get stuck? What trap? What prerequisite is being tested?\n\n"
+       "Your reply is the authoritative phase record. Do not answer with a summary like "
+       "\"wrote this to file X\" or \"see notes\". Emit the actual OBSERVE content inline. "
+       "If you also write a sidecar file, mirror the same content here.\n\n"
        "Write for a strong undergrad. This becomes the cheatsheet's opening exposition.\n"))
 
 (defn make-propose-prompt [problem tex-body observe-notes]
-  (str "You are in the PROPOSE phase of the proof peripheral.\n\n"
+  (str "Execution evidence required: no.\n"
+       "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
+       "You are in the PROPOSE phase of the proof peripheral.\n\n"
        (problem-header problem tex-body)
        "\nYour OBSERVE notes:\n" observe-notes "\n\n"
        "Write two labeled sections:\n"
        "- **THE KEY INSIGHT**: The single idea that unlocks this problem. Proof strategy and why.\n"
-       "- **THE NAIVE APPROACH THAT FAILS**: What does a student try first? Why does it fail? What structural obstruction blocks it?\n"))
+       "- **THE NAIVE APPROACH THAT FAILS**: What does a student try first? Why does it fail? What structural obstruction blocks it?\n\n"
+       "Your reply is the authoritative phase record. Do not summarize the file you wrote; "
+       "emit the actual PROPOSE notes inline.\n"))
 
 (defn make-execute-prompt [problem tex-body observe-notes propose-notes]
-  (str "You are in the EXECUTE phase of the proof peripheral.\n\n"
+  (str "Execution evidence required: yes.\n"
+       "This phase must include real Lean/tool work in Stage 3. A purely textual reply is insufficient.\n\n"
+       "You are in the EXECUTE phase of the proof peripheral.\n\n"
        (problem-header problem tex-body)
        "\nYour OBSERVE notes:\n" observe-notes "\n"
        "\nYour PROPOSE notes:\n" propose-notes "\n\n"
@@ -264,9 +286,16 @@
        "For multi-part problems, prove each part. Write for a reader who could follow line by line.\n\n"
        "**Stage 2 — LEMMA DEPENDENCY GRAPH**: Before Lean, extract the logical structure:\n"
        "- List each lemma/fact used, in dependency order\n"
-       "- For each: expected Lean type signature\n"
-       "- Mark: likely in Mathlib (with search terms) vs. custom\n"
-       "- Critical path: which lemma, if closed, unblocks the most?\n\n"
+       "- For every entry, record both the FORMAL dependency and the INFORMAL dependency\n"
+       "  that made it visible. We are tracing proof strategy, not just theorem lookup.\n"
+       "- Use this exact template for each entry:\n"
+       "  1. **Dependency Name**\n"
+       "     - **Formal dependency**: theorem/lemma/definition actually used\n"
+       "     - **Informal dependency**: recognition heuristic, pattern, or hidden move\n"
+       "     - **Why this becomes thinkable here**: local cue in the problem\n"
+       "     - **Lean target/type**: expected Lean type signature or goal shape\n"
+       "     - **Mathlib status/search terms**: likely Mathlib vs custom, plus search terms\n"
+       "     - **Critical path**: yes/no + why\n\n"
        "**Stage 3 — LEAN FORMALIZATION**: 15-minute exam timer starts NOW.\n"
        "Build the skeleton from your dependency graph. Use HtDP to attack each sorry:\n"
        "1. Type signature (from dependency graph)\n"
@@ -277,26 +306,38 @@
        "**Stage 4 — FORMAL-TO-INFORMAL REVISION**: Reread THE CLEAN PROOF. Add "
        "natural-language difficulty annotations grounded in the Lean work. "
        "No Lean references in Column 1 prose — just calibrated difficulty signals. "
-       "Lean details go in VALIDATE/CLASSIFY (Column 3).\n"))
+       "Lean details go in VALIDATE/CLASSIFY (Column 3).\n\n"
+       "Your reply is the authoritative EXECUTE record. Do not answer with a summary such as "
+       "\"Stage 1 is in file X\" or \"see notes\". Emit the actual Stage 1-4 content inline. "
+       "If you also maintain a sidecar file, keep it in correspondence with this reply.\n"))
 
 (defn make-validate-prompt [_problem execute-notes lean-status]
-  (str "You are in the VALIDATE phase.\n\n"
+  (str "Execution evidence required: no.\n"
+       "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
+       "You are in the VALIDATE phase.\n\n"
        "Your EXECUTE output:\n" execute-notes "\n"
        "\nLean build status: " lean-status "\n\n"
        "Write:\n"
        "- Non-circularity analysis: list independent facts, confirm none assumes conclusion\n"
        "- Lean status: build result, sorry count, what blocked each sorry\n"
-       "- If sorry > 0: for each sorry, an HtDP sketch (which API, what composition, what gap)\n"))
+       "- If sorry > 0: for each sorry, an HtDP sketch (which API, what composition, what gap)\n\n"
+       "Your reply is the authoritative VALIDATE record. Do not answer with a summary like "
+       "\"documented in file X\". Emit the actual validation text inline.\n"))
 
 (defn make-classify-prompt [_problem validate-notes]
-  (str "You are in the CLASSIFY phase.\n\n"
+  (str "Execution evidence required: no.\n"
+       "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
+       "You are in the CLASSIFY phase.\n\n"
        "Your VALIDATE notes:\n" validate-notes "\n\n"
        "Write two labeled sections:\n"
        "- **Classification**: proved / partial (explain what resisted + what you tried) / build-failed / timed-out\n"
-       "- **CONFIDENCE INVERSION**: What is surprising? Where is intuition wrong? Name the surprise.\n"))
+       "- **CONFIDENCE INVERSION**: What is surprising? Where is intuition wrong? Name the surprise.\n\n"
+       "Your reply is the authoritative CLASSIFY record. Do not replace it with file pointers or a summary.\n"))
 
 (defn make-integrate-prompt [_problem all-phase-notes]
-  (str "You are in the INTEGRATE phase.\n\n"
+  (str "Execution evidence required: no.\n"
+       "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
+       "You are in the INTEGRATE phase.\n\n"
        "Summary of all phases so far:\n" all-phase-notes "\n\n"
        "Write two labeled sections:\n"
        "- **Connections**: What other mathematics? Where else does this technique appear?\n"
@@ -308,7 +349,9 @@
        "4. what-connects (from integrate): What connects to this?\n"
        "5. confidence (from classify): Where is intuition wrong?\n"
        "For each: the question AND a brief answer. Review your notes — if a question "
-       "exposes a gap, note what needs revision.\n"))
+       "exposes a gap, note what needs revision.\n\n"
+       "Your reply is the authoritative INTEGRATE record. Do not answer with placeholders "
+       "such as \"Q1\"/\"see notes\" or with a summary that points to another file.\n"))
 
 ;; =============================================================================
 ;; Canaries
@@ -326,6 +369,55 @@
   "Check if artifacts list contains at least one .lean file path."
   [artifacts]
   (some #(str/ends-with? (str %) ".lean") artifacts))
+
+(def ^:private indirect-notes-pattern
+  #"(?is)\b(updated|recorded|integrated|documented|captured|consolidated)\b.*\b(in|into)\b.*(\.md|\.lean|proof_peripheral|lean-proofs)|\bsee notes\b")
+
+(defn- indirect-notes?
+  [notes]
+  (boolean (re-find indirect-notes-pattern (or notes ""))))
+
+(defn- placeholder-dependency-graph?
+  [dep-graph]
+  (or (empty? dep-graph)
+      (every? (fn [entry]
+                (let [lemma (str/lower-case (str (or (:lemma entry) "")))
+                      lean-type (str/lower-case (str (or (:lean-type entry) "")))
+                      notes (str/lower-case (str (or (:notes entry) "")))]
+                  (or (= lemma "see-notes")
+                      (= lean-type "see-notes")
+                      (str/includes? notes "see-notes"))))
+              dep-graph)))
+
+(defn- rich-dependency-entry?
+  [entry]
+  (let [lemma (str/trim (str (or (:lemma entry) "")))
+        formal (str/trim (str (or (:formal-dependency entry) "")))
+        informal (str/trim (str (or (:informal-dependency entry) "")))
+        why-now (str/trim (str (or (:why-this-now entry) "")))
+        lean-type (str/trim (str (or (:lean-type entry) "")))]
+    (and (not (str/blank? lemma))
+         (not= "unparsed-lemma" (str/lower-case lemma))
+         (not (str/blank? formal))
+         (not (str/blank? informal))
+         (not (str/blank? why-now))
+         (not (str/blank? lean-type)))))
+
+(defn- strategic-dependency-graph?
+  [dep-graph]
+  (and (seq dep-graph)
+       (every? rich-dependency-entry? dep-graph)))
+
+(defn- placeholder-arse-questions?
+  [arse]
+  (or (empty? arse)
+      (some (fn [{:keys [question answer]}]
+              (let [q (str/lower-case (str/trim (or question "")))
+                    a (str/lower-case (str/trim (or answer "")))]
+                (or (re-matches #"q\d+" q)
+                    (= a "see notes")
+                    (= q "see notes"))))
+            arse)))
 
 (defn apm-phase-validator
   "Phase validator for APM problems. Returns nil on success, or an error
@@ -350,9 +442,18 @@
         (str/blank? notes)
         {:ok false :error {:code :missing-notes
                            :message "Execute phase requires :notes (THE CLEAN PROOF)"}}
+        (indirect-notes? notes)
+        {:ok false :error {:code :indirect-notes
+                           :message "Execute phase notes must contain the actual Stage 1-4 content, not a file summary or 'see notes' indirection"}}
         (or (nil? dep-graph) (empty? dep-graph))
         {:ok false :error {:code :missing-dependency-graph
                            :message "Execute phase requires :dependency-graph (lemma build plan)"}}
+        (placeholder-dependency-graph? dep-graph)
+        {:ok false :error {:code :placeholder-dependency-graph
+                           :message "Execute phase dependency graph must contain concrete lemma entries, not placeholders like 'see-notes'"}}
+        (not (strategic-dependency-graph? dep-graph))
+        {:ok false :error {:code :underpowered-dependency-graph
+                           :message "Execute phase dependency graph must record formal dependencies, informal strategy triggers, why-they-apply-here cues, and Lean targets for every entry"}}
         (and (not has-lean) (nil? timed-out))
         {:ok false :error {:code :no-lean-work
                            :message "Execute phase requires Lean artifacts (.lean files) or :lean-timed-out report. Cannot advance without attempting Lean formalization."}}
@@ -366,14 +467,22 @@
         :else nil))
 
     :validate
-    (when (str/blank? (:notes phase-data))
+    (cond
+      (str/blank? (:notes phase-data))
       {:ok false :error {:code :missing-notes
-                         :message "Validate phase requires :notes (non-circularity analysis + Lean status)"}})
+                         :message "Validate phase requires :notes (non-circularity analysis + Lean status)"}}
+      (indirect-notes? (:notes phase-data))
+      {:ok false :error {:code :indirect-notes
+                         :message "Validate phase notes must contain the actual validation analysis, not a file summary or 'see notes' indirection"}})
 
     :classify
-    (when (str/blank? (:notes phase-data))
+    (cond
+      (str/blank? (:notes phase-data))
       {:ok false :error {:code :missing-notes
-                         :message "Classify phase requires :notes (CONFIDENCE INVERSION)"}})
+                         :message "Classify phase requires :notes (CONFIDENCE INVERSION)"}}
+      (indirect-notes? (:notes phase-data))
+      {:ok false :error {:code :indirect-notes
+                         :message "Classify phase notes must contain the actual classification content, not a file summary or 'see notes' indirection"}})
 
     :integrate
     (let [notes (:notes phase-data)
@@ -382,10 +491,16 @@
         (str/blank? notes)
         {:ok false :error {:code :missing-notes
                            :message "Integrate phase requires :notes (EXAM-DAY FIELD KIT)"}}
+        (indirect-notes? notes)
+        {:ok false :error {:code :indirect-notes
+                           :message "Integrate phase notes must contain the actual connections/field-kit text, not a file summary or 'see notes' indirection"}}
         (or (nil? arse) (< (count arse) 5))
         {:ok false :error {:code :missing-arse-questions
                            :message (str "Integrate phase requires :arse-questions (5 items, got "
                                          (count arse) ")")}}
+        (placeholder-arse-questions? arse)
+        {:ok false :error {:code :placeholder-arse-questions
+                           :message "Integrate phase ArSE questions must contain real question/answer text, not placeholders like 'Q1' or 'see notes'"}}
         :else nil))
 
     ;; Other phases: no APM-specific enforcement

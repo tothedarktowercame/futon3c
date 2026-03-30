@@ -1916,10 +1916,14 @@ RESPOND WITH ONLY:
    Usage:
      (dev/start-apm-conductor!)              ; 40 problems to claude-1
      (dev/start-apm-conductor! :n 10)        ; 10 problems
-     (dev/start-apm-conductor! :agent-id \"claude-3\" :n 5)"
-  [& {:keys [agent-id n] :or {agent-id "claude-1" n 40}}]
+     (dev/start-apm-conductor! :agent-id \"claude-3\" :n 5)
+     (dev/start-apm-conductor! :agent-id \"codex-1\"
+                               :problem-ids [\"a01J01\" \"a01J02\"])"
+  [& {:keys [agent-id n problem-ids] :or {agent-id "claude-1" n 40}}]
   (dev-apm-conductor/start-apm-conductor! @!evidence-store
-                                           :agent-id agent-id :n n))
+                                           :agent-id agent-id
+                                           :n n
+                                           :problem-ids problem-ids))
 
 (defn stop-apm-conductor!
   "Stop the APM conductor."
@@ -2824,6 +2828,20 @@ RESPOND WITH ONLY:
               result-sid (atom nil)
               result-error (atom false)
               aid-val (str agent-id)
+              ;; Register invoke control so interrupt-invoke endpoint works
+              control-token (str "claude-invoke-" (UUID/randomUUID))
+              _ (register-invoke-control!
+                 aid-val control-token
+                 {:interrupt!
+                  (fn []
+                    (let [details (destroy-process-tree! proc)]
+                      {:ok true
+                       :agent-id aid-val
+                       :action :interrupt-issued
+                       :message "claude invoke interrupted"
+                       :interrupted? true
+                       :root-pid (:root-pid details)
+                       :descendant-count (:descendant-count details)}))})
               stdout-future (future
                               (with-open [r (java.io.BufferedReader.
                                              (java.io.InputStreamReader.
@@ -2865,9 +2883,39 @@ RESPOND WITH ONLY:
                                                 (when-let [sink (get-sink aid-val)]
                                                   (try
                                                     (when tools
-                                                      (sink {:type "tool_use" :tools (vec tools)}))
+                                                      (let [tool-details
+                                                            (->> content
+                                                                 (filter #(= "tool_use" (:type %)))
+                                                                 (mapv (fn [block]
+                                                                         (cond-> {:name (:name block)}
+                                                                           (:id block)
+                                                                           (assoc :id (:id block))
+                                                                           (:input block)
+                                                                           (assoc :input (:input block))))))]
+                                                        (sink {:type "tool_use"
+                                                               :tools (vec tools)
+                                                               :tool_details tool-details})))
                                                     (when (and text (not (str/blank? text)))
                                                       (sink {:type "text" :text text}))
+                                                    (catch Throwable _)))))
+                                            "user"
+                                            (let [content (get-in parsed [:message :content])
+                                                  tool-results
+                                                  (when (sequential? content)
+                                                    (->> content
+                                                         (filter #(= "tool_result" (:type %)))
+                                                         (mapv (fn [block]
+                                                                 (cond-> {:tool_use_id (:tool_use_id block)}
+                                                                   (:content block)
+                                                                   (assoc :content (:content block)))))))]
+                                              (when-let [get-sink (ns-resolve 'futon3c.agency.registry
+                                                                              'get-invoke-event-sink)]
+                                                (when-let [sink (get-sink aid-val)]
+                                                  (try
+                                                    (when (seq tool-results)
+                                                      (sink {:type "tool_result"
+                                                             :results tool-results
+                                                             :tool_use_result (:tool_use_result parsed)}))
                                                     (catch Throwable _)))))
                                             "result"
                                             (do (reset! result-sid (:session_id parsed))
@@ -2934,6 +2982,7 @@ RESPOND WITH ONLY:
                  :error (str "Exit " exit ": " (str/trim (or err "")))
                  :invoke-trace-id invoke-trace-id}))
             (finally
+              (clear-invoke-control! aid-val control-token)
               (stop-ticker!)))))))))
 
 (def ^:private codex-work-claim-re
@@ -2966,6 +3015,27 @@ RESPOND WITH ONLY:
   [prompt]
   (boolean (re-find #"(?i)\bmode:\s*task\b" (str (or prompt "")))))
 
+(def ^:private codex-execution-required-directive-re
+  #"(?im)^execution evidence required:\s*(yes|no)\b")
+
+(defn- codex-execution-required-directive
+  "Read explicit execution-evidence policy from the prompt.
+   Returns :required, :not-required, or nil."
+  [prompt]
+  (when-let [[_ raw] (re-find codex-execution-required-directive-re (str (or prompt "")))]
+    (case (some-> raw str/lower-case)
+      "yes" :required
+      "no" :not-required
+      nil)))
+
+(defn- codex-text-authoring-prompt?
+  "True when the prompt is structurally asking for an inline textual artifact,
+   not a tool/command execution turn."
+  [prompt]
+  (boolean
+   (re-find #"(?is)\b(you are in the (observe|propose|validate|classify|integrate) phase of the proof peripheral)\b|\bauthoritative phase record\b"
+            (str (or prompt "")))))
+
 (defn- codex-mission-work-prompt?
   "True when prompt is a mission/work request that should require execution evidence.
    Keeps this enforcement in the invoke engine, independent of bridge classification."
@@ -2973,6 +3043,18 @@ RESPOND WITH ONLY:
   (boolean
    (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b"
             (str (or prompt "")))))
+
+(defn- codex-execution-required-prompt?
+  "True when this prompt should require runtime execution evidence.
+   Explicit directives win. Otherwise task/mission prompts require evidence
+   except for clearly textual proof-peripheral authoring turns."
+  [prompt]
+  (case (codex-execution-required-directive prompt)
+    :required true
+    :not-required false
+    (and (or (codex-task-mode-prompt? prompt)
+             (codex-mission-work-prompt? prompt))
+         (not (codex-text-authoring-prompt? prompt)))))
 
 (defn- codex-no-execution-evidence?
   "True when invoke result reports no executed/tool/command evidence."
@@ -3006,8 +3088,7 @@ RESPOND WITH ONLY:
    This prevents non-evidenced 'done' text from being emitted for work turns."
   [prompt result]
   (let [text (str/trim (or (:result result) ""))]
-    (and (or (codex-task-mode-prompt? prompt)
-             (codex-mission-work-prompt? prompt))
+    (and (codex-execution-required-prompt? prompt)
          (codex-no-execution-evidence? result)
          (not (str/blank? text))
          (not (codex-planning-only-text? text)))))
@@ -3018,8 +3099,7 @@ RESPOND WITH ONLY:
    bounded execution turns unless they cite a concrete artifact or blocker."
   [prompt result]
   (let [text (str/trim (or (:result result) ""))]
-    (and (or (codex-task-mode-prompt? prompt)
-             (codex-mission-work-prompt? prompt))
+    (and (codex-execution-required-prompt? prompt)
          (nil? (:error result))
          (not (str/blank? text))
          (not (codex-planning-only-text? text))

@@ -1,6 +1,7 @@
 (ns futon3c.peripheral.proof-backend-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
+            [futon3c.agents.apm-work-queue :as apm-queue]
             [futon3c.peripheral.proof-backend :as pb]
             [futon3c.peripheral.proof-dag :as dag]
             [futon3c.peripheral.proof-shapes :as ps]
@@ -320,6 +321,49 @@
     (is (= :bad-observe (get-in rejected [:error :code])))
     (is (:ok accepted))
     (is (= :propose (get-in accepted [:result :cycle/phase])))))
+
+(deftest apm-phase-validator-rejects-indirect-execute-records
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "see-notes"
+                                     :lean-type "see-notes"
+                                     :source "tbd"
+                                     :on-critical-path true}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 & 2 are documented in `proof_peripheral/apm-a01J01-execute.md`."}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :indirect-notes (get-in result [:error :code])))))
+
+(deftest apm-phase-validator-rejects-underpowered-dependency-graph
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "Completion lemma"
+                                     :formal-dependency "completion of measure spaces"
+                                     :lean-type "`∀ A, ...`"
+                                     :source "likely in Mathlib"
+                                     :on-critical-path true
+                                     :notes "Only formal dependency recorded."}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 — THE CLEAN PROOF\n...\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n..."}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :underpowered-dependency-graph (get-in result [:error :code])))))
+
+(deftest apm-phase-validator-rejects-placeholder-arse-questions
+  (let [result (apm-queue/apm-phase-validator
+                :integrate
+                {:notes "**Connections**\n- Actual content.\n\n**ArSE Questions**\n..."
+                 :arse-questions [{:type :why-hard :question "Q1" :answer "see notes"}
+                                  {:type :what-crux :question "Q2" :answer "see notes"}
+                                  {:type :why-works :question "Q3" :answer "see notes"}
+                                  {:type :what-connects :question "Q4" :answer "see notes"}
+                                  {:type :confidence :question "Q5" :answer "see notes"}]}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :placeholder-arse-questions (get-in result [:error :code])))))
 
 (deftest cycle-advance-accepts-traceable-step-boundary
   (let [{:keys [backend] :as ctx} (make-test-backend)
