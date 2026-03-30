@@ -695,6 +695,11 @@
         retry-override
         (when (= current-phase :execute)
           (cond
+            (re-find #"(?i)Stage 1-4|dependency graph|actual Stage" message)
+            {:prompt-override (make-full-execute-resubmission-prompt
+                               current-problem remaining-ms "" execute-record)
+             :timeout-override (max 60000 remaining-ms)}
+
             (not (execute-record-complete? execute-record))
             {:prompt-override (make-full-execute-resubmission-prompt
                                current-problem remaining-ms "" execute-record)
@@ -721,6 +726,14 @@
                :message (str "Exceeded retry budget after " failures " failures")})
         (stop-apm-conductor!)))))
 
+(defn- handle-phase-rejection!
+  [agent-id rejection-message evidence-store]
+  (log! {:event :phase-rejection-retry
+         :problem (some-> @!apm-state :current-problem :id (#(str "apm-" %)))
+         :phase (:current-phase @!apm-state)
+         :message rejection-message})
+  (handle-phase-failure! agent-id {:error {:message rejection-message}} evidence-store))
+
 ;; =============================================================================
 ;; Phase advancement + next phase logic
 ;; =============================================================================
@@ -738,7 +751,6 @@
     ;; Log phase completion
     (log! {:event :phase-complete :problem pid :phase current-phase
            :elapsed-ms elapsed-ms})
-    (swap! !apm-state assoc :phase-failure-count 0)
 
     ;; Execute phase has special floor enforcement
     (if (and (= current-phase :execute)
@@ -796,13 +808,16 @@
 
       (if-not (:ok advance-result)
         (do
-          (log! {:event :phase-rejected :problem pid :phase current-phase
-                 :message (get-in advance-result [:error :message])})
-          (println (str "[apm-conductor] " (name current-phase) " REJECTED: "
-                        (get-in advance-result [:error :message]))))
+          (let [rejection-message (get-in advance-result [:error :message])]
+            (log! {:event :phase-rejected :problem pid :phase current-phase
+                   :message rejection-message})
+            (println (str "[apm-conductor] " (name current-phase) " REJECTED: "
+                          rejection-message))
+            (handle-phase-rejection! agent-id rejection-message evidence-store)))
 
         ;; Advance succeeded — what's next?
         (let [next-idx (inc (.indexOf apm-phases current-phase))]
+          (swap! !apm-state assoc :phase-failure-count 0)
           (if (< next-idx (count apm-phases))
             ;; Next agent phase
             (do
@@ -879,24 +894,38 @@
 
         ;; Init proof state
         (log! {:event :problem-start :problem pid})
-        (.execute-tool backend :proof-load [pid])
-        (let [r (.execute-tool backend :cycle-begin [pid "root"])
-              cid (get-in r [:result :cycle/id])]
-          (apm-queue/emit-apm-evidence! evidence-store
-            {:problem-id pid :problem-base base :subject (:subject problem)
-             :session-id (str "apm-conductor-" pid) :event-tag :workflow-start})
-          (swap! !apm-state assoc
-                 :current-problem problem :current-phase :observe
-                 :cycle-id cid :backend backend :phase-notes {}
-                 :execute-record (empty-execute-record)
-                 :problem-start-ms (System/currentTimeMillis)
-                 :phase-dispatch-ms nil
-                 :execute-start-ms nil
-                 :phase-failure-count 0
-                 :problem-bases (if explicit-base
-                                  (vec (rest problem-bases))
-                                  problem-bases))
-          (dispatch-phase! agent-id evidence-store))))))
+        (let [load-result (.execute-tool backend :proof-load [pid])]
+          (when-not (:ok load-result)
+            (log! {:event :problem-start-failed
+                   :problem pid
+                   :message (get-in load-result [:error :message])})
+            (throw (ex-info "APM proof state missing"
+                            {:problem-id pid
+                             :load-result load-result}))))
+        (let [r (.execute-tool backend :cycle-begin [pid "root"])]
+          (when-not (:ok r)
+            (log! {:event :problem-start-failed
+                   :problem pid
+                   :message (get-in r [:error :message])})
+            (throw (ex-info "APM cycle begin failed"
+                            {:problem-id pid
+                             :cycle-begin-result r})))
+          (let [cid (get-in r [:result :cycle/id])]
+            (apm-queue/emit-apm-evidence! evidence-store
+              {:problem-id pid :problem-base base :subject (:subject problem)
+               :session-id (str "apm-conductor-" pid) :event-tag :workflow-start})
+            (swap! !apm-state assoc
+                   :current-problem problem :current-phase :observe
+                   :cycle-id cid :backend backend :phase-notes {}
+                   :execute-record (empty-execute-record)
+                   :problem-start-ms (System/currentTimeMillis)
+                   :phase-dispatch-ms nil
+                   :execute-start-ms nil
+                   :phase-failure-count 0
+                   :problem-bases (if explicit-base
+                                    (vec (rest problem-bases))
+                                    problem-bases))
+            (dispatch-phase! agent-id evidence-store)))))))
 
 ;; =============================================================================
 ;; Start / Stop
