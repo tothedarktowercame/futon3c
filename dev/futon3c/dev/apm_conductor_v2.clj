@@ -61,11 +61,43 @@
    :applied "Applied/Functional Analysis"})
 
 ;; =============================================================================
-;; State (separate atoms from v1 — both can coexist)
+;; State (per-agent conductor instances)
 ;; =============================================================================
 
-(defonce !conductor (atom nil))
-(defonce !state (atom nil))
+(defonce ^{:doc "Map of {conductor-id -> {:agent-id ... :version :v2 :started-at ...}}."} !conductor
+  (atom {}))
+
+(defonce ^{:doc "Map of {conductor-id -> per-run state}."} !state
+  (atom {}))
+
+(defn- conductor-id [agent-id]
+  [:apm-v2 agent-id])
+
+(defn state-for-agent
+  "Diagnostic helper for REPL inspection."
+  [agent-id]
+  (get @!state (conductor-id agent-id)))
+
+(defn active-conductors
+  "Diagnostic helper for REPL inspection."
+  []
+  @!conductor)
+
+(defn- conductor-running?
+  [cid]
+  (contains? @!conductor cid))
+
+(defn- conductor-state
+  [cid]
+  (get @!state cid))
+
+(defn- assoc-state!
+  [cid & kvs]
+  (swap! !state update cid #(apply assoc (or % {}) kvs)))
+
+(defn- update-state!
+  [cid f & args]
+  (swap! !state update cid #(apply f (or % {}) args)))
 
 ;; =============================================================================
 ;; Logging (same format as v1, different prefix)
@@ -188,9 +220,10 @@
   (io/file lean-proofs-root (:id problem)))
 
 (defn- current-frame-workspace
-  [problem]
-  (when (= (:id problem) (get-in @!state [:current-problem :id]))
-    (:frame-workspace @!state)))
+  [cid problem]
+  (let [state (conductor-state cid)]
+    (when (= (:id problem) (get-in state [:current-problem :id]))
+      (:frame-workspace state))))
 
 (defn- mentioned-lean-artifacts [output]
   (->> (re-seq #"(?:/home/joe/code/apm-lean/)?(?:lean-proofs|ApmCanaries/Frames|ApmCanaries/Local)/[^\s\]\"']+\.lean" (or output ""))
@@ -198,9 +231,9 @@
                (str "/home/joe/code/apm-lean/" %)))
        distinct vec))
 
-(defn- recent-lean-artifacts [problem execute-start-ms]
+(defn- recent-lean-artifacts [cid problem execute-start-ms]
   (let [dir (problem-lean-dir problem)
-        frame-artifacts (apm-frames/workspace-lean-artifacts (current-frame-workspace problem))
+        frame-artifacts (apm-frames/workspace-lean-artifacts (current-frame-workspace cid problem))
         threshold-ms (long (max 0 (- (or execute-start-ms 0) 2000)))]
     (->> (concat
           frame-artifacts
@@ -212,9 +245,9 @@
                  (map #(.getAbsolutePath ^java.io.File %)))))
          distinct vec)))
 
-(defn- discover-lean-artifacts [problem execute-start-ms output]
+(defn- discover-lean-artifacts [cid problem execute-start-ms output]
   (let [mentioned (mentioned-lean-artifacts output)
-        recent (recent-lean-artifacts problem execute-start-ms)]
+        recent (recent-lean-artifacts cid problem execute-start-ms)]
     (->> (concat mentioned recent)
          distinct
          (filter #(try (.exists (io/file %)) (catch Exception _ false)))
@@ -366,7 +399,7 @@
 
 (defn- make-solve-prompt
   "Single 'solve and explain' prompt. The agent does everything in one shot."
-  [problem tex-body]
+  [cid problem tex-body]
   (let [{:keys [id subject year session subpart-count subparts]} problem]
     (str "Problem: apm-" id " (" (get subject-names subject (name subject))
          ", " year ", " (if (= session :fall) "Fall" "Spring") ")\n\n"
@@ -395,7 +428,7 @@
          "Style anchors:\n"
          "- " worked-example-root "/a02J04\n"
          "- " worked-example-root "/a02J04-full\n\n"
-         (when-let [frame-context (apm-frames/prompt-context (current-frame-workspace problem))]
+         (when-let [frame-context (apm-frames/prompt-context (current-frame-workspace cid problem))]
            (str "Use the isolated frame workspace for this problem:\n"
                 "- workspace root: " (:workspace-root frame-context) "\n"
                 "- Lean module root: " (:module-root frame-context) "\n"
@@ -493,19 +526,19 @@
       (catch Exception e
         (println (str "[apm-v2] dispatch exception: " (.getMessage e)))))))
 
-(defn- current-problem-timeout-ms []
-  (or (:problem-timeout-ms @!state) default-problem-timeout-ms))
+(defn- current-problem-timeout-ms [cid]
+  (or (:problem-timeout-ms (conductor-state cid)) default-problem-timeout-ms))
 
-(defn- problem-timed-out? []
-  (when-let [start-ms (:problem-start-ms @!state)]
-    (> (- (System/currentTimeMillis) start-ms) (current-problem-timeout-ms))))
+(defn- problem-timed-out? [cid]
+  (when-let [start-ms (:problem-start-ms (conductor-state cid))]
+    (> (- (System/currentTimeMillis) start-ms) (current-problem-timeout-ms cid))))
 
 (defn- handle-solve-return!
   "Handle return from the solve or sorry-kick dispatch."
-  [agent-id agent-output evidence-store]
+  [cid agent-id agent-output evidence-store]
   (let [{:keys [current-problem problem-start-ms dispatch-start-ms
                 sorry-kick-count record-kick-count problems-done batch-results target-n
-                accumulated-output backend]} @!state
+                accumulated-output backend]} (conductor-state cid)
         pid (str "apm-" (:id current-problem))
         now-ms (System/currentTimeMillis)
         dispatch-elapsed (- now-ms (or dispatch-start-ms now-ms))
@@ -514,15 +547,15 @@
 
         ;; Accumulate all output from all dispatches for this problem
         all-output (str (or accumulated-output "") "\n\n---\n\n" output)
-        _ (swap! !state assoc :accumulated-output all-output)
+        _ (assoc-state! cid :accumulated-output all-output)
 
         ;; Check Lean status — only check artifacts, not prose (which may discuss sorry)
-        artifacts (discover-lean-artifacts current-problem problem-start-ms all-output)
+        artifacts (discover-lean-artifacts cid current-problem problem-start-ms all-output)
         sorry? (boolean (some artifact-has-sorry? artifacts))
         kick-count (or sorry-kick-count 0)
         record-kicks (or record-kick-count 0)
-        record-status (frame-record-status (:frame-workspace @!state))
-        remaining-ms (- (current-problem-timeout-ms) total-elapsed)]
+        record-status (frame-record-status (:frame-workspace (conductor-state cid)))
+        remaining-ms (- (current-problem-timeout-ms cid) total-elapsed)]
 
     (log! {:event :solve-return :problem pid
            :dispatch-elapsed-ms dispatch-elapsed
@@ -535,12 +568,12 @@
 
     (cond
       ;; Problem timeout
-      (problem-timed-out?)
+      (problem-timed-out? cid)
       (do
         (log! {:event :problem-timed-out :problem pid
                :total-elapsed-ms total-elapsed})
         (let [extraction (run-extraction all-output)
-              frame-workspace (:frame-workspace @!state)
+              frame-workspace (:frame-workspace (conductor-state cid))
               done (inc problems-done)
               results (conj (or batch-results [])
                             {:ok false :problem-id pid
@@ -548,11 +581,11 @@
                              :extraction extraction
                              :frame-id (:frame/id frame-workspace)
                              :elapsed-ms total-elapsed})]
-          (swap! !state assoc :problems-done done :batch-results results)
+          (assoc-state! cid :problems-done done :batch-results results)
           (if (>= done target-n)
             (do (log! {:event :batch-complete :done done})
-                (stop-apm-conductor-v2!))
-            (start-next-problem! agent-id evidence-store))))
+                (stop-apm-conductor-v2! agent-id))
+            (start-next-problem! cid agent-id evidence-store))))
 
       ;; The frame-local HtDP record is incomplete. If the mathematical work is
       ;; otherwise ready to classify, spend bounded extra clicks normalizing the
@@ -562,8 +595,8 @@
                (>= kick-count max-sorry-kicks)))
       (if (< record-kicks max-record-kicks)
         (let [new-count (inc record-kicks)]
-          (swap! !state assoc :record-kick-count new-count
-                              :dispatch-start-ms (System/currentTimeMillis))
+          (assoc-state! cid :record-kick-count new-count
+                            :dispatch-start-ms (System/currentTimeMillis))
           (log! {:event :record-kick
                  :problem pid
                  :record-kick-count new-count
@@ -580,13 +613,13 @@
                              :classification :abandoned
                              :message "Frame record incomplete after normalization retries"
                              :elapsed-ms total-elapsed})]
-          (swap! !state assoc :problems-done done :batch-results results)
+          (assoc-state! cid :problems-done done :batch-results results)
           (log! {:event :problem-abandoned :problem pid
                  :message "Frame record incomplete after normalization retries"})
           (if (>= done target-n)
             (do (log! {:event :batch-complete :done done})
-                (stop-apm-conductor-v2!))
-            (start-next-problem! agent-id evidence-store))))
+                (stop-apm-conductor-v2! agent-id))
+            (start-next-problem! cid agent-id evidence-store))))
 
       ;; Lean clean — no sorry, artifacts exist
       (and (seq artifacts) (not sorry?))
@@ -596,7 +629,7 @@
                :total-elapsed-ms total-elapsed
                :sorry-kicks kick-count})
         (let [extraction (run-extraction all-output)
-              frame-workspace (:frame-workspace @!state)
+              frame-workspace (:frame-workspace (conductor-state cid))
               ;; Save proof state
               _ (when backend
                   (.execute-tool backend :proof-load [pid])
@@ -624,14 +657,14 @@
                              :extraction extraction
                              :sorry-kicks kick-count
                              :elapsed-ms total-elapsed})]
-          (swap! !state assoc :problems-done done :batch-results results)
+          (assoc-state! cid :problems-done done :batch-results results)
           (println (str "[apm-v2] === " pid " PROVED ("
                         (long (/ total-elapsed 1000)) "s, "
                         kick-count " sorry-kicks) ==="))
           (if (>= done target-n)
             (do (log! {:event :batch-complete :done done})
-                (stop-apm-conductor-v2!))
-            (start-next-problem! agent-id evidence-store))))
+                (stop-apm-conductor-v2! agent-id))
+            (start-next-problem! cid agent-id evidence-store))))
 
       ;; Sorry-kick budget exhausted — save as partial
       (>= kick-count max-sorry-kicks)
@@ -642,7 +675,7 @@
                :sorry-kicks kick-count
                :message "Sorry-kick budget exhausted"})
         (let [extraction (run-extraction all-output)
-              frame-workspace (:frame-workspace @!state)
+              frame-workspace (:frame-workspace (conductor-state cid))
               _ (save-proof-state! (:id current-problem)
                   {:proof/problem-id pid
                    :proof/classification :partial
@@ -664,22 +697,22 @@
                              :extraction extraction
                              :sorry-kicks kick-count
                              :elapsed-ms total-elapsed})]
-          (swap! !state assoc :problems-done done :batch-results results)
+          (assoc-state! cid :problems-done done :batch-results results)
           (println (str "[apm-v2] === " pid " PARTIAL ("
                         (long (/ total-elapsed 1000)) "s, "
                         kick-count " sorry-kicks) ==="))
           (if (>= done target-n)
             (do (log! {:event :batch-complete :done done})
-                (stop-apm-conductor-v2!))
-            (start-next-problem! agent-id evidence-store))))
+                (stop-apm-conductor-v2! agent-id))
+            (start-next-problem! cid agent-id evidence-store))))
 
       ;; Sorry present, budget remains — kick
       :else
       (let [new-count (inc kick-count)
             use-arse? (>= kick-count arse-kick-threshold)
             prompt-fn (if use-arse? make-arse-kick-prompt make-sorry-kick-prompt)]
-        (swap! !state assoc :sorry-kick-count new-count
-                            :dispatch-start-ms (System/currentTimeMillis))
+        (assoc-state! cid :sorry-kick-count new-count
+                          :dispatch-start-ms (System/currentTimeMillis))
         (log! {:event (if use-arse? :arse-kick :sorry-kick)
                :problem pid
                :sorry-kick-count new-count
@@ -693,51 +726,52 @@
 
 (defn- handle-failure!
   "Handle agent invoke failure."
-  [agent-id outcome evidence-store]
-  (let [{:keys [current-problem failure-count]} @!state
+  [cid agent-id outcome evidence-store]
+  (let [{:keys [current-problem failure-count]} (conductor-state cid)
         pid (some-> current-problem :id (#(str "apm-" %)))
         failures (inc (or failure-count 0))]
-    (swap! !state assoc :failure-count failures)
+    (assoc-state! cid :failure-count failures)
     (log! {:event :dispatch-failure :problem pid :failure-count failures
            :message (str (:error outcome))})
     (if (<= failures 3)
       ;; Retry after delay
       (future
         (Thread/sleep 30000)
-        (when @!conductor
-          (let [{:keys [current-problem]} @!state
+        (when (conductor-running? cid)
+          (let [{:keys [current-problem]} (conductor-state cid)
                 tex-body (apm-queue/load-problem-tex (:id current-problem))]
-            (swap! !state assoc :dispatch-start-ms (System/currentTimeMillis))
+            (assoc-state! cid :dispatch-start-ms (System/currentTimeMillis))
             (dispatch! agent-id
-                       (make-solve-prompt current-problem tex-body)
-                       (current-problem-timeout-ms)))))
+                       (make-solve-prompt cid current-problem tex-body)
+                       (current-problem-timeout-ms cid)))))
       ;; Budget exhausted — skip
-      (let [frame-workspace (:frame-workspace @!state)
-            done (inc (:problems-done @!state))
-            results (conj (or (:batch-results @!state) [])
+      (let [state (conductor-state cid)
+            frame-workspace (:frame-workspace state)
+            done (inc (:problems-done state))
+            results (conj (or (:batch-results state) [])
                           {:ok false :problem-id pid :classification :abandoned
                            :frame-id (:frame/id frame-workspace)})]
-        (swap! !state assoc :problems-done done :batch-results results)
+        (assoc-state! cid :problems-done done :batch-results results)
         (log! {:event :problem-abandoned :problem pid})
-        (if (>= done (:target-n @!state))
+        (if (>= done (:target-n state))
           (do (log! {:event :batch-complete :done done})
-              (stop-apm-conductor-v2!))
-          (start-next-problem! agent-id evidence-store))))))
+              (stop-apm-conductor-v2! agent-id))
+          (start-next-problem! cid agent-id evidence-store))))))
 
 ;; =============================================================================
 ;; Problem lifecycle
 ;; =============================================================================
 
 (defn- start-next-problem!
-  [agent-id evidence-store]
-  (let [{:keys [problem-bases]} @!state
+  [cid agent-id evidence-store]
+  (let [{:keys [problem-bases]} (conductor-state cid)
         explicit-base (first problem-bases)
         issue (if explicit-base
                 {:problem-base explicit-base}
                 (first (apm-queue/next-unprocessed evidence-store 1)))]
     (if-not issue
       (do (log! {:event :queue-empty})
-          (stop-apm-conductor-v2!))
+          (stop-apm-conductor-v2! agent-id))
       (let [base (:problem-base issue)
             pid (str "apm-" base)
             manifest (apm-queue/load-apm-manifest)
@@ -756,22 +790,22 @@
         (apm-queue/emit-apm-evidence! evidence-store
           {:problem-id pid :problem-base base :subject (:subject problem)
            :session-id (str "apm-v2-" pid) :event-tag :workflow-start})
-        (swap! !state assoc
-               :current-problem problem
-               :frame-workspace frame-workspace
-               :backend backend
-               :accumulated-output ""
-               :sorry-kick-count 0
-               :record-kick-count 0
-               :failure-count 0
-               :problem-start-ms (System/currentTimeMillis)
-               :dispatch-start-ms (System/currentTimeMillis)
-               :problem-bases (if explicit-base
-                                (vec (rest problem-bases))
-                                problem-bases))
+        (assoc-state! cid
+                      :current-problem problem
+                      :frame-workspace frame-workspace
+                      :backend backend
+                      :accumulated-output ""
+                      :sorry-kick-count 0
+                      :record-kick-count 0
+                      :failure-count 0
+                      :problem-start-ms (System/currentTimeMillis)
+                      :dispatch-start-ms (System/currentTimeMillis)
+                      :problem-bases (if explicit-base
+                                       (vec (rest problem-bases))
+                                       problem-bases))
         (dispatch! agent-id
-                   (make-solve-prompt problem tex-body)
-                   (current-problem-timeout-ms))))))
+                   (make-solve-prompt cid problem tex-body)
+                   (current-problem-timeout-ms cid))))))
 
 ;; =============================================================================
 ;; Triage — effort estimation pre-pass
@@ -968,12 +1002,17 @@
 ;; Start / Stop
 ;; =============================================================================
 
-(defn stop-apm-conductor-v2! []
-  (when @!conductor
-    (apm-dispatch/deregister-conductor! :apm-v2)
-    (reset! !conductor nil)
-    (log! {:event :conductor-stopped})
-    (println "[apm-v2] Stopped.")))
+(defn stop-apm-conductor-v2!
+  ([] (doseq [agent-id (map :agent-id (vals @!conductor))]
+        (stop-apm-conductor-v2! agent-id)))
+  ([agent-id]
+   (let [cid (conductor-id agent-id)]
+     (when (conductor-running? cid)
+       (apm-dispatch/deregister-conductor! cid)
+       (swap! !conductor dissoc cid)
+       (swap! !state dissoc cid)
+       (log! {:event :conductor-stopped :agent agent-id})
+       (println (str "[apm-v2] Stopped " agent-id "."))))))
 
 (defn start-apm-conductor-v2!
   "Start the v2 APM conductor.
@@ -982,43 +1021,44 @@
    sorry-kick loop for Lean closure, post-hoc extraction of structured data.
 
    Same interface as v1's start-apm-conductor! for A/B testing.
-   Additional :lane option filters to a triage lane (:quick/:medium/:hard)."
+  Additional :lane option filters to a triage lane (:quick/:medium/:hard)."
   [evidence-store & {:keys [agent-id n problem-ids lane problem-timeout-ms]
                      :or {agent-id "codex-1"
                           n 40
                           problem-timeout-ms default-problem-timeout-ms}}]
-  (stop-apm-conductor-v2!)
+  (let [cid (conductor-id agent-id)]
+    (stop-apm-conductor-v2! agent-id)
   (spit log-path (str ";; APM Conductor v2 Log — " (Instant/now) "\n") :append true)
 
-  (let [problem-bases (or (some->> problem-ids
-                                   (mapv #(if (str/starts-with? (str %) "apm-")
-                                            (subs (str %) 4)
-                                            (str %))))
-                          (when lane (problems-by-lane lane)))]
-    (reset! !state {:problems-done 0
-                    :batch-results []
-                    :target-n (or (some-> problem-bases count) n)
-                    :problem-timeout-ms problem-timeout-ms
-                    :problem-bases problem-bases})
+    (let [problem-bases (or (some->> problem-ids
+                                     (mapv #(if (str/starts-with? (str %) "apm-")
+                                              (subs (str %) 4)
+                                              (str %))))
+                            (when lane (problems-by-lane lane)))]
+      (swap! !state assoc cid {:problems-done 0
+                               :batch-results []
+                               :target-n (or (some-> problem-bases count) n)
+                               :problem-timeout-ms problem-timeout-ms
+                               :problem-bases problem-bases})
 
-    (apm-dispatch/register-conductor! :apm-v2 agent-id
-      (fn [idle-agent-id outcome]
-        (when (and (= idle-agent-id agent-id) @!conductor)
-          (if (:ok outcome true)
-            (handle-solve-return! agent-id (:result outcome) evidence-store)
-            (handle-failure! agent-id outcome evidence-store)))))
+      (apm-dispatch/register-conductor! cid agent-id
+        (fn [idle-agent-id outcome]
+          (when (and (= idle-agent-id agent-id) (conductor-running? cid))
+            (if (:ok outcome true)
+              (handle-solve-return! cid agent-id (:result outcome) evidence-store)
+              (handle-failure! cid agent-id outcome evidence-store)))))
 
-    (reset! !conductor {:agent-id agent-id
-                        :version :v2
-                        :started-at (System/currentTimeMillis)})
-    (log! (cond-> {:event :conductor-started :version :v2
-                   :agent agent-id
-                   :target (or (some-> problem-bases count) n)}
-            (seq problem-bases) (assoc :problem-bases problem-bases)))
+      (swap! !conductor assoc cid {:agent-id agent-id
+                                   :version :v2
+                                   :started-at (System/currentTimeMillis)})
+      (log! (cond-> {:event :conductor-started :version :v2
+                     :agent agent-id
+                     :target (or (some-> problem-bases count) n)}
+              (seq problem-bases) (assoc :problem-bases problem-bases)))
 
-    (start-next-problem! agent-id evidence-store)
-    {:ok true
-     :version :v2
-     :agent-id agent-id
-     :target (or (some-> problem-bases count) n)
-     :problem-bases problem-bases}))
+      (start-next-problem! cid agent-id evidence-store)
+      {:ok true
+       :version :v2
+       :agent-id agent-id
+       :target (or (some-> problem-bases count) n)
+       :problem-bases problem-bases})))
