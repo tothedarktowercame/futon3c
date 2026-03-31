@@ -185,6 +185,18 @@
                          :summary "Peripheral and mission state project to evidence, blackboards, or reports.")
               (invariant :id evidence-over-folklore
                          :summary "Operationally important claims are queryable or documented in stable artifacts.")))
+     (family :id interaction-evidence-continuity
+             :status candidate
+             :summary "Interactive agent work should either land in the evidence ledger or incur explicit, inspectable debt."
+             :candidate-invariants
+             ((invariant :id all-turns-logged-as-evidence
+                         :summary "Substantive interactive agent turns should be logged as evidence rather than existing only in transient UI or terminal state.")
+              (invariant :id session-anchor-carries-surface-context
+                         :summary "Interactive sessions should carry explicit non-transcript context such as working directory, transport, continuity token, and rollout anchor.")
+              (invariant :id off-surface-turns-create-debt
+                         :summary "Turns taken through legacy CLI or other non-evidencing surfaces should create explicit evidence debt rather than vanishing silently.")
+              (invariant :id evidence-debt-visible-and-bounded
+                         :summary "Outstanding interaction evidence debt should be visible enough to drive repayment, acceptance, or prohibition rather than accumulating as folklore.")))
      (family :id failure-locality
              :status candidate
              :summary "Failures should surface near the layer, subsystem, or entry point that caused them, with enough structure that diagnosis is quick."
@@ -246,7 +258,11 @@
               (invariant :id reporting-pipeline-legibility
                          :family human-visible-inspectability
                          :status candidate
-                         :summary "Derivative reports should remain readable and inspectable from stable local artifacts."))))
+                         :summary "Derivative reports should remain readable and inspectable from stable local artifacts.")
+              (invariant :id interactive-turns-evidence-first
+                         :family interaction-evidence-continuity
+                         :status candidate
+                         :summary "Joe-facing Codex/Claude work should prefer surfaces that log turns as evidence; legacy CLI use creates explicit evidence debt instead of disappearing."))))
 
      (devmap :id futon1a
              :role "deterministic substrate with unresolved devmap relationship"

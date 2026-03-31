@@ -330,6 +330,21 @@
                                      :lean-type "see-notes"
                                      :source "tbd"
                                      :on-critical-path true}]
+                 :proof-plan {:goal "Goal"
+                              :terms [{:name "term" :meaning "meaning" :needed-because "reason"}]
+                              :strategy [{:id :s1
+                                          :formal-dependency "fd"
+                                          :informal-dependency "id"
+                                          :why-this-now "why"
+                                          :lean-target "target"
+                                          :mathlib-status "status"
+                                          :critical-path true}]
+                              :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :changelog [{:kind :initial-plan
+                              :summary "Recorded the initial execute plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}]
                  :lean-elapsed-ms 900000
                  :notes "Stage 1 & 2 are documented in `proof_peripheral/apm-a01J01-execute.md`."}
                 nil)]
@@ -347,6 +362,28 @@
                                      :lean-type "`|∫ k x y * u y| ≤ ...`"
                                      :source "search `integral_mul_le_Lp_Lq`"
                                      :on-critical-path true}]
+                 :proof-plan {:goal "Bound the integral operator in L²."
+                              :terms [{:name "weighted Cauchy-Schwarz"
+                                       :meaning "factor the kernel before squaring"
+                                       :needed-because "turn slice bounds into an operator norm bound"}]
+                              :strategy [{:id :weighted-cs
+                                          :formal-dependency "Cauchy-Schwarz in L²"
+                                          :informal-dependency "split the kernel with square roots"
+                                          :why-this-now "the hypotheses are slice-wise bounds, so factorization is the cue"
+                                          :lean-target "`|∫ k x y * u y| ≤ ...`"
+                                          :mathlib-status "search `integral_mul_le_Lp_Lq`"
+                                          :critical-path true}]
+                              :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :changelog [{:kind :initial-plan
+                              :summary "Built the weighted Cauchy-Schwarz plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}
+                             {:kind :lean-delta
+                              :summary "Updated the scaffold and rebuilt the Lean file."
+                              :full-record? true
+                              :sorry? false
+                              :fully-closed? false}]
                  :lean-elapsed-ms 900000
                  :notes "Stage 1 — THE CLEAN PROOF\n--------------------------------\n\nUse weighted Cauchy-Schwarz and Tonelli.\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n--------------------------------\n\n1. **Weighted Cauchy-Schwarz**\n   - **Formal dependency**: Cauchy-Schwarz in L².\n   - **Informal dependency**: Split the kernel with square roots to move from L¹ slice control to an L² bound.\n   - **Why this becomes thinkable here**: The hypothesis only gives slice-wise integral bounds, so the right cue is to factor the kernel before squaring.\n   - **Lean target/type**: `|∫ k x y * u y| ≤ ...`.\n   - **Mathlib status/search terms**: search `integral_mul_le_Lp_Lq`.\n   - **Critical path**: yes.\n\nStage 3 — LEAN FORMALIZATION\n--------------------------------\n\n- Updated `apm-lean/lean-proofs/a02J01/Main.lean` so `ProblemData` packages the kernel data cleanly.\n- Rebuilt with `lake env lean lean-proofs/a02J01/Main.lean`; the file compiles.\n\nStage 4 — FORMAL-TO-INFORMAL REVISION\n--------------------------------\n\nThe hard part is seeing that the slice bounds should be combined through weighted Cauchy-Schwarz, not termwise estimates."}
                 nil)]
@@ -362,11 +399,48 @@
                                      :source "likely in Mathlib"
                                      :on-critical-path true
                                      :notes "Only formal dependency recorded."}]
+                 :proof-plan {:goal "Goal"
+                              :terms [{:name "term" :meaning "meaning" :needed-because "reason"}]
+                              :strategy [{:id :s1
+                                          :formal-dependency "fd"
+                                          :informal-dependency "id"
+                                          :why-this-now "why"
+                                          :lean-target "target"
+                                          :mathlib-status "status"
+                                          :critical-path true}]
+                              :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :changelog [{:kind :initial-plan
+                              :summary "Built an initial plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}]
                  :lean-elapsed-ms 900000
                  :notes "Stage 1 — THE CLEAN PROOF\n...\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n..."}
                 nil)]
     (is (false? (:ok result)))
     (is (= :underpowered-dependency-graph (get-in result [:error :code])))))
+
+(deftest apm-phase-validator-rejects-missing-proof-plan
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "Weighted Cauchy-Schwarz"
+                                     :formal-dependency "Cauchy-Schwarz in L²"
+                                     :informal-dependency "split the kernel with square roots"
+                                     :why-this-now "slice bounds suggest factorization"
+                                     :lean-type "`|∫ k x y * u y| ≤ ...`"
+                                     :source "search `integral_mul_le_Lp_Lq`"
+                                     :on-critical-path true}]
+                 :changelog [{:kind :initial-plan
+                              :summary "Built an initial plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 — THE CLEAN PROOF\n...\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n..."}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :invalid-proof-plan (get-in result [:error :code])))))
 
 (deftest apm-phase-validator-rejects-placeholder-arse-questions
   (let [result (apm-queue/apm-phase-validator
