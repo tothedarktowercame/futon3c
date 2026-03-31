@@ -22,6 +22,7 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [futon3c.agents.apm-work-queue :as apm-queue]
+            [futon3c.dev.apm-dispatch :as apm-dispatch]
             [futon3c.dev.apm-frames :as apm-frames]
             [futon3c.peripheral.proof-backend :as pb]
             [futon3c.agency.registry :as reg])
@@ -35,12 +36,16 @@
   "Max re-dispatches for sorry closure."
   4)
 
+(def ^:private max-record-kicks
+  "Max re-dispatches for frame-record normalization."
+  2)
+
 (def ^:private arse-kick-threshold
   "After this many sorry-kicks, switch to diagnostic QP prompt."
   2)
 
-(def ^:private problem-timeout-ms
-  "Overall problem timeout (20 minutes)."
+(def ^:private default-problem-timeout-ms
+  "Default overall problem timeout (20 minutes)."
   (* 20 60 1000))
 
 (def ^:private lean-proofs-root
@@ -68,6 +73,39 @@
 
 (def ^:private log-path
   "/home/joe/code/futon3c/data/apm-conductor-v2-log.edn")
+
+(def ^:private worked-example-root
+  "/home/joe/code/proof_peripheral/worked-solutions")
+
+(def ^:private htdp-reference-card
+  (str
+   "HtDP reference card for frame artifacts:\n"
+   "\n"
+   "proof-plan.edn must have exactly this kind of shape:\n"
+   "```clojure\n"
+   "{:goal \"...\"\n"
+   " :terms [{:name \"...\" :meaning \"...\" :needed-because \"...\"}]\n"
+   " :strategy [{:id :s1\n"
+   "             :formal-dependency \"...\"\n"
+   "             :informal-dependency \"...\"\n"
+   "             :why-this-now \"...\"\n"
+   "             :lean-target \"...\"\n"
+   "             :mathlib-status \"...\"}]\n"
+   " :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n"
+   "```\n"
+   "Do not use `:checkpoints`. Do not use bare symbols or plain string lists for terms/strategy.\n"
+   "\n"
+   "changelog.edn must be a vector of maps like:\n"
+   "```clojure\n"
+   "[{:kind :stage1-completed\n"
+   "  :summary \"...\"\n"
+   "  :full-record? true\n"
+   "  :sorry? false\n"
+   "  :fully-closed? false}]\n"
+   "```\n"
+   "Every changelog entry must include `:full-record?`, `:sorry?`, and `:fully-closed?`.\n"
+   "\n"
+   "execute.md must contain real Stage 1, Stage 2, Stage 3, and Stage 4 sections with no template placeholders.\n"))
 
 (defn- log!
   [entry]
@@ -99,6 +137,48 @@
     (when parent (.mkdirs parent))
     (spit path (pr-str state)))
   state)
+
+(defn- read-edn-if-exists [path]
+  (when-let [text (slurp-if-exists path)]
+    (try (edn/read-string text)
+         (catch Exception _ nil))))
+
+(defn- placeholder-execute-notes? [text]
+  (boolean
+   (or (str/blank? (str/trim (or text "")))
+       (re-find #"\[Fill in" text)
+       (re-find #"\[Record formal dependency" text)
+       (re-find #"\[Back-port" text))))
+
+(defn- valid-execute-notes? [text]
+  (and (not (placeholder-execute-notes? text))
+       (str/includes? text "Stage 1")
+       (str/includes? text "Stage 2")
+       (str/includes? text "Stage 3")
+       (str/includes? text "Stage 4")
+       (> (count (str/trim text)) 400)))
+
+(defn- frame-record-status
+  [frame-workspace]
+  (let [execute-path (apm-frames/workspace-sidecar-path frame-workspace :execute)
+        plan-path (apm-frames/proof-plan-path frame-workspace)
+        changelog-path (apm-frames/changelog-path frame-workspace)
+        execute-notes (slurp-if-exists execute-path)
+        proof-plan (read-edn-if-exists plan-path)
+        changelog (read-edn-if-exists changelog-path)
+        execute-ok? (valid-execute-notes? execute-notes)
+        plan-ok? (apm-queue/valid-proof-plan? proof-plan)
+        changelog-ok? (apm-queue/valid-changelog? changelog)]
+    {:execute-path execute-path
+     :proof-plan-path plan-path
+     :changelog-path changelog-path
+     :execute-notes execute-notes
+     :proof-plan proof-plan
+     :changelog changelog
+     :execute-ok? execute-ok?
+     :proof-plan-ok? plan-ok?
+     :changelog-ok? changelog-ok?
+     :full-record? (and execute-ok? plan-ok? changelog-ok?)}))
 
 ;; =============================================================================
 ;; Lean artifact inspection (same as v1)
@@ -173,23 +253,41 @@
 
 (defn- extract-phases
   "Extract phase-like sections from natural agent output.
-   Looks for markdown headings or bold sections that correspond to
-   observe/propose/execute/validate/classify/integrate content.
+   Handles both structured (### OBSERVE) and natural (## 1. Why it's hard) formats.
    Returns a map of phase keywords to extracted text."
   [output]
-  (let [try-section (fn [& labels]
-                      (some #(or (extract-section output
-                                   (re-pattern (str "(?ims)###?\\s*" % "\\s*\n(.*?)(?=###?\\s|\\z)")))
-                                 (extract-bold-section output %))
-                            labels))]
+  (let [try-section
+        (fn [& labels]
+          (some (fn [label]
+                  (let [escaped (java.util.regex.Pattern/quote label)]
+                    (or
+                     ;; ### HEADING or ## HEADING (exact)
+                     (extract-section output
+                       (re-pattern (str "(?ims)###?\\s*" escaped "\\s*\n(.*?)(?=###?\\s|\\z)")))
+                     ;; ## N. HEADING (numbered)
+                     (extract-section output
+                       (re-pattern (str "(?ims)###?\\s*\\d+\\.?\\s*" escaped ".*?\n(.*?)(?=###?\\s*\\d|\\z)")))
+                     ;; **HEADING** (bold)
+                     (extract-bold-section output label)
+                     ;; **HEADING:** (bold with colon, e.g. **Connections:**)
+                     (extract-section output
+                       (re-pattern (str "(?ims)\\*\\*" escaped "\\s*:?\\*\\*\\s*:?\\s*\n?(.*?)(?=\\*\\*[A-Z]|###?\\s|\\z)"))))))
+                labels))]
     (into {}
       (filter (comp some? val)
-        {:observe   (try-section "OBSERVE" "What is really being asked" "WHY IT IS HARD")
-         :propose   (try-section "PROPOSE" "THE KEY INSIGHT" "Key Insight")
-         :execute   (try-section "EXECUTE" "THE CLEAN PROOF" "Clean Proof" "Proof")
-         :validate  (try-section "VALIDATE" "Non-circularity" "Validation")
-         :classify  (try-section "CLASSIFY" "Classification" "CONFIDENCE INVERSION")
-         :integrate (try-section "INTEGRATE" "Connections" "EXAM-DAY FIELD KIT")}))))
+        {:observe   (try-section "OBSERVE" "What is really being asked" "Why it's hard"
+                                 "Why it.s hard" "WHY IT IS HARD")
+         :propose   (try-section "PROPOSE" "THE KEY INSIGHT" "Key Insight"
+                                 "The key insight" "Key insight")
+         :execute   (try-section "EXECUTE" "THE CLEAN PROOF" "Clean Proof"
+                                 "A complete proof" "Complete proof" "Proof")
+         :validate  (try-section "VALIDATE" "Non-circularity" "Validation"
+                                 "Lean status" "Lean 4")
+         :classify  (try-section "CLASSIFY" "Classification" "CONFIDENCE INVERSION"
+                                 "Confidence inversion" "Confidence Inversion")
+         :integrate (try-section "INTEGRATE" "Connections" "EXAM-DAY FIELD KIT"
+                                 "Exam-day field kit" "What connects"
+                                 "What Connects")}))))
 
 (defn- extract-dep-field
   "Extract a dependency-graph field by trying multiple label prefixes."
@@ -241,11 +339,18 @@
 
 (defn- run-extraction
   "Run all post-hoc extraction passes on the agent's combined output.
-   Returns a map of extracted structured data. Missing fields are nil, not errors."
+   Returns a map of extracted structured data. Missing fields are nil, not errors.
+   Dep-graph extraction scopes to the execute/proof phase section to avoid
+   parsing 'Connections' numbered lists as dependency entries."
   [output]
   (let [phases (extract-phases output)
-        dep-graph (parse-dependency-graph output)
-        arse (parse-arse-questions output)
+        ;; Scope dep-graph to execute phase text, falling back to full output
+        execute-text (or (:execute phases) output)
+        dep-graph (parse-dependency-graph execute-text)
+        ;; Scope ArSE to the ArSE section explicitly
+        arse-section (or (extract-section output #"(?ims)###?\s*ArSE.*?\n(.*)\z")
+                         (extract-section output #"(?ims)\*\*ArSE[^*]*\*\*\s*\n?(.*)\z"))
+        arse (when arse-section (parse-arse-questions arse-section))
         classification (classify-status output)]
     {:phases phases
      :dependency-graph dep-graph
@@ -281,6 +386,15 @@
          "   Write real proofs, not scaffolds. If a sorry is genuinely needed (Mathlib gap),\n"
          "   explain exactly what's missing and what would close it.\n"
          "5. **What connects** — where else this technique appears, exam-day field kit\n\n"
+         "A problem is not complete until the frame-local record is populated.\n"
+         "Before replying, update all three frame artifacts with real content:\n"
+         "- `execute.md` with non-placeholder Stage 1-4 text\n"
+         "- `proof-plan.edn` with goal, terms, strategy, and `:stage-status`\n"
+         "- `changelog.edn` with concrete progress entries\n\n"
+         htdp-reference-card "\n"
+         "Style anchors:\n"
+         "- " worked-example-root "/a02J04\n"
+         "- " worked-example-root "/a02J04-full\n\n"
          (when-let [frame-context (apm-frames/prompt-context (current-frame-workspace problem))]
            (str "Use the isolated frame workspace for this problem:\n"
                 "- workspace root: " (:workspace-root frame-context) "\n"
@@ -289,11 +403,13 @@
                 "- Lean scratch file: " (:lean-scratch-path frame-context) "\n"
                 "- proof-plan.edn: " (:proof-plan-path frame-context) "\n"
                 "- changelog.edn: " (:changelog-path frame-context) "\n"
+                "- execute.md: " (:execute-notes-path frame-context) "\n"
                 "- shared extension root: " (:shared-extension-root frame-context) "\n"
                 "Do not use shared scratch paths like `ApmCanaries/Current.lean`.\n\n"))
          "If no explicit frame paths are given, write Lean files to " lean-proofs-root "/" id "/Main.lean\n\n"
 
-         "Time budget: 15 minutes. Quality over speed. A single well-proved problem\n"
+         "Time budget: use the full budget unless you close the formal work early and have already populated the frame record.\n"
+         "Quality over speed. A single well-proved problem\n"
          "is worth more than a scaffold.\n")))
 
 (defn- make-sorry-kick-prompt
@@ -330,6 +446,34 @@
        (subs previous-output 0 (min 1500 (count previous-output)))
        "\n"))
 
+(defn- make-record-kick-prompt
+  "Prompt for filling the frame-local HtDP record after mathematical work exists
+   but the workspace artifacts are still placeholders or empty."
+  [problem remaining-ms record-status previous-output record-kick-count]
+  (str "The frame-local record for apm-" (:id problem) " is incomplete. "
+       (long (/ remaining-ms 1000)) " seconds remain.\n\n"
+       "You must populate the workspace artifacts before this problem can count as complete.\n"
+       "Do not leave template placeholders. Do not just mention the paths in your reply.\n\n"
+       "Invalid or missing artifacts:\n"
+       (when-not (:execute-ok? record-status)
+         (str "- execute.md needs real Stage 1-4 content at "
+              (:execute-path record-status) "\n"))
+       (when-not (:proof-plan-ok? record-status)
+         (str "- proof-plan.edn needs goal, terms, strategy, and :stage-status at "
+              (:proof-plan-path record-status) "\n"))
+       (when-not (:changelog-ok? record-status)
+         (str "- changelog.edn needs concrete progress entries at "
+              (:changelog-path record-status) "\n"))
+       "\n"
+       htdp-reference-card
+       "\nUse these worked examples as the style anchors:\n"
+       "- " worked-example-root "/a02J04\n"
+       "- " worked-example-root "/a02J04-full\n\n"
+       "After updating the files, reply with a short confirmation of what you wrote.\n\n"
+       "Previous output (summary):\n"
+       (subs previous-output 0 (min 1500 (count previous-output)))
+       "\n\nRecord normalization attempt #" record-kick-count ".\n"))
+
 ;; =============================================================================
 ;; Core dispatch loop
 ;; =============================================================================
@@ -349,15 +493,18 @@
       (catch Exception e
         (println (str "[apm-v2] dispatch exception: " (.getMessage e)))))))
 
+(defn- current-problem-timeout-ms []
+  (or (:problem-timeout-ms @!state) default-problem-timeout-ms))
+
 (defn- problem-timed-out? []
   (when-let [start-ms (:problem-start-ms @!state)]
-    (> (- (System/currentTimeMillis) start-ms) problem-timeout-ms)))
+    (> (- (System/currentTimeMillis) start-ms) (current-problem-timeout-ms))))
 
 (defn- handle-solve-return!
   "Handle return from the solve or sorry-kick dispatch."
   [agent-id agent-output evidence-store]
   (let [{:keys [current-problem problem-start-ms dispatch-start-ms
-                sorry-kick-count problems-done batch-results target-n
+                sorry-kick-count record-kick-count problems-done batch-results target-n
                 accumulated-output backend]} @!state
         pid (str "apm-" (:id current-problem))
         now-ms (System/currentTimeMillis)
@@ -373,14 +520,18 @@
         artifacts (discover-lean-artifacts current-problem problem-start-ms all-output)
         sorry? (boolean (some artifact-has-sorry? artifacts))
         kick-count (or sorry-kick-count 0)
-        remaining-ms (- problem-timeout-ms total-elapsed)]
+        record-kicks (or record-kick-count 0)
+        record-status (frame-record-status (:frame-workspace @!state))
+        remaining-ms (- (current-problem-timeout-ms) total-elapsed)]
 
     (log! {:event :solve-return :problem pid
            :dispatch-elapsed-ms dispatch-elapsed
            :total-elapsed-ms total-elapsed
            :artifact-count (count artifacts)
            :sorry? sorry?
-           :sorry-kick-count kick-count})
+           :sorry-kick-count kick-count
+           :record-kick-count record-kicks
+           :full-record? (:full-record? record-status)})
 
     (cond
       ;; Problem timeout
@@ -398,6 +549,40 @@
                              :frame-id (:frame/id frame-workspace)
                              :elapsed-ms total-elapsed})]
           (swap! !state assoc :problems-done done :batch-results results)
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done})
+                (stop-apm-conductor-v2!))
+            (start-next-problem! agent-id evidence-store))))
+
+      ;; The frame-local HtDP record is incomplete. If the mathematical work is
+      ;; otherwise ready to classify, spend bounded extra clicks normalizing the
+      ;; record instead of silently calling the problem solved.
+      (and (not (:full-record? record-status))
+           (or (and (seq artifacts) (not sorry?))
+               (>= kick-count max-sorry-kicks)))
+      (if (< record-kicks max-record-kicks)
+        (let [new-count (inc record-kicks)]
+          (swap! !state assoc :record-kick-count new-count
+                              :dispatch-start-ms (System/currentTimeMillis))
+          (log! {:event :record-kick
+                 :problem pid
+                 :record-kick-count new-count
+                 :remaining-ms remaining-ms
+                 :message (str "execute-ok=" (:execute-ok? record-status)
+                               ", plan-ok=" (:proof-plan-ok? record-status)
+                               ", changelog-ok=" (:changelog-ok? record-status))})
+          (dispatch! agent-id
+                     (make-record-kick-prompt current-problem remaining-ms record-status output new-count)
+                     (max 60000 remaining-ms)))
+        (let [done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok false :problem-id pid
+                             :classification :abandoned
+                             :message "Frame record incomplete after normalization retries"
+                             :elapsed-ms total-elapsed})]
+          (swap! !state assoc :problems-done done :batch-results results)
+          (log! {:event :problem-abandoned :problem pid
+                 :message "Frame record incomplete after normalization retries"})
           (if (>= done target-n)
             (do (log! {:event :batch-complete :done done})
                 (stop-apm-conductor-v2!))
@@ -525,7 +710,7 @@
             (swap! !state assoc :dispatch-start-ms (System/currentTimeMillis))
             (dispatch! agent-id
                        (make-solve-prompt current-problem tex-body)
-                       (* 15 60 1000)))))
+                       (current-problem-timeout-ms)))))
       ;; Budget exhausted — skip
       (let [frame-workspace (:frame-workspace @!state)
             done (inc (:problems-done @!state))
@@ -577,6 +762,7 @@
                :backend backend
                :accumulated-output ""
                :sorry-kick-count 0
+               :record-kick-count 0
                :failure-count 0
                :problem-start-ms (System/currentTimeMillis)
                :dispatch-start-ms (System/currentTimeMillis)
@@ -585,7 +771,7 @@
                                 problem-bases))
         (dispatch! agent-id
                    (make-solve-prompt problem tex-body)
-                   (* 15 60 1000))))))
+                   (current-problem-timeout-ms))))))
 
 ;; =============================================================================
 ;; Triage — effort estimation pre-pass
@@ -784,7 +970,7 @@
 
 (defn stop-apm-conductor-v2! []
   (when @!conductor
-    (reg/set-on-idle! nil)
+    (apm-dispatch/deregister-conductor! :apm-v2)
     (reset! !conductor nil)
     (log! {:event :conductor-stopped})
     (println "[apm-v2] Stopped.")))
@@ -797,8 +983,10 @@
 
    Same interface as v1's start-apm-conductor! for A/B testing.
    Additional :lane option filters to a triage lane (:quick/:medium/:hard)."
-  [evidence-store & {:keys [agent-id n problem-ids lane]
-                     :or {agent-id "codex-1" n 40}}]
+  [evidence-store & {:keys [agent-id n problem-ids lane problem-timeout-ms]
+                     :or {agent-id "codex-1"
+                          n 40
+                          problem-timeout-ms default-problem-timeout-ms}}]
   (stop-apm-conductor-v2!)
   (spit log-path (str ";; APM Conductor v2 Log — " (Instant/now) "\n") :append true)
 
@@ -810,9 +998,10 @@
     (reset! !state {:problems-done 0
                     :batch-results []
                     :target-n (or (some-> problem-bases count) n)
+                    :problem-timeout-ms problem-timeout-ms
                     :problem-bases problem-bases})
 
-    (reg/set-on-idle!
+    (apm-dispatch/register-conductor! :apm-v2 agent-id
       (fn [idle-agent-id outcome]
         (when (and (= idle-agent-id agent-id) @!conductor)
           (if (:ok outcome true)

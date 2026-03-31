@@ -249,86 +249,119 @@
          (when (and subparts (pos? subpart-count))
            (str "\nSub-parts: " (str/join ", " (map :label subparts)) "\n")))))
 
-(defn make-observe-prompt [problem tex-body]
-  (str "Execution evidence required: no.\n"
-       "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
-       "You are in the OBSERVE phase of the proof peripheral.\n\n"
-       (problem-header problem tex-body)
-       "\nWrite two labeled sections:\n"
-       "- **WHAT IS REALLY BEING ASKED**: Restate the problem. What mathematical objects? What is the real question?\n"
-       "- **WHY IT IS HARD**: Where do students get stuck? What trap? What prerequisite is being tested?\n\n"
-       "Your reply is the authoritative phase record. Do not answer with a summary like "
-       "\"wrote this to file X\" or \"see notes\". Emit the actual OBSERVE content inline. "
-       "If you also write a sidecar file, mirror the same content here.\n\n"
-       "Write for a strong undergrad. This becomes the cheatsheet's opening exposition.\n"))
+(defn make-observe-prompt
+  ([problem tex-body] (make-observe-prompt problem tex-body nil))
+  ([problem tex-body frame-context]
+   (str "Execution evidence required: no.\n"
+        "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
+        "You are in the OBSERVE phase of the proof peripheral.\n\n"
+        (problem-header problem tex-body)
+        (when frame-context
+          (str "\nFrame workspace root:\n"
+               (or (:workspace-root frame-context) "") "\n"))
+        "\nWrite two labeled sections:\n"
+        "- **WHAT IS REALLY BEING ASKED**: Restate the problem. What mathematical objects? What is the real question?\n"
+        "- **WHY IT IS HARD**: Where do students get stuck? What trap? What prerequisite is being tested?\n\n"
+        "Your reply is the authoritative phase record. Do not answer with a summary like "
+        "\"wrote this to file X\" or \"see notes\". Emit the actual OBSERVE content inline. "
+        "If you also write a sidecar file, mirror the same content here.\n\n"
+        "Write for a strong undergrad. This becomes the cheatsheet's opening exposition.\n")))
 
-(defn make-propose-prompt [problem tex-body observe-notes]
-  (str "Execution evidence required: no.\n"
-       "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
-       "You are in the PROPOSE phase of the proof peripheral.\n\n"
-       (problem-header problem tex-body)
-       "\nYour OBSERVE notes:\n" observe-notes "\n\n"
-       "Write two labeled sections:\n"
-       "- **THE KEY INSIGHT**: The single idea that unlocks this problem. Proof strategy and why.\n"
-       "- **THE NAIVE APPROACH THAT FAILS**: What does a student try first? Why does it fail? What structural obstruction blocks it?\n\n"
-       "Your reply is the authoritative phase record. Do not summarize the file you wrote; "
-       "emit the actual PROPOSE notes inline.\n"))
+(defn make-propose-prompt
+  ([problem tex-body observe-notes] (make-propose-prompt problem tex-body observe-notes nil))
+  ([problem tex-body observe-notes frame-context]
+   (str "Execution evidence required: no.\n"
+        "This is a text-authoring phase inside the proof peripheral. The required deliverable is substantive inline notes, not tool activity.\n\n"
+        "You are in the PROPOSE phase of the proof peripheral.\n\n"
+        (problem-header problem tex-body)
+        (when frame-context
+          (str "\nFrame workspace root:\n"
+               (or (:workspace-root frame-context) "") "\n"))
+        "\nYour OBSERVE notes:\n" observe-notes "\n\n"
+        "Write two labeled sections:\n"
+        "- **THE KEY INSIGHT**: The single idea that unlocks this problem. Proof strategy and why.\n"
+        "- **THE NAIVE APPROACH THAT FAILS**: What does a student try first? Why does it fail? What structural obstruction blocks it?\n\n"
+        "Your reply is the authoritative phase record. Do not summarize the file you wrote; "
+        "emit the actual PROPOSE notes inline.\n")))
 
-(defn make-execute-prompt [problem tex-body observe-notes propose-notes]
-  (str "Execution evidence required: yes.\n"
-       "This phase must include real Lean/tool work in Stage 3. A purely textual reply is insufficient.\n\n"
-       "You are in the EXECUTE phase of the proof peripheral.\n\n"
-       (problem-header problem tex-body)
-       "\nYour OBSERVE notes:\n" observe-notes "\n"
-       "\nYour PROPOSE notes:\n" propose-notes "\n\n"
-       "THREE STAGES IN ORDER:\n\n"
-       "**Stage 1 — THE CLEAN PROOF**: Complete, readable informal proof. Not a sketch. "
-       "For multi-part problems, prove each part. Write for a reader who could follow line by line.\n\n"
-       "**Stage 2 — LEMMA DEPENDENCY GRAPH**: Before Lean, extract the logical structure:\n"
-       "- List each lemma/fact used, in dependency order\n"
-       "- For every entry, record both the FORMAL dependency and the INFORMAL dependency\n"
-       "  that made it visible. We are tracing proof strategy, not just theorem lookup.\n"
-       "- Use this exact template for each entry:\n"
-       "  1. **Dependency Name**\n"
-       "     - **Formal dependency**: theorem/lemma/definition actually used\n"
-       "     - **Informal dependency**: recognition heuristic, pattern, or hidden move\n"
-       "     - **Why this becomes thinkable here**: local cue in the problem\n"
-       "     - **Lean target/type**: expected Lean type signature or goal shape\n"
-       "     - **Mathlib status/search terms**: likely Mathlib vs custom, plus search terms\n"
-       "     - **Critical path**: yes/no + why\n\n"
-       "After the dependency graph, emit a machine-readable `proof-plan.edn` block in\n"
-       "this exact form:\n"
-       "```edn\n"
-       "{:goal \"...\"\n"
-       " :terms [{:name \"...\" :meaning \"...\" :needed-because \"...\"}]\n"
-       " :strategy [{:id :step-1\n"
-       "             :formal-dependency \"...\"\n"
-       "             :informal-dependency \"...\"\n"
-       "             :why-this-now \"...\"\n"
-       "             :lean-target \"...\"\n"
-       "             :mathlib-status \"...\"\n"
-       "             :critical-path true}]\n"
-       " :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n"
-       "```\n"
-       "This is the HtDP artifact. It must stay valid throughout execute.\n\n"
-       "**Stage 3 — LEAN FORMALIZATION**: 15-minute exam timer starts NOW.\n"
-       "Build the skeleton from your dependency graph. Use HtDP to attack each sorry:\n"
-       "1. Type signature (from dependency graph)\n"
-       "2. Search Mathlib (exact?, apply?, grep)\n"
-       "3. Sketch composition\n"
-       "4. Wire and build (lake build, read error, fix, repeat)\n"
-       "The skeleton must type-check. Sorry is localized to specific claims.\n\n"
-       "At EACH execute return, update the plan if needed and show concrete progress.\n"
-       "The conductor maintains a `changelog.edn`; your Stage 3 text must make clear what\n"
-       "changed this click: which lemma closed, which search failed, which blocker moved,\n"
-       "or how the plan changed.\n\n"
-       "**Stage 4 — FORMAL-TO-INFORMAL REVISION**: Reread THE CLEAN PROOF. Add "
-       "natural-language difficulty annotations grounded in the Lean work. "
-       "No Lean references in Column 1 prose — just calibrated difficulty signals. "
-       "Lean details go in VALIDATE/CLASSIFY (Column 3).\n\n"
-       "Your reply is the authoritative EXECUTE record. Do not answer with a summary such as "
-       "\"Stage 1 is in file X\" or \"see notes\". Emit the actual Stage 1-4 content inline. "
-       "If you also maintain a sidecar file, keep it in correspondence with this reply.\n"))
+(defn make-execute-prompt
+  ([problem tex-body observe-notes propose-notes]
+   (make-execute-prompt problem tex-body observe-notes propose-notes nil))
+  ([problem tex-body observe-notes propose-notes frame-context]
+   (str "Execution evidence required: yes.\n"
+        "This phase must include real Lean/tool work in Stage 3. A purely textual reply is insufficient.\n\n"
+        "You are in the EXECUTE phase of the proof peripheral.\n\n"
+        (problem-header problem tex-body)
+        (when frame-context
+          (str "\nFrame workspace root:\n"
+               (or (:workspace-root frame-context) "") "\n"
+               "Frame-local Lean module root:\n"
+               (or (:module-root frame-context) "") "\n"
+               "Frame-local Lean files:\n"
+               "- " (or (:lean-main-path frame-context) "") "\n"
+               "- " (or (:lean-scratch-path frame-context) "") "\n"
+               "Frame-local proof plan path:\n"
+               (or (:proof-plan-path frame-context) "") "\n"
+               "Frame-local changelog path:\n"
+               (or (:changelog-path frame-context) "") "\n"
+               "Shared extension root for promoted lemmas:\n"
+               (or (:shared-extension-root frame-context) "") "\n\n"))
+        "\nYour OBSERVE notes:\n" observe-notes "\n"
+        "\nYour PROPOSE notes:\n" propose-notes "\n\n"
+        "THREE STAGES IN ORDER:\n\n"
+        "**Stage 1 — THE CLEAN PROOF**: Complete, readable informal proof. Not a sketch. "
+        "For multi-part problems, prove each part. Write for a reader who could follow line by line.\n\n"
+        "**Stage 2 — LEMMA DEPENDENCY GRAPH**: Before Lean, extract the logical structure:\n"
+        "- List each lemma/fact used, in dependency order\n"
+        "- For every entry, record both the FORMAL dependency and the INFORMAL dependency\n"
+        "  that made it visible. We are tracing proof strategy, not just theorem lookup.\n"
+        "- Use this exact template for each entry:\n"
+        "  1. **Dependency Name**\n"
+        "     - **Formal dependency**: theorem/lemma/definition actually used\n"
+        "     - **Informal dependency**: recognition heuristic, pattern, or hidden move\n"
+        "     - **Why this becomes thinkable here**: local cue in the problem\n"
+        "     - **Lean target/type**: expected Lean type signature or goal shape\n"
+        "     - **Mathlib status/search terms**: likely Mathlib vs custom, plus search terms\n"
+        "     - **Critical path**: yes/no + why\n\n"
+        "After the dependency graph, emit a machine-readable `proof-plan.edn` block in\n"
+        "this exact form:\n"
+        "```edn\n"
+        "{:goal \"...\"\n"
+        " :terms [{:name \"...\" :meaning \"...\" :needed-because \"...\"}]\n"
+        " :strategy [{:id :step-1\n"
+        "             :formal-dependency \"...\"\n"
+        "             :informal-dependency \"...\"\n"
+        "             :why-this-now \"...\"\n"
+        "             :lean-target \"...\"\n"
+        "             :mathlib-status \"...\"\n"
+        "             :critical-path true}]\n"
+        " :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n"
+        "```\n"
+        "This is the HtDP artifact. It must stay valid throughout execute.\n\n"
+        "**Stage 3 — LEAN FORMALIZATION**: 15-minute exam timer starts NOW.\n"
+        "Build the skeleton from your dependency graph. Use HtDP to attack each sorry:\n"
+        "1. Type signature (from dependency graph)\n"
+        "2. Search Mathlib (exact?, apply?, grep)\n"
+        "3. Sketch composition\n"
+        "4. Wire and build (lake build, read error, fix, repeat)\n"
+        "The skeleton must type-check. Sorry is localized to specific claims.\n"
+        (when frame-context
+          (str "Work only in the frame-local Lean files above. Do not use shared scratch paths "
+               "such as `ApmCanaries/Current.lean` or global `lean-proofs/<problem>/Main.lean`. "
+               "If material becomes reusable, promote it explicitly into "
+               (or (:shared-extension-root frame-context) "the shared extension root")
+               ", but keep exploratory work frame-local.\n"))
+        "\nAt EACH execute return, update the plan if needed and show concrete progress.\n"
+        "The conductor maintains a `changelog.edn`; your Stage 3 text must make clear what\n"
+        "changed this click: which lemma closed, which search failed, which blocker moved,\n"
+        "or how the plan changed.\n\n"
+        "**Stage 4 — FORMAL-TO-INFORMAL REVISION**: Reread THE CLEAN PROOF. Add "
+        "natural-language difficulty annotations grounded in the Lean work. "
+        "No Lean references in Column 1 prose — just calibrated difficulty signals. "
+        "Lean details go in VALIDATE/CLASSIFY (Column 3).\n\n"
+        "Your reply is the authoritative EXECUTE record. Do not answer with a summary such as "
+        "\"Stage 1 is in file X\" or \"see notes\". Emit the actual Stage 1-4 content inline. "
+        "If you also maintain a sidecar file, keep it in correspondence with this reply.\n")))
 
 (defn make-validate-prompt [_problem execute-notes lean-status]
   (str "Execution evidence required: no.\n"

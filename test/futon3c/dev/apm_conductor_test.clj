@@ -5,6 +5,7 @@
             [futon3c.agency.registry :as reg]
             [futon3c.agents.apm-work-queue :as apm-queue]
             [futon3c.dev.apm-conductor :as conductor]
+            [futon3c.dev.apm-frames :as frames]
             [futon3c.peripheral.proof-backend :as pb]
             [futon3c.peripheral.tools :as tools]))
 
@@ -197,16 +198,30 @@
         phase-idx (atom 0)
         phase-history (atom [])
         backend (ScriptBackend. (atom {}) phase-idx phase-history)
+        frame-workspace {:frame/id "frame-replay01"
+                         :frame/workspace-root (str tmp-dir "/frame")
+                         :frame/module-root "ApmCanaries.Frames.Replay01.Run1"
+                         :frame/lean-root (str tmp-dir "/apm-lean/ApmCanaries/Frames/Replay01/Run1")
+                         :frame/shared-extension-root (str tmp-dir "/apm-lean/ApmCanaries/Local")
+                         :artifacts {:proof-plan (str tmp-dir "/frame/proof-plan.edn")
+                                     :changelog (str tmp-dir "/frame/changelog.edn")
+                                     :execute-notes (str tmp-dir "/frame/execute.md")
+                                     :workspace-metadata (str tmp-dir "/frame/workspace.json")
+                                     :lean-main (.getAbsolutePath artifact)
+                                     :lean-scratch (str tmp-dir "/apm-lean/ApmCanaries/Frames/Replay01/Run1/Scratch.lean")}}
         observe "WHAT IS REALLY BEING ASKED\nShow the zero-counting argument converges.\n\nWHY IT IS HARD\nOne must turn growth into summability."
         propose "THE KEY INSIGHT\nUse Jensen-style counting bounds.\n\nTHE NAIVE APPROACH THAT FAILS\nA termwise estimate on zeros gives no global control."
         execute "**Stage 1 — THE CLEAN PROOF**\nUse the growth bound to control the zero counting function, then compare the weighted series with a convergent integral.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n1. **Counting bound**\n   - **Formal dependency**: Jensen-type control turns exponential growth into linear control on the zero counting function.\n   - **Informal dependency**: when an entire function has exponential type, the right hidden move is to estimate how many zeros lie in each disk.\n   - **Why this becomes thinkable here**: the target is a summability statement over zeros, so the natural bridge is a counting function rather than a direct termwise estimate.\n   - **Lean target/type**: `∃ C ≥ 0, ∀ r ≥ 0, (N r : ℝ) ≤ C * (1 + r)`.\n   - **Mathlib status/search terms**: custom; search `Summable`, `Real.rpow`, `Nat.cast`.\n   - **Critical path**: yes.\n\n2. **Integral comparison**\n   - **Formal dependency**: linear counting growth with `α > 1` implies convergence of the weighted Dirichlet series.\n   - **Informal dependency**: once the counting function is tame, dyadic or integral comparison is the standard way to prove summability.\n   - **Why this becomes thinkable here**: the exponent condition `α > 1` is exactly the threshold where a one-dimensional tail integral converges.\n   - **Lean target/type**: `Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))`.\n   - **Mathlib status/search terms**: partially in Mathlib; search `summable_nat_add_iff`, `Real.summable_nat_rpow`.\n   - **Critical path**: yes.\n\n**PROOF-PLAN.EDN**\n```edn\n{:goal \"Show the weighted zero series converges.\"\n :terms [{:name \"zero counting function\" :meaning \"counts zeros in disks\" :needed-because \"turns global growth into a summability estimate\"}]\n :strategy [{:id :counting-bound :formal-dependency \"Jensen-type counting bound\" :informal-dependency \"replace termwise zero estimates by a counting function\" :why-this-now \"the target is a series over zeros, so counting is the natural bridge\" :lean-target \"∃ C ≥ 0, ∀ r ≥ 0, (N r : ℝ) ≤ C * (1 + r)\" :mathlib-status \"custom; search `Summable`, `Real.rpow`, `Nat.cast`\" :critical-path true}\n            {:id :integral-comparison :formal-dependency \"integral comparison for p-series tails\" :informal-dependency \"once counting growth is linear, compare to a convergent integral\" :why-this-now \"the hypothesis gives α > 1, exactly the one-dimensional convergence threshold\" :lean-target \"Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))\" :mathlib-status \"partially in Mathlib; search `summable_nat_add_iff`, `Real.summable_nat_rpow`\" :critical-path true}]\n :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n```\n\n**Stage 3 — LEAN FORMALIZATION**\nBuilt the typed scaffold and closed the final theorem in the current artifact.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\nThe hard step is not the last comparison but knowing to pass through the zero-counting function first."
         validate "Non-circularity analysis: the zero-counting estimate is independent of the desired summability conclusion.\n\nLean status: built successfully, zero sorry."
         classify "**Classification**: proved.\n\n**CONFIDENCE INVERSION**: The surprise is that the proof is really about counting zeros in disks, not estimating each zero separately."
         integrate "**Connections**\nThis is a prototype for Jensen, Cartwright, and density arguments in complex analysis.\n\n**EXAM-DAY FIELD KIT**\n1. Summability over zeros is usually a counting-function problem.\n2. Exponential type suggests Jensen-style disk estimates.\n3. `α > 1` is the one-dimensional convergence threshold.\n\n**ArSE Questions**\n1. *Why is this hard?*\n   **Q:** Why can’t we just bound each zero directly?\n   **A:** Because the hypothesis controls global growth, not individual zeros.\n2. *What is the key insight?*\n   **Q:** What single move unlocks the proof?\n   **A:** Replace the series by a counting-function estimate.\n3. *Why does step N work?*\n   **Q:** Why does linear zero growth imply convergence here?\n   **A:** Because the tail compares to an integral with exponent greater than one.\n4. *What connects to this?*\n   **Q:** Where else does this method appear?\n   **A:** In Jensen formula, entire-function theory, and zero-density arguments.\n5. *Where is intuition wrong?*\n   **Q:** What false instinct should we avoid?\n   **A:** Thinking the zeros must be controlled one-by-one rather than statistically."
-        manifest [{:id "replay01" :subject "Analysis"}]]
+        manifest [{:id "replay01" :subject "Analysis"}]
+        _ (.mkdirs (io/file (:frame/workspace-root frame-workspace)))]
     (with-redefs [conductor/log! (fn [entry] (swap! logs conj entry))
                   conductor/proof-state-root proof-root
                   conductor/discover-lean-artifacts (fn [_ _ _] [(.getAbsolutePath artifact)])
+                  frames/init-frame-workspace! (fn [_] frame-workspace)
+                  frames/emit-frame-receipt! (fn [& _] (str tmp-dir "/frame.json"))
                   reg/set-on-idle! (fn [f] (reset! idle-callback f))
                   reg/invoke-agent! (fn [_agent-id prompt _timeout-ms]
                                       (swap! prompts conj prompt)
@@ -232,6 +247,29 @@
 (deftest preflight-succeeds
   (is (:ok (conductor/run-apm-preflight!))))
 
+(deftest execute-prompt-prefers-frame-local-paths
+  (let [frame-workspace {:frame/workspace-root "/tmp/frame"
+                         :frame/module-root "ApmCanaries.Frames.Replay01.Run1"
+                         :frame/lean-root "/home/joe/code/apm-lean/ApmCanaries/Frames/Replay01/Run1"
+                         :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
+                         :artifacts {:proof-plan "/tmp/frame/proof-plan.edn"
+                                     :changelog "/tmp/frame/changelog.edn"
+                                     :execute-notes "/tmp/frame/execute.md"
+                                     :workspace-metadata "/tmp/frame/workspace.json"
+                                     :lean-main "/home/joe/code/apm-lean/ApmCanaries/Frames/Replay01/Run1/Main.lean"
+                                     :lean-scratch "/home/joe/code/apm-lean/ApmCanaries/Frames/Replay01/Run1/Scratch.lean"}}]
+    (reset! conductor/!apm-state {:current-problem {:id "replay01"}
+                                  :frame-workspace frame-workspace})
+    (let [prompt (#'conductor/make-phase-prompt
+                  {:id "replay01" :subject :analysis}
+                  "Problem body"
+                  :execute
+                  {:observe "Observe"
+                   :propose "Propose"})]
+      (is (str/includes? prompt "/home/joe/code/apm-lean/ApmCanaries/Frames/Replay01/Run1/Main.lean"))
+      (is (str/includes? prompt "/tmp/frame/proof-plan.edn"))
+      (is (str/includes? prompt "Do not use shared scratch paths such as `ApmCanaries/Current.lean`")))))
+
 ;; =============================================================================
 ;; Test scaffold for circuit-breaker tests
 ;; =============================================================================
@@ -256,18 +294,33 @@
         logs (atom [])
         phase-idx (atom 0)
         phase-history (atom [])
-        backend (ScriptBackend. (atom {}) phase-idx phase-history)]
+        backend (ScriptBackend. (atom {}) phase-idx phase-history)
+        frame-workspace {:frame/id (str "frame-" problem-id)
+                         :frame/workspace-root (str tmp-dir "/frame")
+                         :frame/module-root (str "ApmCanaries.Frames." problem-id ".Run1")
+                         :frame/lean-root (str tmp-dir "/apm-lean/ApmCanaries/Frames/" problem-id "/Run1")
+                         :frame/shared-extension-root (str tmp-dir "/apm-lean/ApmCanaries/Local")
+                         :artifacts {:proof-plan (str tmp-dir "/frame/proof-plan.edn")
+                                     :changelog (str tmp-dir "/frame/changelog.edn")
+                                     :execute-notes (str tmp-dir "/frame/execute.md")
+                                     :workspace-metadata (str tmp-dir "/frame/workspace.json")
+                                     :lean-main (.getAbsolutePath artifact)
+                                     :lean-scratch (str tmp-dir "/apm-lean/ApmCanaries/Frames/" problem-id "/Run1/Scratch.lean")}}]
+    (.mkdirs (io/file (:frame/workspace-root frame-workspace)))
     {:idle-callback idle-callback
      :prompts prompts
      :logs logs
      :backend backend
      :phase-history phase-history
      :artifact artifact
+     :frame-workspace frame-workspace
      :proof-root proof-root
      :redef-bindings
      {#'conductor/log! (fn [entry] (swap! logs conj entry))
       #'conductor/proof-state-root proof-root
       #'conductor/discover-lean-artifacts (fn [_ _ _] [(.getAbsolutePath artifact)])
+      #'frames/init-frame-workspace! (fn [_] frame-workspace)
+      #'frames/emit-frame-receipt! (fn [& _] (str tmp-dir "/frame.json"))
       #'reg/set-on-idle! (fn [f] (reset! idle-callback f))
       #'reg/invoke-agent! (fn [_agent-id prompt _timeout-ms]
                              (swap! prompts conj prompt)

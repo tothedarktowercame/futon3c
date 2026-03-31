@@ -15,6 +15,8 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [futon3c.agents.apm-work-queue :as apm-queue]
+            [futon3c.dev.apm-dispatch :as apm-dispatch]
+            [futon3c.dev.apm-frames :as apm-frames]
             [futon3c.peripheral.proof-backend :as pb]
             [futon3c.agency.registry :as reg])
   (:import [java.time Instant]))
@@ -31,6 +33,7 @@
 (declare discover-lean-artifacts)
 (declare extract-bold-section)
 (declare run-apm-preflight!)
+(declare current-frame-workspace)
 
 (def ^:private apm-phases
   [:observe :propose :execute :validate :classify :integrate])
@@ -99,19 +102,30 @@
 
 (defn- phase-sidecar-path
   [problem phase]
-  (let [pid (:id problem)]
-    (case phase
-      :propose (str proof-peripheral-root "/apm-" pid "-propose.md")
-      :execute (str proof-peripheral-root "/apm-" pid "-execute.md")
-      nil)))
+  (let [pid (:id problem)
+        frame-workspace (when (= pid (get-in @!apm-state [:current-problem :id]))
+                          (:frame-workspace @!apm-state))]
+    (or (apm-frames/workspace-sidecar-path frame-workspace phase)
+        (case phase
+          :propose (str proof-peripheral-root "/apm-" pid "-propose.md")
+          :execute (str proof-peripheral-root "/apm-" pid "-execute.md")
+          nil))))
 
 (defn- proof-plan-sidecar-path
   [problem]
-  (str proof-peripheral-root "/apm-" (:id problem) "-proof-plan.edn"))
+  (let [pid (:id problem)
+        frame-workspace (when (= pid (get-in @!apm-state [:current-problem :id]))
+                          (:frame-workspace @!apm-state))]
+    (or (apm-frames/proof-plan-path frame-workspace)
+        (str proof-peripheral-root "/apm-" pid "-proof-plan.edn"))))
 
 (defn- changelog-sidecar-path
   [problem]
-  (str proof-peripheral-root "/apm-" (:id problem) "-changelog.edn"))
+  (let [pid (:id problem)
+        frame-workspace (when (= pid (get-in @!apm-state [:current-problem :id]))
+                          (:frame-workspace @!apm-state))]
+    (or (apm-frames/changelog-path frame-workspace)
+        (str proof-peripheral-root "/apm-" pid "-changelog.edn"))))
 
 (defn- slurp-if-exists
   [path]
@@ -255,12 +269,18 @@
 (defn- persist-proof-plan!
   [problem proof-plan]
   (when proof-plan
-    (spit (proof-plan-sidecar-path problem) (pr-str proof-plan))))
+    (let [path (proof-plan-sidecar-path problem)
+          parent (.getParentFile (io/file path))]
+      (when parent (.mkdirs parent))
+      (spit path (pr-str proof-plan)))))
 
 (defn- persist-changelog!
   [problem changelog]
   (when changelog
-    (spit (changelog-sidecar-path problem) (pr-str changelog))))
+    (let [path (changelog-sidecar-path problem)
+          parent (.getParentFile (io/file path))]
+      (when parent (.mkdirs parent))
+      (spit path (pr-str changelog)))))
 
 (defn- update-proof-plan!
   [problem output]
@@ -548,26 +568,32 @@
 
 (defn- make-phase-prompt
   [problem tex-body phase phase-notes]
-  (case phase
-    :observe   (apm-queue/make-observe-prompt problem tex-body)
-    :propose   (apm-queue/make-propose-prompt problem tex-body (:observe phase-notes))
+  (let [frame-context (apm-frames/prompt-context (current-frame-workspace problem))]
+    (case phase
+      :observe   (apm-queue/make-observe-prompt problem tex-body frame-context)
+      :propose   (apm-queue/make-propose-prompt problem tex-body (:observe phase-notes) frame-context)
     :execute   (apm-queue/make-execute-prompt problem tex-body
-                                              (:observe phase-notes) (:propose phase-notes))
+                                              (:observe phase-notes) (:propose phase-notes) frame-context)
     :validate  (apm-queue/make-validate-prompt problem (:execute phase-notes) "see notes")
     :classify  (apm-queue/make-classify-prompt problem (:validate phase-notes))
     :integrate (apm-queue/make-integrate-prompt problem
                  (str/join "\n\n" (for [p [:observe :propose :execute :validate :classify]
                                         :let [n (get phase-notes p)]
                                         :when n]
-                                    (str (str/upper-case (name p)) ":\n" n))))))
+                                    (str (str/upper-case (name p)) ":\n" n)))))))
 
 (defn- make-lean-continue-prompt
   "Prompt for re-dispatch when agent returns early from execute with sorry."
   [problem remaining-ms previous-output]
-  (str "Execution evidence required: yes.\n"
+  (let [frame-context (apm-frames/prompt-context (current-frame-workspace problem))]
+    (str "Execution evidence required: yes.\n"
        "This phase must include real Lean/tool work in Stage 3. A purely textual reply is insufficient.\n\n"
        "You are STILL in the EXECUTE phase. Timer has NOT expired.\n\n"
        "Problem: apm-" (:id problem) "\n\n"
+       (when frame-context
+         (str "Frame-local Lean files:\n- " (:lean-main-path frame-context)
+              "\n- " (:lean-scratch-path frame-context)
+              "\nShared extension root:\n" (:shared-extension-root frame-context) "\n\n"))
        "You returned with sorry instances but " (long (/ remaining-ms 1000))
        " seconds remain on your 15-minute Lean timer.\n\n"
        "Your previous output (summary):\n"
@@ -584,17 +610,22 @@
        "with a summary or 'see file' note; the conductor will merge your Lean delta into\n"
        "the canonical execute record and changelog.\n\n"
        "When the timer expires, the conductor will advance you.\n"
-       "DO NOT rewrite the informal proof — focus entirely on Lean.\n"))
+       "DO NOT rewrite the informal proof — focus entirely on Lean.\n")))
 
 (defn- make-arse-kick-prompt
   "Prompt for re-dispatch when the agent is stuck in a sorry loop.
    Instead of 'keep working on sorry', asks the agent to diagnose what's
    blocking it using QP-pattern questions, then use the answer to get unstuck."
   [problem remaining-ms previous-output]
-  (str "Execution evidence required: yes.\n"
+  (let [frame-context (apm-frames/prompt-context (current-frame-workspace problem))]
+    (str "Execution evidence required: yes.\n"
        "This phase must include real Lean/tool work. A purely textual reply is insufficient.\n\n"
        "You are STILL in the EXECUTE phase. Timer has NOT expired.\n\n"
        "Problem: apm-" (:id problem) "\n\n"
+       (when frame-context
+         (str "Frame-local Lean files:\n- " (:lean-main-path frame-context)
+              "\n- " (:lean-scratch-path frame-context)
+              "\nShared extension root:\n" (:shared-extension-root frame-context) "\n\n"))
        "You have attempted sorry closure " arse-kick-threshold
        " times without success. " (long (/ remaining-ms 1000))
        " seconds remain.\n\n"
@@ -616,7 +647,7 @@
        "\n\n"
        "Return: the 3 diagnostic answers, your chosen action, and the resulting\n"
        "LEAN DELTA (what changed in Stage 3). If you chose Accept, that's fine —\n"
-       "a well-diagnosed sorry with a Mathlib boundary explanation is a real result.\n"))
+       "a well-diagnosed sorry with a Mathlib boundary explanation is a real result.\n")))
 
 (defn- make-full-execute-resubmission-prompt
   [problem remaining-ms previous-output execute-record]
@@ -653,9 +684,14 @@
   [problem]
   (io/file lean-proofs-root (:id problem)))
 
+(defn- current-frame-workspace
+  [problem]
+  (when (= (:id problem) (get-in @!apm-state [:current-problem :id]))
+    (:frame-workspace @!apm-state)))
+
 (defn- mentioned-lean-artifacts
   [output]
-  (->> (re-seq #"(?:/home/joe/code/apm-lean/)?lean-proofs/[^\s\]\"']+\.lean" (or output ""))
+  (->> (re-seq #"(?:/home/joe/code/apm-lean/)?(?:lean-proofs|ApmCanaries/Frames|ApmCanaries/Local)/[^\s\]\"']+\.lean" (or output ""))
        (map #(if (str/starts-with? % "/")
                %
                (str "/home/joe/code/apm-lean/" %)))
@@ -665,16 +701,18 @@
 (defn- recent-lean-artifacts
   [problem execute-start-ms]
   (let [dir (problem-lean-dir problem)
+        frame-artifacts (apm-frames/workspace-lean-artifacts (current-frame-workspace problem))
         threshold-ms (long (max 0 (- (or execute-start-ms 0) 2000)))]
-    (if (.exists dir)
-      (->> (file-seq dir)
-           (filter #(.isFile ^java.io.File %))
-           (filter #(str/ends-with? (.getName ^java.io.File %) ".lean"))
-           (filter #(>= (.lastModified ^java.io.File %) threshold-ms))
-           (map #(.getAbsolutePath ^java.io.File %))
-           distinct
-           vec)
-      [])))
+    (->> (concat
+          frame-artifacts
+          (when (.exists dir)
+            (->> (file-seq dir)
+                 (filter #(.isFile ^java.io.File %))
+                 (filter #(str/ends-with? (.getName ^java.io.File %) ".lean"))
+                 (filter #(>= (.lastModified ^java.io.File %) threshold-ms))
+                 (map #(.getAbsolutePath ^java.io.File %)))))
+         distinct
+         vec)))
 
 (defn- discover-lean-artifacts
   [problem execute-start-ms output]
@@ -990,7 +1028,7 @@
                              :timeout-override (:timeout-override retry-override))
             (dispatch-phase! agent-id evidence-store))))
       (let [{:keys [problems-done batch-results target-n execute-record execute-start-ms
-                    problem-start-ms phase-notes problem-failures]} @!apm-state
+                    problem-start-ms phase-notes problem-failures frame-workspace]} @!apm-state
             execute-notes (execute-record->notes execute-record)
             artifacts (when current-problem
                         (discover-lean-artifacts current-problem execute-start-ms execute-notes))
@@ -1007,6 +1045,7 @@
                     :problem-elapsed-ms total-elapsed
                     :phase-failure-count failures
                     :failures problem-failures
+                    :frame-workspace frame-workspace
                     :phase-notes phase-notes
                     :execute-record execute-record
                     :execute-notes execute-notes
@@ -1181,7 +1220,9 @@
                     ;; Save
                     _ (let [cache @(.cache backend) state (get cache pid)]
                         (when state
-                          (save-proof-state! (:id current-problem) state)))
+                          (save-proof-state! (:id current-problem)
+                                             (assoc state :proof/frame-workspace
+                                                    (:frame-workspace @!apm-state)))))
                     total-elapsed (- (System/currentTimeMillis)
                                      (or (:problem-start-ms @!apm-state) 0))]
 
@@ -1235,6 +1276,9 @@
             pid (str "apm-" base)
             manifest (apm-queue/load-apm-manifest)
             problem (first (filter #(= base (:id %)) manifest))
+            frame-workspace (apm-frames/init-frame-workspace!
+                             {:problem-base base
+                              :conductor-tag "apm-v1"})
             backend (pb/make-proof-backend
                       {:phase-validator apm-queue/apm-phase-validator})]
 
@@ -1257,12 +1301,21 @@
                             {:problem-id pid
                              :cycle-begin-result r})))
           (let [cid (get-in r [:result :cycle/id])]
+            (let [receipt-path (apm-frames/emit-frame-receipt!
+                                {:problem-base base
+                                 :frame-workspace frame-workspace
+                                 :cycle-id cid
+                                 :frame-label (str "APM v1 frame for " base)})]
+              (log! {:event :frame-workspace-ready
+                     :problem pid
+                     :message receipt-path}))
             (apm-queue/emit-apm-evidence! evidence-store
               {:problem-id pid :problem-base base :subject (:subject problem)
                :session-id (str "apm-conductor-" pid) :event-tag :workflow-start})
             (swap! !apm-state assoc
                    :current-problem problem :current-phase :observe
                    :cycle-id cid :backend backend :phase-notes {}
+                   :frame-workspace frame-workspace
                    :execute-record (empty-execute-record)
                    :proof-plan nil
                    :execute-changelog []
@@ -1283,7 +1336,7 @@
 
 (defn stop-apm-conductor! []
   (when @!apm-conductor
-    (reg/set-on-idle! nil)
+    (apm-dispatch/deregister-conductor! :apm-v1)
     (reset! !apm-conductor nil)
     (log! {:event :conductor-stopped})
     (println "[apm-conductor] Stopped.")))
@@ -1317,7 +1370,7 @@
                         :target-n (or (some-> problem-bases count) n)
                         :problem-bases problem-bases})
 
-    (reg/set-on-idle!
+    (apm-dispatch/register-conductor! :apm-v1 agent-id
       (fn [idle-agent-id outcome]
         (when (and (= idle-agent-id agent-id) @!apm-conductor)
           (if (:ok outcome true)
