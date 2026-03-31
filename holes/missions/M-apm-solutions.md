@@ -1846,3 +1846,54 @@ analysis and functional analysis items.
    from your last output") instead of echoing the canonical record.
    This requires the agent to maintain context across invocations,
    which Codex already does within a session.
+
+### Planned Excursion: Agentic Breakpoints
+
+**Motivation:** The :hard lane (209 problems) needs Lakatosian teaming —
+human-in-the-loop at the moment of mathematical friction. Currently, the
+conductor runs blind sorry-kicks until the budget exhausts. The agent may
+be stuck on a specific Mathlib gap that a human could diagnose in 30
+seconds ("try `ENNReal.toReal_rpow_of_pos`").
+
+**Concept:** `breakpoint!` pauses the conductor mid-proof and drops the
+human into a direct conversation with the agent, which still has its proof
+context loaded. `resume!` re-registers the dispatch callback and continues
+the cycle from where it stopped.
+
+**Implementation sketch:**
+
+```clojure
+;; Pause: conductor stops advancing, agent finishes current dispatch
+(defn breakpoint! [conductor-id]
+  (apm-dispatch/deregister-conductor! conductor-id)
+  ;; !state preserved — knows which problem, which phase, which kick
+  )
+
+;; Chat directly with the agent while paused
+(reg/invoke-agent! "claude-1"
+  "Show me the Lean goal state for the main sorry. What have you tried?"
+  120000)
+
+;; Resume: re-register callback, conductor picks up from !state
+(defn resume! [conductor-id]
+  (apm-dispatch/register-conductor! conductor-id ...))
+```
+
+**Why the architecture supports this:**
+- Agent sessions persist across invocations (context is retained)
+- `!state` holds the full problem/phase/kick state across pause/resume
+- `apm-dispatch` allows clean deregister/re-register without affecting
+  other conductors running in parallel
+- Drawbridge provides the direct `invoke-agent!` channel
+
+**Use cases:**
+- :hard lane problems where the sorry is at a known Mathlib boundary —
+  human inspects, suggests an API path, agent tries it
+- A/B comparison: pause both agents at the same proof step, ask each
+  "what would you do next?", compare reasoning
+- Pedagogical development: simulate the student experience by manually
+  stepping through the proof peripheral, testing whether the discipline
+  helps or hinders at each phase
+
+**Deferred until:** the :quick and :medium batches are complete and the
+:hard lane queue is populated with diagnosed Mathlib boundary problems.
