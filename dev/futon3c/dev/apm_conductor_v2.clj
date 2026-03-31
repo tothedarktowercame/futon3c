@@ -17,9 +17,12 @@
 
    A/B testing: start-apm-conductor-v2! has the same interface as v1's
    start-apm-conductor! so the same problem sets can be run through both."
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.java.io :as io]
             [futon3c.agents.apm-work-queue :as apm-queue]
+            [futon3c.dev.apm-frames :as apm-frames]
             [futon3c.peripheral.proof-backend :as pb]
             [futon3c.agency.registry :as reg])
   (:import [java.time Instant]))
@@ -104,23 +107,30 @@
 (defn- problem-lean-dir [problem]
   (io/file lean-proofs-root (:id problem)))
 
+(defn- current-frame-workspace
+  [problem]
+  (when (= (:id problem) (get-in @!state [:current-problem :id]))
+    (:frame-workspace @!state)))
+
 (defn- mentioned-lean-artifacts [output]
-  (->> (re-seq #"(?:/home/joe/code/apm-lean/)?lean-proofs/[^\s\]\"']+\.lean" (or output ""))
+  (->> (re-seq #"(?:/home/joe/code/apm-lean/)?(?:lean-proofs|ApmCanaries/Frames|ApmCanaries/Local)/[^\s\]\"']+\.lean" (or output ""))
        (map #(if (str/starts-with? % "/") %
                (str "/home/joe/code/apm-lean/" %)))
        distinct vec))
 
 (defn- recent-lean-artifacts [problem execute-start-ms]
   (let [dir (problem-lean-dir problem)
+        frame-artifacts (apm-frames/workspace-lean-artifacts (current-frame-workspace problem))
         threshold-ms (long (max 0 (- (or execute-start-ms 0) 2000)))]
-    (if (.exists dir)
-      (->> (file-seq dir)
-           (filter #(.isFile ^java.io.File %))
-           (filter #(str/ends-with? (.getName ^java.io.File %) ".lean"))
-           (filter #(>= (.lastModified ^java.io.File %) threshold-ms))
-           (map #(.getAbsolutePath ^java.io.File %))
-           distinct vec)
-      [])))
+    (->> (concat
+          frame-artifacts
+          (when (.exists dir)
+            (->> (file-seq dir)
+                 (filter #(.isFile ^java.io.File %))
+                 (filter #(str/ends-with? (.getName ^java.io.File %) ".lean"))
+                 (filter #(>= (.lastModified ^java.io.File %) threshold-ms))
+                 (map #(.getAbsolutePath ^java.io.File %)))))
+         distinct vec)))
 
 (defn- discover-lean-artifacts [problem execute-start-ms output]
   (let [mentioned (mentioned-lean-artifacts output)
@@ -271,8 +281,17 @@
          "   Write real proofs, not scaffolds. If a sorry is genuinely needed (Mathlib gap),\n"
          "   explain exactly what's missing and what would close it.\n"
          "5. **What connects** — where else this technique appears, exam-day field kit\n\n"
-
-         "Write Lean files to " lean-proofs-root "/" id "/Main.lean\n\n"
+         (when-let [frame-context (apm-frames/prompt-context (current-frame-workspace problem))]
+           (str "Use the isolated frame workspace for this problem:\n"
+                "- workspace root: " (:workspace-root frame-context) "\n"
+                "- Lean module root: " (:module-root frame-context) "\n"
+                "- Lean main file: " (:lean-main-path frame-context) "\n"
+                "- Lean scratch file: " (:lean-scratch-path frame-context) "\n"
+                "- proof-plan.edn: " (:proof-plan-path frame-context) "\n"
+                "- changelog.edn: " (:changelog-path frame-context) "\n"
+                "- shared extension root: " (:shared-extension-root frame-context) "\n"
+                "Do not use shared scratch paths like `ApmCanaries/Current.lean`.\n\n"))
+         "If no explicit frame paths are given, write Lean files to " lean-proofs-root "/" id "/Main.lean\n\n"
 
          "Time budget: 15 minutes. Quality over speed. A single well-proved problem\n"
          "is worth more than a scaffold.\n")))
@@ -370,11 +389,13 @@
         (log! {:event :problem-timed-out :problem pid
                :total-elapsed-ms total-elapsed})
         (let [extraction (run-extraction all-output)
+              frame-workspace (:frame-workspace @!state)
               done (inc problems-done)
               results (conj (or batch-results [])
                             {:ok false :problem-id pid
                              :classification :timed-out
                              :extraction extraction
+                             :frame-id (:frame/id frame-workspace)
                              :elapsed-ms total-elapsed})]
           (swap! !state assoc :problems-done done :batch-results results)
           (if (>= done target-n)
@@ -390,6 +411,7 @@
                :total-elapsed-ms total-elapsed
                :sorry-kicks kick-count})
         (let [extraction (run-extraction all-output)
+              frame-workspace (:frame-workspace @!state)
               ;; Save proof state
               _ (when backend
                   (.execute-tool backend :proof-load [pid])
@@ -400,6 +422,7 @@
                          :proof/classification :proved
                          :proof/output all-output
                          :proof/extraction extraction
+                         :proof/frame-workspace frame-workspace
                          :proof/artifacts (mapv str artifacts)
                          :proof/elapsed-ms total-elapsed}))))
               ;; Evidence
@@ -434,11 +457,13 @@
                :sorry-kicks kick-count
                :message "Sorry-kick budget exhausted"})
         (let [extraction (run-extraction all-output)
+              frame-workspace (:frame-workspace @!state)
               _ (save-proof-state! (:id current-problem)
                   {:proof/problem-id pid
                    :proof/classification :partial
                    :proof/output all-output
                    :proof/extraction extraction
+                   :proof/frame-workspace frame-workspace
                    :proof/artifacts (mapv str artifacts)
                    :proof/elapsed-ms total-elapsed})
               _ (apm-queue/emit-apm-evidence! evidence-store
@@ -502,9 +527,11 @@
                        (make-solve-prompt current-problem tex-body)
                        (* 15 60 1000)))))
       ;; Budget exhausted — skip
-      (let [done (inc (:problems-done @!state))
+      (let [frame-workspace (:frame-workspace @!state)
+            done (inc (:problems-done @!state))
             results (conj (or (:batch-results @!state) [])
-                          {:ok false :problem-id pid :classification :abandoned})]
+                          {:ok false :problem-id pid :classification :abandoned
+                           :frame-id (:frame/id frame-workspace)})]
         (swap! !state assoc :problems-done done :batch-results results)
         (log! {:event :problem-abandoned :problem pid})
         (if (>= done (:target-n @!state))
@@ -531,13 +558,22 @@
             manifest (apm-queue/load-apm-manifest)
             problem (first (filter #(= base (:id %)) manifest))
             tex-body (apm-queue/load-problem-tex base)
+            frame-workspace (apm-frames/init-frame-workspace!
+                             {:problem-base base
+                              :conductor-tag "apm-v2"})
             backend (pb/make-proof-backend {})]
         (log! {:event :problem-start :problem pid})
+        (let [receipt-path (apm-frames/emit-frame-receipt!
+                            {:problem-base base
+                             :frame-workspace frame-workspace
+                             :frame-label (str "APM v2 frame for " base)})]
+          (log! {:event :frame-workspace-ready :problem pid :message receipt-path}))
         (apm-queue/emit-apm-evidence! evidence-store
           {:problem-id pid :problem-base base :subject (:subject problem)
            :session-id (str "apm-v2-" pid) :event-tag :workflow-start})
         (swap! !state assoc
                :current-problem problem
+               :frame-workspace frame-workspace
                :backend backend
                :accumulated-output ""
                :sorry-kick-count 0
@@ -570,8 +606,10 @@
        "- **medium**: Mathlib has the pieces but composition is nontrivial. 5-20 min.\n"
        "- **hard**: Genuine Mathlib gap, custom lemmas or new theory needed. 20+ min.\n\n"
 
-       "For each problem, respond with exactly one line:\n"
-       "  <problem-id> <lane> <one-sentence reason>\n\n"
+       "For each problem, respond with exactly one line and nothing else:\n"
+       "  <problem-id> <lane> <one-sentence reason>\n"
+       "No bullets. No numbering. No markdown table. No headings. No code fences.\n"
+       "Use lane names in lowercase: quick, medium, or hard.\n\n"
 
        "Example:\n"
        "  a01J01 quick Schur test — MeasureTheory.integral_mul_le covers it\n"
@@ -586,11 +624,24 @@
               problems))
        "\n"))
 
+(defn- normalize-triage-line
+  [line]
+  (-> (or line "")
+      str/trim
+      (str/replace #"^\s*(?:[-*•]+|\d+[.)])\s*" "")
+      (str/replace #"`" "")
+      (str/replace #"\*\*" "")
+      (str/replace #"\s*[|]\s*" " ")
+      (str/replace #"\s+" " ")))
+
 (defn- parse-triage-line
   "Parse one triage line: 'a01J01 quick Reason here' -> {:id :lane :reason}"
   [line]
-  (when-let [[_ id lane reason] (re-find #"^\s*(\S+)\s+(quick|medium|hard)\s+(.+)" line)]
-    {:id id :lane (keyword lane) :reason (str/trim reason)}))
+  (let [line (normalize-triage-line line)]
+    (when-let [[_ id lane reason]
+               (or (re-find #"(?i)^\s*([a-z]\d\d[A-Z]\d\d)\s+[:\-]?\s*(quick|medium|hard)\s*[:\-]?\s+(.+)$" line)
+                   (re-find #"(?i)^\s*([a-z]\d\d[A-Z]\d\d)\s*\|\s*(quick|medium|hard)\s*\|\s*(.+)$" line))]
+      {:id id :lane (keyword (str/lower-case lane)) :reason (str/trim reason)})))
 
 (defn- parse-triage-output
   "Parse triage agent output into a map of {problem-id {:lane :reason}}."
@@ -615,16 +666,26 @@
 
 (defn triage-summary
   "Summarize a triage manifest by lane."
-  [triage-map]
+  [triage-map manifest]
   (let [by-lane (group-by (comp :lane val) triage-map)]
     {:quick (count (get by-lane :quick))
      :medium (count (get by-lane :medium))
      :hard (count (get by-lane :hard))
-     :unclassified (- (count triage-map)
+     :unclassified (- (count manifest)
                       (count (get by-lane :quick))
                       (count (get by-lane :medium))
                       (count (get by-lane :hard)))
-     :total (count triage-map)}))
+     :total (count manifest)}))
+
+(defn unclassified-problem-ids
+  "Return manifest problem ids not yet present in the saved triage map."
+  []
+  (let [triage (or (load-triage) {})
+        manifest (apm-queue/load-apm-manifest)
+        classified (set (keys triage))]
+    (->> manifest
+         (remove #(contains? classified (:id %)))
+         (mapv :id))))
 
 (defn run-triage!
   "Run triage pre-pass: dispatch all problems (or a subset) to an agent for
@@ -634,33 +695,77 @@
      (run-triage! :agent-id \"claude-1\")
      (run-triage! :agent-id \"claude-1\" :subject :analysis)
      (run-triage! :agent-id \"claude-1\" :problem-ids [\"a01J01\" \"a02J04\"])"
-  [& {:keys [agent-id subject problem-ids batch-size]
-      :or {agent-id "claude-1" batch-size 50}}]
-  (let [manifest (cond->> (apm-queue/load-apm-manifest)
-                   subject (filter #(= subject (:subject %)))
-                   problem-ids (filter #((set problem-ids) (:id %))))
+  [& {:keys [agent-id subject problem-ids batch-size max-retries force?]
+      :or {agent-id "claude-1" batch-size 50 max-retries 2 force? false}}]
+  (let [existing (or (load-triage) {})
+        explicit-ids (when problem-ids (set problem-ids))
+        existing-ids (set (keys existing))
+        target-manifest (cond->> (apm-queue/load-apm-manifest)
+                          subject (filter #(= subject (:subject %)))
+                          explicit-ids (filter #(contains? explicit-ids (:id %))))
+        manifest (cond->> target-manifest
+                   (not force?) (remove #(contains? existing-ids (:id %))))
         ;; Batch to avoid context overflow
         batches (partition-all batch-size manifest)
-        existing (or (load-triage) {})
         results (atom existing)]
-    (log! {:event :triage-started :total (count manifest)
-           :batches (count batches) :agent agent-id})
+    (log! {:event :triage-started
+           :total (count target-manifest)
+           :pending (count manifest)
+           :batches (count batches)
+           :agent agent-id})
     (doseq [[batch-idx batch] (map-indexed vector batches)]
-      (let [prompt (make-triage-prompt batch)
-            response (reg/invoke-agent! agent-id prompt (* 5 60 1000))]
-        (if (:ok response)
-          (let [parsed (parse-triage-output (:result response))]
-            (swap! results merge parsed)
-            (log! {:event :triage-batch-complete
-                   :batch (inc batch-idx)
-                   :classified (count parsed)}))
-          (log! {:event :triage-batch-failed
-                 :batch (inc batch-idx)
-                 :error (str (:error response))}))))
+      (loop [attempt 1
+             pending batch]
+        (when (seq pending)
+          (let [prompt (make-triage-prompt pending)
+                response (reg/invoke-agent! agent-id prompt (* 5 60 1000))]
+            (if (:ok response)
+              (let [parsed (parse-triage-output (:result response))
+                    pending-ids (set (map :id pending))
+                    parsed-ids (set (keys parsed))
+                    missing-ids (set/difference pending-ids parsed-ids)
+                    missing (filterv #(contains? missing-ids (:id %)) pending)]
+                (swap! results merge parsed)
+                (log! {:event :triage-batch-complete
+                       :batch (inc batch-idx)
+                       :attempt attempt
+                       :requested (count pending)
+                       :classified (count parsed)
+                       :missing (count missing)})
+                (cond
+                  (empty? missing) nil
+                  (< attempt max-retries)
+                  (do
+                    (log! {:event :triage-batch-retry
+                           :batch (inc batch-idx)
+                           :attempt (inc attempt)
+                           :reason :parse-miss
+                           :remaining (count missing)})
+                    (recur (inc attempt) missing))
+                  :else
+                  (log! {:event :triage-batch-incomplete
+                         :batch (inc batch-idx)
+                         :attempt attempt
+                         :remaining (count missing)
+                         :missing-ids (mapv :id missing)})))
+              (if (< attempt max-retries)
+                (do
+                  (log! {:event :triage-batch-retry
+                         :batch (inc batch-idx)
+                         :attempt (inc attempt)
+                         :reason :invoke-failure
+                         :error (str (:error response))
+                         :remaining (count pending)})
+                  (recur (inc attempt) pending))
+                (log! {:event :triage-batch-failed
+                       :batch (inc batch-idx)
+                       :attempt attempt
+                       :remaining (count pending)
+                       :error (str (:error response))})))))))
     (let [final @results]
       (save-triage! final)
-      (log! {:event :triage-complete :summary (triage-summary final)})
-      (println (str "[apm-v2] Triage complete: " (triage-summary final)))
+      (log! {:event :triage-complete :summary (triage-summary final target-manifest)})
+      (println (str "[apm-v2] Triage complete: " (triage-summary final target-manifest)))
       final)))
 
 (defn problems-by-lane
