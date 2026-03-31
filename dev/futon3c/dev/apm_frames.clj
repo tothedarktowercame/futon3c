@@ -96,6 +96,7 @@
      :lean-root (get frame-workspace :frame/lean-root)
      :shared-extension-root (get frame-workspace :frame/shared-extension-root)
      :proof-plan-path (get artifacts :proof-plan)
+     :formal-alignment-path (get artifacts :formal-alignment)
      :changelog-path (get artifacts :changelog)
      :execute-notes-path (get artifacts :execute-notes)
      :workspace-readme-path (get artifacts :workspace-readme)
@@ -116,6 +117,10 @@
 (defn changelog-path
   [frame-workspace]
   (get-in frame-workspace [:artifacts :changelog]))
+
+(defn formal-alignment-path
+  [frame-workspace]
+  (get-in frame-workspace [:artifacts :formal-alignment]))
 
 (defn workspace-lean-artifacts
   [frame-workspace]

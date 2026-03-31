@@ -20,6 +20,7 @@
                               :frame/lean-root "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1"
                               :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
                               :artifacts {:proof-plan "/tmp/frame/proof-plan.edn"
+                                          :formal-alignment "/tmp/frame/formal-alignment.edn"
                                           :changelog "/tmp/frame/changelog.edn"
                                           :lean-main "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Main.lean"
                                           :lean-scratch "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Scratch.lean"}}}})
@@ -43,6 +44,7 @@
                    :frame/lean-root "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1"
                    :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
                    :artifacts {:proof-plan "/tmp/frame/proof-plan.edn"
+                               :formal-alignment "/tmp/frame/formal-alignment.edn"
                                :changelog "/tmp/frame/changelog.edn"
                                :lean-main "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Main.lean"
                                :lean-scratch "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Scratch.lean"
@@ -73,6 +75,7 @@
                    :frame/lean-root "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1"
                    :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
                    :artifacts {:proof-plan "/tmp/frame/proof-plan.edn"
+                               :formal-alignment "/tmp/frame/formal-alignment.edn"
                                :changelog "/tmp/frame/changelog.edn"
                                :lean-main "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Main.lean"
                                :lean-scratch "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Scratch.lean"
@@ -113,12 +116,14 @@
                    :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
                    :artifacts {:execute-notes execute-path
                                :proof-plan plan-path
+                               :formal-alignment (.getAbsolutePath (io/file workspace-root "formal-alignment.edn"))
                                :changelog changelog-path
                                :lean-main lean-main
                                :lean-scratch (.getAbsolutePath (io/file lean-dir "Scratch.lean"))}}]
     (spit lean-main "import Mathlib\n\ntheorem clean : True := by trivial\n")
     (spit execute-path "**Stage 1 — THE CLEAN PROOF**\n\n[Fill in the authoritative reader-facing proof.]\n")
     (spit plan-path "{:goal \"\" :terms [] :strategy [] :checkpoints [{:stage 1 :status :pending}]}\n")
+    (spit (get-in workspace [:artifacts :formal-alignment]) "{:main-claim {:informal-claim \"\" :formal-name \"\" :formal-target \"\"} :alignments []}\n")
     (spit changelog-path "[{:kind :workspace-initialized :summary \"seed\"}]\n")
     (reset! conductor/!state {(cid "codex-1")
                               {:current-problem {:id "a00J02" :subject :analysis :year 2000 :session :fall}
@@ -144,6 +149,82 @@
       (is (str/includes? (first @prompts) "frame-local record for apm-a00J02 is incomplete"))
       (is (str/includes? (first @prompts) "worked-solutions/a02J04-full")))))
 
+(deftest formalization-status-rejects-empty-or-placeholder-lean
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                           "apm-v2-formal-status" (make-array java.nio.file.attribute.FileAttribute 0)))
+        lean-main (.getAbsolutePath (io/file tmp-dir "Main.lean"))
+        alignment {:main-claim {:informal-claim "Main claim"
+                                :formal-name "main_claim"
+                                :formal-target "theorem main_claim (x : ℝ) : x = x"}
+                   :alignments [{:formal-name "main_claim"
+                                 :formal-statement "theorem main_claim (x : ℝ) : x = x"
+                                 :informal-clause "Main claim"
+                                 :role :main-theorem}]}]
+    (spit lean-main "import Mathlib\n\nnamespace Foo\n\nend Foo\n")
+    (let [status (#'conductor/formalization-status [lean-main] alignment)]
+      (is (false? (:meaningful? status)))
+      (is (empty? (:declaration-names status))))
+    (spit lean-main "import Mathlib\n\ntheorem main_claim (x : ℝ) : True := by trivial\n")
+    (let [status (#'conductor/formalization-status [lean-main] alignment)]
+      (is (false? (:meaningful? status)))
+      (is (:main-name-present? status)))
+    (spit lean-main "import Mathlib\n\ntheorem main_claim (x : ℝ) : x = x := by rfl\n")
+    (let [status (#'conductor/formalization-status [lean-main] alignment)]
+      (is (true? (:meaningful? status)))
+      (is (:main-target-present? status)))))
+
+(deftest handle-solve-return-formal-kicks-when-lean-does-not-match-alignment
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                           "apm-v2-formal-kick" (make-array java.nio.file.attribute.FileAttribute 0)))
+        workspace-root (.getAbsolutePath tmp-dir)
+        lean-dir (doto (io/file workspace-root "lean") .mkdirs)
+        lean-main (.getAbsolutePath (io/file lean-dir "Main.lean"))
+        execute-path (.getAbsolutePath (io/file workspace-root "execute.md"))
+        plan-path (.getAbsolutePath (io/file workspace-root "proof-plan.edn"))
+        alignment-path (.getAbsolutePath (io/file workspace-root "formal-alignment.edn"))
+        changelog-path (.getAbsolutePath (io/file workspace-root "changelog.edn"))
+        prompts (atom [])
+        workspace {:frame/id "frame-t97J01"
+                   :frame/workspace-root workspace-root
+                   :frame/module-root "ApmCanaries.Frames.T97J01.Frame"
+                   :frame/lean-root (.getAbsolutePath lean-dir)
+                   :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
+                   :artifacts {:execute-notes execute-path
+                               :proof-plan plan-path
+                               :formal-alignment alignment-path
+                               :changelog changelog-path
+                               :lean-main lean-main
+                               :lean-scratch (.getAbsolutePath (io/file lean-dir "Scratch.lean"))}}]
+    (spit lean-main "import Mathlib\n\nnamespace Foo\n\nend Foo\n")
+    (spit execute-path "**Stage 1 — THE CLEAN PROOF**\n\nA real proof.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n\n1. **Main step**\n   - **Formal dependency**: theorem X.\n   - **Informal dependency**: use idea Y.\n   - **Why this becomes thinkable here**: cue Z.\n   - **Lean target/type**: `theorem main_claim (x : ℝ) : x = x`.\n   - **Mathlib status/search terms**: search `rfl`.\n   - **Critical path**: yes.\n\n**Stage 3 — LEAN FORMALIZATION**\n\nLean work done.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\n\nRevision.\n")
+    (spit plan-path "{:goal \"Main claim\" :terms [{:name \"x\" :meaning \"a real variable\" :needed-because \"target\"}] :strategy [{:id :s1 :formal-dependency \"theorem X\" :informal-dependency \"idea Y\" :why-this-now \"cue Z\" :lean-target \"theorem main_claim (x : ℝ) : x = x\" :mathlib-status \"existing\"}] :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n")
+    (spit alignment-path "{:main-claim {:informal-claim \"Main claim\" :formal-name \"main_claim\" :formal-target \"theorem main_claim (x : ℝ) : x = x\"} :alignments [{:formal-name \"main_claim\" :formal-statement \"theorem main_claim (x : ℝ) : x = x\" :informal-clause \"Main claim\" :role :main-theorem}]}\n")
+    (spit changelog-path "[{:kind :stage1-completed :summary \"Proof written\" :full-record? true :sorry? false :fully-closed? false}]\n")
+    (reset! conductor/!state {(cid "codex-1")
+                              {:current-problem {:id "t97J01" :subject :topology :year 1997 :session :fall}
+                               :frame-workspace workspace
+                               :backend nil
+                               :accumulated-output ""
+                               :sorry-kick-count 0
+                               :record-kick-count 0
+                               :formal-kick-count 0
+                               :problems-done 0
+                               :batch-results []
+                               :target-n 1
+                               :problem-timeout-ms 600000
+                               :problem-start-ms (System/currentTimeMillis)
+                               :dispatch-start-ms (System/currentTimeMillis)}})
+    (with-redefs [conductor/log! (fn [_] nil)
+                  conductor/dispatch! (fn [_ prompt _] (swap! prompts conj prompt))
+                  conductor/start-next-problem! (fn [& _] (throw (ex-info "should not advance" {})))
+                  conductor/stop-apm-conductor-v2! (fn [& _] (throw (ex-info "should not stop" {})))]
+      (#'conductor/handle-solve-return! (cid "codex-1") "codex-1" "Real proof, no sorry in prose." nil)
+      (is (= 1 (:formal-kick-count (conductor/state-for-agent "codex-1"))))
+      (is (zero? (:problems-done (conductor/state-for-agent "codex-1"))))
+      (is (= 1 (count @prompts)))
+      (is (str/includes? (first @prompts) "does not yet certify the problem you claim to have solved"))
+      (is (str/includes? (first @prompts) "formal-alignment.edn")))))
+
 (deftest start-apm-conductor-v2-keeps-other-agent-run-alive
   (let [idle-callback (atom nil)
         workspaces (atom [])
@@ -157,6 +238,7 @@
                                                     :frame/lean-root root
                                                     :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
                                                     :artifacts {:proof-plan (str root "/proof-plan.edn")
+                                                                :formal-alignment (str root "/formal-alignment.edn")
                                                                 :changelog (str root "/changelog.edn")
                                                                 :lean-main (str root "/Main.lean")
                                                                 :lean-scratch (str root "/Scratch.lean")}}))

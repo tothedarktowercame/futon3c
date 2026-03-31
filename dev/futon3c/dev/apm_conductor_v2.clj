@@ -40,6 +40,10 @@
   "Max re-dispatches for frame-record normalization."
   2)
 
+(def ^:private max-formal-kicks
+  "Max re-dispatches for formal/informal alignment repair."
+  2)
+
 (def ^:private arse-kick-threshold
   "After this many sorry-kicks, switch to diagnostic QP prompt."
   2)
@@ -127,6 +131,22 @@
    "```\n"
    "Do not use `:checkpoints`. Do not use bare symbols or plain string lists for terms/strategy.\n"
    "\n"
+   "formal-alignment.edn must have exactly this kind of shape:\n"
+   "```clojure\n"
+   "{:main-claim {:informal-claim \"reader-facing statement\"\n"
+   "             :formal-name \"main_theorem_name\"\n"
+   "             :formal-target \"exact Lean theorem statement without the proof body\"}\n"
+   " :alignments [{:formal-name \"main_theorem_name\"\n"
+   "              :formal-statement \"exact Lean theorem statement\"\n"
+   "              :informal-clause \"which sentence in Stage 1 this certifies\"\n"
+   "              :role :main-theorem}\n"
+   "             {:formal-name \"helper_lemma_name\"\n"
+   "              :formal-statement \"exact Lean helper statement\"\n"
+   "              :informal-clause \"which bridge step it justifies\"\n"
+   "              :role :helper-lemma}]}\n"
+   "```\n"
+   "The main theorem entry must align the Stage 1 claim with a real Lean declaration.\n"
+   "\n"
    "changelog.edn must be a vector of maps like:\n"
    "```clojure\n"
    "[{:kind :stage1-completed\n"
@@ -194,23 +214,29 @@
   [frame-workspace]
   (let [execute-path (apm-frames/workspace-sidecar-path frame-workspace :execute)
         plan-path (apm-frames/proof-plan-path frame-workspace)
+        formal-alignment-path (apm-frames/formal-alignment-path frame-workspace)
         changelog-path (apm-frames/changelog-path frame-workspace)
         execute-notes (slurp-if-exists execute-path)
         proof-plan (read-edn-if-exists plan-path)
+        formal-alignment (read-edn-if-exists formal-alignment-path)
         changelog (read-edn-if-exists changelog-path)
         execute-ok? (valid-execute-notes? execute-notes)
         plan-ok? (apm-queue/valid-proof-plan? proof-plan)
+        formal-alignment-ok? (apm-queue/valid-formal-alignment? formal-alignment)
         changelog-ok? (apm-queue/valid-changelog? changelog)]
     {:execute-path execute-path
      :proof-plan-path plan-path
+     :formal-alignment-path formal-alignment-path
      :changelog-path changelog-path
      :execute-notes execute-notes
      :proof-plan proof-plan
+     :formal-alignment formal-alignment
      :changelog changelog
      :execute-ok? execute-ok?
      :proof-plan-ok? plan-ok?
+     :formal-alignment-ok? formal-alignment-ok?
      :changelog-ok? changelog-ok?
-     :full-record? (and execute-ok? plan-ok? changelog-ok?)}))
+     :full-record? (and execute-ok? plan-ok? formal-alignment-ok? changelog-ok?)}))
 
 ;; =============================================================================
 ;; Lean artifact inspection (same as v1)
@@ -256,6 +282,80 @@
 (defn- artifact-has-sorry? [path]
   (try (boolean (re-find #"(?i)\bsorry\b" (slurp path)))
     (catch Exception _ true)))
+
+(def ^:private placeholder-artifact-pattern
+  #"(?is)\bplaceholder\b|:\s*True\s*:=\s*(?:by\s+)?trivial\b|lemma\s+\S+\s*\([^)]*\)\s*:\s*True\s*:=|theorem\s+\S+\s*\([^)]*\)\s*:\s*True\s*:=")
+
+(defn- declaration-lines
+  [text]
+  (->> (str/split-lines (or text ""))
+       (map str/trim)
+       (filter #(re-find #"^(?:lemma|theorem)\b" %))))
+
+(defn- declaration-name
+  [line]
+  (some-> (re-find #"^(?:lemma|theorem)\s+([^\s\[:(]+)" (or line "")) second))
+
+(defn- artifact-placeholder?
+  [path]
+  (try
+    (let [text (slurp path)
+          decls (declaration-lines text)]
+      (or (boolean (re-find placeholder-artifact-pattern text))
+          (empty? decls)
+          (not-any? #(not (re-find #":\s*True\b" %)) decls)))
+    (catch Exception _
+      true)))
+
+(defn- normalize-formal-text [s]
+  (-> (or s "")
+      (str/replace #"\s+" " ")
+      str/trim))
+
+(defn- artifact-declaration-names
+  [path]
+  (try
+    (->> (declaration-lines (slurp path))
+         (keep declaration-name)
+         set)
+    (catch Exception _
+      #{})))
+
+(defn- artifact-contains-formal-target?
+  [path formal-name formal-target]
+  (try
+    (let [text (normalize-formal-text (slurp path))
+          formal-name (str/trim (str (or formal-name "")))
+          formal-target (normalize-formal-text formal-target)]
+      (and (not (str/blank? formal-name))
+           (not (str/blank? formal-target))
+           (str/includes? text formal-name)
+           (str/includes? text formal-target)))
+    (catch Exception _
+      false)))
+
+(defn- formalization-status
+  [artifacts formal-alignment]
+  (let [main-claim (:main-claim formal-alignment)
+        main-name (:formal-name main-claim)
+        main-target (:formal-target main-claim)
+        decl-names (apply clojure.set/union #{} (map artifact-declaration-names artifacts))
+        non-placeholder? (and (seq artifacts)
+                              (every? (complement artifact-placeholder?) artifacts))
+        main-name-present? (contains? decl-names main-name)
+        main-target-present? (some #(artifact-contains-formal-target? % main-name main-target) artifacts)]
+    {:artifacts-present? (seq artifacts)
+     :declaration-names decl-names
+     :has-declarations? (boolean (seq decl-names))
+     :non-placeholder? (boolean non-placeholder?)
+     :main-name-present? (boolean main-name-present?)
+     :main-target-present? (boolean main-target-present?)
+     :meaningful? (boolean
+                   (and (seq artifacts)
+                        (seq decl-names)
+                        non-placeholder?
+                        main-name-present?
+                        main-target-present?))}))
 
 (defn- has-sorry? [output]
   (boolean (re-find #"(?i)\bsorry\b" (or output ""))))
@@ -420,9 +520,10 @@
          "   explain exactly what's missing and what would close it.\n"
          "5. **What connects** — where else this technique appears, exam-day field kit\n\n"
          "A problem is not complete until the frame-local record is populated.\n"
-         "Before replying, update all three frame artifacts with real content:\n"
+         "Before replying, update all four frame artifacts with real content:\n"
          "- `execute.md` with non-placeholder Stage 1-4 text\n"
          "- `proof-plan.edn` with goal, terms, strategy, and `:stage-status`\n"
+         "- `formal-alignment.edn` with the main claim aligned to exact Lean declarations\n"
          "- `changelog.edn` with concrete progress entries\n\n"
          htdp-reference-card "\n"
          "Style anchors:\n"
@@ -435,6 +536,7 @@
                 "- Lean main file: " (:lean-main-path frame-context) "\n"
                 "- Lean scratch file: " (:lean-scratch-path frame-context) "\n"
                 "- proof-plan.edn: " (:proof-plan-path frame-context) "\n"
+                "- formal-alignment.edn: " (:formal-alignment-path frame-context) "\n"
                 "- changelog.edn: " (:changelog-path frame-context) "\n"
                 "- execute.md: " (:execute-notes-path frame-context) "\n"
                 "- shared extension root: " (:shared-extension-root frame-context) "\n"
@@ -494,6 +596,9 @@
        (when-not (:proof-plan-ok? record-status)
          (str "- proof-plan.edn needs goal, terms, strategy, and :stage-status at "
               (:proof-plan-path record-status) "\n"))
+       (when-not (:formal-alignment-ok? record-status)
+         (str "- formal-alignment.edn must map the main informal claim to exact Lean declarations at "
+              (:formal-alignment-path record-status) "\n"))
        (when-not (:changelog-ok? record-status)
          (str "- changelog.edn needs concrete progress entries at "
               (:changelog-path record-status) "\n"))
@@ -506,6 +611,29 @@
        "Previous output (summary):\n"
        (subs previous-output 0 (min 1500 (count previous-output)))
        "\n\nRecord normalization attempt #" record-kick-count ".\n"))
+
+(defn- make-formal-kick-prompt
+  [problem frame-workspace remaining-ms formal-status record-status previous-output formal-kick-count]
+  (str "The current Lean artifact for apm-" (:id problem) " does not yet certify the problem you claim to have solved. "
+       (long (/ remaining-ms 1000)) " seconds remain.\n\n"
+       "This is not a record-format issue anymore. You must align the formal development with the informal claim.\n\n"
+       "Current formal status:\n"
+       "- declaration names seen: " (pr-str (vec (:declaration-names formal-status))) "\n"
+       "- non-placeholder Lean artifact? " (:non-placeholder? formal-status) "\n"
+       "- main theorem name present? " (:main-name-present? formal-status) "\n"
+       "- main theorem statement aligned? " (:main-target-present? formal-status) "\n\n"
+       "Required fixes:\n"
+       "1. Put at least one real `theorem`/`lemma` declaration in the frame-local Lean file.\n"
+       "2. Make the main declaration correspond to the problem's main claim, not an unrelated helper.\n"
+       "3. Update formal-alignment.edn so the main informal claim names that declaration and copies its exact Lean statement.\n"
+       "4. Keep execute.md / proof-plan.edn / changelog.edn in sync with that declaration.\n\n"
+       "formal-alignment.edn path: " (:formal-alignment-path record-status) "\n"
+       "Lean main file: " (get-in frame-workspace [:artifacts :lean-main]) "\n\n"
+       htdp-reference-card
+       "\nReply only after you have written an aligned theorem declaration, not just prose about what you intend to formalize.\n\n"
+       "Previous output (summary):\n"
+       (subs previous-output 0 (min 1500 (count previous-output)))
+       "\n\nFormal alignment repair attempt #" formal-kick-count ".\n"))
 
 ;; =============================================================================
 ;; Core dispatch loop
@@ -537,7 +665,7 @@
   "Handle return from the solve or sorry-kick dispatch."
   [cid agent-id agent-output evidence-store]
   (let [{:keys [current-problem problem-start-ms dispatch-start-ms
-                sorry-kick-count record-kick-count problems-done batch-results target-n
+                sorry-kick-count record-kick-count formal-kick-count problems-done batch-results target-n
                 accumulated-output backend]} (conductor-state cid)
         pid (str "apm-" (:id current-problem))
         now-ms (System/currentTimeMillis)
@@ -554,7 +682,9 @@
         sorry? (boolean (some artifact-has-sorry? artifacts))
         kick-count (or sorry-kick-count 0)
         record-kicks (or record-kick-count 0)
+        formal-kicks (or formal-kick-count 0)
         record-status (frame-record-status (:frame-workspace (conductor-state cid)))
+        formal-status (formalization-status artifacts (:formal-alignment record-status))
         remaining-ms (- (current-problem-timeout-ms cid) total-elapsed)]
 
     (log! {:event :solve-return :problem pid
@@ -564,7 +694,9 @@
            :sorry? sorry?
            :sorry-kick-count kick-count
            :record-kick-count record-kicks
-           :full-record? (:full-record? record-status)})
+           :formal-kick-count formal-kicks
+           :full-record? (:full-record? record-status)
+           :meaningful-formal? (:meaningful? formal-status)})
 
     (cond
       ;; Problem timeout
@@ -603,6 +735,7 @@
                  :remaining-ms remaining-ms
                  :message (str "execute-ok=" (:execute-ok? record-status)
                                ", plan-ok=" (:proof-plan-ok? record-status)
+                               ", formal-alignment-ok=" (:formal-alignment-ok? record-status)
                                ", changelog-ok=" (:changelog-ok? record-status))})
           (dispatch! agent-id
                      (make-record-kick-prompt current-problem remaining-ms record-status output new-count)
@@ -621,8 +754,41 @@
                 (stop-apm-conductor-v2! agent-id))
             (start-next-problem! cid agent-id evidence-store))))
 
+      ;; The record is populated, but the Lean artifact still does not contain
+      ;; a real aligned theorem declaration for the main claim.
+      (and (:full-record? record-status)
+           (not (:meaningful? formal-status)))
+      (if (< formal-kicks max-formal-kicks)
+        (let [new-count (inc formal-kicks)
+              frame-workspace (:frame-workspace (conductor-state cid))]
+          (assoc-state! cid :formal-kick-count new-count
+                            :dispatch-start-ms (System/currentTimeMillis))
+          (log! {:event :formal-kick
+                 :problem pid
+                 :formal-kick-count new-count
+                 :remaining-ms remaining-ms
+                 :message (str "main-name-present=" (:main-name-present? formal-status)
+                               ", main-target-present=" (:main-target-present? formal-status)
+                               ", declaration-count=" (count (:declaration-names formal-status)))})
+          (dispatch! agent-id
+                     (make-formal-kick-prompt current-problem frame-workspace remaining-ms formal-status record-status output new-count)
+                     (max 60000 remaining-ms)))
+        (let [done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok false :problem-id pid
+                             :classification :abandoned
+                             :message "Lean artifact never aligned with the claimed theorem"
+                             :elapsed-ms total-elapsed})]
+          (assoc-state! cid :problems-done done :batch-results results)
+          (log! {:event :problem-abandoned :problem pid
+                 :message "Lean artifact never aligned with the claimed theorem"})
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done})
+                (stop-apm-conductor-v2! agent-id))
+            (start-next-problem! cid agent-id evidence-store))))
+
       ;; Lean clean — no sorry, artifacts exist
-      (and (seq artifacts) (not sorry?))
+      (and (seq artifacts) (not sorry?) (:meaningful? formal-status))
       (do
         (log! {:event :problem-complete :problem pid
                :classification "proved"
@@ -666,8 +832,9 @@
                 (stop-apm-conductor-v2! agent-id))
             (start-next-problem! cid agent-id evidence-store))))
 
-      ;; Sorry-kick budget exhausted — save as partial
-      (>= kick-count max-sorry-kicks)
+      ;; Sorry-kick budget exhausted — save as partial only if the Lean artifact
+      ;; is a real aligned partial, not an empty scaffold.
+      (and (>= kick-count max-sorry-kicks) (:meaningful? formal-status))
       (do
         (log! {:event :problem-complete :problem pid
                :classification "partial"
@@ -705,6 +872,22 @@
             (do (log! {:event :batch-complete :done done})
                 (stop-apm-conductor-v2! agent-id))
             (start-next-problem! cid agent-id evidence-store))))
+
+      ;; Sorry budget exhausted, but still no meaningful formal artifact.
+      (>= kick-count max-sorry-kicks)
+      (let [done (inc problems-done)
+            results (conj (or batch-results [])
+                          {:ok false :problem-id pid
+                           :classification :abandoned
+                           :message "No meaningful formalization after sorry budget exhausted"
+                           :elapsed-ms total-elapsed})]
+        (assoc-state! cid :problems-done done :batch-results results)
+        (log! {:event :problem-abandoned :problem pid
+               :message "No meaningful formalization after sorry budget exhausted"})
+        (if (>= done target-n)
+          (do (log! {:event :batch-complete :done done})
+              (stop-apm-conductor-v2! agent-id))
+          (start-next-problem! cid agent-id evidence-store)))
 
       ;; Sorry present, budget remains — kick
       :else
@@ -797,6 +980,7 @@
                       :accumulated-output ""
                       :sorry-kick-count 0
                       :record-kick-count 0
+                      :formal-kick-count 0
                       :failure-count 0
                       :problem-start-ms (System/currentTimeMillis)
                       :dispatch-start-ms (System/currentTimeMillis)

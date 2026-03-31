@@ -302,6 +302,8 @@
                "- " (or (:lean-scratch-path frame-context) "") "\n"
                "Frame-local proof plan path:\n"
                (or (:proof-plan-path frame-context) "") "\n"
+               "Frame-local formal alignment path:\n"
+               (or (:formal-alignment-path frame-context) "") "\n"
                "Frame-local changelog path:\n"
                (or (:changelog-path frame-context) "") "\n"
                "Shared extension root for promoted lemmas:\n"
@@ -338,6 +340,22 @@
         " :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n"
         "```\n"
         "This is the HtDP artifact. It must stay valid throughout execute.\n\n"
+        "After the proof plan, emit a machine-readable `formal-alignment.edn` block in\n"
+        "this exact form:\n"
+        "```edn\n"
+        "{:main-claim {:informal-claim \"reader-facing statement\"\n"
+        "             :formal-name \"main_theorem_name\"\n"
+        "             :formal-target \"exact Lean theorem statement without the proof body\"}\n"
+        " :alignments [{:formal-name \"main_theorem_name\"\n"
+        "              :formal-statement \"exact Lean theorem statement\"\n"
+        "              :informal-clause \"which sentence in Stage 1 this formal item certifies\"\n"
+        "              :role :main-theorem}\n"
+        "             {:formal-name \"helper_lemma_name\"\n"
+        "              :formal-statement \"exact Lean helper lemma statement\"\n"
+        "              :informal-clause \"which bridge step it justifies\"\n"
+        "              :role :helper-lemma}]}\n"
+        "```\n"
+        "This alignment artifact must stay in sync with both the Stage 1 proof and the Lean declarations.\n\n"
         "**Stage 3 — LEAN FORMALIZATION**: 15-minute exam timer starts NOW.\n"
         "Build the skeleton from your dependency graph. Use HtDP to attack each sorry:\n"
         "1. Type signature (from dependency graph)\n"
@@ -497,6 +515,32 @@
          (every? valid-step? strategy)
          (valid-stage-status? stage-status))))
 
+(defn valid-formal-alignment?
+  [alignment]
+  (let [main-claim (:main-claim alignment)
+        alignments (:alignments alignment)
+        nonblank? (fn [x] (not (str/blank? (str/trim (str (or x ""))))))
+        valid-main-claim? (fn [m]
+                            (and (map? m)
+                                 (nonblank? (:informal-claim m))
+                                 (nonblank? (:formal-name m))
+                                 (nonblank? (:formal-target m))))
+        valid-alignment? (fn [entry]
+                           (and (map? entry)
+                                (nonblank? (:formal-name entry))
+                                (nonblank? (:formal-statement entry))
+                                (nonblank? (:informal-clause entry))
+                                (keyword? (:role entry))))
+        main-name (:formal-name main-claim)]
+    (and (map? alignment)
+         (valid-main-claim? main-claim)
+         (vector? alignments)
+         (seq alignments)
+         (every? valid-alignment? alignments)
+         (some #(and (= :main-theorem (:role %))
+                     (= main-name (:formal-name %)))
+               alignments))))
+
 (defn valid-changelog?
   [changelog]
   (and (vector? changelog)
@@ -538,6 +582,7 @@
           timed-out (:lean-timed-out phase-data)
           dep-graph (:dependency-graph phase-data)
           proof-plan (:proof-plan phase-data)
+          formal-alignment (:formal-alignment phase-data)
           changelog (:changelog phase-data)
           notes (:notes phase-data)
           elapsed (:lean-elapsed-ms phase-data)]
@@ -560,6 +605,9 @@
         (not (valid-proof-plan? proof-plan))
         {:ok false :error {:code :invalid-proof-plan
                            :message "Execute phase requires a valid proof-plan.edn artifact with goal, terms, strategy, and stage-status"}}
+        (not (valid-formal-alignment? formal-alignment))
+        {:ok false :error {:code :invalid-formal-alignment
+                           :message "Execute phase requires a valid formal-alignment.edn artifact mapping the main informal claim to explicit Lean declarations"}}
         (not (valid-changelog? changelog))
         {:ok false :error {:code :invalid-changelog
                            :message "Execute phase requires a non-empty changelog.edn artifact showing concrete progress across clicks"}}

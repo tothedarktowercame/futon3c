@@ -8,6 +8,7 @@
                    :frame/lean-root "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1"
                    :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
                    :artifacts {:proof-plan "/tmp/ws/proof-plan.edn"
+                               :formal-alignment "/tmp/ws/formal-alignment.edn"
                                :changelog "/tmp/ws/changelog.edn"
                                :execute-notes "/tmp/ws/execute.md"
                                :workspace-readme "/tmp/ws/README.md"
@@ -18,6 +19,7 @@
     (is (= "/tmp/ws" (:workspace-root ctx)))
     (is (= "ApmCanaries.Frames.A01J06.Run1" (:module-root ctx)))
     (is (= "/tmp/ws/proof-plan.edn" (:proof-plan-path ctx)))
+    (is (= "/tmp/ws/formal-alignment.edn" (:formal-alignment-path ctx)))
     (is (= "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Main.lean"
            (:lean-main-path ctx)))))
 
