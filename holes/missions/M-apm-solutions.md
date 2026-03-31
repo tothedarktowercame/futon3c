@@ -1719,3 +1719,130 @@ futon6 normalizer extended with APM + CT domain patterns.
 3. C2/C3 notes re-run with LaTeX math
 4. Stage 9b R-GCN training with harder negative sampling
 5. Scale to all 489 APM problems
+
+## Conductor Retrospective (2026-03-30)
+
+### Context
+
+The APM conductor (`dev/futon3c/dev/apm_conductor.clj`) was introduced
+in commit `b7025f7` (2026-03-30) to drive the proof peripheral through
+APM problems automatically: dispatch each of the 6 agent phases
+(observe → propose → execute → validate → classify → integrate), enforce
+the 15-minute Lean floor on execute, and advance through a batch
+without human intervention.
+
+Four hardening commits followed on the same day (`ee42387`, `7aec9eb`,
+`e7bb425`, `8bd026e`) as failure modes surfaced in live runs.
+
+### What happened
+
+The earliest runs used Claude as the agent (`claude-1`). Token burn
+was severe — the conductor re-dispatched execute repeatedly, and each
+re-dispatch included the full problem statement plus all prior phase
+notes. Claude on "high effort" compounded this. The system was switched
+to Codex (`codex-1`) for batch runs.
+
+Analysis of `data/apm-conductor-log.edn` (3,061 lines, 16 conductor
+starts, 8 problem completions) reveals three distinct failure modes:
+
+| Failure mode | Evidence | Impact |
+|-------------|----------|--------|
+| Execute re-dispatch infinite loop | a01J04: **411** missing-full-record re-dispatches; a01J03: 72 sorry re-dispatches | Unbounded token burn, conductor never advances |
+| "No proof state" rejection loop | a01J06: 66 rejections across restarts | Problem permanently stuck, manual restart required |
+| Timer never expires (pre-fix) | a01J01: remaining-ms oscillated 648→751→838→767→769 instead of converging to 0 | 15-minute floor unreachable, sorry re-dispatch runs forever |
+
+The timer bug (third row) was fixed in `7aec9eb` by anchoring to
+`execute-start-ms` instead of `phase-dispatch-ms`. The remaining two
+were structural.
+
+### Root causes
+
+**1. Missing-full-record re-dispatch had no circuit breaker.**
+
+In `handle-execute-return!`, the `(not full-record?)` check came
+*before* the timer check. If the agent returned text that didn't match
+the expected `Stage 1 — ... / Stage 2 — ... / Stage 3 — ... / Stage 4 — ...`
+heading format, the conductor re-dispatched with `(max 60000 remaining-ms)`.
+After the 15-minute floor expired, `remaining-ms` went negative, the
+timeout clamped to 60s, and the cycle repeated — forever. There was no
+re-dispatch counter and no overall problem timeout.
+
+This was the single worst bug: a01J04 accumulated 411 re-dispatches
+for missing-full-record alone, each one burning tokens on a prompt
+that included prior notes. The agent was probably doing real work but
+formatting its output differently from what the Stage-heading regex
+expected.
+
+**2. `sorry?` was nil, not false, when no artifacts existed.**
+
+`(some artifact-has-sorry? [])` returns `nil`. Combined with
+`(or false nil)` = `nil`, this caused `sorry?` to be logged as `nil`
+and the cond dispatch to fall through to the `:else` branch (sorry
+re-dispatch) even when there was genuinely no sorry.
+
+**3. Token cost scaled quadratically per problem.**
+
+Each phase prompt includes all prior phase notes. The execute phase
+is the largest (Stage 1-4 + dependency graph). When execute was
+re-dispatched N times, the full-execute-resubmission prompt included
+the canonical execute record so far, and each re-dispatch added ~2KB.
+For a01J04 with 411 re-dispatches at ~4KB per prompt, the execute
+phase alone consumed roughly 1.6MB of prompt tokens — for a single
+problem that never completed.
+
+### Fixes applied
+
+Five changes to `apm_conductor.clj`, with deterministic replay tests
+following the `8bd026e` pattern:
+
+| Fix | What | Test |
+|-----|------|------|
+| Re-dispatch cap | `max-execute-redispatches = 8` — hard cap on execute re-dispatches (sorry + full-record combined). `:execute-redispatch-count` tracked in state, reset per problem. | `execute-redispatch-cap-forces-advance` |
+| Cond reorder | Priority: fully-closed → redispatch-cap → timer-expired → missing-full-record → sorry re-dispatch. Timer and cap now override the missing-full-record loop. | `timer-expiry-takes-priority-over-missing-full-record` |
+| Problem timeout | `problem-timeout-ms = 20 min` — if total problem time exceeds this, log `:problem-timed-out`, record `{:classification :timed-out}`, skip to next problem. | `problem-timeout-skips-to-next-problem` |
+| `sorry?` boolean | `(boolean (or (has-sorry? ...) (some ...)))` — no nil leaking. | `sorry-check-returns-boolean-not-nil` |
+| Re-dispatch count in logs | Every `:execute-return`, `:execute-redispatch`, and `:execute-missing-full-record` log entry includes `:redispatch-count` for post-hoc analysis. | (logged in all circuit-breaker tests) |
+
+All 15 tests pass (55 assertions).
+
+### What this means for the 489-problem run
+
+The fixes bound the worst case per problem:
+
+- **Best case** (fully-closed Lean, <2min): unchanged. ~5 minutes
+  total including all phases.
+- **Typical case** (partial Lean, uses 15min floor): 15 min execute +
+  ~2 min other phases = ~17 min. Capped at 8 re-dispatches if the
+  agent struggles with Stage formatting.
+- **Worst case** (every re-dispatch fails, problem times out): 20 min,
+  then skip. Previously unbounded.
+
+At worst-case 20 min/problem, 489 problems = 163 hours. At typical
+17 min, ~139 hours. At best-case 5 min, ~41 hours. The realistic
+expectation is that most problems complete quickly (canaries completed
+in 2–5 min) with a long tail of partial/timed-out problems on harder
+analysis and functional analysis items.
+
+### Open issues
+
+1. **"No proof state" for a01J06** — 66 rejections across restarts.
+   The proof-backend's `get-state` returns nil even though `proof-load`
+   succeeded seconds earlier. Likely a cache/lookup mismatch when the
+   `.edn` file was pre-created by futon6 via symlink. The problem
+   timeout now prevents this from blocking the batch, but the root
+   cause (why does the cache lose the state?) is undiagnosed.
+
+2. **Stage heading format fragility** — The conductor's
+   `extract-stage` regex requires headings like
+   `Stage 1 — THE CLEAN PROOF` (with em-dash). Agents sometimes emit
+   `Stage 1: THE CLEAN PROOF` or `**Stage 1 — THE CLEAN PROOF**`.
+   The bold variant was fixed in `ee42387`, but other formatting
+   variants still trigger the missing-full-record path. More tolerant
+   parsing (or a structured JSON response format) would reduce
+   re-dispatches.
+
+3. **Quadratic prompt growth** — Each re-dispatch includes prior notes.
+   A future improvement: send only a delta reference (e.g. "continue
+   from your last output") instead of echoing the canonical record.
+   This requires the agent to maintain context across invocations,
+   which Codex already does within a session.

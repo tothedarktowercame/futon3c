@@ -1,0 +1,730 @@
+(ns futon3c.dev.apm-conductor-v2
+  "APM conductor v2 — single-dispatch, post-hoc extraction.
+
+   Design difference from v1:
+   - v1 dispatches 6 separate phase prompts, enforces format at each gate.
+   - v2 dispatches ONE 'solve and explain' prompt. The agent does mathematics
+     in whatever natural form it wants. The conductor extracts structured data
+     (phases, dep graph, ArSE questions) from the output after the fact.
+
+   Sorry-kick loop: if the Lean proof has sorry, v2 re-dispatches with a
+   focused 'close these sorries' prompt (up to max-sorry-kicks). After
+   sorry-kick-threshold, switches to ArSE-kick diagnostic prompt.
+
+   Post-hoc extraction: reuses v1's parsers (parse-dependency-graph,
+   parse-arse-questions, extract-stage, classify-status) on the agent's
+   natural output. Missing structure is logged but does not block advancement.
+
+   A/B testing: start-apm-conductor-v2! has the same interface as v1's
+   start-apm-conductor! so the same problem sets can be run through both."
+  (:require [clojure.string :as str]
+            [clojure.java.io :as io]
+            [futon3c.agents.apm-work-queue :as apm-queue]
+            [futon3c.peripheral.proof-backend :as pb]
+            [futon3c.agency.registry :as reg])
+  (:import [java.time Instant]))
+
+;; =============================================================================
+;; Constants
+;; =============================================================================
+
+(def ^:private max-sorry-kicks
+  "Max re-dispatches for sorry closure."
+  4)
+
+(def ^:private arse-kick-threshold
+  "After this many sorry-kicks, switch to diagnostic QP prompt."
+  2)
+
+(def ^:private problem-timeout-ms
+  "Overall problem timeout (20 minutes)."
+  (* 20 60 1000))
+
+(def ^:private lean-proofs-root
+  "/home/joe/code/apm-lean/lean-proofs")
+
+(def ^:private proof-state-root
+  "/home/joe/code/futon3c/data/proof-state")
+
+(def ^:private subject-names
+  {:analysis "Analysis"
+   :algebra "Algebra"
+   :topology "Topology"
+   :applied "Applied/Functional Analysis"})
+
+;; =============================================================================
+;; State (separate atoms from v1 — both can coexist)
+;; =============================================================================
+
+(defonce !conductor (atom nil))
+(defonce !state (atom nil))
+
+;; =============================================================================
+;; Logging (same format as v1, different prefix)
+;; =============================================================================
+
+(def ^:private log-path
+  "/home/joe/code/futon3c/data/apm-conductor-v2-log.edn")
+
+(defn- log!
+  [entry]
+  (let [entry (assoc entry :at (str (Instant/now)))]
+    (spit log-path (str (pr-str entry) "\n") :append true)
+    (println (str "[apm-v2] " (:event entry) " " (:problem entry "")
+                  " " (:phase entry "") " " (:elapsed-ms entry "")
+                  (when-let [m (:message entry)] (str " — " m))))))
+
+;; =============================================================================
+;; Utilities (reused from v1 patterns)
+;; =============================================================================
+
+(defn- trim-to-nil [s]
+  (let [s (some-> s str/trim)]
+    (when (seq s) s)))
+
+(defn- slurp-if-exists [path]
+  (when path
+    (let [f (io/file path)]
+      (when (.exists f) (slurp f)))))
+
+(defn- proof-state-path [problem-base]
+  (str proof-state-root "/apm-" problem-base ".edn"))
+
+(defn- save-proof-state! [problem-base state]
+  (let [path (proof-state-path problem-base)
+        parent (.getParentFile (io/file path))]
+    (when parent (.mkdirs parent))
+    (spit path (pr-str state)))
+  state)
+
+;; =============================================================================
+;; Lean artifact inspection (same as v1)
+;; =============================================================================
+
+(defn- problem-lean-dir [problem]
+  (io/file lean-proofs-root (:id problem)))
+
+(defn- mentioned-lean-artifacts [output]
+  (->> (re-seq #"(?:/home/joe/code/apm-lean/)?lean-proofs/[^\s\]\"']+\.lean" (or output ""))
+       (map #(if (str/starts-with? % "/") %
+               (str "/home/joe/code/apm-lean/" %)))
+       distinct vec))
+
+(defn- recent-lean-artifacts [problem execute-start-ms]
+  (let [dir (problem-lean-dir problem)
+        threshold-ms (long (max 0 (- (or execute-start-ms 0) 2000)))]
+    (if (.exists dir)
+      (->> (file-seq dir)
+           (filter #(.isFile ^java.io.File %))
+           (filter #(str/ends-with? (.getName ^java.io.File %) ".lean"))
+           (filter #(>= (.lastModified ^java.io.File %) threshold-ms))
+           (map #(.getAbsolutePath ^java.io.File %))
+           distinct vec)
+      [])))
+
+(defn- discover-lean-artifacts [problem execute-start-ms output]
+  (let [mentioned (mentioned-lean-artifacts output)
+        recent (recent-lean-artifacts problem execute-start-ms)]
+    (->> (concat mentioned recent)
+         distinct
+         (filter #(try (.exists (io/file %)) (catch Exception _ false)))
+         vec)))
+
+(defn- artifact-has-sorry? [path]
+  (try (boolean (re-find #"(?i)\bsorry\b" (slurp path)))
+    (catch Exception _ true)))
+
+(defn- has-sorry? [output]
+  (boolean (re-find #"(?i)\bsorry\b" (or output ""))))
+
+;; =============================================================================
+;; Post-hoc extraction (reuses v1 parser patterns)
+;; =============================================================================
+
+;; Import v1's parsers by requiring the namespace — they're pure functions
+;; on text, no state dependency. We call them via the ns alias.
+;; (For now, inline lightweight versions to keep v2 self-contained.)
+
+(defn- extract-section [text re]
+  (some-> (re-find re (or text "")) second trim-to-nil))
+
+(defn- extract-bold-section [text title]
+  (extract-section text
+    (re-pattern
+     (str "(?ms)^\\*\\*" (java.util.regex.Pattern/quote title)
+          "\\*\\*\\s*(.*?)(?=^\\*\\*|\\z)"))))
+
+(defn- classify-status [text]
+  (cond
+    (re-find #"(?i)\bproved\b" (or text "")) :proved
+    (re-find #"(?i)\bbuild-failed\b" (or text "")) :inconclusive
+    (re-find #"(?i)\btimed-out\b" (or text "")) :partial
+    :else :partial))
+
+(defn- extract-phases
+  "Extract phase-like sections from natural agent output.
+   Looks for markdown headings or bold sections that correspond to
+   observe/propose/execute/validate/classify/integrate content.
+   Returns a map of phase keywords to extracted text."
+  [output]
+  (let [try-section (fn [& labels]
+                      (some #(or (extract-section output
+                                   (re-pattern (str "(?ims)###?\\s*" % "\\s*\n(.*?)(?=###?\\s|\\z)")))
+                                 (extract-bold-section output %))
+                            labels))]
+    (into {}
+      (filter (comp some? val)
+        {:observe   (try-section "OBSERVE" "What is really being asked" "WHY IT IS HARD")
+         :propose   (try-section "PROPOSE" "THE KEY INSIGHT" "Key Insight")
+         :execute   (try-section "EXECUTE" "THE CLEAN PROOF" "Clean Proof" "Proof")
+         :validate  (try-section "VALIDATE" "Non-circularity" "Validation")
+         :classify  (try-section "CLASSIFY" "Classification" "CONFIDENCE INVERSION")
+         :integrate (try-section "INTEGRATE" "Connections" "EXAM-DAY FIELD KIT")}))))
+
+(defn- extract-dep-field
+  "Extract a dependency-graph field by trying multiple label prefixes."
+  [body prefixes]
+  (some (fn [prefix]
+          (let [escaped (java.util.regex.Pattern/quote prefix)
+                patterns [(re-pattern (str "(?im)^\\s*-\\s+\\*\\*" escaped "\\*\\*\\s*:\\s*(.+)$"))
+                          (re-pattern (str "(?im)^\\s*-\\s+\\*" escaped "\\*\\s*:\\s*(.+)$"))
+                          (re-pattern (str "(?im)^\\s*" escaped "\\s*:\\s*(.+)$"))]]
+            (some #(extract-section body %) patterns)))
+        prefixes))
+
+(defn- parse-dependency-entry [entry-text]
+  (let [[_ lemma body] (re-find #"(?ms)^\s*\d+\.\s+\*\*([^*]+)\*\*\s*\n(.*)\z" entry-text)
+        full (trim-to-nil entry-text)
+        body (or body "")]
+    {:lemma (or (trim-to-nil lemma) "unparsed-lemma")
+     :formal-dependency (or (extract-dep-field body ["Formal dependency"]) full)
+     :informal-dependency (extract-dep-field body ["Informal dependency" "Informal strategy"
+                                                    "Recognition heuristic"])
+     :why-this-now (extract-dep-field body ["Why this becomes thinkable here" "Why thinkable here"
+                                             "Why thinkable" "Why now" "Why here"
+                                             "Why relevant here" "Local cue"])
+     :lean-type (or (extract-dep-field body ["Lean target/type" "Lean target" "Lean type" "Type"]) full)
+     :notes full}))
+
+(defn- parse-dependency-graph [text]
+  (let [entries (->> (re-seq #"(?ms)^\s*\d+\.\s+\*\*[^*]+\*\*.*?(?=^\s*\d+\.\s+\*\*|\z)" (or text ""))
+                     (map parse-dependency-entry)
+                     vec)]
+    (when (seq entries) entries)))
+
+(defn- parse-arse-questions [text]
+  (let [section (or (extract-section text #"(?ims)\*\*ArSE Questions\*\*\s*(.*)\z")
+                    (extract-section text #"(?ims)###\s*ArSE(?:\s+QUESTIONS)?\s*(.*)\z")
+                    text)]
+    (->> (re-seq #"(?ms)^\s*(\d+)\.\s+\*(.+?)\*\s*(.*?)(?=^\s*\d+\.\s+\*|\z)" (or section ""))
+         (map-indexed
+          (fn [idx [_ _ title body]]
+            (let [body (or body "")
+                  q (extract-section body #"(?ims)\*\*Q:\*\*\s*(.+?)(?=\n\s*\*\*A:\*\*|\z)")
+                  a (or (extract-section body #"(?ims)\*\*A:\*\*\s*(.+?)(?=\n\s*\*\*[A-Z]|^\s*\d+\.\s+\*|\z)")
+                        (when-not (re-find #"(?ims)\*\*Q:\*\*" body)
+                          (trim-to-nil (str/replace body #"^\s*[:\-]\s*" ""))))]
+              {:question (or q (trim-to-nil title))
+               :answer a})))
+         (filter #(and (:question %) (:answer %)))
+         vec)))
+
+(defn- run-extraction
+  "Run all post-hoc extraction passes on the agent's combined output.
+   Returns a map of extracted structured data. Missing fields are nil, not errors."
+  [output]
+  (let [phases (extract-phases output)
+        dep-graph (parse-dependency-graph output)
+        arse (parse-arse-questions output)
+        classification (classify-status output)]
+    {:phases phases
+     :dependency-graph dep-graph
+     :arse-questions arse
+     :classification classification
+     :phase-count (count phases)
+     :dep-graph-count (count dep-graph)
+     :arse-count (count arse)}))
+
+;; =============================================================================
+;; Prompts
+;; =============================================================================
+
+(defn- make-solve-prompt
+  "Single 'solve and explain' prompt. The agent does everything in one shot."
+  [problem tex-body]
+  (let [{:keys [id subject year session subpart-count subparts]} problem]
+    (str "Problem: apm-" id " (" (get subject-names subject (name subject))
+         ", " year ", " (if (= session :fall) "Fall" "Spring") ")\n\n"
+         "```latex\n" tex-body "\n```\n\n"
+         (when (and subparts (pos? subpart-count))
+           (str "Sub-parts: " (str/join ", " (map :label subparts)) "\n\n"))
+
+         "## Your task\n\n"
+         "Solve this problem completely. Write for a strong undergrad studying for prelims.\n\n"
+
+         "Include:\n"
+         "1. **Why it's hard** — where students get stuck, what trap the problem sets\n"
+         "2. **The key insight** — the single idea that unlocks it\n"
+         "3. **A complete proof** — readable, line-by-line, not a sketch\n"
+         "4. **Lean 4 formalization** — prove it in Lean with Mathlib. Build with `lake build`.\n"
+         "   Use the HtDP recipe: type signature → search Mathlib → sketch composition → wire it.\n"
+         "   Write real proofs, not scaffolds. If a sorry is genuinely needed (Mathlib gap),\n"
+         "   explain exactly what's missing and what would close it.\n"
+         "5. **What connects** — where else this technique appears, exam-day field kit\n\n"
+
+         "Write Lean files to " lean-proofs-root "/" id "/Main.lean\n\n"
+
+         "Time budget: 15 minutes. Quality over speed. A single well-proved problem\n"
+         "is worth more than a scaffold.\n")))
+
+(defn- make-sorry-kick-prompt
+  "Re-dispatch for sorry closure."
+  [problem remaining-ms previous-output sorry-count]
+  (str "Your Lean proof for apm-" (:id problem) " has sorry instances.\n"
+       (long (/ remaining-ms 1000)) " seconds remain.\n\n"
+       "Close the sorries. Use HtDP:\n"
+       "1. Pick the most promising sorry\n"
+       "2. Search Mathlib (`exact?`, `apply?`, grep)\n"
+       "3. Sketch the composition\n"
+       "4. Wire it: `lake build`, read error, fix, repeat\n\n"
+       "Previous output (summary):\n"
+       (subs previous-output 0 (min 1500 (count previous-output)))
+       "\n"))
+
+(defn- make-arse-kick-prompt
+  "Diagnostic prompt when agent is stuck in sorry loop."
+  [problem remaining-ms previous-output sorry-count]
+  (str "Your Lean proof for apm-" (:id problem) " still has sorry after "
+       sorry-count " attempts. " (long (/ remaining-ms 1000)) " seconds remain.\n\n"
+       "STOP repeating the same approach. Diagnose what's blocking you:\n\n"
+       "1. **What is the exact Lean goal state** for the most promising sorry?\n"
+       "   Copy it from `lake build` output.\n\n"
+       "2. **What is the gap** between what you have and what the goal needs?\n"
+       "   Missing Mathlib lemma? Type mismatch? Universe issue?\n\n"
+       "3. **What did you assume would work that didn't?**\n\n"
+       "Then choose:\n"
+       "- **Pivot**: different proof strategy\n"
+       "- **Extend**: write a helper lemma bridging the gap\n"
+       "- **Accept**: this is a genuine Mathlib boundary — explain what's missing\n\n"
+       "A well-diagnosed sorry with a boundary explanation is a real result.\n\n"
+       "Previous output (summary):\n"
+       (subs previous-output 0 (min 1500 (count previous-output)))
+       "\n"))
+
+;; =============================================================================
+;; Core dispatch loop
+;; =============================================================================
+
+(declare start-next-problem!)
+(declare stop-apm-conductor-v2!)
+
+(defn- dispatch!
+  "Dispatch a prompt to the agent. Non-blocking."
+  [agent-id prompt timeout-ms]
+  (log! {:event :dispatch :agent agent-id :timeout-ms timeout-ms})
+  (future
+    (try
+      (let [result (reg/invoke-agent! agent-id prompt timeout-ms)]
+        (when-not (:ok result)
+          (println (str "[apm-v2] dispatch FAILED: " (:error result)))))
+      (catch Exception e
+        (println (str "[apm-v2] dispatch exception: " (.getMessage e)))))))
+
+(defn- problem-timed-out? []
+  (when-let [start-ms (:problem-start-ms @!state)]
+    (> (- (System/currentTimeMillis) start-ms) problem-timeout-ms)))
+
+(defn- handle-solve-return!
+  "Handle return from the solve or sorry-kick dispatch."
+  [agent-id agent-output evidence-store]
+  (let [{:keys [current-problem problem-start-ms dispatch-start-ms
+                sorry-kick-count problems-done batch-results target-n
+                accumulated-output backend]} @!state
+        pid (str "apm-" (:id current-problem))
+        now-ms (System/currentTimeMillis)
+        dispatch-elapsed (- now-ms (or dispatch-start-ms now-ms))
+        total-elapsed (- now-ms (or problem-start-ms now-ms))
+        output (or agent-output "")
+
+        ;; Accumulate all output from all dispatches for this problem
+        all-output (str (or accumulated-output "") "\n\n---\n\n" output)
+        _ (swap! !state assoc :accumulated-output all-output)
+
+        ;; Check Lean status — only check artifacts, not prose (which may discuss sorry)
+        artifacts (discover-lean-artifacts current-problem problem-start-ms all-output)
+        sorry? (boolean (some artifact-has-sorry? artifacts))
+        kick-count (or sorry-kick-count 0)
+        remaining-ms (- problem-timeout-ms total-elapsed)]
+
+    (log! {:event :solve-return :problem pid
+           :dispatch-elapsed-ms dispatch-elapsed
+           :total-elapsed-ms total-elapsed
+           :artifact-count (count artifacts)
+           :sorry? sorry?
+           :sorry-kick-count kick-count})
+
+    (cond
+      ;; Problem timeout
+      (problem-timed-out?)
+      (do
+        (log! {:event :problem-timed-out :problem pid
+               :total-elapsed-ms total-elapsed})
+        (let [extraction (run-extraction all-output)
+              done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok false :problem-id pid
+                             :classification :timed-out
+                             :extraction extraction
+                             :elapsed-ms total-elapsed})]
+          (swap! !state assoc :problems-done done :batch-results results)
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done})
+                (stop-apm-conductor-v2!))
+            (start-next-problem! agent-id evidence-store))))
+
+      ;; Lean clean — no sorry, artifacts exist
+      (and (seq artifacts) (not sorry?))
+      (do
+        (log! {:event :problem-complete :problem pid
+               :classification "proved"
+               :total-elapsed-ms total-elapsed
+               :sorry-kicks kick-count})
+        (let [extraction (run-extraction all-output)
+              ;; Save proof state
+              _ (when backend
+                  (.execute-tool backend :proof-load [pid])
+                  (let [r (.execute-tool backend :cycle-begin [pid "root"])]
+                    (when (:ok r)
+                      (save-proof-state! (:id current-problem)
+                        {:proof/problem-id pid
+                         :proof/classification :proved
+                         :proof/output all-output
+                         :proof/extraction extraction
+                         :proof/artifacts (mapv str artifacts)
+                         :proof/elapsed-ms total-elapsed}))))
+              ;; Evidence
+              _ (apm-queue/emit-apm-evidence! evidence-store
+                  {:problem-id pid :problem-base (:id current-problem)
+                   :subject (:subject current-problem)
+                   :session-id (str "apm-v2-" pid)
+                   :event-tag :workflow-complete
+                   :classification "proved"})
+              done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok true :problem-id pid
+                             :classification :proved
+                             :extraction extraction
+                             :sorry-kicks kick-count
+                             :elapsed-ms total-elapsed})]
+          (swap! !state assoc :problems-done done :batch-results results)
+          (println (str "[apm-v2] === " pid " PROVED ("
+                        (long (/ total-elapsed 1000)) "s, "
+                        kick-count " sorry-kicks) ==="))
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done})
+                (stop-apm-conductor-v2!))
+            (start-next-problem! agent-id evidence-store))))
+
+      ;; Sorry-kick budget exhausted — save as partial
+      (>= kick-count max-sorry-kicks)
+      (do
+        (log! {:event :problem-complete :problem pid
+               :classification "partial"
+               :total-elapsed-ms total-elapsed
+               :sorry-kicks kick-count
+               :message "Sorry-kick budget exhausted"})
+        (let [extraction (run-extraction all-output)
+              _ (save-proof-state! (:id current-problem)
+                  {:proof/problem-id pid
+                   :proof/classification :partial
+                   :proof/output all-output
+                   :proof/extraction extraction
+                   :proof/artifacts (mapv str artifacts)
+                   :proof/elapsed-ms total-elapsed})
+              _ (apm-queue/emit-apm-evidence! evidence-store
+                  {:problem-id pid :problem-base (:id current-problem)
+                   :subject (:subject current-problem)
+                   :session-id (str "apm-v2-" pid)
+                   :event-tag :workflow-complete
+                   :classification "partial"})
+              done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok true :problem-id pid
+                             :classification :partial
+                             :extraction extraction
+                             :sorry-kicks kick-count
+                             :elapsed-ms total-elapsed})]
+          (swap! !state assoc :problems-done done :batch-results results)
+          (println (str "[apm-v2] === " pid " PARTIAL ("
+                        (long (/ total-elapsed 1000)) "s, "
+                        kick-count " sorry-kicks) ==="))
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done})
+                (stop-apm-conductor-v2!))
+            (start-next-problem! agent-id evidence-store))))
+
+      ;; Sorry present, budget remains — kick
+      :else
+      (let [new-count (inc kick-count)
+            use-arse? (>= kick-count arse-kick-threshold)
+            prompt-fn (if use-arse? make-arse-kick-prompt make-sorry-kick-prompt)]
+        (swap! !state assoc :sorry-kick-count new-count
+                            :dispatch-start-ms (System/currentTimeMillis))
+        (log! {:event (if use-arse? :arse-kick :sorry-kick)
+               :problem pid
+               :sorry-kick-count new-count
+               :remaining-ms remaining-ms})
+        (println (str "[apm-v2] " (if use-arse? "ArSE KICK" "sorry-kick")
+                      " #" new-count " for " pid
+                      " (" (long (/ remaining-ms 1000)) "s remaining)"))
+        (dispatch! agent-id
+                   (prompt-fn current-problem remaining-ms output new-count)
+                   (max 60000 remaining-ms))))))
+
+(defn- handle-failure!
+  "Handle agent invoke failure."
+  [agent-id outcome evidence-store]
+  (let [{:keys [current-problem failure-count]} @!state
+        pid (some-> current-problem :id (#(str "apm-" %)))
+        failures (inc (or failure-count 0))]
+    (swap! !state assoc :failure-count failures)
+    (log! {:event :dispatch-failure :problem pid :failure-count failures
+           :message (str (:error outcome))})
+    (if (<= failures 3)
+      ;; Retry after delay
+      (future
+        (Thread/sleep 30000)
+        (when @!conductor
+          (let [{:keys [current-problem]} @!state
+                tex-body (apm-queue/load-problem-tex (:id current-problem))]
+            (swap! !state assoc :dispatch-start-ms (System/currentTimeMillis))
+            (dispatch! agent-id
+                       (make-solve-prompt current-problem tex-body)
+                       (* 15 60 1000)))))
+      ;; Budget exhausted — skip
+      (let [done (inc (:problems-done @!state))
+            results (conj (or (:batch-results @!state) [])
+                          {:ok false :problem-id pid :classification :abandoned})]
+        (swap! !state assoc :problems-done done :batch-results results)
+        (log! {:event :problem-abandoned :problem pid})
+        (if (>= done (:target-n @!state))
+          (do (log! {:event :batch-complete :done done})
+              (stop-apm-conductor-v2!))
+          (start-next-problem! agent-id evidence-store))))))
+
+;; =============================================================================
+;; Problem lifecycle
+;; =============================================================================
+
+(defn- start-next-problem!
+  [agent-id evidence-store]
+  (let [{:keys [problem-bases]} @!state
+        explicit-base (first problem-bases)
+        issue (if explicit-base
+                {:problem-base explicit-base}
+                (first (apm-queue/next-unprocessed evidence-store 1)))]
+    (if-not issue
+      (do (log! {:event :queue-empty})
+          (stop-apm-conductor-v2!))
+      (let [base (:problem-base issue)
+            pid (str "apm-" base)
+            manifest (apm-queue/load-apm-manifest)
+            problem (first (filter #(= base (:id %)) manifest))
+            tex-body (apm-queue/load-problem-tex base)
+            backend (pb/make-proof-backend {})]
+        (log! {:event :problem-start :problem pid})
+        (apm-queue/emit-apm-evidence! evidence-store
+          {:problem-id pid :problem-base base :subject (:subject problem)
+           :session-id (str "apm-v2-" pid) :event-tag :workflow-start})
+        (swap! !state assoc
+               :current-problem problem
+               :backend backend
+               :accumulated-output ""
+               :sorry-kick-count 0
+               :failure-count 0
+               :problem-start-ms (System/currentTimeMillis)
+               :dispatch-start-ms (System/currentTimeMillis)
+               :problem-bases (if explicit-base
+                                (vec (rest problem-bases))
+                                problem-bases))
+        (dispatch! agent-id
+                   (make-solve-prompt problem tex-body)
+                   (* 15 60 1000))))))
+
+;; =============================================================================
+;; Triage — effort estimation pre-pass
+;; =============================================================================
+
+(def ^:private triage-path
+  "/home/joe/code/futon3c/data/apm-triage.edn")
+
+(defn- make-triage-prompt
+  "Prompt for batch triage. Given N problems, classify each as quick/medium/hard."
+  [problems]
+  (str "You are triaging " (count problems) " graduate math prelim problems for Lean 4\n"
+       "formalization difficulty. For each problem, estimate how hard it will be to\n"
+       "produce a COMPLETE Lean 4 proof with Mathlib (not a scaffold — a real proof).\n\n"
+
+       "Lanes:\n"
+       "- **quick**: Standard Mathlib lemmas exist, straightforward wiring. Under 5 min.\n"
+       "- **medium**: Mathlib has the pieces but composition is nontrivial. 5-20 min.\n"
+       "- **hard**: Genuine Mathlib gap, custom lemmas or new theory needed. 20+ min.\n\n"
+
+       "For each problem, respond with exactly one line:\n"
+       "  <problem-id> <lane> <one-sentence reason>\n\n"
+
+       "Example:\n"
+       "  a01J01 quick Schur test — MeasureTheory.integral_mul_le covers it\n"
+       "  a02J04 hard Pushforward measure Radon-Nikodym — needs custom decomposition lemma\n\n"
+
+       "Problems:\n\n"
+       (str/join "\n\n"
+         (map (fn [{:keys [id subject year] :as p}]
+                (let [tex (apm-queue/load-problem-tex id)]
+                  (str "### " id " (" (get subject-names subject (name subject)) ", " year ")\n"
+                       "```latex\n" tex "\n```")))
+              problems))
+       "\n"))
+
+(defn- parse-triage-line
+  "Parse one triage line: 'a01J01 quick Reason here' -> {:id :lane :reason}"
+  [line]
+  (when-let [[_ id lane reason] (re-find #"^\s*(\S+)\s+(quick|medium|hard)\s+(.+)" line)]
+    {:id id :lane (keyword lane) :reason (str/trim reason)}))
+
+(defn- parse-triage-output
+  "Parse triage agent output into a map of {problem-id {:lane :reason}}."
+  [output]
+  (->> (str/split-lines (or output ""))
+       (keep parse-triage-line)
+       (reduce (fn [m {:keys [id lane reason]}]
+                 (assoc m id {:lane lane :reason reason}))
+               {})))
+
+(defn load-triage
+  "Load triage manifest from disk. Returns {problem-id {:lane :reason}} or nil."
+  []
+  (when-let [text (slurp-if-exists triage-path)]
+    (try (clojure.edn/read-string text) (catch Exception _ nil))))
+
+(defn save-triage!
+  "Save triage manifest to disk."
+  [triage-map]
+  (spit triage-path (pr-str triage-map))
+  triage-map)
+
+(defn triage-summary
+  "Summarize a triage manifest by lane."
+  [triage-map]
+  (let [by-lane (group-by (comp :lane val) triage-map)]
+    {:quick (count (get by-lane :quick))
+     :medium (count (get by-lane :medium))
+     :hard (count (get by-lane :hard))
+     :unclassified (- (count triage-map)
+                      (count (get by-lane :quick))
+                      (count (get by-lane :medium))
+                      (count (get by-lane :hard)))
+     :total (count triage-map)}))
+
+(defn run-triage!
+  "Run triage pre-pass: dispatch all problems (or a subset) to an agent for
+   effort estimation. Returns the triage manifest.
+
+   Usage:
+     (run-triage! :agent-id \"claude-1\")
+     (run-triage! :agent-id \"claude-1\" :subject :analysis)
+     (run-triage! :agent-id \"claude-1\" :problem-ids [\"a01J01\" \"a02J04\"])"
+  [& {:keys [agent-id subject problem-ids batch-size]
+      :or {agent-id "claude-1" batch-size 50}}]
+  (let [manifest (cond->> (apm-queue/load-apm-manifest)
+                   subject (filter #(= subject (:subject %)))
+                   problem-ids (filter #((set problem-ids) (:id %))))
+        ;; Batch to avoid context overflow
+        batches (partition-all batch-size manifest)
+        existing (or (load-triage) {})
+        results (atom existing)]
+    (log! {:event :triage-started :total (count manifest)
+           :batches (count batches) :agent agent-id})
+    (doseq [[batch-idx batch] (map-indexed vector batches)]
+      (let [prompt (make-triage-prompt batch)
+            response (reg/invoke-agent! agent-id prompt (* 5 60 1000))]
+        (if (:ok response)
+          (let [parsed (parse-triage-output (:result response))]
+            (swap! results merge parsed)
+            (log! {:event :triage-batch-complete
+                   :batch (inc batch-idx)
+                   :classified (count parsed)}))
+          (log! {:event :triage-batch-failed
+                 :batch (inc batch-idx)
+                 :error (str (:error response))}))))
+    (let [final @results]
+      (save-triage! final)
+      (log! {:event :triage-complete :summary (triage-summary final)})
+      (println (str "[apm-v2] Triage complete: " (triage-summary final)))
+      final)))
+
+(defn problems-by-lane
+  "Filter the manifest to problems in a given lane. Requires triage to have run."
+  [lane]
+  (let [triage (load-triage)
+        manifest (apm-queue/load-apm-manifest)]
+    (when triage
+      (->> manifest
+           (filter #(= lane (get-in triage [(:id %) :lane])))
+           (mapv :id)))))
+
+;; =============================================================================
+;; Start / Stop
+;; =============================================================================
+
+(defn stop-apm-conductor-v2! []
+  (when @!conductor
+    (reg/set-on-idle! nil)
+    (reset! !conductor nil)
+    (log! {:event :conductor-stopped})
+    (println "[apm-v2] Stopped.")))
+
+(defn start-apm-conductor-v2!
+  "Start the v2 APM conductor.
+
+   Single-dispatch architecture: one 'solve and explain' prompt per problem,
+   sorry-kick loop for Lean closure, post-hoc extraction of structured data.
+
+   Same interface as v1's start-apm-conductor! for A/B testing.
+   Additional :lane option filters to a triage lane (:quick/:medium/:hard)."
+  [evidence-store & {:keys [agent-id n problem-ids lane]
+                     :or {agent-id "codex-1" n 40}}]
+  (stop-apm-conductor-v2!)
+  (spit log-path (str ";; APM Conductor v2 Log — " (Instant/now) "\n") :append true)
+
+  (let [problem-bases (or (some->> problem-ids
+                                   (mapv #(if (str/starts-with? (str %) "apm-")
+                                            (subs (str %) 4)
+                                            (str %))))
+                          (when lane (problems-by-lane lane)))]
+    (reset! !state {:problems-done 0
+                    :batch-results []
+                    :target-n (or (some-> problem-bases count) n)
+                    :problem-bases problem-bases})
+
+    (reg/set-on-idle!
+      (fn [idle-agent-id outcome]
+        (when (and (= idle-agent-id agent-id) @!conductor)
+          (if (:ok outcome true)
+            (handle-solve-return! agent-id (:result outcome) evidence-store)
+            (handle-failure! agent-id outcome evidence-store)))))
+
+    (reset! !conductor {:agent-id agent-id
+                        :version :v2
+                        :started-at (System/currentTimeMillis)})
+    (log! (cond-> {:event :conductor-started :version :v2
+                   :agent agent-id
+                   :target (or (some-> problem-bases count) n)}
+            (seq problem-bases) (assoc :problem-bases problem-bases)))
+
+    (start-next-problem! agent-id evidence-store)
+    {:ok true
+     :version :v2
+     :agent-id agent-id
+     :target (or (some-> problem-bases count) n)
+     :problem-bases problem-bases}))

@@ -296,6 +296,21 @@
        "     - **Lean target/type**: expected Lean type signature or goal shape\n"
        "     - **Mathlib status/search terms**: likely Mathlib vs custom, plus search terms\n"
        "     - **Critical path**: yes/no + why\n\n"
+       "After the dependency graph, emit a machine-readable `proof-plan.edn` block in\n"
+       "this exact form:\n"
+       "```edn\n"
+       "{:goal \"...\"\n"
+       " :terms [{:name \"...\" :meaning \"...\" :needed-because \"...\"}]\n"
+       " :strategy [{:id :step-1\n"
+       "             :formal-dependency \"...\"\n"
+       "             :informal-dependency \"...\"\n"
+       "             :why-this-now \"...\"\n"
+       "             :lean-target \"...\"\n"
+       "             :mathlib-status \"...\"\n"
+       "             :critical-path true}]\n"
+       " :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n"
+       "```\n"
+       "This is the HtDP artifact. It must stay valid throughout execute.\n\n"
        "**Stage 3 — LEAN FORMALIZATION**: 15-minute exam timer starts NOW.\n"
        "Build the skeleton from your dependency graph. Use HtDP to attack each sorry:\n"
        "1. Type signature (from dependency graph)\n"
@@ -303,6 +318,10 @@
        "3. Sketch composition\n"
        "4. Wire and build (lake build, read error, fix, repeat)\n"
        "The skeleton must type-check. Sorry is localized to specific claims.\n\n"
+       "At EACH execute return, update the plan if needed and show concrete progress.\n"
+       "The conductor maintains a `changelog.edn`; your Stage 3 text must make clear what\n"
+       "changed this click: which lemma closed, which search failed, which blocker moved,\n"
+       "or how the plan changed.\n\n"
        "**Stage 4 — FORMAL-TO-INFORMAL REVISION**: Reread THE CLEAN PROOF. Add "
        "natural-language difficulty annotations grounded in the Lean work. "
        "No Lean references in Column 1 prose — just calibrated difficulty signals. "
@@ -371,7 +390,10 @@
   (some #(str/ends-with? (str %) ".lean") artifacts))
 
 (def ^:private indirect-notes-pattern
-  #"(?is)\bsee\s+(?:notes?|file|artifact|writeup|sidecar)\b|\b(?:documented|recorded|captured|consolidated|saved|written)\b\s+(?:in|into)\b.*(?:\.md|\.lean|proof_peripheral|lean-proofs)")
+  "Detect notes that are just pointers to external files, not substantive content.
+   The file-path trigger requires the path to appear within ~80 chars of the verb,
+   so mathematical prose ('documented that the bound holds...') does not false-positive."
+  #"(?is)\bsee\s+(?:notes?|file|artifact|writeup|sidecar)\b|\b(?:documented|recorded|captured|consolidated|saved|written)\b\s+(?:in|into)\b.{0,80}?(?:\.md|\.lean|proof_peripheral|lean-proofs)")
 
 (defn- indirect-notes?
   [notes]
@@ -408,6 +430,52 @@
   (and (seq dep-graph)
        (every? rich-dependency-entry? dep-graph)))
 
+(def ^:private valid-stage-statuses
+  #{:pending :in-progress :done :revised :blocked})
+
+(defn valid-proof-plan?
+  [plan]
+  (let [goal (str/trim (str (or (:goal plan) "")))
+        terms (:terms plan)
+        strategy (:strategy plan)
+        stage-status (:stage-status plan)
+        valid-term? (fn [term]
+                      (every? #(not (str/blank? (str/trim (str (or (% term) "")))))
+                              [:name :meaning :needed-because]))
+        valid-step? (fn [step]
+                      (and (contains? step :id)
+                           (every? #(not (str/blank? (str/trim (str (or (% step) "")))))
+                                   [:formal-dependency
+                                    :informal-dependency
+                                    :why-this-now
+                                    :lean-target
+                                    :mathlib-status])))
+        valid-stage-status? (fn [m]
+                              (and (map? m)
+                                   (every? #(contains? m %) [:stage1 :stage2 :stage3 :stage4])
+                                   (every? valid-stage-statuses (vals m))))]
+    (and (map? plan)
+         (not (str/blank? goal))
+         (vector? terms)
+         (seq terms)
+         (every? valid-term? terms)
+         (vector? strategy)
+         (seq strategy)
+         (every? valid-step? strategy)
+         (valid-stage-status? stage-status))))
+
+(defn valid-changelog?
+  [changelog]
+  (and (vector? changelog)
+       (seq changelog)
+       (every? (fn [entry]
+                 (and (keyword? (:kind entry))
+                      (not (str/blank? (str/trim (str (or (:summary entry) "")))))
+                      (contains? entry :full-record?)
+                      (contains? entry :sorry?)
+                      (contains? entry :fully-closed?)))
+               changelog)))
+
 (defn- placeholder-arse-questions?
   [arse]
   (or (empty? arse)
@@ -436,6 +504,8 @@
           has-lean (has-lean-artifacts? artifacts)
           timed-out (:lean-timed-out phase-data)
           dep-graph (:dependency-graph phase-data)
+          proof-plan (:proof-plan phase-data)
+          changelog (:changelog phase-data)
           notes (:notes phase-data)
           elapsed (:lean-elapsed-ms phase-data)]
       (cond
@@ -454,6 +524,12 @@
         (not (strategic-dependency-graph? dep-graph))
         {:ok false :error {:code :underpowered-dependency-graph
                            :message "Execute phase dependency graph must record formal dependencies, informal strategy triggers, why-they-apply-here cues, and Lean targets for every entry"}}
+        (not (valid-proof-plan? proof-plan))
+        {:ok false :error {:code :invalid-proof-plan
+                           :message "Execute phase requires a valid proof-plan.edn artifact with goal, terms, strategy, and stage-status"}}
+        (not (valid-changelog? changelog))
+        {:ok false :error {:code :invalid-changelog
+                           :message "Execute phase requires a non-empty changelog.edn artifact showing concrete progress across clicks"}}
         (and (not has-lean) (nil? timed-out))
         {:ok false :error {:code :no-lean-work
                            :message "Execute phase requires Lean artifacts (.lean files) or :lean-timed-out report. Cannot advance without attempting Lean formalization."}}

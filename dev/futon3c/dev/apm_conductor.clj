@@ -10,8 +10,9 @@
    - If agent returns early with sorry, re-dispatched with remaining time
    - All phase timings logged to data/apm-conductor-log.edn
 
-   start-apm-conductor! / stop-apm-conductor! pair."
-  (:require [clojure.string :as str]
+  start-apm-conductor! / stop-apm-conductor! pair."
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.java.io :as io]
             [futon3c.agents.apm-work-queue :as apm-queue]
             [futon3c.peripheral.proof-backend :as pb]
@@ -29,6 +30,7 @@
 (declare start-next-problem!)
 (declare discover-lean-artifacts)
 (declare extract-bold-section)
+(declare run-apm-preflight!)
 
 (def ^:private apm-phases
   [:observe :propose :execute :validate :classify :integrate])
@@ -46,7 +48,12 @@
 (def ^:private max-execute-redispatches
   "Hard cap on execute re-dispatches (sorry retries + full-record retries combined).
    After this many, force-advance with whatever notes exist."
-  8)
+  4)
+
+(def ^:private arse-kick-threshold
+  "After this many sorry re-dispatches, switch from 'continue working on sorry'
+   to a QP-pattern prompt that asks the agent to diagnose what's blocking it."
+  2)
 
 (def ^:private problem-timeout-ms
   "Overall problem timeout (20 minutes). If total time exceeds this, skip to next."
@@ -98,6 +105,14 @@
       :execute (str proof-peripheral-root "/apm-" pid "-execute.md")
       nil)))
 
+(defn- proof-plan-sidecar-path
+  [problem]
+  (str proof-peripheral-root "/apm-" (:id problem) "-proof-plan.edn"))
+
+(defn- changelog-sidecar-path
+  [problem]
+  (str proof-peripheral-root "/apm-" (:id problem) "-changelog.edn"))
+
 (defn- slurp-if-exists
   [path]
   (when path
@@ -106,7 +121,10 @@
         (slurp f)))))
 
 (def ^:private indirect-notes-pattern
-  #"(?is)\bsee\s+(?:notes?|file|artifact|writeup|sidecar)\b|\b(?:documented|recorded|captured|consolidated|saved|written)\b\s+(?:in|into)\b.*(?:\.md|\.lean|proof_peripheral|lean-proofs)")
+  "Detect notes that are just pointers to external files, not substantive content.
+   The file-path trigger requires the path to appear within ~80 chars of the verb,
+   so mathematical prose ('documented that the bound holds...') does not false-positive."
+  #"(?is)\bsee\s+(?:notes?|file|artifact|writeup|sidecar)\b|\b(?:documented|recorded|captured|consolidated|saved|written)\b\s+(?:in|into)\b.{0,80}?(?:\.md|\.lean|proof_peripheral|lean-proofs)")
 
 (defn- indirect-notes?
   [text]
@@ -165,6 +183,11 @@
   (let [{:keys [stage1 stage2 stage3 stage4]} (merge (empty-execute-record) record)]
     (every? #(not (str/blank? %)) [stage1 stage2 stage3 stage4])))
 
+(defn- htdp-record-complete?
+  [execute-record proof-plan]
+  (and (execute-record-complete? execute-record)
+       (apm-queue/valid-proof-plan? proof-plan)))
+
 (defn- extract-lean-delta
   [text]
   (cond
@@ -206,6 +229,60 @@
     (when (seq pieces)
       (str/join "\n\n" pieces))))
 
+(defn- extract-fenced-edn
+  [text label]
+  (some-> (re-find (re-pattern
+                    (str "(?ms)(?:\\*\\*)?"
+                         (java.util.regex.Pattern/quote label)
+                         "(?:\\*\\*)?\\s*```edn\\s*(.*?)\\s*```"))
+                   (or text ""))
+          second
+          trim-to-nil))
+
+(defn- parse-edn-snippet
+  [text]
+  (when-let [text (trim-to-nil text)]
+    (try
+      (edn/read-string text)
+      (catch Exception _
+        nil))))
+
+(defn- extract-proof-plan
+  [text]
+  (or (parse-edn-snippet (extract-fenced-edn text "PROOF-PLAN.EDN"))
+      (parse-edn-snippet (extract-fenced-edn text "PROOF PLAN EDN"))))
+
+(defn- persist-proof-plan!
+  [problem proof-plan]
+  (when proof-plan
+    (spit (proof-plan-sidecar-path problem) (pr-str proof-plan))))
+
+(defn- persist-changelog!
+  [problem changelog]
+  (when changelog
+    (spit (changelog-sidecar-path problem) (pr-str changelog))))
+
+(defn- update-proof-plan!
+  [problem output]
+  (let [plan (extract-proof-plan output)]
+    (when plan
+      (swap! !apm-state assoc :proof-plan plan)
+      (persist-proof-plan! problem plan))
+    plan))
+
+(defn- current-proof-plan
+  [problem]
+  (or (:proof-plan @!apm-state)
+      (some-> (slurp-if-exists (proof-plan-sidecar-path problem))
+              parse-edn-snippet)))
+
+(defn- append-changelog-entry!
+  [problem entry]
+  (let [new-state (swap! !apm-state update :execute-changelog (fnil conj []) entry)
+        changelog (:execute-changelog new-state)]
+    (persist-changelog! problem changelog)
+    changelog))
+
 (defn- update-execute-record!
   [output]
   (let [new-state
@@ -217,36 +294,54 @@
                      canonical-notes (assoc-in [:phase-notes :execute] canonical-notes)))))]
     (:execute-record new-state)))
 
+(defn- extract-dep-field
+  "Extract a dependency-graph field by trying multiple label prefixes.
+   Labels are matched case-insensitively, with optional bold/italic markdown
+   wrapping and optional leading `- `. Returns the first match or nil."
+  [body prefixes]
+  (some (fn [prefix]
+          (let [;; Escape the prefix for regex, but allow case-insensitive
+                escaped (java.util.regex.Pattern/quote prefix)
+                ;; Try: `- **Label**:`, `- *Label*:`, `Label:`
+                patterns [(re-pattern (str "(?im)^\\s*-\\s+\\*\\*" escaped "\\*\\*\\s*:\\s*(.+)$"))
+                          (re-pattern (str "(?im)^\\s*-\\s+\\*" escaped "\\*\\s*:\\s*(.+)$"))
+                          (re-pattern (str "(?im)^\\s*" escaped "\\s*:\\s*(.+)$"))]]
+            (some #(extract-section body %) patterns)))
+        prefixes))
+
 (defn- parse-dependency-entry
   [entry-text]
   (let [[_ lemma body] (re-find #"(?ms)^\s*\d+\.\s+\*\*([^*]+)\*\*\s*\n(.*)\z" entry-text)
         full (trim-to-nil entry-text)
         body (or body "")
-        formal (or (extract-section body #"(?m)^\s*-\s+\*\*Formal dependency\*\*:\s*(.+)$")
-                   (extract-section body #"(?m)^\s*-\s+\*Formal dependency\*:\s*(.+)$")
-                   (extract-section body #"(?m)^\s*Formal dependency:\s*(.+)$"))
-        informal (or (extract-section body #"(?m)^\s*-\s+\*\*Informal dependency\*\*:\s*(.+)$")
-                     (extract-section body #"(?m)^\s*-\s+\*Informal dependency\*:\s*(.+)$")
-                     (extract-section body #"(?m)^\s*Informal dependency:\s*(.+)$"))
-        why-now (or (extract-section body #"(?m)^\s*-\s+\*\*Why this becomes thinkable here\*\*:\s*(.+)$")
-                    (extract-section body #"(?m)^\s*-\s+\*Why this becomes thinkable here\*:\s*(.+)$")
-                    (extract-section body #"(?m)^\s*Why this becomes thinkable here:\s*(.+)$")
-                    (extract-section body #"(?m)^\s*-\s+\*\*Why now\*\*:\s*(.+)$")
-                    (extract-section body #"(?m)^\s*-\s+\*Why now\*:\s*(.+)$")
-                    (extract-section body #"(?m)^\s*Why now:\s*(.+)$"))
-        lean-type (or (extract-section body #"(?m)^\s*-\s+\*\*Lean target/type\*\*:\s*(.+)$")
-                      (extract-section body #"(?m)^\s*-\s+\*Lean target/type\*:\s*(.+)$")
-                      (extract-section body #"(?m)^\s*Lean target/type:\s*(.+)$")
-                      (extract-section body #"(?m)^\s*-\s+\*Type(?: \([^)]+\))?\*:\s*(.+)$")
-                      (extract-section body #"(?m)^\s*Type:\s*(.+)$"))
-        status (or (extract-section body #"(?m)^\s*-\s+\*\*Mathlib status/search terms\*\*:\s*(.+)$")
-                   (extract-section body #"(?m)^\s*-\s+\*Mathlib status/search terms\*:\s*(.+)$")
-                   (extract-section body #"(?m)^\s*Mathlib status/search terms:\s*(.+)$")
-                   (extract-section body #"(?m)^\s*-\s+\*Status\*:\s*(.+)$")
-                   (extract-section body #"(?m)^\s*Status:\s*(.+)$"))
-        critical (or (extract-section body #"(?m)^\s*-\s+\*Critical path\*:\s*(.+)$")
-                     (extract-section body #"(?m)^\s*-\s+\*\*Critical path\*\*:\s*(.+)$")
-                     (extract-section body #"(?m)^\s*Critical path:\s*(.+)$"))]
+        formal (extract-dep-field body
+                 ["Formal dependency"])
+        informal (extract-dep-field body
+                   ["Informal dependency"
+                    "Informal strategy"
+                    "Recognition heuristic"])
+        why-now (extract-dep-field body
+                  ["Why this becomes thinkable here"
+                   "Why thinkable here"
+                   "Why thinkable"
+                   "Why now"
+                   "Why here"
+                   "Why relevant here"
+                   "Local cue"])
+        lean-type (extract-dep-field body
+                    ["Lean target/type"
+                     "Lean target"
+                     "Lean type"
+                     "Type"])
+        status (extract-dep-field body
+                 ["Mathlib status/search terms"
+                  "Mathlib status"
+                  "Mathlib"
+                  "Status"
+                  "Search terms"])
+        critical (extract-dep-field body
+                   ["Critical path"
+                    "Critical"])]
     {:lemma (or (trim-to-nil lemma) "unparsed-lemma")
      :formal-dependency (or formal full)
      :informal-dependency informal
@@ -360,6 +455,10 @@
       {:ok false :error (str "No proof state for " problem-id)}
       (let [execute-sidecar (slurp-if-exists (phase-sidecar-path problem :execute))
             propose-sidecar (slurp-if-exists (phase-sidecar-path problem :propose))
+            proof-plan-sidecar (some-> (slurp-if-exists (proof-plan-sidecar-path problem))
+                                       parse-edn-snippet)
+            changelog-sidecar (some-> (slurp-if-exists (changelog-sidecar-path problem))
+                                      parse-edn-snippet)
             repaired-cycle (fn [cycle]
                              (let [phase-data (:cycle/phase-data cycle)
                                    execute-notes (or (some-> execute-sidecar normalize-execute-notes)
@@ -375,6 +474,12 @@
                                    (assoc-in [:cycle/phase-data :execute :notes] execute-notes)
                                    (assoc-in [:cycle/phase-data :execute :dependency-graph]
                                              (parse-dependency-graph execute-notes))
+                                   (assoc-in [:cycle/phase-data :execute :proof-plan]
+                                             (or proof-plan-sidecar
+                                                 (get-in phase-data [:execute :proof-plan])))
+                                   (assoc-in [:cycle/phase-data :execute :changelog]
+                                             (or changelog-sidecar
+                                                 (get-in phase-data [:execute :changelog])))
                                    (assoc-in [:cycle/phase-data :execute :artifacts] execute-artifacts)
                                    (assoc-in [:cycle/phase-data :integrate :notes] integrate-notes)
                                    (assoc-in [:cycle/phase-data :integrate :rationale]
@@ -429,7 +534,9 @@
   [problem execute-artifacts]
   (->> (concat execute-artifacts
                (keep identity [(phase-sidecar-path problem :propose)
-                               (phase-sidecar-path problem :execute)]))
+                               (phase-sidecar-path problem :execute)
+                               (proof-plan-sidecar-path problem)
+                               (changelog-sidecar-path problem)]))
        (filter #(try (.exists (io/file %))
                      (catch Exception _ false)))
        distinct
@@ -472,11 +579,44 @@
        "3. Wire it: lake build, read error, fix, repeat\n"
        "4. If you close it, move to the next sorry\n\n"
        "Return a LEAN DELTA ONLY: what changed in Stage 3, what artifacts now exist,\n"
-       "which sorrys closed, and what blockers remain. Do NOT replace Stage 1/2/4 with\n"
-       "a summary or 'see file' note; the conductor will merge your Lean delta into the\n"
-       "canonical execute record.\n\n"
+       "which sorrys closed, and what blockers remain. If the proof plan changed,\n"
+       "include an updated `PROOF-PLAN.EDN` fenced block. Do NOT replace Stage 1/2/4\n"
+       "with a summary or 'see file' note; the conductor will merge your Lean delta into\n"
+       "the canonical execute record and changelog.\n\n"
        "When the timer expires, the conductor will advance you.\n"
        "DO NOT rewrite the informal proof — focus entirely on Lean.\n"))
+
+(defn- make-arse-kick-prompt
+  "Prompt for re-dispatch when the agent is stuck in a sorry loop.
+   Instead of 'keep working on sorry', asks the agent to diagnose what's
+   blocking it using QP-pattern questions, then use the answer to get unstuck."
+  [problem remaining-ms previous-output]
+  (str "Execution evidence required: yes.\n"
+       "This phase must include real Lean/tool work. A purely textual reply is insufficient.\n\n"
+       "You are STILL in the EXECUTE phase. Timer has NOT expired.\n\n"
+       "Problem: apm-" (:id problem) "\n\n"
+       "You have attempted sorry closure " arse-kick-threshold
+       " times without success. " (long (/ remaining-ms 1000))
+       " seconds remain.\n\n"
+       "STOP repeating the same approach. Instead, diagnose what is blocking you:\n\n"
+       "1. **QP-3 Structural probe**: What EXACTLY is the Lean goal state for the\n"
+       "   most promising sorry? Copy the goal from `lake build` output.\n\n"
+       "2. **QP-6 Tension dissolution**: What is the GAP between what you have\n"
+       "   and what the goal needs? Is it a missing Mathlib lemma, a type mismatch,\n"
+       "   a universe issue, or a definitional unfolding problem?\n\n"
+       "3. **QP-8 Confidence inversion**: What did you ASSUME would work that\n"
+       "   turned out to be wrong? Name the false assumption.\n\n"
+       "After answering these three questions, choose ONE of:\n"
+       "- **Pivot**: try a different proof strategy for this sorry\n"
+       "- **Extend**: write a custom helper lemma that bridges the gap\n"
+       "- **Accept**: mark this sorry as a genuine Mathlib boundary, explain\n"
+       "  what would need to be added to Mathlib to close it, and move on\n\n"
+       "Your previous output (summary):\n"
+       (subs previous-output 0 (min 1500 (count previous-output)))
+       "\n\n"
+       "Return: the 3 diagnostic answers, your chosen action, and the resulting\n"
+       "LEAN DELTA (what changed in Stage 3). If you chose Accept, that's fine —\n"
+       "a well-diagnosed sorry with a Mathlib boundary explanation is a real result.\n"))
 
 (defn- make-full-execute-resubmission-prompt
   [problem remaining-ms previous-output execute-record]
@@ -491,6 +631,7 @@
          "You must now return ONE FULL EXECUTE SUBMISSION with all four sections inline:\n"
          "1. Stage 1 — THE CLEAN PROOF\n"
          "2. Stage 2 — LEMMA DEPENDENCY GRAPH\n"
+         "   plus a fenced `PROOF-PLAN.EDN` block with goal / terms / strategy / stage-status\n"
          "3. Stage 3 — LEAN FORMALIZATION\n"
          "4. Stage 4 — FORMAL-TO-INFORMAL REVISION\n\n"
          "Do not answer with a delta, file pointer, ellipsis, or summary. The conductor\n"
@@ -580,6 +721,62 @@
          (every? (complement artifact-has-sorry?) artifacts)
          (every? (complement artifact-placeholder?) artifacts))))
 
+(defn- stop-the-line!
+  [reason data]
+  (log! (merge {:event :stop-the-line
+                :message reason}
+               data))
+  (println (str "[apm-conductor] STOP-THE-LINE: " reason))
+  (stop-apm-conductor!)
+  {:ok false :error {:message reason :data data}})
+
+(defn run-apm-preflight!
+  []
+  (let [sample-plan {:goal "Show the operator family converges strongly."
+                     :terms [{:name "strong convergence"
+                              :meaning "pointwise convergence on each vector"
+                              :needed-because "target statement"}]
+                     :strategy [{:id :dense-set-reduction
+                                 :formal-dependency "dense-set reduction for uniformly bounded operators"
+                                 :informal-dependency "prove convergence on a dense core, then extend by the uniform bound"
+                                 :why-this-now "operator convergence plus a bound usually signals dense-set extension"
+                                 :lean-target "∀ x, Tendsto (fun n => T n x) ... "
+                                 :mathlib-status "search `DenseInducing`, `ContinuousLinearMap`, `Tendsto`"
+                                 :critical-path true}]
+                     :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+        sample-changelog [{:kind :initial-plan
+                           :summary "Captured the initial HtDP plan and identified the dense-set reduction as the critical path."
+                           :full-record? true
+                           :sorry? true
+                           :fully-closed? false}]
+        sample-data {:artifacts ["/tmp/preflight.lean"]
+                     :dependency-graph [{:lemma "Dense-set reduction"
+                                         :formal-dependency "dense-set reduction for uniformly bounded operators"
+                                         :informal-dependency "prove convergence on a dense core, then extend by the bound"
+                                         :why-this-now "the target is strong convergence of operators with a norm bound"
+                                         :lean-type "∀ x, Tendsto (fun n => T n x) ..."
+                                         :source "search `Dense`, `Tendsto`, `ContinuousLinearMap`"
+                                         :on-critical-path true}]
+                     :proof-plan sample-plan
+                     :changelog sample-changelog
+                     :lean-elapsed-ms 900000
+                     :notes "Stage 1 — THE CLEAN PROOF\n--------------------------------\n\nProof.\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n--------------------------------\n\n1. **Dense-set reduction**\n   - **Formal dependency**: dense-set reduction for uniformly bounded operators.\n   - **Informal dependency**: prove convergence on a dense core, then extend by the bound.\n   - **Why this becomes thinkable here**: the target is strong convergence with a uniform norm bound.\n   - **Lean target/type**: `∀ x, Tendsto (fun n => T n x) ...`.\n   - **Mathlib status/search terms**: search `Dense`, `Tendsto`, `ContinuousLinearMap`.\n   - **Critical path**: yes.\n\n**PROOF-PLAN.EDN**\n```edn\n{:goal \"Show the operator family converges strongly.\"\n :terms [{:name \"strong convergence\" :meaning \"pointwise convergence on each vector\" :needed-because \"target statement\"}]\n :strategy [{:id :dense-set-reduction :formal-dependency \"dense-set reduction for uniformly bounded operators\" :informal-dependency \"prove convergence on a dense core, then extend by the uniform bound\" :why-this-now \"operator convergence plus a bound usually signals dense-set extension\" :lean-target \"∀ x, Tendsto (fun n => T n x) ...\" :mathlib-status \"search `DenseInducing`, `ContinuousLinearMap`, `Tendsto`\" :critical-path true}]\n :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n```\n\nStage 3 — LEAN FORMALIZATION\n--------------------------------\n\nLean.\n\nStage 4 — FORMAL-TO-INFORMAL REVISION\n--------------------------------\n\nRevision."}]
+    (cond
+      (not (apm-queue/valid-proof-plan? sample-plan))
+      {:ok false :message "Sample proof plan failed validation"}
+
+      (not (apm-queue/valid-changelog? sample-changelog))
+      {:ok false :message "Sample changelog failed validation"}
+
+      (not (full-execute-submission? (:notes sample-data)))
+      {:ok false :message "Execute parser preflight failed to recognize full Stage 1-4 record"}
+
+      (nil? (apm-queue/apm-phase-validator :execute sample-data nil))
+      {:ok true}
+
+      :else
+      {:ok false :message "Execute phase validator rejected the preflight sample"})))
+
 (defn- dispatch-phase!
   "Dispatch the current phase to the agent. Non-blocking (runs in future).
    Records dispatch timestamp in state."
@@ -633,13 +830,26 @@
         total-elapsed-ms (- now-ms (or execute-start-ms now-ms))
         remaining-ms (- lean-floor-ms total-elapsed-ms)
         execute-record (update-execute-record! agent-output)
-        full-record? (execute-record-complete? execute-record)
+        _ (update-proof-plan! current-problem agent-output)
+        proof-plan (current-proof-plan current-problem)
+        full-record? (htdp-record-complete? execute-record proof-plan)
         artifacts (discover-lean-artifacts current-problem execute-start-ms agent-output)
         sorry? (boolean (or (has-sorry? agent-output)
                             (some artifact-has-sorry? artifacts)))
         fully-closed? (fully-closed-execute? current-problem execute-start-ms agent-output)
         redispatch-count (or (:execute-redispatch-count @!apm-state) 0)
-        redispatch-budget-exhausted? (>= redispatch-count max-execute-redispatches)]
+        redispatch-budget-exhausted? (>= redispatch-count max-execute-redispatches)
+        changelog (append-changelog-entry!
+                   current-problem
+                   {:at (str (Instant/now))
+                    :kind (if (full-execute-submission? agent-output) :full-submission :lean-delta)
+                    :summary (or (trim-to-nil (extract-lean-delta agent-output))
+                                 (trim-to-nil (subs agent-output 0 (min 240 (count agent-output)))))
+                    :full-record? full-record?
+                    :sorry? sorry?
+                    :fully-closed? fully-closed?
+                    :artifacts artifacts
+                    :plan-updated? (boolean (extract-proof-plan agent-output))})]
 
     (log! {:event :execute-return :problem pid
            :elapsed-ms dispatch-elapsed-ms
@@ -648,7 +858,8 @@
            :full-record? full-record?
            :sorry? sorry? :fully-closed? fully-closed?
            :remaining-ms (max 0 remaining-ms)
-           :redispatch-count redispatch-count})
+           :redispatch-count redispatch-count
+           :changelog-count (count changelog)})
 
     (cond
       ;; Zero sorry — early exit allowed (check first, before any re-dispatch logic)
@@ -702,20 +913,24 @@
                          :timeout-override (max 60000 remaining-ms))
         false)
 
-      ;; Agent returned early with sorry — re-dispatch with remaining time
+      ;; Agent returned early with sorry — re-dispatch.
+      ;; After arse-kick-threshold dispatches, switch to diagnostic prompt.
       :else
-      (do
+      (let [use-arse-kick? (>= redispatch-count arse-kick-threshold)
+            prompt-fn (if use-arse-kick? make-arse-kick-prompt make-lean-continue-prompt)]
         (swap! !apm-state update :execute-redispatch-count (fnil inc 0))
-        (log! {:event :execute-redispatch :problem pid :elapsed-ms dispatch-elapsed-ms
+        (log! {:event (if use-arse-kick? :execute-arse-kick :execute-redispatch)
+               :problem pid :elapsed-ms dispatch-elapsed-ms
                :total-elapsed-ms total-elapsed-ms
                :remaining-ms remaining-ms
                :redispatch-count (inc redispatch-count)
-               :message (str "Sorry present, " (long (/ remaining-ms 1000))
-                             "s remaining — re-dispatching")})
-        (println (str "[apm-conductor] Execute: sorry present, "
+               :message (str (if use-arse-kick? "ArSE kick: " "Sorry present, ")
+                             (long (/ remaining-ms 1000)) "s remaining — re-dispatching")})
+        (println (str "[apm-conductor] Execute: "
+                      (if use-arse-kick? "ArSE KICK — " "sorry present, ")
                       (long (/ remaining-ms 1000)) "s remaining — re-dispatching"))
         (dispatch-phase! agent-id evidence-store
-                         :prompt-override (make-lean-continue-prompt
+                         :prompt-override (prompt-fn
                                            (:current-problem @!apm-state)
                                            remaining-ms agent-output)
                          :timeout-override remaining-ms)
@@ -774,47 +989,57 @@
                              :prompt-override (:prompt-override retry-override)
                              :timeout-override (:timeout-override retry-override))
             (dispatch-phase! agent-id evidence-store))))
-      (do
-        (let [{:keys [problems-done batch-results target-n execute-record execute-start-ms
-                      problem-start-ms phase-notes problem-failures]} @!apm-state
-              execute-notes (execute-record->notes execute-record)
-              artifacts (when current-problem
-                          (discover-lean-artifacts current-problem execute-start-ms execute-notes))
-              total-elapsed (max 0 (- (System/currentTimeMillis) (or problem-start-ms 0)))
-              report {:problem-id pid
-                      :problem-base (:id current-problem)
-                      :status :abandoned
-                      :reason-code :retry-budget-exhausted
-                      :reason-message (str "Exceeded retry budget after " failures " failures")
-                      :last-phase current-phase
-                      :problem-elapsed-ms total-elapsed
-                      :phase-failure-count failures
-                      :failures problem-failures
-                      :phase-notes phase-notes
-                      :execute-record execute-record
-                      :execute-notes execute-notes
-                      :artifacts artifacts
-                      :at (str (Instant/now))}
-              _ (save-failure-report! (:id current-problem) report)
-              _ (log! {:event :problem-abandoned :problem pid :phase current-phase
-                       :classification "abandoned"
-                       :total-elapsed-ms total-elapsed
-                       :message (:reason-message report)})
-              _ (println (str "[apm-conductor] === " pid " ABANDONED: "
-                              (:reason-message report) " ==="))
-              result {:ok false :problem-id pid :classification :abandoned
-                      :elapsed-ms total-elapsed
-                      :reason-code :retry-budget-exhausted}
-              done (inc problems-done)
-              results (conj (or batch-results []) result)]
-          (swap! !apm-state assoc
-                 :problems-done done
-                 :batch-results results)
-          (if (>= done target-n)
-            (do
-              (log! {:event :batch-complete :done done :target target-n})
-              (stop-apm-conductor!))
-            (start-next-problem! agent-id evidence-store)))))))
+      (let [{:keys [problems-done batch-results target-n execute-record execute-start-ms
+                    problem-start-ms phase-notes problem-failures]} @!apm-state
+            execute-notes (execute-record->notes execute-record)
+            artifacts (when current-problem
+                        (discover-lean-artifacts current-problem execute-start-ms execute-notes))
+            total-elapsed (max 0 (- (System/currentTimeMillis) (or problem-start-ms 0)))
+            execute-total-elapsed (when (= current-phase :execute)
+                                    (max 0 (- (System/currentTimeMillis)
+                                              (or execute-start-ms phase-dispatch-ms 0))))
+            report {:problem-id pid
+                    :problem-base (:id current-problem)
+                    :status :abandoned
+                    :reason-code :retry-budget-exhausted
+                    :reason-message (str "Exceeded retry budget after " failures " failures")
+                    :last-phase current-phase
+                    :problem-elapsed-ms total-elapsed
+                    :phase-failure-count failures
+                    :failures problem-failures
+                    :phase-notes phase-notes
+                    :execute-record execute-record
+                    :execute-notes execute-notes
+                    :artifacts artifacts
+                    :at (str (Instant/now))}
+            _ (save-failure-report! (:id current-problem) report)]
+        (if (and (= current-phase :execute)
+                 (< (or execute-total-elapsed 0) lean-floor-ms))
+          (stop-the-line!
+           "Execute discipline broke before the 15-minute floor: retry budget exhausted without maintaining a valid HtDP record."
+           {:problem pid
+            :phase current-phase
+            :execute-elapsed-ms execute-total-elapsed
+            :failure-count failures})
+          (let [_ (log! {:event :problem-abandoned :problem pid :phase current-phase
+                         :classification "abandoned"
+                         :total-elapsed-ms total-elapsed
+                         :message (:reason-message report)})
+                _ (println (str "[apm-conductor] === " pid " ABANDONED: "
+                                (:reason-message report) " ==="))
+                result {:ok false :problem-id pid :classification :abandoned
+                        :elapsed-ms total-elapsed
+                        :reason-code :retry-budget-exhausted}
+                done (inc problems-done)
+                results (conj (or batch-results []) result)]
+            (swap! !apm-state assoc
+                   :problems-done done
+                   :batch-results results)
+            (if (>= done target-n)
+              (do
+                (log! {:event :batch-complete :done done :target target-n})
+                (stop-apm-conductor!))
+              (start-next-problem! agent-id evidence-store))))))))
 
 (defn- handle-phase-rejection!
   [agent-id rejection-message evidence-store]
@@ -886,6 +1111,8 @@
     ;; Build phase-data and advance
     (let [accumulated-execute (get-in @!apm-state [:phase-notes :execute])
           execute-record (:execute-record @!apm-state)
+          proof-plan (current-proof-plan current-problem)
+          changelog (:execute-changelog @!apm-state)
           normalized-notes (case current-phase
                              :execute (or (execute-record->notes execute-record)
                                           (normalized-phase-notes current-problem :execute accumulated-execute))
@@ -906,6 +1133,8 @@
             :execute   {:artifacts execute-artifacts
                         :dependency-graph (or (some-> execute-record :stage2 parse-dependency-graph)
                                               (parse-dependency-graph execute-notes))
+                        :proof-plan proof-plan
+                        :changelog changelog
                         :lean-elapsed-ms execute-total-elapsed
                         :notes execute-notes
                         :lean-timed-out (when (>= execute-total-elapsed lean-floor-ms)
@@ -926,13 +1155,12 @@
           advance-result (.execute-tool backend :cycle-advance [pid cycle-id phase-data])]
 
       (if-not (:ok advance-result)
-        (do
-          (let [rejection-message (get-in advance-result [:error :message])]
-            (log! {:event :phase-rejected :problem pid :phase current-phase
-                   :message rejection-message})
-            (println (str "[apm-conductor] " (name current-phase) " REJECTED: "
-                          rejection-message))
-            (handle-phase-rejection! agent-id rejection-message evidence-store)))
+        (let [rejection-message (get-in advance-result [:error :message])]
+          (log! {:event :phase-rejected :problem pid :phase current-phase
+                 :message rejection-message})
+          (println (str "[apm-conductor] " (name current-phase) " REJECTED: "
+                        rejection-message))
+          (handle-phase-rejection! agent-id rejection-message evidence-store))
 
         ;; Advance succeeded — what's next?
         (let [next-idx (inc (.indexOf apm-phases current-phase))]
@@ -1036,6 +1264,8 @@
                    :current-problem problem :current-phase :observe
                    :cycle-id cid :backend backend :phase-notes {}
                    :execute-record (empty-execute-record)
+                   :proof-plan nil
+                   :execute-changelog []
                    :problem-start-ms (System/currentTimeMillis)
                    :phase-dispatch-ms nil
                    :execute-start-ms nil
@@ -1071,6 +1301,12 @@
 
   ;; Init log file header
   (spit log-path (str ";; APM Conductor Log — " (Instant/now) "\n") :append true)
+
+  (let [preflight (run-apm-preflight!)]
+    (when-not (:ok preflight)
+      (log! {:event :preflight-failed
+             :message (:message preflight)})
+      (throw (ex-info "APM preflight failed" preflight))))
 
   (let [problem-bases (some->> problem-ids
                                (mapv #(if (str/starts-with? (str %) "apm-")
