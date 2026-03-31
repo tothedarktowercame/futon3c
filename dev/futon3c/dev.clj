@@ -63,6 +63,7 @@
             [futon3c.dev.irc :as dev-irc]
             [futon3c.dev.apm :as dev-apm]
             [futon3c.dev.apm-conductor :as dev-apm-conductor]
+            [futon3c.dev.apm-conductor-v2 :as dev-apm-conductor-v2]
             [futon3c.dev.arse :as dev-arse]
             [futon3c.dev.fm :as dev-fm]
             [futon3c.dev.ct :as dev-ct]
@@ -1929,6 +1930,26 @@ RESPOND WITH ONLY:
   "Stop the APM conductor."
   []
   (dev-apm-conductor/stop-apm-conductor!))
+
+(defn start-apm-conductor-v2!
+  "Start the simpler v2 APM conductor for A/B testing.
+
+   Usage:
+     (dev/start-apm-conductor-v2!)
+     (dev/start-apm-conductor-v2! :agent-id \"codex-1\" :n 10)
+     (dev/start-apm-conductor-v2! :agent-id \"codex-1\"
+                                  :problem-ids [\"a01J06\" \"a02J01\"])"
+  [& {:keys [agent-id n problem-ids lane] :or {agent-id "codex-1" n 40}}]
+  (dev-apm-conductor-v2/start-apm-conductor-v2! @!evidence-store
+                                                :agent-id agent-id
+                                                :n n
+                                                :problem-ids problem-ids
+                                                :lane lane))
+
+(defn stop-apm-conductor-v2!
+  "Stop the v2 APM conductor."
+  []
+  (dev-apm-conductor-v2/stop-apm-conductor-v2!))
 
 ;; =============================================================================
 ;; System boot
