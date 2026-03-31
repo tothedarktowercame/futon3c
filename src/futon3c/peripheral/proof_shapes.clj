@@ -31,7 +31,7 @@
 (def CyclePhase
   "Cycle phase in the proof development state machine (CR-1).
    Phases must be traversed in order; no skipping."
-  [:enum :observe :propose :execute :validate
+  [:enum :observe :propose :target-check :execute :validate
    :classify :integrate :commit :gate-review :completed])
 
 (def CycleResultStatus
@@ -171,6 +171,23 @@
    [:graph-refs {:optional true} [:vector GraphRef]]
    [:notes {:optional true} :string]])
 
+(def TargetSanity
+  "Sanity check on the intended main formal target.
+   This is the HtDP question: are we building the right program?"
+  [:map {:closed false}
+   [:mentions-problem-objects? :boolean]
+   [:avoids-assuming-conclusion? :boolean]
+   [:meaningful-without-prose? :boolean]
+   [:notes :string]])
+
+(def TargetCheckPhaseData
+  [:map {:closed false}
+   [:proof-plan :map]
+   [:formal-alignment :map]
+   [:target-sanity TargetSanity]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
 (def ExecutePhaseData
   [:map {:closed false}
    [:artifacts [:vector :string]]
@@ -226,6 +243,7 @@
   [:map
    [:observe {:optional true} ObservePhaseData]
    [:propose {:optional true} ProposePhaseData]
+   [:target-check {:optional true} TargetCheckPhaseData]
    [:execute {:optional true} ExecutePhaseData]
    [:validate {:optional true} ValidatePhaseData]
    [:classify {:optional true} ClassifyPhaseData]
@@ -357,6 +375,8 @@
                 :tryharder-license :proof-mode-get}
    :propose   #{:ledger-query :dag-impact :corpus-check :read :grep :glob
                 :bash-readonly :cycle-advance :cycle-get :proof-mode-get}
+   :target-check #{:read :write :glob :grep :bash-readonly
+                   :cycle-advance :cycle-get}
    :execute   #{:read :write :bash :glob :grep
                 :cycle-advance :cycle-get}
    :validate  #{:read :bash :bash-readonly :glob :grep
@@ -377,7 +397,7 @@
 
 (def phase-order
   "The canonical order of cycle phases."
-  [:observe :propose :execute :validate :classify :integrate :commit :gate-review :completed])
+  [:observe :propose :target-check :execute :validate :classify :integrate :commit :gate-review :completed])
 
 (def phase-transitions
   "Valid phase transitions — each phase can only advance to the next."
@@ -388,6 +408,7 @@
    Keys are the phase being left; values are required keys in phase-data."
   {:observe   #{:blocker-id}
    :propose   #{:approach}
+   :target-check #{:proof-plan :formal-alignment :target-sanity}
    :execute   #{:artifacts}
    :validate  #{:validation-artifacts}
    :classify  #{:classification}
@@ -430,6 +451,7 @@
   [phase]
   (get {:observe ObservePhaseData
         :propose ProposePhaseData
+        :target-check TargetCheckPhaseData
         :execute ExecutePhaseData
         :validate ValidatePhaseData
         :classify ClassifyPhaseData

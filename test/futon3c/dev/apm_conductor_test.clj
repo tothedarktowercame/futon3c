@@ -23,7 +23,7 @@
 
       :cycle-advance
       (let [[pid _cycle-id phase-data] args
-            phases [:observe :propose :execute :validate :classify :integrate]]
+            phases [:observe :propose :target-check :execute :validate :classify :integrate]]
         (if (< @phase-idx (count phases))
           (let [phase (nth phases @phase-idx)
                 validation-error (apm-queue/apm-phase-validator phase phase-data {})]
@@ -38,6 +38,9 @@
           {:ok true :result {:accepted :mechanical}}))
 
       {:ok true :result nil})))
+
+(def ^:private valid-target-check-output
+  "**TARGET SANITY CHECK**\n- mentions-problem-objects?: yes\n- avoids-assuming-conclusion?: yes\n- meaningful-without-prose?: yes\n- notes: The target theorem still states the actual claim.\n\n**PROOF-PLAN.EDN**\n```edn\n{:goal \"Prove the claim.\"\n :terms [{:name \"x\" :meaning \"the main object\" :needed-because \"it appears in the statement\"}]\n :strategy [{:id :main-step\n             :formal-dependency \"main reduction lemma\"\n             :informal-dependency \"reduce to the canonical estimate\"\n             :why-this-now \"the target is a direct convergence statement\"\n             :lean-target \"theorem main_target : True\"\n             :mathlib-status \"custom\"\n             :critical-path true}]\n :stage-status {:stage1 :done :stage2 :done :stage3 :pending :stage4 :pending}}\n```\n\n**FORMAL-ALIGNMENT.EDN**\n```edn\n{:main-claim {:informal-claim \"Prove the claim.\"\n              :formal-name \"main_target\"\n              :formal-target \"theorem main_target : True\"\n              :sanity-check {:mentions-problem-objects? true\n                             :avoids-assuming-conclusion? true\n                             :meaningful-without-prose? true\n                             :notes \"The target theorem still states the claim being pursued.\"}}\n :alignments [{:formal-name \"main_target\"\n               :formal-statement \"theorem main_target : True\"\n               :informal-clause \"Main claim\"\n               :role :main-theorem}]}\n```")
 
 (deftest parse-dependency-graph-extracts-concrete-entries
   (let [text "Stage 2 — LEMMA DEPENDENCY GRAPH\n--------------------------------\n\n1. **Completion lemma**\n   - **Formal dependency**: completion of Lebesgue measure by Borel sets up to null symmetric difference.\n   - **Informal dependency**: if the statement only asks for equality almost everywhere, reach for completion rather than explicit construction.\n   - **Why this becomes thinkable here**: the goal is to replace a measurable set/function by a Borel representative, which is exactly a completion move.\n   - **Lean target/type**: `∀ A, MeasurableSet A -> ∃ B, MeasurableSet[Borel] B ∧ μ (A ∆ B) = 0`.\n   - **Mathlib status/search terms**: likely in Mathlib; search `toMeasurable`, `ae_eq_set`, `completion`.\n   - **Critical path**: Yes, it unlocks the entire construction.\n\n2. **Simple approximation**\n   - **Formal dependency**: measurable functions admit simple-function approximations.\n   - **Informal dependency**: once the set case is handled, the function case usually reduces by step-function approximation.\n   - **Why this becomes thinkable here**: the target asks for a Borel measurable representative of a measurable function, so approximation is the standard bridge.\n   - **Lean target/type**: `Measurable f -> ∃ s_n, Tendsto s_n ...`.\n   - **Mathlib status/search terms**: custom wiring around simple functions; search `SimpleFunc`, `approx`, `ae_measurable`.\n   - **Critical path**: No, downstream of completion.\n"
@@ -204,6 +207,7 @@
                          :frame/lean-root (str tmp-dir "/apm-lean/ApmCanaries/Frames/Replay01/Run1")
                          :frame/shared-extension-root (str tmp-dir "/apm-lean/ApmCanaries/Local")
                          :artifacts {:proof-plan (str tmp-dir "/frame/proof-plan.edn")
+                                     :formal-alignment (str tmp-dir "/frame/formal-alignment.edn")
                                      :changelog (str tmp-dir "/frame/changelog.edn")
                                      :execute-notes (str tmp-dir "/frame/execute.md")
                                      :workspace-metadata (str tmp-dir "/frame/workspace.json")
@@ -211,7 +215,8 @@
                                      :lean-scratch (str tmp-dir "/apm-lean/ApmCanaries/Frames/Replay01/Run1/Scratch.lean")}}
         observe "WHAT IS REALLY BEING ASKED\nShow the zero-counting argument converges.\n\nWHY IT IS HARD\nOne must turn growth into summability."
         propose "THE KEY INSIGHT\nUse Jensen-style counting bounds.\n\nTHE NAIVE APPROACH THAT FAILS\nA termwise estimate on zeros gives no global control."
-        execute "**Stage 1 — THE CLEAN PROOF**\nUse the growth bound to control the zero counting function, then compare the weighted series with a convergent integral.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n1. **Counting bound**\n   - **Formal dependency**: Jensen-type control turns exponential growth into linear control on the zero counting function.\n   - **Informal dependency**: when an entire function has exponential type, the right hidden move is to estimate how many zeros lie in each disk.\n   - **Why this becomes thinkable here**: the target is a summability statement over zeros, so the natural bridge is a counting function rather than a direct termwise estimate.\n   - **Lean target/type**: `∃ C ≥ 0, ∀ r ≥ 0, (N r : ℝ) ≤ C * (1 + r)`.\n   - **Mathlib status/search terms**: custom; search `Summable`, `Real.rpow`, `Nat.cast`.\n   - **Critical path**: yes.\n\n2. **Integral comparison**\n   - **Formal dependency**: linear counting growth with `α > 1` implies convergence of the weighted Dirichlet series.\n   - **Informal dependency**: once the counting function is tame, dyadic or integral comparison is the standard way to prove summability.\n   - **Why this becomes thinkable here**: the exponent condition `α > 1` is exactly the threshold where a one-dimensional tail integral converges.\n   - **Lean target/type**: `Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))`.\n   - **Mathlib status/search terms**: partially in Mathlib; search `summable_nat_add_iff`, `Real.summable_nat_rpow`.\n   - **Critical path**: yes.\n\n**PROOF-PLAN.EDN**\n```edn\n{:goal \"Show the weighted zero series converges.\"\n :terms [{:name \"zero counting function\" :meaning \"counts zeros in disks\" :needed-because \"turns global growth into a summability estimate\"}]\n :strategy [{:id :counting-bound :formal-dependency \"Jensen-type counting bound\" :informal-dependency \"replace termwise zero estimates by a counting function\" :why-this-now \"the target is a series over zeros, so counting is the natural bridge\" :lean-target \"∃ C ≥ 0, ∀ r ≥ 0, (N r : ℝ) ≤ C * (1 + r)\" :mathlib-status \"custom; search `Summable`, `Real.rpow`, `Nat.cast`\" :critical-path true}\n            {:id :integral-comparison :formal-dependency \"integral comparison for p-series tails\" :informal-dependency \"once counting growth is linear, compare to a convergent integral\" :why-this-now \"the hypothesis gives α > 1, exactly the one-dimensional convergence threshold\" :lean-target \"Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))\" :mathlib-status \"partially in Mathlib; search `summable_nat_add_iff`, `Real.summable_nat_rpow`\" :critical-path true}]\n :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n```\n\n**Stage 3 — LEAN FORMALIZATION**\nBuilt the typed scaffold and closed the final theorem in the current artifact.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\nThe hard step is not the last comparison but knowing to pass through the zero-counting function first."
+        target-check "**TARGET SANITY CHECK**\n- mentions-problem-objects?: yes\n- avoids-assuming-conclusion?: yes\n- meaningful-without-prose?: yes\n- notes: The target theorem still states the weighted zero-series convergence claim.\n\n**PROOF-PLAN.EDN**\n```edn\n{:goal \"Show the weighted zero series converges.\"\n :terms [{:name \"zero counting function\" :meaning \"counts zeros in disks\" :needed-because \"turns global growth into a summability estimate\"}]\n :strategy [{:id :counting-bound :formal-dependency \"Jensen-type counting bound\" :informal-dependency \"replace termwise zero estimates by a counting function\" :why-this-now \"the target is a series over zeros, so counting is the natural bridge\" :lean-target \"∃ C ≥ 0, ∀ r ≥ 0, (N r : ℝ) ≤ C * (1 + r)\" :mathlib-status \"custom; search `Summable`, `Real.rpow`, `Nat.cast`\" :critical-path true}\n            {:id :integral-comparison :formal-dependency \"integral comparison for p-series tails\" :informal-dependency \"once counting growth is linear, compare to a convergent integral\" :why-this-now \"the hypothesis gives α > 1, exactly the one-dimensional convergence threshold\" :lean-target \"Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))\" :mathlib-status \"partially in Mathlib; search `summable_nat_add_iff`, `Real.summable_nat_rpow`\" :critical-path true}]\n :stage-status {:stage1 :done :stage2 :done :stage3 :pending :stage4 :pending}}\n```\n\n**FORMAL-ALIGNMENT.EDN**\n```edn\n{:main-claim {:informal-claim \"Show the weighted zero series converges.\"\n              :formal-name \"weighted_zero_series_summable\"\n              :formal-target \"theorem weighted_zero_series_summable : Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))\"\n              :sanity-check {:mentions-problem-objects? true\n                             :avoids-assuming-conclusion? true\n                             :meaningful-without-prose? true\n                             :notes \"The target theorem states the actual convergence claim.\"}}\n :alignments [{:formal-name \"weighted_zero_series_summable\"\n               :formal-statement \"theorem weighted_zero_series_summable : Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))\"\n               :informal-clause \"Stage 1: the weighted zero series converges.\"\n               :role :main-theorem}]}\n```"
+        execute "**Stage 1 — THE CLEAN PROOF**\nUse the growth bound to control the zero counting function, then compare the weighted series with a convergent integral.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n1. **Counting bound**\n   - **Formal dependency**: Jensen-type control turns exponential growth into linear control on the zero counting function.\n   - **Informal dependency**: when an entire function has exponential type, the right hidden move is to estimate how many zeros lie in each disk.\n   - **Why this becomes thinkable here**: the target is a summability statement over zeros, so the natural bridge is a counting function rather than a direct termwise estimate.\n   - **Lean target/type**: `∃ C ≥ 0, ∀ r ≥ 0, (N r : ℝ) ≤ C * (1 + r)`.\n   - **Mathlib status/search terms**: custom; search `Summable`, `Real.rpow`, `Nat.cast`.\n   - **Critical path**: yes.\n\n2. **Integral comparison**\n   - **Formal dependency**: linear counting growth with `α > 1` implies convergence of the weighted Dirichlet series.\n   - **Informal dependency**: once the counting function is tame, dyadic or integral comparison is the standard way to prove summability.\n   - **Why this becomes thinkable here**: the exponent condition `α > 1` is exactly the threshold where a one-dimensional tail integral converges.\n   - **Lean target/type**: `Summable (fun n => Real.rpow (1 + ‖zeros n‖) (-α))`.\n   - **Mathlib status/search terms**: partially in Mathlib; search `summable_nat_add_iff`, `Real.summable_nat_rpow`.\n   - **Critical path**: yes.\n\n**Stage 3 — LEAN FORMALIZATION**\nBuilt the typed scaffold and closed the final theorem in the current artifact.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\nThe hard step is not the last comparison but knowing to pass through the zero-counting function first."
         validate "Non-circularity analysis: the zero-counting estimate is independent of the desired summability conclusion.\n\nLean status: built successfully, zero sorry."
         classify "**Classification**: proved.\n\n**CONFIDENCE INVERSION**: The surprise is that the proof is really about counting zeros in disks, not estimating each zero separately."
         integrate "**Connections**\nThis is a prototype for Jensen, Cartwright, and density arguments in complex analysis.\n\n**EXAM-DAY FIELD KIT**\n1. Summability over zeros is usually a counting-function problem.\n2. Exponential type suggests Jensen-style disk estimates.\n3. `α > 1` is the one-dimensional convergence threshold.\n\n**ArSE Questions**\n1. *Why is this hard?*\n   **Q:** Why can’t we just bound each zero directly?\n   **A:** Because the hypothesis controls global growth, not individual zeros.\n2. *What is the key insight?*\n   **Q:** What single move unlocks the proof?\n   **A:** Replace the series by a counting-function estimate.\n3. *Why does step N work?*\n   **Q:** Why does linear zero growth imply convergence here?\n   **A:** Because the tail compares to an integral with exponent greater than one.\n4. *What connects to this?*\n   **Q:** Where else does this method appear?\n   **A:** In Jensen formula, entire-function theory, and zero-density arguments.\n5. *Where is intuition wrong?*\n   **Q:** What false instinct should we avoid?\n   **A:** Thinking the zeros must be controlled one-by-one rather than statistically."
@@ -231,16 +236,17 @@
                   apm-queue/emit-apm-evidence! (fn [& _] nil)
                   pb/make-proof-backend (fn [_config] backend)]
       (conductor/start-apm-conductor! nil :agent-id "codex-1" :problem-ids ["replay01"])
-      (doseq [payload [observe propose execute validate classify integrate]]
+      (doseq [payload [observe propose target-check execute validate classify integrate]]
         (@idle-callback "codex-1" {:ok true :result payload}))
       (testing "the scripted run reaches batch completion"
         (is (nil? @conductor/!apm-conductor))
         (is (= 1 (:problems-done @conductor/!apm-state)))
         (is (= :integrate (-> @phase-history last :phase)))
         (is (= 5 (count (get-in (-> @phase-history last :phase-data) [:arse-questions]))))
-        (is (= 2 (count (get-in (nth @phase-history 2) [:phase-data :dependency-graph]))))
         (is (map? (get-in (nth @phase-history 2) [:phase-data :proof-plan])))
-        (is (seq (get-in (nth @phase-history 2) [:phase-data :changelog])))
+        (is (map? (get-in (nth @phase-history 2) [:phase-data :formal-alignment])))
+        (is (= 2 (count (get-in (nth @phase-history 3) [:phase-data :dependency-graph]))))
+        (is (seq (get-in (nth @phase-history 3) [:phase-data :changelog])))
         (is (some #(= :problem-complete (:event %)) @logs))
         (is (some #(= :batch-complete (:event %)) @logs))))))
 
@@ -253,6 +259,7 @@
                          :frame/lean-root "/home/joe/code/apm-lean/ApmCanaries/Frames/Replay01/Run1"
                          :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
                          :artifacts {:proof-plan "/tmp/frame/proof-plan.edn"
+                                     :formal-alignment "/tmp/frame/formal-alignment.edn"
                                      :changelog "/tmp/frame/changelog.edn"
                                      :execute-notes "/tmp/frame/execute.md"
                                      :workspace-metadata "/tmp/frame/workspace.json"
@@ -301,6 +308,7 @@
                          :frame/lean-root (str tmp-dir "/apm-lean/ApmCanaries/Frames/" problem-id "/Run1")
                          :frame/shared-extension-root (str tmp-dir "/apm-lean/ApmCanaries/Local")
                          :artifacts {:proof-plan (str tmp-dir "/frame/proof-plan.edn")
+                                     :formal-alignment (str tmp-dir "/frame/formal-alignment.edn")
                                      :changelog (str tmp-dir "/frame/changelog.edn")
                                      :execute-notes (str tmp-dir "/frame/execute.md")
                                      :workspace-metadata (str tmp-dir "/frame/workspace.json")
@@ -349,6 +357,8 @@
            {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
           (@idle-callback "codex-1"
            {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result valid-target-check-output})
 
           ;; Now in execute: return incomplete text (missing Stage 1-4 headings) repeatedly.
           ;; Each return should trigger a re-dispatch. After max-execute-redispatches,
@@ -382,6 +392,8 @@
            {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
           (@idle-callback "codex-1"
            {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result valid-target-check-output})
 
           ;; Backdate execute-start-ms to simulate timer expiry
           (swap! conductor/!apm-state assoc
@@ -481,6 +493,8 @@
            {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
           (@idle-callback "codex-1"
            {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result valid-target-check-output})
           (dotimes [_ (inc @#'conductor/max-phase-failures)]
             (@idle-callback "codex-1"
              {:ok false
@@ -497,7 +511,7 @@
       (with-redefs-fn (assoc redef-bindings
                              #'conductor/discover-lean-artifacts (fn [_ _ _] [])
                              #'conductor/has-sorry? (fn [_] true)
-                             #'conductor/htdp-record-complete? (fn [_ _] true))
+                             #'conductor/htdp-record-complete? (fn [_ _ _] true))
         (fn []
           (conductor/start-apm-conductor! nil :agent-id "codex-1" :problem-ids ["cb01"])
 
@@ -506,6 +520,8 @@
            {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
           (@idle-callback "codex-1"
            {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result valid-target-check-output})
 
           ;; First execute: feed complete Stage 1-4 to populate the execute record.
           ;; has-sorry? is true so fully-closed? is false → sorry re-dispatch.
@@ -543,6 +559,8 @@
            {:ok true :result "WHAT IS REALLY BEING ASKED\nTest.\n\nWHY IT IS HARD\nTest."})
           (@idle-callback "codex-1"
            {:ok true :result "THE KEY INSIGHT\nTest.\n\nTHE NAIVE APPROACH THAT FAILS\nTest."})
+          (@idle-callback "codex-1"
+           {:ok true :result valid-target-check-output})
 
           ;; Feed execute with no sorry mention and no artifacts
           (@idle-callback "codex-1"

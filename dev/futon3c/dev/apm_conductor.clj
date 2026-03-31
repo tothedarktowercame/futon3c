@@ -36,7 +36,7 @@
 (declare current-frame-workspace)
 
 (def ^:private apm-phases
-  [:observe :propose :execute :validate :classify :integrate])
+  [:observe :propose :target-check :execute :validate :classify :integrate])
 
 (def ^:private lean-floor-ms
   "Minimum time in execute phase (15 minutes) unless zero sorry."
@@ -119,6 +119,14 @@
     (or (apm-frames/proof-plan-path frame-workspace)
         (str proof-peripheral-root "/apm-" pid "-proof-plan.edn"))))
 
+(defn- formal-alignment-sidecar-path
+  [problem]
+  (let [pid (:id problem)
+        frame-workspace (when (= pid (get-in @!apm-state [:current-problem :id]))
+                          (:frame-workspace @!apm-state))]
+    (or (apm-frames/formal-alignment-path frame-workspace)
+        (str proof-peripheral-root "/apm-" pid "-formal-alignment.edn"))))
+
 (defn- changelog-sidecar-path
   [problem]
   (let [pid (:id problem)
@@ -198,9 +206,10 @@
     (every? #(not (str/blank? %)) [stage1 stage2 stage3 stage4])))
 
 (defn- htdp-record-complete?
-  [execute-record proof-plan]
+  [execute-record proof-plan formal-alignment]
   (and (execute-record-complete? execute-record)
-       (apm-queue/valid-proof-plan? proof-plan)))
+       (apm-queue/valid-proof-plan? proof-plan)
+       (apm-queue/valid-formal-alignment? formal-alignment)))
 
 (defn- extract-lean-delta
   [text]
@@ -266,6 +275,11 @@
   (or (parse-edn-snippet (extract-fenced-edn text "PROOF-PLAN.EDN"))
       (parse-edn-snippet (extract-fenced-edn text "PROOF PLAN EDN"))))
 
+(defn- extract-formal-alignment
+  [text]
+  (or (parse-edn-snippet (extract-fenced-edn text "FORMAL-ALIGNMENT.EDN"))
+      (parse-edn-snippet (extract-fenced-edn text "FORMAL ALIGNMENT EDN"))))
+
 (defn- persist-proof-plan!
   [problem proof-plan]
   (when proof-plan
@@ -273,6 +287,14 @@
           parent (.getParentFile (io/file path))]
       (when parent (.mkdirs parent))
       (spit path (pr-str proof-plan)))))
+
+(defn- persist-formal-alignment!
+  [problem formal-alignment]
+  (when formal-alignment
+    (let [path (formal-alignment-sidecar-path problem)
+          parent (.getParentFile (io/file path))]
+      (when parent (.mkdirs parent))
+      (spit path (pr-str formal-alignment)))))
 
 (defn- persist-changelog!
   [problem changelog]
@@ -290,10 +312,24 @@
       (persist-proof-plan! problem plan))
     plan))
 
+(defn- update-formal-alignment!
+  [problem output]
+  (let [alignment (extract-formal-alignment output)]
+    (when alignment
+      (swap! !apm-state assoc :formal-alignment alignment)
+      (persist-formal-alignment! problem alignment))
+    alignment))
+
 (defn- current-proof-plan
   [problem]
   (or (:proof-plan @!apm-state)
       (some-> (slurp-if-exists (proof-plan-sidecar-path problem))
+              parse-edn-snippet)))
+
+(defn- current-formal-alignment
+  [problem]
+  (or (:formal-alignment @!apm-state)
+      (some-> (slurp-if-exists (formal-alignment-sidecar-path problem))
               parse-edn-snippet)))
 
 (defn- append-changelog-entry!
@@ -554,6 +590,7 @@
   [problem execute-artifacts]
   (->> (concat execute-artifacts
                (keep identity [(phase-sidecar-path problem :propose)
+                               (formal-alignment-sidecar-path problem)
                                (phase-sidecar-path problem :execute)
                                (proof-plan-sidecar-path problem)
                                (changelog-sidecar-path problem)]))
@@ -572,15 +609,18 @@
     (case phase
       :observe   (apm-queue/make-observe-prompt problem tex-body frame-context)
       :propose   (apm-queue/make-propose-prompt problem tex-body (:observe phase-notes) frame-context)
-    :execute   (apm-queue/make-execute-prompt problem tex-body
-                                              (:observe phase-notes) (:propose phase-notes) frame-context)
-    :validate  (apm-queue/make-validate-prompt problem (:execute phase-notes) "see notes")
-    :classify  (apm-queue/make-classify-prompt problem (:validate phase-notes))
-    :integrate (apm-queue/make-integrate-prompt problem
-                 (str/join "\n\n" (for [p [:observe :propose :execute :validate :classify]
-                                        :let [n (get phase-notes p)]
-                                        :when n]
-                                    (str (str/upper-case (name p)) ":\n" n)))))))
+      :target-check (apm-queue/make-target-check-prompt problem tex-body
+                                                        (:observe phase-notes) (:propose phase-notes)
+                                                        frame-context)
+      :execute   (apm-queue/make-execute-prompt problem tex-body
+                                                (:observe phase-notes) (:propose phase-notes) frame-context)
+      :validate  (apm-queue/make-validate-prompt problem (:execute phase-notes) "see notes")
+      :classify  (apm-queue/make-classify-prompt problem (:validate phase-notes))
+      :integrate (apm-queue/make-integrate-prompt problem
+                   (str/join "\n\n" (for [p [:observe :propose :target-check :execute :validate :classify]
+                                          :let [n (get phase-notes p)]
+                                          :when n]
+                                      (str (str/upper-case (name p)) ":\n" n)))))))
 
 (defn- make-lean-continue-prompt
   "Prompt for re-dispatch when agent returns early from execute with sorry."
@@ -782,6 +822,17 @@
                                  :mathlib-status "search `DenseInducing`, `ContinuousLinearMap`, `Tendsto`"
                                  :critical-path true}]
                      :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+        sample-formal-alignment {:main-claim {:informal-claim "Show the operator family converges strongly."
+                                              :formal-name "strong_operator_convergence"
+                                              :formal-target "theorem strong_operator_convergence : ∀ x, Tendsto (fun n => T n x) atTop (𝓝 (T∞ x))"
+                                              :sanity-check {:mentions-problem-objects? true
+                                                             :avoids-assuming-conclusion? true
+                                                             :meaningful-without-prose? true
+                                                             :notes "The target theorem still states the actual operator convergence claim."}}
+                                 :alignments [{:formal-name "strong_operator_convergence"
+                                               :formal-statement "theorem strong_operator_convergence : ∀ x, Tendsto (fun n => T n x) atTop (𝓝 (T∞ x))"
+                                               :informal-clause "Main strong convergence claim."
+                                               :role :main-theorem}]}
         sample-changelog [{:kind :initial-plan
                            :summary "Captured the initial HtDP plan and identified the dense-set reduction as the critical path."
                            :full-record? true
@@ -796,6 +847,7 @@
                                          :source "search `Dense`, `Tendsto`, `ContinuousLinearMap`"
                                          :on-critical-path true}]
                      :proof-plan sample-plan
+                     :formal-alignment sample-formal-alignment
                      :changelog sample-changelog
                      :lean-elapsed-ms 900000
                      :notes "Stage 1 — THE CLEAN PROOF\n--------------------------------\n\nProof.\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n--------------------------------\n\n1. **Dense-set reduction**\n   - **Formal dependency**: dense-set reduction for uniformly bounded operators.\n   - **Informal dependency**: prove convergence on a dense core, then extend by the bound.\n   - **Why this becomes thinkable here**: the target is strong convergence with a uniform norm bound.\n   - **Lean target/type**: `∀ x, Tendsto (fun n => T n x) ...`.\n   - **Mathlib status/search terms**: search `Dense`, `Tendsto`, `ContinuousLinearMap`.\n   - **Critical path**: yes.\n\n**PROOF-PLAN.EDN**\n```edn\n{:goal \"Show the operator family converges strongly.\"\n :terms [{:name \"strong convergence\" :meaning \"pointwise convergence on each vector\" :needed-because \"target statement\"}]\n :strategy [{:id :dense-set-reduction :formal-dependency \"dense-set reduction for uniformly bounded operators\" :informal-dependency \"prove convergence on a dense core, then extend by the uniform bound\" :why-this-now \"operator convergence plus a bound usually signals dense-set extension\" :lean-target \"∀ x, Tendsto (fun n => T n x) ...\" :mathlib-status \"search `DenseInducing`, `ContinuousLinearMap`, `Tendsto`\" :critical-path true}]\n :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n```\n\nStage 3 — LEAN FORMALIZATION\n--------------------------------\n\nLean.\n\nStage 4 — FORMAL-TO-INFORMAL REVISION\n--------------------------------\n\nRevision."}]
@@ -805,6 +857,9 @@
 
       (not (apm-queue/valid-changelog? sample-changelog))
       {:ok false :message "Sample changelog failed validation"}
+
+      (not (apm-queue/valid-formal-alignment? sample-formal-alignment))
+      {:ok false :message "Sample formal alignment failed validation"}
 
       (not (full-execute-submission? (:notes sample-data)))
       {:ok false :message "Execute parser preflight failed to recognize full Stage 1-4 record"}
@@ -869,8 +924,10 @@
         remaining-ms (- lean-floor-ms total-elapsed-ms)
         execute-record (update-execute-record! agent-output)
         _ (update-proof-plan! current-problem agent-output)
+        _ (update-formal-alignment! current-problem agent-output)
         proof-plan (current-proof-plan current-problem)
-        full-record? (htdp-record-complete? execute-record proof-plan)
+        formal-alignment (current-formal-alignment current-problem)
+        full-record? (htdp-record-complete? execute-record proof-plan formal-alignment)
         artifacts (discover-lean-artifacts current-problem execute-start-ms agent-output)
         sorry? (boolean (or (has-sorry? agent-output)
                             (some artifact-has-sorry? artifacts)))
@@ -887,7 +944,8 @@
                     :sorry? sorry?
                     :fully-closed? fully-closed?
                     :artifacts artifacts
-                    :plan-updated? (boolean (extract-proof-plan agent-output))})]
+                    :plan-updated? (boolean (extract-proof-plan agent-output))
+                    :alignment-updated? (boolean (extract-formal-alignment agent-output))})]
 
     (log! {:event :execute-return :problem pid
            :elapsed-ms dispatch-elapsed-ms
@@ -1143,6 +1201,9 @@
 
       ;; For non-execute phases (or execute that passed the floor):
       (do
+        (when (= current-phase :target-check)
+          (update-proof-plan! current-problem output)
+          (update-formal-alignment! current-problem output))
         (when (not= current-phase :execute)
           (swap! !apm-state assoc-in [:phase-notes current-phase]
                  (normalized-phase-notes current-problem current-phase output)))
@@ -1151,6 +1212,7 @@
     (let [accumulated-execute (get-in @!apm-state [:phase-notes :execute])
           execute-record (:execute-record @!apm-state)
           proof-plan (current-proof-plan current-problem)
+          formal-alignment (current-formal-alignment current-problem)
           changelog (:execute-changelog @!apm-state)
           normalized-notes (case current-phase
                              :execute (or (execute-record->notes execute-record)
@@ -1169,10 +1231,15 @@
             :propose   {:approach (or (extract-bold-section normalized-notes "THE KEY INSIGHT")
                                       normalized-notes)
                         :notes normalized-notes}
+            :target-check {:proof-plan proof-plan
+                           :formal-alignment formal-alignment
+                           :target-sanity (get-in formal-alignment [:main-claim :sanity-check])
+                           :notes normalized-notes}
             :execute   {:artifacts execute-artifacts
                         :dependency-graph (or (some-> execute-record :stage2 parse-dependency-graph)
                                               (parse-dependency-graph execute-notes))
                         :proof-plan proof-plan
+                        :formal-alignment formal-alignment
                         :changelog changelog
                         :lean-elapsed-ms execute-total-elapsed
                         :notes execute-notes
@@ -1318,6 +1385,7 @@
                    :frame-workspace frame-workspace
                    :execute-record (empty-execute-record)
                    :proof-plan nil
+                   :formal-alignment nil
                    :execute-changelog []
                    :problem-start-ms (System/currentTimeMillis)
                    :phase-dispatch-ms nil

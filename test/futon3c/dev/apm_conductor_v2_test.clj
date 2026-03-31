@@ -1,8 +1,9 @@
 (ns futon3c.dev.apm-conductor-v2-test
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agents.apm-work-queue :as apm-queue]
+            [futon3c.dev.apm-dispatch :as dispatch]
             [futon3c.dev.apm-conductor-v2 :as conductor]
             [futon3c.dev.apm-frames :as frames]
             [futon3c.peripheral.proof-backend :as pb]
@@ -10,6 +11,17 @@
 
 (defn- cid [agent-id]
   [:apm-v2 agent-id])
+
+(use-fixtures
+  :each
+  (fn [f]
+    (reset! conductor/!conductor {})
+    (reset! conductor/!state {})
+    (reset! dispatch/!conductors {})
+    (f)
+    (reset! conductor/!conductor {})
+    (reset! conductor/!state {})
+    (reset! dispatch/!conductors {})))
 
 (deftest solve-prompt-prefers-frame-local-paths
   (reset! conductor/!state
@@ -33,7 +45,8 @@
     (is (str/includes? prompt "Do not use shared scratch paths like `ApmCanaries/Current.lean`"))
     (is (str/includes? prompt "/home/joe/code/proof_peripheral/worked-solutions/a02J04-full"))
     (is (str/includes? prompt ":stage-status"))
-    (is (str/includes? prompt ":full-record? true"))))
+    (is (str/includes? prompt ":full-record? true"))
+    (is (str/includes? prompt ":mentions-problem-objects? true"))))
 
 (deftest start-next-problem-initializes-frame-workspace
   (let [idle-callback (atom nil)
@@ -123,7 +136,7 @@
     (spit lean-main "import Mathlib\n\ntheorem clean : True := by trivial\n")
     (spit execute-path "**Stage 1 — THE CLEAN PROOF**\n\n[Fill in the authoritative reader-facing proof.]\n")
     (spit plan-path "{:goal \"\" :terms [] :strategy [] :checkpoints [{:stage 1 :status :pending}]}\n")
-    (spit (get-in workspace [:artifacts :formal-alignment]) "{:main-claim {:informal-claim \"\" :formal-name \"\" :formal-target \"\"} :alignments []}\n")
+    (spit (get-in workspace [:artifacts :formal-alignment]) "{:main-claim {:informal-claim \"\" :formal-name \"\" :formal-target \"\" :sanity-check {:mentions-problem-objects? false :avoids-assuming-conclusion? false :meaningful-without-prose? false :notes \"\"}} :alignments []}\n")
     (spit changelog-path "[{:kind :workspace-initialized :summary \"seed\"}]\n")
     (reset! conductor/!state {(cid "codex-1")
                               {:current-problem {:id "a00J02" :subject :analysis :year 2000 :session :fall}
@@ -198,7 +211,7 @@
     (spit lean-main "import Mathlib\n\nnamespace Foo\n\nend Foo\n")
     (spit execute-path "**Stage 1 — THE CLEAN PROOF**\n\nA real proof.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n\n1. **Main step**\n   - **Formal dependency**: theorem X.\n   - **Informal dependency**: use idea Y.\n   - **Why this becomes thinkable here**: cue Z.\n   - **Lean target/type**: `theorem main_claim (x : ℝ) : x = x`.\n   - **Mathlib status/search terms**: search `rfl`.\n   - **Critical path**: yes.\n\n**Stage 3 — LEAN FORMALIZATION**\n\nLean work done.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\n\nRevision.\n")
     (spit plan-path "{:goal \"Main claim\" :terms [{:name \"x\" :meaning \"a real variable\" :needed-because \"target\"}] :strategy [{:id :s1 :formal-dependency \"theorem X\" :informal-dependency \"idea Y\" :why-this-now \"cue Z\" :lean-target \"theorem main_claim (x : ℝ) : x = x\" :mathlib-status \"existing\"}] :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n")
-    (spit alignment-path "{:main-claim {:informal-claim \"Main claim\" :formal-name \"main_claim\" :formal-target \"theorem main_claim (x : ℝ) : x = x\"} :alignments [{:formal-name \"main_claim\" :formal-statement \"theorem main_claim (x : ℝ) : x = x\" :informal-clause \"Main claim\" :role :main-theorem}]}\n")
+    (spit alignment-path "{:main-claim {:informal-claim \"Main claim\" :formal-name \"main_claim\" :formal-target \"theorem main_claim (x : ℝ) : x = x\" :sanity-check {:mentions-problem-objects? true :avoids-assuming-conclusion? true :meaningful-without-prose? true :notes \"The theorem still states the real claim.\"}} :alignments [{:formal-name \"main_claim\" :formal-statement \"theorem main_claim (x : ℝ) : x = x\" :informal-clause \"Main claim\" :role :main-theorem}]}\n")
     (spit changelog-path "[{:kind :stage1-completed :summary \"Proof written\" :full-record? true :sorry? false :fully-closed? false}]\n")
     (reset! conductor/!state {(cid "codex-1")
                               {:current-problem {:id "t97J01" :subject :topology :year 1997 :session :fall}
@@ -224,6 +237,20 @@
       (is (= 1 (count @prompts)))
       (is (str/includes? (first @prompts) "does not yet certify the problem you claim to have solved"))
       (is (str/includes? (first @prompts) "formal-alignment.edn")))))
+
+(deftest valid-formal-alignment-rejects-target-that-assumes-conclusion
+  (is (false? (apm-queue/valid-formal-alignment?
+                {:main-claim {:informal-claim "Y is Hausdorff"
+                              :formal-name "finiteCover_isHausdorff"
+                              :formal-target "theorem finiteCover_isHausdorff {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y] [T2Space Y] : T2Space Y"
+                              :sanity-check {:mentions-problem-objects? true
+                                             :avoids-assuming-conclusion? true
+                                             :meaningful-without-prose? true
+                                             :notes "This would be wrong, because it assumes the conclusion."}}
+                 :alignments [{:formal-name "finiteCover_isHausdorff"
+                               :formal-statement "theorem finiteCover_isHausdorff {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y] [T2Space Y] : T2Space Y"
+                               :informal-clause "Main claim"
+                               :role :main-theorem}]}))))
 
 (deftest start-apm-conductor-v2-keeps-other-agent-run-alive
   (let [idle-callback (atom nil)

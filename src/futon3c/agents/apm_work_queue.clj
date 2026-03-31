@@ -284,6 +284,60 @@
         "Your reply is the authoritative phase record. Do not summarize the file you wrote; "
         "emit the actual PROPOSE notes inline.\n")))
 
+(defn make-target-check-prompt
+  ([problem tex-body observe-notes propose-notes]
+   (make-target-check-prompt problem tex-body observe-notes propose-notes nil))
+  ([problem tex-body observe-notes propose-notes frame-context]
+   (str "Execution evidence required: no.\n"
+        "This is a text-authoring and design-check phase. The deliverable is a valid target theorem, proof plan, and alignment record, not Lean execution yet.\n\n"
+        "You are in the TARGET-CHECK phase of the proof peripheral.\n\n"
+        (problem-header problem tex-body)
+        (when frame-context
+          (str "\nFrame workspace root:\n"
+               (or (:workspace-root frame-context) "") "\n"
+               "Frame-local proof plan path:\n"
+               (or (:proof-plan-path frame-context) "") "\n"
+               "Frame-local formal alignment path:\n"
+               (or (:formal-alignment-path frame-context) "") "\n"))
+        "\nYour OBSERVE notes:\n" observe-notes "\n"
+        "\nYour PROPOSE notes:\n" propose-notes "\n\n"
+        "Task: decide whether you are building the right formal program BEFORE real Lean work starts.\n\n"
+        "Produce three things inline:\n"
+        "1. A concise **TARGET SANITY CHECK** section answering:\n"
+        "   - Does the main theorem still mention the real hypotheses and objects from the problem?\n"
+        "   - Does it avoid assuming the desired conclusion?\n"
+        "   - Would it still count as meaningful progress if the prose were deleted?\n"
+        "   - One sentence explaining why this is the right theorem to build.\n\n"
+        "2. A machine-readable `proof-plan.edn` block:\n"
+        "```edn\n"
+        "{:goal \"...\"\n"
+        " :terms [{:name \"...\" :meaning \"...\" :needed-because \"...\"}]\n"
+        " :strategy [{:id :step-1\n"
+        "             :formal-dependency \"...\"\n"
+        "             :informal-dependency \"...\"\n"
+        "             :why-this-now \"...\"\n"
+        "             :lean-target \"...\"\n"
+        "             :mathlib-status \"...\"\n"
+        "             :critical-path true}]\n"
+        " :stage-status {:stage1 :done :stage2 :done :stage3 :pending :stage4 :pending}}\n"
+        "```\n\n"
+        "3. A machine-readable `formal-alignment.edn` block:\n"
+        "```edn\n"
+        "{:main-claim {:informal-claim \"reader-facing statement\"\n"
+        "             :formal-name \"main_theorem_name\"\n"
+        "             :formal-target \"exact Lean theorem statement without the proof body\"\n"
+        "             :sanity-check {:mentions-problem-objects? true\n"
+        "                            :avoids-assuming-conclusion? true\n"
+        "                            :meaningful-without-prose? true\n"
+        "                            :notes \"One sentence on why this is the right theorem.\"}}\n"
+        " :alignments [{:formal-name \"main_theorem_name\"\n"
+        "              :formal-statement \"exact Lean theorem statement\"\n"
+        "              :informal-clause \"which sentence in Stage 1 this formal item certifies\"\n"
+        "              :role :main-theorem}]}\n"
+        "```\n\n"
+        "Hard gate: do NOT move on with a tautology, a theorem that assumes the conclusion, or a helper theorem unrelated to the main claim.\n"
+        "Your reply is the authoritative TARGET-CHECK record. Do not reply with file pointers or summaries.\n")))
+
 (defn make-execute-prompt
   ([problem tex-body observe-notes propose-notes]
    (make-execute-prompt problem tex-body observe-notes propose-notes nil))
@@ -345,7 +399,11 @@
         "```edn\n"
         "{:main-claim {:informal-claim \"reader-facing statement\"\n"
         "             :formal-name \"main_theorem_name\"\n"
-        "             :formal-target \"exact Lean theorem statement without the proof body\"}\n"
+        "             :formal-target \"exact Lean theorem statement without the proof body\"\n"
+        "             :sanity-check {:mentions-problem-objects? true\n"
+        "                            :avoids-assuming-conclusion? true\n"
+        "                            :meaningful-without-prose? true\n"
+        "                            :notes \"One sentence on why this is the right theorem.\"}}\n"
         " :alignments [{:formal-name \"main_theorem_name\"\n"
         "              :formal-statement \"exact Lean theorem statement\"\n"
         "              :informal-clause \"which sentence in Stage 1 this formal item certifies\"\n"
@@ -355,6 +413,11 @@
         "              :informal-clause \"which bridge step it justifies\"\n"
         "              :role :helper-lemma}]}\n"
         "```\n"
+        "Before spending real Lean time, do the HtDP target sanity check inside `:sanity-check`:\n"
+        "1. Does the theorem still mention the real hypotheses and objects from the problem?\n"
+        "2. Does it avoid assuming the desired conclusion?\n"
+        "3. Would it still count as meaningful progress if the prose were deleted?\n"
+        "If any answer is no, repair the theorem statement before formalizing.\n"
         "This alignment artifact must stay in sync with both the Stage 1 proof and the Lean declarations.\n\n"
         "**Stage 3 — LEAN FORMALIZATION**: 15-minute exam timer starts NOW.\n"
         "Build the skeleton from your dependency graph. Use HtDP to attack each sorry:\n"
@@ -515,25 +578,61 @@
          (every? valid-step? strategy)
          (valid-stage-status? stage-status))))
 
+(defn valid-target-sanity?
+  [target-sanity]
+  (and (map? target-sanity)
+       (boolean? (:mentions-problem-objects? target-sanity))
+       (boolean? (:avoids-assuming-conclusion? target-sanity))
+       (boolean? (:meaningful-without-prose? target-sanity))
+       (not (str/blank? (str/trim (str (or (:notes target-sanity) "")))))))
+
 (defn valid-formal-alignment?
   [alignment]
   (let [main-claim (:main-claim alignment)
         alignments (:alignments alignment)
+        sanity-check (:sanity-check main-claim)
         nonblank? (fn [x] (not (str/blank? (str/trim (str (or x ""))))))
+        normalize-target (fn [s]
+                           (-> (str (or s ""))
+                               (str/replace #"\s+" " ")
+                               str/trim))
+        target-conclusion (fn [target]
+                            (let [target (first (str/split (normalize-target target) #":=" 2))
+                                  idx (.lastIndexOf ^String target ":")]
+                              (when (pos? idx)
+                                (some-> (subs target (inc idx)) str/trim not-empty))))
+        target-prefix (fn [target]
+                        (let [target (first (str/split (normalize-target target) #":=" 2))
+                              idx (.lastIndexOf ^String target ":")]
+                          (when (pos? idx)
+                            (subs target 0 idx))))
+        assumes-conclusion? (fn [target]
+                              (let [conclusion (target-conclusion target)
+                                    prefix (or (target-prefix target) "")]
+                                (and conclusion
+                                     (str/includes? prefix conclusion))))
         valid-main-claim? (fn [m]
                             (and (map? m)
                                  (nonblank? (:informal-claim m))
                                  (nonblank? (:formal-name m))
                                  (nonblank? (:formal-target m))))
+        valid-sanity-check? (fn [m]
+                              (and (valid-target-sanity? m)
+                                   (true? (:mentions-problem-objects? m))
+                                   (true? (:avoids-assuming-conclusion? m))
+                                   (true? (:meaningful-without-prose? m))))
         valid-alignment? (fn [entry]
                            (and (map? entry)
                                 (nonblank? (:formal-name entry))
                                 (nonblank? (:formal-statement entry))
                                 (nonblank? (:informal-clause entry))
                                 (keyword? (:role entry))))
-        main-name (:formal-name main-claim)]
+        main-name (:formal-name main-claim)
+        main-target (:formal-target main-claim)]
     (and (map? alignment)
          (valid-main-claim? main-claim)
+         (valid-sanity-check? sanity-check)
+         (not (assumes-conclusion? main-target))
          (vector? alignments)
          (seq alignments)
          (every? valid-alignment? alignments)
@@ -576,6 +675,32 @@
    - Integrate: :notes required, :arse-questions required (5 items)"
   [phase phase-data _cycle]
   (case phase
+    :target-check
+    (let [proof-plan (:proof-plan phase-data)
+          formal-alignment (:formal-alignment phase-data)
+          target-sanity (:target-sanity phase-data)
+          notes (:notes phase-data)]
+      (cond
+        (str/blank? notes)
+        {:ok false :error {:code :missing-notes
+                           :message "Target-check phase requires :notes explaining the target theorem choice"}}
+        (indirect-notes? notes)
+        {:ok false :error {:code :indirect-notes
+                           :message "Target-check notes must contain the actual target sanity analysis, not file pointers or 'see notes'"}}
+        (not (valid-proof-plan? proof-plan))
+        {:ok false :error {:code :invalid-proof-plan
+                           :message "Target-check requires a valid proof-plan.edn artifact with goal, terms, strategy, and stage-status"}}
+        (not (valid-formal-alignment? formal-alignment))
+        {:ok false :error {:code :invalid-formal-alignment
+                           :message "Target-check requires a valid formal-alignment.edn artifact mapping the main informal claim to an explicit Lean declaration"}}
+        (not (valid-target-sanity? target-sanity))
+        {:ok false :error {:code :invalid-target-sanity
+                           :message "Target-check requires explicit yes/no answers for the HtDP target sanity check"}}
+        (not= target-sanity (get-in formal-alignment [:main-claim :sanity-check]))
+        {:ok false :error {:code :inconsistent-target-sanity
+                           :message "Target-check :target-sanity must agree with formal-alignment.edn :main-claim :sanity-check"}}
+        :else nil))
+
     :execute
     (let [artifacts (:artifacts phase-data)
           has-lean (has-lean-artifacts? artifacts)

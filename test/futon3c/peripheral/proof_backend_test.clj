@@ -25,6 +25,36 @@
   (pb/init-problem! cwd "P-test" "Prove X > 0 for all X in S" "All cases verified")
   (tools/execute-tool backend :proof-load ["P-test"]))
 
+(defn- valid-target-check-payload []
+  {:proof-plan {:goal "Prove X > 0 for all X in S."
+                :terms [{:name "X"
+                         :meaning "the main variable in the statement"
+                         :needed-because "it is the object being bounded"}]
+                :strategy [{:id :main-step
+                            :formal-dependency "main reduction lemma"
+                            :informal-dependency "translate the statement into a simpler monotonicity claim"
+                            :why-this-now "the target is a direct positivity statement, so reduction is the cue"
+                            :lean-target "theorem main_target : 0 < X"
+                            :mathlib-status "custom"
+                            :critical-path true}]
+                :stage-status {:stage1 :done :stage2 :done :stage3 :pending :stage4 :pending}}
+   :formal-alignment {:main-claim {:informal-claim "Prove X > 0 for all X in S."
+                                   :formal-name "main_target"
+                                   :formal-target "theorem main_target : 0 < X"
+                                   :sanity-check {:mentions-problem-objects? true
+                                                  :avoids-assuming-conclusion? true
+                                                  :meaningful-without-prose? true
+                                                  :notes "The target theorem still states the actual positivity claim."}}
+                      :alignments [{:formal-name "main_target"
+                                    :formal-statement "theorem main_target : 0 < X"
+                                    :informal-clause "Main positivity claim."
+                                    :role :main-theorem}]}
+   :target-sanity {:mentions-problem-objects? true
+                   :avoids-assuming-conclusion? true
+                   :meaningful-without-prose? true
+                   :notes "The target theorem still states the actual positivity claim."}
+   :notes "The target theorem still names the real objects, avoids assuming the conclusion, and would remain meaningful without the prose."})
+
 ;; =============================================================================
 ;; Load/Save round-trip
 ;; =============================================================================
@@ -288,6 +318,8 @@
             ["P-test" cycle-id {:blocker-id "L-b"}])
         _ (tools/execute-tool backend :cycle-advance
             ["P-test" cycle-id {:approach "Try a structural induction"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id (valid-target-check-payload)])
         adv (tools/execute-tool backend :cycle-advance
               ["P-test" cycle-id
                {:artifacts ["artifacts/step-1.txt"]
@@ -295,6 +327,24 @@
                                 :boundary/kind :not-a-boundary}}])]
     (is (not (:ok adv)))
     (is (= :invalid-phase-data (get-in adv [:error :code])))))
+
+(deftest cycle-advance-requires-target-check-before-execute
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:blocker-id "L-b"}])
+        propose-adv (tools/execute-tool backend :cycle-advance
+                      ["P-test" cycle-id {:approach "Try a structural induction"}])
+        target-adv (tools/execute-tool backend :cycle-advance
+                     ["P-test" cycle-id (valid-target-check-payload)])]
+    (is (:ok propose-adv))
+    (is (= :target-check (get-in propose-adv [:result :cycle/phase])))
+    (is (:ok target-adv))
+    (is (= :execute (get-in target-adv [:result :cycle/phase])))))
 
 (deftest cycle-advance-applies-phase-validator-hook
   (let [dir (fix/temp-dir!)
@@ -340,6 +390,7 @@
                                           :mathlib-status "status"
                                           :critical-path true}]
                               :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :formal-alignment (:formal-alignment (valid-target-check-payload))
                  :changelog [{:kind :initial-plan
                               :summary "Recorded the initial execute plan."
                               :full-record? true
@@ -374,6 +425,7 @@
                                           :mathlib-status "search `integral_mul_le_Lp_Lq`"
                                           :critical-path true}]
                               :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :formal-alignment (:formal-alignment (valid-target-check-payload))
                  :changelog [{:kind :initial-plan
                               :summary "Built the weighted Cauchy-Schwarz plan."
                               :full-record? true
@@ -409,6 +461,7 @@
                                           :mathlib-status "status"
                                           :critical-path true}]
                               :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :formal-alignment (:formal-alignment (valid-target-check-payload))
                  :changelog [{:kind :initial-plan
                               :summary "Built an initial plan."
                               :full-record? true
@@ -466,6 +519,8 @@
             ["P-test" cycle-id {:blocker-id "L-b"}])
         _ (tools/execute-tool backend :cycle-advance
             ["P-test" cycle-id {:approach "Try a structural induction"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id (valid-target-check-payload)])
         adv (tools/execute-tool backend :cycle-advance
               ["P-test" cycle-id
                {:artifacts ["artifacts/step-1.txt"]
@@ -569,6 +624,7 @@
         cycle-id (get-in begin [:result :cycle/id])
         _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id {:blocker-id "L-b"}])
         _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id {:approach "Direct"}])
+        _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id (valid-target-check-payload)])
         _ (tools/execute-tool backend :cycle-advance
             ["P-test" cycle-id
              {:artifacts ["artifacts/step-1.txt"]
