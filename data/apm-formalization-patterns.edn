@@ -1,0 +1,122 @@
+;; APM Formalization Pattern Library — extracted from 19 proved + 2 partial overnight proofs
+;; Generated 2026-04-01 from ApmCanaries/Frames/*/Main.lean
+;;
+;; Each pattern has:
+;;   :id           — unique pattern identifier
+;;   :name         — human-readable name
+;;   :recognition  — when to reach for this pattern (the informal dependency)
+;;   :mathlib-api  — key Mathlib lemmas/APIs used
+;;   :tactic-chain — typical tactic sequence
+;;   :subjects     — which prelim subjects use it
+;;   :examples     — problems where this pattern succeeded
+;;   :difficulty   — :routine / :moderate / :hard
+
+[
+ {:id :P-connected-union
+  :name "Connected union via common point"
+  :recognition "Union of connected sets sharing a common point → argue by contradiction via separations, each connected piece stays on one side"
+  :mathlib-api ["isPreconnected_sUnion" "Set.range" "Set.not_nonempty_iff"]
+  :tactic-chain ["classical" "by_cases" "simpa [sUnion_range]"]
+  :subjects [:topology]
+  :examples ["t92J01"]
+  :difficulty :routine}
+
+ {:id :P-separation-function
+  :name "Continuous separation function from distance"
+  :recognition "Separate disjoint closed sets by a continuous [0,1]-valued function → use dist(x,A)/(dist(x,A)+dist(x,B)) with empty-set guard"
+  :mathlib-api ["Metric.continuous_infDist_pt" "Metric.infDist_nonneg" "Continuous.div" "Set.nonempty_iff_ne_empty"]
+  :tactic-chain ["have" "exact" "simp" "ext" "classical"]
+  :subjects [:topology]
+  :examples ["t94A02"]
+  :difficulty :moderate}
+
+ {:id :P-finite-group-classification
+  :name "Finite group classification and counterexamples"
+  :recognition "Verify/refute claims about finite groups → use Fintype.card, ZMod.card, IsCyclic, Equiv.swap"
+  :mathlib-api ["Fintype.card" "Fintype.card_perm" "Fintype.card_prod" "ZMod.card" "IsCyclic.isCommutative" "Equiv.swap"]
+  :tactic-chain ["decide" "exact" "classical"]
+  :subjects [:algebra]
+  :examples ["b93J01" "b93J02"]
+  :difficulty :routine}
+
+ {:id :P-hilbert-projection
+  :name "Hilbert space orthogonal projection properties"
+  :recognition "Prove self-adjointness, idempotency, or norm-one of orthogonal projections → use Submodule.starProjection API"
+  :mathlib-api ["Submodule.starProjection_apply_mem" "Submodule.starProjection_eq_self_iff" "Submodule.norm_starProjection" "Submodule.isClosed_orthogonal" "Submodule.orthogonalProjection_eq_zero_iff"]
+  :tactic-chain ["constructor" "intro" "ext" "simp"]
+  :subjects [:applied]
+  :examples ["m96J01" "m98J03"]
+  :difficulty :routine}
+
+ {:id :P-metric-cauchy-convergence
+  :name "Cauchy sequence convergence in metric spaces"
+  :recognition "Prove a sequence converges by showing it's Cauchy → use Metric.cauchySeq_iff, Metric.tendsto_atTop, triangle inequality chains"
+  :mathlib-api ["Metric.cauchySeq_iff" "Metric.tendsto_atTop" "Real.dist_eq"]
+  :tactic-chain ["have" "intro" "calc" "nlinarith" "ring"]
+  :subjects [:analysis :topology]
+  :examples ["a97A04"]
+  :difficulty :moderate}
+
+ {:id :P-complex-polynomial-bound
+  :name "Complex polynomial norm estimates on balls"
+  :recognition "Bound a polynomial or analytic function on a disk → use Complex.norm_eq_abs, Metric.ball/closedBall, Metric.frontier_ball for boundary"
+  :mathlib-api ["Complex.norm_eq_abs" "Metric.ball" "Metric.closedBall" "Metric.frontier_ball" "Polynomial.eval"]
+  :tactic-chain ["have" "calc" "mul_comm" "mul_assoc" "classical"]
+  :subjects [:analysis]
+  :examples ["a99J07"]
+  :difficulty :moderate}
+
+ {:id :P-field-simp-reciprocal
+  :name "Field simplification for reciprocal/division goals"
+  :recognition "Prove x * (1/x) = 1 or similar reciprocal identities → field_simp + ne_of_gt clears division"
+  :mathlib-api ["ne_of_gt" "Pi.zero_apply"]
+  :tactic-chain ["field_simp" "nlinarith" "ne_of_gt"]
+  :subjects [:analysis :applied]
+  :examples ["a02J04"]
+  :difficulty :routine}
+
+ {:id :P-measure-restrict-simplify
+  :name "Simplify μ(univ) for restricted measures"
+  :recognition "Working with volume.restrict on [0,1] → rewrite μ(univ) = volume(Icc 0 1) = 1 to collapse rpow and mul terms"
+  :mathlib-api ["Measure.restrict_apply" "Real.volume_Icc" "ENNReal.ofReal_one" "one_rpow" "mul_one"]
+  :tactic-chain ["rw [Measure.restrict_apply]" "rw [Real.volume_Icc]" "rw [one_rpow, mul_one]"]
+  :subjects [:analysis]
+  :examples ["a00J01"]
+  :difficulty :routine}
+
+ {:id :P-rpow-exponent-limit
+  :name "Limit of t^{1/n} → 1 via continuity"
+  :recognition "Need t^{1/p} → 1 as p → ∞ for fixed t > 0 → compose Real.continuousAt_const_rpow with tendsto_const_div_atTop_nhds_zero_nat"
+  :mathlib-api ["Real.continuousAt_const_rpow" "Real.rpow_zero" "tendsto_const_div_atTop_nhds_zero_nat"]
+  :tactic-chain ["have hcont := Real.continuousAt_const_rpow" "have hlim := tendsto_const_div_atTop_nhds_zero_nat" "exact hcont.tendsto.comp hlim"]
+  :subjects [:analysis]
+  :examples ["a00J01"]
+  :difficulty :moderate}
+
+ {:id :P-lp-norm-comparison
+  :name "Lp norm comparison on finite measure spaces"
+  :recognition "Compare ‖f‖_p across exponents on finite measure → use eLpNorm_le_eLpNorm_mul_rpow_measure_univ, then simplify μ(univ)"
+  :mathlib-api ["eLpNorm_le_eLpNorm_mul_rpow_measure_univ" "le_eLpNorm_of_bddBelow"]
+  :tactic-chain ["have h := eLpNorm_le_eLpNorm_mul_rpow_measure_univ" "rw [...]" "exact h"]
+  :subjects [:analysis]
+  :examples ["a00J01"]
+  :difficulty :moderate}
+
+ {:id :P-ae-integral-zero
+  :name "Integral vanishes from a.e. zero integrand"
+  :recognition "Show ∫_A f = 0 when f = 0 a.e. on A → use integral_eq_zero_of_ae, ae_restrict_mem, filter_upwards"
+  :mathlib-api ["integral_eq_zero_of_ae" "ae_restrict_mem" "filter_upwards"]
+  :tactic-chain ["exact integral_eq_zero_of_ae" "filter_upwards [...] with x hx"]
+  :subjects [:analysis]
+  :examples ["a02J04"]
+  :difficulty :routine}
+
+ {:id :P-continuous-linear-map-comp
+  :name "Continuous linear map composition properties"
+  :recognition "Prove properties of composed bounded operators → use ContinuousLinearMap API"
+  :mathlib-api ["ContinuousLinearMap.comp_apply"]
+  :tactic-chain ["simp [ContinuousLinearMap.comp_apply]"]
+  :subjects [:applied]
+  :examples ["m98J03"]
+  :difficulty :routine}
+]

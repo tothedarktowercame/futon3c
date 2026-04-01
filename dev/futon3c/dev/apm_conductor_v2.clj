@@ -553,6 +553,44 @@
      :arse-count (count arse)}))
 
 ;; =============================================================================
+;; Pass 2: Formalization pattern injection
+;; =============================================================================
+
+(def ^:private pattern-library-path
+  "/home/joe/code/futon3c/data/apm-formalization-patterns.edn")
+
+(defn load-pattern-library
+  "Load the formalization pattern library. Returns a vector of pattern maps."
+  []
+  (when-let [text (slurp-if-exists pattern-library-path)]
+    (try (clojure.edn/read-string text) (catch Exception _ nil))))
+
+(defn patterns-for-subject
+  "Filter patterns relevant to a given subject keyword."
+  [subject]
+  (when-let [patterns (load-pattern-library)]
+    (->> patterns
+         (filter #(some #{subject} (:subjects %)))
+         vec)))
+
+(defn- format-patterns-for-prompt
+  "Format relevant patterns as a prompt section for the agent.
+   Returns nil if no patterns are relevant."
+  [subject]
+  (when-let [patterns (seq (patterns-for-subject subject))]
+    (str "## Formalization patterns from prior successful proofs\n\n"
+         "These patterns worked on similar " (name subject) " problems. "
+         "Use them as recognition heuristics when searching Mathlib.\n\n"
+         (str/join "\n"
+           (map (fn [{:keys [name recognition mathlib-api tactic-chain difficulty]}]
+                  (str "**" name "** (" (clojure.core/name difficulty) ")\n"
+                       "  Recognition: " recognition "\n"
+                       "  Mathlib API: `" (str/join "`, `" mathlib-api) "`\n"
+                       "  Tactics: " (str/join " → " tactic-chain) "\n"))
+                patterns))
+         "\n")))
+
+;; =============================================================================
 ;; Prompts
 ;; =============================================================================
 
@@ -604,6 +642,9 @@
                 "- shared extension root: " (:shared-extension-root frame-context) "\n"
                 "Do not use shared scratch paths like `ApmCanaries/Current.lean`.\n\n"))
          "If no explicit frame paths are given, write Lean files to " lean-proofs-root "/" id "/Main.lean\n\n"
+
+         (when-let [patterns (format-patterns-for-prompt subject)]
+           patterns)
 
          "Time budget: use the full budget unless you close the formal work early and have already populated the frame record.\n"
          "Quality over speed. A single well-proved problem\n"
