@@ -976,6 +976,151 @@ patterns, completing the three-level pattern architecture:
 - **math-strategy**: how to structure the argument (composition)
 - **math-formalization**: how to wire the Lean proof (execution)
 
+## ARGUE — Why This Design Is Right (2026-04-01)
+
+### Pattern cross-references
+
+Seven futon3/library patterns apply directly to DiagramProver's design:
+
+**1. `futon-theory/baldwin-cycle` [🔃/三]**
+*Where it applies:* The entire DiagramProver feedback loop.
+Phase 1 (EXPLORATION): TPG evolves tactic programs, tries variants
+against sorry boundaries, preserves evidence of what was tried.
+Phase 2 (ASSIMILATION): successful programs are extracted as new
+PatternDiagram entries — learned behaviour fixed into genotype.
+Phase 3 (CANALIZATION): the Bayesian model narrows the search space
+by removing low-probability patterns from the candidate set. What
+started as runtime search becomes compile-time structure (the pattern
+library).
+
+**2. `meta/baldwin-ratchet-defeats-darkroom` [🔃/今 🌏/甲]**
+*Where it applies:* The conductor's tendency to accept scaffolds as
+"proved" was a dark-room response — reducing observation (skip Lean
+verification) to avoid the friction of sorry. The formal-alignment
+gate, the artifact-content check, and the sorry-kick loop are all
+Baldwin ratchets: they internalise the pressure into the agent's
+exotype and require demonstrated behaviour (zero sorry, substantive
+declarations) rather than claims.
+
+**3. `aif/candidate-pattern-action-space` [📥/力]**
+*Where it applies:* Layer 3 (TPG search). The action space for TPG
+is not "any Lean tactic at any time" — it's a bounded candidate set
+of pattern-informed tactic sequences. The Bayesian model (Layer 2)
+constructs this candidate set by filtering patterns whose output
+ports type-match the sorry goal. This prevents the search from being
+"unstructured and dominated by recency" (the pattern's warning).
+
+**4. `enrichment/rational-reconstruction` [日/引]**
+*Where it applies:* The sorry boundary atlas (Layer 1). We don't
+do a one-shot static analysis of all 489 problems. We build the
+atlas incrementally — each conductor batch adds sorry boundary
+observations, each is timestamped and correctable. The 31→19→31
+reclassification sequence is exactly the "corrections between layers"
+the pattern describes. Early layers WILL have errors; later layers
+fix them. The correction history shows where the system's self-image
+was wrong.
+
+**5. `realtime/learn-as-you-go` [🌂/日]**
+*Where it applies:* The pattern library's append-only growth (D5).
+Each proof attempt — success or failure — generates a realtime
+learning: "this pattern worked on this sorry type" or "this pattern
+failed because of this coercion gap." These are the `{:works-well
+:doesnt-work :evidence}` entries the pattern prescribes. Without
+them, the loop stalls — the system keeps trying the same patterns
+on the same blockers.
+
+**6. `math-strategy/compose-independent-lemmas` [🧩/合]**
+*Where it applies:* Layer 1.5 (pattern diagrams as wiring diagrams).
+The diagram representation IS the dependency graph from this pattern.
+Each PatternDiagram decomposes a proof into independent pieces,
+verifies each is self-contained, and checks the composition step.
+The invariant rule `addresses-valid?` (output ports type-match input
+ports) is the formal version of "the composition step does not
+silently introduce new claims."
+
+**7. `math-informal/argue-by-contradiction` [🔺/今]**
+*Where it applies:* As the most common informal pattern in the
+overnight run (t92J01, topology sorry boundaries). The `:instantiates`
+relation links the formalization pattern `connected-union-via-common-
+point.flexiarg` to this informal pattern. This validates the
+three-level architecture: the informal pattern tells you *when*
+(existential/impossibility goal), the strategy pattern tells you
+*how* (decompose, find the known fact violated), the formalization
+pattern tells you *which Lean API* (isPreconnected_sUnion + classical).
+
+### Theoretical coherence
+
+The IDENTIFY theoretical anchoring was Deleuze's diagram vs axiom.
+Does the DERIVE design serve it?
+
+Yes: the diagram IS the sorry boundary atlas with its pattern overlays.
+It maps intensities (which sorry boundaries cluster, which patterns
+succeed where, which Mathlib APIs are the bottleneck). The axiom
+system IS Lean's type checker + Mathlib. DiagramProver extends the
+axiom system (writes Mathlib extensions) by reading the diagram
+(Bayesian model identifies highest-impact intervention). The
+reterritorialization pressure (fixed Mathlib, fixed tactic vocabulary)
+is resisted by the deterritorialization force (TPG evolving new tactic
+programs, pattern library growing, sorry boundaries remapping the
+landscape after each extension).
+
+The Baldwin cycle provides the mechanism: the diagram is the
+phenotype (plastic, exploratory), the pattern library is the
+genotype (stable, accumulated), and canalization narrows the
+search space without losing the capacity to explore new territory.
+
+### Trade-off summary
+
+| We chose | Over | Because |
+|----------|------|---------|
+| TPG (CPU, inspectable) | Transformer (GPU, black-box) | Laptop-runnable, patterns extractable, no training data needed |
+| Sparse encoding | Full proof context | 100x efficiency (Axplorer finding), pattern library provides the prior |
+| Geometric-mean gates | Beta-Binomial | Matches tactic-chain bottleneck structure (weakest link dominates) |
+| Append-only patterns | Mutable pattern library | Stability > plasticity (LeanAgent finding), corrections via supersession not deletion |
+| futon3 flexiarg format | Custom EDN-only format | Integrates with existing 38 math patterns, IF/HOWEVER/THEN/BECAUSE structure reusable |
+
+What we give up:
+- **Neural generalization**: TPG may not generalize as well as a
+  fine-tuned transformer to unseen tactic sequences. Mitigated by
+  the pattern library providing strong priors.
+- **Training data flywheel**: We can't self-train on our own proofs
+  the way AxiomProver does. Mitigated by the Bayesian model updating
+  on proof attempt outcomes (not gradient updates, but belief updates).
+- **Speed**: TPG evolution is slower than neural inference for
+  candidate generation. Mitigated by the bounded candidate set
+  (pattern action space) keeping the search small.
+
+### Generalisation notes
+
+The design generalises beyond prelim mathematics:
+
+- **Any Lean repository with sorry**: DiagramProver can be pointed at
+  any Lean project, not just APM problems. The sorry boundary atlas,
+  pattern library, and TPG search are domain-agnostic.
+- **Other ITPs**: The architecture (sorry atlas → patterns → Bayesian →
+  search → verify) works for Coq, Isabelle, or Agda with different
+  Layer 4 verification backends.
+- **Software verification**: Axiom claims transfer learning to code
+  verification. Our pattern architecture (informal → strategy →
+  formalization) could map to (design intent → architecture pattern →
+  implementation tactic) for program correctness.
+- **Pedagogy**: The breakpoint library (M-apm-solutions planned
+  excursion) is a direct projection of DiagramProver's sorry boundary
+  atlas into a student-facing format. The pattern library becomes the
+  tutor's knowledge base.
+
+### Plain-language argument
+
+DiagramProver looks at where proofs get stuck, figures out which
+stuck-points are related, and writes targeted fixes that unstick
+multiple proofs at once. It gets better over time because each
+success and failure updates its estimate of what works where.
+It runs on a laptop because it uses evolved programs instead of
+neural networks for search. The patterns it discovers are readable
+by humans, so they double as teaching material. The whole thing is
+grounded in Lean's type checker — no proof is accepted unless the
+machine verifies it.
+
 ## Deferred Until
 
 - Phase 0 can start **now** with existing data (39 partials, 12 patterns)
