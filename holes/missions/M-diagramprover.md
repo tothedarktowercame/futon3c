@@ -37,9 +37,26 @@ or something more nuanced. The "top-down vs bottom-up" framing below is
 our philosophical positioning, not a claim about AxiomProver's internals.
 
 **Other systems:**
-- **LeanDojo** (open-source): tree search over Lean tactic states.
-  Proof-state extraction + neural tactic suggestion. Available. Rob is
-  setting this up on the superpod.
+- **LeanAgent** (Kumarappan et al., ICLR 2025, arxiv 2410.06209v8):
+  Lifelong learning for formal theorem proving. Curriculum learning
+  (easy→medium→hard by `e^S` complexity), progressive training (1 epoch
+  per repo to balance stability/plasticity), dynamic premise database
+  that grows as proofs succeed. Proved 155 sorry theorems across 23 Lean
+  repos. Key finding: backward transfer — learning new tasks improved
+  performance on old tasks. Open-source, builds on LeanDojo/ReProver.
+  **Directly relevant**: their curriculum learning = our triage lanes,
+  their dynamic database = our local Mathlib extensions, their
+  stability/plasticity balance = our pattern library (stable) +
+  TPG evolution (plastic).
+- **LeanDojo-v2** (Hsiang et al., NeurIPS 2025 Workshop, LeanDojo v2 paper):
+  Unified infrastructure for Lean+AI. Data extraction from any Lean repo,
+  Pantograph REPL for tactic execution with goal-state introspection,
+  pluggable search (DFS, MCTS, custom), training pipelines (SFT, LoRA, RL
+  via GRPO/PPO). The search agent is a base class — **we can plug TPG in
+  as a tactic generator**. Supports API inference (HuggingFace) so laptop
+  runs are viable — tactic generation calls the API, search + REPL run
+  locally. Rob is setting this up on the superpod for fine-tuning and
+  large-model local inference.
 - **AlphaProof** (DeepMind, 2024): RL + Lean, IMO silver medal performance.
   Not open-source. Architecture published in more detail than AxiomProver.
 - **Curriculum-level provers** (various): Most benchmarks focus on
@@ -249,19 +266,63 @@ The UKRN demo structure:
 - Network → projected intervention impact
 - Intervention → execute → observe → update
 
-### Layer 3: TPG Evolution (search)
+### Layer 3: Search — TPG + LeanDojo-v2
 
-Tangled Program Graphs from futon5 evolve tactic-search programs.
+Two tactic-search mechanisms, one laptop-runnable, one superpod-scale.
 
-Population seeded from: pattern library (each pattern → initial program)
-Fitness: sorry closed (binary) + partial progress (subgoals reduced)
-Selection: programs that close sorry in one problem are tested on
-similar problems (cross-problem transfer)
+**TPG (laptop, futon5):** Tangled Program Graphs evolve tactic-search
+programs. Population seeded from pattern diagrams (Layer 1.5).
+Runs locally — no GPU required. Binary fitness initially (sorry
+closed or not). Key advantage over neural search: evolved programs
+are inspectable and become new pattern library entries automatically.
 
-Key advantage over RL: evolved programs are inspectable. A TPG program
-that closes a topology sorry can be read as "first try exact?, then
-unfold IsConnected, then apply isPreconnected_sUnion, then..." — that's
-a new pattern for the library, extracted automatically.
+**LeanDojo-v2 (laptop + superpod):** The integration layer, not just
+a search backend. Three roles:
+
+1. **Data extraction**: Point at apm-lean repo, extract theorems,
+   proofs, premises, dependencies. Builds the sorry boundary atlas
+   (Layer 1) automatically from the Lean source.
+2. **Pantograph REPL**: Python interface that executes a tactic and
+   returns the updated goal state. This gives TPG its subgoal
+   introspection for fitness evaluation (Path 1): after applying
+   a TPG-generated tactic, Pantograph reports how many goals remain
+   and what their types are. **This is the bridge between TPG and
+   Lean.**
+3. **Pluggable search**: The `BaseProver` class accepts any tactic
+   generator. We plug in TPG as a tactic generator alongside
+   LeanAgent/ReProver/API models. Same search framework, different
+   tactic sources — direct A/B comparison.
+
+**Laptop vs superpod split:**
+
+| | Laptop | Superpod |
+|---|---|---|
+| TPG evolution | Yes — CPU-only, futon5 | Yes — faster population |
+| Pantograph REPL | Yes — runs locally | Yes |
+| LeanDojo data extraction | Yes — local apm-lean repo | Yes — larger repos |
+| Tactic generation (small model) | Yes — API inference via HuggingFace | Yes — local inference |
+| Fine-tuning (LoRA/SFT) | No — needs GPU | Yes |
+| Large model local inference | No | Yes — DeepSeek-Prover-V2-7B+ |
+
+The laptop runs the full DiagramProver loop at lower throughput:
+TPG generates tactic candidates, Pantograph evaluates them, the
+Bayesian model picks the next sorry to attack. The superpod adds
+fine-tuned neural tactic generation and faster search.
+
+**Curriculum learning connection (from LeanAgent):** LeanAgent's
+progressive training — 1 epoch per repo, easy→medium→hard ordering,
+dynamic premise database — maps to our architecture:
+
+- Our triage lanes (quick/medium/hard) = their curriculum ordering
+- Our local Mathlib extensions (ApmCanaries/Local/) = their dynamic
+  premise database
+- Their backward transfer finding (new tasks improve old performance)
+  = our hypothesis that the pattern library compounds across batches
+
+After each batch of proved problems, we should **actively reorder
+the remaining problems** by updated difficulty estimates, not just
+accumulate patterns. The Bayesian model (Layer 2) provides the
+updated estimates; the triage is re-run using posteriors, not priors.
 
 ### Layer 4: Lean Verification (ground truth)
 
@@ -269,13 +330,19 @@ Every candidate proof is verified by `lake build`. No exceptions.
 This is the one axiom we keep: Lean's type checker is the final
 arbiter. The diagram maps possibilities; Lean confirms reality.
 
+Pantograph (via LeanDojo-v2) provides *incremental* verification:
+each tactic step is checked as it's applied, not just the final
+proof. This means search can backtrack on the first failing tactic
+rather than building a complete proof and checking at the end.
+
 ### The Loop
 
 ```
-Observe sorry boundaries (Layer 1)
-  → Infer highest-impact intervention (Layer 2)
-  → Generate tactic candidates (Layer 3 / TPG)
-  → Verify with Lean (Layer 4)
+Observe sorry boundaries (Layer 1, auto-extracted by LeanDojo-v2)
+  → Induce pattern diagrams (Layer 1.5, futon5 translation)
+  → Infer highest-impact intervention (Layer 2, Bayesian model)
+  → Generate tactic candidates (Layer 3, TPG or LeanDojo search)
+  → Verify incrementally (Layer 4, Pantograph REPL)
   → Update diagram with result
   → Repeat
 ```
@@ -469,17 +536,38 @@ ranking from Phase 0.
 Implement model B (partial pooling across subjects).
 Compare with 2a. If data supports it, implement model C (NPT).
 
-### Phase 3: TPG Tactic Evolution (VERIFY → INSTANTIATE)
+### Phase 3a: LeanDojo-v2 Integration — Laptop Layer (VERIFY)
 
-Connect futon5 TPG to Lean tactic search. Binary fitness (Path 2).
-Seed population from pattern library. Evolve against sorry boundaries.
-Extract new patterns from successful programs.
+Install LeanDojo-v2 locally. Point data extraction at apm-lean repo.
+Verify Pantograph REPL works against our sorry theorems. This gives us:
+- Automatic sorry boundary atlas extraction (replaces manual EDN)
+- Incremental tactic evaluation for TPG fitness (Path 1)
+- API inference for tactic generation (HuggingFace, no local GPU)
 
-### Phase 4: LeanDojo Integration
+This is the foundation — everything else in Layer 3 builds on it.
 
-When available on superpod: integrate as search backend, enable
-Path 1 fitness (subgoal introspection), compare TPG vs LeanDojo
-vs RL (if replicable).
+### Phase 3b: TPG as Tactic Generator (VERIFY → INSTANTIATE)
+
+Implement a LeanDojo-v2 `BaseProver` subclass that uses futon5 TPG
+as the tactic generator. Binary fitness initially (sorry closed or
+not), then upgrade to subgoal-counting fitness via Pantograph.
+Seed TPG population from pattern diagrams (Layer 1.5). Evolve
+against sorry boundaries. Extract new pattern diagrams from
+successful programs.
+
+Runs entirely on laptop — TPG is CPU-only, Pantograph is local,
+tactic evaluation uses the REPL.
+
+### Phase 4: Superpod Scale-Up
+
+When Rob has LeanDojo-v2 on the superpod:
+- Fine-tune DeepSeek-Prover-V2-7B on our apm-lean data (SFT/LoRA)
+- Run neural tactic generation locally (no API latency)
+- Compare: TPG tactic generator vs fine-tuned neural generator vs
+  API inference — same LeanDojo search framework, different sources
+- Re-run curriculum with updated difficulty estimates (LeanAgent-style
+  progressive training: re-rank problems after each batch by
+  Bayesian posterior, not initial triage)
 
 ## Deferred Until
 
@@ -487,5 +575,7 @@ vs RL (if replicable).
   (Phase 0 can start now with existing 53-problem data)
 - Sorry boundary data is rich enough to train Bayesian models
   (~50+ observations for model A, ~200+ for model B)
-- futon5 TPG infrastructure is available for Lean integration
-- LeanDojo is running on the superpod (Rob's timeline)
+- LeanDojo-v2 installable on laptop (Phase 3a — check with Rob)
+- futon5 TPG infrastructure reachable from LeanDojo BaseProver
+  (Phase 3b)
+- Superpod access with GPU for fine-tuning (Phase 4, non-blocking)
