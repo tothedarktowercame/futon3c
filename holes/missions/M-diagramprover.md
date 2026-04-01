@@ -1,7 +1,7 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
 
-**Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP begun)
-**Status:** MAP
+**Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE begun)
+**Status:** DERIVE
 **Cross-ref:** M-apm-solutions (proof peripheral, pattern library, sorry boundaries),
 futon5 (TPG, AIF loops), vsat.wiki/ukrn-demo (Bayesian pattern models),
 M-distributed-frontiermath (superpod, LeanDojo)
@@ -741,6 +741,164 @@ Formal clustering is Phase 1 work.
    which matches reality: a 5-step tactic chain fails if any one step
    is impossible. This structure may be more appropriate than the
    Beta-Binomial model for Phase 2.
+
+## DERIVE — Design (2026-04-01)
+
+### Entity types
+
+| Entity | Source | Type | Repo |
+|--------|--------|------|------|
+| **SorryBoundary** | Extracted from proof-state EDN | Derived (from proof attempts) | futon3c |
+| **PatternDiagram** | Induced from proved Lean traces | Derived (from successful proofs) | futon3c + futon5 |
+| **InformalPattern** | Pre-existing flexiarg library | Authored (human-written) | futon3 |
+| **TacticProgram** | Evolved by TPG | Derived (from evolution) | futon5 |
+| **BlockerCluster** | Grouped sorry boundaries | Derived (from clustering) | futon3c |
+| **MathLibExtension** | Written to close a cluster | Authored (human or agent) | apm-lean |
+| **InterventionRanking** | Output of Bayesian model | Derived (from inference) | futon3c |
+| **ProofTrace** | Extracted from Lean via LeanDojo | Derived (from Lean source) | apm-lean |
+| **FitnessEvaluation** | Pantograph REPL result | Derived (from tactic execution) | apm-lean |
+
+### Relation types
+
+| Relation | From | To | Type |
+|----------|------|----|------|
+| `:blocks` | SorryBoundary | ProofTrace | The sorry prevents the proof from completing |
+| `:addresses` | PatternDiagram | BlockerCluster | The pattern's output ports match the cluster's goal type |
+| `:closes` | TacticProgram | SorryBoundary | The program generates tactics that close the sorry |
+| `:induced-from` | PatternDiagram | ProofTrace | The diagram was extracted from this proved proof |
+| `:instantiates` | PatternDiagram | InformalPattern | The formal diagram is a concrete instance of an informal heuristic |
+| `:unblocks` | MathLibExtension | BlockerCluster | The extension closes sorry across this cluster |
+| `:recommends` | InterventionRanking | MathLibExtension | The Bayesian model ranked this intervention highest |
+| `:seeded-by` | TacticProgram | PatternDiagram | The TPG population was initialised from this pattern |
+| `:evolved-into` | TacticProgram | PatternDiagram | A successful program was extracted as a new pattern |
+
+### Invariant rules
+
+Expressible as core.logic relations:
+
+```clojure
+;; A PatternDiagram's output ports must type-match the goal of any
+;; SorryBoundary it claims to address.
+(defn addresses-valid? [pattern sorry]
+  (port-type-compatible? (:output-ports pattern) (:goal-type sorry)))
+
+;; A TacticProgram that :closes a SorryBoundary must have been verified
+;; by Pantograph REPL — no self-reported closures.
+(defn closure-verified? [program sorry]
+  (some? (:pantograph-verification (get-closure program sorry))))
+
+;; An InterventionRanking must be traceable to Bayesian posterior
+;; computation — no ad hoc rankings.
+(defn ranking-traceable? [ranking]
+  (some? (:posterior-computation ranking)))
+
+;; The :induced-from relation is monotone: once a pattern is induced
+;; from a proof, it cannot be un-induced. The pattern library only grows.
+(defn pattern-library-monotone? [library-before library-after]
+  (every? (set library-after) library-before))
+```
+
+### Data flow
+
+```
+futon3c conductor (Pass 1)
+  → proof-state/*.edn (SorryBoundary data)
+  → apm-lean/ApmCanaries/Frames/*/Main.lean (ProofTrace source)
+       ↓
+LeanDojo-v2 data extraction (Phase 3a)
+  → (goal-before, tactic, goal-after) triples
+       ↓
+futon5 pattern-to-diagram translator (Phase 1)
+  → PatternDiagram entries (typed wiring diagrams)
+       ↓
+Bayesian model (Phase 2)
+  ← PatternDiagram + SorryBoundary + BlockerCluster
+  → InterventionRanking
+       ↓
+TPG evolution (Phase 3b) / LeanDojo search (Phase 4)
+  ← PatternDiagram (seeds population)
+  ← SorryBoundary (fitness targets)
+  → TacticProgram candidates
+       ↓
+Pantograph REPL (Layer 4)
+  ← TacticProgram
+  → FitnessEvaluation (sorry closed? subgoals reduced?)
+       ↓
+Feedback:
+  - Closed sorry → new ProofTrace → new PatternDiagram (library grows)
+  - Failed attempt → updated Bayesian posterior (model learns)
+  - New MathLibExtension → unblocks BlockerCluster → re-run conductor
+```
+
+### Design decisions (IF/HOWEVER/THEN/BECAUSE)
+
+**D1: TPG replaces transformer in the PatternBoost loop.**
+IF the Axplorer/PatternBoost self-improvement cycle requires a
+generative model to produce candidate tactic sequences, HOWEVER
+transformers require GPU and gradient-based training, THEN we use
+TPG (evolved programs) as the generative model, BECAUSE TPG is
+CPU-only, produces inspectable programs, and the programs can be
+directly extracted as new patterns for the library. Trade-off:
+TPG may have weaker generalization than a transformer, but the
+pattern library provides strong priors that narrow the search space.
+
+**D2: Sparse encoding for sorry boundaries.**
+IF each sorry boundary has a full Lean proof context (hypotheses,
+imports, sibling lemmas), HOWEVER full-context encoding is quadratic
+in attention cost for transformers and combinatorially explosive for
+TPG, THEN we encode only: goal type + available hypotheses + pattern
+hint (the matching PatternDiagram), BECAUSE Axplorer's key efficiency
+finding is that sparse encoding gives 100x speedup over dense encoding.
+The pattern hint is the "prior distribution" that transforms brute-force
+search into informed search.
+
+**D3: Geometric-mean gate model for Bayesian inference.**
+IF we need to estimate P(sorry closes | pattern, blocker-type),
+HOWEVER the Beta-Binomial treats each factor independently while
+proof tactics fail at the weakest link, THEN we use the UKRN demo's
+geometric-mean gate model where the weakest factor dominates,
+BECAUSE a 5-step tactic chain fails if any one step is impossible —
+the bottleneck structure matches the mathematical reality. The
+Beta-Binomial is the comparison baseline.
+
+**D4: futon3 informal math patterns as the human-authored seed.**
+IF we need to seed the pattern library with high-quality recognition
+heuristics, HOWEVER our current 12 formalization patterns are
+extracted from a small sample of proved proofs, THEN we also load
+the 31 informal math patterns and 7 strategy patterns from
+`futon3/library/math-informal/` and `futon3/library/math-strategy/`
+as the informal backbone of the pattern library, BECAUSE these
+patterns encode decades of mathematical practice in IF/HOWEVER/
+THEN/BECAUSE form with NEXT-STEPS, and they cover exactly the
+reasoning moves (argue-by-contradiction, compose-independent-lemmas,
+estimate-by-bounding, pass-to-a-subsequence, etc.) that drive
+prelim proofs. The formalization patterns are their Lean-specific
+instantiations; the informal patterns are the recognition heuristics
+that select which formalization to attempt.
+
+Concretely:
+- `argue-by-contradiction.flexiarg` → when TPG encounters a sorry
+  whose goal is negated or existential, this pattern fires
+- `compose-independent-lemmas.flexiarg` → when a sorry has multiple
+  independent subgoals, decompose before searching
+- `estimate-by-bounding.flexiarg` → analysis sorry involving
+  inequalities → reach for `nlinarith`, `gcongr`, `calc`
+- `pass-to-a-subsequence.flexiarg` → convergence sorry where the
+  full sequence doesn't converge → `Filter.Tendsto` + `atTop`
+
+The `:instantiates` relation links each PatternDiagram to the
+InformalPattern it concretises.
+
+**D5: Monotone pattern library (append-only).**
+IF patterns could be deleted or modified as the system evolves,
+HOWEVER this would break the stability property (backward transfer)
+and make the Bayesian model's priors unreliable, THEN the pattern
+library is append-only — new patterns are added, old patterns are
+never removed or modified, BECAUSE LeanAgent's key finding is that
+stability (retaining old knowledge) is more important than
+plasticity (adapting to new data) for lifelong theorem proving.
+Patterns can be *superseded* (marked as having a better alternative)
+but never deleted.
 
 ## Deferred Until
 
