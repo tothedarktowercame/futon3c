@@ -44,6 +44,14 @@
   "Max re-dispatches for formal/informal alignment repair."
   2)
 
+(def ^:private max-lean-last-mile-kicks
+  "Max extra focused closure passes for near-closed Lean proofs."
+  1)
+
+(def ^:private lean-last-mile-ms
+  "Extra wall-clock budget for near-closed Lean proofs."
+  (* 5 60 1000))
+
 (def ^:private arse-kick-threshold
   "After this many sorry-kicks, switch to diagnostic QP prompt."
   2)
@@ -167,6 +175,17 @@
    "Every changelog entry must include `:full-record?`, `:sorry?`, and `:fully-closed?`.\n"
    "\n"
    "execute.md must contain real Stage 1, Stage 2, Stage 3, and Stage 4 sections with no template placeholders.\n"))
+
+(def ^:private revision-reference-card
+  (str
+   "Stage 4 — FORMAL-TO-INFORMAL REVISION must revise the prose in light of the Lean attempt.\n"
+   "Do not leave Stage 1 stronger than the formal result.\n"
+   "Use exactly one of these three modes:\n"
+   "1. `matched`: the formal theorem certifies the same main claim; say which sentence/part is now formally supported.\n"
+   "2. `narrowed`: Lean proved only a helper lemma / one subpart / a narrower theorem; rewrite Stage 1 lightly so the reader can see exactly what is now formally certified and what remains informal.\n"
+   "3. `blocked`: the target theorem is still right but the Lean route hit a concrete blocker; name the step that remains informal and why.\n"
+   "Stage 4 should name the changed sentence, clause, or subpart, not just say 'revise lightly if needed'.\n"
+   "Keep Lean API jargon out of Stage 1 itself; put the technical detail in Stage 3 / changelog.\n"))
 
 (defn- log!
   [entry]
@@ -619,6 +638,11 @@
          "   Write real proofs, not scaffolds. If a sorry is genuinely needed (Mathlib gap),\n"
          "   explain exactly what's missing and what would close it.\n"
          "5. **What connects** — where else this technique appears, exam-day field kit\n\n"
+         "Before you call the informal proof done, run a quick proof sanity pass:\n"
+         "- identify the single most fragile bridge step and say why it really follows;\n"
+         "- if the problem is multipart, say which parts are fully proved vs only sketched/delegated;\n"
+         "- if the Lean side is blocked, classify the blocker as one of: missing API/theory,\n"
+         "  wrong target theorem, last-mile wiring/bookkeeping, or routine-but-long construction.\n\n"
          "A problem is not complete until the frame-local record is populated.\n"
          "Before replying, update all four frame artifacts with real content:\n"
          "- `execute.md` with non-placeholder Stage 1-4 text\n"
@@ -626,6 +650,7 @@
          "- `formal-alignment.edn` with the main claim aligned to exact Lean declarations\n"
          "- `changelog.edn` with concrete progress entries\n\n"
          htdp-reference-card "\n"
+         revision-reference-card "\n"
          "Style anchors:\n"
          "- " worked-example-root "/a02J04\n"
          "- " worked-example-root "/a02J04-full\n\n"
@@ -760,6 +785,8 @@
               (:changelog-path record-status) "\n"))
        "\n"
        htdp-reference-card
+       "\n"
+       revision-reference-card
        "\nUse these worked examples as the style anchors:\n"
        "- " worked-example-root "/a02J04\n"
        "- " worked-example-root "/a02J04-full\n\n"
@@ -786,14 +813,61 @@
        "   - what search/API route you attempted,\n"
        "   - why you concluded the route was blocked.\n"
        "4. Re-run the HtDP target-theorem sanity check: right objects/hypotheses, no assumed conclusion, meaningful without prose.\n"
-       "5. Keep execute.md / proof-plan.edn / changelog.edn in sync with the actual formal work.\n\n"
+       "5. Revise Stage 4 so it says exactly what the Lean attempt changed in the prose: matched, narrowed, or blocked.\n"
+       "6. Keep execute.md / proof-plan.edn / changelog.edn in sync with the actual formal work.\n\n"
        "formal-alignment.edn path: " (:formal-alignment-path record-status) "\n"
        "Lean main file: " (get-in frame-workspace [:artifacts :lean-main]) "\n\n"
        htdp-reference-card
+       "\n"
+       revision-reference-card
        "\nReply only after you have either written a substantive theorem/lemma or recorded the failed formal route concretely.\n\n"
        "Previous output (summary):\n"
        (subs previous-output 0 (min 1500 (count previous-output)))
        "\n\nFormal alignment repair attempt #" formal-kick-count ".\n"))
+
+(defn- make-lean-last-mile-prompt
+  [problem frame-workspace remaining-ms formal-status previous-output]
+  (str "LEAN LAST MILE for apm-" (:id problem) ". "
+       (long (/ remaining-ms 1000)) " seconds remain in this focused closure pass.\n\n"
+       "The theorem target and record are already good enough. Do not restart the proof design.\n"
+       "Do not rewrite the exposition. Do not broaden the theorem. Just close the Lean proof.\n\n"
+       "Focus only on the existing near-closed declarations:\n"
+       "- declaration names seen: " (pr-str (vec (:declaration-names formal-status))) "\n"
+       "- substantive Lean artifacts: " (:substantive-artifact-count formal-status) "\n"
+       "- aligned? " (:aligned? formal-status) "\n\n"
+       "Use this pass only for last-mile work:\n"
+       "1. inspect the exact remaining goals / errors;\n"
+       "2. search the precise Mathlib lemma or composition step;\n"
+       "3. wire the proof and rebuild;\n"
+       "4. revise Stage 4 so the prose reflects what is now formally certified;\n"
+       "5. if it still does not close, record the blocker concretely in Stage 3 and changelog.\n\n"
+       "Lean main file: " (get-in frame-workspace [:artifacts :lean-main]) "\n"
+       "Lean scratch file: " (get-in frame-workspace [:artifacts :lean-scratch]) "\n\n"
+       revision-reference-card
+       "\n"
+       "Previous output (summary):\n"
+       (subs previous-output 0 (min 1500 (count previous-output)))
+       "\n"))
+
+(defn- lean-last-mile-eligible?
+  [record-status formal-status sorry?]
+  (and (:full-record? record-status)
+       sorry?
+       (:substantive? formal-status)
+       (or (:aligned? formal-status)
+           (:main-name-present? formal-status)
+           (:main-target-present? formal-status))))
+
+(defn- multipart-problem?
+  [problem]
+  (pos? (or (:subpart-count problem) 0)))
+
+(defn- proved-formal?
+  [problem formal-status sorry?]
+  (and (not sorry?)
+       (or (:aligned? formal-status)
+           (and (:meaningful? formal-status)
+                (not (multipart-problem? problem))))))
 
 ;; =============================================================================
 ;; Core dispatch loop
@@ -817,15 +891,21 @@
 (defn- current-problem-timeout-ms [cid]
   (or (:problem-timeout-ms (conductor-state cid)) default-problem-timeout-ms))
 
+(defn- current-problem-timeout-limit-ms [cid]
+  (+ (current-problem-timeout-ms cid)
+     (if (pos? (or (:lean-last-mile-count (conductor-state cid)) 0))
+       lean-last-mile-ms
+       0)))
+
 (defn- problem-timed-out? [cid]
   (when-let [start-ms (:problem-start-ms (conductor-state cid))]
-    (> (- (System/currentTimeMillis) start-ms) (current-problem-timeout-ms cid))))
+    (> (- (System/currentTimeMillis) start-ms) (current-problem-timeout-limit-ms cid))))
 
 (defn- handle-solve-return!
   "Handle return from the solve or sorry-kick dispatch."
   [cid agent-id agent-output evidence-store]
   (let [{:keys [current-problem problem-start-ms dispatch-start-ms
-                sorry-kick-count record-kick-count formal-kick-count problems-done batch-results target-n
+                sorry-kick-count record-kick-count formal-kick-count lean-last-mile-count problems-done batch-results target-n
                 accumulated-output backend]} (conductor-state cid)
         pid (str "apm-" (:id current-problem))
         now-ms (System/currentTimeMillis)
@@ -847,6 +927,9 @@
         formal-status (formalization-status artifacts (:formal-alignment record-status))
         attempt-trace? (formal-attempt-trace? record-status all-output)
         remaining-ms (- (current-problem-timeout-ms cid) total-elapsed)
+        last-mile-count (or lean-last-mile-count 0)
+        last-mile-eligible? (and (< last-mile-count max-lean-last-mile-kicks)
+                                 (lean-last-mile-eligible? record-status formal-status sorry?))
         substantive-partial-message "Recorded substantive Lean subtheorems without a fully aligned main theorem"
         attempt-trace-message "Recorded formal attempt trace without substantive Lean theorem"]
 
@@ -858,6 +941,7 @@
            :sorry-kick-count kick-count
            :record-kick-count record-kicks
            :formal-kick-count formal-kicks
+           :lean-last-mile-count last-mile-count
            :full-record? (:full-record? record-status)
            :meaningful-formal? (:meaningful? formal-status)
            :substantive-formal? (:substantive? formal-status)
@@ -865,6 +949,27 @@
            :attempt-trace? attempt-trace?})
 
     (cond
+      ;; Near-closed theorem: spend one bounded extra pass just closing Lean.
+      (and last-mile-eligible?
+           (or (problem-timed-out? cid)
+               (>= kick-count arse-kick-threshold)))
+      (let [new-count (inc last-mile-count)
+            frame-workspace (:frame-workspace (conductor-state cid))
+            last-mile-remaining-ms (min lean-last-mile-ms
+                                        (max 60000
+                                             (+ remaining-ms lean-last-mile-ms)))]
+        (assoc-state! cid :lean-last-mile-count new-count
+                          :current-phase :lean-last-mile
+                          :dispatch-start-ms (System/currentTimeMillis))
+        (log! {:event :lean-last-mile-kick
+               :problem pid
+               :lean-last-mile-count new-count
+               :remaining-ms last-mile-remaining-ms
+               :message "Substantive aligned/near-aligned theorem with local Lean holes; granting one focused closure pass"})
+        (dispatch! agent-id
+                   (make-lean-last-mile-prompt current-problem frame-workspace last-mile-remaining-ms formal-status output)
+                   last-mile-remaining-ms))
+
       ;; Problem timeout
       (problem-timed-out? cid)
       (do
@@ -956,7 +1061,7 @@
             (start-next-problem! cid agent-id evidence-store))))
 
       ;; Lean clean — no sorry, artifacts exist
-      (and (seq artifacts) (not sorry?) (:meaningful? formal-status))
+      (proved-formal? current-problem formal-status sorry?)
       (do
         (when-not (:aligned? formal-status)
           (log! {:event :alignment-warning
@@ -1195,8 +1300,20 @@
             (dispatch! agent-id
                        (if (= current-phase :target-check)
                          (make-target-check-prompt cid current-problem tex-body)
-                         (make-solve-prompt cid current-problem tex-body))
-                       (current-problem-timeout-ms cid)))))
+                         (if (= current-phase :lean-last-mile)
+                           (make-lean-last-mile-prompt current-problem
+                                                       (:frame-workspace (conductor-state cid))
+                                                       lean-last-mile-ms
+                                                       (formalization-status
+                                                        (discover-lean-artifacts cid current-problem
+                                                                                 (:problem-start-ms (conductor-state cid))
+                                                                                 (:accumulated-output (conductor-state cid)))
+                                                        (:formal-alignment (frame-record-status (:frame-workspace (conductor-state cid)))))
+                                                       (or (:accumulated-output (conductor-state cid)) ""))
+                           (make-solve-prompt cid current-problem tex-body)))
+                       (if (= current-phase :lean-last-mile)
+                         lean-last-mile-ms
+                         (current-problem-timeout-ms cid))))))
       ;; Budget exhausted — skip
       (let [state (conductor-state cid)
             frame-workspace (:frame-workspace state)
@@ -1252,6 +1369,7 @@
                       :sorry-kick-count 0
                       :record-kick-count 0
                       :formal-kick-count 0
+                      :lean-last-mile-count 0
                       :failure-count 0
                       :problem-start-ms (System/currentTimeMillis)
                       :dispatch-start-ms (System/currentTimeMillis)

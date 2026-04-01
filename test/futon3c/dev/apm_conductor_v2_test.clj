@@ -48,6 +48,33 @@
     (is (str/includes? prompt ":full-record? true"))
     (is (str/includes? prompt ":mentions-problem-objects? true"))))
 
+(deftest solve-prompt-includes-informal-proof-sanity-pass
+  (reset! conductor/!state
+          {(cid "codex-1")
+           {:current-problem {:id "a01J06" :subject :analysis :year 2001 :session :fall}
+            :frame-workspace {:frame/workspace-root "/tmp/frame"
+                              :frame/module-root "ApmCanaries.Frames.A01J06.Run1"
+                              :frame/lean-root "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1"
+                              :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
+                              :artifacts {:proof-plan "/tmp/frame/proof-plan.edn"
+                                          :formal-alignment "/tmp/frame/formal-alignment.edn"
+                                          :changelog "/tmp/frame/changelog.edn"
+                                          :lean-main "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Main.lean"
+                                          :lean-scratch "/home/joe/code/apm-lean/ApmCanaries/Frames/A01J06/Run1/Scratch.lean"}}}})
+  (let [prompt (#'conductor/make-solve-prompt
+                (cid "codex-1")
+                {:id "a01J06" :subject :analysis :year 2001 :session :fall}
+                "Problem body")]
+    (is (str/includes? prompt "identify the single most fragile bridge step"))
+    (is (str/includes? prompt "which parts are fully proved vs only sketched/delegated"))
+    (is (str/includes? prompt "missing API/theory"))
+    (is (str/includes? prompt "last-mile wiring/bookkeeping"))
+    (is (str/includes? prompt "Do not leave Stage 1 stronger than the formal result."))
+    (is (str/includes? prompt "Use exactly one of these three modes"))
+    (is (str/includes? prompt "`matched`"))
+    (is (str/includes? prompt "`narrowed`"))
+    (is (str/includes? prompt "`blocked`"))))
+
 (deftest start-next-problem-initializes-frame-workspace
   (let [idle-callback (atom nil)
         dispatches (atom [])
@@ -236,13 +263,13 @@
       (is (:main-name-present? status)))
     (spit lean-main "import Mathlib\n\ntheorem main_claim (x : ℝ) : x = x := by rfl\n")
     (let [status (#'conductor/formalization-status [lean-main] alignment)]
-      (is (true? (:meaningful? status)))
-      (is (true? (:substantive? status)))
+      (is (:meaningful? status))
+      (is (:substantive? status))
       (is (:main-target-present? status))
       (is (:aligned? status)))
     (let [status (#'conductor/formalization-status [lean-main lean-scratch] alignment)]
-      (is (false? (:meaningful? status)))
-      (is (true? (:substantive? status)))
+      (is (:meaningful? status))
+      (is (:substantive? status))
       (is (= #{"main_claim"} (:substantive-declaration-names status))))))
 
 (deftest handle-solve-return-formal-kicks-when-no-theorem-and-no-trace
@@ -430,7 +457,9 @@
     (spit alignment-path "{:main-claim {:informal-claim \"Solve the whole multipart problem.\" :formal-name \"full_problem_main\" :formal-target \"theorem full_problem_main : True\" :sanity-check {:mentions-problem-objects? true :avoids-assuming-conclusion? true :meaningful-without-prose? true :notes \"The declared main theorem is still broader than the closed Lean subtheorem.\"}} :alignments [{:formal-name \"full_problem_main\" :formal-statement \"theorem full_problem_main : True\" :informal-clause \"Whole problem\" :role :main-theorem} {:formal-name \"finite_mul_subgroup_cyclic\" :formal-statement \"theorem finite_mul_subgroup_cyclic {K : Type*} [Field K] (G : Subgroup Kˣ) [Finite G] : IsCyclic G\" :informal-clause \"Part (c)\" :role :helper-lemma}]}\n")
     (spit changelog-path "[{:kind :stage1-completed :summary \"Proof written\" :full-record? true :sorry? false :fully-closed? false}\n {:kind :stage3-completed :summary \"Tried the full theorem, then closed the part (c) Lean theorem using subgroup cyclicity in Mathlib\" :full-record? true :sorry? false :fully-closed? true}]\n")
     (reset! conductor/!state {(cid "codex-1")
-                              {:current-problem {:id "b94J01" :subject :algebra :year 1994 :session :fall}
+                              {:current-problem {:id "b94J01" :subject :algebra :year 1994 :session :fall
+                                                 :subpart-count 3
+                                                 :subparts [{:label "(a)"} {:label "(b)"} {:label "(c)"}]}
                                :frame-workspace workspace
                                :backend nil
                                :accumulated-output ""
@@ -456,6 +485,61 @@
                       (= "Recorded substantive Lean subtheorems without a fully aligned main theorem"
                          (:message %)))
                 @logs)))))
+
+(deftest handle-solve-return-grants-one-lean-last-mile-pass
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                           "apm-v2-last-mile" (make-array java.nio.file.attribute.FileAttribute 0)))
+        workspace-root (.getAbsolutePath tmp-dir)
+        lean-dir (doto (io/file workspace-root "lean") .mkdirs)
+        lean-main (.getAbsolutePath (io/file lean-dir "Main.lean"))
+        execute-path (.getAbsolutePath (io/file workspace-root "execute.md"))
+        plan-path (.getAbsolutePath (io/file workspace-root "proof-plan.edn"))
+        alignment-path (.getAbsolutePath (io/file workspace-root "formal-alignment.edn"))
+        changelog-path (.getAbsolutePath (io/file workspace-root "changelog.edn"))
+        prompts (atom [])
+        logs (atom [])
+        workspace {:frame/id "frame-a00J03"
+                   :frame/workspace-root workspace-root
+                   :frame/module-root "ApmCanaries.Frames.A00J03.Frame"
+                   :frame/lean-root (.getAbsolutePath lean-dir)
+                   :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
+                   :artifacts {:execute-notes execute-path
+                               :proof-plan plan-path
+                               :formal-alignment alignment-path
+                               :changelog changelog-path
+                               :lean-main lean-main
+                               :lean-scratch (.getAbsolutePath (io/file lean-dir "Scratch.lean"))}}]
+    (spit lean-main "import Mathlib\n\ntheorem composition_isometric_isomorphism (x : ℝ) : x = x := by\n  sorry\n")
+    (spit execute-path "**Stage 1 — THE CLEAN PROOF**\n\nA real proof.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n\n1. **Main step**\n   - **Formal dependency**: theorem X.\n   - **Informal dependency**: use idea Y.\n   - **Why this becomes thinkable here**: cue Z.\n   - **Lean target/type**: `theorem composition_isometric_isomorphism (x : ℝ) : x = x`.\n   - **Mathlib status/search terms**: search `rfl`.\n   - **Critical path**: yes.\n\n**Stage 3 — LEAN FORMALIZATION**\n\nOnly local wiring remains.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\n\nRevision.\n")
+    (spit plan-path "{:goal \"Main claim\" :terms [{:name \"x\" :meaning \"a real variable\" :needed-because \"target\"}] :strategy [{:id :s1 :formal-dependency \"theorem X\" :informal-dependency \"idea Y\" :why-this-now \"cue Z\" :lean-target \"theorem composition_isometric_isomorphism (x : ℝ) : x = x\" :mathlib-status \"existing\"}] :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}\n")
+    (spit alignment-path "{:main-claim {:informal-claim \"Main claim\" :formal-name \"composition_isometric_isomorphism\" :formal-target \"theorem composition_isometric_isomorphism (x : ℝ) : x = x\" :sanity-check {:mentions-problem-objects? true :avoids-assuming-conclusion? true :meaningful-without-prose? true :notes \"The theorem still states the real claim.\"}} :alignments [{:formal-name \"composition_isometric_isomorphism\" :formal-statement \"theorem composition_isometric_isomorphism (x : ℝ) : x = x\" :informal-clause \"Main claim\" :role :main-theorem}]}\n")
+    (spit changelog-path "[{:kind :stage1-completed :summary \"Proof written\" :full-record? true :sorry? true :fully-closed? false}\n {:kind :stage3-progress :summary \"Closed helper lemmas; one local wiring step remains\" :full-record? true :sorry? true :fully-closed? false}]\n")
+    (reset! conductor/!state {(cid "codex-1")
+                              {:current-problem {:id "a00J03" :subject :analysis :year 2000 :session :fall}
+                               :frame-workspace workspace
+                               :backend nil
+                               :accumulated-output ""
+                               :sorry-kick-count 2
+                               :record-kick-count 0
+                               :formal-kick-count 0
+                               :lean-last-mile-count 0
+                               :problems-done 0
+                               :batch-results []
+                               :target-n 1
+                               :problem-timeout-ms 600000
+                               :problem-start-ms (System/currentTimeMillis)
+                               :dispatch-start-ms (System/currentTimeMillis)}})
+    (with-redefs [conductor/log! (fn [entry] (swap! logs conj entry))
+                  conductor/dispatch! (fn [_ prompt _] (swap! prompts conj prompt))
+                  conductor/start-next-problem! (fn [& _] (throw (ex-info "should not advance" {})))
+                  conductor/stop-apm-conductor-v2! (fn [& _] (throw (ex-info "should not stop" {})))]
+      (#'conductor/handle-solve-return! (cid "codex-1") "codex-1" "Near-closed Lean proof with one sorry remaining." nil)
+      (is (= :lean-last-mile (:current-phase (conductor/state-for-agent "codex-1"))))
+      (is (= 1 (:lean-last-mile-count (conductor/state-for-agent "codex-1"))))
+      (is (zero? (:problems-done (conductor/state-for-agent "codex-1"))))
+      (is (= 1 (count @prompts)))
+      (is (str/includes? (first @prompts) "LEAN LAST MILE"))
+      (is (some #(= :lean-last-mile-kick (:event %)) @logs)))))
 
 (deftest valid-formal-alignment-rejects-target-that-assumes-conclusion
   (is (false? (apm-queue/valid-formal-alignment?

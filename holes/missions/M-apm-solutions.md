@@ -1897,3 +1897,64 @@ the cycle from where it stopped.
 
 **Deferred until:** the :quick and :medium batches are complete and the
 :hard lane queue is populated with diagnosed Mathlib boundary problems.
+
+## Post-Quick-Stage Note (2026-04-01)
+
+The first large `:quick` batch was useful, but it exposed a distinction that
+must remain explicit in the mission:
+
+1. **Good partials are valuable.**
+   A frame that contains a complete informal proof plus a real Lean attempt
+   with a diagnosed blocker is a useful Pass 1 artifact. It can improve the
+   final exposition and it is reusable as a later formalization target.
+
+2. **False-positive prose is not acceptable.**
+   Several early `:quick` outputs looked polished but contained invalid bridge
+   steps. Two concrete examples:
+   - `t97J01`: the argument wrongly inferred disjoint images downstairs from
+     disjoint lifts upstairs under a covering map.
+   - `b94J01`: the proof of part (c) conflated the largest invariant factor
+     with the full group order.
+
+3. **Pass 1 still prioritizes informal quality.**
+   The first-pass objective is not "prove everything in Lean"; it is "obtain
+   high-quality informal solutions for the whole corpus, with honest formal
+   evidence where available." A good partial Lean proof should refine the
+   exposition, not block it.
+
+### Informal-proof quality improvements to enforce after the `:quick` stage
+
+- **Bridge-step sanity check.**
+  Before an informal proof is accepted, explicitly test whether the crucial
+  implication actually follows from the stated hypotheses. This is the
+  informal analogue of the HtDP target check: "does this step really prove
+  what I think it proves?"
+
+- **Multipart honesty.**
+  For multipart problems, the record must say which parts are fully proved,
+  which parts are only sketched, and which parts are merely delegated to
+  standard theorems. Do not let a solid proof of part (c) blur into
+  "the whole problem is solved."
+
+- **Sharper blocker taxonomy.**
+  "Mathlib lacks X" is too coarse. Distinguish:
+  - true missing API/theory;
+  - theorem target is wrong or too weak;
+  - last-mile Lean wiring/bookkeeping only;
+  - construction is correct but formalization is long and routine.
+
+- **Use Lean partials to revise the prose.**
+  When Lean closes a helper or exposes a blocker, revise the reader-facing
+  proof lightly so the final exposition matches what has actually been
+  formalized. This is especially important when the formal theorem is a
+  narrower but genuine sub-result.
+
+- **Add a bounded Lean last-mile boost.**
+  Some problems (e.g. `a00J03`) are essentially solved, but stop at the final
+  5% of Lean bookkeeping. A short focused follow-up stage should exist for
+  "close the proof you already know how to prove," without reopening the
+  broader planning loop.
+
+These changes should land before the first serious `:medium` slice, because
+the quick-lane failures were mostly failures of discipline and artifact
+quality, not failures of mathematical insight.
