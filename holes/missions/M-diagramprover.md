@@ -155,35 +155,170 @@ is trying to *understand why theorems are hard to prove*, and use that
 understanding to make the next theorem easier. The proofs are a byproduct
 of the understanding, not the goal.
 
-## Scope
+## Open Design Questions
+
+### Layer 2: Bayesian Model — candidate structures
+
+The model must answer: "given this sorry boundary, which intervention
+has the highest expected impact?" Three candidate structures:
+
+**A. Beta-Binomial per pattern-blocker pair (simplest).**
+Each (pattern, blocker-type) pair gets a Beta(α, β) prior.
+α increments when the pattern closes a sorry of that blocker type,
+β increments when it fails. Posterior mean = α/(α+β) = success rate.
+Intervention ranking: pick the pair with highest posterior mean ×
+cross-problem count (expected sorry closed).
+
+Pro: trivially implementable now from existing data (12 patterns ×
+~5 blocker types = 60 cells). Con: no sharing of information across
+similar patterns or subjects. The topology P-connected-union pattern
+learns nothing from the analysis P-measure-restrict pattern, even
+if both involve "rewrite μ(univ) for a restricted measure."
+
+**B. Hierarchical model with partial pooling across subjects.**
+Pattern success rates are drawn from a subject-level distribution:
+θ_{p,s} ~ Beta(α_s, β_s), where (α_s, β_s) are estimated per
+subject. Analysis patterns share strength; topology patterns share
+strength. A new pattern in analysis starts with the analysis-level
+prior, not a uniform prior.
+
+Pro: better estimates with sparse data (most patterns have 1-3
+observations). Con: requires choosing the pooling structure — do
+we pool by subject, by blocker type, or both? Needs ~50+ observations
+to reliably estimate the hyperparameters.
+
+**C. NPT-style model (cf. UKRN demo).**
+A directed Bayesian network where nodes are: problem-subject,
+blocker-type, pattern-attempted, Mathlib-coverage-area, outcome.
+The conditional probability tables are estimated from data. The
+network structure encodes domain knowledge: subject influences
+which patterns are relevant, Mathlib coverage influences whether
+a pattern can succeed, blocker type determines which intervention
+is needed.
+
+Pro: richest model, can answer counterfactual questions ("if we
+added ENNReal rpow-exponent continuity to Mathlib, how many sorry
+would close?"). Con: requires the most data and the most structural
+assumptions. Probably Phase 2b after the simpler models are validated.
+
+**Phase 2 starts by comparing A and B on the existing 489-problem
+data** (once Pass 1 has enough sorry boundary observations). Model C
+is deferred to Phase 2b.
+
+### Layer 3: TPG fitness — subgoal measurement
+
+"Partial progress (subgoals reduced)" requires introspecting Lean's
+proof state between tactic steps. Two paths:
+
+**Path 1: LeanDojo proof-state extraction.** LeanDojo exposes the
+tactic state (goals, hypotheses, types) at each step. Fitness =
+(initial sorry count - final sorry count) + 0.1 × (initial subgoal
+count - final subgoal count). This makes Phase 3 dependent on Phase 4
+(LeanDojo integration). Honest dependency — note it.
+
+**Path 2: Binary fitness only.** Fitness = 1 if sorry closes, 0
+otherwise. No partial progress signal. Simpler, no LeanDojo
+dependency. TPG evolves by finding *any* tactic sequence that works,
+without gradient toward partial solutions. May be sufficient for
+prelim-level problems where the search space is narrow enough that
+binary signal suffices.
+
+**Start with Path 2. Move to Path 1 when LeanDojo is available.**
+
+### Cross-problem impact — population strategy
+
+The `:cross-problem-impact` field in the sorry boundary EDN is
+populated in three stages:
+
+1. **Manual (now):** From the overnight run analysis, a human reads
+   sorry descriptions and notes obvious connections. ("a00J01 and
+   a93A03 both need ENNReal rpow-exponent continuity.")
+
+2. **String-matching (Phase 1):** Cluster sorry boundaries by
+   `:blocker.description` similarity (TF-IDF or embedding cosine).
+   Automatic but noisy — catches "rpow" appearing in multiple
+   descriptions but may miss semantic connections.
+
+3. **Bayesian model (Phase 2):** The model infers cross-problem
+   impact from the posterior: if closing sorry X with pattern P
+   updates the posterior for sorry Y (because they share a
+   blocker-type node), then X and Y are cross-linked. No circularity
+   — the model *discovers* connections, it doesn't assume them.
+
+## First Concrete Experiment
+
+**Prerequisite:** existing data only (12 patterns, ~30 diagnosed
+sorry boundaries from the overnight run). No Bayesian model, no TPG.
+
+**Steps:**
+
+1. **Cluster sorry by blocker type.** Read all sorry boundary
+   descriptions from proof-state EDN files. Group by hand into
+   blocker categories: api-gap (missing Mathlib lemma), coercion-
+   bridge (ℝ↔ℝ≥0∞ type wiring), tactic-composition (right lemmas
+   known but can't chain them), structural-gap (no Mathlib coverage
+   for the proof technique at all).
+
+2. **Pick the highest-count cluster.** From the overnight run,
+   "coercion-bridge" and "api-gap" are likely the largest clusters.
+
+3. **Write one targeted Mathlib extension.** For the highest-count
+   cluster, write one lemma or tactic macro that addresses the common
+   blocker. E.g., if 5 sorry need `ENNReal.rpow` exponent continuity,
+   write `ENNReal.tendsto_rpow_atTop` and add it to
+   `apm-lean/ApmCanaries/Local/`.
+
+4. **Re-run the conductor on that cluster.** Use the v2 conductor
+   with the local extension available. Measure: how many sorry close?
+
+5. **Evaluate.** If K sorry close from 1 extension, that's the
+   empirical cross-problem impact for this blocker type. Record it.
+   This becomes the first data point for the Bayesian model.
+
+**Expected timeline:** One weekend with what exists now.
+**Expected outcome:** 3-8 sorry closed from 1 targeted extension,
+plus the first calibration data for the Bayesian model.
+
+## Scope (revised)
+
+### Phase 0: First Concrete Experiment (above)
+
+Cluster, extend, re-run, measure. No new infrastructure.
 
 ### Phase 1: Sorry Boundary Atlas (IDENTIFY → MAP)
 
-Extract structured sorry-boundary data from all overnight run results.
-Build the diagram. Identify clusters of sorry that share the same blocker.
+Extract structured sorry-boundary data from all Pass 1 results.
+Build the diagram. Automate clustering (string-matching on blocker
+descriptions). Populate cross-problem impact links.
 
-### Phase 2: Bayesian Pattern Model (DERIVE → ARGUE)
+### Phase 2a: Bayesian Pattern Model — Beta-Binomial (DERIVE)
 
-Build the Bayesian model over pattern × sorry-type × outcome.
-Rank interventions. Identify the Mathlib extension with highest
-expected cross-problem impact.
+Implement model A (Beta-Binomial per pattern-blocker pair).
+Rank interventions by expected impact. Compare with manual
+ranking from Phase 0.
+
+### Phase 2b: Bayesian Pattern Model — Hierarchical (ARGUE)
+
+Implement model B (partial pooling across subjects).
+Compare with 2a. If data supports it, implement model C (NPT).
 
 ### Phase 3: TPG Tactic Evolution (VERIFY → INSTANTIATE)
 
-Connect futon5 TPG to Lean tactic search. Seed population from
-pattern library. Evolve against sorry boundaries. Extract new patterns
-from successful programs.
+Connect futon5 TPG to Lean tactic search. Binary fitness (Path 2).
+Seed population from pattern library. Evolve against sorry boundaries.
+Extract new patterns from successful programs.
 
 ### Phase 4: LeanDojo Integration
 
-When Rob has LeanDojo running on the superpod, integrate it as an
-alternative search backend alongside TPG. Compare: TPG-evolved
-programs vs LeanDojo tree search vs AxiomProver-style RL (if we
-can replicate it).
+When available on superpod: integrate as search backend, enable
+Path 1 fitness (subgoal introspection), compare TPG vs LeanDojo
+vs RL (if replicable).
 
 ## Deferred Until
 
 - M-apm-solutions Pass 1 has completed at least 200 problems
-- Sorry boundary data is rich enough to train the Bayesian model
+  (Phase 0 can start now with existing 53-problem data)
+- Sorry boundary data is rich enough to train Bayesian models
+  (~50+ observations for model A, ~200+ for model B)
 - futon5 TPG infrastructure is available for Lean integration
 - LeanDojo is running on the superpod (Rob's timeline)
