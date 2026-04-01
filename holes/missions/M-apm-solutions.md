@@ -1958,3 +1958,49 @@ must remain explicit in the mission:
 These changes should land before the first serious `:medium` slice, because
 the quick-lane failures were mostly failures of discipline and artifact
 quality, not failures of mathematical insight.
+
+### Verbal Exam Finding: Two-Agent Workflow (2026-04-01)
+
+**Experiment:** Same problem (a03J04, distribution functions / weak-L^1),
+same prompt, dispatched simultaneously to claude-1 and codex-1 via the
+v3 stepper. Three rounds observed.
+
+**Finding:** The agents have complementary failure modes under pressure:
+- Claude-1 *thinks* when stuck — spends 20 minutes attempting `field_simp`
+  chains on rpow algebra, gets partial results, produces real Lean work.
+- Codex-1 *documents* when stuck — writes handoff summaries and context
+  notes instead of attempting the proof.
+
+This is not "Claude good, Codex bad." It's a workflow design insight:
+**don't ask one agent to be both mathematician and engineer.** Split the
+roles by what each agent does when the friction is high.
+
+**Proposed two-agent workflow:**
+
+1. **Claude (v3 stepper, mathematician):** "Solve this problem completely"
+   → produces informal proof + real Lean with honest sorry at genuine
+   blockers. Human watches the mirror, steers with `continue!`/`backup!`.
+
+2. **Codex (cleanup pass, technician):** "Here's Main.lean with N sorry.
+   Close them. Don't write documentation, don't produce a handoff, just
+   close the admits." → mechanical tactic search on pre-identified goals.
+
+The key constraint: Codex must receive a *narrow, mechanical spec* (close
+this admit using these specific lemmas), not a *broad mathematical task*
+(prove this theorem). When given the broad task, Codex optimises for
+process documentation over mathematical work. When given the narrow task,
+it can wire `field_simp` chains competently.
+
+**Evidence from the exam:**
+
+| | Claude-1 | Codex-1 |
+|---|---|---|
+| Informal proof | 77s, correct, rich | 26s, correct, adequate |
+| Lean Part (a) | Closed via Mathlib | `admit`, placeholder |
+| Lean Parts (b)/(c) | 1200s of real `field_simp` work, 2 admit at rpow algebra | Wrote handoff memo instead |
+| Response to "close the admits" | (not tested — was doing the work) | TBD — cleanup pass dispatched |
+
+**Implication for Pass 1:** Run claude-1 as the primary prover via v3
+stepper. Accumulate sorry boundaries. Then run codex-1 as a cleanup
+pass on the specific sorry, with narrow specs derived from Claude's
+diagnosed blockers. This maximises both agents' strengths.
