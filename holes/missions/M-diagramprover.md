@@ -48,6 +48,56 @@ and pattern successes/failures, projects where intervention will have
 the most impact, executes that intervention, and feeds the result back
 into the diagram.
 
+## Scope
+
+### In scope
+
+- Sorry boundary atlas: structured data from all Pass 1 proof attempts
+- Bayesian pattern model: at least model A (Beta-Binomial), possibly B/C
+- TPG integration: futon5 TPG pointed at Lean tactic search (binary fitness)
+- LeanDojo integration: when available on superpod
+- Pattern library feedback loop: successful TPG programs → new patterns
+- First concrete experiment: cluster → extend → re-run → measure
+
+### Out of scope
+
+- **Training a neural prover from scratch** — we use TPG/LeanDojo, not a
+  custom transformer. AxiomProver's data flywheel is out of reach without
+  their compute budget.
+- **Competition math** — Putnam-style problems require different heuristics.
+  We stay on curriculum math (prelims) where Mathlib coverage is the bottleneck,
+  not mathematical creativity.
+- **Replacing the proof peripheral** — DiagramProver augments the sorry-kick
+  loop, it doesn't replace the observe/propose/execute discipline. The informal
+  proofs remain the primary product.
+- **Web UI** — all interaction is via REPL, Drawbridge, and Emacs.
+
+## Completion Criteria
+
+1. **Sorry boundary atlas** exists as queryable EDN with blocker-type clustering
+   and cross-problem impact links for ≥100 problems.
+2. **Bayesian model A** (Beta-Binomial) is implemented and ranks interventions.
+   Ranking is validated against manual expert ranking on ≥20 sorry boundaries.
+3. **At least one targeted Mathlib extension** has been written based on the
+   model's recommendation and has closed ≥3 sorry across different problems
+   in a re-run.
+4. **TPG or LeanDojo** (whichever is available first) has been pointed at ≥10
+   sorry boundaries and has closed ≥2 that the conductor alone could not.
+5. **Pattern library has grown** from the initial 12 to ≥20 patterns, with at
+   least 4 extracted automatically from TPG programs or LeanDojo traces.
+
+## Owner and Dependencies
+
+**Owner:** Joe (architecture + Bayesian model), with Claude/Codex for
+implementation and proof search.
+**Repos:** futon3c (conductor, pattern library), futon5 (TPG, AIF),
+apm-lean (Lean proofs, Mathlib extensions), futon6 (frame workspaces).
+**Blocking dependencies:**
+- M-apm-solutions Pass 1 ≥200 problems (for sorry boundary data volume)
+- futon5 TPG infrastructure reachable from futon3c (for Phase 3)
+- Rob's LeanDojo on superpod (for Phase 4, non-blocking — Phase 3 can
+  proceed with binary fitness)
+
 ## Architecture
 
 ### Layer 1: The Diagram (data)
