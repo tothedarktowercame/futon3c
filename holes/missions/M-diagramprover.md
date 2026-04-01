@@ -1208,6 +1208,40 @@ validated. If the ports say "match" but the proof fails anyway
 (because of coercion gaps, universe issues, or API changes), the
 port typing is too coarse and needs refinement.
 
+### Pilot C: Tension analysis → new patterns (completed)
+
+The VERIFY pilot's most productive direction was not diagram
+construction but tension identification. Three proof failures were
+analysed using `constraint-tension-resolution` methodology:
+
+| Failure | Tension | Pattern induced |
+|---------|---------|----------------|
+| a00J01: proved limit in ℝ, can't lift to ℝ≥0∞ | Math representation ≠ API representation. Coercion chain is directed (lossy), not isomorphic | `coercion-bridge.flexiarg` [🌉/渡] |
+| a93A03: know ‖h‖²-2‖h‖²+‖h‖²=0 but rw breaks Tendsto goal | Algebraic rewrite obligation conflicts with filter-structure preservation | `tactic-algebra-interference.flexiarg` [⚡/衝] |
+| a96J01: "tent functions" is 1 line on paper, 50 in Lean | Trivial mathematical insight, substantial Lean construction engineering | `construction-cost-asymmetry.flexiarg` [🏗️/造] |
+
+Each pattern was induced from a real failure, linked to its informal
+parent via `:instantiates`, and documents the specific tension that
+the informal pattern doesn't capture. This validates the three-level
+architecture: the informal pattern tells you *what to try*, the
+tension tells you *why it's hard in Lean*, the formalization pattern
+tells you *how to work around it*.
+
+**Pilot C finding:** Pattern induction from failures is more
+productive than pattern induction from successes. Successful proofs
+yield patterns that describe what worked; failed proofs yield
+patterns that describe what's *hard* — and the hard parts are where
+the pattern library needs to grow. This inverts the expected value:
+the sorry boundaries are not just targets for search, they're the
+raw material for pattern discovery.
+
+This is the DiagramProver thesis in miniature: the diagram of
+failures (sorry boundary atlas) produces the patterns (library growth)
+that drive the search (TPG/LeanDojo) that closes the sorry (new
+proofs) that updates the diagram. The loop works.
+
+Pattern library: 15 formalization + 31 informal + 7 strategy = 53 total.
+
 ### Decision log
 
 1. **Pattern-to-diagram is new code, not futon5 adaptation.**
