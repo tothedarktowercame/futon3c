@@ -900,6 +900,82 @@ plasticity (adapting to new data) for lifelong theorem proving.
 Patterns can be *superseded* (marked as having a better alternative)
 but never deleted.
 
+### Views and projections
+
+**REPL (primary):** All interaction via Drawbridge eval + Emacs REPL.
+```clojure
+;; Check sorry boundary atlas
+(v2/sorry-boundary-atlas)
+
+;; Run Bayesian ranking
+(v2/rank-interventions)
+
+;; Evolve TPG population for 100 generations against a sorry cluster
+(dp/evolve-tactic-programs! :cluster :api-gap :generations 100)
+
+;; Inspect an evolved program as a tactic sequence
+(dp/program->tactics best-program sorry-boundary)
+```
+
+**PDF cheatsheet projection:** Each proved problem generates a
+two-column cheatsheet (from M-apm-solutions rendering pipeline).
+DiagramProver adds a third annotation layer: the wiring diagram of
+the proof, showing which patterns were applied, in what order, with
+what type transformations. This is the "proof anatomy" view — how
+the proof *works*, not just what it says.
+
+**Pattern evolution visualisation:** futon5's `tpg_render.clj`
+already renders TPG phenotypes as PNGs. Extend to show the tactic
+program structure alongside the sorry boundary it addresses.
+
+### Wiring diagram (pilot)
+
+The DERIVE wiring diagram for DiagramProver itself is deferred to
+ARGUE (it's the mission's own architecture, not a proof diagram).
+
+However, a **pilot** is needed now: take 2-3 proved proofs and 1-2
+partials from the overnight run and manually construct their wiring
+diagrams. This validates that:
+1. The (goal-before, tactic, goal-after) triple representation works
+2. Pattern diagrams can be induced from the triples
+3. The `:instantiates` relation to informal patterns is meaningful
+4. Partial proofs produce diagrams with open ports (sorry = open port)
+
+Pilot candidates:
+- **t92J01** (proved, 1 theorem, topology) — clean contradiction via
+  isPreconnected_sUnion, should yield a simple linear diagram
+- **t94A02** (proved, 10 theorems, topology) — multi-lemma composition,
+  should yield a rich dependency diagram
+- **a00J01** (partial, 2 sorry, analysis) — open ports at the
+  ENNReal rpow boundary, validates partial-diagram representation
+
+### Fidelity contract
+
+This mission is greenfield, not a port. Fidelity is to the futon6
+devmap vision (`futon3/holes/futon6.devmap`):
+
+> "FUTON6 is a comprehensive mathematics dictionary where informal and
+> formal arguments coexist, indexed by patterns at multiple levels of
+> abstraction."
+
+DiagramProver contributes to this vision by:
+1. **Populating the formal argument layer** — each proved Lean proof
+   is a formal entry in the dictionary
+2. **Linking formal to informal** — the `:instantiates` relation
+   connects PatternDiagrams to math-informal flexiarg patterns
+3. **Indexing by patterns** — the pattern library IS the index; the
+   Bayesian model ranks patterns by effectiveness
+4. **Multiple levels of abstraction** — informal patterns (recognition
+   heuristic) → formalization patterns (Lean API + tactic chain) →
+   wiring diagrams (typed ports, composition) → TPG programs (executable)
+
+The 12 new `math-formalization/*.flexiarg` files in futon3/library/
+sit alongside the existing 31 `math-informal/` and 7 `math-strategy/`
+patterns, completing the three-level pattern architecture:
+- **math-informal**: when to try a strategy (recognition)
+- **math-strategy**: how to structure the argument (composition)
+- **math-formalization**: how to wire the Lean proof (execution)
+
 ## Deferred Until
 
 - Phase 0 can start **now** with existing data (39 partials, 12 patterns)
