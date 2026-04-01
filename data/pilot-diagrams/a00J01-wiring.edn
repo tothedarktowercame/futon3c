@@ -1,0 +1,113 @@
+;; Pilot A — Wiring Diagram for a00J01 (Lp norm → L∞ limit)
+;; Partial proof: 2 sorry = 2 open ports.
+;; Demonstrates how sorry appears as an open output port in the diagram.
+
+{:problem-id "a00J01"
+ :theorem "eLpNorm_tendsto_top"
+ :classification :partial
+ :sorry-count 2
+
+ :trace
+ [;; === upper_bound (CLOSED — complete subproof) ===
+  {:id :ub-0
+   :type :tactic
+   :tactic "have h := eLpNorm_le_eLpNorm_mul_rpow_measure_univ ..."
+   :goal-before "⊢ eLpNorm f p μ ≤ eLpNorm f ⊤ μ"
+   :goal-after "h : eLpNorm f p μ ≤ eLpNorm f ⊤ μ * μ(univ)^{1/p - 1/⊤} ⊢ ..."
+   :pattern :P-lp-norm-comparison
+   :mathlib-api ["eLpNorm_le_eLpNorm_mul_rpow_measure_univ"]}
+
+  {:id :ub-1
+   :type :tactic
+   :tactic "rw [Measure.restrict_apply ..., Real.volume_Icc ..., ofReal_one] at h"
+   :goal-before "h : ... * μ(univ)^{...} ⊢ ..."
+   :goal-after "h : ... * 1^{...} ⊢ ..."
+   :pattern :P-measure-restrict-simplify
+   :mathlib-api ["Measure.restrict_apply" "Real.volume_Icc" "ENNReal.ofReal_one"]}
+
+  {:id :ub-2
+   :type :exact
+   :tactic "rw [one_rpow, mul_one] at h; exact h"
+   :goal-before "h : eLpNorm f p μ ≤ eLpNorm f ⊤ μ * 1 ⊢ eLpNorm f p μ ≤ eLpNorm f ⊤ μ"
+   :goal-after :closed
+   :pattern :P-measure-restrict-simplify
+   :notes "1^x = 1, then y * 1 = y — mechanical cleanup"}
+
+  ;; === tendsto_rpow_inv_nat_atTop (CLOSED — key helper lemma) ===
+  {:id :key-0
+   :type :tactic
+   :tactic "have hcont := Real.continuousAt_const_rpow (ne_of_gt ht)"
+   :goal-before "ht : 0 < t ⊢ Tendsto (fun n => t ^ (1/n)) atTop (𝓝 1)"
+   :goal-after "hcont : ContinuousAt (t ^ ·) 0 ⊢ ..."
+   :pattern :P-rpow-exponent-limit
+   :mathlib-api ["Real.continuousAt_const_rpow"]}
+
+  {:id :key-1
+   :type :tactic
+   :tactic "have hlim := tendsto_const_div_atTop_nhds_zero_nat 1"
+   :goal-before "hcont : ContinuousAt (t ^ ·) 0 ⊢ ..."
+   :goal-after "hcont, hlim : Tendsto (1/·) atTop (𝓝 0) ⊢ ..."
+   :pattern :P-rpow-exponent-limit
+   :mathlib-api ["tendsto_const_div_atTop_nhds_zero_nat"]}
+
+  {:id :key-2
+   :type :exact
+   :tactic "have := hcont.tendsto.comp hlim; simp [...] at this; exact this"
+   :goal-before "hcont, hlim ⊢ Tendsto (fun n => t ^ (1/n)) atTop (𝓝 1)"
+   :goal-after :closed
+   :pattern :P-rpow-exponent-limit
+   :notes "Compose continuity at 0 with 1/n → 0, simplify t^0 = 1"}
+
+  ;; === lower_bound (SORRY — open port) ===
+  {:id :lb-sorry
+   :type :sorry
+   :goal "∀ᶠ p in atTop, α ≤ eLpNorm f p (volume.restrict (Icc 0 1))"
+   :blocker {:type :coercion-bridge
+             :description "Compose le_eLpNorm_of_bddBelow (ℝ≥0∞) with tendsto_rpow_inv_nat_atTop (ℝ)"
+             :tension "Math proved in ℝ, API needs ℝ≥0∞"
+             :pattern-blocked :coercion-bridge}
+   :notes "The mathematical content is resolved (key-0 through key-2). The sorry is
+           purely the ENNReal↔ℝ wiring."}
+
+  ;; === eLpNorm_tendsto_top (SORRY — depends on lower_bound) ===
+  {:id :main-sorry
+   :type :sorry
+   :goal "Tendsto (fun p => eLpNorm f p μ) atTop (𝓝 (eLpNorm f ⊤ μ))"
+   :blocker {:type :composition
+             :description "Squeeze: upper_bound (closed) + lower_bound (sorry) → Tendsto"
+             :depends-on [:lb-sorry]
+             :pattern-blocked nil}
+   :notes "Blocked by lower_bound. Once lower_bound closes, this is
+           a standard squeeze theorem application."}]
+
+ :diagram
+ {:nodes [:ub-0 :ub-1 :ub-2 :key-0 :key-1 :key-2 :lb-sorry :main-sorry]
+  :edges [{:from :ub-0 :to :ub-1 :type :sequential}
+          {:from :ub-1 :to :ub-2 :type :sequential}
+          {:from :key-0 :to :key-1 :type :sequential}
+          {:from :key-1 :to :key-2 :type :sequential}
+          {:from :key-2 :to :lb-sorry :type :feeds-into :label "real-valued limit feeds lower bound"}
+          {:from :ub-2 :to :main-sorry :type :feeds-into :label "upper bound feeds squeeze"}
+          {:from :lb-sorry :to :main-sorry :type :depends-on :label "lower bound feeds squeeze"}]
+  :terminals [:ub-2 :key-2]
+  :open-ports [:lb-sorry :main-sorry]}
+
+ :patterns-instantiated
+ [{:pattern :P-lp-norm-comparison :steps [:ub-0] :role "Upper bound via Mathlib comparison"}
+  {:pattern :P-measure-restrict-simplify :steps [:ub-1 :ub-2] :role "Collapse μ(Icc 0 1) = 1"}
+  {:pattern :P-rpow-exponent-limit :steps [:key-0 :key-1 :key-2] :role "Key mathematical lemma"}
+  {:pattern :coercion-bridge :steps [:lb-sorry] :role "BLOCKED — the open port"
+   :tension "tendsto_rpow_inv_nat_atTop lives in ℝ; le_eLpNorm_of_bddBelow lives in ℝ≥0∞"}]
+
+ :composition-structure
+ {:type :parallel-then-compose
+  :branches [{:name "upper-bound" :path [:ub-0 :ub-1 :ub-2] :status :closed}
+             {:name "key-limit" :path [:key-0 :key-1 :key-2] :status :closed}
+             {:name "lower-bound" :path [:lb-sorry] :status :open
+              :blocked-by :coercion-bridge}]
+  :composition {:name "squeeze" :node :main-sorry :status :open
+                :depends-on ["upper-bound" "lower-bound"]}
+  :notes "Three independent branches. Two closed, one open.
+          The open branch is blocked by a coercion bridge tension,
+          not by mathematical difficulty. The composition (squeeze)
+          is trivial once the branches are all closed."}}

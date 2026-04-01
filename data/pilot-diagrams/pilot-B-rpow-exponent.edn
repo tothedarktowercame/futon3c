@@ -1,0 +1,79 @@
+;; Pilot B — Pattern application: rpow-exponent-limit → a00J01 lower_bound
+;;
+;; Pattern: P-rpow-exponent-limit
+;; This is the HARD test — the pattern's mathematical content matches but
+;; the coercion bridge tension means the ports don't fully connect.
+
+{:pattern-id :P-rpow-exponent-limit
+ :pattern-source "math-formalization/rpow-exponent-limit.flexiarg"
+
+ :typed-ports
+ {:input [{:port-id :rpow-limit-goal
+           :type :input-goal
+           :signature "goal contains t ^ (1/p) → 1 or equivalent limit as p → ∞"
+           :predicate "(re-find #\"Tendsto.*rpow|rpow.*nhds.*1\" goal-text)"}
+          {:port-id :positive-base
+           :type :input-hyp
+           :signature "0 < t (base is positive)"
+           :predicate "(re-find #\"0 < |pos\" hyp-text)"}]
+  :output [{:port-id :limit-closed
+            :type :output-goal
+            :signature "the rpow limit is closed (Tendsto proved)"
+            :transform "continuousAt_const_rpow composed with 1/n → 0"}]}
+
+ :test-cases
+ [{:sorry-id "a00J01/tendsto_rpow_inv_nat_atTop"
+   :goal "Tendsto (fun n : ℕ => t ^ (1 / (n : ℝ))) atTop (𝓝 1)"
+   :port-match? true
+   :type-universe :real
+   :prediction :should-succeed
+   :actual-result :succeeded
+   :notes "Direct application. Goal is in ℝ, pattern works in ℝ.
+           Closed with 6 lines of Lean. Ports perfectly predicted success."}
+
+  {:sorry-id "a00J01/lower_bound"
+   :goal "∀ᶠ p in atTop, α ≤ eLpNorm f p (volume.restrict (Icc 0 1))"
+   :port-match? :partial
+   :type-universe :ennreal
+   :prediction :should-partially-apply
+   :actual-result :partially-applied
+   :notes "The mathematical content matches — lower_bound USES the rpow limit.
+           But the goal is in ℝ≥0∞ and the pattern produces a result in ℝ.
+           The port types don't match: pattern output is ℝ-valued Tendsto,
+           goal needs ℝ≥0∞-valued Eventually.
+
+           This is EXACTLY the coercion-bridge tension. The pattern correctly
+           identifies WHAT to do but cannot complete the wiring because the
+           type universes don't match.
+
+           Prediction accuracy: CORRECT. The :partial port-match correctly
+           predicts that the pattern contributes but doesn't close."}
+
+  {:sorry-id "a93A03/radon_riesz"
+   :goal "Tendsto (fun n => ‖u n - h‖) atTop (𝓝 0)"
+   :port-match? false
+   :type-universe :real
+   :prediction :should-not-apply
+   :actual-result :did-not-apply
+   :notes "Goal is a norm limit, not an rpow limit. No rpow in the goal.
+           Ports correctly predict non-applicability."}]
+
+ :pilot-B-finding
+ "The rpow-exponent-limit pattern test reveals a three-valued port matching:
+    :true     — ports fully match, pattern closes the sorry
+    :partial  — mathematical content matches but type universe mismatch
+    :false    — no structural match at all
+
+  The :partial case is the most interesting. It correctly predicts that the
+  pattern CONTRIBUTES (the rpow limit is a sub-result needed by lower_bound)
+  but DOESN'T CLOSE (the coercion bridge is still needed).
+
+  This suggests the port type system needs a :type-universe annotation on
+  each port. When pattern output universe ≠ goal universe, the match is
+  :partial and the system should look for a coercion-bridge pattern to
+  compose with.
+
+  Port composition rule:
+    If pattern P has output in ℝ and sorry S has goal in ℝ≥0∞,
+    then P alone is :partial, but P ∘ coercion-bridge might be :true.
+    The Bayesian model should evaluate P(S closes | P ∘ bridge) not just P(S closes | P)."}

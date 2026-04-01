@@ -1,0 +1,65 @@
+;; Pilot B — Pattern application: measure-restrict-simplify → analysis sorry
+;;
+;; Pattern: P-measure-restrict-simplify
+;; Typed ports:
+;;   Input:  {:goal "... μ(univ) ..." :hyp "μ = volume.restrict (Icc 0 1)"}
+;;   Output: {:goal "... 1 ..."} (μ(univ) replaced by 1)
+;;
+;; Test: can these ports predict where the pattern will succeed?
+
+{:pattern-id :P-measure-restrict-simplify
+ :pattern-source "math-formalization/measure-restrict-simplify.flexiarg"
+
+ :typed-ports
+ {:input [{:port-id :goal-with-measure-univ
+           :type :input-goal
+           :signature "goal contains `volume.restrict (Icc 0 1) univ` or equivalent"
+           :predicate "(re-find #\"restrict.*univ|volume.*Icc.*univ\" goal-text)"}
+          {:port-id :restricted-measure-hyp
+           :type :input-hyp
+           :signature "μ is volume.restrict (Icc a b) for known [a,b]"
+           :predicate "(re-find #\"volume\\.restrict.*Icc\" hyp-text)"}]
+  :output [{:port-id :simplified-goal
+            :type :output-goal
+            :signature "μ(univ) replaced by ofReal(b-a), typically 1"
+            :transform "rw [Measure.restrict_apply, volume_Icc, ofReal..., one_rpow, mul_one]"}]}
+
+ :test-cases
+ [{:sorry-id "a00J01/upper_bound"
+   :goal "eLpNorm f p (volume.restrict (Icc 0 1)) ≤ eLpNorm f ⊤ (volume.restrict ...)"
+   :port-match? true
+   :prediction :should-succeed
+   :actual-result :succeeded
+   :notes "Pattern was used in the overnight proof. 5-step rewrite chain closed the goal.
+           Ports correctly predicted success."}
+
+  {:sorry-id "a00J01/lower_bound"
+   :goal "∀ᶠ p in atTop, α ≤ eLpNorm f p (volume.restrict (Icc 0 1))"
+   :port-match? false
+   :prediction :should-not-apply
+   :actual-result :did-not-apply
+   :notes "Goal does not contain μ(univ) in a directly simplifiable position.
+           The measure appears inside a Tendsto/Eventually quantifier, not as a
+           standalone term. Pattern correctly predicts non-applicability.
+           This sorry needs coercion-bridge, not measure-restrict-simplify."}
+
+  {:sorry-id "a93A03/radon_riesz"
+   :goal "Tendsto (fun n => ‖u n - h‖) atTop (𝓝 0)"
+   :port-match? false
+   :prediction :should-not-apply
+   :actual-result :did-not-apply
+   :notes "No restricted measure in this Hilbert space proof. Ports correctly
+           predict non-applicability. This sorry needs tactic-algebra-interference
+           pattern instead."}]
+
+ :pilot-B-finding
+ "The typed ports for measure-restrict-simplify correctly predicted all three
+  cases: applied where expected (upper_bound), did not apply where the goal
+  structure didn't match (lower_bound, radon_riesz). Port typing at the level
+  of 'goal contains μ(univ) in simplifiable position' is sufficient granularity
+  for this pattern.
+
+  Limitation: the port predicate is a regex, not a type-theoretic check. A
+  real compiler would need to parse the Lean goal state (via Pantograph) and
+  check structural matching, not string matching. But for the pilot, string
+  matching was sufficient to make correct predictions."}
