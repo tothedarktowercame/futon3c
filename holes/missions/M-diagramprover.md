@@ -1,7 +1,7 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
 
-**Date:** 2026-04-01 (IDENTIFY)
-**Status:** IDENTIFY
+**Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP begun)
+**Status:** MAP
 **Cross-ref:** M-apm-solutions (proof peripheral, pattern library, sorry boundaries),
 futon5 (TPG, AIF loops), vsat.wiki/ukrn-demo (Bayesian pattern models),
 M-distributed-frontiermath (superpod, LeanDojo)
@@ -569,13 +569,103 @@ When Rob has LeanDojo-v2 on the superpod:
   progressive training: re-rank problems after each batch by
   Bayesian posterior, not initial triage)
 
+## MAP — Infrastructure Survey (2026-04-01)
+
+### Inventory: ready vs missing
+
+| Component | State | Location | Notes |
+|-----------|-------|----------|-------|
+| Pattern library | **READY** | `futon3c/data/apm-formalization-patterns.edn` | 12 patterns, EDN, loadable, injected into v2 conductor prompts |
+| Sorry boundary data | **READY** | `futon3c/data/proof-state/` | 76 proof state files, 39 partial with diagnosed sorry boundaries |
+| Proved Lean files | **READY** | `apm-lean/ApmCanaries/Frames/` | 70 frame dirs, 31 sorry-free files with real theorem declarations |
+| Frame workspaces | **READY** | `futon6/.state/proof-frames/` | 78 problem frames, 211 metadata JSON files |
+| Conductor pattern injection | **READY** | `futon3c/.../apm_conductor_v2.clj` | `format-patterns-for-prompt` wired into `make-solve-prompt` |
+| futon5 TPG | **READY** | `futon5/` | `tpg_render.clj`, evolution scripts, phenotype output, `best-tpg.edn` |
+| UKRN Bayesian model | **READY** | `vsat.wiki/ukrn-demo/` | Clojure NPT model, geometric-mean gates, mode classification |
+| apm-lean Local extensions | **EMPTY** | `apm-lean/ApmCanaries/Local/` | Directory exists, no files. First extension is Phase 0 deliverable |
+| LeanDojo-v2 | **MISSING** | — | Not installed. Python package, needs pip + Lean toolchain |
+| Pantograph | **MISSING** | — | Not installed. Required by LeanDojo-v2 for REPL |
+
+### MAP questions and answers
+
+**Q1: Is the sorry boundary data rich enough for Phase 0?**
+Yes. 39 partial proof states with diagnosed blockers. The `:proof/output`
+field in each EDN contains the sorry count, which Mathlib APIs were tried,
+and what would close the gap. This is sufficient to cluster by blocker type
+and pick the highest-count cluster for the first targeted extension.
+
+**Q2: Can the pattern library be loaded and used programmatically?**
+Yes. `load-pattern-library` and `patterns-for-subject` are working
+functions in the v2 conductor. The format (EDN with `:id`, `:recognition`,
+`:mathlib-api`, `:tactic-chain`, `:subjects`, `:difficulty`) is stable.
+Pattern diagrams (Layer 1.5) will extend this format, not replace it.
+
+**Q3: Can futon5 TPG be pointed at Lean tactic search?**
+Partially. TPG evolution infrastructure exists (`tpg_coupling_evolve.clj`,
+`tpg_pattern_evolution.clj`). The fitness function and action space need
+to be adapted: currently TPG operates on futon5's own domain, not Lean
+tactics. The adaptation requires: (a) defining the action space (Lean
+tactic vocabulary), (b) connecting fitness evaluation to Pantograph REPL,
+(c) seeding initial population from pattern library entries. This is
+Phase 3b work.
+
+**Q4: Can we run LeanDojo-v2 on the laptop?**
+Unknown — not yet installed. The paper says API inference (HuggingFace)
+eliminates the need for local GPU, so the laptop should handle search +
+REPL. Rob can confirm. Installation is Phase 3a.
+
+**Q5: Is the UKRN Bayesian model transferable to the proof domain?**
+Structurally yes. The UKRN model uses NPT (Noisy-OR + geometric-mean
+gates) over pattern-strength scores. The same structure works for
+pattern × blocker-type × outcome, replacing "institution support factors"
+with "Mathlib coverage factors." The assumptions.edn format can encode
+our pattern priors. Adaptation is Phase 2a work.
+
+**Q6: How many tactic traces can we extract from proved proofs?**
+31 sorry-free Lean files with real theorem declarations. Each can be
+traced to produce (goal-before, tactic, goal-after) triples. LeanDojo-v2
+data extraction does this automatically (when installed). Manual
+extraction is possible but tedious — ~30 minutes per file. LeanDojo
+installation is the gating dependency for efficient trace extraction.
+
+**Q7: What is the sorry blocker distribution?**
+Not yet formally clustered. From manual overnight-run analysis:
+- API gap (missing Mathlib lemma): ~15 problems (e.g., ENNReal rpow)
+- Coercion bridge (ℝ↔ℝ≥0∞ wiring): ~8 problems
+- Structural gap (no Mathlib coverage for proof technique): ~10 problems
+- Tactic composition (right lemmas known, can't chain): ~6 problems
+Formal clustering is Phase 1 work.
+
+### Surprises
+
+1. **31 sorry-free proofs, not 19.** The reclassification pass found 19,
+   but continued codex-1 runs added more. The pattern library was
+   extracted from the original 19 — the additional 12 may contain new
+   patterns not yet catalogued.
+
+2. **TPG phenotypes already exist.** `futon5/out/tpg-runs/` contains
+   rendered TPG phenotypes from prior evolution runs. The rendering
+   pipeline (`tpg_render.clj`) includes routing summaries, operator
+   frequency analysis, and entropy metrics — all potentially useful for
+   visualizing evolved tactic programs.
+
+3. **apm-lean Local extensions directory is empty.** Despite being
+   referenced in frame workspace prompts ("promote reusable lemmas into
+   ApmCanaries/Local"), no lemmas have actually been promoted. The first
+   targeted Mathlib extension (Phase 0) will be the first occupant.
+
+4. **The UKRN model uses geometric-mean gates.** This is a bottleneck
+   model — the weakest factor dominates. For proof search, this means
+   the hardest step (the gate) determines whether a pattern succeeds,
+   which matches reality: a 5-step tactic chain fails if any one step
+   is impossible. This structure may be more appropriate than the
+   Beta-Binomial model for Phase 2.
+
 ## Deferred Until
 
-- M-apm-solutions Pass 1 has completed at least 200 problems
-  (Phase 0 can start now with existing 53-problem data)
-- Sorry boundary data is rich enough to train Bayesian models
-  (~50+ observations for model A, ~200+ for model B)
-- LeanDojo-v2 installable on laptop (Phase 3a — check with Rob)
-- futon5 TPG infrastructure reachable from LeanDojo BaseProver
-  (Phase 3b)
-- Superpod access with GPU for fine-tuning (Phase 4, non-blocking)
+- Phase 0 can start **now** with existing data (39 partials, 12 patterns)
+- Phase 1 requires Pass 1 ≥200 problems (currently ~76)
+- Phase 2 requires ~50+ sorry boundary observations for model A
+- Phase 3a requires LeanDojo-v2 installation (check with Rob)
+- Phase 3b requires futon5 TPG + Pantograph integration
+- Phase 4 requires superpod GPU access (non-blocking)
