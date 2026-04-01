@@ -6,25 +6,72 @@
 futon5 (TPG, AIF loops), vsat.wiki/ukrn-demo (Bayesian pattern models),
 M-distributed-frontiermath (superpod, LeanDojo)
 
+## SOTA: What Is Known About AI Theorem Proving (April 2026)
+
+**AxiomProver** (Axiom, axiommath.ai) is the headline system. Published
+claims from press releases, investor materials, and news coverage:
+
+- Putnam 2025: 12/12 (120/120). Only five humans have achieved this in
+  98 years; median human score is 0.
+- Four previously unsolved conjectures closed, including Chen-Gendron
+  (algebraic geometry / number theory) and Fel's conjecture (syzygies
+  of numerical semigroups, solved autonomously).
+- Architecture (from UBOS coverage): "natural-language problem statements
+  are parsed and translated into Lean code with type-consistency checking,
+  then a custom transformer explores proof space with an RL loop rewarding
+  progress and penalizing dead ends, and finally each candidate proof is
+  fed to Lean for formal verification, with backtracking on rejection."
+- Data flywheel: verified proofs fed back into training, avoiding model
+  collapse from unverified AI-generated data.
+- Transfer learning claims into code verification (thin specifics).
+
+**What is NOT published:** model architecture, training data, RL reward
+shaping details, search algorithm, Lean integration specifics. No papers.
+No open-source components beyond API wrappers. The GitHub repos are
+consumer-facing, not research artifacts.
+
+**Our assessment:** The 3-stage pipeline (NL→Lean, RL search, Lean verify)
+is a plausible rational reconstruction from the press coverage, but we
+cannot verify whether the actual system is top-down (fixed axiom search)
+or something more nuanced. The "top-down vs bottom-up" framing below is
+our philosophical positioning, not a claim about AxiomProver's internals.
+
+**Other systems:**
+- **LeanDojo** (open-source): tree search over Lean tactic states.
+  Proof-state extraction + neural tactic suggestion. Available. Rob is
+  setting this up on the superpod.
+- **AlphaProof** (DeepMind, 2024): RL + Lean, IMO silver medal performance.
+  Not open-source. Architecture published in more detail than AxiomProver.
+- **Curriculum-level provers** (various): Most benchmarks focus on
+  competition math or miniF2F. Curriculum math (prelim-style) against a
+  specific Mathlib API surface is underexplored — our 489-problem corpus
+  may be a novel benchmark.
+
+**The gap DiagramProver addresses:** All published systems treat each
+theorem as an independent search problem. None exploit cross-problem
+structure (sorry boundary clustering, pattern transfer, targeted Mathlib
+extension as a strategic intervention). This is the Deleuzian contribution:
+reading the *diagram* of failures across a corpus to guide where to extend
+the *axiom system* (Mathlib) next.
+
 ## The Name
 
-AxiomProver works top-down: axioms → rules → search within rules → verify.
-The axioms are fixed; the prover explores within their constraints. This is
-Cartesian: clear and distinct rules, mechanical deduction, convergence to
-a single correct proof.
+The name "DiagramProver" contrasts with "AxiomProver" at the level of
+Deleuze vs Descartes — but this is our framing, not a claim about what
+AxiomProver actually does internally.
 
 DiagramProver works bottom-up: observed data → patterns → projected
 interventions → evolve new capacity. The patterns are fluid; they emerge
 from proof attempts, mutate through TPG evolution, and are validated
-against real sorry boundaries. This is Deleuzian: the diagram maps
-intensities (where is the proof stuck? what's the shape of the gap?),
-creates new realities (Mathlib extensions, novel tactic sequences), and
-resists the reterritorialization of fixed axiom systems.
+against real sorry boundaries. The diagram maps intensities (where is
+the proof stuck? what's the shape of the gap?), creates new realities
+(Mathlib extensions, novel tactic sequences), and resists the
+reterritorialization of fixed axiom systems.
 
 The diagram is not a proof — it's a map of the proof landscape that
-shows where movement is possible. The axiom is not wrong — it's
-incomplete. DiagramProver extends the axiom system by reading the
-diagram of what's missing.
+shows where movement is possible. The axiom system is not wrong — it's
+incomplete. DiagramProver extends it by reading the diagram of what's
+missing.
 
 ## The Problem
 
