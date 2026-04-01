@@ -59,6 +59,17 @@ our philosophical positioning, not a claim about AxiomProver's internals.
   large-model local inference.
 - **AlphaProof** (DeepMind, 2024): RL + Lean, IMO silver medal performance.
   Not open-source. Architecture published in more detail than AxiomProver.
+- **Axplorer / PatternBoost** (Axiom, open-sourced March 2025; based on
+  Charton, Ellenberg, Wagner & Williamson 2024): Self-improvement loop
+  for combinatorial math discovery. Generate candidates → train
+  transformer on best → sample new candidates → local search to fix →
+  retain best → retrain. Key findings: (a) the model provides starting
+  points, local search does the actual discovery; (b) sparse encoding
+  (edges only, not adjacency matrix) gives 100x speedup; (c) "exploit
+  first, then explore" beats usual exploration-first temperature
+  scheduling. Runs on a laptop with GPU (MacBook Pro). **Our hypothesis:
+  TPG replaces the transformer, eliminating the GPU requirement. The
+  loop structure maps directly to DiagramProver.**
 - **Curriculum-level provers** (various): Most benchmarks focus on
   competition math or miniF2F. Curriculum math (prelim-style) against a
   specific Mathlib API surface is underexplored — our 489-problem corpus
@@ -512,6 +523,76 @@ plus the first calibration data for the Bayesian model.
 ### Phase 0: First Concrete Experiment (above)
 
 Cluster, extend, re-run, measure. No new infrastructure.
+
+### Checkpoint 1: PatternBoost-on-a-Dell
+
+**Goal:** Demonstrate that the Axplorer/PatternBoost self-improvement
+loop works for Lean tactic search on commodity hardware (no GPU),
+using TPG in place of the transformer.
+
+**Motivation:** Axiom's Axplorer (open-sourced March 2025, based on
+PatternBoost by Charton, Ellenberg, Wagner & Williamson 2024) runs a
+generate→train→sample→local-search→select cycle for combinatorial
+math discovery. They got 100x efficiency over brute force on an L4
+GPU. The core insight: the AI model provides good starting points
+for local search; it doesn't do the discovery itself. Our hypothesis:
+TPG can replace the transformer in this loop, eliminating the GPU
+requirement entirely.
+
+**The loop on a Dell:**
+
+```
+1. Score initial candidates
+   → lake build on 39 sorry boundaries (binary: closed or not)
+
+2. "Train" (evolve TPG population)
+   → Seed from 12 pattern library entries
+   → Each TPG program is a tactic-sequence generator
+   → Fitness: did the generated tactics close the sorry?
+   → Selection + crossover + mutation (CPU-only, no backprop)
+
+3. Sample new tactic candidates from evolved TPG programs
+   → Each program generates a tactic sequence for a target sorry
+
+4. Local search (Pantograph REPL)
+   → Apply tactics step-by-step
+   → Backtrack on failure
+   → This is the "sculptor" — TPG is the "apprentice"
+
+5. Retain best, re-evolve
+   → Successful tactic sequences → extract as new patterns
+   → Add to pattern library → seed next TPG generation
+   → Bayesian model updates priors on blocker types
+```
+
+**Sparse encoding (from Axplorer's key insight):** Don't encode the
+full proof state. Encode only: (a) the sorry goal type, (b) the
+available hypotheses, (c) the pattern hint. This is our sorry boundary
+EDN — already sparse by design.
+
+**Temperature analogy:** Axplorer found "exploit first, then explore"
+beats the usual exploration-first wisdom. For TPG: start with low
+mutation rate (exploit known patterns), increase mutation once easy
+sorry are closed and duplicates appear in the population. This matches
+LeanAgent's curriculum: easy→medium→hard.
+
+**Hardware:** Dell laptop, no GPU. TPG evolution is CPU-only.
+Pantograph REPL runs locally. Tactic generation is program execution,
+not neural inference. The only external dependency is LeanDojo-v2
+for Pantograph (Phase 3a).
+
+**Success criteria:**
+- TPG evolves at least one tactic program that closes a sorry the
+  conductor could not close
+- The closed sorry yields a new pattern not in the original 12
+- Total compute time < 24 hours on the laptop
+- No GPU used at any point
+
+**Expected timeline:** After Phase 3a (LeanDojo-v2 installed) +
+Phase 3b (TPG wired as BaseProver). Possibly 1-2 weeks of
+TPG evolution runs.
+
+---
 
 ### Phase 1: Sorry Boundary Atlas + Diagram Induction (IDENTIFY → MAP)
 
