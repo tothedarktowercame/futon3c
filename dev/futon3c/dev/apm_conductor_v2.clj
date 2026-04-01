@@ -135,7 +135,11 @@
    "```clojure\n"
    "{:main-claim {:informal-claim \"reader-facing statement\"\n"
    "             :formal-name \"main_theorem_name\"\n"
-   "             :formal-target \"exact Lean theorem statement without the proof body\"}\n"
+   "             :formal-target \"exact Lean theorem statement without the proof body\"\n"
+   "             :sanity-check {:mentions-problem-objects? true\n"
+   "                            :avoids-assuming-conclusion? true\n"
+   "                            :meaningful-without-prose? true\n"
+   "                            :notes \"One sentence explaining why this is the right theorem to build.\"}}\n"
    " :alignments [{:formal-name \"main_theorem_name\"\n"
    "              :formal-statement \"exact Lean theorem statement\"\n"
    "              :informal-clause \"which sentence in Stage 1 this certifies\"\n"
@@ -146,6 +150,11 @@
    "              :role :helper-lemma}]}\n"
    "```\n"
    "The main theorem entry must align the Stage 1 claim with a real Lean declaration.\n"
+   "Before you spend serious Lean time, do the HtDP target-theorem sanity check:\n"
+   "- Does the theorem still mention the real hypotheses and objects from the problem?\n"
+   "- Does it avoid assuming the desired conclusion?\n"
+   "- Would it still count as meaningful progress if the prose were deleted?\n"
+   "If the answer to any of these is no, repair the theorem statement first.\n"
    "\n"
    "changelog.edn must be a vector of maps like:\n"
    "```clojure\n"
@@ -237,6 +246,21 @@
      :formal-alignment-ok? formal-alignment-ok?
      :changelog-ok? changelog-ok?
      :full-record? (and execute-ok? plan-ok? formal-alignment-ok? changelog-ok?)}))
+
+(defn- target-check-status
+  [frame-workspace output]
+  (let [record-status (frame-record-status frame-workspace)
+        target-sanity (get-in record-status [:formal-alignment :main-claim :sanity-check])
+        phase-data {:proof-plan (:proof-plan record-status)
+                    :formal-alignment (:formal-alignment record-status)
+                    :target-sanity target-sanity
+                    :notes (or output "")}
+        validation-error (apm-queue/apm-phase-validator :target-check phase-data nil)]
+    (assoc record-status
+           :target-sanity target-sanity
+           :target-sanity-ok? (apm-queue/valid-target-sanity? target-sanity)
+           :validation-error validation-error
+           :ok? (nil? validation-error))))
 
 ;; =============================================================================
 ;; Lean artifact inspection (same as v1)
@@ -339,23 +363,59 @@
   (let [main-claim (:main-claim formal-alignment)
         main-name (:formal-name main-claim)
         main-target (:formal-target main-claim)
-        decl-names (apply clojure.set/union #{} (map artifact-declaration-names artifacts))
+        artifact-summaries (mapv (fn [path]
+                                   {:path path
+                                    :placeholder? (artifact-placeholder? path)
+                                    :declaration-names (artifact-declaration-names path)})
+                                 artifacts)
+        decl-names (apply clojure.set/union #{} (map :declaration-names artifact-summaries))
         non-placeholder? (and (seq artifacts)
-                              (every? (complement artifact-placeholder?) artifacts))
+                              (every? (complement :placeholder?) artifact-summaries))
+        substantive-artifacts (filter (fn [{:keys [placeholder? declaration-names]}]
+                                        (and (not placeholder?) (seq declaration-names)))
+                                      artifact-summaries)
+        substantive-decl-names (apply clojure.set/union #{} (map :declaration-names substantive-artifacts))
         main-name-present? (contains? decl-names main-name)
         main-target-present? (some #(artifact-contains-formal-target? % main-name main-target) artifacts)]
     {:artifacts-present? (seq artifacts)
      :declaration-names decl-names
+     :substantive-declaration-names substantive-decl-names
+     :substantive-artifact-count (count substantive-artifacts)
+     :substantive? (boolean (seq substantive-artifacts))
      :has-declarations? (boolean (seq decl-names))
      :non-placeholder? (boolean non-placeholder?)
      :main-name-present? (boolean main-name-present?)
      :main-target-present? (boolean main-target-present?)
+     :aligned? (boolean (and main-name-present? main-target-present?))
      :meaningful? (boolean
                    (and (seq artifacts)
                         (seq decl-names)
-                        non-placeholder?
-                        main-name-present?
-                        main-target-present?))}))
+                        non-placeholder?))}))
+
+(defn- extract-stage-fragment
+  [text n]
+  (some-> (re-find (re-pattern
+                     (str "(?is)Stage\\s+" n "\\s+[—-].*?\\n[-]+\\n\\n(.*?)(?=\\n\\nStage\\s+\\d+\\s+[—-]|\\z)"))
+                   (or text ""))
+          second
+          trim-to-nil))
+
+(defn- formal-attempt-trace?
+  [record-status output]
+  (let [execute-notes (:execute-notes record-status)
+        stage3 (or (extract-stage-fragment execute-notes 3)
+                   (extract-stage-fragment output 3))
+        changelog (:changelog record-status)
+        non-init-entries (remove #(= :workspace-initialized (:kind %)) changelog)
+        trace-pattern #"(?i)\b(tried|search|searched|mathlib|api|goal|blocked|blocker|lemma|theorem|exact\?|apply\?|grep|lake build)\b"]
+    (boolean
+      (or (and stage3
+               (> (count stage3) 40)
+               (re-find trace-pattern stage3))
+          (some (fn [entry]
+                  (and (string? (:summary entry))
+                       (re-find trace-pattern (:summary entry))))
+                non-init-entries)))))
 
 (defn- has-sorry? [output]
   (boolean (re-find #"(?i)\bsorry\b" (or output ""))))
@@ -516,6 +576,9 @@
          "3. **A complete proof** — readable, line-by-line, not a sketch\n"
          "4. **Lean 4 formalization** — prove it in Lean with Mathlib. Build with `lake build`.\n"
          "   Use the HtDP recipe: type signature → search Mathlib → sketch composition → wire it.\n"
+         "   Before real Lean work, state the intended main theorem in formal-alignment.edn and pass\n"
+         "   the three-question HtDP sanity check: right objects/hypotheses, no assumed conclusion,\n"
+         "   meaningful even without the prose.\n"
          "   Write real proofs, not scaffolds. If a sorry is genuinely needed (Mathlib gap),\n"
          "   explain exactly what's missing and what would close it.\n"
          "5. **What connects** — where else this technique appears, exam-day field kit\n\n"
@@ -546,6 +609,59 @@
          "Time budget: use the full budget unless you close the formal work early and have already populated the frame record.\n"
          "Quality over speed. A single well-proved problem\n"
          "is worth more than a scaffold.\n")))
+
+(defn- make-target-check-prompt
+  [cid problem tex-body]
+  (let [{:keys [id subject year session subpart-count subparts]} problem]
+    (str "Problem: apm-" id " (" (get subject-names subject (name subject))
+         ", " year ", " (if (= session :fall) "Fall" "Spring") ")\n\n"
+         "```latex\n" tex-body "\n```\n\n"
+         (when (and subparts (pos? subpart-count))
+           (str "Sub-parts: " (str/join ", " (map :label subparts)) "\n\n"))
+         "You are in TARGET-CHECK.\n\n"
+         "Goal: decide whether you are building the right formal program before serious Lean work starts.\n"
+         "Populate the authoritative machine-readable artifacts now:\n"
+         "- `proof-plan.edn`\n"
+         "- `formal-alignment.edn`\n"
+         "and reply inline with the target-sanity analysis.\n\n"
+         (when-let [frame-context (apm-frames/prompt-context (current-frame-workspace cid problem))]
+           (str "Use the isolated frame workspace for this problem:\n"
+                "- workspace root: " (:workspace-root frame-context) "\n"
+                "- proof-plan.edn: " (:proof-plan-path frame-context) "\n"
+                "- formal-alignment.edn: " (:formal-alignment-path frame-context) "\n"
+                "- execute.md: " (:execute-notes-path frame-context) "\n\n"))
+         "Hard gate: do not proceed with a tautology, a theorem that assumes the conclusion,\n"
+         "or a helper theorem unrelated to the main claim.\n\n"
+         "Reply with:\n"
+         "1. `TARGET SANITY CHECK` answering:\n"
+         "   - mentions-problem-objects?\n"
+         "   - avoids-assuming-conclusion?\n"
+         "   - meaningful-without-prose?\n"
+         "   - notes\n"
+         "2. fenced `PROOF-PLAN.EDN`\n"
+         "3. fenced `FORMAL-ALIGNMENT.EDN`\n\n"
+         htdp-reference-card
+         "\nUse these worked examples as style anchors:\n"
+         "- " worked-example-root "/a02J04\n"
+         "- " worked-example-root "/a02J04-full\n")))
+
+(defn- make-target-check-kick-prompt
+  [problem remaining-ms target-status previous-output failure-count]
+  (str "TARGET-CHECK for apm-" (:id problem) " is still invalid. "
+       (long (/ remaining-ms 1000)) " seconds remain.\n\n"
+       "You must fix the target artifacts before any real Lean loop can begin.\n\n"
+       "Current issue:\n"
+       (or (get-in target-status [:validation-error :error :message])
+           "The target-check artifacts are incomplete or inconsistent.")
+       "\n\n"
+       "Write or repair:\n"
+       "- proof-plan.edn\n"
+       "- formal-alignment.edn\n"
+       "- inline TARGET SANITY CHECK\n\n"
+       htdp-reference-card
+       "\nPrevious output (summary):\n"
+       (subs previous-output 0 (min 1500 (count previous-output)))
+       "\n\nTarget-check repair attempt #" failure-count ".\n"))
 
 (defn- make-sorry-kick-prompt
   "Re-dispatch for sorry closure."
@@ -616,21 +732,25 @@
   [problem frame-workspace remaining-ms formal-status record-status previous-output formal-kick-count]
   (str "The current Lean artifact for apm-" (:id problem) " does not yet certify the problem you claim to have solved. "
        (long (/ remaining-ms 1000)) " seconds remain.\n\n"
-       "This is not a record-format issue anymore. You must align the formal development with the informal claim.\n\n"
+       "This is not a record-format issue anymore. You must either write a real theorem/lemma or leave an honest attempt trace.\n\n"
        "Current formal status:\n"
        "- declaration names seen: " (pr-str (vec (:declaration-names formal-status))) "\n"
        "- non-placeholder Lean artifact? " (:non-placeholder? formal-status) "\n"
        "- main theorem name present? " (:main-name-present? formal-status) "\n"
        "- main theorem statement aligned? " (:main-target-present? formal-status) "\n\n"
        "Required fixes:\n"
-       "1. Put at least one real `theorem`/`lemma` declaration in the frame-local Lean file.\n"
-       "2. Make the main declaration correspond to the problem's main claim, not an unrelated helper.\n"
-       "3. Update formal-alignment.edn so the main informal claim names that declaration and copies its exact Lean statement.\n"
-       "4. Keep execute.md / proof-plan.edn / changelog.edn in sync with that declaration.\n\n"
+       "1. Put at least one real `theorem`/`lemma` declaration in the frame-local Lean file if you can.\n"
+       "2. If the actual formal theorem differs slightly from the planned target, lightly revise the informal/formal alignment to match what you really proved.\n"
+       "3. If you still cannot close the main theorem, record an honest formal attempt trace in Stage 3 / changelog:\n"
+       "   - what theorem you tried to state,\n"
+       "   - what search/API route you attempted,\n"
+       "   - why you concluded the route was blocked.\n"
+       "4. Re-run the HtDP target-theorem sanity check: right objects/hypotheses, no assumed conclusion, meaningful without prose.\n"
+       "5. Keep execute.md / proof-plan.edn / changelog.edn in sync with the actual formal work.\n\n"
        "formal-alignment.edn path: " (:formal-alignment-path record-status) "\n"
        "Lean main file: " (get-in frame-workspace [:artifacts :lean-main]) "\n\n"
        htdp-reference-card
-       "\nReply only after you have written an aligned theorem declaration, not just prose about what you intend to formalize.\n\n"
+       "\nReply only after you have either written a substantive theorem/lemma or recorded the failed formal route concretely.\n\n"
        "Previous output (summary):\n"
        (subs previous-output 0 (min 1500 (count previous-output)))
        "\n\nFormal alignment repair attempt #" formal-kick-count ".\n"))
@@ -685,7 +805,10 @@
         formal-kicks (or formal-kick-count 0)
         record-status (frame-record-status (:frame-workspace (conductor-state cid)))
         formal-status (formalization-status artifacts (:formal-alignment record-status))
-        remaining-ms (- (current-problem-timeout-ms cid) total-elapsed)]
+        attempt-trace? (formal-attempt-trace? record-status all-output)
+        remaining-ms (- (current-problem-timeout-ms cid) total-elapsed)
+        substantive-partial-message "Recorded substantive Lean subtheorems without a fully aligned main theorem"
+        attempt-trace-message "Recorded formal attempt trace without substantive Lean theorem"]
 
     (log! {:event :solve-return :problem pid
            :dispatch-elapsed-ms dispatch-elapsed
@@ -696,7 +819,10 @@
            :record-kick-count record-kicks
            :formal-kick-count formal-kicks
            :full-record? (:full-record? record-status)
-           :meaningful-formal? (:meaningful? formal-status)})
+           :meaningful-formal? (:meaningful? formal-status)
+           :substantive-formal? (:substantive? formal-status)
+           :aligned-formal? (:aligned? formal-status)
+           :attempt-trace? attempt-trace?})
 
     (cond
       ;; Problem timeout
@@ -755,9 +881,10 @@
             (start-next-problem! cid agent-id evidence-store))))
 
       ;; The record is populated, but the Lean artifact still does not contain
-      ;; a real aligned theorem declaration for the main claim.
+      ;; substantive formal work and there is no honest attempt trace yet.
       (and (:full-record? record-status)
-           (not (:meaningful? formal-status)))
+           (not (:meaningful? formal-status))
+           (not attempt-trace?))
       (if (< formal-kicks max-formal-kicks)
         (let [new-count (inc formal-kicks)
               frame-workspace (:frame-workspace (conductor-state cid))]
@@ -769,7 +896,8 @@
                  :remaining-ms remaining-ms
                  :message (str "main-name-present=" (:main-name-present? formal-status)
                                ", main-target-present=" (:main-target-present? formal-status)
-                               ", declaration-count=" (count (:declaration-names formal-status)))})
+                               ", declaration-count=" (count (:declaration-names formal-status))
+                               ", attempt-trace?=" attempt-trace?)})
           (dispatch! agent-id
                      (make-formal-kick-prompt current-problem frame-workspace remaining-ms formal-status record-status output new-count)
                      (max 60000 remaining-ms)))
@@ -777,11 +905,11 @@
               results (conj (or batch-results [])
                             {:ok false :problem-id pid
                              :classification :abandoned
-                             :message "Lean artifact never aligned with the claimed theorem"
+                             :message "No substantive Lean theorem and no formal attempt trace"
                              :elapsed-ms total-elapsed})]
           (assoc-state! cid :problems-done done :batch-results results)
           (log! {:event :problem-abandoned :problem pid
-                 :message "Lean artifact never aligned with the claimed theorem"})
+                 :message "No substantive Lean theorem and no formal attempt trace"})
           (if (>= done target-n)
             (do (log! {:event :batch-complete :done done})
                 (stop-apm-conductor-v2! agent-id))
@@ -790,6 +918,10 @@
       ;; Lean clean — no sorry, artifacts exist
       (and (seq artifacts) (not sorry?) (:meaningful? formal-status))
       (do
+        (when-not (:aligned? formal-status)
+          (log! {:event :alignment-warning
+                 :problem pid
+                 :message "Accepted proved result with non-exact post-Lean alignment; revise informal statement lightly if needed."}))
         (log! {:event :problem-complete :problem pid
                :classification "proved"
                :total-elapsed-ms total-elapsed
@@ -832,10 +964,14 @@
                 (stop-apm-conductor-v2! agent-id))
             (start-next-problem! cid agent-id evidence-store))))
 
-      ;; Sorry-kick budget exhausted — save as partial only if the Lean artifact
-      ;; is a real aligned partial, not an empty scaffold.
+      ;; Sorry-kick budget exhausted — save as partial if the Lean artifact is
+      ;; substantive, even if the post-hoc alignment is imperfect.
       (and (>= kick-count max-sorry-kicks) (:meaningful? formal-status))
       (do
+        (when-not (:aligned? formal-status)
+          (log! {:event :alignment-warning
+                 :problem pid
+                 :message "Accepted partial result with non-exact post-Lean alignment; revise informal statement lightly if needed."}))
         (log! {:event :problem-complete :problem pid
                :classification "partial"
                :total-elapsed-ms total-elapsed
@@ -873,6 +1009,39 @@
                 (stop-apm-conductor-v2! agent-id))
             (start-next-problem! cid agent-id evidence-store))))
 
+      ;; No substantive theorem, but there is an honest Stage 3 attempt trace.
+      attempt-trace?
+      (do
+        (let [message (if (:substantive? formal-status)
+                        substantive-partial-message
+                        attempt-trace-message)]
+        (log! {:event :problem-complete :problem pid
+               :classification "partial"
+               :total-elapsed-ms total-elapsed
+               :message message})
+        (let [extraction (run-extraction all-output)
+              frame-workspace (:frame-workspace (conductor-state cid))
+              _ (save-proof-state! (:id current-problem)
+                  {:proof/problem-id pid
+                   :proof/classification :partial
+                   :proof/output all-output
+                   :proof/extraction extraction
+                   :proof/frame-workspace frame-workspace
+                   :proof/artifacts (mapv str artifacts)
+                   :proof/elapsed-ms total-elapsed})
+              done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok true :problem-id pid
+                             :classification :partial
+                             :extraction extraction
+                             :elapsed-ms total-elapsed
+                             :message message})]
+          (assoc-state! cid :problems-done done :batch-results results)
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done})
+                (stop-apm-conductor-v2! agent-id))
+            (start-next-problem! cid agent-id evidence-store)))))
+
       ;; Sorry budget exhausted, but still no meaningful formal artifact.
       (>= kick-count max-sorry-kicks)
       (let [done (inc problems-done)
@@ -907,6 +1076,65 @@
                    (prompt-fn current-problem remaining-ms output new-count)
                    (max 60000 remaining-ms))))))
 
+(defn- handle-target-check-return!
+  [cid agent-id agent-output evidence-store]
+  (let [{:keys [current-problem problem-start-ms dispatch-start-ms
+                accumulated-output frame-workspace failure-count]} (conductor-state cid)
+        pid (str "apm-" (:id current-problem))
+        now-ms (System/currentTimeMillis)
+        dispatch-elapsed (- now-ms (or dispatch-start-ms now-ms))
+        total-elapsed (- now-ms (or problem-start-ms now-ms))
+        output (or agent-output "")
+        all-output (str (or accumulated-output "") "\n\n---\n\n" output)
+        target-status (target-check-status frame-workspace output)
+        failures (or failure-count 0)
+        remaining-ms (- (current-problem-timeout-ms cid) total-elapsed)]
+    (assoc-state! cid :accumulated-output all-output)
+    (log! {:event :target-check-return
+           :problem pid
+           :dispatch-elapsed-ms dispatch-elapsed
+           :total-elapsed-ms total-elapsed
+           :proof-plan-ok? (:proof-plan-ok? target-status)
+           :formal-alignment-ok? (:formal-alignment-ok? target-status)
+           :target-sanity-ok? (:target-sanity-ok? target-status)
+           :ok? (:ok? target-status)})
+    (if (:ok? target-status)
+      (let [tex-body (apm-queue/load-problem-tex (:id current-problem))]
+        (assoc-state! cid
+                      :current-phase :solve
+                      :failure-count 0
+                      :dispatch-start-ms (System/currentTimeMillis))
+        (log! {:event :target-check-complete :problem pid})
+        (dispatch! agent-id
+                   (make-solve-prompt cid current-problem tex-body)
+                   (current-problem-timeout-ms cid)))
+      (let [new-failures (inc failures)]
+        (assoc-state! cid :failure-count new-failures)
+        (log! {:event :target-check-rejected
+               :problem pid
+               :failure-count new-failures
+               :message (get-in target-status [:validation-error :error :message])})
+        (if (<= new-failures 3)
+          (let [tex-body (apm-queue/load-problem-tex (:id current-problem))]
+            (assoc-state! cid :dispatch-start-ms (System/currentTimeMillis))
+            (dispatch! agent-id
+                       (make-target-check-kick-prompt current-problem remaining-ms target-status output new-failures)
+                       (min 300000 (max 60000 remaining-ms))))
+          (let [{:keys [problems-done batch-results target-n]} (conductor-state cid)
+                done (inc problems-done)
+                results (conj (or batch-results [])
+                              {:ok false :problem-id pid
+                               :classification :abandoned
+                               :message "Target-check never converged to a valid formal target"
+                               :elapsed-ms total-elapsed})]
+            (assoc-state! cid :problems-done done :batch-results results)
+            (log! {:event :problem-abandoned :problem pid
+                   :message "Target-check never converged to a valid formal target"})
+            (if (>= done target-n)
+              (do (log! {:event :batch-complete :done done})
+                  (stop-apm-conductor-v2! agent-id))
+              (start-next-problem! cid agent-id evidence-store))))))))
+
 (defn- handle-failure!
   "Handle agent invoke failure."
   [cid agent-id outcome evidence-store]
@@ -921,11 +1149,13 @@
       (future
         (Thread/sleep 30000)
         (when (conductor-running? cid)
-          (let [{:keys [current-problem]} (conductor-state cid)
+          (let [{:keys [current-problem current-phase]} (conductor-state cid)
                 tex-body (apm-queue/load-problem-tex (:id current-problem))]
             (assoc-state! cid :dispatch-start-ms (System/currentTimeMillis))
             (dispatch! agent-id
-                       (make-solve-prompt cid current-problem tex-body)
+                       (if (= current-phase :target-check)
+                         (make-target-check-prompt cid current-problem tex-body)
+                         (make-solve-prompt cid current-problem tex-body))
                        (current-problem-timeout-ms cid)))))
       ;; Budget exhausted — skip
       (let [state (conductor-state cid)
@@ -975,6 +1205,7 @@
            :session-id (str "apm-v2-" pid) :event-tag :workflow-start})
         (assoc-state! cid
                       :current-problem problem
+                      :current-phase :target-check
                       :frame-workspace frame-workspace
                       :backend backend
                       :accumulated-output ""
@@ -988,8 +1219,8 @@
                                        (vec (rest problem-bases))
                                        problem-bases))
         (dispatch! agent-id
-                   (make-solve-prompt cid problem tex-body)
-                   (current-problem-timeout-ms cid))))))
+                   (make-target-check-prompt cid problem tex-body)
+                   (min 300000 (current-problem-timeout-ms cid)))))))
 
 ;; =============================================================================
 ;; Triage — effort estimation pre-pass
@@ -1229,7 +1460,9 @@
         (fn [idle-agent-id outcome]
           (when (and (= idle-agent-id agent-id) (conductor-running? cid))
             (if (:ok outcome true)
-              (handle-solve-return! cid agent-id (:result outcome) evidence-store)
+              (if (= :target-check (:current-phase (conductor-state cid)))
+                (handle-target-check-return! cid agent-id (:result outcome) evidence-store)
+                (handle-solve-return! cid agent-id (:result outcome) evidence-store))
               (handle-failure! cid agent-id outcome evidence-store)))))
 
       (swap! !conductor assoc cid {:agent-id agent-id
