@@ -1,7 +1,8 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
 
-**Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE begun)
-**Status:** DERIVE
+**Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
+2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)
+**Status:** VERIFY
 **Cross-ref:** M-apm-solutions (proof peripheral, pattern library, sorry boundaries),
 futon5 (TPG, AIF loops), vsat.wiki/ukrn-demo (Bayesian pattern models),
 M-distributed-frontiermath (superpod, LeanDojo)
@@ -1120,6 +1121,115 @@ neural networks for search. The patterns it discovers are readable
 by humans, so they double as teaching material. The whole thing is
 grounded in Lean's type checker — no proof is accepted unless the
 machine verifies it.
+
+## VERIFY — Structural Check and Pilot (2026-04-01)
+
+### Completion criteria pre-check
+
+| Criterion (from IDENTIFY) | DERIVE addresses it? | Risk |
+|---|---|---|
+| Sorry atlas ≥100 problems | Yes (Layer 1, Phase 1) | Low — Pass 1 is running |
+| Bayesian model A validated on ≥20 | Yes (Layer 2, Phase 2a) | Medium — needs sorry data volume |
+| ≥3 sorry closed from 1 extension | Yes (Phase 0) | Low — can start now |
+| TPG/LeanDojo closes ≥2 sorry | Yes (Checkpoint 1) | **HIGH — see pilot below** |
+| Pattern library ≥20 with ≥4 auto-extracted | Yes (Layer 1.5 + Layer 3) | **HIGH — pattern-to-diagram gap** |
+
+### Critical gap: pattern-to-diagram translation does not exist
+
+The DERIVE design describes Layer 1.5 as "futon5's pattern-to-diagram
+translator compiles traces into typed wiring diagrams." This code does
+not exist. futon5's TPG infrastructure operates on MMCA cellular
+automata with hexagram-aligned operators. It has:
+
+- TPG core: teams, programs, routing, evolution (**ready**)
+- Exotype representation: 6x6 matrices, hexagram lifting (**ready**)
+- Diagnostics: feature vectors for decision-making (**ready**)
+- Phenotype rendering (**ready**)
+
+It does NOT have:
+- Pattern → wiring diagram translation (**missing**)
+- Typed ports for pattern composition (**missing**)
+- String diagram / category theory formalism (**missing**)
+- Any connection to Lean tactics (**missing**)
+
+This means:
+- Layer 1.5 (pattern diagrams) requires **new code**, not adaptation
+- The `:instantiates` relation needs a formal representation of
+  "instantiation" that doesn't yet exist
+- TPG as a tactic generator (Phase 3b) requires defining a new
+  action space, not reusing the hexagram operators
+
+**This is the riskiest part of the design.** The ARGUE section claims
+the Baldwin cycle operates via pattern library → TPG → new patterns.
+But the bridge between patterns (flexiarg, prose) and TPG (programs,
+feature vectors) is unbuilt.
+
+### Pilot specification
+
+The pilot tests both directions of the pattern-to-diagram bridge,
+starting small enough to validate the concept before building
+infrastructure.
+
+**Pilot A: Proof → diagram (3 specimens)**
+
+For each proved proof, manually construct the wiring diagram:
+1. Read the Lean file
+2. List each tactic step as (goal-before, tactic, goal-after)
+3. Draw the diagram: nodes = goal states, edges = tactics
+4. Identify which formalization pattern each step instantiates
+5. Check: can the diagram be composed from existing patterns?
+
+| Specimen | Type | What it tests |
+|----------|------|---------------|
+| t92J01 (1 theorem, topology) | Simple linear | Does the contradiction pattern yield a clean diagram? |
+| t94A02 (10 theorems, topology) | Multi-lemma DAG | Do independent lemma compositions show up as parallel branches? |
+| a00J01 (2 sorry, analysis) | Open ports | Do sorry boundaries appear as open output ports in the diagram? |
+
+**Pilot B: Pattern → diagram → improved proof (2 attempts)**
+
+For each pattern, manually construct a wiring diagram with typed
+ports, then apply it to a sorry boundary where the ports should match:
+
+1. Take a formalization pattern (e.g., `rpow-exponent-limit.flexiarg`)
+2. Define input ports: {goal : `Tendsto (t ^ ·) ... (𝓝 1)`, hyp : `0 < t`}
+3. Define output ports: {closed-goal : `True`}
+4. Find a sorry boundary whose goal matches the input port type
+5. Manually apply the pattern's tactic chain to the sorry
+6. Record: did it close? If not, where did the ports mismatch?
+
+| Pattern | Target sorry | What it tests |
+|---------|-------------|---------------|
+| `rpow-exponent-limit` | a00J01 lower_bound | Does the Real rpow limit bridge to the ENNReal context? |
+| `measure-restrict-simplify` | any analysis sorry involving volume.restrict | Does the μ(univ)=1 rewrite chain transfer? |
+
+**Pilot B is the real test.** If the pattern's typed ports predict
+where it will succeed and fail, the diagram representation is
+validated. If the ports say "match" but the proof fails anyway
+(because of coercion gaps, universe issues, or API changes), the
+port typing is too coarse and needs refinement.
+
+### Decision log
+
+1. **Pattern-to-diagram is new code, not futon5 adaptation.**
+   Originally scoped as "futon5's translator." Revised: the
+   translator must be written. futon5 provides TPG evolution
+   infrastructure but not the pattern representation layer.
+   The pilot will determine the right representation before
+   committing to implementation.
+
+2. **TPG action space for Lean is new, not hexagram-based.**
+   The MMCA hexagram operators (expansion, conservation, adaptation,
+   etc.) don't map to Lean tactics. A new operator table must be
+   designed: {apply, exact, rw, simp, calc, have, intro, cases, ...}
+   with the feature vector being the sorry goal state. The pilot
+   doesn't need TPG — it uses manual pattern application — but the
+   action space design must precede Phase 3b.
+
+3. **The wiring diagram pilot is manual, not automated.**
+   Automated extraction requires LeanDojo-v2 (Pantograph for
+   goal-state introspection at each tactic step). The pilot is
+   done by hand to validate the representation before depending
+   on tooling that isn't installed yet.
 
 ## Deferred Until
 
