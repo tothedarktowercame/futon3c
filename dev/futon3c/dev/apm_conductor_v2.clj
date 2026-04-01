@@ -389,8 +389,7 @@
      :aligned? (boolean (and main-name-present? main-target-present?))
      :meaningful? (boolean
                    (and (seq artifacts)
-                        (seq decl-names)
-                        non-placeholder?))}))
+                        (seq substantive-artifacts)))}))
 
 (defn- extract-stage-fragment
   [text n]
@@ -1412,6 +1411,84 @@
       (->> manifest
            (filter #(= lane (get-in triage [(:id %) :lane])))
            (mapv :id)))))
+
+;; =============================================================================
+;; Post-hoc reclassification
+;; =============================================================================
+
+(defn reclassify-problem
+  "Re-evaluate a single problem's classification by checking the actual Lean
+   artifacts on disk. Returns {:id :old :new :reason :decl-count :sorry?}."
+  [problem-base]
+  (let [pid (str "apm-" problem-base)
+        ;; Find frame workspace Lean files
+        uc (str/upper-case (subs problem-base 0 1))
+        rest-id (subs problem-base 1)
+        base-dir (io/file "/home/joe/code/apm-lean/ApmCanaries/Frames" (str uc rest-id))
+        frame-dir (when (.exists base-dir) (first (.listFiles base-dir)))
+        ;; Also check legacy path
+        legacy-main (io/file lean-proofs-root problem-base "Main.lean")
+        artifacts (cond-> []
+                    frame-dir
+                    (into (->> [(io/file frame-dir "Main.lean")
+                                (io/file frame-dir "Scratch.lean")]
+                               (filter #(.exists %))
+                               (map #(.getAbsolutePath %))))
+                    (.exists legacy-main)
+                    (conj (.getAbsolutePath legacy-main)))
+        ;; Load existing proof state
+        state-path (str proof-state-root "/apm-" problem-base ".edn")
+        old-state (when (.exists (io/file state-path))
+                    (try (clojure.edn/read-string (slurp state-path))
+                      (catch Exception _ nil)))
+        old-classification (or (:proof/classification old-state) :unknown)
+        ;; Re-evaluate
+        formal-status (when (seq artifacts) (formalization-status artifacts nil))
+        sorry? (boolean (some artifact-has-sorry? artifacts))
+        meaningful? (boolean (:meaningful? formal-status))
+        new-classification (cond
+                             (and meaningful? (not sorry?)) :proved
+                             (and meaningful? sorry?) :partial
+                             :else :partial)
+        upgraded? (and (= old-classification :partial) (= new-classification :proved))]
+    {:id problem-base
+     :pid pid
+     :old old-classification
+     :new new-classification
+     :upgraded? upgraded?
+     :sorry? sorry?
+     :meaningful? meaningful?
+     :decl-count (count (:declaration-names formal-status))
+     :reason (cond
+               upgraded? "Zero sorry with substantive declarations — reclassified as proved"
+               (and (not meaningful?) (not sorry?)) "No substantive Lean declarations"
+               sorry? (str "Sorry present in artifacts")
+               :else "No change")}))
+
+(defn reclassify-batch!
+  "Re-evaluate and update proof states for a list of problem-bases.
+   Upgrades partial→proved where Lean artifacts have zero sorry and
+   substantive declarations. Returns a summary."
+  [problem-bases]
+  (let [results (mapv reclassify-problem problem-bases)
+        upgraded (filter :upgraded? results)
+        ;; Update proof state files for upgraded problems
+        _ (doseq [{:keys [id]} upgraded]
+            (let [path (str proof-state-root "/apm-" id ".edn")]
+              (when (.exists (io/file path))
+                (let [state (clojure.edn/read-string (slurp path))
+                      updated (assoc state :proof/classification :proved
+                                          :proof/reclassified-at (str (Instant/now))
+                                          :proof/reclassification-reason
+                                          "Post-hoc: zero sorry with substantive declarations")]
+                  (spit path (pr-str updated))))))
+        summary {:total (count results)
+                 :upgraded (count upgraded)
+                 :still-partial (count (filter #(= :partial (:new %)) results))
+                 :upgraded-ids (mapv :id upgraded)}]
+    (log! {:event :reclassification-complete :summary summary})
+    (println (str "[apm-v2] Reclassified: " (:upgraded summary) " upgraded to proved out of " (:total summary)))
+    {:summary summary :details results}))
 
 ;; =============================================================================
 ;; Start / Stop
