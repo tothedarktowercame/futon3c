@@ -418,22 +418,52 @@
           second
           trim-to-nil))
 
-(defn- formal-attempt-trace?
+(defn- formal-attempt-trace-status
   [record-status output]
   (let [execute-notes (:execute-notes record-status)
         stage3 (or (extract-stage-fragment execute-notes 3)
                    (extract-stage-fragment output 3))
         changelog (:changelog record-status)
         non-init-entries (remove #(= :workspace-initialized (:kind %)) changelog)
-        trace-pattern #"(?i)\b(tried|search|searched|mathlib|api|goal|blocked|blocker|lemma|theorem|exact\?|apply\?|grep|lake build)\b"]
-    (boolean
-      (or (and stage3
-               (> (count stage3) 40)
-               (re-find trace-pattern stage3))
-          (some (fn [entry]
-                  (and (string? (:summary entry))
-                       (re-find trace-pattern (:summary entry))))
-                non-init-entries)))))
+        trace-text (str/join "\n" (remove str/blank?
+                                   (concat (when stage3 [stage3])
+                                           (keep :summary non-init-entries))))
+        main-claim (get-in record-status [:formal-alignment :main-claim])
+        formal-name (trim-to-nil (:formal-name main-claim))
+        theorem-name-pattern (when formal-name
+                               (re-pattern (str "(?i)\\b"
+                                                (java.util.regex.Pattern/quote formal-name)
+                                                "\\b")))
+        theorem-pattern #"(?i)\b(theorem|lemma)\b"
+        search-pattern #"(?i)\b(search|searched|search terms|exact\?|apply\?|grep|rg|#check|#find|looked for|tried importing|imported)\b"
+        build-pattern #"(?i)\b(lake build|build|error|errors|unknown constant|type mismatch|unsolved goals?|goal state|failed|no such constant)\b"
+        blocker-pattern #"(?i)\b(blocked|blocker|missing|gap|not present|not available|route failed|concluded the route was blocked)\b"
+        theorem-mentioned? (boolean
+                             (and (not (str/blank? trace-text))
+                                  (or (and theorem-name-pattern
+                                           (re-find theorem-name-pattern trace-text))
+                                      (re-find theorem-pattern trace-text))))
+        search-route? (boolean (and (not (str/blank? trace-text))
+                                    (re-find search-pattern trace-text)))
+        build-evidence? (boolean (and (not (str/blank? trace-text))
+                                      (re-find build-pattern trace-text)))
+        blocker-diagnosis? (boolean (and (not (str/blank? trace-text))
+                                         (re-find blocker-pattern trace-text)))
+        concrete? (boolean
+                    (and theorem-mentioned?
+                         (or search-route?
+                             build-evidence?
+                             (and search-route? blocker-diagnosis?))))]
+    {:text-present? (not (str/blank? trace-text))
+     :theorem-mentioned? theorem-mentioned?
+     :search-route? search-route?
+     :build-evidence? build-evidence?
+     :blocker-diagnosis? blocker-diagnosis?
+     :concrete? concrete?}))
+
+(defn- formal-attempt-trace?
+  [record-status output]
+  (:concrete? (formal-attempt-trace-status record-status output)))
 
 (defn- has-sorry? [output]
   (boolean (re-find #"(?i)\bsorry\b" (or output ""))))
@@ -811,7 +841,9 @@
        "3. If you still cannot close the main theorem, record an honest formal attempt trace in Stage 3 / changelog:\n"
        "   - what theorem you tried to state,\n"
        "   - what search/API route you attempted,\n"
+       "   - what Lean build/error/contact you saw if any,\n"
        "   - why you concluded the route was blocked.\n"
+       "   Generic blocker prose without a named theorem and concrete search/build contact will not count.\n"
        "4. Re-run the HtDP target-theorem sanity check: right objects/hypotheses, no assumed conclusion, meaningful without prose.\n"
        "5. Revise Stage 4 so it says exactly what the Lean attempt changed in the prose: matched, narrowed, or blocked.\n"
        "6. Keep execute.md / proof-plan.edn / changelog.edn in sync with the actual formal work.\n\n"
@@ -898,19 +930,21 @@
        0)))
 
 (defn- problem-timed-out? [cid]
-  (when-let [start-ms (:problem-start-ms (conductor-state cid))]
+  (when-let [start-ms (or (:solve-start-ms (conductor-state cid))
+                          (:problem-start-ms (conductor-state cid)))]
     (> (- (System/currentTimeMillis) start-ms) (current-problem-timeout-limit-ms cid))))
 
 (defn- handle-solve-return!
   "Handle return from the solve or sorry-kick dispatch."
   [cid agent-id agent-output evidence-store]
   (let [{:keys [current-problem problem-start-ms dispatch-start-ms
-                sorry-kick-count record-kick-count formal-kick-count lean-last-mile-count problems-done batch-results target-n
+                solve-start-ms sorry-kick-count record-kick-count formal-kick-count lean-last-mile-count problems-done batch-results target-n
                 accumulated-output backend]} (conductor-state cid)
         pid (str "apm-" (:id current-problem))
         now-ms (System/currentTimeMillis)
         dispatch-elapsed (- now-ms (or dispatch-start-ms now-ms))
         total-elapsed (- now-ms (or problem-start-ms now-ms))
+        solve-elapsed (- now-ms (or solve-start-ms problem-start-ms now-ms))
         output (or agent-output "")
 
         ;; Accumulate all output from all dispatches for this problem
@@ -925,8 +959,9 @@
         formal-kicks (or formal-kick-count 0)
         record-status (frame-record-status (:frame-workspace (conductor-state cid)))
         formal-status (formalization-status artifacts (:formal-alignment record-status))
-        attempt-trace? (formal-attempt-trace? record-status all-output)
-        remaining-ms (- (current-problem-timeout-ms cid) total-elapsed)
+        attempt-trace-status (formal-attempt-trace-status record-status all-output)
+        attempt-trace? (:concrete? attempt-trace-status)
+        remaining-ms (- (current-problem-timeout-ms cid) solve-elapsed)
         last-mile-count (or lean-last-mile-count 0)
         last-mile-eligible? (and (< last-mile-count max-lean-last-mile-kicks)
                                  (lean-last-mile-eligible? record-status formal-status sorry?))
@@ -936,6 +971,7 @@
     (log! {:event :solve-return :problem pid
            :dispatch-elapsed-ms dispatch-elapsed
            :total-elapsed-ms total-elapsed
+           :solve-elapsed-ms solve-elapsed
            :artifact-count (count artifacts)
            :sorry? sorry?
            :sorry-kick-count kick-count
@@ -946,7 +982,11 @@
            :meaningful-formal? (:meaningful? formal-status)
            :substantive-formal? (:substantive? formal-status)
            :aligned-formal? (:aligned? formal-status)
-           :attempt-trace? attempt-trace?})
+           :attempt-trace? attempt-trace?
+           :trace-theorem? (:theorem-mentioned? attempt-trace-status)
+           :trace-search? (:search-route? attempt-trace-status)
+           :trace-build? (:build-evidence? attempt-trace-status)
+           :trace-blocker? (:blocker-diagnosis? attempt-trace-status)})
 
     (cond
       ;; Near-closed theorem: spend one bounded extra pass just closing Lean.
@@ -969,26 +1009,6 @@
         (dispatch! agent-id
                    (make-lean-last-mile-prompt current-problem frame-workspace last-mile-remaining-ms formal-status output)
                    last-mile-remaining-ms))
-
-      ;; Problem timeout
-      (problem-timed-out? cid)
-      (do
-        (log! {:event :problem-timed-out :problem pid
-               :total-elapsed-ms total-elapsed})
-        (let [extraction (run-extraction all-output)
-              frame-workspace (:frame-workspace (conductor-state cid))
-              done (inc problems-done)
-              results (conj (or batch-results [])
-                            {:ok false :problem-id pid
-                             :classification :timed-out
-                             :extraction extraction
-                             :frame-id (:frame/id frame-workspace)
-                             :elapsed-ms total-elapsed})]
-          (assoc-state! cid :problems-done done :batch-results results)
-          (if (>= done target-n)
-            (do (log! {:event :batch-complete :done done})
-                (stop-apm-conductor-v2! agent-id))
-            (start-next-problem! cid agent-id evidence-store))))
 
       ;; The frame-local HtDP record is incomplete. If the mathematical work is
       ;; otherwise ready to classify, spend bounded extra clicks normalizing the
@@ -1042,7 +1062,10 @@
                  :message (str "main-name-present=" (:main-name-present? formal-status)
                                ", main-target-present=" (:main-target-present? formal-status)
                                ", declaration-count=" (count (:declaration-names formal-status))
-                               ", attempt-trace?=" attempt-trace?)})
+                               ", attempt-trace?=" attempt-trace?
+                               ", trace-theorem?=" (:theorem-mentioned? attempt-trace-status)
+                               ", trace-search?=" (:search-route? attempt-trace-status)
+                               ", trace-build?=" (:build-evidence? attempt-trace-status))})
           (dispatch! agent-id
                      (make-formal-kick-prompt current-problem frame-workspace remaining-ms formal-status record-status output new-count)
                      (max 60000 remaining-ms)))
@@ -1187,6 +1210,27 @@
                 (stop-apm-conductor-v2! agent-id))
             (start-next-problem! cid agent-id evidence-store)))))
 
+      ;; Problem timeout
+      (problem-timed-out? cid)
+      (do
+        (log! {:event :problem-timed-out :problem pid
+               :total-elapsed-ms total-elapsed
+               :solve-elapsed-ms solve-elapsed})
+        (let [extraction (run-extraction all-output)
+              frame-workspace (:frame-workspace (conductor-state cid))
+              done (inc problems-done)
+              results (conj (or batch-results [])
+                            {:ok false :problem-id pid
+                             :classification :timed-out
+                             :extraction extraction
+                             :frame-id (:frame/id frame-workspace)
+                             :elapsed-ms total-elapsed})]
+          (assoc-state! cid :problems-done done :batch-results results)
+          (if (>= done target-n)
+            (do (log! {:event :batch-complete :done done})
+                (stop-apm-conductor-v2! agent-id))
+            (start-next-problem! cid agent-id evidence-store))))
+
       ;; Sorry budget exhausted, but still no meaningful formal artifact.
       (>= kick-count max-sorry-kicks)
       (let [done (inc problems-done)
@@ -1248,6 +1292,7 @@
         (assoc-state! cid
                       :current-phase :solve
                       :failure-count 0
+                      :solve-start-ms (System/currentTimeMillis)
                       :dispatch-start-ms (System/currentTimeMillis))
         (log! {:event :target-check-complete :problem pid})
         (dispatch! agent-id
@@ -1372,6 +1417,7 @@
                       :lean-last-mile-count 0
                       :failure-count 0
                       :problem-start-ms (System/currentTimeMillis)
+                      :solve-start-ms nil
                       :dispatch-start-ms (System/currentTimeMillis)
                       :problem-bases (if explicit-base
                                        (vec (rest problem-bases))
