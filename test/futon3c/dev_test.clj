@@ -1,12 +1,14 @@
 (ns futon3c.dev-test
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]
             [futon3c.agency.registry]
             [futon3c.agents.mfuton-invoke-override]
             [futon3c.agents.tickle-work-queue]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.evidence.store]
+            [futon3c.dev.apm-conductor-v2 :as apm-v2]
             [futon3c.dev :as dev]))
 
 (deftest compatible-codex-ws-bridge-agent-detection
@@ -197,6 +199,54 @@
         (reset! (var-get #'dev/!codex-rollout-summary-cache) {})
         (doseq [f (reverse (file-seq root))]
           (io/delete-file f true))))))
+
+(deftest apm-v2-mirror-state-combines-run-and-rollout-context
+  (with-redefs [dev/codex-lane-runtime-state
+                (fn [_]
+                  {:agent-id "codex-1"
+                   :session-id "sid-123"
+                   :rollout-file "/tmp/codex-rollout.jsonl"
+                   :turn-count 7})
+                apm-v2/state-for-agent
+                (fn [_]
+                  {:current-phase :solve
+                   :current-problem {:id "t97J01" :subject :topology}
+                   :frame-workspace {:frame/id "frame-t97J01"
+                                     :frame/workspace-root "/tmp/frame-t97J01"}})]
+    (is (= {:agent-id "codex-1"
+            :active? true
+            :phase :solve
+            :problem-id "t97J01"
+            :subject :topology
+            :frame-id "frame-t97J01"
+            :frame-workspace-root "/tmp/frame-t97J01"
+            :session-id "sid-123"
+            :rollout-file "/tmp/codex-rollout.jsonl"
+            :turn-count 7}
+           (dev/apm-v2-mirror-state "codex-1")))))
+
+(deftest mirror-apm-conductor-v2-to-codex-repl-opens-current-rollout
+  (let [called (atom nil)]
+    (with-redefs [dev/apm-v2-mirror-state
+                  (fn [_]
+                    {:agent-id "codex-1"
+                     :active? true
+                     :phase :solve
+                     :problem-id "t97J01"
+                     :rollout-file "/tmp/codex-rollout.jsonl"})
+                  shell/sh
+                  (fn [& args]
+                    (reset! called args)
+                    {:exit 0 :out "ok" :err ""})]
+      (let [result (dev/mirror-apm-conductor-v2-to-codex-repl! :agent-id "codex-1"
+                                                               :emacsclient-bin "emacsclient")]
+        (is (true? (:ok? result)))
+        (is (= "emacsclient" (first @called)))
+        (is (some #{"-e"} @called))
+        (is (some #(and (string? %)
+                        (.contains ^String % "codex-repl-mirror-rollout")
+                        (.contains ^String % "/tmp/codex-rollout.jsonl"))
+                  @called))))))
 
 (deftest make-claude-invoke-fn-delegates-to-codex-in-mfuton-mode
   (testing "mfuton mode redirects Claude-role invoke construction through Codex"
