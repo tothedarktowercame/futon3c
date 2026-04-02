@@ -86,6 +86,7 @@
 (declare make-codex-invoke-fn)
 (declare record-invoke-delivery!)
 (declare make-bridge-irc-send-fn)
+(declare mirror-apm-conductor-v2-to-codex-repl!)
 
 (defonce !agents-blackboard-ticker-stop
   (atom nil))
@@ -1938,13 +1939,19 @@ RESPOND WITH ONLY:
      (dev/start-apm-conductor-v2!)
      (dev/start-apm-conductor-v2! :agent-id \"codex-1\" :n 10)
      (dev/start-apm-conductor-v2! :agent-id \"codex-1\"
-                                  :problem-ids [\"a01J06\" \"a02J01\"])"
-  [& {:keys [agent-id n problem-ids lane] :or {agent-id "codex-1" n 40}}]
-  (dev-apm-conductor-v2/start-apm-conductor-v2! @!evidence-store
-                                                :agent-id agent-id
-                                                :n n
-                                                :problem-ids problem-ids
-                                                :lane lane))
+                                  :problem-ids [\"a01J06\" \"a02J01\"])
+     (dev/start-apm-conductor-v2! :agent-id \"codex-1\" :n 10 :mirror? true)"
+  [& {:keys [agent-id n problem-ids lane mirror?]
+      :or {agent-id "codex-1" n 40 mirror? false}}]
+  (let [result (dev-apm-conductor-v2/start-apm-conductor-v2! @!evidence-store
+                                                             :agent-id agent-id
+                                                             :n n
+                                                             :problem-ids problem-ids
+                                                             :lane lane)]
+    (if mirror?
+      {:started result
+       :mirror (mirror-apm-conductor-v2-to-codex-repl! :agent-id agent-id)}
+      result)))
 
 (defn stop-apm-conductor-v2!
   "Stop the v2 APM conductor."
@@ -2497,6 +2504,73 @@ RESPOND WITH ONLY:
     (swap! !invoke-controls dissoc aid)
     (project-codex-status!)
     true))
+
+(def ^:private codex-repl-el-path
+  "/home/joe/code/futon3c/emacs/codex-repl.el")
+
+(defn apm-v2-mirror-state
+  "Return the live mirror state for a v2 APM run on AGENT-ID.
+   Includes the active problem/phase plus the current Codex rollout path when known."
+  [agent-id]
+  (let [aid (str agent-id)
+        lane (codex-lane-runtime-state aid)
+        conductor (dev-apm-conductor-v2/state-for-agent aid)
+        current-problem (:current-problem conductor)
+        frame-workspace (:frame-workspace conductor)]
+    {:agent-id aid
+     :active? (boolean conductor)
+     :phase (:current-phase conductor)
+     :problem-id (:id current-problem)
+     :subject (:subject current-problem)
+     :frame-id (:frame/id frame-workspace)
+     :frame-workspace-root (:frame/workspace-root frame-workspace)
+     :session-id (:session-id lane)
+     :rollout-file (:rollout-file lane)
+     :turn-count (:turn-count lane)}))
+
+(defn- codex-repl-mirror-elisp
+  [rollout-file]
+  (str "(progn "
+       "(load " (pr-str codex-repl-el-path) ") "
+       "(codex-repl-mirror-rollout " (pr-str rollout-file) "))"))
+
+(defn mirror-apm-conductor-v2-to-codex-repl!
+  "Open codex-repl in mirror mode for the live v2 APM run on AGENT-ID.
+   Returns mirror state plus the emacsclient result."
+  [& {:keys [agent-id emacsclient-bin]
+      :or {agent-id "codex-1"
+           emacsclient-bin (or (env "EMACSCLIENT_BIN") "emacsclient")}}]
+  (let [state (apm-v2-mirror-state agent-id)
+        rollout-file (:rollout-file state)]
+    (cond
+      (not (:active? state))
+      (assoc state
+             :ok? false
+             :message (str "No active APM v2 conductor for " (:agent-id state)))
+
+      (or (not (string? rollout-file)) (str/blank? rollout-file))
+      (assoc state
+             :ok? false
+             :message (str "No rollout file yet for " (:agent-id state)
+                           "; wait for the first invoke to start."))
+
+      :else
+      (let [elisp (codex-repl-mirror-elisp rollout-file)
+            result (shell/sh emacsclient-bin
+                             "--alternate-editor" ""
+                             "--reuse-frame"
+                             "--no-wait"
+                             "-e"
+                             elisp)]
+        (assoc state
+               :ok? (zero? (:exit result))
+               :emacsclient-bin emacsclient-bin
+               :stdout (:out result)
+               :stderr (:err result)
+               :exit (:exit result)
+               :message (if (zero? (:exit result))
+                          (str "Opened codex-repl mirror for " rollout-file)
+                          (str "Failed to open codex-repl mirror for " rollout-file)))))))
 
 (defn- register-invoke-control!
   [agent-id token control]
