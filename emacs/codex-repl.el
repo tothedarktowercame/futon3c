@@ -423,6 +423,19 @@ Interpreted as width on left/right and height on top/bottom."
   "Return VALUE converted to a form acceptable to `json-serialize'."
   (cond
    ((hash-table-p value) value)
+   ((and (listp value)
+         (keywordp (car value)))
+    (let ((obj (make-hash-table :test 'equal))
+          (plist value))
+      (while plist
+        (let ((key (pop plist))
+              (val (pop plist)))
+          (puthash (format "%s" key)
+                   (codex-repl--json-encodable val)
+                   obj)))
+      obj))
+   ((symbolp value)
+    (symbol-name value))
    ((and (listp value) (consp value) (consp (car value)))
     (let ((obj (make-hash-table :test 'equal)))
       (dolist (entry value obj)
@@ -1580,6 +1593,33 @@ Returns non-nil when prompt markers were restored."
       (set-marker-insertion-type agent-chat--prompt-marker t)
       (set-marker-insertion-type agent-chat--input-start nil)
       t)))
+
+(defun codex-repl--append-ui-tail! ()
+  "Append a fresh separator and prompt without erasing transcript.
+Returns non-nil once prompt markers are installed."
+  (codex-repl--apply-ui-state-defaults)
+  (let ((inhibit-read-only t))
+    (save-excursion
+      (goto-char (point-max))
+      (unless (bolp)
+        (insert "\n"))
+      (setq-local agent-chat--prompt-marker (copy-marker (point) t))
+      (setq-local agent-chat--separator-start (copy-marker (point)))
+      (insert (propertize (make-string 72 ?─) 'face 'font-lock-comment-face) "\n")
+      (insert (propertize "> " 'face 'agent-chat-prompt-face))
+      ;; Input-start must stay fixed at prompt boundary while user types.
+      (setq-local agent-chat--input-start (copy-marker (point)))
+      (set-marker-insertion-type agent-chat--prompt-marker t)
+      (set-marker-insertion-type agent-chat--input-start nil)))
+  t)
+
+(defun codex-repl--repair-ui-state! ()
+  "Repair codex-repl UI state without destroying existing transcript.
+Prefer restoring the existing prompt markers; if that fails on a non-empty
+buffer, append a new prompt tail instead of erasing the conversation."
+  (or (codex-repl--restore-ui-state)
+      (and (> (buffer-size) 0)
+           (codex-repl--append-ui-tail!))))
 
 (defun codex-repl--ensure-input-marker-stable! ()
   "Ensure `agent-chat--input-start` does not advance while typing."
@@ -3581,7 +3621,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
         (setq-local default-directory (file-name-as-directory working-directory)))
       (setq-local codex-repl--session-open-mode (or open-mode 'repl))
       (unless (codex-repl--ui-state-valid-p)
-        (unless (codex-repl--restore-ui-state)
+        (unless (codex-repl--repair-ui-state!)
           (let ((inhibit-read-only t))
             (erase-buffer))
           (codex-repl--init))

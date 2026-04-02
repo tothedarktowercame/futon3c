@@ -1,0 +1,125 @@
+;; APM Conductor Log — 2026-03-30T09:31:47.398652456Z
+{:event :conductor-started, :agent "claude-1", :target 5, :at "2026-03-30T09:31:47.399001494Z"}
+{:event :problem-start, :problem "apm-a01J01", :at "2026-03-30T09:31:47.420938362Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :observe, :timeout-ms 300000, :at "2026-03-30T09:31:47.422132726Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :observe, :elapsed-ms 6893, :at "2026-03-30T09:31:54.315370405Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :propose, :timeout-ms 300000, :at "2026-03-30T09:31:54.316184382Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :propose, :elapsed-ms 30236, :at "2026-03-30T09:32:24.552100578Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 900000, :at "2026-03-30T09:32:24.552776975Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 33473, :at "2026-03-30T09:32:58.025548739Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 33474, :sorry? false, :fully-closed? true, :remaining-ms 866526, :at "2026-03-30T09:32:58.028106728Z"}
+{:event :execute-early-exit, :problem "apm-a01J01", :elapsed-ms 33474, :message "Zero sorry — fully closed, early exit permitted", :at "2026-03-30T09:32:58.028373930Z"}
+{:event :phase-rejected, :problem "apm-a01J01", :phase :execute, :message "Execute phase requires Lean artifacts (.lean files) or :lean-timed-out report. Cannot advance without attempting Lean formalization.", :at "2026-03-30T09:32:58.029929933Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 251290, :at "2026-03-30T09:36:35.842071409Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 251290, :sorry? true, :fully-closed? false, :remaining-ms 648710, :at "2026-03-30T09:36:35.842548327Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 251290, :remaining-ms 648710, :message "Sorry present, 648s remaining — re-dispatching", :at "2026-03-30T09:36:35.842683112Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 648710, :at "2026-03-30T09:36:35.843101843Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 148274, :at "2026-03-30T09:39:04.117857503Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 148275, :sorry? true, :fully-closed? false, :remaining-ms 751725, :at "2026-03-30T09:39:04.118152357Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 148275, :remaining-ms 751725, :message "Sorry present, 751s remaining — re-dispatching", :at "2026-03-30T09:39:04.118308274Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 751725, :at "2026-03-30T09:39:04.118461445Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 61450, :at "2026-03-30T09:40:05.568084984Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 61450, :sorry? true, :fully-closed? false, :remaining-ms 838550, :at "2026-03-30T09:40:05.568434287Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 61450, :remaining-ms 838550, :message "Sorry present, 838s remaining — re-dispatching", :at "2026-03-30T09:40:05.568571967Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 838550, :at "2026-03-30T09:40:05.568832630Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 228034, :at "2026-03-30T09:43:53.602137406Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 228034, :sorry? true, :fully-closed? false, :remaining-ms 671966, :at "2026-03-30T09:43:53.602319772Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 228034, :remaining-ms 671966, :message "Sorry present, 671s remaining — re-dispatching", :at "2026-03-30T09:43:53.602383870Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 671966, :at "2026-03-30T09:43:53.602545673Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 132305, :at "2026-03-30T09:46:05.907301147Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 132305, :sorry? true, :fully-closed? false, :remaining-ms 767695, :at "2026-03-30T09:46:05.907478397Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 132305, :remaining-ms 767695, :message "Sorry present, 767s remaining — re-dispatching", :at "2026-03-30T09:46:05.907594293Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 767695, :at "2026-03-30T09:46:05.907732139Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 163419, :at "2026-03-30T09:48:49.326036836Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 163419, :sorry? true, :fully-closed? false, :remaining-ms 736581, :at "2026-03-30T09:48:49.326305426Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 163419, :remaining-ms 736581, :message "Sorry present, 736s remaining — re-dispatching", :at "2026-03-30T09:48:49.326411197Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 736581, :at "2026-03-30T09:48:49.326603755Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 130987, :at "2026-03-30T09:51:00.313454263Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 130987, :sorry? true, :fully-closed? false, :remaining-ms 769013, :at "2026-03-30T09:51:00.314005825Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 130987, :remaining-ms 769013, :message "Sorry present, 769s remaining — re-dispatching", :at "2026-03-30T09:51:00.314207688Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 769013, :at "2026-03-30T09:51:00.314518223Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 210931, :at "2026-03-30T09:54:31.245038416Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 210931, :sorry? true, :fully-closed? false, :remaining-ms 689069, :at "2026-03-30T09:54:31.245187119Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 210931, :remaining-ms 689069, :message "Sorry present, 689s remaining — re-dispatching", :at "2026-03-30T09:54:31.245247724Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 689069, :at "2026-03-30T09:54:31.245362525Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 105997, :at "2026-03-30T09:56:17.242645692Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 105997, :sorry? true, :fully-closed? false, :remaining-ms 794003, :at "2026-03-30T09:56:17.242875185Z"}
+{:event :execute-redispatch, :problem "apm-a01J01", :elapsed-ms 105997, :remaining-ms 794003, :message "Sorry present, 794s remaining — re-dispatching", :at "2026-03-30T09:56:17.242990323Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 794003, :at "2026-03-30T09:56:17.243216261Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 367516, :at "2026-03-30T10:02:24.759223465Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 367516, :sorry? false, :fully-closed? true, :remaining-ms 532484, :at "2026-03-30T10:02:24.759398370Z"}
+{:event :execute-early-exit, :problem "apm-a01J01", :elapsed-ms 367516, :message "Zero sorry — fully closed, early exit permitted", :at "2026-03-30T10:02:24.759450960Z"}
+{:event :phase-rejected, :problem "apm-a01J01", :phase :execute, :message "Execute phase requires Lean artifacts (.lean files) or :lean-timed-out report. Cannot advance without attempting Lean formalization.", :at "2026-03-30T10:02:24.759960629Z"}
+{:event :conductor-stopped, :at "2026-03-30T10:03:19.846878241Z"}
+;; APM Conductor Log — 2026-03-30T10:03:19.847429856Z
+{:event :conductor-started, :agent "claude-1", :target 5, :at "2026-03-30T10:03:19.847502679Z"}
+{:event :problem-start, :problem "apm-a01J01", :at "2026-03-30T10:03:19.871940980Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :observe, :timeout-ms 300000, :at "2026-03-30T10:03:19.873101979Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :observe, :elapsed-ms 5257, :at "2026-03-30T10:03:25.130081344Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :propose, :timeout-ms 300000, :at "2026-03-30T10:03:25.130762369Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :propose, :elapsed-ms 38463, :at "2026-03-30T10:04:03.593204453Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 900000, :at "2026-03-30T10:04:03.593969911Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 29595, :at "2026-03-30T10:04:33.188755934Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 29595, :sorry? false, :fully-closed? true, :remaining-ms 870405, :at "2026-03-30T10:04:33.189050290Z"}
+{:event :execute-early-exit, :problem "apm-a01J01", :elapsed-ms 29595, :message "Zero sorry — fully closed, early exit permitted", :at "2026-03-30T10:04:33.189138536Z"}
+{:event :phase-rejected, :problem "apm-a01J01", :phase :execute, :message "Execute phase requires Lean artifacts (.lean files) or :lean-timed-out report. Cannot advance without attempting Lean formalization.", :at "2026-03-30T10:04:33.189653125Z"}
+{:event :conductor-stopped, :at "2026-03-30T12:26:32.743865709Z"}
+;; APM Conductor Log — 2026-03-30T12:26:32.745877709Z
+{:event :conductor-started, :agent "codex-1", :target 2, :at "2026-03-30T12:26:32.746010733Z"}
+{:event :problem-start, :problem "apm-a01J01", :at "2026-03-30T12:26:32.784007848Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :observe, :timeout-ms 300000, :at "2026-03-30T12:26:32.787456966Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :observe, :elapsed-ms 12390, :at "2026-03-30T12:26:45.177689192Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :propose, :timeout-ms 300000, :at "2026-03-30T12:26:45.179630759Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :propose, :elapsed-ms 34967, :at "2026-03-30T12:27:20.146586260Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 900000, :at "2026-03-30T12:27:20.148487572Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 177896, :at "2026-03-30T12:30:18.044373697Z"}
+{:event :execute-return, :problem "apm-a01J01", :elapsed-ms 177896, :sorry? false, :fully-closed? true, :remaining-ms 722104, :at "2026-03-30T12:30:18.044538715Z"}
+{:event :execute-early-exit, :problem "apm-a01J01", :elapsed-ms 177896, :message "Zero sorry — fully closed, early exit permitted", :at "2026-03-30T12:30:18.044604318Z"}
+{:event :phase-rejected, :problem "apm-a01J01", :phase :execute, :message "Execute phase requires Lean artifacts (.lean files) or :lean-timed-out report. Cannot advance without attempting Lean formalization.", :at "2026-03-30T12:30:18.045006190Z"}
+{:event :conductor-stopped, :at "2026-03-30T12:32:24.817542784Z"}
+;; APM Conductor Log — 2026-03-30T12:32:24.820902520Z
+{:event :conductor-started, :agent "codex-1", :target 2, :at "2026-03-30T12:32:24.821241794Z"}
+{:event :problem-start, :problem "apm-a01J01", :at "2026-03-30T12:32:24.853617191Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :observe, :timeout-ms 300000, :at "2026-03-30T12:32:24.854991057Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :observe, :elapsed-ms 9160, :at "2026-03-30T12:32:34.014466017Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :propose, :timeout-ms 300000, :at "2026-03-30T12:32:34.015884007Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :propose, :elapsed-ms 22409, :at "2026-03-30T12:32:56.424150743Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :execute, :timeout-ms 900000, :at "2026-03-30T12:32:56.425062006Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :execute, :elapsed-ms 18629, :at "2026-03-30T12:33:15.054925982Z"}
+{:fully-closed? true, :total-elapsed-ms 18630, :remaining-ms 881370, :artifact-count 1, :problem "apm-a01J01", :sorry? nil, :event :execute-return, :at "2026-03-30T12:33:15.055885203Z", :elapsed-ms 18630}
+{:event :execute-early-exit, :problem "apm-a01J01", :elapsed-ms 18630, :total-elapsed-ms 18630, :message "Zero sorry — fully closed, early exit permitted", :at "2026-03-30T12:33:15.055992213Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :validate, :timeout-ms 300000, :at "2026-03-30T12:33:15.056474092Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :validate, :elapsed-ms 31797, :at "2026-03-30T12:33:46.853829188Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :classify, :timeout-ms 300000, :at "2026-03-30T12:33:46.854623676Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :classify, :elapsed-ms 18241, :at "2026-03-30T12:34:05.095572758Z"}
+{:event :phase-dispatch, :problem "apm-a01J01", :phase :integrate, :timeout-ms 300000, :at "2026-03-30T12:34:05.097586006Z"}
+{:event :phase-complete, :problem "apm-a01J01", :phase :integrate, :elapsed-ms 21496, :at "2026-03-30T12:34:26.593738848Z"}
+{:event :mechanical-gates, :problem "apm-a01J01", :at "2026-03-30T12:34:26.594517274Z"}
+{:event :problem-complete, :problem "apm-a01J01", :classification "proved", :total-elapsed-ms 121741, :at "2026-03-30T12:34:26.595796934Z"}
+{:event :problem-start, :problem "apm-a01J02", :at "2026-03-30T12:34:26.619026434Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :observe, :timeout-ms 300000, :at "2026-03-30T12:34:26.619758020Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :observe, :elapsed-ms 5919, :at "2026-03-30T12:34:32.538512518Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :propose, :timeout-ms 300000, :at "2026-03-30T12:34:32.539795564Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :propose, :elapsed-ms 16959, :at "2026-03-30T12:34:49.498150146Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :execute, :timeout-ms 900000, :at "2026-03-30T12:34:49.499038406Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :execute, :elapsed-ms 59801, :at "2026-03-30T12:35:49.300424573Z"}
+{:fully-closed? nil, :total-elapsed-ms 59801, :remaining-ms 840199, :artifact-count 0, :problem "apm-a01J02", :sorry? nil, :event :execute-return, :at "2026-03-30T12:35:49.300641928Z", :elapsed-ms 59801}
+{:event :execute-redispatch, :problem "apm-a01J02", :elapsed-ms 59801, :total-elapsed-ms 59801, :remaining-ms 840199, :message "Sorry present, 840s remaining — re-dispatching", :at "2026-03-30T12:35:49.300750195Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :execute, :timeout-ms 840199, :at "2026-03-30T12:35:49.301032905Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :execute, :elapsed-ms 128561, :at "2026-03-30T12:37:57.862564438Z"}
+{:fully-closed? false, :total-elapsed-ms 188363, :remaining-ms 711637, :artifact-count 1, :problem "apm-a01J02", :sorry? true, :event :execute-return, :at "2026-03-30T12:37:57.862976008Z", :elapsed-ms 128561}
+{:event :execute-redispatch, :problem "apm-a01J02", :elapsed-ms 128561, :total-elapsed-ms 188363, :remaining-ms 711637, :message "Sorry present, 711s remaining — re-dispatching", :at "2026-03-30T12:37:57.863072042Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :execute, :timeout-ms 711637, :at "2026-03-30T12:37:57.863507246Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :execute, :elapsed-ms 49912, :at "2026-03-30T12:38:47.775783127Z"}
+{:fully-closed? true, :total-elapsed-ms 238276, :remaining-ms 661724, :artifact-count 1, :problem "apm-a01J02", :sorry? nil, :event :execute-return, :at "2026-03-30T12:38:47.776529786Z", :elapsed-ms 49912}
+{:event :execute-early-exit, :problem "apm-a01J02", :elapsed-ms 49912, :total-elapsed-ms 238276, :message "Zero sorry — fully closed, early exit permitted", :at "2026-03-30T12:38:47.776615832Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :validate, :timeout-ms 300000, :at "2026-03-30T12:38:47.777083386Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :validate, :elapsed-ms 14133, :at "2026-03-30T12:39:01.910286834Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :classify, :timeout-ms 300000, :at "2026-03-30T12:39:01.911140769Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :classify, :elapsed-ms 6650, :at "2026-03-30T12:39:08.561853964Z"}
+{:event :phase-dispatch, :problem "apm-a01J02", :phase :integrate, :timeout-ms 300000, :at "2026-03-30T12:39:08.562783328Z"}
+{:event :phase-complete, :problem "apm-a01J02", :phase :integrate, :elapsed-ms 32133, :at "2026-03-30T12:39:40.695398760Z"}
+{:event :mechanical-gates, :problem "apm-a01J02", :at "2026-03-30T12:39:40.696019964Z"}
+{:event :problem-complete, :problem "apm-a01J02", :classification "proved", :total-elapsed-ms 314078, :at "2026-03-30T12:39:40.698148768Z"}
+{:event :batch-complete, :done 2, :target 2, :at "2026-03-30T12:39:40.698504933Z"}
+{:event :conductor-stopped, :at "2026-03-30T12:39:40.698682618Z"}

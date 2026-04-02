@@ -1,0 +1,31 @@
+#:proof{:updated-at "2026-03-30T22:31:20.605983454Z",
+        :falsify-completed? true,
+        :cycles [],
+        :ledger
+        {"root"
+         #:item{:id "root",
+                :label "Prove a02J02",
+                :status :open,
+                :depends-on #{},
+                :unlocks #{},
+                :evidence-type :analytical}},
+        :active-license nil,
+        :current-mode :CONSTRUCT,
+        :problem-id "apm-a02J02",
+        :canonical
+        {:statement
+         "Let $\\{f_n\\}$ be a sequence of Lebesgue measurable functions in\n$L^p([0,1])$ for some $p:1<p<\\infty$. Assume that $f_n\\rightarrow f$\nalmost everywhere  for $f\\in L^p([0,1])$ with\n$\\|f_n\\|_p\\rightarrow \\|f\\|_p$. Show that $f_n\\rightarrow f$ in\n$L^p([0,1])$.\n\n",
+         :closure-criterion "All parts proved analytically",
+         :statement-hash
+         "6a043766360a3b832a02a6f1b7b44ef809ab0bd2a5346e58d3629b21ce48744c",
+         :version-history
+         [{:version 0,
+           :statement
+           "Let $\\{f_n\\}$ be a sequence of Lebesgue measurable functions in\n$L^p([0,1])$ for some $p:1<p<\\infty$. Assume that $f_n\\rightarrow f$\nalmost everywhere  for $f\\in L^p([0,1])$ with\n$\\|f_n\\|_p\\rightarrow \\|f\\|_p$. Show that $f_n\\rightarrow f$ in\n$L^p([0,1])$.\n\n",
+           :hash
+           "6a043766360a3b832a02a6f1b7b44ef809ab0bd2a5346e58d3629b21ce48744c",
+           :changed-at "2026-03-30T22:31:20.605983454Z",
+           :reason "Initial load from APM archive"}]},
+        :version 0,
+        :tryharder-log [],
+        :failed-routes []}
