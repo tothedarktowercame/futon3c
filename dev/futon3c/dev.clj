@@ -3057,6 +3057,13 @@ RESPOND WITH ONLY:
    (re-find #"(?is)\b(you are in the (observe|propose|validate|classify|integrate) phase of the proof peripheral)\b|\bauthoritative phase record\b"
             (str (or prompt "")))))
 
+(defn- codex-emacs-repl-prompt?
+  "True when prompt is the direct emacs-codex-repl conversational surface."
+  [prompt]
+  (boolean
+   (re-find #"(?im)^-\s*Current surface:\s*emacs-codex-repl\.\s*$"
+            (str (or prompt "")))))
+
 (defn- codex-mission-work-prompt?
   "True when prompt is a mission/work request that should require execution evidence.
    Keeps this enforcement in the invoke engine, independent of bridge classification."
@@ -3097,10 +3104,13 @@ RESPOND WITH ONLY:
          (boolean (re-find codex-planning-only-re t)))))
 
 (defn- codex-work-claim-without-execution?
-  "True when Codex returned work/progress claim text with no execution evidence."
-  [result]
+  "True when Codex returned a work/progress claim with no execution evidence.
+   Direct emacs-codex-repl conversation is exempt; other prompts keep the
+   longstanding enforcement behavior."
+  [prompt result]
   (let [text (str/trim (or (:result result) ""))]
-    (and (codex-no-execution-evidence? result)
+    (and (not (codex-emacs-repl-prompt? prompt))
+         (codex-no-execution-evidence? result)
          (not (str/blank? text))
          (boolean (re-find codex-work-claim-re text)))))
 
@@ -3445,11 +3455,11 @@ RESPOND WITH ONLY:
                                            next-prompt
                                            next-session-id))
                              initial (call-codex prompt invoke-sid)]
-                         (if (or (codex-work-claim-without-execution? initial)
+                         (if (or (codex-work-claim-without-execution? prompt-str initial)
                                  (codex-task-reply-without-execution? prompt-str initial)
                                  (codex-task-micro-update? prompt-str initial)
                                  (codex-format-refusal? prompt-str initial))
-                           (let [exec-enforce? (or (codex-work-claim-without-execution? initial)
+                           (let [exec-enforce? (or (codex-work-claim-without-execution? prompt-str initial)
                                                    (codex-task-reply-without-execution? prompt-str initial))
                                  micro-enforce? (codex-task-micro-update? prompt-str initial)
                                  format-enforce? (codex-format-refusal? prompt-str initial)
@@ -3487,7 +3497,7 @@ RESPOND WITH ONLY:
                                            :else "retrying after format refusal")
                                :trace (vec @!event-trace)})
                              (let [retry (call-codex retry-prompt retry-sid)]
-                                (if (or (codex-work-claim-without-execution? retry)
+                                (if (or (codex-work-claim-without-execution? prompt-str retry)
                                         (codex-task-reply-without-execution? prompt-str retry)
                                         (codex-task-micro-update? prompt-str retry)
                                         (codex-format-refusal? prompt-str retry))
