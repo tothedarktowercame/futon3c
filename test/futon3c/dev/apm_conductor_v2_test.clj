@@ -185,6 +185,7 @@
        "TARGET SANITY CHECK\n- mentions-problem-objects?: yes\n- avoids-assuming-conclusion?: yes\n- meaningful-without-prose?: yes\n- notes: The target theorem still states the intended claim."
        nil)
       (is (= :solve (:current-phase (conductor/state-for-agent "codex-1"))))
+      (is (number? (:solve-start-ms (conductor/state-for-agent "codex-1"))))
       (is (= 1 (count @prompts)))
       (is (str/includes? (first @prompts) "Solve this problem completely.")))))
 
@@ -324,6 +325,25 @@
       (is (str/includes? (first @prompts) "does not yet certify the problem you claim to have solved"))
       (is (str/includes? (first @prompts) "formal-alignment.edn")))))
 
+(deftest formal-attempt-trace-requires-concrete-lean-contact
+  (let [record-status {:execute-notes "**Stage 3 — LEAN FORMALIZATION**\n\nMathlib seems not to have the needed API, so the route is blocked.\n"
+                       :formal-alignment {:main-claim {:formal-name "main_claim"}}
+                       :changelog [{:kind :stage3-blocked
+                                    :summary "Blocked by a missing API after thinking about the formalization."}]}
+        concrete-status {:execute-notes "**Stage 3 — LEAN FORMALIZATION**\n\nTried theorem main_claim, searched Mathlib with `rg` and `#check`, then `lake build` failed with an unknown constant.\n"
+                         :formal-alignment {:main-claim {:formal-name "main_claim"}}
+                         :changelog [{:kind :stage3-blocked
+                                      :summary "Tried theorem main_claim; searched Mathlib; lake build failed with unknown constant Foo.bar"}]}]
+    (is (false? (#'conductor/formal-attempt-trace? record-status "")))
+    (is (= {:text-present? true
+            :theorem-mentioned? false
+            :search-route? false
+            :build-evidence? false
+            :blocker-diagnosis? true
+            :concrete? false}
+           (#'conductor/formal-attempt-trace-status record-status "")))
+    (is (#'conductor/formal-attempt-trace? concrete-status ""))))
+
 (deftest handle-solve-return-accepts-real-proof-with-alignment-warning
   (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
                            "apm-v2-alignment-warning" (make-array java.nio.file.attribute.FileAttribute 0)))
@@ -375,6 +395,56 @@
       (is (some #(and (= :problem-complete (:event %))
                       (= "proved" (:classification %)))
                 @logs)))))
+
+(deftest handle-solve-return-prefers-real-proof-over-problem-timeout
+  (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
+                           "apm-v2-timeout-proof" (make-array java.nio.file.attribute.FileAttribute 0)))
+        workspace-root (.getAbsolutePath tmp-dir)
+        lean-dir (doto (io/file workspace-root "lean") .mkdirs)
+        lean-main (.getAbsolutePath (io/file lean-dir "Main.lean"))
+        execute-path (.getAbsolutePath (io/file workspace-root "execute.md"))
+        plan-path (.getAbsolutePath (io/file workspace-root "proof-plan.edn"))
+        alignment-path (.getAbsolutePath (io/file workspace-root "formal-alignment.edn"))
+        changelog-path (.getAbsolutePath (io/file workspace-root "changelog.edn"))
+        logs (atom [])
+        workspace {:frame/id "frame-a93J05"
+                   :frame/workspace-root workspace-root
+                   :frame/module-root "ApmCanaries.Frames.A93J05.Frame"
+                   :frame/lean-root (.getAbsolutePath lean-dir)
+                   :frame/shared-extension-root "/home/joe/code/apm-lean/ApmCanaries/Local"
+                   :artifacts {:execute-notes execute-path
+                               :proof-plan plan-path
+                               :formal-alignment alignment-path
+                               :changelog changelog-path
+                               :lean-main lean-main
+                               :lean-scratch (.getAbsolutePath (io/file lean-dir "Scratch.lean"))}}]
+    (spit lean-main "import Mathlib\n\ntheorem lattice_periodic_entire_const (x : ℝ) : x = x := by rfl\n")
+    (spit execute-path "**Stage 1 — THE CLEAN PROOF**\n\nA real proof.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n\n1. **Main step**\n   - **Formal dependency**: theorem X.\n   - **Informal dependency**: use idea Y.\n   - **Why this becomes thinkable here**: cue Z.\n   - **Lean target/type**: `theorem lattice_periodic_entire_const (x : ℝ) : x = x`.\n   - **Mathlib status/search terms**: search `rfl`.\n   - **Critical path**: yes.\n\n**Stage 3 — LEAN FORMALIZATION**\n\nClosed the theorem.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION (matched)**\n\nThe Lean theorem certifies the same main claim.\n")
+    (spit plan-path "{:goal \"Main claim\" :terms [{:name \"x\" :meaning \"a real variable\" :needed-because \"target\"}] :strategy [{:id :s1 :formal-dependency \"theorem X\" :informal-dependency \"idea Y\" :why-this-now \"cue Z\" :lean-target \"theorem lattice_periodic_entire_const (x : ℝ) : x = x\" :mathlib-status \"existing\"}] :stage-status {:stage1 :done :stage2 :done :stage3 :done :stage4 :done}}\n")
+    (spit alignment-path "{:main-claim {:informal-claim \"Main claim\" :formal-name \"lattice_periodic_entire_const\" :formal-target \"theorem lattice_periodic_entire_const (x : ℝ) : x = x\" :sanity-check {:mentions-problem-objects? true :avoids-assuming-conclusion? true :meaningful-without-prose? true :notes \"The theorem still states the real claim.\"}} :alignments [{:formal-name \"lattice_periodic_entire_const\" :formal-statement \"theorem lattice_periodic_entire_const (x : ℝ) : x = x\" :informal-clause \"Main claim\" :role :main-theorem}]}\n")
+    (spit changelog-path "[{:kind :stage3-completed :summary \"Closed the theorem\" :full-record? true :sorry? false :fully-closed? true}]\n")
+    (reset! conductor/!state {(cid "codex-1")
+                              {:current-problem {:id "a93J05" :subject :analysis :year 1993 :session :fall}
+                               :frame-workspace workspace
+                               :backend nil
+                               :accumulated-output ""
+                               :solve-start-ms (- (System/currentTimeMillis) 1000)
+                               :sorry-kick-count 0
+                               :record-kick-count 0
+                               :formal-kick-count 0
+                               :problems-done 0
+                               :batch-results []
+                               :target-n 1
+                               :problem-timeout-ms 600000
+                               :problem-start-ms (- (System/currentTimeMillis) 700000)
+                               :dispatch-start-ms (System/currentTimeMillis)}})
+    (with-redefs [conductor/log! (fn [entry] (swap! logs conj entry))
+                  conductor/start-next-problem! (fn [& _] (throw (ex-info "should not advance" {})))
+                  conductor/stop-apm-conductor-v2! (fn [& _] nil)]
+      (#'conductor/handle-solve-return! (cid "codex-1") "codex-1" "Real proof, no sorry in prose." nil)
+      (is (= 1 (:problems-done (conductor/state-for-agent "codex-1"))))
+      (is (= :proved (-> (conductor/state-for-agent "codex-1") :batch-results first :classification)))
+      (is (not-any? #(= :problem-timed-out (:event %)) @logs)))))
 
 (deftest handle-solve-return-accepts-attempt-trace-as-partial
   (let [tmp-dir (.toFile (java.nio.file.Files/createTempDirectory
@@ -455,7 +525,7 @@
     (spit execute-path "**Stage 1 — THE CLEAN PROOF**\n\nA real proof.\n\n**Stage 2 — LEMMA DEPENDENCY GRAPH**\n\n1. **Main step**\n   - **Formal dependency**: subgroup units cyclicity.\n   - **Informal dependency**: finite subgroup argument.\n   - **Why this becomes thinkable here**: the target is about finite subgroups of Kˣ.\n   - **Lean target/type**: `theorem finite_mul_subgroup_cyclic {K : Type*} [Field K] (G : Subgroup Kˣ) [Finite G] : IsCyclic G`.\n   - **Mathlib status/search terms**: search `Subgroup.isCyclic_subgroup_units`.\n   - **Critical path**: yes.\n\n**Stage 3 — LEAN FORMALIZATION**\n\nTried the main theorem, searched Mathlib for subgroup cyclicity lemmas, and closed the finite subgroup theorem directly.\n\n**Stage 4 — FORMAL-TO-INFORMAL REVISION**\n\nThe Lean theorem certifies part (c), but the whole multipart problem is not fully aligned.\n")
     (spit plan-path "{:goal \"Solve the multipart group-theory problem.\" :terms [{:name \"finite subgroup of Kˣ\" :meaning \"a finite multiplicative subgroup\" :needed-because \"part (c)\"}] :strategy [{:id :s1 :formal-dependency \"Subgroup.isCyclic_subgroup_units\" :informal-dependency \"finite subgroup argument\" :why-this-now \"part (c) is the formalized subproblem\" :lean-target \"theorem finite_mul_subgroup_cyclic {K : Type*} [Field K] (G : Subgroup Kˣ) [Finite G] : IsCyclic G\" :mathlib-status \"available\"}] :stage-status {:stage1 :done :stage2 :done :stage3 :done :stage4 :done}}\n")
     (spit alignment-path "{:main-claim {:informal-claim \"Solve the whole multipart problem.\" :formal-name \"full_problem_main\" :formal-target \"theorem full_problem_main : True\" :sanity-check {:mentions-problem-objects? true :avoids-assuming-conclusion? true :meaningful-without-prose? true :notes \"The declared main theorem is still broader than the closed Lean subtheorem.\"}} :alignments [{:formal-name \"full_problem_main\" :formal-statement \"theorem full_problem_main : True\" :informal-clause \"Whole problem\" :role :main-theorem} {:formal-name \"finite_mul_subgroup_cyclic\" :formal-statement \"theorem finite_mul_subgroup_cyclic {K : Type*} [Field K] (G : Subgroup Kˣ) [Finite G] : IsCyclic G\" :informal-clause \"Part (c)\" :role :helper-lemma}]}\n")
-    (spit changelog-path "[{:kind :stage1-completed :summary \"Proof written\" :full-record? true :sorry? false :fully-closed? false}\n {:kind :stage3-completed :summary \"Tried the full theorem, then closed the part (c) Lean theorem using subgroup cyclicity in Mathlib\" :full-record? true :sorry? false :fully-closed? true}]\n")
+    (spit changelog-path "[{:kind :stage1-completed :summary \"Proof written\" :full-record? true :sorry? false :fully-closed? false}\n {:kind :stage3-completed :summary \"Tried the full theorem, searched Mathlib for subgroup cyclicity lemmas, then closed the part (c) Lean theorem\" :full-record? true :sorry? false :fully-closed? true}]\n")
     (reset! conductor/!state {(cid "codex-1")
                               {:current-problem {:id "b94J01" :subject :algebra :year 1994 :session :fall
                                                  :subpart-count 3
