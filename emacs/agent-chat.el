@@ -338,6 +338,24 @@ Returns the buffer content up to the separator line."
 
 ;; --- HTTP helpers ---
 
+(defun agent-chat--json-encodable (value)
+  "Return VALUE converted to a form acceptable to Emacs JSON encoders."
+  (cond
+   ((hash-table-p value) value)
+   ((symbolp value)
+    (symbol-name value))
+   ((and (listp value) (consp value) (consp (car value)))
+    (let ((obj (make-hash-table :test 'equal)))
+      (dolist (entry value obj)
+        (puthash (format "%s" (car entry))
+                 (agent-chat--json-encodable (cdr entry))
+                 obj))))
+   ((listp value)
+    (mapcar #'agent-chat--json-encodable value))
+   ((vectorp value)
+    (apply #'vector (mapcar #'agent-chat--json-encodable value)))
+   (t value)))
+
 (defun agent-chat--walkie-post (path payload callback)
   "POST PAYLOAD (alist) to PATH under the walkie-talkie base URL.
 CALLBACK is called with (STATUS-SYMBOL BODY-STRING).
@@ -347,7 +365,7 @@ STATUS-SYMBOL is `ok' or `error'."
          (url-request-extra-headers
           '(("Content-Type" . "application/json")))
          (url-request-data (encode-coding-string
-                            (json-serialize payload) 'utf-8)))
+                            (json-serialize (agent-chat--json-encodable payload)) 'utf-8)))
     (url-retrieve
      url
      (lambda (status)
@@ -870,7 +888,9 @@ Replaces the `(session: ...)' text in the first line."
           '(("Content-Type" . "application/json")
             ("Accept" . "application/json")))
          (url-request-data (when payload
-                             (encode-coding-string (json-encode payload) 'utf-8)))
+                             (encode-coding-string
+                              (json-encode (agent-chat--json-encodable payload))
+                              'utf-8)))
          (buffer (condition-case nil
                      (url-retrieve-synchronously url t t timeout)
                    (error nil))))
