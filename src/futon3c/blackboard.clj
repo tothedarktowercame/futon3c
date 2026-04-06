@@ -713,10 +713,19 @@
   (let [agents (:agents registry-status)
         ws-connected (vec (or (:ws-connected registry-status) []))
         ws-unregistered (vec (or (:ws-unregistered registry-status) []))
+        route-counts (frequencies (map :invoke-route (vals agents)))
+        local-count (long (or (get route-counts :local) 0))
+        ws-count (long (or (get route-counts :ws) 0))
+        unreachable-count (long (or (get route-counts :none) 0))
+        invocable-count (+ local-count ws-count)
         now-ms (System/currentTimeMillis)]
-    (str "Agents (" (:count registry-status) " registered"
+    (str "Agents (" (:count registry-status) " registered, "
+         invocable-count " invocable: "
+         local-count " local, "
+         ws-count " ws, "
+         unreachable-count " unreachable"
          (when (seq ws-connected)
-           (str ", " (count ws-connected) " ws-connected"))
+           (str ", " (count ws-connected) " inbound-ws-connected"))
          ")\n"
          (str/join "\n"
                    (map (fn [[aid info]]
@@ -724,6 +733,15 @@
                                 type-str (some-> (:type info) name)
                                 metadata (:metadata info)
                                 remote? (:remote? metadata)
+                                route (:invoke-route info)
+                                route-label (case route
+                                              :local "local"
+                                              :ws "ws"
+                                              "unreachable")
+                                surface (:surface metadata)
+                                lane (:lane metadata)
+                                role (:role metadata)
+                                ws-bridge? (true? (:ws-bridge? metadata))
                                 queued-jobs (long (or (:queued-jobs info) 0))
                                 elapsed (when (and (= status :invoking)
                                                    (:invoke-started-at info))
@@ -735,14 +753,23 @@
                                               (format-elapsed-secs secs))
                                             (catch Exception _ nil)))
                                 activity (:invoke-activity info)
+                                readiness (case route
+                                            :local "ready"
+                                            :ws "ready"
+                                            "registered-only")
                                 last-active-str (format-relative-time
                                                   (:last-active info) now-ms)]
                             (str "  " (name aid) " [" type-str
                                  (when remote? " remote")
+                                 ", " route-label
+                                 (when ws-bridge? ", ws-bridge")
+                                 (when surface (str ", " surface))
+                                 (when lane (str ", lane=" lane))
+                                 (when role (str ", role=" role))
                                  "] "
                                  (case status
                                    :invoking
-                                   (str "INVOKING"
+                                   (str "INVOKING via " route-label
                                         (when elapsed (str " (" elapsed ")"))
                                         (when (pos? queued-jobs)
                                           (str " [" queued-jobs " queued]"))
@@ -760,7 +787,8 @@
                                                         [(when (pos? queued-jobs)
                                                            (str queued-jobs " queued"))
                                                          last-active-str]))
-                                               ")")))
+                                               ")"))
+                                        " — " readiness)
                                    (name status)))))
                         (sort-by key agents)))
          (when (seq ws-unregistered)
@@ -821,9 +849,10 @@
   [registry-entries]
   (let [now-ms (System/currentTimeMillis)
         by-type (group-by :process/type registry-entries)
-        ;; Running processes: daemons, peripherals (not state-machines which are mission docs)
+        ;; Running processes: daemons, peripherals, and headless agent lanes.
         running (concat (get by-type :daemon)
-                        (get by-type :peripheral))
+                        (get by-type :peripheral)
+                        (get by-type :agent-lane))
         running-ids (set (map :process/id running))
         missing (remove running-ids expected-daemons)
         infra (get (group-by :process/layer registry-entries) :infra)

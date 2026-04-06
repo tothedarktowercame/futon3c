@@ -86,4 +86,11 @@ for arg in "$@"; do
   esac
 done
 
+local_override="${BASH_SOURCE[0]}.local"
+if [[ -f "$local_override" ]]; then
+  # shellcheck source=/dev/null
+  source "$local_override"
+  echo "[dev] Loaded local overrides: $(basename "$local_override")"
+fi
+
 exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"

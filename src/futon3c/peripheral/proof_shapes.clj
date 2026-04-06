@@ -31,7 +31,7 @@
 (def CyclePhase
   "Cycle phase in the proof development state machine (CR-1).
    Phases must be traversed in order; no skipping."
-  [:enum :observe :propose :execute :validate
+  [:enum :observe :propose :target-check :execute :validate
    :classify :integrate :commit :gate-review :completed])
 
 (def CycleResultStatus
@@ -121,6 +121,137 @@
                                [:reason :string]]]]])
 
 ;; =============================================================================
+;; Phase payloads — structured proof-step records
+;; =============================================================================
+
+(def GraphRef
+  "A graph-linkable reference used to keep proof-step work navigable.
+   Reuses the common {:ref/type :ref/id} subject shape already used
+   across evidence and transport layers."
+  [:map
+   [:ref/type :keyword]
+   [:ref/id :string]
+   [:ref/label {:optional true} :string]])
+
+(def StepBoundary
+  "Execution boundary for one proof step.
+   This is intentionally broader than a concrete container runtime:
+   the boundary may be container-backed today or another replayable
+   owner surface tomorrow, as long as it is named and traceable."
+  [:map {:closed false}
+   [:boundary/id :string]
+   [:boundary/kind [:enum :container :workspace :proof-step]]
+   [:boundary/owner {:optional true} :string]
+   [:boundary/algorithm-ref {:optional true} GraphRef]
+   [:boundary/entrypoint {:optional true} :string]
+   [:boundary/workdir {:optional true} :string]
+   [:boundary/trace-id {:optional true} :string]
+   [:boundary/artifacts {:optional true} [:vector :string]]
+   [:boundary/graph-refs {:optional true} [:vector GraphRef]]])
+
+(def LedgerChange
+  "One integration-time change to the proof ledger."
+  [:map {:closed false}
+   [:item/id :string]
+   [:change :keyword]
+   [:item/status {:optional true} ItemStatus]
+   [:note {:optional true} :string]])
+
+(def ObservePhaseData
+  [:map {:closed false}
+   [:blocker-id :string]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def ProposePhaseData
+  [:map {:closed false}
+   [:approach :string]
+   [:predicted-artifacts {:optional true} [:vector :string]]
+   [:success-criteria {:optional true} [:vector :string]]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def TargetSanity
+  "Sanity check on the intended main formal target.
+   This is the HtDP question: are we building the right program?"
+  [:map {:closed false}
+   [:mentions-problem-objects? :boolean]
+   [:avoids-assuming-conclusion? :boolean]
+   [:meaningful-without-prose? :boolean]
+   [:notes :string]])
+
+(def TargetCheckPhaseData
+  [:map {:closed false}
+   [:proof-plan :map]
+   [:formal-alignment :map]
+   [:target-sanity TargetSanity]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def ExecutePhaseData
+  [:map {:closed false}
+   [:artifacts [:vector :string]]
+   [:step-boundary {:optional true} StepBoundary]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def ValidatePhaseData
+  [:map {:closed false}
+   [:validation-artifacts [:vector :string]]
+   [:step-boundary {:optional true} StepBoundary]
+   [:validated-step-id {:optional true} :string]
+   [:verdict {:optional true} [:or ItemStatus CycleResultStatus]]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def ClassifyPhaseData
+  [:map {:closed false}
+   [:classification [:or ItemStatus CycleResultStatus]]
+   [:rationale {:optional true} :string]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def IntegratePhaseData
+  [:map {:closed false}
+   [:rationale :string]
+   [:ledger-changes [:vector LedgerChange]]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def CommitPhaseData
+  [:map {:closed false}
+   [:saved? :boolean]
+   [:save-version {:optional true} :int]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def GateReviewPhaseData
+  [:map {:closed false}
+   [:gates-passed :boolean]
+   [:gate-report {:optional true}
+    [:vector [:map {:closed false}
+              [:gate :keyword]
+              [:passed? :boolean]
+              [:detail {:optional true} :string]]]]
+   [:result-status {:optional true} CycleResultStatus]
+   [:graph-refs {:optional true} [:vector GraphRef]]
+   [:notes {:optional true} :string]])
+
+(def CyclePhaseData
+  "Per-phase payloads recorded as the cycle advances.
+   Each completed phase may contribute one typed payload."
+  [:map
+   [:observe {:optional true} ObservePhaseData]
+   [:propose {:optional true} ProposePhaseData]
+   [:target-check {:optional true} TargetCheckPhaseData]
+   [:execute {:optional true} ExecutePhaseData]
+   [:validate {:optional true} ValidatePhaseData]
+   [:classify {:optional true} ClassifyPhaseData]
+   [:integrate {:optional true} IntegratePhaseData]
+   [:commit {:optional true} CommitPhaseData]
+   [:gate-review {:optional true} GateReviewPhaseData]])
+
+;; =============================================================================
 ;; Cycle record — one pass through the 8-phase cycle (CR-1..8)
 ;; =============================================================================
 
@@ -134,7 +265,7 @@
    [:cycle/phase CyclePhase]
    [:cycle/result-status {:optional true} CycleResultStatus]
    [:cycle/phases-completed [:vector CyclePhase]]
-   [:cycle/phase-data [:map-of CyclePhase :any]]
+   [:cycle/phase-data CyclePhaseData]
    [:cycle/started-at :string]
    [:cycle/updated-at :string]])
 
@@ -244,6 +375,8 @@
                 :tryharder-license :proof-mode-get}
    :propose   #{:ledger-query :dag-impact :corpus-check :read :grep :glob
                 :bash-readonly :cycle-advance :cycle-get :proof-mode-get}
+   :target-check #{:read :write :glob :grep :bash-readonly
+                   :cycle-advance :cycle-get}
    :execute   #{:read :write :bash :glob :grep
                 :cycle-advance :cycle-get}
    :validate  #{:read :bash :bash-readonly :glob :grep
@@ -264,7 +397,7 @@
 
 (def phase-order
   "The canonical order of cycle phases."
-  [:observe :propose :execute :validate :classify :integrate :commit :gate-review :completed])
+  [:observe :propose :target-check :execute :validate :classify :integrate :commit :gate-review :completed])
 
 (def phase-transitions
   "Valid phase transitions — each phase can only advance to the next."
@@ -275,6 +408,7 @@
    Keys are the phase being left; values are required keys in phase-data."
   {:observe   #{:blocker-id}
    :propose   #{:approach}
+   :target-check #{:proof-plan :formal-alignment :target-sanity}
    :execute   #{:artifacts}
    :validate  #{:validation-artifacts}
    :classify  #{:classification}
@@ -311,6 +445,26 @@
   "Returns true if data conforms to proof shape."
   [shape data]
   (m/validate shape data))
+
+(defn phase-data-shape
+  "Return the expected phase-data shape for PHASE."
+  [phase]
+  (get {:observe ObservePhaseData
+        :propose ProposePhaseData
+        :target-check TargetCheckPhaseData
+        :execute ExecutePhaseData
+        :validate ValidatePhaseData
+        :classify ClassifyPhaseData
+        :integrate IntegratePhaseData
+        :commit CommitPhaseData
+        :gate-review GateReviewPhaseData}
+       phase))
+
+(defn validate-phase-data
+  "Validate one phase payload against its shape. Returns nil on success."
+  [phase phase-data]
+  (when-let [shape (phase-data-shape phase)]
+    (validate shape phase-data)))
 
 (defn valid-status?
   "Check if a status keyword is in the allowed set."

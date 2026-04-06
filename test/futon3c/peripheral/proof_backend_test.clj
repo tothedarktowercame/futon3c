@@ -1,6 +1,7 @@
 (ns futon3c.peripheral.proof-backend-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
+            [futon3c.agents.apm-work-queue :as apm-queue]
             [futon3c.peripheral.proof-backend :as pb]
             [futon3c.peripheral.proof-dag :as dag]
             [futon3c.peripheral.proof-shapes :as ps]
@@ -23,6 +24,36 @@
   [{:keys [backend cwd]}]
   (pb/init-problem! cwd "P-test" "Prove X > 0 for all X in S" "All cases verified")
   (tools/execute-tool backend :proof-load ["P-test"]))
+
+(defn- valid-target-check-payload []
+  {:proof-plan {:goal "Prove X > 0 for all X in S."
+                :terms [{:name "X"
+                         :meaning "the main variable in the statement"
+                         :needed-because "it is the object being bounded"}]
+                :strategy [{:id :main-step
+                            :formal-dependency "main reduction lemma"
+                            :informal-dependency "translate the statement into a simpler monotonicity claim"
+                            :why-this-now "the target is a direct positivity statement, so reduction is the cue"
+                            :lean-target "theorem main_target : 0 < X"
+                            :mathlib-status "custom"
+                            :critical-path true}]
+                :stage-status {:stage1 :done :stage2 :done :stage3 :pending :stage4 :pending}}
+   :formal-alignment {:main-claim {:informal-claim "Prove X > 0 for all X in S."
+                                   :formal-name "main_target"
+                                   :formal-target "theorem main_target : 0 < X"
+                                   :sanity-check {:mentions-problem-objects? true
+                                                  :avoids-assuming-conclusion? true
+                                                  :meaningful-without-prose? true
+                                                  :notes "The target theorem still states the actual positivity claim."}}
+                      :alignments [{:formal-name "main_target"
+                                    :formal-statement "theorem main_target : 0 < X"
+                                    :informal-clause "Main positivity claim."
+                                    :role :main-theorem}]}
+   :target-sanity {:mentions-problem-objects? true
+                   :avoids-assuming-conclusion? true
+                   :meaningful-without-prose? true
+                   :notes "The target theorem still states the actual positivity claim."}
+   :notes "The target theorem still names the real objects, avoids assuming the conclusion, and would remain meaningful without the prose."})
 
 ;; =============================================================================
 ;; Load/Save round-trip
@@ -276,6 +307,236 @@
     (is (not (:ok adv)))
     (is (= :missing-phase-outputs (get-in adv [:error :code])))))
 
+(deftest cycle-advance-rejects-invalid-phase-payload
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:blocker-id "L-b"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:approach "Try a structural induction"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id (valid-target-check-payload)])
+        adv (tools/execute-tool backend :cycle-advance
+              ["P-test" cycle-id
+               {:artifacts ["artifacts/step-1.txt"]
+                :step-boundary {:boundary/id "step-1"
+                                :boundary/kind :not-a-boundary}}])]
+    (is (not (:ok adv)))
+    (is (= :invalid-phase-data (get-in adv [:error :code])))))
+
+(deftest cycle-advance-requires-target-check-before-execute
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:blocker-id "L-b"}])
+        propose-adv (tools/execute-tool backend :cycle-advance
+                      ["P-test" cycle-id {:approach "Try a structural induction"}])
+        target-adv (tools/execute-tool backend :cycle-advance
+                     ["P-test" cycle-id (valid-target-check-payload)])]
+    (is (:ok propose-adv))
+    (is (= :target-check (get-in propose-adv [:result :cycle/phase])))
+    (is (:ok target-adv))
+    (is (= :execute (get-in target-adv [:result :cycle/phase])))))
+
+(deftest cycle-advance-applies-phase-validator-hook
+  (let [dir (fix/temp-dir!)
+        backend (pb/make-proof-backend
+                 {:cwd dir
+                  :phase-validator (fn [phase phase-data _cycle]
+                                     (when (and (= phase :observe)
+                                                (not= "ok" (:notes phase-data)))
+                                       {:ok false
+                                        :error {:code :bad-observe
+                                                :message "Observe notes must be ok"}}))}
+                 (tools/make-mock-backend))
+        _ (pb/init-problem! dir "P-test" "Prove X > 0 for all X in S" "All cases verified")
+        _ (tools/execute-tool backend :proof-load ["P-test"])
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        rejected (tools/execute-tool backend :cycle-advance
+                   ["P-test" cycle-id {:blocker-id "L-b" :notes "nope"}])
+        accepted (tools/execute-tool backend :cycle-advance
+                   ["P-test" cycle-id {:blocker-id "L-b" :notes "ok"}])]
+    (is (false? (:ok rejected)))
+    (is (= :bad-observe (get-in rejected [:error :code])))
+    (is (:ok accepted))
+    (is (= :propose (get-in accepted [:result :cycle/phase])))))
+
+(deftest apm-phase-validator-rejects-indirect-execute-records
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "see-notes"
+                                     :lean-type "see-notes"
+                                     :source "tbd"
+                                     :on-critical-path true}]
+                 :proof-plan {:goal "Goal"
+                              :terms [{:name "term" :meaning "meaning" :needed-because "reason"}]
+                              :strategy [{:id :s1
+                                          :formal-dependency "fd"
+                                          :informal-dependency "id"
+                                          :why-this-now "why"
+                                          :lean-target "target"
+                                          :mathlib-status "status"
+                                          :critical-path true}]
+                              :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :formal-alignment (:formal-alignment (valid-target-check-payload))
+                 :changelog [{:kind :initial-plan
+                              :summary "Recorded the initial execute plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 & 2 are documented in `proof_peripheral/apm-a01J01-execute.md`."}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :indirect-notes (get-in result [:error :code])))))
+
+(deftest apm-phase-validator-allows-substantive-execute-records-that-mention-artifacts
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "Weighted Cauchy-Schwarz"
+                                     :formal-dependency "Cauchy-Schwarz in L²"
+                                     :informal-dependency "Split the kernel with square roots to move from L¹ slice control to an L² bound"
+                                     :why-this-now "The hypothesis only gives slice-wise integral bounds, so the right cue is to factor the kernel before squaring"
+                                     :lean-type "`|∫ k x y * u y| ≤ ...`"
+                                     :source "search `integral_mul_le_Lp_Lq`"
+                                     :on-critical-path true}]
+                 :proof-plan {:goal "Bound the integral operator in L²."
+                              :terms [{:name "weighted Cauchy-Schwarz"
+                                       :meaning "factor the kernel before squaring"
+                                       :needed-because "turn slice bounds into an operator norm bound"}]
+                              :strategy [{:id :weighted-cs
+                                          :formal-dependency "Cauchy-Schwarz in L²"
+                                          :informal-dependency "split the kernel with square roots"
+                                          :why-this-now "the hypotheses are slice-wise bounds, so factorization is the cue"
+                                          :lean-target "`|∫ k x y * u y| ≤ ...`"
+                                          :mathlib-status "search `integral_mul_le_Lp_Lq`"
+                                          :critical-path true}]
+                              :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :formal-alignment (:formal-alignment (valid-target-check-payload))
+                 :changelog [{:kind :initial-plan
+                              :summary "Built the weighted Cauchy-Schwarz plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}
+                             {:kind :lean-delta
+                              :summary "Updated the scaffold and rebuilt the Lean file."
+                              :full-record? true
+                              :sorry? false
+                              :fully-closed? false}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 — THE CLEAN PROOF\n--------------------------------\n\nUse weighted Cauchy-Schwarz and Tonelli.\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n--------------------------------\n\n1. **Weighted Cauchy-Schwarz**\n   - **Formal dependency**: Cauchy-Schwarz in L².\n   - **Informal dependency**: Split the kernel with square roots to move from L¹ slice control to an L² bound.\n   - **Why this becomes thinkable here**: The hypothesis only gives slice-wise integral bounds, so the right cue is to factor the kernel before squaring.\n   - **Lean target/type**: `|∫ k x y * u y| ≤ ...`.\n   - **Mathlib status/search terms**: search `integral_mul_le_Lp_Lq`.\n   - **Critical path**: yes.\n\nStage 3 — LEAN FORMALIZATION\n--------------------------------\n\n- Updated `apm-lean/lean-proofs/a02J01/Main.lean` so `ProblemData` packages the kernel data cleanly.\n- Rebuilt with `lake env lean lean-proofs/a02J01/Main.lean`; the file compiles.\n\nStage 4 — FORMAL-TO-INFORMAL REVISION\n--------------------------------\n\nThe hard part is seeing that the slice bounds should be combined through weighted Cauchy-Schwarz, not termwise estimates."}
+                nil)]
+    (is (nil? result))))
+
+(deftest apm-phase-validator-rejects-underpowered-dependency-graph
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "Completion lemma"
+                                     :formal-dependency "completion of measure spaces"
+                                     :lean-type "`∀ A, ...`"
+                                     :source "likely in Mathlib"
+                                     :on-critical-path true
+                                     :notes "Only formal dependency recorded."}]
+                 :proof-plan {:goal "Goal"
+                              :terms [{:name "term" :meaning "meaning" :needed-because "reason"}]
+                              :strategy [{:id :s1
+                                          :formal-dependency "fd"
+                                          :informal-dependency "id"
+                                          :why-this-now "why"
+                                          :lean-target "target"
+                                          :mathlib-status "status"
+                                          :critical-path true}]
+                              :stage-status {:stage1 :done :stage2 :done :stage3 :in-progress :stage4 :pending}}
+                 :formal-alignment (:formal-alignment (valid-target-check-payload))
+                 :changelog [{:kind :initial-plan
+                              :summary "Built an initial plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 — THE CLEAN PROOF\n...\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n..."}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :underpowered-dependency-graph (get-in result [:error :code])))))
+
+(deftest apm-phase-validator-rejects-missing-proof-plan
+  (let [result (apm-queue/apm-phase-validator
+                :execute
+                {:artifacts ["/tmp/Main.lean"]
+                 :dependency-graph [{:lemma "Weighted Cauchy-Schwarz"
+                                     :formal-dependency "Cauchy-Schwarz in L²"
+                                     :informal-dependency "split the kernel with square roots"
+                                     :why-this-now "slice bounds suggest factorization"
+                                     :lean-type "`|∫ k x y * u y| ≤ ...`"
+                                     :source "search `integral_mul_le_Lp_Lq`"
+                                     :on-critical-path true}]
+                 :changelog [{:kind :initial-plan
+                              :summary "Built an initial plan."
+                              :full-record? true
+                              :sorry? true
+                              :fully-closed? false}]
+                 :lean-elapsed-ms 900000
+                 :notes "Stage 1 — THE CLEAN PROOF\n...\n\nStage 2 — LEMMA DEPENDENCY GRAPH\n..."}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :invalid-proof-plan (get-in result [:error :code])))))
+
+(deftest apm-phase-validator-rejects-placeholder-arse-questions
+  (let [result (apm-queue/apm-phase-validator
+                :integrate
+                {:notes "**Connections**\n- Actual content.\n\n**ArSE Questions**\n..."
+                 :arse-questions [{:type :why-hard :question "Q1" :answer "see notes"}
+                                  {:type :what-crux :question "Q2" :answer "see notes"}
+                                  {:type :why-works :question "Q3" :answer "see notes"}
+                                  {:type :what-connects :question "Q4" :answer "see notes"}
+                                  {:type :confidence :question "Q5" :answer "see notes"}]}
+                nil)]
+    (is (false? (:ok result)))
+    (is (= :placeholder-arse-questions (get-in result [:error :code])))))
+
+(deftest cycle-advance-accepts-traceable-step-boundary
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "Blocker" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:blocker-id "L-b"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:approach "Try a structural induction"}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id (valid-target-check-payload)])
+        adv (tools/execute-tool backend :cycle-advance
+              ["P-test" cycle-id
+               {:artifacts ["artifacts/step-1.txt"]
+                :step-boundary {:boundary/id "step-1"
+                                :boundary/kind :container
+                                :boundary/trace-id "trace-1"
+                                :boundary/artifacts ["artifacts/step-1.txt"]
+                                :boundary/algorithm-ref {:ref/type :algorithm
+                                                         :ref/id "eal/algorithms/create-container.md"}
+                                :boundary/graph-refs [{:ref/type :proof-step
+                                                       :ref/id "P-test/step-1"}]}}])]
+    (is (:ok adv))
+    (is (= :validate (get-in adv [:result :cycle/phase])))
+    (is (= "step-1"
+           (get-in adv [:result :cycle/phase-data :execute :step-boundary :boundary/id])))))
+
 (deftest cycle-list-and-get
   (let [{:keys [backend] :as ctx} (make-test-backend)
         _ (init-test-problem! ctx)
@@ -353,6 +614,39 @@
     ;; G5 should pass (blocker exists)
     (is (:passed? (first (filter #(= :G5-scope (:gate %))
                                   (get-in result [:result :gates])))))))
+
+(deftest gate-check-rejects-untraceable-step-boundary
+  (let [{:keys [backend] :as ctx} (make-test-backend)
+        _ (init-test-problem! ctx)
+        _ (tools/execute-tool backend :ledger-upsert
+            ["P-test" "L-b" {:item/label "B" :item/status :open}])
+        begin (tools/execute-tool backend :cycle-begin ["P-test" "L-b"])
+        cycle-id (get-in begin [:result :cycle/id])
+        _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id {:blocker-id "L-b"}])
+        _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id {:approach "Direct"}])
+        _ (tools/execute-tool backend :cycle-advance ["P-test" cycle-id (valid-target-check-payload)])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id
+             {:artifacts ["artifacts/step-1.txt"]
+              :step-boundary {:boundary/id "step-1"
+                              :boundary/kind :container
+                              :boundary/artifacts ["artifacts/step-1.txt"]}}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:validation-artifacts ["artifacts/validation.txt"]}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:classification :partial}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id
+             {:rationale "Recorded the partial result"
+              :ledger-changes [{:item/id "L-b" :change :status-update :item/status :partial}]}])
+        _ (tools/execute-tool backend :cycle-advance
+            ["P-test" cycle-id {:saved? true}])
+        result (tools/execute-tool backend :gate-check ["P-test" cycle-id])
+        g4 (first (filter #(= :G4-evidence (:gate %))
+                          (get-in result [:result :gates])))]
+    (is (:ok result))
+    (is (false? (:passed? g4)))
+    (is (= "Step boundary is missing graph refs" (:detail g4)))))
 
 ;; =============================================================================
 ;; Shape validation

@@ -5,10 +5,15 @@
 ;;   infrastructure shared by claude-repl.el (Claude) and codex-repl.el (Codex).
 
 (require 'cl-lib)
+(require 'browse-url)
 (require 'json)
 (require 'subr-x)
 (require 'url)
 (require 'url-util)
+
+(defconst agent-chat--source-file
+  (or load-file-name (buffer-file-name))
+  "Path used to recover a stable workspace root for chat rendering.")
 
 ;;; Faces
 
@@ -149,6 +154,7 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
           (let ((text-end (point)))
             (overlay-put (make-overlay name-start name-end) 'face face)
             (overlay-put (make-overlay name-end text-end) 'face 'agent-chat-text-face)
+            (agent-chat--decorate-markdown-links name-end text-end)
             ;; Highlight tool-use lines in orange.
             ;; Matches: [Read], [Edit], [Bash], [Glob], [Grep], [Write],
             ;; [Agent], [WebFetch], and also "Using Bash", "Reading Files", etc.
@@ -167,11 +173,15 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
       (agent-chat-scroll-to-bottom))))
 
 (defun agent-chat-scroll-to-bottom ()
-  "Scroll window so input prompt is pinned near the bottom."
+  "Scroll window so input prompt is pinned near the bottom.
+Only scrolls when the end of the buffer is already visible in the
+window, meaning the user is following the output. If the user has
+scrolled away, their view and cursor are left undisturbed."
   (when-let ((win (get-buffer-window (current-buffer))))
-    (with-selected-window win
-      (goto-char (point-max))
-      (recenter -2))))
+    (when (pos-visible-in-window-p (point-max) win)
+      (set-window-point win (point-max))
+      (with-selected-window win
+        (recenter -2)))))
 
 ;;; Thinking / Progress
 
@@ -328,6 +338,24 @@ Returns the buffer content up to the separator line."
 
 ;; --- HTTP helpers ---
 
+(defun agent-chat--json-encodable (value)
+  "Return VALUE converted to a form acceptable to Emacs JSON encoders."
+  (cond
+   ((hash-table-p value) value)
+   ((symbolp value)
+    (symbol-name value))
+   ((and (listp value) (consp value) (consp (car value)))
+    (let ((obj (make-hash-table :test 'equal)))
+      (dolist (entry value obj)
+        (puthash (format "%s" (car entry))
+                 (agent-chat--json-encodable (cdr entry))
+                 obj))))
+   ((listp value)
+    (mapcar #'agent-chat--json-encodable value))
+   ((vectorp value)
+    (apply #'vector (mapcar #'agent-chat--json-encodable value)))
+   (t value)))
+
 (defun agent-chat--walkie-post (path payload callback)
   "POST PAYLOAD (alist) to PATH under the walkie-talkie base URL.
 CALLBACK is called with (STATUS-SYMBOL BODY-STRING).
@@ -337,7 +365,7 @@ STATUS-SYMBOL is `ok' or `error'."
          (url-request-extra-headers
           '(("Content-Type" . "application/json")))
          (url-request-data (encode-coding-string
-                            (json-serialize payload) 'utf-8)))
+                            (json-serialize (agent-chat--json-encodable payload)) 'utf-8)))
     (url-retrieve
      url
      (lambda (status)
@@ -783,6 +811,7 @@ CONFIG keys:
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
+    (setq-local agent-chat-hide-markup agent-chat-hide-markup-default)
     ;; Insert header
     (insert (propertize (concat title " ") 'face 'bold)
             (propertize (format "(session: %s)\n" agent-chat--session-id)
@@ -859,7 +888,9 @@ Replaces the `(session: ...)' text in the first line."
           '(("Content-Type" . "application/json")
             ("Accept" . "application/json")))
          (url-request-data (when payload
-                             (encode-coding-string (json-encode payload) 'utf-8)))
+                             (encode-coding-string
+                              (json-encode (agent-chat--json-encodable payload))
+                              'utf-8)))
          (buffer (condition-case nil
                      (url-retrieve-synchronously url t t timeout)
                    (error nil))))
@@ -1019,17 +1050,131 @@ Replaces the `(session: ...)' text in the first line."
                (agent-chat--url-host-port agent-chat-agency-base-url 7070)))
     (agent-chat-port-open-p host port)))
 
+;;; Popup display (posframe on GUI, transient window on terminal)
+
+(defcustom agent-chat-popup-timeout 0
+  "Seconds before popup auto-hides. 0 means manual dismiss only."
+  :type 'number
+  :group 'agent-chat)
+
+(defcustom agent-chat-popup-max-width 80
+  "Maximum character width for popup frames."
+  :type 'integer
+  :group 'agent-chat)
+
+(defcustom agent-chat-popup-max-height 20
+  "Maximum line height for popup frames."
+  :type 'integer
+  :group 'agent-chat)
+
+(defvar agent-chat--popup-buffer " *agent-chat-popup*"
+  "Buffer name used for transient popup display.")
+
+(defvar agent-chat--popup-window nil
+  "Window used for terminal-mode popup fallback.")
+
+(defun agent-chat-popup-show (text &optional title)
+  "Show TEXT in a floating popup near point.
+Uses posframe in GUI Emacs, a transient bottom window in terminal.
+Optional TITLE appears as a header line."
+  (let ((buf (get-buffer-create agent-chat--popup-buffer)))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert text)
+        (goto-char (point-min))
+        (setq-local mode-line-format nil)
+        (when title
+          (setq-local header-line-format
+                      (propertize (format " %s" title) 'face 'bold)))
+        (special-mode)))
+    (if (display-graphic-p)
+        ;; GUI: posframe child frame
+        (when (require 'posframe nil t)
+          (posframe-show buf
+                         :position (point)
+                         :max-width agent-chat-popup-max-width
+                         :max-height agent-chat-popup-max-height
+                         :border-width 1
+                         :border-color "#555555"
+                         :internal-border-width 8
+                         :timeout (if (zerop agent-chat-popup-timeout)
+                                      0
+                                    agent-chat-popup-timeout)))
+      ;; Terminal: transient bottom window
+      (let ((win (or (and (window-live-p agent-chat--popup-window)
+                          agent-chat--popup-window)
+                     (display-buffer-in-side-window
+                      buf
+                      '((side . bottom)
+                        (window-height . fit-window-to-buffer)
+                        (window-parameters . ((no-other-window . t)
+                                              (no-delete-other-windows . t))))))))
+        (when (window-live-p win)
+          (setq agent-chat--popup-window win)
+          (fit-window-to-buffer win agent-chat-popup-max-height 3))))))
+
+(defun agent-chat-popup-hide ()
+  "Dismiss the popup."
+  (interactive)
+  (if (display-graphic-p)
+      (when (require 'posframe nil t)
+        (posframe-hide agent-chat--popup-buffer))
+    (when (window-live-p agent-chat--popup-window)
+      (quit-window nil agent-chat--popup-window)
+      (setq agent-chat--popup-window nil))))
+
+(defun agent-chat-popup-toggle (text &optional title)
+  "Toggle popup display. Show TEXT if hidden, hide if visible."
+  (if (if (display-graphic-p)
+          (and (require 'posframe nil t)
+               (get-buffer agent-chat--popup-buffer)
+               (posframe--find-visible-frame
+                (get-buffer agent-chat--popup-buffer)))
+        (window-live-p agent-chat--popup-window))
+      (agent-chat-popup-hide)
+    (agent-chat-popup-show text title)))
+
 ;;; Interrupt
+
+(defun agent-chat--server-interrupt (agent-id &optional base-url)
+  "POST interrupt-invoke to the server for AGENT-ID.
+Uses BASE-URL if provided, otherwise `agent-chat-agency-base-url'.
+Best-effort: failures are logged but do not block the local interrupt."
+  (when (and (stringp agent-id) (not (string-empty-p agent-id)))
+    (let ((url (format "%s/api/alpha/agents/%s/interrupt-invoke"
+                       (string-remove-suffix "/"
+                         (or base-url agent-chat-agency-base-url))
+                       agent-id)))
+      (make-process
+       :name "agent-chat-interrupt"
+       :buffer nil
+       :command (list "curl" "-sS" "--max-time" "5"
+                      "-X" "POST"
+                      "-H" "Content-Type: application/json"
+                      "-d" "{}" url)
+       :noquery t
+       :sentinel (lambda (_p event)
+                   (when (string-match-p "finished" event)
+                     (message "server-side interrupt sent for %s" agent-id)))))))
 
 (defun agent-chat-interrupt ()
   "Interrupt the current in-flight request.
-Kills the pending process, removes thinking indicator, and inserts
+Kills the pending process, sends server-side interrupt to stop the
+agent's backing subprocess, removes thinking indicator, and inserts
 an [interrupted] message."
   (interactive)
   (if (process-live-p agent-chat--pending-process)
       (let ((proc agent-chat--pending-process))
         (setq agent-chat--pending-process nil)
         (kill-process proc)
+        ;; Tell the server to kill the agent's subprocess tree
+        (agent-chat--server-interrupt
+         agent-chat--agent-id
+         (cond ((local-variable-p 'claude-repl-api-url) claude-repl-api-url)
+               ((local-variable-p 'codex-repl-api-url) codex-repl-api-url)))
+        (when agent-chat--streaming-started
+          (agent-chat-end-streaming-message))
         (agent-chat-remove-thinking)
         (agent-chat-insert-message
          "system" "[interrupted]")
@@ -1044,6 +1189,11 @@ an [interrupted] message."
 Delimiters are hidden via the `display' text property — the underlying
 text is preserved for copy/paste.  Toggle and `font-lock-flush' to
 see the change."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-hide-markup-default t
+  "Default local value for `agent-chat-hide-markup` in chat buffers."
   :type 'boolean
   :group 'agent-chat)
 
@@ -1097,6 +1247,11 @@ unavailable."
 (defface agent-chat-markdown-fence-delimiter
   '((t :foreground "#6272a4"))
   "Face for fence delimiter lines (``` markers) when not hidden."
+  :group 'agent-chat)
+
+(defface agent-chat-markdown-link
+  '((t :inherit link))
+  "Face for markdown links in chat buffers."
   :group 'agent-chat)
 
 ;; --- Markup hiding helpers ---
@@ -1194,6 +1349,21 @@ Groups: 1=open `, 2=text, 3=close `.  Skips fenced regions."
         (setq found t)))
     found))
 
+(defun agent-chat--match-link (limit)
+  "Font-lock matcher for markdown links.
+Groups: 1=label, 2=target. Skips fenced regions."
+  (let ((found nil))
+    (while (and (not found)
+                (re-search-forward
+                 (rx "[" (group (+? (not (any "]" "\n"))))
+                     "]("
+                     (group (+? (not (any ")" "\n"))))
+                     ")")
+                 limit t))
+      (unless (get-text-property (match-beginning 0) 'agent-chat-in-fence)
+        (setq found t)))
+    found))
+
 (defun agent-chat--match-fence (limit)
   "Font-lock matcher for fenced code blocks.
 Groups: 1=opening fence line, 2=language tag, 3=code content, 4=closing fence."
@@ -1241,6 +1411,131 @@ Only hide the * character itself within each group."
                         '(face agent-chat-markdown-code))
   nil)
 
+(defun agent-chat-open-link-at-point ()
+  "Open the markdown link target at point, if any."
+  (interactive)
+  (let ((target (get-text-property (point) 'agent-chat-link-target)))
+    (unless (stringp target)
+      (user-error "No link at point"))
+    (pcase-let ((`(,kind ,path ,line)
+                 (agent-chat--parse-link-target target)))
+      (cond
+       ((eq kind 'file)
+        (find-file path)
+        (when line
+          (goto-char (point-min))
+          (forward-line (1- line))))
+       ((eq kind 'url)
+        (browse-url path))
+       (t
+        (user-error "Unsupported link target: %s" target))))))
+
+(defun agent-chat--parse-link-target (target)
+  "Parse markdown link TARGET.
+Return (KIND PATH LINE), where KIND is `file', `url', or nil."
+  (cond
+   ((and (stringp target)
+         (string-match "\\`\\(/[^#]+\\)\\(?:#L\\([0-9]+\\)\\)?\\'" target))
+    (list 'file
+          (match-string 1 target)
+          (when-let ((line (match-string 2 target)))
+            (string-to-number line))))
+   ((and (stringp target)
+         (string-match-p "\\`https?://" target))
+    (list 'url target nil))
+   (t
+    (list nil target nil))))
+
+(defun agent-chat--workspace-root ()
+  "Return the nearest workspace root for the current buffer, or nil."
+  (when-let ((root (or (locate-dominating-file default-directory "AGENTS.md")
+                       (when buffer-file-name
+                         (locate-dominating-file buffer-file-name "AGENTS.md"))
+                       (and agent-chat--source-file
+                            (locate-dominating-file agent-chat--source-file
+                                                    "AGENTS.md")))))
+    (file-name-as-directory (expand-file-name root))))
+
+(defun agent-chat--link-display-text (label target)
+  "Return clean display text for markdown link LABEL and TARGET."
+  (pcase-let ((`(,kind ,path ,line)
+               (agent-chat--parse-link-target target)))
+    (cond
+     ((eq kind 'file)
+      (let* ((root (agent-chat--workspace-root))
+             (display-path
+              (if (and root
+                       (string-prefix-p (file-name-as-directory root) path))
+                  (file-relative-name path root)
+                (abbreviate-file-name path))))
+        (if line
+            (format "%s:%d" display-path line)
+          display-path)))
+     ((eq kind 'url)
+      (or label target))
+     (t
+      (or label target)))))
+
+(defvar agent-chat-link-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mouse-1] #'agent-chat-open-link-at-point)
+    (define-key map (kbd "RET") #'agent-chat-open-link-at-point)
+    map)
+  "Keymap used for markdown links in chat buffers.")
+
+(defun agent-chat--apply-link-properties (start end target &optional display-text)
+  "Apply interactive link properties to START..END for TARGET.
+When DISPLAY-TEXT is non-nil, render that instead of the raw markdown."
+  (dolist (ov (overlays-in start end))
+    (when (overlay-get ov 'agent-chat-link)
+      (delete-overlay ov)))
+  (add-text-properties
+   start end
+   `(mouse-face highlight
+                help-echo ,target
+                keymap ,agent-chat-link-map
+                follow-link t
+                agent-chat-link-target ,target))
+  (let ((ov (make-overlay start end)))
+    (overlay-put ov 'agent-chat-link t)
+    (overlay-put ov 'priority 20)
+    (overlay-put ov 'face 'agent-chat-markdown-link)
+    (overlay-put ov 'mouse-face 'highlight)
+    (overlay-put ov 'help-echo target)
+    (overlay-put ov 'keymap agent-chat-link-map)
+    (overlay-put ov 'follow-link t)
+    (when display-text
+      (overlay-put ov 'display display-text))))
+
+(defun agent-chat--decorate-markdown-links (start end)
+  "Apply markdown link styling in region START..END."
+  (save-excursion
+    (goto-char start)
+    (while (re-search-forward
+            (rx "[" (group (+? (not (any "]" "\n"))))
+                "]("
+                (group (+? (not (any ")" "\n"))))
+                ")")
+            end t)
+      (let* ((beg (match-beginning 0))
+             (fin (match-end 0))
+             (label (match-string-no-properties 1))
+             (target (match-string-no-properties 2))
+             (display-text (agent-chat--link-display-text label target)))
+        (agent-chat--apply-link-properties
+         beg fin target display-text)))))
+
+(defun agent-chat--fontify-link ()
+  "Apply link styling and open behavior to markdown links.  Return nil."
+  (let* ((beg (match-beginning 0))
+         (fin (match-end 0))
+         (label (match-string-no-properties 1))
+         (target (match-string-no-properties 2))
+         (display-text (agent-chat--link-display-text label target)))
+    (agent-chat--apply-link-properties
+     beg fin target display-text))
+  nil)
+
 (defun agent-chat--fontify-fence ()
   "Fontify fenced code block with native highlighting.  Return nil.
 Marks code content with `agent-chat-in-fence' so inline-code matcher
@@ -1284,6 +1579,7 @@ skips it.  Uses overlays for native syntax faces."
     (agent-chat--match-heading (0 (agent-chat--fontify-heading) nil t))
     (agent-chat--match-bold (0 (agent-chat--fontify-bold) nil t))
     (agent-chat--match-italic (0 (agent-chat--fontify-italic) nil t))
+    (agent-chat--match-link (0 (agent-chat--fontify-link) nil t))
     (agent-chat--match-inline-code (0 (agent-chat--fontify-inline-code) nil t)))
   "Font-lock keywords for GFM highlighting with markup hiding and native code.")
 
@@ -1308,6 +1604,8 @@ Respects `agent-chat-hide-markup' and `agent-chat-fontify-code-natively'."
 
 (defvar agent-chat-base-map
   (let ((map (make-sparse-keymap)))
+    ;; Preserve normal Emacs screen recentering across chat surfaces.
+    (define-key map (kbd "C-l") #'recenter-top-bottom)
     (define-key map (kbd "C-c C-k") #'ignore) ;; placeholder, overridden per-mode
     map)
   "Base keymap inherited by chat modes.")
