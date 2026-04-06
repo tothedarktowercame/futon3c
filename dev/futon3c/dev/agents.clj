@@ -19,6 +19,90 @@
   (when session-id
     (subs session-id 0 (min 8 (count session-id)))))
 
+(defn- compact-preview
+  [value max-len]
+  (when (some? value)
+    (let [text (-> (str value)
+                   (str/replace #"\s+" " ")
+                   str/trim)]
+      (when-not (str/blank? text)
+        (subs text 0 (min max-len (count text)))))))
+
+(defn- register-codex-lane-process!
+  [{:keys [agent-id session-file metadata read-session-id !codex-ws-bridge
+           codex-lane-runtime-state clear-codex-lane-runtime-state!]}]
+  (cyder/deregister! agent-id)
+  (cyder/register!
+   {:id agent-id
+    :type :agent-lane
+    :layer :repl
+    :stop-fn (fn []
+               (when (true? (:ws-bridge? metadata))
+                 (when-let [bridge @!codex-ws-bridge]
+                   (try
+                     ((:stop-fn bridge))
+                     (catch Exception _))
+                   (reset! !codex-ws-bridge nil)))
+               (reg/unregister-agent! agent-id)
+               (when clear-codex-lane-runtime-state!
+                 (clear-codex-lane-runtime-state! agent-id)))
+    :state-fn (fn []
+                (let [registry-status (reg/registry-status)
+                      agent (get-in registry-status [:agents agent-id])
+                      runtime (or (when codex-lane-runtime-state
+                                    (codex-lane-runtime-state agent-id))
+                                  {})
+                      last-terminal (:last-terminal runtime)
+                      runtime-state (or (:runtime runtime)
+                                        (:runtime last-terminal))
+                      session-id (or (:session-id runtime)
+                                     (:session-id agent)
+                                     (read-session-id session-file))
+                      live-pids (->> (:processes runtime-state)
+                                     (keep :pid)
+                                     vec)]
+                  (cond-> {:phase (name (or (:phase runtime)
+                                            (:status agent)
+                                            :idle))
+                           :backing (if (true? (:ws-bridge? metadata))
+                                      "headless resumable codex session + ws bridge"
+                                      "headless resumable codex session")
+                           :invoke-route (some-> (:invoke-route agent) name)
+                           :invoke-ready? (:invoke-ready? agent)
+                           :invoke-diagnostic (:invoke-diagnostic agent)
+                           :session-id session-id
+                           :session-file (.getPath ^java.io.File session-file)
+                           :turn-count (long (or (:turn-count runtime) 0))
+                           :rollout-file (:rollout-file runtime)
+                           :surface (:surface metadata)
+                           :lane (:lane metadata)
+                           :ws-bridge-running? (and (true? (:ws-bridge? metadata))
+                                                    (some? @!codex-ws-bridge))
+                           :lifecycle-status (some-> (:lifecycle-status runtime) name)
+                           :last-terminal-status (some-> (or (:last-terminal-status runtime)
+                                                             (:status last-terminal))
+                                                         name)
+                           :last-prompt (compact-preview (:prompt-preview runtime) 120)
+                           :last-result (compact-preview (or (:result-preview runtime)
+                                                             (:result-preview last-terminal))
+                                                        120)
+                           :last-error (compact-preview (or (:error runtime)
+                                                            (:error last-terminal))
+                                                        120)
+                           :invoke-trace-id (or (:invoke-trace-id runtime)
+                                                (:invoke-trace-id last-terminal))
+                           :interrupt-available? (boolean (:interrupt-available? runtime))
+                           :working-directory (:cwd runtime-state)}
+                    (seq live-pids)
+                    (assoc :live-pids live-pids))))
+    :metadata (cond-> {:agent-id agent-id
+                       :agent/type :codex
+                       :headless? true
+                       :resumable-session? true}
+                (true? (:ws-bridge? metadata)) (assoc :ws-bridge? true)
+                (:surface metadata) (assoc :surface (:surface metadata))
+                (:lane metadata) (assoc :lane (:lane metadata)))}))
+
 (defn- binary-on-path?
   [bin-name]
   (try
@@ -66,7 +150,8 @@
   (println "[dev] Corpus agent registered: corpus-1 (ws-only)"))
 
 (defn- register-inline-codex-agent!
-  [{:keys [agent-id session-file metadata make-codex-invoke-fn read-session-id]}]
+  [{:keys [agent-id session-file metadata make-codex-invoke-fn read-session-id
+           !codex-ws-bridge codex-lane-runtime-state clear-codex-lane-runtime-state!]}]
   (let [initial-sid (read-session-id session-file)
         sid-atom (atom initial-sid)
         invoke-fn (make-codex-invoke-fn
@@ -92,6 +177,14 @@
                        :agent/metadata metadata)
     (when initial-sid
       (reg/update-agent! agent-id :agent/session-id initial-sid))
+    (register-codex-lane-process!
+     {:agent-id agent-id
+      :session-file session-file
+      :metadata metadata
+      :read-session-id read-session-id
+      :!codex-ws-bridge !codex-ws-bridge
+      :codex-lane-runtime-state codex-lane-runtime-state
+      :clear-codex-lane-runtime-state! clear-codex-lane-runtime-state!})
     (println (str "[dev] Codex agent registered: " agent-id " (inline invoke)"
                   (when initial-sid
                     (str " (session: " (short-session initial-sid) ")"))))
@@ -133,7 +226,8 @@
            start-futon3c! install-irc-auto-join! make-claude-invoke-fn
            make-codex-invoke-fn make-tickle-invoke-fn start-codex-ws-bridge!
            start-dispatch-relay! read-session-id direct-xtdb-enabled?
-           make-bridge-irc-send-fn]
+           make-bridge-irc-send-fn codex-lane-runtime-state
+           clear-codex-lane-runtime-state!]
     :as _deps}]
   (let [role-info (config/deployment-role-info)
         role (:role role-info)
@@ -284,6 +378,14 @@
                                  :agent/metadata codex-metadata)
               (when initial-sid
                 (reg/update-agent! codex-agent-id :agent/session-id initial-sid))
+              (register-codex-lane-process!
+               {:agent-id codex-agent-id
+                :session-file session-file
+                :metadata codex-metadata
+                :read-session-id read-session-id
+                :!codex-ws-bridge !codex-ws-bridge
+                :codex-lane-runtime-state codex-lane-runtime-state
+                :clear-codex-lane-runtime-state! clear-codex-lane-runtime-state!})
               (reset! !codex-ws-bridge bridge)
               (println (str "[dev] Codex agent registered: " codex-agent-id " (ws-bridge mode"
                             (when remote-ws-target? ", remote")
@@ -301,6 +403,14 @@
                                  :agent/capabilities [:edit :test :coordination/execute])
               (when initial-sid
                 (reg/update-agent! codex-agent-id :agent/session-id initial-sid))
+              (register-codex-lane-process!
+               {:agent-id codex-agent-id
+                :session-file session-file
+                :metadata {}
+                :read-session-id read-session-id
+                :!codex-ws-bridge !codex-ws-bridge
+                :codex-lane-runtime-state codex-lane-runtime-state
+                :clear-codex-lane-runtime-state! clear-codex-lane-runtime-state!})
               (println (str "[dev] Codex agent registered: " codex-agent-id " (inline invoke)"
                             (when initial-sid
                               (str " (session: " (short-session initial-sid) ")"))))))))
@@ -314,7 +424,10 @@
           :metadata {:surface "VS Code"
                      :lane "vscode"}
           :make-codex-invoke-fn make-codex-invoke-fn
-          :read-session-id read-session-id}))
+          :read-session-id read-session-id
+          :!codex-ws-bridge !codex-ws-bridge
+          :codex-lane-runtime-state codex-lane-runtime-state
+          :clear-codex-lane-runtime-state! clear-codex-lane-runtime-state!}))
       (when (and (not register-codex?) relay-codex?)
         (let [proxy-invoke-fn (when codex-remote-origin
                                 (federation/make-proxy-invoke-fn codex-remote-origin codex-agent-id))

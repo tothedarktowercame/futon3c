@@ -20,6 +20,7 @@ __pycache__/
 AGENTS.md
 .state/
 .tmp/
+scripts/dev-laptop-env.local
 library/alfworld/compile-flexiargs-to-deterministic-runner.flexiarg
 library/social/cluster-tooling-bootstrap.flexiarg
 *.elc

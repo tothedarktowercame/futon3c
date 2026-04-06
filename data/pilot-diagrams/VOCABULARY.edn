@@ -1,0 +1,48 @@
+;; DiagramProver Wiring Diagram Vocabulary
+;; Induced from Pilot A specimens: t92J01 (proved) and a00J01 (partial)
+;;
+;; This vocabulary is the seed for the pattern-to-diagram compiler.
+
+{:node-types
+ {:tactic     "A single tactic application. Has goal-before, goal-after."
+  :have       "Introduces a named subgoal. Branches the diagram."
+  :by-cases   "Case split. Creates multiple branches."
+  :exact      "Closes the current goal. Terminal node."
+  :simpa      "Simplification that closes the goal. Terminal node."
+  :sorry      "Open port — unresolved goal. Has :blocker metadata."
+  :closed     "Terminal — all goals discharged."}
+
+ :edge-types
+ {:sequential  "Next tactic in the same goal context."
+  :subgoal     "Edge from a :have to its new subgoal."
+  :continuation "Edge from a :have back to the original goal (after subgoal discharged)."
+  :branch-positive "Positive case of a :by-cases."
+  :branch-negative "Negative case of a :by-cases."
+  :feeds-into  "A closed subproof provides input to another part of the proof."
+  :depends-on  "A sorry blocks another node. Directed dependency."}
+
+ :composition-types
+ {:sequential-then-branch  "Linear flow, then case split at the end."
+  :parallel-then-compose   "Independent branches worked in parallel, composed at the end."
+  :linear                  "Strictly sequential tactic chain."
+  :recursive               "A subgoal invokes a pattern that itself has subgoals."}
+
+ :port-types
+ {:input-goal   "The goal type this pattern/diagram expects as input."
+  :input-hyp    "A hypothesis the pattern requires in context."
+  :output-goal  "The goal type produced (or :closed if terminal)."
+  :output-hyp   "A hypothesis added to context by the pattern."
+  :open-port    "A :sorry node — unresolved, needs external input to close."}
+
+ :tension-types
+ {:coercion-bridge       "Math in type A, API in type B. Directed embedding, not isomorphism."
+  :tactic-algebra-interference "Algebraic rewrite conflicts with goal structure preservation."
+  :construction-cost-asymmetry "Trivial insight, substantial engineering."
+  :api-gap               "No Mathlib lemma exists for this step."
+  :composition-blocked   "Dependencies between branches — one must close before the other."}
+
+ :pattern-annotation
+ {:pattern       "Which formalization pattern this step instantiates (keyword or nil)."
+  :informal      "Which informal pattern (flexiarg) this step instantiates."
+  :mathlib-api   "Specific Mathlib lemma names used in this step."
+  :tension       "If this step is blocked, which tension type and description."}}

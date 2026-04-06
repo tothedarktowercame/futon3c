@@ -281,23 +281,53 @@
                   cycles))))
 
 (defn- validate-phase-advance
-  "Check that all required outputs for the current phase are present."
-  [cycle phase-data]
+  "Check that all required outputs for the current phase are present.
+   After base validation, calls the optional :phase-validator from config
+   (if present) for domain-specific enforcement (e.g. APM Lean requirements).
+
+   Returns nil on success, or an error map on failure."
+  [cycle phase-data config]
   (let [current-phase (:cycle/phase cycle)
         required (get ps/phase-required-outputs current-phase #{})
-        provided (set (keys phase-data))
+        provided (if (map? phase-data) (set (keys phase-data)) #{})
         missing (clojure.set/difference required provided)]
-    (when (seq missing)
-      (proof-error :missing-phase-outputs
-                   (str "Phase " current-phase " requires: "
-                        (pr-str missing) " before advancing")
-                   :phase current-phase
-                   :missing (vec missing)))))
+    (or
+     ;; 1. Phase-data must be a map
+     (when-not (map? phase-data)
+       (proof-error :invalid-phase-data
+                    (str "Phase " current-phase " payload must be a map")
+                    :phase current-phase
+                    :received (type phase-data)))
+     ;; 2. Required keys present
+     (when (seq missing)
+       (proof-error :missing-phase-outputs
+                    (str "Phase " current-phase " requires: "
+                         (pr-str missing) " before advancing")
+                    :phase current-phase
+                    :missing (vec missing)))
+     ;; 3. Base Malli shape validation
+     (when-let [err (ps/validate-phase-data current-phase phase-data)]
+       (proof-error :invalid-phase-data
+                    (str "Invalid phase payload for " current-phase
+                         ": " (:error err))
+                    :phase current-phase
+                    :validation-error err))
+     ;; 4. Domain-specific phase validator (optional, from config)
+     (when-let [pv (:phase-validator config)]
+       (pv current-phase phase-data cycle)))))
+
+(defn- graph-refs
+  "Collect graph refs from a phase payload and optional step boundary."
+  [phase-payload]
+  (let [payload-refs (vec (or (:graph-refs phase-payload) []))
+        boundary-refs (vec (or (get-in phase-payload [:step-boundary :boundary/graph-refs]) []))
+        algorithm-ref (some-> (get-in phase-payload [:step-boundary :boundary/algorithm-ref]) vector)]
+    (vec (concat payload-refs boundary-refs algorithm-ref))))
 
 (defn- tool-cycle-advance
   "Advance a cycle to the next phase (CR-1..8).
-   Enforces phase order and required outputs."
-  [cache cwd args]
+   Enforces phase order, required outputs, and domain-specific validation."
+  [cache cwd args config]
   (let [problem-id (first args)
         cycle-id (second args)
         phase-data (nth args 2)]
@@ -310,9 +340,9 @@
             (proof-error :cycle-completed
                          (str "Cycle " cycle-id " is already completed"))
 
-            ;; Check required outputs
+            ;; Check required outputs + domain validator
             :else
-            (if-let [err (validate-phase-advance cycle phase-data)]
+            (if-let [err (validate-phase-advance cycle phase-data config)]
               err
               (let [updated-cycle (-> cycle
                                       (assoc :cycle/phase next-phase
@@ -483,6 +513,18 @@
               blocker (get-in state [:proof/ledger blocker-id])
               phase-data (:cycle/phase-data cycle)
               dag-result (dag/acyclic? (:proof/ledger state))
+              execute-data (get phase-data :execute {})
+              g4-artifacts (vec (or (:artifacts execute-data) []))
+              step-boundary (:step-boundary execute-data)
+              boundary-artifacts (vec (or (:boundary/artifacts step-boundary) []))
+              trace-refs (graph-refs execute-data)
+              boundary-artifacts-ok?
+              (or (not step-boundary)
+                  (empty? boundary-artifacts)
+                  (every? (set g4-artifacts) boundary-artifacts))
+              boundary-traceable?
+              (or (not step-boundary)
+                  (seq trace-refs))
 
               ;; G5: scope — blocker matches canonical
               g5 {:gate :G5-scope
@@ -490,10 +532,33 @@
                   :detail (if blocker "Blocker exists in ledger" "Blocker not found")}
 
               ;; G4: evidence — artifacts exist
-              g4-artifacts (get-in phase-data [:execute :artifacts] [])
               g4 {:gate :G4-evidence
-                  :passed? (seq g4-artifacts)
-                  :detail (str (count g4-artifacts) " artifact(s) referenced")}
+                  :passed? (boolean
+                             (and (seq g4-artifacts)
+                                  boundary-artifacts-ok?
+                                  boundary-traceable?))
+                  :detail (cond
+                            (not (seq g4-artifacts))
+                            "No execute artifacts recorded"
+
+                            (and step-boundary (not boundary-artifacts-ok?))
+                            "Step boundary artifacts are not a subset of execute artifacts"
+
+                            (and step-boundary (not boundary-traceable?))
+                            "Step boundary is missing graph refs"
+
+                            step-boundary
+                            (str (count g4-artifacts) " artifact(s) referenced via "
+                                 (:boundary/kind step-boundary) " boundary "
+                                 (:boundary/id step-boundary))
+
+                            :else
+                            (str (count g4-artifacts) " artifact(s) referenced"))
+                  :audit {:artifact-count (count g4-artifacts)
+                          :boundary-id (:boundary/id step-boundary)
+                          :boundary-kind (:boundary/kind step-boundary)
+                          :boundary-artifact-count (count boundary-artifacts)
+                          :graph-ref-count (count trace-refs)}}
 
               ;; G3: status — valid transition
               g3-classification (get-in phase-data [:classify :classification])
@@ -1159,7 +1224,7 @@
           (= tool-id :canonical-get)    (tool-canonical-get cache cwd args)
           (= tool-id :canonical-update) (tool-canonical-update cache cwd args)
           (= tool-id :cycle-begin)      (tool-cycle-begin cache cwd args)
-          (= tool-id :cycle-advance)    (tool-cycle-advance cache cwd args)
+          (= tool-id :cycle-advance)    (tool-cycle-advance cache cwd args config)
           (= tool-id :cycle-get)        (tool-cycle-get cache cwd args)
           (= tool-id :cycle-list)       (tool-cycle-list cache cwd args)
           (= tool-id :failed-route-add) (tool-failed-route-add cache cwd args)

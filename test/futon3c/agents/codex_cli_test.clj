@@ -130,6 +130,19 @@
           (is (map? (:execution resp)))
           (is (str/includes? (:error resp) "Exit 2")))))))
 
+(deftest make-invoke-fn-preserves-exception-class-when-message-is-blank
+  (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
+                                          :model nil
+                                          :sandbox "workspace-write"
+                                          :approval-policy "never"})]
+    (with-redefs [codex-cli/run-codex-stream! (fn [& _]
+                                                (throw (IllegalStateException.)))]
+      (let [resp (invoke "x" "sid-old")]
+        (is (nil? (:result resp)))
+        (is (= "sid-old" (:session-id resp)))
+        (is (str/includes? (:error resp) "codex invocation error:"))
+        (is (str/includes? (:error resp) "IllegalStateException"))))))
+
 (deftest make-invoke-fn-recovers-from-stale-resume-action-type-error
   (let [calls (atom [])
         invoke (codex-cli/make-invoke-fn {:codex-bin "codex"

@@ -1,0 +1,98 @@
+;; Pilot A — Wiring Diagram for t92J01 (connected union via common point)
+;; Hand-extracted tactic trace as (goal-before, tactic, goal-after) triples.
+;;
+;; Node vocabulary:
+;;   :goal    — a Lean goal state (hypotheses + target type)
+;;   :closed  — a terminal node (no remaining goals)
+;;   :sorry   — an open port (unresolved goal)
+;;
+;; Edge vocabulary:
+;;   :tactic     — a single tactic application
+;;   :have       — introduces a subgoal (branches the diagram)
+;;   :by-cases   — case split (branches into two paths)
+;;   :exact      — closes the current goal (edge to :closed)
+;;   :simpa      — simplification that closes the goal
+;;
+;; Pattern annotations:
+;;   :pattern    — which formalization/informal pattern this step instantiates
+
+{:problem-id "t92J01"
+ :theorem "connected_union"
+ :classification :proved
+ :sorry-count 0
+
+ :trace
+ [{:id :step-0
+   :type :tactic
+   :tactic "classical"
+   :goal-before "⊢ IsConnected (⋃ a, C a)"
+   :goal-after "⊢ IsConnected (⋃ a, C a)"  ;; enables classical reasoning, no goal change
+   :pattern nil
+   :notes "Boilerplate — enables by_cases later"}
+
+  {:id :step-1
+   :type :have
+   :tactic "have hpre : IsPreconnected (⋃ a, C a)"
+   :goal-before "⊢ IsConnected (⋃ a, C a)"
+   :goal-after "⊢ IsPreconnected (⋃ a, C a)"  ;; new subgoal
+   :remaining "⊢ IsConnected (⋃ a, C a)"       ;; original goal still open
+   :pattern :P-connected-union
+   :notes "Key decomposition: IsConnected = Nonempty ∧ IsPreconnected"}
+
+  {:id :step-1a
+   :type :tactic
+   :tactic "simpa [sUnion_range] using (isPreconnected_sUnion x ...)"
+   :goal-before "⊢ IsPreconnected (⋃ a, C a)"
+   :goal-after :closed
+   :pattern :P-connected-union
+   :mathlib-api ["isPreconnected_sUnion" "sUnion_range"]
+   :notes "The core Mathlib combinator — feeds common point + per-component connectedness"}
+
+  {:id :step-2
+   :type :by-cases
+   :tactic "by_cases hnon : (⋃ a, C a).Nonempty"
+   :goal-before "hpre : IsPreconnected (⋃ a, C a) ⊢ IsConnected (⋃ a, C a)"
+   :branches [:step-2a :step-2b]
+   :pattern "math-informal/argue-by-contradiction"
+   :notes "Split on whether the union is nonempty"}
+
+  {:id :step-2a
+   :type :exact
+   :tactic "exact ⟨hnon, hpre⟩"
+   :goal-before "hnon : (⋃ a, C a).Nonempty, hpre : IsPreconnected ... ⊢ IsConnected ..."
+   :goal-after :closed
+   :pattern nil
+   :notes "Positive case: trivial — pair the two halves of IsConnected"}
+
+  {:id :step-2b
+   :type :tactic
+   :tactic "have hUnion ... simpa [hUnion] using isConnected_empty"
+   :goal-before "hnon : ¬(⋃ a, C a).Nonempty, hpre : ... ⊢ IsConnected ..."
+   :goal-after :closed
+   :pattern nil
+   :notes "Negative case: union is empty, use isConnected_empty"}]
+
+ :diagram
+ {:nodes [:step-0 :step-1 :step-1a :step-2 :step-2a :step-2b]
+  :edges [{:from :step-0 :to :step-1 :type :sequential}
+          {:from :step-1 :to :step-1a :type :subgoal}
+          {:from :step-1 :to :step-2 :type :continuation}
+          {:from :step-2 :to :step-2a :type :branch-positive}
+          {:from :step-2 :to :step-2b :type :branch-negative}]
+  :terminals [:step-1a :step-2a :step-2b]
+  :open-ports []}
+
+ :patterns-instantiated
+ [{:pattern :P-connected-union
+   :steps [:step-1 :step-1a]
+   :role "Core mathematical move — decompose IsConnected, apply Mathlib combinator"}
+  {:pattern "math-informal/argue-by-contradiction"
+   :steps [:step-2 :step-2b]
+   :role "Handle the degenerate case (empty union) separately"}]
+
+ :composition-structure
+ {:type :sequential-then-branch
+  :main-path [:step-0 :step-1 :step-1a]
+  :case-split {:point :step-2 :branches [:step-2a :step-2b]}
+  :notes "Linear flow up to the Mathlib combinator, then a case split on nonemptiness.
+          The case split is cleanup — the mathematical work is all in step-1a."}}

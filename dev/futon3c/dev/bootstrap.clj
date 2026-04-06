@@ -159,6 +159,18 @@
          :port port
          :bind bind}))))
 
+(defn- agent-availability-summary
+  [registry-status]
+  (let [route-counts (frequencies (map :invoke-route (vals (:agents registry-status))))
+        local-count (long (or (get route-counts :local) 0))
+        ws-count (long (or (get route-counts :ws) 0))
+        unreachable-count (long (or (get route-counts :none) 0))]
+    {:registered (long (or (:count registry-status) 0))
+     :invocable (+ local-count ws-count)
+     :local local-count
+     :ws ws-count
+     :unreachable unreachable-count}))
+
 (defn run-main!
   [{:keys [!f1-sys !evidence-store !irc-sys
            direct-xtdb-enabled? make-evidence-store
@@ -237,12 +249,18 @@
                        (bb/project-processes!
                         (sort-by :process/id (vals new-val)))))
         _ (start-agents-blackboard-ticker! 5000)
-        _ (bb/project-agents! (reg/registry-status))
+        registry-status (reg/registry-status)
+        agent-summary (agent-availability-summary registry-status)
+        _ (bb/project-agents! registry-status)
         _ (bb/project-processes! (sort-by :process/id (vals @cyder/!processes)))]
     (println)
     (println (str "[dev] Role: " (name role)
                   " (" (:source role-info) ")"
-                  " | agents: " (count (reg/registered-agents)) " registered"
+                  " | agents: " (:registered agent-summary) " registered"
+                  " (" (:invocable agent-summary) " invocable: "
+                  (:local agent-summary) " local, "
+                  (:ws agent-summary) " ws, "
+                  (:unreachable agent-summary) " unreachable)"
                   " | CYDER: " (count (cyder/list-processes)) " processes"
                   " (" mission-count " missions)"))
     (println)

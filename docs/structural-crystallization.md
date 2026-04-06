@@ -162,7 +162,7 @@ keep this difference visible.
 
 ## Layer 2: Candidate Invariants (Soft Crystal)
 
-Eight families of invariant recur across the stack as pressures —
+Nine families of invariant recur across the stack as pressures —
 things that break when violated, patterns that show up in cleanup
 passes and debugging sessions — but don't yet have enforcement code:
 
@@ -215,6 +215,15 @@ passes and debugging sessions — but don't yet have enforcement code:
    action without budget. Spend must be recorded. Depletion forces
    deferral. *Evidence*: discussed and partially sketched; no fully
    operational exemplar yet.
+
+9. **Interaction evidence continuity** — substantive interactive agent
+   turns should either be logged as evidence or create explicit,
+   inspectable debt. Session surfaces should carry enough non-transcript
+   context that the operator can tell what session they are in, where it
+   is operating, and what continuity token backs it. *Evidence*: Emacs
+   Codex surfaces now carry session/frame context and log turns; raw CLI
+   Codex/Claude use still creates invisible evidence gaps unless tracked
+   deliberately.
 
 ---
 
@@ -290,7 +299,7 @@ The holistic-argument-sketch makes five support claims (S1–S5).
 Structural law is the missing sixth:
 
 **S6: The stack checks its own structural integrity.** Nine operational
-families enforce invariants across six repos. Eight candidate families
+families enforce invariants across six repos. Nine candidate families
 recur as pressures across cleanup passes and debugging sessions.
 Violations are cataloged, classified by scope/status/kind, and (soon)
 dispatched as work. This is not just reflexion — it's reflexion with
@@ -303,7 +312,7 @@ is explicit. What remains: combinators (Layer 4), obligation dispatch
 
 ---
 
-## The Five Questions
+## The Six Questions
 
 The inventory's immediate questions (from the sexp) are the
 crystallization's decision points:
@@ -327,6 +336,11 @@ crystallization's decision points:
    invariants, and which should remain optional gates? *(The central
    classification question for Phase 2.)*
 
+6. Should interactive CLI turns that bypass evidence-aware surfaces
+   count as explicit debt rather than ambient leakage? *(Interaction
+   evidence continuity family; pressure from Codex/Claude workflow
+   discipline says yes.)*
+
 ---
 
 ## The Crystallization Timeline
@@ -337,7 +351,7 @@ crystallization's decision points:
 Layer 0 (code)      ████████████████████    ██████████           ████████
 Layer 1 (9 families)█████████               ██ (mission logic)   ████
 Layer 1b (gates)    ████                    ██                   ████
-Layer 2 (8 cands.)  ██ (identified)         ████ (evidenced)     ████████
+Layer 2 (9 cands.)  ██ (identified)         ████ (evidenced)     ████████
 Layer 3 (meta-map)  ██ (mapped)             ████ (not extracted) ████████
 Layer 4 (combin.)                           █ (designed)         ████████
 Layer 5 (obligat.)                                               ████████
