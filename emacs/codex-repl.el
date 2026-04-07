@@ -2943,13 +2943,15 @@ When FORCE is non-nil, refresh immediately."
                        (format "[curl error (exit %d): %s]"
                                exit-code
                                (string-trim (truncate-string-to-width raw 200))))))
-         (trace-session (or sid codex-repl-session-id "unknown"))
-         (rendered-text (string-trim (or codex-repl--rendered-assistant-text "")))
-         (needs-terminal-insert?
-          (and ok
-               (stringp final-text)
-               (not (string-empty-p final-text))
-               (not (string= rendered-text (string-trim final-text))))))
+        (trace-session (or sid codex-repl-session-id "unknown"))
+        (rendered-text (string-trim (or codex-repl--rendered-assistant-text "")))
+        (final-visible-text
+         (let ((raw (if (stringp final-text) final-text "")))
+           (if (and (or (not (stringp raw))
+                        (string-empty-p (string-trim raw)))
+                    (not (string-empty-p rendered-text)))
+               rendered-text
+             raw))))
     (setq codex-repl--invoke-done-info
           (list :exit-code exit-code
                 :elapsed elapsed
@@ -2988,16 +2990,11 @@ When FORCE is non-nil, refresh immediately."
           (condition-case callback-err
               (if (and ok agent-chat--streaming-started)
                   (progn
-                    (when needs-terminal-insert?
-                      (when (and (stringp codex-repl--last-stream-summary)
-                                 (not (string-empty-p codex-repl--last-stream-summary)))
-                        (agent-chat-stream-text "\n"))
-                      (agent-chat-stream-text final-text)
-                      (codex-repl--record-rendered-assistant-text! final-text)
-                      (setq codex-repl--final-text-rendered t))
-                    (agent-chat-end-streaming-message)
+                    (agent-chat-finalize-streaming-message "codex" final-visible-text)
+                    (codex-repl--record-rendered-assistant-text! final-visible-text)
+                    (setq codex-repl--final-text-rendered t)
                     (setq codex-repl--last-stream-summary nil)
-                    (codex-repl--emit-assistant-turn-evidence! final-text)
+                    (codex-repl--emit-assistant-turn-evidence! final-visible-text)
                     (agent-chat-invariants-turn-ended)
                     (goto-char (point-max))
                     (agent-chat-scroll-to-bottom))
@@ -3005,7 +3002,7 @@ When FORCE is non-nil, refresh immediately."
                   (when agent-chat--streaming-started
                     (agent-chat-end-streaming-message)
                     (setq codex-repl--last-stream-summary nil))
-                  (funcall callback final-text)))
+                  (funcall callback final-visible-text)))
             (error
              (message "codex-repl callback warning: %s"
                       (error-message-string callback-err)))))
