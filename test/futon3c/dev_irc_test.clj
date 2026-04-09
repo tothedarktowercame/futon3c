@@ -14,6 +14,19 @@
              (#'futon3c.dev.irc/bridge-say-url
               (#'futon3c.dev.irc/configured-bridge-http-port)))))))
 
+(deftest configured-bridge-max-lines-defaults-to-four
+  (testing "bridge /say keeps the historical cap by default"
+    (with-redefs [futon3c.dev.config/env-bool (fn [_k default] default)]
+      (is (= 4 (#'futon3c.dev.irc/configured-bridge-max-lines))))))
+
+(deftest configured-bridge-max-lines-allows-no-limit-opt-in
+  (testing "bridge /say can opt into unlimited delivery for Matrix-backed rooms"
+    (with-redefs [futon3c.dev.config/env-bool (fn [k default]
+                                                (if (= k "FUTON3C_MATRIX_REPLY_NO_LIMITS")
+                                                  true
+                                                  default))]
+      (is (= 0 (#'futon3c.dev.irc/configured-bridge-max-lines))))))
+
 (deftest start-dispatch-relay-defaults-to-futon-room
   (testing "dispatch relay keeps the generic room binding by default"
     (let [joined-agent (atom nil)

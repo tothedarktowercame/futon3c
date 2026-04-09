@@ -74,8 +74,12 @@ call :port_accepts_local !WAIT_PORT!
 if not errorlevel 1 (
   endlocal & exit /b 0
 )
-if defined DEV_CORE_PID_FILE if not exist "!DEV_CORE_PID_FILE!" (
-  endlocal & call :report_runtime_exit %~1 %~3 & exit /b 1
+if exist "!DEV_CORE_EXIT_FILE!" (
+  set "WAIT_RUNTIME_EXIT_CODE="
+  for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "$receipt = Get-Content -Raw '%DEV_CORE_EXIT_FILE%' | ConvertFrom-Json; if ($null -ne $receipt.exit_code) { [Console]::Out.WriteLine($receipt.exit_code) }" 2^>nul`) do set "WAIT_RUNTIME_EXIT_CODE=%%I"
+  if defined WAIT_RUNTIME_EXIT_CODE if not "!WAIT_RUNTIME_EXIT_CODE!"=="0" (
+    endlocal & call :report_runtime_exit %~1 %~3 & exit /b 1
+  )
 )
 if !WAIT_SECS! GEQ !WAIT_TIMEOUT! (
   1>&2 echo [dev-stack-windows] ERROR: timed out waiting for !WAIT_NAME! on port !WAIT_PORT! while the futon runtime lane was still loading.

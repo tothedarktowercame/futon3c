@@ -207,6 +207,7 @@
         (if-some [handled? (mfuton-invoke-override/maybe-record-delivery!
                             {:agent-id aid
                              :invoke-trace-id tid
+                             :receipt receipt
                              :receipt-line receipt-line})]
           handled?
           (let [receipt-artifact-path (write-invoke-delivery-artifact! aid tid receipt-line)

@@ -149,6 +149,14 @@
   [port]
   (str "http://127.0.0.1:" port "/say"))
 
+(defn- configured-bridge-max-lines
+  "Bridge /say line cap. Zero means unlimited bridge-side delivery while
+   still relying on the IRC transport for RFC-safe chunking."
+  []
+  (if (config/env-bool "FUTON3C_MATRIX_REPLY_NO_LIMITS" false)
+    0
+    4))
+
 (defn make-bridge-irc-send-fn
   "Create a send-fn that posts via the ngircd bridge's HTTP /say endpoint.
    This lets agents post as 'claude' or 'codex' without opening separate IRC
@@ -159,7 +167,7 @@
      (let [url (bridge-say-url port)
            payload (json/generate-string (cond-> {"from" (or from-nick "claude")
                                                    "text" (str message)
-                                                   "max_lines" 4}
+                                                   "max_lines" (configured-bridge-max-lines)}
                                            channel (assoc "channel" (str channel))))
            conn (doto (-> (java.net.URI. url) .toURL .openConnection)
                   (.setRequestMethod "POST")

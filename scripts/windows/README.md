@@ -75,6 +75,10 @@ ngircd bridge launch examples:
 - the Windows bridge wrapper defaults `CODEX_BRIDGE_SUMMARY_MODE=raw` so codex
   replies can preserve multi-line IRC bodies; set it to `summary` before launch
   to restore the older one-line summary behavior.
+- `FUTON3C_MATRIX_REPLY_NO_LIMITS` defaults off; when set to `true`, the
+  bridge keeps RFC-safe line splitting but stops applying bridge-level
+  clipping/line-cap limits to Matrix-backed clean-output evolver replies and
+  bridge `/say` delivery. Leave it unset to preserve the historical behavior.
 
 Full-stack launch (`dev`) behavior:
 - runs `stop-futon1a-windows.bat`
@@ -125,6 +129,9 @@ Full-stack launch (`dev`) behavior:
   processes
 - defaults `CODEX_BRIDGE_SUMMARY_MODE=raw` unless already set so multiline
   codex replies survive the bridge on Windows by default
+- keeps `FUTON3C_MATRIX_REPLY_NO_LIMITS` unset by default, preserving the
+  historical bridge cap/truncation behavior unless an outer config/launcher
+  explicitly opts into the Matrix-backed no-limit posture
 - starts `dev-core` through a tracked runtime-lane supervisor
 - writes runtime-lane trace artifacts under `XDG_RUNTIME_DIR`, `TEMP`, or `TMP`
   (whichever is available first):
