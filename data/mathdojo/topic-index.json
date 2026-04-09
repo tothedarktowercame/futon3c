@@ -1,0 +1,1610 @@
+{
+  "problems": {
+    "a00J01": {
+      "insight": "",
+      "techniques": [
+        "cauchy-schwarz-holder"
+      ]
+    },
+    "a00J02": {
+      "insight": "",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "real-analysis"
+      ]
+    },
+    "a00J03": {
+      "insight": "",
+      "techniques": []
+    },
+    "a00J04": {
+      "insight": "Every component of \u2102 \\ L is either sublevel ({|p| < 1}) or superlevel ({|p| > 1}) by continuity and connectedness. The maximum modulus principle kills bounded superlevel components, giving exactly one",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "maximum-principle",
+        "topology"
+      ]
+    },
+    "a00J05": {
+      "insight": "",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a00J06": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "integration-theorems",
+        "maximum-principle",
+        "uniform-convergence"
+      ]
+    },
+    "a01A01": {
+      "insight": "",
+      "techniques": []
+    },
+    "a01A02": {
+      "insight": "",
+      "techniques": [
+        "borel-cantelli",
+        "functional-analysis"
+      ]
+    },
+    "a01A03": {
+      "insight": "",
+      "techniques": [
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a01A04": {
+      "insight": "",
+      "techniques": [
+        "convergence",
+        "fourier-analysis",
+        "measure-theory"
+      ]
+    },
+    "a01A05": {
+      "insight": "",
+      "techniques": [
+        "integration-theorems"
+      ]
+    },
+    "a01A06": {
+      "insight": "Choosing f = c \u00b7 \u03c7_E (a constant on a measurable set) with the constraint \u222b e^f \u2264 1 gives e^c \u00b7 m(E) + (1 - m(E)) \u2264 1, i.e., m(E) \u2264 1/(e^c - 1 + 1) = e^{-c}/(1 - e^{-c} + e^{-c}) \u2014 more simply, m(E)(e",
+      "techniques": [
+        "distribution-functions",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a01A07": {
+      "insight": "The mean value property for analytic functions converts area integrals into pointwise values: |g(z\u2080)| \u2264 (1/\u03c0r\u00b2) \u222b_{D(z\u2080,r)} |g| dA. Applied to g = f\u2099 - f\u2098 (analytic), this bounds sup-norm by L\u00b9 norm, ",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "convergence",
+        "measure-theory",
+        "real-analysis",
+        "topology",
+        "uniform-convergence"
+      ]
+    },
+    "a01A08": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "uniform-convergence"
+      ]
+    },
+    "a01A09": {
+      "insight": "",
+      "techniques": [
+        "maximum-principle"
+      ]
+    },
+    "a01A10": {
+      "insight": "",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "complex-analysis",
+        "contour-integration",
+        "fourier-analysis",
+        "integration-theorems"
+      ]
+    },
+    "a01A11": {
+      "insight": "",
+      "techniques": [
+        "contour-integration",
+        "fourier-analysis",
+        "measure-theory"
+      ]
+    },
+    "a01A12": {
+      "insight": "",
+      "techniques": [
+        "contour-integration",
+        "integration-theorems",
+        "maximum-principle"
+      ]
+    },
+    "a01J01": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis"
+      ]
+    },
+    "a01J02": {
+      "insight": "",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "measure-theory"
+      ]
+    },
+    "a01J03": {
+      "insight": "",
+      "techniques": [
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a01J04": {
+      "insight": "",
+      "techniques": [
+        "integration-theorems",
+        "uniform-convergence"
+      ]
+    },
+    "a01J05": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration"
+      ]
+    },
+    "a01J06": {
+      "insight": "",
+      "techniques": [
+        "argument-principle",
+        "contour-integration",
+        "functional-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a02J01": {
+      "insight": "",
+      "techniques": [
+        "argument-principle",
+        "real-analysis"
+      ]
+    },
+    "a02J02": {
+      "insight": "",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "integration-theorems"
+      ]
+    },
+    "a02J03": {
+      "insight": "",
+      "techniques": [
+        "integration-theorems",
+        "measure-theory"
+      ]
+    },
+    "a02J04": {
+      "insight": "",
+      "techniques": [
+        "functional-analysis"
+      ]
+    },
+    "a02J05": {
+      "insight": "",
+      "techniques": [
+        "integration-theorems"
+      ]
+    },
+    "a02J06": {
+      "insight": "",
+      "techniques": [
+        "contour-integration",
+        "fourier-analysis"
+      ]
+    },
+    "a02J07": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a03J01": {
+      "insight": "",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "contour-integration"
+      ]
+    },
+    "a03J02": {
+      "insight": "",
+      "techniques": [
+        "borel-cantelli",
+        "integration-theorems"
+      ]
+    },
+    "a03J03": {
+      "insight": "",
+      "techniques": []
+    },
+    "a03J04": {
+      "insight": "",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "fourier-analysis",
+        "functional-analysis",
+        "integration-theorems"
+      ]
+    },
+    "a03J05": {
+      "insight": "",
+      "techniques": [
+        "distribution-functions",
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a03J06": {
+      "insight": "The Cauchy estimates bound the n-th Taylor coefficient by |a\u2099| \u2264 max_{|z|=R} |f(z)| / R\u207f \u2264 AR^m / R\u207f = AR^{m-n}. For n > m, letting R \u2192 \u221e forces a\u2099 = 0.",
+      "techniques": [
+        "complex-analysis",
+        "convergence",
+        "maximum-principle",
+        "topology"
+      ]
+    },
+    "a03J07": {
+      "insight": "Introduce an auxiliary function that forces decay at infinity, apply the maximum principle on a large semicircular domain, then remove the auxiliary factor. The standard choice is f_\u03b5(z) = f(z) \u00b7 e^{i",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle",
+        "real-analysis",
+        "topology"
+      ]
+    },
+    "a03J08": {
+      "insight": "If f omits a value w\u2080 \u2208 \u2102, then 1/(f(z) - w\u2080) is analytic on D and bounded (since |f| \u2192 \u221e at every boundary point of D, including \u221e, forces |f - w\u2080| \u2192 \u221e at every boundary point, making 1/|f - w\u2080| \u2192 0)",
+      "techniques": [
+        "complex-analysis",
+        "convergence",
+        "functional-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a92J01": {
+      "insight": "On finite measure spaces, higher Lp embeds into lower Lq (H\u00f6lder). For sequence spaces, the inclusion reverses: \u2113p \u2282 \u2113q when p < q (smaller p means stricter summability). On infinite measure spaces, n",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "convergence",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a92J02": {
+      "insight": "Choose a subsequence f_{n_k} so fast that m({|f_{n_k} - f| > 1/k}) < 2^{-k}. Then \u03a3 m(E_k) < \u221e where E_k = {|f_{n_k} - f| > 1/k}, so Borel-Cantelli gives: a.e. x belongs to only finitely many E_k, mea",
+      "techniques": [
+        "borel-cantelli",
+        "convergence",
+        "measure-theory",
+        "real-analysis",
+        "topology"
+      ]
+    },
+    "a92J03": {
+      "insight": "For a single indicator function 1_{[a,b]}, the Fourier transform is (e^{ib\u03be} - e^{ia\u03be})/(i\u03be), which is O(1/|\u03be|) \u2192 0. This extends by linearity to step functions, and then by density (step functions ar",
+      "techniques": [
+        "complex-analysis",
+        "convergence",
+        "fourier-analysis",
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a92J04": {
+      "insight": "Apply the Schwarz lemma to f(z)/z. Since f(0) = 0 and |f(z)| < 1 for |z| < 1, the Schwarz lemma gives |f(z)| \u2264 |z|, with equality at any interior point iff f(z) = e^{i\u03b8}z. Since f'(0) = 1, we get \u03b8 = ",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a92J05": {
+      "insight": "Apply Rouch\u00e9's theorem on |z| = 1 to count roots *inside* the unit disk, then subtract from 10 to get roots outside. On |z| = 1, the term 5z\u00b3 dominates: |5z\u00b3| = 5 > |z\u00b9\u2070 + 2z + 1| \u2264 1 + 2 + 1 = 4. So ",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis"
+      ]
+    },
+    "a92J06": {
+      "insight": "Substitute z = e^{i\u03b8}, so d\u03b8 = dz/(iz) and cos \u03b8 = (z + z\u207b\u00b9)/2. The integral becomes a contour integral of a rational function around the unit circle, evaluated by the residue theorem.",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "real-analysis"
+      ]
+    },
+    "a92J07": {
+      "insight": "The condition means f(\u2102) \u2286 \u2102 \\ (\u2212\u221e, 0], so log \u2218 f is a well-defined entire function (using the principal branch of log on \u2102 \\ (\u2212\u221e, 0]). The real part of log f is log|f|, and the imaginary part is arg",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a93A01": {
+      "insight": "Condition (b) is a contrapositive restatement of: \"if |f(x)-f(y)| \u2265 \u03b5 then the difference quotient is bounded by N\" \u2014 which means |x-y| \u2265 |f(x)-f(y)|/N \u2265 \u03b5/N. Taking the contrapositive of *that*: if |",
+      "techniques": [
+        "bounded-variation",
+        "convergence",
+        "topology"
+      ]
+    },
+    "a93A02": {
+      "insight": "Use Vitali's convergence theorem: on a finite measure space, a.e. convergence + uniform integrability \u27f9 L\u00b9 convergence. The L\u00b2 bound provides uniform integrability of |f\u2099 - f|^p via H\u00f6lder (since p < ",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "convergence",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a93A03": {
+      "insight": "Expand ||h\u2099 - h||\u00b2 = ||h\u2099||\u00b2 - 2 Re\u27e8h\u2099, h\u27e9 + ||h||\u00b2. Weak convergence gives \u27e8h\u2099, h\u27e9 \u2192 \u27e8h, h\u27e9 = ||h||\u00b2 (take k = h). So ||h\u2099 - h||\u00b2 = ||h\u2099||\u00b2 - 2Re\u27e8h\u2099, h\u27e9 + ||h||\u00b2 \u2192 ||h||\u00b2 - 2||h||\u00b2 + ||h||\u00b2 = 0 if ||",
+      "techniques": [
+        "convergence",
+        "real-analysis"
+      ]
+    },
+    "a93A04": {
+      "insight": "An absolutely continuous function satisfies f(x) = f(0) + \u222b\u2080\u02e3 f'(t) dt with f' \u2208 L\u00b9, and V(f) = \u222b\u2080\u00b9 |f'|. Truncating f' at height n gives Lipschitz functions f\u2099(x) = f(0) + \u222b\u2080\u02e3 g\u2099(t) dt where g\u2099 = max",
+      "techniques": [
+        "bounded-variation",
+        "integration-theorems",
+        "measure-theory"
+      ]
+    },
+    "a93J01": {
+      "insight": "Bounded variation means the total variation V(f, [0, a]) \u2192 0 as a \u2192 0\u207a (since V(f, [0,1]) = V(f, [0,a]) + V(f, [a,1]) and V(f, [0,1]) < \u221e). So any collection of disjoint intervals with small total len",
+      "techniques": [
+        "bounded-variation",
+        "real-analysis"
+      ]
+    },
+    "a93J02": {
+      "insight": "Integrate the *partial sums* S\u2099(x) = \u03a3\u2096\u208c\u2080\u207f (-x)\u1d4f = (1-(-x)^{n+1})/(1+x) over [0,1]. Each partial sum is a polynomial (hence integrable), and |S\u2099(x)| \u2264 1/(1-|(-x)|) ... no, we need a uniform dominator.",
+      "techniques": [
+        "convergence",
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a93J03": {
+      "insight": "Borel-Cantelli: since \u03a3 \u03bc(A\u2099) \u2264 \u03a3 2\u207b\u207f = 1 < \u221e, almost every x belongs to only finitely many A\u2099. For such x, |f\u2099(x)| \u2264 n\u207b\u00b2 for all large n, and \u03a3 n\u207b\u00b2 < \u221e gives absolute convergence by comparison.",
+      "techniques": [
+        "borel-cantelli",
+        "convergence",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a93J04": {
+      "insight": "Upper bound: |f| \u2264 ||f||\u221e a.e. \u27f9 ||f||p \u2264 ||f||\u221e \u00b7 m([0,1])^{1/p} = ||f||\u221e. Lower bound: for any c < ||f||\u221e, the set {|f| > c} has positive measure, so ||f||p \u2265 c \u00b7 m({|f|>c})^{1/p} \u2192 c as p \u2192 \u221e.",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "convergence",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a93J05": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a93J06": {
+      "insight": ": Since $f(0) = 0$, we can write $f(z) = \\int_0^z f'(\\zeta)\\,d\\zeta$ along the radial segment. Since $f'(0) = 0$ and $|f'| \\leq 1$, we apply the same idea again: $f'(z) = \\int_0^z f''(\\zeta)\\,d\\zeta$.",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle",
+        "topology"
+      ]
+    },
+    "a93J07": {
+      "insight": "",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "contour-integration",
+        "convergence",
+        "topology",
+        "uniform-convergence"
+      ]
+    },
+    "a94A01": {
+      "insight": "",
+      "techniques": [
+        "convergence",
+        "integration-theorems",
+        "measure-theory"
+      ]
+    },
+    "a94A02": {
+      "insight": "A doubly periodic function is determined by its values on the fundamental parallelogram [0,1]\u00d7[0,1], which is compact. An entire function on a compact set is bounded. By periodicity, f is bounded on a",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "contour-integration",
+        "integration-theorems",
+        "maximum-principle",
+        "uniform-convergence"
+      ]
+    },
+    "a94A03": {
+      "insight": "The kernel \u03c6_t(x) = (1/t)e^{-\u03c0x\u00b2/t\u00b2} is a Gaussian approximate identity: it has \u222b\u03c6_t = 1 (after checking the normalisation), so K_t f = \u03c6_t * f. Young's inequality with ||\u03c6_t||\u2081 = 1 gives ||K_t f||_p ",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis",
+        "uniform-convergence"
+      ]
+    },
+    "a94A04": {
+      "insight": "By linearity, \u222b p(x)f(x) dx = 0 for every polynomial p. By Weierstrass approximation, polynomials are uniformly dense in C([0,1]), hence dense in L\u00b2([0,1]). So f is orthogonal to a dense subspace, for",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "complex-analysis",
+        "convergence",
+        "measure-theory"
+      ]
+    },
+    "a94A05": {
+      "insight": "(a) Greedily pick the largest available interval, remove everything it intersects, repeat. Any interval not selected is intersected by a selected one of at least its length, so it's covered by the 5\u00d7 ",
+      "techniques": [
+        "measure-theory",
+        "real-analysis",
+        "topology"
+      ]
+    },
+    "a94A06": {
+      "insight": "On the ray z = re^{i\u03c0/6}, z\u00b9\u00b2 = r\u00b9\u00b2e^{2\u03c0i} = r\u00b9\u00b2 and z\u2077 = r\u2077e^{7i\u03c0/6}, so z\u2077/(1+z\u00b9\u00b2) = e^{7i\u03c0/6} \u00b7 r\u2077/(1+r\u00b9\u00b2). The integral along this ray is e^{7i\u03c0/6} \u00b7 e^{i\u03c0/6} \u00b7 I = e^{8i\u03c0/6} \u00b7 I where I is the or",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "convergence",
+        "real-analysis"
+      ]
+    },
+    "a94A07": {
+      "insight": "Consider g(w) = f(1/w) near w = 0, which captures the behaviour of f at \u221e. If f has an essential singularity at \u221e, Casorati-Weierstrass (or Picard) says the image of f near \u221e is dense \u2014 destroying inj",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a94A08": {
+      "insight": "On the closed disk |z| \u2264 r < 1, the Schwarz lemma applied to g(z) = f(z)/z gives |g(z)| \u2264 1 on the unit disk with |g(0)| = |f'(0)| < 1. By the maximum principle on |z| \u2264 r: |g(z)| \u2264 \u03bb(r) < 1 (a contin",
+      "techniques": [
+        "complex-analysis",
+        "functional-analysis",
+        "maximum-principle",
+        "topology",
+        "uniform-convergence"
+      ]
+    },
+    "a94A09": {
+      "insight": "Apply Rouch\u00e9's theorem to compare z and f(z) on \u2202\u0394. Fixed points of f are zeros of g(z) = z - f(z). On \u2202\u0394: |z| = 1 and |f(z)| \u2264 1, but we also know z \u2260 f(z) (no fixed points on \u2202\u0394). Rouch\u00e9 with the do",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "contour-integration"
+      ]
+    },
+    "a94A10": {
+      "insight": "If f'(x\u2080) = 0 at some real x\u2080, then f has a critical point: locally f(z) \u2248 f(x\u2080) + c(z-x\u2080)\u207f for some n \u2265 2. This n-to-1 local map sends n distinct branches near x\u2080 to the same real value. Since n \u2265 2,",
+      "techniques": [
+        "complex-analysis",
+        "functional-analysis"
+      ]
+    },
+    "a94J01": {
+      "insight": "Truncate f at height M: the bounded part is controlled by M\u00b7m(E), and the unbounded tail \u222b_{|f|>M} |f| can be made small by choosing M large (since f \u2208 L\u00b9). Choosing M first (to make the tail < \u03b5/2), ",
+      "techniques": [
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a94J02": {
+      "insight": "Use a \"fat Cantor set\" (a nowhere-dense closed set C \u2282 [0,1] with m(C) > 0) and define h as the integral of a strictly positive L\u00b9 function that concentrates most of its mass on [0,1] \\ C. Specificall",
+      "techniques": [
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a94J03": {
+      "insight": "If f is not strictly monotone, then f is not injective (by IVT, a continuous non-monotone function must retrace values). Non-injectivity gives points a < b with f(a) = f(b), and by the extreme value t",
+      "techniques": [
+        "functional-analysis"
+      ]
+    },
+    "a94J04": {
+      "insight": "The Poisson kernel is a probability measure (\u222bP_y = 1) and a convolution kernel, so P_y f = P_y * f. Young's inequality with ||P_y||\u2081 = 1 gives ||P_y f||\u2082 \u2264 ||f||\u2082. The L\u00b2 convergence follows from the",
+      "techniques": [
+        "fourier-analysis",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a94J05": {
+      "insight": "(a) Cauchy's integral formula for derivatives gives |f'(z)| \u2264 M/R on circles of radius R; let R \u2192 \u221e to get f' \u2261 0. (b) If Re f \u2265 -C, compose with g(z) = e^{-f(z)}: then |g(z)| = e^{-Re f(z)} \u2264 e^C, so",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "maximum-principle",
+        "topology"
+      ]
+    },
+    "a94J06": {
+      "insight": "On the unit circle |\u03b6| = 1, we have \u03b6\u0304 = 1/\u03b6. This converts the antiholomorphic \u03b6\u0304 into a rational (hence meromorphic) function of \u03b6, and the integral becomes \u222e 1/(\u03b6(\u03b6-z)) d\u03b6, which is computable by t",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration"
+      ]
+    },
+    "a94J07": {
+      "insight": "f is injective on \u0394 iff for each w \u2208 f(\u0394), the equation f(z) = w has exactly one solution in \u0394. By the argument principle, the number of solutions is the winding number of f(\u03b3) around w as \u03b3 traverses",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "contour-integration",
+        "real-analysis",
+        "topology"
+      ]
+    },
+    "a94J08": {
+      "insight": "The bound |f(z)| \u2265 |z|^{3/2} > 0 for z \u2260 0 means f has at most one zero (at z = 0). If f(0) = 0, the order of the zero is some integer n, so |f(z)| ~ c|z|\u207f near 0. Then 1/f is entire away from 0 (and ",
+      "techniques": [
+        "maximum-principle",
+        "real-analysis"
+      ]
+    },
+    "a95A01": {
+      "insight": "(a) Lower Riemann sums approximate f from below using infima on intervals, which are \u2264 the Lebesgue integral (because Lebesgue simple functions are more flexible than step functions). Similarly upper ",
+      "techniques": [
+        "measure-theory"
+      ]
+    },
+    "a95A02": {
+      "insight": "(b) is Lusin's condition (N): AC functions map null sets to null sets, and more generally m*(f(E)) is controlled by m*(E). The AC definition directly handles finite unions of intervals; outer regulari",
+      "techniques": [
+        "bounded-variation",
+        "measure-theory"
+      ]
+    },
+    "a95A03": {
+      "insight": "In spherical coordinates, \u222b|f|^p = c\u2083 \u222b\u2080^\u221e r\u207b\u00b2\u1d56(1+r\u00b2)\u207b\u1d56 \u00b7 r\u00b2 dr. Near 0, the integrand ~ r\u00b2\u207b\u00b2\u1d56, integrable iff 2-2p > -1 iff p < 3/2. Near \u221e, the integrand ~ r\u00b2\u207b\u2074\u1d56, integrable iff 2-4p < -1 iff p > 3/",
+      "techniques": [
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a95A04": {
+      "insight": "The symmetry condition says \u222b_{x-h}^{x+h} f = 2\u222b_x^{x+h} f, meaning the integral of f over any interval centered at x equals twice the integral over the right half. This forces f to have equal average",
+      "techniques": [
+        "convergence",
+        "measure-theory"
+      ]
+    },
+    "a95A05": {
+      "insight": "The upper semicircle is an arc containing infinitely many points, and an analytic function vanishing on a set with an accumulation point inside its domain of analyticity must vanish identically. But t",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a95A06": {
+      "insight": "At every rational angle \u03b8 = p/q on the unit circle, the derivative f'(re^{2\u03c0i\u03b8}) \u2192 \u221e as r \u2192 1\u207b. This is because for n \u2265 q, the term z^{n!} at z = re^{2\u03c0ip/q} satisfies (re^{2\u03c0ip/q})^{n!} = r^{n!} (sin",
+      "techniques": [
+        "complex-analysis",
+        "convergence",
+        "real-analysis",
+        "uniform-convergence"
+      ]
+    },
+    "a95A07": {
+      "insight": "The function g(z) = (1/z\u00b2) \u00b7 e^{2\u03c0iz}/(e^{2\u03c0iz}-1) has poles at all integers. At z = 0 it has a pole of order 3 (double from 1/z\u00b2 and simple from 1/(e^{2\u03c0iz}-1)). At z = n \u2260 0 the residue is 1/(2\u03c0in\u00b2)",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "real-analysis"
+      ]
+    },
+    "a95A08": {
+      "insight": "The length is \u2113(C) = \u222b\u2080\u00b2\u03c0 |f'(e^{i\u03b8})| d\u03b8. By Parseval/power series: f'(z) = \u03a3 na\u2099z^{n-1} with a\u2081 = f'(0), |a\u2081| = 1. Then \u222b\u2080\u00b2\u03c0 |f'(e^{i\u03b8})|\u00b2 d\u03b8 = 2\u03c0 \u03a3 n\u00b2|a\u2099|\u00b2 \u2265 2\u03c0|a\u2081|\u00b2 = 2\u03c0. By Cauchy-Schwarz: \u2113(C)\u00b2 ",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "complex-analysis",
+        "maximum-principle",
+        "measure-theory",
+        "real-analysis",
+        "topology"
+      ]
+    },
+    "a95J01": {
+      "insight": "Since g is univalent, g\u207b\u00b9 exists on g(\u0394). The composition h = g\u207b\u00b9 \u2218 f maps \u0394 \u2192 \u0394 (since f(\u0394) \u2286 g(\u0394)), h(0) = g\u207b\u00b9(f(0)) = g\u207b\u00b9(g(0)) = 0, and h is analytic. By the Schwarz lemma: |h'(0)| \u2264 1, with equal",
+      "techniques": [
+        "complex-analysis",
+        "maximum-principle"
+      ]
+    },
+    "a95J02": {
+      "insight": "|f(z)| \u2265 |z|^\u03bb > 0 for z \u2260 0 means f has no zeros away from the origin. If f(0) = 0, then f(z) = z^n h(z) with h entire and h(0) \u2260 0. Then |h(z)| \u2265 |z|^{\u03bb-n}/something. The function 1/h is entire (h n",
+      "techniques": [
+        "maximum-principle",
+        "real-analysis"
+      ]
+    },
+    "a95J03": {
+      "insight": "Substitute w = e^{it}, so \u03b3(t) = \u03a3 a(n)w^n = P(w)/w^N where P(w) = \u03a3 a(n)w^{n+N} is a polynomial of degree 2N. The winding number Ind(z; \u03b3) equals the number of zeros of \u03b3(t) - z = 0 counted with sign",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "contour-integration",
+        "fourier-analysis"
+      ]
+    },
+    "a95J04": {
+      "insight": "(a) If there were no poles on \u2202\u0394, f would be holomorphic on D (which contains \u0394\u0304), so the power series would converge on a disk of radius > 1, contradicting R = 1. (b) Subtract the principal parts at ",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration"
+      ]
+    },
+    "a95J05": {
+      "insight": "arctan is bounded (|arctan t| < \u03c0/2) and continuous with arctan(0) = 0, and |arctan t| > 0 iff t \u2260 0. On a *finite* measure space, convergence in measure is equivalent to convergence in the metric d(f",
+      "techniques": [
+        "convergence",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a95J06": {
+      "insight": "Since f(x) = x on C (a set of measure zero), f contributes zero total oscillation on C: for any collection of intervals with endpoints in C, the function values agree with the identity. The oscillatio",
+      "techniques": [
+        "bounded-variation",
+        "measure-theory"
+      ]
+    },
+    "a95J07": {
+      "insight": "(a) Greedily select intervals by decreasing length; any unselected interval is intersected by a selected one of at least half its length, placing it inside the 5\u00d7 inflation. (b) At each x \u2208 D, f'(x) =",
+      "techniques": [
+        "measure-theory",
+        "real-analysis",
+        "topology"
+      ]
+    },
+    "a95J08": {
+      "insight": "Write |f(x-y)g(y)| = |f(x-y)|^{1/q} \u00b7 (|f(x-y)|^{1/p} |g(y)|) where 1/p + 1/q = 1. Apply H\u00f6lder in y: the first factor has Lq norm = ||f||\u2081^{1/q}, the second factor has Lp norm controlled by ||f||\u2081^{1",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a96A01": {
+      "insight": "(a) Jensen's inequality for the concave function t \u21a6 t^{p/q} (with 0 < p/q < 1): (\u222b|f|^q)^{p/q} \u2265 \u222b|f|^p on a probability space, giving ||f||_p \u2264 ||f||_q. (b)-(c) As p \u2192 0\u207a, (1/p)log\u222b|f|^p \u2192 \u222blog|f| b",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a96A02": {
+      "insight": "Each spike has height 1/n over a base of width ~1/n\u00b2, so the slope is ~n. The H\u00f6lder bound comes from: within one spike, |f(x)-f(y)| \u2264 1/n and |x-y| \u2264 1/(2n(n+1)) ~ 1/(2n\u00b2), giving |f(x)-f(y)|/|x-y|^{",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "real-analysis"
+      ]
+    },
+    "a96A03": {
+      "insight": "f \u2208 B follows from Fatou's lemma. Weak convergence \u27e8f\u2099, g\u27e9 \u2192 \u27e8f, g\u27e9 follows by approximation: for compactly supported continuous g, use DCT on the compact support; for general g \u2208 L\u00b2, approximate by s",
+      "techniques": [
+        "cauchy-schwarz-holder",
+        "convergence",
+        "functional-analysis",
+        "integration-theorems",
+        "measure-theory"
+      ]
+    },
+    "a96A04": {
+      "insight": "Everything is cleanest via the Fourier transform: \u011c\u209c(\u03be) = e^{-4\u03c0\u00b2|\u03be|\u00b2t}, so \u00fb = \u011c\u209c \u00b7 f\u0302. (a) Smoothness: x-derivatives of G\u209c multiply f\u0302 by polynomials in \u03be times the Gaussian \u2014 always in L\u00b2. (b) L\u00b2 b",
+      "techniques": [
+        "fourier-analysis",
+        "integration-theorems",
+        "measure-theory",
+        "real-analysis"
+      ]
+    },
+    "a96A05": {
+      "insight": "Use the integral: \u222e_{|z|=1} (1/z - P(z)) dz/(2\u03c0i). The integral of 1/z on the unit circle is 2\u03c0i (winding number 1), while the integral of any polynomial P(z) is 0 (Cauchy's theorem \u2014 P is entire). So",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "functional-analysis"
+      ]
+    },
+    "a96A06": {
+      "insight": "The residue at z = 1 is determined by the contour integral: Res(f,1) = (1/2\u03c0i)\u222e_{|z|=2} f(z)dz = (-2\u03c0i)/(2\u03c0i) = -1. Then f(z) = -1/(z-1) + g(z) where g is entire (the singularity is removed). The Tayl",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "convergence"
+      ]
+    },
+    "a96A07": {
+      "insight": "For any w \u2208 D (the bounded region enclosed by C = g(\u0393)), the number of preimages of w under g in \u0394 equals the winding number of g(\u0393) around w, which is 1 (since g is injective on \u0393, g(\u0393) is a simple c",
+      "techniques": [
+        "argument-principle",
+        "complex-analysis",
+        "contour-integration",
+        "topology"
+      ]
+    },
+    "a96A08": {
+      "insight": "",
+      "techniques": []
+    },
+    "a96J01": {
+      "insight": "",
+      "techniques": [
+        "convergence",
+        "uniform-convergence"
+      ]
+    },
+    "a96J02": {
+      "insight": "",
+      "techniques": []
+    },
+    "a96J03": {
+      "insight": "",
+      "techniques": []
+    },
+    "a96J04": {
+      "insight": "",
+      "techniques": [
+        "functional-analysis",
+        "measure-theory"
+      ]
+    },
+    "a96J05": {
+      "insight": "",
+      "techniques": [
+        "functional-analysis",
+        "measure-theory",
+        "topology"
+      ]
+    },
+    "a96J06": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "functional-analysis",
+        "maximum-principle",
+        "topology"
+      ]
+    },
+    "a96J07": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "convergence",
+        "maximum-principle"
+      ]
+    },
+    "a96J08": {
+      "insight": "",
+      "techniques": [
+        "complex-analysis",
+        "contour-integration",
+        "convergence",
+        "measure-theory",
+        "real-analysis"
+      ]
+    }
+  },
+  "topics": {
+    "complex-analysis": [
+      "a00J04",
+      "a00J05",
+      "a00J06",
+      "a01A07",
+      "a01A08",
+      "a01A10",
+      "a01J01",
+      "a01J05",
+      "a02J07",
+      "a03J01",
+      "a03J06",
+      "a03J07",
+      "a03J08",
+      "a92J03",
+      "a92J04",
+      "a92J05",
+      "a92J06",
+      "a92J07",
+      "a93J05",
+      "a93J06",
+      "a93J07",
+      "a94A02",
+      "a94A04",
+      "a94A06",
+      "a94A07",
+      "a94A08",
+      "a94A09",
+      "a94A10",
+      "a94J05",
+      "a94J06",
+      "a94J07",
+      "a95A05",
+      "a95A06",
+      "a95A07",
+      "a95A08",
+      "a95J01",
+      "a95J03",
+      "a95J04",
+      "a96A05",
+      "a96A06",
+      "a96A07",
+      "a96J06",
+      "a96J07",
+      "a96J08"
+    ],
+    "measure-theory": [
+      "a01A03",
+      "a01A04",
+      "a01A06",
+      "a01A07",
+      "a01A11",
+      "a01J02",
+      "a01J03",
+      "a02J03",
+      "a03J05",
+      "a92J01",
+      "a92J02",
+      "a92J03",
+      "a93A02",
+      "a93A04",
+      "a93J02",
+      "a93J03",
+      "a93J04",
+      "a94A01",
+      "a94A03",
+      "a94A04",
+      "a94A05",
+      "a94J01",
+      "a94J02",
+      "a94J04",
+      "a95A01",
+      "a95A02",
+      "a95A03",
+      "a95A04",
+      "a95A08",
+      "a95J05",
+      "a95J06",
+      "a95J07",
+      "a95J08",
+      "a96A01",
+      "a96A03",
+      "a96A04",
+      "a96J04",
+      "a96J05",
+      "a96J08"
+    ],
+    "real-analysis": [
+      "a00J02",
+      "a01A03",
+      "a01A06",
+      "a01A07",
+      "a01J03",
+      "a02J01",
+      "a03J05",
+      "a03J07",
+      "a92J01",
+      "a92J02",
+      "a92J03",
+      "a92J06",
+      "a93A02",
+      "a93A03",
+      "a93J01",
+      "a93J02",
+      "a93J03",
+      "a93J04",
+      "a94A03",
+      "a94A05",
+      "a94A06",
+      "a94J01",
+      "a94J02",
+      "a94J04",
+      "a94J07",
+      "a94J08",
+      "a95A03",
+      "a95A06",
+      "a95A07",
+      "a95A08",
+      "a95J02",
+      "a95J05",
+      "a95J07",
+      "a95J08",
+      "a96A01",
+      "a96A02",
+      "a96A04",
+      "a96J08"
+    ],
+    "contour-integration": [
+      "a00J06",
+      "a01A07",
+      "a01A08",
+      "a01A10",
+      "a01A11",
+      "a01A12",
+      "a01J05",
+      "a01J06",
+      "a02J06",
+      "a03J01",
+      "a92J06",
+      "a93J07",
+      "a94A02",
+      "a94A06",
+      "a94A09",
+      "a94J05",
+      "a94J06",
+      "a94J07",
+      "a95A07",
+      "a95J03",
+      "a95J04",
+      "a96A05",
+      "a96A06",
+      "a96A07",
+      "a96J06",
+      "a96J07",
+      "a96J08"
+    ],
+    "maximum-principle": [
+      "a00J04",
+      "a00J05",
+      "a00J06",
+      "a01A09",
+      "a01A12",
+      "a01J06",
+      "a02J07",
+      "a03J06",
+      "a03J07",
+      "a03J08",
+      "a92J04",
+      "a92J07",
+      "a93J05",
+      "a93J06",
+      "a94A02",
+      "a94A07",
+      "a94A08",
+      "a94J05",
+      "a94J08",
+      "a95A05",
+      "a95A08",
+      "a95J01",
+      "a95J02",
+      "a96J06",
+      "a96J07"
+    ],
+    "convergence": [
+      "a01A04",
+      "a01A07",
+      "a03J06",
+      "a03J08",
+      "a92J01",
+      "a92J02",
+      "a92J03",
+      "a93A01",
+      "a93A02",
+      "a93A03",
+      "a93J02",
+      "a93J03",
+      "a93J04",
+      "a93J07",
+      "a94A01",
+      "a94A04",
+      "a94A06",
+      "a95A04",
+      "a95A06",
+      "a95J05",
+      "a96A03",
+      "a96A06",
+      "a96J01",
+      "a96J07",
+      "a96J08"
+    ],
+    "integration-theorems": [
+      "a00J06",
+      "a01A05",
+      "a01A10",
+      "a01A12",
+      "a01J04",
+      "a02J02",
+      "a02J03",
+      "a02J05",
+      "a03J02",
+      "a03J04",
+      "a03J05",
+      "a92J03",
+      "a93A04",
+      "a93J02",
+      "a94A01",
+      "a94A02",
+      "a94A03",
+      "a94J01",
+      "a95J08",
+      "a96A01",
+      "a96A03",
+      "a96A04"
+    ],
+    "topology": [
+      "a00J04",
+      "a01A07",
+      "a03J06",
+      "a03J07",
+      "a92J02",
+      "a93A01",
+      "a93J06",
+      "a93J07",
+      "a94A05",
+      "a94A08",
+      "a94J05",
+      "a94J07",
+      "a95A08",
+      "a95J07",
+      "a96A07",
+      "a96J05",
+      "a96J06"
+    ],
+    "cauchy-schwarz-holder": [
+      "a00J01",
+      "a00J02",
+      "a01A10",
+      "a01J02",
+      "a02J02",
+      "a03J04",
+      "a92J01",
+      "a93A02",
+      "a93J04",
+      "a94A03",
+      "a94A04",
+      "a95A08",
+      "a95J08",
+      "a96A01",
+      "a96A02",
+      "a96A03"
+    ],
+    "functional-analysis": [
+      "a01A02",
+      "a01J06",
+      "a02J04",
+      "a03J04",
+      "a03J08",
+      "a94A08",
+      "a94A10",
+      "a94J03",
+      "a96A03",
+      "a96A05",
+      "a96J04",
+      "a96J05",
+      "a96J06"
+    ],
+    "argument-principle": [
+      "a00J04",
+      "a00J05",
+      "a01J06",
+      "a02J01",
+      "a03J01",
+      "a92J05",
+      "a93J07",
+      "a94A02",
+      "a94A09",
+      "a94J07",
+      "a95J03",
+      "a96A07"
+    ],
+    "uniform-convergence": [
+      "a00J06",
+      "a01A07",
+      "a01A08",
+      "a01J04",
+      "a93J07",
+      "a94A02",
+      "a94A03",
+      "a94A08",
+      "a95A06",
+      "a96J01"
+    ],
+    "fourier-analysis": [
+      "a01A04",
+      "a01A10",
+      "a01A11",
+      "a02J06",
+      "a03J04",
+      "a92J03",
+      "a94J04",
+      "a95J03",
+      "a96A04"
+    ],
+    "bounded-variation": [
+      "a93A01",
+      "a93A04",
+      "a93J01",
+      "a95A02",
+      "a95J06"
+    ],
+    "borel-cantelli": [
+      "a01A02",
+      "a03J02",
+      "a92J02",
+      "a93J03"
+    ],
+    "distribution-functions": [
+      "a01A06",
+      "a03J05"
+    ]
+  },
+  "technique_graph": [
+    {
+      "from": "measure-theory",
+      "to": "real-analysis",
+      "weight": 25
+    },
+    {
+      "from": "complex-analysis",
+      "to": "contour-integration",
+      "weight": 23
+    },
+    {
+      "from": "complex-analysis",
+      "to": "maximum-principle",
+      "weight": 20
+    },
+    {
+      "from": "convergence",
+      "to": "measure-theory",
+      "weight": 15
+    },
+    {
+      "from": "convergence",
+      "to": "real-analysis",
+      "weight": 13
+    },
+    {
+      "from": "complex-analysis",
+      "to": "topology",
+      "weight": 12
+    },
+    {
+      "from": "integration-theorems",
+      "to": "measure-theory",
+      "weight": 12
+    },
+    {
+      "from": "complex-analysis",
+      "to": "convergence",
+      "weight": 11
+    },
+    {
+      "from": "argument-principle",
+      "to": "complex-analysis",
+      "weight": 10
+    },
+    {
+      "from": "complex-analysis",
+      "to": "real-analysis",
+      "weight": 10
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "measure-theory",
+      "weight": 10
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "real-analysis",
+      "weight": 9
+    },
+    {
+      "from": "maximum-principle",
+      "to": "topology",
+      "weight": 8
+    },
+    {
+      "from": "argument-principle",
+      "to": "contour-integration",
+      "weight": 8
+    },
+    {
+      "from": "integration-theorems",
+      "to": "real-analysis",
+      "weight": 8
+    },
+    {
+      "from": "complex-analysis",
+      "to": "uniform-convergence",
+      "weight": 7
+    },
+    {
+      "from": "contour-integration",
+      "to": "maximum-principle",
+      "weight": 7
+    },
+    {
+      "from": "real-analysis",
+      "to": "topology",
+      "weight": 7
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "integration-theorems",
+      "weight": 7
+    },
+    {
+      "from": "contour-integration",
+      "to": "convergence",
+      "weight": 6
+    },
+    {
+      "from": "contour-integration",
+      "to": "real-analysis",
+      "weight": 6
+    },
+    {
+      "from": "contour-integration",
+      "to": "topology",
+      "weight": 6
+    },
+    {
+      "from": "measure-theory",
+      "to": "topology",
+      "weight": 6
+    },
+    {
+      "from": "contour-integration",
+      "to": "uniform-convergence",
+      "weight": 5
+    },
+    {
+      "from": "fourier-analysis",
+      "to": "measure-theory",
+      "weight": 5
+    },
+    {
+      "from": "complex-analysis",
+      "to": "measure-theory",
+      "weight": 5
+    },
+    {
+      "from": "convergence",
+      "to": "topology",
+      "weight": 5
+    },
+    {
+      "from": "complex-analysis",
+      "to": "functional-analysis",
+      "weight": 5
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "convergence",
+      "weight": 5
+    },
+    {
+      "from": "argument-principle",
+      "to": "maximum-principle",
+      "weight": 4
+    },
+    {
+      "from": "argument-principle",
+      "to": "topology",
+      "weight": 4
+    },
+    {
+      "from": "complex-analysis",
+      "to": "integration-theorems",
+      "weight": 4
+    },
+    {
+      "from": "contour-integration",
+      "to": "integration-theorems",
+      "weight": 4
+    },
+    {
+      "from": "integration-theorems",
+      "to": "uniform-convergence",
+      "weight": 4
+    },
+    {
+      "from": "convergence",
+      "to": "uniform-convergence",
+      "weight": 4
+    },
+    {
+      "from": "contour-integration",
+      "to": "fourier-analysis",
+      "weight": 4
+    },
+    {
+      "from": "fourier-analysis",
+      "to": "integration-theorems",
+      "weight": 4
+    },
+    {
+      "from": "functional-analysis",
+      "to": "maximum-principle",
+      "weight": 4
+    },
+    {
+      "from": "maximum-principle",
+      "to": "real-analysis",
+      "weight": 4
+    },
+    {
+      "from": "convergence",
+      "to": "integration-theorems",
+      "weight": 4
+    },
+    {
+      "from": "integration-theorems",
+      "to": "maximum-principle",
+      "weight": 3
+    },
+    {
+      "from": "maximum-principle",
+      "to": "uniform-convergence",
+      "weight": 3
+    },
+    {
+      "from": "contour-integration",
+      "to": "measure-theory",
+      "weight": 3
+    },
+    {
+      "from": "real-analysis",
+      "to": "uniform-convergence",
+      "weight": 3
+    },
+    {
+      "from": "topology",
+      "to": "uniform-convergence",
+      "weight": 3
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "complex-analysis",
+      "weight": 3
+    },
+    {
+      "from": "complex-analysis",
+      "to": "fourier-analysis",
+      "weight": 3
+    },
+    {
+      "from": "contour-integration",
+      "to": "functional-analysis",
+      "weight": 3
+    },
+    {
+      "from": "convergence",
+      "to": "maximum-principle",
+      "weight": 3
+    },
+    {
+      "from": "fourier-analysis",
+      "to": "real-analysis",
+      "weight": 3
+    },
+    {
+      "from": "bounded-variation",
+      "to": "measure-theory",
+      "weight": 3
+    },
+    {
+      "from": "functional-analysis",
+      "to": "topology",
+      "weight": 3
+    },
+    {
+      "from": "functional-analysis",
+      "to": "measure-theory",
+      "weight": 3
+    },
+    {
+      "from": "convergence",
+      "to": "fourier-analysis",
+      "weight": 2
+    },
+    {
+      "from": "distribution-functions",
+      "to": "measure-theory",
+      "weight": 2
+    },
+    {
+      "from": "distribution-functions",
+      "to": "real-analysis",
+      "weight": 2
+    },
+    {
+      "from": "measure-theory",
+      "to": "uniform-convergence",
+      "weight": 2
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "fourier-analysis",
+      "weight": 2
+    },
+    {
+      "from": "argument-principle",
+      "to": "real-analysis",
+      "weight": 2
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "functional-analysis",
+      "weight": 2
+    },
+    {
+      "from": "functional-analysis",
+      "to": "integration-theorems",
+      "weight": 2
+    },
+    {
+      "from": "convergence",
+      "to": "functional-analysis",
+      "weight": 2
+    },
+    {
+      "from": "borel-cantelli",
+      "to": "convergence",
+      "weight": 2
+    },
+    {
+      "from": "borel-cantelli",
+      "to": "measure-theory",
+      "weight": 2
+    },
+    {
+      "from": "borel-cantelli",
+      "to": "real-analysis",
+      "weight": 2
+    },
+    {
+      "from": "argument-principle",
+      "to": "uniform-convergence",
+      "weight": 2
+    },
+    {
+      "from": "borel-cantelli",
+      "to": "functional-analysis",
+      "weight": 1
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "contour-integration",
+      "weight": 1
+    },
+    {
+      "from": "argument-principle",
+      "to": "functional-analysis",
+      "weight": 1
+    },
+    {
+      "from": "borel-cantelli",
+      "to": "integration-theorems",
+      "weight": 1
+    },
+    {
+      "from": "fourier-analysis",
+      "to": "functional-analysis",
+      "weight": 1
+    },
+    {
+      "from": "distribution-functions",
+      "to": "integration-theorems",
+      "weight": 1
+    },
+    {
+      "from": "borel-cantelli",
+      "to": "topology",
+      "weight": 1
+    },
+    {
+      "from": "bounded-variation",
+      "to": "convergence",
+      "weight": 1
+    },
+    {
+      "from": "bounded-variation",
+      "to": "topology",
+      "weight": 1
+    },
+    {
+      "from": "bounded-variation",
+      "to": "integration-theorems",
+      "weight": 1
+    },
+    {
+      "from": "bounded-variation",
+      "to": "real-analysis",
+      "weight": 1
+    },
+    {
+      "from": "argument-principle",
+      "to": "convergence",
+      "weight": 1
+    },
+    {
+      "from": "argument-principle",
+      "to": "integration-theorems",
+      "weight": 1
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "uniform-convergence",
+      "weight": 1
+    },
+    {
+      "from": "functional-analysis",
+      "to": "uniform-convergence",
+      "weight": 1
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "maximum-principle",
+      "weight": 1
+    },
+    {
+      "from": "cauchy-schwarz-holder",
+      "to": "topology",
+      "weight": 1
+    },
+    {
+      "from": "maximum-principle",
+      "to": "measure-theory",
+      "weight": 1
+    },
+    {
+      "from": "argument-principle",
+      "to": "fourier-analysis",
+      "weight": 1
+    }
+  ]
+}
