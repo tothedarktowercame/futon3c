@@ -120,6 +120,12 @@ If a function returns nil, the original TEXT is used.")
 (defvar-local agent-chat--streaming-started nil
   "Non-nil when streaming output has started for the current turn.")
 
+(defvar-local agent-chat--streaming-origin nil
+  "Marker at the beginning of the in-flight streaming chunk.")
+
+(defvar-local agent-chat--streaming-skip-newline nil
+  "Internal flag to suppress newline insertion when committing a stream.")
+
 (defvar-local agent-chat--last-evidence-id nil
   "Last evidence entry ID for the current chat buffer.")
 
@@ -237,6 +243,8 @@ Optional FACE overrides `agent-chat-thinking-face'."
     (agent-chat-remove-thinking)
     (save-excursion
       (goto-char (marker-position agent-chat--prompt-marker))
+      (setq agent-chat--streaming-origin (copy-marker (point)))
+      (set-marker-insertion-type agent-chat--streaming-origin nil)
       (let ((name-start (point)))
         (insert (format "%s: " name))
         (let ((name-end (point)))
@@ -268,11 +276,29 @@ Optional FACE overrides `agent-chat-thinking-face'."
       (agent-chat-remove-thinking)
       (save-excursion
         (goto-char (marker-position agent-chat--streaming-marker))
-        (insert "\n\n"))))
+        (unless agent-chat--streaming-skip-newline
+          (insert "\n\n")))))
   (when agent-chat--streaming-marker
     (set-marker agent-chat--streaming-marker nil))
   (setq agent-chat--streaming-marker nil
+        agent-chat--streaming-origin nil
+        agent-chat--streaming-skip-newline nil
         agent-chat--streaming-started nil))
+
+(defun agent-chat-finalize-streaming-message (name text)
+  "Replace the active streaming chunk with a NAME message containing TEXT."
+  (let* ((content (or text ""))
+         (start (and agent-chat--streaming-origin
+                     (marker-position agent-chat--streaming-origin)))
+         (prompt (and (markerp agent-chat--prompt-marker)
+                      (marker-position agent-chat--prompt-marker))))
+    (when (and start prompt (< start prompt))
+      (let ((inhibit-read-only t))
+        (delete-region start prompt)))
+    (setq agent-chat--streaming-origin nil)
+    (let ((agent-chat--streaming-skip-newline t))
+      (agent-chat-insert-message name content)
+      (agent-chat-end-streaming-message))))
 
 ;;; Streaming filter
 
