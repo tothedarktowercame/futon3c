@@ -1304,7 +1304,8 @@ RESPOND WITH ONLY:
                                    :room (or (:room opts) "#futon")
                                    :make-page-message
                                    (fn [agent-id]
-                                     (str "@" agent-id " you appear stalled — check #futon and #math for current tasks"))}
+                                     (str "@" agent-id " you appear stalled — check #futon and "
+                                          (config/frontiermath-room) " for current tasks"))}
                      :escalate-config {:notify-fn
                                        (fn [agent-id reason]
                                          ;; 1. Blackboard notification
@@ -1422,7 +1423,7 @@ RESPOND WITH ONLY:
     (println "[dev] Tickle stopped.")))
 
 ;; =============================================================================
-;; FM-001 task dispatch — Tickle assigns proof obligations on #math
+;; FM-001 task dispatch — Tickle assigns proof obligations on the configured FrontierMath room
 ;; =============================================================================
 
 ;; --- FM Conductor thin wrappers (delegates to tickle_orchestrate.clj) ---
@@ -1439,7 +1440,7 @@ RESPOND WITH ONLY:
   (dev-fm/fm-assignable-obligations problem-id))
 
 (defn fm-dispatch!
-  "Have Tickle assign the top FM-001 obligation on #math."
+  "Have Tickle assign the top FM-001 obligation on the configured FrontierMath room."
   ([] (dev-fm/fm-dispatch!))
   ([problem-id] (dev-fm/fm-dispatch! problem-id)))
 
@@ -1669,18 +1670,18 @@ RESPOND WITH ONLY:
            (some? review?) (conj :review? review?))))
 
 ;; =============================================================================
-;; Mentor peripheral — claude-2 on #math
+;; Mentor peripheral — claude-2 on the configured FrontierMath room
 ;; =============================================================================
 
 (def !mentor dev-mentor/!mentor)
 
 (defn make-math-irc-read-fn
-  "Create an irc-read-fn that pulls #math messages from the IRC log ring buffer."
+  "Create an irc-read-fn that pulls configured FrontierMath room messages from the IRC log ring buffer."
   []
   (dev-mentor/make-math-irc-read-fn))
 
 (defn make-math-irc-send-fn
-  "Create an irc-send-fn that posts to #math via the bridge."
+  "Create an irc-send-fn that posts to the configured FrontierMath room via the bridge."
   []
   (dev-mentor/make-math-irc-send-fn))
 
@@ -1692,12 +1693,12 @@ RESPOND WITH ONLY:
    Options:
      :handle     — mentor handle (default \"mentor:FM-001\")
      :problem-id — FM problem to track (default \"FM-001\")
-     :channel    — IRC channel to observe (default \"#math\")
+     :channel    — IRC channel to observe (default configured FrontierMath room)
      :agent-id   — agent inhabiting this mentor (default \"claude-2\")"
   [& {:keys [handle problem-id channel agent-id]
       :or {handle "mentor:FM-001"
            problem-id "FM-001"
-           channel "#math"
+           channel (config/frontiermath-room)
            agent-id "claude-2"}}]
   (dev-mentor/start-mentor!
    :handle handle

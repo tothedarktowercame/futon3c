@@ -18,6 +18,10 @@ Environment variables:
                     (optional: #channel:agent-id,#channel2:agent-id)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
     BRIDGE_BOTS     (default: claude,codex)  - comma-separated bot nicks
+    FUTON3C_MATRIX_REPLY_NO_LIMITS
+                    (default: false)         — when enabled, Matrix-backed
+                    clean-output evolver replies use full IRC-safe line
+                    splitting instead of bridge-level clipping/cap notices
     INVOKE_TIMEOUT_SECONDS (default: 1800)   — invoke hard-timeout in seconds
     INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
@@ -76,6 +80,17 @@ def int_env(name, default, minimum=1):
     except ValueError:
         return default
     return max(minimum, value)
+
+
+def bool_env(name, default=False):
+    """Parse boolean env var with fallback.
+
+    Falsey values: 0,false,no,off (case-insensitive).
+    """
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _health_ok(base_url, timeout_seconds=0.5):
@@ -190,8 +205,9 @@ IRC_HOST = os.environ.get("IRC_HOST", "127.0.0.1")
 IRC_PORT = int_env("IRC_PORT", 6667, minimum=1)
 IRC_PASSWORD = os.environ.get("IRC_PASSWORD", "MonsterMountain")
 # IRC_CHANNEL is the primary channel; IRC_CHANNELS adds extras (comma-separated).
-# E.g. IRC_CHANNEL=#futon IRC_CHANNELS=#math,#ops → bot joins all three.
+# E.g. IRC_CHANNEL=#futon IRC_CHANNELS=<frontiermath-room>,#ops → bot joins all three.
 IRC_CHANNEL = os.environ.get("IRC_CHANNEL", "#futon")
+FRONTIERMATH_ROOM = (os.environ.get("FUTON3C_FRONTIERMATH_ROOM", "#math") or "#math").strip()
 IRC_CHANNELS = _dedupe_channels(
     [IRC_CHANNEL]
     + [
@@ -224,6 +240,7 @@ PAR_URL = f"{INVOKE_BASE}/api/alpha/evidence/par"
 PATTERNS_SEARCH_URL = f"{INVOKE_BASE}/api/alpha/patterns/search"
 CODEX_BRIDGE_SUMMARY_MODE = os.environ.get("CODEX_BRIDGE_SUMMARY_MODE", "summary").strip().lower()
 CODEX_USE_RAW_OUTPUT = CODEX_BRIDGE_SUMMARY_MODE == "raw"
+FUTON3C_MATRIX_REPLY_NO_LIMITS = bool_env("FUTON3C_MATRIX_REPLY_NO_LIMITS", False)
 MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
@@ -340,9 +357,6 @@ def _cleanup():
 
 atexit.register(_cleanup)
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))  # triggers atexit
-
-BRIDGE_FATAL_STOP = threading.Event()
-BRIDGE_FATAL_STOP_REASON = {"reason": None}
 
 
 def sd_notify(state):
@@ -473,20 +487,6 @@ class IRCBot:
             "command_owner_agent_map": self.command_owner_agent_map,
             "summary_mode": CODEX_BRIDGE_SUMMARY_MODE,
         }
-
-    def _request_orchestration_stop(self, reason):
-        """Fail closed for this bridge process after a fatal orchestration seam."""
-        text = (str(reason) or "fatal orchestration stop requested").strip()
-        BRIDGE_FATAL_STOP_REASON["reason"] = text
-        BRIDGE_FATAL_STOP.set()
-        log(self.nick, f"FATAL orchestration stop requested: {text}")
-        self.connected = False
-        if self.sock is not None:
-            try:
-                self.sock.close()
-            except Exception:
-                pass
-            self.sock = None
 
     def _bare_command_owner_agent_id(self, channel):
         """Return the configured bare ! owner for a room, if any."""
@@ -690,10 +690,6 @@ class IRCBot:
                     log(self.nick, f"{self.agent_id}: ready after interrupt; continuing {action_label}")
                     return {"ok": True, "status": status_before}
                 status_after = waited.get("status") or status_before
-                self._request_orchestration_stop(
-                    f"{self.agent_id} did not return ready within "
-                    f"{INVOKE_INTERRUPT_READY_TIMEOUT_SECONDS}s after interrupt"
-                )
                 return {
                     "ok": False,
                     "error": (
@@ -969,6 +965,10 @@ class IRCBot:
         # Claude/corpus/codex: clean IRC output with no queue/done framing.
         is_clean = self._uses_clean_irc_output()
         if is_clean:
+            if FUTON3C_MATRIX_REPLY_NO_LIMITS:
+                full_text = self._sanitize_for_irc(response.get("result", "") or "").strip()
+                self._say(full_text or "[no response]", max_lines=0, channel=reply_ch)
+                return
             if self.nick == "corpus":
                 summary = self._multiline_result_for_irc(response.get("result", ""))
                 self._say(summary, max_lines=8, channel=reply_ch)
@@ -1426,6 +1426,11 @@ class IRCBot:
         thread_channel = getattr(self._thread_context, "reply_channel", None)
         channel = channel or thread_channel or self._reply_channel or self.channel
         text = self._sanitize_for_irc(text)
+        try:
+            limit = None if max_lines is None else int(max_lines)
+        except (TypeError, ValueError):
+            limit = 6
+        unlimited = limit is None or limit <= 0
         lines = []
         for line in text.split("\n"):
             line = line.rstrip()
@@ -1437,13 +1442,14 @@ class IRCBot:
                 line = line[MAX_IRC_LINE:]
             lines.append(line)
 
-        truncated = len(lines) > max_lines
-        for line in lines[:max_lines]:
+        send_lines = lines if unlimited else lines[:limit]
+        truncated = (not unlimited) and len(lines) > limit
+        for line in send_lines:
             self._send(f"PRIVMSG {channel} :{line}")
             time.sleep(0.1)  # gentle rate limit
         if truncated:
             self._send(f"PRIVMSG {channel} :"
-                       f"[truncated {len(lines) - max_lines} more lines — "
+                       f"[truncated {len(lines) - limit} more lines — "
                        f"post details to mfuton gitlab issue instead]")
             time.sleep(0.1)
 
@@ -1461,6 +1467,9 @@ class IRCBot:
             if len(kv_pairs) >= 2:
                 lines = kv_pairs
 
+        if FUTON3C_MATRIX_REPLY_NO_LIMITS:
+            return "\n".join(lines)
+
         # Keep line payloads concise for IRC.
         clipped = [self._truncate(ln, max_len=180) for ln in lines]
         return "\n".join(clipped)
@@ -1474,10 +1483,10 @@ class IRCBot:
         )
 
     def _is_frontiermath_room_control_message(self, text, channel=None):
-        """Reserve dedicated #math Bell/claim mention forms for the runtime seam."""
+        """Reserve dedicated FrontierMath-room Bell/claim mention forms for the runtime seam."""
         channel = channel or self.channel
         normalized_channel = (channel or "").strip().lower()
-        if normalized_channel != "#math":
+        if normalized_channel != FRONTIERMATH_ROOM.lower():
             return False
         normalized_text = (text or "").strip()
         if not normalized_text:
@@ -2117,13 +2126,9 @@ class IRCBot:
     def run(self):
         """Main loop: read IRC messages, handle PINGs, commands, mentions."""
         while True:
-            if BRIDGE_FATAL_STOP.is_set():
-                return
             try:
                 self.connect()
                 while True:
-                    if BRIDGE_FATAL_STOP.is_set():
-                        return
                     line = self._readline()
                     if line is None:
                         log(self.nick, "Connection closed by server")
@@ -2218,8 +2223,6 @@ class IRCBot:
                 except Exception:
                     pass
                 self.sock = None
-            if BRIDGE_FATAL_STOP.is_set():
-                return
 
             log(self.nick, f"Reconnecting in {RECONNECT_DELAY}s...")
             time.sleep(RECONNECT_DELAY)
@@ -2278,7 +2281,7 @@ def _make_say_handler(bots_by_nick):
                 self._json(404, {"ok": False, "err": "unknown-nick",
                                  "available": list(bots_by_nick.keys())})
                 return
-            max_lines = payload.get("max_lines", 4)
+            max_lines = payload.get("max_lines", 0 if FUTON3C_MATRIX_REPLY_NO_LIMITS else 4)
             channel = payload.get("channel")  # optional: target specific channel
             bot._say(text, max_lines=max_lines, channel=channel)
             self._json(200, {"ok": True, "from": from_nick, "text": text,
@@ -2363,6 +2366,10 @@ def main():
         f"Codex bridge summary mode: {CODEX_BRIDGE_SUMMARY_MODE} "
         f"(raw_output={'yes' if CODEX_USE_RAW_OUTPUT else 'no'})"
     )
+    print(
+        "Matrix reply no-limits mode: "
+        + ("enabled" if FUTON3C_MATRIX_REPLY_NO_LIMITS else "disabled")
+    )
     fallback_owner = f"{bots[0].nick} ({bots[0].agent_id})"
     if IRC_COMMAND_OWNER_AGENT_MAP:
         owners = ", ".join(
@@ -2390,13 +2397,7 @@ def main():
         while True:
             _write_health(bots, started_at)
             sd_notify("WATCHDOG=1")
-            if BRIDGE_FATAL_STOP.wait(HEALTH_INTERVAL):
-                reason = BRIDGE_FATAL_STOP_REASON.get("reason") or "fatal orchestration stop requested"
-                print(
-                    f"Stopping ngircd bridge after fatal orchestration stop: {reason}",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
+            time.sleep(HEALTH_INTERVAL)
     except KeyboardInterrupt:
         print("\nShutting down bridge...")
         sys.exit(0)

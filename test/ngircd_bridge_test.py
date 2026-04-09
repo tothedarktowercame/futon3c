@@ -49,10 +49,6 @@ class NgircdBridgeAnnounceTest(unittest.TestCase):
 
 
 class NgircdBridgeBusyInterruptTest(unittest.TestCase):
-    def tearDown(self):
-        bridge.BRIDGE_FATAL_STOP.clear()
-        bridge.BRIDGE_FATAL_STOP_REASON["reason"] = None
-
     def test_prepare_agent_for_new_invoke_interrupts_running_codex(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
@@ -147,7 +143,7 @@ class NgircdBridgeBusyInterruptTest(unittest.TestCase):
         self.assertEqual("codex-job-22", payload["job-id"])
         self.assertEqual("irc:joe", payload["caller"])
 
-    def test_busy_codex_interrupt_timeout_requests_fatal_stop(self):
+    def test_busy_codex_interrupt_timeout_returns_error_without_stopping_bridge(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         with mock.patch.object(bot, "_interrupt_when_busy_enabled", return_value=True), \
              mock.patch.object(bot, "_agent_status", return_value={
@@ -159,8 +155,7 @@ class NgircdBridgeBusyInterruptTest(unittest.TestCase):
              mock.patch.object(bot, "_wait_for_agent_ready_after_interrupt", return_value={
                  "ok": False,
                  "status": {"status": "invoking", "session_id": "sid-busy", "running_jobs": 1},
-             }), \
-             mock.patch.object(bot, "_request_orchestration_stop") as stop:
+             }):
             result = bot._invoke_agent(
                 "finish T3-general",
                 "joe",
@@ -170,7 +165,6 @@ class NgircdBridgeBusyInterruptTest(unittest.TestCase):
             )
         self.assertFalse(result["ok"])
         self.assertIn("invoke interrupt timeout", result["error"])
-        stop.assert_called_once()
 
 
 class NgircdBridgeCodexFormattingTest(unittest.TestCase):
@@ -222,6 +216,35 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
         self.assertNotIn("(session ", text)
         self.assertNotIn("artifact refs", text)
         self.assertTrue(text.startswith("Re-running `kissat --time=3600 FM001-n6.cnf` now."))
+        self.assertEqual(2, say.call_args.kwargs["max_lines"])
+
+    def test_codex_clean_summary_can_opt_into_matrix_no_limit_mode(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        full_text = "Line one survives whole.\n" + ("x" * 600) + "\nLine three survives too."
+        with mock.patch.object(bridge, "FUTON3C_MATRIX_REPLY_NO_LIMITS", True), \
+             mock.patch.object(bot, "_say") as say:
+            bot._emit_success_reply({
+                "ok": True,
+                "result": full_text,
+                "session_id": "019ccdc0abcdef",
+            }, "#math", "codex-job-2", multi_message=False)
+        say.assert_called_once()
+        self.assertEqual(full_text, say.call_args.args[0])
+        self.assertEqual(0, say.call_args.kwargs["max_lines"])
+
+    def test_claude_clean_summary_can_opt_into_matrix_no_limit_mode(self):
+        bot = bridge.IRCBot("math-mentor", "claude-2", "#math", "localhost", 6667, "pw")
+        full_text = "Paragraph one stays whole.\n" + ("y" * 520) + "\nParagraph three stays whole too."
+        with mock.patch.object(bridge, "FUTON3C_MATRIX_REPLY_NO_LIMITS", True), \
+             mock.patch.object(bot, "_say") as say:
+            bot._emit_success_reply({
+                "ok": True,
+                "result": full_text,
+                "session_id": "019ccdc0abcdef",
+            }, "#math", "claude-job-2", multi_message=False)
+        say.assert_called_once()
+        self.assertEqual(full_text, say.call_args.args[0])
+        self.assertEqual(0, say.call_args.kwargs["max_lines"])
 
     def test_fallback_summary_omits_no_artifact_and_execution_suffixes(self):
         bot = bridge.IRCBot("helper", "codex-1", "#math", "localhost", 6667, "pw")
@@ -267,6 +290,15 @@ class NgircdBridgeSurfaceContractTest(unittest.TestCase):
         self.assertEqual(3, send.call_count)
         self.assertIn("post details to mfuton gitlab issue instead", send.call_args_list[2].args[0])
         self.assertNotIn("post details to GitHub instead", send.call_args_list[2].args[0])
+
+    def test_say_zero_max_lines_disables_truncation_notice(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_send") as send, mock.patch.object(bridge.time, "sleep"):
+            bot._say("line1\nline2\nline3", max_lines=0, channel="#math")
+        self.assertEqual(3, send.call_count)
+        self.assertEqual("PRIVMSG #math :line1", send.call_args_list[0].args[0])
+        self.assertEqual("PRIVMSG #math :line2", send.call_args_list[1].args[0])
+        self.assertEqual("PRIVMSG #math :line3", send.call_args_list[2].args[0])
 
     def test_extract_artifact_refs_promotes_frontiermath_local_paths(self):
         text = (
