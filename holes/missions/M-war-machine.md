@@ -925,10 +925,30 @@ reports where heads are missing (structural gap = priority).
 - No Clojure REPL wired in Emacs for launching the visualiser — currently
   requires `clojure -M:war-machine` from terminal.
 
+**Critical bug fixed this session:** `emit-context-evidence!` had shape
+violations (string tags/ref-type where keywords required). The evidence store
+silently rejected every context-retrieval entry. Notifications fired (visible
+to Joe), evidence writes failed (invisible). Hot-fixed via Drawbridge and
+patched in source. The Baldwin loop (fast cycle → evidence store → slow cycle)
+is now connected. Context-retrieval entries are flowing into the evidence store.
+
+**Forward integration point: structural graph + PSR-as-graph-rewrite.**
+cf. github.com/tirth8205/code-review-graph — AST-based structural graph
+(functions, classes, imports as nodes; calls, inheritance, test coverage as
+edges) queried via MCP at review time. The war machine could consume such a
+graph as another scan source (`scan-structural-graph`). PSR/PUR would then
+operate as typed annotations on graph edges — PSR predicts a graph
+transformation, PUR records the delta between predicted and actual. This
+connects M-self-representing-stack (the system describes itself structurally)
+to M-war-machine (the system observes itself strategically). Not in scope for
+this mission but the engine architecture supports it: new scan functions and
+AIF heads slot in without redesign.
+
 **What remains for INSTANTIATE completion:**
 
+- [x] Connect context retrieval → pattern-reuse observation channel (bug fix:
+  shape validation, evidence now flowing)
 - [ ] Surface portfolio adjacent-possible set + EFE-ranked missions
-- [ ] Connect context retrieval → pattern-reuse observation channel
 - [ ] PSR/PUR priming: sessions start with relevant pattern context
 - [ ] `M-x war-machine` Emacs command (needs JVM REPL)
 - [ ] Hobbes response: demonstrated by the four views + judgement layer
