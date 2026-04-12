@@ -1,7 +1,7 @@
 # Mission: War Machine
 
 **Date:** 2026-04-10
-**Status:** INSTANTIATE (IDENTIFY→MAP→DERIVE→ARGUE→VERIFY complete 2026-04-11)
+**Status:** DOCUMENT (IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE complete 2026-04-12)
 **Owner:** Joe + Claude (cross-stack)
 **Cross-ref:** M-stack-inhabitation (umbrella), M-a-sorry-enterprise (sorry closure model),
   holistic-argument-sketch.md (the thesis), war-room.md (WR-1 through WR-4)
@@ -944,15 +944,57 @@ to M-war-machine (the system observes itself strategically). Not in scope for
 this mission but the engine architecture supports it: new scan functions and
 AIF heads slot in without redesign.
 
-**What remains for INSTANTIATE completion:**
+**INSTANTIATE checklist (final):**
 
-- [x] Connect context retrieval → pattern-reuse observation channel (bug fix:
-  shape validation, evidence now flowing)
-- [ ] Surface portfolio adjacent-possible set + EFE-ranked missions
-- [ ] PSR/PUR priming: sessions start with relevant pattern context
-- [ ] `M-x war-machine` Emacs command (needs JVM REPL)
-- [ ] Hobbes response: demonstrated by the four views + judgement layer
-  showing coordination without command — invariants enforced, patterns
-  activating, priorities emerging from composed head states
+- [x] Connect context retrieval → pattern-reuse observation channel
+- [x] Surface portfolio adjacent-possible set + EFE-ranked missions
+- [x] `M-x war-machine` Emacs command (Babashka, no JVM needed)
+- [x] Hobbes response: four views + judgement layer showing coordination
+  without command (see below)
+- [ ] PSR/PUR priming → deferred to structural graph integration (future mission)
 
-## 7. DOCUMENT — _pending_
+**INSTANTIATE exit (2026-04-12):**
+
+The War Machine is operational as an always-breaking-down-and-rebuilding
+assemblage. It does not aim for perfection — it observes flows, detects
+capture, and reports. The machine breaks down when a scan fails or an
+endpoint goes dark; the gaps are visible as dark hexes and missing data,
+which is itself useful information.
+
+Commits: `futon0@fe4991b`, `futon3c@a6d4e87`, `futon4@d200f04`
+
+The Hobbes response is demonstrated in material terms:
+
+1. **Invariants replace the sovereign's decree.** 9 operational families
+   enforce structural laws without command. 9 candidate families and 40
+   individual candidates show where governance needs to grow. The invariant
+   runner reports violations and obligations — non-blocking quality signals,
+   not gates that stop work.
+
+2. **Patterns replace law with tendency.** 954 patterns across 56
+   collections, spatialized by MiniLM embedding similarity. Per-turn
+   context retrieval activates relevant patterns as ambient knowledge
+   (desktop notification + evidence entry). The Baldwin loop connects
+   fast-cycle activation to slow-cycle strategic synthesis.
+
+3. **The pocketwatch replaces discipline with awareness.** All four ticks
+   fire in hermit mode — the war machine makes this visible. The operator
+   sees "stack at 91%, consulting at 0%, all constraints violated" and
+   decides what to do. The machine does not command.
+
+4. **The evidence landscape replaces the social contract.** Every turn is
+   logged. Every pattern retrieval is certified. Every invariant check is
+   queryable. Trust is accumulated from evidence, not granted by authority.
+
+The response to Hobbes is not a philosophical argument but a running system
+with an evidence trail. The war machine is upgradable — see
+`futon0/README-war-machine.md` for how to add scans, heads, views, and
+invariant domains.
+
+## 7. DOCUMENT
+
+Documentation artifacts:
+- `futon0/README-war-machine.md` — Upgrade guide (how to extend the assemblage)
+- `futon5a/data/war-machine-exotype.edn` — AIF+ wiring diagram
+- `futon5a/data/war-machine-terminal-vocabulary.edn` — Preferences and free energy
+- This mission document (M-war-machine.md) — checkpoints 1-3 + INSTANTIATE exit
