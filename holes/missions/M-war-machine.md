@@ -847,5 +847,92 @@ logic model.
 - [ ] Replay slider for temporal position
 - [ ] `M-x war-machine` Emacs command
 - [ ] Hobbes response: coordination without command demonstrated by running system
+- [ ] Clojure REPL against the JVM (needed to launch visualiser from Emacs)
+
+### Checkpoint 3 (2026-04-12): Judgement layer + four-view visualiser + Arxana invariant browser
+
+**Commits:** `futon0@df612b8`, `futon4@d200f04`, `futon3c@6de0fdf`
+
+**Design shift:** Mid-course redesign from dashboard to strategic engine. The
+previous session built scans and a hex grid; this session asked "what can we
+actually learn from this?" and concluded the war machine needs a judgement
+layer — the bridge between raw observations and actionable priorities. The
+engine is separate from the visualiser (same pattern as cyberants: the ant
+colony runs independently, the viz is a debugger).
+
+**What was built:**
+
+1. **Judgement layer** (war_machine.clj) — the missing inference step between
+   observe and render. Computes free energy (G = 0.45, pragmatic + epistemic),
+   infers strategic mode (currently: hermit, 10% prior), ranks 15 priorities
+   by type (missing AIF heads, channel gaps, unwired invariant families,
+   critical path missions). Detects 5 active losses (hermit mode, stack at 91%,
+   consulting at 0%, all ticks firing, sorrys accumulating).
+
+2. **AIF head integration** — queries portfolio inference (MAINTAIN, urgency
+   0.74, tau 0.93), detects 2 missing heads (mission-aif-head has code but no
+   HTTP endpoint; session-aif-head doesn't exist yet per M-aif-head).
+
+3. **Live invariant runner** — queries all 6 domain checks (agency, tickle,
+   proof, mission, codex, portfolio) via Drawbridge /eval endpoint. Currently:
+   5 domains active, all clean, 0 violations, 0 obligations.
+
+4. **Support/attack enrichment** — overlays invariant and AIF head health onto
+   holistic argument claims. S1 gets "9/18 families operational", A1 gets "9
+   candidate families unwired", A2 gets "2 AIF heads missing". Support coverage
+   jumps from 60% to 80% with invariant evidence; attack from 0% to 50%.
+
+5. **Four-view visualiser** — toggle cycles Stack → Missions → Invariants →
+   Patterns. Invariants view: concentric hex rings (9 operational green core,
+   9 candidate amber ring, 30 individual candidates dim outer ring). Patterns
+   view: 56 collections spatialized by MiniLM embedding similarity
+   (top-2-variance dimensions from 384-dim centroids), semantic clusters
+   visible (math collections near each other, agency/coordination near each
+   other, etc).
+
+6. **Pattern scan** — loads 954 patterns from TSV index, groups into 56
+   collections, computes embedding coordinates from MiniLM centroid projection.
+
+7. **Arxana Browser** — Invariants menu restructured: Operational Families
+   (18 families grouped by I0-I4 layers with headers), Live Violations,
+   Candidate Queue, Invariant Guide (explains layers, lifecycle, ownership).
+
+8. **futon3c endpoint** — GET /api/alpha/invariants ready (activates on next
+   server restart). War machine uses Drawbridge /eval fallback in the meantime.
+
+**Key architectural insight:** The war machine integrates AIF heads — it reads
+their judgements rather than replacing them. "Sessions are ants" (each with a
+trail and a momentary existence). The war machine is the Leviathan response:
+coordination without sovereignty via invariant enforcement, pattern activation,
+and AIF head composition. New heads are added as they're built; the system
+reports where heads are missing (structural gap = priority).
+
+**Honest gaps:**
+
+- Free energy uses the terminal vocabulary preferences (C/preferred from the
+  exotype) but the observation vector's support/attack channels read 0% from
+  evidence text — the claim-matching regexes may be too narrow. Invariant
+  enrichment partially compensates.
+
+- The 4 views are display-only debuggers for the engine. The engine's priority
+  list is the actionable output (rendered in markdown). The hex views verify
+  the engine isn't hallucinating.
+
+- Pattern embedding coordinates use raw top-2-variance dimensions, not true
+  PCA. Semantic clustering is visible but could be tighter with proper
+  dimensionality reduction.
+
+- No Clojure REPL wired in Emacs for launching the visualiser — currently
+  requires `clojure -M:war-machine` from terminal.
+
+**What remains for INSTANTIATE completion:**
+
+- [ ] Surface portfolio adjacent-possible set + EFE-ranked missions
+- [ ] Connect context retrieval → pattern-reuse observation channel
+- [ ] PSR/PUR priming: sessions start with relevant pattern context
+- [ ] `M-x war-machine` Emacs command (needs JVM REPL)
+- [ ] Hobbes response: demonstrated by the four views + judgement layer
+  showing coordination without command — invariants enforced, patterns
+  activating, priorities emerging from composed head states
 
 ## 7. DOCUMENT — _pending_
