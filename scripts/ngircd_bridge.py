@@ -1010,6 +1010,35 @@ class IRCBot:
             self._say(f"[done {job_id}] {summary}",
                       max_lines=max_lines, channel=reply_ch)
 
+    @staticmethod
+    def _frontiermath_completion_bell_requested(prompt, sender):
+        prompt_text = str(prompt or "")
+        if "Signal @tickle BELL SPEC_VERIFIED when done." in prompt_text:
+            return True
+        return (
+            str(sender or "").strip().lower().startswith("tickle")
+            and "T3-general control:" in prompt_text
+            and "mfuton/data/frontiermath-local/FM-" in prompt_text
+        )
+
+    @staticmethod
+    def _response_already_signals_frontiermath_bell(response):
+        if not isinstance(response, dict):
+            return False
+        result_text = str(response.get("result", "") or "")
+        return "BELL SPEC_VERIFIED" in result_text
+
+    def _maybe_emit_frontiermath_completion_bell(self, prompt, sender, response, reply_ch):
+        if (reply_ch or "").strip().lower() != FRONTIERMATH_ROOM.lower():
+            return False
+        if not self._frontiermath_completion_bell_requested(prompt, sender):
+            return False
+        if self._response_already_signals_frontiermath_bell(response):
+            return False
+        self._say("@tickle BELL SPEC_VERIFIED", max_lines=1, channel=reply_ch)
+        log(self.nick, f"Emitted synthetic FrontierMath completion bell on {reply_ch}")
+        return True
+
     def _fetch_job(self, job_id):
         """Fetch canonical invoke-job snapshot from futon3c, or None."""
         if not job_id:
@@ -1229,6 +1258,7 @@ class IRCBot:
                 invoke_meta = response.get("invoke_meta") if isinstance(response, dict) else None
                 if response.get("ok"):
                     self._emit_success_reply(response, reply_ch, job_id, multi_message=multi_message)
+                    self._maybe_emit_frontiermath_completion_bell(prompt, sender, response, reply_ch)
                     self._record_delivery_receipt(
                         invoke_meta,
                         delivered=True,

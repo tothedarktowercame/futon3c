@@ -261,6 +261,78 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
         self.assertNotIn("no artifact refs", text)
         self.assertNotIn("no execution evidence", text)
 
+    def test_worker_emits_synthetic_frontiermath_completion_bell_when_prompt_requires_it(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        bot._invoke_queue.put({
+            "job_id": "codex-job-bell-1",
+            "sender": "tickle",
+            "prompt": "Do the control. Signal @tickle BELL SPEC_VERIFIED when done.",
+            "reply_channel": "#math",
+            "multi_message": False,
+        })
+        bot._invoke_queue.put(None)
+        with mock.patch.object(bot, "_invoke_agent", return_value={
+            "ok": True,
+            "result": "Control finished cleanly.",
+            "session_id": "sid-bell-1",
+        }), mock.patch.object(bot, "_emit_success_reply") as emit, \
+             mock.patch.object(bot, "_record_delivery_receipt") as record, \
+             mock.patch.object(bot, "_say") as say:
+            bot._invoke_worker_loop()
+        emit.assert_called_once()
+        record.assert_called_once()
+        say.assert_called_once_with("@tickle BELL SPEC_VERIFIED", max_lines=1, channel="#math")
+
+    def test_worker_skips_synthetic_frontiermath_completion_bell_when_result_already_contains_it(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        bot._invoke_queue.put({
+            "job_id": "codex-job-bell-2",
+            "sender": "tickle",
+            "prompt": "Do the control. Signal @tickle BELL SPEC_VERIFIED when done.",
+            "reply_channel": "#math",
+            "multi_message": False,
+        })
+        bot._invoke_queue.put(None)
+        with mock.patch.object(bot, "_invoke_agent", return_value={
+            "ok": True,
+            "result": "Done.\n@tickle BELL SPEC_VERIFIED",
+            "session_id": "sid-bell-2",
+        }), mock.patch.object(bot, "_emit_success_reply") as emit, \
+             mock.patch.object(bot, "_record_delivery_receipt") as record, \
+             mock.patch.object(bot, "_say") as say:
+            bot._invoke_worker_loop()
+        emit.assert_called_once()
+        record.assert_called_once()
+        say.assert_not_called()
+
+    def test_worker_emits_synthetic_frontiermath_completion_bell_for_wrapped_tickle_dispatch_prompt(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        bot._invoke_queue.put({
+            "job_id": "codex-job-bell-3",
+            "sender": "tickle",
+            "prompt": (
+                "[Surface: IRC | Channel: #math | Speaker: tickle | Mode: task]\n\n"
+                "tickle: @codex T3-general control: run exactly one n=3 control using "
+                "mfuton/data/frontiermath-local/FM-001/artifacts/T3-search/"
+                "2026-03-26-generated-witness/scripts/fm001/generate_witness.py "
+                "--check 3 --method wesley."
+            ),
+            "reply_channel": "#math",
+            "multi_message": False,
+        })
+        bot._invoke_queue.put(None)
+        with mock.patch.object(bot, "_invoke_agent", return_value={
+            "ok": True,
+            "result": "Control finished cleanly.",
+            "session_id": "sid-bell-3",
+        }), mock.patch.object(bot, "_emit_success_reply") as emit, \
+             mock.patch.object(bot, "_record_delivery_receipt") as record, \
+             mock.patch.object(bot, "_say") as say:
+            bot._invoke_worker_loop()
+        emit.assert_called_once()
+        record.assert_called_once()
+        say.assert_called_once_with("@tickle BELL SPEC_VERIFIED", max_lines=1, channel="#math")
+
 
 class NgircdBridgeSurfaceContractTest(unittest.TestCase):
     def test_local_math_mentor_nick_keeps_brief_surface_contract(self):
