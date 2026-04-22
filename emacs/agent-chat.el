@@ -86,6 +86,15 @@
 (defvar-local agent-chat--session-id nil
   "Current session ID displayed in the buffer header.")
 
+(defvar-local agent-chat--session-turn-count nil
+  "Cached number of evidence chat turns recorded for the current session.")
+
+(defvar-local agent-chat--evidence-url nil
+  "Evidence API endpoint used for session turn metrics.")
+
+(defvar-local agent-chat--evidence-timeout 1
+  "Timeout (seconds) for evidence API queries.")
+
 (defvar-local agent-chat--face-alist nil
   "Alist mapping speaker name to face, e.g. ((\"claude\" . face)).")
 
@@ -216,8 +225,18 @@ scrolled away, their view and cursor are left undisturbed."
         (let ((next (or (next-single-property-change (point) prop nil (point-max))
                         (point-max))))
           (if (get-text-property (point) prop)
-              (delete-region (line-beginning-position)
-                             (min (point-max) (1+ (line-end-position))))
+              (let* ((span-start (point))
+                     (span-end next)
+                     (line-start (line-beginning-position))
+                     (line-end (line-end-position)))
+                (if (= span-start line-start)
+                    (delete-region line-start
+                                   (min (point-max) (1+ line-end)))
+                  (delete-region span-start
+                                 (if (and (< span-end (point-max))
+                                          (eq (char-after span-end) ?\n))
+                                     (1+ span-end)
+                                   span-end))))
             (goto-char next)))))))
 
 (defun agent-chat-update-progress (status-text &optional face)
@@ -230,6 +249,8 @@ Optional FACE overrides `agent-chat-thinking-face'."
     ;; Insert new progress line
     (save-excursion
       (goto-char (marker-position agent-chat--prompt-marker))
+      (unless (bolp)
+        (insert "\n"))
       (insert (propertize (concat status-text "\n")
                           'face (or face 'agent-chat-thinking-face)
                           prop t)))))
@@ -828,7 +849,9 @@ CONFIG keys:
         (agent-name (plist-get config :agent-name))
         (agent-id (plist-get config :agent-id))
         (thinking-text (plist-get config :thinking-text))
-        (thinking-prop (plist-get config :thinking-prop)))
+        (thinking-prop (plist-get config :thinking-prop))
+        (evidence-url (plist-get config :evidence-url))
+        (evidence-timeout (plist-get config :evidence-timeout)))
     ;; Set buffer-local state
     (setq agent-chat--face-alist
           (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
@@ -837,11 +860,13 @@ CONFIG keys:
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
+    (setq agent-chat--evidence-url evidence-url)
+    (setq agent-chat--evidence-timeout (or evidence-timeout 1))
     (setq-local agent-chat-hide-markup agent-chat-hide-markup-default)
     ;; Insert header
     (insert (propertize (concat title " ") 'face 'bold)
-            (propertize (format "(session: %s)\n" agent-chat--session-id)
-                        'face 'font-lock-comment-face))
+            (propertize (agent-chat--session-header-text)
+                        'face 'font-lock-comment-face) "\n")
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face)))
@@ -859,7 +884,8 @@ CONFIG keys:
     (set-marker-insertion-type agent-chat--prompt-marker t)
     (agent-chat-enable-markdown-font-lock)
     (goto-char (point-max))
-    (agent-chat-scroll-to-bottom)))
+    (agent-chat-scroll-to-bottom)
+    (agent-chat--refresh-session-turn-count)))
 
 ;;; Session helpers
 
@@ -875,18 +901,30 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
         (unless (string-empty-p sid)
           (funcall setter-fn sid))))))
 
+(defun agent-chat--session-header-text ()
+  "Return the formatted session header text with turn counts."
+  (format "(session: %s%s)"
+          (or agent-chat--session-id "pending")
+          (if (numberp agent-chat--session-turn-count)
+              (format ", turns: %d" agent-chat--session-turn-count)
+            "")))
+
+(defun agent-chat--update-session-header-line ()
+  "Refresh the session header line (session id + turns)."
+  (let ((inhibit-read-only t))
+    (save-excursion
+      (goto-char (point-min))
+      (when (re-search-forward "(session:[^\n]+)" (line-end-position 2) t)
+        (replace-match (propertize (agent-chat--session-header-text)
+                                   'face 'font-lock-comment-face)
+                       nil nil)))))
+
 (defun agent-chat-update-session-id (new-id)
   "Update the session ID displayed in the buffer header.
 Replaces the `(session: ...)' text in the first line."
   (when (and new-id (not (equal new-id agent-chat--session-id)))
-    (let ((inhibit-read-only t)
-          (old-text (format "(session: %s)" agent-chat--session-id))
-          (new-text (format "(session: %s)" new-id)))
-      (save-excursion
-        (goto-char (point-min))
-        (when (search-forward old-text (line-end-position 2) t)
-          (replace-match (propertize new-text 'face 'font-lock-comment-face) t t)))
-      (setq agent-chat--session-id new-id))))
+    (setq agent-chat--session-id new-id)
+    (agent-chat--refresh-session-turn-count)))
 
 ;;; Evidence helpers
 
@@ -1040,6 +1078,50 @@ Replaces the `(session: ...)' text in the first line."
       (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
         (set session-var sid)
         (set last-id-var new-id)))))
+
+(defconst agent-chat--session-turn-limit 1000
+  "Maximum number of evidence entries to fetch when counting session turns.")
+
+(defun agent-chat--fetch-session-turn-count (sid)
+  "Return number of chat-turn evidence entries for SID, or nil on failure."
+  (when (and (agent-chat-evidence-enabled-p agent-chat--evidence-url)
+             (stringp sid)
+             (not (string-empty-p sid)))
+    (let* ((base (agent-chat-evidence-base-url agent-chat--evidence-url))
+           (query (format "session-id=%s&limit=%d"
+                          (url-hexify-string sid)
+                          agent-chat--session-turn-limit))
+           (url (format "%s/api/alpha/evidence?%s" base query))
+           (response (agent-chat-evidence-request-json
+                      "GET" url agent-chat--evidence-timeout))
+           (status (plist-get response :status))
+           (entries (and (integerp status)
+                         (<= 200 status) (< status 300)
+                         (plist-get (plist-get response :json) :entries))))
+      (when entries
+        (cl-loop for entry in entries
+                 for body = (plist-get entry :evidence/body)
+                 when (and (plist-get body :event)
+                           (string= "chat-turn" (plist-get body :event)))
+                 count 1)))))
+
+(defun agent-chat--refresh-session-turn-count ()
+  "Refresh cached session turn count by querying the evidence API."
+  (if (and (stringp agent-chat--session-id)
+           (not (string-empty-p agent-chat--session-id)))
+      (let ((count (agent-chat--fetch-session-turn-count agent-chat--session-id)))
+        (setq agent-chat--session-turn-count count)
+        (agent-chat--update-session-header-line))
+    (setq agent-chat--session-turn-count nil)
+    (agent-chat--update-session-header-line)))
+
+(defun agent-chat-note-turn-recorded ()
+  "Increment the cached session turn count after emitting evidence."
+  (when (stringp agent-chat--session-id)
+    (if (numberp agent-chat--session-turn-count)
+        (cl-incf agent-chat--session-turn-count)
+      (setq agent-chat--session-turn-count 1))
+    (agent-chat--update-session-header-line)))
 
 ;;; Transport availability checks (shared)
 
