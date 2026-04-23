@@ -64,6 +64,7 @@
             [futon3c.dev.apm :as dev-apm]
             [futon3c.dev.apm-conductor :as dev-apm-conductor]
             [futon3c.dev.apm-conductor-v2 :as dev-apm-conductor-v2]
+            [futon3c.dev.apm-conductor-v3 :as dev-apm-conductor-v3]
             [futon3c.dev.arse :as dev-arse]
             [futon3c.dev.fm :as dev-fm]
             [futon3c.dev.ct :as dev-ct]
@@ -577,6 +578,146 @@
 
 (defonce !f1-sys (atom nil))
 (defonce !evidence-store (atom nil))
+
+;; Ring buffer for recent context retrieval results (displayed in HUD)
+(defonce !recent-context (atom []))
+
+(defn- extract-user-message
+  "Strip surface contract header from prompt, returning just the user message."
+  [prompt-str]
+  (let [marker "\nUser message:\n"
+        idx (str/index-of prompt-str marker)]
+    (if idx
+      (subs prompt-str (+ idx (count marker)))
+      prompt-str)))
+
+(defn- run-futon3a-search
+  "Run futon3a semantic search against a query string.
+   Returns a vector of {:id :title :score} maps, or nil on failure."
+  [query-text]
+  (let [futon3a-root (or (System/getenv "FUTON3A_ROOT")
+                         (str (System/getProperty "user.home") "/code/futon3a"))
+        venv-python (str futon3a-root "/.venv/bin/python3")
+        search-script (str futon3a-root "/scripts/notions_search.py")
+        embeddings (str futon3a-root "/resources/notions/minilm_pattern_embeddings.json")]
+    (when (.exists (java.io.File. venv-python))
+      (let [pb (doto (ProcessBuilder.
+                       [venv-python search-script
+                        "--query" query-text
+                        "--top" "3"
+                        "--embeddings" embeddings
+                        "--json"])
+                 (.redirectErrorStream true))
+            proc (.start pb)
+            _ (.waitFor proc 15000 java.util.concurrent.TimeUnit/MILLISECONDS)
+            out (slurp (.getInputStream proc))
+            json-line (->> (str/split-lines out)
+                           (filter #(str/starts-with? % "["))
+                           first)]
+        (when json-line
+          (json/parse-string json-line true))))))
+
+(defn- format-context-body
+  "Format retrieval results as a notification body string."
+  [results]
+  (str/join "\n"
+    (map (fn [r]
+           (format "  [%.2f] %s: %s"
+                   (double (:score r))
+                   (:id r)
+                   (or (:title r) "")))
+         results)))
+
+(defn- emit-context-evidence!
+  "Emit a context-retrieval evidence entry synchronously. Returns the evidence ID."
+  [agent-id session-id turn-n query-text result-map]
+  (try
+    (when-let [store @!evidence-store]
+      (let [result (estore/append* store
+                     {:subject {:ref/type :agent :ref/id (str agent-id)}
+                      :type :coordination
+                      :claim-type :step
+                      :author (str agent-id)
+                      :session-id (or session-id "dev-invoke")
+                      :body {"event" "context-retrieval"
+                             "agent-id" (str agent-id)
+                             "at" (str (java.time.Instant/now))
+                             "turn" turn-n
+                             "query" (subs query-text 0 (min 100 (count query-text)))
+                             "results" result-map}
+                      :tags [:invoke :dev :context-retrieval :futon3a]})]
+        (get-in result [:entry :evidence/id])))
+    (catch Throwable _ nil)))
+
+(defn- project-context-hud!
+  "Project the recent context ring buffer to the *context* blackboard buffer."
+  [bb-opts]
+  (try
+    (let [ctx @!recent-context
+          content (str "Context Lookback (" (count ctx) " turns)\n"
+                       (apply str (repeat 60 "\u2500")) "\n"
+                       (str/join "\n"
+                         (map-indexed
+                           (fn [i {:keys [turn eid agent at query results]}]
+                             (str "\n" (inc i) ". Turn " turn
+                                  " \u00b7 " agent " \u00b7 " eid "\n"
+                                  "   " (subs at 11 (min 19 (count at))) " | "
+                                  (subs query 0 (min 60 (count query)))
+                                  (when (> (count query) 60) "...") "\n"
+                                  (str/join "\n"
+                                    (map (fn [r]
+                                           (format "   [%.2f] %s"
+                                                   (double (:score r))
+                                                   (:id r)))
+                                         results))))
+                           (rseq ctx))))]
+      (bb/blackboard! "*context*" content
+                      (merge {:width 60 :slot 2 :no-display true} bb-opts)))
+    (catch Throwable _ nil)))
+
+(defn- context-retrieval!
+  "Post-turn context retrieval: search futon3a patterns against the A->B
+   protopattern, emit evidence, notify desktop, update HUD lookback.
+   Fire-and-forget — call from a future."
+  [{:keys [agent-id session-id prompt-str response-text turn-counter bb-opts]}]
+  (try
+    (let [user-msg (extract-user-message prompt-str)
+          response-preview (subs (or response-text "") 0 (min 200 (count (or response-text ""))))
+          proto-text (str (subs user-msg 0 (min 200 (count user-msg)))
+                         " " response-preview)
+          results (run-futon3a-search proto-text)]
+      (when (seq results)
+        (let [body (format-context-body results)
+              turn-n (swap! turn-counter inc)
+              result-map (mapv #(select-keys % [:id :title :score]) results)
+              eid (or (emit-context-evidence! agent-id session-id turn-n proto-text result-map)
+                      (str "t" turn-n))
+              cert (str eid " \u00b7 " agent-id)]
+          ;; Log to console
+          (println (str "[context] " cert " retrieved: "
+                        (str/join ", " (map :id results))))
+          (flush)
+          ;; Desktop notification
+          (-> (ProcessBuilder. ["notify-send" "--urgency" "low"
+                                (str "futon3a \u00b7 " cert)
+                                body])
+              .start
+              (.waitFor 2000 java.util.concurrent.TimeUnit/MILLISECONDS))
+          ;; Accumulate in ring buffer and project to HUD
+          (swap! !recent-context
+                 (fn [buf]
+                   (vec (take-last 10
+                     (conj buf
+                       {:turn turn-n
+                        :eid eid
+                        :agent (str agent-id)
+                        :at (str (java.time.Instant/now))
+                        :query (subs proto-text 0 (min 80 (count proto-text)))
+                        :results result-map})))))
+          (project-context-hud! bb-opts))))
+    (catch Throwable t
+      (println (str "[context] retrieval error: " (.getMessage t)))
+      (flush))))
 (defonce !irc-sys (atom nil))
 (defonce !f3c-sys (atom nil))
 (defonce !tickle (atom nil))
@@ -1959,6 +2100,114 @@ RESPOND WITH ONLY:
   []
   (dev-apm-conductor-v2/stop-apm-conductor-v2!))
 
+(defn start-apm-codex-cleanup!
+  "Dispatch codex triage over the next N already-started Lean proofs.
+
+   Defaults:
+   - agent-id: configured codex agent id
+   - n: 1
+
+   Usage:
+     (dev/start-apm-codex-cleanup!)                      ; next one
+     (dev/start-apm-codex-cleanup! :n 5)                ; five more
+     (dev/start-apm-codex-cleanup! :problem-ids [\"a94A07\"])
+     (dev/start-apm-codex-cleanup! :include-blocked? true :n 3)"
+  [& {:keys [agent-id n problem-ids include-blocked? timeout-ms]
+      :or {agent-id (configured-codex-agent-id) n 1 include-blocked? false}}]
+  (apply dev-apm-conductor-v3/cleanup-batch!
+         (cond-> []
+           agent-id (conj :agent-id agent-id)
+           n (conj :n n)
+           problem-ids (conj :problem-ids problem-ids)
+           (some? include-blocked?) (conj :include-blocked? include-blocked?)
+           timeout-ms (conj :timeout-ms timeout-ms))))
+
+(defn apm-codex-cleanup-status
+  "Status for the started-proof codex triage/close loop."
+  []
+  (dev-apm-conductor-v3/cleanup-status))
+
+(defn stop-apm-codex-cleanup!
+  "Stop the started-proof codex triage/close loop."
+  []
+  (dev-apm-conductor-v3/cleanup-stop!))
+
+(defn start-apm-codex-close!
+  "Dispatch codex close mode over the next N already-started Lean proofs.
+
+   Defaults:
+   - agent-id: configured codex agent id
+   - n: 1
+
+   Unlike triage, this mode skips blocked rows by default even if they are
+   explicitly named. Pass :include-blocked? true to override.
+
+   Usage:
+     (dev/start-apm-codex-close!)                      ; next closeable one
+     (dev/start-apm-codex-close! :n 5)                ; five more
+     (dev/start-apm-codex-close! :problem-ids [\"a94J01\"])
+     (dev/start-apm-codex-close! :problem-ids [\"a94A07\"] :include-blocked? true)"
+  [& {:keys [agent-id n problem-ids include-blocked? timeout-ms]
+      :or {agent-id (configured-codex-agent-id) n 1 include-blocked? false}}]
+  (apply dev-apm-conductor-v3/close-batch!
+         (cond-> []
+           agent-id (conj :agent-id agent-id)
+           n (conj :n n)
+           problem-ids (conj :problem-ids problem-ids)
+           (some? include-blocked?) (conj :include-blocked? include-blocked?)
+           timeout-ms (conj :timeout-ms timeout-ms))))
+
+(defn apm-codex-close-status
+  "Alias for the shared started-proof close-mode status."
+  []
+  (dev-apm-conductor-v3/cleanup-status))
+
+(defn stop-apm-codex-close!
+  "Alias for stopping the shared started-proof close-mode loop."
+  []
+  (dev-apm-conductor-v3/cleanup-stop!))
+
+(defn start-apm-codex-scaffold!
+  "Dispatch codex scaffold mode over started Lean proofs that need Codex scaffolding.
+
+   Defaults:
+   - agent-id: configured codex agent id
+   - n: 1
+
+   Usage:
+     (dev/start-apm-codex-scaffold!)                ; next scaffold-needed one
+     (dev/start-apm-codex-scaffold! :n 5)          ; five more
+     (dev/start-apm-codex-scaffold! :problem-ids [\"a03J04\"])"
+  [& {:keys [agent-id n problem-ids timeout-ms]
+      :or {agent-id (configured-codex-agent-id) n 1}}]
+  (apply dev-apm-conductor-v3/scaffold-batch!
+         (cond-> []
+           agent-id (conj :agent-id agent-id)
+           n (conj :n n)
+           problem-ids (conj :problem-ids problem-ids)
+           timeout-ms (conj :timeout-ms timeout-ms))))
+
+(defn apm-codex-scaffold-status
+  "Alias for the shared started-proof scaffold-mode status."
+  []
+  (dev-apm-conductor-v3/cleanup-status))
+
+(defn stop-apm-codex-scaffold!
+  "Alias for stopping the shared started-proof scaffold-mode loop."
+  []
+  (dev-apm-conductor-v3/cleanup-stop!))
+
+(defn build-apm-lean-dojo-handoffs!
+  "Rebuild LeanDojo handoff artifacts from existing APM close results.
+
+   Usage:
+     (dev/build-apm-lean-dojo-handoffs!)
+     (dev/build-apm-lean-dojo-handoffs! :problem-ids [\"a00J02\" \"a01J01\"])"
+  [& {:keys [problem-ids]}]
+  (apply dev-apm-conductor-v3/rebuild-lean-dojo-handoffs!
+         (cond-> []
+           problem-ids (conj :problem-ids problem-ids))))
+
 ;; =============================================================================
 ;; System boot
 ;; =============================================================================
@@ -2840,7 +3089,7 @@ RESPOND WITH ONLY:
                          shorter timeout (120s) via invoke-timeout-ms.
      :model            — Claude model override (e.g. \"claude-haiku-4-5-20251001\").
                          When nil, uses the CLI default."
-  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model]
+  [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model cwd]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
          timeout-ms 1800000}}]
   (if-let [codex-opts (mfuton-invoke-override/claude-role-codex-opts
@@ -2866,6 +3115,7 @@ RESPOND WITH ONLY:
       (flush)
       (make-codex-invoke-fn codex-opts))
     (let [!lock (Object.)
+          !turn-count (atom 0)
           buf-name (str "*invoke: " agent-id "*")
           bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
       (fn [prompt session-id]
@@ -2875,15 +3125,18 @@ RESPOND WITH ONLY:
                            (map? prompt)    (or (:prompt prompt) (:text prompt)
                                                 (json/generate-string prompt))
                            :else            (str prompt))
-              new-sid (when-not session-id (str (UUID/randomUUID)))
+              ;; Session resolution: caller > atom > new random UUID
+              effective-sid (or session-id
+                               (when session-id-atom @session-id-atom))
+              new-sid (when-not effective-sid (str (UUID/randomUUID)))
               args (cond-> [claude-bin "-p"
                             "--permission-mode" permission-mode
                             "--output-format" "stream-json" "--verbose"]
-                     model      (into ["--model" model])
-                     session-id (into ["--resume" (str session-id)])
-                     new-sid    (into ["--session-id" new-sid])
-                     :always    (into ["--" prompt-str]))
-              used-sid (or session-id new-sid)
+                     model         (into ["--model" model])
+                     effective-sid (into ["--resume" (str effective-sid)])
+                     new-sid       (into ["--session-id" new-sid])
+                     :always       (into ["--" prompt-str]))
+              used-sid (or effective-sid new-sid)
               invoke-trace-id (str "invoke-" (UUID/randomUUID))
               prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
               _ (println (str "[invoke] " agent-id " claude -p "
@@ -2904,14 +3157,16 @@ RESPOND WITH ONLY:
                                        "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                        (when (> (count prompt-str) 300) "...")
                                        "\n\nStarting...")
-                                  (merge {:width 80 :slot 1} bb-opts))
+                                  (merge {:width 80 :slot 1 :no-display true} bb-opts))
                   (catch Throwable _))
               ;; Start ticker: updates invoke buffer + agents buffer every 5s
               ;; Also emits evidence heartbeats every 30s
               stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000 :bb-opts bb-opts)
               ;; Launch process with ProcessBuilder
-              pb (doto (ProcessBuilder. ^java.util.List (vec args))
-                    (.redirectInput (java.lang.ProcessBuilder$Redirect/from (java.io.File. "/dev/null"))))
+              pb (let [pb* (doto (ProcessBuilder. ^java.util.List (vec args))
+                            (.redirectInput (java.lang.ProcessBuilder$Redirect/from (java.io.File. "/dev/null"))))]
+                      (when cwd (.directory pb* (java.io.File. cwd)))
+                      pb*)
               proc (.start pb)
               ;; Drain stderr in background (prevents buffer blocking)
               stderr-future (future (drain-stream! (.getErrorStream proc)))
@@ -3037,10 +3292,11 @@ RESPOND WITH ONLY:
                   session-id @result-sid
                   final-sid (or session-id used-sid)
                   ok? (and (zero? exit) (not @result-error))]
-              ;; Persist session ID
-              (when (and session-file final-sid (not (str/blank? final-sid)))
+              ;; Persist session ID — only on success, to prevent
+              ;; failed invokes from corrupting the session file (I-1)
+              (when (and ok? session-file final-sid (not (str/blank? final-sid)))
                 (persist-session-id! session-file final-sid))
-              (when (and session-id-atom final-sid (not (str/blank? final-sid)))
+              (when (and ok? session-id-atom final-sid (not (str/blank? final-sid)))
                 (reset! session-id-atom final-sid))
               ;; Evidence: invoke complete
               (emit-invoke-evidence! agent-id "invoke-complete"
@@ -3068,6 +3324,16 @@ RESPOND WITH ONLY:
                             " text-len=" (count (or text ""))
                             " err-len=" (count (or err ""))))
               (flush)
+              ;; Context retrieval: fire-and-forget
+              (when ok?
+                (future
+                  (context-retrieval!
+                    {:agent-id agent-id
+                     :session-id used-sid
+                     :prompt-str prompt-str
+                     :response-text text
+                     :turn-counter !turn-count
+                     :bb-opts bb-opts})))
               (if ok?
                 {:result (if (str/blank? text)
                            "[Claude used tools but produced no text response]"

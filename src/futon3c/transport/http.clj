@@ -38,6 +38,7 @@
      POST /api/alpha/portfolio/step — run one AIF portfolio step
      POST /api/alpha/portfolio/heartbeat — weekly heartbeat with bid/clear
      GET  /api/alpha/portfolio/state — current portfolio belief state
+     GET  /api/alpha/invariants — run invariant checks, return domain reports
      GET  /health    — liveness check with agent/session counts
 
    Pattern references:
@@ -1640,9 +1641,9 @@
 
 (defn- handle-agents-auto-register
   "POST /api/alpha/agents/auto — allocate and register next available agent.
-   Body: {\"type\": \"claude\"} — type is required.
+   Body: {\"type\": \"claude\", \"session-id\": \"...\", \"cwd\": \"...\"} — type is required.
    Finds the next unused ID (e.g. claude-2 if claude-1 exists) and registers it
-   with a real invoke-fn (resolved from dev.clj's make-claude-invoke-fn).
+   with a real invoke-fn (resolved from dev.clj's local factories).
    Each call creates a new, independent agent (I-1: one agent = one identity)."
   [request _config]
   (let [payload (parse-json-map (read-body request))]
@@ -1654,43 +1655,97 @@
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required"})
           (let [prefix (name agent-type)
-                existing (reg/registered-agents)
-                matching-ids (->> existing
-                                  (map :id/value)
-                                  (filter #(str/starts-with? (str %) (str prefix "-")))
-                                  set)
-                next-n (loop [n 1]
-                         (if (contains? matching-ids (str prefix "-" n))
-                           (recur (inc n))
-                           n))
-                agent-id (str prefix "-" next-n)
-                ;; Build invoke-fn: resolve make-claude-invoke-fn from dev ns
+                ;; Ghost reclamation: reclaim the lowest-numbered idle,
+                ;; session-less, auto-registered agent of this type rather
+                ;; than allocating ever-increasing nicks.
+                agent-id (if-let [ghost (reg/find-reclaimable-agent agent-type)]
+                           (do
+                             ;; Clean up stale session file before unregistering
+                             (let [stale-sf (case agent-type
+                                             :claude (format "/tmp/futon-session-id-%s" ghost)
+                                             :codex (format "/tmp/futon-codex-session-id-%s" ghost)
+                                             nil)]
+                               (when (and stale-sf (.exists (java.io.File. stale-sf)))
+                                 (.delete (java.io.File. stale-sf))))
+                             (reg/unregister-agent! ghost)
+                             ghost)
+                           (let [matching-ids (->> (reg/registered-agents)
+                                                   (map :id/value)
+                                                   (filter #(str/starts-with? (str %) (str prefix "-")))
+                                                   set)
+                                 next-n (loop [n 1]
+                                          (if (contains? matching-ids (str prefix "-" n))
+                                            (recur (inc n))
+                                            n))]
+                             (str prefix "-" next-n)))
+                initial-session-id (some-> (or (:session-id payload)
+                                               (get payload "session-id"))
+                                           str
+                                           str/trim
+                                           not-empty)
+                requested-cwd (some-> (or (:cwd payload)
+                                          (get payload "cwd"))
+                                      str
+                                      str/trim
+                                      not-empty)
                 emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
-                invoke-fn (when (= agent-type :claude)
+                session-file (case agent-type
+                               :claude (format "/tmp/futon-session-id-%s" agent-id)
+                               :codex (format "/tmp/futon-codex-session-id-%s" agent-id)
+                               nil)
+                invoke-fn (case agent-type
+                            :claude
                             (try
                               (require 'futon3c.dev)
                               (when-let [make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)]
-                                (let [sf (format "/tmp/futon-session-id-%s" agent-id)
-                                      sid-atom (atom (when (.exists (java.io.File. sf))
-                                                       (str/trim (slurp sf))))]
+                                (let [sf session-file
+                                      sid-atom (atom (or initial-session-id
+                                                         (when (.exists (java.io.File. sf))
+                                                           (str/trim (slurp sf)))))]
                                   (@make-fn (cond-> {:agent-id agent-id
                                                      :session-file sf
                                                      :session-id-atom sid-atom}
-                                              emacs-socket (assoc :emacs-socket emacs-socket)))))
-                              (catch Throwable _ nil)))
+                                              emacs-socket (assoc :emacs-socket emacs-socket)
+                                              requested-cwd (assoc :cwd requested-cwd)))))
+                              (catch Throwable _ nil))
+
+                            :codex
+                            (try
+                              (require 'futon3c.dev)
+                              (when-let [make-fn (resolve 'futon3c.dev/make-codex-invoke-fn)]
+                                (let [sf session-file
+                                      sid-atom (atom (or initial-session-id
+                                                         (when (.exists (java.io.File. sf))
+                                                           (str/trim (slurp sf)))))]
+                                  (@make-fn (cond-> {:agent-id agent-id
+                                                     :session-file sf
+                                                     :session-id-atom sid-atom}
+                                              requested-cwd (assoc :cwd requested-cwd)))))
+                              (catch Throwable _ nil))
+
+                            nil)
                 result (reg/register-agent!
                         {:agent-id {:id/value agent-id :id/type :continuity}
                          :type agent-type
                          :invoke-fn invoke-fn
                          :capabilities (get default-capabilities agent-type [])
                          :metadata (cond-> {:auto-registered? true}
+                                     (= agent-type :codex) (assoc :require-execution? true)
+                                     requested-cwd (assoc :cwd requested-cwd)
                                      emacs-socket (assoc :emacs-socket emacs-socket))})]
             (when (and invoke-fn (map? result) (:agent/id result))
-              (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
+              (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
+              (when initial-session-id
+                (when session-file
+                  (spit session-file initial-session-id))
+                (reg/update-agent! agent-id :agent/session-id initial-session-id)))
             (if (and (map? result) (:agent/id result))
               (json-response 201 {:ok true
                                   :agent-id agent-id
-                                  :type (name agent-type)})
+                                  :type (name agent-type)
+                                  :session-id initial-session-id
+                                  :session-file session-file
+                                  :cwd requested-cwd})
               (json-response 409 {:ok false
                                   :err "registration-failed"
                                   :message (str "Could not register: " agent-id)}))))))))
@@ -3383,6 +3438,70 @@
                :pending (:pending state)}})))
 
 ;; =============================================================================
+;; Invariant Runner
+;; =============================================================================
+
+(defn- try-resolve-domain
+  "Attempt to resolve a domain's build-db and query-violations fns.
+   Returns a domain spec or nil if the namespace can't be loaded."
+  [domain-id ns-sym]
+  (try
+    (require ns-sym)
+    (let [build-db (resolve (symbol (str ns-sym) "build-db"))
+          qv (resolve (symbol (str ns-sym) "query-violations"))]
+      (when (and build-db qv)
+        {:domain-id domain-id
+         :build-db @build-db
+         :query-violations @qv}))
+    (catch Exception _ nil)))
+
+(def ^:private invariant-domain-registry
+  "All known invariant domains with their logic namespaces."
+  [[:agency   'futon3c.agency.logic]
+   [:tickle   'futon3c.agents.tickle-logic]
+   [:proof    'futon3c.peripheral.proof-logic]
+   [:mission  'futon3c.peripheral.mission-logic]
+   [:codex    'futon3c.agents.codex-code-logic]
+   [:portfolio 'futon3c.portfolio.logic]])
+
+(defn- handle-invariants
+  "GET /api/alpha/invariants — run invariant checks across all domains.
+   Returns domain reports, violation summary, and obligation counts.
+
+   Each domain's build-db is called with nil input. Domains whose
+   build-db requires live state will produce empty results (no false
+   positives). This endpoint reports what is structurally checkable
+   from the HTTP context."
+  [_request _config]
+  (try
+    (require 'futon3c.logic.invariant-runner)
+    (let [run-aggregate (resolve 'futon3c.logic.invariant-runner/run-aggregate)
+          domains (vec (keep (fn [[did ns-sym]]
+                               (try-resolve-domain did ns-sym))
+                             invariant-domain-registry))
+          load-profile {}
+          aggregate (@run-aggregate load-profile domains)
+          {:keys [reports summary]} aggregate]
+      (json-response 200
+        {:ok true
+         :domains (mapv (fn [{:keys [domain-id state has-violations? violations]}]
+                          {:domain domain-id
+                           :state state
+                           :has-violations has-violations?
+                           :violation-categories (when has-violations?
+                                                   (into {}
+                                                         (for [[k v] violations
+                                                               :when (seq v)]
+                                                           [k (count v)])))})
+                        reports)
+         :summary summary
+         :registry-size (count invariant-domain-registry)
+         :resolved-size (count domains)}))
+    (catch Exception e
+      (json-response 500 {:ok false :error "invariant-check-failed"
+                          :message (.getMessage e)}))))
+
+;; =============================================================================
 ;; Concept Graph (meme store)
 ;; =============================================================================
 
@@ -3584,6 +3703,9 @@
           (and (= :get method) (= "/api/alpha/portfolio/state" uri))
           (handle-portfolio-state config)
 
+          (and (= :get method) (= "/api/alpha/invariants" uri))
+          (handle-invariants request config)
+
           (and (= :get method) (= "/api/alpha/missions" uri))
           (handle-missions request config)
 
@@ -3664,6 +3786,27 @@
 
           (and (= :get method) (= "/api/alpha/processes" uri))
           (handle-processes-list config)
+
+          ;; Mission inventory endpoint
+          (and (= :get method) (= "/api/alpha/missions" uri))
+          (try
+            (require 'futon3c.peripheral.mission-control-backend)
+            (let [build-inv (resolve 'futon3c.peripheral.mission-control-backend/build-inventory)
+                  missions (build-inv)
+                  entries (mapv (fn [m]
+                                 {:mission/id (:mission/id m)
+                                  :mission/status (some-> (:mission/status m) name)
+                                  :mission/repo (:mission/repo m)
+                                  :mission/source (some-> (:mission/source m) name)
+                                  :mission/title (:mission/title m)
+                                  :mission/owner (:mission/owner m)
+                                  :mission/date (:mission/date m)
+                                  :mission/path (:mission/path m)})
+                                missions)]
+              (json-response 200 {:ok true :count (count entries) :missions entries}))
+            (catch Throwable t
+              (json-response 500 {:ok false :error "mission-scan-failed"
+                                  :message (.getMessage t)})))
 
           ;; Reflection endpoints
           (and (= :get method) (= "/api/alpha/reflect/namespaces" uri))

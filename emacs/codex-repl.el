@@ -1640,14 +1640,19 @@ buffer, append a new prompt tail instead of erasing the conversation."
   "Display invoke trace side-window if enabled."
   (when codex-repl-show-invoke-buffer
     (let* ((buf (codex-repl--invoke-buffer))
-           (side codex-repl-invoke-window-side)
-           (size-pair (if (memq side '(left right))
-                          (cons 'window-width codex-repl-invoke-window-size)
-                        (cons 'window-height codex-repl-invoke-window-size)))
-           (params (list (cons 'side side)
-                         size-pair
-                         (cons 'slot 1))))
-      (display-buffer-in-side-window buf params))))
+           (external-hud? (and (boundp 'futon3c-blackboard-use-external-hud)
+                               futon3c-blackboard-use-external-hud
+                               (fboundp 'futon3c-blackboard-display-buffer-in-hud))))
+      (if external-hud?
+          (futon3c-blackboard-display-buffer-in-hud buf t)
+        (let* ((side codex-repl-invoke-window-side)
+               (size-pair (if (memq side '(left right))
+                              (cons 'window-width codex-repl-invoke-window-size)
+                            (cons 'window-height codex-repl-invoke-window-size)))
+               (params (list (cons 'side side)
+                             size-pair
+                             (cons 'slot 1))))
+          (display-buffer-in-side-window buf params))))))
 
 (defun codex-repl--truncate-single-line (text max-len)
   "Return TEXT collapsed to one line and truncated to MAX-LEN chars."
@@ -1948,6 +1953,47 @@ buffer, append a new prompt tail instead of erasing the conversation."
   (when (stringp text)
     (setq codex-repl--rendered-assistant-text
           (concat (or codex-repl--rendered-assistant-text "") text))))
+
+(defun codex-repl--stream-agent-message-text! (text)
+  "Stream completed agent-message TEXT as a separate visible segment."
+  (when (and (stringp text)
+             (not (string-empty-p (string-trim text))))
+    (when (and (not (string-empty-p
+                     (string-trim (or codex-repl--rendered-assistant-text ""))))
+               (not (string-suffix-p "\n" codex-repl--rendered-assistant-text)))
+      (agent-chat-stream-text "\n")
+      (codex-repl--record-rendered-assistant-text! "\n"))
+    (agent-chat-stream-text text)
+    (codex-repl--record-rendered-assistant-text! text)))
+
+(defun codex-repl--finish-visible-stream! (final-visible-text)
+  "Finalize the visible stream without deleting already-rendered output.
+FINAL-VISIBLE-TEXT is appended only when no assistant text was streamed
+or when it is a clear suffix of the streamed assistant text."
+  (let* ((final (or final-visible-text ""))
+         (rendered (or codex-repl--rendered-assistant-text ""))
+         (final-trimmed (string-trim final))
+         (rendered-trimmed (string-trim rendered)))
+    (cond
+     ((string-empty-p final-trimmed)
+      nil)
+     ((string-empty-p rendered-trimmed)
+      (agent-chat-stream-text final)
+      (codex-repl--record-rendered-assistant-text! final))
+     ((string-suffix-p final rendered)
+      nil)
+     ((string-prefix-p rendered final)
+      (let ((suffix (substring final (length rendered))))
+        (unless (string-empty-p suffix)
+          (agent-chat-stream-text suffix)
+          (codex-repl--record-rendered-assistant-text! suffix))))
+     (t
+      (unless (string-suffix-p "\n" rendered)
+        (agent-chat-stream-text "\n")
+        (codex-repl--record-rendered-assistant-text! "\n"))
+      (agent-chat-stream-text final)
+      (codex-repl--record-rendered-assistant-text! final))))
+  (agent-chat-end-streaming-message))
 
 (defun codex-repl--mirror-message-text (content)
   "Extract visible text from rollout CONTENT."
@@ -2358,8 +2404,7 @@ buffer, append a new prompt tail instead of erasing the conversation."
               (agent-chat-begin-streaming-message "codex")
               (setq codex-repl--last-stream-summary nil))
             (setq codex-repl--final-text-rendered t)
-            (codex-repl--record-rendered-assistant-text! message-text)
-            (agent-chat-stream-text message-text)))))
+            (codex-repl--stream-agent-message-text! message-text)))))
      ((and (member type '("tool_use" "item.started" "command_execution" "reasoning"))
            (stringp summary)
            (not (string-empty-p summary))
@@ -2741,18 +2786,22 @@ When FORCE is non-nil, refresh immediately."
 
 (defun codex-repl--emit-turn-evidence! (role text)
   "Emit a turn evidence event for ROLE (\"user\" or \"assistant\") and TEXT."
-  (agent-chat-emit-turn-evidence!
-   codex-repl-evidence-url
-   codex-repl-evidence-timeout
-   codex-repl-evidence-log-turns
-   codex-repl-session-id
-   role
-   text
-   "codex"
-   "emacs-codex-repl"
-   '("codex" "repl" "turn")
-   'codex-repl--evidence-session-id
-   'codex-repl--last-evidence-id))
+  (let ((logged? (and codex-repl-evidence-log-turns
+                      (agent-chat-evidence-enabled-p codex-repl-evidence-url))))
+    (agent-chat-emit-turn-evidence!
+     codex-repl-evidence-url
+     codex-repl-evidence-timeout
+     codex-repl-evidence-log-turns
+     codex-repl-session-id
+     role
+     text
+     "codex"
+     "emacs-codex-repl"
+     '("codex" "repl" "turn")
+     'codex-repl--evidence-session-id
+     'codex-repl--last-evidence-id)
+    (when logged?
+      (agent-chat-note-turn-recorded))))
 
 (defun codex-repl--emit-user-turn-evidence! (text)
   "Emit evidence for user TEXT."
@@ -2990,8 +3039,7 @@ When FORCE is non-nil, refresh immediately."
           (condition-case callback-err
               (if (and ok agent-chat--streaming-started)
                   (progn
-                    (agent-chat-finalize-streaming-message "codex" final-visible-text)
-                    (codex-repl--record-rendered-assistant-text! final-visible-text)
+                    (codex-repl--finish-visible-stream! final-visible-text)
                     (setq codex-repl--final-text-rendered t)
                     (setq codex-repl--last-stream-summary nil)
                     (codex-repl--emit-assistant-turn-evidence! final-visible-text)
@@ -3307,8 +3355,13 @@ With REFRESH non-nil, force an immediate refresh."
 (defun codex-repl-show-invoke-trace ()
   "Display invoke trace buffer."
   (interactive)
-  (pop-to-buffer (codex-repl--invoke-buffer))
-  (goto-char (point-max)))
+  (let ((buf (codex-repl--invoke-buffer)))
+    (if (and (boundp 'futon3c-blackboard-use-external-hud)
+             futon3c-blackboard-use-external-hud
+             (fboundp 'futon3c-blackboard-display-buffer-in-hud))
+        (futon3c-blackboard-display-buffer-in-hud buf t)
+      (pop-to-buffer buf)
+      (goto-char (point-max)))))
 
 (defun codex-repl--frame-candidates ()
   "Return completion candidates for known frames."
@@ -3497,6 +3550,7 @@ Returns (ok . old-session-id) on success, nil on failure."
 (define-key codex-repl-mode-map (kbd "C-c C-n") #'codex-repl-new-session)
 (define-key codex-repl-mode-map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-hud)
 (define-key codex-repl-mode-map (kbd "C-c M-a") #'futon3c-blackboard-toggle-agents-window-display)
+(define-key codex-repl-mode-map (kbd "C-c M-h") #'futon3c-blackboard-toggle-external-hud-mode)
 (define-key codex-repl-mode-map (kbd "C-c C-d") #'codex-repl-diagnose-routing)
 (define-key codex-repl-mode-map (kbd "C-c C-v") #'codex-repl-show-invoke-trace)
 (define-key codex-repl-mode-map (kbd "C-c C-l") #'codex-repl-clear-invoke-trace)
@@ -3510,6 +3564,7 @@ Returns (ok . old-session-id) on success, nil on failure."
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-n") #'codex-repl-new-session)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-hud)
 (define-key codex-repl-mirror-mode-map (kbd "C-c M-a") #'futon3c-blackboard-toggle-agents-window-display)
+(define-key codex-repl-mirror-mode-map (kbd "C-c M-h") #'futon3c-blackboard-toggle-external-hud-mode)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-d") #'codex-repl-diagnose-routing)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-v") #'codex-repl-show-invoke-trace)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-l") #'codex-repl-clear-invoke-trace)
@@ -3521,7 +3576,7 @@ Returns (ok . old-session-id) on success, nil on failure."
 
 (define-derived-mode codex-repl-mode nil "Codex-REPL"
   "Chat with Codex via CLI.
-Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh session, C-c C-a for the `*agents*' HUD, C-c M-a to toggle persistent popup behavior.
+Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh session, C-c C-a for the `*agents*' HUD, C-c M-a to toggle persistent popup behavior, C-c M-h to toggle external HUD mode.
 \\{codex-repl-mode-map}"
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
@@ -3592,7 +3647,9 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
          :agent-name "codex"
          :agent-id (or codex-repl-agency-agent-id "codex-1")
          :thinking-text "codex is thinking..."
-         :thinking-prop 'codex-repl-thinking))
+         :thinking-prop 'codex-repl-thinking
+         :evidence-url codex-repl-evidence-url
+         :evidence-timeout codex-repl-evidence-timeout))
   (agent-chat-invariants-setup)
   (add-hook 'kill-buffer-hook #'codex-repl--cleanup-buffer nil t)
   (codex-repl--ensure-header-line!))
