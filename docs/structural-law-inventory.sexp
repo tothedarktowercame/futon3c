@@ -80,6 +80,11 @@
              :implemented-in ("agents/tickle_logic.clj"
                               "peripheral/proof_logic.clj"
                               "peripheral/mission_backend.clj"))
+     (family :id gate-pipeline-phase-ordering
+             :status operational-but-bypassable
+             :question "Does the futon3b coordination pipeline traverse G5→G0 in declared order, with later gates blocked after the first failing gate?"
+             :implemented-in ("futon3b/src/futon3/gate/pipeline.clj"
+                              "futon3b/src/futon3b/bootstrap.clj"))
      (family :id required-outputs
              :status operational
              :question "Does each phase produce its required artifacts?"
@@ -105,24 +110,125 @@
              :status operational
              :question "Do failures surface at the layer that caused them, with stable status/context?"
              :implemented-in ("futon1a/core/pipeline.clj"
-                              "futon1a/api/errors.clj"))
+                              "futon1a/api/errors.clj")
+             ;; Added by M-reachable-from-boot (2026-05-01) as a STOP-THE-LINE
+             ;; hot-fix following HUD STUCK + Evidence Landscape data-loss
+             ;; diagnosis. The siblings under namespace `reachable-from-boot/*`
+             ;; make state-durability discipline structural (grep + pre-commit
+             ;; hook) rather than runtime-watchdog. See
+             ;; futon3/library/invariant-coherence/reachable-from-boot.flexiarg.
+             :candidate-invariants
+             ((invariant :id reachable-from-boot/evidence-store
+                         :status operational
+                         :scope :stack
+                         :summary "Direct reset!/swap!/reset-store! against the !store atom is forbidden outside the bootstrap construction path and test fixtures. Authoritative value originates only from bootstrap/start-futon3c! → make-evidence-store → XtdbBackend."
+                         :implemented-in ("futon3c/src/futon3c/evidence/store.clj"
+                                          "futon3c/scripts/check-reachable-from-boot.sh")
+                         :enforced-at "pre-commit hook (operator-installed via .git/hooks/pre-commit symlink to scripts/check-reachable-from-boot.sh; refuses commits introducing forbidden mutations). Static check is grep-verifiable against the construction-path allowlist."
+                         :evidenced-by ("futon3c/scripts/check-reachable-from-boot.sh"
+                                        "futon3c/test/futon3c/scripts/reachable_from_boot_test.clj"))
+              (invariant :id reachable-from-boot/family-check-fns
+                         :status operational
+                         :scope :stack
+                         :summary "Direct reset!/swap! of family-check-fns and ad hoc register-family-check! calls are forbidden outside the bootstrap-rooted registrar set. The probe registry must be reconstructed from boot."
+                         :implemented-in ("futon3c/src/futon3c/logic/probe.clj"
+                                          "futon3c/scripts/check-reachable-from-boot-family-check-fns.sh")
+                         :enforced-at "pre-commit hook via scripts/check-pre-commit-wrapper.sh runs scripts/check-reachable-from-boot-family-check-fns.sh on every commit; it refuses direct registry mutation or out-of-allowlist registration."
+                         :evidenced-by ("futon3c/scripts/check-reachable-from-boot-family-check-fns.sh"
+                                        "futon3c/test/futon3c/scripts/reachable_from_boot_test.clj"))
+              (invariant :id reachable-from-boot/agent-registry
+                         :status operational
+                         :scope :stack
+                         :summary "Direct reset!/swap! of !registry outside agency/registry.clj and test fixtures is forbidden. The authoritative routing container is structurally owned by the agency module helper surface."
+                         :implemented-in ("futon3c/src/futon3c/agency/registry.clj"
+                                          "futon3c/scripts/check-reachable-from-boot-agent-registry.sh")
+                         :enforced-at "pre-commit hook via scripts/check-pre-commit-wrapper.sh runs scripts/check-reachable-from-boot-agent-registry.sh on every commit; it refuses direct !registry mutation outside the allowlist."
+                         :evidenced-by ("futon3c/scripts/check-reachable-from-boot-agent-registry.sh"
+                                        "futon3c/test/futon3c/scripts/reachable_from_boot_test.clj"))
+              (invariant :id reachable-from-boot/dev-evidence-store
+                         :status operational
+                         :scope :stack
+                         :summary "Direct reset!/swap! of the dev-side !evidence-store atom outside bootstrap and test fixtures is forbidden. The dev handle must be assigned only by boot."
+                         :implemented-in ("futon3c/dev/futon3c/dev.clj"
+                                          "futon3c/scripts/check-reachable-from-boot-dev-evidence-store.sh")
+                         :enforced-at "pre-commit hook via scripts/check-pre-commit-wrapper.sh runs scripts/check-reachable-from-boot-dev-evidence-store.sh on every commit; it refuses direct !evidence-store mutation outside bootstrap."
+                         :evidenced-by ("futon3c/scripts/check-reachable-from-boot-dev-evidence-store.sh"
+                                        "futon3c/test/futon3c/scripts/reachable_from_boot_test.clj"))))
      (family :id authorization-and-identity-discipline
              :status operational
              :question "Are write authority and external identity uniqueness enforced before durable write?"
              :implemented-in ("futon1a/auth/penholder.clj"
                               "futon1a/core/identity.clj"
                               "futon1a/core/entity.clj"
-                              "futon1a/core/pipeline.clj"))))
+                              "futon1a/core/pipeline.clj"))
+     ;; Added by M-invariant-queue-unstuck (2026-04-29). Four families
+     ;; covering the evidence-emission boundary, the per-turn persistence
+     ;; check, the coverage ratchet at inventory mutation time, and the
+     ;; family-canary live-state probe. The boundary itself supersedes
+     ;; ~30 prior parallel evidence-write paths.
+     (family :id single-boundary
+             :status operational
+             :scope :stack
+             :question "Does every futon3c evidence append originate from the single boundary?"
+             :implemented-in ("futon3c/src/futon3c/evidence/boundary.clj")
+             :enforced-at "futon3c.evidence.boundary/append! (only path that calls store/append*)"
+             :evidenced-by ("futon3c/test/futon3c/evidence/boundary_test.clj"
+                            "static check: grep -rn 'estore/append\\*' src dev | grep -v 'evidence/boundary'"))
+     (family :id evidence-per-turn
+             :status operational
+             :scope :stack
+             :question "Does every substantive turn's evidence persist durably (verified via read-back)?"
+             :implemented-in ("futon3c/src/futon3c/evidence/invariant.clj"
+                              "futon3c/src/futon3c/evidence/boundary.clj")
+             :enforced-at "futon3c.evidence.boundary/append! (verify-persisted before declaring success)"
+             :evidenced-by ("futon3c/test/futon3c/evidence/invariant_test.clj"
+                            "futon3c/test/futon3c/evidence/boundary_test.clj"))
+     (family :id coverage-ratchet
+             :status operational-when-enabled
+             :scope :stack
+             :question "Does every reduction in an operational-family :status carry a matching :family-demoted evidence entry?"
+             :implemented-in ("futon3c/src/futon3c/logic/ratchet.clj"
+                              "futon3c/scripts/check-coverage-ratchet.sh")
+             :enforced-at "pre-commit hook (operator-installed via .git/hooks/pre-commit symlink)"
+             :evidenced-by ("futon3c/test/futon3c/logic/ratchet_test.clj"))
+     (family :id family-canary
+             :status operational-when-enabled
+             :scope :stack
+             :question "Does every operational family have a recent live-fire record?"
+             :implemented-in ("futon3c/src/futon3c/logic/probe.clj"
+                              "futon3c/src/futon3c/logic/probe_taps.clj")
+             :enforced-at "futon3c.logic.probe/start-probe-loop! (operator-activated; hourly default)"
+             :evidenced-by ("futon3c/test/futon3c/logic/probe_test.clj"
+                            "futon3c/test/futon3c/logic/probe_taps_test.clj"))))
 
   (candidate-families
     ((family :id atomic-inspectable-units
              :status candidate
              :summary "Work should happen in bounded, inspectable units rather than diffusing across repos, stashes, and unowned files."
              :candidate-invariants
-             ((invariant :id home-repo
-                         :summary "Every active work item has one canonical repo.")
-              (invariant :id single-live-copy
-                         :summary "A tool or artifact should not have competing live copies in multiple repos without an explicit variant relation.")
+             (;; Single-locus shape — uniqueness of attribute per identity.
+              ;; Absorbs `home-repo` (renamed; ratchet-:removed semantics).
+              ;; See futon3/library/invariant-coherence/single-locus.flexiarg.
+              ;; M-single-locus INSTANTIATE 2026-04-29.
+              (invariant :id single-locus/mission-home
+                         :status operational-when-enabled
+                         :summary "Every active mission file has at most one Home-repo: annotation in its first 10 lines; missing annotation defaults to implicit-home (mission file's own repo). Two distinct annotated values violate."
+                         :implemented-in ("futon3c/src/futon3c/logic/locus.clj")
+                         :enforced-at "futon3c.logic.locus/check-mission-home-locus-on-load! (boot-time, runs on every JVM start). Plus probe-tap when activated via register-locus-taps!."
+                         :evidenced-by ("futon3c/test/futon3c/logic/locus_test.clj"))
+              (invariant :id single-locus/agent-routing
+                         :status operational-when-enabled
+                         :summary "For each agent-id, the routing registry plus any in-flight registration buffer carries at most one simultaneously-active routing record. Duplicate agent-id entries violate."
+                         :implemented-in ("futon3c/src/futon3c/logic/locus.clj")
+                         :enforced-at "futon3c.logic.locus/check-agent-routing-locus-on-load! (boot-time, runs on every JVM start). Plus probe-tap when activated via register-locus-taps!."
+                         :evidenced-by ("futon3c/test/futon3c/logic/locus_test.clj"))
+              ;; Absorbs `single-live-copy` into the named single-locus sibling.
+              (invariant :id single-locus/artifact-live-copy
+                         :status operational-when-enabled
+                         :summary "A library/ or scripts/ artifact basename appearing in two or more repos must carry an explicit canonical-repo marker on one matching file; otherwise the same-named live copies contradict."
+                         :implemented-in ("futon3c/src/futon3c/logic/locus.clj")
+                         :enforced-at "futon3c.logic.locus/check-artifact-live-copy-locus-on-load! (boot-time, runs on every JVM start). Plus probe-tap when activated via register-locus-taps!."
+                         :evidenced-by ("futon3c/test/futon3c/logic/locus_test.clj"))
               (invariant :id checkout-before-work
                          :summary "Active work starts from an explicit checked-out unit.")
               (invariant :id checkin-on-exit
@@ -157,12 +263,54 @@
              :status candidate
              :summary "Latent work should not accumulate as invisible operational debt."
              :candidate-invariants
-             ((invariant :id stash-debt-bounded
-                         :summary "Stash count remains below a reasonable threshold, or older stashes must be classified.")
-              (invariant :id recover-or-drop
-                         :summary "A stash is revived, parked on a branch, or explicitly dropped.")
-              (invariant :id obsolescence-recognition
-                         :summary "Superseded autostashes do not remain in the live queue once equivalent commits have landed.")))
+             (;; Bounded-disposition shape — per-artifact disposition +
+              ;; population bound. Absorbs the two narrower candidates
+              ;; `stash-debt-bounded` and `recover-or-drop` (removed
+              ;; 2026-04-29 per ratchet :removed semantics). The new
+              ;; sibling carries both obligations at once.
+              ;; See futon3/library/invariant-coherence/bounded-disposition.flexiarg.
+              ;; M-bounded-disposition INSTANTIATE 2026-04-29.
+              (invariant :id bounded-disposition/stash
+                         :status operational-when-enabled
+                         :summary "Every stash carries a disposition (kept / parked-on-branch / dropped / awaiting-decision via [disposition: ...] message tag), and per repo the awaiting-decision subset stays bounded (count <= 5 AND no awaiting stash older than 14 days)."
+                         :implemented-in ("futon3c/src/futon3c/logic/archaeology.clj")
+                         :enforced-at "futon3c.logic.archaeology/check-stash-disposition (probe-tap, operator-activated via register-archaeology-control-taps!) plus futon3c.logic.archaeology/check-stash-disposition-on-load! at JVM boot. Pre-commit binding pending follow-on."
+                         :evidenced-by ("futon3c/test/futon3c/logic/archaeology_test.clj"))
+              (invariant :id bounded-disposition/branch
+                         :status operational-when-enabled
+                         :summary "Every non-main/master branch carries a disposition (active / merged-not-yet-deleted / parked / long-lived-release / abandoned via [disposition: ...] branch description tag), and per repo the default-active subset stays bounded (count <= 10 AND no default-active branch older than 30 days)."
+                         :implemented-in ("futon3c/src/futon3c/logic/archaeology.clj")
+                         :enforced-at "futon3c.logic.archaeology/check-branch-disposition (probe-tap, operator-activated via register-archaeology-control-taps!) plus futon3c.logic.archaeology/check-branch-disposition-on-load! at JVM boot."
+                         :evidenced-by ("futon3c/test/futon3c/logic/archaeology_test.clj"))
+              (invariant :id bounded-disposition/mission-doc
+                         :status operational-when-enabled
+                         :summary "Every mission doc carries a disposition (open / closed / parked / archived via Status: front-matter), and per repo the open subset stays bounded (count <= 10 AND every mission doc modified within 60 days has a non-empty Status line)."
+                         :implemented-in ("futon3c/src/futon3c/logic/archaeology.clj")
+                         :enforced-at "futon3c.logic.archaeology/check-mission-doc-disposition (probe-tap, operator-activated via register-archaeology-control-taps!) plus futon3c.logic.archaeology/check-mission-doc-disposition-on-load! at JVM boot."
+                         :evidenced-by ("futon3c/test/futon3c/logic/archaeology_test.clj"))
+              ;; Subsumption-witness shape — sibling instances under
+              ;; namespace `obsolescence-recognition/<artifact-class>`.
+              ;; See futon3/library/invariant-coherence/subsumption-witness.flexiarg.
+              ;; M-archaeology-control INSTANTIATE 2026-04-29.
+              (invariant :id obsolescence-recognition/autostash
+                         :status operational
+                         :summary "Superseded autostashes do not remain in the live queue once equivalent commits have landed."
+                         :implemented-in ("futon3c/src/futon3c/logic/archaeology.clj"
+                                          "futon3c/scripts/check-autostash-obsolescence.sh")
+                         :enforced-at "pre-commit hook (installed across all 14 ~/code/futon* repos via symlink to scripts/check-autostash-obsolescence.sh; refuses commit when subsumed stashes remain). Plus probe-tap when activated."
+                         :evidenced-by ("futon3c/test/futon3c/logic/archaeology_test.clj"))
+              (invariant :id obsolescence-recognition/deferred-stub
+                         :status operational
+                         :summary "Deferred-stub probe registrations do not persist after the inventory shows the family as :status :operational."
+                         :implemented-in ("futon3c/src/futon3c/logic/archaeology.clj")
+                         :enforced-at "futon3c.logic.archaeology/check-deferred-stub-on-load! (boot-time, runs on every JVM start)"
+                         :evidenced-by ("futon3c/test/futon3c/logic/archaeology_test.clj"))
+              (invariant :id obsolescence-recognition/pipeline-tracer
+                         :status operational
+                         :summary "Open :pipeline-tracer-item evidence entries do not persist after their work is complete or after target-date with no close-emit."
+                         :implemented-in ("futon3c/src/futon3c/logic/archaeology.clj")
+                         :enforced-at "futon3c.logic.archaeology/check-pipeline-tracer-on-load! (boot-time, runs on every JVM start)"
+                         :evidenced-by ("futon3c/test/futon3c/logic/archaeology_test.clj"))))
      (family :id peripheral-custody
              :status candidate
              :summary "A peripheral session should carry enough structure that work cannot silently drift across domains."
@@ -185,6 +333,14 @@
                          :summary "Peripheral and mission state project to evidence, blackboards, or reports.")
               (invariant :id evidence-over-folklore
                          :summary "Operationally important claims are queryable or documented in stable artifacts.")))
+     (family :id strategic-closure-specification
+             :status candidate
+             :summary "Strategic recommendations should only be promoted when their next closure step is specified enough to execute, witness, and roll forward honestly."
+             :candidate-invariants
+             ((invariant :id strategic-sorry-next-step-sufficiently-specified
+                         :summary "Each strategic SORRY that appears as a live recommendation has an honest v1 closure spec: canonical target, concrete action, step/effect/successor witnesses, backing surface, and explicit failure interpretation.")
+              (invariant :id under-specified-strategic-items-stay-candidate
+                         :summary "Strategic SORRYs without a recommendation-grade v1 spec remain candidate pressure in the queue rather than entering the War Machine as crisp next moves.")))
      (family :id interaction-evidence-continuity
              :status candidate
              :summary "Interactive agent work should either land in the evidence ledger or incur explicit, inspectable debt."

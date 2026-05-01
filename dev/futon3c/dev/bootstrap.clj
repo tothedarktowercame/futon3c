@@ -6,6 +6,11 @@
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
+            [futon3c.evidence.invariant :as evidence-invariant]
+            [futon3c.logic.archaeology :as archaeology]
+            [futon3c.logic.locus :as locus]
+            [futon3c.logic.ratchet :as ratchet]
+            [futon3c.logic.tracer :as tracer]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.http :as http]
@@ -194,6 +199,98 @@
         evidence-store (make-evidence-store f1-sys direct-xtdb?)
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
+        ;; I-evidence-per-turn boot-time check: refuse to proceed silently
+        ;; with a non-durable evidence store. On failure we print loudly
+        ;; and keep going — but the turn-level check will fail every turn
+        ;; so the violation is impossible to miss.
+        boot-check (evidence-invariant/check-store-backing evidence-store)
+        _ (if (:ok boot-check)
+            (println (str "[dev] I-evidence-per-turn boot check: OK ("
+                          (name (:kind boot-check)) ")"))
+            (do
+              (println "================================================================")
+              (println "[dev] I-evidence-per-turn BOOT CHECK FAILED")
+              (println (str "      kind:   " (name (:kind boot-check))))
+              (println (str "      reason: " (:reason boot-check)))
+              (println (str "      invariant: " (:invariant boot-check)))
+              (println "      Evidence writes will not persist. Fix and restart.")
+              (println "================================================================")))
+        ;; I-coverage-ratchet load-time check: compare working-tree inventory
+        ;; against git HEAD; emit a :family-fired :coverage-ratchet entry
+        ;; recording the outcome. Boot continues either way — the violation,
+        ;; if any, is durably evidenced and visible in the operational-families
+        ;; view. (Mission: M-invariant-queue-extend Track 4.1.)
+        _ (try (ratchet/check-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] I-coverage-ratchet load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)
+                               " — boot continues."))))
+        _ (try (archaeology/check-autostash-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/autostash load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-deferred-stub-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/deferred-stub load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-pipeline-tracer-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/pipeline-tracer load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-stash-disposition-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/stash-disposition load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-branch-disposition-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/branch-disposition load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-mission-doc-disposition-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/mission-doc-disposition load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/check-mission-home-locus-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] locus/mission-home load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; Auto-register the family-check-fns at boot so the probe-loop
+        ;; has a populated registry without operator-driven activation.
+        ;; Mutating an in-memory atom across restarts was diagnosed as
+        ;; an anti-pattern (Joe 2026-05-01); deterministic registration
+        ;; from on-disk inventory + source code is the durable fix.
+        _ (try (archaeology/register-archaeology-control-taps!)
+               (println "[dev] registered archaeology-control probe-taps (6 family-ids)")
+               (catch Throwable t
+                 (println (str "[dev] register-archaeology-control-taps! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/register-locus-taps!)
+               (println "[dev] registered single-locus probe-taps (3 family-ids)")
+               (catch Throwable t
+                 (println (str "[dev] register-locus-taps! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; Ensure pipeline-tracer items exist in the durable store.
+        ;; Idempotent: re-emits only those track-ids missing from the
+        ;; persisted set. Reachable-from-boot discipline — tracer state
+        ;; is reconstructible from `tracer/default-tracers` (on-disk
+        ;; source) at every boot. M-reachable-from-boot 2026-05-01.
+        _ (try (let [r (tracer/ensure-default-tracers! evidence-store)]
+                 (println (str "[dev] tracer/ensure-default-tracers!: "
+                               "present=" (:already-present r)
+                               " emitted=" (:emitted r)
+                               " attempted=" (:attempted r))))
+               (catch Throwable t
+                 (println (str "[dev] tracer/ensure-default-tracers! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/check-agent-routing-locus-on-load!
+                evidence-store
+                {:state-source reg/!registry})
+               (catch Throwable t
+                 (println (str "[dev] locus/agent-routing load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/check-artifact-live-copy-locus-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] locus/artifact-live-copy load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
         _ (mcs/configure! {:evidence-store evidence-store
                            :repos mcb/default-repo-roots})
         _ (cyder/register!

@@ -14,7 +14,15 @@
 
 ;; Store model: {:entries {id EvidenceEntry} :order [id ...]} in an atom.
 ;; This atom is the default backend; callers can pass an EvidenceBackend instead.
-(defonce ^{:doc "Default evidence store atom."} !store
+;;
+;; ^:durable metadata (M-reachable-from-boot 2026-05-01): the authoritative
+;; value of this atom must come from `bootstrap.clj`'s `make-evidence-store`
+;; (XtdbBackend). Direct `(reset! !store ...)` / `(reset-store!)` calls
+;; from outside the construction-path allowlist are forbidden by the
+;; pre-commit hook `scripts/check-reachable-from-boot.sh`. See
+;; futon3/library/invariant-coherence/reachable-from-boot.flexiarg.
+(defonce ^{:doc "Default evidence store atom."
+           :durable true} !store
   (atom {:entries {} :order []}))
 
 (defn reset-store!
