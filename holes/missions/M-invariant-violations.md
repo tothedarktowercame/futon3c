@@ -3,7 +3,24 @@
 **Date:** 2026-03-10
 **Status:** MAP
 **Cross-ref:** M-fulab-logic, M-self-representing-stack, M-three-column-stack,
-TN-dev-clj-decomposition
+TN-dev-clj-decomposition, **M-invariant-queue-unstuck**
+
+> **2026-04-29 update — sibling mission landed.** `M-invariant-queue-unstuck`
+> ships meta-level infrastructure that this ledger now sits on top of:
+>
+> - `futon3c.evidence.boundary` — single evidence-write boundary (I-single-boundary).
+> - `futon3c.evidence.invariant` — per-turn persistence verification (I-evidence-per-turn).
+> - `futon3c.logic.ratchet` — coverage-decrease ratchet (I-coverage-ratchet).
+> - `futon3c.logic.probe` — hourly + on-demand + autoshutter live-state probe (I-family-canary).
+> - `futon3c.logic.probe-taps` — wraps the agency / tickle / portfolio core.logic
+>   layers as registered probe check-fns. The 5 violations tracked below
+>   (V-1..V-5) become `:family-fired :outcome :violation` evidence entries
+>   when the probe is activated.
+>
+> The two missions cross-link tightly during INSTANTIATE; possibly merge during
+> DOCUMENT. See
+> `futon3c/holes/missions/M-invariant-queue-unstuck.md` and
+> `futon3c/docs/boundary-pattern.md` for the boundary recipe.
 
 ## Motivation
 
