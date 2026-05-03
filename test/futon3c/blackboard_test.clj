@@ -302,3 +302,32 @@
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :no-display]))))
       (bb/set-agents-window-display! true))))
+
+(deftest project-agents-external-hud-suppresses-popup
+  (testing "*agents* projection updates without forcing popup in external HUD mode"
+    (let [calls (atom [])]
+      (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (bb/set-agents-window-display! true)
+        (bb/set-external-hud-enabled! true)
+        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (is (= 1 (count @calls)))
+        (is (= "*agents*" (:buffer-name (first @calls))))
+        (is (true? (get-in @calls [0 :opts :no-display]))))
+      (bb/set-external-hud-enabled! false)
+      (bb/set-agents-window-display! true))))
+
+(deftest project-agents-runs-in-async-mode
+  (testing "*agents* projection marks opts :async? so a slow Emacs cannot backpressure the ticker"
+    (let [calls (atom [])]
+      (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (is (= 1 (count @calls)))
+        (is (true? (get-in @calls [0 :opts :async?])))))))
