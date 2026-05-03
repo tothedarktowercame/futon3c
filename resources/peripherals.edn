@@ -132,4 +132,17 @@
    :peripheral/scope :observation
    :peripheral/entry #{:user-request :from-any}
    :peripheral/exit #{:user-request :session-end}
-   :peripheral/context {:session-id :inherit :problem-id :optional}}}}
+   :peripheral/context {:session-id :inherit :problem-id :optional}}
+
+  :portfolio-inference
+  {:peripheral/id :portfolio-inference
+   :peripheral/tools #{:read :glob :grep :bash-readonly
+                       :pi-mission-features :pi-precision-table
+                       :pi-promotion-candidates :pi-aif-step :pi-step
+                       :pi-heartbeat :pi-adjacent
+                       :reflect-namespaces :reflect-ns :reflect-var
+                       :reflect-deps :reflect-java-class}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:from-any :user-request}
+   :peripheral/exit #{:review-complete :hop-reflect :hop-explore :user-request}
+   :peripheral/context {:session-id :inherit}}}}

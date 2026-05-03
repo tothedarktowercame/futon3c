@@ -15,6 +15,7 @@
    - realtime/rendezvous-handshake: whistle send + response = exchange proof
    - realtime/liveness-heartbeats: whistle to idle agent proves it is responding"
   (:require [futon3c.agency.registry :as registry]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [clojure.string :as str])
   (:import [java.time Instant]
@@ -124,7 +125,7 @@
                            (if (map? e) (:error/message e) (str e))))]
       ;; Emit evidence
       (when evidence-store
-        (estore/append* evidence-store
+        (boundary/append! evidence-store
                         (make-whistle-evidence
                          aid-val prompt response-str status
                          (or author "whistle-dispatcher")

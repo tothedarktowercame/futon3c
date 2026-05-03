@@ -9,6 +9,7 @@
             [futon3c.social.shapes :as shapes]
             [futon3c.agency.registry :as reg]
             [futon3c.peripheral.registry :as preg]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.social.persist :as persist])
   (:import [java.time Instant]
@@ -168,7 +169,7 @@
                  :evidence/session-id session-id
                  :evidence/author (if (map? agent-id) (:id/value agent-id) (str agent-id))
                  :evidence/at (now-str)}
-          result (estore/append* evidence-store entry)]
+          result (boundary/append! evidence-store entry)]
       (when (:ok result)
         (:evidence/id entry)))))
 

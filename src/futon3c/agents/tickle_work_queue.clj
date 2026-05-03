@@ -15,6 +15,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]))
 
@@ -259,7 +260,7 @@
   [evidence-store {:keys [entity-id entity-type session-id event-tag
                           ground-truth extraction-result verdict]}]
   (when evidence-store
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :task
                                :ref/id entity-id}
                      :type :coordination

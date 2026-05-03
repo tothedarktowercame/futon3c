@@ -14,7 +14,7 @@
      AGENT_ID            codex-1
      CODEX_BIN           codex
      CODEX_CWD           <pwd>
-     CODEX_MODEL         gpt-5-codex
+     CODEX_MODEL         optional model override (unset uses Codex config)
      CODEX_SANDBOX       danger-full-access
      CODEX_APPROVAL      never
      CODEX_REASONING_EFFORT low|medium|high (optional)
@@ -46,7 +46,7 @@
 
 (def codex-bin (env "CODEX_BIN" "codex"))
 (def codex-cwd (env "CODEX_CWD" (System/getProperty "user.dir")))
-(def codex-model (env "CODEX_MODEL" "gpt-5-codex"))
+(def codex-model (env "CODEX_MODEL" ""))
 (def codex-sandbox (env "CODEX_SANDBOX" "danger-full-access"))
 (def codex-approval (env "CODEX_APPROVAL" "never"))
 (def codex-reasoning-effort (System/getenv "CODEX_REASONING_EFFORT"))

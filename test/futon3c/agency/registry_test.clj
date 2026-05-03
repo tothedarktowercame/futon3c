@@ -176,6 +176,48 @@
       (is (= :invoke-exception (:error/code (:error result))))
       (is (shapes/valid? shapes/SocialError (:error result))))))
 
+(deftest reset-session-clears-backing-continuity
+  (testing "reset-session! clears registry session plus backing file/atom"
+    (let [session-file (java.io.File/createTempFile "futon3c-reset-session-" ".sid")
+          sid-atom (atom "sess-reset")
+          reset-fn (fn []
+                     (reset! sid-atom nil)
+                     (when (.exists session-file)
+                       (.delete session-file))
+                     {:ok true})]
+      (try
+        (spit session-file "sess-reset")
+        (reg/register-agent!
+         {:agent-id (fix/make-agent-id "reset-me")
+          :type :codex
+          :invoke-fn (fn [_ _] {:result "ok"})
+          :capabilities [:edit]
+          :session-id "sess-reset"
+          :session-reset-fn reset-fn})
+        (let [result (reg/reset-session! (fix/make-agent-id "reset-me"))]
+          (is (:ok result))
+          (is (= "sess-reset" (:old-session-id result)))
+          (is (nil? @sid-atom))
+          (is (false? (.exists session-file)))
+          (is (nil? (:session-id (get-in (reg/registry-status) [:agents "reset-me"])))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file)))))))
+
+(deftest reset-session-fails-loudly-when-backing-reset-fails
+  (testing "reset-session! preserves continuity when backing reset fails"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "reset-fail")
+      :type :codex
+      :invoke-fn (fn [_ _] {:result "ok"})
+      :capabilities [:edit]
+      :session-id "sess-still-live"
+      :session-reset-fn (fn [] {:ok false :error "cannot clear backing continuity"})})
+    (let [result (reg/reset-session! (fix/make-agent-id "reset-fail"))]
+      (is (= false (:ok result)))
+      (is (= "sess-still-live"
+             (:session-id (get-in (reg/registry-status) [:agents "reset-fail"])))))))
+
 (deftest unregister-missing-returns-social-error
   (testing "unregister of missing agent returns SocialError"
     (let [result (reg/unregister-agent! (fix/make-agent-id "nobody"))]

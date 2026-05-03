@@ -40,7 +40,7 @@
 
 (def codex-bin (env "CODEX_BIN" "codex"))
 (def codex-cwd (env "CODEX_CWD" (System/getProperty "user.dir")))
-(def codex-model (env "CODEX_MODEL" "gpt-5-codex"))
+(def codex-model (env "CODEX_MODEL" ""))
 (def codex-sandbox (env "CODEX_SANDBOX" "danger-full-access"))
 (def codex-approval (env "CODEX_APPROVAL" "never"))
 (def codex-reasoning-effort (System/getenv "CODEX_REASONING_EFFORT"))

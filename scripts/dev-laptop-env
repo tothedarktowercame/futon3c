@@ -10,7 +10,7 @@ set -euo pipefail
 # --- Role & network ---
 export FUTON3C_ROLE="${FUTON3C_ROLE:-laptop}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
-export FUTON3C_PORT="${FUTON3C_PORT:-47070}"
+export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
 export FUTON3C_LINODE_URL="${FUTON3C_LINODE_URL:-http://172.236.28.208:7070}"
 
 # --- IRC: disabled on laptop (ngircd runs on Linode) ---
@@ -27,6 +27,11 @@ export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
 export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 
+# --- Blackboard / HUD defaults ---
+export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
+export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
+export FUTON3C_HUD_TERMINAL="${FUTON3C_HUD_TERMINAL:-alacritty}"
+
 # --- Futon1a/Futon4 compatibility ---
 export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
 export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
@@ -38,6 +43,11 @@ fi
 export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/alpha}"
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
+export FUTON3C_MULTI_WATCHER_AUTOSTART="${FUTON3C_MULTI_WATCHER_AUTOSTART:-true}"
+export FUTON3C_MULTI_WATCHER_INTERVAL_MS="${FUTON3C_MULTI_WATCHER_INTERVAL_MS:-5000}"
+export FUTON3C_MULTI_WATCHER_DEBOUNCE_MS="${FUTON3C_MULTI_WATCHER_DEBOUNCE_MS:-250}"
+export FUTON3C_MULTI_WATCHER_PIDFILE="${FUTON3C_MULTI_WATCHER_PIDFILE:-/tmp/multi-watcher.pid}"
+export FUTON3C_MULTI_WATCHER_LOGFILE="${FUTON3C_MULTI_WATCHER_LOGFILE:-/tmp/multi-watcher.log}"
 
 # --- Federation: peer with Linode unless explicitly disabled ---
 if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}" ]]; then
@@ -48,13 +58,16 @@ fi
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   _emacs_dir="/run/user/$(id -u)/emacs"
   if [[ -d "$_emacs_dir" ]]; then
-    _sockets=("$_emacs_dir"/*)
-    if [[ ${#_sockets[@]} -eq 1 && -S "${_sockets[0]}" ]]; then
-      export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
-    elif [[ ${#_sockets[@]} -gt 1 ]]; then
-      _newest="$(ls -t "$_emacs_dir" | head -1)"
-      if [[ -n "$_newest" ]]; then
-        export FUTON3C_EMACS_SOCKET="$_newest"
+    # Prefer 'server' (interactive Emacs hosting *server* / Agency) then
+    # 'futon' (headless daemon spawned by cr), else first available.
+    if [[ -S "$_emacs_dir/server" ]]; then
+      export FUTON3C_EMACS_SOCKET="server"
+    elif [[ -S "$_emacs_dir/futon" ]]; then
+      export FUTON3C_EMACS_SOCKET="futon"
+    else
+      _sockets=("$_emacs_dir"/*)
+      if [[ ${#_sockets[@]} -ge 1 && -S "${_sockets[0]}" ]]; then
+        export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
       fi
     fi
   fi
@@ -92,5 +105,120 @@ if [[ -f "$local_override" ]]; then
   source "$local_override"
   echo "[dev] Loaded local overrides: $(basename "$local_override")"
 fi
+
+watcher_pid_running() {
+  local pidfile="$1"
+  [[ -f "$pidfile" ]] || return 1
+  local pid
+  pid="$(cat "$pidfile" 2>/dev/null || true)"
+  [[ -n "$pid" ]] || return 1
+  kill -0 "$pid" 2>/dev/null
+}
+
+retire_old_bb_multi_watcher() {
+  local old_pids
+  old_pids="$(ps -ww -eo pid=,cmd= | grep 'bb /home/joe/code/futon3/scripts/multi_watcher.clj' | grep -v grep | awk '{print $1}' || true)"
+  if [[ -n "$old_pids" ]]; then
+    echo "[dev] Retiring old bb multi-watcher: $old_pids"
+    while read -r pid; do
+      [[ -n "$pid" ]] || continue
+      kill "$pid" 2>/dev/null || true
+    done <<< "$old_pids"
+  fi
+}
+
+find_jvm_multi_watcher_pid() {
+  local repo_base="$1"
+  ps -ww -eo pid=,cmd= \
+    | grep 'clojure.main scripts/multi_watcher_jvm.clj' \
+    | grep -F "${repo_base}/futon0=futon0-d" \
+    | grep -v grep \
+    | awk '{print $1}' \
+    | tail -n 1
+}
+
+start_multi_watcher() {
+  # E-live-means-live Path B (2026-05-01): the multi-watcher now runs
+  # IN-JVM as a service started by futon3c.dev.bootstrap (see
+  # futon3c/src/futon3c/watcher/multi.clj + bootstrap.clj). The
+  # separate-process bb watcher launched by this function has been
+  # retired. Keeping the function as a no-op + orphan-cleanup so any
+  # stale bb watchers from before the cutover get reaped on the next
+  # `make dev`.
+  retire_old_bb_multi_watcher
+  rm -f "${FUTON3C_MULTI_WATCHER_PIDFILE:-/tmp/multi-watcher.pid}"
+  if [[ "${FUTON3C_MULTI_WATCHER_AUTOSTART}" == "true" ]]; then
+    echo "[dev] FUTON3C_MULTI_WATCHER_AUTOSTART=true is deprecated;"
+    echo "      the watcher runs in-JVM via futon3c.dev.bootstrap now."
+  fi
+  return 0
+}
+
+start_multi_watcher_LEGACY_BB() {
+  # Preserved for reference / rollback. Do not call from the env script.
+  [[ "${FUTON3C_MULTI_WATCHER_AUTOSTART}" == "true" ]] || return 0
+
+  local repo_base watcher_log watcher_pid clojure_bin actual_pid
+  repo_base="${FUTON3C_REPO_BASE:-${FUTON_REPO_BASE:-${HOME}/code}}"
+  watcher_log="${FUTON3C_MULTI_WATCHER_LOGFILE}"
+  watcher_pid="${FUTON3C_MULTI_WATCHER_PIDFILE}"
+  if [[ -x "${repo_base}/futon3/.tools/clojure/bin/clojure" ]]; then
+    clojure_bin="${repo_base}/futon3/.tools/clojure/bin/clojure"
+  else
+    clojure_bin="clojure"
+  fi
+
+  retire_old_bb_multi_watcher
+
+  if watcher_pid_running "$watcher_pid"; then
+    echo "[dev] Multi-watcher already running (pid $(cat "$watcher_pid"))"
+    return 0
+  fi
+
+  actual_pid="$(find_jvm_multi_watcher_pid "$repo_base" || true)"
+  if [[ -n "$actual_pid" ]]; then
+    echo "$actual_pid" > "$watcher_pid"
+    echo "[dev] Multi-watcher already running (pid ${actual_pid})"
+    return 0
+  fi
+
+  rm -f "$watcher_pid"
+  echo "[dev] Starting JVM multi-watcher"
+  nohup bash -lc "
+    cd '${repo_base}/futon3'
+    exec '${clojure_bin}' -M scripts/multi_watcher_jvm.clj \
+      --root '${repo_base}/futon0=futon0-d' \
+      --root '${repo_base}/futon1=futon1-d' \
+      --root '${repo_base}/futon1a=futon1a-d' \
+      --root '${repo_base}/futon2=futon2-d' \
+      --root '${repo_base}/futon3=futon3-d' \
+      --root '${repo_base}/futon3a=futon3a-d' \
+      --root '${repo_base}/futon3b=futon3b-d' \
+      --root '${repo_base}/futon3c=futon3c-d' \
+      --root '${repo_base}/futon4=futon4-elisp-d' \
+      --root '${repo_base}/futon5=futon5-d2' \
+      --root '${repo_base}/futon5a=futon5a-d' \
+      --root '${repo_base}/futon6=futon6-py-d' \
+      --root '${repo_base}/futon7=futon7-d' \
+      --interval-ms '${FUTON3C_MULTI_WATCHER_INTERVAL_MS}' \
+      --debounce-ms '${FUTON3C_MULTI_WATCHER_DEBOUNCE_MS}' \
+      --no-cold-scan
+  " >>"$watcher_log" 2>&1 &
+  echo $! > "$watcher_pid"
+  sleep 1
+  if ! watcher_pid_running "$watcher_pid"; then
+    actual_pid="$(find_jvm_multi_watcher_pid "$repo_base" || true)"
+    if [[ -n "$actual_pid" ]]; then
+      echo "$actual_pid" > "$watcher_pid"
+    fi
+  fi
+  if ! watcher_pid_running "$watcher_pid"; then
+    echo "[dev] JVM multi-watcher failed to stay up; see ${watcher_log}" >&2
+    return 1
+  fi
+  echo "[dev] Multi-watcher pid $(cat "$watcher_pid") log ${watcher_log}"
+}
+
+start_multi_watcher
 
 exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"

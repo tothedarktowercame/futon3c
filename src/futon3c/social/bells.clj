@@ -19,6 +19,7 @@
    - realtime/rendezvous-handshake: bell ring + ack = co-presence proof
    - realtime/liveness-heartbeats: test-bell proves agent is receiving"
   (:require [futon3c.agency.registry :as registry]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -108,7 +109,7 @@
           bell-ev (make-bell-evidence :standup room target-agents author)
           bell-session-id (:evidence/session-id bell-ev)
           _ (when evidence-store
-              (estore/append* evidence-store bell-ev))
+              (boundary/append! evidence-store bell-ev))
           ;; Join each agent to the IRC room
           joined (atom [])]
       (doseq [agent-id target-agents]
@@ -123,7 +124,7 @@
                          (fn [_msg] :bell-placeholder)))
           ;; Emit arrival evidence
           (when evidence-store
-            (estore/append* evidence-store
+            (boundary/append! evidence-store
                             (make-arrival-evidence :standup room agent-id nick bell-session-id)))
           (swap! joined conj agent-id)))
       ;; Send opening prompt to room
@@ -167,7 +168,7 @@
                                 :secret-issued true}
                 :evidence/tags [:bell :test-bell :liveness]}]
         (when evidence-store
-          (estore/append* evidence-store ev))
+          (boundary/append! evidence-store ev))
         {:bell/type :test-bell
          :bell/agent-id (:agent/id agent)
          :bell/secret secret

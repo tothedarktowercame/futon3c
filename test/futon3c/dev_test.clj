@@ -44,23 +44,98 @@
       (is (= {:ok? true :action :kept-existing}
              (#'dev/classify-codex-ws-bridge-registration
               "codex-1" 409 "{\"ok\":false}" 200 existing-body)))))
-  (testing "duplicate registration fails loudly on incompatible existing state"
-    (let [existing-body (json/generate-string
+  (testing "duplicate registration fails loudly on incompatible, fresh existing state"
+    (let [recent (str (java.time.Instant/now))
+          existing-body (json/generate-string
                          {:ok true
                           :agent-id "codex-1"
                           :agent {:id {:id/value "codex-1" :id/type "continuity"}
                                   :type "codex"
+                                  :last-active recent
                                   :metadata {:proxy? true}}})
           result (#'dev/classify-codex-ws-bridge-registration
-                  "codex-1" 409 "{\"ok\":false}" 200 existing-body)]
+                  "codex-1" 409 "{\"ok\":false}" 200 existing-body
+                  :stale-threshold-ms 600000)]
       (is (false? (:ok? result)))
-      (is (= :conflict (:action result))))))
+      (is (= :conflict (:action result)))))
+  (testing "duplicate registration signals stale-reclaim when the existing record is abandoned"
+    (let [old (str (java.time.Instant/ofEpochMilli
+                    (- (System/currentTimeMillis) (* 2 60 60 1000))))
+          existing-body (json/generate-string
+                         {:ok true
+                          :agent-id "codex-1"
+                          :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                                  :type "codex"
+                                  :last-active old
+                                  :metadata {:proxy? true}}})
+          result (#'dev/classify-codex-ws-bridge-registration
+                  "codex-1" 409 "{\"ok\":false}" 200 existing-body
+                  :stale-threshold-ms 600000)]
+      (is (false? (:ok? result)))
+      (is (= :stale-reclaim (:action result)))
+      (is (string? (:message result))))))
+
+(deftest codex-record-reclaimable-as-stale-only-for-old-codex-same-id
+  (testing "refuses reclaim when id does not match"
+    (let [recent (str (java.time.Instant/ofEpochMilli
+                       (- (System/currentTimeMillis) (* 24 60 60 1000))))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-2"
+                 :agent {:id {:id/value "codex-2" :id/type "continuity"}
+                         :type "codex"
+                         :last-active recent}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "refuses reclaim when type is not :codex"
+    (let [old (str (java.time.Instant/ofEpochMilli
+                    (- (System/currentTimeMillis) (* 24 60 60 1000))))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "claude"
+                         :last-active old}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "refuses reclaim when last-active is missing"
+    (let [body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "codex"}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "refuses reclaim when last-active is within threshold"
+    (let [recent (str (java.time.Instant/now))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "codex"
+                         :last-active recent}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "allows reclaim for matching old codex record"
+    (let [old (str (java.time.Instant/ofEpochMilli
+                    (- (System/currentTimeMillis) (* 24 60 60 1000))))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "codex"
+                         :last-active old}})]
+      (is (true? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000))))))
 
 (deftest codex-ws-bridge-exception-summary
   (testing "blank top-level exception messages fall back to the root cause"
     (let [e (RuntimeException. nil (IllegalStateException. "connection refused"))]
       (is (= "IllegalStateException: connection refused"
              (#'dev/exception-summary e))))))
+
+(deftest codex-ws-bridge-unreachable-network-detection
+  (testing "nested connect failures are treated as unreachable"
+    (let [e (RuntimeException. "wrap" (java.net.ConnectException. "timed out"))]
+      (is (true? (#'dev/unreachable-network-exception? e)))))
+  (testing "non-network failures do not pause the bridge"
+    (is (false? (#'dev/unreachable-network-exception?
+                 (IllegalStateException. "bad payload"))))))
 
 (deftest codex-ws-bridge-repeated-failure-tracking
   (testing "identical failures emit once immediately and then on the throttle interval"

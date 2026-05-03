@@ -120,6 +120,23 @@
         (is (.contains (get-in (first @calls) [:elisp]) "insert-file-contents"))
         (is (not (.contains (get-in (first @calls) [:elisp]) " via whistle -> caller joe")))))))
 
+(deftest record-invoke-delivery-short-circuits-on-emacs-timeout
+  (testing "blackboard-eval timeouts return false without retrying (HTTP handler falls through to WS relay)"
+    (let [calls (atom 0)]
+      (with-redefs [futon3c.agency.registry/get-agent
+                    (fn [_agent-id] {:agent/metadata {:emacs-socket "workspace1"}})
+                    futon3c.blackboard/blackboard-eval!
+                    (fn [_elisp _opts]
+                      (swap! calls inc)
+                      {:ok false :output "timeout"})]
+        (is (false? (futon3c.dev/record-invoke-delivery!
+                     "claude-1"
+                     "invoke-xyz"
+                     {:surface "whistle"
+                      :destination "caller joe"
+                      :delivered? true})))
+        (is (= 1 @calls) "timeout must not be retried")))))
+
 (deftest record-invoke-delivery-uses-irc-in-mfuton-mode
   (testing "mfuton mode projects invoke delivery receipts to the primary IRC room instead of Emacs"
     (let [irc-calls (atom [])

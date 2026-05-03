@@ -37,6 +37,10 @@ export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
 export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 
+# --- Blackboard / HUD defaults ---
+export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
+export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
+
 # --- Futon1a/Futon4 compatibility ---
 export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
 export FUTON1A_STATIC_DIR="${FUTON1A_STATIC_DIR:-${HOME}/code/futon4/dev/web}"
@@ -62,13 +66,16 @@ fi
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   _emacs_dir="/run/user/$(id -u)/emacs"
   if [[ -d "$_emacs_dir" ]]; then
-    _sockets=("$_emacs_dir"/*)
-    if [[ ${#_sockets[@]} -eq 1 && -S "${_sockets[0]}" ]]; then
-      export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
-    elif [[ ${#_sockets[@]} -gt 1 ]]; then
-      _newest="$(ls -t "$_emacs_dir" | head -1)"
-      if [[ -n "$_newest" ]]; then
-        export FUTON3C_EMACS_SOCKET="$_newest"
+    # Prefer 'server' (interactive Emacs hosting *server* / Agency) then
+    # 'futon' (headless daemon spawned by cr), else first available.
+    if [[ -S "$_emacs_dir/server" ]]; then
+      export FUTON3C_EMACS_SOCKET="server"
+    elif [[ -S "$_emacs_dir/futon" ]]; then
+      export FUTON3C_EMACS_SOCKET="futon"
+    else
+      _sockets=("$_emacs_dir"/*)
+      if [[ ${#_sockets[@]} -ge 1 && -S "${_sockets[0]}" ]]; then
+        export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
       fi
     fi
   fi
