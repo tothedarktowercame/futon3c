@@ -39,6 +39,7 @@
             [clojure.string :as str]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.logic.disposition-edn :as disposition-edn]
+            [futon3c.logic.mana-session :as mana-session]
             [futon3c.logic.probe :as probe])
   (:import [java.time Instant]))
 
@@ -225,7 +226,8 @@
 
    See M-bounded-in-flight-state INSTANTIATE-improvisation, Blocks 1-3."
   ([repo-paths] (check-working-tree-pressure repo-paths {}))
-  ([repo-paths {:keys [nominals disposition-state-by-repo]
+  ([repo-paths {:keys [nominals disposition-state-by-repo
+                       session-id mana-session-base-url]
                 :or {nominals default-working-tree-nominals}}]
    (fn [_evidence-store]
      (try
@@ -251,14 +253,26 @@
                         1 :advisory
                         2 :high
                         3 :stop-the-line)
-             outcome (tier->outcome max-tier)]
+             outcome (tier->outcome max-tier)
+             ;; Per V-6 amendment (II): drain measures per-repo;
+             ;; balance aggregates per-session. When a session-id is
+             ;; supplied, fetch the session-attributed mana summary
+             ;; from nonstarter and surface it alongside the per-repo
+             ;; drain readings. Failures (nonstarter unreachable) are
+             ;; silent — the drain readings stand on their own.
+             mana-opts (cond-> {} mana-session-base-url
+                                  (assoc :base-url mana-session-base-url))
+             mana-summary (when session-id
+                            (mana-session/mana-summary session-id mana-opts))]
          {:outcome outcome
-          :detail  {:scanned-repos (count per-repo)
-                    :max-tier max-tier
-                    :max-pressure (apply max 0.0 (map :P per-repo))
-                    :per-repo per-repo
-                    :nominals nominals
-                    :invariant I-metabolic-balance}})
+          :detail  (cond-> {:scanned-repos (count per-repo)
+                            :max-tier max-tier
+                            :max-pressure (apply max 0.0 (map :P per-repo))
+                            :per-repo per-repo
+                            :nominals nominals
+                            :invariant I-metabolic-balance}
+                     session-id (assoc :session-id session-id
+                                       :session-mana mana-summary))})
        (catch Throwable t
          {:outcome :violation
           :detail  {:exception (str (.getName (class t)) ": "
@@ -370,7 +384,8 @@
    distinguishability in boot logs."
   ([evidence-store] (check-working-tree-pressure-on-load! evidence-store {}))
   ([evidence-store {:keys [emit? print? repo-paths nominals
-                           disposition-state-by-repo]
+                           disposition-state-by-repo
+                           session-id mana-session-base-url]
                     :or {emit? true
                          print? true
                          repo-paths default-repo-paths
@@ -382,7 +397,9 @@
     ((check-working-tree-pressure
       repo-paths
       {:nominals nominals
-       :disposition-state-by-repo disposition-state-by-repo})
+       :disposition-state-by-repo disposition-state-by-repo
+       :session-id session-id
+       :mana-session-base-url mana-session-base-url})
      evidence-store)
     {:emit? emit? :print? print?})))
 
