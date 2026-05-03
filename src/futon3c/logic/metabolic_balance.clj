@@ -38,6 +38,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.logic.disposition-edn :as disposition-edn]
             [futon3c.logic.probe :as probe])
   (:import [java.time Instant]))
 
@@ -93,12 +94,30 @@
    begins regardless of age/size."
   20)
 
+(defn- file-age-days
+  "Age in days (double) of FILE on disk, computed from mtime vs
+   System/currentTimeMillis. Returns 0.0 if file is absent (e.g.
+   a deletion shown by git status)."
+  [^java.io.File f]
+  (if (and f (.exists f))
+    (let [now-ms (System/currentTimeMillis)
+          mtime  (.lastModified f)]
+      (if (zero? mtime)
+        0.0
+        (double (/ (- now-ms mtime) (* 1000.0 60 60 24)))))
+    0.0))
+
+(defn- file-bytes
+  "Bytes of FILE on disk; 0 if file is absent."
+  [^java.io.File f]
+  (if (and f (.exists f)) (.length f) 0))
+
 (defn- list-uncommitted-paths
-  "Return [{:path string :status string :age-days number :bytes long} ...]
-   for paths shown in `git status --porcelain` for REPO-PATH.
-   Empty when not a git repo or git fails. Status string is the
-   2-character porcelain code (e.g. \" M\", \"D \", \"??\").
-   Block 2 fills the per-path mtime + bytes computation."
+  "Return [{:path string :status string :age-days double :bytes long} ...]
+   for paths shown in `git status --porcelain` for REPO-PATH. Status is
+   the 2-character porcelain code (e.g. \" M\", \"D \", \"??\"). Empty
+   when not a git repo or git fails. For deleted files, age and bytes
+   are 0 (the file is gone; the index reference is what's pending)."
   [repo-path]
   (try
     (let [{:keys [exit out]}
@@ -107,61 +126,144 @@
         (->> (str/split-lines (or out ""))
              (remove str/blank?)
              (mapv (fn [line]
-                     {:status (subs line 0 (min 2 (count line)))
-                      :path (str/triml (subs line (min 3 (count line))))
-                      ;; Block 2 fills these:
-                      :age-days nil
-                      :bytes nil})))
+                     (let [status (subs line 0 (min 2 (count line)))
+                           rel (str/triml (subs line (min 3 (count line))))
+                           f (io/file repo-path rel)]
+                       {:status status
+                        :path rel
+                        :age-days (file-age-days f)
+                        :bytes (file-bytes f)}))))
         []))
     (catch Throwable _ [])))
 
 (defn- apply-eligibility-filter
-  "Drop paths that should not contribute to pressure:
-     - gitignored (by status code)
-     - volatile-tracked (Block 2 / Q-12)
-     - disposition-opted-out per `.futon-disposition.edn` (Block 3)
-   Block 1 is a passthrough placeholder; Blocks 2 + 3 fill it."
-  [paths _disposition-state]
-  paths)
+  "Drop paths that should not contribute to pressure. Currently:
+     - disposition-opted-out per `.futon-disposition.edn`
+       (via disposition-edn/active?).
+   gitignored paths are auto-excluded by `git status --porcelain`
+   itself (it omits ignored files unless --ignored is passed).
+   Volatile-tracked filtering (DOCUMENT QA-12) is a future refinement."
+  [paths disposition-state]
+  (if-not disposition-state
+    (vec paths)
+    (vec
+     (remove (fn [{:keys [path]}]
+               (disposition-edn/active? disposition-state path))
+             paths))))
+
+(defn compute-channel-pressure
+  "Compute working-tree pressure from a vec of eligible path-records
+   (each with at least :age-days and :bytes), under NOMINALS map of
+   {:N-count int :D-age-days number :B-bytes number}.
+
+   Pressure is `max(count/N, age/D, bytes/B)` per ARGUE-3. Returns
+   {:P double :count int :max-age-days double :total-bytes long
+    :tier keyword}. Pure function; no IO."
+  [eligible-paths {:keys [N-count D-age-days B-bytes]
+                   :as _nominals}]
+  (if (empty? eligible-paths)
+    {:P 0.0 :count 0 :max-age-days 0.0 :total-bytes 0 :tier :silent}
+    (let [n            (count eligible-paths)
+          max-age      (double (apply max 0.0
+                                      (keep #(some-> (:age-days %) double)
+                                            eligible-paths)))
+          total-bytes  (long (reduce + 0 (keep :bytes eligible-paths)))
+          P            (max (/ n (double N-count))
+                            (/ max-age (double D-age-days))
+                            (/ total-bytes (double B-bytes)))]
+      {:P P
+       :count n
+       :max-age-days max-age
+       :total-bytes total-bytes
+       :tier (pressure->tier P)})))
 
 (defn- compute-working-tree-pressure
-  "Pressure for the working-tree channel of REPO-PATH.
-   Block 1 returns nil (skeleton); Block 2 fills with
-     max(count/N, age/D, bytes/B).
-   Returns {:P number :count int :max-age-days number :total-bytes long}
-   or nil while skeleton."
-  [_repo-path _eligible-paths _nominals]
-  ;; Block 2 implementation goes here.
-  nil)
+  "Per-repo: list paths, filter for eligibility, compute pressure.
+   Returns the map shape from compute-channel-pressure plus :repo."
+  [repo-path disposition-state nominals]
+  (-> (list-uncommitted-paths repo-path)
+      (apply-eligibility-filter disposition-state)
+      (compute-channel-pressure nominals)
+      (assoc :repo repo-path)))
+
+(defn- load-disposition-for-repo
+  "Read `.futon-disposition.edn` for REPO-PATH; nil if absent."
+  [repo-path]
+  (disposition-edn/load-state repo-path))
+
+(defn tier->outcome
+  "Map a tier keyword to the probe-result :outcome. Silent and
+   advisory are :ok (the operator notices but nothing fails);
+   high and stop-the-line are :violation (boot-time evidence
+   surfaces the channel). Public so downstream surfaces (HUD,
+   War Machine views) can render outcome consistently with the
+   check-fn."
+  [tier]
+  (case tier
+    :silent        :ok
+    :advisory      :ok
+    :high          :violation
+    :stop-the-line :violation))
 
 (defn check-working-tree-pressure
   "Probe check-fn factory for `metabolic-balance/working-tree`.
 
    REPO-PATHS is a seq of git-repo paths to scan. Returns the
    standard probe-result shape `{:outcome :ok | :violation
-   | :inactive :detail <map>}`.
+   :detail <map>}`. Detail carries :tier (:silent / :advisory /
+   :high / :stop-the-line) so downstream surfaces can render
+   graduated drive (the ARGUE-1 distinguishing feature of this
+   sibling vs the bounded-disposition single-tier siblings).
 
-   Skeleton form (Block 1): returns :inactive with :deferred? true
-   until pressure function lands in Block 2.
-
-   Options (planned):
+   Options:
      :nominals — per-channel nominal map; defaults to
        `default-working-tree-nominals`.
-     :disposition-state — output of `futon3c.logic.disposition-edn/load`
-       (Block 3). When omitted, eligibility filter is identity.
+     :disposition-state-by-repo — map repo-path → state. When
+       omitted, the check loads `.futon-disposition.edn` for each
+       repo via `disposition-edn/load-state`. Pass an explicit map
+       for hermetic testing.
 
-   See M-bounded-in-flight-state INSTANTIATE-improvisation, Block 1."
+   See M-bounded-in-flight-state INSTANTIATE-improvisation, Blocks 1-3."
   ([repo-paths] (check-working-tree-pressure repo-paths {}))
-  ([repo-paths {:keys [nominals disposition-state]
+  ([repo-paths {:keys [nominals disposition-state-by-repo]
                 :or {nominals default-working-tree-nominals}}]
    (fn [_evidence-store]
-     {:outcome :inactive
-      :detail  {:deferred? true
-                :reason "INSTANTIATE Block 1 skeleton; pressure function lands in Block 2."
-                :scanned-repos (count repo-paths)
-                :nominals nominals
-                :disposition-state-present? (some? disposition-state)
-                :invariant I-metabolic-balance}})))
+     (try
+       (let [per-repo
+             (vec
+              (for [repo repo-paths
+                    :when (.exists (io/file repo ".git"))]
+                (let [disp (or (get disposition-state-by-repo repo)
+                               (load-disposition-for-repo repo))]
+                  (compute-working-tree-pressure repo disp nominals))))
+             max-tier-value (reduce
+                             (fn [acc {:keys [tier]}]
+                               (max acc
+                                    (case tier
+                                      :silent 0
+                                      :advisory 1
+                                      :high 2
+                                      :stop-the-line 3)))
+                             0
+                             per-repo)
+             max-tier (case max-tier-value
+                        0 :silent
+                        1 :advisory
+                        2 :high
+                        3 :stop-the-line)
+             outcome (tier->outcome max-tier)]
+         {:outcome outcome
+          :detail  {:scanned-repos (count per-repo)
+                    :max-tier max-tier
+                    :max-pressure (apply max 0.0 (map :P per-repo))
+                    :per-repo per-repo
+                    :nominals nominals
+                    :invariant I-metabolic-balance}})
+       (catch Throwable t
+         {:outcome :violation
+          :detail  {:exception (str (.getName (class t)) ": "
+                                    (.getMessage t))
+                    :invariant I-metabolic-balance}})))))
 
 ;; ---------------------------------------------------------------------------
 ;; on-load wrapper (mirrors archaeology siblings' shape)
