@@ -305,6 +305,96 @@ That's 20 questions total. The set partitions cleanly into:
 
 These five clusters are the spec for `working-tree-commit-pressure`'s check-fn, read top-down.
 
+## Phase I — Stack-wide WIP sweep (2026-05-03 afternoon)
+
+After Phase H landed the session-work commits, the operator pushed for clearing
+all *pre-existing* WIP across the stack ("any order whatsoever; just log
+insights as we go"). Result: from 8 dirty / 11 ahead → **2 dirty / 13 ahead**
+across 14 repos, ~40 commits in this phase alone. The remaining 2 dirty +
+1 untracked are explicitly deferred.
+
+### What got committed in Phase I (counting per repo)
+
+| Repo | Commits | Headline |
+|---|---|---|
+| futon1a | 1 | Hygiene: ignore .clj-kondo/ + .lsp/ |
+| futon7  | 3 | Move data/{briefs,daily,frames,probes}/ → storage; gitignore; retire 13 tracked |
+| futon3a | 1 | New embed_text.py |
+| futon5  | 1 | New TN-synesthesia |
+| futon1a | 1 | New README-reflection |
+| futon6  | 1 | mark2 trio (page size halve + glob tighten) |
+| futon4  | 3 | arxana-browser, M-peeragogy-rewrite (+250-file lab dir), M-writing-ethics |
+| futon0  | 6 | hygiene .gitignore; stack-HUD refactor + war-machine port; usage-report; audio pipeline; analysis excursions; misc |
+| futon3  | 4 | path rename (28 files); substrate-2 / live-geometric-stack (55 files); pattern library (89 files); war-room |
+| futon3c | 9 | hygiene + log; APM/Lean-dojo; transport rebuild; blackboard; portfolio+AIF+inference; peripheral; snapshot+watcher+labs+inventory; social+runtime+scripts+REPLs+resources; agency/registry+agent runtime |
+| futon5a | 6 | hygiene __pycache__; stack-stereolithography pipeline (187 files); holistic argument; missions; misc; data/grand-unified-placemat |
+| futon2  | 2 | war-machine receive (paired with futon0); M-reflective-discipline |
+| futon6  | 1 | M-hyperreal-dictionary-planning |
+| futon7  | 1 | src/f7/daily subseries axes refactor + bb.edn + journal |
+
+Total: **40 commits across 13 repos**.
+
+### Findings (each one constrains the check-fn design)
+
+#### Finding 8 — Pre-commit hooks belong *inside* the bucketing logic, not after.
+
+The first attempted futon3c commit triggered the `reachable-from-boot/agent-registry` hook because dev.clj contained pre-existing `swap! reg/!registry` call sites unrelated to my session edits. The hook caught a real "you have your WIP entangled with mine" situation. **The check-fn should pre-flight all known hooks before staging**, surfacing "this commit will trip hook X" so the operator decides before adding to the index.
+
+#### Finding 9 — Big-diff cohesion is real and should not be punished.
+
+The transport/http rebuild was +482/-82 in one file (+289 in its test). The blackboard refactor was +103. The portfolio rebuild was +69+29. arxana-browser-essays was +579. peeragogy lab dir was 250 files. **Heterogeneity penalty must be diff-content-aware, not size-aware** — a single coherent refactor of any size beats a scatter of tiny unrelated edits.
+
+#### Finding 10 — Lab-dir proliferation tracks mission count.
+
+The 5 untracked lab dirs (M-archaeology-control, M-bounded-disposition, M-invariant-queue-extend, M-invariant-queue-unstuck, M-single-locus) plus our M-commit-as-you-go reflect futon3c's *invariant-queue practice*: each candidate invariant earns a lab dir. **Pressure function should track lab-dir lifecycle (created → first commit → continuous additions) as a separate axis from one-off file edits.**
+
+#### Finding 11 — Systematic renames are detectable from diff signatures.
+
+The futon3 path rename `holes/<repo>.devmap → holes/features/<repo>.devmap` touched 28 files. Every diff was "+1/-1 of the same line replacement." **The check-fn could surface "candidate bulk commits" by clustering M files whose diffs match a normalized signature.** Operator skims the cluster and approves a single commit.
+
+#### Finding 12 — Tracked-but-volatile artifacts are a third state.
+
+`resources/vitality/latest_scan.json` and `data/grand-unified-placemat.edn` are in-tree but regenerated/edited frequently. Their commit churn rate is a separate concern from commit pressure. **Flag tracked-but-volatile by churn rate; surface "this file's churn exceeds your commit cadence — should it move to .gitignore or storage?"**
+
+#### Finding 13 — Operational refs to moved paths persist.
+
+futon7/src/f7/daily.clj still reads from `data/probes/*.edn` after we moved the dir to `~/code/storage/futon7-scans/probes/` in commit a954c9f. Same shape as futon6's 101 tracked files referencing `data/first-proof/`. **The check-fn's storage-move action should emit a follow-up note enumerating "tracked-source files that reference the moved path."** Operator can fix lazily; the note prevents silent breakage.
+
+#### Finding 14 — Zero-byte zombie files from glob misfires.
+
+futon7 had a literal `*.clj` filename, 0 bytes, from Apr 27 — almost certainly an accidental shell redirect (`> *.clj` glob misfire, perhaps via an unset variable). **The check-fn should flag 0-byte files at unusual locations as "likely accidental redirect output" — high-signal, low-volume diagnostic.**
+
+#### Finding 15 — Cross-repo paired commits cluster naturally.
+
+The futon0 → futon2 war-machine port was three commits across two repos (futon0 retires the reports + updates :war-machine alias; futon2 receives the reports + paired tests + deps). Linked manually via commit-message references. **The check-fn could detect "session-window cross-repo file moves" by comparing deletions in one repo to additions in another within an N-day window.**
+
+#### Finding 16 — Large untracked source trees with build artifacts must be deferred, not blanket-staged.
+
+futon0/web/war-machine/ is 125 MB (50 MB node_modules + 55 MB .shadow-cljs + dist + cpcache + 352 .js files). A `git add web/` would stage 2,825 files including build artifacts. **The check-fn should detect "untracked subtree contains known build-artifact dir names" and decline to bulk-stage it; require explicit operator confirmation per source-only subset.**
+
+#### Finding 17 — Mission docs cluster into a recognizable shape.
+
+10+ missions committed across the sweep, each ~3-line preamble (`# Mission: NAME` / `**Status:** PHASE` / `**Date:** YYYY-MM-DD`). **The check-fn could detect "untracked mission docs" by file-pattern (`holes/missions/M-*.md`) AND content-pattern (preamble shape), and propose "commit all N as one M-* introductions commit" as a default.** Operator can split if desired.
+
+#### Finding 18 — Pure data-vs-code-vs-docs heuristics fall apart at the futonic stack scale.
+
+The clusters that made sense were *thematic* (transport, blackboard, portfolio, APM, stack-stereolithography, etc.), not *path-based*. Library/, scripts/, src/, test/, holes/, docs/ all coexisted within single thematic commits. **The check-fn must support theme-driven clustering, not path-segregated commits.** This matches how the operator thinks about the work.
+
+### State on closing Phase I
+
+```
+14 repos  |  13 ahead of origin  |  2 dirty  |  0 noisy
+
+dirty:
+  futon1a   2 src M    — operator code WIP (left for direct attention)
+  futon3c   6 dev/* M  — entangled with our 2026-05-02 WS-bridge + shutdown-order patches; commit when surrounding WIP lands
+
+untracked:
+  futon0    web/       — war-machine UI source tree, 125 MB; deferred to M-single-entry-point
+```
+
+The 18 findings collected across Phases A→I are the spec the check-fn replays in logical order. Five clusters → 18 questions, with the last-mile authoring (commit messages, paired-commit links, theme-driven bucketing) being the operator-attestable surface the invariant cannot fully automate but must scaffold.
+
 ## Distilled checklist (what an instrumented `commit-as-you-go` invariant should make routine)
 
 For each candidate cleanup target, the apparatus should:
