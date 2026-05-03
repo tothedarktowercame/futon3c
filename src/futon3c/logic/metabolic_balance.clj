@@ -282,15 +282,135 @@
    "/home/joe/code/futon5"
    "/home/joe/code/futon5a"])
 
+;; ---------------------------------------------------------------------------
+;; Boot-time emit + print helpers (Block 4)
+;; ---------------------------------------------------------------------------
+
+(defn- emit-load-time-fired!
+  "Emit a `:family-fired` evidence entry for the metabolic-balance
+   load-time check. Returns the boundary receipt."
+  [evidence-store family-id author {:keys [outcome detail invariant]}]
+  (boundary/append!
+   evidence-store
+   {:subject {:ref/type :pattern
+              :ref/id (str "structural-law-family/" (name family-id))}
+    :type :coordination
+    :claim-type :observation
+    :author author
+    :body {:event :family-fired
+           :family-id family-id
+           :outcome outcome
+           :detail (or detail {})
+           :invariant invariant
+           :timestamp (str (Instant/now))}}))
+
+(defn- print-load-time-result!
+  [family-id {:keys [outcome detail]}]
+  (let [label (name family-id)
+        max-tier (:max-tier detail)
+        max-pressure (:max-pressure detail)]
+    (case outcome
+      :ok
+      (println (str "[metabolic-balance] " label " load-time check: OK"
+                    (when max-tier
+                      (str " (max-tier=" (name max-tier)
+                           " P=" (format "%.2f" (or max-pressure 0.0)) ")"))))
+
+      :inactive
+      (println (str "[metabolic-balance] " label " load-time check: INACTIVE ("
+                    (pr-str detail) ")"))
+
+      (do
+        (println "================================================================")
+        (println (str "[metabolic-balance] " label " LOAD-TIME CHECK FAILED"))
+        (when max-tier
+          (println (str "              max-tier: " (name max-tier)
+                        "   max-P: " (format "%.2f" (or max-pressure 0.0)))))
+        (when-let [violators (->> (:per-repo detail)
+                                  (filter (fn [r] (#{:high :stop-the-line}
+                                                   (:tier r))))
+                                  vec)]
+          (when (seq violators)
+            (doseq [v violators]
+              (println (format "              %-50s tier=%-14s P=%.2f  count=%d  max-age=%.1fd  bytes=%d"
+                               (str (:repo v))
+                               (name (:tier v))
+                               (:P v)
+                               (:count v)
+                               (:max-age-days v)
+                               (:total-bytes v))))))
+        (println "              Boot continues; the violation is recorded as evidence.")
+        (println "================================================================")))))
+
+(defn- run-load-time-check!
+  [evidence-store family-id author result {:keys [emit? print?]
+                                           :or {emit? true print? true}}]
+  (let [outcome (or (:outcome result) :violation)
+        detail (:detail result)
+        invariant (or (:invariant result) (:invariant detail))
+        receipt (when emit?
+                  (try
+                    (emit-load-time-fired!
+                     evidence-store family-id author
+                     {:outcome outcome :detail detail :invariant invariant})
+                    (catch Throwable t
+                      {:ok false
+                       :error/code :emit-failed
+                       :error/exception (str (.getName (class t)) ": "
+                                             (.getMessage t))})))]
+    (when print?
+      (print-load-time-result! family-id {:outcome outcome :detail detail}))
+    (cond-> (assoc result :outcome outcome)
+      receipt (assoc :emit-receipt receipt))))
+
 (defn check-working-tree-pressure-on-load!
-  "Run the working-tree drain-channel check at JVM load time.
-   Skeleton wrapper — Block 4 finishes wiring (probe-tap registration,
-   evidence emission). For now emits the :inactive skeleton outcome."
+  "Run the working-tree drain-channel check at JVM load time and emit
+   a `:family-fired` evidence entry. Mirrors the archaeology siblings'
+   on-load! shape; output line begins with `[metabolic-balance]` for
+   distinguishability in boot logs."
   ([evidence-store] (check-working-tree-pressure-on-load! evidence-store {}))
-  ([evidence-store {:keys [repo-paths nominals disposition-state]
-                    :or {repo-paths default-repo-paths
+  ([evidence-store {:keys [emit? print? repo-paths nominals
+                           disposition-state-by-repo]
+                    :or {emit? true
+                         print? true
+                         repo-paths default-repo-paths
                          nominals default-working-tree-nominals}}]
-   ((check-working-tree-pressure repo-paths
-                                 {:nominals nominals
-                                  :disposition-state disposition-state})
-    evidence-store)))
+   (run-load-time-check!
+    evidence-store
+    :metabolic-balance/working-tree
+    "metabolic-balance/check-working-tree-pressure-on-load!"
+    ((check-working-tree-pressure
+      repo-paths
+      {:nominals nominals
+       :disposition-state-by-repo disposition-state-by-repo})
+     evidence-store)
+    {:emit? emit? :print? print?})))
+
+;; ---------------------------------------------------------------------------
+;; Probe-tap registration (Block 4)
+;; ---------------------------------------------------------------------------
+
+(defn register-metabolic-balance-taps!
+  "Register the metabolic-balance/* check-fns with `futon3c.logic.probe`.
+   Operator-driven; intended to be called once at activation time
+   alongside `register-default-taps!`,
+   `register-archaeology-control-taps!`, and `register-locus-taps!`.
+
+   Options:
+     :repo-paths — override the default futon-stack repo list.
+     :nominals — override the default working-tree nominals.
+
+   Returns the set of registered family-ids.
+
+   First sibling: metabolic-balance/working-tree (graduated-tier).
+   Future siblings (when their hinges open): mission-proliferation,
+   session-sprawl, branch/PR ahead-of-origin, untriaged-evidence — see
+   M-bounded-in-flight-state DOCUMENT QA Q-15."
+  ([] (register-metabolic-balance-taps! {}))
+  ([{:keys [repo-paths nominals]
+     :or {repo-paths default-repo-paths
+          nominals default-working-tree-nominals}}]
+   (probe/register-family-check!
+    :metabolic-balance/working-tree
+    (check-working-tree-pressure repo-paths {:nominals nominals}))
+   #{:metabolic-balance/working-tree}))

@@ -42,6 +42,7 @@ ALLOWED_PATHS=(
   "src/futon3c/logic/probe_taps.clj"
   "src/futon3c/logic/archaeology.clj"
   "src/futon3c/logic/locus.clj"
+  "src/futon3c/logic/metabolic_balance.clj"
 )
 
 PATTERN='\([[:space:]]*(reset!|swap!)[[:space:]]+\(?[[:alnum:]_./-]*family-check-fns\b|\([[:space:]]*(probe/)?register-family-check!'

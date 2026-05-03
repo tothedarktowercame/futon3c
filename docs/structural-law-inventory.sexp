@@ -345,6 +345,24 @@
                          :implemented-in ("futon3c/src/futon3c/logic/archaeology.clj")
                          :enforced-at "futon3c.logic.archaeology/check-pipeline-tracer-on-load! (boot-time, runs on every JVM start)"
                          :evidenced-by ("futon3c/test/futon3c/logic/archaeology_test.clj"))))
+     (family :id metabolic-balance
+             :status candidate
+             :summary "The operator's allostatic state in the stack — the integral of (block-closures-at-hinges − allostatic-load-symptoms) — must remain non-negative under sustained operation. Each artifact-class is a drain channel under this faculty; channels are voices in one harmonic structure (harmolodic reread). Working-tree is the first graduated-tier sibling; the existing bounded-disposition siblings (branch, mission-doc, stash) above are reread as single-tier instances of the same faculty without structural change to those siblings."
+             :candidate-invariants
+             (;; Graduated-tier shape — continuous drive over (count, age,
+              ;; bytes) with eligibility filtered by .futon-disposition.edn.
+              ;; See futon3/library/structure/block-as-futonic-revolution,
+              ;;     futon3/library/structure/mana-allostasis, and
+              ;;     futon3/library/invariant-coherence/drain-channel-shape.
+              ;; M-bounded-in-flight-state INSTANTIATE 2026-05-03.
+              (invariant :id metabolic-balance/working-tree
+                         :status operational-when-enabled
+                         :summary "Per-repo, the working-tree drain pressure P = max(count_eligible/N, age_eligible_max/D, bytes_eligible/B) under nominals (N=20 paths, D=7 days, B=10 MB), with eligibility filtered by `.futon-disposition.edn` (paths under :in-progress globs whose :review-by has not self-decayed are excluded). Tier mapping: P<1 silent → :ok; 1≤P<2 advisory → :ok with :tier in detail; 2≤P<4 high → :violation; P≥4 stop-the-line → :violation. Calibrated against the 2026-05-03 sweep (futon6 pre=25.35 STL, post=0.15 silent)."
+                         :implemented-in ("futon3c/src/futon3c/logic/metabolic_balance.clj"
+                                          "futon3c/src/futon3c/logic/disposition_edn.clj")
+                         :enforced-at "futon3c.logic.metabolic-balance/check-working-tree-pressure (probe-tap, operator-activated via register-metabolic-balance-taps!) plus futon3c.logic.metabolic-balance/check-working-tree-pressure-on-load! at JVM boot."
+                         :evidenced-by ("futon3c/test/futon3c/logic/metabolic_balance_test.clj"
+                                        "futon3c/test/futon3c/logic/disposition_edn_test.clj"))))
      (family :id peripheral-custody
              :status candidate
              :summary "A peripheral session should carry enough structure that work cannot silently drift across domains."
