@@ -8,12 +8,15 @@
             [cheshire.core :as json]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.transport.http :as http]
+            [futon3c.portfolio.core :as portfolio]
+            [futon3c.portfolio.perceive :as perceive]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.string :as str]))
 
 ;; =============================================================================
 ;; Fixtures
@@ -25,6 +28,11 @@
     (reg/reset-registry!)
     (persist/reset-sessions!)
     (estore/reset-store!)
+    (reset! portfolio/!state {:mu perceive/default-mu
+                              :prec perceive/default-precision
+                              :pending nil
+                              :recent []
+                              :step-count 0})
     (enc/clear-cache!)
     (http/reset-invoke-jobs!)
     (f)))
@@ -126,6 +134,32 @@
 (defn- write-corpus!
   [dir corpus-name entries]
   (spit (io/file dir (str corpus-name ".edn")) (pr-str entries)))
+
+;; =============================================================================
+;; Mission sync endpoint
+;; =============================================================================
+
+(deftest mc-sync-mission-pushes-versioned-snapshot
+  (testing "POST /api/alpha/mc/sync-mission parses and stores a mission snapshot"
+    (with-temp-dir
+      (fn [dir]
+        (let [missions-dir (io/file dir "holes" "missions")
+              path (io/file missions-dir "M-sample.md")
+              _ (.mkdirs missions-dir)
+              _ (spit path (str "# Mission: Sample\n\n"
+                                "**Date:** 2026-04-29\n"
+                                "**Status:** IDENTIFY\n"))
+              handler (make-handler {:evidence-store estore/!store})
+              body (json/generate-string {"path" (.getAbsolutePath path)
+                                          "repo" "futonz"})
+              response (post handler "/api/alpha/mc/sync-mission" body)
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "sample" (get-in parsed [:mission :mission/id])))
+          (is (= "futonz" (get-in parsed [:mission :mission/repo])))
+          (is (string? (:evidence/id parsed)))
+          (is (true? (:created parsed))))))))
 
 ;; =============================================================================
 ;; POST /dispatch tests
@@ -327,6 +361,198 @@
             (is (= 502 (:status invoke-response)))
             (is (false? (:ok invoke-parsed)))
             (is (= "invoke-error" (:error invoke-parsed)))))))))
+
+(deftest agent-auto-register-seeds-session-id
+  (testing "POST /api/alpha/agents/auto seeds session continuity at registration time"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-session-id-claude-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-http-register"
+          body (json/generate-string {"type" "claude"
+                                      "session-id" sid})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "claude-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "claude-1" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= sid (some-> session-file slurp str/trim))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-auto-register-fresh-ignores-stale-file
+  (testing "POST /api/alpha/agents/auto with no session-id deletes stale session file (I-1)"
+    ;; Regression: a stale /tmp/futon-session-id-<aid> from a prior
+    ;; incarnation of this agent-id must not be silently adopted as the
+    ;; new agent's session. Otherwise two agents can share one session
+    ;; (observed: claude-3 and claude-6 both resuming 14459c97...).
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-session-id-claude-1")
+          backup (when (.exists session-file) (slurp session-file))
+          stale-sid "stale-from-prior-incarnation"
+          body (json/generate-string {"type" "claude"})]
+      (try
+        (spit session-file stale-sid)
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "claude-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "claude-1" (:agent-id parsed)))
+          (is (nil? (:session-id parsed))
+              "fresh lane must not echo back a session-id")
+          (is (nil? (:agent/session-id agent))
+              "fresh lane must not inherit the stale file's session-id")
+          (is (not (.exists session-file))
+              "stale session file must be deleted on fresh registration"))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest codex-auto-register-seeds-session-id
+  (testing "POST /api/alpha/agents/auto creates a fresh codex lane with its own session file"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-codex-register"
+          cwd "/home/joe/code"
+          body (json/generate-string {"type" "codex"
+                                      "session-id" sid
+                                      "cwd" cwd})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "codex-1" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= (.getPath session-file) (:session-file parsed)))
+          (is (= cwd (:cwd parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= true (get-in agent [:agent/metadata :require-execution?])))
+          (is (= sid (some-> session-file slurp str/trim)))
+          (is (fn? (:agent/invoke-fn agent))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-restore-registers-codex-exact-identity
+  (testing "POST /api/alpha/agents/restore recreates an exact codex identity"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-99")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-restore-codex-99"
+          cwd "/home/joe/code"
+          body (json/generate-string {"agent-id" "codex-99"
+                                      "type" "codex"
+                                      "session-id" sid
+                                      "session-file" (.getPath session-file)
+                                      "cwd" cwd})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/restore" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-99")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "registered" (:action parsed)))
+          (is (= "codex-99" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= (.getPath session-file) (:session-file parsed)))
+          (is (= cwd (:cwd parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= true (get-in agent [:agent/metadata :require-execution?])))
+          (is (= cwd (get-in agent [:agent/metadata :cwd])))
+          (is (= sid (some-> session-file slurp str/trim)))
+          (is (fn? (:agent/invoke-fn agent))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-restore-existing-preserves-session-id-when-omitted
+  (testing "POST /api/alpha/agents/restore refreshes invoke-fn without clearing session-id"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-session-id-claude-88")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-restore-claude-88"
+          initial-body (json/generate-string {"agent-id" "claude-88"
+                                              "type" "claude"
+                                              "session-id" sid
+                                              "session-file" (.getPath session-file)
+                                              "cwd" "/home/joe/code"})
+          refresh-body (json/generate-string {"agent-id" "claude-88"
+                                              "type" "claude"
+                                              "session-file" (.getPath session-file)
+                                              "cwd" "/home/joe/code/futon3c"})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [initial-response (post handler "/api/alpha/agents/restore" initial-body)
+              refresh-response (post handler "/api/alpha/agents/restore" refresh-body)
+              parsed (parse-body refresh-response)
+              agent (reg/get-agent "claude-88")]
+          (is (= 201 (:status initial-response)))
+          (is (= 200 (:status refresh-response)))
+          (is (true? (:ok parsed)))
+          (is (= "updated" (:action parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= sid (some-> session-file slurp str/trim)))
+          (is (= "/home/joe/code/futon3c"
+                 (get-in agent [:agent/metadata :cwd]))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-reset-session-clears-backing-continuity
+  (testing "POST /api/alpha/agents/:id/reset-session clears registry and backing session state"
+    (let [handler (make-handler)
+          session-file (java.io.File/createTempFile "futon3c-http-reset-" ".sid")
+          sid-atom (atom "sess-http-reset")]
+      (try
+        (spit session-file "sess-http-reset")
+        (reg/register-agent!
+         {:agent-id {:id/value "codex-reset" :id/type :continuity}
+          :type :codex
+          :invoke-fn (fn [_ _] {:result "ok"})
+          :capabilities [:edit]
+          :session-id "sess-http-reset"
+          :session-reset-fn (fn []
+                              (reset! sid-atom nil)
+                              (when (.exists session-file)
+                                (.delete session-file))
+                              {:ok true})})
+        (let [response (post handler "/api/alpha/agents/codex-reset/reset-session" "{}")
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "sess-http-reset" (:old-session-id parsed)))
+          (is (nil? @sid-atom))
+          (is (false? (.exists session-file)))
+          (is (nil? (:session-id (get-in (reg/registry-status) [:agents "codex-reset"])))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file)))))))
 
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
@@ -1372,15 +1598,83 @@
 
 (deftest portfolio-step-returns-recommendation
   (testing "POST /api/alpha/portfolio/step runs AIF step and returns recommendation"
-    (let [handler (make-handler)
+    (let [handler (make-handler {:evidence-store estore/!store})
           response (post handler "/api/alpha/portfolio/step"
-                         (json/generate-string {:emit-evidence false}))
+                         (json/generate-string {:agenda-id "wm.close-s6.v1"
+                                                :claim "Close S6 by stepping Portfolio Inference using THE-STACK"
+                                                :observation-source {:kind "aif-stack"
+                                                                     :path "futon5a/holes/stories/THE-STACK.aif.edn"}}))
           parsed (parse-body response)]
       (is (= 200 (:status response)))
       (is (true? (:ok parsed)))
       (is (string? (:recommendation parsed)))
       (is (contains? parsed :diagnostics))
-      (is (contains? parsed :action)))))
+      (is (contains? parsed :action))
+      (is (string? (:run-id parsed)))
+      (is (= "wm.close-s6.v1" (:agenda-id parsed)))
+      (is (= {:before 0 :after 1} (:step-count parsed)))
+      (is (= "futon5a/holes/stories/THE-STACK.aif.edn"
+             (get-in parsed [:observation-source :path])))
+      (is (= 4 (count (get-in parsed [:evidence :entries]))))
+      (let [evidence-response (get-req-with-query handler
+                                                  "/api/alpha/evidence"
+                                                  "tag=portfolio,step")
+            evidence-parsed (parse-body evidence-response)
+            step-entry (first (:entries evidence-parsed))]
+        (is (= 200 (:status evidence-response)))
+        (is (= 1 (:count evidence-parsed)))
+        (is (= "wm.close-s6.v1" (get-in step-entry [:evidence/body :run :agenda-id])))
+        (is (= (:run-id parsed) (get-in step-entry [:evidence/body :run :run-id])))))))
+
+(deftest aif-stack-live-rolls-forward-s6-agenda
+  (testing "GET /api/alpha/aif-stack/live marks v1 rolled-forward, exposes v2 as documented-but-underspecified, and updates the S6 counter"
+    (let [handler (make-handler {:evidence-store estore/!store})
+          _step-response (post handler "/api/alpha/portfolio/step"
+                               (json/generate-string {:agenda-id "wm.close-s6.v1"
+                                                      :claim "Close S6 by stepping Portfolio Inference using THE-STACK"
+                                                     :observation-source {:kind "aif-stack"
+                                                                           :path "futon5a/holes/stories/THE-STACK.aif.edn"}}))
+          response (get-req handler "/api/alpha/aif-stack/live")
+          parsed (parse-body response)
+          s6-node (first (filter #(= "S6" (:id %)) (:stack-nodes parsed)))
+          queue (get parsed :candidate-queue)
+          inspectability (get-in queue [:by-leaf-family :inspectability])
+          unmapped (get queue :unmapped-families)]
+      (is (= 200 (:status response)))
+      (is (= "wm.close-s6.v1" (get-in parsed [:reading :next-move :agenda :id])))
+      (is (= "rolled-forward" (get-in parsed [:reading :next-move :agenda :status])))
+      (is (= "portfolio-step-evidence"
+             (get-in parsed [:reading :next-move :agenda :witness :kind])))
+      (is (= "wm.close-s6.v1"
+             (get-in parsed [:reading :next-move :agenda :witness :run :agenda-id])))
+      (is (= 0
+             (get-in parsed [:reading :next-move :agenda :witness :run :step-before])))
+      (is (= 1
+             (get-in parsed [:reading :next-move :agenda :witness :run :step-after])))
+      (is (= "stack-self-step-count"
+             (get-in parsed [:reading :next-move :agenda :effect-witness :kind])))
+      (is (= 1
+             (get-in parsed [:reading :next-move :agenda :effect-witness :after])))
+      (is (= "wm.close-s6.v2"
+             (get-in parsed [:reading :next-move :agenda :successor :id])))
+      (is (= "underspecified"
+             (get-in parsed [:reading :next-move :agenda :successor :status])))
+      (is (= false
+             (get-in parsed [:reading :next-move :agenda :successor :recommendation-grade?])))
+      (is (= true
+             (get-in parsed [:reading :next-move :agenda :successor :documented?])))
+      (is (= ["action-surface" "step-witness" "effect-witness" "successor-witness"]
+             (get-in parsed [:reading :next-move :agenda :successor :missing-fields])))
+      (is (= "clear the completed War Machine item and set the next item for work via the Candidate Queue invariant"
+             (get-in parsed [:reading :next-move :agenda :successor :specifically])))
+      (is (= 1 (:live-self-step-count s6-node)))
+      (is (= "PI loop step-count = 1; HGO spec-only" (:gap s6-node)))
+      (is (string? (:generated-at queue)))
+      (is (pos? (:run-count queue)))
+      (is (pos? (:top-rank inspectability)))
+      (is (pos? (:item-count inspectability)))
+      (is (some #(= "human-visible-inspectability" %) (:families inspectability)))
+      (is (some #(= "strategic-closure-specification" (:family-id %)) unmapped)))))
 
 (deftest portfolio-heartbeat-rejects-invalid-json
   (testing "POST /api/alpha/portfolio/heartbeat with bad JSON returns 400"

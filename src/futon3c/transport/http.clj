@@ -47,8 +47,10 @@
      failures (port in use, permission denied).
    - realtime/request-param-resilience (L1, L3): delegates param extraction
      to protocol/extract-params for consistency across HTTP and WS."
-  (:require [futon3c.transport.protocol :as proto]
+  (:require [futon3c.evidence.invariant :as evidence-invariant]
+            [futon3c.transport.protocol :as proto]
             [futon3c.transport.encyclopedia :as enc]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as federation]
@@ -1105,7 +1107,7 @@
                           :message "Request body must be a JSON object"})
       (let [evidence-store (evidence-store-for-config config)
             normalized (normalize-evidence-payload payload)
-            result (estore/append* evidence-store normalized)]
+            result (boundary/append! evidence-store normalized)]
         (if (:ok result)
           (json-response 201 {:ok true
                               :evidence/id (get-in result [:entry :evidence/id])
@@ -1197,7 +1199,7 @@
                            :author author
                            :body {:title title :text question}
                            :tags (mapv keyword tags)}
-                  result (estore/append* evidence-store q-entry)]
+                  result (boundary/append! evidence-store q-entry)]
               (json-response 201 {:ok true
                                   :thread-id thread-id
                                   :evidence-id q-id
@@ -1246,7 +1248,7 @@
                                :body {:text answer-text}
                                :tags (mapv keyword (or (:tags target) []))
                                :in-reply-to q-id}
-                      result (estore/append* evidence-store a-entry)]
+                      result (boundary/append! evidence-store a-entry)]
                   (json-response 200 {:ok true
                                       :thread-id thread-id
                                       :evidence-id a-id
@@ -1442,7 +1444,7 @@
                                :tags [:psr]}
                         session-id (assoc :session-id session-id)
                         sigil (assoc-in [:body :sigil] sigil))
-                result (estore/append* evidence-store entry)]
+                result (boundary/append! evidence-store entry)]
             ;; Put pattern in agent's backpack (persisted to disk)
             (backpack-put! author pattern-id e-id)
             (json-response 201 {:ok true
@@ -1492,7 +1494,7 @@
                                :tags [:pur]}
                         session-id (assoc :session-id session-id)
                         in-reply-to (assoc :in-reply-to in-reply-to))
-                result (estore/append* evidence-store entry)]
+                result (boundary/append! evidence-store entry)]
             ;; Clear pattern from agent's backpack (persisted to disk)
             (backpack-clear! author)
             (json-response 201 {:ok true
@@ -1545,7 +1547,7 @@
                                :tags [:par]}
                         (not (str/blank? session-id))
                         (assoc :session-id session-id))
-                result (estore/append* evidence-store entry)]
+                result (boundary/append! evidence-store entry)]
             (json-response 201 {:ok true
                                 :evidence-id e-id
                                 :evidence-ok (:ok result)})))))))
@@ -1567,6 +1569,67 @@
   {:claude [:explore :edit :test :coordination/execute]
    :codex  [:edit :test :coordination/execute]
    :tickle [:mission-control :discipline :coordination/execute]})
+
+(defn- default-session-file-for-agent
+  "Return the default session-file path for AGENT-TYPE/AGENT-ID."
+  [agent-type agent-id]
+  (case agent-type
+    :claude (format "/tmp/futon-session-id-%s" agent-id)
+    :codex (format "/tmp/futon-codex-session-id-%s" agent-id)
+    nil))
+
+(defn- make-session-id-atom
+  "Create a session-id atom seeded from INITIAL-SESSION-ID or SESSION-FILE."
+  [initial-session-id session-file]
+  (atom (or initial-session-id
+            (when (and session-file (.exists (java.io.File. session-file)))
+              (some-> session-file slurp str/trim not-empty)))))
+
+(defn- make-session-reset-fn
+  "Create a reset hook that clears both persisted and in-memory session state."
+  [session-file session-id-atom]
+  (fn []
+    (try
+      (when session-id-atom
+        (reset! session-id-atom nil))
+      (when-let [file (some-> session-file java.io.File.)]
+        (when (and (.exists ^java.io.File file)
+                   (not (.delete ^java.io.File file)))
+          (throw (ex-info "could not delete session file"
+                          {:session-file session-file}))))
+      {:ok true}
+      (catch Exception e
+        {:ok false
+         :error (.getMessage e)}))))
+
+(defn- make-local-agent-invoke-fn
+  "Best-effort builder for a local invoke-fn for AGENT-TYPE."
+  [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom]}]
+  (let [sid-atom (or session-id-atom
+                     (make-session-id-atom initial-session-id session-file))]
+    (case agent-type
+      :claude
+      (try
+        (require 'futon3c.dev)
+        (when-let [make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)]
+          (@make-fn (cond-> {:agent-id agent-id
+                             :session-file session-file
+                             :session-id-atom sid-atom}
+                      emacs-socket (assoc :emacs-socket emacs-socket)
+                      requested-cwd (assoc :cwd requested-cwd))))
+        (catch Throwable _ nil))
+
+      :codex
+      (try
+        (require 'futon3c.dev)
+        (when-let [make-fn (resolve 'futon3c.dev/make-codex-invoke-fn)]
+          (@make-fn (cond-> {:agent-id agent-id
+                             :session-file session-file
+                             :session-id-atom sid-atom}
+                      requested-cwd (assoc :cwd requested-cwd))))
+        (catch Throwable _ nil))
+
+      nil)))
 
 (defn- handle-agents-register
   "POST /api/alpha/agents — register an agent via HTTP.
@@ -1689,45 +1752,29 @@
                                       str/trim
                                       not-empty)
                 emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
-                session-file (case agent-type
-                               :claude (format "/tmp/futon-session-id-%s" agent-id)
-                               :codex (format "/tmp/futon-codex-session-id-%s" agent-id)
-                               nil)
-                invoke-fn (case agent-type
-                            :claude
-                            (try
-                              (require 'futon3c.dev)
-                              (when-let [make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)]
-                                (let [sf session-file
-                                      sid-atom (atom (or initial-session-id
-                                                         (when (.exists (java.io.File. sf))
-                                                           (str/trim (slurp sf)))))]
-                                  (@make-fn (cond-> {:agent-id agent-id
-                                                     :session-file sf
-                                                     :session-id-atom sid-atom}
-                                              emacs-socket (assoc :emacs-socket emacs-socket)
-                                              requested-cwd (assoc :cwd requested-cwd)))))
-                              (catch Throwable _ nil))
-
-                            :codex
-                            (try
-                              (require 'futon3c.dev)
-                              (when-let [make-fn (resolve 'futon3c.dev/make-codex-invoke-fn)]
-                                (let [sf session-file
-                                      sid-atom (atom (or initial-session-id
-                                                         (when (.exists (java.io.File. sf))
-                                                           (str/trim (slurp sf)))))]
-                                  (@make-fn (cond-> {:agent-id agent-id
-                                                     :session-file sf
-                                                     :session-id-atom sid-atom}
-                                              requested-cwd (assoc :cwd requested-cwd)))))
-                              (catch Throwable _ nil))
-
-                            nil)
+                session-file (default-session-file-for-agent agent-type agent-id)
+                ;; I-1: a fresh auto-register (no initial-session-id) must
+                ;; NOT silently inherit orphan session state from a prior
+                ;; incarnation of this agent-id. Delete stale file before
+                ;; seeding so Claude CLI mints a new session on first invoke.
+                _ (when (and session-file (nil? initial-session-id))
+                    (let [f (java.io.File. session-file)]
+                      (when (.exists f) (.delete f))))
+                sid-atom (make-session-id-atom initial-session-id session-file)
+                session-reset-fn (make-session-reset-fn session-file sid-atom)
+                invoke-fn (make-local-agent-invoke-fn
+                           agent-type
+                           {:agent-id agent-id
+                            :session-file session-file
+                            :initial-session-id initial-session-id
+                            :session-id-atom sid-atom
+                            :requested-cwd requested-cwd
+                            :emacs-socket emacs-socket})
                 result (reg/register-agent!
                         {:agent-id {:id/value agent-id :id/type :continuity}
                          :type agent-type
                          :invoke-fn invoke-fn
+                         :session-reset-fn session-reset-fn
                          :capabilities (get default-capabilities agent-type [])
                          :metadata (cond-> {:auto-registered? true}
                                      (= agent-type :codex) (assoc :require-execution? true)
@@ -1750,6 +1797,110 @@
                                   :err "registration-failed"
                                   :message (str "Could not register: " agent-id)}))))))))
 
+(defn- handle-agent-restore
+  "POST /api/alpha/agents/restore — rehydrate or refresh an exact agent identity.
+   Body: {\"agent-id\": \"claude-17\", \"type\": \"claude\", \"session-id\": \"...\",
+          \"session-file\": \"/tmp/futon-session-id-claude-17\", \"cwd\": \"...\",
+          \"emacs-socket\": \"server\"}
+   If the agent is already live, refresh its invoke-fn/session metadata.
+   If it is missing, recreate the exact identity instead of allocating a new one."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [agent-id (some-> (or (:agent-id payload) (get payload "agent-id"))
+                             str str/trim not-empty)
+            agent-type (some-> (or (:type payload) (get payload "type"))
+                               parse-keyword)
+            initial-session-id (some-> (or (:session-id payload)
+                                           (get payload "session-id"))
+                                       str str/trim not-empty)
+            requested-cwd (some-> (or (:cwd payload) (get payload "cwd"))
+                                  str str/trim not-empty)
+            emacs-socket (some-> (or (:emacs-socket payload)
+                                     (get payload "emacs-socket"))
+                                 str str/trim not-empty)
+            session-file (some-> (or (:session-file payload)
+                                     (get payload "session-file")
+                                     (default-session-file-for-agent agent-type agent-id))
+                                 str str/trim not-empty)]
+        (cond
+          (nil? agent-id)
+          (json-response 400 {:ok false :err "missing-agent-id"
+                              :message "agent-id is required"})
+
+          (nil? agent-type)
+          (json-response 400 {:ok false :err "missing-type"
+                              :message "type is required"})
+
+          :else
+          (let [sid-atom (make-session-id-atom initial-session-id session-file)
+                session-reset-fn (make-session-reset-fn session-file sid-atom)
+                invoke-fn (make-local-agent-invoke-fn
+                           agent-type
+                           {:agent-id agent-id
+                            :session-file session-file
+                            :initial-session-id initial-session-id
+                            :session-id-atom sid-atom
+                            :requested-cwd requested-cwd
+                            :emacs-socket emacs-socket})
+                metadata (cond-> {:auto-registered? true}
+                           (= agent-type :codex) (assoc :require-execution? true)
+                           requested-cwd (assoc :cwd requested-cwd)
+                           emacs-socket (assoc :emacs-socket emacs-socket))]
+            (if (nil? invoke-fn)
+              (json-response 500 {:ok false
+                                  :err "restore-failed"
+                                  :message (str "Could not build invoke-fn for " agent-id)})
+              (let [existing (reg/get-agent agent-id)]
+                (when (and session-file initial-session-id)
+                  (spit session-file initial-session-id))
+                (if existing
+                  (let [effective-session-id (or initial-session-id
+                                                 (:agent/session-id existing))
+                        result (reg/update-agent!
+                        agent-id
+                        :agent/type agent-type
+                        :agent/invoke-fn invoke-fn
+                        :agent/session-reset-fn session-reset-fn
+                        :agent/capabilities (get default-capabilities agent-type [])
+                        :agent/metadata (merge (or (:agent/metadata existing) {})
+                                               metadata)
+                                :agent/session-id effective-session-id)]
+                    (if (and (map? result) (= false (:ok result)))
+                      (json-response 409 {:ok false
+                                          :err "restore-failed"
+                                          :message (str "Could not refresh: " agent-id)
+                                          :detail result})
+                      (json-response 200 {:ok true
+                                          :action "updated"
+                                          :agent-id agent-id
+                                          :type (name agent-type)
+                                          :session-id effective-session-id
+                                          :session-file session-file
+                                          :cwd requested-cwd})))
+                  (let [result (reg/register-agent!
+                                {:agent-id {:id/value agent-id :id/type :continuity}
+                                 :type agent-type
+                                 :invoke-fn invoke-fn
+                                 :session-reset-fn session-reset-fn
+                                 :capabilities (get default-capabilities agent-type [])
+                                 :metadata metadata})]
+                    (when (and (map? result) (:agent/id result) initial-session-id)
+                      (reg/update-agent! agent-id :agent/session-id initial-session-id))
+                    (if (and (map? result) (:agent/id result))
+                      (json-response 201 {:ok true
+                                          :action "registered"
+                                          :agent-id agent-id
+                                          :type (name agent-type)
+                                          :session-id initial-session-id
+                                          :session-file session-file
+                                          :cwd requested-cwd})
+                      (json-response 409 {:ok false
+                                          :err "restore-failed"
+                                          :message (str "Could not restore: " agent-id)
+                                          :detail result}))))))))))))
+
 (defn- handle-agent-rebind
   "POST /api/alpha/agents/:id/rebind — update an agent's invoke-fn socket.
    Body: {\"emacs-socket\": \"workspace1\"}
@@ -1766,16 +1917,13 @@
                               :message (str "No agent: " agent-id)})
           (try
             (require 'futon3c.dev)
-            (if-let [make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)]
-              (let [sf (format "/tmp/futon-session-id-%s" agent-id)
-                    existing-sid (:agent/session-id agent)
-                    sid-atom (atom (or existing-sid
-                                       (when (.exists (java.io.File. sf))
-                                         (str/trim (slurp sf)))))
-                    invoke-fn (@make-fn {:agent-id agent-id
-                                         :session-file sf
-                                         :session-id-atom sid-atom
-                                         :emacs-socket emacs-socket})]
+            (if-let [invoke-fn (make-local-agent-invoke-fn
+                                :claude
+                                {:agent-id agent-id
+                                 :session-file (default-session-file-for-agent :claude agent-id)
+                                 :initial-session-id (:agent/session-id agent)
+                                 :emacs-socket emacs-socket})]
+              (do
                 (reg/update-agent! agent-id
                                    :agent/invoke-fn invoke-fn
                                    :agent/metadata (assoc (or (:agent/metadata agent) {})
@@ -1789,35 +1937,57 @@
 
 (defn- emit-invoke-evidence!
   "Emit a forum-post evidence entry for an invoke prompt or response.
-   Mirrors the pattern used by the IRC transport so chat messages from
-   all surfaces are queryable in the same evidence landscape.
-   When mission-id is provided, tags evidence with that mission subject.
-   Fire-and-forget: runs in a future so HTTP handler threads are never
-   blocked by XTDB indexing delays."
+   Synchronous under I-evidence-per-turn: append then verify read-back
+   through the same backend before returning. HTTP handler threads block
+   up to the XTDB put-and-sync! timeout (10s) — the tradeoff is that a
+   turn cannot claim success while its evidence is still in flight or
+   silently lost. See futon3c.evidence.invariant/I-evidence-per-turn.
+   When mission-id is provided, tags evidence with that mission subject."
   [evidence-store author text session-id & {:keys [mission-id]}]
   (when evidence-store
-    (future
-      (try
-        (let [subject (if mission-id
-                        {:ref/type :mission :ref/id mission-id}
-                        {:ref/type :thread :ref/id "emacs/chat"})
-              tags (cond-> [:emacs :chat :transport/emacs-chat]
-                     mission-id (conj :mission-focused))]
-          (estore/append* evidence-store
-                          {:evidence/id (str "e-" (UUID/randomUUID))
-                           :evidence/subject subject
-                           :evidence/type :forum-post
-                           :evidence/claim-type :observation
-                           :evidence/author author
-                           :evidence/at (str (Instant/now))
-                           :evidence/body {:channel "emacs-chat"
-                                           :text text
-                                           :from author
-                                           :transport :emacs-chat}
-                           :evidence/tags tags
-                           :evidence/session-id (or session-id "pending")}))
-        (catch Exception e
-          (println (str "[invoke] evidence emit warning: " (.getMessage e))))))))
+    (try
+      (let [subject (if mission-id
+                      {:ref/type :mission :ref/id mission-id}
+                      {:ref/type :thread :ref/id "emacs/chat"})
+            tags (cond-> [:emacs :chat :transport/emacs-chat]
+                   mission-id (conj :mission-focused))
+            result (boundary/append! evidence-store
+                                   {:evidence/id (str "e-" (UUID/randomUUID))
+                                    :evidence/subject subject
+                                    :evidence/type :forum-post
+                                    :evidence/claim-type :observation
+                                    :evidence/author author
+                                    :evidence/at (str (Instant/now))
+                                    :evidence/body {:channel "emacs-chat"
+                                                    :text text
+                                                    :from author
+                                                    :transport :emacs-chat}
+                                    :evidence/tags tags
+                                    :evidence/session-id (or session-id "pending")})
+            eid (get-in result [:entry :evidence/id])
+            verify (when eid
+                     (evidence-invariant/verify-persisted evidence-store eid))]
+        (cond
+          (not (:ok result))
+          (do (println (str "[invoke] I-evidence-per-turn VIOLATION: append failed "
+                            "(" (:error/code result) ") — "
+                            (:error/message result)))
+              result)
+
+          (not (:ok verify))
+          (do (println (str "[invoke] I-evidence-per-turn VIOLATION: entry "
+                            eid " appended but not readable back from "
+                            (name (:kind verify)) " — " (:reason verify)))
+              (assoc result :invariant/violation verify))
+
+          :else result))
+      (catch Exception e
+        (println (str "[invoke] I-evidence-per-turn VIOLATION: emit threw "
+                      (.getName (class e)) " — " (.getMessage e)))
+        {:ok false
+         :invariant/violation {:kind :exception
+                               :reason (.getMessage e)
+                               :invariant evidence-invariant/I-evidence-per-turn}}))))
 
 (defn- emit-review-snapshot!
   "Emit a portfolio snapshot evidence entry after a successful review.
@@ -1841,7 +2011,7 @@
                                            status (or (get m "mission/status")
                                                       (:mission/status m) "unknown")]
                                        {:mission/id mid :mission/status status})))]
-          (estore/append* evidence-store
+          (boundary/append! evidence-store
                           {:evidence/id (str "e-review-" (UUID/randomUUID))
                            :evidence/subject {:ref/type :portfolio :ref/id "global"}
                            :evidence/type :coordination
@@ -3126,7 +3296,7 @@
                        :author author
                        :body {:text text}
                        :tags [:todo :pending]}
-                result (estore/append* evidence-store entry)]
+                result (boundary/append! evidence-store entry)]
             (if (and (map? result) (:evidence/id result))
               (json-response 201 {:ok true
                                   :id todo-id
@@ -3181,7 +3351,7 @@
                            :author author
                            :body {:completed true}
                            :tags [:todo :done]}
-                    result (estore/append* evidence-store entry)]
+                    result (boundary/append! evidence-store entry)]
                 (if (or (:ok result) (:evidence/id result))
                   (json-response 200 {:ok true :id (str todo-id)})
                   (json-response 400 {:ok false :err "append-failed"
@@ -3283,7 +3453,7 @@
       (try
         (let [entries (mcb/backfill-inventory)
               results (mapv (fn [entry]
-                              (let [result (estore/append* evidence-store entry)]
+                              (let [result (boundary/append! evidence-store entry)]
                                 {:id (:evidence/id entry)
                                  :ok (boolean (:ok result))
                                  :skipped (= :duplicate-id (:error/code result))}))
@@ -3298,6 +3468,56 @@
              :sample (vec (take 3 entries))}))
         (catch Exception e
           (json-response 500 {:ok false :error "backfill-failed"
+                              :message (.getMessage e)}))))))
+
+(defn- handle-mc-sync-mission
+  "POST /api/alpha/mc/sync-mission — push-sync a single mission markdown file
+   into the evidence store as a versioned snapshot. Request body:
+   {\"path\":\"/abs/path/to/M-foo.md\", \"repo\":\"futon6\"} where repo is optional."
+  [request config]
+  (let [body (read-body request)
+        payload (try
+                  (some-> body (json/parse-string true))
+                  (catch Exception e
+                    ::bad-json))
+        path (or (:path payload) (get payload "path"))
+        repo (or (:repo payload) (get payload "repo"))
+        repo-kw (cond
+                  (keyword? repo) repo
+                  (string? repo) (keyword repo)
+                  :else nil)
+        evidence-store (evidence-store-for-config config)]
+    (cond
+      (= ::bad-json payload)
+      (json-response 400 {:ok false
+                          :error "bad-json"
+                          :message "Expected JSON body with a mission path"})
+
+      (or (nil? path) (str/blank? (str path)))
+      (json-response 400 {:ok false
+                          :error "missing-path"
+                          :message "path is required"})
+
+      :else
+      (try
+        (if-let [mission (mcb/parse-mission-path mcb/default-repo-roots path repo-kw)]
+          (let [entry (mcb/mission->sync-evidence mission)
+                append-result (when evidence-store
+                                (boundary/append! evidence-store entry))
+                duplicate? (= :duplicate-id (:error/code append-result))]
+            (json-response 200
+                           {:ok true
+                            :mission mission
+                            :evidence/id (:evidence/id entry)
+                            :created (boolean (and append-result (:ok append-result)))
+                            :skipped duplicate?
+                            :stored? (boolean evidence-store)}))
+          (json-response 404 {:ok false
+                              :error "mission-not-found"
+                              :message (str "No mission markdown found at path: " path)}))
+        (catch Exception e
+          (json-response 500 {:ok false
+                              :error "mission-sync-failed"
                               :message (.getMessage e)}))))))
 
 (defn- handle-mc-tensions
@@ -3366,15 +3586,27 @@
         payload (or (parse-json-map (read-body request)) {})
         opts (cond-> {}
                (:emit-evidence payload)
-               (assoc :emit-evidence? (boolean (:emit-evidence payload))))]
+               (assoc :emit-evidence? (boolean (:emit-evidence payload)))
+               (:agenda-id payload)
+               (assoc :agenda-id (:agenda-id payload))
+               (:claim payload)
+               (assoc :claim (:claim payload))
+               (:observation-source payload)
+               (assoc :observation-source (:observation-source payload)))]
     (try
       (let [result (portfolio/portfolio-step! evidence-store opts)]
         (json-response 200
           {:ok true
            :recommendation (portfolio/format-recommendation result)
            :action (some-> (:action result) name)
+           :run-id (get-in result [:run :run-id])
+           :agenda-id (get-in result [:run :agenda-id])
+           :observation-source (get-in result [:run :observation-source])
+           :step-count {:before (get-in result [:run :step-before])
+                        :after (get-in result [:run :step-after])}
            :diagnostics (:diagnostics result)
            :abstain (get-in result [:policy :abstain?])
+           :evidence (:evidence result)
            :structure (:structure result)}))
       (catch Exception e
         (json-response 500 {:ok false :error "portfolio-step-failed"
@@ -3561,6 +3793,189 @@
     (json-response 503 {:ok false :error "meme.db not available"})))
 
 ;; =============================================================================
+;; War Machine — strategic synthesis visualiser backing API
+;; =============================================================================
+;;
+;; The canonical war-machine scan lives in futon2 (futon2.report.war-machine).
+;; Exposing it here lets the CLJS web viewer at futon2/web/war-machine share the
+;; existing futon3c JVM instead of spinning up a second HTTP server.
+;;
+;; futon2.report.war-machine returns values with namespaced keys (e.g.
+;; :mission/id). Cheshire's default keyword encoder drops the namespace
+;; ((name :mission/id) → "id"), which would collide with :id on siblings.
+;; stringify-wm-keys preserves namespaces on the wire by emitting "ns/name"
+;; for namespaced keywords (the CLJS client re-keywordises via cljs-http's
+;; :keywordize-keys default, and (keyword "mission/id") → :mission/id).
+
+(defn- stringify-wm-keys
+  [x]
+  (cond
+    (map? x)    (into {}
+                      (map (fn [[k v]]
+                             [(cond
+                                (keyword? k) (if (namespace k)
+                                               (str (namespace k) "/" (name k))
+                                               (name k))
+                                :else (str k))
+                              (stringify-wm-keys v)])
+                           x))
+    (vector? x) (mapv stringify-wm-keys x)
+    (seq? x)    (mapv stringify-wm-keys x)
+    (set? x)    (mapv stringify-wm-keys x)
+    (keyword? x) (if (namespace x)
+                   (str (namespace x) "/" (name x))
+                   (name x))
+    :else x))
+
+(defn- handle-war-machine
+  "GET /api/alpha/war-machine[?days=N] — run wm scan, return JSON snapshot.
+
+   Lazily resolves futon2.report.war-machine/generate-war-machine so a
+   missing futon2 on the classpath produces a clean 503 instead of a
+   futon3c startup failure."
+  [request]
+  (try
+    (let [;; Two-source query-param parsing: the standard Ring form
+          ;; (:query-params, populated by wrap-params middleware) AND a
+          ;; manual :query-string scan, because the futon3c Ring stack
+          ;; does not currently wrap-params here so :query-params is nil.
+          qs (or (:query-string request) "")
+          days-from-qs (when-let [m (re-find #"(?:^|&)days=([0-9]+)" qs)]
+                         (try (Integer/parseInt (second m))
+                              (catch NumberFormatException _ nil)))
+          days-from-params (let [v (get-in request [:query-params "days"])]
+                             (when (string? v)
+                               (try (Integer/parseInt v)
+                                    (catch NumberFormatException _ nil))))
+          days (or days-from-params days-from-qs 14)
+          generate (requiring-resolve 'futon2.report.war-machine/generate-war-machine)]
+      (if generate
+        (let [{:keys [data judgement]} (generate days)
+              payload (stringify-wm-keys (assoc data :judgement judgement))]
+          ;; Same-origin when behind shadow-cljs proxy; CORS for direct dev use.
+          (-> (json-response 200 payload)
+              (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
+        (json-response 503
+                       {:ok false
+                        :error "futon2.report.war-machine not on classpath"
+                        :hint "add futon2 as a :local/root dep of futon3c"})))
+    (catch Exception e
+      (json-response 500 {:ok false
+                          :error "war-machine-scan-failed"
+                          :message (.getMessage e)}))))
+
+;; =============================================================================
+;; AIF+ stack — live projection of the stack's self-model
+;; =============================================================================
+;;
+;; Loads the cached structural prior at futon5a/holes/stories/THE-STACK.aif.edn
+;; and overlays live mission status from `mcb/build-inventory'. The output
+;; mirrors THE-STACK.aif.edn's shape (so the existing prose generators and
+;; the planned War Machine view-mode read the same payload) plus a few
+;; metadata fields marking liveness.
+;;
+;; Cached EDN supplies *structure* (spine selection, conflict definitions,
+;; edge topology, frame definitions, cross-leaf relations). Registry supplies
+;; *data* (current node statuses for nodes whose :origin resolves to a
+;; mission@repo ref).  Spine nodes whose origin is a sorry id retain their
+;; cached status — that's a v2 enhancement (query the sorry registry).
+
+(defn- portfolio-scheduler-status-snapshot
+  "Best-effort scheduler snapshot for inclusion in the AIF stack response.
+   Resolves the scheduler ns lazily so the HTTP handler does not require
+   the scheduler at compile time."
+  []
+  (try
+    (when-let [s (requiring-resolve 'futon3c.portfolio-inference.scheduler/status)]
+      (s))
+    (catch Throwable _ nil)))
+
+(defn- handle-aif-stack-live
+  "GET /api/alpha/aif-stack/live — live-projected AIF+ stack self-model.
+
+   Returns the structural prior with live :status overlays applied to
+   spine nodes whose :origin resolves to a mission ref.  Each overlaid
+   node carries :live-status? true.  Top-level :live? indicates whether
+   the mission inventory was reachable; on inventory failure the cached
+   stack is returned with :live? false.
+
+   Also embeds a :scheduler block with the recurring AIF tick's period
+   and last/next-tick-at so the War Machine UI can derive its own poll
+   cadence and freshness thresholds from a single source of truth — see
+   M-stack-stereolithography Checkpoint 5 (cadence walk-back)."
+  ([_request]
+   (handle-aif-stack-live
+    _request
+    {:evidence-store (or (:evidence-store @mcs/!config)
+                         estore/!store)}))
+  ([_request config]
+   (try
+     (let [generate (requiring-resolve 'futon3c.aif.stack-generator/generate-live)
+           evidence-store (evidence-store-for-config config)]
+       (if generate
+         (if-let [stack (generate {:evidence-store evidence-store})]
+           (let [scheduler (portfolio-scheduler-status-snapshot)
+                 stack-with-sched (cond-> stack
+                                    scheduler (assoc :scheduler scheduler))]
+             (-> (json-response 200 (stringify-wm-keys stack-with-sched))
+                 (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
+           (json-response 503
+                          {:ok false
+                           :error "stack-generator returned nil"
+                           :hint  "check that THE-STACK.aif.edn exists at futon5a/holes/stories/"}))
+         (json-response 503
+                        {:ok false
+                         :error "futon3c.aif.stack-generator not loadable"})))
+     (catch Exception e
+       (json-response 500 {:ok false
+                           :error "aif-stack-generation-failed"
+                           :message (.getMessage e)})))))
+
+(defn- handle-show-in-emacs
+  "POST /api/alpha/war-machine/show-in-emacs — open a War Machine target in
+   the user's running Emacs.
+
+   Body shapes:
+     {:kind 'vsatarcs-story' :leaf 'leaf-invariants' :scene-anchor 'optional'}
+     {:kind 'workspace-file' :path 'futon3/holes/strategy/globe1-market-interface.devmap'}
+
+   Delegates to `futon3c.aif.emacs-bridge/open-target` via
+   requiring-resolve so this transport namespace stays free of subprocess
+   dependencies (per I-2)."
+  [request]
+  (let [body   (parse-json-map (read-body request))
+        kind   (some-> (get body :kind) str)
+        leaf   (some-> (get body :leaf) str)
+        anchor (some-> (get body :scene-anchor) str)
+        path   (some-> (get body :path) str)]
+    (if (and (str/blank? leaf) (str/blank? path))
+      (json-response 400 {:ok false :error "missing-target"
+                          :hint "POST {:kind 'vsatarcs-story' :leaf 'leaf-name'} or {:kind 'workspace-file' :path 'futon3/...'}"})
+      (try
+        (let [opener (requiring-resolve 'futon3c.aif.emacs-bridge/open-target)
+              result (opener {:kind kind :leaf leaf :scene-anchor anchor :path path})]
+          (cond
+            (:ok? result)
+            (-> (json-response 200 (select-keys result [:ok? :kind :leaf :path :resolved-path]))
+                (assoc-in [:headers "Access-Control-Allow-Origin"] "*"))
+
+            (:emacsclient-missing? result)
+            (-> (json-response 503 (assoc result :error "emacsclient-missing"))
+                (assoc-in [:headers "Access-Control-Allow-Origin"] "*"))
+
+            (#{"leaf-not-found" "workspace-file-not-found"} (:error result))
+            (-> (json-response 404 result)
+                (assoc-in [:headers "Access-Control-Allow-Origin"] "*"))
+
+            :else
+            (-> (json-response 500 (assoc result :error "emacsclient-failed"))
+                (assoc-in [:headers "Access-Control-Allow-Origin"] "*"))))
+        (catch Exception e
+          (json-response 500 {:ok false
+                              :error "show-in-emacs-failed"
+                              :message (.getMessage e)}))))))
+
+;; =============================================================================
 ;; Public API
 ;; =============================================================================
 
@@ -3681,6 +4096,9 @@
           (and (= :post method) (= "/api/alpha/mc/backfill" uri))
           (handle-mc-backfill config)
 
+          (and (= :post method) (= "/api/alpha/mc/sync-mission" uri))
+          (handle-mc-sync-mission request config)
+
           (and (= :get method) (= "/api/alpha/mc/tensions" uri))
           (handle-mc-tensions config)
 
@@ -3706,6 +4124,17 @@
           (and (= :get method) (= "/api/alpha/invariants" uri))
           (handle-invariants request config)
 
+          ;; War Machine — strategic synthesis snapshot for the CLJS viewer
+          (and (= :get method) (= "/api/alpha/war-machine" uri))
+          (handle-war-machine request)
+
+          (and (= :get method) (= "/api/alpha/aif-stack/live" uri))
+          (handle-aif-stack-live request config)
+
+          (and (= :post method)
+               (= "/api/alpha/war-machine/show-in-emacs" uri))
+          (handle-show-in-emacs request)
+
           (and (= :get method) (= "/api/alpha/missions" uri))
           (handle-missions request config)
 
@@ -3723,6 +4152,9 @@
 
           (and (= :post method) (= "/api/alpha/agents/auto" uri))
           (handle-agents-auto-register request config)
+
+          (and (= :post method) (= "/api/alpha/agents/restore" uri))
+          (handle-agent-restore request config)
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)

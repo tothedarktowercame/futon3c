@@ -28,6 +28,7 @@
             [futon3c.peripheral.registry :as preg]
             [futon3c.peripheral.runner :as runner]
             [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
@@ -392,7 +393,7 @@
                                                (fn [tags] (vec (conj (or tags []) :replicated))))
                                        (assoc :evidence/replicated-by agent-id
                                               :evidence/replicated-at (now-str)))
-                             result (estore/append* evidence-store entry)]
+                             result (boundary/append! evidence-store entry)]
                          (if (contains? result :error/code)
                            (send-fn ch (proto/render-ws-frame result))
                            (send-fn ch (proto/render-evidence-ack
