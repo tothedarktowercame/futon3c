@@ -41,4 +41,27 @@
                           "src/futon3c/agents/tickle.clj"
                           "src/futon3c/social/dispatch.clj"
                           "test/futon3c/social/dispatch_test.clj"]
-   :verification/required #{:commit :script :test}}]}
+   :verification/required #{:commit :script :test}}
+
+  {:claim/id :peripheral/portfolio-inference
+   :claim/description "Portfolio Inference is registered as a flat tool-dispatch peripheral exposing mission-feature scoring, per-family precision-proxy aggregation, promotion-candidate extraction, and the AIF loop entry points (aif-step / portfolio-step! / portfolio-heartbeat!) for cross-repo strategic visibility."
+   :diagram/components [:S-dispatch :S-persist]
+   :implementation/files ["src/futon3c/peripheral/portfolio_inference.clj"
+                          "src/futon3c/peripheral/portfolio_inference_backend.clj"
+                          "src/futon3c/peripheral/portfolio_inference_shapes.clj"
+                          "src/futon3c/portfolio_inference/service.clj"
+                          "resources/peripherals.edn"]
+   :verification/required #{:commit :test :script}
+   :verification/baseline "futon5a/scripts/run_mission_feature_loop.clj"
+   :verification/notes "VERIFY by running the babashka regression baseline and comparing pi-mission-features / pi-precision-table / pi-promotion-candidates outputs."}
+
+  {:claim/id :daemon/portfolio-inference-scheduler
+   :claim/description "A ScheduledExecutorService inside futon3c calls futon3c.portfolio.core/portfolio-step! at a fixed cadence (default 1 h) so the live AIF loop deposits :portfolio/observation, :portfolio/belief, :portfolio/policy, and :portfolio/step evidence on its own. Registered with futon3c.cyder for steppable + inspectable visibility. This makes Portfolio Inference a continuously present substrate (not a callable function) — the AIF-side answer to M-war-machine's continuous-synthesis goal and the slow-timescale-dual claim in M-aif-head."
+   :diagram/components [:S-dispatch :S-persist]
+   :implementation/files ["src/futon3c/portfolio_inference/scheduler.clj"
+                          "src/futon3c/cyder.clj"]
+   :verification/required #{:commit :test}
+   :verification/notes "VERIFY by inspecting (futon3c.portfolio-inference.scheduler/status) — running? true, tick-count > 0, error-count 0, last-result-keys non-empty — and confirming evidence count under {:ref/type :portfolio :ref/id \"inference\"} grows by 4 per tick."
+   :cross-refs ["holes/missions/M-war-machine.md"
+                "../../futon2/holes/M-aif-head.md"
+                "../../futon5a/holes/missions/M-stack-stereolithography.md"]}]}

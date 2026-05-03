@@ -100,7 +100,10 @@
 (defn register-family-check!
   "Register a check function for FAMILY-ID. Replaces any prior registration."
   [family-id check-fn]
-  (swap! family-check-fns assoc family-id check-fn)
+  (let [registered-fn (if (instance? clojure.lang.IObj check-fn)
+                        (vary-meta check-fn assoc :registered-at (str (Instant/now)))
+                        check-fn)]
+    (swap! family-check-fns assoc family-id registered-fn))
   family-id)
 
 (defn unregister-family-check!

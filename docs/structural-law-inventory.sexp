@@ -182,7 +182,41 @@
                               "futon3c/src/futon3c/evidence/boundary.clj")
              :enforced-at "futon3c.evidence.boundary/append! (verify-persisted before declaring success)"
              :evidenced-by ("futon3c/test/futon3c/evidence/invariant_test.clj"
-                            "futon3c/test/futon3c/evidence/boundary_test.clj"))
+                            "futon3c/test/futon3c/evidence/boundary_test.clj")
+             ;; State-snapshot-witness shape (M-state-snapshot-witness 2026-05-01)
+             ;; — per-cycle full-state projection complementing per-event deltas.
+             ;; See futon3/library/invariant-coherence/state-snapshot-witness.flexiarg.
+             ;; Closes pipeline-tracer track-4-2-snapshot-as-evidence.
+             :candidate-invariants
+             ((invariant :id state-snapshot-witness/inventory
+                         :status operational-when-enabled
+                         :scope :stack
+                         :summary "On every JVM boot, futon3c emits one :event :inventory-snapshot evidence entry containing the full structural-law-inventory projection (families + scope-stack invariants + per-family status). Provides cycle-boundary state queryable as evidence."
+                         :implemented-in ("futon3c/src/futon3c/logic/snapshot.clj")
+                         :enforced-at "futon3c.logic.snapshot/snapshot-inventory-on-load! (boot-time, runs on every JVM start). Plus operator-on-demand via snapshot-inventory!."
+                         :evidenced-by ("futon3c/test/futon3c/logic/snapshot_test.clj"))
+              (invariant :id state-snapshot-witness/registry
+                         :status operational-when-enabled
+                         :scope :stack
+                         :summary "On every JVM boot, futon3c emits one :event :registry-snapshot evidence entry containing the live family-check-fns registry projection, including per-family deferred status and registration timestamps when available."
+                         :implemented-in ("futon3c/src/futon3c/logic/snapshot.clj"
+                                          "futon3c/src/futon3c/logic/probe.clj")
+                         :enforced-at "futon3c.logic.snapshot/snapshot-registry-on-load! (boot-time, runs on every JVM start). Plus operator-on-demand via snapshot-registry!."
+                         :evidenced-by ("futon3c/test/futon3c/logic/snapshot_test.clj"))
+              (invariant :id state-snapshot-witness/repo-refs
+                         :status operational-when-enabled
+                         :scope :stack
+                         :summary "On every JVM boot, futon3c emits one :event :repo-refs-snapshot evidence entry containing the current git ref projection for futon* repos: branch, HEAD sha, ahead/behind, dirty bit, and stash count."
+                         :implemented-in ("futon3c/src/futon3c/logic/snapshot.clj")
+                         :enforced-at "futon3c.logic.snapshot/snapshot-repo-refs-on-load! (boot-time, runs on every JVM start). Plus operator-on-demand via snapshot-repo-refs!."
+                         :evidenced-by ("futon3c/test/futon3c/logic/snapshot_test.clj"))
+              (invariant :id state-snapshot-witness/hud-render
+                         :status operational-when-enabled
+                         :scope :stack
+                         :summary "On every JVM boot, futon3c emits one :event :hud-render-snapshot evidence entry containing the most recent Stack HUD render projection when present, or an inactive placeholder when no render has been reported yet."
+                         :implemented-in ("futon3c/src/futon3c/logic/snapshot.clj")
+                         :enforced-at "futon3c.logic.snapshot/snapshot-hud-render-on-load! (boot-time, runs on every JVM start). Plus operator-on-demand via snapshot-hud-render!."
+                         :evidenced-by ("futon3c/test/futon3c/logic/snapshot_test.clj"))))
      (family :id coverage-ratchet
              :status operational-when-enabled
              :scope :stack
