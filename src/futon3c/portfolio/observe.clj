@@ -8,7 +8,13 @@
 
    Source: D-2 in M-portfolio-inference.md"
   (:require [futon3c.peripheral.mission-control-backend :as mc]
-            [futon3c.evidence.store :as estore]))
+            [futon3c.evidence.store :as estore])
+  (:import (java.time Duration Instant ZoneId)))
+
+(def ^:private turn-zone
+  (ZoneId/of "Europe/London"))
+
+(def ^:private turn-window-days 14)
 
 ;; =============================================================================
 ;; Utilities
@@ -40,7 +46,8 @@
    :max-chain-cap         10.0   ; >10 dependency depth would be surprising
    :gap-cap              120.0   ; ~80 current gaps → 0.67 (room for improvement/degradation)
    :spinoff-cap           40.0   ; ~20 current spinoffs → 0.5
-   :review-age-cap        14.0}) ; >14 days since last review would be surprising
+   :review-age-cap        14.0   ; >14 days since last review would be surprising
+   :turns-per-day-cap     40.0}) ; >40 chat turns/day would be surprising
 
 ;; =============================================================================
 ;; Raw state gathering
@@ -133,7 +140,19 @@
                                      (/ (- now then) (* 24.0 60 60 1000)))
                                    (catch Exception _ nil)))))
          ;; Pattern reuse: placeholder — requires pattern catalog query
-         pattern-reuse-ratio 0.0]
+         pattern-reuse-ratio 0.0
+         ;; Chat turn density (evidence discipline)
+         turn-count (when evidence-store
+                      (let [since (.minus (Instant/now)
+                                          (Duration/ofDays turn-window-days))
+                            entries (estore/query* evidence-store
+                                                   {:query/limit 1000
+                                                    :query/since (str since)})]
+                        (count (filter #(= "chat-turn"
+                                           (get-in % [:evidence/body :event]))
+                                       entries))))
+         turns-per-day (when turn-count
+                         (/ (double turn-count) turn-window-days))]
      {:total total
       :complete complete
       :blocked blocked
@@ -148,7 +167,10 @@
       :stalled stalled
       :spinoff-candidates spinoff-candidates
       :pattern-reuse-ratio pattern-reuse-ratio
-      :days-since-review (or days-since-review 999.0)})))
+      :days-since-review (or days-since-review 999.0)
+      :turn-count-last-window (or turn-count 0)
+      :turns-per-day (or turns-per-day 0.0)
+      :turn-window-days turn-window-days})))
 
 ;; =============================================================================
 ;; Channel normalization — raw state → [0,1] observation vector
@@ -164,12 +186,14 @@
    (let [total (max 1 (:total mc-state 1))]
      {:mission-complete-ratio  (clamp01 (/ (double (:complete mc-state 0)) total))
       :coverage-pct            (clamp01 (double (:coverage-pct mc-state 0.0)))
-      :coverage-trajectory     (rescale (:coverage-slope mc-state 0.0) -1.0 1.0)
+     :coverage-trajectory     (rescale (:coverage-slope mc-state 0.0) -1.0 1.0)
       :mana-available          (clamp01 (/ (double (:mana-pool-balance mc-state 0.0))
                                            (max 1.0 (:mana-cap mc-state 1.0))))
       :blocked-ratio           (clamp01 (/ (double (:blocked mc-state 0)) total))
       :evidence-velocity       (clamp01 (/ (double (:evidence-per-day mc-state 0))
                                            (:evidence-per-day-cap priors)))
+      :turn-velocity           (clamp01 (/ (double (:turns-per-day mc-state 0.0))
+                                           (:turns-per-day-cap priors)))
       :dependency-depth        (clamp01 (/ (double (:max-chain mc-state 0))
                                            (:max-chain-cap priors)))
       :gap-count               (clamp01 (/ (double (:gaps mc-state 0))
@@ -216,10 +240,10 @@
 
 (def channel-keys
   "Ordered list of observation channel keys.
-   First 12: portfolio state from mc-backend.
+   First 13: portfolio state from mc-backend.
    Last 3: heartbeat effort data (neutral defaults when no heartbeat available)."
   [:mission-complete-ratio :coverage-pct :coverage-trajectory
-   :mana-available :blocked-ratio :evidence-velocity
+   :mana-available :blocked-ratio :evidence-velocity :turn-velocity
    :dependency-depth :gap-count :stall-count
    :spinoff-pressure :pattern-reuse :review-age
    ;; Heartbeat-derived channels (T-7)

@@ -16,7 +16,9 @@
             [futon3c.portfolio.logic :as logic]
             [futon3c.portfolio.policy :as policy]
             [futon3c.peripheral.mission-control-backend :as mc-backend]
-            [futon3c.evidence.store :as estore]))
+            [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.store :as estore])
+  (:import [java.util UUID]))
 
 ;; =============================================================================
 ;; State atom — persistent portfolio belief state
@@ -31,6 +33,10 @@
 
 (def recent-window-size 5)
 
+(defn- gen-run-id []
+  (str "portfolio-step-" (System/currentTimeMillis) "-"
+       (subs (str (UUID/randomUUID)) 0 8)))
+
 ;; =============================================================================
 ;; Evidence emission
 ;; =============================================================================
@@ -39,7 +45,7 @@
   "Emit portfolio inference evidence to the store."
   [evidence-store evidence-type body]
   (when evidence-store
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:evidence/id (str "e-portfolio-" (name evidence-type) "-"
                                        (System/currentTimeMillis))
                      :evidence/subject {:ref/type :portfolio :ref/id "inference"}
@@ -49,6 +55,29 @@
                      :evidence/at (str (java.time.Instant/now))
                      :evidence/body body
                      :evidence/tags [:portfolio evidence-type]})))
+
+(defn- evidence-id-of
+  [append-result]
+  (or (:evidence/id append-result)
+      (get-in append-result [:entry :evidence/id])))
+
+(defn- run-metadata
+  [opts step-before step-after]
+  {:run-id (or (:run-id opts) (gen-run-id))
+   :agenda-id (:agenda-id opts)
+   :claim (:claim opts)
+   :observation-source (:observation-source opts)
+   :step-before step-before
+   :step-after step-after})
+
+(defn- evidence-body
+  [run-meta body]
+  (cond-> (assoc body :run run-meta)
+    (:agenda-id run-meta)
+    (assoc :agenda {:id (:agenda-id run-meta)
+                    :claim (:claim run-meta)})
+    (:observation-source run-meta)
+    (assoc :observation-source (:observation-source run-meta))))
 
 ;; =============================================================================
 ;; aif-step — the core loop
@@ -136,24 +165,53 @@
                                                          (or (:logic-opts opts) {}))
         ;; Run the step
         current-state @!state
+        step-before (:step-count current-state)
         result (aif-step current-state observation adjacent-missions opts)]
     ;; Update persistent state
     (reset! !state (:state result))
     ;; Attach structural summary from logic layer
-    (let [result (assoc result :structure (logic/structural-summary logic-db))]
+    (let [step-after (get-in result [:state :step-count])
+          run-meta (run-metadata opts step-before step-after)
+          result (assoc result
+                        :structure (logic/structural-summary logic-db)
+                        :run run-meta)]
       ;; Emit evidence
-      (when (:emit-evidence? opts true)
-        (emit-evidence! evidence-store :observation
-                        {:channels observation :mc-state mc-state})
-        (emit-evidence! evidence-store :belief
-                        {:mu (get-in result [:state :mu])
-                         :prec (get-in result [:state :prec])})
-        (emit-evidence! evidence-store :policy
-                        {:action (:action result)
-                         :policies (mapv #(select-keys % [:action :G :probability])
-                                         (get-in result [:policy :policies]))
-                         :abstain? (get-in result [:policy :abstain?])}))
-      result)))
+      (let [evidence-refs
+            (when (:emit-evidence? opts true)
+              (->> [{:kind :observation
+                     :evidence-id
+                     (evidence-id-of
+                      (emit-evidence! evidence-store :observation
+                                      (evidence-body run-meta
+                                                     {:channels observation
+                                                      :mc-state mc-state})))}
+                    {:kind :belief
+                     :evidence-id
+                     (evidence-id-of
+                      (emit-evidence! evidence-store :belief
+                                      (evidence-body run-meta
+                                                     {:mu (get-in result [:state :mu])
+                                                      :prec (get-in result [:state :prec])})))}
+                    {:kind :policy
+                     :evidence-id
+                     (evidence-id-of
+                      (emit-evidence! evidence-store :policy
+                                      (evidence-body run-meta
+                                                     {:action (:action result)
+                                                      :policies (mapv #(select-keys % [:action :G :probability])
+                                                                      (get-in result [:policy :policies]))
+                                                      :abstain? (get-in result [:policy :abstain?])})))}
+                    {:kind :step
+                     :evidence-id
+                     (evidence-id-of
+                      (emit-evidence! evidence-store :step
+                                      (evidence-body run-meta
+                                                     {:action (:action result)
+                                                      :diagnostics (:diagnostics result)
+                                                      :structure-summary (:structure result)})))}]
+                   (filterv :evidence-id)))]
+        (cond-> result
+          evidence-refs (assoc :evidence {:entries evidence-refs}))))))
 
 ;; =============================================================================
 ;; portfolio-heartbeat! — weekly cycle with bid/clear
