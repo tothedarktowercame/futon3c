@@ -1,0 +1,491 @@
+id	subject	year	session	number	tex_path	machine_processing_state	machine_processing_note	processed_level	has_informal_outline	informal_proof_path	has_legacy_main	legacy_main_path	has_legacy_statement	legacy_statement_path	has_pipeline_statement	pipeline_statement_path	canary_main_count	latest_canary_main_path	cleanup_closed	cleanup_remaining	cleanup_state	dojo_handoff_path	dojo_state
+a00J01	a	00	J	01	/home/joe/code/storage/apm/a00J01.tex			codex_cleanup_blocked	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a00J01.md	true	/home/joe/code/apm-lean/lean-proofs/a00J01/Main.lean	true	/home/joe/code/apm-lean/lean-proofs/a00J01/Statement.lean	true	/home/joe/code/apm-lean/pipeline/lean-proofs/a00J01/Statement.lean	1	/home/joe/code/apm-lean/ApmCanaries/Frames/A00J01/Apm_v2_a00J01_1774990935426/Main.lean	0	2	blocked		
+a00J02	a	00	J	02	/home/joe/code/storage/apm/a00J02.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a00J02.md	true	/home/joe/code/apm-lean/lean-proofs/a00J02/Main.lean	true	/home/joe/code/apm-lean/lean-proofs/a00J02/Statement.lean	true	/home/joe/code/apm-lean/pipeline/lean-proofs/a00J02/Statement.lean	3	/home/joe/code/apm-lean/ApmCanaries/Frames/A00J02/Apm_v2_a00J02_1774990402922/Main.lean	0	1	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a00J02.md	dojo_ready
+a00J03	a	00	J	03	/home/joe/code/storage/apm/a00J03.tex			codex_cleanup_complete	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a00J03.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A00J03/Apm_v2_a00J03_1774991806132/Main.lean	0	0	complete		
+a00J04	a	00	J	04	/home/joe/code/storage/apm/a00J04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a00J04.md	false		false		false		0						
+a00J05	a	00	J	05	/home/joe/code/storage/apm/a00J05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a00J05.md	false		false		false		0						
+a00J06	a	00	J	06	/home/joe/code/storage/apm/a00J06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a00J06.md	false		false		false		0						
+a01A01	a	01	A	01	/home/joe/code/storage/apm/a01A01.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A01.md	false		false		false		3	/home/joe/code/apm-lean/ApmCanaries/Frames/A01A01/Apm_v2_a01A01_1774990784258/Main.lean	0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01A01.md	dojo_ready
+a01A02	a	01	A	02	/home/joe/code/storage/apm/a01A02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A02.md	false		false		false		0						
+a01A03	a	01	A	03	/home/joe/code/storage/apm/a01A03.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A03.md	false		false		false		0						
+a01A04	a	01	A	04	/home/joe/code/storage/apm/a01A04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A04.md	false		false		false		0						
+a01A05	a	01	A	05	/home/joe/code/storage/apm/a01A05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A05.md	false		false		false		0						
+a01A06	a	01	A	06	/home/joe/code/storage/apm/a01A06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A06.md	false		false		false		0						
+a01A07	a	01	A	07	/home/joe/code/storage/apm/a01A07.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A07.md	false		false		false		0						
+a01A08	a	01	A	08	/home/joe/code/storage/apm/a01A08.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A08.md	false		false		false		0						
+a01A09	a	01	A	09	/home/joe/code/storage/apm/a01A09.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A09.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A01A09/Apm_v2_a01A09_1774988409275/Main.lean	0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01A09.md	dojo_ready
+a01A10	a	01	A	10	/home/joe/code/storage/apm/a01A10.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A10.md	false		false		false		0						
+a01A11	a	01	A	11	/home/joe/code/storage/apm/a01A11.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A11.md	true	/home/joe/code/apm-lean/lean-proofs/a01A11/Main.lean	false		false		0		0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01A11.md	dojo_ready
+a01A12	a	01	A	12	/home/joe/code/storage/apm/a01A12.tex			codex_cleanup_blocked	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01A12.md	true	/home/joe/code/apm-lean/lean-proofs/a01A12/Main.lean	false		false		0		0	4	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01A12.md	deep_mathlib_blocked
+a01J01	a	01	J	01	/home/joe/code/storage/apm/a01J01.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01J01.md	true	/home/joe/code/apm-lean/lean-proofs/a01J01/Main.lean	false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A01J01/Apm_v2_a01J01_1774988573118/Main.lean	0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01J01.md	dojo_ready
+a01J02	a	01	J	02	/home/joe/code/storage/apm/a01J02.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01J02.md	true	/home/joe/code/apm-lean/lean-proofs/a01J02/Main.lean	false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A01J02/Apm_v2_a01J02_1774988681233/Main.lean	0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01J02.md	dojo_ready
+a01J03	a	01	J	03	/home/joe/code/storage/apm/a01J03.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01J03.md	true	/home/joe/code/apm-lean/lean-proofs/a01J03/Main.lean	false		false		0		0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01J03.md	dojo_ready
+a01J04	a	01	J	04	/home/joe/code/storage/apm/a01J04.tex			codex_cleanup_complete	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01J04.md	true	/home/joe/code/apm-lean/lean-proofs/a01J04/Main.lean	false		false		0		1	0	complete		
+a01J05	a	01	J	05	/home/joe/code/storage/apm/a01J05.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01J05.md	true	/home/joe/code/apm-lean/lean-proofs/a01J05/Main.lean	false		false		0		0	4	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01J05.md	dojo_ready
+a01J06	a	01	J	06	/home/joe/code/storage/apm/a01J06.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a01J06.md	true	/home/joe/code/apm-lean/lean-proofs/a01J06/Main.lean	false		false		0		0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a01J06.md	dojo_ready
+a02J01	a	02	J	01	/home/joe/code/storage/apm/a02J01.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a02J01.md	true	/home/joe/code/apm-lean/lean-proofs/a02J01/Main.lean	false		false		0		0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a02J01.md	dojo_ready
+a02J02	a	02	J	02	/home/joe/code/storage/apm/a02J02.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a02J02.md	true	/home/joe/code/apm-lean/lean-proofs/a02J02/Main.lean	false		false		0		0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a02J02.md	dojo_ready
+a02J03	a	02	J	03	/home/joe/code/storage/apm/a02J03.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a02J03.md	true	/home/joe/code/apm-lean/lean-proofs/a02J03/Main.lean	false		false		0		0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a02J03.md	dojo_ready
+a02J04	a	02	J	04	/home/joe/code/storage/apm/a02J04.tex			codex_cleanup_complete	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a02J04.md	true	/home/joe/code/apm-lean/lean-proofs/a02J04/Main.lean	false		false		0		0	0	complete		
+a02J05	a	02	J	05	/home/joe/code/storage/apm/a02J05.tex			codex_cleanup_blocked	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a02J05.md	true	/home/joe/code/apm-lean/lean-proofs/a02J05/Main.lean	false		false		0		0	1	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a02J05.md	deep_mathlib_blocked
+a02J06	a	02	J	06	/home/joe/code/storage/apm/a02J06.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a02J06.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A02J06/Apm_v2_a02J06_1774988737606/Main.lean	0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a02J06.md	dojo_ready
+a02J07	a	02	J	07	/home/joe/code/storage/apm/a02J07.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a02J07.md	false		false		false		0						
+a03J01	a	03	J	01	/home/joe/code/storage/apm/a03J01.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J01.md	true	/home/joe/code/apm-lean/lean-proofs/a03J01/Main.lean	false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/A03J01/Apm_v2_a03J01_1774988783157/Main.lean	0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a03J01.md	dojo_ready
+a03J02	a	03	J	02	/home/joe/code/storage/apm/a03J02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J02.md	false		false		false		0						
+a03J03	a	03	J	03	/home/joe/code/storage/apm/a03J03.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J03.md	true	/home/joe/code/apm-lean/lean-proofs/a03J03/Main.lean	false		false		0		0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a03J03.md	dojo_ready
+a03J04	a	03	J	04	/home/joe/code/storage/apm/a03J04.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J04.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A03J04/Main.lean	0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a03J04.md	dojo_ready
+a03J05	a	03	J	05	/home/joe/code/storage/apm/a03J05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J05.md	false		false		false		0						
+a03J06	a	03	J	06	/home/joe/code/storage/apm/a03J06.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J06.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A03J06/Apm_v2_a03J06_1774988835460/Main.lean					
+a03J07	a	03	J	07	/home/joe/code/storage/apm/a03J07.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J07.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A03J07/Apm_v2_a03J07_1774988886868/Main.lean					
+a03J08	a	03	J	08	/home/joe/code/storage/apm/a03J08.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a03J08.md	false		false		false		0						
+a92J01	a	92	J	01	/home/joe/code/storage/apm/a92J01.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a92J01.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A92J01/Apm_v2_a92J01_1774989024995/Main.lean					
+a92J02	a	92	J	02	/home/joe/code/storage/apm/a92J02.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a92J02.md	false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/A92J02/Apm_v2_a92J02_1775049364123/Main.lean					
+a92J03	a	92	J	03	/home/joe/code/storage/apm/a92J03.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a92J03.md	false		false		false		0						
+a92J04	a	92	J	04	/home/joe/code/storage/apm/a92J04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a92J04.md	false		false		false		0						
+a92J05	a	92	J	05	/home/joe/code/storage/apm/a92J05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a92J05.md	false		false		false		0						
+a92J06	a	92	J	06	/home/joe/code/storage/apm/a92J06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a92J06.md	false		false		false		0						
+a92J07	a	92	J	07	/home/joe/code/storage/apm/a92J07.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a92J07.md	false		false		false		0						
+a93A01	a	93	A	01	/home/joe/code/storage/apm/a93A01.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93A01.md	false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/A93A01/Apm_v2_a93A01_1775049526689/Main.lean					
+a93A02	a	93	A	02	/home/joe/code/storage/apm/a93A02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93A02.md	false		false		false		0						
+a93A03	a	93	A	03	/home/joe/code/storage/apm/a93A03.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93A03.md	false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/A93A03/Apm_v2_a93A03_1775049613401/Main.lean					
+a93A04	a	93	A	04	/home/joe/code/storage/apm/a93A04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93A04.md	false		false		false		0						
+a93J01	a	93	J	01	/home/joe/code/storage/apm/a93J01.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93J01.md	false		false		false		0						
+a93J02	a	93	J	02	/home/joe/code/storage/apm/a93J02.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93J02.md	false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/A93J02/Apm_v2_a93J02_1775049742668/Main.lean					
+a93J03	a	93	J	03	/home/joe/code/storage/apm/a93J03.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93J03.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A93J03/Apm_v2_a93J03_1774992011929/Main.lean					
+a93J04	a	93	J	04	/home/joe/code/storage/apm/a93J04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93J04.md	false		false		false		0						
+a93J05	a	93	J	05	/home/joe/code/storage/apm/a93J05.tex			codex_cleanup_complete	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93J05.md	false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/A93J05/Apm_v2_a93J05_1775050465617/Main.lean	1	0	complete		
+a93J06	a	93	J	06	/home/joe/code/storage/apm/a93J06.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93J06.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A93J06/Apm_v2_a93J06_1775002790071/Main.lean	0	2	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a93J06.md	dojo_ready
+a93J07	a	93	J	07	/home/joe/code/storage/apm/a93J07.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a93J07.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A93J07/Apm_v2_a93J07_1775570229422/Main.lean	0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a93J07.md	dojo_ready
+a93J08	a	93	J	08	/home/joe/code/storage/apm/a93J08.tex	original_problem_unreadable	Source .tex is truncated in the corpus after "let m"; the full original statement is not available locally.	source_only	false		false		false		false		0						
+a94A01	a	94	A	01	/home/joe/code/storage/apm/a94A01.tex			lean_dojo_handoff_ready	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A01.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A94A01/Apm_v2_a94A01_1775002871618/Main.lean	0	3	blocked	/home/joe/code/futon3c/data/apm-lean-dojo-handoffs/apm-a94A01.md	dojo_ready
+a94A02	a	94	A	02	/home/joe/code/storage/apm/a94A02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A02.md	false		false		false		0						
+a94A03	a	94	A	03	/home/joe/code/storage/apm/a94A03.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A03.md	false		false		false		0						
+a94A04	a	94	A	04	/home/joe/code/storage/apm/a94A04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A04.md	false		false		false		0						
+a94A05	a	94	A	05	/home/joe/code/storage/apm/a94A05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A05.md	false		false		false		0						
+a94A06	a	94	A	06	/home/joe/code/storage/apm/a94A06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A06.md	false		false		false		0						
+a94A07	a	94	A	07	/home/joe/code/storage/apm/a94A07.tex			codex_cleanup_blocked	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A07.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A94A07/Main.lean	0	2	blocked		
+a94A08	a	94	A	08	/home/joe/code/storage/apm/a94A08.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A08.md	false		false		false		0						
+a94A09	a	94	A	09	/home/joe/code/storage/apm/a94A09.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A09.md	false		false		false		0						
+a94A10	a	94	A	10	/home/joe/code/storage/apm/a94A10.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94A10.md	false		false		false		0						
+a94J01	a	94	J	01	/home/joe/code/storage/apm/a94J01.tex			codex_cleanup_complete	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J01.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A94J01/Apm_v2_a94J01_1775002964674/Main.lean	4	0	complete		
+a94J02	a	94	J	02	/home/joe/code/storage/apm/a94J02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J02.md	false		false		false		0						
+a94J03	a	94	J	03	/home/joe/code/storage/apm/a94J03.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J03.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A94J03/Apm_v2_a94J03_1775003038480/Main.lean					
+a94J04	a	94	J	04	/home/joe/code/storage/apm/a94J04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J04.md	false		false		false		0						
+a94J05	a	94	J	05	/home/joe/code/storage/apm/a94J05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J05.md	false		false		false		0						
+a94J06	a	94	J	06	/home/joe/code/storage/apm/a94J06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J06.md	false		false		false		0						
+a94J07	a	94	J	07	/home/joe/code/storage/apm/a94J07.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J07.md	false		false		false		0						
+a94J08	a	94	J	08	/home/joe/code/storage/apm/a94J08.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a94J08.md	false		false		false		0						
+a95A01	a	95	A	01	/home/joe/code/storage/apm/a95A01.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A01.md	false		false		false		0						
+a95A02	a	95	A	02	/home/joe/code/storage/apm/a95A02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A02.md	false		false		false		0						
+a95A03	a	95	A	03	/home/joe/code/storage/apm/a95A03.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A03.md	false		false		false		0						
+a95A04	a	95	A	04	/home/joe/code/storage/apm/a95A04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A04.md	false		false		false		0						
+a95A05	a	95	A	05	/home/joe/code/storage/apm/a95A05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A05.md	false		false		false		0						
+a95A06	a	95	A	06	/home/joe/code/storage/apm/a95A06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A06.md	false		false		false		0						
+a95A07	a	95	A	07	/home/joe/code/storage/apm/a95A07.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A07.md	false		false		false		0						
+a95A08	a	95	A	08	/home/joe/code/storage/apm/a95A08.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95A08.md	false		false		false		0						
+a95J01	a	95	J	01	/home/joe/code/storage/apm/a95J01.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J01.md	false		false		false		0						
+a95J02	a	95	J	02	/home/joe/code/storage/apm/a95J02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J02.md	false		false		false		0						
+a95J03	a	95	J	03	/home/joe/code/storage/apm/a95J03.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J03.md	false		false		false		0						
+a95J04	a	95	J	04	/home/joe/code/storage/apm/a95J04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J04.md	false		false		false		0						
+a95J05	a	95	J	05	/home/joe/code/storage/apm/a95J05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J05.md	false		false		false		0						
+a95J06	a	95	J	06	/home/joe/code/storage/apm/a95J06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J06.md	false		false		false		0						
+a95J07	a	95	J	07	/home/joe/code/storage/apm/a95J07.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J07.md	false		false		false		0						
+a95J08	a	95	J	08	/home/joe/code/storage/apm/a95J08.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a95J08.md	false		false		false		0						
+a96A01	a	96	A	01	/home/joe/code/storage/apm/a96A01.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A01.md	false		false		false		0						
+a96A02	a	96	A	02	/home/joe/code/storage/apm/a96A02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A02.md	false		false		false		0						
+a96A03	a	96	A	03	/home/joe/code/storage/apm/a96A03.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A03.md	false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/A96A03/Apm_v2_a96A03_1775070631660/Main.lean					
+a96A04	a	96	A	04	/home/joe/code/storage/apm/a96A04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A04.md	false		false		false		0						
+a96A05	a	96	A	05	/home/joe/code/storage/apm/a96A05.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A05.md	false		false		false		0						
+a96A06	a	96	A	06	/home/joe/code/storage/apm/a96A06.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A06.md	false		false		false		0						
+a96A07	a	96	A	07	/home/joe/code/storage/apm/a96A07.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A07.md	false		false		false		0						
+a96A08	a	96	A	08	/home/joe/code/storage/apm/a96A08.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96A08.md	false		false		false		0						
+a96J01	a	96	J	01	/home/joe/code/storage/apm/a96J01.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96J01.md	false		false		false		6	/home/joe/code/apm-lean/ApmCanaries/Frames/A96J01/Apm_v2_a96J01_1775044904478/Main.lean					
+a96J02	a	96	J	02	/home/joe/code/storage/apm/a96J02.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96J02.md	false		false		false		0						
+a96J03	a	96	J	03	/home/joe/code/storage/apm/a96J03.tex			canary_frame_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96J03.md	false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A96J03/Apm_v2_a96J03_1775003261538/Main.lean					
+a96J04	a	96	J	04	/home/joe/code/storage/apm/a96J04.tex			informal_outline_present	true	/home/joe/code/futon3c/data/apm-informal-proofs/apm-a96J04.md	false		false		false		0						
+a96J05	a	96	J	05	/home/joe/code/storage/apm/a96J05.tex			source_only	false		false		false		false		0						
+a96J06	a	96	J	06	/home/joe/code/storage/apm/a96J06.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A96J06/Apm_v2_a96J06_1775003321530/Main.lean					
+a96J07	a	96	J	07	/home/joe/code/storage/apm/a96J07.tex			source_only	false		false		false		false		0						
+a96J08	a	96	J	08	/home/joe/code/storage/apm/a96J08.tex			source_only	false		false		false		false		0						
+a96J09	a	96	J	09	/home/joe/code/storage/apm/a96J09.tex			source_only	false		false		false		false		0						
+a96J10	a	96	J	10	/home/joe/code/storage/apm/a96J10.tex			source_only	false		false		false		false		0						
+a97A01	a	97	A	01	/home/joe/code/storage/apm/a97A01.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A97A01/Apm_v2_a97A01_1775003392734/Main.lean					
+a97A02	a	97	A	02	/home/joe/code/storage/apm/a97A02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A97A02/Apm_v2_a97A02_1775003733088/Main.lean					
+a97A03	a	97	A	03	/home/joe/code/storage/apm/a97A03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A97A03/Apm_v2_a97A03_1775003886693/Main.lean					
+a97A04	a	97	A	04	/home/joe/code/storage/apm/a97A04.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A97A04/Apm_v2_a97A04_1775003958890/Main.lean					
+a97A05	a	97	A	05	/home/joe/code/storage/apm/a97A05.tex			source_only	false		false		false		false		0						
+a97A06	a	97	A	06	/home/joe/code/storage/apm/a97A06.tex			source_only	false		false		false		false		0						
+a97A07	a	97	A	07	/home/joe/code/storage/apm/a97A07.tex			source_only	false		false		false		false		0						
+a97A08	a	97	A	08	/home/joe/code/storage/apm/a97A08.tex			source_only	false		false		false		false		0						
+a97J01	a	97	J	01	/home/joe/code/storage/apm/a97J01.tex			source_only	false		false		false		false		0						
+a97J02	a	97	J	02	/home/joe/code/storage/apm/a97J02.tex			source_only	false		false		false		false		0						
+a97J03	a	97	J	03	/home/joe/code/storage/apm/a97J03.tex			source_only	false		false		false		false		0						
+a97J04	a	97	J	04	/home/joe/code/storage/apm/a97J04.tex			source_only	false		false		false		false		0						
+a97J05	a	97	J	05	/home/joe/code/storage/apm/a97J05.tex			source_only	false		false		false		false		0						
+a97J06	a	97	J	06	/home/joe/code/storage/apm/a97J06.tex			source_only	false		false		false		false		0						
+a97J07	a	97	J	07	/home/joe/code/storage/apm/a97J07.tex			source_only	false		false		false		false		0						
+a97J08	a	97	J	08	/home/joe/code/storage/apm/a97J08.tex			source_only	false		false		false		false		0						
+a98A01	a	98	A	01	/home/joe/code/storage/apm/a98A01.tex			source_only	false		false		false		false		0						
+a98A02	a	98	A	02	/home/joe/code/storage/apm/a98A02.tex			source_only	false		false		false		false		0						
+a98A03	a	98	A	03	/home/joe/code/storage/apm/a98A03.tex			source_only	false		false		false		false		0						
+a98A04	a	98	A	04	/home/joe/code/storage/apm/a98A04.tex			source_only	false		false		false		false		0						
+a98A05	a	98	A	05	/home/joe/code/storage/apm/a98A05.tex			source_only	false		false		false		false		0						
+a98A06	a	98	A	06	/home/joe/code/storage/apm/a98A06.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A98A06/Apm_v2_a98A06_1775004274108/Main.lean					
+a98A07	a	98	A	07	/home/joe/code/storage/apm/a98A07.tex			source_only	false		false		false		false		0						
+a98J01	a	98	J	01	/home/joe/code/storage/apm/a98J01.tex			source_only	false		false		false		false		0						
+a98J02	a	98	J	02	/home/joe/code/storage/apm/a98J02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A98J02/Apm_v2_a98J02_1775004665812/Main.lean					
+a98J03	a	98	J	03	/home/joe/code/storage/apm/a98J03.tex			source_only	false		false		false		false		0						
+a98J04	a	98	J	04	/home/joe/code/storage/apm/a98J04.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A98J04/Apm_v2_a98J04_1775004924027/Main.lean					
+a98J05	a	98	J	05	/home/joe/code/storage/apm/a98J05.tex			source_only	false		false		false		false		0						
+a99J01	a	99	J	01	/home/joe/code/storage/apm/a99J01.tex			source_only	false		false		false		false		0						
+a99J02	a	99	J	02	/home/joe/code/storage/apm/a99J02.tex			source_only	false		false		false		false		0						
+a99J03	a	99	J	03	/home/joe/code/storage/apm/a99J03.tex			source_only	false		false		false		false		0						
+a99J04	a	99	J	04	/home/joe/code/storage/apm/a99J04.tex			source_only	false		false		false		false		0						
+a99J05	a	99	J	05	/home/joe/code/storage/apm/a99J05.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A99J05/Apm_v2_a99J05_1775005037257/Main.lean					
+a99J06	a	99	J	06	/home/joe/code/storage/apm/a99J06.tex			source_only	false		false		false		false		0						
+a99J07	a	99	J	07	/home/joe/code/storage/apm/a99J07.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/A99J07/Apm_v2_a99J07_1775005157308/Main.lean					
+a99J08	a	99	J	08	/home/joe/code/storage/apm/a99J08.tex			source_only	false		false		false		false		0						
+a99J09	a	99	J	09	/home/joe/code/storage/apm/a99J09.tex			source_only	false		false		false		false		0						
+a99J10	a	99	J	10	/home/joe/code/storage/apm/a99J10.tex			source_only	false		false		false		false		0						
+aunk01	a	un	k	01	/home/joe/code/storage/apm/aunk01.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/Aunk01/Apm_v2_aunk01_1775005703226/Main.lean					
+aunk02	a	un	k	02	/home/joe/code/storage/apm/aunk02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/Aunk02/Apm_v2_aunk02_1775005869003/Main.lean					
+aunk03	a	un	k	03	/home/joe/code/storage/apm/aunk03.tex			source_only	false		false		false		false		0						
+aunk04	a	un	k	04	/home/joe/code/storage/apm/aunk04.tex			source_only	false		false		false		false		0						
+aunk05	a	un	k	05	/home/joe/code/storage/apm/aunk05.tex			source_only	false		false		false		false		0						
+b00J01	b	00	J	01	/home/joe/code/storage/apm/b00J01.tex			source_only	false		false		false		false		0						
+b00J02	b	00	J	02	/home/joe/code/storage/apm/b00J02.tex			source_only	false		false		false		false		0						
+b00J03	b	00	J	03	/home/joe/code/storage/apm/b00J03.tex			source_only	false		false		false		false		0						
+b00J04	b	00	J	04	/home/joe/code/storage/apm/b00J04.tex			source_only	false		false		false		false		0						
+b01A01	b	01	A	01	/home/joe/code/storage/apm/b01A01.tex			source_only	false		false		false		false		0						
+b01A02	b	01	A	02	/home/joe/code/storage/apm/b01A02.tex			source_only	false		false		false		false		0						
+b01A03	b	01	A	03	/home/joe/code/storage/apm/b01A03.tex			source_only	false		false		false		false		0						
+b01A04	b	01	A	04	/home/joe/code/storage/apm/b01A04.tex			source_only	false		false		false		false		0						
+b01J01	b	01	J	01	/home/joe/code/storage/apm/b01J01.tex			source_only	false		false		false		false		0						
+b01J02	b	01	J	02	/home/joe/code/storage/apm/b01J02.tex			source_only	false		false		false		false		0						
+b01J03	b	01	J	03	/home/joe/code/storage/apm/b01J03.tex			source_only	false		false		false		false		0						
+b01J04	b	01	J	04	/home/joe/code/storage/apm/b01J04.tex			source_only	false		false		false		false		0						
+b03J01	b	03	J	01	/home/joe/code/storage/apm/b03J01.tex			source_only	false		false		false		false		0						
+b03J02	b	03	J	02	/home/joe/code/storage/apm/b03J02.tex			canary_frame_present	false		false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/B03J02/Apm_v2_b03J02_1775070732956/Main.lean					
+b03J03	b	03	J	03	/home/joe/code/storage/apm/b03J03.tex			source_only	false		false		false		false		0						
+b03J04	b	03	J	04	/home/joe/code/storage/apm/b03J04.tex			source_only	false		false		false		false		0						
+b90A01	b	90	A	01	/home/joe/code/storage/apm/b90A01.tex			source_only	false		false		false		false		0						
+b90A02	b	90	A	02	/home/joe/code/storage/apm/b90A02.tex			source_only	false		false		false		false		0						
+b90A03	b	90	A	03	/home/joe/code/storage/apm/b90A03.tex			source_only	false		false		false		false		0						
+b90A04	b	90	A	04	/home/joe/code/storage/apm/b90A04.tex			source_only	false		false		false		false		0						
+b93A01	b	93	A	01	/home/joe/code/storage/apm/b93A01.tex			source_only	false		false		false		false		0						
+b93A02	b	93	A	02	/home/joe/code/storage/apm/b93A02.tex			source_only	false		false		false		false		0						
+b93A03	b	93	A	03	/home/joe/code/storage/apm/b93A03.tex			source_only	false		false		false		false		0						
+b93A04	b	93	A	04	/home/joe/code/storage/apm/b93A04.tex			source_only	false		false		false		false		0						
+b93J01	b	93	J	01	/home/joe/code/storage/apm/b93J01.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/B93J01/Apm_v2_b93J01_1775006040768/Main.lean					
+b93J02	b	93	J	02	/home/joe/code/storage/apm/b93J02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/B93J02/Apm_v2_b93J02_1775006390328/Main.lean					
+b93J03	b	93	J	03	/home/joe/code/storage/apm/b93J03.tex			source_only	false		false		false		false		0						
+b93J04	b	93	J	04	/home/joe/code/storage/apm/b93J04.tex			source_only	false		false		false		false		0						
+b94A01	b	94	A	01	/home/joe/code/storage/apm/b94A01.tex			source_only	false		false		false		false		0						
+b94A02	b	94	A	02	/home/joe/code/storage/apm/b94A02.tex			source_only	false		false		false		false		0						
+b94J01	b	94	J	01	/home/joe/code/storage/apm/b94J01.tex			canary_frame_present	false		false		false		false		6	/home/joe/code/apm-lean/ApmCanaries/Frames/B94J01/Apm_v2_b94J01_1775002552157/Main.lean					
+b94J02	b	94	J	02	/home/joe/code/storage/apm/b94J02.tex			source_only	false		false		false		false		0						
+b94J03	b	94	J	03	/home/joe/code/storage/apm/b94J03.tex			source_only	false		false		false		false		0						
+b94J04	b	94	J	04	/home/joe/code/storage/apm/b94J04.tex			source_only	false		false		false		false		0						
+b95J01	b	95	J	01	/home/joe/code/storage/apm/b95J01.tex			source_only	false		false		false		false		0						
+b95J02	b	95	J	02	/home/joe/code/storage/apm/b95J02.tex			source_only	false		false		false		false		0						
+b95J03	b	95	J	03	/home/joe/code/storage/apm/b95J03.tex			source_only	false		false		false		false		0						
+b95J04	b	95	J	04	/home/joe/code/storage/apm/b95J04.tex			source_only	false		false		false		false		0						
+b96A01	b	96	A	01	/home/joe/code/storage/apm/b96A01.tex			source_only	false		false		false		false		0						
+b96A02	b	96	A	02	/home/joe/code/storage/apm/b96A02.tex			source_only	false		false		false		false		0						
+b96A03	b	96	A	03	/home/joe/code/storage/apm/b96A03.tex			source_only	false		false		false		false		0						
+b96A04	b	96	A	04	/home/joe/code/storage/apm/b96A04.tex			source_only	false		false		false		false		0						
+b96J01	b	96	J	01	/home/joe/code/storage/apm/b96J01.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/B96J01/Apm_v2_b96J01_1775006550462/Main.lean					
+b96J02	b	96	J	02	/home/joe/code/storage/apm/b96J02.tex			source_only	false		false		false		false		0						
+b96J03	b	96	J	03	/home/joe/code/storage/apm/b96J03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/B96J03/Apm_v2_b96J03_1775006849349/Main.lean					
+b96J04	b	96	J	04	/home/joe/code/storage/apm/b96J04.tex			source_only	false		false		false		false		0						
+b97A01	b	97	A	01	/home/joe/code/storage/apm/b97A01.tex			source_only	false		false		false		false		0						
+b97A02	b	97	A	02	/home/joe/code/storage/apm/b97A02.tex			source_only	false		false		false		false		0						
+b97A03	b	97	A	03	/home/joe/code/storage/apm/b97A03.tex			source_only	false		false		false		false		0						
+b97A04	b	97	A	04	/home/joe/code/storage/apm/b97A04.tex			source_only	false		false		false		false		0						
+b97J01	b	97	J	01	/home/joe/code/storage/apm/b97J01.tex			source_only	false		false		false		false		0						
+b97J02	b	97	J	02	/home/joe/code/storage/apm/b97J02.tex			source_only	false		false		false		false		0						
+b97J03	b	97	J	03	/home/joe/code/storage/apm/b97J03.tex			source_only	false		false		false		false		0						
+b97J04	b	97	J	04	/home/joe/code/storage/apm/b97J04.tex			source_only	false		false		false		false		0						
+b98A01	b	98	A	01	/home/joe/code/storage/apm/b98A01.tex			source_only	false		false		false		false		0						
+b98A02	b	98	A	02	/home/joe/code/storage/apm/b98A02.tex			source_only	false		false		false		false		0						
+b98A03	b	98	A	03	/home/joe/code/storage/apm/b98A03.tex			source_only	false		false		false		false		0						
+b98A04	b	98	A	04	/home/joe/code/storage/apm/b98A04.tex			source_only	false		false		false		false		0						
+b98J01	b	98	J	01	/home/joe/code/storage/apm/b98J01.tex			source_only	false		false		false		false		0						
+b98J02	b	98	J	02	/home/joe/code/storage/apm/b98J02.tex			source_only	false		false		false		false		0						
+b98J03	b	98	J	03	/home/joe/code/storage/apm/b98J03.tex			source_only	false		false		false		false		0						
+b98J04	b	98	J	04	/home/joe/code/storage/apm/b98J04.tex			source_only	false		false		false		false		0						
+b99A01	b	99	A	01	/home/joe/code/storage/apm/b99A01.tex			source_only	false		false		false		false		0						
+b99A02	b	99	A	02	/home/joe/code/storage/apm/b99A02.tex			source_only	false		false		false		false		0						
+b99A03	b	99	A	03	/home/joe/code/storage/apm/b99A03.tex			source_only	false		false		false		false		0						
+b99A04	b	99	A	04	/home/joe/code/storage/apm/b99A04.tex			source_only	false		false		false		false		0						
+lts-ultraproduct-thm1	l	ts	-	ul	/home/joe/code/storage/apm/lts-ultraproduct-thm1.tex			source_only	false		false		false		false		0						
+m00A01	m	00	A	01	/home/joe/code/storage/apm/m00A01.tex			source_only	false		false		false		false		0						
+m00A02	m	00	A	02	/home/joe/code/storage/apm/m00A02.tex			source_only	false		false		false		false		0						
+m00A03	m	00	A	03	/home/joe/code/storage/apm/m00A03.tex			source_only	false		false		false		false		0						
+m00A04	m	00	A	04	/home/joe/code/storage/apm/m00A04.tex			source_only	false		false		false		false		0						
+m00A05	m	00	A	05	/home/joe/code/storage/apm/m00A05.tex			source_only	false		false		false		false		0						
+m00A06	m	00	A	06	/home/joe/code/storage/apm/m00A06.tex			source_only	false		false		false		false		0						
+m01J01	m	01	J	01	/home/joe/code/storage/apm/m01J01.tex			source_only	false		false		false		false		0						
+m01J02	m	01	J	02	/home/joe/code/storage/apm/m01J02.tex			source_only	false		false		false		false		0						
+m01J03	m	01	J	03	/home/joe/code/storage/apm/m01J03.tex			source_only	false		false		false		false		0						
+m01J04	m	01	J	04	/home/joe/code/storage/apm/m01J04.tex			source_only	false		false		false		false		0						
+m01J05	m	01	J	05	/home/joe/code/storage/apm/m01J05.tex			source_only	false		false		false		false		0						
+m01J06	m	01	J	06	/home/joe/code/storage/apm/m01J06.tex			source_only	false		false		false		false		0						
+m02A01	m	02	A	01	/home/joe/code/storage/apm/m02A01.tex			source_only	false		false		false		false		0						
+m02A02	m	02	A	02	/home/joe/code/storage/apm/m02A02.tex			source_only	false		false		false		false		0						
+m02A03	m	02	A	03	/home/joe/code/storage/apm/m02A03.tex			source_only	false		false		false		false		0						
+m02A04	m	02	A	04	/home/joe/code/storage/apm/m02A04.tex			source_only	false		false		false		false		0						
+m02A05	m	02	A	05	/home/joe/code/storage/apm/m02A05.tex			source_only	false		false		false		false		0						
+m02A06	m	02	A	06	/home/joe/code/storage/apm/m02A06.tex			source_only	false		false		false		false		0						
+m02J01	m	02	J	01	/home/joe/code/storage/apm/m02J01.tex			source_only	false		false		false		false		0						
+m02J02	m	02	J	02	/home/joe/code/storage/apm/m02J02.tex			source_only	false		false		false		false		0						
+m02J03	m	02	J	03	/home/joe/code/storage/apm/m02J03.tex			source_only	false		false		false		false		0						
+m02J04	m	02	J	04	/home/joe/code/storage/apm/m02J04.tex			source_only	false		false		false		false		0						
+m02J05	m	02	J	05	/home/joe/code/storage/apm/m02J05.tex			source_only	false		false		false		false		0						
+m02J06	m	02	J	06	/home/joe/code/storage/apm/m02J06.tex			source_only	false		false		false		false		0						
+m03J01	m	03	J	01	/home/joe/code/storage/apm/m03J01.tex			source_only	false		false		false		false		0						
+m03J02	m	03	J	02	/home/joe/code/storage/apm/m03J02.tex			source_only	false		false		false		false		0						
+m03J03	m	03	J	03	/home/joe/code/storage/apm/m03J03.tex			source_only	false		false		false		false		0						
+m03J04	m	03	J	04	/home/joe/code/storage/apm/m03J04.tex			source_only	false		false		false		false		0						
+m03J05	m	03	J	05	/home/joe/code/storage/apm/m03J05.tex			source_only	false		false		false		false		0						
+m93A01	m	93	A	01	/home/joe/code/storage/apm/m93A01.tex			source_only	false		false		false		false		0						
+m93A02	m	93	A	02	/home/joe/code/storage/apm/m93A02.tex			source_only	false		false		false		false		0						
+m93A03	m	93	A	03	/home/joe/code/storage/apm/m93A03.tex			source_only	false		false		false		false		0						
+m93A04	m	93	A	04	/home/joe/code/storage/apm/m93A04.tex			source_only	false		false		false		false		0						
+m93J01	m	93	J	01	/home/joe/code/storage/apm/m93J01.tex			source_only	false		false		false		false		0						
+m93J02	m	93	J	02	/home/joe/code/storage/apm/m93J02.tex			source_only	false		false		false		false		0						
+m93J03	m	93	J	03	/home/joe/code/storage/apm/m93J03.tex			source_only	false		false		false		false		0						
+m93J04	m	93	J	04	/home/joe/code/storage/apm/m93J04.tex			source_only	false		false		false		false		0						
+m93J05	m	93	J	05	/home/joe/code/storage/apm/m93J05.tex			source_only	false		false		false		false		0						
+m93J06	m	93	J	06	/home/joe/code/storage/apm/m93J06.tex			source_only	false		false		false		false		0						
+m93J07	m	93	J	07	/home/joe/code/storage/apm/m93J07.tex			source_only	false		false		false		false		0						
+m94A01	m	94	A	01	/home/joe/code/storage/apm/m94A01.tex			source_only	false		false		false		false		0						
+m94A02	m	94	A	02	/home/joe/code/storage/apm/m94A02.tex			source_only	false		false		false		false		0						
+m94A03	m	94	A	03	/home/joe/code/storage/apm/m94A03.tex			source_only	false		false		false		false		0						
+m94A04	m	94	A	04	/home/joe/code/storage/apm/m94A04.tex			source_only	false		false		false		false		0						
+m94A05	m	94	A	05	/home/joe/code/storage/apm/m94A05.tex			source_only	false		false		false		false		0						
+m94J01	m	94	J	01	/home/joe/code/storage/apm/m94J01.tex			source_only	false		false		false		false		0						
+m94J02	m	94	J	02	/home/joe/code/storage/apm/m94J02.tex			source_only	false		false		false		false		0						
+m94J03	m	94	J	03	/home/joe/code/storage/apm/m94J03.tex			source_only	false		false		false		false		0						
+m94J04	m	94	J	04	/home/joe/code/storage/apm/m94J04.tex			source_only	false		false		false		false		0						
+m94J05	m	94	J	05	/home/joe/code/storage/apm/m94J05.tex			source_only	false		false		false		false		0						
+m94J06	m	94	J	06	/home/joe/code/storage/apm/m94J06.tex			source_only	false		false		false		false		0						
+m95A01	m	95	A	01	/home/joe/code/storage/apm/m95A01.tex			source_only	false		false		false		false		0						
+m95A02	m	95	A	02	/home/joe/code/storage/apm/m95A02.tex			source_only	false		false		false		false		0						
+m95A03	m	95	A	03	/home/joe/code/storage/apm/m95A03.tex			source_only	false		false		false		false		0						
+m95A04	m	95	A	04	/home/joe/code/storage/apm/m95A04.tex			source_only	false		false		false		false		0						
+m95A05	m	95	A	05	/home/joe/code/storage/apm/m95A05.tex			source_only	false		false		false		false		0						
+m95J01	m	95	J	01	/home/joe/code/storage/apm/m95J01.tex			source_only	false		false		false		false		0						
+m95J02	m	95	J	02	/home/joe/code/storage/apm/m95J02.tex			source_only	false		false		false		false		0						
+m95J03	m	95	J	03	/home/joe/code/storage/apm/m95J03.tex			source_only	false		false		false		false		0						
+m95J04	m	95	J	04	/home/joe/code/storage/apm/m95J04.tex			source_only	false		false		false		false		0						
+m95J05	m	95	J	05	/home/joe/code/storage/apm/m95J05.tex			source_only	false		false		false		false		0						
+m95J06	m	95	J	06	/home/joe/code/storage/apm/m95J06.tex			source_only	false		false		false		false		0						
+m95J07	m	95	J	07	/home/joe/code/storage/apm/m95J07.tex			source_only	false		false		false		false		0						
+m96A01	m	96	A	01	/home/joe/code/storage/apm/m96A01.tex			source_only	false		false		false		false		0						
+m96A02	m	96	A	02	/home/joe/code/storage/apm/m96A02.tex			source_only	false		false		false		false		0						
+m96A03	m	96	A	03	/home/joe/code/storage/apm/m96A03.tex			source_only	false		false		false		false		0						
+m96A04	m	96	A	04	/home/joe/code/storage/apm/m96A04.tex			canary_frame_present	false		false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/M96A04/Apm_v2_m96A04_1775070820897/Main.lean					
+m96A05	m	96	A	05	/home/joe/code/storage/apm/m96A05.tex			source_only	false		false		false		false		0						
+m96A06	m	96	A	06	/home/joe/code/storage/apm/m96A06.tex			source_only	false		false		false		false		0						
+m96J01	m	96	J	01	/home/joe/code/storage/apm/m96J01.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/M96J01/Apm_v2_m96J01_1775007086632/Main.lean					
+m96J02	m	96	J	02	/home/joe/code/storage/apm/m96J02.tex			source_only	false		false		false		false		0						
+m96J03	m	96	J	03	/home/joe/code/storage/apm/m96J03.tex			source_only	false		false		false		false		0						
+m96J04	m	96	J	04	/home/joe/code/storage/apm/m96J04.tex			source_only	false		false		false		false		0						
+m96J05	m	96	J	05	/home/joe/code/storage/apm/m96J05.tex			source_only	false		false		false		false		0						
+m96J06	m	96	J	06	/home/joe/code/storage/apm/m96J06.tex			source_only	false		false		false		false		0						
+m97A01	m	97	A	01	/home/joe/code/storage/apm/m97A01.tex			source_only	false		false		false		false		0						
+m97A02	m	97	A	02	/home/joe/code/storage/apm/m97A02.tex			source_only	false		false		false		false		0						
+m97A03	m	97	A	03	/home/joe/code/storage/apm/m97A03.tex			source_only	false		false		false		false		0						
+m97A04	m	97	A	04	/home/joe/code/storage/apm/m97A04.tex			source_only	false		false		false		false		0						
+m97A05	m	97	A	05	/home/joe/code/storage/apm/m97A05.tex			source_only	false		false		false		false		0						
+m97A06	m	97	A	06	/home/joe/code/storage/apm/m97A06.tex			source_only	false		false		false		false		0						
+m98A01	m	98	A	01	/home/joe/code/storage/apm/m98A01.tex			source_only	false		false		false		false		0						
+m98A02	m	98	A	02	/home/joe/code/storage/apm/m98A02.tex			source_only	false		false		false		false		0						
+m98A03	m	98	A	03	/home/joe/code/storage/apm/m98A03.tex			source_only	false		false		false		false		0						
+m98A04	m	98	A	04	/home/joe/code/storage/apm/m98A04.tex			source_only	false		false		false		false		0						
+m98A05	m	98	A	05	/home/joe/code/storage/apm/m98A05.tex			source_only	false		false		false		false		0						
+m98A06	m	98	A	06	/home/joe/code/storage/apm/m98A06.tex			source_only	false		false		false		false		0						
+m98J01	m	98	J	01	/home/joe/code/storage/apm/m98J01.tex			source_only	false		false		false		false		0						
+m98J02	m	98	J	02	/home/joe/code/storage/apm/m98J02.tex			source_only	false		false		false		false		0						
+m98J03	m	98	J	03	/home/joe/code/storage/apm/m98J03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/M98J03/Apm_v2_m98J03_1775007499607/Main.lean					
+m98J04	m	98	J	04	/home/joe/code/storage/apm/m98J04.tex			source_only	false		false		false		false		0						
+m98J05	m	98	J	05	/home/joe/code/storage/apm/m98J05.tex			source_only	false		false		false		false		0						
+m99A01	m	99	A	01	/home/joe/code/storage/apm/m99A01.tex			source_only	false		false		false		false		0						
+m99A02	m	99	A	02	/home/joe/code/storage/apm/m99A02.tex			source_only	false		false		false		false		0						
+m99A03	m	99	A	03	/home/joe/code/storage/apm/m99A03.tex			source_only	false		false		false		false		0						
+m99A04	m	99	A	04	/home/joe/code/storage/apm/m99A04.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/M99A04/Apm_v2_m99A04_1775007855572/Main.lean					
+m99A05	m	99	A	05	/home/joe/code/storage/apm/m99A05.tex			source_only	false		false		false		false		0						
+m99A06	m	99	A	06	/home/joe/code/storage/apm/m99A06.tex			source_only	false		false		false		false		0						
+m99J01	m	99	J	01	/home/joe/code/storage/apm/m99J01.tex			source_only	false		false		false		false		0						
+m99J02	m	99	J	02	/home/joe/code/storage/apm/m99J02.tex			source_only	false		false		false		false		0						
+m99J03	m	99	J	03	/home/joe/code/storage/apm/m99J03.tex			source_only	false		false		false		false		0						
+m99J04	m	99	J	04	/home/joe/code/storage/apm/m99J04.tex			source_only	false		false		false		false		0						
+m99J05	m	99	J	05	/home/joe/code/storage/apm/m99J05.tex			source_only	false		false		false		false		0						
+m99J06	m	99	J	06	/home/joe/code/storage/apm/m99J06.tex			source_only	false		false		false		false		0						
+t00A01	t	00	A	01	/home/joe/code/storage/apm/t00A01.tex			source_only	false		false		false		false		0						
+t00A02	t	00	A	02	/home/joe/code/storage/apm/t00A02.tex			source_only	false		false		false		false		0						
+t00A03	t	00	A	03	/home/joe/code/storage/apm/t00A03.tex			source_only	false		false		false		false		0						
+t00A04	t	00	A	04	/home/joe/code/storage/apm/t00A04.tex			source_only	false		false		false		false		0						
+t00A05	t	00	A	05	/home/joe/code/storage/apm/t00A05.tex			source_only	false		false		false		false		0						
+t00J01	t	00	J	01	/home/joe/code/storage/apm/t00J01.tex			source_only	false		false		false		false		0						
+t00J02	t	00	J	02	/home/joe/code/storage/apm/t00J02.tex			source_only	false		false		false		false		0						
+t00J03	t	00	J	03	/home/joe/code/storage/apm/t00J03.tex			source_only	false		false		false		false		0						
+t00J04	t	00	J	04	/home/joe/code/storage/apm/t00J04.tex			source_only	false		false		false		false		0						
+t00J05	t	00	J	05	/home/joe/code/storage/apm/t00J05.tex			source_only	false		false		false		false		0						
+t00J06	t	00	J	06	/home/joe/code/storage/apm/t00J06.tex			source_only	false		false		false		false		0						
+t00J07	t	00	J	07	/home/joe/code/storage/apm/t00J07.tex			source_only	false		false		false		false		0						
+t00J08	t	00	J	08	/home/joe/code/storage/apm/t00J08.tex			source_only	false		false		false		false		0						
+t01A01	t	01	A	01	/home/joe/code/storage/apm/t01A01.tex			canary_frame_present	false		false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/T01A01/Apm_v2_t01A01_1775070410894/Main.lean					
+t01A02	t	01	A	02	/home/joe/code/storage/apm/t01A02.tex			source_only	false		false		false		false		0						
+t01A03	t	01	A	03	/home/joe/code/storage/apm/t01A03.tex			source_only	false		false		false		false		0						
+t01A04	t	01	A	04	/home/joe/code/storage/apm/t01A04.tex			source_only	false		false		false		false		0						
+t01A05	t	01	A	05	/home/joe/code/storage/apm/t01A05.tex			source_only	false		false		false		false		0						
+t01A06	t	01	A	06	/home/joe/code/storage/apm/t01A06.tex			source_only	false		false		false		false		0						
+t01A07	t	01	A	07	/home/joe/code/storage/apm/t01A07.tex			source_only	false		false		false		false		0						
+t01A08	t	01	A	08	/home/joe/code/storage/apm/t01A08.tex			source_only	false		false		false		false		0						
+t01J01	t	01	J	01	/home/joe/code/storage/apm/t01J01.tex			source_only	false		false		false		false		0						
+t01J02	t	01	J	02	/home/joe/code/storage/apm/t01J02.tex			source_only	false		false		false		false		0						
+t01J03	t	01	J	03	/home/joe/code/storage/apm/t01J03.tex			source_only	false		false		false		false		0						
+t01J04	t	01	J	04	/home/joe/code/storage/apm/t01J04.tex			source_only	false		false		false		false		0						
+t01J05	t	01	J	05	/home/joe/code/storage/apm/t01J05.tex			source_only	false		false		false		false		0						
+t01J06	t	01	J	06	/home/joe/code/storage/apm/t01J06.tex			source_only	false		false		false		false		0						
+t02A01	t	02	A	01	/home/joe/code/storage/apm/t02A01.tex			source_only	false		false		false		false		0						
+t02A02	t	02	A	02	/home/joe/code/storage/apm/t02A02.tex			source_only	false		false		false		false		0						
+t02A03	t	02	A	03	/home/joe/code/storage/apm/t02A03.tex			source_only	false		false		false		false		0						
+t02A04	t	02	A	04	/home/joe/code/storage/apm/t02A04.tex			source_only	false		false		false		false		0						
+t02A05	t	02	A	05	/home/joe/code/storage/apm/t02A05.tex			source_only	false		false		false		false		0						
+t02A06	t	02	A	06	/home/joe/code/storage/apm/t02A06.tex			source_only	false		false		false		false		0						
+t02A07	t	02	A	07	/home/joe/code/storage/apm/t02A07.tex			source_only	false		false		false		false		0						
+t02A08	t	02	A	08	/home/joe/code/storage/apm/t02A08.tex			source_only	false		false		false		false		0						
+t03J01	t	03	J	01	/home/joe/code/storage/apm/t03J01.tex			source_only	false		false		false		false		0						
+t03J02	t	03	J	02	/home/joe/code/storage/apm/t03J02.tex			source_only	false		false		false		false		0						
+t03J03	t	03	J	03	/home/joe/code/storage/apm/t03J03.tex			source_only	false		false		false		false		0						
+t03J04	t	03	J	04	/home/joe/code/storage/apm/t03J04.tex			source_only	false		false		false		false		0						
+t03J05	t	03	J	05	/home/joe/code/storage/apm/t03J05.tex			source_only	false		false		false		false		0						
+t03J06	t	03	J	06	/home/joe/code/storage/apm/t03J06.tex			source_only	false		false		false		false		0						
+t91A01	t	91	A	01	/home/joe/code/storage/apm/t91A01.tex			source_only	false		false		false		false		0						
+t91A02	t	91	A	02	/home/joe/code/storage/apm/t91A02.tex			source_only	false		false		false		false		0						
+t91A03	t	91	A	03	/home/joe/code/storage/apm/t91A03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T91A03/Apm_v2_t91A03_1775008066441/Main.lean					
+t91A04	t	91	A	04	/home/joe/code/storage/apm/t91A04.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T91A04/Apm_v2_t91A04_1775008241824/Main.lean					
+t91A05	t	91	A	05	/home/joe/code/storage/apm/t91A05.tex			source_only	false		false		false		false		0						
+t91A06	t	91	A	06	/home/joe/code/storage/apm/t91A06.tex			source_only	false		false		false		false		0						
+t91A07	t	91	A	07	/home/joe/code/storage/apm/t91A07.tex			source_only	false		false		false		false		0						
+t91A08	t	91	A	08	/home/joe/code/storage/apm/t91A08.tex			source_only	false		false		false		false		0						
+t91J01	t	91	J	01	/home/joe/code/storage/apm/t91J01.tex			source_only	false		false		false		false		0						
+t91J02	t	91	J	02	/home/joe/code/storage/apm/t91J02.tex			source_only	false		false		false		false		0						
+t91J03	t	91	J	03	/home/joe/code/storage/apm/t91J03.tex			source_only	false		false		false		false		0						
+t91J04	t	91	J	04	/home/joe/code/storage/apm/t91J04.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T91J04/Apm_v2_t91J04_1775008373965/Main.lean					
+t91J05	t	91	J	05	/home/joe/code/storage/apm/t91J05.tex			source_only	false		false		false		false		0						
+t91J06	t	91	J	06	/home/joe/code/storage/apm/t91J06.tex			source_only	false		false		false		false		0						
+t92J01	t	92	J	01	/home/joe/code/storage/apm/t92J01.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T92J01/Apm_v2_t92J01_1775008525795/Main.lean					
+t92J02	t	92	J	02	/home/joe/code/storage/apm/t92J02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T92J02/Apm_v2_t92J02_1775008678104/Main.lean					
+t92J03	t	92	J	03	/home/joe/code/storage/apm/t92J03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T92J03/Apm_v2_t92J03_1775008978201/Main.lean					
+t92J04	t	92	J	04	/home/joe/code/storage/apm/t92J04.tex			source_only	false		false		false		false		0						
+t92J05	t	92	J	05	/home/joe/code/storage/apm/t92J05.tex			source_only	false		false		false		false		0						
+t92J06	t	92	J	06	/home/joe/code/storage/apm/t92J06.tex			source_only	false		false		false		false		0						
+t92J07	t	92	J	07	/home/joe/code/storage/apm/t92J07.tex			source_only	false		false		false		false		0						
+t92J08	t	92	J	08	/home/joe/code/storage/apm/t92J08.tex			source_only	false		false		false		false		0						
+t92J09	t	92	J	09	/home/joe/code/storage/apm/t92J09.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T92J09/Apm_v2_t92J09_1775009066645/Main.lean					
+t93A01	t	93	A	01	/home/joe/code/storage/apm/t93A01.tex			source_only	false		false		false		false		0						
+t93A02	t	93	A	02	/home/joe/code/storage/apm/t93A02.tex			source_only	false		false		false		false		0						
+t93A03	t	93	A	03	/home/joe/code/storage/apm/t93A03.tex			source_only	false		false		false		false		0						
+t93A04	t	93	A	04	/home/joe/code/storage/apm/t93A04.tex			source_only	false		false		false		false		0						
+t93A05	t	93	A	05	/home/joe/code/storage/apm/t93A05.tex			source_only	false		false		false		false		0						
+t93A06	t	93	A	06	/home/joe/code/storage/apm/t93A06.tex			source_only	false		false		false		false		0						
+t93J01	t	93	J	01	/home/joe/code/storage/apm/t93J01.tex			source_only	false		false		false		false		0						
+t93J02	t	93	J	02	/home/joe/code/storage/apm/t93J02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T93J02/Apm_v2_t93J02_1775009331315/Main.lean					
+t93J03	t	93	J	03	/home/joe/code/storage/apm/t93J03.tex			source_only	false		false		false		false		0						
+t93J04	t	93	J	04	/home/joe/code/storage/apm/t93J04.tex			source_only	false		false		false		false		0						
+t93J05	t	93	J	05	/home/joe/code/storage/apm/t93J05.tex			source_only	false		false		false		false		0						
+t93J06	t	93	J	06	/home/joe/code/storage/apm/t93J06.tex			source_only	false		false		false		false		0						
+t94A01	t	94	A	01	/home/joe/code/storage/apm/t94A01.tex			source_only	false		false		false		false		0						
+t94A02	t	94	A	02	/home/joe/code/storage/apm/t94A02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T94A02/Apm_v2_t94A02_1775009748581/Main.lean					
+t94A03	t	94	A	03	/home/joe/code/storage/apm/t94A03.tex			source_only	false		false		false		false		0						
+t94A04	t	94	A	04	/home/joe/code/storage/apm/t94A04.tex			canary_frame_present	false		false		false		false		2	/home/joe/code/apm-lean/ApmCanaries/Frames/T94A04/Apm_v2_t94A04_1775045150581/Main.lean					
+t94A05	t	94	A	05	/home/joe/code/storage/apm/t94A05.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T94A05/Apm_v2_t94A05_1775010453161/Main.lean					
+t94A06	t	94	A	06	/home/joe/code/storage/apm/t94A06.tex			source_only	false		false		false		false		0						
+t94A07	t	94	A	07	/home/joe/code/storage/apm/t94A07.tex			source_only	false		false		false		false		0						
+t94A08	t	94	A	08	/home/joe/code/storage/apm/t94A08.tex			source_only	false		false		false		false		0						
+t94A09	t	94	A	09	/home/joe/code/storage/apm/t94A09.tex			source_only	false		false		false		false		0						
+t94A10	t	94	A	10	/home/joe/code/storage/apm/t94A10.tex			source_only	false		false		false		false		0						
+t94J01	t	94	J	01	/home/joe/code/storage/apm/t94J01.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T94J01/Apm_v2_t94J01_1775010781379/Main.lean					
+t94J02	t	94	J	02	/home/joe/code/storage/apm/t94J02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T94J02/Apm_v2_t94J02_1775011263361/Main.lean					
+t94J03	t	94	J	03	/home/joe/code/storage/apm/t94J03.tex			source_only	false		false		false		false		0						
+t94J04	t	94	J	04	/home/joe/code/storage/apm/t94J04.tex			source_only	false		false		false		false		0						
+t94J05	t	94	J	05	/home/joe/code/storage/apm/t94J05.tex			source_only	false		false		false		false		0						
+t94J06	t	94	J	06	/home/joe/code/storage/apm/t94J06.tex			source_only	false		false		false		false		0						
+t94J07	t	94	J	07	/home/joe/code/storage/apm/t94J07.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T94J07/Apm_v2_t94J07_1775011599250/Main.lean					
+t94J08	t	94	J	08	/home/joe/code/storage/apm/t94J08.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T94J08/Apm_v2_t94J08_1775011677105/Main.lean					
+t94J09	t	94	J	09	/home/joe/code/storage/apm/t94J09.tex			source_only	false		false		false		false		0						
+t94J10	t	94	J	10	/home/joe/code/storage/apm/t94J10.tex			source_only	false		false		false		false		0						
+t94J11	t	94	J	11	/home/joe/code/storage/apm/t94J11.tex			source_only	false		false		false		false		0						
+t95A01	t	95	A	01	/home/joe/code/storage/apm/t95A01.tex			source_only	false		false		false		false		0						
+t95A02	t	95	A	02	/home/joe/code/storage/apm/t95A02.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T95A02/Apm_v2_t95A02_1775011739446/Main.lean					
+t95A03	t	95	A	03	/home/joe/code/storage/apm/t95A03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T95A03/Apm_v2_t95A03_1775011813898/Main.lean					
+t95A04	t	95	A	04	/home/joe/code/storage/apm/t95A04.tex			source_only	false		false		false		false		0						
+t95A05	t	95	A	05	/home/joe/code/storage/apm/t95A05.tex			source_only	false		false		false		false		0						
+t95J01	t	95	J	01	/home/joe/code/storage/apm/t95J01.tex			source_only	false		false		false		false		0						
+t95J02	t	95	J	02	/home/joe/code/storage/apm/t95J02.tex			source_only	false		false		false		false		0						
+t95J03	t	95	J	03	/home/joe/code/storage/apm/t95J03.tex			source_only	false		false		false		false		0						
+t95J04	t	95	J	04	/home/joe/code/storage/apm/t95J04.tex			source_only	false		false		false		false		0						
+t95J05	t	95	J	05	/home/joe/code/storage/apm/t95J05.tex			source_only	false		false		false		false		0						
+t95J06	t	95	J	06	/home/joe/code/storage/apm/t95J06.tex			source_only	false		false		false		false		0						
+t96A01	t	96	A	01	/home/joe/code/storage/apm/t96A01.tex			source_only	false		false		false		false		0						
+t96A02	t	96	A	02	/home/joe/code/storage/apm/t96A02.tex			source_only	false		false		false		false		0						
+t96A03	t	96	A	03	/home/joe/code/storage/apm/t96A03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T96A03/Apm_v2_t96A03_1775012050983/Main.lean					
+t96A04	t	96	A	04	/home/joe/code/storage/apm/t96A04.tex			source_only	false		false		false		false		0						
+t96A05	t	96	A	05	/home/joe/code/storage/apm/t96A05.tex			source_only	false		false		false		false		0						
+t96A06	t	96	A	06	/home/joe/code/storage/apm/t96A06.tex			source_only	false		false		false		false		0						
+t96A07	t	96	A	07	/home/joe/code/storage/apm/t96A07.tex			source_only	false		false		false		false		0						
+t96A08	t	96	A	08	/home/joe/code/storage/apm/t96A08.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T96A08/Apm_v2_t96A08_1775012559877/Main.lean					
+t96J01	t	96	J	01	/home/joe/code/storage/apm/t96J01.tex			source_only	false		false		false		false		0						
+t96J02	t	96	J	02	/home/joe/code/storage/apm/t96J02.tex			source_only	false		false		false		false		0						
+t96J03	t	96	J	03	/home/joe/code/storage/apm/t96J03.tex			canary_frame_present	false		false		false		false		5	/home/joe/code/apm-lean/ApmCanaries/Frames/T96J03/Apm_v2_t96J03_1775003096930/Main.lean					
+t96J04	t	96	J	04	/home/joe/code/storage/apm/t96J04.tex			source_only	false		false		false		false		0						
+t96J05	t	96	J	05	/home/joe/code/storage/apm/t96J05.tex			source_only	false		false		false		false		0						
+t96J06	t	96	J	06	/home/joe/code/storage/apm/t96J06.tex			source_only	false		false		false		false		0						
+t96J07	t	96	J	07	/home/joe/code/storage/apm/t96J07.tex			source_only	false		false		false		false		0						
+t96J08	t	96	J	08	/home/joe/code/storage/apm/t96J08.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T96J08/Apm_v2_t96J08_1775012649049/Main.lean					
+t97A01	t	97	A	01	/home/joe/code/storage/apm/t97A01.tex			source_only	false		false		false		false		0						
+t97A02	t	97	A	02	/home/joe/code/storage/apm/t97A02.tex			source_only	false		false		false		false		0						
+t97A03	t	97	A	03	/home/joe/code/storage/apm/t97A03.tex			source_only	false		false		false		false		0						
+t97A04	t	97	A	04	/home/joe/code/storage/apm/t97A04.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T97A04/Apm_v2_t97A04_1775012771698/Main.lean					
+t97A05	t	97	A	05	/home/joe/code/storage/apm/t97A05.tex			source_only	false		false		false		false		0						
+t97A06	t	97	A	06	/home/joe/code/storage/apm/t97A06.tex			source_only	false		false		false		false		0						
+t97A07	t	97	A	07	/home/joe/code/storage/apm/t97A07.tex			source_only	false		false		false		false		0						
+t97J01	t	97	J	01	/home/joe/code/storage/apm/t97J01.tex			canary_frame_present	false		false		false		false		6	/home/joe/code/apm-lean/ApmCanaries/Frames/T97J01/Apm_v2_t97J01_1775002043870/Main.lean					
+t97J02	t	97	J	02	/home/joe/code/storage/apm/t97J02.tex			source_only	false		false		false		false		0						
+t97J03	t	97	J	03	/home/joe/code/storage/apm/t97J03.tex			source_only	false		false		false		false		0						
+t97J04	t	97	J	04	/home/joe/code/storage/apm/t97J04.tex			source_only	false		false		false		false		0						
+t97J05	t	97	J	05	/home/joe/code/storage/apm/t97J05.tex			source_only	false		false		false		false		0						
+t97J06	t	97	J	06	/home/joe/code/storage/apm/t97J06.tex			source_only	false		false		false		false		0						
+t97J07	t	97	J	07	/home/joe/code/storage/apm/t97J07.tex			source_only	false		false		false		false		0						
+t97J08	t	97	J	08	/home/joe/code/storage/apm/t97J08.tex			source_only	false		false		false		false		0						
+t98A01	t	98	A	01	/home/joe/code/storage/apm/t98A01.tex			source_only	false		false		false		false		0						
+t98A02	t	98	A	02	/home/joe/code/storage/apm/t98A02.tex			source_only	false		false		false		false		0						
+t98A03	t	98	A	03	/home/joe/code/storage/apm/t98A03.tex			source_only	false		false		false		false		0						
+t98A04	t	98	A	04	/home/joe/code/storage/apm/t98A04.tex			source_only	false		false		false		false		0						
+t98A05	t	98	A	05	/home/joe/code/storage/apm/t98A05.tex			source_only	false		false		false		false		0						
+t98A06	t	98	A	06	/home/joe/code/storage/apm/t98A06.tex			source_only	false		false		false		false		0						
+t98J01	t	98	J	01	/home/joe/code/storage/apm/t98J01.tex			source_only	false		false		false		false		0						
+t98J02	t	98	J	02	/home/joe/code/storage/apm/t98J02.tex			source_only	false		false		false		false		0						
+t98J03	t	98	J	03	/home/joe/code/storage/apm/t98J03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T98J03/Apm_v2_t98J03_1775012941316/Main.lean					
+t98J04	t	98	J	04	/home/joe/code/storage/apm/t98J04.tex			source_only	false		false		false		false		0						
+t98J05	t	98	J	05	/home/joe/code/storage/apm/t98J05.tex			source_only	false		false		false		false		0						
+t98J06	t	98	J	06	/home/joe/code/storage/apm/t98J06.tex			source_only	false		false		false		false		0						
+t99A01	t	99	A	01	/home/joe/code/storage/apm/t99A01.tex			source_only	false		false		false		false		0						
+t99A02	t	99	A	02	/home/joe/code/storage/apm/t99A02.tex			source_only	false		false		false		false		0						
+t99A03	t	99	A	03	/home/joe/code/storage/apm/t99A03.tex			source_only	false		false		false		false		0						
+t99A04	t	99	A	04	/home/joe/code/storage/apm/t99A04.tex			source_only	false		false		false		false		0						
+t99A05	t	99	A	05	/home/joe/code/storage/apm/t99A05.tex			source_only	false		false		false		false		0						
+t99A06	t	99	A	06	/home/joe/code/storage/apm/t99A06.tex			source_only	false		false		false		false		0						
+t99J01	t	99	J	01	/home/joe/code/storage/apm/t99J01.tex			source_only	false		false		false		false		0						
+t99J02	t	99	J	02	/home/joe/code/storage/apm/t99J02.tex			source_only	false		false		false		false		0						
+t99J03	t	99	J	03	/home/joe/code/storage/apm/t99J03.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T99J03/Apm_v2_t99J03_1775013445880/Main.lean					
+t99J04	t	99	J	04	/home/joe/code/storage/apm/t99J04.tex			canary_frame_present	false		false		false		false		1	/home/joe/code/apm-lean/ApmCanaries/Frames/T99J04/Apm_v2_t99J04_1775013570926/Main.lean					
+t99J05	t	99	J	05	/home/joe/code/storage/apm/t99J05.tex			source_only	false		false		false		false		0						
+t99J06	t	99	J	06	/home/joe/code/storage/apm/t99J06.tex			source_only	false		false		false		false		0						
+tunk01	t	un	k	01	/home/joe/code/storage/apm/tunk01.tex			source_only	false		false		false		false		0						
+tunk02	t	un	k	02	/home/joe/code/storage/apm/tunk02.tex			source_only	false		false		false		false		0						
+tunk03	t	un	k	03	/home/joe/code/storage/apm/tunk03.tex			source_only	false		false		false		false		0						
