@@ -1,4 +1,5 @@
 # Mission: APM Solutions — Expository Prelim Tutor
+Status: parked
 
 **Date:** 2026-03-28 (IDENTIFY), 2026-03-29 (MAP→INSTANTIATE, all gates pass)
 **Status:** INSTANTIATE (all 6 gates pass, bonus rounds in progress)
@@ -1993,12 +1994,12 @@ it can wire `field_simp` chains competently.
 
 **Evidence from the exam:**
 
-| | Claude-1 | Codex-1 |
-|---|---|---|
-| Informal proof | 77s, correct, rich | 26s, correct, adequate |
-| Lean Part (a) | Closed via Mathlib | `admit`, placeholder |
-| Lean Parts (b)/(c) | 1200s of real `field_simp` work, 2 admit at rpow algebra | Wrote handoff memo instead |
-| Response to "close the admits" | (not tested — was doing the work) | TBD — cleanup pass dispatched |
+|                                | Claude-1                                                 | Codex-1                       |
+|--------------------------------|----------------------------------------------------------|-------------------------------|
+| Informal proof                 | 77s, correct, rich                                       | 26s, correct, adequate        |
+| Lean Part (a)                  | Closed via Mathlib                                       | `admit`, placeholder          |
+| Lean Parts (b)/(c)             | 1200s of real `field_simp` work, 2 admit at rpow algebra | Wrote handoff memo instead    |
+| Response to "close the admits" | (not tested — was doing the work)                        | TBD — cleanup pass dispatched |
 
 **Implication for Pass 1:** Run claude-1 as the primary prover via v3
 stepper. Accumulate sorry boundaries. Then run codex-1 as a cleanup

@@ -383,9 +383,14 @@
   "Probe check-fn for `single-locus/artifact-live-copy`.
 
    Scans REPO-PATHS for artifact files matching GLOBS (default:
-   `default-artifact-globs`). For each basename appearing in two or more
-   repos, require exactly one valid `canonical-repo:` marker across the
-   group; otherwise surface a contradiction."
+   `default-artifact-globs`). For each artifact relative-path appearing
+   in two or more repos, require exactly one valid `canonical-repo:`
+   marker across the group; otherwise surface a contradiction.
+
+   Grouping by relative-path (not basename) avoids false positives when
+   a basename like `ARGUMENT.flexiarg` or `README.md` is intentionally
+   reused across distinct directories — those are different artifacts,
+   not live copies of one artifact."
   ([repo-paths]
    (check-artifact-live-copy-locus repo-paths {}))
   ([repo-paths {:keys [globs] :or {globs default-artifact-globs}}]
@@ -396,17 +401,17 @@
                   (filter #(.exists (io/file % ".git")))
                   (mapcat #(list-artifact-files % globs))
                   (vec))
-             grouped (group-by :basename artifact-files)
+             grouped (group-by :relative-path artifact-files)
              multi-repo-groups
              (->> grouped
-                  (keep (fn [[basename records]]
+                  (keep (fn [[relative-path records]]
                           (let [repos (set (map :repo records))]
                             (when (>= (count repos) 2)
-                              [basename (vec records)]))))
+                              [relative-path (vec records)]))))
                   (into {}))
              violations
              (->> multi-repo-groups
-                  (keep (fn [[basename records]]
+                  (keep (fn [[relative-path records]]
                           (let [repo-set (set (map :repo records))
                                 canonical-repos (->> records
                                                      (keep :canonical-repo)
@@ -415,7 +420,7 @@
                                                    (contains? repo-set
                                                               (first canonical-repos)))]
                             (when-not canonical-ok?
-                              {:identity basename
+                              {:identity relative-path
                                :canonical-repos (vec (sort canonical-repos))
                                :records (mapv #(select-keys %
                                                             [:repo
@@ -429,7 +434,7 @@
             :detail {:scanned-repos (count (filter #(.exists (io/file % ".git"))
                                                    repo-paths))
                      :total-artifacts (count artifact-files)
-                     :multi-repo-basename-count (count multi-repo-groups)
+                     :multi-repo-path-count (count multi-repo-groups)
                      :globs globs
                      :invariant I-single-locus}}
            {:outcome :violation
@@ -491,7 +496,7 @@
 
     :single-locus/artifact-live-copy
     (str (:total-artifacts detail) " artifact file(s); "
-         (:multi-repo-basename-count detail) " multi-repo basename group(s)")
+         (:multi-repo-path-count detail) " multi-repo path group(s)")
 
     (pr-str detail)))
 

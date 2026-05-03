@@ -1,3 +1,5 @@
+Status: parked
+
 **Status:** MAP → DERIVE iterating (2026-04-29). Pending Joe review before VERIFY / INSTANTIATE.
 
 **Open questions blocking ARGUE:**

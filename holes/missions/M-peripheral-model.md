@@ -1,4 +1,5 @@
 # Mission: Peripheral Model
+Status: archived
 
 ## Derivation
 

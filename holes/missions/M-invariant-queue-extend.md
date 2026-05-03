@@ -1,4 +1,7 @@
+Status: parked
+
 **Status:** MAP → INSTANTIATE iterating per track (2026-04-29). Q-track-priority + Q-merge-with-violations settled by Joe 2026-04-29.
+
 **Predecessor:** [M-invariant-queue-unstuck](M-invariant-queue-unstuck.md) (CLOSED 2026-04-29)
 
 **Settled questions:**

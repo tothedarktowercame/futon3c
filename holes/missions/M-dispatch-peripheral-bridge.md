@@ -1,4 +1,5 @@
 # Mission: Dispatch–Peripheral Bridge
+Status: archived
 
 ## Derivation
 

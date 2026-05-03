@@ -1,4 +1,5 @@
 # Traceability: M-operational-readiness
+Status: archived
 
 End-to-end evidence chain for the Operational Readiness mission.
 

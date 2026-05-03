@@ -1,4 +1,5 @@
 # Mission: Mission Wiring
+Status: parked
 
 **Date:** 2026-04-29
 **Status:** IDENTIFY

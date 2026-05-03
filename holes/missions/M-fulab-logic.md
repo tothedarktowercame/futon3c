@@ -1,4 +1,5 @@
 # Mission: Fulab Logic — core.logic Invariants Beyond Portfolio
+Status: parked
 
 **Date:** 2026-03-10
 **Status:** NOT STARTED

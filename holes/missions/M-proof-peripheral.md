@@ -1,4 +1,5 @@
 # M-proof-peripheral: FrontierMath Preseason on the Proof Peripheral
+Status: archived
 
 ## Status: IN PROGRESS
 

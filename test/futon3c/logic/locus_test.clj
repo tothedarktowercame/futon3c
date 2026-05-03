@@ -192,8 +192,8 @@
     (is (= :ok (:outcome r)))
     (is (= 0 (get-in r [:detail :total-artifacts])))))
 
-(deftest artifact-live-copy-detects-multi-repo-basename
-  (testing "same basename in two repos without canonical marker → violation"
+(deftest artifact-live-copy-detects-multi-repo-path
+  (testing "same relative-path in two repos without canonical marker → violation"
     (let [repo-a (make-temp-repo! "artifact-repo-a-")
           repo-b (make-temp-repo! "artifact-repo-b-")
           _ (write-file! repo-a "scripts/shared-tool.clj" "(println :a)\n")
@@ -203,8 +203,20 @@
           r (check *xtdb-backend*)]
       (is (= :violation (:outcome r))
           (str "expected violation, got " (pr-str r)))
-      (is (= ["shared-tool.clj"]
+      (is (= ["scripts/shared-tool.clj"]
              (mapv :identity (get-in r [:detail :violations]))))))
+  (testing "same basename at different relative-paths → not flagged"
+    (let [repo-a (make-temp-repo! "artifact-repo-e-")
+          repo-b (make-temp-repo! "artifact-repo-f-")
+          _ (write-file! repo-a "library/coordination/ARGUMENT.flexiarg"
+                         "! conclusion: a\n")
+          _ (write-file! repo-b "library/social/ARGUMENT.flexiarg"
+                         "! conclusion: b\n")
+          check (locus/check-artifact-live-copy-locus
+                 [(.getPath repo-a) (.getPath repo-b)])
+          r (check *xtdb-backend*)]
+      (is (= :ok (:outcome r))
+          (str "expected ok, got " (pr-str r)))))
   (testing "canonical-repo marker on one matching file suppresses violation"
     (let [repo-a (make-temp-repo! "artifact-repo-c-")
           repo-b (make-temp-repo! "artifact-repo-d-")

@@ -1,4 +1,5 @@
 # Mission: Invariant Violations Ledger
+Status: parked
 
 **Date:** 2026-03-10
 **Status:** MAP

@@ -125,15 +125,25 @@
 ;; obsolescence-recognition/deferred-stub
 ;; ---------------------------------------------------------------------------
 
+(def ^:private ^:dynamic *checking-deferred?*
+  "Re-entrancy guard: when this binding is true, `check-fn-result-deferred?`
+   short-circuits to false. Prevents unbounded recursion if a probe check-fn
+   transitively walks `probe/family-check-fns` (as the deferred-stub check
+   itself does) and re-enters this predicate."
+  false)
+
 (defn- check-fn-result-deferred?
   "True iff calling CHECK-FN with a stub store returns
    `{:outcome :inactive :detail {:deferred? true ...}}`."
   [check-fn]
-  (try
-    (let [r (check-fn nil)]
-      (and (= :inactive (:outcome r))
-           (true? (get-in r [:detail :deferred?]))))
-    (catch Throwable _ false)))
+  (if *checking-deferred?*
+    false
+    (binding [*checking-deferred?* true]
+      (try
+        (let [r (check-fn nil)]
+          (and (= :inactive (:outcome r))
+               (true? (get-in r [:detail :deferred?]))))
+        (catch Throwable _ false)))))
 
 (defn- inventory-status-operational?
   "True iff INVENTORY-FAMILIES contains a family with :id matching
@@ -175,6 +185,8 @@
              obsolete
              (vec
               (for [[fid f] registry
+                    :when (not= "obsolescence-recognition"
+                                (when (keyword? fid) (namespace fid)))
                     :when (check-fn-result-deferred? f)
                     :when (inventory-status-operational? families fid)]
                 {:class :deferred-stub

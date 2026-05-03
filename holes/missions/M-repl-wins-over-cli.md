@@ -1,7 +1,8 @@
 # Mission: REPL Wins Over CLI
+Status: parked
 
 **Date:** 2026-03-29
-**Status:** :active
+**Status:** :testing
 **Owner:** Claude (claude-repl.el, agent-chat.el, dev.clj), Joe (testing, direction)
 **Cross-ref:** M-apm-solutions (first consumer), M-walkie-talkie (ArSE endpoints), M-structural-law (invariants), M-peripheral-gauntlet (peripheral contract)
 **Repos:** futon3c (emacs/, dev/, src/transport/http.clj)
@@ -91,6 +92,171 @@ interaction. Concretely:
 | Change | Status |
 |--------|--------|
 | `agent-chat-agency-base-url` set to port 47070 | Done |
+
+## Checkpoint 2 — 2026-04-09 (Entry ceremony + evidence landscape)
+
+**What was done:**
+
+- `cr`/`cx` auto-start Agency via Emacs `*server*` shell buffer if not running
+- `cr new`/`cx new` shorthand accepted (bare `new` alongside `--new`)
+- Fixed heredoc quoting (`\"` → bare `"`) — eval was always broken, hidden by `-t`
+- Inside-Emacs path: no more `emacsclient -t` hang; uses `-n --eval` + `exit 0`
+- `add-to-list 'load-path` in eval — works on fresh daemon without futon config
+- Ghost reclamation: `/agents/auto` reuses idle no-session agent nicks
+- Stale session file cleanup on ghost reclamation
+- Failed invokes no longer corrupt session files (gated on `ok?`)
+- cwd passed from `cr` to invoke-fn; ProcessBuilder `.directory()` set — fixes
+  "No conversation found with session ID" on resume
+- Inhabitation turn: `cr new` fires async bell with surface contract, establishing
+  real session from first breath
+- `*agents*` display shows session IDs; "no session" flags ghosts
+- `*processes*` routed to HUD frame; `project-processes!` respects `external-hud-enabled?`
+- `*invoke:*` side-window suppressed via `display-buffer-in-side-window` advice
+  when external HUD mode is on
+- Repl-parity ratchet claims doc: `docs/repl-parity-claims.edn` (12 claims, 4 verified)
+- Context retrieval: futon3a semantic search (MiniLM embeddings) on A→B protopattern,
+  results logged as evidence + desktop notification with turn certificate
+- Session resumed from CLI to REPL mid-conversation (`:session/resume-from-cli` verified)
+- Excursion E-evidence-explorer logged for the read-side query function
+
+**Files changed:**
+- `bin/cr`, `bin/cx` (entry ceremony, cwd, inhabitation, load-path)
+- `src/futon3c/agency/registry.clj` (`find-reclaimable-agent`)
+- `src/futon3c/transport/http.clj` (ghost reclaim, cwd passthrough, session file cleanup)
+- `src/futon3c/blackboard.clj` (`project-processes!` no-display, session ID in agents display)
+- `emacs/futon3c-blackboard.el` (HUD layout with `*processes*`, side-window advice)
+- `dev/futon3c/dev.clj` (cwd on ProcessBuilder, no-display invoke start, session persist
+  gated on ok?, context retrieval + notification + evidence)
+- `docs/repl-parity-claims.edn` (new file)
+
+**Test state:** Manual testing throughout. Entry ceremony verified on GUI Emacs
+and terminal. Session resume verified. Context retrieval + notification verified.
+
+**Status:** :testing — entry ceremony solid, evidence pipeline live, Phase 2 UX
+gaps (cursor-sensor, scroll stability, frame inspector) remain open.
+
+**Next:** E-evidence-explorer (query function for evidence chain), Phase 2 UX ratchet.
+
+## Checkpoint 3 — 2026-04-25 (Evidence pipeline was a Potemkin village; invariant landed)
+
+**What was done:**
+
+- Forensic audit on 2026-04-24 found that on `:laptop` role, `make-evidence-store`
+  fell through to a volatile in-memory atom because `dev/futon3c/dev/config.clj`
+  was missing `:direct-xtdb?` from the `:laptop` role-defaults entry. Result: every
+  REPL turn was logging "evidence" that died with each JVM restart. The viewer
+  showed today's data because the JVM had been up that long, not because anything
+  was persistent. M-aif-head's prior closure on 2026-03-15 had documented an
+  `estore` integration that did exist (`futon3c.evidence.store`, XTDB-backed via
+  futon1a) but pointed at a path that had never been wired on laptop.
+- Defined and committed `I-evidence-per-turn` (commit `c6f2c32`):
+  `src/futon3c/evidence/invariant.clj` exposes `check-store-backing` (passes only
+  for `XtdbBackend`) and `verify-persisted` (read-back through the same backend
+  after append). `test/futon3c/evidence/invariant_test.clj` covers all four store
+  shapes against a real in-memory XTDB node — 8 tests, 25 assertions, 0 failures.
+- Working-tree edits (not yet committed pending unrelated in-flight work in those
+  files) wire the invariant at three sites: `dev/bootstrap.clj` runs
+  `check-store-backing` after `reset! !evidence-store` and prints a red banner if
+  the store is not XTDB-backed; `dev/futon3c/dev/invoke.clj:emit-invoke-evidence!`
+  and `src/futon3c/transport/http.clj:emit-invoke-evidence!` are now synchronous,
+  call `verify-persisted` after each append, and log a `VIOLATION` line with the
+  evidence-id on failure (no more silent `(catch Throwable _ nil)` drops). Plus
+  the `:laptop` role gets `:direct-xtdb? true`.
+- Sister fix in `futon4/dev/arxana-browser-evidence.el` and `arxana-browser-lab.el`:
+  fallback port `:8080` → `:7071`. Joe's `futon-config.el` now sets the live
+  values explicitly so Emacs doesn't depend on the defcustom default.
+- End-to-end verified: a chat turn before JVM restart was readable via the
+  evidence-viewer at `:7071/evidence-viewer/#/timeline` after restart. First time
+  the pipe has been observably end-to-end.
+
+**Files changed (committed):**
+- `src/futon3c/evidence/invariant.clj` (new, 106 lines)
+- `test/futon3c/evidence/invariant_test.clj` (new, 123 lines)
+
+**Files changed (working tree, pending unrelated cleanup):**
+- `dev/futon3c/dev/config.clj` (one line — `:direct-xtdb? true` on `:laptop`)
+- `dev/futon3c/dev/bootstrap.clj` (boot-time invariant check)
+- `dev/futon3c/dev/invoke.clj` (sync + verify-persisted)
+- `src/futon3c/transport/http.clj` (sync + verify-persisted)
+- `futon4/dev/arxana-browser-evidence.el`, `arxana-browser-lab.el` (port default)
+
+**Test state:** Unit tests pass for the new namespace (8/8). Full
+`futon3c.transport.http-test` and `futon3c.evidence.*` suites pass with no
+regressions (140 tests, 494 assertions across those packages). Live test
+of evidence persistence across JVM restart confirmed by inspecting
+`:7071/evidence-viewer/#/timeline` after `make dev-laptop` was restarted.
+
+**Status:** :testing — invariant active in committed library code, wiring active
+in working tree pending repo cleanup. Three threads opened off this checkpoint
+(see Excursions below).
+
+**Next:** Vitality-scan evidence-accumulation probe (active thread); excursions
+on invariants audit and evidence-viewer deep-dive logged for follow-up.
+
+### Excursions logged off Checkpoint 3
+
+- **E-candidate-invariants-audit:** Across the futon* repo family there is a
+  body of "Candidate Invariants" — claims that the system enforces some
+  property — and as of 2026-04-25 there is no clarity about which are
+  enumerable, which are checked at runtime, which are tested against both
+  pass and fail inputs, and which are firing in production. The
+  `I-evidence-per-turn` work is the proposed template: canonical def-string,
+  two check functions, real-backend test, named enforcement sites that
+  `rg <invariant-name>` finds. Excursion goal: enumerate all candidate
+  invariants in the codebase (likely sources include `holes/missions/`,
+  `src/**/invariant*.clj`, doc sections marked "Candidate Invariants"),
+  classify each as design-only / check-exists / check-tested /
+  check-firing-in-prod, and produce a punch list with file:line citations.
+  Closes when every invariant is one of (a) enforced and tested, (b)
+  explicitly downgraded to design-only with a known reason, or (c) deleted.
+
+- **E-stack-hud-cleanup (port manifest):** see
+  `futon0/analysis/excursions/E-stack-hud-cleanup.md` §6 for the
+  ranked list of stack-hud-1 → stack-hud-2 port candidates as of
+  2026-04-25 (voice, hot-reload, services, git, vitality, reminders,
+  liveness keep; focus needs verify; affect deferred to per-agent;
+  boundary/musn/pattern-sync drop).
+
+- **E-stack-hud-cleanup:** The Vitality-scan evidence-accumulation probe
+  (active thread, Layer 1) lands a probe in
+  `futon0/scripts/futon0/vitality/scanner.clj` and a render in
+  `futon0/contrib/stack-hud.el`. The follow-on (Layer 2) is a reazon-based
+  surface check that fires when the hud's *visible* evidence delta is zero
+  during an active turn window — i.e. an alarm that audits what the hud
+  surfaces, not what the JVM holds, so a silent projection failure (cache,
+  filter, stale read) is caught. Reazon plumbing already exists in
+  `futon3c/emacs/agent-chat-invariants.el:171-199`. This excursion also
+  carries a process commitment: futon0 is by design a cross-futon interface
+  layer, so stack-hud may legitimately depend on any futon — but *which*
+  futons it depends on for *which* surfaces should be made explicit. A
+  wiring diagram (cross-futon dependency map: scanner → futon1a HTTP, hud →
+  scanner snapshot, hud → futon3a/futon3c/etc.) is part of the deliverable
+  for this excursion. Closes when (a) Layer 2 reazon check is registered and
+  fires on the synthetic test-case "turns happened, hud evidence delta = 0",
+  (b) the wiring diagram is committed alongside the cleanup, and (c) the
+  cleanup pass has no half-rendered or unused sections in the hud.
+
+- **E-evidence-viewer-deep-dive:** The evidence-viewer at
+  `:7071/evidence-viewer/` and the Arxana Browse Evidence/Sessions views have
+  three live issues that deserve concentrated attention rather than ad-hoc
+  fixes. (i) Per-turn pattern annotations from futon3a semantic search land as
+  one composite `:coordination` entry per turn with patterns inside
+  `:evidence/body "results"` — they are not first-class annotations linked by
+  `:evidence/in-reply-to` to the turn's forum-post entry, so queries like
+  "show me annotations on this turn" miss. Proposed fix α: rewrite
+  `dev/futon3c/dev.clj:emit-context-evidence!` to emit one entry per retrieved
+  pattern, each with `:evidence/in-reply-to` on the turn id, typed as a pattern
+  annotation. (ii) `emit-context-evidence!` still has a silent
+  `(catch Throwable _ nil)` at line 735. Proposed fix β: bring it under
+  `I-evidence-per-turn` — synchronous, verify-persisted after append, log
+  VIOLATION on failure. (iii) `futon4/dev/arxana-browser-evidence.el:106,
+  813-830` keeps an open-session row cache (`row-v3`) that returns cached
+  rows for the lifetime of Emacs without a freshness threshold; on 2026-04-24
+  this lied with a 9-day-old row claiming 83 turns when the underlying store
+  had been wiped by JVM restarts. Proposed fix: 30s TTL on cache hits, or
+  invalidate when the buffer's `--last-evidence-id` advances past the
+  cached value. Closes when (α) and (β) ship and (iii) is either fixed or
+  explicitly downgraded with a documented reason.
 
 ## What Remains
 
