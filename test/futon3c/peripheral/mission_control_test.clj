@@ -18,7 +18,22 @@
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.evidence.store :as evidence-store]
-            [futon3c.social.shapes :as shapes]))
+            [futon3c.social.shapes :as shapes])
+  (:import [java.io File]))
+
+(defn- temp-dir!
+  []
+  (let [dir (File/createTempFile "futon3c-mission-control" "tmp")]
+    (.delete dir)
+    (.mkdirs dir)
+    (.getAbsolutePath dir)))
+
+(defn- rm-rf!
+  [^String path]
+  (let [root (File. path)]
+    (when (.exists root)
+      (doseq [f (reverse (file-seq root))]
+        (.delete ^File f)))))
 
 ;; =============================================================================
 ;; Backend: status classification
@@ -55,6 +70,54 @@
           (is (= "futon3c" (:mission/repo entry)))
           (is (string? (:mission/date entry)))
           (is (keyword? (:mission/status entry))))))))
+
+(deftest parse-mission-path-infers-repo-from-root-map
+  (testing "single mission path parsing can infer repo from configured roots"
+    (let [tmp (temp-dir!)]
+      (try
+        (let [repo-root (io/file tmp "futonx")
+              missions-dir (io/file repo-root "holes" "missions")
+              path (io/file missions-dir "M-sample.md")]
+          (.mkdirs missions-dir)
+          (spit path (str "# Mission: Sample\n\n"
+                          "**Date:** 2026-04-29\n"
+                          "**Status:** IDENTIFY\n"))
+          (let [entry (mcb/parse-mission-path {:futonx (.getAbsolutePath repo-root)}
+                                             (.getAbsolutePath path)
+                                             nil)]
+            (is (= "sample" (:mission/id entry)))
+            (is (= "futonx" (:mission/repo entry)))
+            (is (= :in-progress (:mission/status entry)))))
+        (finally
+          (rm-rf! tmp))))))
+
+(deftest mission-sync-evidence-is-versioned-by-content
+  (testing "sync evidence id changes when file content changes"
+    (let [tmp (temp-dir!)
+          repo-root (io/file tmp "futony")
+          missions-dir (io/file repo-root "holes" "missions")
+          path (io/file missions-dir "M-sample.md")]
+      (try
+        (.mkdirs missions-dir)
+        (spit path (str "# Mission: Sample\n\n"
+                        "**Date:** 2026-04-29\n"
+                        "**Status:** IDENTIFY\n"))
+        (let [entry-a (mcb/parse-mission-path {:futony (.getAbsolutePath repo-root)}
+                                              (.getAbsolutePath path)
+                                              nil)
+              ev-a (mcb/mission->sync-evidence entry-a)]
+          (spit path (str "# Mission: Sample\n\n"
+                          "**Date:** 2026-04-29\n"
+                          "**Status:** COMPLETE\n"))
+          (let [entry-b (mcb/parse-mission-path {:futony (.getAbsolutePath repo-root)}
+                                                (.getAbsolutePath path)
+                                                nil)
+                ev-b (mcb/mission->sync-evidence entry-b)]
+            (is (not= (:evidence/id ev-a) (:evidence/id ev-b)))
+            (is (= [:mission :sync :snapshot] (:evidence/tags ev-a)))
+            (is (= :complete (get-in ev-b [:evidence/body :mission/status])))))
+        (finally
+          (rm-rf! tmp))))))
 
 (deftest parse-devmap-edn-extracts-fields
   (testing "parsing a real devmap EDN extracts mission/id and state"

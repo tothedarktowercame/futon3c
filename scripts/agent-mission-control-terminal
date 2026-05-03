@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# Launch the Agent Mission Control digest as a floating Emacs frame in Sway.
+# Mirrors agency-hud-terminal: scratchpad-managed, raised on subsequent calls.
+set -euo pipefail
+
+socket="${1:-${FUTON3C_HUD_SOCKET:-${FUTON3C_EMACS_SOCKET:-${EMACS_SOCKET_NAME:-}}}}"
+frame_params="((name . \"Agent Mission Control\") (agent-mission-control . t))"
+client=(emacsclient)
+
+if [[ -n "${socket}" ]]; then
+  client+=(-s "${socket}")
+fi
+
+client+=(-t -F "${frame_params}")
+
+find_existing() {
+  command -v swaymsg >/dev/null 2>&1 || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+
+  python3 - <<'PY'
+import json
+import subprocess
+import sys
+
+def value(node, *path):
+    cur = node
+    for key in path:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(key)
+    return cur
+
+def walk(node):
+    if not isinstance(node, dict):
+        return None
+    app_id = value(node, "app_id")
+    win_class = value(node, "window_properties", "class")
+    if app_id == "agent-mission-control" or win_class == "agent-mission-control":
+        con_id = value(node, "id")
+        if con_id is not None:
+            return con_id
+    for key in ("nodes", "floating_nodes"):
+        for child in node.get(key, []):
+            found = walk(child)
+            if found is not None:
+                return found
+    return None
+
+try:
+    tree = subprocess.check_output(["swaymsg", "-t", "get_tree", "-r"], text=True)
+except Exception:
+    sys.exit(1)
+
+con_id = walk(json.loads(tree))
+if con_id is None:
+    sys.exit(1)
+print(con_id)
+PY
+}
+
+focus_existing() {
+  local con_id="$1"
+  swaymsg "[con_id=${con_id}]" scratchpad show >/dev/null 2>&1 || true
+  swaymsg "[con_id=${con_id}]" focus >/dev/null 2>&1 || true
+}
+
+launch_terminal() {
+  local terminal="${FUTON3C_HUD_TERMINAL:-}"
+  local -a candidates=()
+
+  footclient_ready() {
+    [[ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/foot-wayland-1.sock" ]] \
+      || [[ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/foot.sock" ]] \
+      || [[ -S "/tmp/foot.sock" ]]
+  }
+
+  if [[ -n "${terminal}" ]]; then
+    candidates=("${terminal}")
+  else
+    candidates=(alacritty kitty wezterm footclient xterm)
+  fi
+
+  for candidate in "${candidates[@]}"; do
+    case "${candidate}" in
+      footclient)
+        if command -v footclient >/dev/null 2>&1 && footclient_ready; then
+          footclient --app-id agent-mission-control "${client[@]}" >/dev/null 2>&1 &
+          disown || true
+          return 0
+        fi
+        ;;
+      alacritty)
+        if command -v alacritty >/dev/null 2>&1; then
+          alacritty --class agent-mission-control,AgentMissionControl -e "${client[@]}" >/dev/null 2>&1 &
+          disown || true
+          return 0
+        fi
+        ;;
+      kitty)
+        if command -v kitty >/dev/null 2>&1; then
+          kitty --class agent-mission-control "${client[@]}" >/dev/null 2>&1 &
+          disown || true
+          return 0
+        fi
+        ;;
+      wezterm)
+        if command -v wezterm >/dev/null 2>&1; then
+          wezterm start --class agent-mission-control -- "${client[@]}" >/dev/null 2>&1 &
+          disown || true
+          return 0
+        fi
+        ;;
+      xterm)
+        if command -v xterm >/dev/null 2>&1; then
+          xterm -class agent-mission-control -e "${client[@]}" >/dev/null 2>&1 &
+          disown || true
+          return 0
+        fi
+        ;;
+    esac
+  done
+
+  echo "agent-mission-control-terminal: no supported terminal emulator found" >&2
+  exit 1
+}
+
+if con_id="$(find_existing 2>/dev/null)"; then
+  focus_existing "${con_id}"
+  exit 0
+fi
+
+launch_terminal

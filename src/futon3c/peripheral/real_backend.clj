@@ -20,6 +20,7 @@
             [futon.notions :as notions]
             [futon3.gate.shapes :as gate-shapes]
             [futon3b.query.relations :as relations]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.tools :as tools]
             [futon3c.reflection.core :as reflection])
@@ -410,7 +411,7 @@
                                    :path/file (:file persisted)
                                    :gate-events (mapv :gate/id events)}
                    :evidence/tags [:proof-path :gate-traversal]}]
-        (let [append-result (estore/append* evidence-store entry)]
+        (let [append-result (boundary/append! evidence-store entry)]
           (when (and (map? append-result) (contains? append-result :error/code))
             (println "[WARN] proof-path evidence append failed:" (:error/message append-result))))))
     result))

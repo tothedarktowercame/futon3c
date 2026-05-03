@@ -164,6 +164,7 @@
         (str/starts-with? s "done")             :complete
         (str/starts-with? s "blocked")          :blocked
         (str/starts-with? s "ready")            :ready
+        (str/starts-with? s "testing")          :testing
         (str/starts-with? s "pass")             :complete
         (str/starts-with? s "deferred")         :deferred
         (str/starts-with? s "nonstarter")       :nonstarter
@@ -191,6 +192,12 @@
           :complete
           :in-progress)
         :else :unknown))))
+
+(defn- in-progress-status?
+  "Return true when status counts as in-progress/active."
+  [status]
+  (or (= status :in-progress)
+      (= status :testing)))
 
 (defn- count-checkboxes
   "Count checked and total checkboxes in markdown text.
@@ -222,6 +229,8 @@
                            (str/join "\n"))
           filename (.getName (io/file path))
           mission-id (str/replace filename #"^M-|\.md$" "")
+          title (when-let [m (re-find #"(?m)^#\s+(?:Mission:\s*)?(.+)$" header-text)]
+                  (str/trim (second m)))
           raw-status (extract-header header-text "Status")
           date (extract-header header-text "Date")
           blocked-by (extract-header header-text "Blocked by")
@@ -235,6 +244,7 @@
                :mission/source :md-file
                :mission/repo (name repo-name)
                :mission/path (str path)
+               :mission/title title
                :mission/date date
                :mission/blocked-by blocked-by
                :mission/raw-status raw-status}
@@ -251,6 +261,37 @@
        :mission/repo (name repo-name)
        :mission/path (str path)
        :mission/raw-status (str "parse-error: " (.getMessage e))})))
+
+(defn- path-under-root?
+  [root path]
+  (let [root (some-> root io/file .getCanonicalPath normalize-path-separators)
+        path (some-> path io/file .getCanonicalPath normalize-path-separators)]
+    (and root path
+         (or (= root path)
+             (str/starts-with? path (str root "/"))))))
+
+(defn infer-repo-name-for-path
+  "Best-effort repo inference for an absolute path using known repo roots.
+   Returns a repo keyword or nil."
+  ([path] (infer-repo-name-for-path default-repo-roots path))
+  ([repos path]
+   (some (fn [[repo-name root]]
+           (when (path-under-root? root path)
+             repo-name))
+         repos)))
+
+(defn parse-mission-path
+  "Parse a single mission markdown path with explicit or inferred repo name.
+   Returns a MissionEntry or nil when the file does not look like a mission."
+  ([path] (parse-mission-path default-repo-roots path nil))
+  ([repos path repo-name]
+   (let [path-str (str path)
+         file-name (.getName (io/file path-str))
+         repo-name (or repo-name (infer-repo-name-for-path repos path-str))]
+     (when (and repo-name
+                (str/starts-with? file-name "M-")
+                (str/ends-with? file-name ".md"))
+       (parse-mission-md path-str repo-name)))))
 
 (defn- classify-devmap-state
   "Convert an EDN :mission/state keyword to a MissionStatus."
@@ -604,7 +645,7 @@
   [missions devmap-summaries coverage mana doc-drift]
   (let [total-missions (count missions)
         complete (count (filter #(= :complete (:mission/status %)) missions))
-        in-progress (count (filter #(= :in-progress (:mission/status %)) missions))
+        in-progress (count (filter #(in-progress-status? (:mission/status %)) missions))
         blocked (count (filter #(= :blocked (:mission/status %)) missions))
         ready (count (filter #(= :ready (:mission/status %)) missions))
         total-devmaps (count devmap-summaries)
@@ -713,7 +754,9 @@
 (defn- find-actionable
   "Identify actionable missions: ready or in-progress, not blocked."
   [missions]
-  (let [actionable (filter #(#{:ready :in-progress} (:mission/status %)) missions)]
+  (let [actionable (filter #(or (= :ready (:mission/status %))
+                                (in-progress-status? (:mission/status %)))
+                           missions)]
     (mapv (fn [m]
             (str (:mission/id m)
                  " (" (name (:mission/status m)) ")"
@@ -1036,6 +1079,44 @@
                                           :mission/devmap-id
                                           :mission/gates])
      :evidence/tags [:mission :backfill :snapshot]}))
+
+(defn- file-sha256
+  [path]
+  (let [md (java.security.MessageDigest/getInstance "SHA-256")
+        bytes (java.nio.file.Files/readAllBytes (.toPath (io/file path)))]
+    (.update md bytes)
+    (apply str (map #(format "%02x" %) (.digest md)))))
+
+(defn mission->sync-evidence
+  "Convert a MissionEntry into a versioned EvidenceEntry suitable for
+   push-based mission sync. Each distinct file content version gets a
+   stable evidence id derived from the content hash, so repeated saves
+   of unchanged content dedupe while real edits append a new snapshot."
+  [mission]
+  (let [mid (:mission/id mission)
+        repo (or (:mission/repo mission) "unknown")
+        src (name (:mission/source mission))
+        path (:mission/path mission)
+        sha (when (and path (.exists (io/file path)))
+              (file-sha256 path))
+        sha-short (subs (or sha "missing") 0 (min 12 (count (or sha "missing"))))
+        now (str (java.time.Instant/now))]
+    {:evidence/id (str "e-mission-sync-" mid "-" repo "-" sha-short)
+     :evidence/subject {:ref/type :mission :ref/id mid}
+     :evidence/type :coordination
+     :evidence/claim-type :observation
+     :evidence/author "mission-control/sync"
+     :evidence/at now
+     :evidence/body (cond-> (select-keys mission [:mission/id :mission/status
+                                                  :mission/source :mission/repo
+                                                  :mission/path :mission/title
+                                                  :mission/date
+                                                  :mission/blocked-by
+                                                  :mission/raw-status
+                                                  :mission/devmap-id
+                                                  :mission/gates])
+                      sha (assoc :mission/content-sha sha))
+     :evidence/tags [:mission :sync :snapshot]}))
 
 (defn backfill-inventory
   "Convert a full mission inventory into backfill evidence entries.

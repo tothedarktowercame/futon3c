@@ -18,7 +18,7 @@
 (def MissionStatus
   "Classified status of a mission. Derived from parsing **Status:** headers
    or :mission/state EDN keywords."
-  [:enum :complete :blocked :ready :in-progress :unknown])
+  [:enum :complete :blocked :ready :in-progress :testing :deferred :nonstarter :unknown])
 
 (def MissionSource
   "Where the mission data came from."

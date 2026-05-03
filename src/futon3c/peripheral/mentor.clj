@@ -27,6 +27,7 @@
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.blackboard :as bb]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [clojure.string :as str])
   (:import [java.time Instant]))
@@ -132,7 +133,7 @@
                  :evidence/body body
                  :evidence/tags [:mentor :checkpoint (:handle state)]}]
       (try
-        (estore/append* store entry)
+        (boundary/append! store entry)
         nil ;; success
         (catch Exception e
           (println (str "[mentor] Checkpoint failed: " (.getMessage e))))))))
