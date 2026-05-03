@@ -71,9 +71,17 @@
     :agent/registered-at Instant
     :agent/last-active Instant
     :agent/ttl-ms     long (optional — bounded lifecycle R5)
-    :agent/metadata   map}"}
+    :agent/metadata   map}"
+           :durable true}
   !registry
   (atom {}))
+
+;; ^:durable metadata (M-reachable-from-boot 2026-05-01): `!registry` is
+;; the authoritative routing container. External code must go through the
+;; helper surface in this namespace (`register-agent!`,
+;; `unregister-agent!`, etc.), not direct `(reset! !registry ...)` or
+;; `(swap! !registry ...)` from arbitrary call sites. The structural
+;; guard lives in `scripts/check-reachable-from-boot-agent-registry.sh`.
 
 (declare registry-status)
 
@@ -232,11 +240,14 @@
      :session-id    - Optional. Initial session ID.
      :ttl-ms        - Optional. Bounded lifecycle in milliseconds (R5).
      :metadata      - Optional. Arbitrary metadata map.
+     :session-reset-fn - Optional. Zero-arity fn that clears any backing
+                         session continuity (session file, atom, etc.).
 
    Returns:
      Agent record on success (R1: typed result).
      {:ok false :error SocialError} on failure (R2: duplicate → error, not overwrite)."
-  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata]}]
+  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata
+           session-reset-fn]}]
   (let [aid-val (agent-id-value agent-id)
         typed-id (if (map? agent-id)
                    agent-id
@@ -247,6 +258,7 @@
                       :agent/invoke-fn invoke-fn
                       :agent/capabilities (vec (or capabilities []))
                       :agent/session-id session-id
+                      :agent/session-reset-fn session-reset-fn
                       :agent/registered-at ts
                       :agent/last-active ts
                       :agent/ttl-ms ttl-ms
@@ -340,25 +352,61 @@
      {:ok false :error SocialError} if agent not found."
   [agent-id]
   (let [aid-val (agent-id-value agent-id)
-        result (atom nil)]
-    (swap! !registry
-           (fn [m]
-             (if-let [agent (get m aid-val)]
-               (let [old-sid (:agent/session-id agent)]
-                 (reset! result {:ok true
-                                 :agent-id aid-val
-                                 :old-session-id old-sid})
-                 (assoc m aid-val (assoc agent
-                                        :agent/session-id nil
-                                        :agent/last-active (now))))
-               (do (reset! result
-                           {:ok false
-                            :error (make-social-error
-                                    :agent-not-found
-                                    (str "Agent not registered: " aid-val)
-                                    :agent-id aid-val)})
-                   m))))
-    @result))
+        agent (get @!registry aid-val)]
+    (if-let [agent agent]
+      (let [old-sid (:agent/session-id agent)
+            reset-fn (:agent/session-reset-fn agent)
+            reset-result
+            (if reset-fn
+              (try
+                (let [result (reset-fn)]
+                  (cond
+                    (or (nil? result) (true? result)) {:ok true}
+                    (and (map? result) (= false (:ok result))) result
+                    :else {:ok true}))
+                (catch Exception e
+                  {:ok false
+                   :error (make-social-error
+                           :session-reset-failed
+                           (.getMessage e)
+                           :agent-id aid-val
+                           :exception-class (.getName (class e)))}))
+              {:ok true})]
+        (if (= false (:ok reset-result))
+          {:ok false
+           :error (or (:error reset-result)
+                      (make-social-error
+                       :session-reset-failed
+                       (str "Session reset failed for " aid-val)
+                       :agent-id aid-val))}
+          (let [result (atom nil)]
+            (swap! !registry
+                   (fn [m]
+                     (if-let [agent* (get m aid-val)]
+                       (do
+                         (reset! result {:ok true
+                                         :agent-id aid-val
+                                         :old-session-id old-sid})
+                         (assoc m aid-val
+                                (-> agent*
+                                    (assoc :agent/session-id nil
+                                           :agent/last-active (now))
+                                    (dissoc :agent/external-invokes
+                                            :agent/external-heartbeat-at))))
+                       (do
+                         (reset! result
+                                 {:ok false
+                                  :error (make-social-error
+                                          :agent-not-found
+                                          (str "Agent not registered: " aid-val)
+                                          :agent-id aid-val)})
+                         m))))
+            @result)))
+      {:ok false
+       :error (make-social-error
+               :agent-not-found
+               (str "Agent not registered: " aid-val)
+               :agent-id aid-val)})))
 
 ;; =============================================================================
 ;; Invocation (R1: delivery receipt, R4: loud failure)
@@ -795,6 +843,26 @@
   "Return list of registered TypedAgentId maps."
   []
   (mapv :agent/id (vals @!registry)))
+
+(defn find-reclaimable-agent
+  "Find the lowest-numbered idle, session-less, auto-registered local agent
+   of the given type. Returns its agent-id string, or nil."
+  [agent-type]
+  (let [prefix (name agent-type)]
+    (->> (vals @!registry)
+         (filter (fn [agent]
+                   (let [aid-val (get-in agent [:agent/id :id/value])
+                         meta (:agent/metadata agent)]
+                     (and (= (:agent/type agent) agent-type)
+                          (str/starts-with? (str aid-val) (str prefix "-"))
+                          (= (:agent/status agent) :idle)
+                          (nil? (:agent/session-id agent))
+                          (not (:remote? meta))
+                          (not (:proxy? meta))
+                          (:auto-registered? meta)))))
+         (sort-by #(get-in % [:agent/id :id/value]))
+         first
+         (#(some-> % (get-in [:agent/id :id/value]))))))
 
 (defn shutdown-all!
   "Unregister all agents. Returns count of agents removed."

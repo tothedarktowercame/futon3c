@@ -16,6 +16,7 @@
             [cheshire.core :as json]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.blackboard :as bb]
             [futon3c.dev.config :as config])
@@ -134,7 +135,7 @@
   [evidence-store {:keys [session-id issue-number repo
                           claim-type event-tag body]}]
   (when evidence-store
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :task
                                :ref/id (str (or repo "unknown") "#" issue-number)}
                      :type :coordination
@@ -189,7 +190,7 @@
       (send-to-channel! (or room "#futon") "tickle-1" message))
     (when evidence-store
       (let [append-result
-            (estore/append* evidence-store
+            (boundary/append! evidence-store
                             {:subject subject
                              :type :coordination
                              :claim-type :observation
@@ -770,7 +771,7 @@
                           (= "PASS" (str/upper-case (str first-line))))]
             ;; Emit evidence for this cycle
             (when evidence-store
-              (estore/append* evidence-store
+              (boundary/append! evidence-store
                               {:subject {:ref/type :session
                                          :ref/id (str "fm-conductor/" problem-id)}
                                :type :coordination

@@ -435,7 +435,7 @@
    opts:
    - :codex-bin (default \"codex\")
    - :profile (optional Codex config profile passed as `codex -p <profile> exec`)
-   - :model (optional, default \"gpt-5-codex\")
+   - :model (optional; when absent, use Codex CLI config/default)
    - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
    - :reasoning-effort (optional, e.g. low|medium|high)
@@ -445,7 +445,6 @@
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
            on-event on-runtime-event on-process-started on-process-exit]
     :or {codex-bin "codex"
-         model "gpt-5-codex"
          sandbox "danger-full-access"
          approval-policy "never"
          timeout-ms 1800000}}]

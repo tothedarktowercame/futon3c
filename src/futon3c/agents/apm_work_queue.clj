@@ -16,6 +16,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]))
 
@@ -29,6 +30,30 @@
 (def ^:private manifest-path
   (str apm-dir "/manifest.edn"))
 
+(def ^:private problem-overrides-path
+  "/home/joe/code/futon3c/data/apm-problem-overrides.tsv")
+
+(defn- load-problem-overrides
+  "Load machine-processing overrides keyed by problem id."
+  []
+  (if-not (.exists (io/file problem-overrides-path))
+    {}
+    (let [lines (-> problem-overrides-path slurp str/split-lines)
+          rows (rest lines)]
+      (into {}
+            (keep (fn [line]
+                    (let [[id machine-processing-state machine-processing-note]
+                          (str/split line #"\t" -1)]
+                      (when-not (str/blank? id)
+                        [id {:machine-processing-state machine-processing-state
+                             :machine-processing-note machine-processing-note}]))))
+            rows))))
+
+(defn machine-processable?
+  "True when a problem may be scheduled for automated processing."
+  [problem]
+  (str/blank? (:machine-processing-state problem)))
+
 ;; =============================================================================
 ;; Manifest loading
 ;; =============================================================================
@@ -38,7 +63,10 @@
    Returns a vector of maps with :id, :subject, :year, :filename, etc."
   ([] (load-apm-manifest manifest-path))
   ([path]
-   (edn/read-string (slurp path))))
+   (let [overrides (load-problem-overrides)]
+     (mapv (fn [problem]
+             (merge problem (get overrides (:id problem) {})))
+           (edn/read-string (slurp path))))))
 
 (defn load-problem-tex
   "Read the LaTeX body for a problem ID (e.g. \"t01A01\").
@@ -812,6 +840,7 @@
    Optional :subject filters by subject keyword."
   [evidence-store & {:keys [subject]}]
   (let [manifest (cond->> (load-apm-manifest)
+                   true (filter machine-processable?)
                    subject (filter #(= subject (:subject %))))
         done (completed-problem-ids evidence-store)
         total (count manifest)]
@@ -828,6 +857,7 @@
   ([evidence-store] (next-unprocessed evidence-store 10))
   ([evidence-store n & {:keys [subject canary]}]
    (let [manifest (cond->> (load-apm-manifest)
+                    true (filter machine-processable?)
                     subject (filter #(= subject (:subject %)))
                     canary  (filter #(canary-ids (:id %))))
          done (completed-problem-ids evidence-store)]
@@ -848,7 +878,7 @@
   [evidence-store {:keys [problem-id problem-base subject session-id event-tag
                           agent-result lean-status sorry-count classification]}]
   (when evidence-store
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :task
                                :ref/id problem-id}
                      :type :coordination
@@ -879,7 +909,7 @@
 (defn problems-by-subject
   "Group manifest entries by subject."
   []
-  (group-by :subject (load-apm-manifest)))
+  (group-by :subject (filter machine-processable? (load-apm-manifest))))
 
 (defn subject-summary
   "Return problem counts by subject."

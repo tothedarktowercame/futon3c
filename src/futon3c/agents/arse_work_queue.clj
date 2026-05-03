@@ -13,6 +13,7 @@
    invocation flows through tickle_orchestrate.clj's existing machinery."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]))
 
@@ -153,7 +154,7 @@
   [evidence-store {:keys [entity-id problem node-id session-id event-tag
                           generation-result verdict]}]
   (when evidence-store
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :task
                                :ref/id entity-id}
                      :type :coordination
