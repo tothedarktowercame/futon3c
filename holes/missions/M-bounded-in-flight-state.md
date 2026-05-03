@@ -1348,7 +1348,66 @@ Until #3 lands, INSTANTIATE remains in flight.
 
 ### 7. DOCUMENT
 
-To be written. Mission closes by updating M-the-futon-stack §"What invariantly exists today" and the cognitive-faculty table.
+DOCUMENT closes the mission by:
+1. Producing the docbook-style entry that explains *what was built,
+   how to use it, how it connects to prior work* — readable without
+   the mission doc.
+2. Updating M-the-futon-stack §"What invariantly exists today" with
+   the 10th cognitive-faculty shape (`metabolic-balance`) and the
+   harmolodic-reread of bounded-disposition siblings.
+3. Running a **QA pass** over the items that surfaced during
+   IDENTIFY → INSTANTIATE but are not in scope for INSTANTIATE-
+   head.
+
+#### QA-items bookkeeping
+
+These are real refinements / open questions / cross-checks surfaced
+during the mission arc that should be addressed at DOCUMENT time
+rather than during INSTANTIATE-head. Each carries a phase-of-origin
+and a brief note. The DOCUMENT-time QA pass walks the list and
+either resolves, defers, or dismisses each.
+
+**From the mission text itself:**
+
+| # | Item | Origin | Notes |
+|---|---|---|---|
+| Q-01 | Block-id parser disambiguation | INSTANTIATE coup-de-grâce | `git log --grep='^Block:'` matches prose-mentions too. Parser must match `^Block: <kind>-<YYYY-MM-DD>-<slug>$` specifically, ideally checking for *last* such match in a message rather than any. |
+| Q-02 | Cross-repo block atomicity | V-5 Gap 1 | Block-id binds across repos but doesn't atomically ensure all sides land. Future sibling: orphaned-half-block detector. |
+| Q-03 | Counterfeit-closure detection | V-5 Gap 2 | No clean heuristic. Defer; revisit if empirical evidence of counterfeit closure accumulates. Candidate signals: empty-diff commits, formatter-only diffs, automated-merge-only commits. |
+| Q-04 | `:review-by` self-decay enforcement loop | V-4 ⚠ / V-5 Gap 3 | Check-fn must read disposition file each fire and compare against `now`. Implementation detail for INSTANTIATE Block 4. |
+| Q-05 | Disposition opt-out granularity | V-4 schema | Path globs covered. Line-range opt-out probably out of scope; document the boundary. |
+| Q-06 | Mission name reconciliation | ARGUE-1 / Q-naming | Working name `M-bounded-in-flight-state`. ARGUE held it; revisit at DOCUMENT — does the name still fit after the broader mana-allostasis frame landed? |
+| Q-07 | Queue entry reconciliation | INSTANTIATE handoff | `run-068-commit-as-you-go--working-tree-commit-pressure` carries research-phase name. Once mission is operational, update `futon5a/data/stack-stereolithography-runbook.edn` (the source-of-truth) so the queue regenerates with the operational name + cross-reference to `run-064-mana-gated-work`. |
+| Q-08 | Inventory entry shape | INSTANTIATE Block 4 | New family in `futon3c/docs/structural-law-inventory.sexp` should reference the harmolodic reread (declare bounded-disposition siblings as single-tier instances under metabolic-balance). The reread is operationally inert; making it explicit is a docbook-level statement. |
+| Q-09 | Plain-language argument re-test | ARGUE plain-language | Have a non-stack-internal reader (or "outside-reader" simulation) actually test the elevator pitch. The exit criterion in `mission-lifecycle.md` is "someone outside the project can understand from the plain-language argument alone" — needs an actual outsider check. |
+| Q-10 | Music-theoretic terminology grounding | DERIVE patterns | "Harmolodics" used without an in-library anchor. Either add a brief flexiarg (e.g., `library/music-theory/harmolodics.flexiarg`) or pre-define the term within the patterns that use it. |
+| Q-11 | Free-jazz framing as methodology | INSTANTIATE form | Head-improvisation-head structure is ad-hoc here. Could be generalised as a mission-section template, possibly under `library/futon-theory/` or `library/structure/`. Defer until used a second time. |
+| Q-12 | Session-id mechanics | V-6 amendment (II) / INSTANTIATE Block 5 | Session as temporal frame is named; session-id formation/persistence is not. `nonstarter_mana.clj`'s `--session` is the existing mechanism; needs a documented binding. |
+| Q-13 | 5-phase lifecycle ↔ 8-phase futonic-loop mapping | DERIVE Pattern 1 | The five-phase block lifecycle maps onto the futonic loop's eight elements but isn't 1:1. Pattern names the mapping in prose; a side-by-side table would help future readers. |
+| Q-14 | Empirical re-calibration | V-1 / INSTANTIATE Block 2 | Today's nominal `N=20`, `D=7d`, `B=10MB` chosen from a single empirical run. After first INSTANTIATE produces more data points, revisit. |
+| Q-15 | Cross-mission back-references | mission text throughout | Mission references `M-the-futon-stack`, `M-live-geometric-stack`, `M-single-entry-point`, `M-commit-as-you-go`. Each target should accept a back-reference (a "see M-bounded-in-flight-state" line in their relevant section). |
+
+**From the surrounding work that prompted this mission:**
+
+| # | Item | Origin | Notes |
+|---|---|---|---|
+| Q-16 | futon7 daily.clj refers to moved data path | 2026-05-03 cleanup | `src/f7/daily.clj` reads from `data/probes/*.edn` after we moved the dir to storage. Captured for the M-commit-as-you-go log; needs a separate scoped fix when next exercised. |
+| Q-17 | The 6 entangled futon3c dev/* M's | 2026-05-03 cleanup | `dev.clj`, `dev/agents.clj`, `dev/bootstrap.clj`, `dev/config.clj`, `dev/invoke.clj`, `dev/peripheral_agents.clj` — operator WIP. The disposition surface candidate (V-4 synthetic .futon-disposition.edn) addresses this; once the disposition mechanism is operational, these gain a real `:review-by`. |
+| Q-18 | futon0/web/ war-machine source tree | 2026-05-03 cleanup / M-single-entry-point | 125 MB / 2,825 files untracked. Deferred to M-single-entry-point. The disposition surface should carry the `:review-by` "M-single-entry-point INSTANTIATE complete" entry. |
+
+**DOCUMENT-time QA pass produces:** for each item, one of `:resolved
+{...}`, `:deferred {to "..." reason "..."}`, `:dismissed {reason "..."}`.
+The QA-pass record itself becomes a docbook entry capturing the
+mission's known-knowns and known-unknowns at close.
+
+#### DOCUMENT exit criterion
+
+Mission COMPLETE when:
+1. Docbook entry exists, self-contained, readable without the mission doc.
+2. M-the-futon-stack §"What invariantly exists today" reflects 10th shape.
+3. QA-items list above has been walked and recorded as resolved /
+   deferred / dismissed.
+4. Cross-mission back-references accepted.
 
 ## Checkpoints
 
