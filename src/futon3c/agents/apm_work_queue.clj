@@ -33,6 +33,11 @@
 ;; Manifest loading
 ;; =============================================================================
 
+(defn machine-processable?
+  "True when a problem may be scheduled for automated processing."
+  [problem]
+  (str/blank? (:machine-processing-state problem)))
+
 (defn load-apm-manifest
   "Load the APM problem manifest (489 entries).
    Returns a vector of maps with :id, :subject, :year, :filename, etc."

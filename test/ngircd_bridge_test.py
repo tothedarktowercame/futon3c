@@ -262,7 +262,8 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
         self.assertNotIn("no execution evidence", text)
 
     def test_worker_emits_synthetic_frontiermath_completion_bell_when_prompt_requires_it(self):
-        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bridge.threading.Thread, "start", autospec=True, return_value=None):
+            bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         bot._invoke_queue.put({
             "job_id": "codex-job-bell-1",
             "sender": "tickle",
@@ -284,7 +285,8 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
         say.assert_called_once_with("@tickle BELL SPEC_VERIFIED", max_lines=1, channel="#math")
 
     def test_worker_skips_synthetic_frontiermath_completion_bell_when_result_already_contains_it(self):
-        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bridge.threading.Thread, "start", autospec=True, return_value=None):
+            bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         bot._invoke_queue.put({
             "job_id": "codex-job-bell-2",
             "sender": "tickle",
@@ -306,7 +308,8 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
         say.assert_not_called()
 
     def test_worker_emits_synthetic_frontiermath_completion_bell_for_wrapped_tickle_dispatch_prompt(self):
-        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bridge.threading.Thread, "start", autospec=True, return_value=None):
+            bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
         bot._invoke_queue.put({
             "job_id": "codex-job-bell-3",
             "sender": "tickle",

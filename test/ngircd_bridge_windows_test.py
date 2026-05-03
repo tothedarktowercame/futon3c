@@ -4,8 +4,11 @@ import unittest
 
 class NgircdBridgeWindowsScriptTest(unittest.TestCase):
     def test_wrapper_forces_utf8_stdio_defaults(self):
-        path = pathlib.Path(
-            "I:/darktower/futon3c-mfuton-overlay/scripts/windows/ngircd-bridge-windows.bat"
+        path = (
+            pathlib.Path(__file__).resolve().parents[1]
+            / "scripts"
+            / "windows"
+            / "ngircd-bridge-windows.bat"
         )
         text = path.read_text(encoding="utf-8")
 
