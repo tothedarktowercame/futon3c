@@ -209,6 +209,102 @@ generated outputs landed under `data/` instead of `~/code/storage/`.
 - **followup for invariant design:** include `total_dirty_bytes` and `total_dirty_lines` in the
   pressure function alongside `count` and `age`.
 
+## Phase H — Sweep across the rest of the stack (2026-05-03 afternoon)
+
+After the futon6 cleanup landed (`338a2fa`), the rest of yesterday's session pile across futon0 / futon3 /
+futon3b / futon3c / futon5 / futon5a / futon6 was committed in **4 more commits**:
+
+| # | Commit | Repo | Scope |
+|---|---|---|---|
+| 1 | `d521820` | futon0 | M-the-futon-stack.md (new — was untracked, 370 lines of session work) |
+| 2 | `fb533ce` | futon3 | 13 coord flexiarg M + 3 scripts D + 22 mission-doc Status: archived M |
+| 3 | `ad7c824` | futon3b | 13 coord flexiarg D (paired with #2) |
+| 4 | `5f18bc2` | futon3c | 3 source patches (clean) + 6 D + 28 mission-doc M + 2 new files |
+
+### Findings from the multi-repo sweep (extends the 13-question checklist)
+
+These are findings *additional* to the futon6 phases above. Each one narrows the design of the
+forthcoming `working-tree-commit-pressure` check-fn.
+
+#### Finding 1 — "untracked but operator-active" is a third state.
+
+`M-the-futon-stack.md` carried 370 lines of session work but appeared as `??` in `git status`.
+futon-sync's "Untracked" column counted it but didn't surface "has authored content vs blank scaffold."
+For the pressure function, **untracked-with-content should weight separately from untracked-blank** —
+authored work-not-yet-tracked is a higher-pressure state than placeholders.
+
+#### Finding 2 — single repo, multiple session concerns.
+
+The futon3 commit carried three concerns (coord-flexiarg consolidation, scripts retirement,
+mission-doc dispositions). The futon3c commit carried four (source patches, data cleanup, mission
+dispositions, new mission docs). Per-repo commits keep cross-reference burden low at the cost of
+commit-purity. **Future tooling: `bb futon-sync.clj scope --session=$id` should preview "files whose
+diff matches a session-pattern" so the operator can audit what's about to be lumped together
+before the staging step.**
+
+#### Finding 3 — cross-repo paired commits need linking.
+
+Commit `ad7c824` (futon3b) only makes sense as a pair with `fb533ce` (futon3). The link lives in the
+commit message text ("paired with futon3 fb533ce"). **Tooling: a session-scope marker — possibly
+in `git notes` or a sidecar `.session-id` — would make the link mechanical, not literary.**
+
+#### Finding 4 — pre-commit hooks catch real things; don't bypass.
+
+The `reachable-from-boot/agent-registry` hook rejected the futon3c commit because dev.clj had
+pre-existing `swap! reg/!registry` call sites at lines 1314/1321. CLAUDE.md discipline ("never add
+--no-verify") was the right call — investigation revealed those call sites were *not from our
+session* but from operator WIP we'd accidentally pulled in via `git add <file>`. The hook
+prevented a polluted commit. **Existing futon3c hooks are a *prior art* the new invariant can
+build on, not duplicate.**
+
+#### Finding 5 — WIP-entanglement is a real cleanup blocker.
+
+`dev/futon3c/dev.clj` and `dev/futon3c/dev/bootstrap.clj` had operator WIP interleaved with our
+session edits on shared lines (Joe's `bridge-state` tracking + our `text-buf` declaration shared the
+same hunk). Patches can't be split cleanly when this happens. **Decision rule: drop entangled
+files from the session commit; the session change continues running in-memory; commit later
+when the surrounding WIP lands.** This is a legitimate "deferred commit" pattern — the pressure
+function should distinguish "deferred-with-reason" from "default-undecided."
+
+#### Finding 6 — gitignored files can carry session work invisibly.
+
+`futon5a/data/stack-stereolithography-priority-queue.json` is gitignored (`data/*` rule). Our
+edit to it (added `run-068` at top with score 800) lives only on disk, invisible to git and to
+futon-sync. The runbook (`stack-stereolithography-runbook.edn`) is the *tracked* source-of-truth
+and should hold the new candidate. **Pressure function should ignore git-ignored paths but flag
+"edited gitignored generated artifacts whose runbook was not also touched" — that's the silent
+divergence the operator wouldn't otherwise see.**
+
+#### Finding 7 — heterogeneous commits are a tradeoff.
+
+Commit 4 (futon3c) carried code + data + mission-meta + new-missions in one commit. Smaller
+commits would be purer; this one was coherent only as "the day's work on futon3c." For
+session-scope cleanups, "one commit per repo" was the chosen tradeoff. **The pressure function
+should not punish heterogeneity per se — what matters is whether the diff's coherence is
+operator-attestable. The `git commit -m` message itself is the attestation.**
+
+### Distilled additions to the 13-question checklist
+
+| # | New question (additions to the original checklist above) |
+|---|---|
+| 14 | What hunks of each modified file are session-work vs operator-WIP? Stage only the former. |
+| 15 | Are any files entangled (session edits + operator WIP on shared lines)? Drop entangled files; commit later. |
+| 16 | Does any session work live in gitignored generated artifacts? If so, is the corresponding tracked source-of-truth also touched? Flag divergence. |
+| 17 | Are there cross-repo paired commits? Link them in commit messages (or via mechanical session-scope marker). |
+| 18 | Did pre-commit hooks fire? Investigate root cause; never bypass with --no-verify. |
+| 19 | Is "untracked but authored" present? Distinguish from "untracked but blank/scaffold." |
+| 20 | After the sweep: re-run the audit tool. The same tool that surfaced the problem should confirm the loop closed. |
+
+That's 20 questions total. The set partitions cleanly into:
+
+- **Reconciliation** (Q1, Q2, Q20): "what is the working tree's state, before and after?"
+- **Locate-and-verify** (Q4–Q7): "where did the data go; is it recoverable; what's at storage?"
+- **Scope-and-boundary** (Q3, Q8, Q9, Q14, Q15): "what's mine, what's yours, what's coupled?"
+- **Stage-and-commit** (Q10, Q11, Q12, Q17, Q18): "stage with verification; commit with attestation; pair across repos."
+- **Operational hygiene** (Q13, Q16, Q19): "followups for runtime references, gitignored divergence, untracked-with-content."
+
+These five clusters are the spec for `working-tree-commit-pressure`'s check-fn, read top-down.
+
 ## Distilled checklist (what an instrumented `commit-as-you-go` invariant should make routine)
 
 For each candidate cleanup target, the apparatus should:

@@ -27,6 +27,35 @@ it goes, and how the laptop and server work together.
 
 ## Evidence Sources (Who Creates Entries)
 
+### 0. Evidence-write boundary (canonical path for ALL of the below)
+
+Since **2026-04-29 (M-invariant-queue-unstuck INSTANTIATE-2)**, every
+evidence emit in futon3c routes through a **single boundary**:
+
+```
+futon3c.evidence.boundary/append!
+```
+
+The boundary:
+
+- Coerces commonly-misshaped fields (string→keyword for `:tags`,
+  `:subject :ref/type`, `:type`, `:claim-type`, `:pattern-id`).
+- Calls `futon3c.evidence.store/append*`.
+- Verifies durable persistence via
+  `futon3c.evidence.invariant/verify-persisted` (binds **I-evidence-per-turn**).
+- Returns a delivery-receipt-shaped result (`{:ok bool ...}` always).
+- Surfaces structured **VIOLATION** lines on stderr for any failure mode.
+
+The boundary itself binds **I-single-boundary**: a static check confirms
+zero direct calls to `estore/append*` outside the boundary namespace.
+
+All sources documented below (slash commands, Codex REPL, peripherals,
+IRC, agent invocations, direct HTTP POST) ultimately route through this
+boundary. New code MUST go through `boundary/append!`. Use
+`peripheral.common/maybe-append-evidence!` as the back-compat alias if
+you have a `state` map; use `boundary/append!` directly if you have a
+plain store reference.
+
 ### 1. Claude Code slash commands (`/psr`, `/pur`, `/par`)
 
 When you run `/psr` in Claude Code, the skill invokes the **discipline
@@ -72,7 +101,11 @@ The reflect peripheral uses `evidence/type: reflection`; all others use
 `evidence/type: coordination`.
 
 **Where it's stored**: Direct append via `common/maybe-append-evidence!` to
-whatever evidence store is in the peripheral's context.
+whatever evidence store is in the peripheral's context. Since
+2026-04-29 (M-invariant-queue-unstuck INSTANTIATE-2),
+`common/maybe-append-evidence!` is a thin alias that delegates to
+`futon3c.evidence.boundary/append!` — the single boundary; see §**0.
+Evidence-write boundary** below.
 
 ### 4. IRC messages
 

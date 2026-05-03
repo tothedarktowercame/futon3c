@@ -16,7 +16,13 @@
   futon3b/futon3b           {:local/root "../futon3b"}
 
   ;; futon1a durable store — XTDB persistence for evidence landscape
-  futon1a/futon1a           {:local/root "../futon1a"}}
+  futon1a/futon1a           {:local/root "../futon1a"}
+
+  ;; futon0 — remaining shared tooling still consumed from futon3c.
+  futon0/futon0             {:local/root "../futon0"}
+
+  ;; futon2 — canonical War Machine engine + visualiser home.
+  futon2/futon2             {:local/root "../futon2"}}
 
  :aliases
  {:test {:extra-paths ["test" "dev"]

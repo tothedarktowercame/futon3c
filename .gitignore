@@ -12,6 +12,10 @@ log/
 .alleycat-drop/
 storage/
 data/*
+!data/apm-problem-manifest.tsv
+!data/apm-problem-overrides.tsv
+!data/apm-lean-dojo-handoffs/
+!data/apm-lean-dojo-handoffs/*.md
 !data/proof-state/
 
 bb
