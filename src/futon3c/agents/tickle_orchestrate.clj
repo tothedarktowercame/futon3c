@@ -682,7 +682,8 @@
 (defn- build-fm-context-original
   "Build the Tickle decision prompt for an FM conductor cycle."
   [problem-id target-agent recent-msgs assignable-tasks]
-  (let [agent-role (get agent-roles target-agent target-agent)
+  (let [room (config/frontiermath-room)
+        agent-role (get agent-roles target-agent target-agent)
         irc-nick (config/irc-nick-for-agent-id target-agent)
         recent-text (str/join "\n"
                      (map (fn [{:keys [nick text at]}]
@@ -692,7 +693,7 @@
                    (map (fn [item]
                           (str "  " (:item/id item) ": " (:item/label item)))
                         assignable-tasks))]
-    (str "You are Tickle, task coordinator for " problem-id " (Ramsey numbers for book graphs) on #math.\n\n"
+    (str "You are Tickle, task coordinator for " problem-id " (Ramsey numbers for book graphs) on " room ".\n\n"
          "ROLE: You assign proof obligations and follow up on progress. You are mechanical/queue-based, not epistemic.\n"
          "Current mode: FALSIFY (must try to disprove before constructing).\n"
          "Problem state doc: futon6/data/first-proof/frontiermath-pilot/FM-001-ramsey-book-graphs-state.md\n"
@@ -700,16 +701,16 @@
          "TARGET THIS CYCLE: " agent-role "\n"
          "IRC NICK: " irc-nick " (use @" irc-nick " when mentioning this agent)\n\n"
          "ASSIGNABLE OBLIGATIONS:\n" (if (seq task-text) task-text "  (none — all blocked by dependencies)") "\n\n"
-         "RECENT #math (" (count recent-msgs) " messages):\n"
+         "RECENT " room " (" (count recent-msgs) " messages):\n"
          (if (seq recent-text) recent-text "(no messages captured)") "\n\n"
          "RULES:\n"
          "1. If the target agent claimed work and is actively working — PASS (don't interrupt)\n"
          "2. If the target agent seems stuck or silent — brief nudge\n"
          "3. If work is completed — acknowledge and dispatch next obligation\n"
-         "4. Max 1-2 lines, <400 chars. Always @mention the target using their IRC NICK (not agent ID). Post to #math.\n"
+         "4. Max 1-2 lines, <400 chars. Always @mention the target using their IRC NICK (not agent ID). Post to " room ".\n"
          "5. Do NOT repeat the full problem statement — agents know it.\n"
          "6. Remind agents to push artifacts to git — never reference local paths or /tmp.\n"
-         "7. If YOU (tickle) already said something similar in RECENT #math — PASS. Do not re-page.\n\n"
+         "7. If YOU (tickle) already said something similar in RECENT " room " — PASS. Do not re-page.\n\n"
          "RESPOND WITH ONLY:\n"
          "- A short IRC message (start with @agent-name), OR\n"
          "- PASS")))
@@ -756,7 +757,7 @@
           {:action :cooldown :target target-agent})
       (let [recent-msgs (when (fn? irc-read-fn)
                           (->> (irc-read-fn)
-                               (filter #(= "#math" (:channel %)))
+                               (filter #(= (config/frontiermath-room) (:channel %)))
                                (take-last 20)))
             assignable (fm-assignable-obligations problem-id)
             context (build-fm-context problem-id target-agent recent-msgs assignable)]
@@ -807,7 +808,7 @@
               (do (println (str "[fm-conductor] " target-agent " → " first-line))
                   (record-page! conductor-state target-agent)
                   (when (fn? bridge-send-fn)
-                    (bridge-send-fn "#math" "tickle" first-line))
+                    (bridge-send-fn (config/frontiermath-room) "tickle" first-line))
                   {:action :message :target target-agent :text first-line}))))))))
 
 (defn start-fm-conductor!

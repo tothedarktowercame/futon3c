@@ -20,6 +20,7 @@
    Design: emacsclient is the transport. No protocol to design, no
    endpoint to build. Emacs IS the sliding blackboard."
   (:require [clojure.string :as str]
+            [futon3c.dev.config :as config]
             [futon3c.evidence.store :as estore])
   (:import [java.util UUID]))
 
@@ -431,7 +432,8 @@
         problem-id (or (:problem-id state)
                        (:mentor/problem cmap) "none")
         channel (or (:channel state)
-                    (:mentor/channel cmap) "#math")
+                    (:mentor/channel cmap)
+                    (config/frontiermath-room))
         handle (or (:handle state) (:mentor/handle cmap))
         version (get cmap :mentor/version 0)
         recent-digest (take-last 3 digest)

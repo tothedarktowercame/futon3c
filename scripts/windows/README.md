@@ -44,6 +44,8 @@ Internal lifecycle helper authority:
   - operator-facing full-stack entrypoint
 - `scripts/windows/stop-dev-stack-windows.bat`
   - canonical full-stack cleanup authority for Windows lane bring-up/teardown
+- `scripts/windows/dev-stack-core-supervisor.ps1`
+  - internal runtime-lane tracker for the `dev-core` process under `dev`
 - `scripts/windows/dev-stack-supervisor.ps1`
   - internal lifecycle wrapper that preserves cleanup on launcher exit and `Ctrl-C`
   - do not treat this as a separate operator target; invoke `dev` instead
@@ -73,6 +75,10 @@ ngircd bridge launch examples:
 - the Windows bridge wrapper defaults `CODEX_BRIDGE_SUMMARY_MODE=raw` so codex
   replies can preserve multi-line IRC bodies; set it to `summary` before launch
   to restore the older one-line summary behavior.
+- `FUTON3C_MATRIX_REPLY_NO_LIMITS` defaults off; when set to `true`, the
+  bridge keeps RFC-safe line splitting but stops applying bridge-level
+  clipping/line-cap limits to Matrix-backed clean-output evolver replies and
+  bridge `/say` delivery. Leave it unset to preserve the historical behavior.
 
 Full-stack launch (`dev`) behavior:
 - runs `stop-futon1a-windows.bat`
@@ -123,7 +129,20 @@ Full-stack launch (`dev`) behavior:
   processes
 - defaults `CODEX_BRIDGE_SUMMARY_MODE=raw` unless already set so multiline
   codex replies survive the bridge on Windows by default
-- starts `dev-core` in the background with output streamed to the same console
+- keeps `FUTON3C_MATRIX_REPLY_NO_LIMITS` unset by default, preserving the
+  historical bridge cap/truncation behavior unless an outer config/launcher
+  explicitly opts into the Matrix-backed no-limit posture
+- starts `dev-core` through a tracked runtime-lane supervisor
+- writes runtime-lane trace artifacts under `XDG_RUNTIME_DIR`, `TEMP`, or `TMP`
+  (whichever is available first):
+  - `futon3c-dev-core-supervisor.json` while the runtime lane is alive
+  - `futon3c-dev-core-supervisor-exit.json` after the runtime lane exits
+  - `futon3c-dev-core.log` as the combined runtime log
+- waits for runtime ports while that tracked runtime lane is still alive
+- if the tracked runtime lane exits before the expected port becomes available,
+  `dev` now reports that as an early runtime-lane exit and prints the exit
+  receipt path plus the tail of the combined runtime log, instead of reducing
+  everything to a generic port-wait timeout
 - waits for runtime ports, then starts `ngircd-bridge`
 
 IRC lane switch for `dev`:

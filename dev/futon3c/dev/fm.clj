@@ -63,7 +63,7 @@
       default-fm-rotation)))
 
 (defn fm-dispatch!
-  "Have Tickle assign the top FM-001 obligation on #math."
+  "Have Tickle assign the top FM-001 obligation on the configured FrontierMath room."
   ([] (fm-dispatch! "FM-001"))
   ([problem-id]
    (let [tasks (mfuton-frontiermath/unclaimed-assignable-obligations
@@ -74,11 +74,12 @@
        (do (println "[tickle-fm] No assignable obligations for " problem-id)
            nil)
        (let [{:item/keys [id label]} (first tasks)
+             dispatch-channel (fm-dispatch-channel)
              msg (str "TASK ASSIGNMENT [" problem-id " / " id "]: " label
                       ". Current mode: FALSIFY. "
                       "Who wants to take this? Claim with @tickle I'll take " id)]
-         ((dev-irc/make-bridge-irc-send-fn) "#math" "tickle" msg)
-         (println (str "[tickle-fm] Assigned " id " on #math"))
+         ((dev-irc/make-bridge-irc-send-fn) dispatch-channel "tickle" msg)
+         (println (str "[tickle-fm] Assigned " id " on " dispatch-channel))
          {:assigned id :label label})))))
 
 (defn fm-status!
@@ -108,7 +109,7 @@
        ". Push results to git when done."))
 
 (defn handle-claim-prompt!
-  "Honor the existing FrontierMath claim seam on the dedicated #math lane.
+  "Honor the existing FrontierMath claim seam on the configured FrontierMath room.
    Returns nil when PROMPT is not a math-lane claim and generic tickle behavior
    should continue."
   [prompt session-id]
@@ -122,7 +123,7 @@
       :dispatch-message-original-fn fm-dispatch-message-original})))
 
 (defn handle-bell-prompt!
-  "Honor the existing FrontierMath bell phrase on the dedicated #math lane.
+  "Honor the existing FrontierMath bell phrase on the configured FrontierMath room.
    Returns nil when PROMPT is not a math-lane bell and generic tickle behavior
    should continue."
   [prompt session-id]
@@ -257,7 +258,7 @@
                          (assoc-in [:last-paged agent-id] (System/currentTimeMillis))
                          (update-in [:paged-obligations agent-id] (fnil conj #{}) ob-id))))
             (when (fn? bridge-send-fn)
-              (bridge-send-fn "#math" "tickle" msg))
+              (bridge-send-fn (fm-dispatch-channel) "tickle" msg))
             {:action :page :target agent-id :text msg :obligation ob-id}))))))
 
 (defn- fm-dispatch-idle-agents!
@@ -280,7 +281,7 @@
            invariant-emit-fn invariant-futon1a-url invariant-penholder]} overrides]
   (merge {:problem-id "FM-001"
           :cooldown-ms (* 3 60 1000)
-          :irc-read-fn #(irc-recent-channel "#math" 20)
+          :irc-read-fn #(irc-recent-channel (fm-dispatch-channel) 20)
           :bridge-send-fn (dev-irc/make-bridge-irc-send-fn)
           :evidence-store evidence-store
           :invariant-aggregate-fn (or invariant-aggregate-fn

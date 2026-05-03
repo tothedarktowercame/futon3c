@@ -796,6 +796,26 @@
   []
   (mapv :agent/id (vals @!registry)))
 
+(defn find-reclaimable-agent
+  "Find the lowest-numbered idle, session-less, auto-registered local agent
+   of the given type. Returns its agent-id string, or nil."
+  [agent-type]
+  (let [prefix (name agent-type)]
+    (->> (vals @!registry)
+         (filter (fn [agent]
+                   (let [aid-val (get-in agent [:agent/id :id/value])
+                         meta (:agent/metadata agent)]
+                     (and (= (:agent/type agent) agent-type)
+                          (str/starts-with? (str aid-val) (str prefix "-"))
+                          (= (:agent/status agent) :idle)
+                          (nil? (:agent/session-id agent))
+                          (not (:remote? meta))
+                          (not (:proxy? meta))
+                          (:auto-registered? meta)))))
+         (sort-by #(get-in % [:agent/id :id/value]))
+         first
+         (#(some-> % (get-in [:agent/id :id/value]))))))
+
 (defn shutdown-all!
   "Unregister all agents. Returns count of agents removed."
   []

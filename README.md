@@ -75,6 +75,15 @@ Role-aware defaults are available via `FUTON3C_ROLE`:
 - `laptop`: disables local IRC (`0`), registers `codex-1`, skips `claude-1`.
 - `default`: legacy behavior (IRC on, both agents registered).
 
+Matrix-backed reply-shape override:
+- `FUTON3C_MATRIX_REPLY_NO_LIMITS=false` by default, which preserves the
+  historical bridge-side clipping/cap behavior.
+- when set true, the ngircd bridge keeps RFC-safe IRC line splitting but stops
+  adding bridge-level clipping/line-cap limits for Matrix-backed clean-output
+  evolver replies and bridge `/say` delivery.
+- this is intended to be selected by an outer config/launcher seam rather than
+  exported ad hoc as a new default.
+
 Convenience launchers:
 - `./scripts/dev-linode-env` — Linode profile + `make dev`
 - `./scripts/dev-laptop-env` — laptop profile + `make dev`

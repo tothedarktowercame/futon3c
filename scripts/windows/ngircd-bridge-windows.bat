@@ -27,6 +27,8 @@ if not defined IRC_CHANNEL set "IRC_CHANNEL=#futon"
 if not defined INVOKE_BASE set "INVOKE_BASE=http://127.0.0.1:7070"
 if not defined BRIDGE_BOTS set "BRIDGE_BOTS=codex"
 if not defined CODEX_BRIDGE_SUMMARY_MODE set "CODEX_BRIDGE_SUMMARY_MODE=raw"
+if not defined PYTHONUTF8 set "PYTHONUTF8=1"
+if not defined PYTHONIOENCODING set "PYTHONIOENCODING=UTF-8"
 
 set "BRIDGE_BOTS_NORMALIZED=%BRIDGE_BOTS: =%"
 if /i "%BRIDGE_BOTS_NORMALIZED%"=="codex" (
@@ -56,6 +58,8 @@ echo [ngircd-bridge-windows] Starting ngircd bridge
 echo [ngircd-bridge-windows] IRC=%IRC_HOST%:%IRC_PORT% channel=%IRC_CHANNEL%
 echo [ngircd-bridge-windows] invoke=%INVOKE_BASE% bots=%BRIDGE_BOTS%
 echo [ngircd-bridge-windows] CODEX_BRIDGE_SUMMARY_MODE=%CODEX_BRIDGE_SUMMARY_MODE%
+echo [ngircd-bridge-windows] PYTHONUTF8=%PYTHONUTF8%
+echo [ngircd-bridge-windows] PYTHONIOENCODING=%PYTHONIOENCODING%
 if defined NICK_AGENT_MAP echo [ngircd-bridge-windows] NICK_AGENT_MAP=%NICK_AGENT_MAP%
 if defined IRC_COMMAND_OWNER_AGENT_MAP echo [ngircd-bridge-windows] IRC_COMMAND_OWNER_AGENT_MAP=%IRC_COMMAND_OWNER_AGENT_MAP%
 if defined FUTON3C_REGISTER_CLAUDE echo [ngircd-bridge-windows] FUTON3C_REGISTER_CLAUDE=%FUTON3C_REGISTER_CLAUDE%
