@@ -1375,6 +1375,8 @@ edits + corresponding implementation blocks.
   endpoint in futon3c (returning the same JSON shape as the snapshot)
   and stop there; cljs integration follows whenever you next
   iterate the War Machine UI.
+  
+> Joe: Let's start by thinking about how these details would fit into the .edn or, I guess, .json that feeds the war machine. My sense is that the war machine should be aware that the operator is part of the stack.  The computer doesn't care if I have 100 open missions, but I care, since there's no way I can keep track of that complexity, and the stack should respect that limitation.  Consider also that the War Machine is like the "AIF Head" (per futon2/holes/M-aif-head.md) that integrates the AIF heads that (should) exist for other peripherals. That mission is written down as complete, but should conceptually be re-opened.  As we're thinking about M-bounded-in-flight-state, it's clear that each session is its own "peripheral" (for me / for the stack) and that the War Machine should be aware of the sessions *and their relationship* to the material existence of the stack (per M-live-geometric-stack).  So, I think it's not so much about defining "a view" but about figuring out how the active channels (sessions) relate to the accreted code and signals.  It's an "integration" problem, in other words.
 
 **D-02 — Bootstrap wiring (QA-17)**
 
@@ -1395,6 +1397,8 @@ edits + corresponding implementation blocks.
   call site).
 - *Default*: leave deferred until you author the disposition file.
 
+> Joe: Well, you have good shapes written down for the "Synthetic `.futon-disposition.edn` for the residual cases the 2026-05-03 sweep deliberately left in flight." — let's follow that.  I think it shouldn't be any harder to think transactionally about the bootsrap phase than any future phases, which is kind of the point.
+
 **D-03 — Snapshot refresh cadence**
 
 - *Question*: How does `mana-snapshot.bb` keep the JSON fresh?
@@ -1407,6 +1411,8 @@ edits + corresponding implementation blocks.
 - *Default*: emacs `after-save-hook` fires it for tracked files in
   any of the 14 repos; debounced to ≤1×/min; HUD widget shows
   "stale" past 10 min if no save has happened. Lightest weight.
+  
+> Joe: I think we should hook the active side to the multi-watcher, not to Emacs, since in principle other people might be using, e.g., VS Code, to work on the stack.  This links to my comment above (D-01): "the stack" should know which missions are active, and Emacs is a projection + sensory surface, by and large.  Updates to the HUD are certainly useful, but I think these can be "driven" by the deeper layers of the stack (or, more likely, just exposed in a "pull" fashion when I run M-x stack-hud-2-toggle).
 
 **D-04 — Session-id formation**
 
@@ -1423,6 +1429,8 @@ edits + corresponding implementation blocks.
   by hand or via a small `(mana-session-set "...")` interactive
   command. Simplest, no infrastructure assumptions.
 
+> Joe: This is an easy question - buffers like *claude-repl:claude-3* correspond to sessions (claude-3, session: 1a356840-fda2-434e-818b-30d4f53b279c), and other buffers don't.  So, it's a per-buffer thing, not a per frame thing.  In principle the buffers could be renamed (e.g., *claude:M-bounded-in-flight-state*) but I haven't renamed them yet because I'm not sure what would happen.  In any case, the buffers could have a buffer-local variable (if they don't already) that maintains the agent ID and session ID so they could be retrieved even if renamed.  Indeed, your idea of a "sidecar file" could be replaced by exactly such a buffer local variable, so we don't litter the filesystem with lots of sidecars.
+
 **D-05 — `.futon-disposition.edn` adoption (operator-author task)**
 
 - *Question*: Who authors the disposition files for the deferred
@@ -1436,6 +1444,8 @@ edits + corresponding implementation blocks.
   side is done.
 - *Default*: leave for Joe; INSTANTIATE remains in flight on this
   item until the files exist.
+
+> Joe: I really don't want to write extra files, but if it's a protocol that absolutely needs my input, we could create a new algorithm in ~/code/algorithms/... that the agent would run to get information out of me.  Odds are, though, all of the information can be derived from the session buffer, linked missions, the evidence landscape, etc., without me having to type anything new, and, indeed, it could likely be derived classically without the need for LLM calls.  If that seems surprising, we can discuss further.
 
 **D-06 — `:operational` promotion criteria**
 
@@ -1453,6 +1463,8 @@ edits + corresponding implementation blocks.
   it (a proof-of-binding).
 - *Default*: keep at `:operational-when-enabled` until D-02 + D-03
   + D-04 are settled and a proof-of-binding event lands.
+
+> Joe: :operational-when-enabled should come with proof that it is, in fact, operational when enabled, or at least was when it was last enabled.  I don't have an opinion about when it should be promoted — the general idea is that it's a switch-flip away and can be enabled whenever we want.
 
 **Discussion pacing**
 
