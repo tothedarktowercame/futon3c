@@ -35,6 +35,49 @@ Status: open
   Recent revolutions table now shows commit hashes (good), but doesn't
   yet show "earned by session X" because G-1 isn't wired.
 
+## QA-found gaps (DOCUMENT, 2026-05-04 second review)
+
+After the G-1/G-2 wiring landed and Joe verified that mana visibly
+ticks up per Block (claude-3 → 26 in the modeline, snapshots correct),
+the second review surfaced two conceptual gaps:
+
+- **Q-21 (guidance-note: futon-Block vs hinge):** A Block (one
+  revolution of the futonic loop, per
+  `block-as-futonic-revolution.flexiarg`) and a *hinge* (Cook-Ting,
+  per `cook-ting.flexiarg`) are at different scales: hinges are
+  cognitive pivot points where the structure of a problem changes
+  (often aligned with mission stages — IDENTIFY/MAP/DERIVE/...);
+  Blocks are work-units that revolve through the futonic loop and
+  may sit inside one hinge, span hinges, or run in parallel across
+  missions. Joe's calibration: a session can have **multiple
+  identified Blocks in flight at once** (e.g. IDENTIFY for one
+  mission + MAP for another) before any of them are committed.
+
+  Open: a guidance-note (probably a flexiarg or appendix to
+  `block-as-futonic-revolution.flexiarg`) clarifying the
+  hinge-vs-Block relationship and the "in-flight Block (identified
+  but uncommitted)" status that the current Block-detection
+  pipeline cannot see (Block: trailers only exist on commits).
+
+- **Q-22 (mana economy coupling — deferred to M-mana-economy):**
+  The drain channels and the mana ledger are not coupled today.
+  Drain reports state-tier; mana ledger reports flow (Block
+  credits). There's no automatic "drain in advisory tier deducts
+  mana" loop, and no per-turn / per-session mana decay. Joe's call
+  (2026-05-04): defer this to a separate mission, candidate name
+  **M-mana-economy**, with simulation grounding in futon2's AIF
+  ants. Out of scope here; tracked so the followup is captured.
+
+The mission stays open until Q-21 is resolved (lightweight: write
+the guidance note); Q-22 is explicitly out-of-scope, follow-up.
+
+### Renamings landed (terminology hygiene)
+
+- War-machine section "Blocks in Flight" renamed → "Block Closures",
+  with a clarifying blurb that distinguishes closed Blocks (visible
+  here) from in-flight Blocks (not visible at this surface; require
+  a separate identification step per Q-21).
+
 # M-bounded-in-flight-state: transactional discipline over the file-system substrate
 
 **Phase:** IDENTIFY (2026-05-03)
