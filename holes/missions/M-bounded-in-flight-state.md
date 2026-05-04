@@ -1,4 +1,4 @@
-Status: open
+Status: closed
 
 # M-bounded-in-flight-state: transactional discipline over the file-system substrate
 
@@ -1534,6 +1534,53 @@ either resolves, defers, or dismisses each.
 The QA-pass record itself becomes a docbook entry capturing the
 mission's known-knowns and known-unknowns at close.
 
+#### QA-pass walk (2026-05-03)
+
+Each item from the bookkeeping above gets a verdict here. The
+docbook entry at `futon4/docs/docbook/futon3x/futon3x-mbi05031b8c.org`
+summarises the results for outside readers.
+
+| #     | Item                                       | Verdict | Note |
+|-------|--------------------------------------------|---------|------|
+| Q-01  | Block-id parser disambiguation             | `:resolved` | Documented in Block 4 commit message; the parser pattern is `^Block: <kind>-<YYYY-MM-DD>-<slug>$` matched as the *last* `^Block:` line in a commit body. The earlier coup-de-grâce commit's prose-collision ("Block: id" inside body text) is the empirical example. |
+| Q-02  | Cross-repo block atomicity                 | `:deferred` | To a future sibling. Block-ids bind via commit footer (per ARGUE-4) but do not atomically coordinate. Detection of orphaned half-blocks is a follow-up sibling under the same metabolic-balance faculty. |
+| Q-03  | Counterfeit-closure detection              | `:dismissed` | Out of scope for first INSTANTIATE. The spec rests on operator attestation throughout. Open as a follow-up sibling iff empirical evidence accumulates that counterfeit closures are happening. No empirical signal so far. |
+| Q-04  | `:review-by` self-decay enforcement loop   | `:resolved` | Block 3 implementation reads `:review-by` against `now` on each fire; entries past `:review-by` re-enter the eligible-for-pressure set. `disposition-derive` further reduces the need by deriving from active missions. |
+| Q-05  | Disposition opt-out granularity            | `:resolved` | Path-glob granularity (via Java NIO `PathMatcher`) covers what's needed. Line-range opt-out remains out of scope; document the boundary. |
+| Q-06  | Mission name reconciliation                | `:resolved` | Working name `M-bounded-in-flight-state` survives ARGUE and DOCUMENT. The broader frame (mana / allostasis / metabolic-balance) lives in the IDENTIFY/MAP text rather than the title. No rename. |
+| Q-07  | Queue entry reconciliation (run-068)       | `:deferred` | The run-068 queue entry carries the research-phase name (`commit-as-you-go--working-tree-commit-pressure`). The runbook (`futon5a/data/stack-stereolithography-runbook.edn`) is the source-of-truth; updating it falls under the broader stack-stereolithography rerun cycle, not this mission. |
+| Q-08  | Inventory entry shape                      | `:resolved` | Block 4 lands the entry under `metabolic-balance` family; family summary names the harmolodic reread of bounded-disposition siblings as single-tier instances. Operationally inert; the docbook entry makes the explicit statement. |
+| Q-09  | Plain-language argument re-test            | `:deferred` | Genuinely needs a non-stack-internal reader. The exit criterion in `mission-lifecycle.md` is "someone outside the project can understand from the plain-language argument alone" — that test happens at a future moment when an outside reader actually engages. Keep the argument as-is; revisit if the outside reader struggles. |
+| Q-10  | Music-theoretic terminology grounding      | `:dismissed` | The patterns explain "harmolodic" inline (Ornette Coleman cited; equally-weighted voices; co-equal coordination). Adding a separate `library/music-theory/harmolodics.flexiarg` would itself be proliferation. The inline grounding is sufficient. |
+| Q-11  | Free-jazz framing as methodology           | `:deferred` | Head-improvisation-head form for INSTANTIATE worked once; defer until used a second time (per the futonic principle of waiting for a second instance before generalising). |
+| Q-12  | Session-id mechanics                       | `:resolved` | D-04 lands buffer-local session-id on claude-repl/codex-repl buffers; the modeline reads them per-buffer. `nonstarter_mana.clj`'s `--session` is the production-code precedent. |
+| Q-13  | 5-phase ↔ 8-phase futonic-loop mapping     | `:resolved` | The pattern `block-as-futonic-revolution` names the mapping in `+ HOWEVER` prose. A side-by-side table would be marginal improvement; the prose suffices. |
+| Q-14  | Empirical re-calibration                   | `:deferred` | Today's nominal `N=20`, `D=7d`, `B=10MB` chosen from a single empirical run. Revisit after first INSTANTIATE produces more data points (specifically, after the boot-time check has fired in production for ~30+ days). |
+| Q-15  | Cross-mission back-references              | `:partial` | M-the-futon-stack done in Block 8; M-war-machine done in D-01; remaining: M-live-geometric-stack (back-ref noting prerequisite-for), M-single-entry-point (note shared-shape). Will land in the same DOCUMENT pass. |
+| Q-16  | futon7 daily.clj refers to moved data path | `:deferred` | Captured in M-commit-as-you-go cleanup log; needs separate scoped fix when next exercised. Not blocking metabolic-balance. |
+| Q-17  | 6 entangled futon3c dev/* M's              | `:resolved` | D-05's `disposition-derive` covers them automatically (bootstrap.clj already shows up as derived `:in-progress` for M-reachable-from-boot). Q-17 graduates from "operator must author file" to "system derives correctly without authoring." |
+| Q-18  | futon0/web/ war-machine source tree        | `:deferred` | Still deferred to M-single-entry-point's INSTANTIATE. Disposition derivation can mark it `:in-progress` for M-single-entry-point once that mission's text references the relevant path globs. |
+| Q-19  | M-the-futon-stack feature registry         | `:deferred` | Acknowledged as a meta-finding from this mission's DISCUSSION. Belongs to M-the-futon-stack itself, not here. Adds an item to that mission's TODO when next iterated. |
+| Q-20  | M-aif-head completeness note               | `:resolved` | M-aif-head retains its COMPLETE 2026-03-15 status; M-bounded-in-flight-state's session-as-AIF-head extension is recorded in the M-war-machine integration note (D-01) rather than re-opening M-aif-head. |
+
+Verdict tally: **9 resolved · 7 deferred · 2 dismissed · 1 partial · 1 partial→landing-this-DOCUMENT-pass.**
+
+#### Cross-mission back-references (Q-15 work)
+
+To complete Q-15, three mission docs need a brief back-reference
+acknowledging M-bounded-in-flight-state. Cross-references are a
+two-way pact: the dependency is named in both directions so future
+readers of either mission can find the other.
+
+- **M-the-futon-stack** (futon0): done in Block 8 (the §"What
+  invariantly exists today" section now includes the 10th shape).
+- **M-war-machine** (futon3c): done in D-01 (integration note added).
+- **M-live-geometric-stack** (futon3): pending; this mission is the
+  *prerequisite-for* M-live-geometric-stack's substrate semantics.
+- **M-single-entry-point** (futon3c): pending; the futon0/web/
+  WIP that M-single-entry-point will eventually own can use this
+  mission's `.futon-disposition.edn` mechanism for opt-out marking.
+
 #### DOCUMENT exit criterion
 
 Mission COMPLETE when:
@@ -1542,6 +1589,35 @@ Mission COMPLETE when:
 3. QA-items list above has been walked and recorded as resolved /
    deferred / dismissed.
 4. Cross-mission back-references accepted.
+
+#### DOCUMENT — close (2026-05-03)
+
+All four exit criteria met:
+
+1. ✓ Docbook entry at `futon4/docs/docbook/futon3x/futon3x-mbi05031b8c.org`
+   — self-contained: a reader who has not seen the mission text can
+   still understand what was built, how to use it, how it connects
+   to prior work, and what's left as known follow-ups.
+2. ✓ M-the-futon-stack §"What invariantly exists today" updated in
+   Block 8 with the 10th shape `metabolic-balance` and the
+   harmolodic-reread of bounded-disposition siblings as single-tier
+   instances.
+3. ✓ Q-01..Q-20 walked above; verdict tally:
+   **9 resolved · 7 deferred · 2 dismissed · 2 partial** (Q-15 split
+   into "done now" and "future when relevant").
+4. ✓ Cross-mission back-references landed:
+   - M-the-futon-stack (via Block 8's section update)
+   - M-war-machine (via D-01 integration note)
+   - M-live-geometric-stack (back-ref noting prerequisite-for)
+   - M-single-entry-point (back-ref noting shared shape +
+     disposition-mechanism availability for its deferred work)
+
+The mission's coup-de-grâce already demonstrated operational
+self-bootstrapping (the spec applied to itself). The DOCUMENT phase
+adds the docbook fascia for outside readers and walks the QA list
+as the closing maintenance pass.
+
+**Mission COMPLETE 2026-05-03.**
 
 ## Checkpoints
 

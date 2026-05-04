@@ -6,6 +6,28 @@ Status: open
 **Parent:** M-the-futon-stack (Q4 — is the stack set up so the invariants can work?)
 **Sibling:** M-reachable-from-boot (boot-time reconstruction discipline)
 
+## Cross-mission back-reference: M-bounded-in-flight-state (2026-05-03)
+
+The `.futon-disposition.edn` mechanism that M-bounded-in-flight-state
+formalises (per its `disposition-edn` namespace + the
+`disposition-derive` derivation) is the natural opt-out vehicle for
+the items this mission defers — including
+`futon0/web/war-machine` (currently 125 MB / 2,825 files
+untracked) which awaits this mission's INSTANTIATE. Until that
+INSTANTIATE lands, M-bounded-in-flight-state's derivation marks the
+tree as `:in-progress` whenever this mission's text references it,
+preventing the tree from accruing pressure under the
+`metabolic-balance/working-tree` check while the integration story
+is still being worked.
+
+This mission and M-bounded-in-flight-state share a shape: both are
+about bounding what's "in flight" (this mission: dev processes;
+M-bounded-in-flight-state: working-tree edits). The patterns
+`structure/block-as-futonic-revolution` and `structure/mana-allostasis`
+that landed for M-bounded-in-flight-state apply here too — process
+spawning is itself a form of in-flight-scope, and managed
+sub-processes are blocks in the same sense.
+
 ## Tension
 
 The local dev stack accumulates orphaned long-running JVMs. As of 2026-05-02 the audit surfaced three:
