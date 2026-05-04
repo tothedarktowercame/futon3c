@@ -141,12 +141,22 @@
 
 ;; ---------- substrate-2 query ----------
 
-(defn last-indexed-commit-sha
+(defonce ^:private !last-ingested
+  ;; In-memory pointer per repo-label, updated after every successful
+  ;; batch ingest. Authoritative once set; falls back to futon1a query
+  ;; on cold start. Dodges a bug in `last-indexed-commit-sha-from-store`
+  ;; where commits sharing a timestamp (e.g. a bulk import) tie-break
+  ;; arbitrarily and the same recent commit gets re-ingested every tick.
+  (atom {}))
+
+(defn last-indexed-commit-sha-from-store
   "Queries futon1a for the SHA of the most-recently-indexed commit-vertex
    for repo-label. Returns nil if no commits indexed.
 
    Uses the :timestamp prop to determine 'most recent' — bitemporal
-   reasoning is XTDB's job, this is just `(max-by :timestamp)`."
+   reasoning is XTDB's job, this is just `(max-by :timestamp)`. NOTE
+   ties on timestamp resolve arbitrarily; prefer `last-indexed-commit-sha`
+   which checks the in-memory pointer first."
   [repo-label]
   (try
     (let [resp (http/get (str FUTON1A "/api/alpha/hyperedges?type=code/v05/commit"
@@ -166,6 +176,23 @@
       (binding [*out* *err*]
         (println "last-indexed-commit-sha error:" repo-label (.getMessage e)))
       nil)))
+
+(defn last-indexed-commit-sha
+  "SHA of the most-recently-ingested commit for repo-label.
+
+   Reads the in-memory pointer first (authoritative once set during this
+   JVM's lifetime); on cold start falls back to the futon1a query. Once
+   the in-memory value is established it survives reloads (defonce) so
+   this avoids the tie-break re-ingestion bug."
+  [repo-label]
+  (or (get @!last-ingested repo-label)
+      (last-indexed-commit-sha-from-store repo-label)))
+
+(defn- record-last-ingested!
+  "Update the in-memory pointer after a successful batch."
+  [repo-label sha]
+  (when (and repo-label sha)
+    (swap! !last-ingested assoc repo-label sha)))
 
 ;; ---------- session-id resolver (mana attribution) ----------
 ;;
@@ -408,14 +435,17 @@
    Args map: {:repo-root :repo-label :file->vars}.
    Returns: {:n-ingested :latest-sha :n-failed :n-blocks :n-mana-credited}."
   [{:keys [repo-root repo-label file->vars]}]
-  (let [commits (list-commits repo-root nil)]
-    (ingest-commits-batch!
-     {:commits commits
-      :repo-root repo-root
-      :repo-label repo-label
-      :file->vars file->vars
-      :prev-sha nil
-      :verbose? true})))
+  (let [commits (list-commits repo-root nil)
+        result (ingest-commits-batch!
+                {:commits commits
+                 :repo-root repo-root
+                 :repo-label repo-label
+                 :file->vars file->vars
+                 :prev-sha nil
+                 :verbose? true})]
+    (when-let [latest (:latest-sha result)]
+      (record-last-ingested! repo-label latest))
+    result))
 
 (defn ingest-new-commits!
   "Live mode. Queries substrate-2 for the most-recently-indexed commit,
@@ -426,11 +456,14 @@
    Returns: {:n-ingested :latest-sha :n-failed :n-blocks :n-mana-credited}."
   [{:keys [repo-root repo-label file->vars]}]
   (let [since-sha (last-indexed-commit-sha repo-label)
-        commits (list-commits repo-root since-sha)]
-    (ingest-commits-batch!
-     {:commits commits
-      :repo-root repo-root
-      :repo-label repo-label
-      :file->vars file->vars
-      :prev-sha since-sha
-      :verbose? false})))
+        commits (list-commits repo-root since-sha)
+        result (ingest-commits-batch!
+                {:commits commits
+                 :repo-root repo-root
+                 :repo-label repo-label
+                 :file->vars file->vars
+                 :prev-sha since-sha
+                 :verbose? false})]
+    (when-let [latest (:latest-sha result)]
+      (record-last-ingested! repo-label latest))
+    result))
