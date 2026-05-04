@@ -406,3 +406,71 @@ Operational details: see
 ## 3. DERIVE — _pending_
 
 ## 4–7. _Pending DERIVE_
+
+## Integration with sibling missions
+
+### Relation to M-aif-head (futon2/holes/M-aif-head.md, COMPLETE 2026-03-15)
+
+M-aif-head established that *every peripheral gets an AIF head* — a
+9-phase cycle machine with constrained action envelopes per phase,
+required outputs, an obligation DAG, a gate review stack, and a
+slow-timescale Portfolio Inference dual. The Mission Peripheral
+in futon3c is the prototypical second AIF head (the ants
+proof-of-concept in futon2 being the first).
+
+War Machine, in this mission's framing, is the **integrating
+surface for AIF heads**. Where M-aif-head specifies what *each*
+head looks like, War Machine specifies how multiple heads compose
+into a coherent strategic view. The two missions are dual: M-aif-head
+is "organ"; M-war-machine is "body."
+
+### Relation to M-bounded-in-flight-state (2026-05-03)
+
+M-bounded-in-flight-state extends the AIF-head model with one
+significant addition: **each operator session is its own AIF head**.
+Sessions (in the I-1 sense — one agent = one session = one
+identity) carry the same shape as Mission Peripheral does — they
+have a phase (active / rest / blocked), a recent-activity
+timestamp, a balance (mana from nonstarter), and a relationship to
+the material existence of the stack (commits, edits, references).
+
+The data shape feeding War Machine therefore grows a `:sessions`
+array alongside the existing per-mission and per-peripheral views.
+Each session record carries `:aif-head/source :session` so the
+integration layer can distinguish session-shaped heads from
+mission-shaped or peripheral-shaped heads while integrating them
+under one strategic view.
+
+War Machine's responsibility under this integration:
+- *Open-blocks*: which sessions are currently in `:active` phase and
+  what they are working on (substrate state per V-6 amendment II).
+- *Closure-feed*: recent block-closures across sessions (mana awards
+  landing).
+- *Trajectory*: the session-level mana balance evolving over time,
+  alongside the cross-channel drain from `metabolic-balance`.
+
+The cljs War Machine view that consumes this enriched data shape is
+the cljs-side iteration step Joe explicitly described as "interactive,
+not one-shot." That iteration is **not** in scope for
+M-bounded-in-flight-state's INSTANTIATE — only the data shape is
+landed here. The view follows whenever the operator next iterates
+the War Machine UI.
+
+### Relation to Mission Peripheral
+
+Per Joe's 2026-05-03 note: *"to an approximation, War Machine
+supersedes the Mission Peripheral, by integrating it or otherwise,
+though this might need some digging to check."* This integration
+note records the conceptual claim; verifying its operational
+shape is M-war-machine's own MAP/DERIVE work, not in scope here.
+
+### Source: M-bounded-in-flight-state INSTANTIATE D-01 (2026-05-03)
+
+This integration note was added during M-bounded-in-flight-state's
+INSTANTIATE D-01 step to anchor "session-as-AIF-head" in the
+War Machine surface contract. The corresponding data-shape change
+landed in `futon0/scripts/mana-snapshot.bb` (the JSON snapshot now
+carries a `:sessions` field). M-aif-head was re-read but not
+re-opened — its completion mark stands; this mission's
+"sessions-as-AIF-heads" extension is recorded here rather than as
+a re-opening.
