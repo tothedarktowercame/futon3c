@@ -249,6 +249,16 @@
                (catch Throwable t
                  (println (str "[dev] archaeology/mission-doc-disposition load-time check threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
+        ;; metabolic-balance/working-tree (10th cognitive-faculty shape;
+        ;; M-bounded-in-flight-state INSTANTIATE D-02). Lives behind
+        ;; requiring-resolve so this site adds no namespace-level
+        ;; require coupling to operator WIP in this file.
+        _ (try ((requiring-resolve
+                 'futon3c.logic.metabolic-balance/check-working-tree-pressure-on-load!)
+                evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] metabolic-balance/check-working-tree-pressure-on-load! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
         _ (try (locus/check-mission-home-locus-on-load! evidence-store)
                (catch Throwable t
                  (println (str "[dev] locus/mission-home load-time check threw: "
@@ -267,6 +277,12 @@
                (println "[dev] registered single-locus probe-taps (3 family-ids)")
                (catch Throwable t
                  (println (str "[dev] register-locus-taps! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try ((requiring-resolve
+                 'futon3c.logic.metabolic-balance/register-metabolic-balance-taps!))
+               (println "[dev] registered metabolic-balance probe-taps (1 family-id)")
+               (catch Throwable t
+                 (println (str "[dev] register-metabolic-balance-taps! threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
         ;; Ensure pipeline-tracer items exist in the durable store.
         ;; Idempotent: re-emits only those track-ids missing from the
