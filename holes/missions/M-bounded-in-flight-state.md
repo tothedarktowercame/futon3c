@@ -1343,8 +1343,130 @@ INSTANTIATE is COMPLETE when:
    deferred-with-reason status in `.futon-disposition.edn`).
 3. The coup-de-grâce block above is closed, witnessing that the
    spec is operable.
+4. The system is **demo-able and QA-able end-to-end** — not just
+   "components unit-tested" but "operator can show it working
+   live and walk a QA pass against the V-1 anchors."
 
-Until #3 lands, INSTANTIATE remains in flight.
+Until #4 lands, INSTANTIATE remains in flight. (#3 is the
+self-bootstrapping closure already met; #4 is the
+broader-system closure that requires the items in DISCUSSION
+below to be settled.)
+
+#### DISCUSSION (operator input pending)
+
+Items that need Joe's input before INSTANTIATE can fully exit.
+Each item: (1) what's the question, (2) what are the options /
+considerations, (3) what's the default if no other input.
+Discussion runs in conversation; resolutions land back here as
+edits + corresponding implementation blocks.
+
+**D-01 — Block 6 (War Machine integration)**
+
+- *Question*: How do the three required views (open-blocks,
+  closure-feed, trajectory) integrate into the existing War Machine
+  surface? Is there an existing view-mode they slot into, or do they
+  warrant a new view-mode?
+- *Considerations*: War Machine has existing view-modes (per
+  bulletin 8: AIF-stack view, Recommended-Next-Move tile, Audacity-
+  style waveform, HUD-tethered-to-playhead). Mana economy is a
+  fourth class of state — it could share AIF-stack view with a new
+  panel, or get its own view-mode.
+- *Default if no input*: write a stub `/api/alpha/metabolic-balance`
+  endpoint in futon3c (returning the same JSON shape as the snapshot)
+  and stop there; cljs integration follows whenever you next
+  iterate the War Machine UI.
+
+**D-02 — Bootstrap wiring (QA-17)**
+
+- *Question*: How do we land the bootstrap.clj edit that calls
+  `register-metabolic-balance-taps!` + `check-working-tree-pressure-
+  on-load!` given that bootstrap.clj is one of the entangled dev/*
+  files?
+- *Considerations*: The disposition mechanism (Block 3) is now
+  operational. Joe could author `.futon-disposition.edn` for
+  futon3c declaring the pre-existing dev/* WIP (dev.clj's
+  bridge-state, bootstrap.clj's snapshot error handling, etc.) as
+  `:in-progress` with `:reasoning` and `:review-by`. The
+  bootstrap.clj edit could then land as a separate commit alongside
+  those disposition entries — operator-attestable.
+  Alternative: small two-line edit committed alone with a clear
+  block-id, accepting the entanglement (the existing `swap!` lines
+  the hook complained about are unrelated to the metabolic-balance
+  call site).
+- *Default*: leave deferred until you author the disposition file.
+
+**D-03 — Snapshot refresh cadence**
+
+- *Question*: How does `mana-snapshot.bb` keep the JSON fresh?
+- *Considerations*:
+  - cron / systemd-timer (every minute / 5 min)
+  - emacs `after-save-hook` for `.clj`/`.md`/`.flexiarg` files
+  - on `dev-laptop-env` boot + periodic in-JVM (the
+    `multi-watcher` cycle is already 5s)
+  - manual on demand
+- *Default*: emacs `after-save-hook` fires it for tracked files in
+  any of the 14 repos; debounced to ≤1×/min; HUD widget shows
+  "stale" past 10 min if no save has happened. Lightest weight.
+
+**D-04 — Session-id formation**
+
+- *Question*: For the modeline lighter to work,
+  `mana-modeline-session-id` (or its fn) must return a session-id
+  the operator considers active. How is that bound?
+- *Considerations*:
+  - One emacs frame = one session (frame title carries id)
+  - One dev-laptop-env invocation = one session (env var, file)
+  - One mission-arc = one session (operator declares as needed)
+  - Multiple concurrent sessions per operator (future: federation)
+- *Default*: bind `mana-modeline-session-id-fn` to read a sidecar
+  file (e.g., `~/.mana-current-session`) that the operator writes
+  by hand or via a small `(mana-session-set "...")` interactive
+  command. Simplest, no infrastructure assumptions.
+
+**D-05 — `.futon-disposition.edn` adoption (operator-author task)**
+
+- *Question*: Who authors the disposition files for the deferred
+  items already named?
+- *Items needing disposition entries today*:
+  - futon3c: 6 entangled dev/* files (Q-17)
+  - futon0: web/war-machine (Q-18)
+- *Considerations*: The schema is small enough to write by hand.
+  Authoring is genuinely operator work (only Joe knows the
+  reasoning, since-dates, review-by criteria). The implementation
+  side is done.
+- *Default*: leave for Joe; INSTANTIATE remains in flight on this
+  item until the files exist.
+
+**D-06 — `:operational` promotion criteria**
+
+- *Question*: When does `metabolic-balance/working-tree` move from
+  `:operational-when-enabled` to `:operational` in the structural-
+  law-inventory?
+- *Considerations*: Per the existing pattern (bounded-disposition
+  siblings still at `:operational-when-enabled` despite being
+  fired today), the promotion criterion is "the apparatus binds
+  the operator's workflow such that violations are structurally
+  surfaced" — not just "the check-fn exists." For the new sibling,
+  this likely means: bootstrap wiring landed (D-02) + HUD live
+  (D-03) + modeline live (D-04). Plus an empirical run where the
+  operator notices the modeline-lighter at high tier and acts on
+  it (a proof-of-binding).
+- *Default*: keep at `:operational-when-enabled` until D-02 + D-03
+  + D-04 are settled and a proof-of-binding event lands.
+
+**Discussion pacing**
+
+These six items are not equally urgent. Suggested order:
+- D-04, D-03 (small, unblock end-to-end demo) — settle first.
+- D-02 (unblocks the boot-time invariant binding) — second.
+- D-05 (operator-author task) — concurrent with D-02.
+- D-01 (War Machine integration) — last, since it needs more
+  iteration and the rest unblocks the demo without it.
+- D-06 (status promotion) — closes once the others land.
+
+Each discussion item resolved produces one or more INSTANTIATE
+blocks, each closed as a normal `Block: instantiate-block-N-...`
+commit per the schema.
 
 ### 7. DOCUMENT
 
