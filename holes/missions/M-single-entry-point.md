@@ -11,14 +11,10 @@ Status: open
 The `.futon-disposition.edn` mechanism that M-bounded-in-flight-state
 formalises (per its `disposition-edn` namespace + the
 `disposition-derive` derivation) is the natural opt-out vehicle for
-the items this mission defers — including
-`futon0/web/war-machine` (currently 125 MB / 2,825 files
-untracked) which awaits this mission's INSTANTIATE. Until that
-INSTANTIATE lands, M-bounded-in-flight-state's derivation marks the
-tree as `:in-progress` whenever this mission's text references it,
-preventing the tree from accruing pressure under the
-`metabolic-balance/working-tree` check while the integration story
-is still being worked.
+the items this mission defers. (The original cross-ref pointed at
+`futon0/web/war-machine` as the load-bearing example — that tree
+was consolidated into `futon2/web/war-machine` on 2026-05-04 and
+no longer exists at the futon0 path.)
 
 This mission and M-bounded-in-flight-state share a shape: both are
 about bounding what's "in flight" (this mission: dev processes;
@@ -51,7 +47,7 @@ This is a structural commitment, not a literal "exactly one PID" rule — sub-pr
 ## Scope in
 
 - `webarxana.server.core` (Ring server on :3100)
-- `shadow-cljs watch app` for war-machine UI (`/home/joe/code/futon0/web/war-machine`)
+- `shadow-cljs watch app` for war-machine UI (`/home/joe/code/futon2/web/war-machine`)
 - `shadow-cljs watch app` for webarxana UI (`/home/joe/code/futon4/dev/web/webarxana`)
 - The `dev-laptop-env` startup + shutdown sequencing for each
 - Cyder registration for each subsystem so it appears in `(dev/status)` and the HUD
