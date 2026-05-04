@@ -1,4 +1,39 @@
-Status: closed
+Status: open
+
+> **2026-05-04 reopen.** Closed 2026-05-04 morning after a 20-item DOCUMENT
+> QA-pass walk. Operator review of the integrated war-machine output
+> immediately surfaced an unwired downstream of the spec: every session
+> shows `:earned 0` even though 27 commits with `Block:` footers had
+> landed in the prior 14 days. The mission's spec literally says "1 mana
+> per block" (per ARGUE-3 / V-6) but the wire-up doesn't exist. Closing
+> before that wiring was real was premature. Reopening into INSTANTIATE
+> for a "Block-completion → mana credit" sub-block; close again only
+> after the operator verifies a fresh commit visibly increments the
+> author's session balance.
+
+## QA-found gaps (DOCUMENT, 2026-05-04 review)
+
+- **G-1 (mana-earning unwired):** Three call sites to `record-mana!`
+  exist (sospeso CLI, demo fixture, futon5a sidecar) — none of them
+  parse `Block:` footers. The complete chain is broken at step 2:
+    1. ✓ Block: footers get written to commits
+    2. ✗ no code detects them
+    3. ✗ no code maps to session-id
+    4. ✗ no code calls `record-mana!`
+  Reuse candidates surfaced during investigation:
+  - `futon3c.watcher.commit_ingest` (substrate-2, M-live-geometric-stack)
+    already walks `git log` and ingests commits to futon1a as
+    `code/v05/commit` hyperedges. **Lacks** footer-trailer extraction.
+    Extending it with `Block:`/`Co-Authored-By:` parsing is the natural
+    home for route 1 (block-detection).
+  - The evidence store captures every Bash tool call as a `:step`
+    claim with `:evidence/session-id` and `:result :out` containing git's
+    raw stdout including the new commit hash — so route 2
+    (commit→session attribution) can be recovered by regex on existing
+    evidence without changing the Block: footer format.
+- **G-2 (war-machine renders block hashes but not the mana-earn link):**
+  Recent revolutions table now shows commit hashes (good), but doesn't
+  yet show "earned by session X" because G-1 isn't wired.
 
 # M-bounded-in-flight-state: transactional discipline over the file-system substrate
 
