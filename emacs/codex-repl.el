@@ -1441,6 +1441,61 @@ Interpreted as width on left/right and height on top/bottom."
                          agent-ids nil t nil nil default)
       (read-string "Attach Codex lane: " default))))
 
+(defun codex-repl--daemon-name ()
+  "Return the Emacs daemon name when running inside one, else nil."
+  (let ((d (daemonp)))
+    (when (stringp d) d)))
+
+(defun codex-repl--rebind-socket (agent-id socket-name)
+  "Rebind AGENT-ID's invoke-fn to deliver to SOCKET-NAME for blackboard calls."
+  (when (and (stringp agent-id) (stringp socket-name)
+             (not (string-empty-p agent-id))
+             (not (string-empty-p socket-name)))
+    (let* ((base (or (codex-repl--resolved-api-base)
+                     (string-remove-suffix "/" codex-repl-api-url)))
+           (url (format "%s/api/alpha/agents/%s/rebind"
+                        base (url-hexify-string agent-id))))
+      (codex-repl--request-json "POST" url
+                                `((emacs-socket . ,socket-name))))))
+
+(defun codex-repl--auto-register ()
+  "Allocate and register a fresh codex-N lane via POST /api/alpha/agents/auto.
+Sets buffer-local `codex-repl-agency-agent-id' and
+`codex-repl-session-file' on success.  Returns the allocated agent-id,
+or nil.
+
+Symmetric to `claude-repl--auto-register'.  Acts as the fallback when
+`codex-repl--re-register-current' fails — typically because the agent
+is absent from the registry after a JVM restart."
+  (let* ((socket-name (or (codex-repl--daemon-name)
+                          (and (boundp 'server-name) server-name)))
+         (base (or (codex-repl--resolved-api-base)
+                   (string-remove-suffix "/" codex-repl-api-url)))
+         (url (format "%s/api/alpha/agents/auto" base))
+         (payload (let ((p `((type . "codex")
+                             (cwd . ,default-directory))))
+                    (when socket-name
+                      (push `(emacs-socket . ,socket-name) p))
+                    (when (and (stringp codex-repl-session-id)
+                               (not (string-empty-p codex-repl-session-id)))
+                      (push `(session-id . ,codex-repl-session-id) p))
+                    p))
+         (response (codex-repl--request-json "POST" url payload))
+         (status (plist-get response :status))
+         (parsed (plist-get response :json))
+         (allocated-id (plist-get parsed :agent-id))
+         (allocated-sf (plist-get parsed :session-file)))
+    (when (and (integerp status) (<= 200 status) (< status 300)
+               (stringp allocated-id) (not (string-empty-p allocated-id)))
+      (setq-local codex-repl-agency-agent-id allocated-id)
+      (when (and (stringp allocated-sf) (not (string-empty-p allocated-sf)))
+        (setq-local codex-repl-session-file allocated-sf))
+      (when socket-name
+        (codex-repl--rebind-socket allocated-id socket-name))
+      (message "codex-repl: registered as %s (socket: %s)"
+               allocated-id (or socket-name "default"))
+      allocated-id)))
+
 (defun codex-repl--restore-agent (&optional agent-id session-file working-directory)
   "Restore AGENT-ID into the live futon3c registry, preserving identity."
   (let* ((resolved-agent-id (or agent-id codex-repl-agency-agent-id))
@@ -3813,6 +3868,12 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
   (setq codex-repl--cached-irc-send-base nil)
   (codex-repl--ensure-session-id)
   (codex-repl--ensure-store-session)
+  ;; Register with Agency only for buffer-local lane overrides; never
+  ;; touch the default codex-1 (owned by the WS-bridged fucodex
+  ;; peripheral — restore would overwrite its invoke-fn).
+  (when (local-variable-p 'codex-repl-agency-agent-id (current-buffer))
+    (or (codex-repl--re-register-current)
+        (codex-repl--auto-register)))
   (agent-chat-init-buffer
    (list :title (replace-regexp-in-string
                  "\\`\\*\\|\\*\\'" ""
