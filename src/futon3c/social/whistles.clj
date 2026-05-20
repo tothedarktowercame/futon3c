@@ -38,7 +38,8 @@
    :evidence/claim-type :step
    :evidence/author (or author "whistle-dispatcher")
    :evidence/at (now-str)
-   :evidence/body {:agent-id agent-id
+   :evidence/body {:event :whistle-exchange
+                   :agent-id agent-id
                    :prompt (truncate prompt 200)
                    :response (truncate response 500)
                    :status status}

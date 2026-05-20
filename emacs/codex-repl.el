@@ -1341,12 +1341,40 @@ Interpreted as width on left/right and height on top/bottom."
   (when (and (stringp sid)
              (not (string-empty-p sid))
              (not (equal sid codex-repl-session-id)))
+    (codex-repl--assert-singular-session-id! sid)
     (setq codex-repl-session-id sid
           agent-chat--session-id sid)
     (when codex-repl--store-session-key
       (codex-repl--store-upsert-session))
     (codex-repl--refresh-session-header (current-buffer))
     (codex-repl-refresh-header-line t (current-buffer))))
+
+(defun codex-repl--session-id-collision-buffers (sid &optional current-buffer)
+  "Return live non-mirror Codex buffers other than CURRENT-BUFFER using SID."
+  (let ((self (or current-buffer (current-buffer)))
+        buffers)
+    (when (and (stringp sid) (not (string-empty-p sid)))
+      (dolist (buf (buffer-list))
+        (when (and (buffer-live-p buf)
+                   (not (eq buf self)))
+          (with-current-buffer buf
+            (when (and (eq major-mode 'codex-repl-mode)
+                       (not codex-repl--mirror-mode-p)
+                       (let ((active-sid (or (and (stringp agent-chat--session-id)
+                                                  agent-chat--session-id)
+                                             (and (stringp codex-repl-session-id)
+                                                  codex-repl-session-id))))
+                         (equal active-sid sid)))
+              (push buf buffers))))))
+    (nreverse buffers)))
+
+(defun codex-repl--assert-singular-session-id! (sid &optional current-buffer)
+  "Signal an error if SID is already held by another live non-mirror Codex buffer."
+  (let ((conflicts (codex-repl--session-id-collision-buffers sid current-buffer)))
+    (when conflicts
+      (error "Codex session-id collision for %s: %s"
+             sid
+             (mapconcat #'buffer-name conflicts ", ")))))
 
 (defun codex-repl--json-object-entries (value)
   "Return VALUE as an alist of (KEY . VAL) pairs when it looks JSON-like."
@@ -2997,7 +3025,10 @@ When FORCE is non-nil, refresh immediately."
 
 (defun codex-repl--emit-user-turn-evidence! (text)
   "Emit evidence for user TEXT."
-  (codex-repl--emit-turn-evidence! "user" text))
+  (if (and (stringp codex-repl-session-id)
+           (not (string-empty-p codex-repl-session-id)))
+      (codex-repl--emit-turn-evidence! "user" text)
+    (agent-chat-stage-pending-user-turn text)))
 
 (defun codex-repl--emit-assistant-turn-evidence! (text)
   "Emit evidence for assistant TEXT."
@@ -3048,7 +3079,10 @@ When FORCE is non-nil, refresh immediately."
 (defun codex-repl--persist-session-id! (sid)
   "Persist SID to `codex-repl-session-file` and local state."
   (when (and (stringp sid) (not (string-empty-p sid)))
-    (setq codex-repl-session-id sid)
+    (when (not (equal sid codex-repl-session-id))
+      (codex-repl--assert-singular-session-id! sid))
+    (setq codex-repl-session-id sid
+          agent-chat--session-id sid)
     (when (not (equal sid codex-repl--evidence-session-id))
       (setq codex-repl--evidence-session-id sid
             codex-repl--last-evidence-id nil))
@@ -3061,6 +3095,10 @@ When FORCE is non-nil, refresh immediately."
     (when codex-repl--store-session-key
       (codex-repl--store-upsert-session))
     (codex-repl--emit-session-start-evidence! sid)
+    ;; The first user turn is submitted before a concrete session id exists.
+    ;; Backfill it now so evidence timelines keep the user/assistant pair.
+    (when-let ((pending (agent-chat-consume-pending-user-turn)))
+      (codex-repl--emit-user-turn-evidence! pending))
     (when (process-live-p agent-chat--pending-process)
       (codex-repl--report-registry-invoke-state!
        :invoking
@@ -3084,8 +3122,13 @@ When FORCE is non-nil, refresh immediately."
    codex-repl-session-file
    codex-repl-session-id
    (lambda (sid)
-     (setq codex-repl-session-id sid)
-     (codex-repl--emit-session-start-evidence! sid))))
+     (condition-case err
+         (codex-repl--persist-session-id! sid)
+       (error
+       (message "codex-repl session-id rejected for %s: %s"
+                 (buffer-name)
+                 (error-message-string err))
+        (codex-repl--clear-session-state!))))))
 
 (defun codex-repl--stale-session-error-p (text)
   "Return non-nil when TEXT indicates a stale/resume-corrupted Codex session."
@@ -3114,6 +3157,8 @@ When FORCE is non-nil, refresh immediately."
 (defun codex-repl--clear-session-state! ()
   "Clear locally persisted Codex session continuity."
   (setq codex-repl-session-id nil
+        agent-chat--session-id nil
+        agent-chat--pending-user-turn-text nil
         codex-repl--evidence-session-id nil
         codex-repl--last-evidence-id nil
         codex-repl--last-emitted-session-id nil)
@@ -3731,16 +3776,7 @@ Returns (ok . old-session-id) on success, nil on failure."
          (result (or api-result (codex-repl--reset-via-drawbridge)))
          (ok (car result))
          (old-sid (or (cdr result) codex-repl-session-id)))
-    (setq codex-repl-session-id nil
-          agent-chat--session-id nil
-          codex-repl--evidence-session-id nil
-          codex-repl--last-evidence-id nil
-          codex-repl--last-emitted-session-id nil)
-    (when (and codex-repl-session-file
-               (file-exists-p codex-repl-session-file))
-      (delete-file codex-repl-session-file))
-    (codex-repl--refresh-session-header (current-buffer))
-    (codex-repl-refresh-header-line t (current-buffer))
+    (codex-repl--clear-session-state!)
     (agent-chat-insert-message
      "system"
      (cond
@@ -3809,6 +3845,8 @@ Returns (ok . old-session-id) on success, nil on failure."
   "Chat with Codex via CLI.
 Type after the prompt, RET to send, C-c C-c to interrupt, C-c C-n for fresh session, C-c C-a for the `*agents*' HUD, C-c M-a to toggle persistent popup behavior, C-c M-h to toggle external HUD mode.
 \\{codex-repl-mode-map}"
+  (unless (local-variable-p 'codex-repl-session-id)
+    (setq-local codex-repl-session-id nil))
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
   (setq-local scroll-conservatively 101)

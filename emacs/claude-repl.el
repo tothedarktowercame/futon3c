@@ -500,6 +500,28 @@ Falls back to unbound idle agents, then returns nil."
                     (buffer-string)))))
         (unless (string-empty-p sid) sid)))))
 
+(defun claude-repl-find-buffer-by-session-id (session-id)
+  "Return the first live Claude REPL buffer whose active session is SESSION-ID."
+  (when (and (stringp session-id) (not (string-empty-p session-id)))
+    (cl-find-if
+     (lambda (buf)
+       (and (buffer-live-p buf)
+            (with-current-buffer buf
+              (and (eq major-mode 'claude-repl-mode)
+                   (equal agent-chat--session-id session-id)))))
+     (buffer-list))))
+
+(defun claude-repl-find-buffer-by-agent-id (agent-id)
+  "Return the first live Claude REPL buffer bound to AGENT-ID."
+  (when (and (stringp agent-id) (not (string-empty-p agent-id)))
+    (cl-find-if
+     (lambda (buf)
+       (and (buffer-live-p buf)
+            (with-current-buffer buf
+              (and (eq major-mode 'claude-repl-mode)
+                   (equal claude-repl-agent-id agent-id)))))
+     (buffer-list))))
+
 (defun claude-repl--sqlite-column (row index)
   "Return column INDEX from sqlite ROW."
   (cond
@@ -620,7 +642,11 @@ session isolation between buffers."
    'claude-repl--last-evidence-id
    'claude-repl--last-emitted-session-id
    "claude-repl"
-   '("claude" "session-start" "chat")))
+   '("claude" "session-start" "chat"))
+  ;; The first user turn is composed before Claude mints a session id.
+  ;; Flush it now so session timelines keep a complete user/assistant pair.
+  (when-let ((pending (agent-chat-consume-pending-user-turn)))
+    (claude-repl--emit-user-turn-evidence! pending)))
 
 (defun claude-repl--emit-turn-evidence! (role text)
   "Emit a turn evidence event for ROLE (\"user\" or \"assistant\") and TEXT."
@@ -643,7 +669,10 @@ session isolation between buffers."
 
 (defun claude-repl--emit-user-turn-evidence! (text)
   "Emit evidence for user TEXT."
-  (claude-repl--emit-turn-evidence! "user" text))
+  (if (and (stringp agent-chat--session-id)
+           (not (string-empty-p agent-chat--session-id)))
+      (claude-repl--emit-turn-evidence! "user" text)
+    (agent-chat-stage-pending-user-turn text)))
 
 (defun claude-repl--emit-assistant-turn-evidence! (text)
   "Emit evidence for assistant TEXT."
@@ -1043,6 +1072,7 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
 (defun claude-repl-send-input ()
   "Send input to Claude and display response."
   (interactive)
+  (claude-repl--assert-session-owned-by-current-agent)
   (agent-chat-send-input
    #'claude-repl--call-claude-streaming
    "claude"
@@ -1149,6 +1179,7 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
          (old-sid (cdr result)))
     ;; Clear local session state regardless of server response
     (setq agent-chat--session-id nil)
+    (setq agent-chat--pending-user-turn-text nil)
     (when claude-repl-session-file
       (when (file-exists-p claude-repl-session-file)
         (delete-file claude-repl-session-file)))
@@ -1251,6 +1282,44 @@ Then auto-register with the server and load existing session-id."
                          (or (null tp) (equal tp "claude")))
                   collect id)
          #'string<)))))
+
+(defun claude-repl--live-agents-response ()
+  "Return parsed live agent registry response, or nil on error."
+  (let* ((url (concat (string-remove-suffix "/" claude-repl-api-url)
+                      "/api/alpha/agents"))
+         (response (agent-chat-evidence-request-json "GET" url 5 nil))
+         (status (plist-get response :status))
+         (parsed (plist-get response :json)))
+    (when (and (integerp status) (<= 200 status) (< status 300))
+      parsed)))
+
+(defun claude-repl--canonical-agent-for-session-id (session-id)
+  "Return the live Claude agent-id currently advertising SESSION-ID."
+  (when (and (stringp session-id) (not (string-empty-p session-id)))
+    (when-let* ((parsed (claude-repl--live-agents-response))
+                (agents (alist-get 'agents parsed)))
+      (car
+       (sort
+        (cl-loop for (agent-id . agent) in agents
+                 when (and (string-prefix-p "claude-" agent-id)
+                           (equal (alist-get 'session-id agent) session-id))
+                 collect agent-id)
+        #'string<)))))
+
+(defun claude-repl--assert-session-owned-by-current-agent ()
+  "Signal an error when this buffer is a stale duplicate lane for its session."
+  (when-let* ((session-id agent-chat--session-id)
+              (canonical-agent (claude-repl--canonical-agent-for-session-id session-id)))
+    (when (and (stringp canonical-agent)
+               (not (equal canonical-agent claude-repl-agent-id)))
+      (let ((owner-buffer (claude-repl-find-buffer-by-agent-id canonical-agent)))
+        (user-error
+         "Session %s is owned by %s%s; this buffer is stale"
+         session-id
+         canonical-agent
+         (if owner-buffer
+             (format " (%s)" (buffer-name owner-buffer))
+           ""))))))
 
 (defun claude-repl--fetch-claude-agent-ids ()
   "Return Claude agent IDs from the live registry plus recent local history."

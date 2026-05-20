@@ -1936,58 +1936,14 @@
                                   :message (.getMessage e)}))))))))
 
 (defn- emit-invoke-evidence!
-  "Emit a forum-post evidence entry for an invoke prompt or response.
-   Synchronous under I-evidence-per-turn: append then verify read-back
-   through the same backend before returning. HTTP handler threads block
-   up to the XTDB put-and-sync! timeout (10s) — the tradeoff is that a
-   turn cannot claim success while its evidence is still in flight or
-   silently lost. See futon3c.evidence.invariant/I-evidence-per-turn.
-   When mission-id is provided, tags evidence with that mission subject."
+  "Historical emacs-chat transport envelope emitter.
+
+   Disabled by policy: the Evidence Landscape is reserved for primary,
+   semantic research records rather than transport-level prompt/response
+   envelopes. Semantic turn evidence is recorded elsewhere (`chat-turn`,
+   `context-retrieval`, invoke lifecycle, etc.)."
   [evidence-store author text session-id & {:keys [mission-id]}]
-  (when evidence-store
-    (try
-      (let [subject (if mission-id
-                      {:ref/type :mission :ref/id mission-id}
-                      {:ref/type :thread :ref/id "emacs/chat"})
-            tags (cond-> [:emacs :chat :transport/emacs-chat]
-                   mission-id (conj :mission-focused))
-            result (boundary/append! evidence-store
-                                   {:evidence/id (str "e-" (UUID/randomUUID))
-                                    :evidence/subject subject
-                                    :evidence/type :forum-post
-                                    :evidence/claim-type :observation
-                                    :evidence/author author
-                                    :evidence/at (str (Instant/now))
-                                    :evidence/body {:channel "emacs-chat"
-                                                    :text text
-                                                    :from author
-                                                    :transport :emacs-chat}
-                                    :evidence/tags tags
-                                    :evidence/session-id (or session-id "pending")})
-            eid (get-in result [:entry :evidence/id])
-            verify (when eid
-                     (evidence-invariant/verify-persisted evidence-store eid))]
-        (cond
-          (not (:ok result))
-          (do (println (str "[invoke] I-evidence-per-turn VIOLATION: append failed "
-                            "(" (:error/code result) ") — "
-                            (:error/message result)))
-              result)
-
-          (not (:ok verify))
-          (do (println (str "[invoke] I-evidence-per-turn VIOLATION: entry "
-                            eid " appended but not readable back from "
-                            (name (:kind verify)) " — " (:reason verify)))
-              (assoc result :invariant/violation verify))
-
-          :else result))
-      (catch Exception e
-        (println (str "[invoke] I-evidence-per-turn VIOLATION: emit threw "
-                      (.getName (class e)) " — " (.getMessage e)))
-        {:ok false
-         :invariant/violation {:kind :exception
-                               :reason (.getMessage e)
-                               :invariant evidence-invariant/I-evidence-per-turn}}))))
+  nil)
 
 (defn- emit-review-snapshot!
   "Emit a portfolio snapshot evidence entry after a successful review.
@@ -2018,7 +1974,8 @@
                            :evidence/claim-type :observation
                            :evidence/author (or author "mission-control")
                            :evidence/at (str (Instant/now))
-                           :evidence/body {:portfolio/missions compact-missions
+                           :evidence/body {:event :portfolio-review-snapshot
+                                           :portfolio/missions compact-missions
                                            :portfolio/summary summary
                                            :portfolio/coverage coverage}
                            :evidence/tags [:review :portfolio-snapshot]}))

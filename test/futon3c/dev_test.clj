@@ -75,6 +75,35 @@
       (is (= :stale-reclaim (:action result)))
       (is (string? (:message result))))))
 
+(deftest context-result-map-emits-compact-structural-packet
+  (let [results [{:id "coordination/capability-gate"
+                  :title "Capability Gate"
+                  :score 0.875
+                  :path "/home/joe/code/futon3/library/coordination/capability-gate.flexiarg"
+                  :rationale "hotword overlap on capability + gate"
+                  :hotwords #{"capability" "gate"}
+                  :tokipona "open the gate"
+                  :sigil "⚖/衡"
+                  :sigils "⚖/衡 🧭/引"
+                  :energy :medium
+                  :if "A capability boundary is implicit"
+                  :however "Implicit boundaries create fake actionability"
+                  :then "Make the capability boundary explicit"
+                  :because "Honest action selection requires real substrate"
+                  :next-steps ["enumerate targets" "record receipts"]}]
+        packet (#'dev/context-result-map results)
+        first-result (first packet)]
+    (is (= 1 (count packet)))
+    (is (= "coordination/capability-gate" (:id first-result)))
+    (is (= 1 (:rank first-result)))
+    (is (= "futon3a" (:retrieval-source first-result)))
+    (is (= "embeddings" (:retrieval-method first-result)))
+    (is (= ["capability" "gate"] (:hotwords first-result)))
+    (is (= ["⚖/衡" "🧭/引"] (:sigils first-result)))
+    (is (= "medium" (:energy first-result)))
+    (is (= "Make the capability boundary explicit" (:then first-result)))
+    (is (= ["enumerate targets" "record receipts"] (:next-steps first-result)))))
+
 (deftest codex-record-reclaimable-as-stale-only-for-old-codex-same-id
   (testing "refuses reclaim when id does not match"
     (let [recent (str (java.time.Instant/ofEpochMilli
@@ -341,6 +370,45 @@
         (is (= "claude-1" (:agent-id @called)))
         (is (= "workspace-write" (:sandbox @called)))
         (is (= "untrusted" (:approval-policy @called)))))))
+
+(deftest make-claude-invoke-fn-prefers-session-file-over-incoming-session-id
+  (testing "Claude invoke continuity matches Codex when a session file is configured"
+    (let [session-file (doto (java.io.File/createTempFile "futon3c-claude-session-" ".sid")
+                         (.deleteOnExit))
+          argv-file (doto (java.io.File/createTempFile "futon3c-claude-argv-" ".txt")
+                      (.deleteOnExit))
+          claude-bin (doto (java.io.File/createTempFile "futon3c-claude-bin-" ".sh")
+                       (.deleteOnExit))
+          _ (spit session-file "file-sid")
+          _ (spit claude-bin
+                  (str "#!/usr/bin/env bash\n"
+                       "printf '%s\\n' \"$*\" > \"" (.getPath argv-file) "\"\n"
+                       "printf '{\"type\":\"result\",\"session_id\":\"file-sid\",\"is_error\":false}\\n'\n"))
+          _ (.setExecutable claude-bin true)
+          invoke-fn (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                                  (constantly nil)
+                                  dev/start-invoke-ticker!
+                                  (fn [& _] (fn [] nil))
+                                  dev/emit-invoke-evidence!
+                                  (fn [& _] nil)
+                                  dev/context-retrieval!
+                                  (fn [& _] nil)
+                                  dev/register-invoke-control!
+                                  (fn [& _] nil)
+                                  futon3c.blackboard/blackboard!
+                                  (fn [& _] nil)]
+                      (dev/make-claude-invoke-fn
+                       {:claude-bin (.getPath claude-bin)
+                        :agent-id "claude-2"
+                        :session-file (.getPath session-file)
+                        :session-id-atom (atom "atom-sid")
+                        :timeout-ms 5000}))
+          result (invoke-fn "hello from test" "incoming-stale")
+          argv (slurp argv-file)]
+      (is (= "file-sid" (:session-id result)))
+      (is (re-find #"--resume file-sid\b" argv))
+      (is (not (re-find #"incoming-stale" argv)))
+      (is (not (re-find #"atom-sid" argv))))))
 
 (deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
   (testing "mfuton mode injects the n=3-only local contract on #math"

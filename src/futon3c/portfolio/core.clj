@@ -53,7 +53,7 @@
                      :evidence/claim-type :observation
                      :evidence/author "portfolio-inference"
                      :evidence/at (str (java.time.Instant/now))
-                     :evidence/body body
+                     :evidence/body (assoc body :event evidence-type)
                      :evidence/tags [:portfolio evidence-type]})))
 
 (defn- evidence-id-of

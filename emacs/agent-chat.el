@@ -144,6 +144,9 @@ If a function returns nil, the original TEXT is used.")
 (defvar-local agent-chat--last-emitted-session-id nil
   "Last session ID for which a session-start evidence entry was emitted.")
 
+(defvar-local agent-chat--pending-user-turn-text nil
+  "User turn text staged until a real session ID is available.")
+
 ;;; Display
 
 (defun agent-chat-insert-message (name text)
@@ -1122,6 +1125,17 @@ Replaces the `(session: ...)' text in the first line."
         (cl-incf agent-chat--session-turn-count)
       (setq agent-chat--session-turn-count 1))
     (agent-chat--update-session-header-line)))
+
+(defun agent-chat-stage-pending-user-turn (text)
+  "Remember TEXT as the current user turn until a session ID is known."
+  (when (and (stringp text)
+             (not (string-empty-p (string-trim text))))
+    (setq agent-chat--pending-user-turn-text (string-trim text))))
+
+(defun agent-chat-consume-pending-user-turn ()
+  "Return and clear any staged sessionless user turn text."
+  (prog1 agent-chat--pending-user-turn-text
+    (setq agent-chat--pending-user-turn-text nil)))
 
 ;;; Transport availability checks (shared)
 

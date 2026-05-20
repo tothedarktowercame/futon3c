@@ -143,7 +143,7 @@
                      :author "tickle-1"
                      :tags [:tickle :orchestrate event-tag]
                      :session-id session-id
-                     :body body})))
+                     :body (assoc body :event event-tag)})))
 
 (defn- project!
   "Update the *Tickle Orchestrate* blackboard buffer."

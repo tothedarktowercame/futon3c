@@ -332,9 +332,6 @@
 (def ^:private evidence-url
   (str (str/replace agency-http-base #"/$" "") "/api/alpha/evidence"))
 
-(def ^:private heartbeat-interval-ms
-  (parse-int (env "HEARTBEAT_INTERVAL_MS" "30000") 30000))
-
 (defn- emit-evidence!
   "POST an evidence entry to the Agency evidence store. Fire-and-forget."
   [event-type body-map & {:keys [session-id tags]}]
@@ -362,33 +359,6 @@
         (println "[bridge] evidence emit failed:" (.getMessage e))
         (flush)))))
 
-(defn- start-heartbeat!
-  "Start a background thread that emits heartbeat evidence every N seconds.
-   Returns a stop function."
-  [invoke-id prompt-preview session-id]
-  (let [running (atom true)
-        start-ms (System/currentTimeMillis)
-        thread (Thread.
-                (fn []
-                  (while @running
-                    (try
-                      (Thread/sleep heartbeat-interval-ms)
-                      (when @running
-                        (let [elapsed-s (quot (- (System/currentTimeMillis) start-ms) 1000)]
-                          (emit-evidence! "invoke-heartbeat"
-                                          {"invoke-id" invoke-id
-                                           "elapsed-seconds" elapsed-s
-                                           "prompt-preview" prompt-preview}
-                                          :session-id session-id
-                                          :tags ["heartbeat"])))
-                      (catch InterruptedException _
-                        (reset! running false))
-                      (catch Exception _))))
-                (str "heartbeat-" invoke-id))]
-    (.setDaemon thread true)
-    (.start thread)
-    (fn [] (reset! running false) (.interrupt thread))))
-
 (defn- handle-invoke-frame!
   [^WebSocket ws sid* frame]
   (let [invoke-id (:invoke_id frame)
@@ -404,12 +374,7 @@
                            "prompt-preview" prompt-preview}
                           :session-id incoming-session
                           :tags ["invoke-start"])
-          ;; Start heartbeat
-          (let [stop-heartbeat! (start-heartbeat! invoke-id prompt-preview incoming-session)
-                initial (try
-                          (invoke-codex! prompt-str incoming-session sid*)
-                          (finally
-                            (stop-heartbeat!)))
+          (let [initial (invoke-codex! prompt-str incoming-session sid*)
                 ;; ---- H-1: Enforcement retry ----
                 outcome (if (and (:ok initial) (enforcement-needed? prompt-str initial))
                           (let [reason (enforcement-reason prompt-str initial)

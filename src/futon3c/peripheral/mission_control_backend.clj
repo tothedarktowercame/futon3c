@@ -1108,13 +1108,15 @@
      :evidence/author "mission-control/sync"
      :evidence/at now
      :evidence/body (cond-> (select-keys mission [:mission/id :mission/status
+                                                  :mission/title
                                                   :mission/source :mission/repo
-                                                  :mission/path :mission/title
+                                                  :mission/path
                                                   :mission/date
                                                   :mission/blocked-by
                                                   :mission/raw-status
                                                   :mission/devmap-id
                                                   :mission/gates])
+                      true (assoc :event :mission-sync-snapshot)
                       sha (assoc :mission/content-sha sha))
      :evidence/tags [:mission :sync :snapshot]}))
 
