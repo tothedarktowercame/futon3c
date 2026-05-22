@@ -46,8 +46,7 @@
             [futon3c.evidence.invariant :as invariant]
             [futon3c.evidence.store :as store]
             [futon3c.social.shapes :as shapes]
-            [clojure.string :as str])
-  (:import [java.time Instant]))
+            [clojure.string :as str]))
 
 (def I-single-boundary
   "Canonical statement of the single-boundary invariant. Grep-verifiable."
@@ -266,18 +265,25 @@
         ;; Shape failure surfaces as a SocialError map (not {:ok false ...}).
         ;; Detect via the SocialError shape; convert to boundary's receipt shape.
         (shapes/valid? shapes/SocialError result)
-        (let [msg (:error/message result)]
-          (binding [*out* *err*]
-            (println (str "[boundary] I-single-boundary VIOLATION: "
-                          "shape rejected — " msg)))
+        (let [msg (:error/message result)
+              duplicate-id? (= :duplicate-id (:error/code result))]
+          (when-not duplicate-id?
+            (binding [*out* *err*]
+              (println (str "[boundary] I-single-boundary VIOLATION: "
+                            "shape rejected — " msg))))
           {:ok false
            :error/code (:error/code result)
            :error/message msg
            :error/at (:error/at result)
+           :evidence/id (or (:evidence/id coerced)
+                            (get-in result [:error/context :evidence-id]))
            :invariant/violation
-           {:invariant invariant/I-evidence-per-turn
-            :kind :shape
+           {:invariant (if duplicate-id?
+                         I-single-boundary
+                         invariant/I-evidence-per-turn)
+            :kind (if duplicate-id? :duplicate-id :shape)
             :reason msg
+            :idempotent? duplicate-id?
             :rejected-entry coerced}})
 
         ;; Backend returned a typed-result with :ok semantics.

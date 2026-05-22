@@ -191,6 +191,30 @@
       (is (some? (:invariant/violation failure)))
       (is (nil? (:evidence/id failure))))))
 
+(deftest duplicate-id-is-quiet-and-structured
+  (testing "duplicate ids return a structured receipt without boundary spam"
+    (let [entry {:evidence/id "e-duplicate-boundary-test"
+                 :evidence/subject {:ref/type :agent :ref/id "claude-test"}
+                 :evidence/type :coordination
+                 :evidence/claim-type :step
+                 :evidence/author "claude-test"
+                 :evidence/at "2026-05-21T18:00:00Z"
+                 :evidence/body {}
+                 :evidence/tags [:test]}
+          success (boundary/append! *xtdb-backend* entry)
+          err-writer (java.io.StringWriter.)
+          _ (binding [*err* err-writer]
+              (let [duplicate (boundary/append! *xtdb-backend* entry)]
+                (is (false? (:ok duplicate)))
+                (is (= :duplicate-id (:error/code duplicate)))
+                (is (= "e-duplicate-boundary-test" (:evidence/id duplicate)))
+                (is (= :duplicate-id
+                       (get-in duplicate [:invariant/violation :kind])))
+                (is (true? (get-in duplicate [:invariant/violation :idempotent?])))))
+          err-output (str err-writer)]
+      (is (:ok success))
+      (is (= "" err-output)))))
+
 ;; -----------------------------------------------------------------------------
 ;; I-single-boundary canonical statement is grep-verifiable.
 ;; -----------------------------------------------------------------------------
