@@ -128,8 +128,8 @@
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :open-count]))))))
 
-(deftest pipeline-tracer-closed-track-flagged-as-obsolete
-  (testing "an open tracer with a matching :closed entry is flagged as obsolete"
+(deftest pipeline-tracer-closed-track-not-flagged-as-obsolete
+  (testing "a later :closed entry retires the open state for that track-id"
     (tracer/emit-tracer!
      *xtdb-backend*
      {:track-id :test/track-flagged
@@ -145,9 +145,11 @@
       :closed-by "archaeology-test"})
     (let [check (arch/check-pipeline-tracer-obsolescence)
           r (check *xtdb-backend*)]
-      (is (= :violation (:outcome r))
-          (str "expected violation, got " (pr-str r)))
-      (is (= 1 (get-in r [:detail :obsolete-count]))))))
+      (is (= :ok (:outcome r))
+          (str "expected closed track to retire cleanly, got " (pr-str r)))
+      (is (= 0 (get-in r [:detail :open-count])))
+      (is (= 1 (get-in r [:detail :closed-count])))
+      (is (= 0 (get-in r [:detail :obsolete-count]))))))
 
 (deftest pipeline-tracer-past-target-flagged-as-obsolete
   (testing "open tracer past target-date with no close → flagged"
@@ -179,6 +181,36 @@
           r (check *xtdb-backend*)]
       (is (= :ok (:outcome r))
           (str "expected ok for future-dated open tracer, got " (pr-str r))))))
+
+(deftest pipeline-tracer-latest-event-wins
+  (testing "a reopened track is evaluated from its latest event, not stale history"
+    (tracer/emit-tracer!
+     *xtdb-backend*
+     {:track-id :test/reopened
+      :title "test"
+      :mission :M-test
+      :target-date "2020-01-01"
+      :expected-outcome "test"
+      :owner nil})
+    (tracer/emit-tracer-closed!
+     *xtdb-backend*
+     {:track-id :test/reopened
+      :resolution "closed"
+      :closed-by "archaeology-test"})
+    (tracer/emit-tracer!
+     *xtdb-backend*
+     {:track-id :test/reopened
+      :title "test"
+      :mission :M-test
+      :target-date "2099-12-31"
+      :expected-outcome "test"
+      :owner nil})
+    (let [check (arch/check-pipeline-tracer-obsolescence)
+          r (check *xtdb-backend*)]
+      (is (= :ok (:outcome r))
+          (str "expected reopened track to use latest open state, got " (pr-str r)))
+      (is (= 1 (get-in r [:detail :open-count])))
+      (is (= 0 (get-in r [:detail :obsolete-count]))))))
 
 ;; -----------------------------------------------------------------------------
 ;; bounded-disposition/stash — different shape (per-artifact + bound)
