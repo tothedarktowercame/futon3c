@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-socket="${1:-${FUTON3C_HUD_SOCKET:-${FUTON3C_EMACS_SOCKET:-${EMACS_SOCKET_NAME:-}}}}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/home/joe/code/futon3c/scripts/emacs-socket-lib.sh
+source "${script_dir}/emacs-socket-lib.sh"
+socket="${1:-${FUTON3C_HUD_SOCKET:-${FUTON3C_EMACS_SOCKET:-$(futon_preferred_emacs_socket || true)}}}"
 frame_params="((name . \"Agency HUD\") (futon3c-hud . t))"
 client=(emacsclient)
 
