@@ -367,6 +367,41 @@
         (is (= :idle (:status info)))
         (is (= "019cd4ad-c5b9-76c0-af08-50d8af0803c7" (:session-id info)))))))
 
+(deftest registry-status-surfaces-live-surface-projection
+  (testing "live surface projections are queryable and exposed in registry-status"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-surface")
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]})
+    (with-redefs [reg/running-codex-session-ids (constantly #{})
+                  futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                  futon3c.blackboard/project-agents! (fn [_] nil)]
+      (reg/report-surface-projection!
+       "codex-surface"
+       "emacs-cursor:editor-main"
+       {:surface "emacs-cursor"
+        :editor-id "editor-main"
+        :mode "follow"
+        :buffer-summary "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+        :write-surface "minibuffer"})
+      (let [projection (reg/current-surface-projection "codex-surface")
+            info (get-in (reg/registry-status) [:agents "codex-surface"])]
+        (is (= "emacs-cursor" (:surface projection)))
+        (is (= "editor-main" (:editor-id projection)))
+        (is (= "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+               (:buffer-summary projection)))
+        (is (= {:source "emacs-cursor:editor-main"
+                :surface "emacs-cursor"
+                :editor-id "editor-main"
+                :mode "follow"
+                :buffer-summary "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+                :write-surface "minibuffer"}
+               (:surface-projection info))))
+      (reg/clear-surface-projection! "codex-surface" "emacs-cursor:editor-main")
+      (is (nil? (reg/current-surface-projection "codex-surface")))
+      (is (nil? (get-in (reg/registry-status) [:agents "codex-surface" :surface-projection]))))))
+
 (deftest registry-status-includes-ws-connected-unregistered
   (testing "registry-status surfaces ws-connected agent ids that are not registered locally"
     (with-redefs [reg/running-codex-session-ids (constantly #{})
