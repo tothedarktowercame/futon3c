@@ -54,6 +54,8 @@ emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
 emacsclient_timeout="${EMACSCLIENT_TIMEOUT:-8}"
 emacs_bin="${EMACS_BIN:-emacs}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/home/joe/code/futon3c/scripts/emacs-socket-lib.sh
+source "${script_dir}/emacs-socket-lib.sh"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
 agency_agent_id="${AGENCY_AGENT_ID:-codex-1}"
 
@@ -246,7 +248,7 @@ launch_repl() {
   local sid="${1:-}" sid_form escaped_session_file escaped_ui escaped_repl
   local escaped_agency_base escaped_evidence_url escaped_irc_send_base new_form irc_send_form
   local escaped_codex_sandbox escaped_codex_approval
-  local elisp eval_out primary_eval_out rc quick_server quick_socket
+  local elisp eval_out primary_eval_out rc quick_server quick_socket socket_name
   local -a emacsclient_cmd
   if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
     echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
@@ -284,6 +286,10 @@ launch_repl() {
     emacsclient_cmd=(timeout --kill-after=2 "${emacsclient_timeout}s" "${emacsclient_bin}")
   else
     emacsclient_cmd=("${emacsclient_bin}")
+  fi
+  socket_name="$(futon_preferred_emacs_socket || true)"
+  if [[ -n "${socket_name}" ]]; then
+    emacsclient_cmd+=(--socket-name "${socket_name}")
   fi
 
   elisp="(progn
