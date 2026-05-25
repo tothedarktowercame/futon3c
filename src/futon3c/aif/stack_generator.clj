@@ -287,10 +287,19 @@
                          :query/tags [:portfolio :step]
                          :query/limit 50})
          (filter (fn [entry]
-                   (let [run (get-in entry [:evidence/body :run])]
+                   (let [run (get-in entry [:evidence/body :run])
+                         obs (:observation-source run)
+                         obs-path (cond
+                                    (map? obs)    (:path obs)
+                                    (string? obs) obs
+                                    :else         nil)]
                      (and (= s6-agenda-id (:agenda-id run))
-                          (= stack-observation-path
-                             (get-in run [:observation-source :path]))))))
+                          (or (= stack-observation-path obs-path)
+                              ;; PI scheduler currently emits the source as a
+                              ;; symbolic short name "the-stack"; accept that
+                              ;; as well, since semantically it names the
+                              ;; same source as stack-observation-path.
+                              (= "the-stack" obs-path))))))
          first)))
 
 (defn- next-move-agenda
