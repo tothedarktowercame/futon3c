@@ -354,6 +354,170 @@
     stack))
 
 ;; =============================================================================
+;; Live next-move projection from judgement.ranked-actions
+;; =============================================================================
+;;
+;; E-wm-live-recommendation: the cached :reading :next-move in THE-STACK.aif.edn
+;; is a static prior (mtime ~33d at time of authorship).  The War Machine's
+;; scheduler produces a fresh :judgement :ranked-actions every ~300s.  Project
+;; the top of the live ranked-actions into a next-move-shape that the cljs
+;; next-move-tile can render alongside the cached prose, so the pilot's loop
+;; reads live data rather than a poster on the wall.
+
+(def ^:private live-rec-default-days 14)
+(def ^:private live-rec-alt-count 4)
+
+(defn- wm-snapshot-for [days]
+  (try
+    (when-let [f (requiring-resolve 'futon3c.wm.scheduler/snapshot-for-days)]
+      (f days))
+    (catch Throwable _ nil)))
+
+(defn- action-target-str [action]
+  (let [t (or (:target action) (get action "target"))]
+    (when (some? t)
+      (if (keyword? t) (name t) (str t)))))
+
+(defn- action-type-str [action]
+  (let [t (or (:type action) (get action "type"))]
+    (when (some? t)
+      (if (keyword? t) (name t) (str t)))))
+
+(defn- action->specifically
+  "Project a ranked-action :action map into a short human-legible
+   'do this thing' string for the next-move-tile's :specifically slot."
+  [action]
+  (when action
+    (let [tp (action-type-str action)
+          tg (action-target-str action)]
+      (cond
+        (and tp tg) (str tp " " tg)
+        tp          tp
+        :else       (pr-str action)))))
+
+(defn- ranked-entry-action [entry]
+  (or (:action entry) (get entry "action")))
+
+(defn- ranked-entry-g-total [entry]
+  (or (:G-total entry) (get entry "G-total")))
+
+(defn- ranked-entry-rank [entry]
+  (or (:rank entry) (get entry "rank")))
+
+(defn- alternatives-from-ranked [ranked-actions]
+  (->> (rest (take (inc live-rec-alt-count) ranked-actions))
+       (map-indexed
+        (fn [i entry]
+          (let [a (ranked-entry-action entry)]
+            [(keyword (str "rank-" (+ 2 i)))
+             (str (action-type-str a)
+                  " " (action-target-str a)
+                  " (G=" (some-> (ranked-entry-g-total entry)
+                                 (#(format "%.3f" (double %)))) ")")])))
+       (into {})))
+
+(defn- snapshot-judgement [snapshot]
+  ;; The cached payload is stored in JSON-key-stringified form
+  ;; (see futon3c.wm.scheduler/render-payload-json → stringify-wm-response),
+  ;; so the inner map uses string keys.  Tolerate both forms.
+  (when-let [payload (:payload snapshot)]
+    (or (:judgement payload) (get payload "judgement"))))
+
+(defn- snapshot-as-of [snapshot]
+  (some-> snapshot :as-of str))
+
+(defn- snapshot-age-seconds [snapshot]
+  (when-let [as-of (:as-of snapshot)]
+    (try
+      (.toSeconds (java.time.Duration/between
+                   ^java.time.Instant as-of
+                   (java.time.Instant/now)))
+      (catch Throwable _ nil))))
+
+(defn derive-next-move-live
+  "Project the top of judgement.ranked-actions into the next-move-tile shape.
+
+   Returns a map with :action, :rank, :G-total, :specifically, :rationale,
+   :alternatives-considered, :priorities, :mode, :source, :as-of,
+   :scheduler-period-seconds, :age-seconds, :stale?, :note — or nil if no
+   live snapshot is available.
+
+   Stale? is true when the snapshot is older than 2× the scheduler period
+   (default period 300s → stale at >600s).  The cljs tile uses :stale? to
+   render an 'aging' badge."
+  ([] (derive-next-move-live (wm-snapshot-for live-rec-default-days)))
+  ([snapshot]
+   (when-let [judgement (snapshot-judgement snapshot)]
+     (let [ranked (or (:ranked-actions judgement)
+                      (get judgement "ranked-actions")
+                      (get judgement "ranked_actions"))
+           top    (first ranked)
+           top-action (ranked-entry-action top)
+           priorities (or (:priorities judgement)
+                          (get judgement "priorities"))
+           mode (or (:mode judgement) (get judgement "mode"))
+           as-of (snapshot-as-of snapshot)
+           age-s (snapshot-age-seconds snapshot)
+           ;; Period defaults to 300; we don't import the scheduler ns here
+           ;; to keep stack-generator's surface minimal.
+           period-s 300
+           stale? (when (number? age-s) (> age-s (* 2 period-s)))]
+       (when top-action
+         {:action top-action
+          :rank (or (ranked-entry-rank top) 1)
+          :G-total (ranked-entry-g-total top)
+          :specifically (action->specifically top-action)
+          :rationale (or (:rationale top-action)
+                         (get top-action "rationale")
+                         "Top of judgement.ranked-actions for this WM tick")
+          :alternatives-considered (alternatives-from-ranked ranked)
+          :priorities (vec (take 5 (or priorities [])))
+          :mode mode
+          :source :wm-judgement-ranked-actions
+          :as-of as-of
+          :scheduler-period-seconds period-s
+          :age-seconds age-s
+          :stale? (boolean stale?)
+          :note (str "Recomputed every WM scheduler tick (default "
+                     period-s "s). See E-wm-live-recommendation.md.")})))))
+
+(defn- cached-prose-mtime []
+  (try
+    (let [f (io/file stack-edn-path)]
+      (when (.exists f)
+        (str (java.time.Instant/ofEpochMilli (.lastModified f)))))
+    (catch Throwable _ nil)))
+
+(defn- cached-prose-age-days []
+  (try
+    (let [f (io/file stack-edn-path)]
+      (when (.exists f)
+        (let [ms (- (System/currentTimeMillis) (.lastModified f))]
+          (long (/ ms 86400000.0)))))
+    (catch Throwable _ nil)))
+
+(defn- attach-next-move-live
+  "Add :next-move-live (from live WM snapshot) AND :freshness-warning on
+   the cached :next-move prose, so operators can see when the static prior
+   is N days old."
+  [stack]
+  (let [snapshot (wm-snapshot-for live-rec-default-days)
+        live-rec (derive-next-move-live snapshot)
+        warning {:source :the-stack-aif-edn-cached-prior
+                 :path "futon5a/holes/stories/THE-STACK.aif.edn"
+                 :mtime (cached-prose-mtime)
+                 :age-days (cached-prose-age-days)
+                 :note (str "Static cached prior; not recomputed per tick. "
+                            "See :reading :next-move-live for live recommendation, "
+                            "or futon3c/holes/missions/E-wm-live-recommendation.md.")}]
+    (cond-> stack
+      live-rec
+      (assoc-in [:reading :next-move-live] live-rec)
+
+      (get-in stack [:reading :next-move])
+      (assoc-in [:reading :next-move :freshness-warning] warning))))
+
+;; =============================================================================
 ;; Main projection
 ;; =============================================================================
 
@@ -421,6 +585,7 @@
                           %))
            (attach-live-s6-counter evidence-store)
            (attach-next-move-agenda evidence-store)
+           (attach-next-move-live)
            (assoc :live? live-applied?
                   :generated-at (str (java.time.Instant/now))
                   :live-data-source (if live-applied?
