@@ -8,12 +8,25 @@
             [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]))
 
-(defonce ^:private specs
-  (delay
-    (let [res (io/resource "peripherals.edn")]
-      (when-not res
-        (throw (ex-info "Missing peripherals.edn resource" {})))
-      (-> res slurp edn/read-string :peripherals))))
+(defn- load-specs-from-resource []
+  (let [res (io/resource "peripherals.edn")]
+    (when-not res
+      (throw (ex-info "Missing peripherals.edn resource" {})))
+    (-> res slurp edn/read-string :peripherals)))
+
+(defonce ^:private specs (atom nil))
+
+(defn refresh-specs!
+  "Re-read peripherals.edn into the specs cache. Use after editing the file
+   to pick up new peripheral registrations without a JVM restart."
+  []
+  (reset! specs (load-specs-from-resource)))
+
+;; Lazy initialisation — only fires when the atom is still empty (so a
+;; `load-file` of this ns is idempotent; an explicit refresh-specs! call is
+;; the way to bust the cache after editing peripherals.edn).
+(when (nil? @specs)
+  (refresh-specs!))
 
 (defn load-spec
   "Load a single peripheral spec from resources/peripherals.edn."
