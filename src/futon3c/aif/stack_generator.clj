@@ -46,17 +46,47 @@
   "futon5a/holes/stories/THE-STACK.aif.edn")
 
 (def s6-successor-specifically
-  "clear the completed War Machine item and set the next item for work via the Candidate Queue invariant")
+  "clear the completed War Machine item and set the next item for work via the Candidate Queue invariant — now realised in the WM live ranked-actions surface (E-wm-live-recommendation, cg-58271911)")
 
 (def s6-successor-invariant
   {:title "completed items in the War Machine get cleared and the next item is set for work"
-   :surface "Arxana Browser -> Invariants -> Candidate Queue"})
+   :surface
+   ;; Originally documented as 'Arxana Browser -> Invariants -> Candidate
+   ;; Queue' (cached prior in THE-STACK.aif.edn).  The actually-landed
+   ;; surface is the WM live ranked-actions queue at /api/alpha/aif-stack/live
+   ;; → :reading :next-move-live (E-wm-live-recommendation).  Pilot's
+   ;; inhabitation cycle on 2026-05-25 demonstrated the invariant end-to-end:
+   ;; addressed sorry/wm-aif-substrate-addressability → next tick rotated
+   ;; ranked-actions[0] from that sorry to sorry/r3a-likelihood-loop-health.
+   ;;
+   ;; The Arxana invariants browser path remains a valid future surface for
+   ;; the leaf-invariants candidate→operational promotion queue (a structurally
+   ;; similar but semantically distinct mechanism — the conflation in the
+   ;; cached prose is a known divergence; see pilot-inhabitations.edn).
+   "WM live ranked-actions queue (/api/alpha/aif-stack/live :reading :next-move-live; see E-wm-live-recommendation)"})
 
-(def s6-successor-missing-fields
-  [:action-surface :step-witness :effect-witness :successor-witness])
+(def s6-successor-populated-fields
+  {:action-surface
+   {:primary "futon3c/src/futon3c/aif/stack_generator.clj/derive-next-move-live"
+    :ui      "futon2/web/war-machine/src/war_machine/client/core.cljs/live-next-move-tile"
+    :endpoint "/api/alpha/aif-stack/live :reading :next-move-live"
+    :landed-in "E-wm-live-recommendation (futon3c/holes/missions/E-wm-live-recommendation.md), commits dcde63c + 60ca06a, 2026-05-25"}
+   :step-witness
+   {:kind :pilot-inhabitation-cycle-with-cg
+    :pattern "(1) pilot reads next-move-live; (2) mints consent-gate-event via war-machine-pilot-backend; (3) executes action citing the cg-id; (4) requests scheduler tick; (5) re-reads next-move-live."
+    :demonstrated-by "cg-5b03db29-b636-4368-88ee-a7c8df23ef55 (claude-1, 2026-05-25): addressed sorry/wm-aif-substrate-addressability."}
+   :effect-witness
+   {:kind :ranked-actions-top-shifts-on-action
+    :observable "ranked-actions[0] :action :target changes between two consecutive WM scheduler ticks bracketing a pilot action."
+    :demonstrated-by "Pre-action top: address-sorry sorry/wm-aif-substrate-addressability (G=-4.99).  Post-action top: address-sorry sorry/r3a-likelihood-loop-health (G=-4.39).  Recorded in pilot-inhabitations.edn under inhab/claude-1/cycle/cg-5b03db29-address-meta-sorry."}
+   :successor-witness
+   {:kind :recurring-shifts-without-pilot-intervention
+    :v3-spec "v3 would close once the pilot's actions on R3a-tier sorries (likelihood models) themselves drive a recomputation that surfaces non-sorry actions — e.g. :open-mission, :fire-pattern, :learn-action-class — as concrete candidates with G-totals comparable to or exceeding the sorry tier.  Until then v3 remains a documented-but-not-preregistered follow-on."
+    :v3-id "wm.close-s6.v3"
+    :v3-status :documented}})
 
 (def s6-successor-note
-  "v2 is documented as a Candidate Queue follow-on, but it is not yet preregistered as an executable closure agenda.")
+  "v2 is preregistered as an executable closure agenda (E-wm-live-recommendation + cg-5b03db29 demonstration, 2026-05-25, claude-1).  Known divergence: cached prose at THE-STACK.aif.edn names the surface as 'Arxana Browser -> Invariants -> Candidate Queue' (the candidate→operational invariant queue), but the actually-landed surface is the WM live ranked-actions queue.  Both are valid realisations of 'completed items cleared, next item set for work'; the cached prose's surface remains a valid future excursion target.")
 
 ;; =============================================================================
 ;; Cached structural prior loading
@@ -325,13 +355,13 @@
        :effect-witness effect-witness
        :successor (when effect-witness
                     {:id s6-successor-agenda-id
-                     :status :underspecified
+                     :status :recommendation-grade
                      :close :S6
                      :specifically s6-successor-specifically
                      :candidate-invariant s6-successor-invariant
-                     :recommendation-grade? false
+                     :recommendation-grade? true
                      :documented? true
-                     :missing-fields s6-successor-missing-fields
+                     :populated-fields s6-successor-populated-fields
                      :note s6-successor-note})})
     {:id s6-agenda-id
      :status :unattempted}))
