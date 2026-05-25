@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/home/joe/code/futon3c/scripts/emacs-socket-lib.sh
+source "${script_dir}/emacs-socket-lib.sh"
+
 # Linode authority profile using the refactored dev.* modules.
 # Boots via futon3c.dev/-main (same as dev-linode-env), then loads
 # the extracted Phase 1+2 namespaces so they're available in
@@ -64,21 +68,7 @@ fi
 
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
-  _emacs_dir="/run/user/$(id -u)/emacs"
-  if [[ -d "$_emacs_dir" ]]; then
-    # Prefer 'server' (interactive Emacs hosting *server* / Agency) then
-    # 'futon' (headless daemon spawned by cr), else first available.
-    if [[ -S "$_emacs_dir/server" ]]; then
-      export FUTON3C_EMACS_SOCKET="server"
-    elif [[ -S "$_emacs_dir/futon" ]]; then
-      export FUTON3C_EMACS_SOCKET="futon"
-    else
-      _sockets=("$_emacs_dir"/*)
-      if [[ ${#_sockets[@]} -ge 1 && -S "${_sockets[0]}" ]]; then
-        export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
-      fi
-    fi
-  fi
+  export FUTON3C_EMACS_SOCKET="$(futon_preferred_emacs_socket || true)"
   if [[ -n "${FUTON3C_EMACS_SOCKET:-}" ]]; then
     echo "[dev] Emacs socket: ${FUTON3C_EMACS_SOCKET}"
   fi
