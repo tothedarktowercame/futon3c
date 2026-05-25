@@ -16,10 +16,13 @@
             [futon3c.peripheral.discipline :as discipline]
             [futon3c.peripheral.deploy :as deploy]
             [futon3c.peripheral.edit :as edit]
+            [futon3c.peripheral.emacs-cursor :as emacs-cursor]
             [futon3c.peripheral.explore :as explore]
             [futon3c.peripheral.mission :as mission]
             [futon3c.peripheral.mentor :as mentor]
             [futon3c.peripheral.mission-control :as mission-control]
+            [futon3c.peripheral.night-shift :as night-shift]
+            [futon3c.peripheral.portfolio-inference :as portfolio-inference]
             [futon3c.peripheral.proof :as proof]
             [futon3c.peripheral.reflect :as reflect]
             [futon3c.peripheral.runner :as runner]
@@ -30,7 +33,10 @@
 
 (def peripheral-ids
   "Set of all known peripheral IDs."
-  #{:explore :edit :test :deploy :reflect :proof :discipline :mission :mission-control :alfworld :arse :chat :mentor})
+  #{:explore :edit :test :deploy :reflect :proof :discipline :mission
+    :mission-control :alfworld :arse :chat :mentor :portfolio-inference
+    :night-shift
+    :emacs-cursor})
 
 (def ^:private factories
   "Maps peripheral-id to its factory function."
@@ -43,10 +49,13 @@
    :mission    mission/make-mission
    :discipline      discipline/make-discipline
    :mission-control mission-control/make-mission-control
+   :night-shift     night-shift/make-night-shift
    :alfworld        alfworld/make-alfworld
    :arse            arse/make-arse
    :chat            chat/make-chat
-   :mentor          mentor/make-mentor})
+   :mentor          mentor/make-mentor
+   :portfolio-inference portfolio-inference/make-portfolio-inference
+   :emacs-cursor    emacs-cursor/make-emacs-cursor})
 
 (defn make-peripheral
   "Create a PeripheralRunner for the given peripheral-id.
