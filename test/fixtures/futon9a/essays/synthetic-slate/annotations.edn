@@ -1,0 +1,45 @@
+{:version 1
+ :paper "synthetic-slate.md"
+ :essay-id "arxana/essay/synthetic-slate-v1"
+ :generated "2026-05-21"
+ :rewrite-pass-status :draft
+ :sections
+ [{:id "arxana/essay/synthetic-slate-v1/section/1-first-move"
+   :name "First Move"
+   :index [1]
+   :heading-level 2
+   :aif-region :internal
+   :path-arrow :first-move}
+  {:id "arxana/essay/synthetic-slate-v1/section/2-second-move"
+   :name "Second Move"
+   :index [2]
+   :heading-level 2
+   :aif-region :active-surface
+   :path-arrow :second-move}]
+ :annotations
+ [{:id "hx:synthetic:v1:plain-opener"
+   :hx-type :annotation/comment
+   :endpoints [{:role :annotated
+                :section-id "arxana/essay/synthetic-slate-v1/section/1-first-move"
+                :passage "states the problem plainly"}
+               {:role :source
+                :pattern-name "writing-coherence/plain-language-thesis"}]
+   :note "Lead with the claim."
+   :severity :medium
+   :status :open}
+  {:id "hx:synthetic:v1:step-bridges-claim"
+   :hx-type :aif/invariant-witness
+   :endpoints [{:role :annotated
+                :section-id "arxana/essay/synthetic-slate-v1/section/1-first-move"
+                :passage "claimed before the mechanism arrives"}
+               {:role :annotated
+                :section-id "arxana/essay/synthetic-slate-v1/section/2-second-move"
+                :passage "ties the claim to a concrete next step"}]
+   :note "The claim and the move stay connected."
+   :invariant :I2
+   :status :open}]
+ :invariant-audit
+ {:I2 {:status :passes
+       :witnesses ["hx:synthetic:v1:step-bridges-claim"]}}
+ :rewrite-pass-queue
+ {:joe-decision-required ["hx:synthetic:v1:plain-opener"]}}
