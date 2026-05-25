@@ -47,8 +47,7 @@
      failures (port in use, permission denied).
    - realtime/request-param-resilience (L1, L3): delegates param extraction
      to protocol/extract-params for consistency across HTTP and WS."
-  (:require [futon3c.evidence.invariant :as evidence-invariant]
-            [futon3c.transport.protocol :as proto]
+  (:require [futon3c.transport.protocol :as proto]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
@@ -64,6 +63,7 @@
             [futon3c.portfolio.core :as portfolio]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
+            [futon3c.transport.peripheral-events :as peripheral-events]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.blackboard :as bb]
             [futon3c.mfuton-mode :as mfuton-mode]
@@ -84,7 +84,7 @@
            [java.net Socket InetSocketAddress]
            [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException]
            [java.util UUID]
-           [java.util.concurrent Executors ExecutorService]
+           [java.util.concurrent Executors ExecutorService RejectedExecutionException]
            [org.httpkit.logger ContextLogger]))
 
 ;; =============================================================================
@@ -711,6 +711,15 @@
            (instance? ClosedSelectorException ex)
            (instance? AsynchronousCloseException ex))))
 
+(defn- expected-http-kit-submit-after-stop?
+  "True when `http-kit` tried to hand work to its request executor after stop began."
+  [msg ex]
+  (and (instance? RejectedExecutionException ex)
+       (boolean
+        (#{"failed to submit task to executor service"
+           "increase :queue-size if this happens often"}
+         msg))))
+
 (defn- expected-http-kit-stop-race?
   "True when `http-kit` stop hit the known JDK selector close race (NPE in removeKey)."
   [ex]
@@ -723,13 +732,19 @@
               (or (nil? msg)
                   (str/includes? msg "this.keys"))))))
 
+(defn- suppress-http-kit-error?
+  "True when `http-kit` emitted a known shutdown-only race after stop began."
+  [status msg ex]
+  (and (not= :running status)
+       (or (expected-http-kit-shutdown-close? msg ex)
+           (expected-http-kit-submit-after-stop? msg ex))))
+
 (defn- make-http-kit-error-logger
   "Create an error logger that suppresses expected shutdown close races only."
   [!server]
   (fn [msg ex]
     (let [status (some-> @!server hk/server-status)
-          suppress? (and (not= :running status)
-                         (expected-http-kit-shutdown-close? msg ex))]
+          suppress? (suppress-http-kit-error? status msg ex)]
       (when-not suppress?
         (.log ContextLogger/ERROR_PRINTER msg ex)))))
 
@@ -2008,6 +2023,124 @@
             prompt))
      prompt)))
 
+(defn- emacs-buffer-summary
+  [projection]
+  (let [summary (:buffer-summary projection)
+        buffer-surface (:buffer-surface projection)
+        buffer (:buffer buffer-surface)
+        user-cursor (:user-cursor buffer-surface)
+        agent-cursor (:agent-cursor buffer-surface)]
+    (or (some-> summary str str/trim not-empty)
+        (when (map? buffer-surface)
+          (format "buffer=%s user=(line %s col %s point %s) remote=%s"
+                  (or (:name buffer) "?")
+                  (or (:line user-cursor) "?")
+                  (or (:column user-cursor) "?")
+                  (or (:point user-cursor) "?")
+                  (if (map? agent-cursor)
+                    (format "(line %s col %s point %s)"
+                            (or (:line agent-cursor) "?")
+                            (or (:column agent-cursor) "?")
+                            (or (:point agent-cursor) "?"))
+                    "nil"))))))
+
+(defn- surface-projection-block
+  "Render an agent-facing live surface projection block, if any."
+  [agent-id]
+  (when-let [projection (and agent-id
+                             (reg/current-surface-projection (str agent-id)))]
+    (when (= "emacs-cursor" (:surface projection))
+      (str "Live surface projection:\n"
+           "- Surface: Emacs smart cursor\n"
+           (when-let [editor-id (some-> (:editor-id projection) str str/trim not-empty)]
+             (str "- Editor: " editor-id "\n"))
+           (when-let [mode (some-> (:mode projection) str str/trim not-empty)]
+             (str "- Cursor mode: " mode "\n"))
+           (when-let [buffer-summary (emacs-buffer-summary projection)]
+             (str "- Read surface `buffer`: " buffer-summary "\n"))
+           "- Write surface `minibuffer`: emit lines `MINIBUFFER: <text-or-json>` in your final response to send commands or messages back to Emacs.\n"
+           "- Structured command: `MINIBUFFER: {\"command\":\"eval-sexp\",\"sexp\":\"(with-current-buffer \\\"*scratch*\\\" (buffer-name))\"}`.\n"
+           "- E2E script command: `MINIBUFFER: {\"command\":\"run-script\",\"steps\":[{\"op\":\"switch-buffer\",\"buffer\":\"*codex-repl:codex-8*\"},{\"op\":\"forward-line\",\"count\":2},{\"op\":\"snapshot\"}]}`.\n"
+           "- Example: `MINIBUFFER: {\"command\":\"refresh-context\"}` or `MINIBUFFER: Inspect current defun`.\n\n"))))
+
+(defn- wrap-agent-facing-surface
+  "Apply authoritative surface header plus any live agent-facing projection."
+  [prompt surface caller agent-id]
+  (str (wrap-surface-header "" surface caller agent-id)
+       (or (surface-projection-block agent-id) "")
+       prompt))
+
+(defn- parse-minibuffer-directive
+  [raw]
+  (let [trimmed (some-> raw str str/trim)]
+    (cond
+      (str/blank? trimmed) nil
+      (and (str/starts-with? trimmed "{")
+           (str/ends-with? trimmed "}"))
+      (try
+        (let [parsed (json/parse-string trimmed true)]
+          (when (map? parsed)
+            parsed))
+        (catch Exception _
+          {:command "message"
+           :message trimmed
+           :prompt trimmed}))
+      :else
+      {:command "message"
+       :message trimmed
+       :prompt trimmed})))
+
+(defn- extract-minibuffer-directives
+  "Split RESULT-TEXT into visible text and routed MINIBUFFER directives."
+  [result-text]
+  (let [lines (str/split-lines (or result-text ""))]
+    (reduce (fn [{:keys [visible directives]} line]
+              (if-let [[_ payload] (re-matches #"^\s*MINIBUFFER:\s*(.+?)\s*$" line)]
+                (if-let [directive (parse-minibuffer-directive payload)]
+                  {:visible visible
+                   :directives (conj directives directive)}
+                  {:visible visible
+                   :directives directives})
+                {:visible (conj visible line)
+                 :directives directives}))
+            {:visible []
+             :directives []}
+            lines)))
+
+(defn- maybe-route-surface-writes
+  "Route agent-authored surface write directives and strip them from RESULT.
+   Today this supports the canonical Emacs smart-cursor minibuffer seam."
+  [agent-id result]
+  (if-not (and (:ok result) (string? (:result result)))
+    result
+    (if-let [projection (and agent-id
+                             (reg/current-surface-projection (str agent-id)))]
+      (if (= "emacs-cursor" (:surface projection))
+        (let [{:keys [visible directives]} (extract-minibuffer-directives (:result result))]
+          (if (seq directives)
+            (let [routed (doall
+                          (map-indexed
+                           (fn [idx directive]
+                             (peripheral-events/send-peripheral-event!
+                              (str agent-id)
+                              :emacs-cursor
+                              :minibuffer
+                              (-> (cond-> directive
+                                    (nil? (:request-id directive))
+                                    (assoc :request-id (str "minibuffer-" idx)))
+                                  (assoc :server-sent-at-ms
+                                         (System/currentTimeMillis)))))
+                           directives))
+                  visible-result (str/join "\n" visible)]
+              (cond-> (assoc result :result visible-result)
+                true
+                (update :invoke-meta #(assoc (or % {})
+                                             :surface-write {:minibuffer-events (count directives)
+                                                             :routed-events (count (filter true? routed))}))))
+            result))
+        result)
+      result)))
+
 (def ^:private task-mode-re
   #"(?i)\bmode:\s*task\b")
 
@@ -2088,8 +2221,9 @@
                                     :surface surface})]
     (try
       (mark-invoke-job-running! job-id)
-      (let [effective-prompt (wrap-surface-header prompt surface caller agent-id)
-            result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+      (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
+            raw-result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+            result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
                               (codex-task-no-execution? agent-id effective-prompt result))
@@ -2141,8 +2275,9 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
-      (let [effective-prompt (wrap-surface-header prompt surface caller agent-id)
-            result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+      (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
+            raw-result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+            result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
                               (codex-task-no-execution? agent-id effective-prompt result))
@@ -2432,8 +2567,9 @@
                                              long)
                           evidence-store (evidence-store-for-config config)
                           ev-opts (when mission-id [:mission-id mission-id])
-                          effective-prompt (wrap-surface-header prompt surface caller agent-id)
-                          result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+                          effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
+                          raw-result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+                          result (maybe-route-surface-writes agent-id raw-result)
                           sid (:session-id result)]
                       ;; Emit evidence (same as handle-invoke)
                       (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
@@ -3764,7 +3900,7 @@
 ;; for namespaced keywords (the CLJS client re-keywordises via cljs-http's
 ;; :keywordize-keys default, and (keyword "mission/id") → :mission/id).
 
-(defn- stringify-wm-keys
+(defn stringify-wm-response
   [x]
   (cond
     (map? x)    (into {}
@@ -3774,22 +3910,367 @@
                                                (str (namespace k) "/" (name k))
                                                (name k))
                                 :else (str k))
-                              (stringify-wm-keys v)])
+                              (stringify-wm-response v)])
                            x))
-    (vector? x) (mapv stringify-wm-keys x)
-    (seq? x)    (mapv stringify-wm-keys x)
-    (set? x)    (mapv stringify-wm-keys x)
+    (vector? x) (mapv stringify-wm-response x)
+    (seq? x)    (mapv stringify-wm-response x)
+    (set? x)    (mapv stringify-wm-response x)
     (keyword? x) (if (namespace x)
                    (str (namespace x) "/" (name x))
                    (name x))
     :else x))
 
-(defn- handle-war-machine
-  "GET /api/alpha/war-machine[?days=N] — run wm scan, return JSON snapshot.
+(def stringify-wm-keys stringify-wm-response)
 
-   Lazily resolves futon2.report.war-machine/generate-war-machine so a
-   missing futon2 on the classpath produces a clean 503 instead of a
-   futon3c startup failure."
+(def ^:private pilot-inhabitations-edn-path
+  "/home/joe/code/futon5a/data/pilot-inhabitations.edn")
+
+(defn- pattern-id->collection-name
+  "Pattern-ids in the evidence store are keywords like :iiching/exotype-000.
+   The collection name is the keyword's namespace (\"iiching\").  Falls back
+   gracefully if pattern-id is a string of the form \"col/name\" or anything
+   else (returns nil and the entry is skipped)."
+  [pattern-id]
+  (cond
+    (keyword? pattern-id) (namespace pattern-id)
+    (string? pattern-id)
+    (let [idx (.indexOf ^String pattern-id "/")]
+      (when (pos? idx) (subs pattern-id 0 idx)))
+    :else nil))
+
+(defn derive-pattern-activations
+  "Walk the live evidence store for `context-retrieval`-tagged entries —
+   each represents one A→B turn whose futon3a retrieval surfaced N patterns.
+   Each result `.id` in the body is a `collection-name/pattern-name` string;
+   count one activation per result per turn, group by collection.
+
+   Returns `{collection-name <activation-count>}`.  Limited to the recent
+   window if :days is provided (uses :evidence/at timestamps).  Quiet on
+   errors so a malformed evidence store never breaks the war-machine
+   endpoint.  Resolves the live store via (mcs/!config :evidence-store) with
+   fallback to estore/!store, mirroring handle-aif-stack-live's pattern.
+
+   NOTE: this is the pattern-SURFACED-by-retrieval signal, not a curated
+   PSR-application signal.  Per Joe's emacs-repl 2026-05-25 clarification:
+   'activation through the tagging that goes on per A→B turn in each turn
+   submitted to the evidence landscape.'  Future cycles may layer a more
+   discriminating signal (PSR-confirmed-activation vs raw-retrieval) on
+   top; v0 surfaces the retrieval count."
+  [{:keys [days]}]
+  (try
+    (let [since-ms (when (and (int? days) (pos? days))
+                     (- (System/currentTimeMillis) (* days 24 60 60 1000)))
+          live-store (or (:evidence-store @mcs/!config) estore/!store)
+          entries (estore/query* live-store {:query/tags [:context-retrieval]})
+          recent? (fn [e]
+                    (or (nil? since-ms)
+                        (when-let [at (:evidence/at e)]
+                          (try
+                            (let [t (cond
+                                      (number? at) (long at)
+                                      (string? at) (.toEpochMilli (java.time.Instant/parse at))
+                                      :else 0)]
+                              (>= t since-ms))
+                            (catch Throwable _ true)))))
+          ;; :evidence/body has STRING keys (it was deserialised from
+          ;; JSON-shaped input that retained literal keys); guard for both
+          ;; shapes so the function is robust across body-source conventions.
+          results-of (fn [e]
+                       (or (get-in e [:evidence/body :results])
+                           (get-in e [:evidence/body "results"])))
+          collection-of (fn [r]
+                          (let [id (or (:id r) (get r "id"))]
+                            (cond
+                              (keyword? id) (namespace id)
+                              (string? id)
+                              (let [i (.indexOf ^String id "/")]
+                                (when (pos? i) (subs id 0 i)))
+                              :else nil)))]
+      (->> entries
+           (filter recent?)
+           (mapcat results-of)
+           (keep collection-of)
+           frequencies))
+    (catch Throwable _ {})))
+
+(defn enrich-patterns-with-activations
+  "Given the WM `data` map and a days window, attach an :activations-Nd count
+   to each collection in :patterns.collections, plus :activations-window-days
+   for the UI to know which window the count covers."
+  [data days]
+  (if (and (map? data) (map? (:patterns data)))
+    (let [activations (derive-pattern-activations {:days days})
+          window-key (keyword (str "activations-" days "d"))]
+      (update-in data [:patterns :collections]
+                 (fn [cols]
+                   (mapv (fn [c]
+                           (let [collection-key (or (some-> (:id c) name)
+                                                    (when (string? (:id c)) (:id c))
+                                                    (:name c))
+                                 n (long (or (get activations collection-key) 0))]
+                             (assoc c
+                                    window-key n
+                                    :activations-window-days days)))
+                         cols))))
+    data))
+
+(def ^:private vsatarcs-aif-path
+  "/home/joe/code/futon4/docs/vsatarcs-alignment-completeness.aif.edn")
+
+(defn- vsatarcs-processed-event-ids
+  "Read VSATARCS bilateral-evidence file and return the set of
+   :writer-event-id strings present.  Used to mark Inhabitation Log
+   events with their VSATARCS-processed status (Joe's emacs-repl
+   request, 2026-05-25: '[E-pilot-vsatarcs-feed] could in principle
+   go into the Inhabitation Log so we would know which items had been
+   processed for VSATARCS').
+
+   Errors absorbed (returns empty set) so a malformed VSATARCS file
+   never breaks the war-machine endpoint."
+  []
+  (try
+    (let [data (-> vsatarcs-aif-path slurp edn/read-string)
+          entries (or (:bilateral-evidence data) [])]
+      (into #{} (keep :writer-event-id) entries))
+    (catch Throwable _ #{})))
+
+(defn- annotate-vsatarcs-status
+  "Decorate each pilot-inhabitation event with :vsatarcs-processed? bool."
+  [events processed-ids]
+  (mapv (fn [ev]
+          (assoc ev :vsatarcs-processed?
+                 (boolean (contains? processed-ids (:id ev)))))
+        events))
+
+(defn derive-pilot-inhabitations
+  "Read futon5a/data/pilot-inhabitations.edn and derive the summary block
+   the War Machine UI's Inhabitation Log card consumes.  Returns a map with
+   :current-inhabitant, :previous-inhabitant, :all-events, :stale?,
+   :source-file.  Errors are absorbed into :stale? true with :error message
+   so a malformed file never breaks the war-machine endpoint.
+
+   Each event in :all-events / :wip-events / :done-events carries a
+   :vsatarcs-processed? flag indicating whether E-pilot-vsatarcs-feed has
+   ingested it (cross-referenced via VSATARCS :writer-event-id)."
+  []
+  (try
+    (let [data (-> pilot-inhabitations-edn-path slurp edn/read-string)
+          processed-ids (vsatarcs-processed-event-ids)
+          events (annotate-vsatarcs-status (vec (:events data)) processed-ids)
+          starts (filter #(= :inhabitation-start (:event %)) events)
+          ends   (filter #(= :inhabitation-end (:event %)) events)
+          latest-by-time (fn [coll]
+                           (->> coll
+                                (sort-by #(or (:at %) (:at-approx %) ""))
+                                last))
+          latest-start (latest-by-time starts)
+          latest-end   (latest-by-time ends)
+          ;; current inhabitant: latest start whose :pilot-agent doesn't
+          ;; appear as the agent of a later :inhabitation-end.
+          start-after-end? (or (nil? latest-end)
+                               (compare (or (:at latest-start)
+                                            (:at-approx latest-start) "")
+                                        (or (:at latest-end)
+                                            (:at-approx latest-end) ""))
+                               0)
+          current-active? (and latest-start
+                               (or (nil? latest-end)
+                                   (> (compare (or (:at latest-start)
+                                                   (:at-approx latest-start) "")
+                                               (or (:at latest-end)
+                                                   (:at-approx latest-end) "")) 0)))
+          current-agent (when current-active? (:pilot-agent latest-start))
+          previous-agent (when latest-end (:pilot-agent latest-end))
+          events-by-agent (fn [agent]
+                            (filter #(= agent (:pilot-agent %)) events))
+          wip-events (when current-agent
+                       (filter #(contains? #{:cycle-in-flight :substrate-creation}
+                                           (:event %))
+                               (events-by-agent current-agent)))
+          done-events (when previous-agent
+                        (filter #(= :cycle-complete (:event %))
+                                (events-by-agent previous-agent)))]
+      {:current-inhabitant  (when current-agent
+                              {:agent       current-agent
+                               :since       (or (:at latest-start)
+                                                (:at-approx latest-start))
+                               :wip-cycles  (count wip-events)
+                               :wip-events  (vec wip-events)})
+       :previous-inhabitant (when previous-agent
+                              {:agent       previous-agent
+                               :ended-at    (or (:at latest-end)
+                                                (:at-approx latest-end))
+                               :done-cycles (count done-events)
+                               :done-events (vec done-events)})
+       :all-events          events
+       :stale?              false
+       :source-file         pilot-inhabitations-edn-path
+       :schema-version      (:schema-version data)})
+    (catch Throwable t
+      {:stale?      true
+       :error       (.getMessage t)
+       :source-file pilot-inhabitations-edn-path})))
+
+;; -- WM operator-clear sentinel ------------------------------------------------
+;;
+;; Operator-side mute for the :stop-the-line override.  When the apparatus
+;; emitting :stop-the-line has been miscalibrated (stale snapshot, tier-
+;; threshold divergence, etc.) the operator can drop a sentinel file to
+;; suppress downstream :stop-the-line propagation until the calibration is
+;; corrected.  Band-aid, NOT the proper fix — see
+;; futon3c/holes/missions/E-wm-staleness-meta-stop.md.
+;;
+;; Sentinel shape (edn at ~/code/storage/futon0/wm-operator-clear.edn):
+;;   {:cleared-at #inst "..."  ;; when set
+;;    :until      #inst "..."  ;; auto-expire
+;;    :reason     "..."        ;; one-liner the operator can read later
+;;    :cleared-by "..."}
+;;
+;; Per CLAUDE.md §9 (never silently swallow), the clear is embedded in the
+;; response under :operator-clear so the override is visible, not hidden.
+
+(def ^:private wm-operator-clear-path
+  (str (System/getProperty "user.home")
+       "/code/storage/futon0/wm-operator-clear.edn"))
+
+(defn read-wm-operator-clear
+  "Read sentinel iff present and :until is in the future. nil otherwise."
+  []
+  (try
+    (let [f (java.io.File. ^String wm-operator-clear-path)]
+      (when (.exists f)
+        (let [data (edn/read-string (slurp f))
+              until (:until data)
+              until-inst (cond
+                           (instance? java.util.Date until)
+                           (.toInstant ^java.util.Date until)
+                           (string? until) (java.time.Instant/parse until)
+                           :else nil)]
+          (when (and until-inst (.isAfter until-inst (java.time.Instant/now)))
+            data))))
+    (catch Exception _ nil)))
+
+(defn downgrade-stl-tier
+  "Map :stop-the-line tier values down to :high.  No-op on other tiers."
+  [tier]
+  (cond
+    (= :stop-the-line tier)  :high
+    (= "stop-the-line" tier) "high"
+    :else                    tier))
+
+(defn downgrade-stl-mode
+  "Map :stop-the-line judgement mode down to :recovery (informational)."
+  [mode]
+  (cond
+    (= :stop-the-line mode)  :recovery
+    (= "stop-the-line" mode) "recovery"
+    :else                    mode))
+
+(defn apply-wm-operator-clear
+  "If an operator-clear sentinel is active, downgrade :stop-the-line tiers
+   across :metabolic-balance / :commit-hygiene and the :judgement :mode so
+   the override stops propagating to the UI.  Sentinel embedded under
+   :operator-clear (visible, not silent)."
+  [{:keys [data judgement] :as bundle}]
+  (if-let [clear (read-wm-operator-clear)]
+    (let [downgrade-coll (fn [coll]
+                           (mapv #(update % :tier downgrade-stl-tier)
+                                 (or coll [])))
+          data' (-> data
+                    (update-in [:metabolic-balance :max-tier] downgrade-stl-tier)
+                    (update-in [:metabolic-balance :per-repo] downgrade-coll)
+                    (update-in [:metabolic-balance :channels] downgrade-coll)
+                    (update-in [:commit-hygiene :max-tier] downgrade-stl-tier)
+                    (update-in [:commit-hygiene :queues] downgrade-coll)
+                    (assoc :operator-clear clear))
+          judgement' (let [m (:mode judgement)]
+                       (if (or (= :stop-the-line m) (= "stop-the-line" m))
+                         (-> judgement
+                             (assoc :mode (downgrade-stl-mode m))
+                             (assoc :operator-cleared? true)
+                             (assoc :pre-clear-mode m))
+                         judgement))]
+      {:data data' :judgement judgement'})
+    bundle))
+
+(defn wm-response-payload
+  "Attach dynamic top-level WM payload fields that are cheap to derive
+   outside the heavyweight scan itself.
+
+   In addition to :pilot-inhabitations, enriches :patterns.collections[]
+   with per-collection :activations-Nd from PSR evidence-store entries in
+   the same days window (M-pattern-application-diagnostic integration,
+   2026-05-25 claude-1)."
+  [{:keys [data judgement] :as bundle}]
+  (let [days (or (get-in data [:window :days])
+                 (get-in data [:window "days"])
+                 14)
+        data' (-> data
+                  (assoc :pilot-inhabitations (derive-pilot-inhabitations))
+                  (enrich-patterns-with-activations days))]
+    (assoc bundle :data data' :judgement judgement)))
+
+(defn wm-scan-age-seconds
+  [as-of]
+  (when as-of
+    (max 0
+         (.getSeconds (java.time.Duration/between ^Instant as-of
+                                                  (Instant/now))))))
+
+(defn- wm-prebuilt-response-body
+  "Inject lightweight freshness metadata into a pre-rendered WM JSON body
+   without re-encoding the entire 10MB+ payload on every request."
+  [snapshot scheduler]
+  (let [as-of (:as-of snapshot)
+        age (wm-scan-age-seconds as-of)
+        body (:body snapshot)]
+    (if (and (string? body) (str/starts-with? body "{"))
+      (str "{\"as-of\":" (json/generate-string (some-> as-of str))
+           ",\"scan-age-seconds\":" (or age "null")
+           ",\"scheduler\":" (json/generate-string scheduler)
+           "," (subs body 1))
+      (json/generate-string
+       (assoc (:payload snapshot)
+              "as-of" (some-> as-of str)
+              "scan-age-seconds" age
+              "scheduler" scheduler)))))
+
+(defn- wm-scheduler-ensure-started! []
+  (try
+    (when-let [f (requiring-resolve 'futon3c.wm.scheduler/ensure-started!)]
+      (f))
+    (catch Throwable _ nil)))
+
+(defn- wm-scheduler-status-snapshot []
+  (try
+    (when-let [f (requiring-resolve 'futon3c.wm.scheduler/status)]
+      (f))
+    (catch Throwable _ nil)))
+
+(defn- wm-scheduler-request-window! [days]
+  (try
+    (when-let [f (requiring-resolve 'futon3c.wm.scheduler/request-window!)]
+      (f days))
+    (catch Throwable _ nil)))
+
+(defn- wm-scheduler-snapshot-for-days [days]
+  (try
+    (when-let [f (requiring-resolve 'futon3c.wm.scheduler/snapshot-for-days)]
+      (f days))
+    (catch Throwable _ nil)))
+
+(defn- handle-war-machine
+  "GET /api/alpha/war-machine[?days=N] — return cached WM JSON snapshot.
+
+   The heavyweight scan runs on a background schedule in
+   `futon3c.wm.scheduler`. HTTP reads the cached atom and returns either
+   the latest snapshot for the requested day-window or a 503 while the
+   background warmup is still in progress.
+
+   Payload now includes :pilot-inhabitations derived from
+   futon5a/data/pilot-inhabitations.edn — the War Machine UI's
+   Inhabitation Log card (which replaced the static Pilot Contract card per
+   M-war-machine-pilot cycle-3, 2026-05-25) reads from this block."
   [request]
   (try
     (let [;; Two-source query-param parsing: the standard Ring form
@@ -3805,20 +4286,27 @@
                                (try (Integer/parseInt v)
                                     (catch NumberFormatException _ nil))))
           days (or days-from-params days-from-qs 14)
-          generate (requiring-resolve 'futon2.report.war-machine/generate-war-machine)]
-      (if generate
-        (let [{:keys [data judgement]} (generate days)
-              payload (stringify-wm-keys (assoc data :judgement judgement))]
-          ;; Same-origin when behind shadow-cljs proxy; CORS for direct dev use.
-          (-> (json-response 200 payload)
+          _ (wm-scheduler-ensure-started!)
+          snapshot (wm-scheduler-snapshot-for-days days)]
+      (if snapshot
+        (let [scheduler (wm-scheduler-status-snapshot)
+              body (wm-prebuilt-response-body snapshot scheduler)]
+          (-> (json-response 200 body)
               (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
-        (json-response 503
-                       {:ok false
-                        :error "futon2.report.war-machine not on classpath"
-                        :hint "add futon2 as a :local/root dep of futon3c"})))
+        (do
+          (wm-scheduler-request-window! days)
+          (-> (json-response 503
+                             {:ok false
+                              :error "war-machine-snapshot-unavailable"
+                              :days days
+                              :retry-after-seconds 60
+                              :scheduler (wm-scheduler-status-snapshot)
+                              :message "war-machine snapshot not ready yet; background warmup started"})
+              (assoc-in [:headers "Access-Control-Allow-Origin"] "*")
+              (assoc-in [:headers "Retry-After"] "60")))))
     (catch Exception e
       (json-response 500 {:ok false
-                          :error "war-machine-scan-failed"
+                          :error "war-machine-snapshot-read-failed"
                           :message (.getMessage e)}))))
 
 ;; =============================================================================
@@ -3947,9 +4435,10 @@
   [config]
   (let [started-at (Instant/now)]
     (fn [request]
-      (let [method (:request-method request)
-            uri (:uri request)]
-        (cond
+      (try
+        (let [method (:request-method request)
+              uri (:uri request)]
+          (cond
           (and (= :post method) (= "/dispatch" uri))
           (handle-dispatch request config)
 
@@ -4264,7 +4753,13 @@
                               "code" "not-found"
                               "message" (str "Unknown endpoint: "
                                             (some-> method name str/upper-case)
-                                            " " uri)}))))))
+                                            " " uri)})))
+        (catch InterruptedException _
+          ;; JVM is tearing down (or a downstream XTDB query thread was
+          ;; interrupted). Convert to a clean 503 instead of letting an
+          ;; ERROR log + stacktrace surface during graceful shutdown.
+          (Thread/interrupted)  ; clear the interrupt flag
+          (json-response 503 {:ok false :error "shutting-down"}))))))
 
 (defn start-server!
   "Start HTTP server on port. Returns {:server stop-fn :port p :started-at t}.
