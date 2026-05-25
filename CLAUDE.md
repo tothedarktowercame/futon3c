@@ -80,6 +80,33 @@ These are hard constraints. Violating any of them is a design error, not a
 tradeoff. If you find yourself reaching for a pattern that conflicts with
 these invariants, stop and rethink.
 
+### I-0: One JVM Is Plenty
+
+**There is exactly one serving JVM on this machine: the futon3c JVM.** It
+hosts the futon3c API (port 7070), the futon1a / substrate-2 hyperedge
+store (7071), the WebArxana app (3100), the War Machine API endpoints
+(`/api/alpha/war-machine`, `/api/alpha/aif-stack/live`, etc., all on 7070),
+and the Drawbridge nREPL-over-HTTP (6768). Everything serves out of this
+one process.
+
+Do **NOT** start a second runtime JVM for any of the apps that have already
+been folded in (WebArxana, War Machine, etc.) — their backends live here.
+A second JVM is only acceptable for short-lived dev tooling like a CLJS
+shadow-cljs watcher when actively editing ClojureScript source; that tool
+exits when you stop editing CLJS, and it serves nothing in the request
+path (futon3c serves the pre-compiled JS as static files).
+
+**Test:** `pgrep java` should return one PID at rest. If you see more
+than one, the second one is either a stale shadow-cljs watcher (kill it)
+or a regression that needs to be folded back in. Historical context:
+this consolidation was completed 2026-05-23 (M-weird-modernism's ARGUE
+round). Before then, three JVMs were running (futon3c, WebArxana
+shadow-cljs, War Machine shadow-cljs); shadow-cljs processes for those
+apps are dev-tooling-only and should not be left running.
+
+**For code reloads inside the futon3c JVM, use Drawbridge nREPL** (per
+`README-drawbridge.md`); do not kill and restart the serving JVM.
+
 ### I-1: Agent Identity Is Singular
 
 One agent = one session = one identity. An agent that is already running is
