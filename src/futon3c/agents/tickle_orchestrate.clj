@@ -123,7 +123,7 @@
   (when evidence-store
     (let [summary (tickle-status evidence-store)
           content (format-status-board summary)]
-      (bb/blackboard! "*Tickle Status*" content {:no-display true})
+      (bb/blackboard! "*Tickle Status*" content {:no-display true :async? true})
       summary)))
 
 (defn- workflow-id [] (str "tko-" (UUID/randomUUID)))
@@ -161,7 +161,7 @@
         (when-let [verdict (:verdict state)]
           (str "Verdict: " (name verdict) "\n"))
         "\nLast updated: " (now-str))
-   {:no-display true}))
+   {:no-display true :async? true}))
 
 (defn report-status!
   "Broadcast a concise orchestration status line and emit supporting evidence.
