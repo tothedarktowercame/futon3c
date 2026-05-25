@@ -19,7 +19,6 @@
    connected-agents) is eliminated by having one authoritative store."
   (:require [clojure.string :as str]
             [futon3c.blackboard :as bb]
-            [futon3c.social.shapes :as shapes]
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
@@ -50,6 +49,7 @@
 
 (def ^:private ws-invoke-timeout-ms 120000)
 (def ^:private external-invoke-fresh-ms 15000)
+(def ^:private surface-projection-fresh-ms 300000)
 
 (def ^:dynamic *resolve-invoke-job-counts*
   "Best-effort resolver for futon3c.transport.http/active-invoke-job-counts.
@@ -685,6 +685,83 @@
   [agent-id-val source]
   (report-external-invoke! agent-id-val source {:status :idle}))
 
+(defn report-surface-projection!
+  "Record or refresh a live agent-facing surface projection.
+
+   SOURCE is a stable surface key such as \"emacs-cursor:editor-main\".
+   PROJECTION is a structured map describing the live read/write surface.
+   Nil or empty projections are rejected; callers should use
+   `clear-surface-projection!` when the surface is no longer active."
+  [agent-id-val source projection]
+  (let [aid-val (agent-id-value agent-id-val)
+        source-key (some-> source str str/trim not-empty)
+        now* (now)
+        normalized (when (map? projection)
+                     (not-empty
+                      (cond-> {}
+                        (some-> (:surface projection) str str/trim not-empty)
+                        (assoc :surface (some-> (:surface projection) str str/trim))
+                        (some-> (:peripheral-id projection) name str/trim not-empty)
+                        (assoc :peripheral-id (keyword (name (:peripheral-id projection))))
+                        (some-> (:editor-id projection) str str/trim not-empty)
+                        (assoc :editor-id (some-> (:editor-id projection) str str/trim))
+                        (some-> (:mode projection) str str/trim not-empty)
+                        (assoc :mode (some-> (:mode projection) str str/trim))
+                        (some-> (:buffer-surface projection) map? boolean)
+                        (assoc :buffer-surface (:buffer-surface projection))
+                        (some-> (:minibuffer-surface projection) map? boolean)
+                        (assoc :minibuffer-surface (:minibuffer-surface projection))
+                        (some-> (:buffer-summary projection) str str/trim not-empty)
+                        (assoc :buffer-summary (some-> (:buffer-summary projection) str str/trim))
+                        (some-> (:write-surface projection) str str/trim not-empty)
+                        (assoc :write-surface (some-> (:write-surface projection) str str/trim))
+                        (some-> (:write-contract projection) str str/trim not-empty)
+                        (assoc :write-contract (some-> (:write-contract projection) str str/trim))
+                        (some-> (:debug projection) map? boolean)
+                        (assoc :debug (:debug projection)))))]
+    (when (and source-key normalized)
+      (swap! !registry
+             (fn [m]
+               (if-let [agent (get m aid-val)]
+                 (let [existing (get-in agent [:agent/surface-projections source-key])
+                       next-projections
+                       (assoc (or (:agent/surface-projections agent) {})
+                              source-key
+                              (merge {:source source-key
+                                      :started-at (or (:started-at existing) now*)
+                                      :updated-at now*}
+                                     normalized))]
+                   (assoc m aid-val
+                          (assoc agent :agent/surface-projections next-projections)))
+                 m)))
+      (bb/project-agents! (registry-status))
+      (broadcast-agents-ws!))
+    {:ok true
+     :agent-id aid-val
+     :source source-key
+     :active? (boolean (and source-key normalized))}))
+
+(defn clear-surface-projection!
+  "Clear a live surface projection for AGENT-ID-VAL and SOURCE."
+  [agent-id-val source]
+  (let [aid-val (agent-id-value agent-id-val)
+        source-key (some-> source str str/trim not-empty)]
+    (when source-key
+      (swap! !registry
+             (fn [m]
+               (if-let [agent (get m aid-val)]
+                 (let [remaining (dissoc (:agent/surface-projections agent) source-key)
+                       agent* (cond-> agent
+                                true (dissoc :agent/surface-projections)
+                                (seq remaining) (assoc :agent/surface-projections remaining))]
+                   (assoc m aid-val agent*))
+                 m)))
+      (bb/project-agents! (registry-status))
+      (broadcast-agents-ws!))
+    {:ok true
+     :agent-id aid-val
+     :source source-key}))
+
 (defn set-invoke-event-sink!
   "Set a streaming event callback for an agent. sink-fn: (fn [event-map])."
   [agent-id-val sink-fn]
@@ -707,6 +784,26 @@
            (if-let [a (get m agent-id-val)]
              (assoc m agent-id-val (dissoc a :agent/invoke-event-sink))
              m))))
+
+(defn- surface-projection-live?
+  [entry]
+  (let [updated-at ^Instant (:updated-at entry)]
+    (and (instance? Instant updated-at)
+         (<= (- (.toEpochMilli (now))
+                (.toEpochMilli updated-at))
+             surface-projection-fresh-ms))))
+
+(defn current-surface-projection
+  "Return the freshest live surface projection for AGENT-ID-VAL, or nil."
+  [agent-id-val]
+  (let [aid-val (agent-id-value agent-id-val)
+        agent (get @!registry aid-val)]
+    (->> (:agent/surface-projections agent)
+         vals
+         (filter surface-projection-live?)
+         (sort-by (fn [entry]
+                    (.toEpochMilli ^Instant (:updated-at entry))))
+         last)))
 
 ;; =============================================================================
 ;; Introspection
@@ -771,6 +868,12 @@
                   (let [base-status (or (:agent/status agent) :idle)
                         routing-info (invoke-routing-info aid agent)
                         external-invoke (freshest-external-invoke agent)
+                        surface-projection (->> (:agent/surface-projections agent)
+                                                vals
+                                                (filter surface-projection-live?)
+                                                (sort-by (fn [entry]
+                                                           (.toEpochMilli ^Instant (:updated-at entry))))
+                                                last)
                         last-heartbeat (:agent/external-heartbeat-at agent)
                         recent-heartbeat?
                         (and (instance? Instant last-heartbeat)
@@ -831,7 +934,10 @@
                            (assoc :invoke-started-at (str invoke-started-at)
                                   :invoke-prompt-preview invoke-prompt-preview)
                            invoke-activity
-                           (assoc :invoke-activity invoke-activity))]))
+                           (assoc :invoke-activity invoke-activity)
+                           surface-projection
+                           (assoc :surface-projection
+                                  (dissoc surface-projection :started-at :updated-at)))]))
                 registry))
      :count (count registry)
      :ws-connected ws-connected
