@@ -113,3 +113,26 @@
           (should (equal "user" (alist-get 'role (alist-get 'body user-turn))))
           (should (equal "hello from first turn"
                          (alist-get 'text (alist-get 'body user-turn)))))))))
+
+(ert-deftest codex-repl-current-progress-status-prefers-live-runtime-state ()
+  (with-temp-buffer
+    (codex-repl-mode)
+    (setq-local codex-repl--thinking-start-time (- (float-time) 42)
+                codex-repl--last-progress-status "Using Bash"
+                codex-repl--runtime-state
+                '((state . "running")
+                  (root-pid . 4242)
+                  (command . "git status")) )
+    (let ((status (codex-repl--current-progress-status)))
+      (should (string-match-p "running pid=4242" status))
+      (should (string-match-p "git status" status))
+      (should (string-match-p "awaiting output" status)))))
+
+(ert-deftest codex-repl-current-progress-status-marks-stale-bash-as-awaiting-runtime ()
+  (with-temp-buffer
+    (codex-repl-mode)
+    (setq-local codex-repl--thinking-start-time (- (float-time) 9)
+                codex-repl--last-progress-status "Using Bash"
+                codex-repl--runtime-state nil)
+    (should (equal (codex-repl--current-progress-status)
+                   "Using Bash (awaiting runtime output)"))))
