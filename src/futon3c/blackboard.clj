@@ -600,7 +600,7 @@
                                    [(:author state) :agent/metadata :emacs-socket])
                            (catch Exception _ nil)))]
           (blackboard! "*mentor*" content
-                       (cond-> {:width 55 :slot 2}
+                       (cond-> {:width 55 :slot 2 :async? true}
                          socket (assoc :emacs-socket socket)))
           (emit-blackboard-evidence! :mentor state content))
         nil)
@@ -913,7 +913,7 @@
 
 (def ^:private expected-daemons
   "Process IDs that should normally be running. Shows ✖ DOWN when absent."
-  #{"fm-conductor" "tickle-watchdog"})
+  #{"fm-conductor" "tickle-watchdog" "process-watchdog"})
 
 (defn format-process-status
   "Format CYDER process registry for blackboard display.
@@ -1002,7 +1002,7 @@
   (when *enabled*
     (try
       (let [content (format-process-status registry-entries)
-            opts (cond-> {:width 60 :slot 1
+            opts (cond-> {:width 60 :slot 1 :async? true
                           :post-elisp processes-highlight-elisp}
                    (external-hud-enabled?)
                    (assoc :no-display true))]
@@ -1055,7 +1055,8 @@
    (when *enabled*
      (try
        (when-let [content (render-blackboard peripheral-id state)]
-         (let [buf-name (str "*" (name peripheral-id) "*")]
+         (let [buf-name (str "*" (name peripheral-id) "*")
+               opts (merge {:async? true} opts)]
            (blackboard! buf-name content opts)
            (emit-blackboard-evidence! peripheral-id state content)
            nil))
