@@ -469,3 +469,148 @@
     (let [n (reg/shutdown-all!)]
       (is (= 5 n))
       (is (= 0 (:count (reg/registry-status)))))))
+
+;; =============================================================================
+;; E-pilot-hop-trigger-wiring tests
+;; =============================================================================
+
+(defn- register-agent-mock! [id]
+  (reg/register-agent!
+   {:agent-id (fix/make-agent-id id)
+    :type :claude
+    :invoke-fn (fn [_p _s] {:result "ok"})
+    :capabilities []}))
+
+(defn- register-peripheral-mock! [id]
+  (reg/register-agent!
+   {:agent-id (fix/make-agent-id id)
+    :type :peripheral
+    :invoke-fn (fn [_p _s] {:result "ok"})
+    :capabilities []}))
+
+(deftest hop-into-vacant-peripheral
+  (testing "Agent can hop into a vacant peripheral; bidirectional pointers set"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "street-sweeper")
+    (let [r (reg/hop! "claude-1" "street-sweeper")]
+      (is (:ok r))
+      (is (= "street-sweeper" (:to r)))
+      (is (nil? (:from r)))
+      (is (= "street-sweeper" (reg/current-peripheral "claude-1")))
+      (is (= "claude-1" (reg/current-inhabitant "street-sweeper")))
+      (is (= ["claude-1"] (vec (map :agent/current-inhabitant
+                                    [(reg/get-agent "street-sweeper")])))))))
+
+(deftest hop-pushes-prev-onto-stack
+  (testing "Hop pushes prev peripheral onto agent's hop-stack"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "war-machine-pilot")
+    (let [r (reg/hop! "claude-1" "street-sweeper")]
+      (is (:ok r))
+      (is (= "war-machine-pilot" (:from r)))
+      (is (= "street-sweeper" (:to r)))
+      (is (= ["war-machine-pilot"] (reg/hop-stack "claude-1")))
+      (is (= "street-sweeper" (reg/current-peripheral "claude-1")))
+      (is (= "claude-1" (reg/current-inhabitant "street-sweeper")))
+      (is (nil? (reg/current-inhabitant "war-machine-pilot"))
+          "Prev peripheral's inhabitant should be cleared after hop"))))
+
+(deftest hop-back-restores-prev
+  (testing "Hop-back pops stack and restores prev inhabitation; pointers reverse"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "war-machine-pilot")
+    (reg/hop! "claude-1" "street-sweeper")
+    (let [r (reg/hop-back! "claude-1")]
+      (is (:ok r))
+      (is (= "street-sweeper" (:from r)))
+      (is (= "war-machine-pilot" (:to r)))
+      (is (= "war-machine-pilot" (reg/current-peripheral "claude-1")))
+      (is (= "claude-1" (reg/current-inhabitant "war-machine-pilot")))
+      (is (nil? (reg/current-inhabitant "street-sweeper")))
+      (is (empty? (reg/hop-stack "claude-1"))))))
+
+(deftest hop-rejects-occupied-peripheral
+  (testing "Foreign-hop-in is rejected when peripheral is occupied by another agent"
+    (register-agent-mock! "claude-1")
+    (register-agent-mock! "claude-2")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "street-sweeper")
+    (let [r (reg/hop! "claude-2" "street-sweeper")]
+      (is (false? (:ok r)))
+      (is (= :peripheral-occupied (:error r)))
+      (is (= "claude-1" (:by r)))
+      ;; Original inhabitant unchanged
+      (is (= "claude-1" (reg/current-inhabitant "street-sweeper")))
+      ;; Foreign agent didn't gain a current-peripheral
+      (is (nil? (reg/current-peripheral "claude-2"))))))
+
+(deftest hop-rejects-unregistered-agent
+  (testing "Hop with unregistered agent fails loudly"
+    (register-peripheral-mock! "street-sweeper")
+    (let [r (reg/hop! "ghost" "street-sweeper")]
+      (is (false? (:ok r)))
+      (is (= :agent-not-registered (:error r))))))
+
+(deftest hop-rejects-unregistered-peripheral
+  (testing "Hop into nonexistent peripheral fails loudly"
+    (register-agent-mock! "claude-1")
+    (let [r (reg/hop! "claude-1" "no-such-peri")]
+      (is (false? (:ok r)))
+      (is (= :peripheral-not-registered (:error r))))))
+
+(deftest hop-rejects-same-peripheral
+  (testing "Hopping into the peripheral the agent is already in is rejected"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "street-sweeper")
+    (let [r (reg/hop! "claude-1" "street-sweeper")]
+      (is (false? (:ok r)))
+      (is (= :hop-to-same-peripheral (:error r))))))
+
+(deftest hop-back-rejects-empty-stack
+  (testing "Hop-back with empty stack fails loudly"
+    (register-agent-mock! "claude-1")
+    (let [r (reg/hop-back! "claude-1")]
+      (is (false? (:ok r)))
+      (is (= :hop-stack-empty (:error r))))))
+
+(deftest bidirectional-pointer-consistency-property
+  (testing "After any sequence of hop! / hop-back!, agent.current-peripheral
+            == peripheral.current-inhabitant invariant holds"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (register-peripheral-mock! "street-sweeper")
+    (register-peripheral-mock! "night-shift")
+    (let [ops [(fn [] (reg/hop! "claude-1" "war-machine-pilot"))
+               (fn [] (reg/hop! "claude-1" "street-sweeper"))
+               (fn [] (reg/hop-back! "claude-1"))
+               (fn [] (reg/hop! "claude-1" "night-shift"))
+               (fn [] (reg/hop-back! "claude-1"))
+               (fn [] (reg/hop-back! "claude-1"))]]
+      (doseq [op ops]
+        (op)
+        (let [agent-peri (reg/current-peripheral "claude-1")]
+          (if agent-peri
+            (is (= "claude-1" (reg/current-inhabitant agent-peri))
+                (str "After op, agent points at " agent-peri
+                     " but " agent-peri " says inhabitant = "
+                     (reg/current-inhabitant agent-peri)))
+            ;; If agent is not in any peripheral, no peripheral should
+            ;; claim them as inhabitant.
+            (doseq [p ["war-machine-pilot" "street-sweeper" "night-shift"]]
+              (is (not= "claude-1" (reg/current-inhabitant p))
+                  (str "Agent is in NO peripheral but " p
+                       " still claims them as inhabitant")))))))))
+
+(deftest legal-self-rehop-blocked-as-noop
+  (testing "An agent attempting to hop into its own current peripheral is
+            rejected with :hop-to-same-peripheral (R4: loud failure, not silent no-op)"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (reg/hop! "claude-1" "war-machine-pilot")
+    (let [r (reg/hop! "claude-1" "war-machine-pilot")]
+      (is (false? (:ok r))))))

@@ -262,6 +262,17 @@
                       :agent/registered-at ts
                       :agent/last-active ts
                       :agent/ttl-ms ttl-ms
+                      ;; E-pilot-hop-trigger-wiring: agent-side fields for
+                      ;; the bidirectional hop pointer (claude-2 A1 in
+                      ;; ~/code/storage/hop-wiring-scratch.md).  Default
+                      ;; nil/[] so existing agents are unaffected.
+                      :agent/current-peripheral nil
+                      :agent/hop-stack []
+                      ;; Peripheral-side field (only populated when this
+                      ;; record represents a :type :peripheral entry).
+                      ;; Bidirectional pointer back to the agent currently
+                      ;; inhabiting this peripheral.
+                      :agent/current-inhabitant nil
                       :agent/metadata (merge {:agency/contracts {:bell-on-complete? (boolean invoke-fn)}}
                                              (or metadata {}))}
         ;; R2: Atomic check-and-set — reject duplicate, don't overwrite
@@ -342,6 +353,195 @@
                                     (str "Agent not registered: " aid-val))})
                    m))))
     @result))
+
+;; =============================================================================
+;; E-pilot-hop-trigger-wiring: bidirectional hop primitives
+;; =============================================================================
+;;
+;; war-machine-pilot ⇄ {street-sweeper, night-shift, ...} transition mechanic.
+;; Spec: futon3c/holes/missions/E-pilot-hop-trigger-wiring.md.
+;; Co-design: claude-2 A1 in ~/code/storage/hop-wiring-scratch.md.
+;;
+;; Hop semantics: an AGENT (e.g. claude-1) inhabits a PERIPHERAL (e.g.
+;; war-machine-pilot).  A hop transitions the agent's inhabitation to a
+;; new peripheral (e.g. street-sweeper) while pushing the prior one onto
+;; the agent's hop-stack.  Hop-back pops the stack.
+;;
+;; The pointer is BIDIRECTIONAL: agent records carry :current-peripheral
+;; + :hop-stack; peripheral records carry :current-inhabitant.  Both sides
+;; updated atomically in a single swap! so there is no consistency window.
+;;
+;; Foreign-hop-in rejection (operator-approved hard mode, design choice
+;; #2 in the spec): if the destination peripheral's :current-inhabitant
+;; is non-nil AND not the requesting agent, the hop is rejected.
+
+(defn- hop-update-agent
+  [agent prev-peri new-peri]
+  (-> agent
+      (assoc :agent/current-peripheral new-peri)
+      ;; Only push prev onto stack if there WAS a prev; pushing nil
+      ;; would corrupt subsequent hop-back operations.
+      (update :agent/hop-stack
+              (fn [stack]
+                (let [s (or stack [])]
+                  (if prev-peri (conj s prev-peri) s))))
+      (assoc :agent/last-active (now))))
+
+(defn- hop-back-update-agent
+  [agent]
+  (let [stack (or (:agent/hop-stack agent) [])
+        prev  (peek stack)
+        rest  (if (seq stack) (pop stack) [])]
+    {:agent (-> agent
+                (assoc :agent/current-peripheral prev)
+                (assoc :agent/hop-stack rest)
+                (assoc :agent/last-active (now)))
+     :popped prev}))
+
+(defn hop!
+  "Transition AGENT-ID's inhabitation to NEW-PERIPHERAL-ID.
+
+   Bidirectional atomic update of both registry records:
+     agent : :current-peripheral <- new; :hop-stack <- conj prev
+     new peripheral : :current-inhabitant <- agent
+     prev peripheral (if any) : :current-inhabitant <- nil (only if it was the agent)
+
+   Foreign-hop-in rejection: if new peripheral's :current-inhabitant is
+   non-nil and != agent, hop is rejected with :error :peripheral-occupied.
+
+   Returns:
+     {:ok true :from <prev-peri-id-or-nil> :to <new-peri-id> :agent-id ...}
+     {:ok false :error :peripheral-occupied :by <other-agent-id>}
+     {:ok false :error :agent-not-registered}
+     {:ok false :error :peripheral-not-registered}
+     {:ok false :error :hop-to-same-peripheral} (no-op rejected loudly per R4)"
+  [agent-id new-peripheral-id]
+  (let [aid-val (agent-id-value agent-id)
+        peri-val (agent-id-value new-peripheral-id)
+        result (atom nil)]
+    (swap!
+     !registry
+     (fn [m]
+       (let [agent (get m aid-val)
+             new-peri (get m peri-val)]
+         (cond
+           (nil? agent)
+           (do (reset! result {:ok false
+                               :error :agent-not-registered
+                               :agent-id aid-val})
+               m)
+
+           (nil? new-peri)
+           (do (reset! result {:ok false
+                               :error :peripheral-not-registered
+                               :peripheral-id peri-val})
+               m)
+
+           (= peri-val (:agent/current-peripheral agent))
+           (do (reset! result {:ok false
+                               :error :hop-to-same-peripheral
+                               :peripheral-id peri-val})
+               m)
+
+           (and (some? (:agent/current-inhabitant new-peri))
+                (not= aid-val (:agent/current-inhabitant new-peri)))
+           (do (reset! result {:ok false
+                               :error :peripheral-occupied
+                               :peripheral-id peri-val
+                               :by (:agent/current-inhabitant new-peri)})
+               m)
+
+           :else
+           (let [prev-peri (:agent/current-peripheral agent)
+                 agent'    (hop-update-agent agent prev-peri peri-val)
+                 new-peri' (assoc new-peri :agent/current-inhabitant aid-val)
+                 m'        (-> m
+                               (assoc aid-val agent')
+                               (assoc peri-val new-peri'))
+                 ;; Clear prev peripheral's inhabitant only if it was the
+                 ;; agent we are hopping (defensive — should always be).
+                 m''       (if (and prev-peri (get m' prev-peri))
+                             (update m' prev-peri
+                                     (fn [p]
+                                       (if (= aid-val (:agent/current-inhabitant p))
+                                         (assoc p :agent/current-inhabitant nil)
+                                         p)))
+                             m')]
+             (reset! result {:ok true
+                             :from prev-peri
+                             :to peri-val
+                             :agent-id aid-val})
+             m'')))))
+    @result))
+
+(defn hop-back!
+  "Pop AGENT-ID's :hop-stack and return inhabitation to the previous
+   peripheral.  Single atomic swap! restoring bidirectional pointers.
+
+   Returns:
+     {:ok true :from <current-peri> :to <prev-peri-or-nil> :agent-id ...}
+     {:ok false :error :hop-stack-empty}
+     {:ok false :error :agent-not-registered}"
+  [agent-id]
+  (let [aid-val (agent-id-value agent-id)
+        result (atom nil)]
+    (swap!
+     !registry
+     (fn [m]
+       (let [agent (get m aid-val)]
+         (cond
+           (nil? agent)
+           (do (reset! result {:ok false
+                               :error :agent-not-registered
+                               :agent-id aid-val})
+               m)
+
+           (empty? (:agent/hop-stack agent))
+           (do (reset! result {:ok false
+                               :error :hop-stack-empty
+                               :agent-id aid-val})
+               m)
+
+           :else
+           (let [current-peri (:agent/current-peripheral agent)
+                 {:keys [agent popped]} (hop-back-update-agent agent)
+                 m'           (assoc m aid-val agent)
+                 ;; Clear current peripheral's :current-inhabitant if it
+                 ;; was the agent (defensive).
+                 m''          (if (and current-peri (get m' current-peri))
+                                (update m' current-peri
+                                        (fn [p]
+                                          (if (= aid-val (:agent/current-inhabitant p))
+                                            (assoc p :agent/current-inhabitant nil)
+                                            p)))
+                                m')
+                 ;; Set popped (= new current) peripheral's
+                 ;; :current-inhabitant to the agent.
+                 m'''         (if (and popped (get m'' popped))
+                                (assoc-in m'' [popped :agent/current-inhabitant] aid-val)
+                                m'')]
+             (reset! result {:ok true
+                             :from current-peri
+                             :to popped
+                             :agent-id aid-val})
+             m''')))))
+    @result))
+
+(defn current-peripheral
+  "Return AGENT-ID's currently-inhabited peripheral id, or nil."
+  [agent-id]
+  (:agent/current-peripheral (get @!registry (agent-id-value agent-id))))
+
+(defn current-inhabitant
+  "Return PERIPHERAL-ID's current-inhabitant agent id, or nil."
+  [peripheral-id]
+  (:agent/current-inhabitant (get @!registry (agent-id-value peripheral-id))))
+
+(defn hop-stack
+  "Return AGENT-ID's hop-stack (vector of peripheral ids; top of stack
+   is the last-departed peripheral)."
+  [agent-id]
+  (or (:agent/hop-stack (get @!registry (agent-id-value agent-id))) []))
 
 (defn reset-session!
   "Clear an agent's session-id so the next invoke starts a fresh conversation.
