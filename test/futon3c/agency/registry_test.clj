@@ -16,7 +16,10 @@
   :each
   (fn [f]
     (reg/reset-registry!)
-    (f)))
+    ;; Suppress live-file pollution during tests: hop! / hop-back!
+    ;; would otherwise append entries to pilot-inhabitations.edn.
+    (binding [reg/*enable-hop-event-emission?* false]
+      (f))))
 
 ;; =============================================================================
 ;; Ported from futon3: timeout enforcement

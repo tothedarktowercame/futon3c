@@ -2382,6 +2382,47 @@
                                   :message (.getMessage t)}))))))))
 
 
+;; -- E-pilot-hop-trigger-wiring §(5): agency hop HTTP endpoints --------------
+;;
+;; Thin wrappers around futon3c.agency.registry/hop! and hop-back!.  Body:
+;;   POST /api/alpha/agency/hop      {"agent-id": "claude-1", "to-peripheral": "street-sweeper"}
+;;   POST /api/alpha/agency/hop-back {"agent-id": "claude-1"}
+;;
+;; Returns the registry result + (best-effort) the emitted hop-event id.
+
+(defn- handle-agency-hop
+  [request]
+  (try
+    (let [body  (parse-json-map (read-body request))
+          aid   (some-> (get body :agent-id) str)
+          peri  (some-> (get body :to-peripheral) str)]
+      (cond
+        (str/blank? aid)
+        (json-response 400 {:ok false :error "missing-agent-id"})
+
+        (str/blank? peri)
+        (json-response 400 {:ok false :error "missing-to-peripheral"})
+
+        :else
+        (let [hop! (requiring-resolve 'futon3c.agency.registry/hop!)
+              r    (hop! aid peri)]
+          (json-response (if (:ok r) 200 409) r))))
+    (catch Exception e
+      (json-response 500 {:ok false :error (.getMessage e)}))))
+
+(defn- handle-agency-hop-back
+  [request]
+  (try
+    (let [body (parse-json-map (read-body request))
+          aid  (some-> (get body :agent-id) str)]
+      (if (str/blank? aid)
+        (json-response 400 {:ok false :error "missing-agent-id"})
+        (let [hop-back! (requiring-resolve 'futon3c.agency.registry/hop-back!)
+              r         (hop-back! aid)]
+          (json-response (if (:ok r) 200 409) r))))
+    (catch Exception e
+      (json-response 500 {:ok false :error (.getMessage e)}))))
+
 (defn- handle-bell
   "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
    Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":1800000}
@@ -4505,6 +4546,13 @@
 
           (and (= :post method) (= "/api/alpha/bell" uri))
           (handle-bell request config)
+
+          ;; E-pilot-hop-trigger-wiring §(5): agency hop endpoints
+          (and (= :post method) (= "/api/alpha/agency/hop" uri))
+          (handle-agency-hop request)
+
+          (and (= :post method) (= "/api/alpha/agency/hop-back" uri))
+          (handle-agency-hop-back request)
 
           (and (= :get method) (= "/api/alpha/invoke/jobs" uri))
           (handle-invoke-jobs request)

@@ -398,6 +398,24 @@
                 (assoc :agent/last-active (now)))
      :popped prev}))
 
+(def ^:dynamic *enable-hop-event-emission?*
+  "Whether hop! / hop-back! emit :hop-in / :hop-out entries to
+   pilot-inhabitations.edn.  Default true (production).  Tests rebind
+   to false to avoid polluting the live substrate."
+  true)
+
+(defn- emit-hop-event!
+  "Lazily call futon3c.agency.hop-events/log-hop-event! to append a
+   :hop-in / :hop-out entry to pilot-inhabitations.edn.  Lazy require
+   avoids a compile-time cycle.  Errors are swallowed (the registry
+   transition has already succeeded; substrate-write is best-effort)."
+  [event-kind payload]
+  (when *enable-hop-event-emission?*
+    (try
+      (when-let [f (requiring-resolve 'futon3c.agency.hop-events/log-hop-event!)]
+        (f event-kind payload))
+      (catch Throwable _ nil))))
+
 (defn hop!
   "Transition AGENT-ID's inhabitation to NEW-PERIPHERAL-ID.
 
@@ -472,7 +490,13 @@
                              :to peri-val
                              :agent-id aid-val})
              m'')))))
-    @result))
+    (let [r @result]
+      (when (:ok r)
+        (emit-hop-event! :hop-in
+                         {:agent-id (:agent-id r)
+                          :from-peri (:from r)
+                          :to-peri (:to r)}))
+      r)))
 
 (defn hop-back!
   "Pop AGENT-ID's :hop-stack and return inhabitation to the previous
@@ -525,7 +549,13 @@
                              :to popped
                              :agent-id aid-val})
              m''')))))
-    @result))
+    (let [r @result]
+      (when (:ok r)
+        (emit-hop-event! :hop-out
+                         {:agent-id (:agent-id r)
+                          :from-peri (:from r)
+                          :to-peri (:to r)}))
+      r)))
 
 (defn current-peripheral
   "Return AGENT-ID's currently-inhabited peripheral id, or nil."
