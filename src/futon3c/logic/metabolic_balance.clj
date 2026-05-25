@@ -336,7 +336,7 @@
 
       (do
         (println "================================================================")
-        (println (str "[metabolic-balance] " label " LOAD-TIME CHECK FAILED"))
+        (println (str "[metabolic-balance] " label " LOAD-TIME WARNING"))
         (when max-tier
           (println (str "              max-tier: " (name max-tier)
                         "   max-P: " (format "%.2f" (or max-pressure 0.0)))))
@@ -353,7 +353,7 @@
                                (:count v)
                                (:max-age-days v)
                                (:total-bytes v))))))
-        (println "              Boot continues; the violation is recorded as evidence.")
+        (println "              Boot continues; the warning is recorded as evidence.")
         (println "================================================================")))))
 
 (defn- run-load-time-check!

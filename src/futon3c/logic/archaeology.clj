@@ -237,58 +237,71 @@
   (or (get-in entry [:evidence/body :track-id])
       (get-in entry [:evidence/body "track-id"])))
 
+(defn- newer-entry?
+  [candidate prior]
+  (let [candidate-at (some-> candidate :evidence/at str)
+        prior-at (some-> prior :evidence/at str)]
+    (cond
+      (nil? prior) true
+      (and candidate-at prior-at) (pos? (compare candidate-at prior-at))
+      candidate-at true
+      :else false)))
+
 (defn check-pipeline-tracer-obsolescence
   "Probe check-fn for `obsolescence-recognition/pipeline-tracer`.
 
    Subsumption test: an open `:pipeline-tracer-item` is obsolete when
-     (a) a matching `:pipeline-tracer-closed` evidence entry exists with
-         the same :track-id (work concluded; tracer should retire), OR
-     (b) target-date is past and no close-emit exists (tracer overdue;
-         operator hasn't decided whether to extend or close)."
+     its latest tracer event is still `:pipeline-tracer-item` AND its
+     target-date is past (tracer overdue; operator hasn't decided whether
+     to extend or close).
+
+   Append-only evidence means historical `:pipeline-tracer-item` entries
+   remain queryable forever. A later `:pipeline-tracer-closed` entry
+   supersedes that open state; it should not cause a permanent boot-time
+   violation just because the older open record still exists."
   []
   (fn [evidence-store]
     (try
       (let [open (query-by-tags evidence-store [:pipeline-tracer :open])
             closed (query-by-tags evidence-store [:pipeline-tracer :closed])
-            closed-track-ids (set (keep entry-track-id closed))
-            ;; Dedupe open by track-id (latest wins).
-            open-by-track (reduce
-                           (fn [acc e]
-                             (let [tid (entry-track-id e)
-                                   prior (get acc tid)]
-                               (if (or (nil? prior)
-                                       (and (:evidence/at e)
-                                            (:evidence/at prior)
-                                            (pos? (compare (str (:evidence/at e))
-                                                           (str (:evidence/at prior))))))
-                                 (assoc acc tid e)
-                                 acc)))
-                           {} open)
+            latest-by-track (reduce
+                             (fn [acc [state entry]]
+                               (let [tid (entry-track-id entry)
+                                     prior (get acc tid)]
+                                 (if (and tid (newer-entry? entry (:entry prior)))
+                                   (assoc acc tid {:state state :entry entry})
+                                   acc)))
+                             {}
+                             (concat (map #(vector :open %) open)
+                                     (map #(vector :closed %) closed)))
+            open-by-track (into {}
+                                (keep (fn [[tid {:keys [state entry]}]]
+                                        (when (= :open state)
+                                          [tid entry])))
+                                latest-by-track)
+            closed-count (count (filter #(= :closed (:state (val %))) latest-by-track))
             obsolete
             (vec
              (for [[tid entry] open-by-track
                    :when tid
                    :let [target (or (get-in entry [:evidence/body :target-date])
                                     (get-in entry [:evidence/body "target-date"]))
-                         closed? (contains? closed-track-ids tid)
                          past-due? (past-target-date? target)]
-                   :when (or closed? past-due?)]
+                   :when past-due?]
                {:class :pipeline-tracer
                 :track-id tid
                 :target-date target
-                :superseded-by (cond
-                                 closed? "matching :pipeline-tracer-closed entry"
-                                 past-due? (str "past target-date " target
-                                                "; no close-emit"))}))]
+                :superseded-by (str "past target-date " target
+                                    "; no close-emit")}))]
         (if (empty? obsolete)
           {:outcome :ok
            :detail {:open-count (count open-by-track)
-                    :closed-count (count closed-track-ids)
+                    :closed-count closed-count
                     :obsolete-count 0
                     :invariant I-obsolescence-recognition}}
           {:outcome :violation
            :detail {:open-count (count open-by-track)
-                    :closed-count (count closed-track-ids)
+                    :closed-count closed-count
                     :obsolete-count (count obsolete)
                     :obsolete-artifacts obsolete
                     :invariant I-obsolescence-recognition}}))
@@ -340,9 +353,9 @@
 
       (do
         (println "================================================================")
-        (println (str "[archaeology] " label " LOAD-TIME CHECK FAILED"))
+        (println (str "[archaeology] " label " LOAD-TIME WARNING"))
         (println (str "              detail: " (pr-str detail)))
-        (println "              Boot continues; the violation is recorded as evidence.")
+        (println "              Boot continues; the warning is recorded as evidence.")
         (println "================================================================")))))
 
 (defn- run-load-time-check!
