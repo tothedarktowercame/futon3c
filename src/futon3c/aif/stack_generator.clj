@@ -473,13 +473,50 @@
                    (java.time.Instant/now)))
       (catch Throwable _ nil))))
 
+(def ^:private live-rec-tied-epsilon
+  "G-total distance under which two ranked-actions are considered tied
+   for display purposes (suppress false specificity in the live tile).
+   The WM's EFE math frequently yields exact ties (5 sibling sorries
+   with identical channel-gap contributions); 1e-3 covers exact + near-
+   exact cases."
+  1.0e-3)
+
+(defn- tied-prefix
+  "Return the prefix of RANKED-ACTIONS whose G-total is within EPS of
+   top-1's G-total.  Caller decides what to do with the count (display
+   as tied-bucket when > 1; single-action when = 1)."
+  [ranked-actions eps]
+  (when-let [top (first ranked-actions)]
+    (let [top-g (ranked-entry-g-total top)]
+      (->> ranked-actions
+           (take-while (fn [r]
+                         (let [g (ranked-entry-g-total r)]
+                           (and (number? g) (number? top-g)
+                                (< (Math/abs (- g top-g)) eps)))))
+           vec))))
+
+(defn- ranked-entry->tile-entry
+  "Project a ranked-action into the slim form the cljs tile renders for
+   the tied-bucket display."
+  [entry]
+  (let [a (ranked-entry-action entry)
+        g (ranked-entry-g-total entry)]
+    {:rank         (ranked-entry-rank entry)
+     :G-total      g
+     :G-display    (when (number? g) (format "%.3f" (double g)))
+     :specifically (action->specifically a)
+     :action       a
+     :rationale    (or (:rationale a) (get a "rationale"))}))
+
 (defn derive-next-move-live
   "Project the top of judgement.ranked-actions into the next-move-tile shape.
 
    Returns a map with :action, :rank, :G-total, :specifically, :rationale,
    :alternatives-considered, :priorities, :mode, :source, :as-of,
-   :scheduler-period-seconds, :age-seconds, :stale?, :note — or nil if no
-   live snapshot is available.
+   :scheduler-period-seconds, :age-seconds, :stale?, :note,
+   :tied-actions (vec of slim ranked-entry projections — count is 1 when
+   top-1 has no near-equal siblings, > 1 when WM has tied options),
+   :tied-count — or nil if no live snapshot is available.
 
    Stale? is true when the snapshot is older than 2× the scheduler period
    (default period 300s → stale at >600s).  The cljs tile uses :stale? to
@@ -500,7 +537,10 @@
            ;; Period defaults to 300; we don't import the scheduler ns here
            ;; to keep stack-generator's surface minimal.
            period-s 300
-           stale? (when (number? age-s) (> age-s (* 2 period-s)))]
+           stale? (when (number? age-s) (> age-s (* 2 period-s)))
+           tied (tied-prefix ranked live-rec-tied-epsilon)
+           tied-actions (mapv ranked-entry->tile-entry tied)
+           tied-count (count tied-actions)]
        (when top-action
          {:action top-action
           :rank (or (ranked-entry-rank top) 1)
@@ -517,6 +557,13 @@
           :scheduler-period-seconds period-s
           :age-seconds age-s
           :stale? (boolean stale?)
+          ;; E-wm-live-recommendation v1.1: tied-bucket display.
+          ;; When the WM's EFE has multiple actions at near-equal G-total,
+          ;; surface the whole bucket so the cljs tile doesn't falsely
+          ;; promote rank-1 as if it were a real preference.
+          :tied-actions tied-actions
+          :tied-count tied-count
+          :tied-epsilon live-rec-tied-epsilon
           :note (str "Recomputed every WM scheduler tick (default "
                      period-s "s). See E-wm-live-recommendation.md.")})))))
 
