@@ -308,3 +308,115 @@ is the surface that enforces this; the CLI is the surface that violates it.
 
 The mission succeeds when the evidence debt from CLI usage drops to zero
 because the REPL is simply better to use.
+
+## 2026-05-25: Cursor-Control Latency Fix (claude-repl path)
+
+A long-standing felt symptom — "1-2-3-crocodile" delays before the cursor
+takes control in `*claude-repl:claude-N*` buffers, occasionally manifesting
+as full 8+ second Emacs blackouts — was instrumented, attributed, and
+patched. The Codex-REPL side likely has analogous problems but is being
+held off because Codex is currently self-improving its REPL surface;
+return here once that work settles.
+
+### Diagnostic chain
+
+1. **`emacs/joe-input-trace.el`** (new) — command-loop tracer with three
+   wrap layers: `pre/post-command-hook`, `timer-event-handler` via
+   `advice-add :around`, and around-advice on specific process-filter
+   symbols (`eat--filter`, `url-http-generic-filter`, `jsonrpc--process-filter`,
+   `comint-output-filter`, `internal-default-process-filter`,
+   `url-retrieve-synchronously`). Records to `*joe-input-trace*` buffer
+   with no per-event disk I/O. M-x `joe-input-trace-{enable,disable,dump,clear}`.
+2. **First live trace** showed three stalls of 1.6-2 s where keys queued
+   (`input-pending=t`) but neither commands nor timers fired during the
+   gap. With the timer + filter tracer enabled, the next trace caught an
+   8.5 s blackout with **zero elisp activity inside it** — no timer firings,
+   no filter firings, no commands. The Emacs main loop itself was blocked
+   at the C level.
+3. **Static diff** between the stalled buffer (`*claude-repl:claude-10*`,
+   `claude-repl-mode`) and the responsive one (`*codex-repl:codex-8*`,
+   `codex-repl-mode`) revealed `cursor-sensor-mode` on in claude-10 with
+   **652 text-property regions** carrying `claude-repl--tool-overlay-sensor`,
+   vs zero such regions in codex-8. That's the "buffer where control was
+   established vs not yet established" distinction Joe felt — really two
+   different mode setups.
+4. **Automated bench** — `joe-input-trace-bench-sensor-cycle` jumps point
+   through tool-overlay regions, forces synchronous `(redisplay t)`,
+   measures wall-clock per phase. Reproducible without live typing, so
+   any fix can be verified by re-running one command. With sensor mode
+   on: **~130 ms per cycle**. With sensor mode off: 6-7 ms. 20× slowdown
+   attributable to the mode.
+5. **CPU profile of the bench** named the actual hotspots in
+   `agent-chat.el`:
+   - `(require 'posframe nil t)` called on every popup-show AND every
+     popup-hide; posframe isn't installed, but `require` still does a
+     load-path scan each call. **39 % of CPU.**
+   - `(special-mode)` re-invoked on the popup buffer every show,
+     re-firing `global-corfu-mode-enable-in-buffer` and the rest of the
+     global mode-enable hooks. **10 % of CPU.**
+
+### Fix
+
+Two-line cache in `emacs/agent-chat.el`:
+
+- `agent-chat--posframe-available` defvar set once at load time; show/hide
+  consult the cache instead of re-`require`-ing.
+- `(unless (derived-mode-p 'special-mode) (special-mode))` so mode setup
+  only runs on first popup creation.
+
+Sympathetic patch in `emacs/claude-repl.el`: debounced
+`claude-repl--tool-overlay-sensor` via `run-with-idle-timer` so popup-show
+schedules on a 0.15 s idle rather than firing every redisplay tick.
+Smaller win once `agent-chat.el` was fixed, but still prevents popup
+flashing during fast cursor traversal across many regions.
+
+### Result
+
+| Bench (claude-7, 1763 sensor regions, 389 KB) | Before | After |
+|---|---|---|
+| Steady-state per sensor cycle | ~130 ms | **0 ms** |
+| First-iter baseline (big-jump redisplay) | ~1900 ms | ~1900 ms (unrelated) |
+| Popup content correctness | rendered | rendered (verified) |
+
+Reload protocol: `emacsclient --eval '(load-file "/home/joe/code/futon3c/emacs/agent-chat.el")'`
+then same for `claude-repl.el`. No JVM restart; smart-cursor instance
+state preserved.
+
+### Hypothesis for Codex-REPL (return here later)
+
+`codex-repl-mode` doesn't install `cursor-sensor-functions` text properties,
+so the *specific* cursor-sensor stall mechanism doesn't apply. But:
+
+- Codex-REPL surfaces have their own popup paths via the same
+  `agent-chat.el` infrastructure (`agent-chat-popup-show / -hide`,
+  `agent-chat-update-progress`) — so the `(require 'posframe nil t)`
+  load-path scan cost was hitting them too. The agent-chat.el patch
+  *already* benefits codex-repl indirectly; no separate change needed
+  for that hotspot.
+- The recurring `codex-repl--refresh-invoke-dashboard` timer (~500 ms
+  cadence; visible in the live trace as the `chat-buffer` anonymous
+  timer firing into `*codex-repl:codex-8*`) calls `agent-chat-update-progress`
+  on each tick. If that path does any synchronous redisplay or
+  window-fitting work, it would manifest as periodic stutter (different
+  signature from the claude-repl burst, but same family).
+- The blackboard-backpressure pattern (futon3c hot paths blocking on
+  emacsclient round-trips) could also surface here, but is mostly out
+  of scope for REPL-side fixes.
+
+When Codex's own self-improvement work settles, the procedure is:
+
+1. Run `joe-input-trace-enable`, drive Codex-REPL through its typical
+   load (long agent reply with many tool calls, plus user typing
+   alongside), dump.
+2. Look for `input-pending=t` gaps and per-timer elapsed-ms outliers,
+   especially `codex-repl--refresh-invoke-dashboard` and any anonymous
+   chat-buffer timers.
+3. If a hotspot surfaces, CPU profile the suspect path with `(profiler-start
+   'cpu)` and search the calltree for `(require ...)` and any `run-mode-hooks`
+   re-invocation.
+4. Verify with the bench harness — `joe-input-trace-bench` (simple insert)
+   or a Codex-specific cycle bench built on the same primitives.
+
+The bench harness itself is the durable artifact. Any future
+perceived-latency regression in any agent-chat-backed REPL buffer can be
+caught by re-running it.
