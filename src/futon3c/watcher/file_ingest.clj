@@ -31,6 +31,7 @@
 (def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 (def FUTON3C   (or (System/getenv "FUTON3C_URL") "http://localhost:7070"))
+(def ^:private home (System/getProperty "user.home"))
 
 (def ^:private mission-doc-pattern
   #"/holes/missions/M-[^/]+\.md$")
@@ -41,10 +42,14 @@
 (def ^:private mission-cross-ref-type
   "code/v05/mission-cross-ref")
 
+(def ^:private file-to-mission-type
+  "code/v05/file→mission")
+
 (def directed-types
   #{"code/v05/calls" "code/v05/coverage" "code/v05/vocabulary-use"
     "code/v05/term-defines" "code/v05/contains"
-    "code/v05/related-mission"})
+    "code/v05/related-mission"
+    "code/v05/file→mission"})
 
 (defn directed-endpoints [hx-type endpoints]
   (if (and (directed-types hx-type) (= 2 (count endpoints)))
@@ -318,6 +323,35 @@
   [mission-name]
   (str/replace-first (str mission-name) #"^M-" ""))
 
+(defn- normalize-path
+  [path]
+  (str/replace (str path) "\\" "/"))
+
+(defn- split-repo-and-relative
+  [rest-path]
+  (when (and (string? rest-path) (not (str/blank? rest-path)))
+    (let [[repo rel] (str/split rest-path #"/" 2)]
+      (when (and repo rel (not (str/blank? repo)) (not (str/blank? rel)))
+        [repo rel]))))
+
+(defn normalize-file-endpoint
+  "Normalize an absolute file path onto the substrate-2 file endpoint
+   convention `<repo-label>/file/<relative-path>`."
+  [path]
+  (let [norm (normalize-path path)
+        code-prefix (str home "/code/")
+        home-prefix (str home "/")]
+    (cond
+      (str/starts-with? norm code-prefix)
+      (when-let [[repo rel] (split-repo-and-relative (subs norm (count code-prefix)))]
+        (str repo "-d/file/" rel))
+
+      (str/starts-with? norm home-prefix)
+      (when-let [[repo rel] (split-repo-and-relative (subs norm (count home-prefix)))]
+        (str repo "-d/file/" rel))
+
+      :else nil)))
+
 (defn- local-name-from-registry-id
   [registry-id]
   (let [raw (cond
@@ -374,6 +408,53 @@
            "mission/target-id" (normalize-mission-id mission-name)
            "mission/target-external-id" (str mission-name)
            "relation/source-field" "related-missions"}})
+
+(defn- file-to-mission-edge-id
+  [source-endpoint target-endpoint]
+  (str "hx:" file-to-mission-type ":" source-endpoint ":" target-endpoint))
+
+(defn- file-to-mission-edge-doc
+  [path mission-repo-label mission-id source-path source-endpoint target-endpoint]
+  {:id (file-to-mission-edge-id source-endpoint target-endpoint)
+   :hx-type file-to-mission-type
+   :endpoints [source-endpoint target-endpoint]
+   :labels ["v05" "phase-4.5"
+            (or (some-> source-endpoint
+                        (str/split #"/file/" 2)
+                        first)
+                mission-repo-label)
+            "file→mission"]
+   :props {"repo" (or (some-> source-endpoint
+                              (str/split #"/file/" 2)
+                              first)
+                      mission-repo-label)
+           "phase" 4.5
+           "source-file" path
+           "file/source-path" source-path
+           "file/source-endpoint" source-endpoint
+           "mission/target-id" mission-id
+           "mission/target-endpoint" target-endpoint
+           "relation/source-field" "mission/code-paths"}})
+
+(defn build-file-to-mission-edge-docs
+  "Pure projection from `:mission/code-paths` to substrate-2
+   `code/v05/file→mission` edge docs."
+  [{:keys [path label mission-id mission-endpoint mission-code-paths]}]
+  (reduce (fn [acc source-path]
+            (if-let [source-endpoint (normalize-file-endpoint source-path)]
+              (update acc :edge-docs conj
+                      (file-to-mission-edge-doc path
+                                                label
+                                                mission-id
+                                                source-path
+                                                source-endpoint
+                                                mission-endpoint))
+              (update acc :unresolved-code-paths conj
+                      {"mission/target-id" mission-id
+                       "mission/target-endpoint" mission-endpoint
+                       "file/source-path" source-path})))
+          {:edge-docs [] :unresolved-code-paths []}
+          (vec (or mission-code-paths []))))
 
 (defn build-sorry-registry-docs
   "Pure projection from the canonical sorry registry to substrate-2 hyperedge
@@ -583,13 +664,26 @@
                                       "mission/phase" (cond
                                                         (keyword? mission-phase) (name mission-phase)
                                                         :else mission-phase)}})))
+        {:keys [edge-docs unresolved-code-paths]}
+        (build-file-to-mission-edge-docs {:path path
+                                          :label label
+                                          :mission-id mission-id
+                                          :mission-endpoint vertex-id
+                                          :mission-code-paths mission-code-paths})
         edge-stats (if (and hx-ok? (seq mission-cross-refs))
                      (emit-cross-ref-edges! vertex-id mission-id mission-cross-refs)
-                     {:emitted 0 :unresolved 0 :failed 0})]
+                     {:emitted 0 :unresolved 0 :failed 0})
+        file-edge-stats (if hx-ok?
+                          (reduce (fn [acc doc]
+                                    (let [resp (post-hyperedge-doc! doc)]
+                                      (update acc (if (:ok? resp) :emitted :failed) inc)))
+                                  {:emitted 0 :failed 0}
+                                  edge-docs)
+                          {:emitted 0 :failed 0})]
     {:vertices (if hx-ok? 1 0)
-     :edges (:emitted edge-stats)
-     :unresolved-edges (:unresolved edge-stats)
-     :failed (+ (if hx-ok? 0 1) (:failed edge-stats))
+     :edges (+ (:emitted edge-stats) (:emitted file-edge-stats))
+     :unresolved-edges (+ (:unresolved edge-stats) (count unresolved-code-paths))
+     :failed (+ (if hx-ok? 0 1) (:failed edge-stats) (:failed file-edge-stats))
      :sync sync}))
 
 (defn ingest-sorry-registry!
