@@ -301,12 +301,13 @@
      (try
      (doseq [repo target-repos]
        (try
-         (let [status-r (ssb/repo-status {:repo repo})]
+         (let [status-r (ssb/repo-status {:repo repo})
+               repo-policy (ssb/read-repo-policy repo)]
            (when (:ok status-r)
              (let [entries (:entries (:result status-r))
                    entries-by-path (into {} (map (juxt :path identity) entries))
                    all-paths (mapv :path entries)
-                   inv-result (ssb/apply-stage-invariants repo all-paths)
+                   inv-result (ssb/apply-stage-invariants repo all-paths repo-policy)
                    stageable (:ok inv-result)
                    packets (take max-packets-per-repo
                                  (build-packets stageable sss/packet-size-cap-files))]
@@ -325,7 +326,8 @@
                                           :files (:files pkt)
                                           :diff-text content
                                           :loc loc
-                                          :file-statuses file-statuses})
+                                          :file-statuses file-statuses
+                                          :repo-policy repo-policy})
                          msg (derive-commit-message repo pkt entries-by-path)
                          pkt-summary {:repo repo
                                       :files (:files pkt)
