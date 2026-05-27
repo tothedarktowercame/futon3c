@@ -6,11 +6,12 @@
   cheshire/cheshire         {:mvn/version "5.11.0"}
   http-kit/http-kit         {:mvn/version "2.8.1"}
   org.clojure/data.json     {:mvn/version "2.5.0"}
-  com.cemerick/drawbridge   {:mvn/version "0.0.7"}
+ com.cemerick/drawbridge   {:mvn/version "0.0.7"}
   ring/ring-core            {:mvn/version "1.11.0"}
   nrepl/nrepl               {:mvn/version "1.1.0"}
   org.clojure/tools.nrepl   {:mvn/version "0.2.13"}
   org.clojure/core.logic    {:mvn/version "1.1.0"}
+  rewrite-clj/rewrite-clj   {:mvn/version "1.1.49"}
 
   ;; futon3b gate pipeline — social loop submits tasks through gates
   futon3b/futon3b           {:local/root "../futon3b"}
@@ -22,7 +23,10 @@
   futon0/futon0             {:local/root "../futon0"}
 
   ;; futon2 — canonical War Machine engine + visualiser home.
-  futon2/futon2             {:local/root "../futon2"}}
+  futon2/futon2             {:local/root "../futon2"}
+
+  ;; futon3a — pattern retrieval + canonical flexiarg enrichment.
+  futon3a/futon3a           {:local/root "../futon3a"}}
 
  :aliases
  {:test {:extra-paths ["test" "dev"]
@@ -34,7 +38,29 @@
          :exec-args {:dirs ["test"]}}
 
   :dev {:extra-paths ["dev"]
-        :extra-deps {futon5/futon5 {:local/root "../futon5"}}
+        :extra-deps {futon5/futon5 {:local/root "../futon5"}
+                     webarxana/webarxana {:local/root "../futon4/dev/web/webarxana"}
+                     ;; war-machine CLJS source must be on the JVM classpath
+                     ;; (not just listed in shadow-cljs.edn :source-paths) for
+                     ;; the embedded shadow-cljs server to index it. webarxana
+                     ;; is already loaded as a local/root for the same reason.
+                     war-machine/war-machine {:local/root "../futon2/web/war-machine"}
+                     ;; Embedded shadow-cljs so CLJS watches run inside the
+                     ;; futon3c JVM instead of spawning standalone npx
+                     ;; processes (CLAUDE.md I-0: one JVM at rest).
+                     ;; Driven via futon3c.dev.shadow + M-x start-shadow /
+                     ;; stop-shadow. Version pinned to match the per-app
+                     ;; package.json files (war-machine + webarxana).
+                     thheller/shadow-cljs {:mvn/version "2.28.20"}
+                     ;; CLJS compile-time deps for the embedded shadow-cljs
+                     ;; builds. Standalone shadow-cljs reads these from its
+                     ;; own :dependencies in shadow-cljs.edn; the embedded
+                     ;; server uses the host JVM classpath, so the same
+                     ;; jars must be declared here. Versions match the
+                     ;; per-app shadow-cljs.edn :dependencies.
+                     reagent/reagent       {:mvn/version "1.2.0"}
+                     cljs-http/cljs-http   {:mvn/version "0.1.46"}
+                     datascript/datascript {:mvn/version "1.7.3"}}
         :main-opts ["-m" "futon3c.dev"]}
 
   :repl {:main-opts ["-m" "nrepl.cmdline"
