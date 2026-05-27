@@ -20,9 +20,18 @@
 (def ^:private mission-cross-ref-kw
   (keyword "code" "v05/mission-cross-ref"))
 
+(def ^:private file-to-mission-kw
+  (keyword "code" "v05/file→mission"))
+
+(def ^:private stack-generator-file
+  "futon3c-d/file/src/futon3c/aif/stack_generator.clj")
+
+(def ^:private mission-control-file
+  "futon3c-d/file/src/futon3c/peripheral/mission_control_backend.clj")
+
 (def ^:private synthetic-substrate
   {war-machine-pilot
-   [{:hx/type "code/v05/mission-doc"
+  [{:hx/type "code/v05/mission-doc"
      :hx/endpoints [war-machine-pilot]
      :hx/props {"mission/phase" "verify"}}
     {:hx/type "code/v05/mission-cross-ref"
@@ -48,6 +57,14 @@
     {:hx/type "code/v05/mission-cross-ref"
      :hx/endpoints [war-machine-pilot mission-wiring]
      :hx/props {"mission/source" "war-machine-pilot"
+                "mission/target" "mission-wiring"}}
+    {:hx/type "code/v05/file→mission"
+     :hx/endpoints [stack-generator-file mission-wiring]
+     :hx/props {"file/source-path" "/home/joe/code/futon3c/src/futon3c/aif/stack_generator.clj"
+                "mission/target" "mission-wiring"}}
+    {:hx/type "code/v05/file→mission"
+     :hx/endpoints [mission-control-file mission-wiring]
+     :hx/props {"file/source-path" "/home/joe/code/futon3c/src/futon3c/peripheral/mission_control_backend.clj"
                 "mission/target" "mission-wiring"}}]
 
    action-cost-modelling
@@ -96,6 +113,21 @@
           (is (finite-nonzero? (:delta-T result)))
           (is (pos? (:n-edges result)))
           (is (pos? (get-in result [:by-edge-type mission-cross-ref-kw :n-edges] 0))))))))
+
+(deftest mission-wiring-picks-up-file-to-mission-edges-in-v0
+  (with-redefs [sut/fetch-hyperedges-by-endpoint
+                (fn [endpoint _opts]
+                  (or (get synthetic-substrate endpoint)
+                      (throw (ex-info "missing synthetic endpoint"
+                                      {:endpoint endpoint}))))]
+    (let [result (sut/delta-t-mission mission-wiring)]
+      (is (finite-nonzero? (:delta-T result)))
+      (is (pos? (get-in result [:by-edge-type file-to-mission-kw :n-edges] 0)))
+      (is (pos? (get-in result [:by-source-type :file :n-edges] 0)))
+      (is (= 0.5 (double (->> (:per-edge-contributions result)
+                              (filter #(= :file (:source-type %)))
+                              first
+                              :source-T)))))))
 
 (deftest phase-projection-table-uses-operator-confirmed-defaults
   (is (= 1.0 (sut/phase->t "head")))

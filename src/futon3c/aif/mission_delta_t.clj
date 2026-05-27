@@ -33,13 +33,21 @@
    nil 0.5})
 
 (def ^:private incoming-edge-types
-  #{"code/v05/related-mission" "code/v05/mission-cross-ref"})
+  #{"code/v05/related-mission"
+    "code/v05/mission-cross-ref"
+    "code/v05/file→mission"})
 
 (def ^:private related-mission-kw
   (keyword "code" "v05/related-mission"))
 
 (def ^:private mission-cross-ref-kw
   (keyword "code" "v05/mission-cross-ref"))
+
+(def ^:private file-to-mission-kw
+  (keyword "code" "v05/file→mission"))
+
+(def ^:private file-default-t
+  0.5)
 
 (defn- url-encode
   [s]
@@ -71,6 +79,11 @@
   [endpoint]
   (and (string? endpoint)
        (str/includes? endpoint "/mission/")))
+
+(defn- file-endpoint?
+  [endpoint]
+  (and (string? endpoint)
+       (str/includes? endpoint "/file/")))
 
 (defn- sorry-endpoint?
   [endpoint]
@@ -126,6 +139,7 @@
   (case edge-type
     "code/v05/related-mission" related-mission-kw
     "code/v05/mission-cross-ref" mission-cross-ref-kw
+    "code/v05/file→mission" file-to-mission-kw
     (keyword edge-type)))
 
 (defn- mission-phase-from-doc
@@ -161,6 +175,12 @@
        :source-type :sorry
        :phase nil
        :T t})
+
+    (file-endpoint? endpoint)
+    {:endpoint endpoint
+     :source-type :file
+     :phase nil
+     :T file-default-t}
 
     (mission-endpoint? endpoint)
     (let [{:keys [phase T]} (mission-state endpoint hyperedges)]
@@ -212,7 +232,10 @@
          (mapv (fn [edge]
                  (let [[source-endpoint _target] (real-endpoints edge)
                        edge-type (hx-type-str edge)
-                       source (source-state source-endpoint (fetch* source-endpoint))
+                       source-hyperedges (if (file-endpoint? source-endpoint)
+                                           []
+                                           (fetch* source-endpoint))
+                       source (source-state source-endpoint source-hyperedges)
                        grad (- T (:T source))]
                    {:source-endpoint source-endpoint
                     :source-type (:source-type source)
