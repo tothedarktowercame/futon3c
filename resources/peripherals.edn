@@ -72,6 +72,54 @@
    :peripheral/exit #{:par-generated :hop-reflect :user-request}
    :peripheral/context {:session-id :inherit :pattern-id :inherit}}
 
+  ;; M-war-machine-pilot — Phase 2 INSTANTIATE (2026-05-24).
+  ;; Phase 1 wired :anchors-read; Phase 2 adds the 3 transports + Playwright +
+  ;; WM-API read.  Read-only stance preserved (no substrate-write tools yet —
+  ;; those land in Phase 3 with the consent-gate).
+  :war-machine-pilot
+  {:peripheral/id :war-machine-pilot
+   :peripheral/tools #{:read :glob :grep :bash-readonly
+                       :anchors-read :wm-api-query :playwright-probe-run
+                       :bell-emit :heartbeat-emit :walkie-psr :walkie-pur :walkie-par
+                       :consent-gate-emit
+                       :anchor-flip :coherence-row-author :pilot-action
+                       :cycle-begin :cycle-advance}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:user-request :from-any}
+   :peripheral/exit #{:cycle-completed :blocked :user-request}
+   :peripheral/context {:session-id :inherit}}
+
+  ;; E-street-sweeper — working-tree-hygiene capability envelope (2026-05-25).
+  ;; Hop target from :war-machine-pilot when WM judgement is :stop-the-line
+  ;; on :working-tree channel. Same agent identity across hops (I-1, I-3).
+  ;; Substantive tools (:repo-stage/:repo-commit/:repo-revert-staged/
+  ;; :write-defer-manifest) are gated by Pilot-I1 (cg-id citation).
+  :street-sweeper
+  {:peripheral/id :street-sweeper
+   :peripheral/tools #{:read :glob :grep :bash-readonly
+                       :repo-status :repo-diff
+                       :list-repos-with-pressure :current-metabolic-pressure
+                       :bell-emit :heartbeat-emit :consent-gate-emit
+                       :repo-stage :repo-commit :repo-revert-staged
+                       :write-defer-manifest
+                       :cycle-begin :cycle-advance}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:from-war-machine-pilot :user-request :from-any}
+   :peripheral/exit #{:cycle-completed :blocked :user-request :hop-war-machine-pilot}
+   :peripheral/context {:session-id :inherit}}
+
+  :night-shift
+  {:peripheral/id :night-shift
+   :peripheral/tools #{:list-agendas :repo-scan :read-file :bell-emit
+                       :hop-in :hop-out :reap-check
+                       :frame-provision :branch-create :edit-file :create-file
+                       :repo-stage :repo-commit :run-tests
+                       :push-feature-branch :pr-create}
+   :peripheral/scope :full-codebase
+   :peripheral/entry #{:from-war-machine-pilot :from-mission :user-request :from-any}
+   :peripheral/exit #{:user-request :review-complete :blocked :hop-war-machine-pilot}
+   :peripheral/context {:session-id :inherit}}
+
   :chat
   {:peripheral/id :chat
    :peripheral/tools #{}
@@ -133,6 +181,16 @@
    :peripheral/entry #{:user-request :from-any}
    :peripheral/exit #{:user-request :session-end}
    :peripheral/context {:session-id :inherit :problem-id :optional}}
+
+  :emacs-cursor
+  {:peripheral/id :emacs-cursor
+   :peripheral/tools #{:cursor-context :cursor-mode :cursor-focus :cursor-minibuffer}
+   :peripheral/scope :live-emacs-session
+   :peripheral/entry #{:user-request :from-any}
+   :peripheral/exit #{:user-request :session-end :blocked}
+   :peripheral/context {:session-id :inherit
+                        :agent-id :inherit
+                        :editor-id :optional}}
 
   :portfolio-inference
   {:peripheral/id :portfolio-inference
