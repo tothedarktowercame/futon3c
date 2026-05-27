@@ -574,6 +574,140 @@ So the honest MAP stance after pass 2 is:
   the mission-specific four-depth reading relates to the four-type / four-frame
   canon
 
+### 7.6 Breadcrumb — second 8-fold structure surfaced (2026-05-27)
+
+A second 8-fold structure appears in the stack and may share DNA with the
+eightfold-path ↔ mission-lifecycle correspondence recorded in §7.5.
+
+**M-interest-network-coupling step (b)**, committed 2026-05-27 as
+`~/code/futon3/library/structure/interest-event-vocabulary.flexiarg`, declares
+**eight typed state-transition events** that posterior-update interest-network
+entities (EoIs, institution-objects, basins, and per the flexiarg's downstream-
+consumer list also sorries and missions):
+
+- `state/spawned` — entity newly proposed
+- `state/refined` — non-truth-changing revision
+- `state/strengthened` — confirmed by lived evidence
+- `state/addressed` — closed or fulfilled
+- `state/falsified` — empirically disproven
+- `state/foreclosed` — declared no-longer-viable
+- `state/reopened` — re-entered after closure
+- `link/asserted` — cross-entity relation declared
+
+That is eight slots, with seven `state/*` events plus one cross-entity
+`link/asserted`. The mission-lifecycle is also eight slots
+(HEAD/IDENTIFY/MAP/DERIVE/ARGUE/VERIFY/INSTANTIATE/DOCUMENT), with seven
+authoring phases plus one cross-mission DOCUMENT-as-handoff.
+
+The candidate DNA: **the eight slots are the lifecycle of work whose object
+is symbolic — whether the object is a mission (work-in-itself) or an
+interest-network entity (work-tracked-by-missions)**. Mapping candidates
+(seeds for IDENTIFY-of-this-question, not commitments):
+
+| Mission lifecycle (work-self) | Interest-event (work-tracked) | Note |
+|---|---|---|
+| HEAD | `state/spawned` | First articulation; entity exists |
+| IDENTIFY | `state/refined` | Sharpening without truth-claim shift |
+| MAP | `link/asserted` | Cross-entity dependency surfaced |
+| DERIVE | `state/strengthened` | Position taken on positive evidence |
+| ARGUE | (no obvious dual?) | Argument-as-act is not in the event vocab |
+| VERIFY | `state/falsified` (refusal) or `state/addressed` (confirmation) | The fork-point |
+| INSTANTIATE | `state/addressed` | Closure as evidence |
+| DOCUMENT | `state/foreclosed` or `state/reopened` | Either retire or re-enter |
+
+The table is **deliberately imperfect** — `state/foreclosed` and
+`state/reopened` form a duality the lifecycle treats as DOCUMENT-then-next-HEAD
+(loop closure per the §7.5 note that "the path is a loop, not eight
+independent slots"); and ARGUE has no obvious event-dual which itself is
+informative — argue-as-act may be the *meta-event-emitting* moment rather
+than an event in the vocabulary.
+
+What this breadcrumb does **not** claim: that the two 8-folds are isomorphic.
+What it does claim: they are not coincidentally 8-fold. Both are decompositions
+of the lifecycle of symbolic work, and the partial mapping is dense enough that
+recognition is preferable to engineering — same diagnostic as §7.5 said about
+the eightfold-path correspondence.
+
+Provenance: surfaced 2026-05-27 emacs-repl session (claude-1 + Joe) during
+M-action-cost-modelling T2-closure work that arrived at this 8-fold parallel
+via the sorry-typing → ΔT(mission) → mission-phase → eight-phase ordinal
+chain. Cross-references:
+
+- `~/code/futon3/library/structure/interest-event-vocabulary.flexiarg`
+  — the eight-event vocabulary itself (landed 2026-05-27 10:53)
+- `~/code/futon3/holes/missions/M-weird-modernism.md` §"Eightfold Path ↔
+  mission lifecycle" — the eightfold-path mapping that §7.5 references
+- `~/code/futon3c/holes/missions/M-action-cost-modelling.md` §3.8 — the
+  aliveness-synthesis projection-apparatus from which this parallel surfaced
+- `~/code/futon4/holes/missions/M-interest-network-coupling.md` — the
+  upstream mission whose step (b) committed the event vocabulary
+
+### 7.7 Breadcrumb — aliveness-substance four-fold as candidate fifth donor (2026-05-27)
+
+§7.5's donor synthesis table assembled four donors for the Pilot's Cycle deck:
+`REPL` (turn logic), `four foundations` (`kāya/vedanā/citta/dhammā` —
+attentional register), `R-criteria` (validation grammar), and `Contract`
+(card discipline). Today's M-action-cost-modelling §3.8 work surfaced a
+fifth candidate donor whose alignment with the existing table is dense
+enough to flag.
+
+The donor: **the aliveness-substance four-fold**.
+
+Joe's three-term articulation 2026-05-27: *"Mana flows ↔ anamnesis
+discharges ↔ niche gets constructed; the three are the same loop."*
+The fourth term to round the loop is **anamnesis disclosure** — same
+substance as anamnesis-discharge, but in its visible-but-not-yet-acted-on
+moment. The split is natural: tension first becomes legible in the
+substrate (high-ΔT region surfaces, false-floor names a missing edge
+family), then gets acted on by the felt-pull, then leaves a typed-edge
+trace, then registers as renewed-aliveness ready for the next cycle.
+
+Aligning with §7.5's existing donor table:
+
+| Turn | REPL | foundation | R-criteria | aliveness substance | what surfaces |
+|------|------|------------|-----------|--------------------|--------------|
+| 1 | `Read` | `kāya` | `R1-R3` belief / observation / PE | **anamnesis discloses** | un-discharged tension becomes legible in the substrate — high-ΔT region surfaces, false-floor names a missing edge family |
+| 2 | `Eval` | `vedanā` | `R4-R7` EFE / policy / precision | **anamnesis discharges** | felt salience selects the candidate; action taken |
+| 3 | `Print` | `citta` | `R8-R9` trace / validation | **niche constructed** | typed-edge trace lands in substrate-2 — the substrate is enriched for the next agent's read |
+| 4 | `Loop` | `dhammā` | `R10-R12` live operation / outer loop | **mana flows** | pattern crystallises as artefact; felt-aliveness seeds the next disclosure |
+
+**Substance singularity claim**: where REPL/foundations/R-criteria each
+carry a *different kind of truth* (turn logic / attentional register /
+validation grammar respectively), the aliveness substance carries **one
+substance through four moments**. This is structurally distinct from the
+other donors and partially explains why it aligns so densely with all
+three of them at once. The loop-closure is exact: mana-flow at turn 4
+seeds anamnesis-disclosure of turn 1 of the next cycle, completing the
+recurrence that the §7.5 note about "the path is a loop, not eight
+independent slots" already insisted on.
+
+**Connection to niche construction (library pattern)**: the
+`aif/niche-construction` flexiarg landed today
+(`~/code/futon3/library/aif/niche-construction.flexiarg`) names false-floor
+readings as the surface form of turn 1 disclosure. The pattern's NEXT-STEPS
+list — "surface false-floor readings as such" — is operationally a turn-1
+discipline: don't let the agent silently zero a signal; let the absence
+register as anamnesis disclosed.
+
+**What this breadcrumb does not claim**: that the aliveness-substance is
+a *primary* donor on the same level as REPL or the four foundations. It
+is a *secondary alignment* that happens to be substantively dense. Whether
+it gets a card-text appearance, lives only in the agent's internal
+discipline, or merely backs the other donors via §3.8's synthesis is an
+operator/ARGUE-stage question, not settled here.
+
+Provenance: surfaced 2026-05-27 emacs-repl session (claude-1 + Joe) during
+M-action-cost-modelling §5.1 T2/T4/T6/T9 closure work. The four-term loop
+emerged from Joe's three-term articulation + the alignment question with
+this mission's existing donor table. Cross-references:
+
+- `~/code/futon3c/holes/missions/M-action-cost-modelling.md` §3.8 — the
+  aliveness synthesis (Alexander / Salingaros / Mana / Anamnesis / T / EOI)
+- `~/code/futon3/library/aif/niche-construction.flexiarg` — the
+  library pattern naming false-floors as the disclosure-phase signal
+- `~/code/.claude/projects/-home-joe-code/memory/project_aliveness_synthesis.md`
+  + `feedback_niche_construction_as_wm_principle.md` — memory anchors
+
 ## 8. ARGUE — seeded argument substrate
 
 The mission can now move into ARGUE on the basis that two things are true:
