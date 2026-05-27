@@ -185,10 +185,13 @@
 (defn watched? [path]
   (let [norm (str/replace (str path) "\\" "/")
         ext (file-ext (str path))
-        mission-doc? (boolean (re-find mission-doc-pattern norm))]
-    (and ext (WATCHED-EXTS ext)
+        mission-doc? (boolean (re-find mission-doc-pattern norm))
+        sorry-registry? (file-ingest/sorry-registry-path? norm)]
+    (and (or (and ext (WATCHED-EXTS ext)) sorry-registry?)
          (not (re-find NOISE-PATTERN norm))
-         (or (not= ext "md") mission-doc?))))
+         (or sorry-registry?
+             (not= ext "md")
+             mission-doc?))))
 
 (defn- mark-subtask!
   [subtask]

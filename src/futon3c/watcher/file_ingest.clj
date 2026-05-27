@@ -35,12 +35,16 @@
 (def ^:private mission-doc-pattern
   #"/holes/missions/M-[^/]+\.md$")
 
+(def ^:private sorry-registry-pattern
+  #"/futon2/data/sorrys\.edn$")
+
 (def ^:private mission-cross-ref-type
   "code/v05/mission-cross-ref")
 
 (def directed-types
   #{"code/v05/calls" "code/v05/coverage" "code/v05/vocabulary-use"
-    "code/v05/term-defines" "code/v05/contains"})
+    "code/v05/term-defines" "code/v05/contains"
+    "code/v05/related-mission"})
 
 (defn directed-endpoints [hx-type endpoints]
   (if (and (directed-types hx-type) (= 2 (count endpoints)))
@@ -298,6 +302,194 @@
    (re-find mission-doc-pattern
             (str/replace (str path) "\\" "/"))))
 
+(defn sorry-registry-path? [path]
+  (boolean
+   (re-find sorry-registry-pattern
+            (str/replace (str path) "\\" "/"))))
+
+(defn current-mission-resolver
+  "Public wrapper around the cached mission-doc lookup. Used by the sorry
+   registry ingest path and by non-live bootstrap tooling that wants the same
+   normalization convention when live mission-doc vertices already exist."
+  []
+  (mission-id->vertex-id-map))
+
+(defn- normalize-mission-id
+  [mission-name]
+  (str/replace-first (str mission-name) #"^M-" ""))
+
+(defn- local-name-from-registry-id
+  [registry-id]
+  (let [raw (cond
+              (keyword? registry-id) (name registry-id)
+              :else (str registry-id))]
+    (if-let [i (str/index-of raw "/")]
+      (subs raw (inc i))
+      raw)))
+
+(defn normalize-sorry-endpoint
+  [label registry-id]
+  (str label "/sorry/" (local-name-from-registry-id registry-id)))
+
+(defn sorry-t
+  [status]
+  (if (= status :open) 1 0))
+
+(defn- json-safe-value
+  [v]
+  (cond
+    (keyword? v) (str v)
+    (symbol? v) (str v)
+    (map? v) (into {}
+                   (map (fn [[k inner]]
+                          [(if (keyword? k)
+                             (if-let [ns-part (namespace k)]
+                               (str ns-part "/" (name k))
+                               (name k))
+                             (str k))
+                           (json-safe-value inner)]))
+                   v)
+    (vector? v) (mapv json-safe-value v)
+    (seq? v) (mapv json-safe-value v)
+    (set? v) (mapv json-safe-value (sort-by pr-str v))
+    :else v))
+
+(defn- sorry-source-props
+  [sorry]
+  (into {}
+        (map (fn [[k v]]
+               [(str "sorry/" (name k)) (json-safe-value v)]))
+        (dissoc sorry :id)))
+
+(defn- related-mission-edge-doc
+  [path label source-endpoint registry-id mission-name target-endpoint]
+  {:hx-type "code/v05/related-mission"
+   :endpoints [source-endpoint target-endpoint]
+   :labels ["v05" "phase-4.5" label "related-mission"]
+   :props {"repo" label
+           "phase" 4.5
+           "source-file" path
+           "sorry/source-endpoint" source-endpoint
+           "sorry/source-registry-id" (str registry-id)
+           "mission/target-id" (normalize-mission-id mission-name)
+           "mission/target-external-id" (str mission-name)
+           "relation/source-field" "related-missions"}})
+
+(defn build-sorry-registry-docs
+  "Pure projection from the canonical sorry registry to substrate-2 hyperedge
+   docs. Returns vertex docs, v0 typed related-mission edge docs, and any
+   unresolved mission references that could not be normalized through the
+   current mission-doc surface."
+  [{:keys [path label registry mission-resolver]
+    :or {mission-resolver {}}}]
+  (let [sorrys (vec (or (:sorrys registry) []))]
+    (reduce (fn [acc sorry]
+              (let [registry-id (:id sorry)
+                    endpoint (normalize-sorry-endpoint label registry-id)
+                    vertex-doc {:hx-type "code/v05/sorry"
+                                :endpoints [endpoint]
+                                :labels ["v05" "phase-4.5" label "sorry-registry"]
+                                :props (merge {"repo" label
+                                               "phase" 4.5
+                                               "source-file" path
+                                               "sorry/endpoint" endpoint
+                                               "sorry/registry-id" (str registry-id)
+                                               "sorry/t" (sorry-t (:status sorry))}
+                                              (sorry-source-props sorry))}
+                    related (vec (or (:related-missions sorry) []))
+                    {:keys [edge-docs unresolved]}
+                    (reduce (fn [edge-acc mission-name]
+                              (let [target-id (normalize-mission-id mission-name)
+                                    target-endpoint (get mission-resolver target-id)]
+                                (if target-endpoint
+                                  (update edge-acc :edge-docs conj
+                                          (related-mission-edge-doc path
+                                                                    label
+                                                                    endpoint
+                                                                    registry-id
+                                                                    mission-name
+                                                                    target-endpoint))
+                                  (update edge-acc :unresolved conj
+                                          {"sorry/registry-id" (str registry-id)
+                                           "sorry/endpoint" endpoint
+                                           "mission/target-external-id" (str mission-name)
+                                           "mission/target-id" target-id}))))
+                            {:edge-docs [] :unresolved []}
+                            related)]
+                (-> acc
+                    (update :vertex-docs conj vertex-doc)
+                    (update :edge-docs into edge-docs)
+                    (update :unresolved-related into unresolved))))
+            {:vertex-docs [] :edge-docs [] :unresolved-related []}
+            sorrys)))
+
+(defn fixture-sorry-roundtrip
+  "Non-live T-A1 fixture for the sorry registry projection. Exercises three
+   cases against the pure projection layer: one :open sorry, one non-open
+   sorry with closure metadata, and one :n-a-by-design sorry. Returns a report
+   map suitable for dry-run validation; does not touch futon1a."
+  [{:keys [path label]
+    :or {label "futon2"}}]
+  (let [registry (edn/read-string (slurp path))
+        sorrys (vec (:sorrys registry))
+        open-sorry (first (filter #(= :open (:status %)) sorrys))
+        closed-sorry (first (filter #(and (not= :open (:status %))
+                                          (or (:resolved-at %)
+                                              (:addressed-at %)
+                                              (:resolution %)
+                                              (:partial-closure-notes %)))
+                                    sorrys))
+        na-sorry (first (filter #(= :n-a-by-design (:status %)) sorrys))
+        cases (vec (remove nil? [open-sorry closed-sorry na-sorry]))
+        selected-registry {:schema-version (:schema-version registry)
+                           :sorrys cases}
+        mission-resolver (into {}
+                              (map (fn [mission-name]
+                                     [(normalize-mission-id mission-name)
+                                      (str "fixture/mission/"
+                                           (normalize-mission-id mission-name))]))
+                              (distinct (mapcat :related-missions cases)))
+        plan-a (build-sorry-registry-docs {:path path
+                                           :label label
+                                           :registry selected-registry
+                                           :mission-resolver mission-resolver})
+        plan-b (build-sorry-registry-docs {:path path
+                                           :label label
+                                           :registry selected-registry
+                                           :mission-resolver mission-resolver})
+        by-endpoint (into {}
+                          (map (fn [doc]
+                                 [(first (:endpoints doc)) doc]))
+                          (:vertex-docs plan-a))
+        case-results
+        (mapv (fn [sorry]
+                (let [endpoint (normalize-sorry-endpoint label (:id sorry))
+                      doc (get by-endpoint endpoint)
+                      props (:props doc)
+                      expected-t (sorry-t (:status sorry))]
+                  {:registry-id (str (:id sorry))
+                   :endpoint endpoint
+                   :status (str (:status sorry))
+                   :passed? (and (= "code/v05/sorry" (:hx-type doc))
+                                 (= [endpoint] (:endpoints doc))
+                                 (= endpoint (get props "sorry/endpoint"))
+                                 (= (str (:id sorry)) (get props "sorry/registry-id"))
+                                 (= expected-t (get props "sorry/t"))
+                                 (= (str (:status sorry)) (get props "sorry/status"))
+                                 (= (:title sorry) (get props "sorry/title"))
+                                 (= (:raised-at sorry) (get props "sorry/raised-at")))}))
+              cases)
+        lossless? (= plan-a plan-b)]
+    {:pass? (and (= 3 (count cases))
+                 (every? :passed? case-results)
+                 lossless?)
+     :case-count (count cases)
+     :cases case-results
+     :lossless-roundtrip? lossless?
+     :planned-vertices (count (:vertex-docs plan-a))
+     :planned-edges (count (:edge-docs plan-a))
+     :unresolved-related (count (:unresolved-related plan-a))}))
+
 (defn sync-mission!
   "Push a single mission markdown file into futon3c's evidence layer
    via HTTP. (We're inside the futon3c JVM here, but the HTTP route
@@ -376,21 +568,21 @@
         ;; focus on it and cross-link to the existing hyperedges via
         ;; futon1a's hyperedges-by-end (UUID → name smart-resolve in
         ;; routes.clj). See README-conventions.md §3.
-        entity-ok? (when hx-ok?
-                     (:ok? (post-entity!
-                            {:name vertex-id
-                             :type "mission/doc"
-                             :source "mission-doc-watcher"
-                             :external-id (str "M-" mission-id)
-                             :props {"mission/id" mission-id
-                                     "mission/title" mission-title
-                                     "mission/status" (cond
-                                                        (keyword? mission-status) (name mission-status)
-                                                        :else mission-status)
-                                     "mission/repo" mission-repo
-                                     "mission/phase" (cond
-                                                       (keyword? mission-phase) (name mission-phase)
-                                                       :else mission-phase)}})))
+        _entity-ok? (when hx-ok?
+                      (:ok? (post-entity!
+                             {:name vertex-id
+                              :type "mission/doc"
+                              :source "mission-doc-watcher"
+                              :external-id (str "M-" mission-id)
+                              :props {"mission/id" mission-id
+                                      "mission/title" mission-title
+                                      "mission/status" (cond
+                                                         (keyword? mission-status) (name mission-status)
+                                                         :else mission-status)
+                                      "mission/repo" mission-repo
+                                      "mission/phase" (cond
+                                                        (keyword? mission-phase) (name mission-phase)
+                                                        :else mission-phase)}})))
         edge-stats (if (and hx-ok? (seq mission-cross-refs))
                      (emit-cross-ref-edges! vertex-id mission-id mission-cross-refs)
                      {:emitted 0 :unresolved 0 :failed 0})]
@@ -399,6 +591,36 @@
      :unresolved-edges (:unresolved edge-stats)
      :failed (+ (if hx-ok? 0 1) (:failed edge-stats))
      :sync sync}))
+
+(defn ingest-sorry-registry!
+  [{:keys [path label mission-resolver]}]
+  (let [registry (edn/read-string (slurp path))
+        {:keys [vertex-docs edge-docs unresolved-related]}
+        (build-sorry-registry-docs {:path path
+                                    :label label
+                                    :registry registry
+                                    :mission-resolver (or mission-resolver
+                                                          (current-mission-resolver))})
+        vertex-stats (reduce (fn [acc doc]
+                               (let [resp (post-hyperedge! (:hx-type doc)
+                                                           (:endpoints doc)
+                                                           (:labels doc)
+                                                           (:props doc))]
+                                 (update acc (if (:ok? resp) :ok :failed) inc)))
+                             {:ok 0 :failed 0}
+                             vertex-docs)
+        edge-stats (reduce (fn [acc doc]
+                             (let [resp (post-hyperedge! (:hx-type doc)
+                                                         (:endpoints doc)
+                                                         (:labels doc)
+                                                         (:props doc))]
+                               (update acc (if (:ok? resp) :ok :failed) inc)))
+                           {:ok 0 :failed 0}
+                           edge-docs)]
+    {:vertices (:ok vertex-stats)
+     :edges (:ok edge-stats)
+     :unresolved-edges (count unresolved-related)
+     :failed (+ (:failed vertex-stats) (:failed edge-stats))}))
 
 (defn ingest-essay!
   [{:keys [path label]}]
@@ -635,8 +857,9 @@
     (throw (ex-info "file does not exist" {:path path})))
   (let [ext (file-ext path)
         mission-doc? (mission-doc-path? path)
+        sorry-registry? (sorry-registry-path? path)
         essay-home? (essay-home-path? path)
-        handled? (or mission-doc? essay-home? (supported-ext? ext))]
+        handled? (or mission-doc? sorry-registry? essay-home? (supported-ext? ext))]
     (cond
       (not handled?) {:status :unhandled :path path :ext ext}
 
@@ -645,6 +868,12 @@
             stats (ingest-mission-doc! {:path path :label label :root root})
             dur (- (System/currentTimeMillis) t-start)]
         (assoc stats :status :mission-doc :duration-ms dur :path path))
+
+      sorry-registry?
+      (let [t-start (System/currentTimeMillis)
+            stats (ingest-sorry-registry! {:path path :label label})
+            dur (- (System/currentTimeMillis) t-start)]
+        (assoc stats :status :sorry-registry :duration-ms dur :path path))
 
       essay-home?
       (let [t-start (System/currentTimeMillis)
