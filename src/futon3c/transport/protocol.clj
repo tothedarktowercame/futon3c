@@ -492,6 +492,47 @@
 ;; Peripheral session frames (Seam 4: WS ↔ peripheral lifecycle)
 ;; =============================================================================
 
+(defn make-peripheral-event
+  "Create the internal typed representation of a server-emitted peripheral event.
+   PERIPHERAL-ID and EVENT may be keywords or strings; PAYLOAD must be a map."
+  [peripheral-id event payload]
+  (let [pid (cond
+              (keyword? peripheral-id) peripheral-id
+              (string? peripheral-id) (str->keyword peripheral-id)
+              :else nil)
+        evt (cond
+              (keyword? event) event
+              (string? event) (str->keyword event)
+              :else nil)]
+    (cond
+      (nil? pid)
+      (throw (ex-info "Invalid peripheral-id for peripheral_event"
+                      {:peripheral-id peripheral-id}))
+
+      (nil? evt)
+      (throw (ex-info "Invalid event for peripheral_event"
+                      {:event event}))
+
+      (not (map? payload))
+      (throw (ex-info "peripheral_event payload must be a map"
+                      {:payload payload}))
+
+      :else
+      {:ws/type :peripheral-event
+       :peripheral-id pid
+       :event evt
+       :payload payload})))
+
+(defn peripheral-event-frame
+  "Render-ready frame map for a server-emitted peripheral event."
+  [peripheral-id event payload]
+  (let [{:keys [peripheral-id event payload]}
+        (make-peripheral-event peripheral-id event payload)]
+    {"type" "peripheral_event"
+     "peripheral_id" (name peripheral-id)
+     "event" (name event)
+     "payload" payload}))
+
 (defn render-peripheral-started
   "Render a peripheral_started ack frame."
   [peripheral-id session-id]
@@ -507,6 +548,11 @@
             "tool" (name tool)
             "ok" ok?}
      (some? result) (assoc "result" result))))
+
+(defn render-peripheral-event
+  "Render a server-emitted peripheral_event frame."
+  [peripheral-id event payload]
+  (json/generate-string (peripheral-event-frame peripheral-id event payload)))
 
 ;; =============================================================================
 ;; Evidence replication — coercion from JSON-parsed maps to EvidenceEntry shape
