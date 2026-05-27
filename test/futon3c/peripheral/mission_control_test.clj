@@ -69,7 +69,25 @@
           (is (= :md-file (:mission/source entry)))
           (is (= "futon3c" (:mission/repo entry)))
           (is (string? (:mission/date entry)))
-          (is (keyword? (:mission/status entry))))))))
+          (is (keyword? (:mission/status entry)))
+          (is (contains? entry :mission/owner)))))))
+
+(deftest parse-mission-md-extracts-owner
+  (testing "T-9b: Owner header extracted into :mission/owner"
+    (let [tmp (temp-dir!)]
+      (try
+        (let [missions-dir (io/file tmp "futonx" "holes" "missions")
+              path (io/file missions-dir "M-owner-fixture.md")]
+          (.mkdirs missions-dir)
+          (spit path (str "# Mission: Owner Fixture\n\n"
+                          "**Date:** 2026-05-21\n"
+                          "**Status:** IDENTIFY\n"
+                          "**Owner:** claude-2 (co-owner claude-4)\n"))
+          (let [entry (mcb/parse-mission-md (.getAbsolutePath path) :futonx)]
+            (is (= "claude-2 (co-owner claude-4)" (:mission/owner entry)))
+            (is (= "owner-fixture" (:mission/id entry)))))
+        (finally
+          (rm-rf! tmp))))))
 
 (deftest parse-mission-path-infers-repo-from-root-map
   (testing "single mission path parsing can infer repo from configured roots"
