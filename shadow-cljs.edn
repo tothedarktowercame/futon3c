@@ -1,0 +1,44 @@
+;; Multi-build CLJS configuration consolidating war-machine and webarxana
+;; into the futon3c JVM. Boot via `M-x start-shadow' (which routes through
+;; `futon3c.dev.shadow/start!') — no standalone `npx shadow-cljs' process
+;; is needed.
+;;
+;; CLAUDE.md I-0: keeps pgrep java at one PID even while CLJS watches
+;; are active.
+;;
+;; Source-paths and output-dirs are relative to this file's directory
+;; (/home/joe/code/futon3c). If either per-app shadow-cljs.edn changes,
+;; mirror the change here.
+
+{:source-paths ["../futon2/web/war-machine/src"
+                "../futon4/dev/web/webarxana/src"]
+
+ :dependencies [[reagent/reagent       "1.2.0"]
+                [cljs-http/cljs-http   "0.1.46"]
+                [datascript/datascript "1.7.3"]]
+
+ :dev-http {8710 {:root "../futon2/web/war-machine/resources/public"
+                  :proxy-url "http://localhost:7070"}
+            9631 {:root "../futon4/dev/web/webarxana/resources/public"}}
+
+ :builds
+ {:war-machine
+  {:target     :browser
+   :output-dir "../futon2/web/war-machine/resources/public/js"
+   :asset-path "/js"
+   :modules    {:main {:init-fn war-machine.client.core/init}}
+   ;; Embedded shadow CWDs at /home/joe/code/futon3c which has no
+   ;; node_modules; each app keeps its own. Point shadow at the per-app
+   ;; dir so JS deps (react, react-dom, ...) resolve.
+   :js-options {:js-package-dirs ["../futon2/web/war-machine/node_modules"]}
+   :devtools   {:repl-pprint true
+                :after-load  war-machine.client.core/reload}}
+
+  :webarxana
+  {:target     :browser
+   :output-dir "../futon4/dev/web/webarxana/resources/public/js"
+   :asset-path "/js"
+   :modules    {:main {:init-fn webarxana.client.core/init}}
+   :js-options {:js-package-dirs ["../futon4/dev/web/webarxana/node_modules"]}
+   :devtools   {:repl-pprint true
+                :after-load  webarxana.client.core/reload}}}}
