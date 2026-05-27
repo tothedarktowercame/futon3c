@@ -28,3 +28,8 @@ scripts/dev-laptop-env.local
 library/alfworld/compile-flexiargs-to-deterministic-runner.flexiarg
 library/social/cluster-tooling-bootstrap.flexiarg
 *.elc
+
+# Added 2026-05-26 by street-sweeper Phase B (allostatic-relief for INV-13 rejects)
+data/
+.shadow-cljs/
+tmp/
