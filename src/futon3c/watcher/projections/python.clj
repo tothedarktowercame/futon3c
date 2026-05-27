@@ -9,8 +9,8 @@
    layout (futon3c CLAUDE.md I-5)."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.java.shell :refer [sh]]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:import [java.util.concurrent TimeUnit]))
 
 (def src-exts #{"py"})
 
@@ -29,15 +29,42 @@
         (throw (ex-info "python_ast_helper.py not on classpath"
                         {:looked-for "scripts/python_ast_helper.py"})))))
 
+(def ^:private helper-timeout-ms
+  (long (or (some-> (System/getenv "FUTON3C_WATCHER_PYTHON_TIMEOUT_MS")
+                    parse-long)
+            15000)))
+
+(defn- read-stream [stream]
+  (future
+    (with-open [rdr (io/reader stream)]
+      (slurp rdr))))
+
 (defn- run-helper-many [paths]
   (let [input (str (str/join "\n" paths) "\n")
-        {:keys [exit out err]} (sh python-bin @helper-path :in input)]
-    (when-not (zero? exit)
-      (throw (ex-info "python_ast_helper.py failed"
-                      {:paths paths :exit exit :err err})))
-    (->> (str/split-lines out)
-         (remove str/blank?)
-         (map edn/read-string))))
+        proc (.start (ProcessBuilder. ^java.util.List [python-bin @helper-path]))
+        out* (read-stream (.getInputStream proc))
+        err* (read-stream (.getErrorStream proc))]
+    (with-open [w (.getOutputStream proc)]
+      (.write w (.getBytes input "UTF-8"))
+      (.flush w))
+    (let [finished? (.waitFor proc helper-timeout-ms TimeUnit/MILLISECONDS)]
+      (when-not finished?
+        (.destroy proc)
+        (when-not (.waitFor proc 1000 TimeUnit/MILLISECONDS)
+          (.destroyForcibly proc)
+          (.waitFor proc 1000 TimeUnit/MILLISECONDS))
+        (throw (ex-info "python_ast_helper.py timed out"
+                        {:paths paths
+                         :timeout-ms helper-timeout-ms})))
+      (let [exit (.exitValue proc)
+            out @out*
+            err @err*]
+        (when-not (zero? exit)
+          (throw (ex-info "python_ast_helper.py failed"
+                          {:paths paths :exit exit :err err :out out})))
+        (->> (str/split-lines out)
+             (remove str/blank?)
+             (map edn/read-string))))))
 
 (defn- ->alias-map [imports]
   (into {}

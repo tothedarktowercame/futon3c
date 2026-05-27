@@ -24,9 +24,11 @@
             [clojure.set]
             [babashka.http-client :as http]
             [cheshire.core :as json]
+            [futon3c.cyder :as cyder]
             [futon3c.watcher.commit-ingest :as commit-ingest]
             [futon3c.watcher.file-ingest :as file-ingest])
-  (:import [java.util.concurrent
+  (:import [java.time Instant]
+           [java.util.concurrent
             Executors ScheduledExecutorService TimeUnit]))
 
 (def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
@@ -34,10 +36,15 @@
 
 (def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "md"})
 (def NOISE-PATTERN
-  #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv)/|/node_modules/|/target/|/out/|/__pycache__/")
+  #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/")
 
 (def VERTEX-TYPES ["code/v05/namespace" "code/v05/var" "code/v05/test"])
 (def RENAMED-LINK-TYPE "edge/renamed-to")
+
+(def ^:private mission-doc-pattern
+  #"/holes/missions/M-[^/]+\.md$")
+
+(declare !state)
 
 ;; ---------- HTTP write surface ----------
 
@@ -64,7 +71,8 @@
 
 (defn http-get-edn [url]
   (let [resp (http/get url {:headers {"X-Penholder" PENHOLDER}
-                            :throw false})]
+                            :throw false
+                            :timeout 5000})]
     (if (= 200 (:status resp))
       (edn/read-string (:body resp))
       (throw (ex-info "HTTP non-200"
@@ -177,10 +185,22 @@
 (defn watched? [path]
   (let [norm (str/replace (str path) "\\" "/")
         ext (file-ext (str path))
-        mission-doc? (boolean (re-find #"/holes/missions/M-[^/]+\.md$" norm))]
+        mission-doc? (boolean (re-find mission-doc-pattern norm))]
     (and ext (WATCHED-EXTS ext)
          (not (re-find NOISE-PATTERN norm))
          (or (not= ext "md") mission-doc?))))
+
+(defn- mark-subtask!
+  [subtask]
+  (let [progress-at (Instant/now)]
+    (swap! !state
+           (fn [s]
+             (if (map? s)
+               (assoc s
+                      :last-subtask subtask
+                      :last-progress-at progress-at)
+               s)))
+    (cyder/touch! "multi-watcher")))
 
 (defn noise-dir? [dir]
   (let [norm (str/replace (str dir) "\\" "/")]
@@ -440,6 +460,7 @@
 
 (defn build-plan
   [{:keys [path label]} per-root-cache]
+  (mark-subtask! {:phase :build-plan :repo label})
   (let [cache (get @per-root-cache path)
         first-cycle? (empty? cache)
         snapshot (if (seq cache)
@@ -466,9 +487,10 @@
    {rel-path → [unprefixed-qnames…]} for use as the file->vars
    parameter to commit-ingest's :edits resolution.
 
-   Cost: one HTTP call to /api/alpha/hyperedges per vertex-type per
+  Cost: one HTTP call to /api/alpha/hyperedges per vertex-type per
    repo per cycle. {} on any HTTP failure (caller skips :edits)."
   [repo-label]
+  (mark-subtask! {:phase :query-repo-vars-by-file :repo repo-label})
   (try
     (reduce
      (fn [acc t]
@@ -491,6 +513,7 @@
   "Per-cycle commit-vertex catch-up. Failures are isolated; do not break
    file-watch ingestion."
   [{:keys [root label cycle-n]}]
+  (mark-subtask! {:phase :commit-ingest :repo label :root root :cycle-n cycle-n})
   (try
     (let [vars-by-file (query-repo-vars-by-file label)
           file->vars (fn [path] (get vars-by-file path))
@@ -511,8 +534,11 @@
         (println (format "[cycle %d] %s: commit-ingest error: %s"
                          cycle-n label (.getMessage e)))))))
 
+(declare stop-requested? status)
+
 (defn run-cycle!
-  [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan?]}]
+  [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?]
+    :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
         plans (vec (map #(build-plan % per-root-cache) roots))
         cross-root-moves (detect-cross-root-moves plans)
@@ -533,9 +559,11 @@
                              []
                              ingest-paths)]
         (when (seq dispatch-paths)
+          (mark-subtask! {:phase :file-ingest-batch :repo label :count (count dispatch-paths)})
           (println (format "[cycle %d] %s: %d/%d files changed"
                            n label (count dispatch-paths) (count snapshot)))
           (doseq [p dispatch-paths]
+            (mark-subtask! {:phase :file-ingest :repo label :path p})
             (let [ev-n (swap! event-n inc)]
               (ingest-event! {:path p :root root :label label
                               :run-id run-id :event-n ev-n
@@ -543,32 +571,42 @@
                                         "cold-scan"
                                         "fs-watch")}))))
         (doseq [p deleted]
+          (mark-subtask! {:phase :deletion :repo label :path p})
           (let [ev-n (swap! event-n inc)]
             (handle-deletion! {:path p :root root :label label
                                :run-id run-id :event-n ev-n
                                :hash (get-in cache [p :hash])})))
         (doseq [{:keys [from to hash]} renamed]
+          (mark-subtask! {:phase :rename :repo label :from from :to to})
           (let [ev-n (swap! event-n inc)]
             (handle-rename! {:from from :to to :hash hash
                              :root root :label label
                              :run-id run-id :event-n ev-n})))
-        (heartbeat! {:root root :label label :run-id run-id
-                     :cycle-n n
-                     :files-seen (count snapshot)
-                     :files-changed (count ingest-paths)
-                     :n-deleted (count deleted)
-                     :n-renamed (count renamed)
-                     :n-added (count added)
-                     :n-cross-root-moves cross-root-count})
-        (ingest-new-commits-for-root!
-         {:root root :label label :cycle-n n})
+        (when-not (stop-requested?)
+          (heartbeat! {:root root :label label :run-id run-id
+                       :cycle-n n
+                       :files-seen (count snapshot)
+                       :files-changed (count ingest-paths)
+                       :n-deleted (count deleted)
+                       :n-renamed (count renamed)
+                       :n-added (count added)
+                       :n-cross-root-moves cross-root-count}))
+        (when (and commit-ingest? (not (stop-requested?)))
+          (ingest-new-commits-for-root!
+           {:root root :label label :cycle-n n}))
         (swap! per-root-cache assoc root snapshot)))
     (doseq [{:keys [from to from-root to-root from-label to-label hash]} cross-root-moves]
+      (mark-subtask! {:phase :cross-root-move
+                      :from-repo from-label
+                      :to-repo to-label
+                      :from from
+                      :to to})
       (let [ev-n (swap! event-n inc)]
         (handle-cross-root-move! {:from from :to to
                                   :from-root from-root :to-root to-root
                                   :from-label from-label :to-label to-label
-                                  :run-id run-id :event-n ev-n :hash hash})))))
+                                  :run-id run-id :event-n ev-n :hash hash})))
+    (mark-subtask! {:phase :idle :cycle-n n})))
 
 ;; ---------- service ----------
 
@@ -576,20 +614,60 @@
                  {:executor <ScheduledExecutorService>
                   :run-id <epoch-millis>
                   :event-n <atom int>
-                  :cycle-n <atom int>
-                  :per-root-cache <atom {root → snapshot}>
-                  :roots <vec of {:path :label}>
-                  :interval-ms <int>}"}
+                 :cycle-n <atom int>
+                 :per-root-cache <atom {root → snapshot}>
+                 :roots <vec of {:path :label}>
+                 :interval-ms <int>
+                  :commit-ingest? <boolean>
+                  :last-cycle-started-at <Instant|nil>
+                  :last-cycle-finished-at <Instant|nil>
+                  :last-progress-at <Instant|nil>
+                  :last-error <string|nil>
+                  :last-subtask <map|nil>
+                  :stopping? <boolean>}"}
   !state (atom nil))
 
-(declare status)
+(defn stop-requested?
+  "Return non-nil when the watcher should stop before more per-root work."
+  []
+  (or (Thread/interrupted)
+      (true? (:stopping? @!state))
+      (nil? @!state)))
 
 (defn- safe-cycle! [state]
-  (try
-    (run-cycle! state)
-    (catch Throwable t
-      (binding [*out* *err*]
-        (println "[multi.run-cycle!] uncaught:" (.getMessage t))))))
+  (when-not (stop-requested?)
+    (let [started-at (Instant/now)]
+      (swap! !state
+             (fn [s]
+               (if (map? s)
+                 (assoc s
+                        :last-cycle-started-at started-at
+                        :last-progress-at started-at
+                        :last-error nil
+                        :last-subtask {:phase :cycle-start})
+                 s))))
+    (try
+      (run-cycle! state)
+      (swap! !state
+             (fn [s]
+               (if (map? s)
+                 (assoc s
+                        :last-cycle-finished-at (Instant/now)
+                        :last-error nil)
+                 s)))
+      (cyder/touch! "multi-watcher")
+      (catch Throwable t
+        (swap! !state
+               (fn [s]
+                 (if (map? s)
+                   (assoc s
+                          :last-cycle-finished-at (Instant/now)
+                          :last-error (.getMessage t)
+                          :last-subtask {:phase :cycle-error})
+                   s)))
+        (cyder/touch! "multi-watcher")
+        (binding [*out* *err*]
+          (println "[multi.run-cycle!] uncaught:" (.getMessage t)))))))
 
 (defn start!
   "Start the watcher loop with the given options. Idempotent — if
@@ -602,10 +680,13 @@
                       (default false; matches bb watcher's --no-cold-scan).
                       Set true on a fresh substrate-2 to force initial
                       population.
+     :commit-ingest? — run the per-cycle commit-vertex catch-up
+                       (default true). Set false when live file-event
+                       ingestion is wanted without the slower commit sidecar.
 
    Returns the same shape as `status`."
-  [{:keys [roots interval-ms cold-scan?]
-    :or {interval-ms 5000 cold-scan? false}}]
+  [{:keys [roots interval-ms cold-scan? commit-ingest?]
+    :or {interval-ms 5000 cold-scan? false commit-ingest? true}}]
   (when-let [s @!state]
     (when (:executor s)
       (throw (ex-info "watcher already running; call stop! first or use status"
@@ -627,7 +708,8 @@
                      :run-id run-id
                      :event-n event-n
                      :cycle-n cycle-n
-                     :cold-scan? cold-scan?}
+                     :cold-scan? cold-scan?
+                     :commit-ingest? commit-ingest?}
         task #(#'safe-cycle! cycle-state)]
     (.scheduleWithFixedDelay executor task 0 interval-ms TimeUnit/MILLISECONDS)
     (reset! !state {:executor executor
@@ -637,7 +719,14 @@
                     :per-root-cache per-root-cache
                     :roots roots
                     :interval-ms interval-ms
-                    :cold-scan? cold-scan?})
+                    :cold-scan? cold-scan?
+                    :commit-ingest? commit-ingest?
+                    :last-cycle-started-at nil
+                    :last-cycle-finished-at nil
+                    :last-progress-at nil
+                    :last-error nil
+                    :last-subtask {:phase :boot}
+                    :stopping? false})
     (println (format "[futon3c.watcher.multi] started run-id=%d roots=%d interval-ms=%d"
                      run-id (count roots) interval-ms))
     (doseq [{:keys [path label]} roots]
@@ -648,6 +737,7 @@
   "Stop the watcher loop. Idempotent — no-op if not running."
   []
   (when-let [s @!state]
+    (swap! !state assoc :stopping? true)
     (when-let [^ScheduledExecutorService ex (:executor s)]
       (.shutdownNow ex)
       (.awaitTermination ex 2 TimeUnit/SECONDS))
@@ -664,6 +754,9 @@
         (assoc :running? (some? (:executor s))
                :event-n @(:event-n s)
                :cycle-n @(:cycle-n s)
+               :last-cycle-started-at (some-> (:last-cycle-started-at s) str)
+               :last-cycle-finished-at (some-> (:last-cycle-finished-at s) str)
+               :last-progress-at (some-> (:last-progress-at s) str)
                :n-roots (count (:roots s))))))
 
 (defn tick!

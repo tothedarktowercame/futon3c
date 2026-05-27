@@ -139,6 +139,13 @@
                    (when (and path (#{"A" "M"} status))
                      (str/trim path))))))))
 
+(defn current-head-sha
+  "Return the current HEAD commit SHA for REPO."
+  [repo]
+  (some-> (run-git repo "rev-parse" "HEAD")
+          str/trim
+          not-empty))
+
 ;; ---------- substrate-2 query ----------
 
 (defonce ^:private !last-ingested
@@ -161,7 +168,8 @@
   (try
     (let [resp (http/get (str FUTON1A "/api/alpha/hyperedges?type=code/v05/commit"
                               "&repo=" repo-label)
-                         {:throw false})
+                         {:throw false
+                          :timeout 5000})
           body (when (= 200 (:status resp)) (:body resp))
           parsed (when (string? body)
                    (edn/read-string {:default (fn [_t v] v)} body))
@@ -174,7 +182,10 @@
             (last (str/split hx-id #":"))))))
     (catch Exception e
       (binding [*out* *err*]
-        (println "last-indexed-commit-sha error:" repo-label (.getMessage e)))
+        (println "last-indexed-commit-sha error:" repo-label
+                 (or (.getMessage e)
+                     (.getName (class e))
+                     (pr-str e))))
       nil)))
 
 (defn last-indexed-commit-sha
@@ -457,6 +468,7 @@
   [{:keys [repo-root repo-label file->vars]}]
   (let [since-sha (last-indexed-commit-sha repo-label)
         commits (list-commits repo-root since-sha)
+        head-sha (current-head-sha repo-root)
         result (ingest-commits-batch!
                 {:commits commits
                  :repo-root repo-root
@@ -464,6 +476,6 @@
                  :file->vars file->vars
                  :prev-sha since-sha
                  :verbose? false})]
-    (when-let [latest (:latest-sha result)]
-      (record-last-ingested! repo-label latest))
+    (when-let [cursor (or head-sha (:latest-sha result))]
+      (record-last-ingested! repo-label cursor))
     result))

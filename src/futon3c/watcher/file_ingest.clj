@@ -4,11 +4,13 @@
    file path + repo root + label, plus a cached `root-ctx` (by-ns
    resolution map for the repo).
 
-   Dispatch by file extension:
+   Dispatch by file extension / path shape:
      .clj/.cljs/.cljc → vendored Clojure projector (this file)
      .el              → futon3c.watcher.projections.elisp/collect-file
      .py              → futon3c.watcher.projections.python/collect-file
      .flexiarg        → futon3c.watcher.projections.flexiarg/collect-file
+     futonN/essays/<slug>/<slug>.md
+                       → futon3c.watcher.projections.essay/collect-file
      holes/missions/M-*.md → mission sync push into futon3c + futon1a
      else            → :unhandled (no-op, returns OK)
 
@@ -23,11 +25,18 @@
             [cheshire.core :as json]
             [futon3c.watcher.projections.elisp :as elisp]
             [futon3c.watcher.projections.python :as python]
-            [futon3c.watcher.projections.flexiarg :as flexiarg]))
+            [futon3c.watcher.projections.flexiarg :as flexiarg]
+            [futon3c.watcher.projections.essay :as essay]))
 
 (def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 (def FUTON3C   (or (System/getenv "FUTON3C_URL") "http://localhost:7070"))
+
+(def ^:private mission-doc-pattern
+  #"/holes/missions/M-[^/]+\.md$")
+
+(def ^:private mission-cross-ref-type
+  "code/v05/mission-cross-ref")
 
 (def directed-types
   #{"code/v05/calls" "code/v05/coverage" "code/v05/vocabulary-use"
@@ -56,6 +65,134 @@
                     (catch Exception _ (:body resp))))]
     {:ok? (and (= 200 (:status resp))
                (or (:hyperedge body) (:hx/id body)))}))
+
+(defn post-hyperedge-doc!
+  [{:keys [id hx-type endpoints labels props]}]
+  (let [endpoints (directed-endpoints hx-type endpoints)
+        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
+                  id (assoc "hx/id" id)
+                  (seq labels) (assoc "hx/labels" labels)
+                  props (assoc "hx/props" props))
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/hyperedge")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    {:ok? (and (= 200 (:status resp))
+               (or (:hyperedge body) (:hx/id body)))}))
+
+;; ---------- mission cross-ref edge emission (T-9d) ----------
+
+(def ^:private mission-id-cache (atom {:t 0 :map {}}))
+
+(defn- fetch-mission-id->vertex-id
+  "Query substrate-2 for every current mission-doc hyperedge and return
+   a map of mission-id (without the `M-` prefix) → vertex-id (the
+   canonical endpoint string). Used to resolve `:mission/cross-refs`
+   targets without having to know each cross-ref's source repo."
+  []
+  (try
+    (let [url (str FUTON1A "/api/alpha/hyperedges?type=code/v05/mission-doc&limit=500")
+          resp (http/get url {:headers {"Accept" "application/json"}
+                              :throw false
+                              :timeout 5000})]
+      (when (= 200 (:status resp))
+        (let [parsed (json/parse-string (:body resp) true)
+              hxes (:hyperedges parsed)]
+          (into {}
+                (keep (fn [hx]
+                        (let [props (:hx/props hx)
+                              id (or (:mission/id props) (get props "mission/id"))
+                              endpoints (:hx/endpoints hx)]
+                          (when (and id (seq endpoints))
+                            [id (first endpoints)]))))
+                hxes))))
+    (catch Exception _ {})))
+
+(defn- mission-id->vertex-id-map
+  "Cached lookup; refreshes every 30 seconds to amortise the substrate-2
+   query across batch ingest passes."
+  []
+  (let [now (System/currentTimeMillis)
+        c @mission-id-cache]
+    (if (< (- now (:t c)) 30000)
+      (:map c)
+      (let [m (fetch-mission-id->vertex-id)]
+        (reset! mission-id-cache {:t now :map m})
+        m))))
+
+(defn invalidate-mission-id-cache!
+  "Force the next cross-ref emission to re-fetch from substrate-2.
+   Call this between backfill passes if recent ingests need to be
+   visible to subsequent edge-emission calls in the same wall-clock
+   second."
+  []
+  (reset! mission-id-cache {:t 0 :map {}}))
+
+(defn- cross-ref-edge-id
+  "Deterministic hyperedge id for a cross-ref edge from SOURCE→TARGET
+   vertex ids. Same (source, target) always produces the same id, so
+   substrate-2 dedupes on re-ingest instead of accumulating duplicates."
+  [source target]
+  (str "hx:" mission-cross-ref-type ":" source ":" target))
+
+(defn emit-cross-ref-edges!
+  "For each cross-ref name in CROSS-REFS, resolve to a target vertex
+   via the substrate-2 mission index and emit a directed cross-ref
+   hyperedge from SOURCE-VERTEX-ID. Skips self-references and
+   unresolvable names. Returns {:emitted N :unresolved N :failed N}."
+  [source-vertex-id source-mission-id cross-refs]
+  (let [resolver (mission-id->vertex-id-map)
+        results (atom {:emitted 0 :unresolved 0 :failed 0})]
+    (doseq [cref cross-refs
+            :let [target-id (str/replace-first (str cref) "M-" "")
+                  target-vertex (get resolver target-id)]]
+      (cond
+        (nil? target-vertex)
+        (swap! results update :unresolved inc)
+
+        (= target-vertex source-vertex-id)
+        (swap! results update :unresolved inc)
+
+        :else
+        (let [ok? (:ok? (post-hyperedge-doc!
+                         {:id (cross-ref-edge-id source-vertex-id target-vertex)
+                          :hx-type mission-cross-ref-type
+                          :endpoints [source-vertex-id target-vertex]
+                          :labels ["v05" "phase-4.5" "mission-cross-ref"]
+                          :props {"mission/source" source-mission-id
+                                  "mission/target" target-id}}))]
+          (if ok?
+            (swap! results update :emitted inc)
+            (swap! results update :failed inc)))))
+    @results))
+
+;; ---------- end T-9d ----------
+
+(defn post-entity!
+  [{:keys [id name type props source external-id]}]
+  (let [payload (cond-> {"name" name "type" type}
+                  id (assoc "id" id)
+                  props (assoc "props" props)
+                  source (assoc "source" source)
+                  external-id (assoc "external-id" external-id))
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/entity")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    {:ok? (and (= 200 (:status resp))
+               (or (:entity body) (:id body)))}))
 
 ;; ---------- file-extension helpers (replaces babashka.fs/extension) ----------
 
@@ -150,11 +287,15 @@
       ((:src-exts (meta #'flexiarg/src-exts) flexiarg/src-exts) ext) (flexiarg/collect-file path)
       :else nil)))
 
+(defn essay-home-path?
+  [path]
+  (essay/essay-home-md? path))
+
 ;; ---------- mission doc path detection + sync ----------
 
 (defn mission-doc-path? [path]
   (boolean
-   (re-find #"/holes/missions/M-[^/]+\.md$"
+   (re-find mission-doc-pattern
             (str/replace (str path) "\\" "/"))))
 
 (defn sync-mission!
@@ -187,6 +328,17 @@
         mission-status (or (:mission/status mission) (get mission "mission/status"))
         mission-repo (or (:mission/repo mission) (get mission "mission/repo"))
         mission-date (or (:mission/date mission) (get mission "mission/date"))
+        mission-owner (or (:mission/owner mission) (get mission "mission/owner"))
+        ;; T-9b: content-enrichment props now sourced from the canonical
+        ;; parser. Removes the need for downstream consumers (futon3a, etc.)
+        ;; to re-parse the source markdown.
+        mission-summary (or (:mission/summary mission) (get mission "mission/summary"))
+        mission-cross-refs (or (:mission/cross-refs mission) (get mission "mission/cross-refs"))
+        mission-code-paths (or (:mission/code-paths mission) (get mission "mission/code-paths"))
+        mission-phase (or (:mission/phase mission) (get mission "mission/phase"))
+        mission-mtime (or (:mission/mtime mission) (get mission "mission/mtime"))
+        mission-psrs (or (:mission/psrs mission) (get mission "mission/psrs") [])
+        mission-purs (or (:mission/purs mission) (get mission "mission/purs") [])
         vertex-id (str label "/mission/" mission-id)
         labels ["v05" "phase-4.5" label "mission-doc"]
         props {"repo" label
@@ -199,6 +351,18 @@
                                   :else mission-status)
                "mission/repo" mission-repo
                "mission/date" mission-date
+               "mission/owner" mission-owner
+               "mission/raw-status" (:mission/raw-status mission)
+               "mission/blocked-by" (:mission/blocked-by mission)
+               "mission/summary" mission-summary
+               "mission/cross-refs" (or mission-cross-refs [])
+               "mission/code-paths" (or mission-code-paths [])
+               "mission/phase" (cond
+                                 (keyword? mission-phase) (name mission-phase)
+                                 :else mission-phase)
+               "mission/mtime" mission-mtime
+               "mission/psrs" mission-psrs
+               "mission/purs" mission-purs
                "mission/sync-status" (:status sync)
                "mission/sync-created" (boolean (or (get-in sync [:body :created])
                                                     (get-in sync [:body "created"])))
@@ -206,11 +370,59 @@
                                                     (get-in sync [:body "skipped"])))}
         hx-ok? (and mission-id
                     (:ok? sync)
-                    (:ok? (post-hyperedge! "code/v05/mission-doc" [vertex-id] labels props)))]
+                    (:ok? (post-hyperedge! "code/v05/mission-doc" [vertex-id] labels props)))
+        ;; T-9e: also create a mission-doc entity whose :name matches the
+        ;; hyperedge endpoint string, so the WebArxana Graph view can
+        ;; focus on it and cross-link to the existing hyperedges via
+        ;; futon1a's hyperedges-by-end (UUID → name smart-resolve in
+        ;; routes.clj). See README-conventions.md §3.
+        entity-ok? (when hx-ok?
+                     (:ok? (post-entity!
+                            {:name vertex-id
+                             :type "mission/doc"
+                             :source "mission-doc-watcher"
+                             :external-id (str "M-" mission-id)
+                             :props {"mission/id" mission-id
+                                     "mission/title" mission-title
+                                     "mission/status" (cond
+                                                        (keyword? mission-status) (name mission-status)
+                                                        :else mission-status)
+                                     "mission/repo" mission-repo
+                                     "mission/phase" (cond
+                                                       (keyword? mission-phase) (name mission-phase)
+                                                       :else mission-phase)}})))
+        edge-stats (if (and hx-ok? (seq mission-cross-refs))
+                     (emit-cross-ref-edges! vertex-id mission-id mission-cross-refs)
+                     {:emitted 0 :unresolved 0 :failed 0})]
     {:vertices (if hx-ok? 1 0)
-     :edges 0
-     :failed (if hx-ok? 0 1)
+     :edges (:emitted edge-stats)
+     :unresolved-edges (:unresolved edge-stats)
+     :failed (+ (if hx-ok? 0 1) (:failed edge-stats))
      :sync sync}))
+
+(defn ingest-essay!
+  [{:keys [path label]}]
+  (let [{:keys [essay sections annotations]} (essay/collect-file path)
+        labels ["v05" "phase-4.5" label "essay-home"]
+        base-props {"repo" label
+                    "phase" 4.5
+                    "source-file" path
+                    "essay/id" (:id essay)}
+        stats (atom {:vertices 0 :edges 0 :failed 0})]
+    (doseq [entity (into [essay] sections)]
+      (let [resp (post-entity! {:id (:id entity)
+                                :name (:name entity)
+                                :type (:type entity)
+                                :props (:props entity)})]
+        (swap! stats update (if (:ok? resp) :vertices :failed) inc)))
+    (doseq [annotation annotations]
+      (let [resp (post-hyperedge-doc! {:id (:id annotation)
+                                       :hx-type (:hx-type annotation)
+                                       :endpoints (:endpoints annotation)
+                                       :labels labels
+                                       :props (merge base-props (:props annotation))})]
+        (swap! stats update (if (:ok? resp) :edges :failed) inc)))
+    @stats))
 
 ;; ---------- repo-wide by-ns rebuild for resolution ----------
 
@@ -292,6 +504,83 @@
 
 ;; ---------- per-file ingest ----------
 
+(def ^:private flexiarg-var-prop-keys
+  [:pattern/id
+   :pattern/title
+   :pattern/source-path
+   :pattern/conclusion
+   :pattern/projection-version
+   :pattern/references
+   :pattern/keywords
+   :pattern/sigils-raw
+   :pattern/sigils-canonical
+   :pattern/sigil-pending
+   :pattern/audience
+   :pattern/tone
+   :pattern/style
+   :pattern/factor
+   :pattern/energy
+   :pattern/pattern-ref
+   :pattern/slots])
+
+(defn- prop-key
+  [k]
+  (if-let [ns-part (namespace k)]
+    (str ns-part "/" (name k))
+    (name k)))
+
+(defn- slot->props
+  [slot]
+  {"slot/index" (:slot/index slot)
+   "slot/name" (:slot/name slot)
+   "slot/name-key" (:slot/name-key slot)
+   "slot/slug" (:slot/slug slot)
+   "slot/text" (:slot/text slot)})
+
+(defn- slot-text-props
+  [slots]
+  (into {}
+        (keep (fn [{:slot/keys [name-key text]}]
+                (when (and name-key text)
+                  [(str "pattern/" name-key) text])))
+        slots))
+
+(defn- flexiarg-var-props
+  [v]
+  (let [pattern-props
+        (reduce (fn [acc k]
+                  (if (contains? v k)
+                    (let [value (get v k)]
+                      (assoc acc
+                             (prop-key k)
+                             (if (= k :pattern/slots)
+                               (mapv slot->props value)
+                               value)))
+                    acc))
+                {}
+                flexiarg-var-prop-keys)]
+    (merge {"var/ns" (:var/ns v)
+            "var/qname" (:var/qname v)
+            "var/kind" (:var/kind v)
+            "var/has-doc" (:var/has-doc v)}
+           pattern-props
+           (slot-text-props (:pattern/slots v)))))
+
+(defn- pattern-slot-edge-id
+  [pattern-qname {:slot/keys [index name-key]}]
+  (str "hx:code/v05/pattern-slot:" pattern-qname ":" index ":" name-key))
+
+(defn- pattern-slot-edge-doc
+  [pf labels base-props v slot]
+  {:id (pattern-slot-edge-id (:var/qname v) slot)
+   :hx-type "code/v05/pattern-slot"
+   :endpoints [(pf (:var/qname v)) (str "slot/" (:slot/name-key slot))]
+   :labels labels
+   :props (merge base-props
+                 {"pattern/id" (:pattern/id v)
+                  "pattern/qname" (:var/qname v)}
+                 (slot->props slot))})
+
 (defn ingest-one-file!
   "Parse `path`, POST its vertices and edges to futon1a. Returns stats.
    B-2 v0: per-repo prefix applied to per-repo qname endpoints."
@@ -308,10 +597,12 @@
       (swap! stats update :vertices inc)
       (doseq [v vars]
         (let [r (post! "code/v05/var" [(pf (:var/qname v))]
-                       {"var/ns" (:var/ns v) "var/qname" (:var/qname v)
-                        "var/kind" (:var/kind v)
-                        "var/has-doc" (:var/has-doc v)})]
-          (swap! stats update (if (:ok? r) :vertices :failed) inc)))
+                       (flexiarg-var-props v))]
+          (swap! stats update (if (:ok? r) :vertices :failed) inc)
+          (doseq [slot (:pattern/slots v)]
+            (let [slot-r (post-hyperedge-doc!
+                          (pattern-slot-edge-doc pf labels base-props v slot))]
+              (swap! stats update (if (:ok? slot-r) :edges :failed) inc)))))
       (doseq [t tests]
         (let [r (post! "code/v05/test" [(pf (:test/qname t))]
                        {"test/ns" (:test/ns t) "test/qname" (:test/qname t)})]
@@ -344,7 +635,8 @@
     (throw (ex-info "file does not exist" {:path path})))
   (let [ext (file-ext path)
         mission-doc? (mission-doc-path? path)
-        handled? (or mission-doc? (supported-ext? ext))]
+        essay-home? (essay-home-path? path)
+        handled? (or mission-doc? essay-home? (supported-ext? ext))]
     (cond
       (not handled?) {:status :unhandled :path path :ext ext}
 
@@ -353,6 +645,12 @@
             stats (ingest-mission-doc! {:path path :label label :root root})
             dur (- (System/currentTimeMillis) t-start)]
         (assoc stats :status :mission-doc :duration-ms dur :path path))
+
+      essay-home?
+      (let [t-start (System/currentTimeMillis)
+            stats (ingest-essay! {:path path :label label})
+            dur (- (System/currentTimeMillis) t-start)]
+        (assoc stats :status :essay :duration-ms dur :path path))
 
       :else
       (let [t-start (System/currentTimeMillis)
