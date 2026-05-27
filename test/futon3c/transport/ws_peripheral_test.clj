@@ -220,7 +220,36 @@
         (finally (cleanup-temp-dir! dir))))))
 
 ;; =============================================================================
-;; 3. Stop peripheral session
+;; 3. Server-emitted peripheral event delivery
+;; =============================================================================
+
+(deftest ws-send-peripheral-event-to-ready-agent
+  (testing "send-peripheral-event! uses the authenticated WS sender for a ready agent"
+    (let [{:keys [dir]} (seed-temp-dir!)
+          evidence-store (atom {:entries {} :order []})]
+      (try
+        (register-mock-agent! "claude-1" :claude)
+        (let [ws-callbacks (make-ws-with-peripherals dir evidence-store)
+              ch (connect-agent! ws-callbacks :ch-event "claude-1")]
+          (is (= :ch-event ch))
+          (is (true? (ws/send-peripheral-event! "claude-1" :explore :cursor-state {:point 42
+                                                                                     :buffer "hello.txt"})))
+          (let [frame (last-sent (:sent ws-callbacks))]
+            (is (= "peripheral_event" (:type frame)))
+            (is (= "explore" (:peripheral_id frame)))
+            (is (= "cursor-state" (:event frame)))
+            (is (= {:point 42 :buffer "hello.txt"} (:payload frame)))))
+        (finally (cleanup-temp-dir! dir))))))
+
+(deftest ws-send-peripheral-event-without-ws-sender
+  (testing "send-peripheral-event! returns false when the agent has no active WS sender"
+    (is (false? (ws/send-peripheral-event! "agent-missing"
+                                           :explore
+                                           :cursor-state
+                                           {:point 1})))))
+
+;; =============================================================================
+;; 4. Stop peripheral session
 ;; =============================================================================
 
 (deftest ws-peripheral-stop-returns-fruit
@@ -259,7 +288,7 @@
         (finally (cleanup-temp-dir! dir))))))
 
 ;; =============================================================================
-;; 4. On-close auto-stops peripheral
+;; 5. On-close auto-stops peripheral
 ;; =============================================================================
 
 (deftest ws-close-stops-active-peripheral
@@ -291,7 +320,7 @@
         (finally (cleanup-temp-dir! dir))))))
 
 ;; =============================================================================
-;; 5. Full session lifecycle: start → actions → stop
+;; 6. Full session lifecycle: start → actions → stop
 ;; =============================================================================
 
 (deftest ws-full-peripheral-session-lifecycle
@@ -345,7 +374,7 @@
         (finally (cleanup-temp-dir! dir))))))
 
 ;; =============================================================================
-;; 6. Regression tests for Codex review findings
+;; 7. Regression tests for Codex review findings
 ;; =============================================================================
 
 (deftest ws-peripheral-start-unknown-id-returns-error

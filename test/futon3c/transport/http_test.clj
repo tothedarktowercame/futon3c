@@ -8,6 +8,8 @@
             [cheshire.core :as json]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.transport.http :as http]
+            [futon3c.transport.peripheral-events]
+            [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.portfolio.perceive :as perceive]
             [futon3c.transport.encyclopedia :as enc]
@@ -604,6 +606,67 @@
                                      :command-events 0}}}
           true)))))
 
+(deftest wrap-agent-facing-surface-includes-live-emacs-projection
+  (testing "invoke prompt includes the active Emacs read/write surface contract"
+    (with-redefs [reg/current-surface-projection
+                  (fn [_]
+                    {:surface "emacs-cursor"
+                     :editor-id "editor-main"
+                     :mode "follow"
+                     :buffer-summary "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+                     :write-surface "minibuffer"})]
+      (let [prompt (#'futon3c.transport.http/wrap-agent-facing-surface
+                    "Investigate the current form."
+                    "emacs-repl"
+                    "joe"
+                    "codex-8")]
+        (is (str/includes? prompt "Surface: emacs-repl"))
+        (is (str/includes? prompt "Live surface projection:"))
+        (is (str/includes? prompt "Editor: editor-main"))
+        (is (str/includes? prompt "Read surface `buffer`: buffer=foo.clj"))
+        (is (str/includes? prompt "Write surface `minibuffer`: emit lines `MINIBUFFER: <text-or-json>`"))
+        (is (str/includes? prompt "\"command\":\"eval-sexp\""))
+        (is (str/includes? prompt "\"command\":\"run-script\""))))))
+
+(deftest maybe-route-surface-writes-strips-and-relays-minibuffer-directives
+  (testing "MINIBUFFER directives are removed from visible output and relayed to Emacs"
+    (let [sent (atom [])]
+      (with-redefs [reg/current-surface-projection
+                    (fn [_]
+                      {:surface "emacs-cursor"
+                       :editor-id "editor-main"})
+                    futon3c.transport.peripheral-events/send-peripheral-event!
+                    (fn [agent-id peripheral-id event payload]
+                      (swap! sent conj {:agent-id agent-id
+                                        :peripheral-id peripheral-id
+                                        :event event
+                                        :payload payload})
+                      true)]
+        (let [result (#'futon3c.transport.http/maybe-route-surface-writes
+                      "codex-8"
+                      {:ok true
+                       :result (str "Summary complete.\n"
+                                    "MINIBUFFER: {\"command\":\"refresh-context\"}\n"
+                                    "MINIBUFFER: Inspect current defun")
+                       :invoke-meta {:execution {:executed? true}}})]
+          (is (= "Summary complete." (:result result)))
+          (is (= {:minibuffer-events 2
+                  :routed-events 2}
+                 (get-in result [:invoke-meta :surface-write])))
+          (is (= [{:agent-id "codex-8"
+                   :peripheral-id :emacs-cursor
+                   :event :minibuffer
+                   :payload {:command "refresh-context"
+                             :request-id "minibuffer-0"}}
+                  {:agent-id "codex-8"
+                   :peripheral-id :emacs-cursor
+                   :event :minibuffer
+                   :payload {:command "message"
+                             :message "Inspect current defun"
+                             :prompt "Inspect current defun"
+                             :request-id "minibuffer-1"}}]
+                 @sent)))))))
+
 (deftest invoke-registered-codex-agent
   (testing "POST /api/alpha/invoke invokes codex agent via registry"
     (register-mock-agent! "codex-1" :codex)
@@ -1102,7 +1165,7 @@
                                       "delivered" true
                                       "note" "ngircd-bridge"})]
       (with-redefs [futon3c.transport.http/*resolve-delivery-recorder* (fn [] nil)
-                    futon3c.transport.ws.invoke/send-frame!
+                    ws-invoke/send-frame!
                     (fn [agent-id payload]
                       (swap! calls conj {:agent-id agent-id :payload payload})
                       true)]
@@ -1546,6 +1609,31 @@
           ;; Graceful shutdown
           ((:server server-info)))))))
 
+(deftest http-kit-shutdown-race-suppression
+  (testing "expected shutdown races are suppressed only after stop begins"
+    (let [submit-race (java.util.concurrent.RejectedExecutionException. "executor closed")
+          close-race (java.nio.channels.ClosedChannelException.)]
+      (is (true? (#'http/suppress-http-kit-error?
+                  :stopped
+                  "failed to submit task to executor service"
+                  submit-race)))
+      (is (true? (#'http/suppress-http-kit-error?
+                  nil
+                  "increase :queue-size if this happens often"
+                  submit-race)))
+      (is (true? (#'http/suppress-http-kit-error?
+                  :stopped
+                  "accept incoming request"
+                  close-race)))
+      (is (false? (#'http/suppress-http-kit-error?
+                   :running
+                   "failed to submit task to executor service"
+                   submit-race)))
+      (is (false? (#'http/suppress-http-kit-error?
+                   :stopped
+                   "some other message"
+                   submit-race))))))
+
 (deftest start-server-stop-closes-gracefully
   (testing "calling the stop function shuts down the server"
     (let [free-port (with-open [ss (java.net.ServerSocket. 0)]
@@ -1675,6 +1763,70 @@
       (is (pos? (:item-count inspectability)))
       (is (some #(= "human-visible-inspectability" %) (:families inspectability)))
       (is (some #(= "strategic-closure-specification" (:family-id %)) unmapped)))))
+
+(deftest war-machine-serves-cached-snapshot
+  (testing "GET /api/alpha/war-machine returns the cached snapshot plus freshness metadata"
+    (let [handler (make-handler)
+          as-of (java.time.Instant/parse "2026-05-25T12:00:00Z")
+          response (with-redefs [requiring-resolve
+                                 (fn [sym]
+                                   (case sym
+                                     futon3c.wm.scheduler/ensure-started!
+                                     (fn [] {:ok true})
+                                     futon3c.wm.scheduler/snapshot-for-days
+                                     (fn [days]
+                                       (when (= 14 days)
+                                         {:as-of as-of
+                                          :payload {"window" {"days" 14}
+                                                    "judgement" {"mode" "steady"}}}))
+                                     futon3c.wm.scheduler/status
+                                     (fn []
+                                       {:running? true
+                                        :period-seconds 300
+                                        :days-windows [14 90]})
+                                     futon3c.wm.scheduler/request-window!
+                                     (fn [_days] {:ok true})
+                                     nil))]
+                     (get-req-with-query handler "/api/alpha/war-machine" "days=14"))
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
+      (is (= 14 (get-in parsed [:window :days])))
+      (is (= "steady" (get-in parsed [:judgement :mode])))
+      (is (= "2026-05-25T12:00:00Z" (:as-of parsed)))
+      (is (integer? (:scan-age-seconds parsed)))
+      (is (= 300 (get-in parsed [:scheduler :period-seconds]))))))
+
+(deftest war-machine-returns-503-while-background-warmup-starts
+  (testing "GET /api/alpha/war-machine returns 503 and requests a background warmup when no snapshot exists yet"
+    (let [handler (make-handler)
+          requested-days (atom [])
+          response (with-redefs [requiring-resolve
+                                 (fn [sym]
+                                   (case sym
+                                     futon3c.wm.scheduler/ensure-started!
+                                     (fn [] {:ok true})
+                                     futon3c.wm.scheduler/snapshot-for-days
+                                     (fn [_days] nil)
+                                     futon3c.wm.scheduler/status
+                                     (fn []
+                                       {:running? true
+                                        :period-seconds 300
+                                        :days-windows [14 90]})
+                                     futon3c.wm.scheduler/request-window!
+                                     (fn [days]
+                                       (swap! requested-days conj days)
+                                       {:ok true})
+                                     nil))]
+                     (get-req-with-query handler "/api/alpha/war-machine" "days=90"))
+          parsed (parse-body response)]
+      (is (= 503 (:status response)))
+      (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
+      (is (= "60" (get-in response [:headers "Retry-After"])))
+      (is (= [90] @requested-days))
+      (is (= "war-machine-snapshot-unavailable" (:error parsed)))
+      (is (= 90 (:days parsed)))
+      (is (= 60 (:retry-after-seconds parsed))))))
 
 (deftest portfolio-heartbeat-rejects-invalid-json
   (testing "POST /api/alpha/portfolio/heartbeat with bad JSON returns 400"
