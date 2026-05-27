@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/home/joe/code/futon3c/scripts/emacs-socket-lib.sh
+source "${script_dir}/emacs-socket-lib.sh"
+
 # Laptop profile for futon3c dev.
 # Just run: ./scripts/dev-laptop-env
 #
@@ -49,6 +53,14 @@ export FUTON3C_MULTI_WATCHER_DEBOUNCE_MS="${FUTON3C_MULTI_WATCHER_DEBOUNCE_MS:-2
 export FUTON3C_MULTI_WATCHER_PIDFILE="${FUTON3C_MULTI_WATCHER_PIDFILE:-/tmp/multi-watcher.pid}"
 export FUTON3C_MULTI_WATCHER_LOGFILE="${FUTON3C_MULTI_WATCHER_LOGFILE:-/tmp/multi-watcher.log}"
 
+# --- Web UIs: start CLJS/web sidecars alongside the JVM ---
+export FUTON3C_WAR_MACHINE_AUTOSTART="${FUTON3C_WAR_MACHINE_AUTOSTART:-true}"
+export FUTON3C_WAR_MACHINE_PIDFILE="${FUTON3C_WAR_MACHINE_PIDFILE:-/tmp/war-machine-web.pid}"
+export FUTON3C_WAR_MACHINE_LOGFILE="${FUTON3C_WAR_MACHINE_LOGFILE:-/tmp/war-machine-web.log}"
+export FUTON3C_WEBARXANA_AUTOSTART="${FUTON3C_WEBARXANA_AUTOSTART:-true}"
+export FUTON3C_WEBARXANA_PIDFILE="${FUTON3C_WEBARXANA_PIDFILE:-/tmp/webarxana-web.pid}"
+export FUTON3C_WEBARXANA_LOGFILE="${FUTON3C_WEBARXANA_LOGFILE:-/tmp/webarxana-web.log}"
+
 # --- Federation: peer with Linode unless explicitly disabled ---
 if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}" ]]; then
   export FUTON3C_PEERS="${FUTON3C_LINODE_URL}"
@@ -56,21 +68,7 @@ fi
 
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
-  _emacs_dir="/run/user/$(id -u)/emacs"
-  if [[ -d "$_emacs_dir" ]]; then
-    # Prefer 'server' (interactive Emacs hosting *server* / Agency) then
-    # 'futon' (headless daemon spawned by cr), else first available.
-    if [[ -S "$_emacs_dir/server" ]]; then
-      export FUTON3C_EMACS_SOCKET="server"
-    elif [[ -S "$_emacs_dir/futon" ]]; then
-      export FUTON3C_EMACS_SOCKET="futon"
-    else
-      _sockets=("$_emacs_dir"/*)
-      if [[ ${#_sockets[@]} -ge 1 && -S "${_sockets[0]}" ]]; then
-        export FUTON3C_EMACS_SOCKET="$(basename "${_sockets[0]}")"
-      fi
-    fi
-  fi
+  export FUTON3C_EMACS_SOCKET="$(futon_preferred_emacs_socket || true)"
   if [[ -n "${FUTON3C_EMACS_SOCKET:-}" ]]; then
     echo "[dev] Emacs socket: ${FUTON3C_EMACS_SOCKET}"
   fi
@@ -106,6 +104,65 @@ if [[ -f "$local_override" ]]; then
   echo "[dev] Loaded local overrides: $(basename "$local_override")"
 fi
 
+futon1a_data_dir() {
+  printf '%s\n' "${FUTON1A_DATA_DIR:-${HOME}/code/storage/futon1a/default}"
+}
+
+port_listening() {
+  local port="$1"
+  ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)${port}$"
+}
+
+port_listener_pid() {
+  local port="$1"
+  ss -ltnp 2>/dev/null \
+    | awk -v port=":${port}" '$4 ~ port {print $NF}' \
+    | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' \
+    | head -n 1
+}
+
+show_futon1a_lock_conflict_and_exit() {
+  local lockfile="$1"
+  local pid="$2"
+  local proc_name active_ports=()
+  proc_name="$(ps -p "$pid" -o comm= 2>/dev/null || true)"
+  for port in "${FUTON3C_PORT:-7070}" "${FUTON1A_PORT:-7071}" "${FUTON5_PORT:-7072}" "${FUTON3C_DRAWBRIDGE_PORT:-6768}"; do
+    if port_listening "$port"; then
+      active_ports+=("$port")
+    fi
+  done
+
+  echo "[dev] futon1a data dir is already locked by pid ${pid}"
+  echo "      lock: ${lockfile}"
+  if [[ -n "$proc_name" ]]; then
+    echo "      process: ${proc_name}"
+  fi
+  if [[ ${#active_ports[@]} -gt 0 ]]; then
+    echo "      active dev ports: ${active_ports[*]}"
+  fi
+  echo "[dev] Another dev JVM is probably already running."
+  echo "      Reuse that session, stop pid ${pid}, or point FUTON1A_DATA_DIR/FUTON1A_PORT elsewhere."
+  exit 1
+}
+
+preflight_futon1a_lock() {
+  local data_dir lockfile pid
+  data_dir="$(futon1a_data_dir)"
+  lockfile="${data_dir}/index-store/LOCK"
+  [[ -e "$lockfile" ]] || return 0
+
+  pid=""
+  if command -v lsof >/dev/null 2>&1; then
+    pid="$(lsof -t -- "$lockfile" 2>/dev/null | head -n 1 || true)"
+  fi
+  if [[ -z "$pid" ]] && command -v fuser >/dev/null 2>&1; then
+    pid="$(fuser "$lockfile" 2>/dev/null | awk '{print $1}' || true)"
+  fi
+  [[ -n "$pid" ]] || return 0
+
+  show_futon1a_lock_conflict_and_exit "$lockfile" "$pid"
+}
+
 watcher_pid_running() {
   local pidfile="$1"
   [[ -f "$pidfile" ]] || return 1
@@ -113,6 +170,156 @@ watcher_pid_running() {
   pid="$(cat "$pidfile" 2>/dev/null || true)"
   [[ -n "$pid" ]] || return 1
   kill -0 "$pid" 2>/dev/null
+}
+
+find_shadow_watch_pid() {
+  local project_dir="$1"
+  ps -ww -eo pid=,cmd= \
+    | grep -F "${project_dir}/node_modules/.bin/shadow-cljs watch app" \
+    | grep -v grep \
+    | awk '{print $1}' \
+    | tail -n 1
+}
+
+ensure_nvm_snippet() {
+  cat <<'EOF'
+if [[ -n "${NVM_DIR:-}" && -s "${NVM_DIR}/nvm.sh" ]]; then
+  # shellcheck source=/dev/null
+  . "${NVM_DIR}/nvm.sh"
+elif [[ -s "${HOME}/.nvm/nvm.sh" ]]; then
+  export NVM_DIR="${HOME}/.nvm"
+  # shellcheck source=/dev/null
+  . "${NVM_DIR}/nvm.sh"
+fi
+EOF
+}
+
+terminate_pid_if_running() {
+  local pid="$1"
+  [[ -n "$pid" ]] || return 0
+  kill "$pid" 2>/dev/null || true
+}
+
+start_shadow_watch_sidecar() {
+  local name="$1"
+  local project_dir="$2"
+  local pidfile="$3"
+  local logfile="$4"
+  local url="${5:-}"
+  local health_port="${6:-}"
+  local actual_pid
+  local nvm_snippet
+  local -i wait_step_seconds=2
+  local -i wait_steps=6
+  local -i step=0
+
+  nvm_snippet="$(ensure_nvm_snippet)"
+
+  if watcher_pid_running "$pidfile"; then
+    if [[ -n "$health_port" ]] && ! port_listening "$health_port"; then
+      echo "[dev] ${name} pid $(cat "$pidfile") is up but port ${health_port} is not; restarting"
+      terminate_pid_if_running "$(cat "$pidfile")"
+      rm -f "$pidfile"
+    else
+      echo "[dev] ${name} already running (pid $(cat "$pidfile"))${url:+ at ${url}}"
+      return 0
+    fi
+  fi
+
+  if [[ -n "$health_port" ]] && port_listening "$health_port"; then
+    actual_pid="$(port_listener_pid "$health_port" || true)"
+    if [[ -n "$actual_pid" ]]; then
+      echo "$actual_pid" > "$pidfile"
+      echo "[dev] ${name} already online (pid ${actual_pid})${url:+ at ${url}}"
+      return 0
+    fi
+  fi
+
+  actual_pid="$(find_shadow_watch_pid "$project_dir" || true)"
+  if [[ -n "$actual_pid" ]]; then
+    if [[ -n "$health_port" ]] && ! port_listening "$health_port"; then
+      echo "[dev] ${name} process ${actual_pid} exists but port ${health_port} is not live; restarting"
+      terminate_pid_if_running "$actual_pid"
+      actual_pid=""
+    else
+      echo "$actual_pid" > "$pidfile"
+      echo "[dev] ${name} already running (pid ${actual_pid})${url:+ at ${url}}"
+      return 0
+    fi
+  fi
+
+  rm -f "$pidfile"
+  echo "[dev] Starting ${name}${url:+ at ${url}}"
+  setsid bash -lc "
+    ${nvm_snippet}
+    cd '${project_dir}'
+    exec npm run dev </dev/null >>'${logfile}' 2>&1
+  " &
+  echo $! > "$pidfile"
+  sleep 2
+
+  if ! watcher_pid_running "$pidfile"; then
+    actual_pid="$(find_shadow_watch_pid "$project_dir" || true)"
+    if [[ -n "$actual_pid" ]]; then
+      echo "$actual_pid" > "$pidfile"
+    fi
+  fi
+
+  if ! watcher_pid_running "$pidfile"; then
+    echo "[dev] ${name} failed to stay up; see ${logfile}" >&2
+    return 1
+  fi
+
+  if [[ -n "$health_port" ]]; then
+    while (( step < wait_steps )); do
+      if port_listening "$health_port"; then
+        break
+      fi
+      sleep "$wait_step_seconds"
+      ((step+=1))
+    done
+    if ! port_listening "$health_port"; then
+      echo "[dev] ${name} started but port ${health_port} is not listening; see ${logfile}" >&2
+      return 1
+    fi
+  fi
+
+  actual_pid="$(find_shadow_watch_pid "$project_dir" || true)"
+  if [[ -n "$actual_pid" ]]; then
+    echo "$actual_pid" > "$pidfile"
+  elif [[ -n "$health_port" ]]; then
+    actual_pid="$(port_listener_pid "$health_port" || true)"
+    if [[ -n "$actual_pid" ]]; then
+      echo "$actual_pid" > "$pidfile"
+    fi
+  fi
+
+  echo "[dev] ${name} pid $(cat "$pidfile") log ${logfile}${url:+ url ${url}}"
+}
+
+start_web_sidecars() {
+  local war_machine_dir="${HOME}/code/futon2/web/war-machine"
+  local webarxana_dir="${HOME}/code/futon4/dev/web/webarxana"
+
+  if [[ "${FUTON3C_WAR_MACHINE_AUTOSTART}" == "true" ]]; then
+    start_shadow_watch_sidecar \
+      "War Machine web" \
+      "$war_machine_dir" \
+      "${FUTON3C_WAR_MACHINE_PIDFILE}" \
+      "${FUTON3C_WAR_MACHINE_LOGFILE}" \
+      "http://localhost:8710" \
+      "8710"
+  fi
+
+  if [[ "${FUTON3C_WEBARXANA_AUTOSTART}" == "true" ]]; then
+    start_shadow_watch_sidecar \
+      "WebArxana CLJS watcher" \
+      "$webarxana_dir" \
+      "${FUTON3C_WEBARXANA_PIDFILE}" \
+      "${FUTON3C_WEBARXANA_LOGFILE}" \
+      "http://localhost:9631" \
+      "9631"
+  fi
 }
 
 retire_old_bb_multi_watcher() {
@@ -219,6 +426,8 @@ start_multi_watcher_LEGACY_BB() {
   echo "[dev] Multi-watcher pid $(cat "$watcher_pid") log ${watcher_log}"
 }
 
+preflight_futon1a_lock
+start_web_sidecars
 start_multi_watcher
 
 exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"
