@@ -363,7 +363,8 @@
     :laptop {:irc-port 0
              :irc-bind-host "127.0.0.1"
              :register-claude? false
-             :register-codex? true}
+             :register-codex? true
+             :direct-xtdb? true}
     ;; Legacy behavior when role is not set.
     {:irc-port 6667
      :irc-bind-host "0.0.0.0"
@@ -408,3 +409,22 @@
     (if (session-file->file session-file)
       (or file-sid incoming)
       (or incoming atom-sid))))
+
+(defn clear-session-state!
+  "Clear persisted and in-memory session continuity.
+
+   Returns {:ok true} on success or {:ok false :error \"...\"} when the backing
+   session file exists but cannot be removed."
+  [session-file session-id-atom]
+  (try
+    (when session-id-atom
+      (reset! session-id-atom nil))
+    (when-let [file (session-file->file session-file)]
+      (when (and (.exists ^java.io.File file)
+                 (not (.delete ^java.io.File file)))
+        (throw (ex-info "could not delete session file"
+                        {:session-file (.getPath ^java.io.File file)}))))
+    {:ok true}
+    (catch Exception e
+      {:ok false
+       :error (.getMessage e)})))

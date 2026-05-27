@@ -3,8 +3,12 @@
 
    Extracted from futon3c.dev (Phase 1 of TN-dev-clj-decomposition).
    The evidence store atom is passed in or injected — this namespace
-   does not own runtime state."
-  (:require [futon3c.evidence.store :as estore]
+   does not own runtime state.
+
+   Evidence emission goes through `futon3c.evidence.boundary/append!` —
+   the single routing authority that binds I-single-boundary +
+   I-evidence-per-turn (M-invariant-queue-unstuck, INSTANTIATE-2)."
+  (:require [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agency.registry :as reg]
@@ -43,26 +47,33 @@
 ;; ---------------------------------------------------------------------------
 
 (defn emit-invoke-evidence!
-  "Emit an invoke lifecycle evidence entry. Fire-and-forget.
-   Uses the provided evidence store — no HTTP round-trip."
+  "Emit an invoke lifecycle evidence entry through the single boundary.
+
+   Routes through `futon3c.evidence.boundary/append!`, which performs
+   shape coercion (string→keyword for tags, ref-type, type, claim-type),
+   calls the underlying append, and verifies durable persistence via
+   I-evidence-per-turn. Returns the boundary's delivery-receipt-shaped
+   result: `{:ok true :entry ... :evidence/id ...}` on success or
+   `{:ok false :error/code ... :invariant/violation ...}` on failure.
+
+   The previous local tag normalisation + per-turn check + violation
+   printing are all delegated to the boundary now (M-invariant-queue-unstuck
+   INSTANTIATE-2)."
   [evidence-store agent-id event-type body-map & {:keys [session-id tags]}]
   (when evidence-store
-    (future
-      (try
-        (estore/append* evidence-store
-                        {:subject {:ref/type "agent" :ref/id agent-id}
-                         :type :coordination
-                         :claim-type :step
-                         :author agent-id
-                         :session-id (or session-id "dev-invoke")
-                         :body (assoc body-map
-                                      "event" event-type
-                                      "agent-id" agent-id
-                                      "at" (str (Instant/now)))
-                         :tags (into ["invoke" "dev" agent-id]
-                                     (or tags []))})
-        (catch Exception e
-          (println (str "[dev] evidence emit error: " (.getMessage e))))))))
+    (boundary/append!
+     evidence-store
+     {:subject {:ref/type :agent :ref/id agent-id}
+      :type :coordination
+      :claim-type :step
+      :author agent-id
+      :session-id (or session-id "dev-invoke")
+      :body (assoc body-map
+                   "event" event-type
+                   "agent-id" agent-id
+                   "at" (str (Instant/now)))
+      :tags (into [:invoke :dev agent-id]
+                  (or tags []))})))
 
 ;; ---------------------------------------------------------------------------
 ;; Artifact helpers
@@ -239,7 +250,8 @@
                              (#{"\"appended\"" "appended"} out) :appended
                              (#{"\"missing-buffer\"" "missing-buffer"} out) :missing-buffer
                              :else :unknown)
-                    success? (and ok (#{:replaced :appended} status))]
+                    success? (and ok (#{:replaced :appended} status))
+                    timeout? (and (not ok) (= "timeout" out))]
                 (cond
                   success?
                   true
@@ -249,7 +261,17 @@
                   (= :missing-buffer status)
                   false
 
-                  (< attempt 3)
+                  ;; Emacs unresponsive — don't retry. Return false so the HTTP
+                  ;; handler falls through to the WS relay instead of burning
+                  ;; 6+ seconds on blackboard retries.
+                  timeout?
+                  (do
+                    (println (str "[invoke-delivery] emacs unresponsive for " aid
+                                  " trace-id=" tid " (output=timeout); skipping retries"))
+                    (flush)
+                    false)
+
+                  (< attempt 2)
                   (do
                     (Thread/sleep (* 120 attempt))
                     (recur (inc attempt)))

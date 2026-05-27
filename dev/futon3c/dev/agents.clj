@@ -28,6 +28,11 @@
       (when-not (str/blank? text)
         (subs text 0 (min max-len (count text)))))))
 
+(defn- make-session-reset-fn
+  [session-file sid-atom]
+  (fn []
+    (config/clear-session-state! session-file sid-atom)))
+
 (defn- register-codex-lane-process!
   [{:keys [agent-id session-file metadata read-session-id !codex-ws-bridge
            codex-lane-runtime-state clear-codex-lane-runtime-state!]}]
@@ -55,6 +60,9 @@
                       last-terminal (:last-terminal runtime)
                       runtime-state (or (:runtime runtime)
                                         (:runtime last-terminal))
+                      bridge @!codex-ws-bridge
+                      bridge-running? (boolean (some-> bridge :running? deref))
+                      bridge-state (some-> bridge :state deref)
                       session-id (or (:session-id runtime)
                                      (:session-id agent)
                                      (read-session-id session-file))
@@ -77,7 +85,9 @@
                            :surface (:surface metadata)
                            :lane (:lane metadata)
                            :ws-bridge-running? (and (true? (:ws-bridge? metadata))
-                                                    (some? @!codex-ws-bridge))
+                                                    bridge-running?)
+                           :ws-bridge-status (some-> (:status bridge-state) name)
+                           :ws-bridge-reason (:reason bridge-state)
                            :lifecycle-status (some-> (:lifecycle-status runtime) name)
                            :last-terminal-status (some-> (or (:last-terminal-status runtime)
                                                              (:status last-terminal))
@@ -124,10 +134,12 @@
                     :session-id-atom sid-atom
                     :emacs-socket socket})]
     (rt/register-claude! {:agent-id agent-id
-                          :invoke-fn invoke-fn})
+                          :invoke-fn invoke-fn
+                          :session-reset-fn (make-session-reset-fn session-file sid-atom)})
     (reg/update-agent! agent-id
                        :agent/type :claude
                        :agent/invoke-fn invoke-fn
+                       :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                        :agent/metadata metadata
                        :agent/capabilities [:explore :edit :test :coordination/execute])
     (when initial-sid
@@ -157,7 +169,7 @@
         invoke-fn (make-codex-invoke-fn
                    {:codex-bin (config/env "CODEX_BIN" "codex")
                     :profile (config/env "CODEX_PROFILE")
-                    :model (config/env "CODEX_MODEL" "gpt-5-codex")
+                    :model (config/env "CODEX_MODEL")
                     :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
                     :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                          (config/env "CODEX_APPROVAL" "never"))
@@ -169,10 +181,12 @@
                     :session-id-atom sid-atom})]
     (rt/register-codex! {:agent-id agent-id
                          :invoke-fn invoke-fn
+                         :session-reset-fn (make-session-reset-fn session-file sid-atom)
                          :metadata metadata})
     (reg/update-agent! agent-id
                        :agent/type :codex
                        :agent/invoke-fn invoke-fn
+                       :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                        :agent/capabilities [:edit :test :coordination/execute]
                        :agent/metadata metadata)
     (when initial-sid
@@ -333,7 +347,7 @@
                invoke-fn (make-codex-invoke-fn
                           {:codex-bin (config/env "CODEX_BIN" "codex")
                            :profile (config/env "CODEX_PROFILE")
-                           :model (config/env "CODEX_MODEL" "gpt-5-codex")
+                           :model (config/env "CODEX_MODEL")
                            :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
                            :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                                 (config/env "CODEX_APPROVAL" "never"))
@@ -372,10 +386,12 @@
                            :replication-interval-ms replication-interval-ms})]
               (rt/register-codex! {:agent-id codex-agent-id
                                    :invoke-fn codex-invoke-fn
+                                   :session-reset-fn (make-session-reset-fn session-file sid-atom)
                                    :metadata codex-metadata})
               (reg/update-agent! codex-agent-id
                                  :agent/type :codex
                                  :agent/invoke-fn codex-invoke-fn
+                                 :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                                  :agent/capabilities [:edit :test :coordination/execute]
                                  :agent/metadata codex-metadata)
               (when initial-sid
@@ -398,10 +414,12 @@
               (when codex-ws-bridge?
                 (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to inline invoke"))
               (rt/register-codex! {:agent-id codex-agent-id
-                                   :invoke-fn invoke-fn})
+                                   :invoke-fn invoke-fn
+                                   :session-reset-fn (make-session-reset-fn session-file sid-atom)})
               (reg/update-agent! codex-agent-id
                                  :agent/type :codex
                                  :agent/invoke-fn invoke-fn
+                                 :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                                  :agent/capabilities [:edit :test :coordination/execute])
               (when initial-sid
                 (reg/update-agent! codex-agent-id :agent/session-id initial-sid))

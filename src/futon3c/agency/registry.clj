@@ -1206,3 +1206,21 @@
   (let [n (count @!registry)]
     (reset! !registry {})
     n))
+
+(defn backpack-add!
+  "Append a pattern entry to an agent's backpack under :agent/metadata."
+  [agent-id pattern-entry]
+  (swap! !registry
+         update-in [agent-id :agent/metadata :backpack]
+         (fn [bp] (vec (conj (or bp []) pattern-entry)))))
+
+(defn backpack-clear!
+  "Clear an agent's pattern backpack."
+  [agent-id]
+  (swap! !registry
+         assoc-in [agent-id :agent/metadata :backpack] []))
+
+(defn backpack
+  "Read an agent's current pattern backpack."
+  [agent-id]
+  (get-in @!registry [agent-id :agent/metadata :backpack]))

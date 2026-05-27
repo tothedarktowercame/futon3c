@@ -45,6 +45,7 @@
      FUTON3C_REGISTER_CLAUDE2 — whether to register claude-2 (mentor, workspace2)
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host
      FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)
+     FUTON3C_PROCESS_WATCHDOG_AUTOSTART — auto-start infra process watchdog on boot (default true)
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
@@ -53,6 +54,7 @@
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.blackboard :as bb]
+            [futon3c.process-watchdog :as process-watchdog]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
@@ -92,6 +94,9 @@
 (declare mirror-apm-conductor-v2-to-codex-repl!)
 
 (defonce !agents-blackboard-ticker-stop
+  (atom nil))
+
+(defonce !process-watchdog
   (atom nil))
 
 (defn env
@@ -1391,20 +1396,17 @@ RESPOND WITH ONLY:
   "Add a pattern to an agent's backpack (stored in registry metadata).
    Pattern is {:pattern \"f0/p2\" :sigil \"才\" :query \"...\" :at \"...\"}."
   [agent-id pattern-entry]
-  (swap! reg/!registry
-         update-in [agent-id :agent/metadata :backpack]
-         (fn [bp] (vec (conj (or bp []) pattern-entry)))))
+  (reg/backpack-add! agent-id pattern-entry))
 
 (defn backpack-clear!
   "Clear an agent's pattern backpack."
   [agent-id]
-  (swap! reg/!registry
-         assoc-in [agent-id :agent/metadata :backpack] []))
+  (reg/backpack-clear! agent-id))
 
 (defn backpack
   "Read an agent's current pattern backpack."
   [agent-id]
-  (get-in @reg/!registry [agent-id :agent/metadata :backpack]))
+  (reg/backpack agent-id))
 
 (defn make-tickle-invoke-fn
   "Create an invoke-fn for tickle-1 that wraps each prompt with the tickle
@@ -1793,6 +1795,54 @@ RESPOND WITH ONLY:
     (reset! !tickle nil)
     (cyder/deregister! "tickle-watchdog")
     (println "[dev] Tickle stopped.")))
+
+(defn start-process-watchdog!
+  "Start the infrastructure process watchdog.
+
+   Watches heartbeat-capable CYDER daemons and sends desktop notifications
+   when they become missing, stale, stuck, or erroring. Initial default
+   scope is the multi-watcher because a blocked sidecar path there freezes
+   substrate-2 incremental ingest silently."
+  ([] (start-process-watchdog! {}))
+  ([opts]
+   (when @!process-watchdog
+     (process-watchdog/stop!)
+     (reset! !process-watchdog nil)
+     (cyder/deregister! "process-watchdog"))
+   (let [evidence-store @!evidence-store
+         interval-ms (or (:interval-ms opts) process-watchdog/default-interval-ms)
+         profiles (or (:profiles opts) process-watchdog/default-profiles)]
+     (process-watchdog/start! {:interval-ms interval-ms
+                               :profiles profiles
+                               :evidence-store evidence-store
+                               :notify-fn process-watchdog/default-notify!})
+     (reset! !process-watchdog {:interval-ms interval-ms
+                                :profiles (vec (keys profiles))})
+     (cyder/deregister! "process-watchdog")
+     (cyder/register!
+      {:id "process-watchdog"
+       :type :daemon
+       :layer :repl
+       :stop-fn (fn []
+                  (process-watchdog/stop!)
+                  (reset! !process-watchdog nil))
+       :state-fn process-watchdog/status
+       :step-fn (fn []
+                  (process-watchdog/tick!))
+       :metadata {:interval-ms interval-ms
+                  :monitored-processes (vec (keys profiles))}})
+     (println (str "[dev] process-watchdog started: interval="
+                   interval-ms "ms monitored=" (vec (keys profiles))))
+     @!process-watchdog)))
+
+(defn stop-process-watchdog!
+  "Stop the infrastructure process watchdog."
+  []
+  (when @!process-watchdog
+    (process-watchdog/stop!)
+    (reset! !process-watchdog nil)
+    (cyder/deregister! "process-watchdog")
+    (println "[dev] process-watchdog stopped.")))
 
 ;; =============================================================================
 ;; FM-001 task dispatch — Tickle assigns proof obligations on #math
@@ -4720,6 +4770,7 @@ RESPOND WITH ONLY:
     :start-irc! start-irc!
     :start-agents! start-agents!
     :start-tickle! start-tickle!
+    :start-process-watchdog! start-process-watchdog!
     :start-fm-conductor! start-fm-conductor!
     :start-drawbridge! start-drawbridge!
     :start-agents-blackboard-ticker! start-agents-blackboard-ticker!
