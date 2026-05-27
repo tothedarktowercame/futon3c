@@ -187,7 +187,6 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
                   (overlay-put ov 'face 'agent-chat-tool-line-face)
                   (overlay-put ov 'priority 10))))))))
     (when at-end
-      (goto-char (point-max))
       (agent-chat-scroll-to-bottom))))
 
 (defun agent-chat-scroll-to-bottom ()
@@ -196,8 +195,8 @@ Only scrolls when the end of the buffer is already visible in the
 window, meaning the user is following the output. If the user has
 scrolled away, their view and cursor are left undisturbed."
   (when-let ((win (get-buffer-window (current-buffer))))
-    (when (pos-visible-in-window-p (point-max) win)
-      (set-window-point win (point-max))
+    (when (and (pos-visible-in-window-p (point-max) win)
+               (>= (window-point win) (max (point-min) (1- (point-max)))))
       (with-selected-window win
         (recenter -2)))))
 
@@ -777,7 +776,6 @@ additionally posted to the evidence HTTP endpoint."
                                           (error
                                            (message "agent-chat turn-end hook error: %s"
                                                     (error-message-string turn-err))))))
-                                    (goto-char (point-max))
                                     (agent-chat-scroll-to-bottom))))))))
           (error
            (setq agent-chat--pending-process nil)
@@ -1195,6 +1193,13 @@ Replaces the `(session: ...)' text in the first line."
 (defvar agent-chat--popup-window nil
   "Window used for terminal-mode popup fallback.")
 
+(defvar agent-chat--posframe-available
+  (require 'posframe nil t)
+  "Cached availability of the posframe feature.
+The cursor-sensor → tool-overlay-popup path can invoke popup-show /
+popup-hide hundreds of times per second; calling `require' each time
+costs a load-path scan whose answer never changes between invocations.")
+
 (defun agent-chat-popup-show (text &optional title)
   "Show TEXT in a floating popup near point.
 Uses posframe in GUI Emacs, a transient bottom window in terminal.
@@ -1209,10 +1214,13 @@ Optional TITLE appears as a header line."
         (when title
           (setq-local header-line-format
                       (propertize (format " %s" title) 'face 'bold)))
-        (special-mode)))
+        ;; Only initialize mode on first creation; re-running special-mode
+        ;; fires global-mode-enable hooks (corfu, font-lock, ...) every show.
+        (unless (derived-mode-p 'special-mode)
+          (special-mode))))
     (if (display-graphic-p)
         ;; GUI: posframe child frame
-        (when (require 'posframe nil t)
+        (when agent-chat--posframe-available
           (posframe-show buf
                          :position (point)
                          :max-width agent-chat-popup-max-width
@@ -1240,7 +1248,7 @@ Optional TITLE appears as a header line."
   "Dismiss the popup."
   (interactive)
   (if (display-graphic-p)
-      (when (require 'posframe nil t)
+      (when agent-chat--posframe-available
         (posframe-hide agent-chat--popup-buffer))
     (when (window-live-p agent-chat--popup-window)
       (quit-window nil agent-chat--popup-window)

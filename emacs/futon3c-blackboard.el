@@ -89,8 +89,7 @@ When nil, uses `scripts/agency-hud-terminal' from the futon3c project root."
   "Minor mode for transient Agency HUD buffers."
   :init-value nil
   :lighter " HUD"
-  :keymap futon3c-blackboard-hud-mode-map
-  (setq-local cursor-type nil))
+  :keymap futon3c-blackboard-hud-mode-map)
 
 (defun futon3c-blackboard--project-root ()
   "Return the futon3c project root."
@@ -250,6 +249,10 @@ Layout stacks vertically: *agents* | *processes* | *context* | focus."
     (with-selected-frame frame
       (set-frame-parameter frame futon3c-blackboard--hud-frame-parameter t)
       (set-frame-name futon3c-blackboard-hud-frame-name)
+      ;; Hide the cursor on the dedicated HUD frame without mutating
+      ;; buffer-local `cursor-type`, since the same buffers may also be shown
+      ;; in the main editing frame.
+      (set-frame-parameter frame 'cursor-type nil)
       (delete-other-windows)
       (let* ((n (length bufs))
              (window (selected-window)))

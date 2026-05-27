@@ -680,20 +680,43 @@ session isolation between buffers."
 
 ;;; Tool overlay popup
 
-(defun claude-repl--tool-overlay-sensor (_window _old-pos action)
-  "Cursor sensor for tool overlays. Show popup on enter, hide on leave."
+(defvar claude-repl--sensor-show-timer nil
+  "Idle timer used to debounce tool-overlay popup show.
+Cancelled on every sensor fire so rapid cursor traversal across many
+tool regions doesn't thrash side-window layout (a single layout
+recompute under `display-buffer-in-side-window' / `fit-window-to-buffer'
+takes ~40 ms per redisplay; a 650-region scan multiplies that).")
+
+(defun claude-repl--cancel-sensor-show ()
+  (when (timerp claude-repl--sensor-show-timer)
+    (cancel-timer claude-repl--sensor-show-timer))
+  (setq claude-repl--sensor-show-timer nil))
+
+(defun claude-repl--tool-overlay-sensor (window _old-pos action)
+  "Cursor sensor for tool overlays. Show popup on enter, hide on leave.
+The show is debounced via a short idle timer; rapid cursor traversal
+cancels and re-schedules instead of firing a synchronous popup-show
+on every redisplay tick."
+  (claude-repl--cancel-sensor-show)
   (if (eq action 'entered)
-      (let* ((ovs (overlays-at (point)))
-             (tool-ov (cl-find-if
-                       (lambda (ov)
-                         (overlay-get ov 'agent-chat-tool-details))
-                       ovs))
-             (details (when tool-ov
-                        (overlay-get tool-ov 'agent-chat-tool-details))))
-        (when details
-          (agent-chat-popup-show
-           (claude-repl--format-tool-popup details)
-           "Tool Call")))
+      (setq claude-repl--sensor-show-timer
+            (run-with-idle-timer
+             0.15 nil
+             (lambda ()
+               (setq claude-repl--sensor-show-timer nil)
+               (when (and (window-live-p window)
+                          (eq (current-buffer) (window-buffer window)))
+                 (let* ((ovs (overlays-at (point)))
+                        (tool-ov (cl-find-if
+                                  (lambda (ov)
+                                    (overlay-get ov 'agent-chat-tool-details))
+                                  ovs))
+                        (details (when tool-ov
+                                   (overlay-get tool-ov 'agent-chat-tool-details))))
+                   (when details
+                     (agent-chat-popup-show
+                      (claude-repl--format-tool-popup details)
+                      "Tool Call")))))))
     (agent-chat-popup-hide)))
 
 (defun claude-repl--format-tool-popup (details)
@@ -1065,6 +1088,9 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
 \\{claude-repl-mode-map}"
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
+  ;; Logical-line motion is much cheaper than visual-line motion in large,
+  ;; wrapped chat buffers with many overlays.
+  (setq-local line-move-visual nil)
   (setq-local scroll-conservatively 101)
   (setq-local scroll-margin 0)
   (cursor-sensor-mode 1))
