@@ -1,7 +1,7 @@
 # Mission: M-pilot-appearance
 
 **Date:** 2026-05-25
-**Status:** HEAD + IDENTIFY complete; MAP complete; DERIVE prototype-complete; ARGUE next
+**Status:** **CLOSED 2026-05-29** (operator-ratified, emacs-repl with claude-2). The pilot now appears coherently across all four depths via the differential-operator REPL — see Closing Checkpoint at end. Immersive-storyteller elaboration deferred to `E-storyteller.md`; hole-budget governance to `E-cheesemonger.md`; LOOP-learning + doc-currency automation are named OPEN follow-ons.
 **Timebox:** 3 weeks soft (extends through the M-war-machine-pilot Phase 4 friction-audit window, since Phase 4 outcomes feed this mission's MAP)
 **Predecessor:** `M-war-machine-pilot.md` — when Phase 3 lands, the pilot is operational; this mission picks up the question *what is it for the pilot to show up well across all four levels*
 **Sibling-of:** `M-interim-director.md` — both missions are facets of the operator-on-Hyperreal instrumentation gap identified 2026-05-25; this one is artefact-shaped, M-interim-director is commercial-shaped
@@ -923,7 +923,7 @@ proves otherwise:
 
 ### 8.4 Provisional ARGUE thesis
 
-The current best thesis for ARGUE is:
+#### 8.4.1 Earlier provisional formulation (2026-05-25; superseded 2026-05-27)
 
 > The pilot's appearance should be argued as a four-depth, four-turn,
 > pattern-backed apparatus whose visible simplicity is backed by a fuller
@@ -938,6 +938,196 @@ The current best thesis for ARGUE is:
 > convenience; and `surface-earns-inhabitation` plus
 > `inhabitation-feeds-evolution` explain why the storyboard prototype must
 > itself be inhabitable and evolve through use.
+
+This formulation was the right composite-donor seed for MAP-stage work, but
+it left the *operative mechanism* implicit and stopped short of a one-claim
+thesis. The post-AIF² contest formulation below supersedes it; this
+paragraph stays as the lineage record.
+
+#### 8.4.2 Plain-language thesis (2026-05-27; current)
+
+The plain-language argument — what someone with no exposure to the futon
+stack should be able to read and follow without consulting any other
+document, naming no vocabulary specific to any tradition or framework:
+
+> **When people use AI to do work they don't already understand, they
+> tend to skip the learning step: the AI produces something, the person
+> approves it, the underlying skill never gets built. Recent research
+> (Shen and Tamkin, 2025) measured this happening — people working
+> with AI help scored 17% lower on a follow-up understanding test than
+> people working without help.**
+>
+> **We are building a working example of a different way to use AI. In
+> this version the person has to say in their own words what they want
+> before the AI produces it, has to check the output against what they
+> asked for, and the system keeps a running record of what is still
+> unresolved. We think this kind of structured back-and-forth develops
+> new skills: knowing how to ask precisely, how to verify what came
+> back, how to notice what is still missing.**
+>
+> **Crucially, we think the same argument applies to AI systems that
+> build and extend themselves. If an AI produces code, fixes, or
+> designs that no one — including the AI itself — stops to state the
+> purpose of, check against that purpose, and record as unresolved
+> where it falls short, the result is the same as with humans: nobody
+> knows what is really there or can vouch for it. Closing the loop on
+> AI development — reaching a point where what an AI builds can be
+> understood, trusted, and extended — requires the same structured
+> back-and-forth, applied by the AI system to its own work.**
+
+This is the primary mission statement. Any reader of this section should
+be able to understand what M-pilot-appearance is for and why it might
+matter without leaving the paragraph. Falsifiability conditions are
+held in the AIF² contra-claim lifeform (§8.4.4) rather than in the
+plain-text argument; the argument itself enacts the discipline it
+describes — extending the case from human users to self-extending AI
+is one round of the structured back-and-forth.
+
+#### 8.4.2.1 Technical formulation (vocabulary-dense; gloss of §8.4.2)
+
+For operators familiar with the futon stack's vocabulary, the same
+argument reads as: the pilot's contract turns the WM into a REPL
+operating over the four-types cycle, bit-shifted so that pheno = the
+operator's lived behaviour and xenotype-of-xenotype is acknowledged
+behind the xeno layer. The four turns are R/E/P/L (Read / Eval / Print
+/ Loop), corresponding to anamnesis discloses / anamnesis discharges /
+niche constructed / mana flows — one aliveness substance through four
+moments. When AI assistance operates inside this architecture — gated
+on user-articulated rationale, holding both buddha-frame
+(typed/articulated) and shaman-frame (felt/embodied) registers
+simultaneously, with anamnesis-accounting tracking the substrate's
+un-discharged debt — AI use is a re-skilling rather than de-skilling
+force. The architecture enforces what Shen+Tamkin observed as
+user-choice high-engagement personas (24% of their participants) and
+develops meta-skills (verification scaffolds, query-as-spec discipline,
+anamnesis-accounting, register-shifting) that their quiz-as-skill
+operationalisation cannot measure.
+
+The vocabulary-dense formulation IS the spine of the DERIVE artefact at
+`~/code/futon5a/holes/stories/futon-pilot-contra-claim.aif.edn`. It is
+*not* the mission's plain-language statement; §8.4.2 is. When prose
+written in vocabulary-dense language reads more confidently than the
+corresponding plain-language statement, that is a signal — usually
+that the confidence is in the vocabulary rather than in the argument
+itself. The §8.4.2 plain-language form is the discipline-test the
+mission must keep passing.
+
+See §8.4.5 for the deliverable boundary.
+
+#### 8.4.3 Pattern grounding (PSR)
+
+Each clause of the thesis grounded in 1-2 patterns from
+`~/code/futon3/library/`:
+
+| # | Pattern | Clause grounded | Load-bearing contribution |
+|---|---|---|---|
+| 1 | `agent/sense-deliberate-act` | WM-as-REPL | R/E/P/L IS sense-deliberate-act-update at the operator-peripheral scale |
+| 2 | `gauntlet/aif-as-environment-not-instruction` | Contract shape | The contract gives the operator an environment to act inside, not orders to execute |
+| 3 | `aif/predictive-coding-belief-update` | The four turns | R/E/P/L maps onto predictive-coding belief-update mechanics |
+| 4 | `futon-theory/four-types` | Four-types cycle | Canonical pheno / geno / exo / xeno from which the bit-shift evolves |
+| 5 | `structure/hinge-point` | Bit-shift operation | The bit-shift IS a hinge-point operation across the four-types boundary |
+| 6 | `futon-theory/wyrd` | Cyclic + xenotype-of-xenotype | Pratītyasamutpāda + Norn three-time + cycle-not-stack reading |
+| 7 | `futon-theory/futonic-logic` | Dual-register | Three-Norn extension holds buddha-frame and shaman-frame as joint readings |
+| 8 | `aif/niche-construction` | Re-skilling mechanism | The operative loop: anamnesis discloses → discharges → niche constructed → mana flows |
+| 9 | `aif/expected-free-energy-scorecard` | Principled accounting | VSATARCS-as-stack-ARGUE IS this discipline at stack scale |
+| 10 | `structure/what-problem-is-this-actually-solving` | Articulation-as-test | Bites the contra-claim's own theatre-risk; primary defence against self-confirmation |
+
+```
+## PSR — M-pilot-appearance §8.4 ARGUE
+- Patterns chosen: 10 (above)
+- Candidates considered: 20 (10 additional rejected for redundancy or scope-overlap; full set verified to exist in library 2026-05-27)
+- Rationale: Each clause of the thesis grounded by 1-2 patterns; multi-pattern grounding only where the clause does load-bearing work one pattern cannot alone carry (Clause 3 needs both :hinge-point and :wyrd; Clause 5 needs both :niche-construction and :expected-free-energy-scorecard).
+- Confidence: high — every clause grounded; patterns from 5 distinct namespaces; no clause rests on a single pattern.
+```
+
+#### 8.4.4 AIF² contest evidence
+
+VERIFY of the §8.4.2 thesis was performed via paired AIF² contest
+2026-05-27:
+
+- **Round 1**: futon-pilot engages shen-tamkin at 6 load-bearing nodes
+  (1 thesis, 2 frames, 1 support, 2 self-named blind-spots). Asymmetric.
+- **Round 2** (steel-manned): shen-tamkin evolves with 7 rebuttals — R1
+  library-knowledge-is-load-bearing, R2 enforcement-decays-under-load, R3
+  register-shift-is-operator-burden, R4 emergent-not-mandatable, R5
+  anamnesis-is-goodhart-target (uses futon-pilot's own :nFalsif5 against
+  it), R6 VSATARCS-is-self-referential, R-meta architecture-design-
+  ≠-architecture-effects. Symmetric mutual engagement.
+- **Verdict**: `:symbiosis-empirically-pending`. Both lifeforms reach a
+  fixed-point of **scope-restricted coalescence conditional on
+  futon-pilot/`:nFalsif1` promotion**. Shen+Tamkin's T1 holds in the
+  default chat-with-free-delegation regime they tested; futon-pilot's
+  T1 holds in the pilot-architecture regime, contingent on empirical
+  demonstration.
+- **Audit coverage**: 87.5% I1-I6 + G5-G0 on both lifeforms; contest as
+  a unit at 91.7%. Full record at
+  `~/code/futon5a/holes/stories/shen-tamkin-vs-futon-pilot-contest.md`.
+
+The contest IS the §8.4 VERIFY: not "did we prove the thesis," but "did
+the thesis survive structured engagement against its strongest opposition
+at fixed-point." It did, scoped to the architecture-vs-default regime
+distinction.
+
+#### 8.4.5 Deliverable boundary — what M-pilot-appearance ships
+
+When this mission's INSTANTIATE lands, five artefacts are on disk:
+
+1. **A formal thesis paragraph** in §8.4.2 above. This is the *mission's*
+   ARGUE statement.
+
+2. **The DERIVE artefact** at
+   `~/code/futon5a/holes/stories/futon-pilot-contra-claim.aif.edn` —
+   structured AIF² argument-graph: 8 claims + 7 frames + 8 falsifiabilities
+   + 13 conflicts + 2 meta + 2 data nodes; spine of 7; full R1-R12
+   alignment (10 embodied, 4 extension-pending); `:contest` map ratified
+   at fixed-point.
+
+3. **The VERIFY artefact** at
+   `~/code/futon5a/holes/stories/shen-tamkin-vs-futon-pilot-contest.md`
+   — the AIF² audit document at the P4/P6 template, 87.5% coverage on
+   both lifeforms, verdict `:symbiosis-empirically-pending`, Open-Gap
+   Ledger naming 8 falsifiability promotion paths + 4 audit-shape gaps.
+
+4. **The worked-example apparatus** at
+   `~/code/futon5a/scripts/run_aif2_contest.clj` (the babashka
+   contest-runner) + the consolidating index at
+   `~/code/futon5/README-aif+.md` (the AIF+ / AIF² method documentation).
+   Together these mean future authors of AIF² lifeforms don't have to
+   re-derive the validation method.
+
+5. **Two named follow-on excursions** registered in §-follow-ons of this
+   mission and any sibling-mission DOCUMENT sections that cite them:
+
+   - **E-pilot-architecture-rct** — empirical study comparable to Shen+
+     Tamkin 2025, designed to promote `:nFalsif1` (pilot-arch quiz-deficit)
+     and `:nFalsif3` (degenerate-mode admittance). Operator-time and
+     IRB-shaped; not in-house INSTANTIATE work.
+   - **E-pilot-peripheral** — live-architecture excursion that ships the
+     peripheral enforcing the pilot's contract at runtime; the contra-
+     claim's `:nF2` (architecture-enforces-engagement) becomes
+     operationally demonstrable. Substantial new code; separate scope.
+
+**What M-pilot-appearance does NOT ship** (per
+`[[feedback_poc_plus_followon_over_scope_creep]]`):
+
+- A runtime pilot apparatus.
+- Empirical RCT results.
+- An author-response from Shen + Tamkin.
+- A fully-monitored falsifiability promotion (all 8 stay `:spec-only` at
+  INSTANTIATE).
+
+These are explicitly siblings, listed by name above, owned by their own
+excursions.
+
+#### 8.4.6 Lineage and rendering note
+
+The §8.4.2 thesis is currently authored as prose. A future
+possibility — flagged in `~/code/futon5/README-aif+.md` §14 — is to
+generate this prose from the DERIVE artefact's spine + R-alignment +
+contest result via a `render_pilot_appearance_argue.clj` Babashka script,
+following the WR-8 render-script pattern. This would make §8.4
+structurally unable to drift from the AIF² lifeform that grounds it.
+Not implemented this cycle; named as durable next-step.
 
 ### 8.5 ARGUE output target
 
@@ -1203,3 +1393,38 @@ patterned in the library.
 - **Authored from session:** 2026-05-25 (Jim Morrison ↔ Jim Henson ↔ Adult Swim ↔ virtual attractors ↔ third jhāna ↔ Markov boundary ↔ homoiconic artefact ↔ HtDP prototype)
 - **Artefacts produced in IDENTIFY:** the three skeleton files; this mission document; the scene-list annex
 - **Awaiting:** next ARGUE/DERIVE iteration, especially whether the 4-turn mockup should grow explicit substrate support for capability classification, peripheral-hop choice, shared workspace/frame awareness, and reflection / loop logging across `:street-sweeper`, `:night-shift`, and successor excursions
+
+## Closing Checkpoint — 2026-05-29 (operator-ratified, emacs-repl + claude-2)
+
+The mission's core question — *what is it for the pilot to show up well across
+pheno / geno / exo / xeno?* — is answered **operationally**, via a route the
+IDENTIFY-phase didn't foresee: not the homoiconic four-reader `.cljc` storyboard
+(that prototype stayed a skeleton), but a **differential-operator account of the
+REPL** that makes the four turns and the four depths one structure.
+
+**The four-depth appearance, now coherent:**
+- **pheno** (code) — the pilot loop `war_machine_pilot.clj` (`begin/close-live-cycle!`), backend tools, `repl_trace.clj`, `loop_learning.clj`, `repl_spec_verify.clj`.
+- **geno** (AIF/WM) — the REPL is `v·∇` over the WM field; `holes/specs/repl.spec.edn` (R/E/P/L = disclose dT / contract v / deform ∇ / integrate φ; V1–V6; §8 fork-resolution; LOOP `:autonomy`).
+- **exo** (VSATARCS readable scene-form) — the "loop closes for real" scene in `futon5a/holes/stories/war-machine-lucid-scenes.md`; LOOP doc-currency requirement keeps it true.
+- **xeno** (pilot-facing artefact) — `futon3c/README-pilot.md` + the CLAUDE.md pointer; the immersive realization is `E-storyteller.md`.
+
+**What is actually operational (honest scope):** one **substantive live cycle**
+ran end-to-end and moved the field (`sorry/mission-aif-head-not-served`
+discharged — earned via a real `defonce` root-fix, not a status flip; top-shift
+TRUE; frame CONFORMS; run `live-2d50834b`). A supervised cycle and the
+auto-miner (`:derivation :auto-mined`, 10 candidates) also conform. The verifier
+checks every frame. The §8 fork-resolution rule + LOOP `:autonomy` give the
+machinery for unattended operation.
+
+**NOT yet done (named follow-ons, not silent gaps):**
+- Multi-cycle **autonomous overnight runs** — machinery present, not yet run.
+- **LOOP-learning automation** is v0 (WM-gap-signals only; transcript-mining + substrate-2 typed-`:sorry` emission still owned by `M-a-sorry-enterprise`, Checkpoint there).
+- **Hole-budget governance** (`E-cheesemonger.md`) — charter scoped; regression-watch / verify-closure / provenance-ledger / anti-Goodhart / GC are OPEN.
+- **Doc-currency automation** + the **immersive WM→VSATARCS storyteller** (`E-storyteller.md`) — scoped, not built.
+- `vsatarcs.html` not regenerated this session (deliberate — regen bundles all current anthology drift; operator's call).
+
+**Commits (2026-05-29):** futon3c `8fb7720` `16fbe11` `9cf4842` `508be69` `eb76eba` `7f894de` `2bb0590` `bd3a2a9`; futon2 `ed78dcf`; futon5a `497f461` `5636871`. Living spine: `holes/specs/repl.spec.edn`; inhabitation log: `futon5a/data/pilot-inhabitations.edn`; frames: `data/repl-traces/`.
+
+The pilot shows up well across all four depths today. The depths it does not yet
+*inhabit autonomously overnight* are named above and owned by named follow-ons —
+which is itself the discipline the mission was about.
