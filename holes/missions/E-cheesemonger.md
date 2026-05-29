@@ -30,6 +30,28 @@ The auto-miner today surfaces candidates **ephemerally**: each cycle recomputes 
 
 The runaway risk appears at the **candidate → registry promotion** step — the typed-`:sorry`-emission gated on `E-substrate-2-sorry-typing` + `interest-event-vocabulary.flexiarg`, still owned by `M-a-sorry-enterprise`. Once promotion exists, an overnight loop could mint sorries far faster than any closing excursion discharges them. **The cheesemonger sits at that boundary** as the advisory governor: it is the thing that makes auto-promotion safe to turn on.
 
+## Rating, promotion, and the anti-backdoor invariant (Joe, emacs-repl 2026-05-29)
+
+> "the auto-mined candidates should probably be rated and top percentage
+> (maybe ≈30%?) should be persisted. Otherwise we'd risk … agent work that
+> claimed closure of WM candidates, but left 'ephemeral sorries'. … I don't
+> [want] to create a backdoor whereby it could happen."
+
+Ephemerality has a dark side: a gap that is **never persisted has no durable referent**, so a closure *claim* against it can't be audited — the V2/no-teleport laundering failure, reappearing at the candidate level. The fix is a **rating + bounded promotion**, governed here:
+
+- **Rate.** Each mined candidate carries a `:rating` (landed in `loop_learning.clj`: channel-gaps by gap magnitude, structural/missing-heads = 1.0), sorted descending.
+- **Promote the top.** The top **≈30%** (starting parameter — really a warrant threshold the cheesemonger tunes against the net-flux) are **persisted** to the registry as durable `:auto-mined` sorries (`:status :open` + provenance, deduped). The long tail stays ephemeral/advisory. This persists the high-warrant holes (auditable, closeable) **without** flooding the registry with the tail — which is exactly the homeostatic balance this excursion governs.
+
+**Anti-backdoor invariant (must hold structurally, not by agent discipline):**
+
+1. **Only PERSISTED registry sorries are actionable/closeable.** Ephemeral candidates are advisory frame-data; they never enter the WM action space.
+2. **A substantive closure claim MUST cite a persisted sorry-id.** You cannot "close" an ephemeral candidate — there is nothing durable to close. You can only *fix the underlying gap*, after which it stops being mined (no closure-claim needed, nothing to launder).
+3. **Promotion is the ONLY route from candidate → actionable, and it persists by construction** — so a thing becomes closeable exactly when it becomes durable+auditable. No other path may make a candidate actionable.
+
+**Current state (verified 2026-05-29):** the backdoor is **not open today** — WM `address-sorry` ranked-actions come from `sorry-registry/open-sorrys` (the persisted registry), and auto-mined candidates live only in the frame `:learning` (advisory). The invariant above is what keeps it closed when promotion is turned on; it is the cheesemonger's contract.
+
+**Dependency note:** persisting auto-mined sorries needs either the substrate-2 typed-`:sorry` emission (gated on `E-substrate-2-sorry-typing`) or a write to the v1 `sorrys.edn` — and `sorrys.edn` is gitignored, so a version-controlled closure ledger (the `sorry-discharge-not-version-controlled` hole) is a soft prerequisite for *auditable* closure over time.
+
 ## What this excursion is for
 
 A monitor (provisionally a report + a WM metabolic-balance channel, NOT a new

@@ -59,16 +59,19 @@
                                (= t "missing-head")
                                {:id (keyword "sorry" (str "aif-head-missing-" id))
                                 :kind :prototyping-forward
+                                :rating 1.0   ; structural gaps top the rating
                                 :title (str "AIF head not readable by WM head: " id)
                                 :rationale (str (g p :note) " (auto-mined from WM missing-head priority)")}
                                (= t "channel-gap")
                                {:id (keyword "sorry" (str "channel-gap-" id))
                                 :kind :technical-debt
+                                :rating (double (or (g p :gap) 0.0))   ; rate by gap magnitude
                                 :title (str "WM channel " id " out of preferred range")
                                 :rationale (str (g p :summary) " (auto-mined from WM channel-gap priority)")}
                                :else nil))))
                    (remove #(contains? existing (name (:id %))))
                    distinct
+                   (sort-by :rating >)   ; highest-warrant first → top-N% promotion
                    vec)
         kept (vec (take max-mined cands))]
     (if (> (count cands) max-mined)
@@ -89,7 +92,11 @@
       :sorries-mined mined
       :notes (str "auto-mined v0: patterns = REPL-cycle structure + fork-warrant; "
                   "sorries = WM judgement gap-signals (missing-heads + channel-gaps) "
-                  "minus registry-tracked. Heuristic candidates for operator review; "
-                  "the interactive M-a-sorry-enterprise pass back-fits to this."
+                  "minus registry-tracked, :rating-sorted (gap magnitude; structural=1.0). "
+                  "ADVISORY-ONLY: frame-local, NOT persisted, NOT WM-actionable — the WM "
+                  "only proposes/closes PERSISTED registry sorries. Promotion of the top-rated "
+                  "candidates to the registry is E-cheesemonger's gated job; closure claims must "
+                  "cite a persisted sorry-id (no closing an ephemeral candidate). "
+                  "The interactive M-a-sorry-enterprise pass back-fits to this."
                   (when trunc (str " [" trunc " further gap-candidates truncated at "
                                    max-mined "]")))})))
