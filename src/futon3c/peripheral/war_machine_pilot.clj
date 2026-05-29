@@ -289,10 +289,17 @@
                :cg-id (:cg-id b) :artefact (:artefact b)
                :delta-grad? false
                :p' "post-tick" :realised-discharge realised})
+          ;; LOOP :autonomy — auto-mine learning from the post-tick judgement
+          ;; (futon3c.aif.loop-learning): patterns from REPL-cycle structure +
+          ;; sorries from WM gap-signals minus registry-tracked. :auto-mined.
+          open-ids (try (mapv :id ((requiring-resolve 'futon2.aif.sorry-registry/open-sorrys)))
+                        (catch Throwable _ []))
+          learning ((requiring-resolve 'futon3c.aif.loop-learning/loop-learning-pass)
+                    {:judgement post-j :open-sorry-ids open-ids})
           frame ((requiring-resolve 'futon3c.aif.repl-trace/frame)
                  {:run-id run-id :agent (:agent b)
                   :date (subs (str (java.time.Instant/now)) 0 10)}
-                 [tr])
+                 [tr] learning)
           frame+ (assoc frame
                         :wm-mode (:wm-mode b) :mode (:mode b)
                         :tick-before (:tick-before b)
