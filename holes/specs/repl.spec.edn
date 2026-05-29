@@ -138,7 +138,9 @@
               ":realised-discharge = the field-change across the tick bracketing the action (e.g. the :ranked-actions-top shift)"
               ":prediction-error = |realised-discharge − predicted-discharge| is logged (see :V3)"]
    :backing  {:status :gap-with-prior-art
-              :anchor "tick+re-read witnessed as :ranked-actions-top-shifts-on-action (G −4.99 → −4.39, pilot-inhabitations.edn). LOOP-as-tooling is the primary gap; prior art: E-pattern-mining, M-a-sorry-enterprise"}}]
+              :anchor "tick+re-read witnessed as :ranked-actions-top-shifts-on-action (G −4.99 → −4.39, pilot-inhabitations.edn). LOOP-as-tooling is the primary gap; prior art: E-pattern-mining, M-a-sorry-enterprise"}
+   :autonomy
+   "INTERACTIVE runs get their learning from operator B→A turns — the operator points the agent at gaps, mines new sorries from the exchange, and judges which patterns applied. That A→B/B→A chain COLLAPSES when the run is non-interactive. So for overnight/full-auto, LOOP must INTERNALISE that learning channel: (1) reread the session transcript + the γ trace; (2) derive/score patterns against futon3/library (M-pattern-application-diagnostic — which patterns applied, which should have); (3) mine new sorries from the run's own interactions (M-a-sorry-enterprise); (4) write them into library/ + the sorry registry so the next READ's dT and the §8 fork-warrant are richer. §8 lets the loop DECIDE autonomously; this :autonomy clause lets it LEARN autonomously — both are required for overnight operation. Lifting M-a-sorry-enterprise + M-pattern-application-diagnostic into LOOP is the next build."}]
 
  ;; ==========================================================================
  ;; 4. INVARIANTS — the checkable spec. A conforming trace γ satisfies all.
@@ -196,7 +198,8 @@
                :turns "READ wm-api-query→215 ranked-actions=dT; EVAL v=top action, predicted=G-total −5.346, cg minted; PRINT supervised-proposal (cg intent-handshake, no mutation, bell off); LOOP request-tick! async → re-read → realised"
                :frame "data/repl-traces/live-021b9a85-a2b3-497f-b97c-7f3c455079f7.edn"
                :result "CONFORMS (V1-V4); V5 skill-operator=0 pilot-auto=−5.346; prediction-error 0.0, top-shift? false — supervised proposal did not move the field, exactly as expected (2026-05-29)"}
-  :remaining-gap "the live loop now runs end-to-end and emits CONFORMING frames, but in SUPERVISED-PROPOSAL mode: PRINT is the cg intent-handshake only, so the field does not move (realised ≈ predicted, pred-error ≈ 0). The remaining step is a FULL-AUTO SUBSTANTIVE PRINT (execute the chosen action citing the cg-id) which mutates substrate and moves the field, reproducing the witness G-shift — gated at operator merge. Needs operator go-ahead before mutating live substrate."
+  :substantive-run "2026-05-29: full substantive cycle landed end-to-end and MOVED THE FIELD — address-sorry sorry/mission-aif-head-not-served discharged (root fix: invariant.clj defonce bug → mission_head loads; bridge-c un-stub of scan-aif-heads; sorrys.edn :open→:addressed). top-shift TRUE (→ handler-closure-route-rebinding), predicted=realised=−5.346, pred-error 0.0, missing-count 0, frame CONFORMS. run live-2d50834b."
+  :remaining-gap "LOOP AUTONOMY (see the :LOOP turn :autonomy clause): the field-moving cycle works, but the LEARNING half is still operator-supplied. Lift M-a-sorry-enterprise (sorry-mining) + M-pattern-application-diagnostic (pattern derivation) INTO the LOOP turn, plus transcript-reread, so the operator-B→A learning channel survives non-interactive overnight runs. §8 fork-resolution (DECIDE) + LOOP :autonomy (LEARN) are the two pillars of overnight operation; the latter is the next build."
   :live-witness
   {:cg "cg-5b03db29-b636-4368-88ee-a7c8df23ef55"
    :who "claude-1, 2026-05-25"
