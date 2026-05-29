@@ -9,6 +9,17 @@ proof trees), and the bridges that connect agents to each other in real time.
 This is the "social" AIF loop — the fastest timescale in the futon system,
 where agents coordinate, hand off work, and maintain shared awareness.
 
+## Inhabiting the War Machine Pilot
+
+**If you are taking on the pilot role — driving the War Machine as a REPL —
+read `README-pilot.md` first.** It is the map for inhabitants: the spec
+(`holes/specs/repl.spec.edn`), the loop apparatus (`war_machine_pilot.clj`,
+`repl_trace.clj`, `loop_learning.clj`, `repl_spec_verify.clj`), how to run a
+cycle, and the hard disciplines (never restart the JVM; `request-tick!` not
+`tick!`; consent-gate / gate-at-merge; earned closure; the E-cheesemonger
+hole-budget). The pilot REPL is the differential operator `v·∇` over the WM
+field; the LOOP turn keeps the substrate AND the VSATARCS documentation current.
+
 ## Canonical Wiring Contract
 
 Before implementing architecture changes, read:
