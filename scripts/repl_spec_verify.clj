@@ -162,19 +162,50 @@
 ;; top-level
 ;; ---------------------------------------------------------------------------
 
+;; ---------------------------------------------------------------------------
+;; V6 — learning-evidence (LOOP :autonomy). Soft/metric: autonomous frames
+;; SHOULD carry a :learning block (patterns derived + sorries mined), since the
+;; operator-B→A learning channel collapses non-interactively. Never fails
+;; interactive/demo frames; flags an autonomous frame missing learning.
+;; ---------------------------------------------------------------------------
+
+(defn- check-v6-learning [frame]
+  (if (nil? frame)
+    {:metric true :learning :n/a :note "bare γ (no frame envelope)"}
+    (let [l (:learning frame)
+          autonomous? (= :substantive (:mode frame))]
+      (cond
+        (nil? l)
+        {:metric true :learning :absent
+         :warn (if autonomous?
+                 "AUTONOMOUS frame with no :learning — LOOP :autonomy requires it (spec §turns :LOOP :autonomy)"
+                 "no :learning (ok for interactive/demo)")}
+        (and (empty? (:patterns-applied l)) (empty? (:sorries-mined l)))
+        {:metric true :learning :empty
+         :warn "learning block present but empty (no patterns-applied / sorries-mined)"}
+        :else
+        {:metric true :learning :present
+         :patterns (count (:patterns-applied l))
+         :sorries (count (:sorries-mined l))
+         :derivation (:derivation l)}))))
+
 (defn verify
-  "Verify a trace γ (vector of step-records). Returns a report map."
-  [trace]
-  (let [v1 (check-v1 trace) v2 (check-v2 trace)
-        v3 (check-v3 trace) v4 (check-v4 trace) v5 (check-v5 trace)]
-    {:spec "futon-repl v0.1"
-     :steps (count trace)
-     :invariants {:V1-read-completeness v1
-                  :V2-no-teleport v2
-                  :V3-prediction-error-tracked v3
-                  :V4-niche-construction-legible v4
-                  :V5-skill-path-integral v5}
-     :conforms? (every? :pass [v1 v2 v3 v4])}))
+  "Verify a trace γ (vector of step-records). Optional FRAME envelope enables
+   the V6 learning-evidence check. Returns a report map."
+  ([trace] (verify trace nil))
+  ([trace frame]
+   (let [v1 (check-v1 trace) v2 (check-v2 trace)
+         v3 (check-v3 trace) v4 (check-v4 trace) v5 (check-v5 trace)
+         v6 (check-v6-learning frame)]
+     {:spec "futon-repl v0.1"
+      :steps (count trace)
+      :invariants {:V1-read-completeness v1
+                   :V2-no-teleport v2
+                   :V3-prediction-error-tracked v3
+                   :V4-niche-construction-legible v4
+                   :V5-skill-path-integral v5
+                   :V6-learning-evidence v6}
+      :conforms? (every? :pass [v1 v2 v3 v4])})))
 
 (defn- format-report [report file]
   (let [lines (atom [])
@@ -185,9 +216,7 @@
     (doseq [[k {:keys [pass violations metric] :as r}] (:invariants report)]
       (emit (str (cond metric "📊" pass "✅" :else "❌") "  " (name k)
                  (cond
-                   metric (str "  skill-operator=" (:skill-operator r)
-                               " pilot-auto=" (:pilot-autonomous-discharge r)
-                               " teleports=" (:teleports r))
+                   metric (str "  " (pr-str (dissoc r :metric :note)))
                    pass "  ok"
                    :else (str "  " (count violations) " violation(s)"))))
       (doseq [v (or violations [])]
@@ -209,8 +238,10 @@
 (defn -main [& args]
   (let [default "holes/specs/traces/trace-witness-cg-5b03db29.edn"
         file (or (first args) default)
-        trace (read-gamma file)
-        report (verify trace)]
+        raw (edn/read-string (slurp file))
+        frame (when (map? raw) raw)
+        trace (if (map? raw) (or (:trace raw) (:gamma raw) []) raw)
+        report (verify trace frame)]
     (println (format-report report file))
     (System/exit (if (:conforms? report) 0 1))))
 

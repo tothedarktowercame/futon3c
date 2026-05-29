@@ -89,17 +89,55 @@
 
 (defn now-iso [] (str (java.time.Instant/now)))
 
+(defn learning
+  "Build a :learning evidence block (LOOP :autonomy, repl.spec.edn §:turns
+   :LOOP :autonomy). This is the learning the operator-B→A channel would
+   supply, internalised into the frame so it survives non-interactive runs.
+
+   v0: the derivations are SUPPLIED by the inhabiting agent (this fn just
+   normalises + types them). Automating the derivation — reading the
+   transcript/γ to score patterns and mine sorries — is M-pattern-application-
+   diagnostic + M-a-sorry-enterprise, the next build. Marked :derivation
+   honestly so a reader can tell agent-supplied from auto-mined.
+
+   :patterns-applied — [{:pattern <lib-path> :role <str> :applied? bool}]
+                       (M-pattern-application-diagnostic: which library
+                        patterns this cycle applied / should have)
+   :sorries-mined    — [{:id <kw> :title <str> :kind <kw> :rationale <str>}]
+                       (M-a-sorry-enterprise: new gaps discovered this run)"
+  [{:keys [patterns-applied sorries-mined transcript-source derivation notes]}]
+  {:learning/v        0
+   :derivation        (or derivation :agent-supplied)
+   :patterns-applied  (vec patterns-applied)
+   :sorries-mined     (vec sorries-mined)
+   :transcript-source transcript-source
+   :notes             notes})
+
 (defn frame
   "Wrap a γ vector in frame-envelope metadata. META supplies :run-id,
-   :agent, :date (caller-supplied so emission stays deterministic/testable)."
-  [{:keys [run-id agent date]} gamma]
-  {:spec         spec-id
-   :spec-version spec-version
-   :run-id       run-id
-   :agent        agent
-   :date         date
-   :step-count   (count gamma)
-   :trace        (vec gamma)})
+   :agent, :date (caller-supplied so emission stays deterministic/testable).
+   Optional LEARNING block (from `learning`) is attached under :learning —
+   the LOOP-autonomy evidence the operator-B→A channel would otherwise carry."
+  ([meta gamma] (frame meta gamma nil))
+  ([{:keys [run-id agent date]} gamma learning-block]
+   (cond-> {:spec         spec-id
+            :spec-version spec-version
+            :run-id       run-id
+            :agent        agent
+            :date         date
+            :step-count   (count gamma)
+            :trace        (vec gamma)}
+     learning-block (assoc :learning learning-block))))
+
+(defn add-learning!
+  "Read a frame file, attach/replace its :learning block, rewrite. The reusable
+   LOOP write-back primitive: a learning pass enriches an already-emitted frame
+   in place (also used to back-fill frames emitted before the schema upgrade)."
+  [path learning-block]
+  (let [fr (edn/read-string (slurp path))
+        fr' (assoc fr :learning learning-block)]
+    (spit path (with-out-str (pp/pprint fr')))
+    path))
 
 (defn gamma
   "Extract the γ payload from a frame map, or pass a bare vector through."
