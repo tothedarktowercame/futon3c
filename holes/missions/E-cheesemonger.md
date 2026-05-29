@@ -74,6 +74,25 @@ When net flux crosses a threshold, it raises a signal the WM can act on — idea
 
 **Out:** does **not** close holes (street-sweeper / night-shift / pilot do that); does **not** itself promote candidates to the registry (that's the M-a-sorry-enterprise emission gate); does **not** auto-throttle the miner without operator consent (advisory v0). Closing-rate over time needs a closure log — note that `data/sorrys.edn` is gitignored, so a separate append-only closure ledger (or futon1a evidence) may be a prerequisite, and is itself a mined hole (`sorry-discharge-not-version-controlled`, frame live-2d50834b).
 
+## Charter: the hole lifecycle (governance scope — Joe + claude-2, emacs-repl 2026-05-29)
+
+E-cheesemonger governs the full lifecycle of a hole (sorry): **mine → rate →
+promote → work → claim-closure → verify → stays-closed → retire.** The review
+below is the agreed scope; **details deferred** ("sort out the details later").
+Status tags: DONE / ENFORCED / DESIGNED / PARTIAL / OPEN.
+
+1. **Identify candidate sorries** (new things to work toward). — **DONE**: `loop_learning.clj` auto-miner from WM gap-signals.
+2. **No fake-finished** — don't leave big unfinished holes in work we claim is done. — **ENFORCED**: REPL V2 (no-teleport) + earned discharge (the mission-aif-head cycle).
+3. **Don't flood** — mining-rate must not outrun closure-rate. — **DESIGNED**: the flux metric (this excursion) + rating + top-≈30% promotion gate.
+4. **Closure must STICK** — regression / false-closure watch: if the WM re-detects a gap marked `:addressed`, flag it as regression-or-false-closure, do NOT silently re-mine as new. (Cautionary tale: the `defonce` bug — "head computes locally" was false for ages, unnoticed.) — **OPEN**. *Highest priority; un-detectable without #8.*
+5. **Verify the closure, don't self-assert it** — a closure needs evidence the gap is gone, checked by something other than the claimer (the witness / realised-vs-predicted G-shift / adversarial re-read). — **PARTIAL**: the REPL's realised-discharge is one instance; generalise it.
+6. **Spurious rejection** — not every candidate is a real hole; a first-class "dismiss as not-a-gap / by-design" disposition (distinct from closed-by-work), and the rejection itself **audited** so inconvenient holes can't just be deleted. — **OPEN** (registry already carries non-`:open` dispositions; use + audit them).
+7. **Right holes (anti-Goodhart)** — auto-mining optimises the *measurable* (WM channel-gaps); important-but-unmeasured strategic/architectural holes stay invisible while the flux reads "balanced." Don't let easy-to-mine crowd out important. (= shen-tamkin `anamnesis-is-Goodhart-target`, live.) — **OPEN** (the `:agent-supplied` / transcript rung partially counters).
+8. **Provenance + auditable closure ledger** — every hole and closure traceable (who/what/when/against-what-evidence). The substrate that makes #4/#5 and the anti-backdoor *checkable* rather than asserted. — **OPEN** (`sorrys.edn` gitignored → no closure history).
+9. **Obsolete-hole GC** — retire holes whose *premise* is gone (referenced code deleted, mission closed) so the flux stays meaningful and the registry doesn't fossilise. — **OPEN**.
+
+Plus the **anti-backdoor invariant** (above): only persisted sorries are actionable/closeable; ephemeral candidates are advisory; closure claims cite a persisted sorry-id; promotion is the only candidate→actionable route and persists by construction.
+
 ## First deliverable (v0, for the owning agent)
 
 A `bb` reading — `hole-budget` over `data/repl-traces/*.edn` (sum/-distinct of `:learning :sorries-mined`) vs registry open-count + `:resolved-at` events — printed as `{:mined-distinct N :open M :closed-window K :net-flux (N−K) :verdict :balanced|:accumulating}`. Then, if the verdict is useful, lift it into a `:sorry-flux` metabolic-balance channel so the WM surfaces it natively.
