@@ -1,0 +1,25 @@
+;; Real conforming REPL step — the live witness named in repl.spec.edn
+;; §:conformance :live-witness.  claude-1, 2026-05-25, cg-5b03db29.
+;; Source: futon2/scripts/futon2/report/war_machine.clj s6-successor-populated-fields.
+;;
+;; READ next-move-live (ranked-actions = dT) → EVAL mint cg (pilot chose v,
+;; :pilot-autonomous) → PRINT address-sorry → LOOP scheduler tick →
+;; ranked-actions[0] rotated away (G −4.99 → −4.39: the addressed item left
+;; the top, the field relaxed).  predicted = chosen action's g-total;
+;; realised modelled as full resolution of that item (calibration-pending,
+;; per spec V3).  Expect: CONFORMS; V5 attributes the discharge to the
+;; PILOT (autopen-class), not the operator.
+[{:step 0
+  :p   "p-pre-tick"
+  :dT-snapshot [{:action {:type :address-sorry :target "sorry/wm-aif-substrate-addressability"} :g-total -4.99 :rank 0}
+                {:action {:type :address-sorry :target "sorry/r3a-likelihood-loop-health"}      :g-total -4.39 :rank 1}]
+  :v {:type :address-sorry :target "sorry/wm-aif-substrate-addressability"}
+  :v-attribution :pilot-autonomous
+  :predicted-discharge -4.99
+  :cg-id "cg-5b03db29-b636-4368-88ee-a7c8df23ef55"
+  :artefact {:kind :address-sorry :target "sorry/wm-aif-substrate-addressability"}
+  :delta-∇? false
+  :new-edge-family nil
+  :p'  "p-post-tick"
+  :realised-discharge -4.99
+  :prediction-error 0.0}]

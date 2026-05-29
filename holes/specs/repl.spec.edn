@@ -1,0 +1,249 @@
+;; =============================================================================
+;; The futon REPL as a differential operator over the active-inference manifold
+;; =============================================================================
+;;
+;; A SPECIFICATION, not an anatomy: every claim below is stated so that a
+;; checker over a REPL turn-trace can decide whether observed behaviour
+;; conforms.  Authored 2026-05-29 by claude-2 (emacs-repl) from Joe's
+;; directive: "I want the specification in .edn ... I'd like to be able to
+;; verify behaviour matches the spec ... getting the mathematical formalism
+;; in place is more important [than who-merges details]."
+;;
+;; LEVEL.  This spec sits ABOVE M-pilot-appearance (what the pilot sees),
+;; above the working-class excursions (E-night-shift / E-street-sweeper /
+;; E-pattern-mining), and above M-a-sorry-enterprise.  Those are instances /
+;; implementations beneath this operator; the REPL contract is higher level.
+;;
+;; FORMALISM.  The REPL is the application-and-integration of a differential
+;; operator on substrate-2's state manifold.  The War Machine IS v·∇ (a
+;; derivation).  One step = LOOP ∘ PRINT ∘ EVAL ∘ READ
+;;             = integrate φ ∘ deform ∇ ∘ contract dT with v ∘ disclose dT.
+;;
+;; POLICY DEFERRED (operator directive 2026-05-29): WHO supplies v (operator
+;; vs full-auto pilot) and WHO replays which branch into master are policy
+;; choices ON this operator, not part of the operator's definition.  Captured
+;; in :policy below as open knobs; the formalism does not depend on them.
+;; =============================================================================
+
+{:spec/id      :futon-repl
+ :spec/title   "The futon REPL as a differential operator over the AIF manifold"
+ :spec/version "0.1"
+ :spec/authored {:by "claude-2" :on "2026-05-29" :surface "emacs-repl"}
+ :spec/level
+ {:above ["M-pilot-appearance (the pilot's contract / what it sees)"
+          "E-night-shift / E-street-sweeper / E-pattern-mining (implementations)"
+          "M-a-sorry-enterprise (the larger LOOP-phase build)"]
+  :note  "those are instances beneath this operator; this is the REPL contract itself"}
+
+ ;; ==========================================================================
+ ;; 1. OBJECTS — the differential-geometric formalism, each tied to substrate
+ ;; ==========================================================================
+ :objects
+ {:M   {:name "state manifold"
+        :points "futon-stack states: open sorries, mission phases, the typed-edge graph"
+        :realised-by "substrate-2"}
+
+  :T   {:name "potential field" :type "M → ℝ"
+        :is  "Expected Free Energy G (the WM's per-action g-total). Identified with tension / negative-aliveness."
+        :convention "lower (more negative) g = more pending pressure; an action's g is how strongly the field pulls toward taking it"
+        :realised-by "WM :judgement; per-action :g-total (witnessed value address-sorry G=-4.99)"
+        :grounding "aliveness-synthesis (T, EFE-G, aliveness are projections of one quantity); take T := G"}
+
+  :TpM {:name "tangent space at p"
+        :is  "the admissible actions at state p"
+        :basis "the candidate actions enumerated in :ranked-actions at p"}
+
+  :dT  {:name "differential / cotangent at p" :type "TpM → ℝ"
+        :def "dT_p(a) = predicted change in the field from action a"
+        :realised-by "the :ranked-actions list IS dT_p: each entry = (action, g-total[, delta-T]) = one component over the action-basis"
+        :anchor "stack_generator.clj:396-491 (next-move projection from judgement.ranked-actions); :rank + :g-total per entry"}
+
+  :v   {:name "chosen tangent vector (the DIRECTION)"
+        :is  "the inhabitant's selected action(s) at p — the move actually committed to"
+        :realised-by "a minted consent-gate-event (cg-id) naming the chosen :action"
+        :grounding "reflective-discipline: 'PARs are tangent vectors; we are still just building the manifold'"}
+
+  :D_v {:name "directional derivative — THE operator"
+        :def "D_v T = dT_p(v) = predicted discharge along v"
+        :is  "the War Machine proper: v·∇, a derivation. Undefined unless v is supplied — see :V2."}
+
+  :∇   {:name "connection"
+        :is  "the typed-edge inventory; it fixes which actions are admissible (the basis of TpM)"
+        :deformed-when "a new typed-edge family is introduced (niche construction); dim(TpM) changes"
+        :grounding "niche-construction: an agent cannot extend its own typed-edge inventory; ΔT=0 false-floor = a missing edge family, not a resolved direction"}
+
+  :φ   {:name "flow"
+        :is  "state advance + field relaxation over one step"
+        :realised-by "a WM scheduler tick (~300s) recomputing :judgement; the field relaxes and the next dT is over a possibly-changed basis"}}
+
+ ;; ==========================================================================
+ ;; 2. OPERATOR — one REPL step, and the trace it must emit
+ ;; ==========================================================================
+ :operator
+ {:def   "REPL_step(p) = LOOP ∘ PRINT ∘ EVAL ∘ READ"
+  :curve "a session is the integral curve γ = [turn-record …]; skill lives in the path, not the endpoints (see :V5)"
+  :turn-record
+  {:turn               "#{:READ :EVAL :PRINT :LOOP}"
+   :p                  "state identifier at entry"
+   :dT-snapshot        "[{:action _ :g-total _ :delta-T _}|{:action _ :g-total :⊥}] — emitted by READ"
+   :v                  "chosen action — emitted by EVAL (nil before EVAL)"
+   :v-attribution      "#{:operator :pilot-autonomous} — who supplied v"
+   :predicted-discharge "D_v T, taken from dT-snapshot at the chosen action — emitted by EVAL"
+   :cg-id              "consent-gate-event id (cg-…) — emitted by EVAL, cited by PRINT"
+   :artefact           "what PRINT emitted (branch ref / commit / typed edge)"
+   :delta-∇?           "bool — did PRINT introduce a new typed-edge family?"
+   :p'                 "state identifier after LOOP"
+   :realised-discharge "measured field-change bracketing the action — emitted by LOOP"
+   :prediction-error   "|realised-discharge − predicted-discharge| — emitted by LOOP"}}
+
+ ;; ==========================================================================
+ ;; 3. TURNS — pre/post-condition contracts
+ ;; ==========================================================================
+ :turns
+ [{:turn :READ
+   :geometry "dT_p : TpM → ℝ      (disclose the cotangent: slope in every direction)"
+   :gloss    "anamnesis discloses"
+   :requires []
+   :ensures  ["emits :dT-snapshot = finite set {(aᵢ, gᵢ)} over the admissible action-basis at p"
+              "every admissible action has gᵢ ∈ ℝ OR an explicit false-floor gᵢ = :⊥ — never a silent 0 (see :V1)"]
+   :backing  {:status :live
+              :anchor "stack_generator.clj:396-491; war_machine_pilot_shapes.clj:44-46 observe tools (:anchors-read :wm-api-query :playwright-probe-run)"}}
+
+  {:turn :EVAL
+   :geometry "D_v T = dT_p(v)      (contract dT with the inhabitant's chosen direction)"
+   :gloss    "anamnesis discharges"
+   :requires [":dT-snapshot from READ" "a non-null v"]
+   :ensures  ["v is drawn from the admissible basis, OR declares a niche-construction intent if no admissible v discharges the tension"
+              ":predicted-discharge = D_v T = g-total of the chosen action"
+              "v carries :v-attribution ∈ #{:operator :pilot-autonomous} — the quantity :V5 integrates over"
+              "mints :cg-id"]
+   :backing  {:status :spike
+              :anchor "consent-gate-emit mints cg-id (war_machine_pilot_shapes.clj:54-55); witnessed cg-5b03db29 (claude-1, 2026-05-25)"}}
+
+  {:turn :PRINT
+   :geometry "apply v: move along existing ∇, OR deform ∇ (introduce a new typed edge)"
+   :gloss    "niche constructed"
+   :requires [":cg-id from EVAL"]
+   :ensures  ["emits :artefact into a branch (a candidate integral curve γᵢ); execution cites :cg-id"
+              "sets :delta-∇? — true iff a new typed-edge family was introduced (see :V4)"
+              "a READ false-floor g=:⊥ predicts a ∇-deforming PRINT is the required move (the missing edge family)"]
+   :backing  {:status :live-factory
+              :anchor "night_shift.clj branch→commit→push→PR path exists; pilot→night-shift hop NOT YET WIRED (the build)"}}
+
+  {:turn :LOOP
+   :geometry "p' = φ_ε(p); recompute T; next READ surveys dT_{p'}"
+   :gloss    "mana flows"
+   :requires ["a completed PRINT"]
+   :ensures  ["a scheduler tick advances state and recomputes :judgement"
+              ":realised-discharge = the field-change across the tick bracketing the action (e.g. the :ranked-actions-top shift)"
+              ":prediction-error = |realised-discharge − predicted-discharge| is logged (see :V3)"]
+   :backing  {:status :gap-with-prior-art
+              :anchor "tick+re-read witnessed as :ranked-actions-top-shifts-on-action (G −4.99 → −4.39, pilot-inhabitations.edn). LOOP-as-tooling is the primary gap; prior art: E-pattern-mining, M-a-sorry-enterprise"}}]
+
+ ;; ==========================================================================
+ ;; 4. INVARIANTS — the checkable spec. A conforming trace γ satisfies all.
+ ;; ==========================================================================
+ :invariants
+ [{:id :V1-read-completeness
+   :plain   "READ shows the slope in every available direction; a missing slope is marked, never silently zero."
+   :formal  "∀ a ∈ basis(TpM): dT-snapshot contains (a, g) with g ∈ ℝ ∪ {:⊥}"
+   :check   "per READ record: action-basis fully covered; any g=:⊥ is explicit"
+   :violation "silent-false-floor — a ∇-gap masquerading as a resolved direction"}
+
+  {:id :V2-no-teleport
+   :plain   "No state change without a chosen direction: the AI may not move p→p' unless a v was supplied and recorded."
+   :formal  "∀ transition p→p' in γ: ∃ EVAL with non-null v immediately preceding the PRINT that caused it"
+   :check   "every PRINT has a preceding EVAL with non-null attributed v; a p→p' with no intervening v is a TELEPORT"
+   :violation "teleport — the de-skilling failure mode"
+   :is      "the formal statement of the §8.4.2 thesis: skip EVAL and you skip the learning step"}
+
+  {:id :V3-prediction-error-tracked
+   :plain   "What actually changed is compared to what EVAL predicted would change."
+   :formal  "∀ LOOP: :prediction-error = |:realised-discharge − :predicted-discharge| is recorded"
+   :check   "each LOOP carries both predicted (from EVAL) and realised (field-change across the tick); a conforming REPL drives Σ prediction-error down over a session"
+   :is      "active-inference belief-update; this is the QUANTITATIVE 'behaviour-matches-spec' signal"
+   :calibration "sign/units of realised-discharge (top-G shift vs whole-field ΔG) to be fixed when the verifier is built; the WITNESS exists (G −4.99 → −4.39)"}
+
+  {:id :V4-niche-construction-legible
+   :plain   "When an emit creates a capability that did not exist, that is recorded as a change of structure, not hidden inside an ordinary move."
+   :formal  "∀ PRINT with :delta-∇? = true: a new typed-edge family is named; dim(TpM) grows for subsequent READs"
+   :check   "∇-deforming PRINTs are flagged; the next READ's basis reflects the new edge family"
+   :violation "stealth-niche-construction"}
+
+  {:id :V5-skill-is-a-path-integral
+   :plain   "Skill accumulated = the sum of directional derivatives the inhabitant actually chose. Autopen and teleports add nothing to operator-skill."
+   :formal  "skill_operator(γ) = Σ_{steps : v-attribution = :operator} D_v T ; pilot-autonomous steps and teleports contribute 0"
+   :check   "computable over any session trace — makes the de-skilling thesis a measured quantity, not a slogan"
+   :is      "re-skilling = forcing traversal; de-skilling/teleportation = endpoint evaluation with no path traversed"}]
+
+ ;; ==========================================================================
+ ;; 5. CONFORMANCE — how to verify, and what already passes
+ ;; ==========================================================================
+ :conformance
+ {:verifier   {:status :built
+               :script "futon3c/scripts/repl_spec_verify.clj — (verify γ) + bb -main; V1-V4 hard (exit 1 on fail), V5 metric"
+               :fixtures ["holes/specs/traces/trace-witness-cg-5b03db29.edn (CONFORMS; V5 attributes discharge to pilot, operator-skill 0)"
+                          "holes/specs/traces/trace-synthetic-failures.edn (DOES NOT CONFORM; trips V1×1 V2×1 V3×1 V4×2)"]
+               :verified-2026-05-29 "both fixtures behave as specified"}
+  :emission   {:status :built
+               :module "futon3c/src/futon3c/aif/repl_trace.clj — turn-record / record-step! (per-turn) / frame / write-frame!"
+               :frame-shape "envelope {:spec :spec-version :run-id :agent :date :step-count :trace γ}, mirroring the futon7 daily scan-frame (futon7/data/daily/<date>.edn): metadata + payload"
+               :data-dir "futon3c/data/repl-traces/<run-id>.edn — CANONICAL (ingestible), NOT .state"
+               :round-trip "emit-witness-demo! → write-frame! → repl_spec_verify reads :trace → CONFORMS (verified 2026-05-29)"
+               :note "the trace IS the data the full LOOP tooling builds off of, or a pointer to it (operator, 2026-05-29)"}
+  :live-run   {:status :built-and-verified
+               :fns "war_machine_pilot.clj begin-live-cycle! / close-live-cycle! — two-phase (never blocks on the 45s tick!; uses request-tick!)"
+               :turns "READ wm-api-query→215 ranked-actions=dT; EVAL v=top action, predicted=G-total −5.346, cg minted; PRINT supervised-proposal (cg intent-handshake, no mutation, bell off); LOOP request-tick! async → re-read → realised"
+               :frame "data/repl-traces/live-021b9a85-a2b3-497f-b97c-7f3c455079f7.edn"
+               :result "CONFORMS (V1-V4); V5 skill-operator=0 pilot-auto=−5.346; prediction-error 0.0, top-shift? false — supervised proposal did not move the field, exactly as expected (2026-05-29)"}
+  :remaining-gap "the live loop now runs end-to-end and emits CONFORMING frames, but in SUPERVISED-PROPOSAL mode: PRINT is the cg intent-handshake only, so the field does not move (realised ≈ predicted, pred-error ≈ 0). The remaining step is a FULL-AUTO SUBSTANTIVE PRINT (execute the chosen action citing the cg-id) which mutates substrate and moves the field, reproducing the witness G-shift — gated at operator merge. Needs operator go-ahead before mutating live substrate."
+  :live-witness
+  {:cg "cg-5b03db29-b636-4368-88ee-a7c8df23ef55"
+   :who "claude-1, 2026-05-25"
+   :step "READ next-move-live → EVAL mint cg → PRINT address-sorry/wm-aif-substrate-addressability → LOOP tick → ranked-actions[0] shifted to sorry/r3a-likelihood-loop-health (G −4.99 → −4.39)"
+   :status "one conforming REPL step exists end-to-end; V2/V3 witnessed for a single step; full V1..V5 over a multi-step γ unverified"
+   :source "futon2/scripts/futon2/report/war_machine.clj s6-successor-populated-fields"}}
+
+ ;; ==========================================================================
+ ;; 6. POLICY — open knobs ON the operator (deferred per directive)
+ ;; ==========================================================================
+ :policy
+ {:who-supplies-v   "#{:operator :pilot-autonomous} — supervised vs full-auto; substitutable per M-vsatarcs-writer §D1 (:operator|:autopen|:cached-policy)"
+  :which-γ-merges   "operator selects which explored branch replays into master; deferred — not part of the operator's definition"
+  :note "the formalism (objects, operator, V1..V5) does NOT depend on these; they are choices about how the operator is driven"}
+
+ ;; ==========================================================================
+ ;; 8. FORK RESOLUTION — how v is chosen at a fork when no operator is present
+ ;;    (the precondition for overnight / autonomous WM operation)
+ ;; ==========================================================================
+ :fork-resolution
+ {:why "For the WM to run overnight, EVAL must select v autonomously at forks. Selection is NOT 'always top-ranked' — it is pattern-warranted and RECORDED, so the choice is auditable and defeasible. Operator preference is a SIGNAL, not a gate (operator-not-sovereign): a well-warranted autonomous choice that differs from operator preference is admissible."
+  :procedure
+  [{:step 1 :name :enumerate :do "list the candidate directions (fork options)"}
+   {:step 2 :name :pattern-warrant
+    :do "score each option against futon3/library/ patterns; select the stronger pattern-based warrant; record the patterns invoked in the turn-record under :fork-warrant. Most forks resolve here ('the choice is simple')."}
+   {:step 3 :name :escalate-if-close
+    :do "when warrants are close or directly contested, run the AIF² contest (futon5/README-aif+.md §11 contest pattern + §12 AIF²): treat the two options as paired AIF+ lifeforms, find the fixed-point (mutual-eradication vs scope-restricted coalescence). Reserve for genuinely hard forks."}
+   {:step 4 :name :record
+    :do "selected option, losing option, and warrant are written into the γ frame so an operator (or later loop) can audit or overturn it."}]
+  :worked-example
+  {:fork "address-sorry sorry/mission-aif-head-not-served — (A) fix the mission_head load blocker → honor the WM #1 recommendation → real closure; (B) sidestep to an easier sorry for a faster demo"
+   :selected :A
+   :patterns-for-A
+   ["futon-theory/stop-the-line — the load blocker IS a stop-the-line; B force-pushes around a halt"
+    "structure/what-problem-is-this-actually-solving — the WM ranked the blocker #1; B drifts to a proxy problem"
+    "war-machine/operational-not-decorative — a demo that bypasses the blocker is decorative; A makes the head operational"
+    "war-machine/ideal-actual-gap — the blocker is the computable ideal/actual gap; A closes it"
+    "futon-theory/all-or-nothing — a workaround is a soft partial-load; A keeps the system whole/consistent"
+    "aif/niche-construction — the load-failure is a niche-construction signal (extend the substrate), not noise to route around"
+    "futon-theory/wyrd — 'mere demo' collapse is the suppress-the-honest-interval anti-pattern"]
+   :verified "all 7 pattern files exist in futon3/library/ (checked 2026-05-29); the 'work-around/coverage-retreat' satisficing signatures are NOT library patterns and were dropped rather than cited"
+   :note "warrant fell to A; operator independently preferred A; the rule would stand on disagreement"}}
+
+ ;; ==========================================================================
+ ;; 7. D&G NOTE — subordinate to the formalism
+ ;; ==========================================================================
+ :dg-note
+ "State apparatus = striated space (fixed coordinates, delivered endpoints — the teleport regime, :V2 violation). War Machine = smooth space (vectors, continuous variation — nomos). The REPL keeps work differential; v·∇ is the war machine proper. Exteriority-to-the-State = the freedom in who supplies v (:policy)."
+
+ :watchwords "Difficult to realize; obvious to the wise."}

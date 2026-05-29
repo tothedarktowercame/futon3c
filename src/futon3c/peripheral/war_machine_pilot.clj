@@ -189,3 +189,117 @@
                          :C6-first-ui-improvement
                          :C7-wm-i4-preservation-at-runtime
                          :C8-consent-gate-exercised]}))
+
+;; =============================================================================
+;; INSTANTIATE Phase 2 — LIVE REPL cycle (differential-operator spec)
+;;
+;; Implements the four-turn operator from holes/specs/repl.spec.edn against the
+;; LIVE War Machine, emitting a verifiable γ frame via futon3c.aif.repl-trace:
+;;   READ  : O(1) cached judgement (pb/wm-api-query) → ranked-actions = dT
+;;   EVAL  : v = top action; predicted = its G-total; mint cg-id
+;;   PRINT : supervised-proposal — artefact = the cg intent-handshake (the
+;;           explored candidate); substantive execution deferred to operator
+;;           merge (gate-at-merge). No substrate mutation; operator bell OFF by
+;;           default so the test activates no other agent.
+;;   LOOP  : request-tick! (async, never the blocking tick!) then re-read;
+;;           realised = post-tick G-total of the chosen target; pred-error auto.
+;; Two-phase (begin!/close!) so we never hold an eval thread across the tick.
+;; requiring-resolve keeps the ns :require form (and reload surface) unchanged.
+;; =============================================================================
+
+(defonce ^:private !live-cycle-runs (atom {}))
+
+(defn- live-judgement []
+  (let [r (pb/wm-api-query {})]
+    (if (:ok r)
+      (get-in r [:result :judgement])
+      (throw (ex-info "live READ failed (wm-api-query)" {:r r})))))
+
+(defn- judgement->dT
+  "Project a WM judgement's ranked-actions into a dT-snapshot
+   [{:action {:type :target} :g-total :rank} …] — the differential dT_p."
+  [judgement]
+  (->> (:ranked-actions judgement)
+       (mapv (fn [e]
+               {:action {:type   (some-> (get-in e [:action :type]) keyword)
+                         :target (get-in e [:action :target])}
+                :g-total (:G-total e)
+                :rank    (:rank e)}))))
+
+(defn begin-live-cycle!
+  "READ → EVAL → PRINT(proposal) → request async tick. Fast, non-blocking, no
+   substrate mutation. Stashes full begin-state by run-id; returns a summary."
+  ([] (begin-live-cycle! {}))
+  ([{:keys [agent v-attribution emit-bell? tick? mode]
+     :or {agent "claude-2" v-attribution :pilot-autonomous emit-bell? false
+          tick? true mode :supervised-proposal}}]
+   (let [run-id (str "live-" (java.util.UUID/randomUUID))
+         j      (live-judgement)
+         dT     (judgement->dT j)
+         top    (first dT)]
+     (if (nil? top)
+       {:ok false :error "no ranked-actions in live judgement"}
+       (let [v         (:action top)
+             predicted (:g-total top)
+             cg-id     (if emit-bell?
+                         (get-in (pb/consent-gate-emit
+                                  {:intent (str "REPL EVAL: engage " (pr-str v))
+                                   :scope {:action v :mode :supervised-proposal :wm-mode (:mode j)}
+                                   :constraints ["supervised-proposal: no mutation; operator merges"]
+                                   :success-criteria ["γ frame emitted" "verifier conforms"]})
+                                 [:result :consent-gate-event-id])
+                         (str "cg-" (java.util.UUID/randomUUID)))
+             tick-before (:tick-count ((requiring-resolve 'futon3c.wm.scheduler/status)))
+             tick        (when tick? ((requiring-resolve 'futon3c.wm.scheduler/request-tick!)))
+             begin {:ok true :run-id run-id :agent agent :v-attribution v-attribution
+                    :wm-mode (:mode j) :mode mode
+                    :pre {:dT-snapshot dT :v v :predicted-discharge predicted}
+                    :cg-id cg-id
+                    :artefact {:kind (if (= mode :substantive)
+                                       :substantive-action
+                                       :consent-gate-intent-handshake)
+                               :cg-id cg-id :proposed-action v
+                               :bell-emitted? (boolean emit-bell?)}
+                    :tick-before tick-before :tick tick}]
+         (swap! !live-cycle-runs assoc run-id begin)
+         {:ok true :run-id run-id :wm-mode (:mode j) :mode mode :n-ranked (count dT)
+          :v v :predicted-discharge predicted :cg-id cg-id
+          :tick-before tick-before :tick-queued tick})))))
+
+(defn close-live-cycle!
+  "LOOP: re-read the (post-tick) judgement; realised = post G-total of the
+   chosen target (or predicted if the target was resolved/absent). Build the
+   turn-record, frame it (envelope + γ), persist, and return the measurement."
+  [run-id]
+  (if-let [b (get @!live-cycle-runs run-id)]
+    (let [post-j     (live-judgement)
+          post-dT    (judgement->dT post-j)
+          v          (get-in b [:pre :v])
+          predicted  (get-in b [:pre :predicted-discharge])
+          target     (:target v)
+          post-entry (first (filter #(= target (get-in % [:action :target])) post-dT))
+          realised   (if post-entry (:g-total post-entry) predicted)
+          pre-top    (get-in b [:pre :dT-snapshot 0 :action :target])
+          post-top   (get-in post-dT [0 :action :target])
+          tr ((requiring-resolve 'futon3c.aif.repl-trace/turn-record)
+              {:step 0 :p "pre-tick"
+               :dT-snapshot (get-in b [:pre :dT-snapshot])
+               :v v :v-attribution (:v-attribution b)
+               :predicted-discharge predicted
+               :cg-id (:cg-id b) :artefact (:artefact b)
+               :delta-grad? false
+               :p' "post-tick" :realised-discharge realised})
+          frame ((requiring-resolve 'futon3c.aif.repl-trace/frame)
+                 {:run-id run-id :agent (:agent b)
+                  :date (subs (str (java.time.Instant/now)) 0 10)}
+                 [tr])
+          frame+ (assoc frame
+                        :wm-mode (:wm-mode b) :mode (:mode b)
+                        :tick-before (:tick-before b)
+                        :tick-after (:tick-count ((requiring-resolve 'futon3c.wm.scheduler/status))))
+          path  ((requiring-resolve 'futon3c.aif.repl-trace/write-frame!) frame+ "data/repl-traces")]
+      {:ok true :frame-path path :run-id run-id
+       :predicted predicted :realised realised
+       :prediction-error (Math/abs (double (- realised predicted)))
+       :top-shift? (not= pre-top post-top) :pre-top pre-top :post-top post-top})
+    {:ok false :error (str "unknown run-id " run-id)}))

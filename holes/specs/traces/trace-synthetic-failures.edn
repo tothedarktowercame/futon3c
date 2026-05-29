@@ -1,0 +1,50 @@
+;; Synthetic trace — NOT a real run. Engineered so each step trips one
+;; invariant, proving the verifier discriminates. Expect: DOES NOT CONFORM,
+;; with V1×1, V2×1, V3×1, V4×2 violations and V5 reported as a metric.
+[;; step 0 → V1: a disclosed action with a silent (nil) g-total, not :⊥
+ {:step 0 :p "s0"
+  :dT-snapshot [{:action {:type :address-sorry :target "a"} :g-total -3.0}
+                {:action {:type :address-sorry :target "b"} :g-total nil}]
+  :v {:type :address-sorry :target "a"} :v-attribution :operator
+  :predicted-discharge -3.0 :cg-id "cg-x0"
+  :artefact {:branch "b0"} :delta-∇? false :p' "s1"
+  :realised-discharge -3.0 :prediction-error 0.0}
+
+ ;; step 1 → V3: prediction-error inconsistent with |realised − predicted|
+ {:step 1 :p "s1"
+  :dT-snapshot [{:action {:type :address-sorry :target "c"} :g-total -2.0}]
+  :v {:type :address-sorry :target "c"} :v-attribution :operator
+  :predicted-discharge -2.0 :cg-id "cg-x1"
+  :artefact {:branch "b1"} :delta-∇? false :p' "s2"
+  :realised-discharge -1.0 :prediction-error 0.5}   ;; should be 1.0
+
+ ;; step 2 → V2: printed an artefact with no chosen v (teleport); no LOOP
+ {:step 2 :p "s2"
+  :dT-snapshot [{:action {:type :address-sorry :target "d"} :g-total -1.0}]
+  :v nil :v-attribution nil :predicted-discharge nil :cg-id nil
+  :artefact {:branch "b2"} :delta-∇? false}
+
+ ;; step 3 → V4 (cross-step): basis grows at step 4 but this PRINT not flagged
+ {:step 3 :p "s3"
+  :dT-snapshot [{:action {:type :address-sorry :target "e"} :g-total -1.0}]
+  :v {:type :address-sorry :target "e"} :v-attribution :operator
+  :predicted-discharge -1.0 :cg-id "cg-x3"
+  :artefact {:branch "b3"} :delta-∇? false :p' "s4"
+  :realised-discharge -1.0 :prediction-error 0.0}
+
+ ;; step 4 → introduces a new admissible action-type (:anchor-reframe)
+ {:step 4 :p "s4"
+  :dT-snapshot [{:action {:type :address-sorry :target "f"}  :g-total -0.5}
+                {:action {:type :anchor-reframe :target "g"} :g-total -0.8}]
+  :v {:type :anchor-reframe :target "g"} :v-attribution :operator
+  :predicted-discharge -0.8 :cg-id "cg-x4"
+  :artefact {:branch "b4"} :delta-∇? false :p' "s5"
+  :realised-discharge -0.8 :prediction-error 0.0}
+
+ ;; step 5 → V4 (per-step): flags ∇-deformation but names no new edge family
+ {:step 5 :p "s5"
+  :dT-snapshot [{:action {:type :anchor-reframe :target "h"} :g-total -0.3}]
+  :v {:type :anchor-reframe :target "h"} :v-attribution :operator
+  :predicted-discharge -0.3 :cg-id "cg-x5"
+  :artefact {:branch "b5"} :delta-∇? true :new-edge-family nil :p' "s6"
+  :realised-discharge -0.3 :prediction-error 0.0}]
