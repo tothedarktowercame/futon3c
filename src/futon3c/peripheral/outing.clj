@@ -49,15 +49,25 @@
                               (not (:delta-grad? c)))) tail))))
 
 (defn- hard-halt-reason
-  "R-D hard halts. nil if none."
-  [{:keys [g1-conforms? g2-regression-ok? claimed-discharge? top-shift?
-           error? tick-timeout?]}]
+  "Contract-breach hard halt — RESERVED for the one thing that poisons trust in
+   the whole run: a FAKE-FINISH (claimed a discharge the field does not support,
+   G3 / V2 no-teleport). 'War Machine, not a pram': ordinary friction does NOT
+   hard-halt. nil if none."
+  [{:keys [claimed-discharge? top-shift?]}]
+  (when (and claimed-discharge? (not top-shift?)) :g3-fake-finish))
+
+(defn- quarantine-reason
+  "Containable friction — record loudly + DO NOT commit, but the run PERSISTS on
+   other work (not an ejector-button event): an uncaught error in a cycle, a
+   slow/missed tick, a non-conformant frame, or a SINGLE regression. The
+   silent-corruption defense is satisfied by detect+surface, not by aborting.
+   nil if the cycle is clean."
+  [{:keys [g1-conforms? g2-regression-ok? error? tick-timeout?]}]
   (cond
-    error?                                   :uncaught-error
-    tick-timeout?                            :tick-sla-breach
-    (not g1-conforms?)                       :g1-nonconformance
-    (not g2-regression-ok?)                  :g2-regression
-    (and claimed-discharge? (not top-shift?)) :g3-fake-finish
+    error?                     :uncaught-error
+    tick-timeout?              :tick-sla-breach
+    (false? g1-conforms?)      :g1-nonconformance
+    (false? g2-regression-ok?) :g2-regression
     :else nil))
 
 (defn record-cycle!
@@ -69,16 +79,21 @@
    A cycle is :committed? only when all gates pass."
   [run-id {:keys [claimed-discharge?] :as cycle}]
   (let [hard (hard-halt-reason cycle)
-        gates-pass? (nil? hard)
-        rec (assoc cycle :committed? (boolean (and gates-pass? claimed-discharge?))
+        quar (quarantine-reason cycle)
+        ;; commit only a clean, earned discharge (no hard breach, no quarantine)
+        committed? (boolean (and (nil? hard) (nil? quar) claimed-discharge?))
+        rec (assoc cycle :committed? committed?
+                         :quarantined? (boolean quar) :quarantine-reason quar
                          :recorded-at (str (java.time.Instant/now)))
         st  (-> (swap! !outings update-in [run-id :cycles] conj rec)
                 (get run-id))
         cycles (:cycles st)
         n (count cycles)
+        n-regress (count (filter #(= :g2-regression (:quarantine-reason %)) cycles))
         soft (cond
                hard nil
                (>= n (:max-cycles st))         :max-cycles
+               (>= n-regress 3)                :regression-storm   ; substrate unstable
                (recent-no-progress? cycles)    :stuck-detector
                :else nil)
         halt (cond hard {:kind :hard :reason hard}
@@ -86,7 +101,7 @@
                    :else nil)]
     (when halt (swap! !outings assoc-in [run-id :status]
                       (if (= :hard (:kind halt)) :halted-hard :stopped)))
-    {:continue? (nil? halt) :halt halt :n-done n}))
+    {:continue? (nil? halt) :halt halt :quarantined quar :n-done n}))
 
 (defn finalize-outing!
   "Write the R-M run-summary artefact and return it."
@@ -95,6 +110,7 @@
         cycles (:cycles st)
         discharges (filter :committed? cycles)
         decompositions (filter :delta-grad? cycles)
+        quarantined (filter :quarantined? cycles)
         regressions (filter #(false? (:g2-regression-ok? %)) cycles)
         nonconf     (filter #(false? (:g1-conforms? %)) cycles)
         sum-pe (reduce + 0.0 (keep :prediction-error cycles))
@@ -105,6 +121,8 @@
                  :discharged-sorries (mapv :sorry-id discharges)
                  :decompositions (count decompositions)
                  :excursions-authored (vec (keep :artefact decompositions))
+                 :quarantined (count quarantined)
+                 :quarantine-reasons (frequencies (keep :quarantine-reason quarantined))
                  :regressions-caught (count regressions)
                  :nonconformances (count nonconf)
                  :sum-prediction-error sum-pe

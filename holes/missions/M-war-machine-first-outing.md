@@ -426,18 +426,34 @@ are committed to the staging branch:
    per cycle; message cites `cg` + sorry-id + frame run-id). Any gate fail ⇒
    halt (R-D), leave the working tree uncommitted, surface.
 
-### 8.8 R-D — Halt conditions (what "without stopping it" actually means)
+### 8.8 R-D — Halt conditions ("War Machine, not a pram") — REVISED 2026-05-30
 
-**Hard halts** (abort, surface, leave branch for review, do NOT merge):
-G1 non-conformance · G2 regression · G3 fake-finish · uncaught exception in a
-cycle · tick fails to land within the R-J SLA (scheduler/JVM unhealthy).
+Operator (2026-05-30): a fake-finish violates every contract — *but* "pushing the
+ejector button the minute things get mildly tricky is not going to work either."
+So the taxonomy is three-tier, with hard-halt reserved for the one trust-poisoning
+breach:
 
-**Soft stops** (clean end + summary): max-cycles or wall-clock box reached (R-K)
-· **stuck detector** — K consecutive cycles (default 3) with top-shift false and
-no earned discharge ⇒ the agent is spinning, stop and surface · **operator
-sentinel** (`OUTING-OFF:` marker, or simply stopping `/loop`).
+**HARD HALT — contract breach (the only run-ending event):**
+- **G3 fake-finish** — claimed a discharge the field doesn't support (V2
+  no-teleport). Non-negotiable; the run can't be trusted to continue.
 
-On any halt: write the run-summary (R-M) and leave the staging branch intact.
+**QUARANTINE + CONTINUE — containable friction (NOT an ejector event):** an
+uncaught error in a cycle · a slow/missed tick (R-J SLA) · a non-conformant frame
+(G1) · a **single** regression (G2). Each is **recorded loudly, NOT committed,
+surfaced** (run-summary + Arxana) — and the run **persists on other work**. The
+silent-corruption defense is satisfied by *detect + surface*, not by aborting the
+whole run for one old regression.
+
+**SOFT STOP — genuine exhaustion (clean end + summary):** bounds reached (R-K) ·
+**stuck-detector** — K consecutive cycles with NO progress *of any kind*, where
+progress now includes a **decompose** (∇-deform) cycle, so deep-but-decomposable
+work never counts as stuck · **regression-storm** (≥3 regressions ⇒ substrate
+actually unstable) · operator sentinel.
+
+On any halt/stop: write the run-summary (R-M); quarantined cycles are listed with
+their reasons so the operator sees exactly what was worked around. Verified
+offline 2026-05-30: error / regression / decompose / discharge all continue; only
+fake-finish hard-halts.
 
 ### 8.9 R-M — Morning-review surface (assembled, one new artefact)
 
