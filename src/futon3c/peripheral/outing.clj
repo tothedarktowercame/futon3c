@@ -35,13 +35,18 @@
   {:ok true :run-id run-id :max-cycles max-cycles})
 
 (defn- recent-no-progress?
-  "Stuck-detector: last `stuck-window` cycles all had no earned discharge AND no
-   top-shift."
+  "Stuck-detector: last `stuck-window` cycles all made NO progress of any kind —
+   no earned discharge, no top-shift, AND no ∇-deform (inline decomposition /
+   niche-construction). A decompose cycle (authoring an excursion + mining
+   bounded sub-sorries in response to a deep sorry) IS progress: the runner,
+   being the same system, extends its own substrate rather than stalling. So a
+   run of decompose cycles never trips the stuck-detector."
   [cycles]
   (let [tail (take-last stuck-window cycles)]
     (and (= stuck-window (count tail))
          (every? (fn [c] (and (not (:claimed-discharge? c))
-                              (not (:top-shift? c)))) tail))))
+                              (not (:top-shift? c))
+                              (not (:delta-grad? c)))) tail))))
 
 (defn- hard-halt-reason
   "R-D hard halts. nil if none."
@@ -89,6 +94,7 @@
   (let [st (get @!outings run-id)
         cycles (:cycles st)
         discharges (filter :committed? cycles)
+        decompositions (filter :delta-grad? cycles)
         regressions (filter #(false? (:g2-regression-ok? %)) cycles)
         nonconf     (filter #(false? (:g1-conforms? %)) cycles)
         sum-pe (reduce + 0.0 (keep :prediction-error cycles))
@@ -97,6 +103,8 @@
                  :cycles-attempted (count cycles)
                  :cycles-committed (count discharges)
                  :discharged-sorries (mapv :sorry-id discharges)
+                 :decompositions (count decompositions)
+                 :excursions-authored (vec (keep :artefact decompositions))
                  :regressions-caught (count regressions)
                  :nonconformances (count nonconf)
                  :sum-prediction-error sum-pe

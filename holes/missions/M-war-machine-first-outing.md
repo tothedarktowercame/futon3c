@@ -861,11 +861,70 @@ plan): R-A.1 (relocated tracked registry + git ledger + reversibility), R-A.2
 (regression invariant live), R-E (G1/G2/G3 gates), the cycle apparatus, and a
 non-disruptive path-limited commit ledger. The COMPONENTS are proven.
 
-**Remaining INSTANTIATE (the harness assembly + first real run):** wire
-`:sorry-closures-stick` as a live probe family (R-A.2 dual-use); the `/loop`
-driver running N cycles (R-B); the git **worktree** for true staging-branch
-isolation (R-C refinement); the run-summary `data/outings/<date>.edn` (R-M); the
-R-L expectations write-up authored before the run. Working-tree state: R-A.1 code
-edits + the two new logic files (`outing_invariants.clj`, `sorry_closures.clj`)
-are **uncommitted** (loaded live; offline VERIFY model not yet wired as a live
-family); the probe lifecycle is committed to futon2 `main`.
+**R-A.1/R-A.2 committed** (path-limited, others' WIP untouched): futon2 `219f026`,
+futon3c `073497a`, futon4 `d36f3f6`. Confidence pass above.
+
+### Car 6 — outing harness + live family + first live cycle (DONE)
+- Built `src/futon3c/peripheral/outing.clj` (committed `0841fa1`): `start-outing!`
+  / `record-cycle!` (R-E gating + R-D halt: hard / soft / stuck-detector) /
+  `finalize-outing!` (R-M run-summary). **Offline-verified:** conforming cycle →
+  continue; fake-finish cycle → hard-halt `:g3-fake-finish`; summary written.
+- **`:sorry-closures-stick` registered as a live probe family** (R-A.2 dual-use)
+  — now fires on the Arxana Live-Violations surface (hourly) in addition to the
+  per-cycle G2 gate. (Runtime registration; bootstrap auto-register is a remaining
+  wiring item so it survives a restart.)
+- **First live cycle through the harness:** the WM ranked `r3d-per-entity-
+  attribution` (a deep `:prototyping-forward` sorry) at rank-1. Honest outcome —
+  **declined to fake-finish** it (no earned fix possible in a bounded cycle);
+  closed as a no-progress cycle (top-shift false, pred-error 0.0, G1 CONFORMS),
+  recorded via the harness, finalized → first real run-summary at
+  `data/outings/2026-05-30-outing-2026-0.edn` (1 attempted, 0 discharged,
+  `:no-tractable-work`). Probe reversed; registry matches HEAD.
+
+### First-outing finding (the verify-as-we-go truth)
+The apparatus runs end-to-end. But the **current queue is all deep
+`:prototyping-forward` work** — `r3d-per-entity-attribution`, two `r3a-likelihood`
+models, 32 `stub-lifts` — none earn-dischargeable in a bounded autonomous cycle;
+the one tractable item (`wm-ui-hud-mode-rationale-hardcode`) **collides with
+another agent's live `core.cljs` WIP**. So a *discharge-producing* first outing is
+**gated on tractable, collision-free work**, exactly as §9 ARGUE predicted ("if it
+does little, that's the trial telling us"). **Path forward:** author dedicated
+excursions (E-prefix) for the likelihood-model / attribution sorries, or run when
+the queue carries tractable items — not an autonomous grind on deep work.
+
+### Car 7 — inline decomposition (REPERTOIRE UPGRADE, operator insight 2026-05-30)
+
+Operator: *"it seems weird to pre-seed E-excursions to upsample data the system
+already has — it's the same system — why can't it write the excursions inline as
+part of the WM run?"* Correct, and it corrects a conservatism in car 6: a deep
+sorry the runner can't one-shot is a **niche-construction signal** (`repl.spec.edn`
+false-floor → ∇-deform; `[[niche-construction]]`), not a dead end. The in-loop
+agent — being the *same system* — decomposes it inline.
+
+**Cycle repertoire is therefore {discharge | decompose | no-progress | halt}**,
+not just discharge/no-progress. A **decompose** cycle authors an excursion (+
+optionally mines bounded sub-sorries) as a ∇-deform PRINT: productive (V4), does
+NOT discharge the sorry, does NOT trip the stuck-detector, is NOT a fake-finish.
+
+**Refines R-I:** authoring an excursion **doc** is low-blast-radius + reversible
+→ allowed inline (esp. supervised). What stays gated for *unattended* runs is
+**autonomously executing** the opened work; flooding is bounded by R-G (promotion
+OFF) + the hole-budget. So decompose-inline ≠ the escalated ∇-deform.
+
+**Demonstrated live:** WM ranked `r3d-per-entity-attribution` #1 (deep; its
+blocker — the typed per-entity event vocabulary — is already gone, so it's
+scopable now). The cycle's move was to author `E-r3d-per-entity-attribution.md`
+inline (cg-f32696ac, run live-08b19d47), annotate r3d `:has-excursion`, and record
+a decompose cycle: G1 CONFORMS, `:decompositions 1`, `:discharged 0` — path
+constructed, not faked. Harness `record-cycle!` updated to treat `:delta-grad?`
+as progress. Run-summary: `data/outings/2026-05-30-outing-2026-0.edn`.
+
+### INSTANTIATE state
+Apparatus **COMPLETE + verified**: R-A.1 (tracked registry/ledger), R-A.2
+(regression invariant, per-cycle gate + live family), the cycle (begin/close +
+G1/G2/G3), the harness (bounds/halt/summary), git-level reversibility — all live
+and committed. **Remaining for a sustained run** (named, not silent): bootstrap
+auto-registration of the family; the `/loop` driver for multi-cycle autonomy
+(R-B); the git **worktree / jj workspace** for R-C isolation; the R-L expectations
+write-up; and **tractable queue work** (the actual gating factor for a
+discharge-producing outing).
