@@ -23,6 +23,7 @@
             [clojure.walk :as walk]
             [babashka.http-client :as http]
             [cheshire.core :as json]
+            [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.watcher.projections.elisp :as elisp]
             [futon3c.watcher.projections.python :as python]
             [futon3c.watcher.projections.flexiarg :as flexiarg]
@@ -36,8 +37,13 @@
 (def ^:private mission-doc-pattern
   #"/holes/missions/M-[^/]+\.md$")
 
+(def ^:private excursion-doc-pattern
+  #"/holes/missions/E-[^/]+\.md$")
+
 (def ^:private sorry-registry-pattern
-  #"/futon2/data/sorrys\.edn$")
+  ;; R-A.1 (M-war-machine-first-outing): sorrys.edn relocated data/ → resources/
+  ;; (tracked, git=ledger). Matches BOTH so the move is transition-safe.
+  #"/futon2/(?:data|resources)/sorrys\.edn$")
 
 (def ^:private mission-cross-ref-type
   "code/v05/mission-cross-ref")
@@ -45,11 +51,15 @@
 (def ^:private file-to-mission-type
   "code/v05/file→mission")
 
+(def ^:private excursion-to-parent-type
+  "code/v05/excursion→parent-mission")
+
 (def directed-types
   #{"code/v05/calls" "code/v05/coverage" "code/v05/vocabulary-use"
     "code/v05/term-defines" "code/v05/contains"
     "code/v05/related-mission"
-    "code/v05/file→mission"})
+    "code/v05/file→mission"
+    "code/v05/excursion→parent-mission"})
 
 (defn directed-endpoints [hx-type endpoints]
   (if (and (directed-types hx-type) (= 2 (count endpoints)))
@@ -307,6 +317,12 @@
    (re-find mission-doc-pattern
             (str/replace (str path) "\\" "/"))))
 
+(defn excursion-doc-path?
+  [path]
+  (boolean
+   (re-find excursion-doc-pattern
+            (str/replace (str path) "\\" "/"))))
+
 (defn sorry-registry-path? [path]
   (boolean
    (re-find sorry-registry-pattern
@@ -364,6 +380,10 @@
 (defn normalize-sorry-endpoint
   [label registry-id]
   (str label "/sorry/" (local-name-from-registry-id registry-id)))
+
+(defn normalize-excursion-endpoint
+  [label excursion-id]
+  (str label "/excursion/" (local-name-from-registry-id excursion-id)))
 
 (defn sorry-t
   [status]
@@ -455,6 +475,56 @@
                        "file/source-path" source-path})))
           {:edge-docs [] :unresolved-code-paths []}
           (vec (or mission-code-paths []))))
+
+(defn- excursion-parent-edge-id
+  [source-endpoint target-endpoint]
+  (str "hx:" excursion-to-parent-type ":" source-endpoint ":" target-endpoint))
+
+(defn- excursion-parent-edge-doc
+  [path label source-endpoint target-endpoint]
+  {:id (excursion-parent-edge-id source-endpoint target-endpoint)
+   :hx-type excursion-to-parent-type
+   :endpoints [source-endpoint target-endpoint]
+   :labels ["v05" "phase-4.5" label "excursion→parent-mission"]
+   :props {"repo" label
+           "phase" 4.5
+           "source-file" path
+           "excursion/source-endpoint" source-endpoint
+           "mission/target-endpoint" target-endpoint
+           "relation/source-field" "excursion/parent-mission"}})
+
+(defn build-excursion-docs
+  "Pure projection from a parsed excursion entry to substrate-2 vertex docs
+   and optional parent-mission edge docs."
+  [{:keys [path label excursion]}]
+  (let [excursion-id (:excursion/id excursion)
+        endpoint (normalize-excursion-endpoint label excursion-id)
+        parent-endpoint (:excursion/parent-mission excursion)
+        vertex-doc {:hx-type "code/v05/excursion-doc"
+                    :endpoints [endpoint]
+                    :labels ["v05" "phase-4.5" label "excursion-doc"]
+                    :props {"repo" label
+                            "phase" 4.5
+                            "source-file" path
+                            "excursion/id" excursion-id
+                            "excursion/endpoint" endpoint
+                            "excursion/title" (:excursion/title excursion)
+                            "excursion/status" (when-let [s (:excursion/status excursion)]
+                                                 (name s))
+                            "excursion/raw-status" (:excursion/raw-status excursion)
+                            "excursion/date" (:excursion/date excursion)
+                            "excursion/owner" (:excursion/owner excursion)
+                            "excursion/parent-mission" parent-endpoint
+                            "excursion/parent-mission-raw" (:excursion/parent-mission-raw excursion)
+                            "excursion/summary" (:excursion/summary excursion)
+                            "excursion/cross-refs" (or (:excursion/cross-refs excursion) [])
+                            "excursion/code-paths" (or (:excursion/code-paths excursion) [])
+                            "excursion/mtime" (:excursion/mtime excursion)}}]
+    {:vertex-doc vertex-doc
+     :edge-docs (cond-> []
+                  parent-endpoint
+                  (conj (excursion-parent-edge-doc path label endpoint parent-endpoint)))
+     :skipped-parent-edge? (nil? parent-endpoint)}))
 
 (defn build-sorry-registry-docs
   "Pure projection from the canonical sorry registry to substrate-2 hyperedge
@@ -685,6 +755,47 @@
      :unresolved-edges (+ (:unresolved edge-stats) (count unresolved-code-paths))
      :failed (+ (if hx-ok? 0 1) (:failed edge-stats) (:failed file-edge-stats))
      :sync sync}))
+
+(defn- label->repo-keyword
+  [label]
+  (-> (str label)
+      (str/replace #"-d$" "")
+      keyword))
+
+(defn ingest-excursion-doc!
+  [{:keys [path label]}]
+  (let [excursion (mcb/parse-excursion-md path (label->repo-keyword label))
+        {:keys [vertex-doc edge-docs skipped-parent-edge?]}
+        (build-excursion-docs {:path path
+                               :label label
+                               :excursion excursion})
+        hx-ok? (:ok? (post-hyperedge! (:hx-type vertex-doc)
+                                      (:endpoints vertex-doc)
+                                      (:labels vertex-doc)
+                                      (:props vertex-doc)))
+        _entity-ok? (when hx-ok?
+                      (:ok? (post-entity!
+                             {:name (first (:endpoints vertex-doc))
+                              :type "excursion/doc"
+                              :source "excursion-doc-watcher"
+                              :external-id (str "E-" (:excursion/id excursion))
+                              :props {"excursion/id" (:excursion/id excursion)
+                                      "excursion/title" (:excursion/title excursion)
+                                      "excursion/status" (when-let [s (:excursion/status excursion)]
+                                                           (name s))
+                                      "excursion/parent-mission" (:excursion/parent-mission excursion)}})))
+        edge-stats (if hx-ok?
+                     (reduce (fn [acc doc]
+                               (let [resp (post-hyperedge-doc! doc)]
+                                 (update acc (if (:ok? resp) :emitted :failed) inc)))
+                             {:emitted 0 :failed 0}
+                             edge-docs)
+                     {:emitted 0 :failed 0})]
+    {:vertices (if hx-ok? 1 0)
+     :edges (:emitted edge-stats)
+     :unresolved-edges (if skipped-parent-edge? 1 0)
+     :failed (+ (if hx-ok? 0 1) (:failed edge-stats))
+     :excursion excursion}))
 
 (defn ingest-sorry-registry!
   [{:keys [path label mission-resolver]}]
@@ -951,9 +1062,10 @@
     (throw (ex-info "file does not exist" {:path path})))
   (let [ext (file-ext path)
         mission-doc? (mission-doc-path? path)
+        excursion-doc? (excursion-doc-path? path)
         sorry-registry? (sorry-registry-path? path)
         essay-home? (essay-home-path? path)
-        handled? (or mission-doc? sorry-registry? essay-home? (supported-ext? ext))]
+        handled? (or mission-doc? excursion-doc? sorry-registry? essay-home? (supported-ext? ext))]
     (cond
       (not handled?) {:status :unhandled :path path :ext ext}
 
@@ -962,6 +1074,12 @@
             stats (ingest-mission-doc! {:path path :label label :root root})
             dur (- (System/currentTimeMillis) t-start)]
         (assoc stats :status :mission-doc :duration-ms dur :path path))
+
+      excursion-doc?
+      (let [t-start (System/currentTimeMillis)
+            stats (ingest-excursion-doc! {:path path :label label})
+            dur (- (System/currentTimeMillis) t-start)]
+        (assoc stats :status :excursion-doc :duration-ms dur :path path))
 
       sorry-registry?
       (let [t-start (System/currentTimeMillis)

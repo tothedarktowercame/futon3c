@@ -35,7 +35,7 @@
 (deftest watched-recognizes-stack-mission-docs
   (testing "watcher mission docs live under stack repos' holes/missions paths"
     (is (true? (sut/watched? "/home/joe/code/futon7/holes/missions/M-self-documenting-stack.md")))
-    (is (true? (sut/watched? "/home/joe/code/futon2/data/sorrys.edn")))
+    (is (true? (sut/watched? "/home/joe/code/futon2/resources/sorrys.edn")))
     (is (false? (sut/watched? "/home/joe/npt/missions/M-ukrns-wp.md")))
     (is (false? (sut/watched? "/home/joe/code/futon7/holes/missions/notes.md")))))
 

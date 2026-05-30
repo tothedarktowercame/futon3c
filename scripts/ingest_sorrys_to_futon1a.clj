@@ -29,7 +29,8 @@
          '[futon3c.watcher.file-ingest :as ingest])
 
 (def ^:private default-path
-  "/home/joe/code/futon2/data/sorrys.edn")
+  ;; R-A.1: relocated data/ → resources/ (tracked).
+  "/home/joe/code/futon2/resources/sorrys.edn")
 
 (def ^:private default-label
   "futon2")
