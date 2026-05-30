@@ -1,10 +1,16 @@
 # Excursion: E-ticks-firing-ratio-likelihood
 
 **Date:** 2026-05-30
-**Status:** IDENTIFY
-**Move:** DECOMPOSE, not discharge
+**Status:** EXECUTED
+**Move:** DECOMPOSE in cycle 3; DISCHARGED in cycle 4
 **Authored-by:** codex-2 as War Machine pilot, run `live-a138864a-c398-427f-9ebd-6b0eab1b253d`, cg `cg-bf2f9b00-f3a3-47cc-9859-e3c7c0e68671`
 **Parent sorry:** `sorry/r3a-likelihood-ticks-firing-ratio`
+
+**Execution:** Cycle 4 (`cg-77efb863-dff7-40d5-8c87-45025d32628d`) added
+first-class `:logic-model-tick` sections to `stack-annotations.edn`, implemented
+`classify-entity-ticks-from-stack-annotations`, implemented
+`predict-ticks-firing-ratio`, wired `judge` context, and addressed the parent
+sorry.
 
 ## Why This Exists
 
