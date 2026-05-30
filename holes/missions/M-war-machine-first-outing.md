@@ -935,6 +935,31 @@ a decompose cycle: G1 CONFORMS, `:decompositions 1`, `:discharged 0` — path
 constructed, not faked. Harness `record-cycle!` updated to treat `:delta-grad?`
 as progress. Run-summary: `data/outings/2026-05-30-outing-2026-0.edn`.
 
+### M1 — FIRST REAL EARNED DISCHARGE ✅ (2026-05-30, commit futon2 7fe10f2)
+
+**Methodological correction (operator):** *"doesn't the WM tell you what to work on
+next? Why are you making a decision? If it recommends hard things at the top,
+maybe there's a reason."* Right — I was shopping for an easier sorry
+(coupling-density) instead of following `v·∇`. The WM's ranking discriminator is
+**`:structural-pressure-per-action`**: r3d **0.9** (rank 1), hud-mode 0.2,
+coupling-density **0.0** (the machine says it's *not pressing*). Following the
+gradient = work on r3d.
+
+**The discharge:** engaging r3d (which I'd wrongly dismissed as "blocked on event
+streams") surfaced a real fix — judge's R3d belief-update was **uniform** across
+all entities; now **per-entity by contribution** (weighted by each entity's
+inconsistency with the error direction; mean preserved = prior event-weight),
+using the per-entity expected-health `predict-annotation-health` already computes.
+Verified: differentiates ~6.7× on a sample, magnitude preserved, new judge code
+ran clean on the live belief domain (`scheduler last-error nil`), field moved
+(r3d → off rank-0, top-shift TRUE), G1 CONFORMS, G2 ok. Run-summary
+`cycles-committed 1`. **Lesson: follow the WM; the hard #1 is hard *because* it's
+structurally central, and engaging it beats shopping for low-pressure wins.**
+
+**Milestones:** M0 ✅ apparatus · **M1 ✅ first earned discharge** · M2 multi-cycle
+demonstration outing · M3 `/loop` driver · M4 finish wiring (bootstrap
+auto-register family, R-L expectations doc).
+
 ### INSTANTIATE state
 Apparatus **COMPLETE + verified**: R-A.1 (tracked registry/ledger), R-A.2
 (regression invariant, per-cycle gate + live family), the cycle (begin/close +
