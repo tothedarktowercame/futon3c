@@ -109,6 +109,50 @@
         (finally
           (rm-rf! tmp))))))
 
+(deftest parse-excursion-md-extracts-parent-owner-and_slug
+  (let [tmp (temp-dir!)]
+    (try
+      (let [missions-dir (io/file tmp "futonx" "holes" "missions")
+            path (io/file missions-dir "E-support-coverage.md")]
+        (.mkdirs missions-dir)
+        (spit path (str "# Excursion: Support Coverage\n\n"
+                        "**Status:** SCOPED — first cycle\n"
+                        "**Date:** 2026-05-27\n"
+                        "**Author + end-to-end owner:** claude-1\n"
+                        "**Parent mission:** `futon3c/holes/missions/M-war-machine-pilot.md`.\n"
+                        "Related code: `/home/joe/code/futon3c/src/futon3c/aif/stack_generator.clj`\n"
+                        "Cross-ref: M-pattern-mining\n"))
+        (let [entry (mcb/parse-excursion-md (.getAbsolutePath path) :futonx)]
+          (is (= "support-coverage" (:excursion/id entry)))
+          (is (= "Support Coverage" (:excursion/title entry)))
+          (is (= :open (:excursion/status entry)))
+          (is (= "claude-1" (:excursion/owner entry)))
+          (is (= "futon3c-d/mission/war-machine-pilot"
+                 (:excursion/parent-mission entry)))
+          (is (some #{"M-pattern-mining"} (:excursion/cross-refs entry)))
+          (is (some #{"futon3c/src/futon3c/aif/stack_generator.clj"
+                      "/home/joe/code/futon3c/src/futon3c/aif/stack_generator.clj"}
+                    (:excursion/code-paths entry)))))
+      (finally
+        (rm-rf! tmp)))))
+
+(deftest parse-excursion-md-keeps-vertex-when-parent-missing
+  (let [tmp (temp-dir!)]
+    (try
+      (let [missions-dir (io/file tmp "futony" "holes" "missions")
+            path (io/file missions-dir "E-orphan.md")]
+        (.mkdirs missions-dir)
+        (spit path (str "# Excursion: Orphan\n\n"
+                        "**Status:** COMPLETE\n"
+                        "**End-to-end owner:** Codex\n"))
+        (let [entry (mcb/parse-excursion-md (.getAbsolutePath path) :futony)]
+          (is (= "orphan" (:excursion/id entry)))
+          (is (= :complete (:excursion/status entry)))
+          (is (= "Codex" (:excursion/owner entry)))
+          (is (nil? (:excursion/parent-mission entry)))))
+      (finally
+        (rm-rf! tmp)))))
+
 (deftest mission-sync-evidence-is-versioned-by-content
   (testing "sync evidence id changes when file content changes"
     (let [tmp (temp-dir!)

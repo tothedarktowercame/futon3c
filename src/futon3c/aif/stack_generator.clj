@@ -497,13 +497,22 @@
 
 (defn- ranked-entry->tile-entry
   "Project a ranked-action into the slim form the cljs tile renders for
-   the tied-bucket display."
+   the tied-bucket display. §3.4 trace affordance: include per-term G
+   decomposition + :anamnesis-concentration when present (attached by
+   futon2.report.war-machine/apply-anamnesis-tiebreak when the tied group
+   was discriminated by ΔT)."
   [entry]
   (let [a (ranked-entry-action entry)
         g (ranked-entry-g-total entry)]
     {:rank         (ranked-entry-rank entry)
      :G-total      g
      :G-display    (when (number? g) (format "%.3f" (double g)))
+     :G-risk       (or (:G-risk entry) (get entry "G-risk"))
+     :G-ambiguity  (or (:G-ambiguity entry) (get entry "G-ambiguity"))
+     :G-info       (or (:G-info entry) (get entry "G-info"))
+     :G-survival   (or (:G-survival entry) (get entry "G-survival"))
+     :anamnesis-concentration (or (:anamnesis-concentration entry)
+                                  (get entry "anamnesis-concentration"))
      :specifically (action->specifically a)
      :action       a
      :rationale    (or (:rationale a) (get a "rationale"))}))

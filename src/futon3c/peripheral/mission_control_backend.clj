@@ -633,6 +633,110 @@
        :mission/path (str path)
        :mission/raw-status (str "parse-error: " (.getMessage e))})))
 
+(defn- classify-excursion-status
+  "Coarse v0 excursion status:
+   - complete/archived => :complete
+   - any other recognised status => :open
+   - missing/unclassified => :unknown
+
+   Preserve the full raw string separately for fidelity."
+  [raw]
+  (let [base (classify-status raw)
+        s (some-> raw
+                  str/trim
+                  (str/replace #"\*+" "")
+                  str/lower-case)]
+    (cond
+      (nil? s) :unknown
+      (or (= base :complete)
+          (= base :archived)
+          (str/starts-with? s "executed"))
+      :complete
+
+      (or (= base :ready)
+          (= base :in-progress)
+          (= base :testing)
+          (= base :blocked)
+          (= base :deferred)
+          (= base :nonstarter)
+          (str/starts-with? s "scoped")
+          (str/starts-with? s "spec")
+          (str/starts-with? s "accepted")
+          (str/starts-with? s "partially executed"))
+      :open
+
+      (= base :unknown) :unknown
+      :else :open)))
+
+(defn- normalize-parent-mission-endpoint
+  "Best-effort normalize a Parent mission header value to a canonical
+   `<repo>-d/mission/<slug>` endpoint. Returns nil when the line does not
+   name a resolvable mission path or id."
+  [raw repo-name]
+  (when (and raw (not (str/blank? raw)))
+    (let [text (-> raw
+                   (str/replace "`" "")
+                   normalize-path-separators)
+          repo+slug (or (some->> (re-find #"(?i)(?:^|/)(futon[0-9a-z.-]+|vsat(?:\.wiki)?|npt)/holes/missions/M-([A-Za-z0-9][A-Za-z0-9-]*)\.md" text)
+                                 rest)
+                        (when-let [slug (second (re-find #"\bM-([A-Za-z0-9][A-Za-z0-9-]*)\.md\b" text))]
+                          [(name repo-name) slug])
+                        (when-let [slug (second (re-find #"\bM-([A-Za-z0-9][A-Za-z0-9-]*)\b" text))]
+                          [(name repo-name) slug]))]
+      (when repo+slug
+        (let [[repo slug] repo+slug]
+          (str repo "-d/mission/" slug))))))
+
+(defn parse-excursion-md
+  "Parse an E-prefix excursion markdown file into an excursion-entry map.
+
+   Reuses the mission parser's content-enrichment heuristics for summary,
+   cross-refs, and code-path extraction, but preserves the E-prefix-specific
+   header semantics: bounded scope-out, parent mission, and end-to-end owner."
+  [path repo-name]
+  (try
+    (let [text (slurp path)
+          lines (str/split-lines text)
+          header-text (->> lines (take 120) (str/join "\n"))
+          filename (.getName (io/file path))
+          excursion-id (str/replace filename #"^E-|\.md$" "")
+          title (when-let [m (re-find #"(?m)^#\s+(?:Excursion:\s*)?(.+)$" header-text)]
+                  (str/trim (second m)))
+          raw-status (extract-header header-text "Status")
+          date (extract-header header-text "Date")
+          owner (or (extract-header header-text "Author + end-to-end owner")
+                    (extract-header header-text "End-to-end owner")
+                    (extract-header header-text "Owner")
+                    (extract-header header-text "Author"))
+          parent-raw (extract-header header-text "Parent mission")
+          parent-endpoint (normalize-parent-mission-endpoint parent-raw repo-name)
+          summary (mission-summary lines)
+          cross-refs (extract-cross-refs text excursion-id)
+          code-paths (extract-code-paths text)
+          mtime (file-mtime-iso path)]
+      {:excursion/id excursion-id
+       :excursion/title title
+       :excursion/status (classify-excursion-status raw-status)
+       :excursion/raw-status raw-status
+       :excursion/date date
+       :excursion/owner owner
+       :excursion/parent-mission parent-endpoint
+       :excursion/parent-mission-raw parent-raw
+       :excursion/summary summary
+       :excursion/cross-refs cross-refs
+       :excursion/code-paths code-paths
+       :excursion/mtime mtime
+       :excursion/source :md-file
+       :excursion/repo (name repo-name)
+       :excursion/path (str path)})
+    (catch Exception e
+      {:excursion/id (str path)
+       :excursion/status :unknown
+       :excursion/source :md-file
+       :excursion/repo (name repo-name)
+       :excursion/path (str path)
+       :excursion/raw-status (str "parse-error: " (.getMessage e))})))
+
 (defn- path-under-root?
   [root path]
   (let [root (some-> root io/file .getCanonicalPath normalize-path-separators)

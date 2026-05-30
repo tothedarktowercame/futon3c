@@ -44,6 +44,9 @@
 (def ^:private mission-doc-pattern
   #"/holes/missions/M-[^/]+\.md$")
 
+(def ^:private excursion-doc-pattern
+  #"/holes/missions/E-[^/]+\.md$")
+
 (declare !state)
 
 ;; ---------- HTTP write surface ----------
@@ -186,12 +189,14 @@
   (let [norm (str/replace (str path) "\\" "/")
         ext (file-ext (str path))
         mission-doc? (boolean (re-find mission-doc-pattern norm))
+        excursion-doc? (boolean (re-find excursion-doc-pattern norm))
         sorry-registry? (file-ingest/sorry-registry-path? norm)]
     (and (or (and ext (WATCHED-EXTS ext)) sorry-registry?)
          (not (re-find NOISE-PATTERN norm))
          (or sorry-registry?
              (not= ext "md")
-             mission-doc?))))
+             mission-doc?
+             excursion-doc?))))
 
 (defn- mark-subtask!
   [subtask]

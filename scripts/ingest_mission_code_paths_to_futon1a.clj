@@ -32,6 +32,28 @@
 (def ^:private penholder
   (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 
+(def ^:private home
+  (System/getProperty "user.home"))
+
+(def ^:private repo-specs
+  [{:label "futon0-d" :root (str home "/code/futon0")}
+   {:label "futon1-d" :root (str home "/code/futon1")}
+   {:label "futon1a-d" :root (str home "/code/futon1a")}
+   {:label "futon2-d" :root (str home "/code/futon2")}
+   {:label "futon3-d" :root (str home "/code/futon3")}
+   {:label "futon3a-d" :root (str home "/code/futon3a")}
+   {:label "futon3b-d" :root (str home "/code/futon3b")}
+   {:label "futon3c-d" :root (str home "/code/futon3c")}
+   {:label "futon4-d" :root (str home "/code/futon4")}
+   {:label "futon5-d" :root (str home "/code/futon5")}
+   {:label "futon5a-d" :root (str home "/code/futon5a")}
+   {:label "futon6-d" :root (str home "/code/futon6")}
+   {:label "futon7-d" :root (str home "/code/futon7")}
+   {:label "futon7a-d" :root (str home "/code/futon7a")}
+   {:label "vsat-d" :root (str home "/vsat")}
+   {:label "vsat.wiki-d" :root (str home "/vsat.wiki")}
+   {:label "npt-d" :root (str home "/npt")}])
+
 (defn- parse-args
   [argv]
   (loop [args argv
@@ -50,19 +72,44 @@
 
 (defn- fetch-mission-docs
   [limit]
-  (let [url (str futon1a "/api/alpha/hyperedges?type="
-                 (java.net.URLEncoder/encode "code/v05/mission-doc" "UTF-8")
-                 "&limit=" limit)
-        resp (http/get url {:headers {"Accept" "application/edn"
-                                      "X-Penholder" penholder}
-                            :throw false
-                            :timeout 10000})]
-    (if (= 200 (:status resp))
-      (vec (or (:hyperedges (edn/read-string (:body resp))) []))
-      (throw (ex-info "mission-doc fetch failed"
-                      {:status (:status resp)
-                       :body (:body resp)
-                       :url url})))))
+  (reduce (fn [acc {:keys [label root]}]
+            (let [mission-dir (java.io.File. (str root "/holes/missions"))
+                  paths (->> (if (.isDirectory mission-dir)
+                               (file-seq mission-dir)
+                               [])
+                             (filter #(.isFile ^java.io.File %))
+                             (map #(.getAbsolutePath ^java.io.File %))
+                             (filter #(re-find #"/M-[^/]+\.md$" %))
+                             sort
+                             (take limit))]
+              (reduce (fn [repo-acc source-file]
+                        (let [url (str futon1a "/api/alpha/hyperedges?type="
+                                       (java.net.URLEncoder/encode "code/v05/mission-doc" "UTF-8")
+                                       "&repo="
+                                       (java.net.URLEncoder/encode label "UTF-8")
+                                       "&source-file="
+                                       (java.net.URLEncoder/encode source-file "UTF-8"))
+                              resp (http/get url {:headers {"Accept" "application/edn"
+                                                            "X-Penholder" penholder}
+                                                  :throw false
+                                                  :timeout 10000})]
+                          (if-not (= 200 (:status resp))
+                            (update repo-acc :unreadable conj
+                                    {:repo label
+                                     :source-file source-file
+                                     :reason (str "http-status-" (:status resp))})
+                            (try
+                              (update repo-acc :mission-docs into
+                                      (vec (or (:hyperedges (edn/read-string (:body resp))) [])))
+                              (catch Exception e
+                                (update repo-acc :unreadable conj
+                                        {:repo label
+                                         :source-file source-file
+                                         :reason (.getMessage e)}))))))
+                      acc
+                      paths)))
+          {:mission-docs [] :unreadable []}
+          repo-specs))
 
 (defn- prop-get
   [props k]
@@ -89,10 +136,11 @@
 
 (defn- dry-run-report
   [limit]
-  (let [mission-docs (fetch-mission-docs limit)
+  (let [{:keys [mission-docs unreadable]} (fetch-mission-docs limit)
         plans (mapv mission-plan mission-docs)]
     {:mode :dry-run
      :mission-doc-count (count mission-docs)
+     :unreadable-mission-docs (count unreadable)
      :planned-edges (reduce + 0 (map #(count (:edge-docs %)) plans))
      :unresolved-code-paths (reduce + 0 (map #(count (:unresolved-code-paths %)) plans))
      :sample-edge (select-keys (first (mapcat :edge-docs plans))
@@ -100,7 +148,7 @@
 
 (defn- write-report
   [limit]
-  (let [mission-docs (fetch-mission-docs limit)
+  (let [{:keys [mission-docs unreadable]} (fetch-mission-docs limit)
         plans (mapv mission-plan mission-docs)
         edge-docs (vec (mapcat :edge-docs plans))
         unresolved (vec (mapcat :unresolved-code-paths plans))
@@ -111,6 +159,7 @@
                         edge-docs)]
     {:mode :write
      :mission-doc-count (count mission-docs)
+     :unreadable-mission-docs (count unreadable)
      :planned-edges (count edge-docs)
      :emitted (:emitted results)
      :failed (:failed results)

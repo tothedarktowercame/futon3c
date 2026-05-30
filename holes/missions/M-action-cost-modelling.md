@@ -534,15 +534,13 @@ The current `mana-snapshot.bb` measure is more accurately called **Anamnesis**: 
 
 The 7-status M-INC vocabulary (`:spawned :refined :strengthened :addressed :falsified :foreclosed :reopened`) IS the **anamnesis → mana lifecycle**: as a sorry moves toward `:strengthened` / `:addressed`, anamnesis discharges and mana forms.  `:falsified` / `:foreclosed` are productive non-formation closures (the question itself dissolves; both anamnesis and mana drop to zero).
 
-The 7-status M-INC vocabulary (`:spawned :refined :strengthened :addressed :falsified :foreclosed :reopened`) IS the aliveness-formation lifecycle — entities move along it as wholeness forms (or, with `:falsified` / `:foreclosed`, as productive non-formation closes the question).
-
 **Why this expands the mission scope from E- to M-**:
 
 The original framing of E-action-cost-modelling was "the WM doesn't represent action cost; bolt cost-awareness on." The synthesis reveals the work is much bigger: **the WM, mana, EOI corpus, and M-live-geometric-stack are all reading projections of one aliveness-quantity, and the futonic system's prioritisation problem cannot be solved by patching any single one — it must recognise the unification and make them consume one substrate.**
 
 That's a Mission-scale piece of work. Hence the retitle to M-action-cost-modelling.md.
 
-**Reconciliation strengthens**: in the original R-4 framing, "substrate-of-belief by construction" meant WM belief is a projection of substrate-2 geometry. Under the synthesis, R-4 becomes: **belief, mana, AIF EFE, T, EOI strength are all projections of aliveness over the typed substrate**; AIF's predictions ARE projections of aliveness-flow; mana's pressure IS the local-tension reading at the working-tree scale. No reconciliation in the "make A and B agree" sense — they're already the same thing, just named differently in different surfaces.
+**Reconciliation strengthens**: in the original R-4 framing, "substrate-of-belief by construction" meant WM belief is a projection of substrate-2 geometry. Under the synthesis, R-4 becomes: **belief, mana, AIF EFE, T, EOI strength are all projections of aliveness over the typed substrate**; AIF's predictions ARE projections of aliveness-flow; mana's pressure IS the local-tension reading at the working-tree scale. No reconciliation in the "make A and B agree" sense — they're already the same thing, just named differently in different surfaces. The **operative mechanism** by which these projections converge (and the unification produces real geometric work rather than parallel renaming) is **niche construction** — see below.
 
 **The geometry-track + mining-track from §3.2 still hold** as the immediate implementation path, but their motivation deepens: typing `:sorry` as a first-class entity in substrate-2 is now framed as "naming the aliveness-projection at the sorry-scale" rather than just "letting the WM rank sorries." Same code, deeper rationale.
 
@@ -557,23 +555,22 @@ That's a Mission-scale piece of work. Hence the retitle to M-action-cost-modelli
 
 - Christopher Alexander, *The Nature of Order* (esp. Book 1: *The Phenomenon of Life*) — the 15 fundamental properties, life as emergent geometric quality
 - Nikos Salingaros — mathematization of Alexander; topological scale-hierarchy of wholeness; relevant work: *A Theory of Architecture*, papers on adaptive complexity
+- **Niche construction** — Lewontin (1983), Odling-Smee/Laland/Feldman (2003), Friston (2010, 2017 in AIF terms), Andy Clark (1997, 2008 on scaffolded cognition). The operative mechanism by which the aliveness-projections compose into one loop; pattern landed at `~/code/futon3/library/aif/niche-construction.flexiarg` (2026-05-27).
 - Existing futon-side theoretical anchoring (AIF, capability-approach, ARGUE-derived weight) all become **sub-projections of the aliveness-geometry**
 
 **Carried-forward tension (new, for ARGUE)**:
 
-6. **Is the aliveness-synthesis genuinely load-bearing for the design, or is it a useful framing that doesn't change the actual code/data shapes?** This is the productive defend-or-refute question for ARGUE. My read: it changes the substrate-2 vocabulary work from "type sorries" to "type aliveness-projections (sorries are one)"; it changes mining from "extract sorries" to "extract aliveness-deficits"; it changes the trace affordance from "show G-decomposition" to "show multi-projection aliveness signature." The synthesis IS load-bearing; the work just becomes bigger and more honest.
+6. **Is the aliveness-synthesis genuinely load-bearing for the design, or is it a useful framing that doesn't change the actual code/data shapes?** **DONE 2026-05-27 (VERIFY T6 closure)**: synthesis is NOT load-bearing at the single-axis T-projection layer (binary T collapses to is-open; cannot break ties whose generator IS open-sorry status). IS load-bearing at the **ΔT composition layer** — the Laplacian over a typed-edge manifold delivers the discriminating gradient (live-empirically demonstrated: 7-way G-tie split into 4 distinct ΔT-levels). Load-bearing-as-composition, not load-bearing-as-direct-projection. The mechanism that makes the composition operative is named below.
 
 7. **Operator-judgement on scope**: M- (mission) retitle implies multi-week+ scope, multiple sub-excursions, possibly a place in the futonic-mission cadence rather than a quick excursion. Honest about that — the synthesis really does pull more in.
 
-**Addendum 2026-05-27 — Niche construction as the operative mechanism**:
+### §3.8.1 Operative mechanism — niche construction (added 2026-05-27)
 
-VERIFY-stage empirical work (§5.1 T2/T6 closures) showed that the synthesis isn't load-bearing at the single-axis T-projection layer (T-binary collapses to is-open; binary T cannot break ties whose generator IS open-sorry status) but IS load-bearing at the **ΔT composition layer** — the Laplacian over a typed-edge manifold delivers the discriminating gradient the synthesis predicted. The missing piece of the §3.8 articulation as originally drafted was the **operative mechanism** by which mana flows / anamnesis discharges / projections converge.
+The missing piece of the §3.8 articulation as originally drafted was the **operative mechanism** by which mana flows / anamnesis discharges / projections converge. That mechanism is **niche construction**. In AIF terms (Lewontin 1983; Odling-Smee/Laland/Feldman 2003; Friston 2010, 2017): an inference agent cannot construct its own niche; the agents-operating-its-peripherals do. The substrate's typed-edge graph IS the WM's niche; agents (operators paired with claudes) author new edges and vertex families that enrich the niche; the WM on the next tick sees a richer manifold and ranks more accurately. Anamnesis (un-discharged tension) drives the construction work; the construction discharges anamnesis into mana (positive aliveness); mana-flow seeds the next disclosure.
 
-That mechanism is **niche construction**. In AIF terms (Lewontin 1983; Odling-Smee/Laland/Feldman 2003; Friston 2010, 2017): an inference agent cannot construct its own niche; the agents-operating-its-peripherals do. The substrate's typed-edge graph IS the WM's niche; agents (operators paired with claudes) author new edges and vertex families that enrich the niche; the WM on the next tick sees a richer manifold and ranks more accurately. Anamnesis (un-discharged tension) drives the construction work; the construction discharges anamnesis into mana (positive aliveness); mana-flow seeds the next disclosure.
+Pattern landed 2026-05-27 at `~/code/futon3/library/aif/niche-construction.flexiarg`: false-floor readings (e.g. ΔT=0 on action classes whose edge family isn't yet typed) are the niche-construction signals, not bugs. Today's T9 retroactive case study showed three of three non-sorry actions (anchor-reframe, file-edit, excursion-step) reading ΔT=0 false-floor under the current sorry-only edge inventory — which is exactly what tells the agents-operating-the-WM which edge families to construct next. INSTANTIATE cars #2 (file→mission, 908 edges) and #3 (excursion-doc, 13 vertices) closed the named false-floors empirically; each was niche-construction work executed against the gap the agent itself surfaced.
 
-Pattern landed 2026-05-27 at `~/code/futon3/library/aif/niche-construction.flexiarg`: false-floor readings (e.g. ΔT=0 on action classes whose edge family isn't yet typed) are the niche-construction signals, not bugs. Today's T9 retroactive case study showed three of three non-sorry actions (anchor-reframe, file-edit, excursion-step) reading ΔT=0 false-floor under the current sorry-only edge inventory — which is exactly what tells the agents-operating-the-WM which edge families to construct next.
-
-The synthesis is therefore four terms, one substance, one loop:
+The synthesis is therefore **four terms, one substance, one loop**:
 
 | Phase | Substance state | What surfaces |
 |---|---|---|
@@ -582,7 +579,7 @@ The synthesis is therefore four terms, one substance, one loop:
 | 3 | niche constructed | typed-edge trace lands in substrate-2 — the substrate is enriched for the next agent's read |
 | 4 | mana flows | pattern crystallises; renewed aliveness seeds the next disclosure |
 
-This is the same aliveness substance through four moments. The four-fold has independent alignment with M-pilot-appearance's REPL / four-foundations / R-criteria donor table (see M-pilot-appearance §7.7 for the cross-mission breadcrumb).
+This is the same aliveness substance through four moments. The four-fold has independent alignment with M-pilot-appearance's REPL / four-foundations / R-criteria donor table (see M-pilot-appearance §7.7 — *the aliveness-substance four-fold as candidate fifth donor*). The two missions discovered the same loop-shape independently from different angles, which is itself the substantive evidence that the loop is real rather than an artifact of how either was authored.
 
 ---
 
@@ -738,9 +735,90 @@ Pending VERIFY.
 
 ---
 
-## 7. DOCUMENT (pending)
+## 7. DOCUMENT (drafted 2026-05-27 evening after operator-paired INSTANTIATE close)
 
-Pending INSTANTIATE.
+### §7.1 INSTANTIATE outcome — six cars, one operator-paired session
+
+| Car | Work | Realised as |
+|---|---|---|
+| #1 | ΔT formalism extended to include `code/v05/mission-cross-ref` incoming edges | `futon3c/src/futon3c/aif/mission_delta_t.clj` (`delta-t-mission` function, codex-5) |
+| #2 | `code/v05/file→mission` derived from `:mission/code-paths` | watcher integration + backfill (codex-5); **908 edges** created |
+| #3 | `code/v05/excursion-doc` ingest + `code/v05/excursion→parent-mission` typed edge | watcher + backfill (codex-5); **13 vertices + 11 parent edges** |
+| #4 | WM head ΔT tie-breaker wired into live `:judgement :ranked-actions` | `futon2.report.war-machine/apply-anamnesis-tiebreak` (codex-5) + 1-line correctness fix (claude-1: replaced aggregate-ΔT with per-edge `(1 − T(mission))`) |
+| #5 | §3.4 trace affordance — `<details>` disclosure with G-decomposition + anamnesis tie-breaker value | `core.cljs` + `stack_generator.clj` + `war_machine.clj`; **Playwright-verified live: 7 trace details, top-1 anamnesis Δ = 2.20** |
+| #6 | §3.8 niche-construction consolidation — integrate operative-mechanism reading throughout the synthesis | §3.8 dedup + bridge sentence + T6 inline closure + new §3.8.1 |
+
+**Total niche enrichment this session**: 921 new typed edges across 3 edge-families + 13 new typed vertices + 1 new analytics function + 1 live UI affordance. The substrate's typed-edge inventory materially grew via the same operator+claude+codex cycle the mission is theorising about.
+
+### §7.2 Theoretical synthesis (operator-articulated 2026-05-27 evening)
+
+The mission's design space evolved during the operator-paired session beyond what HEAD anticipated. Joe's late-session reframe articulates a more fundamental structure that the §3.8 aliveness synthesis was reaching toward but not yet naming:
+
+**One-word summary of FUTON: "Causality"**. The whole stack is causality elaborated across substrate-levels. Each substrate IS a different elaboration of causality — behaviour-causality, phenotype-causality, genotype-causality, exotype-causality, xenotype-causality — and the recurrent structures that show up across the system (Dhamma's pratītyasamutpāda, AIF's predictive coding, §3.8.1's anamnesis ↔ mana loop, the Norn three-time-readings per `[[reference_norn_surface_mapping]]`) are different cross-sections of one thing.
+
+**Five-substrate cycle** (operator framing, verbatim 2026-05-27):
+
+| Tier | Substrate | Four-types role |
+|---|---|---|
+| 0 | Joe / behaviour | (zeroth layer, added by this reframe) |
+| 1 | FUTON / running stack | phenotype |
+| 2 | War Machine | genotype |
+| 3 | VSATARCS | exotype |
+| 4 | Pilot Appearance | xenotype |
+
+**Arrows reverse.** This is the load-bearing claim. The substrates aren't a layered stack — they're stations on a single cycle. Going one way: behaviour drives phenotype drives genotype drives exotype drives xenotype. Going the other way: xenotype constrains exotype constrains genotype constrains phenotype constrains behaviour. The cycle is the same loop as §3.8.1's anamnesis ↔ mana ↔ niche-construction loop seen from a different cross-section.
+
+**Xenotype = Buddhadharma** as the slowest-moving outside layer — *not as cause* (which would be a metaphysical claim), but as the cross-system portable pattern. Dhamma at xenotype is why the Eightfold Path ↔ mission-lifecycle correspondence (recorded in M-weird-modernism §"Eightfold Path ↔ mission lifecycle" and again in M-pilot-appearance §7.5/§7.6/§7.7) reads as *recognition rather than engineering*. Both the path and the lifecycle live at xenotype; recurrence across the system is the system noticing its own xenotype-grade structure. `[[feedback_dhamma_as_structural_prior_art]]` becomes load-bearing under this framing, not metaphorically apt.
+
+**VSATARCS = stack-scale ARGUE.** In missions, ARGUE is the discipline gate: if you can't put the necessity in plain language, the feature isn't worth building. VSATARCS does that same job at *stack* scale — it's the editorial surface where the stack articulates its own composition in plain language. The flexiarg structured form (IF/HOWEVER/THEN/BECAUSE; claim/ground/warrant/backing) IS the structured-ARGUE shape. Three scales of the same discipline:
+
+- Feature scale → `[[feedback_subsumption_claim_discipline]]`
+- Pattern/corpus scale → `M-the-perfect-crime` (Tornhill+Baudrillard forensic mode, spawned today)
+- Stack scale → VSATARCS
+
+Plain-language articulation is the test of reality at all three.
+
+**Pilot's contract → WM-as-REPL** completes M-pilot-appearance simply. The four turns are R/E/P/L over the five-substrate cycle. The donors that mission has been composing (four-foundations kāya/vedanā/citta/dhammā, R-criteria R1-R12, Pilot Contract) are *xenotype-grade aligners with REPL*, not donor composites — they recognise REPL's shape because they share substrate-tier with it. One claim, traceable end-to-end. (Cross-mission: see M-pilot-appearance §8.4 once the ARGUE thesis is authored.)
+
+### §7.3 R11 reframe — communication is the test
+
+The pre-session canonical R11 entry in `futon2/docs/futon-aif-completeness.md:273-277` reads **"N/A at this scope. The WM is a single observer of the futon stack"** with re-evaluation trigger: *"if VSATARCS gains writer capability over the same substrate the WM reads from, R11 stops being N/A and needs an explicit coordination layer."* The trigger fired **2026-05-20** (per `[[project_m_vsatarcs_writer]]` — L3+L4+L4+ shipped, three writer-action-classes via consent-gate-substitutable function, first live cycle on `leaf-6-4-1.md`). The R11 N/A ratification in `M-war-machine-aif-last-mile.md §2.H` carries an `[x ratified 2026-05-20]` tag. The two events were coincident; no one re-evaluated R11.
+
+The five-substrate reading deepens the reframe. R11 is the test of whether **VSATARCS and WM communicate**. Mere coexistence (both running in the same JVM, both touching substrate-2) isn't composition — it's two free-floating AIFs that happen to share storage. **Communication requires that each side interpret the other's emissions**:
+
+- WM-belief-state → VSATARCS-as-observation: ✓ live (VSATARCS reads WM trace and projects evidence-kinds)
+- VSATARCS-action → WM-belief-update: ✓ apparatus (writer capability + consent-gate-substitutable shipped 2026-05-20); empirical live-cycle count to date: **1** (leaf-6-4-1.md)
+
+**Substantively-correct R11 stance**: **✓ apparatus-in-place as of 2026-05-20; communication-empirically-demonstrated requires N > 1 live cycles**. Same apparatus-in-place / empirically-grounded distinction R12 carries.
+
+**Even deeper**: R11 isn't asking about multi-agent state-sharing in isolation; it's asking whether the stack articulates its own composition. VSATARCS *is* the articulation organ. If the R11 audit had gone through VSATARCS (rather than through prose in `futon-aif-completeness.md`), the writer-capability landing and the audit couldn't have been coincident-but-disconnected — VSATARCS would have surfaced the trigger firing as it happened. **The R11 N/A wasn't a composition failure; it was an articulation failure of the stack against itself**.
+
+Open question for a future cycle: does the WM-VSATARCS round-trip *close*? Today's plumbing (VSATARCS writes → substrate-2 → WM reads as evidence → WM scoring → trace → VSATARCS re-reads) is complete in principle, but the LOOP CLOSURE — VSATARCS writing X causes WM to update belief Y which surfaces in VSATARCS's next read of X's downstream effect — hasn't been instrumented. That's the empirical R11 closure work. Listed in §7.5.
+
+### §7.4 Naming collision flagged for future readers
+
+The five-substrate cycle uses **substrate 2 = WM/genotype** at the conceptual level. The running code uses **substrate-2 = futon1a's `code/v05` hyperedge graph** at the storage level. These are different conceptual axes:
+
+- The conceptual substrate-numbering (0..4) is **vertical** — substrate-tiers from behaviour to xenotype.
+- The storage-layer "substrate-1 / substrate-2" naming is **horizontal** — slices through the vertical hierarchy that store data across multiple tiers.
+
+`code/v05/sorry` vertices in storage-substrate-2 are at conceptual-substrate-2 (genotype) when consumed by WM scoring AND at conceptual-substrate-3 (exotype) when consumed by VSATARCS editorial events. Same data, different substrate-tier consumers. Future flexiarg / mission authoring should disambiguate by writing "substrate-tier-N" for the vertical reading and "storage-substrate-N" for the horizontal reading when ambiguity matters.
+
+### §7.5 Follow-on missions / excursions surfaced
+
+- **M-the-perfect-crime** (`futon3c/holes/missions/M-the-perfect-crime.md`) — Tornhill+Baudrillard forensic mode for chained-claim discipline failures. HEAD-only; awaits operator IDENTIFY ratification.
+- **M-pilot-appearance §8.4 ARGUE closure** — author the one-claim thesis: *the pilot's contract turns the WM into a REPL over the five-substrate cycle; donors are xenotype-grade aligners, not composites; the four turns are R/E/P/L.*
+- **§3.4 trace affordance v0.1+** — predicted-observation per-action + structural-weight breakdown (deferred from car #5 v0).
+- **`library/futon-theory/five-substrate-cycle.flexiarg`** (new) — primary structural law capturing arrow-reversibility + xenotype-as-Dhamma + the single-loop reading. Durable home for the §7.2 synthesis.
+- **VSATARCS-WM round-trip empirical closure** — instrument the loop so that LOOP CLOSURE (VSATARCS write → substrate-2 → WM belief-update → trace → VSATARCS re-read) becomes auditable per-cycle. R11 empirically-grounded closure.
+- **`futon2/docs/futon-aif-completeness.md` R11 entry rewrite** — record the corrected stance per §7.3 above. (Ledger-of-truth edit; operator-judgement.)
+- **Street-sweeper hop-back hooks** (surfaced today, separate concern) — emit `wm.scheduler/request-tick!` + run `mana-snapshot.bb` on hop-back from street-sweeper. claude-2 took the street-sweeper workflow handoff today; this would naturally land there.
+
+### §7.6 Mission close-state
+
+M-action-cost-modelling is at DOCUMENT-stage 2026-05-27 evening. All six INSTANTIATE cars landed; the empirical scaffolding closes T2/T4/T6 with strong empirical findings and T9 with structural realisation across three typed-edge families. The theoretical scaffolding (§3.8 aliveness synthesis + §3.8.1 niche construction + §7.2 five-substrate cycle / arrow reversibility / VSATARCS-as-stack-ARGUE) provides the cross-substrate generalisation the mission's HEAD couldn't yet articulate.
+
+**Whether the mission graduates to "closed"** or remains "in-progress" pending the R11 empirical closure + the M-pilot-appearance ARGUE closure + the `library/futon-theory/` durable-law entry is operator-judgement. The follow-on items in §7.5 are clearly named; closing the mission as it stands AND tracking those follow-ons as separate missions/excursions is the cleaner discipline (per `[[feedback_qa_means_qa]]` — don't close-out work that surfaces as a found dependency).
 
 ---
 
