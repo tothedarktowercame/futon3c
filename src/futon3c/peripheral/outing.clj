@@ -44,9 +44,15 @@
   [cycles]
   (let [tail (take-last stuck-window cycles)]
     (and (= stuck-window (count tail))
-         (every? (fn [c] (and (not (:claimed-discharge? c))
+         (every? (fn [c] (and (not (:claimed-discharge? c))   ; not a discharge
                               (not (:top-shift? c))
-                              (not (:delta-grad? c)))) tail))))
+                              (not (:delta-grad? c))           ; not a decompose
+                              (not (:ruled-out? c)))) tail))))  ; not a rule-out
+
+;; Progress is one of: discharge (committed), decompose (∇-deform / authored an
+;; excursion), or RULE-OUT (tried an approach, recorded why it doesn't work —
+;; negative knowledge that narrows the space, exactly the proof-session "we ruled
+;; out strategies X/Y/Z"). Only a run of cycles with NONE of these is "stuck".
 
 (defn- hard-halt-reason
   "Contract-breach hard halt — RESERVED for the one thing that poisons trust in
@@ -110,6 +116,7 @@
         cycles (:cycles st)
         discharges (filter :committed? cycles)
         decompositions (filter :delta-grad? cycles)
+        ruled-out (filter :ruled-out? cycles)
         quarantined (filter :quarantined? cycles)
         regressions (filter #(false? (:g2-regression-ok? %)) cycles)
         nonconf     (filter #(false? (:g1-conforms? %)) cycles)
@@ -121,6 +128,7 @@
                  :discharged-sorries (mapv :sorry-id discharges)
                  :decompositions (count decompositions)
                  :excursions-authored (vec (keep :artefact decompositions))
+                 :strategies-ruled-out (mapv #(select-keys % [:sorry-id :ruled-out-approach :reason]) ruled-out)
                  :quarantined (count quarantined)
                  :quarantine-reasons (frequencies (keep :quarantine-reason quarantined))
                  :regressions-caught (count regressions)
