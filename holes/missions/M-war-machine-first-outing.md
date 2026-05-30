@@ -1,7 +1,7 @@
 # Mission: M-war-machine-first-outing
 
 **Date:** 2026-05-30
-**Status:** **IDENTIFY** (authored emacs-repl with claude-5, operator Joe present). The pilot works at a basic level — one substantive cycle moved the field 2026-05-29 (`live-2d50834b`), a second on 2026-05-30 (`live-00c07332`, this session). This mission asks: *which open edges must close before we can confidently run the machine for a while without stopping it* — and *how* such a run is actually set up.
+**Status:** **CLOSED 2026-05-30** (operator-directed, emacs-repl with claude-5; codex-2 piloted M2). Full lifecycle IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE ran in-session; M0–M4 done; the WM-pilot loop demonstrated end-to-end (codex-2 cleared the entire open-sorry queue following the WM, driven unattended-across-turns by `/loop`+whistle). See **Closing Checkpoint** at end for milestones + named follow-ons (the input-sources frontier, geometry→AIF bug, VSATARCS regen, bootstrap auto-register). The mission *asked*: which open edges must close to run the machine confidently for a while, and how such a run is set up — answered yes, demonstrated.
 **Timebox:** open — gated by the blocking-edge workstream (§3.1), not the calendar.
 **Predecessors:**
 - `M-war-machine-pilot.md` (capability — v0 complete 2026-05-24)
@@ -956,9 +956,103 @@ ran clean on the live belief domain (`scheduler last-error nil`), field moved
 `cycles-committed 1`. **Lesson: follow the WM; the hard #1 is hard *because* it's
 structurally central, and engaging it beats shopping for low-pressure wins.**
 
-**Milestones:** M0 ✅ apparatus · **M1 ✅ first earned discharge** · M2 multi-cycle
-demonstration outing · M3 `/loop` driver · M4 finish wiring (bootstrap
-auto-register family, R-L expectations doc).
+**Milestones:** M0 ✅ apparatus · **M1 ✅ first earned discharge** · **M2 ✅
+multi-cycle demonstration** (codex-2 piloting, claude-5 coaching by whistle, on a
+`/loop`+`ScheduleWakeup`+background-whistle driver — the mechanism Joe doubted
+*works*: codex driven across turns unattended) · M3 `/loop` driver ✅ (proven via
+M2) · M4 finish wiring (bootstrap auto-register family, R-L expectations doc).
+
+**M2 run (codex-2, following the WM's top signal each cycle):** discharged
+hud-mode (dynamic rationale), coupling-density (entity→repo bridge), ticks
+(decompose→execute: real tick entities) — all CONFORMS + tested + path-limited
+commits; honest partial on stub-lifts (1/32), then operator-authorized full
+grind. codex integrity: refused fake proxies, refused to overclaim partials.
+
+**VSATARCS MUDDLED-STATE FLAG (2026-05-30, do not regen until post-grind per R-H
+plan):** `futon7a/vsatarcs.html` is **stale** (generated 2026-05-25, reflects
+none of the M2 work) AND its ToC **overstates completeness** — the generator's
+lift-status is a binary *in-`:sections`? / not* that does **not** distinguish
+`:stub-no-aif` (31) from `:composite-top-level` (17), so "everything lifted" hides
+that ~⅔ are undecomposed stubs. Inline docs (commit msgs + `.aif.edn` +
+`stack-annotations`) carry currency until the post-grind regen. Follow-on: the
+ToC should mark stub-vs-decomposed (the "improve the recommendation/exo"
+instinct). Minor: 20 `.aif.edn` files but only 17 composite sections — a 3-story
+lift gap. (Post-grind 2026-05-30: stub queue now 0 — all 31 lifted+decomposed by
+codex-2; those flag counts are pre-grind.)
+
+### M2/M3 ✅ + the terminal state is a DIAGNOSTIC, not "done" (2026-05-30, Joe)
+
+The M2 grind discharged the **entire open-sorry queue** (hud-mode, coupling-density,
+ticks, stub-lifts ×31 stories) — the WM then fell to `:ranked-actions[0]
+= :learn-action-class` ("no addressable entities for :address-sorry"). **Reframe
+(Joe):** that is NOT "all work done" — it's the WM revealing it is **starved of
+input sources**. Its only substrate was the hand-curated sorry registry; the
+richer sources that should feed `ranked-actions` aren't wired in. "Worthy of its
+name" = wiring those sources. This re-opens the meta-sorry
+(`wm-aif-substrate-addressability`): the answer to "what addressable substrate?"
+is *multiple* sources, not one registry.
+
+**Concrete bug surfaced (#4):** M-stack-geometry is *supposed* to be coupled to
+AIF (substrate-2 live tension → recommendations). Getting **zero** geometry-derived
+recommendations means the **geometry→AIF pipeline isn't working** — diagnose it.
+
+**Next-step input sources (Joe's priority order — the post-first-outing frontier;
+candidate new mission "make-the-WM-worthy-of-its-name" / M-war-machine-input-sources):**
+1. **Invariant Queue** (`docs/structural-law-inventory.sexp`) — read it; draft an
+   Excursion per invariant (**interactive with Joe**); then re-rank. A *prep phase
+   outside the WM*. [Joe's #1 next step.]
+2. **Unfinished missions** (many) — rank by importance + what they unlock for the stack.
+3. **M-the-perfect-crime** — language ↔ static-analysis relationship (interactive;
+   idea source).
+4. **M-stack-geometry tension** — points of tension from the stack's own geometry;
+   fix the broken geometry→AIF pipeline (the zero-recs bug above).
+5. **futon7 daily scans** — set the WM loose on *others'* work to find tension we
+   can help with.
+
+---
+
+## Closing Checkpoint — CLOSED 2026-05-30 (operator-directed)
+
+The mission's question — *can the WM be run for a while, confidently, without
+stopping it or corrupting itself?* — is answered **yes, demonstrated end-to-end.**
+
+**Milestones M0–M4:**
+- **M0 ✅** apparatus — ledger (R-A.1), regression invariant (R-A.2), gated cycle,
+  harness, full repertoire, persist-through-friction halt policy, VERIFY logic
+  model. Committed, path-limited.
+- **M1 ✅** first earned discharge — r3d-per-entity-attribution (claude-5,
+  per-entity-by-contribution; the WM's own #1 by structural-pressure).
+- **M2 ✅** multi-cycle demonstration — codex-2 piloting (claude-5 coaching by
+  whistle), driven by `/loop`+`ScheduleWakeup`+background-whistle, discharged the
+  **entire open-sorry queue** (hud-mode, coupling-density, ticks, stub-lifts ×31):
+  all CONFORMS + tested + path-limited commits, **zero fake-finishes, zero
+  hard-halts**, honest decompose / partial moves where bounded discharge wasn't
+  available.
+- **M3 ✅** driver — the cross-turn unattended `/loop`+whistle mechanism (doubted,
+  but it works; I-1-clean).
+- **M4 ✅** finish wiring — R-L expectations-vs-actual written
+  (`M-war-machine-first-outing-expectations.md`); `:sorry-closures-stick`
+  runtime-registered (live regression-watch restored). *Bootstrap auto-register
+  deferred* (follow-on #1) — add `(outing/register-live-family!)` to `dev/futon3c/dev.clj`'s
+  WM-start path as a **careful standalone edit, NOT a live reload** (a live reload
+  of that 2500-line bootstrap ns is what crashed the server once today).
+
+**Deepest output — the terminal-state finding:** following the WM faithfully drove
+it to `:learn-action-class` = **starved of input sources, not "done."** The WM is
+worthy of its name only once the richer sources feed `ranked-actions`. This
+re-opens the meta-sorry and seeds the next mission.
+
+**Named follow-ons (not silent gaps):**
+1. Bootstrap auto-register the probe family (M4 remainder; careful standalone edit).
+2. **Input-sources frontier** (candidate `M-war-machine-input-sources`): Invariant
+   Queue (interactive prep) → unfinished-missions ranking → M-the-perfect-crime →
+   fix geometry→AIF + stack-geometry tension → futon7 daily scans.
+3. **geometry→AIF pipeline bug** (zero tension-recommendations).
+4. **VSATARCS regen** (stale since 2026-05-25) + ToC stub-vs-decomposed distinction.
+5. **WM-mechanism:** a decompose/partial should *move the field* (currently a
+   decomposed sorry stays #1, risking grind/loop).
+
+The pilot demonstrably runs for a while — and showed us exactly where to extend it.
 
 ### INSTANTIATE state
 Apparatus **COMPLETE + verified**: R-A.1 (tracked registry/ledger), R-A.2
