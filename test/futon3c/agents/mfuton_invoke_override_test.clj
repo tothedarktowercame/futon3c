@@ -58,3 +58,24 @@
                  :from-nick "codex"
                  :message "[invoke-delivery] codex-1 Delivery: delivered via whistle -> caller joe (trace-id invoke-xyz)"}]
                @calls))))))
+
+(deftest maybe-record-delivery-skips-irc-echo-for-irc-surface-in-mfuton-mode
+  (testing "mfuton mode treats IRC-surface delivery receipts as already delivered"
+    (let [calls (atom [])]
+      (with-redefs [mfuton-mode/mfuton-mode? (constantly true)
+                    config/env (fn [_k & [default]] default)
+                    dev-irc/send-irc!
+                    (fn [channel from-nick message]
+                      (swap! calls conj {:channel channel
+                                         :from-nick from-nick
+                                         :message message})
+                      true)]
+        (is (true? (mfuton-invoke-override/maybe-record-delivery!
+                    {:agent-id "codex-1"
+                     :invoke-trace-id "invoke-xyz"
+                     :receipt {:surface "irc"
+                               :destination "#test as <codex>"
+                               :delivered? true
+                               :note "matrix-ircd"}
+                     :receipt-line "Delivery: delivered via irc -> #test as <codex> (trace-id invoke-xyz)"})))
+        (is (empty? @calls))))))

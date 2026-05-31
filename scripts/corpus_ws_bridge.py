@@ -461,13 +461,13 @@ def extract_query_from_prompt(prompt: str) -> str:
     """Extract the actual user query from an IRC surface-contract-wrapped prompt.
 
     The ngircd bridge sends prompts like:
-        [Surface: IRC | Channel: #math | Speaker: joe | Mode: brief | ...]
+        [Surface: IRC | Channel: <frontiermath-room> | Speaker: joe | Mode: brief | ...]
 
         joe: Why do Godement--Jacquet and Rankin--Selberg conductors match?
 
     Or with the full CURRENT TURN header:
         --- CURRENT TURN ---
-        Surface: irc (#math)
+        Surface: irc (<frontiermath-room>)
         Caller: irc:joe
         ---
         [Surface: IRC | ...]

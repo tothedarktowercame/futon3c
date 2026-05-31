@@ -306,7 +306,9 @@
                        (.append sb "\n"))
         consume-lines! (fn [stream line-handler]
                          (with-open [rdr (java.io.BufferedReader.
-                                          (java.io.InputStreamReader. stream))]
+                                          (java.io.InputStreamReader.
+                                           stream
+                                           java.nio.charset.StandardCharsets/UTF_8))]
                            (loop []
                              (when-let [line (.readLine rdr)]
                                (line-handler line)
@@ -372,7 +374,9 @@
                                            :stream :stderr
                                            :error summary
                                            :at (str (java.time.Instant/now))}))))) ]
-    (with-open [w (io/writer (.getOutputStream proc))]
+    (with-open [w (java.io.OutputStreamWriter.
+                   (.getOutputStream proc)
+                   java.nio.charset.StandardCharsets/UTF_8)]
       (.write w (str prompt-str "\n")))
     (let [finished? (if (and (number? timeout-ms) (pos? (long timeout-ms)))
                       (.waitFor proc (long timeout-ms) java.util.concurrent.TimeUnit/MILLISECONDS)

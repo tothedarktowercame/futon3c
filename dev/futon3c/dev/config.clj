@@ -53,6 +53,12 @@
   []
   (or (env-int "FUTON3C_DIRECT_INVOKE_TIMEOUT_SECONDS" 10) 10))
 
+(defn frontiermath-room
+  "Configured FrontierMath IRC room, defaulting to #math."
+  []
+  (or (some-> (env "FUTON3C_FRONTIERMATH_ROOM") str/trim not-empty)
+      "#math"))
+
 ;; ---------------------------------------------------------------------------
 ;; Codex identity
 ;; ---------------------------------------------------------------------------

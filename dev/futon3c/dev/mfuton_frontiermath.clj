@@ -27,7 +27,11 @@
 
 (defn dispatch-channel
   [math-irc-enabled?]
-  (if math-irc-enabled? "#math" "#futon"))
+  (if math-irc-enabled? (config/frontiermath-room) "#futon"))
+
+(defn current-frontiermath-room
+  []
+  (dispatch-channel (config/env-bool "MATH_IRC" false)))
 
 (defn current-conductor-state-atom
   [fm-conductor-handle]
@@ -99,7 +103,7 @@
            assignable-obligations-fn
            dispatch-message-original-fn]}]
   (when-let [{:keys [nick obligation-id channel]} (parse-fm-claim-prompt prompt)]
-    (when (= "#math" channel)
+    (when (= (current-frontiermath-room) channel)
       (if conductor-state
         (let [agent-id (claim-nick->agent-id nick)
               claimed (get (claimed-obligations conductor-state) obligation-id)
@@ -158,7 +162,7 @@
            bridge-send-fn
            dispatch-mechanical-fn]}]
   (when-let [{:keys [nick event channel]} (parse-fm-bell-prompt prompt)]
-    (when (= "#math" channel)
+    (when (= (current-frontiermath-room) channel)
       (if conductor-state
         (let [agent-id (claim-nick->agent-id nick)]
           (if (nil? agent-id)
@@ -175,7 +179,7 @@
                   result-text (case (:action dispatch-result)
                                 :page (str "BELL " event
                                            " acknowledged for " nick
-                                           ". Next work was posted to #math.")
+                                           ". Next work was posted to " (current-frontiermath-room) ".")
                                 :pass (str "BELL " event
                                            " acknowledged for " nick
                                            ". No new assignable obligations right now.")

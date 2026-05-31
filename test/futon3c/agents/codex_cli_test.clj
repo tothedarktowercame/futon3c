@@ -214,8 +214,12 @@
   (testing "real subprocess launch emits verified process/output lifecycle callbacks"
     (let [events (atom [])
           result (codex-cli/run-codex-stream!
-                  ["bash" "-lc"
-                   "printf '{\"type\":\"thread.started\",\"thread_id\":\"sid-runtime\"}\\n'; printf 'stderr-line\\n' 1>&2"]
+                  ["python" "-c"
+                   (str "import sys; "
+                        "sys.stdout.write('{\\\"type\\\":\\\"thread.started\\\",\\\"thread_id\\\":\\\"sid-runtime\\\"}\\\\n'); "
+                        "sys.stdout.flush(); "
+                        "sys.stderr.write('stderr-line\\\\n'); "
+                        "sys.stderr.flush()")]
                   "ignored"
                   {:timeout-ms 5000
                    :on-runtime-event #(swap! events conj %)})
@@ -239,3 +243,16 @@
       (is (= :stderr (:stream stderr-event)))
       (is (pos? (or (:bytes stdout-event) 0)))
       (is (pos? (or (:bytes stderr-event) 0))))))
+
+(deftest run-codex-stream-preserves-utf8-prompt-text
+  (testing "prompt text round-trips through the subprocess boundary as UTF-8"
+    (let [prompt "Caller: irc:bob⚡️"
+          result (codex-cli/run-codex-stream!
+                  ["python" "-c"
+                   (str "import sys; "
+                        "data = sys.stdin.buffer.read(); "
+                        "sys.stdout.buffer.write(data)")]
+                  prompt
+                  {:timeout-ms 5000})]
+      (is (= 0 (:exit result)))
+      (is (str/includes? (:raw-output result) prompt)))))

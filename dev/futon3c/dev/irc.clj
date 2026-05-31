@@ -42,7 +42,7 @@
        :at (str (Instant/now))})))
 
 (defn- irc-connect!
-  "Open a persistent connection to ngircd. JOINs #math and stays connected.
+  "Open a persistent connection to ngircd. JOINs the configured FrontierMath room and stays connected.
    Background thread handles PINGs and captures PRIVMSG lines to !irc-log."
   [nick]
   (let [nick (str/replace (str nick) #"[^a-zA-Z0-9_-]" "")
@@ -53,7 +53,7 @@
     (.println out (str "NICK " nick))
     (.println out (str "USER " nick " 0 * :" nick))
     (Thread/sleep 500)
-    (.println out "JOIN #math")
+    (.println out (str "JOIN " (config/frontiermath-room)))
     (Thread/sleep 300)
     ;; Background thread: respond to PINGs + capture PRIVMSG to ring buffer
     (let [running (atom true)
@@ -149,6 +149,14 @@
   [port]
   (str "http://127.0.0.1:" port "/say"))
 
+(defn- configured-bridge-max-lines
+  "Bridge /say line cap. Zero means unlimited bridge-side delivery while
+   still relying on the IRC transport for RFC-safe chunking."
+  []
+  (if (config/env-bool "FUTON3C_MATRIX_REPLY_NO_LIMITS" false)
+    0
+    4))
+
 (defn make-bridge-irc-send-fn
   "Create a send-fn that posts via the ngircd bridge's HTTP /say endpoint.
    This lets agents post as 'claude' or 'codex' without opening separate IRC
@@ -159,7 +167,7 @@
      (let [url (bridge-say-url port)
            payload (json/generate-string (cond-> {"from" (or from-nick "claude")
                                                    "text" (str message)
-                                                   "max_lines" 4}
+                                                   "max_lines" (configured-bridge-max-lines)}
                                            channel (assoc "channel" (str channel))))
            conn (doto (-> (java.net.URI. url) .toURL .openConnection)
                   (.setRequestMethod "POST")

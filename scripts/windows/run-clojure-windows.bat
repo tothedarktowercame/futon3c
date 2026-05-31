@@ -4,6 +4,10 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+set "RUN_CLOJURE_TARGET_ROOT=%REPO_ROOT%"
+if defined RUN_CLOJURE_WORKDIR (
+  for %%I in ("%RUN_CLOJURE_WORKDIR%") do set "RUN_CLOJURE_TARGET_ROOT=%%~fI"
+)
 
 set "CLOJURE_BAT=%REPO_ROOT%\.tools\clojure\bin\clojure.bat"
 if not exist "%CLOJURE_BAT%" (
@@ -51,7 +55,16 @@ if errorlevel 1 (
   1>&2 echo [run-clojure-windows] ERROR: unable to create %LOCAL_M2%
   exit /b 1
 )
-set "LOCAL_TMP=%REPO_ROOT%\.tmp\java"
+for %%I in ("%REPO_ROOT%\..\..\gh\mfuton\data\tmp\run-clojure-windows\java") do set "LOCAL_TMP_ROOT=%%~fI"
+if not exist "%LOCAL_TMP_ROOT%" mkdir "%LOCAL_TMP_ROOT%" >nul 2>nul
+if errorlevel 1 (
+  1>&2 echo [run-clojure-windows] ERROR: unable to create %LOCAL_TMP_ROOT%
+  exit /b 1
+)
+set "RUN_CLOJURE_TMP_TAG=%RANDOM%-%RANDOM%-%RANDOM%-%TIME: =0%"
+set "RUN_CLOJURE_TMP_TAG=%RUN_CLOJURE_TMP_TAG::=%"
+set "RUN_CLOJURE_TMP_TAG=%RUN_CLOJURE_TMP_TAG:.=%"
+set "LOCAL_TMP=%LOCAL_TMP_ROOT%\run-%RUN_CLOJURE_TMP_TAG%"
 if not exist "%LOCAL_TMP%" mkdir "%LOCAL_TMP%" >nul 2>nul
 if errorlevel 1 (
   1>&2 echo [run-clojure-windows] ERROR: unable to create %LOCAL_TMP%
@@ -71,20 +84,62 @@ if defined CLJ_JVM_OPTS (
 )
 
 set "LOCAL_M2_EDN=%LOCAL_M2:\=/%"
-> "%CLJ_CONFIG%\deps.edn" (
-  echo {
-  echo   :mvn/local-repo "%LOCAL_M2_EDN%"
-  echo   :aliases {}
-  echo }
+if not defined RUN_CLOJURE_WINDOWS_LWJGL_NATIVE_PATCH set "RUN_CLOJURE_WINDOWS_LWJGL_NATIVE_PATCH=0"
+if defined RUN_CLOJURE_EXTRA_ALIAS_BODY (
+  if /I "%RUN_CLOJURE_WINDOWS_LWJGL_NATIVE_PATCH%"=="1" (
+    > "%CLJ_CONFIG%\deps.edn" (
+      echo {
+      echo   :mvn/local-repo "%LOCAL_M2_EDN%"
+      echo   :aliases
+      echo   {:windows-lmdb
+      echo    {:extra-deps
+      echo     {org.lwjgl/lwjgl$natives-windows {:mvn/version "3.3.1"}
+      echo      org.lwjgl/lwjgl-lmdb$natives-windows {:mvn/version "3.3.1"}}}
+      echo    :run-clojure-extra
+      echo     %RUN_CLOJURE_EXTRA_ALIAS_BODY%
+      echo   }
+      echo }
+    )
+  ) else (
+    > "%CLJ_CONFIG%\deps.edn" (
+      echo {
+      echo   :mvn/local-repo "%LOCAL_M2_EDN%"
+      echo   :aliases
+      echo   {:run-clojure-extra
+      echo     %RUN_CLOJURE_EXTRA_ALIAS_BODY%
+      echo   }
+      echo }
+    )
+  )
+) else (
+  if /I "%RUN_CLOJURE_WINDOWS_LWJGL_NATIVE_PATCH%"=="1" (
+    > "%CLJ_CONFIG%\deps.edn" (
+      echo {
+      echo   :mvn/local-repo "%LOCAL_M2_EDN%"
+      echo   :aliases
+      echo   {:windows-lmdb
+      echo    {:extra-deps
+      echo     {org.lwjgl/lwjgl$natives-windows {:mvn/version "3.3.1"}
+      echo      org.lwjgl/lwjgl-lmdb$natives-windows {:mvn/version "3.3.1"}}}}
+      echo }
+    )
+  ) else (
+    > "%CLJ_CONFIG%\deps.edn" (
+      echo {
+      echo   :mvn/local-repo "%LOCAL_M2_EDN%"
+      echo   :aliases {}
+      echo }
+    )
+  )
 )
 if errorlevel 1 (
   1>&2 echo [run-clojure-windows] ERROR: unable to write %CLJ_CONFIG%\deps.edn
   exit /b 1
 )
 
-pushd "%REPO_ROOT%" >nul 2>nul
+pushd "%RUN_CLOJURE_TARGET_ROOT%" >nul 2>nul
 if errorlevel 1 (
-  1>&2 echo [run-clojure-windows] ERROR: unable to enter %REPO_ROOT%
+  1>&2 echo [run-clojure-windows] ERROR: unable to enter %RUN_CLOJURE_TARGET_ROOT%
   exit /b 1
 )
 

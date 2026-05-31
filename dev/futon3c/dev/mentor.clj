@@ -1,5 +1,5 @@
 (ns futon3c.dev.mentor
-  "Mentor peripheral — claude-2 on #math.
+  "Mentor peripheral — claude-2 on the configured FrontierMath room.
 
    Extracted from futon3c.dev (Phase 2 of TN-dev-clj-decomposition).
    Manages mentor peripheral lifecycle: start, observe, evaluate,
@@ -8,6 +8,7 @@
             [futon3c.peripheral.tools :as tools]
             [futon3c.peripheral.runner :as runner]
             [futon3c.agency.registry :as reg]
+            [futon3c.dev.config :as config]
             [futon3c.dev.irc :as dev-irc])
   (:import [java.util UUID]))
 
@@ -18,22 +19,22 @@
 (defonce !mentor (atom {}))
 
 ;; ---------------------------------------------------------------------------
-;; IRC wiring for #math
+;; IRC wiring for the configured FrontierMath room
 ;; ---------------------------------------------------------------------------
 
 (defn make-math-irc-read-fn
-  "Create an irc-read-fn that pulls #math messages from the IRC log ring buffer.
+  "Create an irc-read-fn that pulls configured FrontierMath room messages from the IRC log ring buffer.
    Ensures the IRC connection is alive (auto-reconnects if needed).
-   Returns a fn that returns all #math messages as [{:nick :text :at}]."
+   Returns a fn that returns all room messages as [{:nick :text :at}]."
   []
   (fn []
     (dev-irc/ensure-irc-conn! "listener")
     (->> @dev-irc/!irc-log
-         (filter #(= "#math" (:channel %)))
+         (filter #(= (config/frontiermath-room) (:channel %)))
          (mapv #(select-keys % [:nick :text :at])))))
 
 (defn make-math-irc-send-fn
-  "Create an irc-send-fn that posts to #math via the bridge."
+  "Create an irc-send-fn that posts to the configured FrontierMath room via the bridge."
   []
   (let [bridge-send (dev-irc/make-bridge-irc-send-fn)]
     (fn [channel from-nick message]
@@ -50,13 +51,13 @@
    Options:
      :handle     — mentor handle (default \"mentor:FM-001\")
      :problem-id — FM problem to track (default \"FM-001\")
-     :channel    — IRC channel to observe (default \"#math\")
+     :channel    — IRC channel to observe (default configured FrontierMath room)
      :agent-id   — agent inhabiting this mentor (default \"claude-2\")
      :evidence-store — evidence store for context"
   [& {:keys [handle problem-id channel agent-id evidence-store]
       :or {handle "mentor:FM-001"
            problem-id "FM-001"
-           channel "#math"
+           channel (config/frontiermath-room)
            agent-id "claude-2"}}]
   (let [backend (tools/make-mock-backend)
         irc-read-fn (make-math-irc-read-fn)

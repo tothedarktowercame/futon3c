@@ -49,14 +49,17 @@
 
    Returns nil outside mfuton mode so generic futon owners can keep their
    normal delivery-recording path."
-  [{:keys [agent-id invoke-trace-id receipt-line]}]
+  [{:keys [agent-id invoke-trace-id receipt receipt-line]}]
   (when (mfuton-mode/mfuton-mode?)
     (let [aid (some-> agent-id str str/trim)
           tid (some-> invoke-trace-id str str/trim)
+          surface (some-> (:surface receipt) str str/trim str/lower-case)
           channel (delivery-irc-channel)
           from-nick (delivery-irc-sender aid)
           message (str "[invoke-delivery] " aid " " receipt-line)
-          delivered? (dev-irc/send-irc! channel from-nick message)]
+          delivered? (if (= "irc" surface)
+                       true
+                       (dev-irc/send-irc! channel from-nick message))]
       (when-not delivered?
         (println (str "[invoke-delivery] failed for " aid
                       " trace-id=" tid
