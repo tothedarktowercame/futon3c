@@ -27,11 +27,8 @@
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.blackboard :as bb]
-<<<<<<< HEAD
             [futon3c.evidence.boundary :as boundary]
-=======
             [futon3c.dev.config :as config]
->>>>>>> origin/master
             [futon3c.evidence.store :as estore]
             [clojure.string :as str])
   (:import [java.time Instant]))
