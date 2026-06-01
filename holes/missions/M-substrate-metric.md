@@ -1,7 +1,7 @@
 # Mission: M-substrate-metric
 
 **Date:** 2026-06-01
-**Status:** INSTANTIATE - STANDARD-VERIFY RATIFIED. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; build-to-spec is greenlit. E1 runtime core landed. Heavy O4 / O2-convergence / Fisher-Rao RUN gates remain on hold pending compute-venue confirmation.
+**Status:** INSTANTIATE - STANDARD-VERIFY RATIFIED; E1 CURVATURE QUERY DELIVERED. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; build-to-spec is greenlit. E1 runtime core + full OR curvature pass landed. Keystone closure is pending O4(b) conditioning verdict.
 **Campaign:** `futon3c/holes/campaigns/C-substrate-completion.md`
 **Charter spec:** `futon3c/holes/campaigns/C-substrate-completion.STANDARD-ARGUE.draft.md`
 **Owner:** codex-3, ratified by Joe via claude-3 handoff, 2026-06-01.
@@ -641,3 +641,49 @@ Run, 2026-06-01:
 Observation: after the R1 report was written, the live substrate immediately reflected that artifact, and `M-substrate-metric -- M-substrate-metric.R1-report` became the top structural bridge in the next sample. This is not a solver failure; it is evidence that the live graph is responsive and that consumer ranking may need an explicit self-artifact exclusion or downweighting policy before M-aif2 consumes top-k bridge suggestions.
 
 OR-sample probe state: **timing evidence retained; ranking superseded**. The canonical-filtered R2 report in §9 is the current curvature/propose surface for E1.
+
+---
+
+## 12. Pending closure agreement
+
+Coordination proposal from claude-3, accepted from the keystone seat with the refinements below. This is **not** the terminal closure record; the terminal record is written only after O4(b) lands green.
+
+### 12.1 Proposed terminal state
+
+On O4(b) green, terminal state should be:
+
+**DELIVERED (v1) - with named residue.**
+
+Reason: the keystone will have discharged the Campaign standard it owns: O1 identity fixed, STANDARD-VERIFY ratified, E1 curvature query built and demonstrated, and E2 continuity artifacts proven adequate enough for build-to-spec. That is stronger than "INSTANTIATE", but not "complete/no-residue".
+
+### 12.2 Closure record contents
+
+The final closure record should state:
+
+- O1 delivered: one shared multi-resolution typed identity set; `feeds-mu?` / `feeds-A?` split; select-not-subdivide rule.
+- O2 delivered as v1 contract: two certified cut-realizations with an explicit convergence check deferred, not forgotten.
+- O3 / E1 delivered: DERIVE signed, VERIFY green, R1 graph extraction, R2 resolution-state providers, sampled + full OR curvature pass, stable actionable propose surface.
+- O4 / E2 delivered as v1 once O4(b) is green: direct code embedding non-degenerate and conditioning witnessed.
+- STANDARD-VERIFY: Joe ratified PASS-on-design; escrow E1 and E2 are `:contract-released`.
+- RUN/DELIVER: E1 curvature query delivered by the keystone; consumer live wiring remains downstream.
+
+### 12.3 Named residue
+
+Residue to carry explicitly:
+
+- **Embedding v1 scope:** code embedding is Clojure-only in v1; Elisp/Python extractors are follow-on work, resumable without re-opening O1.
+- **O2 convergence check:** hop-curvature vs embedding-curvature on overlapping grains remains deferred until both cuts are live enough to compare; it is a STANDARD-VERIFY-grade follow-on check, not a hidden premise.
+- **Conditioning scale:** final wording waits for O4(b) verdict from claude-6.
+- **Consumer wiring:** M-aif2 slice-1 owns consuming `curvature-at` / ranked candidates; M-differentiable-code owns consuming the code embedding. The keystone owns the metric surfaces, not the live consumer integration.
+
+### 12.4 Campaign boundary
+
+Keystone `DELIVERED (v1)` does **not** dissolve `C-substrate-completion`.
+
+Campaign dissolution still requires at least one paired requirement consumed live, per the Campaign joint completion criterion. M-aif2 slice-1 reading live curvature is the likely first satisfaction path, but that is downstream of this keystone.
+
+### 12.5 Branch / merge posture
+
+Current branch: `codex/m-substrate-metric-runtime`.
+
+Checkpoint through E1 delivery: `b745ce5` (`Add full E1 curvature pass report`). The final O4(b) result + terminal closure record should be committed on this branch. Merge-to-master remains Joe's decision.
