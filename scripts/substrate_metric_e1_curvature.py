@@ -12,6 +12,7 @@ import argparse
 import json
 import math
 import os
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -89,10 +90,7 @@ def mission_artifact_endpoint(endpoint: str) -> bool:
     if "/mission/" not in endpoint:
         return False
     tail = endpoint.rsplit("/", 1)[-1]
-    return any(
-        tail.endswith(suffix)
-        for suffix in (".R1-report", ".R2-curvature-sample", ".OR-sample")
-    )
+    return bool(re.search(r"(?:\.R[0-9][A-Za-z0-9.-]*|\.OR-sample)$", tail))
 
 
 def edge_relation(edge: dict[str, Any]) -> str | None:

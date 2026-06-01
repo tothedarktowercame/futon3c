@@ -571,6 +571,17 @@ Top post-filter propose candidates:
 
 R2 state: **sampled curvature + polarity complete**. The result confirms that bridge-candidate status is too broad, while `min-incident-kappa` magnitude plus `:resolution-state/actionable?` produces a small actionable mission set.
 
+Full-pass confirmation, 2026-06-01:
+
+- artifacts: `holes/missions/M-substrate-metric.R2-curvature-full.json`, `holes/missions/M-substrate-metric.R2-curvature-full-report.md`;
+- current live graph after later mission-adjacent writes: `923` nodes, `1692` structural edges, `5` components, largest `909`;
+- all `577` structural bridge candidates computed with OR curvature;
+- timing: `3.316s` total, `2.497ms` mean per edge, `22.055ms` max per edge;
+- kappa distribution: min `-0.5556`, p10 `0.0167`, median `0.0400`, p90 `0.0909`, max `1.0000`;
+- post-R2 actionable propose candidates: `4` (`essays-diachronic-model`, `or-training-as-learning-system.v1`, `canon-fingerprint-store`, `bayesian-structure-learning`).
+
+Full-pass verdict: **E1 curvature query delivered** for the current live graph. No broad hidden negative set appeared outside the sampled head; the negative tail remains selective.
+
 ---
 
 ## 10. INSTANTIATE - R2 resolution-state providers
