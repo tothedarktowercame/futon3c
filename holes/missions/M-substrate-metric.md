@@ -534,3 +534,33 @@ Live bounded run, 2026-06-01:
 - bridge candidates: `576`, top candidate split score `2715`.
 
 R1 state: **complete as graph extraction/report**. Next E1 runtime step is bounded hop-distance Ollivier-Ricci over this graph, sampled/capped first with timing reported before scaling.
+
+---
+
+## 9. INSTANTIATE - R2 resolution-state providers
+
+Implementation: `futon3c.metric.resolution-state`.
+
+Scope:
+
+- mission provider maps lifecycle phase/status to the O3 resolvedness buckets;
+- sorry provider maps registry status to open/addressed/closed resolvedness;
+- pattern provider maps candidate/validated-style states where present;
+- file provider returns explicit `:unknown` / non-actionable direct state, preserving the `file->mission` routing rule;
+- unknown grains are explicitly non-actionable.
+
+Focused witness:
+
+- `clojure -M:test -n futon3c.metric.e1-test -n futon3c.metric.e1-report-test -n futon3c.metric.resolution-state-test -n futon3c.logic.substrate-metric-e1-invariants-test`
+- result: `13` tests, `70` assertions, `0` failures, `0` errors.
+
+Live bounded sample, 2026-06-01:
+
+- query types: `code/v05/mission-doc`, `code/v05/sorry`, `code/v05/pattern`, cap `2000` per type;
+- docs read: `218`;
+- providers seen: `201` mission, `17` sorry, `0` pattern;
+- resolvedness distribution: `1.0=50`, `0.65=45`, `0.35=15`, `0.1=74`, `0.0=5`, `:unknown=29`;
+- directly actionable by O3 unresolvedness/actionability before curvature: `139`;
+- unknown/non-actionable: `29`.
+
+R2 state: **provider wiring complete for real mission/sorry/file/pattern shapes**. The remaining R2 payload depends on OR curvature values from the next bounded solver step.
