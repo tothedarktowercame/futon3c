@@ -564,3 +564,31 @@ Live bounded sample, 2026-06-01:
 - unknown/non-actionable: `29`.
 
 R2 state: **provider wiring complete for real mission/sorry/file/pattern shapes**. The remaining R2 payload depends on OR curvature values from the next bounded solver step.
+
+---
+
+## 10. INSTANTIATE - bounded OR sample
+
+Implementation: `scripts/substrate_metric_e1_or_sample.py`.
+
+Artifact: `holes/missions/M-substrate-metric.OR-sample.md`.
+
+Scope:
+
+- bounded E1 relation fetches only;
+- structural `mu_x` with `alpha=0.5`;
+- hop-distance over the E1 graph;
+- exact local W1 via SciPy `linprog` for sampled bridge-candidate edges.
+
+Run, 2026-06-01:
+
+- command: `python3 scripts/substrate_metric_e1_or_sample.py --limit 2000 --sample 8`;
+- graph at run time: `946` nodes, `1715` edges, `5` components, `600` structural bridge candidates;
+- sampled edges: `8`;
+- LP solve time: `31.31 ms` total;
+- wall time including HTTP fetch: `742.26 ms`;
+- kappa range in sample: `-0.8583` to `0.3333`.
+
+Observation: after the R1 report was written, the live substrate immediately reflected that artifact, and `M-substrate-metric -- M-substrate-metric.R1-report` became the top structural bridge in the next sample. This is not a solver failure; it is evidence that the live graph is responsive and that consumer ranking may need an explicit self-artifact exclusion or downweighting policy before M-aif2 consumes top-k bridge suggestions.
+
+OR-sample state: **sampled/capped first run complete with timing**. Next step is a larger capped run or a consumer-policy decision about metric/campaign self-artifacts.
