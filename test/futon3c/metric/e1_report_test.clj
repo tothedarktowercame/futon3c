@@ -18,7 +18,9 @@
     {:hx/type "code/v05/related-mission" :hx/endpoints [m-c m-d]}
     {:hx/type "code/v05/related-mission" :hx/endpoints [m-c m-d]}]
    "code/v05/file->mission"
-   [{:hx/type "code/v05/file->mission" :hx/endpoints [file-a m-b]}]})
+   [{:hx/type "code/v05/file->mission" :hx/endpoints [file-a m-b]}
+    {:hx/type "code/v05/mission-cross-ref"
+     :hx/endpoints [m-a "futon3c-d/mission/substrate-metric.R1-report"]}]})
 
 (defn- fixture-fetcher
   [hx-type _opts]
@@ -39,6 +41,14 @@
     (is (not-any? #(= #{m-c m-d} (set (:edge %)))
                   (:candidate-bridges r)))
     (is (= [8 8 5 5] (map :bridge-score (:candidate-bridges r))))))
+
+(deftest mission-report-artifacts-are-not-o1-nodes
+  (is (sut/mission-artifact-endpoint?
+       "futon3c-d/mission/substrate-metric.R1-report"))
+  (is (sut/mission-artifact-endpoint?
+       "futon3c-d/mission/substrate-metric.OR-sample"))
+  (is (not (sut/mission-artifact-endpoint?
+            "futon4-d/mission/or-training-as-learning-system.v1"))))
 
 (deftest node-type-classification-covers-e1-grains
   (is (= :mission (sut/node-type "futon3c-d/mission/substrate-metric")))

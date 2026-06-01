@@ -537,7 +537,43 @@ R1 state: **complete as graph extraction/report**. Next E1 runtime step is bound
 
 ---
 
-## 9. INSTANTIATE - R2 resolution-state providers
+## 9. RUN/DELIVER R2 - sampled OR curvature + polarity
+
+R2 artifacts:
+
+- `scripts/substrate_metric_e1_curvature.py`
+- `holes/missions/M-substrate-metric.R2-curvature-sample.json`
+- `holes/missions/M-substrate-metric.R2-curvature-report.md`
+
+Implementation:
+
+- fetch only E1 `feeds-mu?` relation families plus bounded mission/sorry docs for `:resolution-state`;
+- exclude mission-adjacent report/sample artifacts from O1 mission nodes;
+- compute lazy-walk Ollivier-Ricci curvature on a capped edge sample using exact sparse transport via `scipy.optimize.linprog`;
+- apply metric-owned `:resolution-state` and actionability to produce the post-filter propose surface.
+
+Sample run, 2026-06-01:
+
+- graph: `922` nodes, `1691` structural edges, `5` components, largest `908`;
+- bridge candidates: `576`;
+- OR curvature sample: top `200` bridge candidates;
+- timing: `2.079s` total, `1.279ms` mean per edge, `9.377ms` max per edge;
+- kappa distribution: min `-0.5556`, p10 `0.0164`, median `0.0417`, p90 `0.0909`, max `0.5000`;
+- post-R2 actionable propose candidates: `3`.
+
+Top post-filter propose candidates:
+
+| Rank | Node | Phase | Min kappa | Action intensity |
+|---:|---|---|---:|---:|
+| 1 | `futon4-d/mission/essays-diachronic-model` | `identify` | `-0.5556` | `0.5000` |
+| 2 | `futon4-d/mission/or-training-as-learning-system.v1` | `identify` | `-0.3571` | `0.3214` |
+| 3 | `futon6-d/mission/canon-fingerprint-store` | `derive` | `-0.1667` | `0.1500` |
+
+R2 state: **sampled curvature + polarity complete**. The result confirms that bridge-candidate status is too broad, while `min-incident-kappa` magnitude plus `:resolution-state/actionable?` produces a small actionable mission set.
+
+---
+
+## 10. INSTANTIATE - R2 resolution-state providers
 
 Implementation: `futon3c.metric.resolution-state`.
 
@@ -552,7 +588,7 @@ Scope:
 Focused witness:
 
 - `clojure -M:test -n futon3c.metric.e1-test -n futon3c.metric.e1-report-test -n futon3c.metric.resolution-state-test -n futon3c.logic.substrate-metric-e1-invariants-test`
-- result: `13` tests, `70` assertions, `0` failures, `0` errors.
+- result: `14` tests, `73` assertions, `0` failures, `0` errors.
 
 Live bounded sample, 2026-06-01:
 
@@ -563,15 +599,17 @@ Live bounded sample, 2026-06-01:
 - directly actionable by O3 unresolvedness/actionability before curvature: `139`;
 - unknown/non-actionable: `29`.
 
-R2 state: **provider wiring complete for real mission/sorry/file/pattern shapes**. The remaining R2 payload depends on OR curvature values from the next bounded solver step.
+R2 provider state: **provider wiring complete for real mission/sorry/file/pattern shapes**. The sampled OR curvature run in §9 now consumes this provider surface.
 
 ---
 
-## 10. INSTANTIATE - bounded OR sample
+## 11. INSTANTIATE - bounded OR sample probe (superseded)
 
 Implementation: `scripts/substrate_metric_e1_or_sample.py`.
 
 Artifact: `holes/missions/M-substrate-metric.OR-sample.md`.
+
+Status: **superseded by §9**. This first probe was useful for timing, but it ran before the canonical graph filter excluded mission-adjacent report/sample artifacts from O1 nodes.
 
 Scope:
 
@@ -591,4 +629,4 @@ Run, 2026-06-01:
 
 Observation: after the R1 report was written, the live substrate immediately reflected that artifact, and `M-substrate-metric -- M-substrate-metric.R1-report` became the top structural bridge in the next sample. This is not a solver failure; it is evidence that the live graph is responsive and that consumer ranking may need an explicit self-artifact exclusion or downweighting policy before M-aif2 consumes top-k bridge suggestions.
 
-OR-sample state: **sampled/capped first run complete with timing**. Next step is a larger capped run or a consumer-policy decision about metric/campaign self-artifacts.
+OR-sample probe state: **timing evidence retained; ranking superseded**. The canonical-filtered R2 report in §9 is the current curvature/propose surface for E1.

@@ -22,6 +22,15 @@
    "code/v05/file→mission"
    "code/v05/sorry->related-missions"])
 
+(defn mission-artifact-endpoint?
+  "True for mission-adjacent report/sample artifacts that can be ingested as
+   mission endpoints because they live under holes/missions and start with M-.
+   These are documentation outputs, not O1 mission nodes."
+  [endpoint]
+  (and (string? endpoint)
+       (re-find #"/mission/" endpoint)
+       (boolean (re-find #"(?:\.R[0-9][A-Za-z0-9.-]*|\.OR-sample)$" endpoint))))
+
 (defn- url-encode
   [s]
   (java.net.URLEncoder/encode (str s) "UTF-8"))
@@ -65,7 +74,14 @@
               (for [hx-type relation-types]
                 [hx-type (fetcher hx-type {:limit limit})]))]
     {:by-type by-type
-     :edges (->> by-type vals (apply concat) e1/feeds-mu-edges vec)}))
+     :edges (->> by-type
+                 vals
+                 (apply concat)
+                 e1/feeds-mu-edges
+                 (remove (fn [edge]
+                           (some mission-artifact-endpoint?
+                                 (e1/edge-endpoints edge))))
+                 vec)}))
 
 (defn node-type
   [endpoint]
