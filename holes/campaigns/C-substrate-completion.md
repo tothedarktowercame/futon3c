@@ -1,7 +1,7 @@
 # Campaign: C-substrate-completion — A Real Ground Metric for substrate-2
 
 **Date:** 2026-05-31
-**Status:** CHARTER + CONSTITUTION + ESCROW (2026-05-31) + STANDARD-ARGUE (§4) + **STANDARD-VERIFY RATIFIED (Joe, 2026-06-01, PASS-on-design)**. Keystone `M-substrate-metric` opened + owned (codex-3); O1 closed; E1 curvature-cut DERIVE + VERIFY green. **Escrow E1 + E2 `:contract-released`** — consumers build to the verified spec. **3 RUN/DELIVER gates open** (O4(b) conditioning extreme · O4(c) code-text embedding *build* · O2-third Fisher–Rao shadow) — compute venue pending (laptop vs superpod). Working mode: **swarm**.
+**Status:** CHARTER + CONSTITUTION + ESCROW (2026-05-31) + STANDARD-ARGUE (§4) + **STANDARD-VERIFY RATIFIED (Joe, 2026-06-01, PASS-on-design)**. Keystone `M-substrate-metric` is **DELIVERED (v1)** with named residue; O1 closed; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). **Escrow E1 + E2 `:contract-released`** — consumers build to the verified spec. Campaign remains open until at least one paired requirement is consumed live. Working mode: **swarm**.
 **Charter source:** `futon3/holes/war-bulletin-10.md` WR-21.
 **Lifecycle:** `futon4/holes/campaign-lifecycle.md` (the first Campaign instance under it).
 **Owner:** Joe; coordination ownership transferable.
@@ -226,7 +226,7 @@ the 115k-ns-vs-1-line-`defn` extremes; cosine-spread floor on sampled pairs. Lat
 design*, fit for both consumers, before either builds; the Campaign dissolves toward
 `:satisfied` once ≥1 paired requirement is released-and-consumed.
 
-**STANDARD-VERIFY result:** PASS-on-design ratified by Joe on 2026-06-01, relayed by claude-3. O1-O4 are accepted as cross-mission adequate as a design; E1 and E2 escrow entries are `:contract-released`. Heavy RUN/DELIVER jobs remain venue-gated, not STANDARD-VERIFY blockers.
+**STANDARD-VERIFY result:** PASS-on-design ratified by Joe on 2026-06-01, relayed by claude-3. O1-O4 are accepted as cross-mission adequate as a design; E1 and E2 escrow entries are `:contract-released`. Keystone v1 RUN/DELIVER proof points R1, R2, and R4 have since landed; remaining ratchet rungs are follow-on / consumer-facing.
 
 ---
 
@@ -243,11 +243,11 @@ STANDARD-ARGUE obligation (O1–O4) it exercises.
 | Rung | Proof point — "it works on THIS" | Pass criterion | Exercises | Posture |
 |---|---|---|---|---|
 | **R0** | structural curvature is meaningful *at all* | hop Ollivier–Ricci marks bridges (−κ) vs clusters (+κ) | O2 (read cut) | ✅ **DONE** — `futon6/resources/differentiable-math/ricci-tag-curvature.json` (math-tag proxy graph) |
-| **R1** | curvature meaningful on **substrate-2's own** `feeds-μ?` graph (not the math proxy) | human recognizes top −κ edges as real cross-area bridges | O1 (shared nodes) + O2 | cheap, **on-box safe** (missions/sorries = hundreds of nodes) |
-| **R2** | curvature **+ polarity** fires "propose-here" correctly (the aif2 payload) | complete-but-central node (`futonzero-capability`, the −9.8 mis-flag) does **not** fire; open `:sorry` at a bridge **does** | O3 (curvature-as-tension; the Stage-B fix demonstrated) | cheap, on-box |
+| **R1** | curvature meaningful on **substrate-2's own** `feeds-μ?` graph (not the math proxy) | human recognizes top −κ edges as real cross-area bridges | O1 (shared nodes) + O2 | ✅ **DONE** — `holes/missions/M-substrate-metric.R1-report.md` |
+| **R2** | curvature **+ polarity** fires "propose-here" correctly (the aif2 payload) | complete-but-central node (`futonzero-capability`, the −9.8 mis-flag) does **not** fire; open `:sorry` at a bridge **does** | O3 (curvature-as-tension; the Stage-B fix demonstrated) | ✅ **DONE** — `holes/missions/M-substrate-metric.R2-curvature-full-report.md` |
 | **R3** | **convergence — is it actually ONE metric?** *(the load-bearing rung)* | hop-distance vs BGE-distance substantially agree on the bridge ranking; if they diverge, that IS the finding (two metrics wearing one name) | O2 (the "two cuts of one object" claim, tested not asserted) | **needs embeddings → off-box / hard-sliced (§2.9)** |
 | **R3.5** | the **blend the charter named** | adding git **co-change** to dependency+semantic measurably improves the bridge ranking, or is shown redundant (real answer either way) | charter §"shared standard" (`d` = dependency + co-change + semantic) | cheap-ish (git-log mining), on-box |
-| **R4** | the differentiable band is **sane** (claude-6's micro-test, in its right place) | `∂s/∂A` finite + well-conditioned across the symbol-size spread, using `:conditioning-scale` (1/√degree) | O4 (a,b,c) | **off-box / capped (§2.9)** |
+| **R4** | the differentiable band is **sane** (claude-6's micro-test, in its right place) | `∂s/∂A` finite + well-conditioned across the symbol-size spread | O4 (a,b,c) | ✅ **DONE** — O4(b) PASS; `:conditioning-scale` audit/optional in v1 |
 | **R5** | one gradient step proposes **one real structural edit** | the edit-proposal is legible + defensible vs the wiring contract, OR its disagreement with the drawn prior is itself the signal (combining-methods-as-diagnostic) | O4 → M-differentiable-code payload | off-box |
 | **R6** | the demonstrator: the metric is **meaningful**, not just well-typed | `E-codebase-manifold` W₂-mass-flow animation over git history shows recognizable structural evolution (a wrong metric → meaningless animation) | whole-metric falsifier | off-box |
 
@@ -257,13 +257,13 @@ artifacts R3+ consume — progress is immediate and visible while the box is sha
 heavy rung sits behind it *and* behind §2.9. You cannot hand-wave R3 without R1's
 substrate-graph curvature file; cannot do R5 without R4's conditioned gradient.
 
-**Status:** R0 done (this session). R1–R6 open. claude-6's caution (proposing a
-micro JAX test = R4) is correct *ordering* — R4 rightly waits behind R1–R3, which
-are cheaper and don't need the box freed. **Ownership:** R1–R3 + R3.5 land
-naturally on the keystone (codex-3) + E1 (claude-3); R4–R5 on E2 (claude-6); R6 on
-the `E-codebase-manifold` demonstrator. This ratchet is claude-2's synthesis,
-cross-checked against §4 O1–O4 + M-substrate-metric — **to be ratified by codex-3
-(contract owner) + the consumers**, not imposed.
+**Status:** R0, R1, R2, and R4 are done. R3/R3.5 remain O2 convergence / blend
+follow-ons; R5 remains the E2 edit-proposal payload; R6 remains the
+`E-codebase-manifold` demonstrator. **Ownership:** R1–R3 + R3.5 land naturally on
+the keystone (codex-3) + E1 (claude-3); R4–R5 on E2 (claude-6); R6 on the
+demonstrator. Keystone `M-substrate-metric` is DELIVERED(v1) with named residue;
+the Campaign remains open until live consumer consumption advances escrow to
+`:satisfied`.
 
 ## Next phases
 - **STANDARD-VERIFY**: ratify O1–O4 as cross-mission-adequate *as a design* (Joe; logic-model-

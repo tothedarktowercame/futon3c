@@ -1,7 +1,7 @@
 # Mission: M-substrate-metric
 
 **Date:** 2026-06-01
-**Status:** INSTANTIATE - STANDARD-VERIFY RATIFIED; E1 CURVATURE QUERY DELIVERED. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; build-to-spec is greenlit. E1 runtime core + full OR curvature pass landed. Keystone closure is pending O4(b) conditioning verdict.
+**Status:** DELIVERED (v1) - with named residue. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). Campaign remains open until a paired consumer consumes live.
 **Campaign:** `futon3c/holes/campaigns/C-substrate-completion.md`
 **Charter spec:** `futon3c/holes/campaigns/C-substrate-completion.STANDARD-ARGUE.draft.md`
 **Owner:** codex-3, ratified by Joe via claude-3 handoff, 2026-06-01.
@@ -155,7 +155,7 @@ Every node carries:
 | `:node/type` | One of the O1 node types above. |
 | `:canonical-source` | Source path / locator after excluding worktrees, origin checkouts, and `.state`. |
 | `:resolution-state` | Metric-owned completeness / unresolvedness feature used by E1 polarity; ratified Campaign §4 O3 contract obligation, not optional metadata. |
-| `:conditioning-scale` | Metric-owned normalization feature used by E2 so gradients are not dominated by high-participation nodes. |
+| `:conditioning-scale` | Metric-owned audit / optional normalization metadata for E2. Not applied by default in v1; use only if future relations show degree-driven gradient swamping. |
 
 ### 2.4 Selection rule
 
@@ -184,27 +184,26 @@ Accepted keystone IFR, 2026-06-01:
 
 > One ground metric `d` that is a pure function of already-present substrate structure plus already-discriminative text - live for E1, differentiable offline for E2 - with no model training and no identity changes. The only new object is `d` itself.
 
-Owner decision: accept **JAX** as the O4 differentiable-band substrate and accept **`:symbol` + per-node `:conditioning-scale` normalization** as the baseline pilot shape. This is IFR-aligned because futon5 already has a JAX autodiff precedent (`tools/tpg/jax_refine.py`), and the Campaign §4 O4 contract already requires a differentiable offline band, fixed embedding observations, conditioning, and non-degenerate text-grade discrimination.
+Owner decision: accept **JAX** as the O4 differentiable-band substrate and accept **`:symbol` + bounded code-text observations + per-source softmax normalization** as the baseline pilot shape. `:conditioning-scale` is retained as metric-owned audit metadata, not applied by default. This is IFR-aligned because futon5 already has a JAX autodiff precedent (`tools/tpg/jax_refine.py`), and the Campaign §4 O4 contract already requires a differentiable offline band, fixed embedding observations, conditioning, and non-degenerate text-grade discrimination.
 
 Fallbacks are costed departures, not defaults:
 
 | Option | Status | Justification threshold |
 |---|---|---|
-| `:symbol` + normalization + BGE/text observations | **baseline** | Already ratified grain; no identity change; no model training. |
+| `:symbol` + bounded BGE/code-text observations + per-source softmax | **baseline** | Already ratified grain; no identity change; no model training; O4(b) confirmed well-conditioned without default degree weighting. |
 | `:scope` overlay | fallback | Only if `:symbol` fails O4(b) conditioning or O4(c) discrimination. |
 | spec / claim overlay beyond existing `:claim` nodes | fallback | Only if existing `:claim` grain cannot express the loss bands. |
 | refactor / new grain | last resort | Only if extraction cannot produce stable, conditioned existing grains. |
 | trained embedding / R-GCN arm | rejected for baseline | Violates IFR and conflicts with O4(c) non-degeneracy warning unless separately justified. |
 
-Pilot instruction to E2 / claude-6: test whether `:symbol` identity with `:conditioning-scale` normalization gives finite, sane `∂s/∂A` and non-degenerate text-observation separation before proposing any new grain.
+Pilot instruction to E2 / claude-6: test whether `:symbol` identity with bounded code-text observations and per-source softmax gives finite, sane `∂s/∂A` and non-degenerate text-observation separation before proposing any new grain. `:conditioning-scale` may be tested as an optional audit/weighting knob, but is not part of the default v1 path unless evidence shows degree-driven swamping.
 
 ### 2.8 O4 Pilot #1 relay
 
 E2 Pilot #1 result, relayed by claude-3 from claude-6, 2026-06-01: **`:symbol` + namespace-context is settled as the baseline embedding shape; no `:scope` escalation.**
 
 - **O4(c) discrimination:** PASS on BGE contextualized symbol windows. `M-differentiable-code` records off-diagonal cosine median about `0.51-0.56`, p99 about `0.71`, and fraction `> 0.95` approximately zero - the inverse of the R-GCN collapse.
-- **O4(b) conditioning:** PASS provisional on the first JAX slice. The actual `∂s/∂A` run is numerically sane on that slice (`grad-norm max/median = 1.30`) and reframes `:conditioning-scale` as degree-aware rather than raw line-size-aware.
-- **Still owed:** the full conditioning extreme named by Campaign O4(b), especially the 115k-namespace versus one-line-`defn` case, remains superpod-gated / pending Joe. This is not a reason to reopen O1 identity.
+- **O4(b) conditioning:** PASS. claude-6's final on-box run found `dS/dA` finite and well-scaled: max/median about `4x`, not the feared `10^4-10^5x`. Sparse `feeds-A?` structure held (`7084` ownership edges + `852` file-dependency edges, never dense). Degree-based `:conditioning-scale` was not load-bearing and slightly worsened max/median (`4.76` vs `3.95`), so it is audit/optional in v1.
 
 ### 2.9 O4 operational memory gate
 
@@ -224,20 +223,25 @@ Rules for this Mission:
 
 `:conditioning-scale` is metric-owned, like `:resolution-state`. E2 may consume it, but the consumer does not invent it.
 
-The current provider is **degree-aware, not raw-size-aware**:
+Keystone O4(b) ruling, 2026-06-01: `:conditioning-scale` is **audit / optional metadata in v1, not default-applied weighting**.
+
+Evidence: claude-6's O4(b) run found gradients finite and well-scaled without default degree weighting. The real spread was about `4x` max/median; the feared `10^4-10^5x` spread did not manifest. Conditioning came from bounded BGE/code-text windows and per-source softmax normalization, not from degree weighting. Applying `1/sqrt(total-A-degree)` slightly worsened max/median (`4.76` vs `3.95`), so the v1 default is no degree weighting.
+
+The current provider remains **degree-aware, not raw-size-aware**, for audit and future fallback:
 
 | Field | Meaning |
 |---|---|
 | `:conditioning-scale/source` | `:metric/o1-degree-provider-v0` or explicit `:unknown`. |
 | `:conditioning-scale/a-degree` | Count of candidate `feeds-A?` targets in which the node participates, by relation and total. |
-| `:conditioning-scale/loss-weight` | V0 normalization weight, `1 / sqrt(max(1, total-a-degree))`. |
+| `:conditioning-scale/loss-weight` | Optional fallback weight, `1 / sqrt(max(1, total-a-degree))`; not applied by default in v1. |
 | `:conditioning-scale/raw` | Preserved source counts: relation degree, optional line count, symbol text-window length. |
 
 Contract:
 
-- O4 losses should be averaged or weighted with `:conditioning-scale/loss-weight` so high-degree nodes do not swamp `∂s/∂A`.
-- Raw line count is recorded for audit but is not the v0 conditioning axis; contextualized symbol windows bound the text input, while degree-like participation drives gradient scale.
-- If `total-a-degree` is unknown, the node is not accepted into the O4 conditioning witness until the provider can compute it or the slice declares it out of scope.
+- O4 v1 losses use bounded code-text observations and per-source softmax normalization by default.
+- `:conditioning-scale/loss-weight` is applied only if a future relation family demonstrates degree-driven swamping; no such swamping appeared in O4(b).
+- Raw line count is recorded for audit but is not the v1 conditioning axis; bounded symbol windows keep source text size out of `dS/dA`.
+- If `total-a-degree` is unknown, the audit field is incomplete, but this does not block v1 O4 execution unless a future run chooses to apply degree weighting.
 
 ### 2.11 E2 STANDARD-VERIFY design verdict
 
@@ -245,10 +249,10 @@ Keystone verdict for E2, 2026-06-01: **buildable spec, not yet fully witnessed**
 
 - **O4(a) differentiable band:** JAX remains the differentiable substrate for the offline Laplace-Beltrami / `A[n,r,target]` band. The O1 identity set and `feeds-A?` relation table are sufficient for `A` to select over existing nodes and relation types.
 - **O4(c) non-degeneracy:** the E2 continuity layer must be a direct code-text embedding at the existing `:symbol` / `:namespace` grains, using bounded namespace-context symbol windows. The embedding cache is build-work under this keystone contract because it is not currently on disk: futon6 BGE covers papers, futon3 embeddings cover missions / patterns, and the R-GCN arm is explicitly rejected because it collapses to cosine near 1.0. This does not reopen O1: the source text and node identities already exist; the owed artifact is the fixed observation layer over those identities, not a new grain or trained graph embedding.
-- **O4(b) conditioning:** `:conditioning-scale` supports the measured degree-like normalization requirement. The v0 provider uses `total-a-degree` across candidate `feeds-A?` relations and `1 / sqrt(max(1, total-a-degree))` as the loss weight; raw line count is preserved only as audit evidence.
+- **O4(b) conditioning:** PASS in final E2 run. `dS/dA` was finite and well-scaled with bounded code-text observations and per-source softmax; degree weighting is audit/optional and not applied by default in v1.
 - **O1 select-not-subdivide:** confirmed PASS by E2 for all four relation families: `file-dependency`, `function-ownership`, `boundary-membership`, and `claim-to-code`.
 
-SV posture: E2 obligations are design-buildable against this schema, but not contract-released. The missing direct code-embedding cache and the full O4(b) conditioning extreme are still owed, and broad E2/JAX/BGE runs remain subject to the §2.9 superpod / memory gate.
+SV / DELIVER posture: E2 obligations are satisfied for v1. The direct code embedding is non-degenerate, and O4(b) conditioning passed on-box under sparse `feeds-A?` structure. Broader future runs still obey the §2.9 memory gate.
 
 ---
 
@@ -396,7 +400,7 @@ Bounded claim for STANDARD-VERIFY: this curvature cut is a high-leverage special
 
 ## 4. VERIFY staging - E1 curvature cut
 
-Next keystone move: stage VERIFY for the E1 cut now, without claiming full Campaign STANDARD-VERIFY. O4's full conditioning extreme remains gated on Joe / superpod; running broad E2 jobs on the serving box is explicitly disallowed by §2.9.
+Historical staging note: this section records the pre-SV E1 VERIFY plan. At the time, the E1 cut could be verified without claiming full Campaign STANDARD-VERIFY, while O4's full conditioning extreme remained gated. That gate has since passed for v1; see §12 for the terminal closure state.
 
 E1-cut VERIFY should check the contract as a design before implementation:
 
@@ -408,7 +412,7 @@ E1-cut VERIFY should check the contract as a design before implementation:
 | `d_E1` | Toy structural graph with connected and disconnected components; verify unweighted symmetric hop-distance and component handling. |
 | O3 composition | Complete-but-bridge mission does not fire; open sorry on negative bridge fires; open flat sorry does not fire via this specialist cut. |
 
-This VERIFY staging can proceed independently of the O4 superpod ruling because it does not release Campaign escrow by itself. Campaign `:contract-released` still requires O1-O4 STANDARD-VERIFY fit-for-all.
+This VERIFY staging proceeded independently of the O4 ruling because it did not release Campaign escrow by itself. Campaign `:contract-released` still required O1-O4 STANDARD-VERIFY fit-for-all, which later passed.
 
 ### 4.1 E1-cut VERIFY result
 
@@ -432,7 +436,7 @@ Invariants witnessed:
 | No-bypass composition | proposal without strain |
 | Unknown safety | unknown resolvedness proposed |
 
-This is an E1-cut VERIFY witness only. It does not release Campaign escrow, because full Campaign STANDARD-VERIFY still requires O1-O4 fit-for-all, including the O4 conditioning extreme.
+This was an E1-cut VERIFY witness only. By itself it did not release Campaign escrow, because full Campaign STANDARD-VERIFY still required O1-O4 fit-for-all. Campaign STANDARD-VERIFY and the O4(b) v1 conditioning proof have since landed; see §7 and §12.
 
 ### 4.2 E1 VERIFY review signoff
 
@@ -442,7 +446,7 @@ E1 review verdict, claude-3, 2026-06-01: **signed off after independent code rev
 - all 6 invariants are implemented and adversarially caught by their own category;
 - scope is honest: this is a design/consistency model over asserted labels, with `propose?` derivation deferred to implementation, matching the M-aif2 Stage-A/Stage-B VERIFY style.
 
-E1 surface state: **complete for the buildable-now curvature cut** — O1 closed, E1 DERIVE signed, E1-cut VERIFY green and E1-confirmed. Remaining keystone blockers are outside this cut: O4 full conditioning extreme and full Campaign STANDARD-VERIFY remain Joe / superpod-gated. No escrow release.
+E1 surface state: **complete for the curvature cut** — O1 closed, E1 DERIVE signed, E1-cut VERIFY green and E1-confirmed. Later RUN/DELIVER work carried this through R1/R2 and full OR curvature; see §8-§12.
 
 ---
 
@@ -459,18 +463,18 @@ Matrix:
 | O1 shared identity | **PASS as design.** One multi-resolution typed identity set is fixed, closed under E1 and E2 declared grains and relation families. `feeds-mu?` and `feeds-A?` are explicit relation-use flags; `A[n,r,target]` selects existing nodes/relations and does not subdivide identity. |
 | O2 one object | **PASS as design.** The contract uses shared identity plus independently certified cut-specific realizations: E1 structural hop-distance for live curvature and E2 direct code-text embedding + JAX band for offline gradients. The O2 convergence check is explicit, not hidden. |
 | O3 E1 curvature cut | **PASS as design and locally verified.** `:resolution-state`, structural `mu_x`, node-level strain rollup, and `d_E1` are specified; the E1 invariant witness is green and E1 independently signed off. |
-| O4 E2 continuity cut | **PASS as design, proof owned by E2.** JAX is the differentiable substrate; the required continuity layer is a fixed direct code-text embedding at existing `:symbol` / `:namespace` grains; non-degenerate BGE-grade spread is required; `:conditioning-scale` is degree-aware and metric-owned. |
+| O4 E2 continuity cut | **PASS as design and delivered for v1, proof owned by E2.** JAX is the differentiable substrate; the required continuity layer is a fixed direct code-text embedding at existing `:symbol` / `:namespace` grains; non-degenerate BGE-grade spread is required and has landed; `:conditioning-scale` is metric-owned audit / optional metadata, not default-applied weighting. |
 
-Open items classification:
+Residue classification:
 
-- **O4(b) full conditioning extreme** (`115k` namespace vs one-line `defn`) is a RUN/DELIVER / superpod gate, not a design blocker. The design already defines the degree-aware normalization and memory gate; the broad witness is an execution proof point.
-- **O2-third Fisher-Rao latent** is a RUN/DELIVER / superpod gate, not a current design blocker. The Campaign names Fisher-Rao as a latent third bridge; current STANDARD-VERIFY covers the two active consumers and records convergence checks rather than requiring the latent leg to be built before escrow release.
-- **Direct code-embedding cache** is owed build-work under the keystone/E2 contract, but it does not reopen O1 or block design-fit: it is a fixed observation layer over existing `:symbol` / `:namespace` identities, not a new identity grain.
+- **O4(b) full conditioning extreme** is resolved for v1: the final E2 run found finite, well-scaled gradients and sparse `feeds-A?` structure. It is no longer an open RUN/DELIVER gate.
+- **O2-third Fisher-Rao latent** remains optional future residue, not a current design or v1 delivery blocker. The Campaign names Fisher-Rao as a latent third bridge; current delivery covers the two active consumers and records convergence checks rather than requiring the latent leg before delivery.
+- **Direct code-embedding cache** has landed for the Clojure v1 path as a fixed observation layer over existing `:symbol` / `:namespace` identities. Elisp/Python extractor expansion is follow-on residue, not a new identity grain.
 
 Attestation answer to the SV convening questions:
 
 - (a) **Yes:** the keystone design satisfies O1-O4 design-fit for both consumers.
-- (b) **Yes:** O4(b) full conditioning extreme and the O2-third Fisher-Rao latent are RUN/DELIVER gates, not STANDARD-VERIFY design blockers.
+- (b) **Yes at SV time:** O4(b) full conditioning extreme and the O2-third Fisher-Rao latent were RUN/DELIVER gates, not STANDARD-VERIFY design blockers. O4(b) has since passed for v1; remaining residue is named in §12.
 - (c) **No:** I do not see an obligation where the design is currently inadequate enough that STANDARD-VERIFY should wait.
 
 ---
@@ -507,11 +511,11 @@ Ratified state:
 - O1-O4 design-fit accepted.
 - Escrow E1 and E2 transition from `:held` to `:contract-released`.
 - Keystone and consumers may build to the verified spec.
-- Heavy RUN/DELIVER jobs remain paused pending compute venue: O4(c) direct code-embedding build, O4(b) full conditioning extreme, and Fisher-Rao / O2 latent runs.
+- Subsequent RUN/DELIVER work completed the E1 curvature query and the E2 v1 continuity / conditioning proof points recorded in §8-§12.
 
-Operational consequence for this Mission: proceed with non-heavy build-to-spec work and cheap on-box E1 rungs; do not start broad E2/JAX/BGE/Fisher-Rao runs until Joe's venue decision is relayed.
+Operational consequence for this Mission: STANDARD-VERIFY released the keystone to build to spec. The v1 build artifacts and remaining residue are recorded in the closure record (§12).
 
-Mission lifecycle status assignment: **INSTANTIATE**. Per the landscape's active layer examples, `CURING` is the visual layer for in-progress missions; the mission-level phase should name the work stage. This Mission has passed VERIFY / Campaign STANDARD-VERIFY and is now building to the verified spec, while RUN/DELIVER gates remain open, so `INSTANTIATE` is the right mission status.
+Mission lifecycle status assignment after closure: **DELIVERED (v1)**. Earlier `INSTANTIATE` was the correct post-SV build-to-spec status; O4(b) has since passed and the terminal v1 state is now recorded in §12, with named residue and without Campaign dissolution.
 
 ---
 
@@ -644,46 +648,50 @@ OR-sample probe state: **timing evidence retained; ranking superseded**. The can
 
 ---
 
-## 12. Pending closure agreement
+## 12. Closure record - DELIVERED (v1)
 
-Coordination proposal from claude-3, accepted from the keystone seat with the refinements below. This is **not** the terminal closure record; the terminal record is written only after O4(b) lands green.
+Final keystone state, 2026-06-01: **DELIVERED (v1) - with named residue**.
 
-### 12.1 Proposed terminal state
+This is a keystone terminal state, not a Campaign dissolution state. The Campaign remains open until at least one paired consumer consumes the metric live.
 
-On O4(b) green, terminal state should be:
+### 12.1 Delivered obligations
 
-**DELIVERED (v1) - with named residue.**
+| Obligation | Closure verdict |
+|---|---|
+| O1 shared identity | **Delivered.** One multi-resolution typed identity set is fixed, closed under E1 and E2 relation families. `feeds-mu?` and `feeds-A?` are explicit; E2 selects existing `A[n,r,target]` triples and does not subdivide identity. |
+| O2 one object | **Delivered as v1 contract.** The keystone supplies shared identity plus certified cut-realizations: E1 hop-distance / OR curvature and E2 direct code embedding / differentiable band. The hop-curvature vs embedding-curvature convergence check is explicitly deferred as named residue. |
+| O3 E1 curvature cut | **Delivered end-to-end.** DERIVE signed, VERIFY green, R1 graph extraction live, R2 resolution-state providers wired, sampled and full OR curvature passes completed, and a stable actionable propose surface produced. |
+| O4 E2 continuity cut | **Delivered for v1.** Direct code embedding is non-degenerate (`code-emb.npy`, `7534 x 1024`, cosine median about `0.627`), and O4(b) conditioning passed: `dS/dA` finite and well-scaled, max/median about `4x`, sparse `feeds-A?` structure (`7084` ownership + `852` file-dependency edges). |
 
-Reason: the keystone will have discharged the Campaign standard it owns: O1 identity fixed, STANDARD-VERIFY ratified, E1 curvature query built and demonstrated, and E2 continuity artifacts proven adequate enough for build-to-spec. That is stronger than "INSTANTIATE", but not "complete/no-residue".
+### 12.2 Conditioning-scale final ruling
 
-### 12.2 Closure record contents
+`:conditioning-scale` remains metric-owned metadata, but in v1 it is **audit / optional**, not default-applied weighting.
 
-The final closure record should state:
+O4(b) evidence showed degree weighting is not load-bearing: bounded code-text windows keep source size out of `dS/dA`, and per-source softmax normalization keeps gradients well-conditioned. Applying `1/sqrt(total-A-degree)` slightly worsened max/median (`4.76` vs `3.95`), so the v1 default does not apply it. It may be activated later only if a future relation family demonstrates degree-driven swamping.
 
-- O1 delivered: one shared multi-resolution typed identity set; `feeds-mu?` / `feeds-A?` split; select-not-subdivide rule.
-- O2 delivered as v1 contract: two certified cut-realizations with an explicit convergence check deferred, not forgotten.
-- O3 / E1 delivered: DERIVE signed, VERIFY green, R1 graph extraction, R2 resolution-state providers, sampled + full OR curvature pass, stable actionable propose surface.
-- O4 / E2 delivered as v1 once O4(b) is green: direct code embedding non-degenerate and conditioning witnessed.
-- STANDARD-VERIFY: Joe ratified PASS-on-design; escrow E1 and E2 are `:contract-released`.
-- RUN/DELIVER: E1 curvature query delivered by the keystone; consumer live wiring remains downstream.
+### 12.3 Ratification and escrow
 
-### 12.3 Named residue
+- STANDARD-VERIFY: Joe ratified PASS-on-design.
+- Escrow: E1 and E2 are `:contract-released`.
+- E1 RUN/DELIVER: keystone delivered the curvature query; M-aif2 slice-1 owns live consumption.
+- E2 RUN/DELIVER: keystone delivered the v1 code embedding / differentiable-band contract surface; M-differentiable-code owns live consumption.
 
-Residue to carry explicitly:
+### 12.4 Named residue
 
-- **Embedding v1 scope:** code embedding is Clojure-only in v1; Elisp/Python extractors are follow-on work, resumable without re-opening O1.
-- **O2 convergence check:** hop-curvature vs embedding-curvature on overlapping grains remains deferred until both cuts are live enough to compare; it is a STANDARD-VERIFY-grade follow-on check, not a hidden premise.
-- **Conditioning scale:** final wording waits for O4(b) verdict from claude-6.
-- **Consumer wiring:** M-aif2 slice-1 owns consuming `curvature-at` / ranked candidates; M-differentiable-code owns consuming the code embedding. The keystone owns the metric surfaces, not the live consumer integration.
+Residue is explicit and non-blocking for DELIVERED(v1):
 
-### 12.4 Campaign boundary
+- **Embedding v1 scope:** code embedding is Clojure-only in v1. Elisp/Python extractors are follow-on work, resumable without re-opening O1.
+- **O2 convergence check:** hop-curvature vs embedding-curvature on overlapping grains remains deferred until both cuts are live enough to compare. This is a STANDARD-VERIFY-grade follow-on check, not a hidden premise.
+- **Consumer wiring:** M-aif2 slice-1 owns consuming `curvature-at` / ranked candidates; M-differentiable-code owns consuming the code embedding. The keystone owns metric surfaces, not live consumer integration.
+
+### 12.5 Campaign boundary
 
 Keystone `DELIVERED (v1)` does **not** dissolve `C-substrate-completion`.
 
 Campaign dissolution still requires at least one paired requirement consumed live, per the Campaign joint completion criterion. M-aif2 slice-1 reading live curvature is the likely first satisfaction path, but that is downstream of this keystone.
 
-### 12.5 Branch / merge posture
+### 12.6 Branch / merge posture
 
 Current branch: `codex/m-substrate-metric-runtime`.
 
-Checkpoint through E1 delivery: `b745ce5` (`Add full E1 curvature pass report`). The final O4(b) result + terminal closure record should be committed on this branch. Merge-to-master remains Joe's decision.
+Closure commit includes the final O4(b) ruling and this terminal record. Merge-to-master remains Joe's decision.
