@@ -682,6 +682,7 @@ Residue is explicit and non-blocking for DELIVERED(v1):
 
 - **Embedding v1 scope:** code embedding is Clojure-only in v1. Elisp/Python extractors are follow-on work, resumable without re-opening O1.
 - **O2 convergence check:** hop-curvature vs embedding-curvature on overlapping grains remains deferred until both cuts are live enough to compare. This is a STANDARD-VERIFY-grade follow-on check, not a hidden premise.
+- **Loss-curvature unification:** a post-v1 E2 loss may use the delivered E1 curvature surface as a target, regularizer, or diagnostic prior, but it must preserve the O3 separation: curvature supplies geometric strain, `:resolution-state` supplies actionability, and `feeds-mu?` / `feeds-A?` remain explicit relation-use flags. A unified loss must not make complete nodes propose, must not resolution-weight `mu_x`, and must not infer `feeds-A?` from E1 curvature edges.
 - **Consumer wiring:** M-aif2 slice-1 owns consuming `curvature-at` / ranked candidates; M-differentiable-code owns consuming the code embedding. The keystone owns metric surfaces, not live consumer integration.
 
 ### 12.5 Campaign boundary

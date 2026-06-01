@@ -248,7 +248,7 @@ STANDARD-ARGUE obligation (O1–O4) it exercises.
 | **R3** | **convergence — is it actually ONE metric?** *(the load-bearing rung)* | hop-distance vs BGE-distance substantially agree on the bridge ranking; if they diverge, that IS the finding (two metrics wearing one name) | O2 (the "two cuts of one object" claim, tested not asserted) | **needs embeddings → off-box / hard-sliced (§2.9)** |
 | **R3.5** | the **blend the charter named** | adding git **co-change** to dependency+semantic measurably improves the bridge ranking, or is shown redundant (real answer either way) | charter §"shared standard" (`d` = dependency + co-change + semantic) | cheap-ish (git-log mining), on-box |
 | **R4** | the differentiable band is **sane** (claude-6's micro-test, in its right place) | `∂s/∂A` finite + well-conditioned across the symbol-size spread | O4 (a,b,c) | ✅ **DONE** — O4(b) PASS; `:conditioning-scale` audit/optional in v1 |
-| **R5** | one gradient step proposes **one real structural edit** | the edit-proposal is legible + defensible vs the wiring contract, OR its disagreement with the drawn prior is itself the signal (combining-methods-as-diagnostic) | O4 → M-differentiable-code payload | off-box |
+| **R5** | one gradient step proposes **one real structural edit**, optionally with E1 curvature shaping the loss | the edit-proposal is legible + defensible vs the wiring contract, OR its disagreement with the drawn prior is itself the signal (combining-methods-as-diagnostic); if curvature enters the loss, O3 polarity and `feeds-mu?` / `feeds-A?` separation remain intact | O4 → M-differentiable-code payload + O2 convergence pressure | off-box |
 | **R6** | the demonstrator: the metric is **meaningful**, not just well-typed | `E-codebase-manifold` W₂-mass-flow animation over git history shows recognizable structural evolution (a wrong metric → meaningless animation) | whole-metric falsifier | off-box |
 
 **Why a ratchet, not a checklist:** R0→R2 are cheap, on-box, and produce the
@@ -258,7 +258,8 @@ heavy rung sits behind it *and* behind §2.9. You cannot hand-wave R3 without R1
 substrate-graph curvature file; cannot do R5 without R4's conditioned gradient.
 
 **Status:** R0, R1, R2, and R4 are done. R3/R3.5 remain O2 convergence / blend
-follow-ons; R5 remains the E2 edit-proposal payload; R6 remains the
+follow-ons; R5 remains the E2 edit-proposal payload and is the right home for
+claude-2's loss-with-E1-curvature unification idea; R6 remains the
 `E-codebase-manifold` demonstrator. **Ownership:** R1–R3 + R3.5 land naturally on
 the keystone (codex-3) + E1 (claude-3); R4–R5 on E2 (claude-6); R6 on the
 demonstrator. Keystone `M-substrate-metric` is DELIVERED(v1) with named residue;
