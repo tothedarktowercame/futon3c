@@ -71,8 +71,9 @@ The Campaign dissolves when **both** hold:
 | Role | Mission | State | What it contributes / needs |
 |---|---|---|---|
 | **Keystone** — owner **codex-3** | `M-substrate-metric` (`futon3c/holes/missions/`) | **OPENED 2026-06-01**; HEAD/IDENTIFY done, O1 schema in MAP | Defines + builds the ground metric; owns its own internal lifecycle/VERIFY |
-| **Paired (consumer, E1)** — owner **claude-3** | `M-aif2` (`futon2/holes/M-aif2.md`) | IDENTIFY→VERIFY complete; **INSTANTIATE held**; O1 closure set declared | Needs curvature as the tension-proposer's signal (replaces the signed-grad-vs-`(1−T)` the Stage-B spike exposed) |
+| **Paired (consumer, E1)** — owner **claude-3** | `M-aif2` (`futon2/holes/M-aif2.md`) | E1 consumer; **M-aif2 mission CLOSED on own criteria (2026-06-02)**; slice-1 live-installed reading the delivered curvature; **extensions possible depending on the Campaign outcome** | Needs curvature as the tension-proposer's signal (replaces the signed-grad-vs-`(1−T)` the Stage-B spike exposed) |
 | **Paired (consumer, E2)** — owner **claude-6** | `M-differentiable-code` (`futon5/holes/missions/`) | early pilot; O1 closure set declared | Needs the continuous embedding for gradients over the code graph |
+| **Paired (consumer, E3)** — owner **claude-6** · **LATE JOINER (2026-06-02)** | `M-categorical-code` (`futon5/holes/missions/`) | IDENTIFY + MAP done 2026-06-02; **ESCROW E3 `:contract-released`** (metric-side; (c) dynamics self-sourced from git/XTDB — no O5) | Generalizes E2 via a functor `F: Evolution → Code` (porting futon5's evolution machinery to code); consumes the metric for code-health **diagnostics** (coupling, structural entropy) + as the Genotype it evolves |
 | **Demonstrator** | `E-codebase-manifold` (M-aif2 §6) | follow-up, unopened | The evolving-manifold animation = W₂ mass-flow over the metric; validates the metric is meaningful |
 
 ### Provenance
@@ -156,8 +157,11 @@ The authoritative escrow ledger. Each entry is `:held` until STANDARD-VERIFY fre
 |---|---|---|---|---|
 | **E1** | M-aif2 | M-substrate-metric (the metric contract) | curvature (Ollivier–Ricci) as the tension-proposer's signal — replaces signed-grad-vs-`(1−T)` | `:contract-released` (SV 2026-06-01) |
 | **E2** | M-differentiable-code | M-substrate-metric (the metric contract) | continuous code-graph embedding (the band a gradient ranges over) **+ node-granularity resolution** | `:contract-released` (SV 2026-06-01) |
+| **E3** | M-categorical-code (**LATE JOINER 2026-06-02**) | M-substrate-metric (the metric contract) | code-health diagnostics + Genotype: **(a)** Genotype = O1 node-identity ✓; **(b)** coupling ≈ O2 curvature + structural-entropy ✓; **(c)** structural-dynamics / damage-spread **self-sourced from the git/XTDB temporal substrate — NOT a metric obligation (no O5 needed)** | `:contract-released` (metric-side, at join 2026-06-02) |
 
 **Release triggers:** `:held → :contract-released` on Campaign **STANDARD-VERIFY** (contract fixed; consumers may build to the verified spec); `:contract-released → :satisfied` on **RUN/DELIVER** (live metric consumed).
+
+**E3 late-joiner note (2026-06-02) — no O5 needed:** E3 joined *after* STANDARD-VERIFY. Its metric requirements (a)+(b) are subsumed by the already-ratified **O1/O2** contract, so it enters `:contract-released` (metric-side) at join — no re-verification. Its distinctive requirement (c) — structural-dynamics / damage-spread — **does NOT extend the metric contract (no O5)**: per the M-categorical-code MAP (Q4), the dynamics already lives in the **git/XTDB temporal substrate** (change-propagation across commits), so it is self-sourced by M-categorical-code's own loop. This keeps the keystone metric static + simple. `:contract-released → :satisfied` on live consumption (code-health diagnostics computed on the delivered metric + the structure evolved over it).
 
 **Held slices marked in the consuming missions (done 2026-05-31):**
 - `M-aif2` header — INSTANTIATE slice 1 (the tension-proposer) marked `:held`; "do not build against the thin scalar field" noted.
@@ -165,7 +169,7 @@ The authoritative escrow ledger. Each entry is `:held` until STANDARD-VERIFY fre
 
 **Shared-prerequisite note (from CONSTITUTION):** E2's node-granularity half is also a precondition of the metric itself — resolving it in the keystone discharges part of E2 *and* unblocks the metric. The keystone's MAP should treat node-granularity as its first sub-deliverable.
 
-**Health telemetry:** 2 entries, both `:contract-released` as of Joe-ratified STANDARD-VERIFY on 2026-06-01. RUN/DELIVER remains open until live metric consumption / proof-point gates are satisfied.
+**Health telemetry:** 3 entries — E1, E2 `:contract-released` (SV 2026-06-01); **E3 `:contract-released`** (metric-side, late join 2026-06-02, no O5 required). RUN/DELIVER remains open until live metric consumption / proof-point gates are satisfied.
 
 **ESCROW exit criterion:** every cross-mission dependency entered the ledger with a `:held` status, a named two-step release path, and a marker in the consuming mission (✓ all three). STANDARD-VERIFY has since ratified the contract and advanced both entries to `:contract-released`; RUN/DELIVER advances them to `:satisfied`.
 
@@ -271,3 +275,25 @@ the Campaign remains open until live consumer consumption advances escrow to
   before-code at Campaign tier). On pass: E1/E2 escrow `:held → :contract-released`.
 - **RUN/DELIVER**: M-substrate-metric ships the verified metric (climb the §5 ratchet); escrow `→ :satisfied`.
 - **DISSOLUTION**: dissolve; the missions are the residue; this doc is the closure record.
+
+---
+
+## 6. ROUND-UP (2026-06-02, claude-3) — what the descriptive turn unlocked
+
+Two sibling excursions — `futon5a/holes/excursions/E-half-mil-audit` (claude-3, *horizontal*) and `E-the-dark-tower` (claude-6, *vertical*) — plus a pre-registered investigation thread (`futon5a/holes/tech-notes/TN-misfit-to-self-description`) have considerably re-grounded this Campaign. Round-up, additive — **changes no obligation, escrow state, or the dissolution criterion.**
+
+**(a) The re-anchor: consumer value is DESCRIPTIVE, not predictive.** Convergence note (claude-3 + claude-6, signed): every *predictive* projection off the metric reduced to a classical baseline (symbol→keyword, code-edges→common-neighbours, categorical-diagnostics→churn; M-categorical-code VERIFY: churn AP 0.81 > coupling 0.70). The metric's consumer value is **describing structure** (manifold morphology, intentional provenance, where intent bends) — gated by a co-occurrence baseline from the start. This sharpens, not weakens, the charter: the consumers (E1/E2/E3) re-aim from forecasting to description.
+
+**(b) Horizontal — the demonstrator is grounded (R6).** `E-half-mil-audit` surveyed *what is* across the 500k-LOC stack via git: the manifold **grows at its edges** (`corr(node-age, centroid-distance)=+0.48`) and **accretes into a few interior basins** (16 attractor hubs in a 108-file fat tail = 5% of files / 29% of LOC). This is `E-codebase-manifold` (R6 demonstrator) made concrete — the morphology a "wrong metric" would fail to reproduce.
+
+**(c) Vertical — the metric IS the first rungs of one tower.** `E-the-dark-tower`: state → change → change-of-change is *one* tower (differential ≅ I-Ching iching/iiching ≅ higher-categorical). substrate-2's `(T,∇,Δ)` and **this Campaign's contract are the tower's first three rungs**: O1 identity = level 0 (state), O2/E2 continuity-gradient = level 1, O2/E1 Ollivier–Ricci curvature = level 2. The Campaign delivered the bottom of the tower without naming it; the read is *climb, don't flatten* (every predictive flattening lost to baselines).
+
+**(d) The misfit thread (pre-registered generator→evaluator) cleared the baseline wall — descriptively.** New laws, each baseline-gated: **level↔span** (corrections/curvature are spatially tight, refactors global), **centrality↔conservatism** (central namespaces edited often but gently), **pheromone↔basin** (the files most mission-referenced ARE the git-accreted basins — the self-description and the accretion are the same hubs). And a positive curvature result that does **not** reduce to the dependency graph (below).
+
+**(e) Concrete substrate unlock — a new E1/O3 ground structure, born without turn→code.** The mission corpus self-describes the build densely (140/172 missions name files; 1182 `mission→file` edges). Ollivier–Ricci on the file-co-mission graph yields interpretable cross-concern **intent-bridges** — and **all 25 top bridges are absent from the `fdep` dependency graph** (some within futon3c's own domain): mission-intent structure the dependency graph cannot see. This landed as a ratified substrate relation:
+
+- **`:mission/mentions-file` / `:mentions/stated`** — implemented by codex-3 (**commit `325315f`**, `codex/m-substrate-metric-runtime`), promoting the pre-existing `code/v05/file→mission` projection (no new parser). **O1-safe edge-only** (mission + file are existing nodes); `feeds-mu? true`, `feeds-A? false`; `:mentions/realized` reserved for a deferred git-co-temporal complement (the Pareto-20%).
+- **E1-side `μ_x` spec (claude-3):** the relation enters the curvature **measure** as a file→file co-mention projection with **Newman weighting** `w(f,g)=Σ 1/(|files(m)|−1)` (down-weights broad missions/hub files), mixed by `β` (default 0.5; **`β=0` recovers pre-mentions curvature exactly** — a reversible extension whose ablation is the built-in baseline test); `d_E1=hop` denominator unchanged, so κ reads *"is intent-coupling tighter than dependency-distance?"*.
+- **Status:** emitter landed; **ingest materialization in progress** (Joe-authorized); then codex-3 wires `μ_x`, claude-3 verifies curvature on materialized edges (β-ablation). Handoff + full spec: `futon3c/holes/CODEX-HANDOFF-mission-file-substrate-edge.md`; thread + rungs: `TN-misfit-to-self-description.md`.
+
+**Implications for the ratchet (not yet formal rungs):** (i) a candidate **new proof-point** — intent-curvature on `:mission/mentions-file`, baseline-gated by the β-ablation (a descriptive complement to R0–R2's `feeds-μ?` curvature); (ii) **R5/R6 re-aim** onto descriptive value (manifold + intent-provenance) rather than predictive edit-forecasting. **Unchanged:** E1/E2/E3 escrow remain `:contract-released`; dissolution still awaits ≥1 paired requirement consumed **live** (the `μ_x` consumption of materialized `mentions-file` edges is a concrete path toward E1 `:satisfied`, not yet reached).
