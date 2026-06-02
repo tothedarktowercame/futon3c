@@ -77,6 +77,7 @@
             [cheshire.generate :as json-gen]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.set :as cset]
             [clojure.string :as str]
             [org.httpkit.server :as hk])
@@ -4258,23 +4259,49 @@
          (.getSeconds (java.time.Duration/between ^Instant as-of
                                                   (Instant/now))))))
 
+(def ^:private vsatarcs-status-script
+  (str (System/getProperty "user.home")
+       "/code/futon4/scripts/build-invariant-state-projection.bb"))
+
+(defn- current-vsatarcs-status
+  []
+  (try
+    (if-not (.exists (io/file vsatarcs-status-script))
+      {:available? false
+       :build {:status :error}
+       :error (str "Missing projection script: " vsatarcs-status-script)}
+      (let [{:keys [exit out err]} (shell/sh "bb" vsatarcs-status-script "--wm-status")]
+        (if (zero? exit)
+          (assoc (edn/read-string out) :available? true)
+          {:available? false
+           :build {:status :error}
+           :error (or (not-empty err)
+                      (str "VSATARCS status command exited " exit))})))
+    (catch Exception e
+      {:available? false
+       :build {:status :error}
+       :error (.getMessage e)})))
+
 (defn- wm-prebuilt-response-body
   "Inject lightweight freshness metadata into a pre-rendered WM JSON body
    without re-encoding the entire 10MB+ payload on every request."
   [snapshot scheduler]
   (let [as-of (:as-of snapshot)
         age (wm-scan-age-seconds as-of)
+        vsatarcs-status (current-vsatarcs-status)
         body (:body snapshot)]
     (if (and (string? body) (str/starts-with? body "{"))
       (str "{\"as-of\":" (json/generate-string (some-> as-of str))
            ",\"scan-age-seconds\":" (or age "null")
            ",\"scheduler\":" (json/generate-string scheduler)
+           ",\"vsatarcs-status\":" (json/generate-string vsatarcs-status)
            "," (subs body 1))
       (json/generate-string
        (assoc (:payload snapshot)
               "as-of" (some-> as-of str)
               "scan-age-seconds" age
-              "scheduler" scheduler)))))
+              "scheduler" scheduler
+              "vsatarcs-status" vsatarcs-status)))))
 
 (defn- wm-scheduler-ensure-started! []
   (try
