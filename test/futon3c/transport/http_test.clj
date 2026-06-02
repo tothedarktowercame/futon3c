@@ -1786,13 +1786,23 @@
                                         :days-windows [14 90]})
                                      futon3c.wm.scheduler/request-window!
                                      (fn [_days] {:ok true})
-                                     nil))]
+                                     nil))
+                                 futon3c.transport.http/current-vsatarcs-status
+                                 (fn []
+                                   {:available? true
+                                    :build {:status :violation}
+                                    :stories [{:story/id "leaf-invariants"
+                                               :headline "drift"
+                                               :build/status :violation}]
+                                    :wm-escalation {:tier :warning}})]
                      (get-req-with-query handler "/api/alpha/war-machine" "days=14"))
           parsed (parse-body response)]
       (is (= 200 (:status response)))
       (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
       (is (= 14 (get-in parsed [:window :days])))
       (is (= "steady" (get-in parsed [:judgement :mode])))
+      (is (= true (get-in parsed [:vsatarcs-status :available?])))
+      (is (= "violation" (get-in parsed [:vsatarcs-status :build :status])))
       (is (= "2026-05-25T12:00:00Z" (:as-of parsed)))
       (is (integer? (:scan-age-seconds parsed)))
       (is (= 300 (get-in parsed [:scheduler :period-seconds]))))))
