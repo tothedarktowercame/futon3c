@@ -1,0 +1,692 @@
+{
+  "alpha": 0.5,
+  "beta": 0.0,
+  "bridge_candidate_count": 703,
+  "component_count": 5,
+  "curvature_distribution": {
+    "max": 0.33333333333333337,
+    "median": 0.041666666666667074,
+    "min": -0.5555555555555558,
+    "p10": 0.018181818181817966,
+    "p90": 0.09090909090909072
+  },
+  "curvature_edges_sampled": 200,
+  "edge_cap": 200,
+  "edge_count": 2264,
+  "fetched_by_type": {
+    "code/v05/file->mission": 0,
+    "code/v05/file\u2192mission": 1584,
+    "code/v05/mission-cross-ref": 689,
+    "code/v05/related-mission": 23,
+    "code/v05/sorry->related-missions": 0
+  },
+  "largest_component": 1177,
+  "limit_per_type": 2000,
+  "mention_pair_cap": 200,
+  "mention_projection": {
+    "code_files_with_mentions": 526,
+    "code_mention_edges": 782,
+    "mention_edges": 1487,
+    "missions_with_code_mentions": 115,
+    "projected_nodes": 518,
+    "projected_pair_contributions": 4811,
+    "projected_undirected_pairs": 4548
+  },
+  "node_count": 1204,
+  "report": "substrate-metric/e1-or-sample",
+  "reversibility": {
+    "beta_zero_legacy_max_abs_delta": 0.0,
+    "beta_zero_legacy_mean_abs_delta": 0.0,
+    "checked_edges": 200
+  },
+  "timing": {
+    "max_ms_per_edge": 8.097123820334673,
+    "mean_ms_per_edge": 1.312527155969292,
+    "total_seconds": 3.5098154759034514
+  },
+  "top_negative_edges": [
+    {
+      "bridge_score": 3522,
+      "d": 1,
+      "edge": [
+        "futon4-d/mission/essays-diachronic-model",
+        "futon4-elisp-d/mission/essays-edit-cycle"
+      ],
+      "kappa": -0.5555555555555558,
+      "mention_weight": null,
+      "relation": "mission-cross-ref",
+      "w1": 1.5555555555555558
+    },
+    {
+      "bridge_score": 9352,
+      "d": 1,
+      "edge": [
+        "futon4-d/mission/simulating-or-training-as-learning-system",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ],
+      "kappa": -0.375,
+      "mention_weight": null,
+      "relation": "mission-cross-ref",
+      "w1": 1.375
+    },
+    {
+      "bridge_score": 10512,
+      "d": 1,
+      "edge": [
+        "futon4-d/mission/or-training-as-learning-system.v1",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ],
+      "kappa": -0.357142857142857,
+      "mention_weight": null,
+      "relation": "mission-cross-ref",
+      "w1": 1.357142857142857
+    },
+    {
+      "bridge_score": 2350,
+      "d": 1,
+      "edge": [
+        "futon6-d/mission/canon-fingerprint-store",
+        "futon6-py-d/mission/bayesian-structure-learning"
+      ],
+      "kappa": -0.30000000000000027,
+      "mention_weight": null,
+      "relation": "mission-cross-ref",
+      "w1": 1.3000000000000003
+    },
+    {
+      "bridge_score": 2350,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/musn/service.clj",
+        "futon3-d/mission/native-plan-coherence"
+      ],
+      "kappa": -0.16666666666666652,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 1.1666666666666665
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3c-d/mission/invariant-queue-unstuck",
+        "futon4-elisp-d/mission/peeragogy-rewrite"
+      ],
+      "kappa": 0.016129032258065168,
+      "mention_weight": null,
+      "relation": "mission-cross-ref",
+      "w1": 0.9838709677419348
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        ".claude-d/file/projects/-home-joe-code/memory/project_aliveness_synthesis.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/docs/four-frame-correspondence.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/holes/missions/M-weird-modernism.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/enrichment/rational-reconstruction.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-action.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-concentration.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-effort.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-intention.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-livelihood.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-mindfulness.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "calendar-d/file/events.edn",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon2-d/file/data/wm-trace/wm-trace-2026-05-*.edn",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon2-d/file/data/wm-trace/wm-trace-YYYY-MM-DD.edn",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon2-d/file/web/war-machine/wm-anchor-*-verify.mjs",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/docs/guides/README-peripherals.md",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/agent/state-is-hypothesis.flexiarg",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/aif/expected-free-energy-scorecard.flexiarg",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/aif/predictive-coding-belief-update.flexiarg",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    },
+    {
+      "bridge_score": 1176,
+      "d": 1,
+      "edge": [
+        "futon3-d/file/library/gauntlet/aif-as-environment-not-instruction.flexiarg",
+        "futon3c-d/mission/war-machine-pilot"
+      ],
+      "kappa": 0.018181818181817966,
+      "mention_weight": null,
+      "relation": "file->mission",
+      "w1": 0.981818181818182
+    }
+  ],
+  "top_negative_mention_pairs": [
+    {
+      "d": 2,
+      "edge": [
+        "futon4-d/file/dev/arxana-browser-essays.el",
+        "npt-d/file/working-paper/annotations.el"
+      ],
+      "kappa": -0.0625,
+      "mention_weight": 1.0,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 2.125
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3-d/file/agency/http.clj",
+        "futon3c-d/file/social/shapes.clj"
+      ],
+      "kappa": 0.02499999999999991,
+      "mention_weight": 1.0,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.9500000000000002
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3b-d/file/query/relations.clj",
+        "futon6-d/file/stackexchange.py"
+      ],
+      "kappa": 0.04166666666666663,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.9166666666666667
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/dev/bootstrap.clj",
+        "futon3c-d/file/src/futon3c/evidence/store.clj"
+      ],
+      "kappa": 0.04166666666666674,
+      "mention_weight": 0.5,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.9166666666666665
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/dev/futon3c/dev.clj",
+        "futon4-d/file/dev/arxana-browser-core.el"
+      ],
+      "kappa": 0.04166666666666674,
+      "mention_weight": 0.3333333333333333,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.9166666666666665
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon4-d/file/dev/arxana-browser-core.el",
+        "futon4-d/file/dev/arxana-browser-pattern-activation.el"
+      ],
+      "kappa": 0.04166666666666674,
+      "mention_weight": 0.3333333333333333,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.9166666666666665
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/dev.clj",
+        "futon5-d/file/scripts/nonstarter_mana.clj"
+      ],
+      "kappa": 0.045454545454545636,
+      "mention_weight": 0.5,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.9090909090909087
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/dev/futon3c/dev/bootstrap.clj",
+        "futon3c-d/file/src/futon3c/evidence/store.clj"
+      ],
+      "kappa": 0.0625,
+      "mention_weight": 0.5,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.875
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3-d/file/scripts/ingest_one_file.clj",
+        "futon3c-d/file/src/futon3c/peripheral/mission_control_backend.clj"
+      ],
+      "kappa": 0.0625,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.875
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3-d/file/scripts/multi_watcher.clj",
+        "futon3c-d/file/src/futon3c/peripheral/mission_control_backend.clj"
+      ],
+      "kappa": 0.0625,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.875
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/agents/tickle_work_queue_test.clj",
+        "futon3c-d/file/dev.clj"
+      ],
+      "kappa": 0.06818181818181857,
+      "mention_weight": 0.5,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8636363636363629
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/agents/codex_enforcement_test.clj",
+        "futon3c-d/file/transport/http.clj"
+      ],
+      "kappa": 0.07692307692307676,
+      "mention_weight": 0.3333333333333333,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8461538461538465
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/cyder.clj",
+        "futon3c-d/file/transport/http.clj"
+      ],
+      "kappa": 0.07692307692307676,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8461538461538465
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/cyder_test.clj",
+        "futon3c-d/file/transport/http.clj"
+      ],
+      "kappa": 0.07692307692307676,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8461538461538465
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3-d/file/scripts/ingest_one_file.clj",
+        "futon3c-d/file/src/futon3c/transport/http.clj"
+      ],
+      "kappa": 0.08333333333333337,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8333333333333333
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3-d/file/scripts/multi_watcher.clj",
+        "futon3c-d/file/src/futon3c/transport/http.clj"
+      ],
+      "kappa": 0.08333333333333337,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8333333333333333
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/dev.clj",
+        "futon3c-d/file/dev/bootstrap.clj"
+      ],
+      "kappa": 0.08806818181818177,
+      "mention_weight": 0.6072261072261073,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8238636363636365
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/agents/codex_enforcement_test.clj",
+        "futon3c-d/file/dev.clj"
+      ],
+      "kappa": 0.09090909090909127,
+      "mention_weight": 0.3333333333333333,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8181818181818175
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/cyder.clj",
+        "futon3c-d/file/dev.clj"
+      ],
+      "kappa": 0.09090909090909127,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8181818181818175
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/cyder_test.clj",
+        "futon3c-d/file/dev.clj"
+      ],
+      "kappa": 0.09090909090909127,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8181818181818175
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/src/futon3c/aif/stack_generator.clj",
+        "futon3c-d/file/src/futon3c/peripheral/mission_control_backend.clj"
+      ],
+      "kappa": 0.09375,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8125
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/transport/irc.clj",
+        "futon3c-d/file/transport/irc_integration_test.clj"
+      ],
+      "kappa": 0.09999999999999987,
+      "mention_weight": 0.5,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8000000000000003
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/transport/irc.clj",
+        "futon3c-d/file/transport/irc_test.clj"
+      ],
+      "kappa": 0.09999999999999987,
+      "mention_weight": 0.5,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.8000000000000003
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon0-d/file/contrib/stack-hud-widgets.el",
+        "futon4-d/file/dev/arxana-browser-core.el"
+      ],
+      "kappa": 0.10416666666666663,
+      "mention_weight": 0.3333333333333333,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.7916666666666667
+    },
+    {
+      "d": 2,
+      "edge": [
+        "futon3c-d/file/src/futon3c/peripheral/mission_control_backend.clj",
+        "futon3c-d/file/src/futon3c/transport/http.clj"
+      ],
+      "kappa": 0.12499999999999989,
+      "mention_weight": 0.25,
+      "relation": "mission-mentions-file-co-mention",
+      "w1": 1.7500000000000002
+    }
+  ],
+  "top_propose_candidates": [
+    {
+      "action_intensity": 0.5000000000000002,
+      "min_incident_kappa": -0.5555555555555558,
+      "node": "futon4-d/mission/essays-diachronic-model",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "identify",
+        "phase": "identify"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon4-d/mission/essays-diachronic-model",
+        "futon4-elisp-d/mission/essays-edit-cycle"
+      ]
+    },
+    {
+      "action_intensity": 0.3214285714285713,
+      "min_incident_kappa": -0.357142857142857,
+      "node": "futon4-d/mission/or-training-as-learning-system.v1",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "identify",
+        "phase": "identify"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon4-d/mission/or-training-as-learning-system.v1",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ]
+    },
+    {
+      "action_intensity": 0.27000000000000024,
+      "min_incident_kappa": -0.30000000000000027,
+      "node": "futon6-d/mission/canon-fingerprint-store",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "derive",
+        "phase": "derive"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon6-d/mission/canon-fingerprint-store",
+        "futon6-py-d/mission/bayesian-structure-learning"
+      ]
+    },
+    {
+      "action_intensity": 0.13124999999999998,
+      "min_incident_kappa": -0.375,
+      "node": "futon4-d/mission/simulating-or-training-as-learning-system",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "document",
+        "phase": "document"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.65,
+      "strain_edge": [
+        "futon4-d/mission/simulating-or-training-as-learning-system",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ]
+    }
+  ]
+}

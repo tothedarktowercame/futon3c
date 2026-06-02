@@ -27,6 +27,8 @@ from scipy.optimize import linprog
 FUTON1A = os.environ.get("FUTON1A_URL", "http://localhost:7071")
 PENHOLDER = os.environ.get("FUTON1A_PENHOLDER", "api")
 ALPHA = 0.5
+DEFAULT_BETA = 0.5
+CODE_FILE_EXTS = (".clj", ".cljs", ".cljc", ".el", ".py", ".bb")
 
 FEEDS_MU_TYPES = [
     "code/v05/related-mission",
@@ -127,7 +129,19 @@ def norm_token(x: Any) -> str | None:
 
 
 def prop(props: dict[str, Any], key: str) -> Any:
-    return props.get(key) if key in props else props.get(key.split("/")[-1])
+    if key in props:
+        return props[key]
+    short = key.split("/")[-1]
+    if short in props:
+        return props[short]
+    return None
+
+
+def is_code_file_endpoint(endpoint: str) -> bool:
+    if "/file/" not in endpoint:
+        return False
+    path = endpoint.split("/file/", 1)[1].lower()
+    return path.endswith(CODE_FILE_EXTS)
 
 
 def resolution_state(endpoint: str, docs: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -159,6 +173,60 @@ def resolution_state(endpoint: str, docs: dict[str, dict[str, Any]]) -> dict[str
 
 def pair(a: str, b: str) -> tuple[str, str]:
     return (a, b) if a < b else (b, a)
+
+
+def mention_edge_endpoints(edge: dict[str, Any]) -> tuple[str, str] | None:
+    props = edge.get("hx/props") or {}
+    semantics = prop(props, "relation/semantics")
+    subtype = prop(props, "relation/subtype")
+    if semantics != "mission/mentions-file" or subtype != "mentions/stated":
+        return None
+    mission = prop(props, "relation/logical-source-endpoint") or prop(props, "mission/target-endpoint")
+    file_endpoint = prop(props, "relation/logical-target-endpoint") or prop(props, "file/source-endpoint")
+    if not mission or not file_endpoint:
+        return None
+    return str(mission), str(file_endpoint)
+
+
+def build_mention_projection(edges: list[dict[str, Any]]) -> tuple[dict[str, dict[str, float]], dict[str, Any]]:
+    files_by_mission: dict[str, set[str]] = defaultdict(set)
+    mention_edges = 0
+    code_mention_edges = 0
+    for edge in edges:
+        eps = mention_edge_endpoints(edge)
+        if not eps:
+            continue
+        mention_edges += 1
+        mission, file_endpoint = eps
+        if not is_code_file_endpoint(file_endpoint):
+            continue
+        code_mention_edges += 1
+        files_by_mission[mission].add(file_endpoint)
+
+    weights: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    projected_pair_count = 0
+    for mission, files in files_by_mission.items():
+        ordered = sorted(files)
+        k = len(ordered)
+        if k < 2:
+            continue
+        contribution = 1.0 / float(k - 1)
+        for i, a in enumerate(ordered):
+            for b in ordered[i + 1 :]:
+                weights[a][b] += contribution
+                weights[b][a] += contribution
+                projected_pair_count += 1
+    plain_weights = {node: dict(nbrs) for node, nbrs in weights.items()}
+    stats = {
+        "mention_edges": mention_edges,
+        "code_mention_edges": code_mention_edges,
+        "missions_with_code_mentions": len(files_by_mission),
+        "code_files_with_mentions": len({f for files in files_by_mission.values() for f in files}),
+        "projected_pair_contributions": projected_pair_count,
+        "projected_nodes": len(plain_weights),
+        "projected_undirected_pairs": sum(len(v) for v in plain_weights.values()) // 2,
+    }
+    return plain_weights, stats
 
 
 def build_graph(edges: list[dict[str, Any]]) -> tuple[dict[str, list[str]], dict[str, set[str]], list[dict[str, Any]]]:
@@ -240,15 +308,54 @@ def bridge_candidates(simple: dict[str, set[str]], edges: list[dict[str, Any]]) 
     return sorted(out, key=lambda x: x["bridge_score"], reverse=True)
 
 
-def mu(multi: dict[str, list[str]], node: str) -> dict[str, float]:
+def legacy_mu(multi: dict[str, list[str]], node: str, alpha: float = ALPHA) -> dict[str, float]:
     nbrs = multi.get(node, [])
     if not nbrs:
         return {node: 1.0}
-    mass = (1.0 - ALPHA) / len(nbrs)
+    mass = (1.0 - alpha) / len(nbrs)
     out = defaultdict(float)
-    out[node] += ALPHA
+    out[node] += alpha
     for nbr in nbrs:
         out[nbr] += mass
+    return dict(out)
+
+
+def normalized_weight_measure(weights: dict[str, float]) -> dict[str, float]:
+    total = float(sum(weights.values()))
+    if total <= 0.0:
+        return {}
+    return {node: float(weight) / total for node, weight in weights.items() if weight > 0.0}
+
+
+def blended_mu(
+    multi: dict[str, list[str]],
+    mention_weights: dict[str, dict[str, float]],
+    node: str,
+    beta: float,
+    alpha: float = ALPHA,
+) -> dict[str, float]:
+    if beta <= 0.0:
+        return legacy_mu(multi, node, alpha)
+
+    structural = legacy_mu(multi, node, 0.0)
+    if structural.get(node) == 1.0 and len(structural) == 1:
+        structural = {}
+    mentions = normalized_weight_measure(mention_weights.get(node, {}))
+
+    if not structural and not mentions:
+        return {node: 1.0}
+    if not structural:
+        channel_weights = [(mentions, 1.0)]
+    elif not mentions:
+        channel_weights = [(structural, 1.0)]
+    else:
+        channel_weights = [(structural, 1.0 - beta), (mentions, beta)]
+
+    out = defaultdict(float)
+    out[node] += alpha
+    for channel, weight in channel_weights:
+        for target, mass in channel.items():
+            out[target] += (1.0 - alpha) * weight * mass
     return dict(out)
 
 
@@ -267,9 +374,22 @@ def bfs_distances(simple: dict[str, set[str]], source: str, targets: set[str]) -
     return found
 
 
-def wasserstein(multi: dict[str, list[str]], simple: dict[str, set[str]], x: str, y: str) -> float:
-    supply = mu(multi, x)
-    demand = mu(multi, y)
+def wasserstein(
+    multi: dict[str, list[str]],
+    simple: dict[str, set[str]],
+    x: str,
+    y: str,
+    *,
+    mention_weights: dict[str, dict[str, float]] | None = None,
+    beta: float = 0.0,
+    legacy: bool = False,
+) -> float:
+    if legacy:
+        supply = legacy_mu(multi, x)
+        demand = legacy_mu(multi, y)
+    else:
+        supply = blended_mu(multi, mention_weights or {}, x, beta)
+        demand = blended_mu(multi, mention_weights or {}, y, beta)
     sources = list(supply.keys())
     targets = list(demand.keys())
     costs = []
@@ -310,25 +430,60 @@ class CurvatureResult:
     relation: str
     kappa: float
     w1: float
+    d: int
     bridge_score: int | None
+    mention_weight: float | None
     elapsed_ms: float
 
 
 def curvature_for_edge(
-    multi: dict[str, list[str]], simple: dict[str, set[str]], edge: dict[str, Any]
+    multi: dict[str, list[str]],
+    simple: dict[str, set[str]],
+    edge: dict[str, Any],
+    *,
+    mention_weights: dict[str, dict[str, float]] | None = None,
+    beta: float = 0.0,
+    legacy: bool = False,
 ) -> CurvatureResult:
     start = time.perf_counter()
     x, y = edge["edge"]
-    w1 = wasserstein(multi, simple, x, y)
+    d = hop_distance(simple, x, y)
+    if d is None or d <= 0:
+        raise RuntimeError(f"no finite positive hop distance for {x} {y}")
+    w1 = wasserstein(multi, simple, x, y, mention_weights=mention_weights, beta=beta, legacy=legacy)
     return CurvatureResult(
         x=x,
         y=y,
         relation=edge["relation"],
-        kappa=1.0 - w1,  # d(x,y)=1 for sampled graph edges
+        kappa=1.0 - (w1 / float(d)),
         w1=w1,
+        d=d,
         bridge_score=edge.get("bridge_score"),
+        mention_weight=edge.get("mention_weight"),
         elapsed_ms=(time.perf_counter() - start) * 1000.0,
     )
+
+
+def hop_distance(simple: dict[str, set[str]], source: str, target: str) -> int | None:
+    found = bfs_distances(simple, source, {target})
+    return found.get(target)
+
+
+def mention_pair_candidates(
+    mention_weights: dict[str, dict[str, float]],
+    simple: dict[str, set[str]],
+    cap: int,
+) -> list[dict[str, Any]]:
+    pairs = []
+    for a, nbrs in mention_weights.items():
+        for b, weight in nbrs.items():
+            if a >= b:
+                continue
+            d = hop_distance(simple, a, b)
+            if d is None or d <= 0:
+                continue
+            pairs.append({"edge": [a, b], "relation": "mission-mentions-file-co-mention", "mention_weight": weight, "d": d})
+    return sorted(pairs, key=lambda e: (e["mention_weight"], e["d"]), reverse=True)[:cap]
 
 
 def quantiles(xs: list[float]) -> dict[str, float]:
@@ -346,6 +501,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit-per-type", type=int, default=2000)
     ap.add_argument("--edge-cap", type=int, default=200)
+    ap.add_argument("--mention-pair-cap", type=int, default=200)
+    ap.add_argument("--beta", type=float, default=DEFAULT_BETA)
     ap.add_argument("--top", type=int, default=25)
     args = ap.parse_args()
 
@@ -360,12 +517,31 @@ def main() -> None:
         for doc in fetch_hyperedges_by_type("code/v05/sorry", 1000)
     }
     docs = {**mission_docs, **sorry_docs}
-    multi, simple, edges = build_graph([e for xs in fetched.values() for e in xs])
+    all_fetched_edges = [e for xs in fetched.values() for e in xs]
+    mention_weights, mention_stats = build_mention_projection(all_fetched_edges)
+    multi, simple, edges = build_graph(all_fetched_edges)
     comps = connected_components(simple)
     bridges = bridge_candidates(simple, edges)
     sample_edges = bridges[: args.edge_cap]
 
-    results = [curvature_for_edge(multi, simple, e) for e in sample_edges]
+    results = [
+        curvature_for_edge(multi, simple, e, mention_weights=mention_weights, beta=args.beta)
+        for e in sample_edges
+    ]
+    legacy_results = [curvature_for_edge(multi, simple, e, legacy=True) for e in sample_edges]
+    beta_zero_results = [
+        curvature_for_edge(multi, simple, e, mention_weights=mention_weights, beta=0.0)
+        for e in sample_edges
+    ]
+    beta_zero_deltas = [
+        abs(a.kappa - b.kappa)
+        for a, b in zip(legacy_results, beta_zero_results)
+    ]
+    mention_edges = mention_pair_candidates(mention_weights, simple, args.mention_pair_cap)
+    mention_results = [
+        curvature_for_edge(multi, simple, e, mention_weights=mention_weights, beta=args.beta)
+        for e in mention_edges
+    ]
     by_node: dict[str, list[CurvatureResult]] = defaultdict(list)
     for r in results:
         by_node[r.x].append(r)
@@ -398,7 +574,16 @@ def main() -> None:
         "report": "substrate-metric/e1-or-sample",
         "limit_per_type": args.limit_per_type,
         "edge_cap": args.edge_cap,
+        "mention_pair_cap": args.mention_pair_cap,
+        "alpha": ALPHA,
+        "beta": args.beta,
         "fetched_by_type": {k: len(v) for k, v in fetched.items()},
+        "mention_projection": mention_stats,
+        "reversibility": {
+            "beta_zero_legacy_max_abs_delta": float(max(beta_zero_deltas)) if beta_zero_deltas else 0.0,
+            "beta_zero_legacy_mean_abs_delta": float(np.mean(beta_zero_deltas)) if beta_zero_deltas else 0.0,
+            "checked_edges": len(beta_zero_deltas),
+        },
         "node_count": len(simple),
         "edge_count": len(edges),
         "component_count": len(comps),
@@ -417,9 +602,22 @@ def main() -> None:
                 "relation": r.relation,
                 "kappa": r.kappa,
                 "w1": r.w1,
+                "d": r.d,
                 "bridge_score": r.bridge_score,
+                "mention_weight": r.mention_weight,
             }
             for r in sorted(results, key=lambda r: r.kappa)[: args.top]
+        ],
+        "top_negative_mention_pairs": [
+            {
+                "edge": [r.x, r.y],
+                "relation": r.relation,
+                "kappa": r.kappa,
+                "w1": r.w1,
+                "d": r.d,
+                "mention_weight": r.mention_weight,
+            }
+            for r in sorted(mention_results, key=lambda r: r.kappa)[: args.top]
         ],
         "top_propose_candidates": candidates[: args.top],
     }
