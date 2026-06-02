@@ -13,6 +13,23 @@ The difference is response contract and caller interaction model.
 
 `POST /api/alpha/whistle` also accepts `"stream": true`, which routes to the same streaming behavior as `/api/alpha/whistle-stream`.
 
+## Sending from a shell — use the robust client (don't hand-quote JSON)
+
+Inline `curl -d '{"prompt":"...don't..."}'` **breaks** when the prompt contains an
+apostrophe, parens, or unicode — the shell mangles the single-quoted payload. Use
+`scripts/agency_send.py`, which reads the prompt from **stdin** (a quoted heredoc =
+zero shell interpolation, safe for any characters) and JSON-encodes it in-process:
+
+```bash
+python3 futon3c/scripts/agency_send.py --to codex-3 --kind whistle <<'EOF'
+Anything goes — apostrophes (don't), parens (f), unicode μ/κ/β/Σ/≥, newlines.
+EOF
+```
+
+`--kind bell` (async, 202+job-id) or `--kind whistle` (blocking, terminal JSON);
+`--dry-run` prints the payload without sending. This is the recommended client for
+agents composing bells/whistles in a shell.
+
 ## `bell` (async handoff)
 
 Request:
