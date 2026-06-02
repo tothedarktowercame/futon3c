@@ -51,7 +51,23 @@
            (:endpoints (first (:edge-docs plan)))))
     (is (= "mission/code-paths"
            (get-in (first (:edge-docs plan))
-                   [:props "relation/source-field"])))))
+                   [:props "relation/source-field"])))
+    (is (= "mission/mentions-file"
+           (get-in (first (:edge-docs plan))
+                   [:props "relation/semantics"])))
+    (is (= "mentions/stated"
+           (get-in (first (:edge-docs plan))
+                   [:props "relation/subtype"])))
+    (is (true? (get-in (first (:edge-docs plan))
+                       [:props "relation/feeds-mu?"])))
+    (is (false? (get-in (first (:edge-docs plan))
+                        [:props "relation/feeds-A?"])))
+    (is (= "futon3c-d/mission/mission-wiring"
+           (get-in (first (:edge-docs plan))
+                   [:props "relation/logical-source-endpoint"])))
+    (is (= "futon3c-d/file/src/futon3c/aif/stack_generator.clj"
+           (get-in (first (:edge-docs plan))
+                   [:props "relation/logical-target-endpoint"])))))
 
 (deftest ingest-mission-doc-emits-one-file-to-mission-edge-per-code-path
   (let [posted (atom [])]
@@ -85,6 +101,10 @@
         (is (= 2 (:edges result)))
         (is (= 2 (count @posted)))
         (is (every? #(= "code/v05/file→mission" (:hx-type %)) @posted))
+        (is (every? #(some #{"mission/mentions-file"} (:labels %)) @posted))
+        (is (every? #(= "mentions/stated"
+                        (get-in % [:props "relation/subtype"]))
+                    @posted))
         (is (= ["futon3c-d/file/src/futon3c/aif/stack_generator.clj"
                 "futon3c-d/mission/mission-wiring"]
                (:endpoints (first @posted))))))))

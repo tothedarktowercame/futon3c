@@ -443,7 +443,9 @@
                         (str/split #"/file/" 2)
                         first)
                 mission-repo-label)
-            "file→mission"]
+            "file→mission"
+            "mission/mentions-file"
+            "mentions/stated"]
    :props {"repo" (or (some-> source-endpoint
                               (str/split #"/file/" 2)
                               first)
@@ -454,7 +456,23 @@
            "file/source-endpoint" source-endpoint
            "mission/target-id" mission-id
            "mission/target-endpoint" target-endpoint
-           "relation/source-field" "mission/code-paths"}})
+           "relation/source-field" "mission/code-paths"
+           ;; Ratified 2026-06-02: keep code/v05/file→mission as
+           ;; compatibility storage while exposing the logical mission→file
+           ;; mention semantics and endpoint roles.
+           "relation/semantics" "mission/mentions-file"
+           "relation/subtype" "mentions/stated"
+           "relation/compat-alias" file-to-mission-type
+           "relation/logical-direction" "mission→file"
+           "relation/logical-source-endpoint" target-endpoint
+           "relation/logical-source-role" "mission"
+           "relation/logical-target-endpoint" source-endpoint
+           "relation/logical-target-role" "file"
+           "relation/storage-direction" "file→mission"
+           "relation/storage-source-role" "file"
+           "relation/storage-target-role" "mission"
+           "relation/feeds-mu?" true
+           "relation/feeds-A?" false}})
 
 (defn build-file-to-mission-edge-docs
   "Pure projection from `:mission/code-paths` to substrate-2
