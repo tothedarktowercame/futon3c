@@ -3376,10 +3376,7 @@ When FORCE is non-nil, refresh immediately."
                 (when (re-search-forward "(session: [^)]+)" (line-end-position 2) t)
                   (let ((beg (match-beginning 0))
                         (end (line-end-position))
-                        (replacement
-                         (format "(session: %s) %s"
-                                 (or codex-repl-session-id "pending")
-                                 (agent-chat-mission-segment))))
+                        (replacement (agent-chat--session-header-text)))
                     (codex-repl--replace-header-region beg end replacement)))
                 (goto-char (point-min))
                 (when (re-search-forward
@@ -4025,8 +4022,7 @@ With REFRESH non-nil, recompute the state even if cached."
                                (format "%s (%s)" label status))))
                          entries))
          (current (plist-get state :current-label)))
-    (format "%s Transports: [%s]. Current: %s."
-            (agent-chat-mission-segment)
+    (format "Transports: [%s]. Current: %s."
             (string-join labels ", ")
             current)))
 
