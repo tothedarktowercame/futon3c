@@ -34,6 +34,9 @@
 (def ^:private mission-doc-hyperedge-type
   "code/v05/mission-doc")
 
+(def ^:private historical-turn-backfill-path
+  "/home/joe/code/futon5a/data/turn-commit-mission-backfill.json")
+
 ;; =============================================================================
 ;; Configuration — repo paths
 ;; =============================================================================
@@ -975,6 +978,153 @@
      (into md-missions devmap-missions))))
 
 ;; =============================================================================
+;; Turn-count telemetry
+;; =============================================================================
+
+(defn- normalize-turn-mission-id
+  [mission-id]
+  (some-> mission-id str str/trim not-empty (str/replace #"^M-" "")))
+
+(defn- load-historical-turn-backfill
+  []
+  (let [f (io/file historical-turn-backfill-path)]
+    (when (.exists f)
+      (try
+        (json/parse-string (slurp f) true)
+        (catch Exception e
+          {:error (.getMessage e)})))))
+
+(defn- historical-mission-turn-counts
+  []
+  (let [backfill (load-historical-turn-backfill)
+        records (:records backfill)
+        by-mission (reduce
+                    (fn [acc rec]
+                      (if-let [mid (normalize-turn-mission-id (:bestguess_mission rec))]
+                        (-> acc
+                            (update-in [mid :turns]
+                                       (fnil conj #{})
+                                       (:turn_epoch rec))
+                            (update-in [mid :commits] (fnil inc 0)))
+                        acc))
+                    {}
+                    (or records []))
+        mission-counts (into {}
+                             (map (fn [[mid {:keys [turns commits]}]]
+                                    [mid {:historical-turn-count (count (disj (or turns #{}) nil))
+                                          :historical-commit-count (or commits 0)}]))
+                             by-mission)]
+    {:source :turn-commit-mission-backfill
+     :source-path historical-turn-backfill-path
+     :source-error (:error backfill)
+     :historical-user-turns-logged (:n_user_turns_logged backfill)
+     :historical-commits-total (:n_commits backfill)
+     :historical-commits-attributed-to-turn (:commits_attributed_to_turn backfill)
+     :historical-commits-with-bestguess-mission (:commits_with_bestguess_mission backfill)
+     :mission-counts mission-counts
+     :total-historical-turns (reduce + (map :historical-turn-count (vals mission-counts)))
+     :total-historical-commits (reduce + (map :historical-commit-count (vals mission-counts)))}))
+
+(defn- body-field
+  [body k]
+  (or (get body k)
+      (get body (name k))))
+
+(defn- chat-user-turn-entry?
+  [entry]
+  (let [body (:evidence/body entry)
+        event (body-field body :event)
+        role (body-field body :role)]
+    (and (= "chat-turn" (some-> event name))
+         (= "user" (str role)))))
+
+(defn- live-turn-entry-mission-id
+  [entry]
+  (let [body (:evidence/body entry)]
+    (normalize-turn-mission-id
+     (or (body-field body :mission-id)
+         (body-field body :clocked-mission)))))
+
+(defn- live-mission-turn-counts
+  ([] (live-mission-turn-counts estore/!store))
+  ([evidence-store]
+   (let [entries (try
+                   (estore/query* evidence-store
+                                  {:query/type :coordination
+                                   :query/claim-type :question
+                                   :query/limit 50000})
+                   (catch Exception _ []))
+         by-mission (reduce
+                     (fn [acc entry]
+                       (if (and (chat-user-turn-entry? entry)
+                                (live-turn-entry-mission-id entry))
+                         (let [mid (live-turn-entry-mission-id entry)
+                               body (:evidence/body entry)
+                               turn-id (or (body-field body :turn-id)
+                                           (:evidence/id entry))]
+                           (update acc mid (fnil conj #{}) turn-id))
+                         acc))
+                     {}
+                     entries)
+         mission-counts (into {}
+                              (map (fn [[mid turn-ids]]
+                                     [mid {:live-turn-count (count turn-ids)}]))
+                              by-mission)]
+     {:source :live-evidence
+      :query-limit 50000
+      :mission-counts mission-counts
+      :total-live-turns (reduce + (map :live-turn-count (vals mission-counts)))})))
+
+(defn mission-turn-count-telemetry
+  "Return per-mission turn counts from historical backfill plus live evidence."
+  ([] (mission-turn-count-telemetry estore/!store))
+  ([evidence-store]
+   (let [historical (historical-mission-turn-counts)
+         live (live-mission-turn-counts evidence-store)
+         mission-ids (sort (cset/union (set (keys (:mission-counts historical)))
+                                       (set (keys (:mission-counts live)))))
+         mission-counts (into {}
+                              (map (fn [mid]
+                                     (let [h (get-in historical [:mission-counts mid] {})
+                                           l (get-in live [:mission-counts mid] {})
+                                           h-turns (or (:historical-turn-count h) 0)
+                                           l-turns (or (:live-turn-count l) 0)]
+                                       [mid (merge {:historical-turn-count h-turns
+                                                    :historical-commit-count (or (:historical-commit-count h) 0)
+                                                    :live-turn-count l-turns
+                                                    :turn-count (+ h-turns l-turns)}
+                                                   h l)])))
+                              mission-ids)]
+     {:mission-counts mission-counts
+      :total-turns (reduce + (map :turn-count (vals mission-counts)))
+      :total-historical-turns (:total-historical-turns historical)
+      :total-live-turns (:total-live-turns live)
+      :total-historical-commits (:total-historical-commits historical)
+      :historical historical
+      :live live})))
+
+(defn attach-turn-counts
+  "Attach per-mission turn-count telemetry to inventory rows."
+  [missions turn-telemetry]
+  (let [counts (:mission-counts turn-telemetry)]
+    (mapv (fn [mission]
+            (let [mid (normalize-turn-mission-id (:mission/id mission))
+                  c (get counts mid)]
+              (cond-> mission
+                c (assoc :mission/turn-count (:turn-count c)
+                         :mission/historical-turn-count (:historical-turn-count c)
+                         :mission/live-turn-count (:live-turn-count c)
+                         :mission/historical-commit-count (:historical-commit-count c)))))
+          missions)))
+
+(defn build-inventory-with-turn-counts
+  "Build mission inventory rows with turn-count telemetry attached."
+  ([] (build-inventory-with-turn-counts default-repo-roots))
+  ([repos]
+   (attach-turn-counts (build-inventory repos)
+                       (mission-turn-count-telemetry))))
+
+;; =============================================================================
 ;; Mission doc fidelity audit (GF / drift)
 ;; =============================================================================
 
@@ -1230,29 +1380,36 @@
 
 (defn- summarize-portfolio
   "Generate a human-readable portfolio summary."
-  [missions devmap-summaries coverage mana doc-drift]
-  (let [total-missions (count missions)
-        complete (count (filter #(= :complete (:mission/status %)) missions))
-        in-progress (count (filter #(in-progress-status? (:mission/status %)) missions))
-        blocked (count (filter #(= :blocked (:mission/status %)) missions))
-        ready (count (filter #(= :ready (:mission/status %)) missions))
-        total-devmaps (count devmap-summaries)
-        valid-devmaps (count (filter :devmap/all-valid devmap-summaries))
-        avg-coverage (if (seq coverage)
-                       (/ (reduce + (map :coverage/coverage-pct coverage)) (count coverage))
-                       0.0)]
-    (str total-missions " missions"
-         " (" complete " complete"
-         ", " in-progress " in-progress"
-         ", " blocked " blocked"
-         ", " ready " ready)"
-         ". " total-devmaps " devmaps"
-         " (" valid-devmaps " valid)."
-         " Avg coverage: " (format "%.0f%%" (* 100 avg-coverage)) "."
-         " Doc drift: " (:audit/drift doc-drift) "/" (:audit/total doc-drift)
-         " drift, " (:audit/open-section-obligations doc-drift)
-         " open section obligations."
-         (when-not (:mana/available mana) " Mana system not yet initialized."))))
+  ([missions devmap-summaries coverage mana doc-drift]
+   (summarize-portfolio missions devmap-summaries coverage mana doc-drift nil))
+  ([missions devmap-summaries coverage mana doc-drift turn-counts]
+   (let [total-missions (count missions)
+         complete (count (filter #(= :complete (:mission/status %)) missions))
+         in-progress (count (filter #(in-progress-status? (:mission/status %)) missions))
+         blocked (count (filter #(= :blocked (:mission/status %)) missions))
+         ready (count (filter #(= :ready (:mission/status %)) missions))
+         total-devmaps (count devmap-summaries)
+         valid-devmaps (count (filter :devmap/all-valid devmap-summaries))
+         avg-coverage (if (seq coverage)
+                        (/ (reduce + (map :coverage/coverage-pct coverage)) (count coverage))
+                        0.0)]
+     (str total-missions " missions"
+          " (" complete " complete"
+          ", " in-progress " in-progress"
+          ", " blocked " blocked"
+          ", " ready " ready)"
+          ". " total-devmaps " devmaps"
+          " (" valid-devmaps " valid)."
+          " Avg coverage: " (format "%.0f%%" (* 100 avg-coverage)) "."
+          " Doc drift: " (:audit/drift doc-drift) "/" (:audit/total doc-drift)
+          " drift, " (:audit/open-section-obligations doc-drift)
+          " open section obligations."
+          (when turn-counts
+            (str " Turn telemetry: " (:total-turns turn-counts 0)
+                 " typed turns ("
+                 (:total-historical-turns turn-counts 0) " historical, "
+                 (:total-live-turns turn-counts 0) " live)."))
+          (when-not (:mana/available mana) " Mana system not yet initialized.")))))
 
 (defn- find-gaps
   "Identify gaps: devmap components without missions, blocked missions, etc."
@@ -1272,10 +1429,11 @@
                                               ")"))))
                                 vec)
         uncovered (mapcat (fn [c]
-                            (map (fn [comp-id]
-                                   (str (name (:coverage/devmap-id c))
-                                        "/" (name comp-id) " — no mission"))
-                                 (:coverage/uncovered c)))
+                            (keep (fn [comp-id]
+                                    (when (and (:coverage/devmap-id c) comp-id)
+                                      (str (name (:coverage/devmap-id c))
+                                           "/" (name comp-id) " — no mission")))
+                                  (:coverage/uncovered c)))
                           coverage)]
     (into (into (mapv (fn [m]
                         (str (:mission/id m) " — blocked"
@@ -1357,16 +1515,19 @@
   ([] (build-portfolio-review default-repo-roots))
   ([repos]
    (let [missions-raw (build-inventory repos)
-         missions (attach-doc-audit repos missions-raw)
+         turn-counts (mission-turn-count-telemetry)
+         missions (attach-turn-counts (attach-doc-audit repos missions-raw)
+                                      turn-counts)
          futon5-root (or (:futon5 repos) (:futon5 default-repo-roots))
          devmap-summaries (read-all-devmaps futon5-root repos)
          coverage (compute-coverage devmap-summaries missions)
          mana (query-mana futon5-root)
          doc-drift (summarize-doc-drift missions)
-         summary (summarize-portfolio missions devmap-summaries coverage mana doc-drift)
+         summary (summarize-portfolio missions devmap-summaries coverage mana doc-drift turn-counts)
          gaps (find-gaps missions coverage)
          actionable (find-actionable missions)]
      {:portfolio/missions missions
+      :portfolio/turn-counts turn-counts
       :portfolio/devmap-summaries devmap-summaries
       :portfolio/coverage coverage
       :portfolio/mana mana

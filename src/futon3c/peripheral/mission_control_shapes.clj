@@ -39,7 +39,11 @@
    [:mission/date {:optional true} :string]
    [:mission/blocked-by {:optional true} :string]
    [:mission/raw-status {:optional true} :string]
-   [:mission/devmap-id {:optional true} :keyword]])
+   [:mission/devmap-id {:optional true} :keyword]
+   [:mission/turn-count {:optional true} :int]
+   [:mission/historical-turn-count {:optional true} :int]
+   [:mission/live-turn-count {:optional true} :int]
+   [:mission/historical-commit-count {:optional true} :int]])
 
 ;; =============================================================================
 ;; Devmap coverage
@@ -94,6 +98,7 @@
   "A complete portfolio review — the fruit of a mission control session."
   [:map
    [:portfolio/missions [:vector MissionEntry]]
+   [:portfolio/turn-counts {:optional true} :map]
    [:portfolio/devmap-summaries [:vector DevmapSummary]]
    [:portfolio/coverage [:vector CoverageEntry]]
    [:portfolio/mana ManaSnapshot]

@@ -347,6 +347,7 @@
   (testing "portfolio review has all required fields"
     (let [review (mcb/build-portfolio-review)]
       (is (vector? (:portfolio/missions review)))
+      (is (map? (:portfolio/turn-counts review)))
       (is (vector? (:portfolio/devmap-summaries review)))
       (is (vector? (:portfolio/coverage review)))
       (is (map? (:portfolio/mana review)))
@@ -357,6 +358,36 @@
       ;; Substantive: we should have missions and devmaps
       (is (pos? (count (:portfolio/missions review))))
       (is (pos? (count (:portfolio/devmap-summaries review)))))))
+
+(deftest mission-turn-count-telemetry-attaches-per-mission-counts
+  (testing "historical and live turn counts are attached per mission with a grand total"
+    (with-redefs-fn {#'mcb/historical-mission-turn-counts
+                     (fn []
+                       {:mission-counts {"autoclock-in" {:historical-turn-count 3
+                                                          :historical-commit-count 4}}
+                        :total-historical-turns 3
+                        :total-historical-commits 4})
+                     #'mcb/live-mission-turn-counts
+                     (fn [& _]
+                       {:mission-counts {"autoclock-in" {:live-turn-count 2}
+                                         "mission-control" {:live-turn-count 1}}
+                        :total-live-turns 3})}
+      (fn []
+        (let [telemetry (mcb/mission-turn-count-telemetry nil)
+              missions (mcb/attach-turn-counts
+                        [{:mission/id "autoclock-in"
+                          :mission/status :in-progress
+                          :mission/source :md-file}
+                         {:mission/id "mission-control"
+                          :mission/status :in-progress
+                          :mission/source :md-file}]
+                        telemetry)
+              by-id (into {} (map (juxt :mission/id identity) missions))]
+          (is (= 5 (get-in by-id ["autoclock-in" :mission/turn-count])))
+          (is (= 3 (get-in by-id ["autoclock-in" :mission/historical-turn-count])))
+          (is (= 2 (get-in by-id ["autoclock-in" :mission/live-turn-count])))
+          (is (= 1 (get-in by-id ["mission-control" :mission/turn-count])))
+          (is (= 6 (:total-turns telemetry))))))))
 
 ;; =============================================================================
 ;; Peripheral lifecycle

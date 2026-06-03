@@ -4778,8 +4778,11 @@
           (and (= :get method) (= "/api/alpha/missions" uri))
           (try
             (require 'futon3c.peripheral.mission-control-backend)
-            (let [build-inv (resolve 'futon3c.peripheral.mission-control-backend/build-inventory)
+            (let [build-inv (or (resolve 'futon3c.peripheral.mission-control-backend/build-inventory-with-turn-counts)
+                                (resolve 'futon3c.peripheral.mission-control-backend/build-inventory))
+                  telemetry (resolve 'futon3c.peripheral.mission-control-backend/mission-turn-count-telemetry)
                   missions (build-inv)
+                  turn-counts (when telemetry (telemetry))
                   entries (mapv (fn [m]
                                  {:mission/id (:mission/id m)
                                   :mission/status (some-> (:mission/status m) name)
@@ -4788,9 +4791,16 @@
                                   :mission/title (:mission/title m)
                                   :mission/owner (:mission/owner m)
                                   :mission/date (:mission/date m)
-                                  :mission/path (:mission/path m)})
+                                  :mission/path (:mission/path m)
+                                  :mission/turn-count (:mission/turn-count m)
+                                  :mission/historical-turn-count (:mission/historical-turn-count m)
+                                  :mission/live-turn-count (:mission/live-turn-count m)
+                                  :mission/historical-commit-count (:mission/historical-commit-count m)})
                                 missions)]
-              (json-response 200 {:ok true :count (count entries) :missions entries}))
+              (json-response 200 {:ok true
+                                  :count (count entries)
+                                  :turn-counts turn-counts
+                                  :missions entries}))
             (catch Throwable t
               (json-response 500 {:ok false :error "mission-scan-failed"
                                   :message (.getMessage t)})))

@@ -536,12 +536,13 @@ When nil, use the current git root plus futon* directories under ~/code."
 
 (defun agent-chat--explicit-clock-target-tokens (text)
   "Return explicit C-/M-/E- target tokens named in TEXT."
-  (let (tokens)
-    (with-temp-buffer
-      (insert text)
-      (goto-char (point-min))
-      (while (re-search-forward "\\_<[CME]-[[:alnum:]_-]+\\_>" nil t)
-        (push (match-string-no-properties 0) tokens)))
+  (let ((start 0)
+        tokens)
+    (while (string-match
+            "\\(?:\\`\\|[^[:alnum:]_-]\\)\\([CME]-[[:alnum:]_-]+\\)\\(?:\\'\\|[^[:alnum:]_-]\\)"
+            text start)
+      (push (match-string 1 text) tokens)
+      (setq start (match-end 1)))
     (nreverse (delete-dups tokens))))
 
 (defun agent-chat--resolve-auto-clock-token (token)
