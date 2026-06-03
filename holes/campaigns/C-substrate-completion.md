@@ -297,3 +297,43 @@ Two sibling excursions — `futon5a/holes/excursions/E-half-mil-audit` (claude-3
 - **Status:** emitter landed; **ingest materialization in progress** (Joe-authorized); then codex-3 wires `μ_x`, claude-3 verifies curvature on materialized edges (β-ablation). Handoff + full spec: `futon3c/holes/CODEX-HANDOFF-mission-file-substrate-edge.md`; thread + rungs: `TN-misfit-to-self-description.md`.
 
 **Implications for the ratchet (not yet formal rungs):** (i) a candidate **new proof-point** — intent-curvature on `:mission/mentions-file`, baseline-gated by the β-ablation (a descriptive complement to R0–R2's `feeds-μ?` curvature); (ii) **R5/R6 re-aim** onto descriptive value (manifold + intent-provenance) rather than predictive edit-forecasting. **Unchanged:** E1/E2/E3 escrow remain `:contract-released`; dissolution still awaits ≥1 paired requirement consumed **live** (the `μ_x` consumption of materialized `mentions-file` edges is a concrete path toward E1 `:satisfied`, not yet reached).
+
+---
+
+## 7. The substrate itself — what's ingested, the mission→code correspondence, the open JAX question (2026-06-02 round-up)
+
+We have discussed many pieces (Malli signatures, embedding actual code, the few fat files, git-historical prediction) but **do not yet have an end-to-end plan** from code-ingest → JAX → useful output. This rounds up the substrate's actual state and the open question, in light of the stack work and claude-6's research footing (`E-the-dark-tower-2`).
+
+### 7.1 What substrate-2 actually ingests now (code side)
+- **O1 identities:** `:file / :namespace / :symbol / :boundary`.
+- **Code-embedding cache:** `code-emb.npy` (7534×1024 BGE) = **7111 symbols + 423 namespaces** (living-Clojure, origin-excluded).
+- **`feeds-A` graph:** `relations.json` — 7084 ownership + 852 file-dependency edges.
+- **The metric:** E1 Ollivier–Ricci curvature (hop) + the **mention-curvature** channel (`feeds-μ`).
+- **NEW — `:mission/mentions-file`:** mission→file edges from the mission-corpus self-description (`feeds-μ`).
+
+### 7.2 The mission→code correspondence now available
+`mission→file` (landed, **stated/explicit**) ∘ `file→namespace→symbol` (the code ingest) = **mission→actual-code**, traceable at namespace/symbol grain — "which code a mission touches" is now answerable from the substrate. *Honesty:* `mission→file` is the *stated* mention map; `file→symbol` is the code ingest; **`turn→code` remains git-only**, and **`turn→mission` is conjectural** (no clock-in — `E-the-dark-tower-2` §7) and mission cross-refs aren't yet ingested as queryable structure.
+
+### 7.3 The open question — does the code-side ingest give JAX anything useful?
+Honest session evidence:
+- **Predictive:** symbol-name embeddings → keyword; code-edges → common-neighbours; the differentiable apparatus reduced to baselines. The *current* representation (symbol names + BGE + edges) gives JAX little **predictive** traction.
+- **Descriptive:** curvature (intent-bridges, mention-curvature) yields real non-baseline structure. JAX-as-survey-instrument works; **JAX-as-forecaster doesn't** — on this representation.
+
+So *today*: the code ingest gives JAX **descriptive** traction, not predictive. The open question is whether a **richer representation** flips that.
+
+### 7.4 Candidate richer representations (the menu — none tested end-to-end into a beats-baseline loss)
+- **Malli signatures** — typed structural shape, richer than name-dominated symbols; the natural retry where the *symbol-name* arm was the expected null.
+- **Embedding actual code** (bodies/scopes), not just symbol names.
+- **The fat-files focus** — only 108 files (29% of LOC) are large; the 95% small files are already at grain, so JAX effort concentrates on the attractor basins, the rest is ~uniform.
+- **Git-historical patterns** — the temporal/evolutionary **ground truth** (predict real edge-additions; node-arrival growth; the PhD-Ch.6 method; the deferred `:mentions/realized` git-co-temporal complement). The one strand with a genuine prediction target ("what actually happened").
+
+### 7.5 Theoretical footing (claude-6, `E-the-dark-tower-2` §8–9) — what "differentiable" can even mean here
+The deep-research survey **relocates** the differentiable ambition (and corrects v1's over-identification):
+- **Substrate → Poly (polynomial functors):** evolving/reconfigurable **coalgebras = "grows at the edges"**; the recommended substrate footing (over the BV/Caus causal-typing layer).
+- **First-order differentiation (gradient / free-energy) *composes* with the substrate** via Smithe's categorical active inference on Poly — landed, first order (the WM/VFE side).
+- **The higher-order curvature tower (tangent categories) is rigorous but its bridge to Poly is an OPEN PROBLEM** — a place futon could *contribute*, not consume.
+
+Consequence for JAX-on-substrate-2: a **first-order** differentiable loss has a categorical home; the **2nd-order / curvature** ambition is research-open. This *matches the empirics*: first-order edit-proposals ran; curvature is descriptive; predictive-via-gradient never beat baselines.
+
+### 7.6 Honest conclusion — no end-to-end plan yet; deep-research-gated
+We have a populated substrate (identities + embedding + edges + `mission→file` + curvature), a clear **descriptive win**, a clear **predictive null** on the current representation, a **menu of richer representations** untested end-to-end, and a **footing** (Poly + first-order-diff landed, curvature↔Poly open). We do **not** have a code-ingest → JAX → beats-baseline solution. The honest read: a real *predictive* solution likely needs **(a)** a richer code representation (Malli / code-bodies / the git-temporal target) **and (b)** progress on the higher-order-tangent↔Poly gap (or a deliberate stay-at-first-order). Until then the substrate's delivered value is **descriptive** (manifold / provenance / curvature), and the predictive ambition is a **deep-research front** (the dark-tower duology + the differential-strand reframe), not yet a buildable plan. Recorded to consolidate the substrate's state and make the open question explicit.
