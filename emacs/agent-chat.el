@@ -69,6 +69,16 @@
   "Face for tool-use lines like [Read], [Edit], etc."
   :group 'agent-chat)
 
+(defface agent-chat-turn-flair-face
+  '((t :inherit font-lock-comment-face))
+  "Face for transcript turn-end rule and duration text."
+  :group 'agent-chat)
+
+(defface agent-chat-turn-flair-target-face
+  '((t :inherit font-lock-comment-face :weight bold))
+  "Face for the clocked-in target label in transcript turn-end flair."
+  :group 'agent-chat)
+
 ;;; Buffer state
 
 (defvar-local agent-chat--prompt-marker nil
@@ -248,6 +258,69 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id."
 (defun agent-chat-mission-segment ()
   "Return a compact prompt/header segment for campaign/mission clock-in state."
   (format "[%s]" (agent-chat-mission-label)))
+
+(defun agent-chat--format-duration (seconds)
+  "Return a compact duration string for SECONDS."
+  (let* ((total (max 0 (floor (or seconds 0))))
+         (minutes (/ total 60))
+         (secs (% total 60)))
+    (if (> minutes 0)
+        (format "%dm %02ds" minutes secs)
+      (format "%ds" secs))))
+
+(defun agent-chat--turn-flair-width ()
+  "Return display width for the transcript turn-end flair."
+  (max 40
+       (or (when-let ((win (get-buffer-window (current-buffer))))
+             (window-body-width win))
+           fill-column
+           80)))
+
+(defun agent-chat--insert-turn-end-flair (&optional elapsed)
+  "Render the transcript turn-end clock-in flair before the input prompt."
+  (when (and (markerp agent-chat--prompt-marker)
+             (marker-position agent-chat--prompt-marker))
+    (let* ((inhibit-read-only t)
+           (label (format "*%s*" (agent-chat-mission-label)))
+           (width (agent-chat--turn-flair-width))
+           (rule-count (max 1 (- width (string-width label) 1)))
+           (rule (make-string rule-count ?─)))
+      (save-excursion
+        (goto-char (marker-position agent-chat--prompt-marker))
+        ;; The initial buffer has a plain separator before the prompt.  Once
+        ;; turn flair takes over, the marker lives immediately before the
+        ;; prompt line and new flair is inserted as transcript text.
+        (when (looking-at-p "^─+$")
+          (delete-region (line-beginning-position)
+                         (min (point-max) (1+ (line-end-position)))))
+        (when (numberp elapsed)
+          (insert (propertize (format "Cooked for %s\n"
+                                      (agent-chat--format-duration elapsed))
+                              'face 'agent-chat-turn-flair-face)))
+        (insert (propertize rule 'face 'agent-chat-turn-flair-face)
+                " "
+                (propertize label 'face 'agent-chat-turn-flair-target-face)
+                "\n")
+        (let ((prompt-start (point)))
+          (set-marker agent-chat--prompt-marker prompt-start)
+          (when (markerp agent-chat--separator-start)
+            (set-marker agent-chat--separator-start prompt-start))
+          (set-marker-insertion-type agent-chat--prompt-marker t))))))
+
+(defun agent-chat-finish-turn! (&optional elapsed)
+  "Run shared turn-end behavior with optional ELAPSED seconds."
+  (let ((duration (or elapsed
+                      (and agent-chat--turn-start-time
+                           (- (float-time) agent-chat--turn-start-time))
+                      0)))
+    (setq agent-chat--turn-start-time nil)
+    (when (functionp agent-chat--on-turn-end)
+      (condition-case turn-err
+          (funcall agent-chat--on-turn-end duration)
+        (error
+         (message "agent-chat turn-end hook error: %s"
+                  (error-message-string turn-err)))))
+    (agent-chat--insert-turn-end-flair duration)))
 
 (defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)
   "Clock the current chat buffer into TARGET, or clear with nil/blank.
@@ -979,18 +1052,8 @@ additionally posted to the evidence HTTP endpoint."
                                     (agent-chat-insert-message agent-name response)
                                     (when (functionp on-response)
                                       (funcall on-response response))
-                                    ;; Turn timing and invariants
-                                    (let ((elapsed (if agent-chat--turn-start-time
-                                                       (- (float-time)
-                                                          agent-chat--turn-start-time)
-                                                     0)))
-                                      (setq agent-chat--turn-start-time nil)
-                                      (when (functionp agent-chat--on-turn-end)
-                                        (condition-case turn-err
-                                            (funcall agent-chat--on-turn-end elapsed)
-                                          (error
-                                           (message "agent-chat turn-end hook error: %s"
-                                                    (error-message-string turn-err))))))
+                                    ;; Turn timing, invariants, and transcript flair.
+                                    (agent-chat-finish-turn!)
                                     (agent-chat-scroll-to-bottom))))))))
           (error
            (setq agent-chat--pending-process nil)
