@@ -62,6 +62,7 @@ The risky part is not detection but over-detection. Therefore the first implemen
 
 A user turn becomes an auto-clock-in only when all of the following are true:
 
+0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just "no mission" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)
 1. The turn contains one or more explicit target tokens matching `C-*`, `M-*`, or `E-*`.
 2. Every target token resolves by exact ID against the filesystem-backed completion candidates for its level.
 3. The turn names at most one campaign, at most one mission, and at most one excursion.
@@ -69,11 +70,13 @@ A user turn becomes an auto-clock-in only when all of the following are true:
 5. The promotion switches the single active path to exactly the resolved `C › M › E` components; absent components become nil rather than being guessed.
 6. The promotion records an audit witness with rule name, source, explicit tokens, old target, and new target.
 
-If any explicit target is unresolved, or if multiple targets at the same level are named, no auto-clock promotion happens.
+If a target is already clocked, or any explicit target is unresolved, or multiple targets at the same level are named, no auto-clock promotion happens.
 
 ### Design Decisions
 
 IF the mission's central risk is false attribution, HOWEVER many turns name missions in ordinary prose, THEN the resolver only accepts exact `C-*`/`M-*`/`E-*` tokens, BECAUSE a missed auto-clock is less damaging than a false one.
+
+IF an exact token can still appear in a turn that merely *discusses* a mission ("unrelated to `M-foo`"), HOWEVER the operator is already clocked on real work, THEN auto-clock fires **only at the no-target floor** and never switches an active clocking, BECAUSE the eager-mention false-positive is harmful precisely when it would move you *off* what you are on — and a mention made while clocked is still captured as turn-level mention-graph data, just not as a clock change.
 
 IF a turn names both `C-*` and `M-*`, HOWEVER the existing model is single-active, THEN the auto-clock path becomes exactly that campaign/mission pair, BECAUSE this matches the manual `C › M` clock-in shape without stacking multiple missions.
 
@@ -118,6 +121,16 @@ Implemented in `futon3c/emacs/agent-chat.el`:
 - `work on C-substrate-completion and M-autoclock-in` resolves to `(:campaign-id "C-substrate-completion" :mission-id "M-autoclock-in")`.
 - `maybe M-does-not-exist` does not promote.
 - `M-autoclock-in and M-vsatarcs-invariants-integration` does not promote because two missions are named.
+
+## INSTANTIATE-1.1 (2026-06-03) — floor-only guard (review fix, claude-3)
+
+Review (claude-3, of `a1add6d`) found the detector promoted on *any* exact resolved token, including a mission named in passing while already clocked — so it could switch you off active work. Per Joe's directive, `agent-chat--maybe-auto-clock-from-turn` now fires **only when the buffer is at the no-target floor** (`agent-chat--campaign-id`, `--mission-id`, and `--excursion-id` all nil). Rule 0 above. Verified (batch, mutators stubbed) + redefined live on the `server` socket:
+
+- clocked on a mission, mention another → **no promotion** (the mention is left for turn-level capture).
+- clocked on a bare campaign, mention a mission → **no promotion** (no campaign-wipe).
+- at the no-target floor → promotion fires as before.
+
+`check-parens` clean. The pure detector (`agent-chat--auto-clock-target-from-text`) is unchanged — it still resolves mentions for the mention-graph; the floor guard sits in the promotion wrapper.
 
 ### Remaining Work
 

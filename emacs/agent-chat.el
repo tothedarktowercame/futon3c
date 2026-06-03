@@ -594,8 +594,15 @@ exact ID, and at most one target may be named per level."
 
 (defun agent-chat--maybe-auto-clock-from-turn (text)
   "Auto-clock from explicit resolved target mentions in TEXT.
+Only fires when the buffer is at the no-target floor (no campaign, mission, or
+excursion clocked): auto-clock fills the floor, it never switches or overrides
+an active clocking.  A mention made while already clocked is left for
+turn-level mention capture (NNexus-style), not promotion.
 Returns the promotion witness plist, or nil when no promotion happened."
-  (when agent-chat-auto-clock-enabled
+  (when (and agent-chat-auto-clock-enabled
+             (null agent-chat--campaign-id)
+             (null agent-chat--mission-id)
+             (null agent-chat--excursion-id))
     (when-let ((target (agent-chat--auto-clock-target-from-text text)))
       (unless (agent-chat--clock-target-equal-p target)
         (let ((old-target (agent-chat-mission-label)))

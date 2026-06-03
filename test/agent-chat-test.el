@@ -128,4 +128,41 @@
         (should-not (assoc 'auto-clock-witness
                            (agent-chat--mission-body-fields)))))))
 
+(ert-deftest agent-chat-auto-clock-only-fires-at-no-target-floor ()
+  "Auto-clock fills the no-target floor; it never switches an active clocking.
+A mention made while already clocked is left for turn-level capture, not
+promoted (and must not wipe a bare campaign down to the bare mention)."
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (cl-letf (((symbol-function 'agent-chat--clock-target-candidates)
+               (lambda (kind)
+                 (pcase kind
+                   ('campaign '("C-substrate-completion"))
+                   ('mission '("M-autoclock-in" "M-differentiable-code"))
+                   ('excursion nil))))
+              ((symbol-function 'agent-chat-insert-message)
+               (lambda (&rest _) nil)))
+      ;; clocked on a mission: mentioning another resolved mission must NOT switch
+      (setq agent-chat--campaign-id nil
+            agent-chat--mission-id "M-autoclock-in"
+            agent-chat--excursion-id nil)
+      (should-not (agent-chat--maybe-auto-clock-from-turn
+                   "this is unrelated to M-differentiable-code"))
+      (should (equal agent-chat--mission-id "M-autoclock-in"))
+      ;; clocked on a bare campaign: mentioning a mission must NOT wipe the campaign
+      (setq agent-chat--campaign-id "C-substrate-completion"
+            agent-chat--mission-id nil
+            agent-chat--excursion-id nil)
+      (should-not (agent-chat--maybe-auto-clock-from-turn
+                   "see M-differentiable-code"))
+      (should (equal agent-chat--campaign-id "C-substrate-completion"))
+      (should-not agent-chat--mission-id)
+      ;; at the no-target floor: promotion fires
+      (setq agent-chat--campaign-id nil
+            agent-chat--mission-id nil
+            agent-chat--excursion-id nil)
+      (should (agent-chat--maybe-auto-clock-from-turn
+               "let us work on M-differentiable-code"))
+      (should (equal agent-chat--mission-id "M-differentiable-code")))))
+
 ;;; agent-chat-test.el ends here
