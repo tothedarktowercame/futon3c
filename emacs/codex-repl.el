@@ -3362,7 +3362,8 @@ When FORCE is non-nil, refresh immediately."
                                            (or codex-repl-session-id "pending"))))
                   (codex-repl--replace-header-region beg end replacement)))
               (goto-char (point-min))
-              (when (re-search-forward "^  Transports: .*$" nil t)
+              (when (re-search-forward
+                     "^  \\(?:\\[[^]\n]+\\] \\)*Transports: .*$" nil t)
                 (let ((beg (match-beginning 0))
                       (end (match-end 0))
                       (replacement (format "  %s" (codex-repl--build-modeline))))

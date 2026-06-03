@@ -139,6 +139,9 @@ Distinct from agent-name which is the display name.")
 (defvar-local agent-chat--current-turn-id nil
   "Local turn ID currently in flight.")
 
+(defvar-local agent-chat--last-flair-turn-id nil
+  "Turn ID for which turn-end flair was last rendered.")
+
 (defvar-local agent-chat--turn-git-heads nil
   "Git repo HEAD snapshot captured at the start of the current turn.")
 
@@ -291,6 +294,29 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id."
   (and (markerp agent-chat--prompt-marker)
        (marker-position agent-chat--prompt-marker)))
 
+(defun agent-chat--delete-existing-turn-flair-before-prompt ()
+  "Delete an existing Cooked/rule flair block immediately before the prompt."
+  (let ((prompt-pos (and (markerp agent-chat--prompt-marker)
+                         (marker-position agent-chat--prompt-marker))))
+    (when prompt-pos
+      (save-excursion
+        (goto-char prompt-pos)
+        (when (> (line-beginning-position) (point-min))
+          (forward-line -1)
+          (when (looking-at-p "^─+ \\*.*\\*$")
+            (let ((start (line-beginning-position))
+                  (end prompt-pos))
+              (while (and (> start (point-min))
+                          (progn
+                            (goto-char start)
+                            (forward-line -1)
+                            (looking-at-p "^Cooked for ")))
+                (setq start (line-beginning-position)))
+              (delete-region start end)
+              (set-marker agent-chat--prompt-marker start)
+              (when (markerp agent-chat--separator-start)
+                (set-marker agent-chat--separator-start start)))))))))
+
 (defun agent-chat--insert-turn-end-flair (&optional elapsed)
   "Render the transcript turn-end clock-in flair before the input prompt."
   (when (agent-chat--ensure-prompt-markers!)
@@ -300,6 +326,8 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id."
            (rule-count (max 1 (- width (string-width label) 1)))
            (rule (make-string rule-count ?─)))
       (save-excursion
+        (goto-char (marker-position agent-chat--prompt-marker))
+        (agent-chat--delete-existing-turn-flair-before-prompt)
         (goto-char (marker-position agent-chat--prompt-marker))
         ;; The initial buffer has a plain separator before the prompt.  Once
         ;; turn flair takes over, the marker lives immediately before the
@@ -323,18 +351,21 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id."
 
 (defun agent-chat-finish-turn! (&optional elapsed)
   "Run shared turn-end behavior with optional ELAPSED seconds."
-  (let ((duration (or elapsed
-                      (and agent-chat--turn-start-time
-                           (- (float-time) agent-chat--turn-start-time))
-                      0)))
-    (setq agent-chat--turn-start-time nil)
-    (when (functionp agent-chat--on-turn-end)
-      (condition-case turn-err
-          (funcall agent-chat--on-turn-end duration)
-        (error
-         (message "agent-chat turn-end hook error: %s"
-                  (error-message-string turn-err)))))
-    (agent-chat--insert-turn-end-flair duration)))
+  (unless (and agent-chat--current-turn-id
+               (equal agent-chat--current-turn-id agent-chat--last-flair-turn-id))
+    (let ((duration (or elapsed
+                        (and agent-chat--turn-start-time
+                             (- (float-time) agent-chat--turn-start-time))
+                        0)))
+      (setq agent-chat--turn-start-time nil)
+      (when (functionp agent-chat--on-turn-end)
+        (condition-case turn-err
+            (funcall agent-chat--on-turn-end duration)
+          (error
+           (message "agent-chat turn-end hook error: %s"
+                    (error-message-string turn-err)))))
+      (agent-chat--insert-turn-end-flair duration)
+      (setq agent-chat--last-flair-turn-id agent-chat--current-turn-id))))
 
 (defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)
   "Clock the current chat buffer into TARGET, or clear with nil/blank.
