@@ -402,7 +402,11 @@ parent path.  When SUPPRESS-CALLBACK is non-nil, do not call
   (agent-chat--update-session-header-line)
   (when (and (not suppress-callback)
              (functionp agent-chat--clock-change-fn))
-    (funcall agent-chat--clock-change-fn))
+    (condition-case clock-err
+        (funcall agent-chat--clock-change-fn)
+      ((error quit)
+       (message "agent-chat clock change callback warning: %s"
+                (error-message-string clock-err)))))
   (list :campaign-id agent-chat--campaign-id
         :mission-id agent-chat--mission-id
         :excursion-id agent-chat--excursion-id))
@@ -450,6 +454,156 @@ TARGET may be a campaign, mission, excursion, path, or blank."
          :excursion-id nil)
    t)
   (message "clocked in: %s" (agent-chat-mission-label)))
+
+(defcustom agent-chat-clock-target-roots nil
+  "Repository roots searched for holes clock target completions.
+When nil, use the current git root plus futon* directories under ~/code."
+  :type '(choice (const nil) (repeat directory))
+  :group 'agent-chat)
+
+(defun agent-chat--git-root-for-clock-targets ()
+  "Return the current git root for clock target completion, or nil."
+  (when (executable-find "git")
+    (let ((default-directory (or default-directory "~/")))
+      (with-temp-buffer
+        (when (zerop (call-process "git" nil t nil
+                                   "rev-parse" "--show-toplevel"))
+          (let ((root (string-trim (buffer-string))))
+            (unless (string-empty-p root)
+              root)))))))
+
+(defun agent-chat--clock-target-roots ()
+  "Return repository roots to search for clock target IDs."
+  (let ((roots (append (mapcar #'expand-file-name agent-chat-clock-target-roots)
+                       (list (agent-chat--git-root-for-clock-targets))))
+        (code-root (expand-file-name "~/code")))
+    (when (file-directory-p code-root)
+      (dolist (name (directory-files code-root nil "\\`futon"))
+        (let ((root (expand-file-name name code-root)))
+          (when (file-directory-p root)
+            (push root roots)))))
+    (delete-dups (delq nil roots))))
+
+(defun agent-chat--clock-target-candidates (kind)
+  "Return completion candidates for KIND, one of `campaign', `mission', `excursion'."
+  (let* ((dir-name (pcase kind
+                     ('campaign "campaigns")
+                     ('mission "missions")
+                     ('excursion "excursions")))
+         (prefix (pcase kind
+                   ('campaign "C-")
+                   ('mission "M-")
+                   ('excursion "E-")))
+         candidates)
+    (dolist (root (agent-chat--clock-target-roots))
+      (let ((dir (and root (expand-file-name (concat "holes/" dir-name) root))))
+        (when (and dir (file-directory-p dir))
+          (dolist (file (directory-files dir nil (concat "\\`" prefix "[^.]+")))
+            (when (string-match (concat "\\`\\(" (regexp-quote prefix) "[^.]+\\)") file)
+              (push (match-string 1 file) candidates))))))
+    (sort (delete-dups candidates) #'string<)))
+
+(defun agent-chat--read-clock-id (kind prompt)
+  "Read a clock target ID of KIND with PROMPT."
+  (let ((candidates (agent-chat--clock-target-candidates kind)))
+    (agent-chat-normalize-clock-id
+     (completing-read prompt candidates nil nil))))
+
+(defun agent-chat-clock-campaign (campaign)
+  "Clock into CAMPAIGN only."
+  (interactive (list (agent-chat--read-clock-id 'campaign "Campaign C-*: ")))
+  (agent-chat-set-clock! (list :campaign-id campaign
+                               :mission-id nil
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-mission (mission)
+  "Clock into MISSION only."
+  (interactive (list (agent-chat--read-clock-id 'mission "Mission M-*: ")))
+  (agent-chat-set-clock! (list :campaign-id nil
+                               :mission-id mission
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-campaign-mission (campaign mission)
+  "Clock into CAMPAIGN and MISSION."
+  (interactive
+   (list (agent-chat--read-clock-id 'campaign "Campaign C-*: ")
+         (agent-chat--read-clock-id 'mission "Mission M-*: ")))
+  (agent-chat-set-clock! (list :campaign-id campaign
+                               :mission-id mission
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-campaign-excursion (campaign excursion)
+  "Clock into CAMPAIGN and EXCURSION."
+  (interactive
+   (list (agent-chat--read-clock-id 'campaign "Campaign C-*: ")
+         (agent-chat--read-clock-id 'excursion "Excursion E-*: ")))
+  (agent-chat-set-clock! (list :campaign-id campaign
+                               :mission-id nil
+                               :excursion-id excursion)
+                         nil t))
+
+(defun agent-chat-clock-mission-excursion (mission excursion)
+  "Clock into MISSION and EXCURSION."
+  (interactive
+   (list (agent-chat--read-clock-id 'mission "Mission M-*: ")
+         (agent-chat--read-clock-id 'excursion "Excursion E-*: ")))
+  (agent-chat-set-clock! (list :campaign-id nil
+                               :mission-id mission
+                               :excursion-id excursion)
+                         nil t))
+
+(defun agent-chat-clock-excursion (excursion)
+  "Clock into EXCURSION under the current campaign/mission path."
+  (interactive (list (agent-chat--read-clock-id 'excursion "Excursion E-*: ")))
+  (agent-chat-set-clock! (list :campaign-id agent-chat--campaign-id
+                               :mission-id agent-chat--mission-id
+                               :excursion-id excursion)
+                         nil t))
+
+(defun agent-chat-clock-clear-excursion ()
+  "Clear the active excursion for the hydra, preserving campaign/mission."
+  (interactive)
+  (agent-chat-set-clock! (list :campaign-id agent-chat--campaign-id
+                               :mission-id agent-chat--mission-id
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-no-mission ()
+  "Clear the entire clock target."
+  (interactive)
+  (agent-chat-set-clock! nil nil t))
+
+(defun agent-chat-clock-menu ()
+  "Show the 🍒 clock-in hydra."
+  (interactive)
+  (if (and (or (fboundp 'defhydra)
+               (require 'hydra nil t))
+           (fboundp 'defhydra))
+      (progn
+        (eval
+         '(defhydra agent-chat-clock-hydra
+            (:hint nil :color blue)
+            "
+🍒 Clock target: %(agent-chat-mission-label)
+
+_c_: Campaign              _m_: Mission              _b_: bare Excursion
+_p_: Campaign → Mission    _x_: Campaign → Excursion _v_: Mission → Excursion
+_e_: clear Excursion       _n_: no mission           _q_: quit
+"
+            ("c" agent-chat-clock-campaign)
+            ("m" agent-chat-clock-mission)
+            ("p" agent-chat-clock-campaign-mission)
+            ("x" agent-chat-clock-campaign-excursion)
+            ("v" agent-chat-clock-mission-excursion)
+            ("b" agent-chat-clock-excursion)
+            ("e" agent-chat-clock-clear-excursion)
+            ("n" agent-chat-clock-no-mission)
+            ("q" nil)))
+        (agent-chat-clock-hydra/body))
+    (call-interactively #'agent-chat-clock-in)))
 
 (defun agent-chat--git-root (&optional directory)
   "Return git root for DIRECTORY, or nil when DIRECTORY is not in a repo."
@@ -1255,7 +1409,7 @@ CONFIG keys:
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face)))
-    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse\n\n"
+    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers
     (setq agent-chat--prompt-marker (point-marker))

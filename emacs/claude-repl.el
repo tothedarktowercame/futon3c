@@ -1123,6 +1123,8 @@ CALLBACK is called with the final response text on completion."
 (define-key claude-repl-mode-map (kbd "C-c C-n") #'claude-repl-new-session)
 (define-key claude-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
 (define-key claude-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
+(define-key claude-repl-mode-map (kbd "C-c C-o") #'agent-chat-clock-menu)
+(define-key claude-repl-mode-map "🍒" #'agent-chat-clock-menu)
 (define-key claude-repl-mode-map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-hud)
 (define-key claude-repl-mode-map (kbd "C-c M-a") #'futon3c-blackboard-toggle-agents-window-display)
 (define-key claude-repl-mode-map (kbd "C-c M-h") #'futon3c-blackboard-toggle-external-hud-mode)
