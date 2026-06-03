@@ -365,3 +365,23 @@ Sharpened from "embed all turns + code pointers → predict what to write next":
 
 ### 8.4 Discipline
 Experiment freely locally; **pre-register + baseline-gate** every predictive claim; bank descriptive value as it lands; keep mathlib as **showcase, not crutch**. The deep-research fronts (`E-the-dark-tower-2`: Poly substrate, first-order-diff landed, curvature↔Poly open) gate the *predictive* ambition; the §8.1 instrumentation + E-α…δ are the buildable near-term. **Nothing here is started unbidden** — this records the program; each item is a deliberate pick-up.
+
+### 8.5 Experimental design — the planned next steps (claude-3 + claude-6 salvo, 2026-06-02)
+
+How the futon5 wiring-diagram concepts structure the §8.2 experiments (converged in a whistle salvo):
+
+- **xenotype genotype = the pre-registration container.** An experiment is a genotype that **freezes** {slice + temporal split · baselines · signal · band · descriptive deliverable · phases}. **Freezing the genotype *is* pre-registration** — the wiring-diagram form becomes the experiment's pre-reg.
+- **band-score = the GATE.** Success = `forecast_harness`'s `lift_over_best_baseline` ≥ a **pre-registered band** (center+width = bootstrap CI), frozen *before* seeing the signal's AP. The exact fix for the bare-AP-delta trap that bit M-differentiable-code VERIFY.
+- **scorer-wirings = DESCRIPTIVE layer only.** Multi-axis structural characterization, reported separately; **not** allowed to count as predictive success "on some axis" (garden-of-forking-paths guard — how a null fakes a win).
+- **`forecast_harness` is the engine** (claude-6, already built): baseline-gated (preferential-attachment / common-neighbours / adamic-adar built in; tie-break fix), with claude-3's **E1 bridge-score pluggable as a signal**. Floor extended with **churn + recency** (churn *dominated* in VERIFY).
+- **The descriptive deliverable is the GUARANTEED output.** Pre-register that the band is likely tight/null and make the structural characterization land *either way* — descriptive-not-predictive **by design**, not post-hoc rescue.
+
+**Scoping calls:**
+- **n=327 ⇒ these are PILOTS** (power-limited). They validate the genotype template + bank the descriptive characterization; the real *predictive* test waits for the going-forward clock-in / per-turn-commit data (§8.1) to accrue. The **same genotype re-runs** as n grows.
+- **Curvature rung is OUT** — it's the *open problem* (exotype→curvature ≡ the tangent-categories↔Poly gap, `E-the-dark-tower-2` §9), not a missing demonstrator. So E-α/E-γ stay **first-order** (Smithe/Poly + jraph link-prediction, which compose). The duology's honest gap *bounds* the experiment's scope.
+
+**Planned next steps (in order):**
+1. **Co-author the E-α (next-locus) genotype** — claude-6's harness + baseline + band scaffold; claude-3's E1 bridge-score as the signal. Freeze it = pre-register it.
+2. **Run E-α on the pilot dataset** (`turn-commit-mission-backfill.json`) — band vs common-neighbours; bank the descriptive characterization; validate the genotype template.
+3. **Then E-γ** (git-temporal edge-additions), same genotype shape.
+4. **Re-run as the going-forward dataset grows** (clean clock-in era) — the pilots become the real predictive test at power.
