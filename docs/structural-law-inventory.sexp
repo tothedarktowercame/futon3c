@@ -233,7 +233,26 @@
                               "futon3c/src/futon3c/logic/probe_taps.clj")
              :enforced-at "futon3c.logic.probe/start-probe-loop! (operator-activated; hourly default)"
              :evidenced-by ("futon3c/test/futon3c/logic/probe_test.clj"
-                            "futon3c/test/futon3c/logic/probe_taps_test.clj"))))
+                            "futon3c/test/futon3c/logic/probe_taps_test.clj"))
+     ;; Added 2026-06-01 (stop-the-line, Joe): the Invariant Queue must enforce
+     ;; its OWN freshness. The Arxana Browser → Candidate Queue rendered ~month-old
+     ;; priority data (stale stack-stereolithography-priority-queue.json + invariant
+     ;; model) as if current, with no invariant catching the drift. check-fn BUILT +
+     ;; tested; :enforced-at is PENDING boot-wiring (register-family-check! in
+     ;; dev/bootstrap.clj) — deliberately not wired in an unattended loop, since a
+     ;; careless bootstrap edit + live-reload has crashed the JVM before. Wire via
+     ;; Drawbridge in an attended turn. Hence :status operational-when-enabled, not
+     ;; :operational, until the boot-wiring lands.
+     (family :id invariant-queue-freshness
+             :status operational-when-enabled
+             :scope :stack
+             :kind :reporting-law
+             :home :subsystem
+             :question "Is the Invariant Queue itself up to date — are its derived artifacts at least as new as the source-of-truth inventory?"
+             :summary "Every generated artifact feeding the Candidate Queue (priority-queue JSON, invariant-model EDN) must be at least as new as structural-law-inventory.sexp; a stale derived artifact means the queue is silently showing old data. Subsumption-witness shape (sibling of archaeology-control): derived A is stale vs source P when mtime(P) > mtime(A)."
+             :implemented-in ("futon3c/src/futon3c/logic/invariant_queue_freshness.clj")
+             :enforced-at "PENDING: register-family-check! :invariant-queue-freshness in dev/bootstrap.clj (attended Drawbridge wiring, not loop)"
+             :evidenced-by ("futon3c/test/futon3c/logic/invariant_queue_freshness_test.clj"))))
 
   (candidate-families
     ((family :id atomic-inspectable-units
