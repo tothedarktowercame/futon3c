@@ -1,7 +1,7 @@
 # Campaign: C-substrate-completion — A Real Ground Metric for substrate-2
 
 **Date:** 2026-05-31
-**Status:** CHARTER + CONSTITUTION + ESCROW (2026-05-31) + STANDARD-ARGUE (§4) + **STANDARD-VERIFY RATIFIED (Joe, 2026-06-01, PASS-on-design)**. Keystone `M-substrate-metric` is **DELIVERED (v1)** with named residue; O1 closed; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). **Escrow E1 + E2 `:contract-released`** — consumers build to the verified spec. Campaign remains open until at least one paired requirement is consumed live. Working mode: **swarm**.
+**Status:** CHARTER + CONSTITUTION + ESCROW (2026-05-31) + STANDARD-ARGUE (§4) + **STANDARD-VERIFY RATIFIED (Joe, 2026-06-01, PASS-on-design)**. Keystone `M-substrate-metric` is **DELIVERED (v1)** with named residue; O1 closed; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). **Escrow E1 + E2 `:contract-released`** — consumers build to the verified spec. **→ DISSOLVED (Joe, 2026-06-03)** — both dissolution criteria met (STANDARD-VERIFY passed + E1 consumed live by M-aif2's tension-proposer); closure record + inspired-inquiry residue map + the named high-priority follow-up `M-intent-curvature` in **§9**. Working mode: **swarm**.
 **Charter source:** `futon3/holes/war-bulletin-10.md` WR-21.
 **Lifecycle:** `futon4/holes/campaign-lifecycle.md` (the first Campaign instance under it).
 **Owner:** Joe; coordination ownership transferable.
@@ -411,3 +411,42 @@ Five experiments, one verdict (E2 edit-proposals→string+common-neighbours; M-c
 **Next steps (the two that matter):**
 1. **Capture ≈all turns→missions.** Clock-in is currently opt-in (un-clocked → `[no mission]`, un-typed). Completeness needs: (a) **a capture-rate telemetry** (% of turns carrying a non-`no-mission` `C›M›E` type); (b) **`M-autoclock-in`** (the stubbed mission) to type the un-clocked residue via *explicit resolved* targets; (c) clock-in discipline (cr/cx new <target>, 🍒). Until the rate is high, the intention channel is sparse.
 2. **The re-run quota.** The metric is **non-degenerate, intention-conditioned episodes** (a clocked turn with an observed intention *and* a subsequent code-locus on a candidate graph that reaches targets — dep/co-touch, not doc-mention) — *not* raw turns. E-α had **0** such at n=59. Heuristic target before another predictive run: **order ~200–300 non-degenerate episodes** (enough for an episode-bootstrap to resolve a ~0.05–0.10 lift over the recency/momentum floor); firm this with a proper power calc once a pilot gives an effect-size estimate. **Do not re-experiment until the quota is met** — the structural lesson (exogenous driver) means more pilots on thin data just re-confirm the baselines.
+
+---
+
+## 9. DISSOLUTION (Joe, 2026-06-03) — closure record + residue map + named follow-up
+
+**Both dissolution criteria are met** (the criterion is cross-mission by design — *not* "all members done", §1):
+
+1. **STANDARD-VERIFY passed** — ratified by Joe 2026-06-01 (PASS-on-design); O1–O4 verified cross-mission-adequate as a design before either consumer built to it.
+2. **≥1 paired requirement released-and-consumed live** — `M-substrate-metric` **DELIVERED(v1)**; **M-aif2 closed (2026-06-02) with slice-1 live-installed reading the delivered E1 curvature** as its tension-proposer signal. Escrow **E1 `:satisfied`** (base-curvature consumption, the charter's wording); E2 `:contract-released` and consumed via M-categorical-code/M-differentiable-code (O4(b)/(c) passed).
+
+Per the lifecycle, the Campaign **dissolves; the missions are the residue; this doc is the closure record.** A Campaign is a cross-mission *standard-delivery vehicle*, not a research umbrella — so the (substantial) inspired inquiry graduates to standing homes rather than holding this open:
+
+| Inspired thread | Now lives in |
+|---|---|
+| Descriptive laws (level↔span, centrality↔conservatism, pheromone↔basin) + the misfit generator→evaluator method | `futon5a/holes/tech-notes/TN-misfit-to-self-description.md` |
+| Horizontal survey — manifold grows-at-edges + 16-basin morphology (R6 grounding) | `futon5a/holes/excursions/E-half-mil-audit.md` |
+| Vertical theory — the one tower (state→change→change-of-change), Simmons–Kissinger `◁`/Caus[−] reading | `E-the-dark-tower` / `futon5a/holes/excursions/E-the-dark-tower-2.md` (+ §8.7 here) |
+| Org-Roam-like mission-mention lattice (genesis-forward + horizontal-transfer) | `futon5a/holes/tech-notes/TN-mission-mention-lattice.md` + `data/mission-mention-lattice/` |
+| JAX/jraph chops (replication; lift-over-heuristics discipline) | `futon5/tools/embed/jax-learning/NOTES.md` + `futon5a/holes/excursions/E-jax-demonstrators.md` |
+| E-α next-locus experiment | **banked clean null** — §8.6 + `futon5/tools/embed/genotypes/E-alpha-next-locus.*` |
+| Instrumentation: clock-in completeness + per-mission-turns viewer | `M-autoclock-in` (priority) + Mission Control viewer (codex-2, in flight) |
+| Forward experimental program + re-run quota (~200–300 non-degenerate episodes) | §8.5 / §8.7 here (the design *is* the closure record) |
+| O2 hop-vs-embedding convergence (R3), git-co-change blend (R3.5), R5 edit-proposal, R6 demonstrator | named residue on keystone `M-substrate-metric` §12.4 (resumable without re-opening O1) |
+
+### 9.1 The named high-priority follow-up — `M-intent-curvature`
+
+The one piece that is *beyond* the dissolution bar but clearly next: promote the consumed signal from **base curvature** to the **mentions-mixed (β>0) intent-curvature surface** — so the tension-proposer reads the cross-concern *intent-bridges* the dependency graph cannot see (§6e). Scoped as its own mission so it is not winged: **`futon3c/holes/missions/M-intent-curvature.md`** — *high priority*.
+
+**What is already done (verified 2026-06-03, claude-3, off the keystone's R3-mentions artifacts):**
+- `:mission/mentions-file` edges **materialized** at real scale (782 code-mention edges, 526 files, 115 missions).
+- **β-ablation verified:** β=0 recovers base curvature **exactly** (max & mean abs-Δ = 0.0 / 200 edges — reversibility holds, the built-in baseline); β=0.5 **earns its keep descriptively** — surfaces additional negative-curvature intent-bridges the dependency-only curvature flattens (p90 0.091→0.306; richer negative tail). Artifacts: `M-substrate-metric.R3-mentions-beta{0,05}.json`.
+
+**Entry conditions (do it when these hold):**
+- **EC1 ✅ met** — mentions-file edges materialized in the live ingest.
+- **EC2 ✅ met** — β-ablation reversible (β=0 ≡ base) *and* informative (β=0.5 adds real bridges).
+- **EC3 ⛔ open (the gate)** — the mentions-mixed curvature is exposed as a **live, full-scale queryable surface** (`curvature-at` over the full mentions-projected graph), not the current 200-edge *sample* report.
+- **EC4 ⛔ decision** — **β chosen** (default 0.5, or exposed as a consumer-set parameter); the β=0 ablation stays the built-in baseline.
+
+**On EC3+EC4 met:** M-aif2 reopens a thin slice to read the β>0 surface live → that consumption is the **E1-via-mentions `:satisfied`** (a strict upgrade over base-curvature consumption). Optional further residue: the deferred `:mentions/realized` git-co-temporal complement (the Pareto-20%). Owners: claude-3 (E1 verify) + codex-3 (keystone exposes the live surface).
