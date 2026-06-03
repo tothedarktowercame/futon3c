@@ -407,11 +407,22 @@
      (family :id strategic-closure-specification
              :status candidate
              :summary "Strategic recommendations should only be promoted when their next closure step is specified enough to execute, witness, and roll forward honestly."
+             ;; v0 check-fn built 2026-06-01 (claude-2, invariant-queue audit Tier-B);
+             ;; stays :candidate because binding is PARTIAL — the live sorrys.edn lacks
+             ;; the witness fields (:step/:effect/:successor, :backing-surface,
+             ;; :failure-interpretation) and an explicit :kind :strategic tag. The check
+             ;; uses a v0 heuristic strategic-id + checkable-fields-only, and reports the
+             ;; missing fields as a SCHEMA GAP, not a violation. Promotion to :operational
+             ;; awaits a registry-schema decision (owner: sorry-registry / War Machine line).
+             :implemented-in ("futon3c/src/futon3c/logic/strategic_closure_specification.clj")
+             :evidenced-by ("futon3c/test/futon3c/logic/strategic_closure_specification_test.clj")
              :candidate-invariants
              ((invariant :id strategic-sorry-next-step-sufficiently-specified
-                         :summary "Each strategic SORRY that appears as a live recommendation has an honest v1 closure spec: canonical target, concrete action, step/effect/successor witnesses, backing surface, and explicit failure interpretation.")
+                         :summary "Each strategic SORRY that appears as a live recommendation has an honest v1 closure spec: canonical target, concrete action, step/effect/successor witnesses, backing surface, and explicit failure interpretation."
+                         :implemented-in ("futon3c/src/futon3c/logic/strategic_closure_specification.clj"))
               (invariant :id under-specified-strategic-items-stay-candidate
-                         :summary "Strategic SORRYs without a recommendation-grade v1 spec remain candidate pressure in the queue rather than entering the War Machine as crisp next moves.")))
+                         :summary "Strategic SORRYs without a recommendation-grade v1 spec remain candidate pressure in the queue rather than entering the War Machine as crisp next moves."
+                         :implemented-in ("futon3c/src/futon3c/logic/strategic_closure_specification.clj"))))
      (family :id interaction-evidence-continuity
              :status candidate
              :summary "Interactive agent work should either land in the evidence ledger or incur explicit, inspectable debt."
