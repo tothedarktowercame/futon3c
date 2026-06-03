@@ -3362,32 +3362,45 @@ When FORCE is non-nil, refresh immediately."
     (when (buffer-live-p buf)
       (with-current-buffer buf
         (when (codex-repl--mode-active-p)
-          (save-excursion
-            (let ((inhibit-read-only t))
-              (goto-char (point-min))
-              (when (re-search-forward "(session: [^)]+)" (line-end-position 2) t)
-                (let ((beg (match-beginning 0))
-                      (end (match-end 0))
-                      (replacement (format "(session: %s)"
-                                           (or codex-repl-session-id "pending"))))
-                  (codex-repl--replace-header-region beg end replacement)))
-              (goto-char (point-min))
-              (when (re-search-forward
-                     "^  \\(?:\\[[^]\n]+\\] \\)*Transports: .*$" nil t)
-                (let ((beg (match-beginning 0))
-                      (end (match-end 0))
-                      (replacement (format "  %s" (codex-repl--build-modeline))))
-                  (codex-repl--replace-header-region beg end replacement)))
-              (goto-char (point-min))
-              (when (and codex-repl--mirror-mode-p
-                         codex-repl--mirror-rollout-file
-                         (re-search-forward "^  Rollout: .*$" nil t))
-                (let ((beg (match-beginning 0))
-                      (end (match-end 0))
-                      (replacement
-                       (format "  Rollout: %s"
-                               (abbreviate-file-name codex-repl--mirror-rollout-file))))
-                  (codex-repl--replace-header-region beg end replacement)))))
+          ;; This runs from async callbacks (invoke results, mirror polling)
+          ;; while the buffer may be visible but not selected. `save-excursion'
+          ;; restores point, but NOT the window's display start — header edits
+          ;; at point-min can otherwise scroll the view out from under the
+          ;; operator. Capture and restore window-start for every window
+          ;; showing BUF so the visible region never jumps.
+          (let ((win-starts (mapcar (lambda (w) (cons w (window-start w)))
+                                    (get-buffer-window-list buf nil t))))
+            (save-excursion
+              (let ((inhibit-read-only t))
+                (goto-char (point-min))
+                (when (re-search-forward "(session: [^)]+)" (line-end-position 2) t)
+                  (let ((beg (match-beginning 0))
+                        (end (line-end-position))
+                        (replacement
+                         (format "(session: %s) %s"
+                                 (or codex-repl-session-id "pending")
+                                 (agent-chat-mission-segment))))
+                    (codex-repl--replace-header-region beg end replacement)))
+                (goto-char (point-min))
+                (when (re-search-forward
+                       "^  \\(?:\\[[^]\n]+\\] \\)*Transports: .*$" nil t)
+                  (let ((beg (match-beginning 0))
+                        (end (match-end 0))
+                        (replacement (format "  %s" (codex-repl--build-modeline))))
+                    (codex-repl--replace-header-region beg end replacement)))
+                (goto-char (point-min))
+                (when (and codex-repl--mirror-mode-p
+                           codex-repl--mirror-rollout-file
+                           (re-search-forward "^  Rollout: .*$" nil t))
+                  (let ((beg (match-beginning 0))
+                        (end (match-end 0))
+                        (replacement
+                         (format "  Rollout: %s"
+                                 (abbreviate-file-name codex-repl--mirror-rollout-file))))
+                    (codex-repl--replace-header-region beg end replacement)))))
+            (dolist (ws win-starts)
+              (when (window-live-p (car ws))
+                (set-window-start (car ws) (cdr ws) t))))
           (codex-repl-refresh-header-line nil buf))))))
 
 (defun codex-repl--persist-session-id! (sid)
@@ -3754,8 +3767,8 @@ When FORCE is non-nil, refresh immediately."
                    (codex-repl--persist-session-id! sid))
                  (format "sid=%s" sid))
               (error
-                (message "codex-repl persist warning: %s"
-                         (error-message-string persist-err)))))
+               (message "codex-repl persist warning: %s"
+                        (error-message-string persist-err)))))
           (when (eq agent-chat--pending-process proc)
             (setq agent-chat--pending-process nil))
           (condition-case callback-err
@@ -3776,25 +3789,26 @@ When FORCE is non-nil, refresh immediately."
                        'font-lock-warning-face)
                       (codex-repl--call-codex-async prompt-text callback 1))
                   (if (and ok agent-chat--streaming-started)
-                      (codex-repl--time-invoke-step!
-                       "visible-stream"
-                       (lambda ()
-                         (codex-repl--finish-visible-stream! final-visible-text))
-                       (format "final-len=%d" (length (or final-visible-text ""))))
-                      (setq codex-repl--final-text-rendered t)
-                      (setq codex-repl--last-stream-summary nil)
-                      (codex-repl--time-invoke-step!
-                       "assistant-evidence"
-                       (lambda ()
-                         (codex-repl--emit-assistant-turn-evidence! final-visible-text)
-                         (codex-repl--emit-turn-commits-evidence!)))
-                      (codex-repl--time-invoke-step!
-                       "turn-ended"
-                       #'agent-chat-finish-turn!)
-                      (codex-repl--time-invoke-step!
-                       "scroll-bottom"
-                       #'agent-chat-scroll-to-bottom)
-                      (codex-repl--record-invoke-timing! "callback-finished" "streamed" t))
+                      (progn
+                        (codex-repl--time-invoke-step!
+                         "visible-stream"
+                         (lambda ()
+                           (codex-repl--finish-visible-stream! final-visible-text))
+                         (format "final-len=%d" (length (or final-visible-text ""))))
+                        (setq codex-repl--final-text-rendered t)
+                        (setq codex-repl--last-stream-summary nil)
+                        (codex-repl--time-invoke-step!
+                         "assistant-evidence"
+                         (lambda ()
+                           (codex-repl--emit-assistant-turn-evidence! final-visible-text)
+                           (codex-repl--emit-turn-commits-evidence!)))
+                        (codex-repl--time-invoke-step!
+                         "turn-ended"
+                         #'agent-chat-finish-turn!)
+                        (codex-repl--time-invoke-step!
+                         "scroll-bottom"
+                         #'agent-chat-scroll-to-bottom)
+                        (codex-repl--record-invoke-timing! "callback-finished" "streamed" t))
                     (progn
                       (when agent-chat--streaming-started
                         (agent-chat-end-streaming-message)
@@ -3832,7 +3846,7 @@ When FORCE is non-nil, refresh immediately."
                  :final-text final-visible-text
                  :turn-id codex-repl--invoke-turn-id
                  :report report)))
-        report)))
+        report))))
 
 (defun codex-repl--call-codex-async (text callback &optional retry-attempt)
   "Invoke server-managed Codex asynchronously for TEXT.

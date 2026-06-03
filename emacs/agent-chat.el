@@ -298,16 +298,14 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
 
 (defun agent-chat--ensure-prompt-markers! ()
   "Ensure prompt markers are usable, repairing from the live prompt if needed."
-  (unless (and (markerp agent-chat--prompt-marker)
-               (marker-position agent-chat--prompt-marker))
-    (save-excursion
-      (goto-char (point-max))
-      (when (re-search-backward "^> " nil t)
-        (let ((prompt-start (line-beginning-position)))
-          (setq agent-chat--prompt-marker (copy-marker prompt-start t))
-          (setq agent-chat--separator-start (copy-marker prompt-start))
-          (set-marker-insertion-type agent-chat--prompt-marker t)
-          (setq agent-chat--input-start (copy-marker (+ prompt-start 2) t))))))
+  (save-excursion
+    (goto-char (point-max))
+    (when (re-search-backward "^> " nil t)
+      (let ((prompt-start (line-beginning-position)))
+        (setq agent-chat--prompt-marker (copy-marker prompt-start t))
+        (setq agent-chat--separator-start (copy-marker prompt-start))
+        (set-marker-insertion-type agent-chat--prompt-marker t)
+        (setq agent-chat--input-start (copy-marker (+ prompt-start 2) t)))))
   (and (markerp agent-chat--prompt-marker)
        (marker-position agent-chat--prompt-marker)))
 
@@ -318,21 +316,22 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
     (when prompt-pos
       (save-excursion
         (goto-char prompt-pos)
-        (when (> (line-beginning-position) (point-min))
-          (forward-line -1)
-          (when (looking-at-p "^─+ \\*.*\\*$")
-            (let ((start (line-beginning-position))
-                  (end prompt-pos))
-              (while (and (> start (point-min))
-                          (progn
-                            (goto-char start)
-                            (forward-line -1)
-                            (looking-at-p "^Cooked for ")))
-                (setq start (line-beginning-position)))
-              (delete-region start end)
-              (set-marker agent-chat--prompt-marker start)
-              (when (markerp agent-chat--separator-start)
-                (set-marker agent-chat--separator-start start)))))))))
+        (let ((end prompt-pos)
+              (start nil)
+              (keep-scanning t))
+          (while (and keep-scanning
+                      (> (line-beginning-position) (point-min)))
+            (forward-line -1)
+            (if (or (looking-at-p "^Cooked for ")
+                    (looking-at-p "^─+ \\*.*\\*$")
+                    (looking-at-p "^─+$"))
+                (setq start (line-beginning-position))
+              (setq keep-scanning nil)))
+          (when start
+            (delete-region start end)
+            (set-marker agent-chat--prompt-marker start)
+            (when (markerp agent-chat--separator-start)
+              (set-marker agent-chat--separator-start start))))))))
 
 (defun agent-chat--insert-turn-end-flair (&optional elapsed)
   "Render the transcript turn-end clock-in flair before the input prompt."
@@ -368,6 +367,12 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
 
 (defun agent-chat-finish-turn! (&optional elapsed)
   "Run shared turn-end behavior with optional ELAPSED seconds."
+  (unless agent-chat--current-turn-id
+    (setq agent-chat--current-turn-id
+          (format "%s-turn-%d-%s"
+                  (or agent-chat--agent-id agent-chat--agent-name "agent")
+                  (or agent-chat--turn-counter 0)
+                  (or agent-chat--turn-start-time (float-time)))))
   (unless (and agent-chat--current-turn-id
                (equal agent-chat--current-turn-id agent-chat--last-flair-turn-id))
     (let ((duration (or elapsed
