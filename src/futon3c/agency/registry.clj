@@ -856,7 +856,8 @@
    {:status \"invoking\"|\"idle\"|:invoking|:idle
     :session-id string
     :prompt-preview string
-    :activity string}
+    :activity string
+    :mission-id string}
 
    Invoking state is treated as live only while refreshed within
    `external-invoke-fresh-ms`; callers should heartbeat during long runs."
@@ -892,7 +893,9 @@
                                   (some-> (:prompt-preview state) str str/trim not-empty)
                                   (assoc :prompt-preview (some-> (:prompt-preview state) str str/trim))
                                   (some-> (:activity state) str str/trim not-empty)
-                                  (assoc :activity (some-> (:activity state) str str/trim)))))
+                                  (assoc :activity (some-> (:activity state) str str/trim))
+                                  (some-> (:mission-id state) str str/trim not-empty)
+                                  (assoc :mission-id (some-> (:mission-id state) str str/trim)))))
                        agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
                                 next-external
                                 (assoc :agent/external-invokes next-external)
@@ -1112,6 +1115,9 @@
                                  external-invoke-fresh-ms))
                         session-id (or (:session-id external-invoke)
                                        (:agent/session-id agent))
+                        mission-id (or (:mission-id external-invoke)
+                                       (get-in agent [:agent/metadata :mission-id])
+                                       (get-in agent [:agent/metadata "mission-id"]))
                         {:keys [queued-jobs running-jobs nonterminal-jobs]}
                         (get invoke-job-counts aid {})
                         external-codex-invoking?
@@ -1142,6 +1148,7 @@
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id
+                                  :mission-id mission-id
                                   :registered-at (str (:agent/registered-at agent))
                                   :last-active (str (:agent/last-active agent))
                                   :capabilities (:agent/capabilities agent)

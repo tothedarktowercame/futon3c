@@ -278,6 +278,8 @@ If nil, reads from .admintoken in the project root at first use."
                (claude-repl--json-encode-value
                 `(("buffer_name" . ,(buffer-name))
                   ("agent_id" . ,claude-repl-agent-id)
+                  ("mission_id" . ,(agent-chat-normalize-mission-id
+                                     agent-chat--mission-id))
                   ("working_directory" . ,default-directory))))))
     (error nil)))
 
@@ -357,6 +359,8 @@ If nil, reads from .admintoken in the project root at first use."
                       :status "streaming"
                       :started-at (current-time)
                       :session-id agent-chat--session-id
+                      :mission-id (agent-chat-normalize-mission-id
+                                   agent-chat--mission-id)
                       :cwd default-directory
                       :prompt prompt
                       :prompt-preview (truncate-string-to-width prompt 200)
@@ -559,6 +563,8 @@ Falls back to unbound idle agents, then returns nil."
          (payload `((agent-id . ,resolved-agent-id)
                     (type . "claude")
                     (session-id . ,session-id)
+                    (mission-id . ,(agent-chat-normalize-mission-id
+                                    agent-chat--mission-id))
                     (cwd . ,default-directory)
                     (session-file . ,resolved-session-file)
                     (emacs-socket . ,socket-name)))
@@ -587,10 +593,14 @@ In both cases, rebinds the agent's socket to this Emacs daemon."
            (claude-repl--find-idle-agent)
            ;; Second: register a new one
            (let* ((url (concat claude-repl-api-url "/api/alpha/agents/auto"))
+                  (mission-id (agent-chat-normalize-mission-id
+                               agent-chat--mission-id))
                   (json-body (json-serialize
-                              (if socket-name
-                                  `(:type "claude" :emacs-socket ,socket-name)
-                                '(:type "claude"))))
+                              (append '(:type "claude")
+                                      (when socket-name
+                                        `(:emacs-socket ,socket-name))
+                                      (when mission-id
+                                        `(:mission-id ,mission-id)))))
                   (result (with-temp-buffer
                             (let ((exit (call-process "curl" nil t nil
                                                       "-sS" "--max-time" "5"
@@ -677,6 +687,17 @@ session isolation between buffers."
 (defun claude-repl--emit-assistant-turn-evidence! (text)
   "Emit evidence for assistant TEXT."
   (claude-repl--emit-turn-evidence! "assistant" text))
+
+(defun claude-repl--emit-turn-commits-evidence! ()
+  "Emit evidence for commits made during the current Claude turn."
+  (agent-chat-emit-turn-commits-evidence!
+   claude-repl-evidence-url
+   claude-repl-evidence-timeout
+   agent-chat--session-id
+   claude-repl-agent-id
+   "emacs-claude-repl"
+   'claude-repl--evidence-session-id
+   'claude-repl--last-evidence-id))
 
 ;;; Tool overlay popup
 
@@ -1006,6 +1027,7 @@ CALLBACK is called with the final response text on completion."
                                      (agent-chat-end-streaming-message)
                                      ;; Emit evidence directly (skip callback to avoid re-insert)
                                      (claude-repl--emit-assistant-turn-evidence! result)
+                                     (claude-repl--emit-turn-commits-evidence!)
                                      (claude-repl--close-frame "done")
                                      (agent-chat-invariants-turn-ended)
                                      (goto-char (point-max))
@@ -1065,7 +1087,8 @@ CALLBACK is called with the final response text on completion."
     (when irc-up
       (push "irc (#futon :6667, available)" transports))
     (push "cli (claude code)" transports)
-    (format "Available transports: [%s]. Current: emacs-chat."
+    (format "%s Available transports: [%s]. Current: emacs-chat."
+            (agent-chat-mission-segment)
             (string-join (reverse transports) ", "))))
 
 ;;; Mode
@@ -1108,6 +1131,7 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
                         (claude-repl--open-frame text))
          :on-response (lambda (text)
                         (claude-repl--emit-assistant-turn-evidence! text)
+                        (claude-repl--emit-turn-commits-evidence!)
                         (claude-repl--close-frame "done")))))
 
 (defun claude-repl-clear ()
@@ -1194,11 +1218,14 @@ Returns (ok . old-session-id) on success, nil on failure."
       (kill-buffer buffer))
     result))
 
-(defun claude-repl-new-session ()
+(defun claude-repl-new-session (&optional mission)
   "Reset the agent session so the next message starts a fresh conversation.
 Useful when a session becomes poisoned (e.g. API rejects the conversation
-history). Tries the reset-session endpoint first, falls back to Drawbridge."
-  (interactive)
+history). Tries the reset-session endpoint first, falls back to Drawbridge.
+With optional MISSION, clock the fresh session into that mission; nil means
+no mission."
+  (interactive (list (when current-prefix-arg
+                       (agent-chat-read-mission))))
   (let* ((api-result (claude-repl--reset-via-api))
          (result (or api-result (claude-repl--reset-via-drawbridge)))
          (ok (car result))
@@ -1206,6 +1233,8 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
     ;; Clear local session state regardless of server response
     (setq agent-chat--session-id nil)
     (setq agent-chat--pending-user-turn-text nil)
+    (agent-chat-set-mission! mission)
+    (claude-repl--store-upsert-session)
     (when claude-repl-session-file
       (when (file-exists-p claude-repl-session-file)
         (delete-file claude-repl-session-file)))
@@ -1215,10 +1244,16 @@ history). Tries the reset-session endpoint first, falls back to Drawbridge."
      "system"
      (cond
       (ok
-       (format "[Session reset — was %s. Next message starts fresh.]"
-               (or old-sid "unknown")))
+       (format "[Session reset — was %s. Next message starts fresh%s.]"
+               (or old-sid "unknown")
+               (if agent-chat--mission-id
+                   (format ", mission %s" agent-chat--mission-id)
+                 ", no mission")))
       (t
-       "[Session reset locally only — could not reach server. Next message may still fail.]")))
+       (format "[Session reset locally only — could not reach server. Next message may still fail%s.]"
+               (if agent-chat--mission-id
+                   (format ", mission %s" agent-chat--mission-id)
+                 ", no mission")))))
     (goto-char (point-max))
     (message "claude-repl: session reset (server=%s, was %s)"
              (if ok "yes" "no") (or old-sid "nil"))))
@@ -1245,6 +1280,7 @@ Used by `claude-repl-clear' to redraw without losing the agent binding."
            :face-alist `(("claude" . claude-repl-claude-face))
            :agent-name "claude"
            :agent-id claude-repl-agent-id
+           :mission-id agent-chat--mission-id
            :thinking-text "claude is thinking..."
            :thinking-prop 'claude-repl-thinking
            :evidence-url claude-repl-evidence-url
@@ -1362,7 +1398,7 @@ Then auto-register with the server and load existing session-id."
                          agent-ids nil t nil nil default)
       (read-string "Attach Claude agent: " default))))
 
-(defun claude-repl--open-instance (buffer-name &optional api-url agent-id session-file)
+(defun claude-repl--open-instance (buffer-name &optional api-url agent-id session-file mission)
   "Open or switch to a Claude REPL instance with explicit local settings.
 Handles mode init, agent registration, and display setup.
 When AGENT-ID is provided, auto-registration is skipped — the caller
@@ -1382,6 +1418,7 @@ socket setup."
         (setq-local claude-repl--workspace-applied t))
       (when session-file
         (setq-local claude-repl-session-file session-file))
+      (agent-chat-set-mission! mission)
       ;; Only run full init (registration + display) if buffer is fresh
       ;; and no explicit agent-id was provided.
       (unless (local-variable-p 'claude-repl--workspace-applied)
@@ -1391,14 +1428,15 @@ socket setup."
     buf))
 
 ;;;###autoload
-(defun claude-repl ()
-  "Start or switch to chat."
-  (interactive)
+(defun claude-repl (&optional mission)
+  "Start or switch to chat, optionally clocked into MISSION."
+  (interactive (list (when current-prefix-arg
+                       (agent-chat-read-mission))))
   (let* ((ws (claude-repl--workspace))
          (bufname (if ws
                      (format "*claude-repl[%s]*" ws)
                    claude-repl-buffer-name)))
-    (claude-repl--open-instance bufname)))
+    (claude-repl--open-instance bufname nil nil nil mission)))
 
 (defun claude-repl-reconnect ()
   "Re-register this buffer's agent with the server.

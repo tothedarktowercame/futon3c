@@ -86,6 +86,9 @@
 (defvar-local agent-chat--session-id nil
   "Current session ID displayed in the buffer header.")
 
+(defvar-local agent-chat--mission-id nil
+  "Mission ID clocked into the current chat session, or nil for no mission.")
+
 (defvar-local agent-chat--session-turn-count nil
   "Cached number of evidence chat turns recorded for the current session.")
 
@@ -113,6 +116,15 @@ Distinct from agent-name which is the display name.")
 
 (defvar-local agent-chat--turn-start-time nil
   "Epoch time (float) when the current turn started.")
+
+(defvar-local agent-chat--turn-counter 0
+  "Monotonic local turn counter for the current chat buffer.")
+
+(defvar-local agent-chat--current-turn-id nil
+  "Local turn ID currently in flight.")
+
+(defvar-local agent-chat--turn-git-heads nil
+  "Git repo HEAD snapshot captured at the start of the current turn.")
 
 (defvar-local agent-chat--on-turn-end nil
   "Function called with elapsed seconds (float) after each turn completes.
@@ -147,7 +159,120 @@ If a function returns nil, the original TEXT is used.")
 (defvar-local agent-chat--pending-user-turn-text nil
   "User turn text staged until a real session ID is available.")
 
+(defcustom agent-chat-commit-repo-roots nil
+  "Git repo roots scanned for commits made during a chat turn.
+When nil, immediate futon* repos under ~/code plus the current
+`default-directory' git root are scanned."
+  :type '(choice (const nil) (repeat directory))
+  :group 'agent-chat)
+
 ;;; Display
+
+(defun agent-chat-normalize-mission-id (mission)
+  "Return normalized MISSION string, or nil for no mission."
+  (let ((s (cond
+            ((null mission) nil)
+            ((symbolp mission) (symbol-name mission))
+            (t (format "%s" mission)))))
+    (when s
+      (let ((trimmed (string-trim s)))
+        (unless (or (string-empty-p trimmed)
+                    (member (downcase trimmed)
+                            '("nil" "none" "no mission" "no-mission")))
+          trimmed)))))
+
+(defun agent-chat-mission-label ()
+  "Return display label for the current mission clock-in."
+  (or (agent-chat-normalize-mission-id agent-chat--mission-id)
+      "no mission"))
+
+(defun agent-chat-mission-segment ()
+  "Return a compact prompt/header segment for mission clock-in state."
+  (format "[mission:%s]" (agent-chat-mission-label)))
+
+(defun agent-chat-set-mission! (mission)
+  "Clock the current chat buffer into MISSION, or clear with nil/blank."
+  (setq agent-chat--mission-id (agent-chat-normalize-mission-id mission))
+  (agent-chat--update-session-header-line)
+  agent-chat--mission-id)
+
+(defun agent-chat-read-mission (&optional prompt)
+  "Read a mission id from the minibuffer; blank means no mission."
+  (agent-chat-normalize-mission-id
+   (read-string (or prompt "Mission (blank for no mission): "))))
+
+(defun agent-chat--git-root (&optional directory)
+  "Return git root for DIRECTORY, or nil when DIRECTORY is not in a repo."
+  (let ((default-directory (or directory default-directory)))
+    (when (executable-find "git")
+      (let ((out (with-temp-buffer
+                   (when (zerop (call-process "git" nil t nil
+                                              "rev-parse" "--show-toplevel"))
+                     (string-trim (buffer-string))))))
+        (unless (or (null out) (string-empty-p out))
+          (file-name-as-directory out))))))
+
+(defun agent-chat--discover-commit-repo-roots ()
+  "Return repo roots to scan for commits around a turn."
+  (let* ((configured (and agent-chat-commit-repo-roots
+                          (mapcar #'file-name-as-directory
+                                  agent-chat-commit-repo-roots)))
+         (code-dir (expand-file-name "~/code"))
+         (futon-roots
+          (when (file-directory-p code-dir)
+            (cl-loop for path in (directory-files code-dir t "\\`futon[0-9a-z].*")
+                     when (file-directory-p (expand-file-name ".git" path))
+                     collect (file-name-as-directory path))))
+         (current (agent-chat--git-root default-directory)))
+    (delete-dups (delq nil (append configured (list current) futon-roots)))))
+
+(defun agent-chat--git-head (repo)
+  "Return current HEAD hash for REPO, or nil."
+  (let ((default-directory repo))
+    (with-temp-buffer
+      (when (zerop (call-process "git" nil t nil "rev-parse" "HEAD"))
+        (string-trim (buffer-string))))))
+
+(defun agent-chat-start-turn-commit-window! ()
+  "Capture git HEADs at the start of the current turn."
+  (setq agent-chat--turn-git-heads
+        (cl-loop for repo in (agent-chat--discover-commit-repo-roots)
+                 for head = (agent-chat--git-head repo)
+                 when head collect (cons repo head))))
+
+(defun agent-chat--parse-git-log-records (repo text)
+  "Parse git log TEXT for REPO into JSON-encodable commit alists."
+  (cl-loop for record in (split-string (or text "") "\036" t)
+           for fields = (split-string record "\037")
+           when (>= (length fields) 4)
+           collect `((repo . ,(file-name-nondirectory
+                               (directory-file-name repo)))
+                     (repo-path . ,(directory-file-name repo))
+                     (sha . ,(nth 0 fields))
+                     (committed-at . ,(nth 1 fields))
+                     (author . ,(nth 2 fields))
+                     (subject . ,(nth 3 fields)))))
+
+(defun agent-chat--git-commits-after (repo old-head)
+  "Return commits in REPO after OLD-HEAD."
+  (let ((default-directory repo))
+    (with-temp-buffer
+      (when (zerop (call-process
+                    "git" nil t nil
+                    "log" "--reverse"
+                    "--format=%H%x1f%cI%x1f%an%x1f%s%x1e"
+                    (format "%s..HEAD" old-head)))
+        (agent-chat--parse-git-log-records repo (buffer-string))))))
+
+(defun agent-chat-finish-turn-commits ()
+  "Return commits made since `agent-chat-start-turn-commit-window!'."
+  (let ((commits
+         (cl-loop for (repo . old-head) in agent-chat--turn-git-heads
+                  for new-head = (agent-chat--git-head repo)
+                  when (and new-head (not (equal old-head new-head)))
+                  append (agent-chat--git-commits-after repo old-head))))
+    (setq agent-chat--turn-git-heads nil)
+    commits))
 
 (defun agent-chat-insert-message (name text)
   "Insert a message from NAME with TEXT above the prompt.
@@ -740,6 +865,12 @@ additionally posted to the evidence HTTP endpoint."
         (when (functionp before-send)
           (funcall before-send trimmed))
         (agent-chat-insert-thinking)
+        (cl-incf agent-chat--turn-counter)
+        (setq agent-chat--current-turn-id
+              (format "%s-turn-%d"
+                      (or agent-chat--agent-id agent-name "agent")
+                      agent-chat--turn-counter))
+        (agent-chat-start-turn-commit-window!)
         (setq agent-chat--turn-start-time (float-time))
         (redisplay)
         (condition-case err
@@ -779,6 +910,7 @@ additionally posted to the evidence HTTP endpoint."
                                     (agent-chat-scroll-to-bottom))))))))
           (error
            (setq agent-chat--pending-process nil)
+           (setq agent-chat--turn-git-heads nil)
            (agent-chat-remove-thinking)
            (let ((msg (format "[Error launching %s process: %s]"
                               agent-name
@@ -840,6 +972,7 @@ CONFIG keys:
   :face-alist  - alist of (name . face) for speakers
   :agent-name  - \"claude\" or \"codex\"
   :agent-id    - registry agent-id (e.g. \"claude-1\") for walkie-talkie
+  :mission-id  - optional mission id clocked into this session
   :thinking-text   - e.g. \"claude is thinking...\"
   :thinking-prop   - symbol for text property"
   (let ((title (plist-get config :title))
@@ -849,6 +982,7 @@ CONFIG keys:
         (face-alist (plist-get config :face-alist))
         (agent-name (plist-get config :agent-name))
         (agent-id (plist-get config :agent-id))
+        (mission-id (plist-get config :mission-id))
         (thinking-text (plist-get config :thinking-text))
         (thinking-prop (plist-get config :thinking-prop))
         (evidence-url (plist-get config :evidence-url))
@@ -858,6 +992,7 @@ CONFIG keys:
           (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
     (setq agent-chat--agent-name agent-name)
     (setq agent-chat--agent-id agent-id)
+    (setq agent-chat--mission-id (agent-chat-normalize-mission-id mission-id))
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
@@ -904,11 +1039,12 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
 
 (defun agent-chat--session-header-text ()
   "Return the formatted session header text with turn counts."
-  (format "(session: %s%s)"
+  (format "(session: %s%s) %s"
           (or agent-chat--session-id "pending")
           (if (numberp agent-chat--session-turn-count)
               (format ", turns: %d" agent-chat--session-turn-count)
-            "")))
+            "")
+          (agent-chat-mission-segment)))
 
 (defun agent-chat--update-session-header-line ()
   "Refresh the session header line (session id + turns)."
@@ -981,6 +1117,12 @@ Replaces the `(session: ...)' text in the first line."
         (or (plist-get parsed :evidence/id)
             (plist-get (plist-get parsed :entry) :evidence/id))))))
 
+(defun agent-chat--mission-body-fields ()
+  "Return mission evidence fields for the current buffer."
+  (when-let ((mission (agent-chat-normalize-mission-id agent-chat--mission-id)))
+    `((mission-id . ,mission)
+      (clocked-mission . ,mission))))
+
 (defun agent-chat-evidence-fetch-latest-id (evidence-url timeout sid)
   "Fetch most recent evidence id for session SID."
   (when (and (agent-chat-evidence-enabled-p evidence-url)
@@ -1029,9 +1171,10 @@ Replaces the `(session: ...)' text in the first line."
                        (claim-type . "goal")
                        (author . ,(or (getenv "USER") user-login-name "joe"))
                        (session-id . ,sid)
-                       (body . ((event . "session-start")
-                                (source . ,source)
-                                (mode . "emacs")))
+                       (body . ,(append `((event . "session-start")
+                                          (source . ,source)
+                                          (mode . "emacs"))
+                                        (agent-chat--mission-body-fields)))
                        (tags . ,(apply #'vector tags)))))
         (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
           (set last-id-var new-id))
@@ -1067,10 +1210,12 @@ Replaces the `(session: ...)' text in the first line."
                       (claim-type . ,claim-type)
                       (author . ,author)
                       (session-id . ,sid)
-                      (body . ((event . "chat-turn")
-                               (transport . ,transport)
-                               (role . ,role)
-                               (text . ,trimmed)))
+                      (body . ,(append `((event . "chat-turn")
+                                         (transport . ,transport)
+                                         (role . ,role)
+                                         (turn-id . ,agent-chat--current-turn-id)
+                                         (text . ,trimmed))
+                                       (agent-chat--mission-body-fields)))
                       (tags . ,(apply #'vector (append tags (list role-tag)))))))
       (when (and (stringp (symbol-value last-id-var))
                  (not (string-empty-p (symbol-value last-id-var))))
@@ -1079,6 +1224,40 @@ Replaces the `(session: ...)' text in the first line."
       (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
         (set session-var sid)
         (set last-id-var new-id)))))
+
+(defun agent-chat-emit-turn-commits-evidence!
+    (evidence-url timeout sid assistant-author transport session-var last-id-var)
+  "Emit a turn-commits evidence event for commits made in the current turn."
+  (when (and (stringp sid)
+             (not (string-empty-p sid))
+             (agent-chat-evidence-enabled-p evidence-url))
+    (let ((commits (agent-chat-finish-turn-commits)))
+      (when commits
+        (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var)
+        (let* ((body (append `((event . "turn-commits")
+                               (transport . ,transport)
+                               (turn-id . ,agent-chat--current-turn-id)
+                               (commit-count . ,(length commits))
+                               (commits . ,(apply #'vector commits)))
+                             (agent-chat--mission-body-fields)))
+               (tags (append (list transport "turn-commits" "git")
+                             (when agent-chat--mission-id
+                               (list "mission-clocked"))))
+               (payload `((subject . ((ref/type . "session")
+                                      (ref/id . ,sid)))
+                          (type . "coordination")
+                          (claim-type . "observation")
+                          (author . ,assistant-author)
+                          (session-id . ,sid)
+                          (body . ,body)
+                          (tags . ,(apply #'vector tags)))))
+          (when (and (stringp (symbol-value last-id-var))
+                     (not (string-empty-p (symbol-value last-id-var))))
+            (setq payload (append payload
+                                  `((in-reply-to . ,(symbol-value last-id-var))))))
+          (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+            (set session-var sid)
+            (set last-id-var new-id)))))))
 
 (defconst agent-chat--session-turn-limit 1000
   "Maximum number of evidence entries to fetch when counting session turns.")

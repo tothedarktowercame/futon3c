@@ -577,6 +577,8 @@ expensive hidden-buffer redraws on every trace line during long Codex turns."
    `(("open_mode" . ,(symbol-name (or codex-repl--session-open-mode 'repl)))
      ("buffer_name" . ,(buffer-name))
      ("agent_id" . ,codex-repl-agency-agent-id)
+     ("mission_id" . ,(agent-chat-normalize-mission-id
+                       agent-chat--mission-id))
      ("working_directory" . ,default-directory)
      ("session_file" . ,codex-repl-session-file)
      ("rollout_file" . ,codex-repl--mirror-rollout-file)
@@ -961,6 +963,8 @@ expensive hidden-buffer redraws on every trace line during long Codex turns."
                  :frame/origin origin
                  :status 'running
                  :session-id codex-repl-session-id
+                 :mission-id (agent-chat-normalize-mission-id
+                              agent-chat--mission-id)
                  :cwd default-directory
                  :prompt prompt
                  :prompt-preview (codex-repl--truncate-single-line prompt 240)
@@ -1598,6 +1602,9 @@ is absent from the registry after a JVM restart."
          (url (format "%s/api/alpha/agents/auto" base))
          (payload (let ((p `((type . "codex")
                              (cwd . ,default-directory))))
+                    (when-let ((mission-id (agent-chat-normalize-mission-id
+                                            agent-chat--mission-id)))
+                      (push `(mission-id . ,mission-id) p))
                     (when socket-name
                       (push `(emacs-socket . ,socket-name) p))
                     (when (and (stringp codex-repl-session-id)
@@ -1644,6 +1651,8 @@ is absent from the registry after a JVM restart."
          (payload `((agent-id . ,resolved-agent-id)
                     (type . "codex")
                     (session-id . ,session-id)
+                    (mission-id . ,(agent-chat-normalize-mission-id
+                                    agent-chat--mission-id))
                     (cwd . ,resolved-cwd)
                     (session-file . ,resolved-session-file)))
          (response (codex-repl--request-json "POST" url payload))
@@ -1852,13 +1861,14 @@ short human-readable progress string to surface in *agents*."
              (concat "(do "
                      "(require 'futon3c.agency.registry) "
                      "(futon3c.agency.registry/report-external-invoke! "
-                     "%S %S {:status %s :session-id %S :prompt-preview %S :activity %S}))")
+                     "%S %S {:status %s :session-id %S :mission-id %S :prompt-preview %S :activity %S}))")
              codex-repl-agency-agent-id
              codex-repl--registry-source
              status-form
              (and (stringp codex-repl-session-id)
                   (not (string-empty-p codex-repl-session-id))
                   codex-repl-session-id)
+             (agent-chat-normalize-mission-id agent-chat--mission-id)
              (when (eq status :invoking) "[external invoke]")
              (and (stringp activity)
                   (not (string-empty-p activity))
@@ -3306,6 +3316,17 @@ When FORCE is non-nil, refresh immediately."
   "Emit evidence for assistant TEXT."
   (codex-repl--emit-turn-evidence! "assistant" text))
 
+(defun codex-repl--emit-turn-commits-evidence! ()
+  "Emit evidence for commits made during the current Codex turn."
+  (agent-chat-emit-turn-commits-evidence!
+   codex-repl-evidence-url
+   codex-repl-evidence-timeout
+   codex-repl-session-id
+   (or codex-repl-agency-agent-id "codex")
+   "emacs-codex-repl"
+   'codex-repl--evidence-session-id
+   'codex-repl--last-evidence-id))
+
 ;;; Session
 
 (defun codex-repl--replace-header-region (beg end replacement)
@@ -3744,7 +3765,8 @@ When FORCE is non-nil, refresh immediately."
                       (codex-repl--time-invoke-step!
                        "assistant-evidence"
                        (lambda ()
-                         (codex-repl--emit-assistant-turn-evidence! final-visible-text)))
+                         (codex-repl--emit-assistant-turn-evidence! final-visible-text)
+                         (codex-repl--emit-turn-commits-evidence!)))
                       (codex-repl--time-invoke-step!
                        "turn-ended"
                        #'agent-chat-invariants-turn-ended)
@@ -3968,7 +3990,8 @@ With REFRESH non-nil, recompute the state even if cached."
                                (format "%s (%s)" label status))))
                          entries))
          (current (plist-get state :current-label)))
-    (format "Transports: [%s]. Current: %s."
+    (format "%s Transports: [%s]. Current: %s."
+            (agent-chat-mission-segment)
             (string-join labels ", ")
             current)))
 
@@ -4229,9 +4252,12 @@ Returns (ok . old-session-id) on success, nil on failure."
     (when ok
       (cons t value))))
 
-(defun codex-repl-new-session ()
-  "Reset the server-managed Codex session so the next turn starts fresh."
-  (interactive)
+(defun codex-repl-new-session (&optional mission)
+  "Reset the server-managed Codex session so the next turn starts fresh.
+With optional MISSION, clock the fresh session into that mission; nil means
+no mission."
+  (interactive (list (when current-prefix-arg
+                       (agent-chat-read-mission))))
   (when codex-repl--mirror-mode-p
     (codex-repl--mirror-read-only-error "start a new session"))
   (when (process-live-p agent-chat--pending-process)
@@ -4241,19 +4267,28 @@ Returns (ok . old-session-id) on success, nil on failure."
          (ok (car result))
          (old-sid (or (cdr result) codex-repl-session-id)))
     (codex-repl--clear-session-state!)
+    (agent-chat-set-mission! mission)
+    (codex-repl--store-upsert-session)
+    (codex-repl--report-registry-invoke-state! :idle nil)
     (agent-chat-insert-message
      "system"
      (cond
       (ok
-       (format "[Session reset on server%s. Next message starts fresh.]"
+       (format "[Session reset on server%s. Next message starts fresh%s.]"
                (if (and (stringp old-sid) (not (string-empty-p old-sid)))
                    (format " (was %s)" old-sid)
-                 "")))
+                 "")
+               (if agent-chat--mission-id
+                   (format ", mission %s" agent-chat--mission-id)
+                 ", no mission")))
       (t
-       (format "[Local session cleared; server reset unconfirmed%s.]"
+       (format "[Local session cleared; server reset unconfirmed%s%s.]"
                (if (and (stringp old-sid) (not (string-empty-p old-sid)))
                    (format " (was %s)" old-sid)
-                 "")))))
+                 "")
+               (if agent-chat--mission-id
+                   (format ", mission %s" agent-chat--mission-id)
+                 ", no mission")))))
     (goto-char (point-max))
     (message "codex-repl: session reset %s (was %s)"
              (if ok "via server" "locally only")
@@ -4364,7 +4399,9 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
    #'codex-repl--call-codex-async
    "codex"
    (list :before-send #'codex-repl--emit-user-turn-evidence!
-         :on-response #'codex-repl--emit-assistant-turn-evidence!)))
+         :on-response (lambda (text)
+                        (codex-repl--emit-assistant-turn-evidence! text)
+                        (codex-repl--emit-turn-commits-evidence!)))))
 
 (defun codex-repl-clear ()
   "Clear display and re-draw header. Session continues."
@@ -4396,6 +4433,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
          :face-alist `(("codex" . codex-repl-codex-face))
          :agent-name "codex"
          :agent-id (or codex-repl-agency-agent-id "codex-1")
+         :mission-id agent-chat--mission-id
          :thinking-text "codex is thinking..."
          :thinking-prop 'codex-repl-thinking
          :evidence-url codex-repl-evidence-url
@@ -4406,7 +4444,8 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
 
 (defun codex-repl--open-instance (buffer-name invoke-buffer-name
                                               &optional api-url agent-id session-file
-                                              working-directory open-mode fresh-session-p)
+                                              working-directory open-mode fresh-session-p
+                                              mission)
   "Open or switch to a Codex REPL instance with explicit local settings."
   (let ((buf (get-buffer-create buffer-name)))
     (with-current-buffer buf
@@ -4423,6 +4462,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
       (when (and working-directory
                  (file-directory-p working-directory))
         (setq-local default-directory (file-name-as-directory working-directory)))
+      (agent-chat-set-mission! mission)
       (setq-local codex-repl--session-open-mode (or open-mode 'repl))
       (if fresh-session-p
           (codex-repl--reset-buffer-for-fresh-session!)
@@ -4546,16 +4586,19 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
   (codex-repl-attach-agent "codex-1"))
 
 ;;;###autoload
-(defun codex-repl ()
-  "Start or switch to Codex REPL."
-  (interactive)
+(defun codex-repl (&optional mission)
+  "Start or switch to Codex REPL, optionally clocked into MISSION."
+  (interactive (list (when current-prefix-arg
+                       (agent-chat-read-mission))))
   (codex-repl--open-instance codex-repl-buffer-name
                              codex-repl-invoke-buffer-name
                              codex-repl-api-url
                              codex-repl-agency-agent-id
                              codex-repl-session-file
                              default-directory
-                             'repl))
+                             'repl
+                             nil
+                             mission))
 
 ;;;###autoload
 (defun codex-repl-mirror-rollout (rollout-file)

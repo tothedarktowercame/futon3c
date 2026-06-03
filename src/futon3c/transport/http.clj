@@ -1767,6 +1767,11 @@
                                       str
                                       str/trim
                                       not-empty)
+                mission-id (some-> (or (:mission-id payload)
+                                       (get payload "mission-id"))
+                                   str
+                                   str/trim
+                                   not-empty)
                 emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
                 session-file (default-session-file-for-agent agent-type agent-id)
                 ;; I-1: a fresh auto-register (no initial-session-id) must
@@ -1795,6 +1800,7 @@
                          :metadata (cond-> {:auto-registered? true}
                                      (= agent-type :codex) (assoc :require-execution? true)
                                      requested-cwd (assoc :cwd requested-cwd)
+                                     mission-id (assoc :mission-id mission-id)
                                      emacs-socket (assoc :emacs-socket emacs-socket))})]
             (when (and invoke-fn (map? result) (:agent/id result))
               (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
@@ -1833,6 +1839,9 @@
                                        str str/trim not-empty)
             requested-cwd (some-> (or (:cwd payload) (get payload "cwd"))
                                   str str/trim not-empty)
+            mission-id (some-> (or (:mission-id payload)
+                                   (get payload "mission-id"))
+                               str str/trim not-empty)
             emacs-socket (some-> (or (:emacs-socket payload)
                                      (get payload "emacs-socket"))
                                  str str/trim not-empty)
@@ -1863,6 +1872,7 @@
                 metadata (cond-> {:auto-registered? true}
                            (= agent-type :codex) (assoc :require-execution? true)
                            requested-cwd (assoc :cwd requested-cwd)
+                           mission-id (assoc :mission-id mission-id)
                            emacs-socket (assoc :emacs-socket emacs-socket))]
             (if (nil? invoke-fn)
               (json-response 500 {:ok false

@@ -142,6 +142,27 @@ has no non-empty lines."
       (insert (agent-mission-control--truncate-line line))
       (insert "\n"))))
 
+(defun agent-mission-control--buffer-mission-label (buf)
+  "Return clocked-in mission label for BUF."
+  (with-current-buffer buf
+    (let ((mission (and (boundp 'agent-chat--mission-id)
+                        agent-chat--mission-id)))
+      (if (and (stringp mission) (not (string-empty-p mission)))
+          mission
+        "no mission"))))
+
+(defun agent-mission-control--buffer-agent-label (buf)
+  "Return agent label for BUF including clocked-in mission."
+  (with-current-buffer buf
+    (let ((agent (or (and (boundp 'agent-chat--agent-id)
+                          agent-chat--agent-id)
+                     (and (boundp 'agent-chat--agent-name)
+                          agent-chat--agent-name)
+                     (buffer-name buf))))
+      (format "%s [mission:%s]"
+              agent
+              (agent-mission-control--buffer-mission-label buf)))))
+
 (defun agent-mission-control--render ()
   "Erase and re-render the digest buffer.  Returns the buffer."
   (let* ((buf (get-buffer-create agent-mission-control-buffer-name))
@@ -171,7 +192,9 @@ has no non-empty lines."
                      'face 'agent-mission-control-meta-face))
           (dolist (src sources)
             (insert (propertize
-                     (format "── %s ──\n" (buffer-name src))
+                     (format "── %s — %s ──\n"
+                             (buffer-name src)
+                             (agent-mission-control--buffer-agent-label src))
                      'face 'agent-mission-control-header-face
                      'agent-mc-section (buffer-name src)))
             (agent-mission-control--insert-tail src)
