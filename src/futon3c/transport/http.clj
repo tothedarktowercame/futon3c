@@ -3408,12 +3408,16 @@
           candidates)))
 
 (defn- handle-missions
-  "GET /api/alpha/missions — cross-repo mission inventory."
-  [_request _config]
-  (let [missions (mcb/build-inventory)]
+  "GET /api/alpha/missions — cross-repo mission inventory with per-mission
+  turn-count telemetry. Telemetry is computed once over the live runtime store
+  and both attached per-mission and surfaced top-level."
+  [_request config]
+  (let [turn-counts (mcb/mission-turn-count-telemetry (evidence-store-for-config config))
+        missions (mcb/attach-turn-counts (mcb/build-inventory) turn-counts)]
     (json-response 200 {:ok true
                         :missions missions
-                        :count (count missions)})))
+                        :count (count missions)
+                        :turn-counts turn-counts})))
 
 (defn- handle-mission-detail
   "GET /api/alpha/missions/:id — single mission info + wiring diagram."
@@ -4775,43 +4779,6 @@
           (handle-processes-list config)
 
           ;; Mission inventory endpoint
-          (and (= :get method) (= "/api/alpha/missions" uri))
-          (try
-            (require 'futon3c.peripheral.mission-control-backend)
-            ;; Compute telemetry once, then attach it AND surface it top-level —
-            ;; build-inventory-with-turn-counts would recompute telemetry
-            ;; internally, doubling the 50k-entry evidence query per request.
-            (let [build-inv (resolve 'futon3c.peripheral.mission-control-backend/build-inventory)
-                  telemetry (resolve 'futon3c.peripheral.mission-control-backend/mission-turn-count-telemetry)
-                  attach (resolve 'futon3c.peripheral.mission-control-backend/attach-turn-counts)
-                  ;; Feed the live runtime store (same one the evidence
-                  ;; endpoints use); the no-arg telemetry defaults to the empty
-                  ;; in-memory !store, so live turn counts would be 0.
-                  turn-counts (when telemetry (telemetry (evidence-store-for-config config)))
-                  missions (cond-> (build-inv)
-                             (and attach turn-counts) (attach turn-counts))
-                  entries (mapv (fn [m]
-                                 {:mission/id (:mission/id m)
-                                  :mission/status (some-> (:mission/status m) name)
-                                  :mission/repo (:mission/repo m)
-                                  :mission/source (some-> (:mission/source m) name)
-                                  :mission/title (:mission/title m)
-                                  :mission/owner (:mission/owner m)
-                                  :mission/date (:mission/date m)
-                                  :mission/path (:mission/path m)
-                                  :mission/turn-count (:mission/turn-count m)
-                                  :mission/historical-turn-count (:mission/historical-turn-count m)
-                                  :mission/live-turn-count (:mission/live-turn-count m)
-                                  :mission/historical-commit-count (:mission/historical-commit-count m)})
-                                missions)]
-              (json-response 200 {:ok true
-                                  :count (count entries)
-                                  :turn-counts turn-counts
-                                  :missions entries}))
-            (catch Throwable t
-              (json-response 500 {:ok false :error "mission-scan-failed"
-                                  :message (.getMessage t)})))
-
           ;; Reflection endpoints
           (and (= :get method) (= "/api/alpha/reflect/namespaces" uri))
           (handle-reflect-namespaces request)
