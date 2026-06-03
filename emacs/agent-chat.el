@@ -7,6 +7,7 @@
 (require 'cl-lib)
 (require 'browse-url)
 (require 'json)
+(require 'seq)
 (require 'subr-x)
 (require 'url)
 (require 'url-util)
@@ -180,6 +181,12 @@ If a function returns nil, the original TEXT is used.")
 
 (defvar-local agent-chat--pending-user-turn-text nil
   "User turn text staged until a real session ID is available.")
+
+(defvar-local agent-chat-auto-clock-enabled t
+  "Non-nil means explicit resolved turn target mentions may auto-clock the buffer.")
+
+(defvar-local agent-chat--last-auto-clock-witness nil
+  "Audit witness for the most recent auto-clock promotion.")
 
 (defcustom agent-chat-commit-repo-roots nil
   "Git repo roots scanned for commits made during a chat turn.
@@ -526,6 +533,88 @@ When nil, use the current git root plus futon* directories under ~/code."
   (let ((candidates (agent-chat--clock-target-candidates kind)))
     (agent-chat-normalize-clock-id
      (completing-read prompt candidates nil nil))))
+
+(defun agent-chat--explicit-clock-target-tokens (text)
+  "Return explicit C-/M-/E- target tokens named in TEXT."
+  (let (tokens)
+    (with-temp-buffer
+      (insert text)
+      (goto-char (point-min))
+      (while (re-search-forward "\\_<[CME]-[[:alnum:]_-]+\\_>" nil t)
+        (push (match-string-no-properties 0) tokens)))
+    (nreverse (delete-dups tokens))))
+
+(defun agent-chat--resolve-auto-clock-token (token)
+  "Return (KIND . TOKEN) when TOKEN exists as a clock target, else nil."
+  (cond
+   ((string-prefix-p "C-" token)
+    (when (member token (agent-chat--clock-target-candidates 'campaign))
+      (cons 'campaign token)))
+   ((string-prefix-p "M-" token)
+    (when (member token (agent-chat--clock-target-candidates 'mission))
+      (cons 'mission token)))
+   ((string-prefix-p "E-" token)
+    (when (member token (agent-chat--clock-target-candidates 'excursion))
+      (cons 'excursion token)))))
+
+(defun agent-chat--auto-clock-target-from-text (text)
+  "Return a witnessed auto-clock target plist for TEXT, or nil.
+The rule is explicit-not-fuzzy: all C-/M-/E- tokens in TEXT must resolve by
+exact ID, and at most one target may be named per level."
+  (let* ((tokens (agent-chat--explicit-clock-target-tokens text))
+         (resolved (delq nil (mapcar #'agent-chat--resolve-auto-clock-token tokens)))
+         (unresolved (seq-remove
+                      (lambda (token)
+                        (assoc token (mapcar (lambda (entry)
+                                               (cons (cdr entry) t))
+                                             resolved)))
+                      tokens))
+         campaign mission excursion ambiguous)
+    (dolist (entry resolved)
+      (pcase (car entry)
+        ('campaign
+         (if campaign (setq ambiguous t) (setq campaign (cdr entry))))
+        ('mission
+         (if mission (setq ambiguous t) (setq mission (cdr entry))))
+        ('excursion
+         (if excursion (setq ambiguous t) (setq excursion (cdr entry))))))
+    (when (and resolved (null unresolved) (not ambiguous))
+      (list :campaign-id campaign
+            :mission-id mission
+            :excursion-id excursion
+            :tokens tokens
+            :rule "explicit-resolved-target"))))
+
+(defun agent-chat--clock-target-equal-p (target)
+  "Return non-nil when TARGET equals the current buffer clock target."
+  (and (equal (plist-get target :campaign-id) agent-chat--campaign-id)
+       (equal (plist-get target :mission-id) agent-chat--mission-id)
+       (equal (plist-get target :excursion-id) agent-chat--excursion-id)))
+
+(defun agent-chat--maybe-auto-clock-from-turn (text)
+  "Auto-clock from explicit resolved target mentions in TEXT.
+Returns the promotion witness plist, or nil when no promotion happened."
+  (when agent-chat-auto-clock-enabled
+    (when-let ((target (agent-chat--auto-clock-target-from-text text)))
+      (unless (agent-chat--clock-target-equal-p target)
+        (let ((old-target (agent-chat-mission-label)))
+          (agent-chat-set-clock! (list :campaign-id (plist-get target :campaign-id)
+                                       :mission-id (plist-get target :mission-id)
+                                       :excursion-id (plist-get target :excursion-id))
+                                 nil t)
+          (setq agent-chat--last-auto-clock-witness
+                `((rule . ,(plist-get target :rule))
+                  (source . "user-turn-explicit-token")
+                  (tokens . ,(apply #'vector (plist-get target :tokens)))
+                  (old-target . ,old-target)
+                  (new-target . ,(agent-chat-mission-label))))
+          (agent-chat-insert-message
+           "system"
+           (format "[auto-clock: %s -> %s via %s]"
+                   old-target
+                   (agent-chat-mission-label)
+                   (string-join (plist-get target :tokens) ", ")))
+          agent-chat--last-auto-clock-witness)))))
 
 (defun agent-chat-clock-campaign (campaign)
   "Clock into CAMPAIGN only."
@@ -1284,8 +1373,10 @@ additionally posted to the evidence HTTP endpoint."
              (on-launch-error (plist-get hooks :on-launch-error)))
         (delete-region (marker-position agent-chat--input-start) (point-max))
         (agent-chat-insert-message "joe" trimmed)
+        (agent-chat--maybe-auto-clock-from-turn trimmed)
         (when (functionp before-send)
           (funcall before-send trimmed))
+        (setq agent-chat--last-auto-clock-witness nil)
         (agent-chat-insert-thinking)
         (cl-incf agent-chat--turn-counter)
         (setq agent-chat--current-turn-id
@@ -1557,7 +1648,9 @@ Replaces the `(session: ...)' text in the first line."
        `((excursion-id . ,excursion)
          (clocked-excursion . ,excursion)))
      (when (or campaign mission excursion)
-       `((clocked-target . ,(agent-chat-mission-label)))))))
+       `((clocked-target . ,(agent-chat-mission-label))))
+     (when agent-chat--last-auto-clock-witness
+       `((auto-clock-witness . ,agent-chat--last-auto-clock-witness))))))
 
 (defun agent-chat-evidence-fetch-latest-id (evidence-url timeout sid)
   "Fetch most recent evidence id for session SID."
