@@ -298,14 +298,29 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
 
 (defun agent-chat--ensure-prompt-markers! ()
   "Ensure prompt markers are usable, repairing from the live prompt if needed."
-  (save-excursion
-    (goto-char (point-max))
-    (when (re-search-backward "^> " nil t)
-      (let ((prompt-start (line-beginning-position)))
-        (setq agent-chat--prompt-marker (copy-marker prompt-start t))
-        (setq agent-chat--separator-start (copy-marker prompt-start))
-        (set-marker-insertion-type agent-chat--prompt-marker t)
-        (setq agent-chat--input-start (copy-marker (+ prompt-start 2) t)))))
+  (let (prompt-pos)
+    (when-let ((marker-pos (and (markerp agent-chat--prompt-marker)
+                                (marker-position agent-chat--prompt-marker))))
+      (save-excursion
+        (goto-char marker-pos)
+        (cond
+         ((looking-at-p "> ")
+          (setq prompt-pos marker-pos))
+         ((looking-at-p "^─+$")
+          (forward-line 1)
+          (when (looking-at-p "> ")
+            (setq prompt-pos (line-beginning-position)))))))
+    (unless prompt-pos
+      (save-excursion
+        (goto-char (point-max))
+        (when (re-search-backward "^> " nil t)
+          (setq prompt-pos (line-beginning-position)))))
+    (when prompt-pos
+      (setq agent-chat--prompt-marker (copy-marker prompt-pos t))
+      (setq agent-chat--separator-start (copy-marker prompt-pos))
+      (set-marker-insertion-type agent-chat--prompt-marker t)
+      (setq agent-chat--input-start (copy-marker (+ prompt-pos 2) nil))
+      (set-marker-insertion-type agent-chat--input-start nil)))
   (and (markerp agent-chat--prompt-marker)
        (marker-position agent-chat--prompt-marker)))
 
@@ -1419,6 +1434,7 @@ CONFIG keys:
       (insert "> ")
       (overlay-put (make-overlay prompt-start (point)) 'face prompt-face))
     (setq agent-chat--input-start (point-marker))
+    (set-marker-insertion-type agent-chat--input-start nil)
     ;; Marker advances when messages are inserted
     (set-marker-insertion-type agent-chat--prompt-marker t)
     (agent-chat-enable-markdown-font-lock)
