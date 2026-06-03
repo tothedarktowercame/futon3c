@@ -282,6 +282,8 @@ If nil, reads from .admintoken in the project root at first use."
                                       agent-chat--campaign-id))
                   ("mission_id" . ,(agent-chat-normalize-mission-id
                                      agent-chat--mission-id))
+                  ("excursion_id" . ,(agent-chat-normalize-excursion-id
+                                       agent-chat--excursion-id))
                   ("working_directory" . ,default-directory))))))
     (error nil)))
 
@@ -365,6 +367,8 @@ If nil, reads from .admintoken in the project root at first use."
                                     agent-chat--campaign-id)
                       :mission-id (agent-chat-normalize-mission-id
                                    agent-chat--mission-id)
+                      :excursion-id (agent-chat-normalize-excursion-id
+                                     agent-chat--excursion-id)
                       :cwd default-directory
                       :prompt prompt
                       :prompt-preview (truncate-string-to-width prompt 200)
@@ -571,6 +575,8 @@ Falls back to unbound idle agents, then returns nil."
                                      agent-chat--campaign-id))
                     (mission-id . ,(agent-chat-normalize-mission-id
                                     agent-chat--mission-id))
+                    (excursion-id . ,(agent-chat-normalize-excursion-id
+                                      agent-chat--excursion-id))
                     (cwd . ,default-directory)
                     (session-file . ,resolved-session-file)
                     (emacs-socket . ,socket-name)))
@@ -603,6 +609,8 @@ In both cases, rebinds the agent's socket to this Emacs daemon."
                                 agent-chat--campaign-id))
                   (mission-id (agent-chat-normalize-mission-id
                                agent-chat--mission-id))
+                  (excursion-id (agent-chat-normalize-excursion-id
+                                 agent-chat--excursion-id))
                   (json-body (json-serialize
                               (append '(:type "claude")
                                       (when socket-name
@@ -610,7 +618,9 @@ In both cases, rebinds the agent's socket to this Emacs daemon."
                                       (when campaign-id
                                         `(:campaign-id ,campaign-id))
                                       (when mission-id
-                                        `(:mission-id ,mission-id)))))
+                                        `(:mission-id ,mission-id))
+                                      (when excursion-id
+                                        `(:excursion-id ,excursion-id)))))
                   (result (with-temp-buffer
                             (let ((exit (call-process "curl" nil t nil
                                                       "-sS" "--max-time" "5"
@@ -1112,6 +1122,7 @@ CALLBACK is called with the final response text on completion."
 (define-key claude-repl-mode-map (kbd "C-c C-k") #'claude-repl-clear)
 (define-key claude-repl-mode-map (kbd "C-c C-n") #'claude-repl-new-session)
 (define-key claude-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
+(define-key claude-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key claude-repl-mode-map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-hud)
 (define-key claude-repl-mode-map (kbd "C-c M-a") #'futon3c-blackboard-toggle-agents-window-display)
 (define-key claude-repl-mode-map (kbd "C-c M-h") #'futon3c-blackboard-toggle-external-hud-mode)
@@ -1233,10 +1244,10 @@ Returns (ok . old-session-id) on success, nil on failure."
   "Reset the agent session so the next message starts a fresh conversation.
 Useful when a session becomes poisoned (e.g. API rejects the conversation
 history). Tries the reset-session endpoint first, falls back to Drawbridge.
-With optional TARGET, clock the fresh session into that campaign/mission target;
-nil means no mission."
+With optional TARGET, clock the fresh session into that campaign/mission/
+excursion target; nil means no mission."
   (interactive (list (when current-prefix-arg
-                       (agent-chat-read-mission))))
+                       (agent-chat-read-clock-target))))
   (let* ((api-result (claude-repl--reset-via-api))
          (result (or api-result (claude-repl--reset-via-drawbridge)))
          (ok (car result))
@@ -1257,12 +1268,12 @@ nil means no mission."
       (ok
        (format "[Session reset — was %s. Next message starts fresh%s.]"
                (or old-sid "unknown")
-               (if (or agent-chat--campaign-id agent-chat--mission-id)
+               (if (or agent-chat--campaign-id agent-chat--mission-id agent-chat--excursion-id)
                    (format ", target %s" (agent-chat-mission-label))
                  ", no mission")))
       (t
        (format "[Session reset locally only — could not reach server. Next message may still fail%s.]"
-               (if (or agent-chat--campaign-id agent-chat--mission-id)
+               (if (or agent-chat--campaign-id agent-chat--mission-id agent-chat--excursion-id)
                    (format ", target %s" (agent-chat-mission-label))
                  ", no mission")))))
     (goto-char (point-max))
@@ -1293,6 +1304,7 @@ Used by `claude-repl-clear' to redraw without losing the agent binding."
            :agent-id claude-repl-agent-id
            :campaign-id agent-chat--campaign-id
            :mission-id agent-chat--mission-id
+           :excursion-id agent-chat--excursion-id
            :clock-change-fn (lambda ()
                               (claude-repl--store-upsert-session)
                               (claude-repl--restore-agent claude-repl-agent-id
@@ -1445,9 +1457,9 @@ socket setup."
 
 ;;;###autoload
 (defun claude-repl (&optional mission)
-  "Start or switch to chat, optionally clocked into MISSION."
+  "Start or switch to chat, optionally clocked into a clock target."
   (interactive (list (when current-prefix-arg
-                       (agent-chat-read-mission))))
+                       (agent-chat-read-clock-target))))
   (let* ((ws (claude-repl--workspace))
          (bufname (if ws
                      (format "*claude-repl[%s]*" ws)

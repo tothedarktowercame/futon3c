@@ -856,6 +856,7 @@
    {:status \"invoking\"|\"idle\"|:invoking|:idle
     :session-id string
     :campaign-id string
+    :excursion-id string
     :prompt-preview string
     :activity string
     :mission-id string}
@@ -898,7 +899,9 @@
                                   (some-> (:campaign-id state) str str/trim not-empty)
                                   (assoc :campaign-id (some-> (:campaign-id state) str str/trim))
                                   (some-> (:mission-id state) str str/trim not-empty)
-                                  (assoc :mission-id (some-> (:mission-id state) str str/trim)))))
+                                  (assoc :mission-id (some-> (:mission-id state) str str/trim))
+                                  (some-> (:excursion-id state) str str/trim not-empty)
+                                  (assoc :excursion-id (some-> (:excursion-id state) str str/trim)))))
                        agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
                                 next-external
                                 (assoc :agent/external-invokes next-external)
@@ -1124,6 +1127,9 @@
                         mission-id (or (:mission-id external-invoke)
                                        (get-in agent [:agent/metadata :mission-id])
                                        (get-in agent [:agent/metadata "mission-id"]))
+                        excursion-id (or (:excursion-id external-invoke)
+                                         (get-in agent [:agent/metadata :excursion-id])
+                                         (get-in agent [:agent/metadata "excursion-id"]))
                         {:keys [queued-jobs running-jobs nonterminal-jobs]}
                         (get invoke-job-counts aid {})
                         external-codex-invoking?
@@ -1156,6 +1162,7 @@
                                   :session-id session-id
                                   :campaign-id campaign-id
                                   :mission-id mission-id
+                                  :excursion-id excursion-id
                                   :registered-at (str (:agent/registered-at agent))
                                   :last-active (str (:agent/last-active agent))
                                   :capabilities (:agent/capabilities agent)

@@ -581,6 +581,8 @@ expensive hidden-buffer redraws on every trace line during long Codex turns."
                         agent-chat--campaign-id))
      ("mission_id" . ,(agent-chat-normalize-mission-id
                        agent-chat--mission-id))
+     ("excursion_id" . ,(agent-chat-normalize-excursion-id
+                         agent-chat--excursion-id))
      ("working_directory" . ,default-directory)
      ("session_file" . ,codex-repl-session-file)
      ("rollout_file" . ,codex-repl--mirror-rollout-file)
@@ -969,6 +971,8 @@ expensive hidden-buffer redraws on every trace line during long Codex turns."
                                agent-chat--campaign-id)
                  :mission-id (agent-chat-normalize-mission-id
                               agent-chat--mission-id)
+                 :excursion-id (agent-chat-normalize-excursion-id
+                                agent-chat--excursion-id)
                  :cwd default-directory
                  :prompt prompt
                  :prompt-preview (codex-repl--truncate-single-line prompt 240)
@@ -1612,6 +1616,9 @@ is absent from the registry after a JVM restart."
                     (when-let ((mission-id (agent-chat-normalize-mission-id
                                             agent-chat--mission-id)))
                       (push `(mission-id . ,mission-id) p))
+                    (when-let ((excursion-id (agent-chat-normalize-excursion-id
+                                               agent-chat--excursion-id)))
+                      (push `(excursion-id . ,excursion-id) p))
                     (when socket-name
                       (push `(emacs-socket . ,socket-name) p))
                     (when (and (stringp codex-repl-session-id)
@@ -1662,6 +1669,8 @@ is absent from the registry after a JVM restart."
                                      agent-chat--campaign-id))
                     (mission-id . ,(agent-chat-normalize-mission-id
                                     agent-chat--mission-id))
+                    (excursion-id . ,(agent-chat-normalize-excursion-id
+                                      agent-chat--excursion-id))
                     (cwd . ,resolved-cwd)
                     (session-file . ,resolved-session-file)))
          (response (codex-repl--request-json "POST" url payload))
@@ -1870,7 +1879,7 @@ short human-readable progress string to surface in *agents*."
              (concat "(do "
                      "(require 'futon3c.agency.registry) "
                      "(futon3c.agency.registry/report-external-invoke! "
-                     "%S %S {:status %s :session-id %S :campaign-id %S :mission-id %S :prompt-preview %S :activity %S}))")
+                     "%S %S {:status %s :session-id %S :campaign-id %S :mission-id %S :excursion-id %S :prompt-preview %S :activity %S}))")
              codex-repl-agency-agent-id
              codex-repl--registry-source
              status-form
@@ -1879,6 +1888,7 @@ short human-readable progress string to surface in *agents*."
                   codex-repl-session-id)
              (agent-chat-normalize-campaign-id agent-chat--campaign-id)
              (agent-chat-normalize-mission-id agent-chat--mission-id)
+             (agent-chat-normalize-excursion-id agent-chat--excursion-id)
              (when (eq status :invoking) "[external invoke]")
              (and (stringp activity)
                   (not (string-empty-p activity))
@@ -4268,7 +4278,7 @@ Returns (ok . old-session-id) on success, nil on failure."
 With optional TARGET, clock the fresh session into that campaign/mission target;
 nil means no mission."
   (interactive (list (when current-prefix-arg
-                       (agent-chat-read-mission))))
+                       (agent-chat-read-clock-target))))
   (when codex-repl--mirror-mode-p
     (codex-repl--mirror-read-only-error "start a new session"))
   (when (process-live-p agent-chat--pending-process)
@@ -4289,7 +4299,7 @@ nil means no mission."
                (if (and (stringp old-sid) (not (string-empty-p old-sid)))
                    (format " (was %s)" old-sid)
                  "")
-               (if (or agent-chat--campaign-id agent-chat--mission-id)
+               (if (or agent-chat--campaign-id agent-chat--mission-id agent-chat--excursion-id)
                    (format ", target %s" (agent-chat-mission-label))
                  ", no mission")))
       (t
@@ -4297,7 +4307,7 @@ nil means no mission."
                (if (and (stringp old-sid) (not (string-empty-p old-sid)))
                    (format " (was %s)" old-sid)
                  "")
-               (if (or agent-chat--campaign-id agent-chat--mission-id)
+               (if (or agent-chat--campaign-id agent-chat--mission-id agent-chat--excursion-id)
                    (format ", target %s" (agent-chat-mission-label))
                  ", no mission")))))
     (goto-char (point-max))
@@ -4326,6 +4336,7 @@ nil means no mission."
 (define-key codex-repl-mode-map (kbd "C-c C-k") #'codex-repl-clear)
 (define-key codex-repl-mode-map (kbd "C-c C-n") #'codex-repl-new-session)
 (define-key codex-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
+(define-key codex-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key codex-repl-mode-map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-hud)
 (define-key codex-repl-mode-map (kbd "C-c M-a") #'futon3c-blackboard-toggle-agents-window-display)
 (define-key codex-repl-mode-map (kbd "C-c M-h") #'futon3c-blackboard-toggle-external-hud-mode)
@@ -4343,6 +4354,7 @@ nil means no mission."
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-k") #'codex-repl-clear)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-n") #'codex-repl-new-session)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
+(define-key codex-repl-mirror-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key codex-repl-mirror-mode-map (kbd "C-c C-a") #'futon3c-blackboard-toggle-agents-hud)
 (define-key codex-repl-mirror-mode-map (kbd "C-c M-a") #'futon3c-blackboard-toggle-agents-window-display)
 (define-key codex-repl-mirror-mode-map (kbd "C-c M-h") #'futon3c-blackboard-toggle-external-hud-mode)
@@ -4448,6 +4460,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
          :agent-id (or codex-repl-agency-agent-id "codex-1")
          :campaign-id agent-chat--campaign-id
          :mission-id agent-chat--mission-id
+         :excursion-id agent-chat--excursion-id
          :clock-change-fn (lambda ()
                             (codex-repl--store-upsert-session)
                             (codex-repl--restore-agent codex-repl-agency-agent-id
@@ -4607,7 +4620,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
 (defun codex-repl (&optional target)
   "Start or switch to Codex REPL, optionally clocked into TARGET."
   (interactive (list (when current-prefix-arg
-                       (agent-chat-read-mission))))
+                       (agent-chat-read-clock-target))))
   (codex-repl--open-instance codex-repl-buffer-name
                              codex-repl-invoke-buffer-name
                              codex-repl-api-url
