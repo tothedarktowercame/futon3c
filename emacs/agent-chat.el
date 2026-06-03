@@ -276,10 +276,24 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id."
            fill-column
            80)))
 
+(defun agent-chat--ensure-prompt-markers! ()
+  "Ensure prompt markers are usable, repairing from the live prompt if needed."
+  (unless (and (markerp agent-chat--prompt-marker)
+               (marker-position agent-chat--prompt-marker))
+    (save-excursion
+      (goto-char (point-max))
+      (when (re-search-backward "^> " nil t)
+        (let ((prompt-start (line-beginning-position)))
+          (setq agent-chat--prompt-marker (copy-marker prompt-start t))
+          (setq agent-chat--separator-start (copy-marker prompt-start))
+          (set-marker-insertion-type agent-chat--prompt-marker t)
+          (setq agent-chat--input-start (copy-marker (+ prompt-start 2) t))))))
+  (and (markerp agent-chat--prompt-marker)
+       (marker-position agent-chat--prompt-marker)))
+
 (defun agent-chat--insert-turn-end-flair (&optional elapsed)
   "Render the transcript turn-end clock-in flair before the input prompt."
-  (when (and (markerp agent-chat--prompt-marker)
-             (marker-position agent-chat--prompt-marker))
+  (when (agent-chat--ensure-prompt-markers!)
     (let* ((inhibit-read-only t)
            (label (format "*%s*" (agent-chat-mission-label)))
            (width (agent-chat--turn-flair-width))

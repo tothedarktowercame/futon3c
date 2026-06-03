@@ -1039,7 +1039,7 @@ CALLBACK is called with the final response text on completion."
                                      (claude-repl--emit-assistant-turn-evidence! result)
                                      (claude-repl--emit-turn-commits-evidence!)
                                      (claude-repl--close-frame "done")
-                                     (agent-chat-invariants-turn-ended)
+                                     (agent-chat-finish-turn!)
                                      (goto-char (point-max))
                                      (agent-chat-scroll-to-bottom))
                                  ;; No streaming happened — use callback for full insert

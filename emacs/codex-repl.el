@@ -3779,7 +3779,7 @@ When FORCE is non-nil, refresh immediately."
                          (codex-repl--emit-turn-commits-evidence!)))
                       (codex-repl--time-invoke-step!
                        "turn-ended"
-                       #'agent-chat-invariants-turn-ended)
+                       #'agent-chat-finish-turn!)
                       (codex-repl--time-invoke-step!
                        "scroll-bottom"
                        #'agent-chat-scroll-to-bottom)
