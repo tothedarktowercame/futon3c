@@ -14,6 +14,12 @@
     (is (:verified? report))
     (is (every? empty? (vals (get-in report [:witness :violations]))))))
 
+(deftest conforming-inbound-click-models-interest-event
+  (let [{:keys [evidence-anchor posterior-delta]} inv/conforming-inbound]
+    (is (seq evidence-anchor))
+    (is (= :posterior-state (:field posterior-delta)))
+    (is (contains? inv/interest-event-posterior-states (:to posterior-delta)))))
+
 (deftest adversarial-traces-caught-by-own-category
   (let [report (inv/run-verify)]
     (doseq [[cat result] (:adversarial report)]
@@ -25,4 +31,6 @@
     (let [report (inv/run-verify trace)]
       (is (not (:verified? report)) (str cat " adversarial trace should fail"))
       (is (seq (get-in report [:witness :violations cat]))
-          (str cat " should be the flagged category")))))
+          (str cat " should be the flagged category"))
+      (is (every? empty? (vals (dissoc (get-in report [:witness :violations]) cat)))
+          (str cat " adversarial trace should violate only its category")))))
