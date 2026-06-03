@@ -1048,10 +1048,13 @@
 (defn- live-mission-turn-counts
   ([] (live-mission-turn-counts estore/!store))
   ([evidence-store]
+   ;; chat-turn evidence is :evidence/type :coordination but spans several
+   ;; claim-types (question / observation / correction), so filtering on
+   ;; :query/claim-type :question silently dropped most turns. Filter on type
+   ;; only; chat-user-turn-entry? narrows to event=chat-turn + role=user.
    (let [entries (try
                    (estore/query* evidence-store
                                   {:query/type :coordination
-                                   :query/claim-type :question
                                    :query/limit 50000})
                    (catch Exception _ []))
          by-mission (reduce

@@ -4784,7 +4784,10 @@
             (let [build-inv (resolve 'futon3c.peripheral.mission-control-backend/build-inventory)
                   telemetry (resolve 'futon3c.peripheral.mission-control-backend/mission-turn-count-telemetry)
                   attach (resolve 'futon3c.peripheral.mission-control-backend/attach-turn-counts)
-                  turn-counts (when telemetry (telemetry))
+                  ;; Feed the live runtime store (same one the evidence
+                  ;; endpoints use); the no-arg telemetry defaults to the empty
+                  ;; in-memory !store, so live turn counts would be 0.
+                  turn-counts (when telemetry (telemetry (evidence-store-for-config config)))
                   missions (cond-> (build-inv)
                              (and attach turn-counts) (attach turn-counts))
                   entries (mapv (fn [m]
