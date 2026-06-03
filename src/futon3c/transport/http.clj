@@ -1767,6 +1767,11 @@
                                       str
                                       str/trim
                                       not-empty)
+                campaign-id (some-> (or (:campaign-id payload)
+                                        (get payload "campaign-id"))
+                                    str
+                                    str/trim
+                                    not-empty)
                 mission-id (some-> (or (:mission-id payload)
                                        (get payload "mission-id"))
                                    str
@@ -1800,6 +1805,7 @@
                          :metadata (cond-> {:auto-registered? true}
                                      (= agent-type :codex) (assoc :require-execution? true)
                                      requested-cwd (assoc :cwd requested-cwd)
+                                     campaign-id (assoc :campaign-id campaign-id)
                                      mission-id (assoc :mission-id mission-id)
                                      emacs-socket (assoc :emacs-socket emacs-socket))})]
             (when (and invoke-fn (map? result) (:agent/id result))
@@ -1839,6 +1845,9 @@
                                        str str/trim not-empty)
             requested-cwd (some-> (or (:cwd payload) (get payload "cwd"))
                                   str str/trim not-empty)
+            campaign-id (some-> (or (:campaign-id payload)
+                                    (get payload "campaign-id"))
+                                str str/trim not-empty)
             mission-id (some-> (or (:mission-id payload)
                                    (get payload "mission-id"))
                                str str/trim not-empty)
@@ -1872,6 +1881,7 @@
                 metadata (cond-> {:auto-registered? true}
                            (= agent-type :codex) (assoc :require-execution? true)
                            requested-cwd (assoc :cwd requested-cwd)
+                           campaign-id (assoc :campaign-id campaign-id)
                            mission-id (assoc :mission-id mission-id)
                            emacs-socket (assoc :emacs-socket emacs-socket))]
             (if (nil? invoke-fn)
@@ -1884,14 +1894,17 @@
                 (if existing
                   (let [effective-session-id (or initial-session-id
                                                  (:agent/session-id existing))
+                        metadata* (cond-> (merge (or (:agent/metadata existing) {})
+                                                 metadata)
+                                    (nil? campaign-id) (dissoc :campaign-id "campaign-id")
+                                    (nil? mission-id) (dissoc :mission-id "mission-id"))
                         result (reg/update-agent!
                         agent-id
                         :agent/type agent-type
                         :agent/invoke-fn invoke-fn
                         :agent/session-reset-fn session-reset-fn
                         :agent/capabilities (get default-capabilities agent-type [])
-                        :agent/metadata (merge (or (:agent/metadata existing) {})
-                                               metadata)
+                        :agent/metadata metadata*
                                 :agent/session-id effective-session-id)]
                     (if (and (map? result) (= false (:ok result)))
                       (json-response 409 {:ok false

@@ -855,6 +855,7 @@
    STATE may include:
    {:status \"invoking\"|\"idle\"|:invoking|:idle
     :session-id string
+    :campaign-id string
     :prompt-preview string
     :activity string
     :mission-id string}
@@ -894,6 +895,8 @@
                                   (assoc :prompt-preview (some-> (:prompt-preview state) str str/trim))
                                   (some-> (:activity state) str str/trim not-empty)
                                   (assoc :activity (some-> (:activity state) str str/trim))
+                                  (some-> (:campaign-id state) str str/trim not-empty)
+                                  (assoc :campaign-id (some-> (:campaign-id state) str str/trim))
                                   (some-> (:mission-id state) str str/trim not-empty)
                                   (assoc :mission-id (some-> (:mission-id state) str str/trim)))))
                        agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
@@ -1115,6 +1118,9 @@
                                  external-invoke-fresh-ms))
                         session-id (or (:session-id external-invoke)
                                        (:agent/session-id agent))
+                        campaign-id (or (:campaign-id external-invoke)
+                                        (get-in agent [:agent/metadata :campaign-id])
+                                        (get-in agent [:agent/metadata "campaign-id"]))
                         mission-id (or (:mission-id external-invoke)
                                        (get-in agent [:agent/metadata :mission-id])
                                        (get-in agent [:agent/metadata "mission-id"]))
@@ -1148,6 +1154,7 @@
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id
+                                  :campaign-id campaign-id
                                   :mission-id mission-id
                                   :registered-at (str (:agent/registered-at agent))
                                   :last-active (str (:agent/last-active agent))

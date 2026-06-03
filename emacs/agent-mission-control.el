@@ -143,13 +143,11 @@ has no non-empty lines."
       (insert "\n"))))
 
 (defun agent-mission-control--buffer-mission-label (buf)
-  "Return clocked-in mission label for BUF."
+  "Return clocked-in campaign/mission label for BUF."
   (with-current-buffer buf
-    (let ((mission (and (boundp 'agent-chat--mission-id)
-                        agent-chat--mission-id)))
-      (if (and (stringp mission) (not (string-empty-p mission)))
-          mission
-        "no mission"))))
+    (if (fboundp 'agent-chat-mission-label)
+        (agent-chat-mission-label)
+      "no mission")))
 
 (defun agent-mission-control--buffer-agent-label (buf)
   "Return agent label for BUF including clocked-in mission."
@@ -159,7 +157,7 @@ has no non-empty lines."
                      (and (boundp 'agent-chat--agent-name)
                           agent-chat--agent-name)
                      (buffer-name buf))))
-      (format "%s [mission:%s]"
+      (format "%s [%s]"
               agent
               (agent-mission-control--buffer-mission-label buf)))))
 

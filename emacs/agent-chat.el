@@ -89,6 +89,12 @@
 (defvar-local agent-chat--mission-id nil
   "Mission ID clocked into the current chat session, or nil for no mission.")
 
+(defvar-local agent-chat--campaign-id nil
+  "Campaign ID clocked into the current chat session, or nil for no campaign.")
+
+(defvar-local agent-chat--clock-change-fn nil
+  "Optional function called after the chat clock target changes.")
+
 (defvar-local agent-chat--session-turn-count nil
   "Cached number of evidence chat turns recorded for the current session.")
 
@@ -168,12 +174,12 @@ When nil, immediate futon* repos under ~/code plus the current
 
 ;;; Display
 
-(defun agent-chat-normalize-mission-id (mission)
-  "Return normalized MISSION string, or nil for no mission."
+(defun agent-chat-normalize-clock-id (value)
+  "Return normalized clock target VALUE string, or nil for no target."
   (let ((s (cond
-            ((null mission) nil)
-            ((symbolp mission) (symbol-name mission))
-            (t (format "%s" mission)))))
+            ((null value) nil)
+            ((symbolp value) (symbol-name value))
+            (t (format "%s" value)))))
     (when s
       (let ((trimmed (string-trim s)))
         (unless (or (string-empty-p trimmed)
@@ -181,25 +187,103 @@ When nil, immediate futon* repos under ~/code plus the current
                             '("nil" "none" "no mission" "no-mission")))
           trimmed)))))
 
+(defun agent-chat-normalize-mission-id (mission)
+  "Return normalized MISSION string, or nil for no mission."
+  (agent-chat-normalize-clock-id mission))
+
+(defun agent-chat-normalize-campaign-id (campaign)
+  "Return normalized CAMPAIGN string, or nil for no campaign."
+  (agent-chat-normalize-clock-id campaign))
+
+(defun agent-chat--parse-clock-target-string (target &optional inherit-current)
+  "Parse TARGET into (:campaign-id C :mission-id M).
+When INHERIT-CURRENT is non-nil, a mission-only target keeps the current
+campaign clock-in."
+  (let ((raw (agent-chat-normalize-clock-id target)))
+    (cond
+     ((null raw) (list :campaign-id nil :mission-id nil))
+     ((string-match-p "\\(?:›\\|>\\|/\\)" raw)
+      (let ((campaign nil)
+            (mission nil))
+        (dolist (part (split-string raw "\\s-*\\(?:›\\|>\\|/\\)\\s-*" t))
+          (let ((id (agent-chat-normalize-clock-id part)))
+            (cond
+             ((and id (string-prefix-p "C-" id)) (setq campaign id))
+             ((and id (string-prefix-p "M-" id)) (setq mission id))
+             ((null campaign) (setq campaign id))
+             (t (setq mission id)))))
+        (list :campaign-id campaign :mission-id mission)))
+     ((string-prefix-p "C-" raw)
+      (list :campaign-id raw :mission-id nil))
+     ((string-prefix-p "M-" raw)
+      (list :campaign-id (and inherit-current agent-chat--campaign-id)
+            :mission-id raw))
+     (t
+      (list :campaign-id nil :mission-id raw)))))
+
+(defun agent-chat-parse-clock-target (target &optional inherit-current)
+  "Parse TARGET into a campaign/mission plist.
+TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id."
+  (cond
+   ((and (listp target) (or (plist-member target :campaign-id)
+                            (plist-member target :mission-id)))
+    (list :campaign-id (agent-chat-normalize-campaign-id
+                        (plist-get target :campaign-id))
+          :mission-id (agent-chat-normalize-mission-id
+                       (plist-get target :mission-id))))
+   (t
+    (agent-chat--parse-clock-target-string target inherit-current))))
+
 (defun agent-chat-mission-label ()
-  "Return display label for the current mission clock-in."
-  (or (agent-chat-normalize-mission-id agent-chat--mission-id)
-      "no mission"))
+  "Return display label for the current campaign/mission clock-in."
+  (cond
+   ((and agent-chat--campaign-id agent-chat--mission-id)
+    (format "%s › %s" agent-chat--campaign-id agent-chat--mission-id))
+   (agent-chat--campaign-id
+    agent-chat--campaign-id)
+   (agent-chat--mission-id
+    agent-chat--mission-id)
+   (t "no mission")))
 
 (defun agent-chat-mission-segment ()
-  "Return a compact prompt/header segment for mission clock-in state."
-  (format "[mission:%s]" (agent-chat-mission-label)))
+  "Return a compact prompt/header segment for campaign/mission clock-in state."
+  (format "[%s]" (agent-chat-mission-label)))
+
+(defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)
+  "Clock the current chat buffer into TARGET, or clear with nil/blank.
+TARGET may be C-*, M-*, or a C-* > M-* pair.  With INHERIT-CURRENT,
+mission-only targets keep the current campaign.  When SUPPRESS-CALLBACK is
+non-nil, do not call `agent-chat--clock-change-fn'."
+  (let ((parsed (agent-chat-parse-clock-target target inherit-current)))
+    (setq agent-chat--campaign-id (plist-get parsed :campaign-id))
+    (setq agent-chat--mission-id (plist-get parsed :mission-id)))
+  (agent-chat--update-session-header-line)
+  (when (and (not suppress-callback)
+             (functionp agent-chat--clock-change-fn))
+    (funcall agent-chat--clock-change-fn))
+  (list :campaign-id agent-chat--campaign-id
+        :mission-id agent-chat--mission-id))
 
 (defun agent-chat-set-mission! (mission)
   "Clock the current chat buffer into MISSION, or clear with nil/blank."
-  (setq agent-chat--mission-id (agent-chat-normalize-mission-id mission))
-  (agent-chat--update-session-header-line)
-  agent-chat--mission-id)
+  (agent-chat-set-clock! mission))
+
+(defun agent-chat-read-clock-target (&optional prompt)
+  "Read a campaign/mission target from the minibuffer; blank clears it."
+  (let ((input (read-string
+                (or prompt "Clock target (C-*, M-*, C-* > M-*, blank for no mission): "))))
+    (agent-chat-parse-clock-target input t)))
 
 (defun agent-chat-read-mission (&optional prompt)
-  "Read a mission id from the minibuffer; blank means no mission."
-  (agent-chat-normalize-mission-id
-   (read-string (or prompt "Mission (blank for no mission): "))))
+  "Read a campaign/mission target from the minibuffer; blank means no mission."
+  (agent-chat-read-clock-target prompt))
+
+(defun agent-chat-clock-in (target)
+  "Clock the current running chat buffer into TARGET.
+TARGET may be a campaign, mission, campaign/mission pair, or blank."
+  (interactive (list (agent-chat-read-clock-target)))
+  (agent-chat-set-clock! target t)
+  (message "clocked in: %s" (agent-chat-mission-label)))
 
 (defun agent-chat--git-root (&optional directory)
   "Return git root for DIRECTORY, or nil when DIRECTORY is not in a repo."
@@ -972,7 +1056,9 @@ CONFIG keys:
   :face-alist  - alist of (name . face) for speakers
   :agent-name  - \"claude\" or \"codex\"
   :agent-id    - registry agent-id (e.g. \"claude-1\") for walkie-talkie
+  :campaign-id - optional campaign id clocked into this session
   :mission-id  - optional mission id clocked into this session
+  :clock-change-fn - optional 0-arg function called after clock-in changes
   :thinking-text   - e.g. \"claude is thinking...\"
   :thinking-prop   - symbol for text property"
   (let ((title (plist-get config :title))
@@ -982,7 +1068,9 @@ CONFIG keys:
         (face-alist (plist-get config :face-alist))
         (agent-name (plist-get config :agent-name))
         (agent-id (plist-get config :agent-id))
+        (campaign-id (plist-get config :campaign-id))
         (mission-id (plist-get config :mission-id))
+        (clock-change-fn (plist-get config :clock-change-fn))
         (thinking-text (plist-get config :thinking-text))
         (thinking-prop (plist-get config :thinking-prop))
         (evidence-url (plist-get config :evidence-url))
@@ -992,7 +1080,9 @@ CONFIG keys:
           (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
     (setq agent-chat--agent-name agent-name)
     (setq agent-chat--agent-id agent-id)
+    (setq agent-chat--campaign-id (agent-chat-normalize-campaign-id campaign-id))
     (setq agent-chat--mission-id (agent-chat-normalize-mission-id mission-id))
+    (setq agent-chat--clock-change-fn clock-change-fn)
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
@@ -1006,7 +1096,7 @@ CONFIG keys:
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face)))
-    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session\n\n"
+    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers
     (setq agent-chat--prompt-marker (point-marker))
@@ -1118,10 +1208,18 @@ Replaces the `(session: ...)' text in the first line."
             (plist-get (plist-get parsed :entry) :evidence/id))))))
 
 (defun agent-chat--mission-body-fields ()
-  "Return mission evidence fields for the current buffer."
-  (when-let ((mission (agent-chat-normalize-mission-id agent-chat--mission-id)))
-    `((mission-id . ,mission)
-      (clocked-mission . ,mission))))
+  "Return campaign/mission evidence fields for the current buffer."
+  (let ((campaign (agent-chat-normalize-campaign-id agent-chat--campaign-id))
+        (mission (agent-chat-normalize-mission-id agent-chat--mission-id)))
+    (append
+     (when campaign
+       `((campaign-id . ,campaign)
+         (clocked-campaign . ,campaign)))
+     (when mission
+       `((mission-id . ,mission)
+         (clocked-mission . ,mission)))
+     (when (or campaign mission)
+       `((clocked-target . ,(agent-chat-mission-label)))))))
 
 (defun agent-chat-evidence-fetch-latest-id (evidence-url timeout sid)
   "Fetch most recent evidence id for session SID."
@@ -1241,8 +1339,9 @@ Replaces the `(session: ...)' text in the first line."
                                (commits . ,(apply #'vector commits)))
                              (agent-chat--mission-body-fields)))
                (tags (append (list transport "turn-commits" "git")
-                             (when agent-chat--mission-id
-                               (list "mission-clocked"))))
+                             (when (or agent-chat--campaign-id
+                                       agent-chat--mission-id)
+                               (list "target-clocked"))))
                (payload `((subject . ((ref/type . "session")
                                       (ref/id . ,sid)))
                           (type . "coordination")
