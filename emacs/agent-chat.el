@@ -1249,10 +1249,12 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
   (let ((inhibit-read-only t))
     (save-excursion
       (goto-char (point-min))
-      (when (re-search-forward "(session:[^\n]+)" (line-end-position 2) t)
-        (replace-match (propertize (agent-chat--session-header-text)
-                                   'face 'font-lock-comment-face)
-                       nil nil)))))
+      (when (re-search-forward "(session:" (line-end-position 2) t)
+        (let ((beg (match-beginning 0))
+              (end (line-end-position)))
+          (delete-region beg end)
+          (insert (propertize (agent-chat--session-header-text)
+                              'face 'font-lock-comment-face)))))))
 
 (defun agent-chat-update-session-id (new-id)
   "Update the session ID displayed in the buffer header.
@@ -1495,11 +1497,13 @@ Replaces the `(session: ...)' text in the first line."
 (defun agent-chat--refresh-session-turn-count ()
   "Refresh cached session turn count by querying the evidence API."
   (if (and (stringp agent-chat--session-id)
-           (not (string-empty-p agent-chat--session-id)))
+           (not (string-empty-p agent-chat--session-id))
+           (not (string= agent-chat--session-id "pending"))
+           (not (string-match-p "(awaiting session)" agent-chat--session-id)))
       (let ((count (agent-chat--fetch-session-turn-count agent-chat--session-id)))
         (setq agent-chat--session-turn-count count)
         (agent-chat--update-session-header-line))
-    (setq agent-chat--session-turn-count nil)
+    (setq agent-chat--session-turn-count 0)
     (agent-chat--update-session-header-line)))
 
 (defun agent-chat-note-turn-recorded ()
