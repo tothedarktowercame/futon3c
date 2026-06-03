@@ -4778,11 +4778,15 @@
           (and (= :get method) (= "/api/alpha/missions" uri))
           (try
             (require 'futon3c.peripheral.mission-control-backend)
-            (let [build-inv (or (resolve 'futon3c.peripheral.mission-control-backend/build-inventory-with-turn-counts)
-                                (resolve 'futon3c.peripheral.mission-control-backend/build-inventory))
+            ;; Compute telemetry once, then attach it AND surface it top-level —
+            ;; build-inventory-with-turn-counts would recompute telemetry
+            ;; internally, doubling the 50k-entry evidence query per request.
+            (let [build-inv (resolve 'futon3c.peripheral.mission-control-backend/build-inventory)
                   telemetry (resolve 'futon3c.peripheral.mission-control-backend/mission-turn-count-telemetry)
-                  missions (build-inv)
+                  attach (resolve 'futon3c.peripheral.mission-control-backend/attach-turn-counts)
                   turn-counts (when telemetry (telemetry))
+                  missions (cond-> (build-inv)
+                             (and attach turn-counts) (attach turn-counts))
                   entries (mapv (fn [m]
                                  {:mission/id (:mission/id m)
                                   :mission/status (some-> (:mission/status m) name)
