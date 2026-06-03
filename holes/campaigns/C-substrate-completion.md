@@ -385,3 +385,13 @@ How the futon5 wiring-diagram concepts structure the §8.2 experiments (converge
 2. **Run E-α on the pilot dataset** (`turn-commit-mission-backfill.json`) — band vs common-neighbours; bank the descriptive characterization; validate the genotype template.
 3. **Then E-γ** (git-temporal edge-additions), same genotype shape.
 4. **Re-run as the going-forward dataset grows** (clean clock-in era) — the pilots become the real predictive test at power.
+
+### 8.6 E-α RESULT — BANKED as a clean, well-diagnosed null (2026-06-02)
+
+Two pre-registered rounds (genotypes `52c97bb` v1, `827835e` v2), both **FAIL the gate**, with a diagnosis that *sharpened* between them:
+- **v1** (111 episodes, all aligned missions): `newman(b)` MAP 0.053 vs **recency floor 0.132**; lift −0.079. **0/111 non-degenerate** — suspected `F_M(T)` staticness.
+- **v2** (59 episodes, the 53 temporally-evolving missions — an outcome-independent applicability slice): `newman(b)`=`raw(a)`=0.035 vs **recency floor 0.171**; lift −0.136. Still **0/59 non-degenerate**, but the diagnostic **moved decisively**: empty-`F_M` dropped 30/111 → 8/59 (the slice *did* fix staticness), yet **flat-candidate 51/59** → the real wall is **candidate-coverage**: the doc-mention graph **structurally cannot reach the next-new-file targets**.
+
+**Verdict:** the *mention-intent → next-locus* hypothesis is **falsified** — not "weak signal beaten by baselines" but *structurally inert for this target*, confirmed in two rounds with a moving, honest diagnosis. **`recency`/node-arrival dominates throughout** (0.132 → 0.171) — the through-line holds: predictive reduces to baselines; the **descriptive** value (`pheromone↔basin`, `:mission/mentions-file` curvature) was the real deliverable and is already banked.
+
+**Decision (Joe):** bank E-α; **do NOT chase v3** (co-touch/dep candidate source ≈ the co-change baseline → would reconfirm baselines, the fishing-expedition we set out to avoid). The pre-registration + ablation + the v1→v2 diagnostic shift are the discipline working as designed — a hypothesis cleanly ruled out, cheaply. The *predictive* frontier reopens only with the going-forward clock-in data (§8.1) at power, on a signal that can structurally reach code-locus targets (not doc-mention). Results: `futon5/tools/embed/genotypes/E-alpha-next-locus{,-v2}.result.md`.
