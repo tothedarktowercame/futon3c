@@ -337,3 +337,29 @@ Consequence for JAX-on-substrate-2: a **first-order** differentiable loss has a 
 
 ### 7.6 Honest conclusion — no end-to-end plan yet; deep-research-gated
 We have a populated substrate (identities + embedding + edges + `mission→file` + curvature), a clear **descriptive win**, a clear **predictive null** on the current representation, a **menu of richer representations** untested end-to-end, and a **footing** (Poly + first-order-diff landed, curvature↔Poly open). We do **not** have a code-ingest → JAX → beats-baseline solution. The honest read: a real *predictive* solution likely needs **(a)** a richer code representation (Malli / code-bodies / the git-temporal target) **and (b)** progress on the higher-order-tangent↔Poly gap (or a deliberate stay-at-first-order). Until then the substrate's delivered value is **descriptive** (manifold / provenance / curvature), and the predictive ambition is a **deep-research front** (the dark-tower duology + the differential-strand reframe), not yet a buildable plan. Recorded to consolidate the substrate's state and make the open question explicit.
+
+---
+
+## 8. Forward program — upgrade-in-flight, pre-registered experiments, the greenfield generalization (2026-06-02, Joe)
+
+**Stance.** We can hand-roll and experiment freely **locally**. The substrate's data is **upgradable in flight** — we've only logged turn-based evidence for a short while relative to when the need was first seen, so any "we weren't gathering the right thing" gap (no mission clock-in; no exact-commit-per-turn) is **cheap to add now, not a blocker**. Discipline holds: every experiment **pre-registered + baseline-gated**; descriptive value banked, predictive claims *earned* against a baseline.
+
+### 8.1 Instrumentation upgrade (close the §7.2 data gaps)
+- **Mission clock-in** → real `turn→mission` ground truth (today conjectural — `E-the-dark-tower-2` §7).
+- **Per-turn commit capture** → real `turn→code` (today git-only, unjoined to turns).
+- Then `turn→mission→code` is *ground truth*, not approximated — the corpus the predictive hypotheses need. Upgrade-in-flight: evidence accrues going forward; no need to retro-fit history to begin.
+
+### 8.2 Pre-registered experiments (firm up *before* running; each **beats-baseline-or-null**)
+Sharpened from "embed all turns + code pointers → predict what to write next":
+- **E-α (next-locus):** from a turn/mission embedding + `mission→file` history, predict the **next code locus** (file/ns) a mission will touch. Baseline: recency + co-mention + preferential-attachment. *Beats baseline or it's a null.*
+- **E-β (Malli-typed representation):** embed **Malli signatures** (typed structure) vs symbol-names; does the typed arm beat the keyword baseline on a structural task (which fns compose / wire)? — the retry where the symbol-name arm was the *expected* null.
+- **E-γ (git-temporal target):** the realized **edge-additions** (git) as ground truth; does any signal (turn-embedding / mention-curvature / Malli) forecast real additions above preferential-attachment + triadic-closure? — the one strand with a genuine prediction target.
+- **E-δ (fat-file focus):** concentrate JAX on the **108 attractor basins** (29% of LOC); the 95% small files are at-grain and ~uniform.
+
+### 8.3 The greenfield generalization — mathlib as a *target, not a dependency*
+- **Apply the same ideas to mathlib** (a proof corpus) to show the tooling generalizes — more valuable demonstrated in a second use case. **Transfers:** the **descriptive/structural** layer (curvature/morphology over mathlib's dependency graph; the Poly substrate; first-order active-inference). **Does NOT transfer:** the **turn-based predictive** hypotheses (E-α/E-γ) — **mathlib has no "turns."**
+- **Do not make the work depend on mathlib usefulness.** futon's predictive edge is turn-instrumented; mathlib is the descriptive-generalization showcase.
+- **The pitch.** Post-futon6-mining `:greenfield` — not *"it works on my laptop"* but *"the ProofGeneral replacement for 2030 and beyond"*: a next-gen development/proof environment where the substrate metric + active-inference + the tower drive the UX. Mathlib demonstrates the descriptive tooling at scale; futon carries the turn-instrumented predictive frontier. (Vision home: the `E-the-dark-tower` duology.)
+
+### 8.4 Discipline
+Experiment freely locally; **pre-register + baseline-gate** every predictive claim; bank descriptive value as it lands; keep mathlib as **showcase, not crutch**. The deep-research fronts (`E-the-dark-tower-2`: Poly substrate, first-order-diff landed, curvature↔Poly open) gate the *predictive* ambition; the §8.1 instrumentation + E-α…δ are the buildable near-term. **Nothing here is started unbidden** — this records the program; each item is a deliberate pick-up.
