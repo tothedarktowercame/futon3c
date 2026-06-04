@@ -134,6 +134,26 @@ Review (claude-3, of `a1add6d`) found the detector promoted on *any* exact resol
 
 ### Remaining Work
 
+- **Creation-clock rule (Joe, 2026-06-04 — via the `eoi-new head` excursion).** `eoi-new head <slug>` (and any
+  mission-*creating* flow) should auto-clock onto the **just-created** mission so the operator needn't clock it in.
+  The existing `explicit-resolved-target` rule **cannot** cover this: Rule 2 requires the token to resolve against
+  *existing* filesystem candidates, but a mission being created does not exist when the turn is parsed. So this is a
+  **distinct post-creation clock-in** — fire *after* `M-<slug>.md` is written (when it now resolves). **Design twist:
+  unlike the floor-only mention rule (Rule 0), creation-clock should *switch* the active clock even if one is set** —
+  invoking `eoi-new head X` is unambiguous explicit intent to start X, not a passing mention, so the floor-only guard
+  does not apply. Surfaces: a post-assembly hook in the `eoi-new` launcher (`futon0/scripts/eoi-new`) or an
+  `agent-chat.el` creation-clock path. Audit witness `(rule . "creation-clock") (source . "eoi-new-head") …`.
 - Add XTDB-backed target existence witness when mission/campaign/excursion entities are stable enough for this surface.
 - Decide whether an explicit bare `E-*` should remain bare forever or inherit a currently active campaign/mission under a separate, explicitly documented rule.
 - Add a dedicated promotion evidence event if the turn-body witness is not enough for downstream analysis.
+
+## INSTANTIATE-2 (2026-06-04) — creation-clock
+
+Implemented a distinct creation-clock rule in `agent-chat.el`:
+
+- `agent-chat-creation-clock-mission!` clocks to a just-created mission only after it resolves through the filesystem-backed mission candidates.
+- The rule records an audit witness with `(rule . "creation-clock")`, source, token, old target, and new target.
+- Unlike the mention-based `explicit-resolved-target` rule, creation-clock does **not** require the no-target floor; it may switch an active clock because mission creation is explicit operator intent.
+- `agent-chat-watch-creation-clock-mission!` arms a buffer-local post-creation watcher, so `eoi-new head <slug>` can wait for `M-<slug>` to appear on disk before switching.
+
+The `eoi-new` launcher now arms that watcher for `eoi-mission-head` / `head` invocations when a mission slug is provided.

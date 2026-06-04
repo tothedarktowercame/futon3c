@@ -188,6 +188,9 @@ If a function returns nil, the original TEXT is used.")
 (defvar-local agent-chat--last-auto-clock-witness nil
   "Audit witness for the most recent auto-clock promotion.")
 
+(defvar-local agent-chat--creation-clock-watch-timer nil
+  "Timer watching for a just-created mission to become clockable.")
+
 (defcustom agent-chat-commit-repo-roots nil
   "Git repo roots scanned for commits made during a chat turn.
 When nil, immediate futon* repos under ~/code plus the current
@@ -591,6 +594,80 @@ exact ID, and at most one target may be named per level."
   (and (equal (plist-get target :campaign-id) agent-chat--campaign-id)
        (equal (plist-get target :mission-id) agent-chat--mission-id)
        (equal (plist-get target :excursion-id) agent-chat--excursion-id)))
+
+(defun agent-chat--normalize-creation-mission-id (mission)
+  "Return normalized mission id for creation-clock MISSION."
+  (when-let ((id (agent-chat-normalize-mission-id mission)))
+    (if (string-prefix-p "M-" id)
+        id
+      (concat "M-" id))))
+
+(defun agent-chat--mission-clock-target-exists-p (mission)
+  "Return non-nil when MISSION resolves as a filesystem-backed mission target."
+  (member mission (agent-chat--clock-target-candidates 'mission)))
+
+(defun agent-chat--cancel-creation-clock-watch! ()
+  "Cancel the current buffer's creation-clock watch timer, if any."
+  (when (timerp agent-chat--creation-clock-watch-timer)
+    (cancel-timer agent-chat--creation-clock-watch-timer))
+  (setq agent-chat--creation-clock-watch-timer nil))
+
+(defun agent-chat-creation-clock-mission! (mission &optional source)
+  "Clock this buffer into just-created MISSION when it now exists.
+This is a distinct post-creation rule, not the mention-based auto-clock rule:
+it may switch an already active clock because mission creation is explicit
+operator intent, not a passing mention.  Return the audit witness, or nil when
+MISSION is not yet a filesystem-backed mission target."
+  (interactive (list (agent-chat--read-clock-id 'mission "Created mission M-*: ")
+                     "manual-creation-clock"))
+  (when-let ((mission-id (agent-chat--normalize-creation-mission-id mission)))
+    (when (agent-chat--mission-clock-target-exists-p mission-id)
+      (let ((old-target (agent-chat-mission-label)))
+        (agent-chat-set-clock! (list :campaign-id nil
+                                     :mission-id mission-id
+                                     :excursion-id nil)
+                               nil t)
+        (setq agent-chat--last-auto-clock-witness
+              `((rule . "creation-clock")
+                (source . ,(or source "mission-created"))
+                (tokens . ,(vector mission-id))
+                (old-target . ,old-target)
+                (new-target . ,(agent-chat-mission-label))))
+        (agent-chat-insert-message
+         "system"
+         (format "[creation-clock: %s -> %s via %s]"
+                 old-target
+                 (agent-chat-mission-label)
+                 mission-id))
+        agent-chat--last-auto-clock-witness))))
+
+(defun agent-chat-watch-creation-clock-mission! (mission &optional source timeout-seconds interval-seconds)
+  "Watch for MISSION to be created, then clock this buffer into it.
+The watcher resolves through `agent-chat--clock-target-candidates', so it only
+fires after the mission exists on disk.  It deliberately does not require the
+no-target floor; the creation-clock rule is explicit creation intent."
+  (when-let ((mission-id (agent-chat--normalize-creation-mission-id mission)))
+    (agent-chat--cancel-creation-clock-watch!)
+    (let* ((buf (current-buffer))
+           (started (float-time))
+           (timeout (or timeout-seconds 7200))
+           (interval (or interval-seconds 5))
+           timer)
+      (setq timer
+            (run-at-time
+             0 interval
+             (lambda ()
+               (if (not (buffer-live-p buf))
+                   (cancel-timer timer)
+                 (with-current-buffer buf
+                   (cond
+                    ((agent-chat-creation-clock-mission! mission-id
+                                                         (or source "mission-created"))
+                     (agent-chat--cancel-creation-clock-watch!))
+                    ((> (- (float-time) started) timeout)
+                     (agent-chat--cancel-creation-clock-watch!))))))))
+      (setq agent-chat--creation-clock-watch-timer timer)
+      mission-id)))
 
 (defun agent-chat--maybe-auto-clock-from-turn (text)
   "Auto-clock from explicit resolved target mentions in TEXT.

@@ -165,4 +165,34 @@ promoted (and must not wipe a bare campaign down to the bare mention)."
                "let us work on M-differentiable-code"))
       (should (equal agent-chat--mission-id "M-differentiable-code")))))
 
+(ert-deftest agent-chat-creation-clock-switches-after-mission-exists ()
+  "Creation-clock is a separate rule: it resolves after creation and may switch."
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let ((missions '("M-autoclock-in"))
+          inserted)
+      (cl-letf (((symbol-function 'agent-chat--clock-target-candidates)
+                 (lambda (kind)
+                   (pcase kind
+                     ('mission missions)
+                     (_ nil))))
+                ((symbol-function 'agent-chat-insert-message)
+                 (lambda (name text)
+                   (push (list name text) inserted))))
+        (setq agent-chat--campaign-id nil
+              agent-chat--mission-id "M-autoclock-in"
+              agent-chat--excursion-id nil)
+        (should-not (agent-chat-creation-clock-mission!
+                     "M-creation-clock" "eoi-new-head"))
+        (should (equal agent-chat--mission-id "M-autoclock-in"))
+        (push "M-creation-clock" missions)
+        (let ((witness (agent-chat-creation-clock-mission!
+                        "creation-clock" "eoi-new-head")))
+          (should witness)
+          (should (equal agent-chat--mission-id "M-creation-clock"))
+          (should (equal (alist-get 'rule witness) "creation-clock"))
+          (should (equal (alist-get 'source witness) "eoi-new-head"))
+          (should (equal (alist-get 'old-target witness) "M-autoclock-in"))
+          (should inserted))))))
+
 ;;; agent-chat-test.el ends here
