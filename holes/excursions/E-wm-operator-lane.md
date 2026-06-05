@@ -174,6 +174,33 @@ depends on the one undecided predicate:
 
 *Joe retains veto on both; these are v0 build defaults, not ratified final design.*
 
+### 8c. Adapter contract — RESOLVED by claude-1 (bell 2026-06-05)
+
+Source: `semilattice.edn :backlog` (108 items), each carrying `:c-joint :days-since :declared
+:region :basins :n-commits :repo`. **TWO streams, two id-spaces — do NOT fake-unify:** missions
+(`semilattice :name`, `M-/C-/E-*`) and business sorries (`mint.edn :sorry`, `:S-*`). Tag each
+lane-item `:source :mission | :business-sorry`. (The §8 registry unifies them conceptually but is a
+doc, not a queryable EDN.)
+
+v1 attribute mapping — mostly READ existing fields; only 2 derived:
+
+| attr | mission stream | business stream |
+|---|---|---|
+| `futon-important?` | `:c-joint` in **top-quartile** (= §7.1 valuable-path top-25); `:region` = coarse tier | priced/crux salience |
+| `risk-mode?` | `:days-since` > 30 (stale, current-state) ∧ central | `:blocked? true` ∨ `:p :unsampled` |
+| `in-joes-model?` | central band — **v1 CAVEAT: coincides with `futon-important?`** (c-joint is the only signal) | presence in mint / interim-director |
+| `framing-blocked?` | parse `:declared` leading token ∈ {IDENTIFY, HEAD, proposal, draft}; eligible = {MAP, DERIVE, INSTANTIATE…}. Use `:declared` (phase), **NOT** centrality `:status` (git/label) | n/a |
+| `operator-dependent?` | from `:declared` phase | derive from `:discharge` text ("SENT cold cycle"/"issue+send" = operator) |
+
+DESCRIPTIVE GUARD holds: c-joint=centrality, days-since=git fact, declared=current phase,
+blocked?/p=current state — all current-state, none a forecast (§5 wall).
+
+**v1 CAVEAT (missions):** `in-joes-model?` ≡ `futon-important?` until v2, so the nag gate's 3-term
+conjunction has effectively 2 independent terms for missions (central ∧ risk-mode ∧ acknowledged).
+Honest v1 limitation. **v2 is near** (claude-1's branching-world-tree, §12 gamification-guard:
+descriptive-only) and adds explicit `:salience-band / :risk-mode? / :operator-dependent? / membership`
+→ swap the 2 derived terms to reads. **Build v1 now** (claude-1 rec); don't block on v2.
+
 ## 9. Invariants (the design contract — logic-model-before-code gate)
 
 - **INV-1 no-autonomous-fire-on-framing-blocked:** in autonomous mode, an `:open-mission` whose mission
