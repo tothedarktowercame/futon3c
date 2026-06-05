@@ -4530,6 +4530,77 @@
 ;; Public API
 ;; =============================================================================
 
+;; =============================================================================
+;; E-wm-operator-lane — operator portal data backbone (claude-7, 2026-06-05).
+;;
+;; `extra-routes` is the reload-safe route extension point: once the one-time
+;; re-mount wires make-handler's :else to call it, NEW routes are added by
+;; editing `extra-routes` and a plain Drawbridge reload — no further re-mount.
+;; Handlers use requiring-resolve to keep this ns's :require surface unchanged.
+;; =============================================================================
+
+(defn- olane-cors [resp]
+  (assoc-in resp [:headers "Access-Control-Allow-Origin"] "*"))
+
+(defn- olane-kw->str [x]
+  (cond (keyword? x) (name x) (nil? x) nil :else (str x)))
+
+(defn- olane-bulletin-item->json [it]
+  {:id       (olane-kw->str (:id it))
+   :title    (:title it)
+   :why      (:why it)
+   :lane     (olane-kw->str (:lane it))
+   :source   (olane-kw->str (:source it))
+   :target   (olane-kw->str (:target it))
+   :salience (:salience it)
+   :path     (:path it)
+   :repo     (:repo it)})
+
+(defn handle-operator-bulletin
+  "GET /api/alpha/war-machine/operator-bulletin — the Morning Bulletin projection
+   over live forward-model data (E-wm-operator-lane)."
+  [_request _config]
+  (try
+    (let [items ((requiring-resolve 'futon3c.wm.operator-lane-adapter/forward-model-items))
+          build (requiring-resolve 'futon3c.wm.operator-bulletin/build-bulletin)
+          b     (build items :date (subs (str (Instant/now)) 0 10))
+          body  {:date         (:date b)
+                 :generated-at (str (Instant/now))
+                 :nag          (mapv olane-bulletin-item->json (:nag b))
+                 :brief        (mapv olane-bulletin-item->json (:brief b))
+                 :silent-count (:silent-count b)
+                 :total        (:total b)}]
+      (olane-cors (json-response 200 body)))
+    (catch Exception e
+      (olane-cors (json-response 500 {:ok false :error "operator-bulletin-failed"
+                                      :message (.getMessage e)})))))
+
+(defn handle-forward-model
+  "GET /api/alpha/forward-model — raw business forward-model surface (mint.edn)."
+  [_request _config]
+  (try
+    (let [path @(requiring-resolve 'futon3c.wm.operator-lane-adapter/default-mint-path)
+          mint ((requiring-resolve 'clojure.edn/read-string) (slurp path))]
+      (olane-cors (json-response 200 mint)))
+    (catch Exception e
+      (olane-cors (json-response 500 {:ok false :error "forward-model-failed"
+                                      :message (.getMessage e)})))))
+
+(defn extra-routes
+  "Reload-safe route extension point for E-wm-operator-lane and future routes.
+   Returns a response map, or nil to fall through to make-handler's 404."
+  [request config]
+  (let [method (:request-method request)
+        uri    (:uri request)]
+    (cond
+      (and (= :get method) (= "/api/alpha/war-machine/operator-bulletin" uri))
+      (handle-operator-bulletin request config)
+
+      (and (= :get method) (= "/api/alpha/forward-model" uri))
+      (handle-forward-model request config)
+
+      :else nil)))
+
 (defn make-handler
   "Create an HTTP request handler wired to the social pipeline.
 
@@ -4842,11 +4913,12 @@
             (handle-encyclopedia-entry config corpus-name entry-id))
 
           :else
-          (json-response 404 {"error" true
-                              "code" "not-found"
-                              "message" (str "Unknown endpoint: "
-                                            (some-> method name str/upper-case)
-                                            " " uri)})))
+          (or (extra-routes request config)
+              (json-response 404 {"error" true
+                                  "code" "not-found"
+                                  "message" (str "Unknown endpoint: "
+                                                (some-> method name str/upper-case)
+                                                " " uri)}))))
         (catch InterruptedException _
           ;; JVM is tearing down (or a downstream XTDB query thread was
           ;; interrupted). Convert to a clean 503 instead of letting an
