@@ -250,6 +250,7 @@
         register-codex? (config/env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
         register-corpus? (config/env-bool "FUTON3C_REGISTER_CORPUS" false)
         register-tickle? (config/env-bool "FUTON3C_REGISTER_TICKLE" false)
+        register-scribe? (config/env-bool "FUTON3C_REGISTER_SCRIBE" false)
         register-vscode-codex? (config/env-bool "FUTON3C_REGISTER_VSCODE_CODEX" true)
         vscode-codex-agent-id (or (some-> (config/env "FUTON3C_VSCODE_AGENT_ID") str/trim not-empty)
                                   "codex-vscode")
@@ -324,6 +325,10 @@
       (peripheral-agents/register-tickle-agent!
        {:make-claude-invoke-fn make-claude-invoke-fn
         :make-tickle-invoke-fn make-tickle-invoke-fn
+        :read-session-id read-session-id}))
+    (when register-scribe?
+      (peripheral-agents/register-scribe-agent!
+       {:make-claude-invoke-fn make-claude-invoke-fn
         :read-session-id read-session-id}))
     (let [codex-bin-name (config/env "CODEX_BIN" "codex")
           codex-bin-exists? (binary-on-path? codex-bin-name)

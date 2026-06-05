@@ -72,3 +72,27 @@
                     (str " (session: " (short-session initial-sid) ")"))))
     {:invoke-fn invoke-fn
      :session-id initial-sid}))
+
+(defn register-scribe-agent!
+  [{:keys [make-claude-invoke-fn read-session-id]}]
+  (let [session-file (io/file "/tmp/futon-scribe-1-session-id")
+        initial-sid (read-session-id session-file)
+        sid-atom (atom initial-sid)
+        invoke-fn (make-claude-invoke-fn
+                   {:claude-bin (config/env "CLAUDE_BIN" "claude")
+                    :permission-mode (config/env "FUTON3C_SCRIBE_PERMISSION" "bypassPermissions")
+                    :agent-id "scribe-1"
+                    :session-file session-file
+                    :session-id-atom sid-atom
+                    :cwd "/home/joe/code"})]
+    (reg/register-agent! {:agent-id "scribe-1"
+                          :type :scribe
+                          :invoke-fn invoke-fn
+                          :capabilities [:write :observe]
+                          :session-reset-fn (make-session-reset-fn session-file sid-atom)
+                          :metadata {:role "interest-network-scribe"}})
+    (println (str "[dev] Scribe agent registered: scribe-1 (claude invoke)"
+                  (when initial-sid
+                    (str " (session: " (short-session initial-sid) ")"))))
+    {:invoke-fn invoke-fn
+     :session-id initial-sid}))
