@@ -1,11 +1,15 @@
 # Excursion: E-wm-operator-lane — operator-communication lanes for the overnight War Machine
 
 **Date:** 2026-06-05
-**Status:** INSTANTIATE in progress. Design gate VERIFIED (invariant logic-model `2c0c6c4`, 6/6).
-Lane classifier LANDED (`f4d5e13`, 330 assertions vs oracle). Morning bulletin LANDED (`2f34f68`,
-19 assertions; nag/brief projection + silent-count + novelty-flows-down acknowledgement boundary).
-Remaining cars: forward-model EDN adapter (pending claude-1 read-contract, bell 2026-06-05 — whether
-it reads fields or derives them); mode-aware `can-execute?` (futon2, held pending repo cleanup).
+**Status:** DATA BACKBONE LIVE (2026-06-05). Full chain shipped + verified over HTTP: invariant
+logic-model (`2c0c6c4`, 6/6) → classifier (`f4d5e13`, 330 assertions) → bulletin (`2f34f68`) →
+adapter (`d6bba12`+`dc5c2bf`, :path 108/108) → endpoints (`6df1754`, reload-safe `extra-routes`).
+Live: `GET /api/alpha/war-machine/operator-bulletin` (nag 0 / brief 60 / silent 51 / total 111) +
+`GET /api/alpha/forward-model` (mint.edn). Operator portal (claude-1) renders these.
+Go-live needed a **clean full JVM restart** (Joe) — in-place `load-file` of the live serving ns
+deadlocked under traffic; see [[feedback_serving_ns_reload_deadlock]]. After this one restart,
+future routes are plain reloads of `extra-routes` (no re-mount).
+Remaining: mode-aware `can-execute?` (futon2, held); acknowledged-state persistence (so nag can fire).
 **Owner:** claude-7 (end-to-end, per the E-prefix excursion convention)
 **Parent / context:** the `M-war-machine*` family (futon3c/holes/missions) — specifically the
 first-outing finding that the WM is *starved of input sources* and the open question of how it
