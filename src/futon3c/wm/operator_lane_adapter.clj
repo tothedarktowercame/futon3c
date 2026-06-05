@@ -6,7 +6,17 @@
    futon3c.wm.operator-bulletin/build-bulletin. The derived booleans are
    current-state/descriptive only; no predictive importance signal is read."
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]))
+
+(def default-code-root "/home/joe/code")
+
+;; Mission docs live in different sub-trees per repo (futon7/holes/,
+;; futon3c/holes/missions/, futon5a/holes/excursions/, …). :name carries the
+;; filename (with .md); :repo the repo. We resolve the real repo-relative path
+;; by probing the known mission homes — so the UI opens the correct file rather
+;; than a hardcoded repo (claude-1, 2026-06-05).
+(def mission-subdirs ["holes/missions" "holes" "holes/excursions" "holes/labs"])
 
 (def default-semilattice-path
   "/home/joe/code/futon7/holes/M-futon-forward-model.semilattice.edn")
@@ -45,6 +55,16 @@
   [declared]
   (contains? framing-blocked-tokens (leading-token declared)))
 
+(defn resolve-mission-path
+  "Repo-relative path of mission NAME within REPO under CODE-ROOT, or nil.
+   Probes the known mission sub-trees; first existing file wins."
+  [code-root repo name]
+  (when (and repo name)
+    (some (fn [sub]
+            (let [rel (str repo "/" sub "/" name)]
+              (when (.exists (io/file code-root rel)) rel)))
+          mission-subdirs)))
+
 (defn- mission-why [{:keys [days-since declared]} futon-important? framing-blocked?]
   (str/join ", "
             (cond-> []
@@ -52,7 +72,7 @@
               (and days-since (> days-since 30)) (conj (str "stale " days-since "d"))
               futon-important? (conj "central"))))
 
-(defn- mission->item [important-names {:keys [name c-joint days-since declared] :as mission}]
+(defn- mission->item [code-root important-names {:keys [name c-joint days-since declared repo] :as mission}]
   (let [futon-important?    (contains? important-names name)
         framing-blocked?    (framing-blocked-declared? declared)
         operator-dependent? framing-blocked?
@@ -63,6 +83,8 @@
            :title name
            :salience c-joint
            :source :mission
+           :repo repo
+           :path (resolve-mission-path code-root repo name)
            :futon-important? futon-important?
            :in-joes-model? futon-important?
            :risk-mode? risk-mode?
@@ -96,6 +118,8 @@
          :title (business-title item)
          :salience expected-lift
          :source :business-sorry
+         :repo nil
+         :path nil
          :futon-important? true
          :in-joes-model? true
          :risk-mode? (business-risk-mode? item)
@@ -103,10 +127,12 @@
          :operator-dependent? (operator-dependent-discharge? discharge)
          :why (business-why item)))
 
-(defn mission-items [semilattice]
-  (let [backlog (:backlog semilattice)
-        important-names (top-quartile-c-joint-names backlog)]
-    (mapv (partial mission->item important-names) backlog)))
+(defn mission-items
+  ([semilattice] (mission-items semilattice default-code-root))
+  ([semilattice code-root]
+   (let [backlog (:backlog semilattice)
+         important-names (top-quartile-c-joint-names backlog)]
+     (mapv (partial mission->item code-root important-names) backlog))))
 
 (defn business-items [mint]
   (mapv business->item
@@ -117,10 +143,11 @@
   ([]
    (forward-model-items {:semilattice-path default-semilattice-path
                          :mint-path default-mint-path}))
-  ([{:keys [semilattice-path mint-path]
+  ([{:keys [semilattice-path mint-path code-root]
      :or {semilattice-path default-semilattice-path
-          mint-path default-mint-path}}]
+          mint-path default-mint-path
+          code-root default-code-root}}]
    (let [semilattice (read-edn-file semilattice-path)
          mint        (read-edn-file mint-path)]
-     (vec (concat (mission-items semilattice)
+     (vec (concat (mission-items semilattice code-root)
                   (business-items mint))))))

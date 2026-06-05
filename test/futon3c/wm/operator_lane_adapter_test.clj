@@ -76,6 +76,28 @@
     (is (:operator-dependent? (by-id items :S-invoice-4)))
     (is (= 641.25 (:salience (by-id items :S-invoice-4))))))
 
+(deftest path-resolution-probes-mission-subtrees
+  (let [root (doto (java.io.File. (System/getProperty "java.io.tmpdir")
+                                  (str "olane-root-" (System/nanoTime)))
+               (.mkdirs))
+        sub  (doto (java.io.File. root "futonX/holes/missions") (.mkdirs))
+        _    (spit (java.io.File. sub "M-found.md") "x")
+        cr   (.getAbsolutePath root)]
+    (testing "first existing sub-tree wins; missing/nil → nil"
+      (is (= "futonX/holes/missions/M-found.md"
+             (adapter/resolve-mission-path cr "futonX" "M-found.md")))
+      (is (nil? (adapter/resolve-mission-path cr "futonX" "M-missing.md")))
+      (is (nil? (adapter/resolve-mission-path cr nil "M-found.md"))))
+    (testing "forward-model-items threads code-root into :path; business items get nil"
+      (let [items (adapter/forward-model-items
+                   {:semilattice-path (temp-edn-file {:backlog [{:name "M-found.md" :c-joint 0.9
+                                                                 :days-since 1 :declared "MAP" :repo "futonX"}]})
+                    :mint-path (temp-edn-file fixture-mint)
+                    :code-root cr})]
+        (is (= "futonX/holes/missions/M-found.md" (:path (by-id items "M-found.md"))))
+        (is (= "futonX" (:repo (by-id items "M-found.md"))))
+        (is (nil? (:path (by-id items :S-invoice-4))))))))
+
 (deftest end-to-end-classifier-and-bulletin
   (let [items (fixture-items)
         lanes (frequencies (map lane/classify-item items))
