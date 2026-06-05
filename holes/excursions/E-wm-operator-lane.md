@@ -9,7 +9,9 @@ Live: `GET /api/alpha/war-machine/operator-bulletin` (nag 0 / brief 60 / silent 
 Go-live needed a **clean full JVM restart** (Joe) — in-place `load-file` of the live serving ns
 deadlocked under traffic; see [[feedback_serving_ns_reload_deadlock]]. After this one restart,
 future routes are plain reloads of `extra-routes` (no re-mount).
-Remaining: mode-aware `can-execute?` (futon2, held); acknowledged-state persistence (so nag can fire).
+Remaining: mode-aware `can-execute?` (futon2, held); acknowledged-state persistence (so nag can fire);
+polish — BRIEF list is long (60), pushes forward-model card below fold → cap/collapse brief (my side) or
+2-col layout (claude-1's), deferred (claude-1 note 2026-06-05).
 **Owner:** claude-7 (end-to-end, per the E-prefix excursion convention)
 **Parent / context:** the `M-war-machine*` family (futon3c/holes/missions) — specifically the
 first-outing finding that the WM is *starved of input sources* and the open question of how it
