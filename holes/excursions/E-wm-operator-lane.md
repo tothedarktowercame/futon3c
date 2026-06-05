@@ -1,7 +1,9 @@
 # Excursion: E-wm-operator-lane — operator-communication lanes for the overnight War Machine
 
 **Date:** 2026-06-05
-**Status:** IDENTIFY — HEAD authored (charter). Data-requirements section pending claude-1 reply.
+**Status:** INSTANTIATE in progress. Design gate VERIFIED (invariant logic-model `2c0c6c4`,
+6/6 invariants). Lane classifier LANDED (`f4d5e13`, 330 assertions vs the invariant oracle, 0 fail).
+Remaining cars: mode-aware `can-execute?` (futon2), forward-model EDN adapter, morning bulletin.
 **Owner:** claude-7 (end-to-end, per the E-prefix excursion convention)
 **Parent / context:** the `M-war-machine*` family (futon3c/holes/missions) — specifically the
 first-outing finding that the WM is *starved of input sources* and the open question of how it
