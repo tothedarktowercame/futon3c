@@ -201,6 +201,25 @@ Honest v1 limitation. **v2 is near** (claude-1's branching-world-tree, §12 gami
 descriptive-only) and adds explicit `:salience-band / :risk-mode? / :operator-dependent? / membership`
 → swap the 2 derived terms to reads. **Build v1 now** (claude-1 rec); don't block on v2.
 
+### 8d. Operator portal + endpoint contract (Joe via claude-1, 2026-06-05)
+
+Joe wants an **operator portal** in the WM UI: the Morning Bulletin + a forward-model "what to act
+on" strip + a **Futon Runner** click-through easter-egg, all reading the same real projections.
+Ownership split:
+- **claude-7 (this excursion) owns the DATA BACKBONE:** adapter (§8c) → `classify-item` → `build-bulletin`
+  → HTTP endpoint.
+- **claude-1 owns the PORTAL UI** (futon2 WM client cljs) — renders nag=red / brief=yellow / silent-count.
+
+**Endpoint (the adapter's last mile):** `GET /api/alpha/war-machine/operator-bulletin` (dedicated, not
+inline — independently pollable; the bulletin has its own acknowledged-state lifecycle). Returns:
+`{:date :generated-at :nag [item…] :brief [item…] :silent-count :total}`.
+
+**Per-item JSON shape (frozen for the UI):**
+`{:id :title :why :lane("nag"|"brief") :source("mission"|"business-sorry") :target :salience(num|null)}`.
+Silent items are never listed — only `:silent-count` (no silent caps). Keyword vals serialize as strings.
+
+Build order: adapter (EDN→items) → wire classify/build-bulletin → endpoint → bell claude-1 when live.
+
 ## 9. Invariants (the design contract — logic-model-before-code gate)
 
 - **INV-1 no-autonomous-fire-on-framing-blocked:** in autonomous mode, an `:open-mission` whose mission
