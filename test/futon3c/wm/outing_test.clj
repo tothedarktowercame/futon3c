@@ -34,6 +34,9 @@
             :regressions [{:id :sorry/foo
                            :resolved-at "2026-06-01T00:00:00Z"}]}})
 
+(defn- inactive-sorry-check []
+  {:outcome :inactive :detail {:reason "no sorrys.edn found"}})
+
 (defn- run
   ([cycle-result] (run cycle-result {}))
   ([cycle-result opts]
@@ -65,6 +68,13 @@
     (is (= :quarantine (:verdict result)))
     (is (= [:g2-regression] (:reasons result)))
     (is (= :violation (get-in result [:gates :g2 :outcome])))))
+
+(deftest g2-inactive-registry-does-not-fail-test
+  ;; :inactive = no registry found = absence-of-data, not a regression; G2 passes.
+  (let [result (run {} {:sorry-check-fn inactive-sorry-check})]
+    (is (= :pass (:verdict result)))
+    (is (true? (get-in result [:gates :g2 :pass?])))
+    (is (= :inactive (get-in result [:gates :g2 :outcome])))))
 
 (deftest gate-error-quarantines-test
   (let [result (run {} {:verify-fn (fn [& _] (throw (ex-info "boom" {})))})]

@@ -40,7 +40,11 @@
 
 (defn- run-g2 [sorry-check-fn]
   (let [result (sorry-check-fn)
-        pass? (= :ok (:outcome result))]
+        ;; Only a :violation (an actual resolved-but-open regression) fails G2.
+        ;; :inactive (no sorrys.edn found) is absence-of-data, NOT a regression —
+        ;; treating it as a fail would quarantine every cycle when the registry
+        ;; can't be resolved. The :outcome stays visible for the run-summary.
+        pass? (not= :violation (:outcome result))]
     {:pass? pass?
      :outcome (:outcome result)
      :detail (:detail result)}))
