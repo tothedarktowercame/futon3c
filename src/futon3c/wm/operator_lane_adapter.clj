@@ -151,3 +151,32 @@
          mint        (read-edn-file mint-path)]
      (vec (concat (mission-items semilattice code-root)
                   (business-items mint))))))
+
+(def default-wm-needs-you-path "/home/joe/code/futon3c/data/wm/needs-you.edn")
+
+(defn wm-needs-you-items
+  "Read the WM overnight loop's needs-you vector (claude-1's emitter), if present.
+   Items arrive pre-laned (:lane \"nag\", :source \"wm-needs-you\") with an
+   :unblock-action. Deduped by :id (last wins); :source/:lane normalised to
+   keywords. Returns [] when the file is absent (the seam is dormant until the
+   overnight loop writes it). Dropping an item from the vector clears it from the
+   bulletin (we read the current vector each request)."
+  ([] (wm-needs-you-items default-wm-needs-you-path))
+  ([path]
+   (let [f (io/file path)]
+     (if (.exists f)
+       (->> (try (edn/read-string (slurp f)) (catch Throwable _ []))
+            (filter map?)
+            (reduce (fn [m it] (assoc m (:id it) it)) {}) ; dedupe by :id, last wins
+            vals
+            (mapv (fn [it] (cond-> it
+                             (:source it) (update :source keyword)
+                             (:lane it)   (update :lane keyword))))
+            vec)
+       []))))
+
+(defn operator-items
+  "The full operator-bulletin input: forward-model items (classified downstream)
+   UNIONed with the WM's pre-laned needs-you items."
+  ([] (operator-items {}))
+  ([opts] (vec (concat (forward-model-items opts) (wm-needs-you-items)))))

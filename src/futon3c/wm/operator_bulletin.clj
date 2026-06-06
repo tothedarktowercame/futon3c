@@ -25,7 +25,12 @@
 (defn classify-items
   "Tag each item with its lane via the classifier (pure)."
   [items]
-  (mapv (fn [it] (assoc it :lane (lane/classify-item it))) items))
+  ;; WM-emitted needs-you items arrive pre-laned (:lane "nag"); respect it
+  ;; (keywordised). Forward-model items have no :lane -> classify them.
+  (mapv (fn [it] (if (:lane it)
+                   (update it :lane keyword)
+                   (assoc it :lane (lane/classify-item it))))
+        items))
 
 (defn build-bulletin
   "Project ITEMS into a morning bulletin:

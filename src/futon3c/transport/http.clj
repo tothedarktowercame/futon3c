@@ -4554,14 +4554,16 @@
    :target   (olane-kw->str (:target it))
    :salience (:salience it)
    :path     (:path it)
-   :repo     (:repo it)})
+   :repo     (:repo it)
+   :unblock-action (:unblock-action it)            ; WM needs-you items: the one concrete clearing step
+   :run-id   (:run-id it)})                         ; provenance for WM-emitted items (nil otherwise)
 
 (defn handle-operator-bulletin
   "GET /api/alpha/war-machine/operator-bulletin — the Morning Bulletin projection
    over live forward-model data (E-wm-operator-lane)."
   [_request _config]
   (try
-    (let [items ((requiring-resolve 'futon3c.wm.operator-lane-adapter/forward-model-items))
+    (let [items ((requiring-resolve 'futon3c.wm.operator-lane-adapter/operator-items))
           build (requiring-resolve 'futon3c.wm.operator-bulletin/build-bulletin)
           b     (build items :date (subs (str (Instant/now)) 0 10))
           body  {:date         (:date b)
