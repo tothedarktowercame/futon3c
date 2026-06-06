@@ -30,7 +30,9 @@
             [futon3c.peripheral.war-machine-pilot-shapes :as pps]
             [futon3c.peripheral.war-machine-pilot-backend :as pb]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.peripheral.tools :as tools]))
+            [futon3c.peripheral.tools :as tools]
+            [futon3c.wm.guardrails :as guardrails]
+            [futon3c.wm.needs-you :as needs-you]))
 
 ;; =============================================================================
 ;; Domain state initialization
@@ -220,27 +222,68 @@
    [{:action {:type :target} :g-total :rank} …] — the differential dT_p."
   [judgement]
   (->> (:ranked-actions judgement)
-       (mapv (fn [e]
-               {:action {:type   (some-> (get-in e [:action :type]) keyword)
-                         :target (get-in e [:action :target])}
+	       (mapv (fn [e]
+	               {:action {:type   (some-> (get-in e [:action :type]) keyword)
+	                         :target (get-in e [:action :target])}
                 :g-total (:G-total e)
                 :rank    (:rank e)}))))
+
+(defn- guarded-selection
+  [dT ctx]
+  (let [classified (mapv #(assoc % :guardrails/classification
+                                  (guardrails/classify-action (:action %) ctx))
+                         dT)
+        autonomous (first (filter #(= :autonomous (:guardrails/classification %))
+                                  classified))
+        stepped-past (if autonomous
+                       (->> classified
+                            (take-while #(not= autonomous %))
+                            (filter #(= :needs-operator (:guardrails/classification %)))
+                            vec)
+                       (filterv #(= :needs-operator (:guardrails/classification %))
+                                classified))]
+    {:autonomous autonomous
+     :stepped-past stepped-past}))
 
 (defn begin-live-cycle!
   "READ → EVAL → PRINT(proposal) → request async tick. Fast, non-blocking, no
    substrate mutation. Stashes full begin-state by run-id; returns a summary."
   ([] (begin-live-cycle! {}))
-  ([{:keys [agent v-attribution emit-bell? tick? mode]
+  ([{:keys [agent v-attribution emit-bell? tick? mode guardrails? guardrails-ctx needs-you-path needs-you-top-k]
      :or {agent "claude-2" v-attribution :pilot-autonomous emit-bell? false
           tick? true mode :supervised-proposal}}]
    (let [run-id (str "live-" (java.util.UUID/randomUUID))
          j      (live-judgement)
          dT     (judgement->dT j)
-         top    (first dT)]
+         guarded (when guardrails?
+                   (guarded-selection dT (or guardrails-ctx {})))
+         top    (if guardrails?
+                  (:autonomous guarded)
+                  (first dT))]
      (if (nil? top)
-       {:ok false :error "no ranked-actions in live judgement"}
+       (if guardrails?
+         (let [items (mapv #(needs-you/action->needs-you-item % run-id)
+                           (:stepped-past guarded))
+               emitted (needs-you/emit-needs-you!
+                        items
+                        (cond-> {}
+                          needs-you-path (assoc :path needs-you-path)
+                          needs-you-top-k (assoc :top-k needs-you-top-k)))]
+           {:ok false
+            :reason :no-autonomous-action
+            :n-ranked (count dT)
+            :needs-you-emitted (:emitted-count emitted)
+            :needs-you-path (:path emitted)})
+         {:ok false :error "no ranked-actions in live judgement"})
        (let [v         (:action top)
              predicted (:g-total top)
+             stepped-past (if guardrails? (:stepped-past guarded) [])
+             emitted (when guardrails?
+                       (needs-you/emit-needs-you!
+                        (mapv #(needs-you/action->needs-you-item % run-id) stepped-past)
+                        (cond-> {}
+                          needs-you-path (assoc :path needs-you-path)
+                          needs-you-top-k (assoc :top-k needs-you-top-k))))
              cg-id     (if emit-bell?
                          (get-in (pb/consent-gate-emit
                                   {:intent (str "REPL EVAL: engage " (pr-str v))
@@ -260,11 +303,14 @@
                                        :consent-gate-intent-handshake)
                                :cg-id cg-id :proposed-action v
                                :bell-emitted? (boolean emit-bell?)}
-                    :tick-before tick-before :tick tick}]
+                    :tick-before tick-before :tick tick}
+             result {:ok true :run-id run-id :wm-mode (:mode j) :mode mode :n-ranked (count dT)
+                     :v v :predicted-discharge predicted :cg-id cg-id
+                     :tick-before tick-before :tick-queued tick}]
          (swap! !live-cycle-runs assoc run-id begin)
-         {:ok true :run-id run-id :wm-mode (:mode j) :mode mode :n-ranked (count dT)
-          :v v :predicted-discharge predicted :cg-id cg-id
-          :tick-before tick-before :tick-queued tick})))))
+         (cond-> result
+           guardrails? (assoc :needs-you-emitted (:emitted-count emitted)
+                              :needs-you-path (:path emitted))))))))
 
 (defn close-live-cycle!
   "LOOP: re-read the (post-tick) judgement; realised = post G-total of the
