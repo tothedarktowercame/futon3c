@@ -30,6 +30,14 @@
                  {:type :open-mission :target "M-unknown-holes"}
                  {:mission-status-fn (mission-status true nil)})))))
 
+(deftest open-mission-default-status-uses-live-mission-registry-test
+  (testing "live mission with parsed holes is autonomous without ctx injection"
+    (is (true? (guardrails/open-mission-with-holes?
+                "M-reflective-discipline" {}))))
+  (testing "done mission stays operator-gated even if historical text mentions work"
+    (is (false? (guardrails/open-mission-with-holes?
+                 "M-forum-refactor" {})))))
+
 (deftest forbidden-paths-and-markers-need-operator-test
   (let [ctx {:mission-status-fn (mission-status true 1)}]
     (is (false? (guardrails/autonomous-admissible?

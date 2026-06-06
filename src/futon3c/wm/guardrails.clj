@@ -80,12 +80,16 @@
       false)))
 
 (defn default-mission-status
-  "Default mission status lookup. The futon2 registry currently establishes
-   liveness; it does not expose open-hole counts, so the default result is
-   intentionally not autonomous unless a richer caller supplies hole evidence."
+  "Default mission status lookup through the futon2 registry."
   [target]
-  {:open? (registry-live-mission? target)
-   :open-hole-count nil})
+  (try
+    (if-let [mission-status-fn (requiring-resolve 'futon2.aif.mission-registry/mission-status)]
+      (mission-status-fn target)
+      {:open? (registry-live-mission? target)
+       :open-hole-count 0})
+    (catch Throwable _
+      {:open? false
+       :open-hole-count 0})))
 
 (defn open-mission-with-holes?
   "True iff TARGET names an existing open mission with >= 1 open hole.
