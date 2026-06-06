@@ -30,6 +30,8 @@
     (is (= "wm-needs-you" (:source item)))
     (is (= :learn-action-class (:wm-action-class item)))
     (is (= -3.0 (:g-total item)))
+    ;; display salience = negated EFE (higher = more salient for the NAG lane)
+    (is (= 3.0 (:salience item)))
     (is (= "run-1" (:run-id item)))
     (is (:unblock-action item))
     (is (:why item))))

@@ -105,7 +105,11 @@
      :source "wm-needs-you"
      :target target
      :path path
-     :salience g-total
+     ;; :g-total is raw expected free energy (LOWER = more important). The
+     ;; bulletin NAG lane sorts :salience DESCENDING (higher = more salient,
+     ;; matching the positive mission saliences), so display salience is the
+     ;; negated EFE: most-important action (most-negative g-total) => highest.
+     :salience (- g-total)
      :repo repo
      :wm-action-class class
      :g-total g-total
@@ -119,8 +123,11 @@
        vals
        vec))
 
-(defn- salience [item]
-  (double (or (:salience item) (:g-total item) 0.0)))
+(defn- importance
+  "Capping key: raw EFE :g-total (LOWER = more important), so the kept top-K are
+   the most-important. Distinct from display :salience (= negated EFE)."
+  [item]
+  (double (or (:g-total item) 0.0)))
 
 (defn- overflow-item [dropped-count run-id]
   {:id "wm-needs-overflow"
@@ -131,7 +138,8 @@
    :source "wm-needs-you"
    :target "wm-needs-you-overflow"
    :path needs-you-path
-   :salience Double/MAX_VALUE
+   ;; lowest display salience => the advisory sorts LAST in the NAG lane
+   :salience (- Double/MAX_VALUE)
    :repo "futon3c"
    :wm-action-class :needs-you-overflow
    :g-total Double/MAX_VALUE
@@ -140,7 +148,7 @@
 
 (defn- cap-items [items top-k]
   (let [top-k (long (or top-k default-top-k))
-        sorted (->> items (sort-by salience) vec)
+        sorted (->> items (sort-by importance) vec)
         n (count sorted)]
     (cond
       (or (not (pos? top-k)) (<= n top-k)) sorted
