@@ -1,7 +1,7 @@
 # M-the-perfect-crime
 
 **Type**: Mission
-**Lifecycle**: HEAD (drafted 2026-05-27 from operator-shape intake)
+**Lifecycle**: HEAD (drafted 2026-05-27) → first IDENTIFY artifact landed 2026-06-07 (corpus-audit pass; see §IDENTIFY). Operator HEAD-verify still pending.
 **Owner**: claude-1 (pending operator-direction)
 **Pairing**: TBD
 
@@ -84,9 +84,39 @@ Concretely: where in the mission corpus does "X subsumes Y" / "Y becomes free gi
 
 ---
 
-## IDENTIFY (pending)
+## IDENTIFY
 
-Pending operator HEAD-verify.
+**Operator HEAD-verify still pending** (the HEAD exit criteria need Joe — see above). What *has*
+landed (WM watched-cycle 1, 2026-06-07, pilot-driven under the guardrailed loop) is the first concrete
+IDENTIFY artifact — the one named in the HEAD design-space sketch:
+
+### The corpus-audit pass (first detective sweep)
+
+A mechanical pass over `*/holes/{missions,excursions}/{M,E}-*.md` (excl. `<repo>/.state`) for the
+chained-claim / subsumption verbs — `subsumes` · `subsumption` · `becomes free` · `for free` ·
+`falls out of` · `by-product` · `as a (free) bonus`. Result:
+
+- **84 raw hits across 39 files**; **74 candidates across 38 files** after excluding the mission's
+  own definitional uses. The HEAD audit's original **4** confirmed sites were the tip — a systematic
+  pass finds an order of magnitude more *candidates*.
+- Top candidate-density files: `M-bounded-disposition` (8), `M-archaeology-control` (8),
+  `M-single-locus` (5), `M-war-machine-wiring` (4), `E-interest-mining` (4).
+- Artifact: **`M-the-perfect-crime.audit.edn`** (this directory) — the punch list (per-file,
+  per-line, per-verb).
+
+**The discipline (load-bearing, per the Baudrillard thread):** these are audit **CANDIDATES — a verb
+is present — NOT confirmed perfect-crimes.** Most uses are legitimate. The crime is specifically
+*"X subsumes Y with neither X nor Y live"*; deciding that needs the per-candidate **live-check** (is
+the subsumer AND the subsumed actually live?). That check is the next IDENTIFY step — and it must not
+itself become the high-definition instrument that substitutes for the judgement (the detective must
+not become another cover for the real).
+
+### Carried into the live-check step
+
+- The **perfect-crime register** (sorrys-on-authoring, distinct from `sorrys.edn` — entity-of-record
+  is the prose location), seeded from the punch list once candidates are live-checked.
+- Graduation of `[[feedback_subsumption_claim_discipline]]` to a `library/` pattern.
+- The sub-question ("add Tornhill anyway?") stays open — the audit does **not** pre-decide it.
 
 ---
 
