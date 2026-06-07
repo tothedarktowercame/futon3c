@@ -4,7 +4,8 @@
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.efe :as efe]
             [futon2.aif.mission-registry :as mission-registry]
-            [futon3c.logic.capability-star-map-extractor :as extractor]))
+            [futon3c.logic.capability-star-map-extractor :as extractor]
+            [futon3c.wm.guardrails :as guardrails]))
 
 (def ^:private graph-path
   (io/file ".." "futon0" "holes" "missions"
@@ -156,6 +157,64 @@
      :leaf-count leaf-count
      :verdict verdict}))
 
+(defn- live-mission-status?
+  [{:keys [status-class missing?]}]
+  (and (not missing?)
+       (not (contains? #{:complete :inactive :draft} status-class))))
+
+(defn- terminal-c3-guardrails-report
+  []
+  (let [entries (terminal-c3-entries)
+        status-by-target (into {}
+                               (for [{:keys [target open-hole-count] :as entry} entries]
+                                 [target {:open? (live-mission-status? entry)
+                                          :open-hole-count open-hole-count}]))
+        ctx {:mission-status-fn (fn [target]
+                                  (get status-by-target target
+                                       {:open? false :open-hole-count 0}))}
+        graph (terminal-c3-graph (real-graph) entries)
+        raw-actions (mapv (fn [{:keys [target]}]
+                            {:type :open-mission :target target})
+                          (remove :missing? entries))
+        filtered-actions (filterv #(guardrails/autonomous-admissible? % ctx)
+                                  raw-actions)
+        opts {:capability-graph graph
+              :pre-registered-goal goal}
+        ranked (efe/rank-star-map-actions base-state filtered-actions opts)
+        top (first ranked)
+        leaf-count (count (filter :graph/single-cycle-leaf? ranked))
+        verdict (if (:graph/single-cycle-leaf? top) :pass :fail)]
+    {:entries entries
+     :status-by-target status-by-target
+     :filtered-actions filtered-actions
+     :graph graph
+     :ranked ranked
+     :top top
+     :leaf-count leaf-count
+     :verdict verdict}))
+
+(defn- ranked-summary
+  [ranked n]
+  (mapv (fn [{:keys [action rank G-total G-risk G-ambiguity G-info
+                     G-survival G-structural G-graph-pragmatic
+                     G-applicability G-body-size G-ascent-progress
+                     graph/applicable? graph/single-cycle-leaf?]}]
+          {:rank rank
+           :action action
+           :G-total G-total
+           :G-risk G-risk
+           :G-ambiguity G-ambiguity
+           :G-info G-info
+           :G-survival G-survival
+           :G-structural G-structural
+           :G-graph-pragmatic G-graph-pragmatic
+           :G-applicability G-applicability
+           :G-body-size G-body-size
+           :G-ascent-progress G-ascent-progress
+           :applicable? applicable?
+           :single-cycle-leaf? single-cycle-leaf?})
+        (take n ranked)))
+
 (deftest c3-real-graph-currently-fails-on-mega-mission-test
   (testing "C3 over the real WM-region graph: report the actual top action"
     (let [graph (real-graph)
@@ -205,6 +264,35 @@
       (is (= {:type :open-mission :target "M-arxana-roundtrip"} top-action))
       (is (= :fail verdict)
           "Terminal C3 FAIL is the honest current result: the top ranked expanded-landscape action is not an applicable single-cycle leaf."))))
+
+(deftest terminal-c3-production-guardrails-filtered-landscape-test
+  (testing "Terminal C3 with production guardrails filtering before EFE ranking"
+    (let [{:keys [filtered-actions ranked top leaf-count verdict status-by-target]} (terminal-c3-guardrails-report)
+          top-action (:action top)
+          top-target (:target top-action)
+          filtered-targets (mapv :target filtered-actions)
+          top-count (get-in status-by-target [top-target :open-hole-count])
+          top-breakdown (ranked-summary ranked 3)]
+      (println "TERMINAL C3 corrected filtered candidates:" filtered-targets)
+      (println "TERMINAL C3 corrected leaf-count:" leaf-count
+               "of" (count filtered-actions))
+      (println "TERMINAL C3 corrected top-count:" top-count)
+      (println "TERMINAL C3 corrected top-3:" top-breakdown)
+      (println "TERMINAL C3 corrected verdict:" verdict)
+      (is (= ["M-war-machine-pilot"
+              "M-capability-star-map"
+              "M-webarxana"
+              "M-essay-corpus-substrate"
+              "M-stack-stereolithography"
+              "M-stack-geometry"
+              "M-expressions-of-interest"]
+             filtered-targets))
+      (is (= 1 leaf-count))
+      (is (= {:type :open-mission :target "M-essay-corpus-substrate"} top-action))
+      (is (= 1 top-count))
+      (is (true? (:graph/single-cycle-leaf? top)))
+      (is (= :pass verdict)
+          "Corrected production-faithful Terminal C3 PASS: guardrails remove 0-hole non-actions before EFE ranking."))))
 
 (deftest inv-g-refuses-unregistered-pursuit-and-goal-extension-test
   (testing "INV-G rejects pursuit outside the brief and goal-extending decompose"
