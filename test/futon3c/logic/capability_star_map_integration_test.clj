@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.efe :as efe]
+            [futon2.aif.mission-registry :as mission-registry]
             [futon3c.logic.capability-star-map-extractor :as extractor]))
 
 (def ^:private graph-path
@@ -42,6 +43,119 @@
        (mapv (fn [[mission-id _]]
                {:type :open-mission :target mission-id}))))
 
+(def ^:private terminal-c3-candidate-docs
+  [{:target "M-war-machine-pilot"
+    :path ["." "holes" "missions" "M-war-machine-pilot.md"]
+    :region :wm}
+   {:target "M-capability-star-map"
+    :path [".." "futon0" "holes" "missions" "M-capability-star-map.md"]
+    :region :wm}
+   {:target "M-webarxana"
+    :path [".." "futon4" "holes" "missions" "M-webarxana.md"]
+    :region :t5}
+   {:target "M-essay-corpus-substrate"
+    :path [".." "futon4" "holes" "missions" "M-essay-corpus-substrate.md"]
+    :region :t5}
+   {:target "M-arxana-roundtrip"
+    :path [".." "futon4" "holes" "missions" "M-arxana-roundtrip.md"]
+    :region :t5}
+   {:target "M-stack-stereolithography"
+    :path [".." "futon5a" "holes" "missions" "M-stack-stereolithography.md"]
+    :region :t5}
+   {:target "M-stack-geometry"
+    :path [".." "futon5a" "holes" "missions" "M-stack-geometry.md"]
+    :region :t5}
+   {:target "M-hypergraph-operator"
+    :path [".." "futon5a" "holes" "missions" "M-hypergraph-operator.md"]
+    :region :t5}
+   {:target "M-superpod-mark2"
+    :path [".." "futon6" "holes" "missions" "M-superpod-mark2.md"]
+    :region :t3}
+   {:target "M-prior-mathematics"
+    :path [".." "futon6" "holes" "missions" "M-prior-mathematics.md"]
+    :region :t3}
+   {:target "M-apm-solutions"
+    :path ["." "holes" "missions" "M-apm-solutions.md"]
+    :region :t3}
+   {:target "M-futonzero-prelim-practice"
+    :path [".." "futon0" "holes" "missions" "M-futonzero-prelim-practice.md"]
+    :region :t3}
+   {:target "M-differentiable-math"
+    :path [".." "futon6" "holes" "missions" "M-differentiable-math.md"]
+    :region :t3
+    :survey-extra? true}
+   {:target "M-diagramprover"
+    :path ["." "holes" "missions" "M-diagramprover.md"]
+    :region :t3
+    :survey-extra? true}
+   {:target "M-expressions-of-interest"
+    :path [".." "futon5a" "holes" "missions" "M-expressions-of-interest.md"]
+    :region :t2}
+   {:target "M-buyer-discovery"
+    :path [".." "futon5a" "holes" "missions" "M-buyer-discovery.md"]
+    :region :t2}])
+
+(defn- doc-file [parts]
+  (apply io/file parts))
+
+(defn- mission-entry-from-doc
+  [{:keys [target path] :as spec}]
+  (let [f (doc-file path)]
+    (if (.isFile f)
+      (assoc (#'mission-registry/mission-doc->entry (.getAbsolutePath f))
+             :target target
+             :region (:region spec)
+             :survey-extra? (boolean (:survey-extra? spec)))
+      (assoc spec
+             :missing? true
+             :absolute-path (.getAbsolutePath f)))))
+
+(defn- terminal-c3-entries []
+  (mapv mission-entry-from-doc terminal-c3-candidate-docs))
+
+(defn- merge-terminal-candidate
+  [graph {:keys [target status-class open-hole-count path status-line]}]
+  (let [existing (get-in graph [:missions target])
+        mission-node (merge {:scope []
+                             :produces []
+                             :real-mission? true
+                             :next-exit-operator-verify? false}
+                            existing
+                            {:open-hole-count (long (or open-hole-count 0))
+                             :phase status-class
+                             :status status-class
+                             :status-line status-line
+                             :path path})]
+    (assoc-in graph [:missions target] mission-node)))
+
+(defn- terminal-c3-graph
+  [base-graph entries]
+  (reduce merge-terminal-candidate
+          base-graph
+          (remove :missing? entries)))
+
+(defn- terminal-c3-report
+  []
+  (let [entries (terminal-c3-entries)
+        missing (filterv :missing? entries)
+        graph (terminal-c3-graph (real-graph) entries)
+        actions (mapv (fn [{:keys [target]}]
+                        {:type :open-mission :target target})
+                      (remove :missing? entries))
+        opts {:capability-graph graph
+              :pre-registered-goal goal}
+        ranked (efe/rank-star-map-actions base-state actions opts)
+        top (first ranked)
+        leaf-count (count (filter :graph/single-cycle-leaf? ranked))
+        verdict (if (:graph/single-cycle-leaf? top) :pass :fail)]
+    {:entries entries
+     :missing missing
+     :graph graph
+     :ranked ranked
+     :top top
+     :leaf-count leaf-count
+     :verdict verdict}))
+
 (deftest c3-real-graph-currently-fails-on-mega-mission-test
   (testing "C3 over the real WM-region graph: report the actual top action"
     (let [graph (real-graph)
@@ -59,6 +173,38 @@
       (is (= 9 (:open-hole-count top-mission)))
       (is (false? (efe/mission-single-cycle-leaf? graph (:target top-action)))
           "C3 is currently FAIL: the top action is applicable, but it is not a one-cycle leaf."))))
+
+(deftest terminal-c3-expanded-curated-landscape-test
+  (testing "Terminal C3 over the expanded curated survey set"
+    ;; This is the expanded curated set surfaced by the WM/T5/T3/T2 grounding
+    ;; surveys, not a full production mission-registry scan. Counts come from
+    ;; futon2.aif.mission-registry's real per-document parser.
+    (let [{:keys [entries missing ranked top leaf-count verdict graph]} (terminal-c3-report)
+          top-action (:action top)
+          candidate-count (count (remove :missing? entries))
+          counts (mapv (fn [{:keys [target open-hole-count status-class missing?]}]
+                         {:target target
+                          :open-hole-count open-hole-count
+                          :status status-class
+                          :missing? (boolean missing?)})
+                       entries)]
+      (println "TERMINAL C3 expanded-curated counts:" counts)
+      (println "TERMINAL C3 missing docs:" (mapv :target missing))
+      (println "TERMINAL C3 leaf-count:" leaf-count "of" candidate-count)
+      (println "TERMINAL C3 top-action:" top-action
+               "applicable?" (:graph/applicable? top)
+               "single-cycle-leaf?" (:graph/single-cycle-leaf? top)
+               "G-total" (:G-total top))
+      (println "TERMINAL C3 verdict:" verdict)
+      (is (pos? candidate-count))
+      (is (= "M-buyer-discovery" (:target (first missing))))
+      (is (= leaf-count (count (filter #(efe/mission-single-cycle-leaf?
+                                         graph
+                                         (get-in % [:action :target]))
+                                       ranked))))
+      (is (= {:type :open-mission :target "M-arxana-roundtrip"} top-action))
+      (is (= :fail verdict)
+          "Terminal C3 FAIL is the honest current result: the top ranked expanded-landscape action is not an applicable single-cycle leaf."))))
 
 (deftest inv-g-refuses-unregistered-pursuit-and-goal-extension-test
   (testing "INV-G rejects pursuit outside the brief and goal-extending decompose"
