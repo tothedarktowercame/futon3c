@@ -32,12 +32,23 @@
    :efe-trustworthy-over-starmap
    :wm-overnight-unsupervised])
 
-(def ^:private canonical-mission-aliases
-  {"guardrails core (Unit 1)" "M-wm-guardrails-core"
-   "input-sources hygiene (Unit 2)" "M-war-machine-input-sources"
-   "hole-counter (Unit 3)" "M-war-machine-hole-counter"
-   "gate-runner (Unit 4)" "M-war-machine-gate-runner"
-   "M-capability-star-map (THIS mission — in progress)" "M-capability-star-map"})
+(def ^:private non-mission-builders
+  {"guardrails core (Unit 1)"
+   {:id "builder/wm-guardrails-core"
+    :builder "guardrails core"
+    :built-under "WM-GUARDRAILS-SPEC"}
+   "input-sources hygiene (Unit 2)"
+   {:id "builder/wm-input-sources-hygiene"
+    :builder "input-sources hygiene"
+    :built-under "WM-GUARDRAILS-SPEC"}
+   "hole-counter (Unit 3)"
+   {:id "builder/wm-hole-counter"
+    :builder "hole-counter"
+    :built-under "WM-GUARDRAILS-SPEC"}
+   "gate-runner (Unit 4)"
+   {:id "builder/wm-gate-runner"
+    :builder "gate-runner"
+    :built-under "WM-GUARDRAILS-SPEC"}})
 
 (defn contaminated-path?
   "True for sources that must not enter the canonical landscape prior."
@@ -45,8 +56,8 @@
   (let [s (str path)]
     (or (str/includes? s "/.state/")
         (str/includes? s "/worktrees/")
-        (str/includes? s "/futon3/")
-        (str/includes? s "/futon3-origin/"))))
+        (str/includes? s "/futon3-origin/")
+        (str/includes? s "/futon3/origin/"))))
 
 (defn clean-missions
   [missions]
@@ -58,8 +69,7 @@
   (str/replace (str s) #"\.md$" ""))
 
 (defn- mission-id-from-minted-by [s]
-  (or (get canonical-mission-aliases s)
-      (some-> (re-find #"M-[A-Za-z0-9-]+" (str s)) strip-md)))
+  (some-> (re-find #"M-[A-Za-z0-9-]+" (str s)) strip-md))
 
 (defn- status->mission-status [cap-status]
   (if (= :satisfied cap-status) :complete :held))
@@ -74,18 +84,32 @@
    (let [doc (read-edn-file path)]
      (into {} (map (juxt :id identity) (:sorries doc))))))
 
-(defn- capability-from-ensemble [pudding-by-id [cap-id cap]]
+(defn- resolve-minted-by [mission-index raw]
+  (if-let [builder (get non-mission-builders raw)]
+    (assoc builder :real-mission? false :raw raw)
+    (let [mission-id (mission-id-from-minted-by raw)]
+      (cond
+        (and mission-id (contains? mission-index mission-id))
+        {:id mission-id :real-mission? true :raw raw}
+
+        mission-id
+        (throw (ex-info "minted-by names an M-* mission that is not in the registry"
+                        {:raw raw :mission-id mission-id}))
+
+        :else
+        (throw (ex-info "minted-by entry is not resolvable as a real mission or known builder"
+                        {:raw raw}))))))
+
+(defn- capability-from-ensemble [pudding-by-id mission-index [cap-id cap]]
   (let [pudding (case cap-id
                   :wm-overnight-unsupervised (get pudding-by-id :T4.2)
-                  nil)]
+                  nil)
+        minted-by (mapv #(resolve-minted-by mission-index %) (:minted-by cap))]
     [cap-id
      (cond-> {:title (:title cap)
               :status (:status cap)
               :scope (vec (:scope cap))
-              :minted-by (->> (:minted-by cap)
-                              (keep mission-id-from-minted-by)
-                              distinct
-                              vec)
+              :minted-by (->> minted-by (map :id) distinct vec)
               :pre-registered? true}
        (:attested cap) (assoc :attested true)
        (:frontier cap) (assoc :frontier true)
@@ -95,23 +119,44 @@
                       :cap/altitude (:altitude pudding)))]))
 
 (defn capability-nodes
-  [ensemble pudding-by-id]
+  [ensemble pudding-by-id mission-index]
   (let [caps (:capabilities ensemble)]
     (into (sorted-map)
-          (map #(capability-from-ensemble pudding-by-id [% (get caps %)]))
+          (map #(capability-from-ensemble pudding-by-id mission-index [% (get caps %)]))
           wm-region-capability-order)))
 
+(defn- mission-ref-details [mission-index mission-id]
+  (if-let [registry (get mission-index mission-id)]
+    {:id mission-id
+     :real-mission? true
+     :registry registry}
+    (when-let [builder (some (fn [[_ spec]]
+                               (when (= mission-id (:id spec)) spec))
+                             non-mission-builders)]
+      (assoc builder :real-mission? false))))
+
 (defn- mission-node [mission-index cap-id cap mission-id]
-  (let [registry (get mission-index mission-id)]
+  (let [{:keys [real-mission? registry] :as ref} (mission-ref-details mission-index mission-id)
+        _ (when-not ref
+            (throw (ex-info "resolved minted-by id has no registry mission or known builder"
+                            {:mission-id mission-id :capability cap-id})))]
     [mission-id
-     {:scope (vec (:scope cap))
-      :produces [cap-id]
-      :open-hole-count (long (or (:open-hole-count registry) 0))
-      :phase (or (:status-class registry)
-                 (status->mission-status (:status cap)))
-      :status (or (:status-class registry)
-                  (status->mission-status (:status cap)))
-      :next-exit-operator-verify? (= cap-id :efe-trustworthy-over-starmap)}]))
+     (cond-> {:scope (vec (:scope cap))
+              :produces [cap-id]
+              :real-mission? real-mission?
+              :next-exit-operator-verify? (= cap-id :efe-trustworthy-over-starmap)}
+       real-mission?
+       (assoc :open-hole-count (long (or (:open-hole-count registry) 0))
+              :phase (:status-class registry)
+              :status (:status-class registry)
+              :path (:path registry))
+
+       (not real-mission?)
+       (assoc :open-hole-count 0
+              :phase :builder
+              :status (status->mission-status (:status cap))
+              :builder (:builder ref)
+              :built-under (:built-under ref)))]))
 
 (defn mission-nodes
   [missions capabilities]
@@ -153,8 +198,9 @@
           pudding-path default-pudding-registry-path}}]
    (let [ensemble (read-edn-file ensemble-path)
          pudding-by-id (read-pudding-registry pudding-path)
-         capabilities (capability-nodes ensemble pudding-by-id)
          missions (or missions (:missions (mission-registry/load-missions)))
+         mission-index (into {} (map (juxt :id identity) (clean-missions missions)))
+         capabilities (capability-nodes ensemble pudding-by-id mission-index)
          mission-map (mission-nodes missions capabilities)]
      {:star-map/region :wm
       :star-map/source {:ensemble ensemble-path
