@@ -508,6 +508,7 @@
         (when (.exists session-file)
           (.delete session-file))
         (let [initial-response (post handler "/api/alpha/agents/restore" initial-body)
+              _ (spit session-file "stale-session-from-before-restart")
               refresh-response (post handler "/api/alpha/agents/restore" refresh-body)
               parsed (parse-body refresh-response)
               agent (reg/get-agent "claude-88")]
@@ -525,6 +526,49 @@
             (spit session-file backup)
             (when (.exists session-file)
               (.delete session-file))))))))
+
+(deftest agent-restore-uses-claude-session-cwd
+  (testing "POST /api/alpha/agents/restore uses Claude transcript cwd over caller cwd"
+    (let [handler (make-handler)
+          projects-root (doto (io/file (System/getProperty "java.io.tmpdir")
+                                       (str "claude-projects-" (java.util.UUID/randomUUID)))
+                          (.mkdirs))
+          transcript-dir (doto (io/file projects-root "-home-joe-code")
+                           (.mkdirs))
+          session-file (java.io.File/createTempFile "futon3c-http-claude-cwd-" ".sid")
+          transcript-session "sess-restore-claude-cwd"
+          transcript-cwd "/home/joe/code"
+          wrong-cwd "/home/joe/code/futon5a/essays/ukrn-open-research-training-plos-one"
+          transcript-file (io/file transcript-dir (str transcript-session ".jsonl"))
+          original-claude-session-cwd (var-get #'futon3c.transport.http/claude-session-cwd)
+          body (json/generate-string {"agent-id" "claude-cwd"
+                                      "type" "claude"
+                                      "session-id" transcript-session
+                                      "session-file" (.getPath session-file)
+                                      "cwd" wrong-cwd})]
+      (try
+        (spit transcript-file
+              (json/generate-string {:type "user"
+                                     :sessionId transcript-session
+                                     :cwd transcript-cwd}))
+        (with-redefs [futon3c.transport.http/claude-session-cwd
+                      (fn
+                        ([session-id]
+                         (original-claude-session-cwd projects-root session-id))
+                        ([root session-id]
+                         (original-claude-session-cwd root session-id)))]
+          (let [response (post handler "/api/alpha/agents/restore" body)
+                parsed (parse-body response)
+                agent (reg/get-agent "claude-cwd")]
+            (is (= 201 (:status response)))
+            (is (true? (:ok parsed)))
+            (is (= transcript-cwd (:cwd parsed)))
+            (is (= transcript-cwd (get-in agent [:agent/metadata :cwd])))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file))
+          (doseq [f (reverse (file-seq projects-root))]
+            (.delete f)))))))
 
 (deftest agent-reset-session-clears-backing-continuity
   (testing "POST /api/alpha/agents/:id/reset-session clears registry and backing session state"
@@ -559,6 +603,49 @@
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================
+
+(deftest claude-invoke-recovers-from-missing-conversation-session
+  (testing "Claude missing-conversation resume failure clears continuity and retries once"
+    (let [handler (make-handler)
+          session-file (java.io.File/createTempFile "futon3c-http-claude-stale-" ".sid")
+          attempts (atom [])
+          sid-atom (atom "stale-claude-session")]
+      (try
+        (spit session-file "stale-claude-session")
+        (reg/register-agent!
+         {:agent-id {:id/value "claude-stale" :id/type :continuity}
+          :type :claude
+          :invoke-fn (fn [_prompt session-id]
+                       (swap! attempts conj session-id)
+                       (if (= "stale-claude-session" session-id)
+                         {:error "Exit 1: No conversation found with session ID: stale-claude-session"
+                          :session-id session-id}
+                         {:result "fresh ok"
+                          :session-id "fresh-claude-session"}))
+          :capabilities [:explore]
+          :session-id "stale-claude-session"
+          :session-reset-fn (fn []
+                              (reset! sid-atom nil)
+                              (when (.exists session-file)
+                                (.delete session-file))
+                              {:ok true})})
+        (let [response (post handler "/api/alpha/invoke"
+                             (json/generate-string {"agent-id" "claude-stale"
+                                                    "prompt" "hello"}))
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "fresh ok" (:result parsed)))
+          (is (= "fresh-claude-session" (:session-id parsed)))
+          (is (= ["stale-claude-session" nil] @attempts))
+          (is (nil? @sid-atom))
+          (is (= "stale-claude-session"
+                 (get-in parsed [:session-recovery :old-session-id])))
+          (is (= "claude-missing-conversation"
+                 (get-in parsed [:session-recovery :reason]))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file)))))))
 
 (deftest codex-task-no-execution-detection
   (testing "task-mode codex reply without execution evidence is rejected"

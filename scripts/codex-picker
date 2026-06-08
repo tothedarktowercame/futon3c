@@ -59,6 +59,30 @@ source "${script_dir}/emacs-socket-lib.sh"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
 agency_agent_id="${AGENCY_AGENT_ID:-codex-1}"
 
+# --- Agent search/memory backstops (added 2026-06-05) -----------------------
+# A broad agent `rg` from ~/code mmapped tens of GB of data files under
+# storage/ and drove the box into global OOM, taking out the serving JVM.
+#
+# (1) ripgrep defaults: skip oversized files + never walk the data dirs. This
+#     covers recursive/broad greps. Exported here so every codex child shell
+#     inherits it regardless of login/interactive mode.
+export RIPGREP_CONFIG_PATH="${RIPGREP_CONFIG_PATH:-${HOME}/.config/ripgrep/config}"
+#
+# (2) Hard memory cap: launch codex inside a transient systemd user scope with
+#     MemoryMax, so any runaway child (an explicit `rg huge.json`, a python that
+#     slurps a 16G file, …) is OOM-killed within the agent's own cgroup instead
+#     of taking down the desktop + port-7070 JVM. Override the cap via
+#     FUTON_CODEX_MEMORY_MAX; disable entirely via FUTON_CODEX_NO_MEMCAP=1.
+codex_memcap_prefix=()
+if [[ -z "${FUTON_CODEX_NO_MEMCAP:-}" ]] \
+   && command -v systemd-run >/dev/null 2>&1 \
+   && grep -qw memory "/sys/fs/cgroup/user.slice/user-$(id -u).slice/cgroup.controllers" 2>/dev/null; then
+  codex_memcap_prefix=(systemd-run --user --scope --collect --quiet
+    "--unit=codex-${agency_agent_id}-$$"
+    -p "MemoryMax=${FUTON_CODEX_MEMORY_MAX:-12G}"
+    -p MemorySwapMax=0 --)
+fi
+
 pick_local_agency_base() {
   local -a candidates=()
   if [[ -n "${FUTON3C_PORT:-}" ]]; then
@@ -489,7 +513,7 @@ if $open_repl; then
 fi
 
 if $start_new; then
-  exec codex --ask-for-approval "${codex_approval_policy}" --sandbox "${codex_sandbox}"
+  exec "${codex_memcap_prefix[@]}" codex --ask-for-approval "${codex_approval_policy}" --sandbox "${codex_sandbox}"
 fi
 
 cmd=(codex resume --ask-for-approval "${codex_approval_policy}" --sandbox "${codex_sandbox}")
@@ -517,4 +541,4 @@ elif [[ -n "${session_hint}" ]]; then
   register_agent "${agency_agent_id}"
 fi
 
-exec "${cmd[@]}"
+exec "${codex_memcap_prefix[@]}" "${cmd[@]}"

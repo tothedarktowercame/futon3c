@@ -60,6 +60,9 @@ export FUTON3C_WAR_MACHINE_LOGFILE="${FUTON3C_WAR_MACHINE_LOGFILE:-/tmp/war-mach
 export FUTON3C_WEBARXANA_AUTOSTART="${FUTON3C_WEBARXANA_AUTOSTART:-true}"
 export FUTON3C_WEBARXANA_PIDFILE="${FUTON3C_WEBARXANA_PIDFILE:-/tmp/webarxana-web.pid}"
 export FUTON3C_WEBARXANA_LOGFILE="${FUTON3C_WEBARXANA_LOGFILE:-/tmp/webarxana-web.log}"
+# Laptop = DEV all the time: skip the WebArxana session gate so Playwright / curl
+# can drive /wa without logging in. Read by webarxana.server.auth/dev-no-auth?.
+export WEBARXANA_DEV_NO_AUTH="${WEBARXANA_DEV_NO_AUTH:-1}"
 
 # --- Federation: peer with Linode unless explicitly disabled ---
 if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}" ]]; then

@@ -1586,6 +1586,35 @@
    :codex  [:edit :test :coordination/execute]
    :tickle [:mission-control :discipline :coordination/execute]})
 
+(defn- claude-session-cwd
+  "Return Claude's recorded cwd for SESSION-ID, if the local Claude transcript
+   store has it. Claude resume lookup is project-directory scoped, so restoring
+   a session with the wrong cwd makes an existing transcript appear missing."
+  ([session-id]
+   (claude-session-cwd
+    (io/file (System/getProperty "user.home") ".claude" "projects")
+    session-id))
+  ([projects-root session-id]
+   (when (and (string? session-id)
+              (not (str/blank? session-id))
+              (.exists ^java.io.File projects-root))
+     (let [filename (str session-id ".jsonl")]
+       (some
+        (fn [^java.io.File f]
+          (when (and (.isFile f) (= filename (.getName f)))
+            (with-open [r (io/reader f)]
+              (some (fn [line]
+                      (try
+                        (let [parsed (json/parse-string line true)
+                              cwd (:cwd parsed)]
+                          (when (and (string? cwd)
+                                     (not (str/blank? cwd))
+                                     (.isDirectory (io/file cwd)))
+                            cwd))
+                        (catch Exception _ nil)))
+                    (line-seq r)))))
+        (file-seq ^java.io.File projects-root))))))
+
 (defn- default-session-file-for-agent
   "Return the default session-file path for AGENT-TYPE/AGENT-ID."
   [agent-type agent-id]
@@ -1866,7 +1895,13 @@
             session-file (some-> (or (:session-file payload)
                                      (get payload "session-file")
                                      (default-session-file-for-agent agent-type agent-id))
-                                 str str/trim not-empty)]
+                                 str str/trim not-empty)
+            existing (when agent-id (reg/get-agent agent-id))
+            restore-session-id (or initial-session-id
+                                   (:agent/session-id existing))
+            effective-cwd (or (when (= :claude agent-type)
+                                (claude-session-cwd restore-session-id))
+                              requested-cwd)]
         (cond
           (nil? agent-id)
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -1885,11 +1920,11 @@
                             :session-file session-file
                             :initial-session-id initial-session-id
                             :session-id-atom sid-atom
-                            :requested-cwd requested-cwd
+                            :requested-cwd effective-cwd
                             :emacs-socket emacs-socket})
                 metadata (cond-> {:auto-registered? true}
                            (= agent-type :codex) (assoc :require-execution? true)
-                           requested-cwd (assoc :cwd requested-cwd)
+                           effective-cwd (assoc :cwd effective-cwd)
                            campaign-id (assoc :campaign-id campaign-id)
                            mission-id (assoc :mission-id mission-id)
                            excursion-id (assoc :excursion-id excursion-id)
@@ -1898,7 +1933,7 @@
               (json-response 500 {:ok false
                                   :err "restore-failed"
                                   :message (str "Could not build invoke-fn for " agent-id)})
-              (let [existing (reg/get-agent agent-id)]
+              (let [existing existing]
                 (when (and session-file initial-session-id)
                   (spit session-file initial-session-id))
                 (if existing
@@ -1917,6 +1952,8 @@
                         :agent/capabilities (get default-capabilities agent-type [])
                         :agent/metadata metadata*
                                 :agent/session-id effective-session-id)]
+                    (when (and session-file effective-session-id)
+                      (spit session-file effective-session-id))
                     (if (and (map? result) (= false (:ok result)))
                       (json-response 409 {:ok false
                                           :err "restore-failed"
@@ -1928,7 +1965,7 @@
                                           :type (name agent-type)
                                           :session-id effective-session-id
                                           :session-file session-file
-                                          :cwd requested-cwd})))
+                                          :cwd effective-cwd})))
                   (let [result (reg/register-agent!
                                 {:agent-id {:id/value agent-id :id/type :continuity}
                                  :type agent-type
@@ -1945,7 +1982,7 @@
                                           :type (name agent-type)
                                           :session-id initial-session-id
                                           :session-file session-file
-                                          :cwd requested-cwd})
+                                          :cwd effective-cwd})
                       (json-response 409 {:ok false
                                           :err "restore-failed"
                                           :message (str "Could not restore: " agent-id)
@@ -2235,6 +2272,44 @@
          (zero? tool-events)
          (zero? command-events)))))
 
+(defn- result-error-message
+  [result]
+  (let [err (:error result)]
+    (cond
+      (map? err) (str (:error/message err))
+      (some? err) (str err)
+      :else "")))
+
+(defn- claude-missing-conversation-result?
+  [agent-id result]
+  (and (not (:ok result))
+       (string? agent-id)
+       (str/starts-with? (str/lower-case agent-id) "claude")
+       (boolean
+        (re-find #"No conversation found with session ID:"
+                 (result-error-message result)))))
+
+(defn- invoke-agent-with-session-recovery!
+  "Invoke AGENT-ID, retrying once for Claude's stale resume-session failure.
+
+   The retry is intentionally narrow. File/incoming session precedence remains
+   unchanged for normal invokes; only the Claude CLI's authoritative
+   \"No conversation found\" response clears backing continuity."
+  [agent-id prompt timeout-ms]
+  (let [aid (str agent-id)
+        first-result (reg/invoke-agent! aid prompt timeout-ms)]
+    (if (claude-missing-conversation-result? aid first-result)
+      (let [reset-result (reg/reset-session! aid)]
+        (if (:ok reset-result)
+          (let [retry-result (reg/invoke-agent! aid prompt timeout-ms)]
+            (cond-> retry-result
+              (map? retry-result)
+              (assoc :session-recovery
+                     {:reason "claude-missing-conversation"
+                      :old-session-id (:old-session-id reset-result)})))
+          first-result))
+      first-result)))
+
 (defn- build-invoke-response
   "Run a direct invoke and convert it to a Ring response map."
   [{:keys [payload agent-id prompt evidence-store]}]
@@ -2257,7 +2332,7 @@
     (try
       (mark-invoke-job-running! job-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
-            raw-result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+            raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
             result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
@@ -2287,7 +2362,9 @@
                                           :result (:result result)
                                           :session-id sid}
                                    (:invoke-meta result)
-                                   (assoc :invoke-meta (:invoke-meta result)))))
+                                   (assoc :invoke-meta (:invoke-meta result))
+                                   (:session-recovery result)
+                                   (assoc :session-recovery (:session-recovery result)))))
             (let [err (:error result)
                   code (if (map? err) (:error/code err) :invoke-failed)
                   msg (if (map? err) (:error/message err) (str err))]
@@ -2311,7 +2388,7 @@
     (try
       (mark-invoke-job-running! job-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
-            raw-result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
+            raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
             result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
