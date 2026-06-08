@@ -185,11 +185,32 @@ If a function returns nil, the original TEXT is used.")
 (defvar-local agent-chat-auto-clock-enabled t
   "Non-nil means explicit resolved turn target mentions may auto-clock the buffer.")
 
+(defcustom agent-chat-edit-activity-clock-enabled t
+  "Non-nil means repeated saves to C-/M-/E- mission docs may reclock chats."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-edit-activity-clock-threshold 3
+  "Number of saves to one C-/M-/E- mission doc required for edit reclocking."
+  :type 'integer
+  :group 'agent-chat)
+
+(defcustom agent-chat-edit-activity-clock-window-seconds 600
+  "Recent-save window, in seconds, for edit-activity reclocking."
+  :type 'integer
+  :group 'agent-chat)
+
 (defvar-local agent-chat--last-auto-clock-witness nil
   "Audit witness for the most recent auto-clock promotion.")
 
 (defvar-local agent-chat--creation-clock-watch-timer nil
   "Timer watching for a just-created mission to become clockable.")
+
+(defvar-local agent-chat--edit-activity-last-reclock-target nil
+  "Last target ID reclocked by the edit-activity rule in this chat buffer.")
+
+(defvar agent-chat--edit-activity-save-events (make-hash-table :test 'equal)
+  "Recent C-/M-/E- mission doc saves keyed by exact clock target ID.")
 
 (defcustom agent-chat-commit-repo-roots nil
   "Git repo roots scanned for commits made during a chat turn.
@@ -700,6 +721,142 @@ Returns the promotion witness plist, or nil when no promotion happened."
                    (agent-chat-mission-label)
                    (string-join (plist-get target :tokens) ", ")))
           agent-chat--last-auto-clock-witness)))))
+
+(defun agent-chat--edit-activity-file-target (file)
+  "Return an exact clock target plist witnessed by saved mission doc FILE.
+Only C-/M-/E- markdown files under a holes/ tree are accepted, and the basename
+must resolve exactly through `agent-chat--clock-target-candidates'."
+  (let* ((path (and file (expand-file-name file)))
+         (base (and path (file-name-nondirectory path))))
+    (when (and path
+               base
+               (string-match-p "\\(?:\\`\\|/\\)holes/" path)
+               (string-match "\\`\\([CME]-[^/]+\\)\\.md\\'" base))
+      (let* ((id (match-string 1 base))
+             (kind (cond
+                    ((string-prefix-p "C-" id) 'campaign)
+                    ((string-prefix-p "M-" id) 'mission)
+                    ((string-prefix-p "E-" id) 'excursion))))
+        (when (and kind (member id (agent-chat--clock-target-candidates kind)))
+          (list :campaign-id (and (eq kind 'campaign) id)
+                :mission-id (and (eq kind 'mission) id)
+                :excursion-id (and (eq kind 'excursion) id)
+                :id id
+                :file path))))))
+
+(defun agent-chat--edit-activity-prune-events (now)
+  "Drop edit-activity save events outside the configured window at NOW."
+  (let ((cutoff (- now agent-chat-edit-activity-clock-window-seconds)))
+    (maphash
+     (lambda (id events)
+       (let ((kept (seq-filter (lambda (event) (>= (car event) cutoff))
+                               events)))
+         (if kept
+             (puthash id kept agent-chat--edit-activity-save-events)
+           (remhash id agent-chat--edit-activity-save-events))))
+     agent-chat--edit-activity-save-events)))
+
+(defun agent-chat--edit-activity-counts (now)
+  "Return recent edit-activity save counts at NOW as ((ID . COUNT) ...)."
+  (agent-chat--edit-activity-prune-events now)
+  (let (counts)
+    (maphash
+     (lambda (id events)
+       (push (cons id (length events)) counts))
+     agent-chat--edit-activity-save-events)
+    counts))
+
+(defun agent-chat--edit-activity-dominant-p (target-id now)
+  "Return non-nil when TARGET-ID is the clearly dominant recent edit target.
+The winner must meet the save threshold and exceed the next target by a
+conservative margin.  With the default threshold of 3, alternating edits like
+foo/bar/foo/bar/foo do not switch at a transient 3-to-2 edge."
+  (let* ((counts (agent-chat--edit-activity-counts now))
+         (target-count (or (cdr (assoc target-id counts)) 0))
+         (others (seq-remove (lambda (entry) (equal (car entry) target-id))
+                             counts))
+         (next-count (or (car (sort (mapcar #'cdr others) #'>)) 0))
+         (margin (max 1 (1- agent-chat-edit-activity-clock-threshold))))
+    (and (>= target-count agent-chat-edit-activity-clock-threshold)
+         (>= target-count (+ next-count margin)))))
+
+(defun agent-chat--edit-activity-target-for-id (target)
+  "Return clock target plist for exact edit-activity TARGET."
+  (list :campaign-id (plist-get target :campaign-id)
+        :mission-id (plist-get target :mission-id)
+        :excursion-id (plist-get target :excursion-id)))
+
+(defun agent-chat--maybe-edit-activity-reclock (target count)
+  "Maybe switch the current chat buffer to edit-activity TARGET with COUNT.
+Unlike the explicit mention rule, this may switch an already active clock
+because repeated editing is treated as operator intent."
+  (let* ((target-id (plist-get target :id))
+         (clock-target (agent-chat--edit-activity-target-for-id target)))
+    (when (and target-id
+               (not (agent-chat--clock-target-equal-p clock-target))
+               (not (equal target-id agent-chat--edit-activity-last-reclock-target)))
+      (let ((old-target (agent-chat-mission-label)))
+        (agent-chat-set-clock! clock-target nil t)
+        (setq agent-chat--edit-activity-last-reclock-target target-id)
+        (setq agent-chat--last-auto-clock-witness
+              `((rule . "edit-activity")
+                (source . "repeated-file-edits")
+                (file . ,(plist-get target :file))
+                (edit-count . ,count)
+                (window-seconds . ,agent-chat-edit-activity-clock-window-seconds)
+                (old-target . ,old-target)
+                (new-target . ,(agent-chat-mission-label))))
+        (agent-chat-insert-message
+         "system"
+         (format "[edit-activity-clock: %s -> %s via %s]"
+                 old-target
+                 (agent-chat-mission-label)
+                 (plist-get target :file)))
+        agent-chat--last-auto-clock-witness))))
+
+(defun agent-chat--chat-buffers ()
+  "Return live buffers that appear to be agent-chat buffers."
+  (seq-filter
+   (lambda (buf)
+     (and (buffer-live-p buf)
+          (buffer-local-boundp 'agent-chat--agent-name buf)
+          (buffer-local-value 'agent-chat--agent-name buf)
+          (buffer-local-boundp 'agent-chat--prompt-marker buf)
+          (markerp (buffer-local-value 'agent-chat--prompt-marker buf))))
+   (buffer-list)))
+
+(defun agent-chat--record-edit-activity-save (file &optional now buffers)
+  "Record mission doc FILE save and maybe reclock chat BUFFERS.
+NOW is an epoch timestamp used by batch smoke checks."
+  (when (and agent-chat-edit-activity-clock-enabled
+             (> agent-chat-edit-activity-clock-threshold 0)
+             (> agent-chat-edit-activity-clock-window-seconds 0))
+    (when-let ((target (agent-chat--edit-activity-file-target file)))
+      (let* ((timestamp (or now (float-time)))
+             (target-id (plist-get target :id))
+             (events (gethash target-id agent-chat--edit-activity-save-events)))
+        (puthash target-id
+                 (cons (cons timestamp (plist-get target :file)) events)
+                 agent-chat--edit-activity-save-events)
+        (agent-chat--edit-activity-prune-events timestamp)
+        (when (agent-chat--edit-activity-dominant-p target-id timestamp)
+          (let ((count (length (gethash target-id
+                                        agent-chat--edit-activity-save-events)))
+                witnesses)
+            (dolist (buf (or buffers (agent-chat--chat-buffers)))
+              (when (buffer-live-p buf)
+                (with-current-buffer buf
+                  (when-let ((witness (agent-chat--maybe-edit-activity-reclock
+                                       target count)))
+                    (push witness witnesses)))))
+            (nreverse witnesses)))))))
+
+(defun agent-chat--after-save-edit-activity-clock ()
+  "After-save hook for edit-activity reclocking from mission docs."
+  (when buffer-file-name
+    (agent-chat--record-edit-activity-save buffer-file-name)))
+
+(add-hook 'after-save-hook #'agent-chat--after-save-edit-activity-clock)
 
 (defun agent-chat-clock-campaign (campaign)
   "Clock into CAMPAIGN only."

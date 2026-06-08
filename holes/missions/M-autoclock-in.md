@@ -157,3 +157,67 @@ Implemented a distinct creation-clock rule in `agent-chat.el`:
 - `agent-chat-watch-creation-clock-mission!` arms a buffer-local post-creation watcher, so `eoi-new head <slug>` can wait for `M-<slug>` to appear on disk before switching.
 
 The `eoi-new` launcher now arms that watcher for `eoi-mission-head` / `head` invocations when a mission slug is provided.
+
+## INSTANTIATE-3 candidate — edit-activity reclock (Joe, 2026-06-08)
+
+**Motivation (Joe):** *"I really can't be bothered to clock in properly most of the time, which makes
+the mission tagging a bit rubbish."* The lossy `turn→mission` tagging directly degrades the
+`pattern→turn→mission` dataset that [[M-pudding-peradams]] §12 (turns-as-exotype) depends on — the
+exo→geno coupling. A third, **fully autonomous** rule closes it: **reclock on repeated edits to a
+`C-*`/`M-*`/`E-*` file.**
+
+**Why this is *more* discipline-compliant, not less:** editing `M-foo.md` is **explicit, non-fuzzy
+operator action** — the file *is* the target (resolves by path against the existing
+`agent-chat--clock-target-candidates`), strictly stronger evidence than a prose mention. It does not
+violate "explicit-not-fuzzy" (principle #8); it strengthens it.
+
+**The rule.** Reclock to target `X` iff:
+1. a save lands on a file whose path resolves by **exact ID** to an existing `C-*`/`M-*`/`E-*` candidate
+   (no fuzzy text; the file path is the witness);
+2. the file has accrued **≥ N saves within a window W** (default e.g. N=3, W=10 min) — *repeated*, so a
+   single stray edit never flips the clock;
+3. `X` differs from the current clock, and `X` is the **dominant** recently-edited target (hysteresis:
+   if two C/M/E files are edited alternately, require clear dominance before switching — no thrash);
+4. it records an audit witness and remains hydra-overridable.
+
+**Switch, don't floor-gate (the key decision vs Rule 0).**
+
+> IF a turn merely *mentions* a mission, THEN auto-clock fires only at the no-target floor (Rule 0,
+> never switches). HOWEVER **repeated edits to a mission file are unambiguous "I am working on X now,"
+> not a passing mention,** THEN edit-activity reclock **switches the active clock** (like creation-clock,
+> §INSTANTIATE-2), BECAUSE sustained editing is operator intent of the same grade as creating the file —
+> the floor-only guard would defeat the whole point (you are usually already clocked on *something* stale).
+
+**Surface.** An Emacs `after-save-hook` (operator edits land in Emacs) that matches `holes/**/{C,M,E}-*.md`,
+maintains a per-target save count + recency, and calls a `agent-chat-edit-activity-reclock!` when the
+threshold + dominance test passes. (Agent/tool edits that bypass Emacs save are out of scope for v1 —
+the target signal is the *operator's* focus.) Debounce to avoid re-firing for the same target.
+
+**Audit shape.**
+
+```elisp
+((rule . "edit-activity")
+ (source . "repeated-file-edits")
+ (file . ".../holes/M-foo.md")
+ (edit-count . 3) (window-seconds . 600)
+ (old-target . "M-stale") (new-target . "M-foo"))
+```
+
+**Remaining design qs:** the N/W defaults (calibrate against real edit cadence); whether to also count
+edits to a mission's *associated code files* (the `file→mission` edges) or only the doc (v1: doc only);
+hysteresis threshold for the dominance test. **Owner:** codex-2 (impl, per this mission's pattern);
+gates — `futon4/dev/check-parens.el` on the elisp + the agent-chat smoke checks.
+
+## INSTANTIATE-3 checkpoint — edit-activity reclock (codex-2, 2026-06-08)
+
+Implemented in `futon3c/emacs/agent-chat.el` as an additive third auto-clock rule:
+
+- `after-save-hook` watches Emacs saves to `holes/**/{C,M,E}-*.md` mission docs only.
+- Saved file paths resolve by exact basename ID through `agent-chat--clock-target-candidates`; no prose/fuzzy matching is used.
+- Reclock requires repeated saves within the configured recency window (`agent-chat-edit-activity-clock-threshold`, default `3`; `agent-chat-edit-activity-clock-window-seconds`, default `600`).
+- The dominance test is conservative: a target must meet the threshold and beat the next recent target by a margin, so alternating edits do not thrash.
+- Unlike the explicit mention rule, edit-activity switches an active stale clock. The switch target is single-active: `C-*` sets campaign only, `M-*` sets mission only, `E-*` sets excursion only; absent components remain nil.
+- The next user-turn evidence body carries the `auto-clock-witness` audit alist with rule/source/file/edit-count/window/old-target/new-target.
+
+Batch smoke coverage was added in `futon3c/test/agent-chat-edit-activity-smoke.el` for the accepted v1 cases:
+3 saves switch, 1 save does not, alternating saves do not thrash, active `M-bar` switches to repeated `M-foo`, and single-active is preserved.
