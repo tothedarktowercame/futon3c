@@ -32,18 +32,6 @@
 (defn- real-graph []
   (edn/read-string (slurp graph-path)))
 
-(defn- candidate-actions
-  "Actions EFE can rank without operator consent: real mission nodes that are
-   not already complete. Builder placeholders and complete producers are data
-   evidence, not live actions."
-  [graph]
-  (->> (:missions graph)
-       (remove (fn [[_ mission]]
-                 (or (= :complete (:status mission))
-                     (false? (:real-mission? mission)))))
-       (mapv (fn [[mission-id _]]
-               {:type :open-mission :target mission-id}))))
-
 (def ^:private terminal-c3-candidate-docs
   [{:target "M-war-machine-pilot"
     :path ["." "holes" "missions" "M-war-machine-pilot.md"]
@@ -220,8 +208,10 @@
     (let [graph (real-graph)
           opts {:capability-graph graph
                 :pre-registered-goal goal}
+          wm-actions [{:type :open-mission :target "M-war-machine-pilot"}
+                      {:type :open-mission :target "M-capability-star-map"}]
           ranked (efe/rank-star-map-actions base-state
-                                             (candidate-actions graph)
+                                             wm-actions
                                              opts)
           top (first ranked)
           top-action (:action top)

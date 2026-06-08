@@ -259,7 +259,11 @@
                                :when (= :satisfied (:status cap))]
                            {:step (keyword (str "prov-" (name cap-id)))
                             :satisfied-cap cap-id
-                            :minted-by-complete? (boolean (some mission-complete? (:minted-by cap)))})
+                            ;; Grounded ledger rows can certify shipped substrate
+                            ;; even while the producing mission remains open.
+                            :minted-by-complete? (boolean (or (:attested-substrate cap)
+                                                              (:external cap)
+                                                              (some mission-complete? (:minted-by cap))))})
         advance-steps (for [[mission-id mission] (:missions graph)
                             :let [scope (:scope mission)
                                   applicable? (every? satisfied? scope)]
