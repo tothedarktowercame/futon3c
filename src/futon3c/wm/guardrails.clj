@@ -180,7 +180,7 @@
 
 (defn classify-action
   "Classify ACTION for the guarded WM selector.
-   Returns :autonomous or :needs-operator."
+   Returns :autonomous, :needs-operator, or :refused."
   [action ctx]
   (cond
     (autonomous-admissible? action ctx) :autonomous
