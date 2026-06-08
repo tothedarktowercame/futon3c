@@ -36,6 +36,20 @@
     (is (:unblock-action item))
     (is (:why item))))
 
+(deftest action->needs-you-item-attaches-pattern-warrant-test
+  (let [entry (assoc learn-entry
+                     :guardrails/pattern-warrant
+                     {:pattern-id :orchestration/pattern-warranted-choice-point
+                      :warrant "operator-only by the consent posture"
+                      :gap "confirm"
+                      :unblock "Confirm."})
+        item (needs-you/action->needs-you-item entry "run-1")]
+    (is (= :orchestration/pattern-warranted-choice-point
+           (get-in item [:pattern-warrant :pattern-id])))
+    (is (= "Confirm." (:unblock-action item)))
+    (is (= "Sorry Joe, because of orchestration/pattern-warranted-choice-point: confirm"
+           (needs-you/sorry-joe-line item)))))
+
 (deftest emit-needs-you-dedupes-last-wins-and-writes-vector-test
   (let [path (temp-file)]
     (try

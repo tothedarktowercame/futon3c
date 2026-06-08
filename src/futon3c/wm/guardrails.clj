@@ -24,6 +24,44 @@
 (defn- action-target [action]
   (or (:target action) (:path action) (:target-file action) (:mission-path action)))
 
+(def pattern-warrants
+  {:niche-deform
+   {:pattern-id :aif/niche-construction
+    :supporting-pattern-ids [:aif/admissibility]
+    :warrant "this grows my own toolset / deforms the goal-structure — per the niche-construction rule you set, that's yours to authorize"
+    :gap "greenlight the scope (or decline)"
+    :unblock "Greenlight the scope, or decline."}
+
+   :outward-irreversible
+   {:pattern-id :orchestration/consent-gate
+    :warrant "an outward, irreversible act — consent-gate wants your hand on it"
+    :gap "approve the send"
+    :unblock "Approve the send, or decline."}
+
+   :unregistered-pursuit
+   {:pattern-id :aif/admissibility
+    :warrant "this pursues a capability not on your pre-registered ascent — admissibility gates pursuit, not discovery"
+    :gap "register the capability, or decline"
+    :unblock "Register the capability, or decline."}
+
+   :open-mission-no-holes
+   {:pattern-id :war-machine/advanceability
+    :warrant "nothing concrete to advance this cycle — advanceability needs >=1 open hole"
+    :gap "articulate the next hole / agree the gap, or it's not ready"
+    :unblock "Articulate the next hole / agree the gap, or mark it not ready."}
+
+   :operator-only
+   {:pattern-id :orchestration/pattern-warranted-choice-point
+    :supporting-pattern-ids [:orchestration/consent-gate]
+    :warrant "operator-only by the consent posture"
+    :gap "confirm"
+    :unblock "Confirm."}})
+
+(def hard-refuse-warrants
+  {:forbidden-path
+   {:warrant "protected boundary"
+    :unblock "Declined: protected boundary."}})
+
 (defn default-forbidden-path?
   "Conservative path guard for hard NO regions."
   [path]
@@ -101,27 +139,50 @@
     (boolean (and (:open? mission-status)
                   (positive-open-hole-count? mission-status)))))
 
+(defn- registered-capability?
+  [action ctx]
+  (boolean
+   (or (:pre-registered? action)
+       (when-let [registered? (:registered-capability? ctx)]
+         (registered? (:target action))))))
+
+(defn guardrail-rule
+  "Return the first guardrail rule that blocks ACTION, or nil when autonomous."
+  [action ctx]
+  (let [type (action-type action)
+        target (action-target action)
+        forbidden-path? (or (:forbidden-path? ctx) default-forbidden-path?)]
+    (cond
+      (target-forbidden? action forbidden-path?) :forbidden-path
+      (and (= :pursue type) (not (registered-capability? action ctx))) :unregistered-pursuit
+      (contains? operator-only-action-types type) :operator-only
+      (marker-present? action) :niche-deform
+      (outward-op? action) :outward-irreversible
+      (not (contains? autonomous-action-types type)) :operator-only
+      (and (= :open-mission type) (not (open-mission-with-holes? target ctx))) :open-mission-no-holes
+      :else nil)))
+
+(defn nag-warrant
+  "Return the fillable operator warrant for ACTION, or nil for autonomous/hard-refused actions."
+  [action ctx]
+  (some-> (guardrail-rule action ctx) pattern-warrants))
+
+(defn hard-refuse-warrant
+  [action ctx]
+  (some-> (guardrail-rule action ctx) hard-refuse-warrants))
+
 (defn autonomous-admissible?
   "Return true iff ACTION is safe to execute autonomously per WM guardrails.
    ACTION is the dT entry's :action. CTX accepts :mission-status-fn and
    :forbidden-path? injections for pure tests."
   [action ctx]
-  (let [type (action-type action)
-        forbidden-path? (or (:forbidden-path? ctx) default-forbidden-path?)]
-    (boolean
-     (and (contains? autonomous-action-types type)
-          (not (contains? operator-only-action-types type))
-          (not (marker-present? action))
-          (not (target-forbidden? action forbidden-path?))
-          (not (outward-op? action))
-          (case type
-            :open-mission (open-mission-with-holes? (action-target action) ctx)
-            true)))))
+  (nil? (guardrail-rule action ctx)))
 
 (defn classify-action
   "Classify ACTION for the guarded WM selector.
    Returns :autonomous or :needs-operator."
   [action ctx]
-  (if (autonomous-admissible? action ctx)
-    :autonomous
-    :needs-operator))
+  (cond
+    (autonomous-admissible? action ctx) :autonomous
+    (hard-refuse-warrant action ctx) :refused
+    :else :needs-operator))

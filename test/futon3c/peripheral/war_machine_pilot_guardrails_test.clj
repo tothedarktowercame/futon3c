@@ -62,6 +62,8 @@
           (let [items (edn/read-string (slurp path))]
             (is (= 1 (count items)))
             (is (= :learn-action-class (:wm-action-class (first items))))
+            (is (= :orchestration/pattern-warranted-choice-point
+                   (get-in (first items) [:pattern-warrant :pattern-id])))
             (is (:unblock-action (first items))))))
       (finally
         (delete-tree! (.getParent (io/file path)))))))
@@ -84,6 +86,10 @@
           (is (= 2 (:needs-you-emitted result)))
           (let [items (edn/read-string (slurp path))]
             (is (= 2 (count items)))
-            (is (every? :unblock-action items)))))
+            (is (every? :unblock-action items))
+            (is (= #{:orchestration/pattern-warranted-choice-point
+                     :war-machine/advanceability}
+                   (set (map #(get-in % [:pattern-warrant :pattern-id])
+                             items)))))))
       (finally
         (delete-tree! (.getParent (io/file path)))))))

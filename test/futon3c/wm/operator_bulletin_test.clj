@@ -55,6 +55,16 @@
     (testing "silent item's title is not rendered"
       (is (not (str/includes? out "Autonomous fix"))))))
 
+(deftest render-shows-pattern-warrant-line
+  (let [item (assoc nag-item
+                    :pattern-warrant
+                    {:pattern-id :war-machine/advanceability
+                     :gap "articulate the next hole / agree the gap, or it's not ready"})
+        out (bull/render-bulletin (bull/build-bulletin [item]))]
+    (is (str/includes?
+         out
+         "Sorry Joe, because of war-machine/advanceability: articulate the next hole"))))
+
 (deftest empty-input-renders-cleanly
   (let [b (bull/build-bulletin [])]
     (is (= 0 (:total b)))

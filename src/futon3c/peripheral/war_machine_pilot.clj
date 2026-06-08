@@ -222,16 +222,22 @@
    [{:action {:type :target} :g-total :rank} …] — the differential dT_p."
   [judgement]
   (->> (:ranked-actions judgement)
-	       (mapv (fn [e]
-	               {:action {:type   (some-> (get-in e [:action :type]) keyword)
-	                         :target (get-in e [:action :target])}
-                :g-total (:G-total e)
-                :rank    (:rank e)}))))
+       (mapv (fn [e]
+               (let [action (:action e)]
+                 {:action (assoc action :type (some-> (:type action) keyword))
+                  :g-total (:G-total e)
+                  :rank    (:rank e)})))))
 
 (defn- guarded-selection
   [dT ctx]
-  (let [classified (mapv #(assoc % :guardrails/classification
-                                  (guardrails/classify-action (:action %) ctx))
+  (let [classified (mapv (fn [entry]
+                           (let [action (:action entry)
+                                 rule (guardrails/guardrail-rule action ctx)
+                                 warrant (guardrails/nag-warrant action ctx)]
+                             (cond-> (assoc entry :guardrails/classification
+                                            (guardrails/classify-action action ctx))
+                               rule (assoc :guardrails/rule rule)
+                               warrant (assoc :guardrails/pattern-warrant warrant))))
                          dT)
         autonomous (first (filter #(= :autonomous (:guardrails/classification %))
                                   classified))

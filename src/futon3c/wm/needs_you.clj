@@ -6,7 +6,8 @@
    item from the vector clears it from the bulletin."
   (:require [clojure.java.io :as io]
             [clojure.pprint :as pprint]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [futon3c.wm.guardrails :as guardrails]))
 
 (def needs-you-path "data/wm/needs-you.edn")
 
@@ -89,6 +90,20 @@
     (str "WM ranked " target
          ", but guardrails classify the action as operator-dependent.")))
 
+(defn- pattern-label [x]
+  (if (keyword? x) (subs (str x) 1) (str x)))
+
+(defn- pattern-warrant [dT-entry]
+  (or (:pattern-warrant dT-entry)
+      (:guardrails/pattern-warrant dT-entry)
+      (get-in dT-entry [:action :pattern-warrant])
+      (guardrails/nag-warrant (:action dT-entry) {})))
+
+(defn sorry-joe-line
+  [item]
+  (when-let [{:keys [pattern-id gap]} (:pattern-warrant item)]
+    (str "Sorry Joe, because of " (pattern-label pattern-id) ": " gap)))
+
 (defn action->needs-you-item
   "Build one needs-you item from a stepped-past dT entry."
   [dT-entry run-id]
@@ -96,25 +111,27 @@
         target (action-target dT-entry)
         path (action-path dT-entry)
         repo (action-repo dT-entry path)
-        g-total (double (or (:g-total dT-entry) 0.0))]
-    {:id (str "wm-needs-" (stable-token class) "-" (stable-token target))
-     :title (str "WM needs Joe: " (kw-name class) " " (target-area target))
-     :why (why-blocked class target)
-     :unblock-action (unblock-action class target path)
-     :lane "nag"
-     :source "wm-needs-you"
-     :target target
-     :path path
-     ;; :g-total is raw expected free energy (LOWER = more important). The
-     ;; bulletin NAG lane sorts :salience DESCENDING (higher = more salient,
-     ;; matching the positive mission saliences), so display salience is the
-     ;; negated EFE: most-important action (most-negative g-total) => highest.
-     :salience (- g-total)
-     :repo repo
-     :wm-action-class class
-     :g-total g-total
-     :emitted-at (now-iso)
-     :run-id run-id}))
+        g-total (double (or (:g-total dT-entry) 0.0))
+        warrant (pattern-warrant dT-entry)]
+    (cond-> {:id (str "wm-needs-" (stable-token class) "-" (stable-token target))
+             :title (str "WM needs Joe: " (kw-name class) " " (target-area target))
+             :why (why-blocked class target)
+             :unblock-action (or (:unblock warrant) (unblock-action class target path))
+             :lane "nag"
+             :source "wm-needs-you"
+             :target target
+             :path path
+             ;; :g-total is raw expected free energy (LOWER = more important). The
+             ;; bulletin NAG lane sorts :salience DESCENDING (higher = more salient,
+             ;; matching the positive mission saliences), so display salience is the
+             ;; negated EFE: most-important action (most-negative g-total) => highest.
+             :salience (- g-total)
+             :repo repo
+             :wm-action-class class
+             :g-total g-total
+             :emitted-at (now-iso)
+             :run-id run-id}
+      warrant (assoc :pattern-warrant warrant))))
 
 (defn- dedupe-last-wins [items]
   (->> items

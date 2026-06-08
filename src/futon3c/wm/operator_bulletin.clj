@@ -56,9 +56,14 @@
   [bulletin prior-ack]
   (set/difference (surfaced-ids bulletin) (set prior-ack)))
 
+(defn- pattern-label [x]
+  (if (keyword? x) (subs (str x) 1) (str x)))
+
 (defn- item-line [it]
   (str "- " (or (:title it) (:id it) (:target it) "(unnamed)")
-       (when-let [w (:why it)] (str " — " w))))
+       (when-let [w (:why it)] (str " — " w))
+       (when-let [{:keys [pattern-id gap]} (:pattern-warrant it)]
+         (str "\n  Sorry Joe, because of " (pattern-label pattern-id) ": " gap))))
 
 (defn render-bulletin
   "Render BULLETIN as a readable 'Awaiting Joe' markdown surface."
