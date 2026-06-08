@@ -215,16 +215,40 @@
         ws-base (or explicit-ws-base
                     (when (= role :laptop) peer-ws-base)
                     (str "ws://127.0.0.1:" ws-port))
-        remote-ws-target? (and (pos? (long ws-port))
-                               (not (config/local-ws-target? ws-base ws-port)))
+        structurally-remote? (and (pos? (long ws-port))
+                                  (not (config/local-ws-target? ws-base ws-port)))
         register-http-base (or (some-> (config/env "FUTON3C_CODEX_WS_HTTP_BASE") str/trim not-empty)
-                               (when remote-ws-target?
+                               (when structurally-remote?
                                  (config/normalize-http-base (or peer-base ws-base))))
+        ;; Gate remote bridging on ACTUAL reachability, not just "is a peer URL
+        ;; configured". A configured-but-down peer (e.g. a linode whose Agency
+        ;; isn't running) must fall back to local — otherwise codex registers as
+        ;; remote (ws-remote?/skip-federation-proxy?), the bridge can't reach its
+        ;; home, and a local bell spawns a codex exec whose reporting is
+        ;; decoupled from the local job tracker (the "exec running, 0 evidence"
+        ;; wedge). Probe is skipped (assumed reachable) for a local ws target.
+        peer-probe-timeout-ms (config/env-int "FUTON3C_PEER_PROBE_TIMEOUT_MS" 1500)
+        remote-reachable? (and structurally-remote?
+                               (config/agency-reachable?
+                                (or register-http-base
+                                    (config/normalize-http-base (or peer-base ws-base)))
+                                peer-probe-timeout-ms))
+        ;; Only treat the target as remote when it is BOTH non-local AND live.
+        remote-ws-target? (and structurally-remote? remote-reachable?)
         evidence-replication? (config/env-bool "FUTON3C_CODEX_WS_REPLICATE_EVIDENCE"
                                                remote-ws-target?)
         replication-interval-ms (or (config/env-int "EVIDENCE_REPLICATION_INTERVAL_MS" 30000)
                                     30000)
-        ws-bridge-enabled? (and codex-ws-bridge? (pos? (long ws-port)))]
+        ;; Enable the ws-bridge for a local target as before, or for a remote
+        ;; target only when it answered the probe. A down remote ⇒ disabled ⇒
+        ;; codex falls through to the plain-local inline-invoke branch.
+        ws-bridge-enabled? (and codex-ws-bridge? (pos? (long ws-port))
+                                (or (not structurally-remote?) remote-reachable?))]
+    (when (and structurally-remote? (not remote-reachable?) codex-ws-bridge?)
+      (println (str "[dev] codex ws bridge: peer Agency "
+                    (or register-http-base peer-base ws-base)
+                    " unreachable (probe " peer-probe-timeout-ms
+                    "ms) — registering codex locally (inline invoke) instead of remote bridge.")))
     {:ws-port ws-port
      :peer-base peer-base
      :peer-ws-base peer-ws-base
@@ -364,7 +388,7 @@
                           :agent-id codex-agent-id
                           :session-file session-file
                           :session-id-atom sid-atom})
-              {:keys [ws-base remote-ws-target? register-http-base
+              {:keys [ws-port ws-base remote-ws-target? register-http-base
                       evidence-replication? replication-interval-ms
                       ws-bridge-enabled?]}
               (codex-registration-config {:f3c-sys f3c-sys
@@ -418,7 +442,7 @@
                             (when initial-sid
                               (str " (session: " (short-session initial-sid) ")")))))
             (do
-              (when codex-ws-bridge?
+              (when (and codex-ws-bridge? (<= (long (or ws-port 0)) 0))
                 (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to inline invoke"))
               (rt/register-codex! {:agent-id codex-agent-id
                                    :invoke-fn invoke-fn

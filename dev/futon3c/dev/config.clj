@@ -2,11 +2,14 @@
   "Environment parsing, deployment role detection, and session ID management.
 
    Extracted from futon3c.dev (Phase 1 of TN-dev-clj-decomposition).
-   All functions are pure or read-only (env vars, files). No runtime atoms."
+   All functions are pure or read-only (env vars, files, network probes).
+   No runtime atoms."
   (:require [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str])
-  (:import [java.net URI InetAddress NetworkInterface]))
+  (:import [java.net URI InetAddress NetworkInterface]
+           [java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers]
+           [java.time Duration]))
 
 ;; ---------------------------------------------------------------------------
 ;; Environment helpers
@@ -273,6 +276,36 @@
       (some-> (URI/create raw) .getHost))
     (catch Exception _
       nil)))
+
+(defn agency-reachable?
+  "Quick liveness probe of a peer Agency at HTTP-BASE: does it answer a GET
+   `/api/alpha/agents` with a 2xx status within TIMEOUT-MS (default 2000)?
+   Returns true iff so; any connect/timeout/non-2xx/parse failure ⇒ false.
+
+   An HTTP-level probe (not a bare TCP connect) is required on purpose: a down
+   peer's port can still accept TCP (firewall / half-open / stale listener)
+   while the Agency HTTP layer is dead, which a socket probe reads as a false
+   positive. `/api/alpha/agents` is used rather than `/health` because it is
+   fast and confirms the Agency is actually serving.
+
+   Used to gate remote ws-bridge registration: a configured-but-down peer
+   (e.g. a linode whose Agency isn't running) must fall back to local rather
+   than register an agent as remote with decoupled reporting. Read-only."
+  ([http-base] (agency-reachable? http-base 2000))
+  ([http-base timeout-ms]
+   (boolean
+    (when-let [base (normalize-http-base http-base)]
+      (try
+        (let [timeout (Duration/ofMillis (long timeout-ms))
+              client (.. (HttpClient/newBuilder) (connectTimeout timeout) build)
+              req (.. (HttpRequest/newBuilder (URI/create (str base "/api/alpha/agents")))
+                      (timeout timeout)
+                      GET
+                      build)
+              resp (.send client req (HttpResponse$BodyHandlers/discarding))
+              status (.statusCode resp)]
+          (and (>= status 200) (< status 300)))
+        (catch Throwable _ false))))))
 
 (defn local-ip-set
   "Best-effort set of local interface IP addresses (IPv4/IPv6 textual forms)."
