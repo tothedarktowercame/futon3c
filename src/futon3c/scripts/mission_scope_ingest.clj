@@ -3,6 +3,8 @@
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.java.shell :as sh]
+            [clojure.set :as set]
             [clojure.string :as str])
   (:import (java.net URI URLEncoder)
            (java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers)
@@ -230,12 +232,38 @@
     (or (get-entity client base-url ident)
         (get-entity client base-url (str "mission|" ident)))))
 
-(defn- resolve-source-file [client base-url source-ref]
+(defn- endpoint-exists?
+  "True when `end-id` already appears as a hyperedge ENDPOINT in substrate-2,
+   even when no entity *document* carries that id. The multi-watcher reflects
+   files as edge endpoints (`<repo>-d/file/<path>`), not entity docs, so a file
+   can be fully present yet invisible to `get-entity`. BOUNDED point lookup
+   (`?end=` + `limit`), never the full-type scan — which can wedge the serving
+   JVM (see README-multi-watcher.md)."
+  [client base-url end-id]
+  (let [resp (http-edn client :get
+                       (str base-url "/api/alpha/hyperedges?end="
+                            (url-encode end-id) "&limit=1"))]
+    (boolean (and (<= 200 (:status resp) 299)
+                  (seq (get-in resp [:body :hyperedges]))))))
+
+(defn- resolve-source-file
+  "Resolve a source-material file ref to a substrate-2 target. Tries entity
+   lookup first (raw ref, then canonical `<repo>-d/file/<path>`); if no entity
+   doc exists, falls back to the watcher's ENDPOINT representation so
+   endpoint-only files link instead of falsely reporting :detached. Never
+   fabricates a node — only returns a target that already exists in the store."
+  [client base-url source-ref]
   (when (seq (str source-ref))
     (or (get-entity client base-url source-ref)
         (let [[repo rest-path] (rest (re-matches #"([^/]+)/(.+)" (str source-ref)))]
           (when (and repo rest-path)
-            (get-entity client base-url (str repo "-d/file/" rest-path)))))))
+            (let [canonical (str repo "-d/file/" rest-path)]
+              (or (get-entity client base-url canonical)
+                  (when (endpoint-exists? client base-url canonical)
+                    {:id canonical
+                     :name rest-path
+                     :type "source/file"
+                     :endpoint-only? true}))))))))
 
 (defn- filler-ends [ends]
   (remove #(contains? #{"entity" "environment" "heading"} (:role %)) ends))
@@ -901,6 +929,315 @@
                                 counts)]))
           @report)))
 
+(defn- mission-ident-from-stem [stem]
+  (let [s (-> (str stem)
+              (str/replace #"\.md$" "")
+              (str/replace #"\.json$" ""))]
+    (if (str/starts-with? s "M-") s (str "M-" s))))
+
+(defn- find-mission-file [stem]
+  (let [mission (mission-ident-from-stem stem)
+        filename (str mission ".md")]
+    (or (some (fn [f]
+                (when (and (.isFile f)
+                           (= filename (.getName f))
+                           (str/includes? (.getPath f) "/holes/"))
+                  f))
+              (file-seq (io/file code-root)))
+        (throw (ex-info "Mission file not found"
+                        {:mission mission
+                         :filename filename})))))
+
+(defn- run-detector! [mission-file]
+  (let [result (sh/sh "python3"
+                      "/home/joe/code/futon6/scripts/mission_scope_detect.py"
+                      (.getAbsolutePath (io/file mission-file)))]
+    (when-not (zero? (:exit result))
+      (throw (ex-info "mission_scope_detect.py failed"
+                      {:mission-file (.getAbsolutePath (io/file mission-file))
+                       :exit (:exit result)
+                       :out (:out result)
+                       :err (:err result)})))
+    result))
+
+(defn- scope-tree-path-for-mission [mission]
+  (io/file default-scope-dir (str mission ".json")))
+
+(defn- stable-scopes-for-binder [mission mission-path raw-scopes binder]
+  (let [scopes (filter #(= binder (:binder-type %)) raw-scopes)]
+    (case binder
+      "eightfold-phase" (stable-eightfold-scopes mission mission-path raw-scopes (vec scopes))
+      "loose-section" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
+      "capability-scope" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
+                                                                       "loose-section"
+                                                                       "capability-scope"}
+                                                                     (:binder-type %))
+                                                        raw-scopes)]
+                            (stable-heading-scopes mission mission-path raw-scopes
+                                                   (vec collision-scopes)
+                                                   (vec scopes)))
+      "map-item" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
+                                                               "loose-section"
+                                                               "capability-scope"
+                                                               "map-item"}
+                                                             (:binder-type %))
+                                                    raw-scopes)]
+                    (stable-item-scopes mission mission-path raw-scopes
+                                        (vec collision-scopes)
+                                        (vec scopes)))
+      "relates-to" (stable-relates-to-scopes mission mission-path raw-scopes (vec scopes))
+      "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
+      "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+      "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+      (vec scopes))))
+
+(defn- stable-scopes-for-tree [data]
+  (let [mission (:mission data)
+        mission-path (:path data)
+        raw-scopes (:scope-hyperedges data)]
+    (mapcat #(stable-scopes-for-binder mission mission-path raw-scopes %)
+            structural-binders)))
+
+(defn- hyperedges-by-end [client base-url end-id]
+  (-> (http-edn client :get
+                (str base-url "/api/alpha/hyperedges?end="
+                     (url-encode end-id)
+                     "&limit=5000"))
+      (ok! {:op :hyperedges-by-end :end end-id})
+      (get-in [:body :hyperedges])
+      (or [])))
+
+(defn- stored-scope-hyperedges-for-mission [client base-url mission]
+  (->> structural-binders
+       (mapcat (fn [binder]
+                 (hyperedges-by-type client base-url (str "mission-scope/" binder))))
+       (filter #(= mission (get (hx-props %) :mission)))
+       vec))
+
+(defn- concept-ids-from-hx [h]
+  (->> (:hx/ends h)
+       (filter #(= :concept (:role %)))
+       (map :entity-id)
+       set))
+
+(defn- concept-ids-from-scope [mission path scope]
+  (->> (:ends scope)
+       filler-ends
+       (keep #(when-let [spec (slot-entity-spec mission path %)]
+                (when (= "concept" (:type spec))
+                  (:id spec))))
+       set))
+
+(defn- title-token-set [s]
+  (->> (str/split (str/lower-case (str s)) #"[^a-z0-9]+")
+       (remove #(or (str/blank? %) (< (count %) 3)
+                    (#{"section" "scope" "phase" "part" "chapter"} %)))
+       set))
+
+(defn- jaccard [a b]
+  (let [a (set a)
+        b (set b)
+        union-count (count (set/union a b))]
+    (if (zero? union-count)
+      0.0
+      (/ (double (count (set/intersection a b))) union-count))))
+
+(defn- indexed-new-scope [mission path scope]
+  (assoc scope
+         :concept-ids (concept-ids-from-scope mission path scope)
+         :title-tokens (title-token-set (get-in scope [:anchor :heading]))
+         :match-scope-id (:scope-id scope)
+         :match-original-id (:original-scope-id scope)))
+
+(defn- indexed-stored-scope [h]
+  (let [props (hx-props h)]
+    {:hx h
+     :scope-id (scope-id-from-hx h)
+     :original-id (:scope/original-id props)
+     :reworded-scope-id (:scope/reworded-scope-id props)
+     :binder (binder-from-hx h)
+     :anchor-passage (:anchor/passage props)
+     :anchor-fingerprint (:anchor/fingerprint props)
+     :title-tokens (title-token-set (:anchor/passage props))
+     :concept-ids (concept-ids-from-hx h)}))
+
+(defn- compatible-reword-match? [stored new-scope]
+  (or (= (:scope-id stored) (:match-scope-id new-scope))
+      (pos? (jaccard (:title-tokens stored) (:title-tokens new-scope)))))
+
+(defn- best-concept-match [stored new-scopes used-new]
+  (let [candidates (->> new-scopes
+                        (remove #(contains? used-new (:match-key %)))
+                        (filter #(= (:binder stored) (:binder-type %)))
+                        (filter #(compatible-reword-match? stored %))
+                        (map (fn [scope]
+                               [scope (jaccard (:concept-ids stored)
+                                               (:concept-ids scope))]))
+                        (filter #(>= (second %) 0.8))
+                        (sort-by (fn [[scope score]]
+                                   [(- score) (:scope-id scope)])))]
+    (ffirst candidates)))
+
+(defn- match-scopes [stored-scopes new-scopes]
+  (let [new-by-original (group-by :match-original-id new-scopes)
+        new-by-scope-id (group-by :match-scope-id new-scopes)]
+    (loop [stored stored-scopes
+           matches []
+           used-new #{}]
+      (if-let [s (first stored)]
+        (let [original-pick (some-> (get new-by-original (:original-id s)) first)
+              pick (or (when (and original-pick
+                                   (compatible-reword-match? s original-pick))
+                          original-pick)
+                       (some-> (get new-by-scope-id (:scope-id s)) first)
+                       (best-concept-match s new-scopes used-new))
+              key (:match-key pick)]
+          (if pick
+            (recur (rest stored)
+                   (conj matches [s pick])
+                   (conj used-new key))
+            (recur (rest stored)
+                   (conj matches [s nil])
+                   used-new)))
+        {:matched matches
+         :unmatched-new (remove #(contains? used-new (:match-key %)) new-scopes)}))))
+
+(defn- delete-scope-docs! [client base-url penholder scope-id hx-id]
+  (let [edge-ids (->> (hyperedges-by-end client base-url scope-id)
+                      (keep :hx/id))
+        ids (distinct (concat [scope-id hx-id] edge-ids))]
+    (delete-docs! client base-url penholder ids)
+    {:deleted-count (count ids)
+     :deleted-ids ids}))
+
+(defn- anchor-props [scope]
+  {:anchor/state (:state (:anchor scope))
+   :anchor/passage (:passage (:anchor scope))
+   :anchor/heading (:heading (:anchor scope))
+   :anchor/fingerprint (:fingerprint (:anchor scope))
+   :anchor/source (:source (:anchor scope))
+   :anchor/resolve-by (:resolve-by (:anchor scope))
+   :anchor/detached-reason (:detached-reason (:anchor scope))})
+
+(defn- reworded? [stored new-scope]
+  (or (not= (or (:reworded-scope-id stored) (:scope-id stored))
+            (:scope-id new-scope))
+      (not= (:anchor-passage stored) (get-in new-scope [:anchor :passage]))))
+
+(defn- update-scope-anchor! [client base-url penholder stored new-scope]
+  (let [h (:hx stored)
+        old-scope-id (:scope-id stored)
+        new-scope-id (:scope-id new-scope)
+        props (merge (anchor-props new-scope)
+                     {:scope/name (env-name new-scope)
+                      :scope/heading-slug (:heading-slug new-scope)
+                      :scope/reworded-scope-id (when (not= old-scope-id new-scope-id)
+                                                 new-scope-id)
+                      :scope/reworded-at (str (java.time.Instant/now))
+                      :scope/maintenance-state :re-resolved})]
+    (post-hyperedge! client base-url penholder
+                     (merged-hyperedge-payload h props))
+    (when-let [entity (get-entity client base-url old-scope-id)]
+      (ensure-entity! client base-url penholder
+                      {:id (:id entity)
+                       :name (env-name new-scope)
+                       :type (:type entity)
+                       :external-id (:external-id entity)
+                       :source (:source entity)
+                       :props props}))))
+
+(defn- mark-detached! [client base-url penholder stored reason]
+  (let [props {:anchor/state :detached
+               :anchor/detached-reason reason
+               :scope/maintenance-state :detached}]
+    (post-hyperedge! client base-url penholder
+                     (merged-hyperedge-payload (:hx stored) props))
+    (when-let [entity (get-entity client base-url (:scope-id stored))]
+      (ensure-entity! client base-url penholder
+                      {:id (:id entity)
+                       :name (:name entity)
+                       :type (:type entity)
+                       :external-id (:external-id entity)
+                       :source (:source entity)
+                       :props props}))))
+
+(defn- upsert-single-scope!
+  [client base-url penholder mission mission-path scope]
+  (let [mission-entity (ensure-entity! client base-url penholder
+                                       {:id (mission-doc-id mission mission-path)
+                                        :name (mission-doc-id mission mission-path)
+                                        :type "mission/doc"
+                                        :external-id mission
+                                        :source "mission-scope-tree"
+                                        :props {:mission/id mission
+                                                :mission/path mission-path}})
+        scope-entity (ensure-entity! client base-url penholder
+                                     (scope-entity-spec mission mission-path scope))
+        slot-entities (->> (filler-ends (:ends scope))
+                           (keep (fn [end]
+                                   (when-let [spec (slot-entity-spec* client base-url mission mission-path end)]
+                                     {:role (:role end)
+                                      :entity (ensure-entity! client base-url penholder spec)})))
+                           vec)
+        hx (post-hyperedge! client base-url penholder
+                            (scope-hyperedge mission-entity scope-entity slot-entities scope))]
+    hx))
+
+(defn- incremental-mission!
+  [{:keys [client base-url penholder mission dry-run?]}]
+  (let [mission (mission-ident-from-stem mission)
+        mission-file (find-mission-file mission)
+        _ (run-detector! mission-file)
+        tree-file (scope-tree-path-for-mission mission)
+        data (json/parse-string (slurp tree-file) true)
+        mission-path (:path data)
+        new-scopes (->> (stable-scopes-for-tree data)
+                        (map-indexed (fn [idx scope]
+                                       (assoc (indexed-new-scope mission mission-path scope)
+                                              :match-key idx)))
+                        vec)
+        stored-scopes (mapv indexed-stored-scope
+                            (stored-scope-hyperedges-for-mission client base-url mission))
+        {:keys [matched unmatched-new]} (match-scopes stored-scopes new-scopes)
+        report (atom {:mission mission
+                      :stored-count (count stored-scopes)
+                      :detected-count (count new-scopes)
+                      :added-count 0
+                      :removed-count 0
+                      :reworded-count 0
+                      :unchanged-count 0
+                      :detached-count 0
+                      :dry-run? (boolean dry-run?)})]
+    (doseq [[stored new-scope] matched]
+      (cond
+        (nil? new-scope)
+        (do
+          (swap! report update :removed-count inc)
+          (when-not dry-run?
+            (delete-scope-docs! client base-url penholder
+                                (:scope-id stored)
+                                (get-in stored [:hx :hx/id]))))
+
+        (= :detached (get-in new-scope [:anchor :state]))
+        (do
+          (swap! report update :detached-count inc)
+          (when-not dry-run?
+            (mark-detached! client base-url penholder stored :verbatim-and-fingerprint-unresolved)))
+
+        (reworded? stored new-scope)
+        (do
+          (swap! report update :reworded-count inc)
+          (when-not dry-run?
+            (update-scope-anchor! client base-url penholder stored new-scope)))
+
+        :else
+        (swap! report update :unchanged-count inc)))
+    (doseq [scope unmatched-new]
+      (swap! report update :added-count inc)
+      (when-not dry-run?
+        (upsert-single-scope! client base-url penholder mission mission-path scope)))
+    @report))
+
 (defn ingest-scope-tree!
   [{:keys [client base-url penholder path binder-filter]}]
   (let [data (json/parse-string (slurp path) true)
@@ -1050,6 +1387,9 @@
                               "--binder"
                               (recur (nnext xs) (assoc opts :binder-filter (second xs)) missions)
 
+                              "--mission"
+                              (recur (nnext xs) (assoc opts :mission (second xs)) missions)
+
                               "--wire-parents"
                               (recur (next xs) (assoc opts :wire-parents? true) missions)
 
@@ -1059,14 +1399,23 @@
                               (recur (next xs) opts (conj missions x)))
                             [opts (remove str/blank? missions)]))
         files (scope-tree-files default-scope-dir missions)
-        reports (when-not (:wire-parents? opts)
+        reports (when-not (or (:wire-parents? opts) (:mission opts))
                   (mapv #(ingest-scope-tree! {:client client
                                               :base-url default-futon1a-url
                                               :penholder default-penholder
                                               :binder-filter (:binder-filter opts)
                                               :path (.getAbsolutePath %)})
                         files))]
-    (if (:wire-parents? opts)
+    (cond
+      (:mission opts)
+      (println (pr-str {:incremental-mission
+                        (incremental-mission! {:client client
+                                               :base-url default-futon1a-url
+                                               :penholder default-penholder
+                                               :mission (:mission opts)
+                                               :dry-run? (:dry-run? opts)})}))
+
+      (:wire-parents? opts)
       (println (pr-str {:scope-parent-wiring
                         (update-parent-wiring! {:client client
                                                 :base-url default-futon1a-url
@@ -1075,6 +1424,8 @@
                                                 :selected missions
                                                 :dry-run? (:dry-run? opts)})
                         :dry-run? (boolean (:dry-run? opts))}))
+
+      :else
       (do
         (doseq [r reports]
           (println (pr-str r)))
