@@ -11,6 +11,9 @@
 (def ^:private default-scope-dir "/home/joe/code/futon6/data/mission-scope-trees")
 (def ^:private default-futon1a-url "http://localhost:7071")
 (def ^:private default-penholder "api")
+(def ^:private code-root "/home/joe/code")
+(def ^:private canonical-phases
+  #{"head" "identify" "map" "derive" "argue" "verify" "instantiate" "document"})
 
 (defn- sha1 [s]
   (let [digest (.digest (MessageDigest/getInstance "SHA-1") (.getBytes (str s) "UTF-8"))]
@@ -79,7 +82,8 @@
       (get-in [:body :hyperedge])))
 
 (defn- repo-name-from-path [path]
-  (second (re-find #"/code/([^/]+)/" (str path))))
+  (or (second (re-find #"/code/([^/]+)/" (str path)))
+      (second (re-find #"^([^/]+)/" (str path)))))
 
 (defn- mission-doc-id [mission path]
   (let [repo (or (repo-name-from-path path) "mission")
@@ -91,6 +95,23 @@
   (or (some #(when (= "environment" (:role %)) (:name %)) (:ends scope))
       (some #(when (= "heading" (:role %)) (:title %)) (:ends scope))
       (:scope-id scope)))
+
+(defn- heading-title [scope]
+  (or (some #(when (= "heading" (:role %)) (:title %)) (:ends scope))
+      (some #(when (= "environment" (:role %)) (:name %)) (:ends scope))
+      (:scope-id scope)))
+
+(defn- env-phase [scope]
+  (some #(when (= "environment" (:role %)) (:phase %)) (:ends scope)))
+
+(defn- canonical-phase [scope]
+  (let [phase (some-> (env-phase scope) str/lower-case)]
+    (if (contains? canonical-phases phase)
+      phase
+      (let [heading (-> (heading-title scope) str/lower-case)
+            hit (some #(when (re-find (re-pattern (str "\\b" % "\\b")) heading) %)
+                      canonical-phases)]
+        (or hit "head")))))
 
 (defn- end-display [end]
   (or (:term end) (:ident end) (:text end) (:title end) (:ref end) (:name end) (:latex end)))
@@ -146,16 +167,133 @@
 (defn- filler-ends [ends]
   (remove #(contains? #{"entity" "environment" "heading"} (:role %)) ends))
 
+(defn- mission-file [mission-path]
+  (let [f (io/file mission-path)]
+    (if (.isAbsolute f)
+      f
+      (io/file code-root mission-path))))
+
+(defn- markdown-heading-text [line]
+  (some-> line
+          (str/replace #"^\s*#+\s*" "")
+          (str/replace #"\s*#+\s*$" "")
+          str/trim))
+
+(defn- heading-passage [mission-path heading]
+  (let [f (mission-file mission-path)]
+    (try
+      (when (.exists f)
+        (let [lines (str/split-lines (slurp f))]
+          (or (some (fn [line]
+                      (when (= heading (markdown-heading-text line))
+                        (str/trim line)))
+                    lines)
+              (some (fn [line]
+                      (when (str/includes? line heading)
+                        (str/trim line)))
+                    lines))))
+      (catch Exception _ nil))))
+
+(defn- child-map [scopes]
+  (reduce (fn [m scope]
+            (if-let [parent (:parent scope)]
+              (update m parent (fnil conj []) (:scope-id scope))
+              m))
+          {}
+          scopes))
+
+(defn- descendant-ids [children sid]
+  (letfn [(walk [id]
+            (cons id (mapcat walk (get children id))))]
+    (rest (walk sid))))
+
+(defn- scope-by-id [scopes]
+  (into {} (map (juxt :scope-id identity) scopes)))
+
+(defn- bound-concept-set [scopes scope]
+  (let [children (child-map scopes)
+        by-id (scope-by-id scopes)
+        ids (cons (:scope-id scope) (descendant-ids children (:scope-id scope)))]
+    (->> ids
+         (keep by-id)
+         (mapcat :ends)
+         filler-ends
+         (keep end-display)
+         (map str/trim)
+         (remove str/blank?)
+         distinct
+         sort
+         vec)))
+
+(defn- anchor-for-scope [mission-path scopes scope]
+  (let [heading (heading-title scope)
+        passage (heading-passage mission-path heading)
+        concepts (bound-concept-set scopes scope)
+        basis (pr-str {:heading (or passage heading)
+                       :concepts concepts})
+        fingerprint (subs (sha1 basis) 0 16)]
+    {:state (if passage :anchored :detached)
+     :passage (or passage heading)
+     :heading heading
+     :fingerprint fingerprint
+     :concepts concepts
+     :resolve-by :verbatim-search
+     :detached-reason (when-not passage :heading-passage-not-found)}))
+
+(defn- canonical-eightfold-scope-id [mission phase]
+  (let [stem (str/replace-first (str mission) #"^M-" "")
+        base (str stem "/" phase)]
+    base))
+
+(defn- stable-eightfold-scope-id [mission phase heading duplicate?]
+  (let [base (canonical-eightfold-scope-id mission phase)]
+    (if duplicate?
+      (str base "--" (slug heading) "-" (subs (sha1 heading) 0 8))
+      base)))
+
+(defn- stable-eightfold-scopes [mission mission-path all-scopes scopes]
+  (let [phase-counts (frequencies (map canonical-phase scopes))]
+    (mapv (fn [scope]
+            (let [phase (canonical-phase scope)
+                  heading (heading-title scope)
+                  duplicate? (> (get phase-counts phase 0) 1)
+                  stable-id (stable-eightfold-scope-id mission phase heading duplicate?)
+                  canonical-id (canonical-eightfold-scope-id mission phase)
+                  anchor (anchor-for-scope mission-path all-scopes scope)]
+              (assoc scope
+                     :original-scope-id (:scope-id scope)
+                     :scope-id stable-id
+                     :stable-scope-id stable-id
+                     :canonical-scope-id canonical-id
+                     :canonical-phase phase
+                     :duplicate-phase? duplicate?
+                     :anchor anchor
+                     :parent nil)))
+          scopes)))
+
 (defn- scope-entity-spec [mission path scope]
   {:id (:scope-id scope)
    :name (env-name scope)
    :type (str "scope/" (:binder-type scope))
    :external-id (:scope-id scope)
    :source "mission-scope-tree"
-   :props {:mission mission
-           :mission/path path
-           :scope/binder-type (:binder-type scope)
-           :scope/parent (:parent scope)}})
+   :props (cond-> {:mission mission
+                   :mission/path path
+                   :scope/binder-type (:binder-type scope)
+                   :scope/parent (:parent scope)}
+            (:canonical-phase scope)
+            (assoc :scope/canonical-phase (:canonical-phase scope)
+                   :scope/original-id (:original-scope-id scope)
+                   :scope/stable-id (:stable-scope-id scope)
+                   :scope/canonical-id (:canonical-scope-id scope)
+                   :scope/duplicate-phase? (boolean (:duplicate-phase? scope)))
+            (:anchor scope)
+            (assoc :anchor/state (:state (:anchor scope))
+                   :anchor/passage (:passage (:anchor scope))
+                   :anchor/heading (:heading (:anchor scope))
+                   :anchor/fingerprint (:fingerprint (:anchor scope))
+                   :anchor/resolve-by (:resolve-by (:anchor scope))
+                   :anchor/detached-reason (:detached-reason (:anchor scope))))})
 
 (defn- scope-hyperedge [mission-entity scope-entity slot-entities scope]
   {:hx/id (str "hx|mission-scope|" (:scope-id scope))
@@ -169,8 +307,21 @@
            :scope/id (:scope-id scope)
            :scope/binder-type (:binder-type scope)
            :scope/parent (:parent scope)
-           :scope/name (:name scope-entity)}
-   :hx/content (:hx/content scope)
+           :scope/name (:name scope-entity)
+           :scope/original-id (:original-scope-id scope)
+           :scope/stable-id (:stable-scope-id scope)
+           :scope/canonical-id (:canonical-scope-id scope)
+           :scope/canonical-phase (:canonical-phase scope)
+           :anchor/state (:state (:anchor scope))
+           :anchor/passage (:passage (:anchor scope))
+           :anchor/fingerprint (:fingerprint (:anchor scope))
+           :anchor/resolve-by (:resolve-by (:anchor scope))
+           :anchor/detached-reason (:detached-reason (:anchor scope))}
+   :hx/content (when-let [anchor (:anchor scope)]
+                 {:anchor/kind "verbatim-heading+concept-fingerprint"
+                  :anchor/passage (:passage anchor)
+                  :anchor/fingerprint (:fingerprint anchor)
+                  :anchor/state (:state anchor)})
    :hx/labels [(str "mission-scope/" (:binder-type scope))]})
 
 (defn- nesting-hyperedge [mission-entity parent-scope child-scope]
@@ -184,10 +335,17 @@
    :hx/labels ["mission-scope/nesting"]})
 
 (defn ingest-scope-tree!
-  [{:keys [client base-url penholder path]}]
+  [{:keys [client base-url penholder path binder-filter]}]
   (let [data (json/parse-string (slurp path) true)
         mission (:mission data)
         mission-path (:path data)
+        raw-scopes (:scope-hyperedges data)
+        scopes (cond->> raw-scopes
+                 binder-filter (filter #(= binder-filter (:binder-type %))))
+        scopes (if (= "eightfold-phase" binder-filter)
+                 (stable-eightfold-scopes mission mission-path raw-scopes (vec scopes))
+                 (vec scopes))
+        selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
         mission-entity (ensure-entity! client base-url penholder
                                        {:id mission-id
@@ -199,7 +357,7 @@
                                                 :mission/path mission-path}})
         entity-ids (atom #{(:id mission-entity)})
         hx-ids (atom #{})]
-    (doseq [scope (:scope-hyperedges data)]
+    (doseq [scope scopes]
       (let [scope-entity (ensure-entity! client base-url penholder
                                          (scope-entity-spec mission mission-path scope))
             _ (swap! entity-ids conj (:id scope-entity))
@@ -214,13 +372,16 @@
                                   (scope-hyperedge mission-entity scope-entity slot-entities scope))]
           (swap! hx-ids conj (:hx/id hx)))
         (when-let [parent (:parent scope)]
-          (let [hx (post-hyperedge! client base-url penholder
-                                    (nesting-hyperedge mission-entity parent (:scope-id scope)))]
-            (swap! hx-ids conj (:hx/id hx))))))
+          (when (contains? selected-ids parent)
+            (let [hx (post-hyperedge! client base-url penholder
+                                      (nesting-hyperedge mission-entity parent (:scope-id scope)))]
+              (swap! hx-ids conj (:hx/id hx)))))))
     {:mission mission
      :mission-entity (:id mission-entity)
      :entity-count (count @entity-ids)
-     :hyperedge-count (count @hx-ids)}))
+     :hyperedge-count (count @hx-ids)
+     :detached-count (count (filter #(= :detached (get-in % [:anchor :state])) scopes))
+     :duplicate-phase-count (count (filter :duplicate-phase? scopes))}))
 
 (defn- scope-tree-files [dir selected]
   (let [selected (set selected)]
@@ -235,15 +396,23 @@
 
 (defn -main [& args]
   (let [client (http-client)
-        missions (remove str/blank? args)
+        [opts missions] (loop [xs args opts {} missions []]
+                          (if-let [x (first xs)]
+                            (if (= "--binder" x)
+                              (recur (nnext xs) (assoc opts :binder-filter (second xs)) missions)
+                              (recur (next xs) opts (conj missions x)))
+                            [opts (remove str/blank? missions)]))
         files (scope-tree-files default-scope-dir missions)
         reports (mapv #(ingest-scope-tree! {:client client
                                             :base-url default-futon1a-url
                                             :penholder default-penholder
+                                            :binder-filter (:binder-filter opts)
                                             :path (.getAbsolutePath %)})
                       files)]
     (doseq [r reports]
       (println (pr-str r)))
     (println (pr-str {:mission-count (count reports)
                       :entity-count (reduce + (map :entity-count reports))
-                      :hyperedge-count (reduce + (map :hyperedge-count reports))}))))
+                      :hyperedge-count (reduce + (map :hyperedge-count reports))
+                      :detached-count (reduce + (map :detached-count reports))
+                      :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))}))))

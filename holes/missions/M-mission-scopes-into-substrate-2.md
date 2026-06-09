@@ -1,0 +1,118 @@
+# Mission: M-mission-scopes-into-substrate-2
+
+**Date:** 2026-06-08
+**Status:** HEAD authored / IDENTIFY (charter). Greenlit by Joe 2026-06-08.
+**Owner:** claude-3 (mission-scope hypergraph + Salingaros field) · claude-1 (WM EFE — Deliverable 2 is
+co-owned with the pudding-engine) · codex (the ingest).
+**Predecessor:** M-web-arxana-missions (futon4) Layer-3 — the session of *play* (the mission carpet,
+2026-06-08) that surfaced this. The name is deliberate: missions are **already** in substrate-2 (as nodes);
+it is their **scopes** (the scope-tree-of-centres) that are not.
+**Co-owns / touches:** C-pudding-prover, E-warranted-play, the WM gap-reader / pre-witness loop (futon3c/futon7).
+
+## 1. IDENTIFY — the gap
+
+Substrate-2 (the Arxana hypergraph, port 7071) already reflects code **contents** (substrate-1). What it lacks
+is the mission **scopes** — the eightfold phases, sub-scopes and bound concepts that M-web-arxana-missions
+Layer-3 computes. Today those scopes are produced **ad-hoc and position-indexed**
+(`futon6/scripts/mission_scope_detect.py` emits `hx/content {position,end}` char-offsets) — ephemeral,
+recomputed each run, living *outside* substrate-2. Two consequences:
+
+- The Salingaros aliveness/entropy field (`futon6/scripts/mission_wholeness.py`, `L = T·H`, `C = T·(10−H)`,
+  where `(10−H)` is architectural entropy) is a **document-derived** read, **blind to substrate-1**: a fat code
+  file is a real refactor-sorry (high entropy) that no scope-tree sees, because the scopes aren't in the same
+  hypergraph as the code.
+- The field can't be composed with the **War Machine's EFE**, which is the *same notional quantity*
+  (free energy ≈ entropy ≈ `C`) computed a **different way** — live code/agenda state, not mission documents.
+
+**Two computations of one notional entropy, never unified.** This mission unifies them.
+
+## 2. Deliverables
+
+### D1 — Mission scopes as real, verbatim-anchored hyperedges in substrate-2  *(the knowable half)*
+Import the 194 mission-scope-trees into substrate-2 as durable hyperedges, anchored so they survive edits:
+- **scope-id** = `<mission-stem>/<heading-slug>` — stable identity across reordering / small edits;
+- **anchor** = the heading **verbatim passage** + a short content **fingerprint**, re-resolved by *search*,
+  **never** by buffer/char position (the README-essays.md convention; positions rot on the first edit);
+- **maintenance:** fuzzy re-resolve when a heading is reworded; an editorial-log **`:detached`** state when an
+  anchor can't resolve (review, never silent loss); a **watcher-driven re-detect** on mission save → diff
+  stored-vs-new scopes (added / removed / moved) → patch the hypergraph.
+- **Builds on:** codex-1's `mission_scope_ingest.clj` (futon3c), which already ingested the 6 ensemble
+  scope-trees into futon1a/substrate-2 for the L1 `/ego` render — extend to 194 + swap positional anchors for
+  verbatim+scope-id+fingerprint.
+
+### D2 — Compose the Salingaros C-field with the WM EFE  *(the unknown — why this is a mission)*
+With missions and code in one substrate-2, run the Salingaros entropy field over the **unified** hypergraph
+(a fat file and an empty phase are both high-C now) and compose it with the WM EFE as a **layered drive**:
+- **macro** — the C-field = a *where-to-attend* prior over the whole substrate-2 (cheap, document+code derived);
+- **micro** — substrate-1 code grain (fat files), within-scope holes, near-miss genes = the *actual buildable
+  action* (not "finish the mission", which is what you get when you stop at the macro);
+- **live-filter** — footfall / WM live-state, to drop stale high-C (e.g. `M-reachable-from-boot`, a forgotten
+  mission the static field over-surfaces).
+
+**The open question this mission exists to answer:** *how do the two entropy computations compose into one
+drive without one merely overriding the other?* (additive term? a prior the WM samples? macro scopes / micro
+acts / live filters?). This is the unknown specification — the reason it's a mission, not a task.
+
+**Salvo resolution (claude-3 ⟷ claude-1, short-whistle salvo 2026-06-08) — answered:**
+- **MACRO where-prior = full-C** (`T·(10−H)`): it **subsumes and retires the additive gap-term**, lifting it
+  OUT of `G-total`. Rationale (today's F1 lesson): the additive-C **is** the gap-reader we de-saturated this
+  morning; an additive C-term re-runs that saturation/mis-steer bug. The gap was "a *where* miscast as a
+  *what*"; full-C puts it at the right altitude — a scoping prior, not an EFE term. One non-fragile mechanism.
+- **MICRO action = clean `G-total`/EFE** over substrate-1 code + scope-holes — C never names the move.
+- **LIVE-FILTER = attested-footfall + WM live-agenda** → drop stale high-C (e.g. `M-reachable-from-boot`).
+  Footfall is *liveness, not progress* — and that's **correct** for drop-stale: the filter's job is to
+  not-attend **dead** regions, and a thrashed mission is at least alive (don't drop it). Keep it **attested**
+  (real logged turns) — same anti-laundering discipline as the fruit-witness, or "footfall" becomes a
+  launderable proxy.
+- **Transition guard (subsumption-discipline):** retiring the live F1 gap-reader is the **end-state**, not an
+  immediate rip-out. It is **both-live-gated** — F1 stays live until full-C demonstrably subsumes its function
+  on the field (the domain-gate AND the de-saturation) — and the swap is **Joe's consent locus**. Nothing
+  leaves the live EFE before its replacement is proven; nothing touches the live EFE without Joe.
+- Symmetry worth noting: the F1 gap-reader built + de-bugged this session is the **stepping-stone** to the
+  cleaner architecture, not the destination.
+
+## 3. Scope
+
+**Scope-in:** `mission_scope_detect` re-anchoring (verbatim, not position); the substrate-2 mission-scope
+ingest; the Arxana annotation-maintenance (fuzzy + editorial-log + watcher-re-detect); the unified-substrate
+Salingaros C-field; the WM-EFE composition design + a worked example.
+
+**Scope-out:** the full diachronic **footfall** layer (separate concern — turns→missions association is spotty);
+per-mission **action-generation** (a follow-on once the field exists); the descriptive carpet/mandala renders
+(done this session — `mission_carpet.py`, `mission_phylo_mandala.py` etc.); other uses of the position-indexed
+detector.
+
+## 4. MAP — build on what exists
+- scope-detector + Salingaros + carpet: `futon6/scripts/mission_{scope_detect,fold,wholeness,carpet,phylogeny}.py`.
+- proven ingest path: codex-1's `mission_scope_ingest.clj` (6 missions → futon1a/substrate-2).
+- anchor convention: futon4 `README-essays.md` (verbatim `:passage`, `.edn` authoritative, `audit-passages`).
+- substrate-2: futon1a hyperedge store / 7071 (already reflects code contents).
+- the WM EFE: gap-reader / pre-witness / E-warranted-play / C-pudding-prover (futon3c/futon7, claude-1).
+
+## 5. Exit conditions
+- 194 mission-scope-trees live in substrate-2 as verbatim-anchored hyperedges; a mission edit re-resolves (or
+  `:detached`-logs) without manual repair.
+- the Salingaros C-field runs over the **unified** substrate-2 and a fat code file registers as high-C.
+- a **ratified composition** of C-field + WM EFE (the layered macro/micro/live drive), demonstrated by a worked
+  example: the WM, asked what to build, returns a *specific buildable unit* (a fat file / a scope-hole / a
+  gene-graft), **not** "finish the mission".
+
+## 6. Disciplines (hard lines)
+- **Never** re-introduce position anchors as the source of truth (verbatim + scope-id only).
+- **Never** restart the 7071 / futon3c JVM — Drawbridge reload only (substrate-2 is live).
+- A scope that can't re-anchor is **`:detached` and logged**, never silently dropped.
+
+## 7. D1 progress — incremental per-scope-type handoffs (Joe 2026-06-08: not bulk; log each)
+
+Scopes are the key information source here — **no EFE yet** (D2 parked). Each scope-type is **one small handoff**
+to codex-1, end-to-end (verbatim-anchor → substrate-2 ingest → verify), logged below. The first establishes the
+reusable mechanism; later types apply it. **Structural** scope-types first; the **pattern-scope layer**
+(flexiarg applications — the subtle "anatomy of patterns") is its own deferred deep-dive, last.
+
+**Order:** eightfold-phase → loose-section → capability-scope → map-item → relates-to → source-material →
+mission-scope-in/out → [pattern-scopes — deferred deep-dive].
+
+| scope-type | status | notes |
+|---|---|---|
+| eightfold-phase | **INGESTED** by codex-1 2026-06-09 — reusable anchor+ingest mechanism established | 194 scope trees scanned; 346 eightfold-phase hyperedges written with `scope-id = <mission-stem>/<canonical-phase>` where unique and duplicate same-phase headings disambiguated by heading slug/hash; anchor shape is verbatim heading passage + concept-set fingerprint + `:anchor/state`; 15 detached anchors recorded for review, no silent drops |
+| (remaining) | queued behind the first | each tuned by what the prior handoff surfaces |
