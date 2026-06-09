@@ -26,7 +26,7 @@
   (json/parse-string (json/generate-string x) true))
 
 (deftest append-posts-json-to-evidence-endpoint
-  (testing "append posts JSON to /api/alpha/evidence and returns parsed success payload"
+  (testing "append posts the PUBLIC unqualified shape (:evidence-id, NOT raw :evidence/id — the shape the server's POST /api/alpha/evidence handler actually reads at http.clj:1078) and returns the server's persisted entry"
     (let [captured (atom nil)
           entry (fix/make-evidence-entry {:evidence/id "e-http-append"})
           normalized-entry (json-normalize entry)
@@ -40,15 +40,26 @@
                                          :headers (:headers req)
                                          :body body-str
                                          :parsed parsed})
-                       (json-response 200 {:ok true :entry parsed})))
+                       ;; a realistic server returns the PERSISTED (qualified) EvidenceEntry,
+                       ;; not an echo of the posted body.
+                       (json-response 200 {:ok true :entry normalized-entry})))
                    (fn [base-url]
-                     (backend/-append (http-be/->HttpBackend base-url) entry)))]
+                     (backend/-append (http-be/->HttpBackend base-url) entry)))
+          posted (:parsed @captured)]
       (is (= :post (:method @captured)))
       (is (= "/api/alpha/evidence" (:uri @captured)))
       (is (= "application/json"
              (or (get-in @captured [:headers "content-type"])
                  (get-in @captured [:headers "Content-Type"]))))
-      (is (= normalized-entry (:parsed @captured)))
+      ;; the body carries the entry's values under the PUBLIC unqualified keys the
+      ;; append handler reads — the previous raw :evidence/... body was rejected.
+      (is (= "e-http-append" (:evidence-id posted)))
+      (is (= "claude-1" (:author posted)))
+      (is (= "observation" (:claim-type posted)))
+      (is (= {:text "hello"} (:body posted)))
+      (is (= ["test"] (:tags posted)))
+      (is (not (contains? posted :evidence/id)))
+      ;; and the backend returns the server's persisted entry verbatim.
       (is (= {:ok true :entry normalized-entry} result)))))
 
 (deftest append-returns-error-on-http-failure
