@@ -136,6 +136,16 @@
       (some #(when (= "environment" (:role %)) (:name %)) (:ends scope))
       (:scope-id scope)))
 
+(defn- map-item-title [scope]
+  (or (some #(when (= "map-item" (:role %)) (:title %)) (:ends scope))
+      (get-in scope [:hx/content :match])
+      (heading-title scope)))
+
+(defn- anchor-text [scope]
+  (case (:binder-type scope)
+    "map-item" (map-item-title scope)
+    (heading-title scope)))
+
 (defn- env-phase [scope]
   (some #(when (= "environment" (:role %)) (:phase %)) (:ends scope)))
 
@@ -229,6 +239,28 @@
                     lines))))
       (catch Exception _ nil))))
 
+(defn- list-item-line? [line]
+  (boolean (re-find #"^\s*(?:[-*+]|\d+[.)])\s+" line)))
+
+(defn- list-item-passage-info [mission-path item-text]
+  (let [f (mission-file mission-path)
+        item-text (str/trim (str item-text))]
+    (try
+      (when (and (.exists f) (seq item-text))
+        (let [lines (str/split-lines (slurp f))]
+          (or (some (fn [line]
+                      (when (and (list-item-line? line)
+                                 (str/includes? line item-text))
+                        {:passage (str/trim line)
+                         :source :list-item}))
+                    lines)
+              (some (fn [line]
+                      (when (str/includes? line item-text)
+                        {:passage (str/trim line)
+                         :source :contains-line}))
+                    lines))))
+      (catch Exception _ nil))))
+
 (defn- child-map [scopes]
   (reduce (fn [m scope]
             (if-let [parent (:parent scope)]
@@ -261,8 +293,13 @@
          vec)))
 
 (defn- anchor-for-scope [mission-path scopes scope]
-  (let [heading (heading-title scope)
-        passage (heading-passage mission-path heading)
+  (let [heading (anchor-text scope)
+        passage-info (case (:binder-type scope)
+                       "map-item" (list-item-passage-info mission-path heading)
+                       (when-let [passage (heading-passage mission-path heading)]
+                         {:passage passage
+                          :source :heading}))
+        passage (:passage passage-info)
         concepts (bound-concept-set scopes scope)
         basis (pr-str {:heading (or passage heading)
                        :concepts concepts})
@@ -272,8 +309,18 @@
      :heading heading
      :fingerprint fingerprint
      :concepts concepts
+     :source (:source passage-info)
      :resolve-by :verbatim-search
-     :detached-reason (when-not passage :heading-passage-not-found)}))
+     :detached-reason (when-not passage
+                        (if (= "map-item" (:binder-type scope))
+                          :list-item-passage-not-found
+                          :heading-passage-not-found))}))
+
+(defn- truncated-slug [s]
+  (let [base (slug s)]
+    (if (> (count base) 72)
+      (str (subs base 0 63) "-" (subs (sha1 base) 0 8))
+      base)))
 
 (defn- canonical-eightfold-scope-id [mission phase]
   (let [stem (str/replace-first (str mission) #"^M-" "")
@@ -313,6 +360,13 @@
       (str base "--" (subs (sha1 (str heading "|" original-id)) 0 8))
       base)))
 
+(defn- stable-item-scope-id [mission text original-id duplicate?]
+  (let [stem (str/replace-first (str mission) #"^M-" "")
+        base (str stem "/" (truncated-slug text))]
+    (if duplicate?
+      (str base "--" (subs (sha1 (str text "|" original-id)) 0 8))
+      base)))
+
 (defn- stable-heading-scopes [mission mission-path all-scopes collision-scopes scopes]
   (let [slug-counts (frequencies (map (comp slug heading-title) collision-scopes))]
     (mapv (fn [scope]
@@ -328,6 +382,26 @@
                      :stable-scope-id stable-id
                      :canonical-scope-id canonical-id
                      :heading-slug heading-slug
+                     :duplicate-heading? duplicate?
+                     :anchor anchor
+                     :parent nil)))
+          scopes)))
+
+(defn- stable-item-scopes [mission mission-path all-scopes collision-scopes scopes]
+  (let [slug-counts (frequencies (map (comp truncated-slug anchor-text) collision-scopes))]
+    (mapv (fn [scope]
+            (let [text (anchor-text scope)
+                  item-slug (truncated-slug text)
+                  duplicate? (> (get slug-counts item-slug 0) 1)
+                  stable-id (stable-item-scope-id mission text (:scope-id scope) duplicate?)
+                  canonical-id (str (str/replace-first (str mission) #"^M-" "") "/" item-slug)
+                  anchor (anchor-for-scope mission-path all-scopes scope)]
+              (assoc scope
+                     :original-scope-id (:scope-id scope)
+                     :scope-id stable-id
+                     :stable-scope-id stable-id
+                     :canonical-scope-id canonical-id
+                     :heading-slug item-slug
                      :duplicate-heading? duplicate?
                      :anchor anchor
                      :parent nil)))
@@ -387,6 +461,7 @@
                    :anchor/passage (:passage (:anchor scope))
                    :anchor/heading (:heading (:anchor scope))
                    :anchor/fingerprint (:fingerprint (:anchor scope))
+                   :anchor/source (:source (:anchor scope))
                    :anchor/resolve-by (:resolve-by (:anchor scope))
                    :anchor/detached-reason (:detached-reason (:anchor scope)))
             (:heading-slug scope)
@@ -418,12 +493,14 @@
            :anchor/state (:state (:anchor scope))
            :anchor/passage (:passage (:anchor scope))
            :anchor/fingerprint (:fingerprint (:anchor scope))
+           :anchor/source (:source (:anchor scope))
            :anchor/resolve-by (:resolve-by (:anchor scope))
            :anchor/detached-reason (:detached-reason (:anchor scope))}
    :hx/content (when-let [anchor (:anchor scope)]
                  {:anchor/kind "verbatim-heading+concept-fingerprint"
                   :anchor/passage (:passage anchor)
                   :anchor/fingerprint (:fingerprint anchor)
+                  :anchor/source (:source anchor)
                   :anchor/state (:state anchor)})
    :hx/labels [(str "mission-scope/" (:binder-type scope))]})
 
@@ -456,6 +533,15 @@
                                       (stable-heading-scopes mission mission-path raw-scopes
                                                              (vec collision-scopes)
                                                              (vec scopes)))
+                 "map-item" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
+                                                                           "loose-section"
+                                                                           "capability-scope"
+                                                                           "map-item"}
+                                                                         (:binder-type %))
+                                                          raw-scopes)]
+                              (stable-item-scopes mission mission-path raw-scopes
+                                                  (vec collision-scopes)
+                                                  (vec scopes)))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
@@ -498,6 +584,8 @@
      :entity-count (count @entity-ids)
      :hyperedge-count (count @hx-ids)
      :detached-count (count (filter #(= :detached (get-in % [:anchor :state])) scopes))
+     :list-item-anchor-count (count (filter #(= :list-item (get-in % [:anchor :source])) scopes))
+     :contains-line-anchor-count (count (filter #(= :contains-line (get-in % [:anchor :source])) scopes))
      :duplicate-phase-count (count (filter :duplicate-phase? scopes))
      :duplicate-heading-count (count (filter :duplicate-heading? scopes))
      :legacy-hyperedge-retract-count (:legacy-hyperedge-retract-count legacy-report)
@@ -536,6 +624,8 @@
                       :entity-count (reduce + (map :entity-count reports))
                       :hyperedge-count (reduce + (map :hyperedge-count reports))
                       :detached-count (reduce + (map :detached-count reports))
+                      :list-item-anchor-count (reduce + (map :list-item-anchor-count reports))
+                      :contains-line-anchor-count (reduce + (map :contains-line-anchor-count reports))
                       :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))
                       :duplicate-heading-count (reduce + (map :duplicate-heading-count reports))
                       :legacy-hyperedge-retract-count (reduce + (map :legacy-hyperedge-retract-count reports))
