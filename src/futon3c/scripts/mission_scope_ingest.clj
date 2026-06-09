@@ -147,11 +147,16 @@
 (defn- target-source-ref [scope]
   (:target-source-ref scope))
 
+(defn- boundary-item-text [scope]
+  (:boundary-item-text scope))
+
 (defn- anchor-text [scope]
   (case (:binder-type scope)
     "map-item" (map-item-title scope)
     "relates-to" (or (target-mission-ident scope) (heading-title scope))
     "source-material" (or (target-source-ref scope) (heading-title scope))
+    "mission-scope-in" (or (boundary-item-text scope) (heading-title scope))
+    "mission-scope-out" (or (boundary-item-text scope) (heading-title scope))
     (heading-title scope)))
 
 (defn- env-phase [scope]
@@ -318,6 +323,8 @@
                        "map-item" (list-item-passage-info mission-path heading)
                        "relates-to" (list-item-passage-info mission-path heading)
                        "source-material" (list-item-passage-info mission-path heading)
+                       "mission-scope-in" (list-item-passage-info mission-path heading)
+                       "mission-scope-out" (list-item-passage-info mission-path heading)
                        (when-let [passage (heading-passage mission-path heading)]
                          {:passage passage
                           :source :heading}))
@@ -338,6 +345,8 @@
                           "map-item" :list-item-passage-not-found
                           "relates-to" :reference-passage-not-found
                           "source-material" :source-passage-not-found
+                          "mission-scope-in" :scope-boundary-passage-not-found
+                          "mission-scope-out" :scope-boundary-passage-not-found
                           :heading-passage-not-found))}))
 
 (defn- truncated-slug [s]
@@ -406,6 +415,11 @@
                 (seq (:ref %)))
           (:ends scope)))
 
+(defn- bounded-item-ends [scope]
+  (filter #(and (= "bounded-item" (:role %))
+                (seq (:text %)))
+          (:ends scope)))
+
 (defn- stable-relates-to-scope-id [mission target-ident original-id duplicate?]
   (let [stem (str/replace-first (str mission) #"^M-" "")
         target-stem (mission-stem target-ident)
@@ -420,6 +434,22 @@
         base (str stem "/source/" source-slug)]
     (if duplicate?
       (str base "--" (subs (sha1 (str source-ref "|" original-id)) 0 8))
+      base)))
+
+(defn- scope-boundary-polarity [scope]
+  (case (:binder-type scope)
+    "mission-scope-in" :scope/in
+    "mission-scope-out" :scope/out
+    (let [heading (str/lower-case (heading-title scope))]
+      (if (str/includes? heading "out") :scope/out :scope/in))))
+
+(defn- stable-boundary-scope-id [mission polarity item-text original-id duplicate?]
+  (let [stem (str/replace-first (str mission) #"^M-" "")
+        polarity-slug (if (= :scope/out polarity) "scope-out" "scope-in")
+        item-slug (truncated-slug item-text)
+        base (str stem "/" polarity-slug "/" item-slug)]
+    (if duplicate?
+      (str base "--" (subs (sha1 (str item-text "|" original-id)) 0 8))
       base)))
 
 (defn- stable-heading-scopes [mission mission-path all-scopes collision-scopes scopes]
@@ -484,6 +514,44 @@
                      :stable-scope-id stable-id
                      :canonical-scope-id canonical-id
                      :heading-slug (str "relates-to/" (mission-stem target-ident))
+                     :duplicate-heading? duplicate?
+                     :anchor anchor
+                     :parent nil)))
+          expanded)))
+
+(defn- stable-boundary-scopes [mission mission-path all-scopes scopes]
+  (let [expanded (mapcat (fn [scope]
+                           (let [items (seq (bounded-item-ends scope))
+                                 polarity (scope-boundary-polarity scope)]
+                             (if items
+                               (for [item items]
+                                 (assoc scope
+                                        :scope-polarity polarity
+                                        :boundary-item-text (:text item)))
+                               [(assoc scope
+                                       :scope-polarity polarity
+                                       :boundary-item-text (heading-title scope))])))
+                         scopes)
+        key-counts (frequencies (map (fn [scope]
+                                        [(:scope-polarity scope)
+                                         (truncated-slug (boundary-item-text scope))])
+                                      expanded))]
+    (mapv (fn [scope]
+            (let [polarity (:scope-polarity scope)
+                  item-text (boundary-item-text scope)
+                  item-slug (truncated-slug item-text)
+                  duplicate? (> (get key-counts [polarity item-slug] 0) 1)
+                  stable-id (stable-boundary-scope-id mission polarity item-text (:scope-id scope) duplicate?)
+                  polarity-slug (if (= :scope/out polarity) "scope-out" "scope-in")
+                  canonical-id (str (str/replace-first (str mission) #"^M-" "")
+                                    "/" polarity-slug "/" item-slug)
+                  anchor (anchor-for-scope mission-path all-scopes scope)]
+              (assoc scope
+                     :original-scope-id (:scope-id scope)
+                     :scope-id stable-id
+                     :stable-scope-id stable-id
+                     :canonical-scope-id canonical-id
+                     :heading-slug (str polarity-slug "/" item-slug)
                      :duplicate-heading? duplicate?
                      :anchor anchor
                      :parent nil)))
@@ -588,7 +656,10 @@
             (assoc :source/ref (:target-source-ref scope)
                    :source/kind (:target-source-kind scope)
                    :source/state (:source-state scope)
-                   :source/detached-reason (:source-detached-reason scope)))})
+                   :source/detached-reason (:source-detached-reason scope))
+            (:scope-polarity scope)
+            (assoc :scope/polarity (:scope-polarity scope)
+                   :scope/boundary-text (:boundary-item-text scope)))})
 
 (defn- scope-hyperedge [mission-entity scope-entity slot-entities scope]
   {:hx/id (str "hx|mission-scope|" (:scope-id scope))
@@ -617,6 +688,8 @@
            :source/kind (:target-source-kind scope)
            :source/state (:source-state scope)
            :source/detached-reason (:source-detached-reason scope)
+           :scope/polarity (:scope-polarity scope)
+           :scope/boundary-text (:boundary-item-text scope)
            :anchor/state (:state (:anchor scope))
            :anchor/passage (:passage (:anchor scope))
            :anchor/fingerprint (:fingerprint (:anchor scope))
@@ -671,6 +744,8 @@
                                                   (vec scopes)))
                  "relates-to" (stable-relates-to-scopes mission mission-path raw-scopes (vec scopes))
                  "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
+                 "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+                 "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
@@ -725,7 +800,10 @@
                           (= "relates-to" (:binder-type scope))
                           (remove #(= "mission" (:role %)))
                           (= "source-material" (:binder-type scope))
-                          (remove #(= "source" (:role %))))
+                          (remove #(= "source" (:role %)))
+                          (contains? #{"mission-scope-in" "mission-scope-out"} (:binder-type scope))
+                          (remove #(and (= "bounded-item" (:role %))
+                                        (not= (:text %) (:boundary-item-text scope)))))
             slot-entities (->> filler-ends
                                (keep (fn [end]
                                        (when-let [spec (slot-entity-spec* client base-url mission mission-path end)]
@@ -754,6 +832,8 @@
      :detached-count (count (filter #(= :detached (get-in % [:anchor :state])) scopes))
      :list-item-anchor-count (count (filter #(= :list-item (get-in % [:anchor :source])) scopes))
      :contains-line-anchor-count (count (filter #(= :contains-line (get-in % [:anchor :source])) scopes))
+     :scope-in-count (count (filter #(= :scope/in (:scope-polarity %)) scopes))
+     :scope-out-count (count (filter #(= :scope/out (:scope-polarity %)) scopes))
      :duplicate-phase-count (count (filter :duplicate-phase? scopes))
      :duplicate-heading-count (count (filter :duplicate-heading? scopes))
      :legacy-hyperedge-retract-count (:legacy-hyperedge-retract-count legacy-report)
@@ -798,6 +878,8 @@
                       :detached-count (reduce + (map :detached-count reports))
                       :list-item-anchor-count (reduce + (map :list-item-anchor-count reports))
                       :contains-line-anchor-count (reduce + (map :contains-line-anchor-count reports))
+                      :scope-in-count (reduce + (map :scope-in-count reports))
+                      :scope-out-count (reduce + (map :scope-out-count reports))
                       :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))
                       :duplicate-heading-count (reduce + (map :duplicate-heading-count reports))
                       :legacy-hyperedge-retract-count (reduce + (map :legacy-hyperedge-retract-count reports))
