@@ -491,8 +491,12 @@
                   {:ok false :error (str "repo-stage threw: " (.getMessage t))}))))))))
 
 (defn repo-commit
-  "git commit -m <message>. cg-id required. INV-3 file-count cap enforced."
-  [{:keys [repo message commit-cap-override] :as args}]
+  "git commit -m <message>. cg-id required. INV-3 file-count cap enforced.
+
+   When :files is supplied, commit only those staged paths.  This keeps an
+   unrelated pre-existing index, or staged files left behind by another failed
+   packet, from being swept into the current consent-bound commit."
+  [{:keys [repo message commit-cap-override files] :as args}]
   (or (substantive-arg-check :repo-commit args)
       (one-repo-cg-check args)
       (cond
@@ -508,8 +512,14 @@
         :else
         (try
           ;; INV-3: file count cap
-          (let [staged-r (shell/sh "git" "diff" "--staged" "--name-only"
-                                   :dir (repo-path repo))
+          (let [requested-files (vec (map str (or files [])))
+                staged-r (if (seq requested-files)
+                           (apply shell/sh
+                                  (concat ["git" "diff" "--staged" "--name-only"
+                                           "--"] requested-files
+                                          [:dir (repo-path repo)]))
+                           (shell/sh "git" "diff" "--staged" "--name-only"
+                                     :dir (repo-path repo)))
                 staged-files (->> (str/split-lines (or (:out staged-r) ""))
                                   (remove str/blank?)
                                   vec)
@@ -529,8 +539,13 @@
               (let [trailer (str "\n\nCo-Authored-By: claude-2 via :street-sweeper <noreply@anthropic.com>"
                                  "\nSweeper-cg-id: " (:consent-gate-event-id args))
                     full-msg (str message trailer)
-                    r (shell/sh "git" "commit" "-m" full-msg
-                                :dir (repo-path repo))]
+                    r (if (seq requested-files)
+                        (apply shell/sh
+                               (concat ["git" "commit" "-m" full-msg "--"]
+                                       staged-files
+                                       [:dir (repo-path repo)]))
+                        (shell/sh "git" "commit" "-m" full-msg
+                                  :dir (repo-path repo)))]
                 (if (zero? (:exit r))
                   (let [sha-r (shell/sh "git" "rev-parse" "HEAD" :dir (repo-path repo))
                         sha (str/trim (or (:out sha-r) ""))]

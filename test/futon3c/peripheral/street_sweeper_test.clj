@@ -20,10 +20,26 @@
               '[futon3c.peripheral.street-sweeper-test])
      (t/run-tests 'futon3c.peripheral.street-sweeper-test)"
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.peripheral.street-sweeper :as ss]
             [futon3c.peripheral.street-sweeper-shapes :as sss]
             [futon3c.peripheral.street-sweeper-backend :as ssb]))
+
+(defn- sh!
+  [dir & args]
+  (let [r (apply shell/sh (concat args [:dir dir]))]
+    (when-not (zero? (:exit r))
+      (throw (ex-info (str "command failed: " (str/join " " args))
+                      {:args args :dir dir :out (:out r) :err (:err r)})))
+    r))
+
+(defn- delete-tree!
+  [f]
+  (when (.exists (io/file f))
+    (doseq [child (reverse (file-seq (io/file f)))]
+      (io/delete-file child true))))
 
 ;; =============================================================================
 ;; Spike + config
@@ -178,6 +194,44 @@
     (is (false? (:ok bad)))
     (is (= :Pilot-I1 (:pilot-invariant bad)))
     (is (str/includes? (:error bad) ":consent-gate-event-id"))))
+
+(deftest repo-commit-commits-only-consent-bound-files
+  (let [repo (str "futon-sweeper-test-" (System/currentTimeMillis))
+        root (str "/home/joe/code/" repo)]
+    (try
+      (.mkdirs (io/file root))
+      (sh! root "git" "init" "-q")
+      (sh! root "git" "config" "user.email" "street-sweeper-test@example.invalid")
+      (sh! root "git" "config" "user.name" "Street Sweeper Test")
+      (spit (str root "/README.md") "base\n")
+      (sh! root "git" "add" "README.md")
+      (sh! root "git" "commit" "-q" "-m" "base")
+      (doseq [i (range 11)]
+        (spit (str root "/extra-" i ".txt") (str "extra " i "\n")))
+      (spit (str root "/target.txt") "target\n")
+      (sh! root "git" "add" ".")
+      (let [emit (ssb/consent-gate-emit {:repo repo
+                                          :intent :test
+                                          :files ["target.txt"]})
+            cg-id (-> emit :result :consent-gate-event-id)
+            r (ssb/repo-commit {:repo repo
+                                 :message "target: add file"
+                                 :files ["target.txt"]
+                                 :consent-gate-event-id cg-id})
+            committed (-> (:out (sh! root "git" "show" "--name-only" "--format=" "HEAD"))
+                          str/split-lines
+                          set)
+            staged (-> (:out (sh! root "git" "diff" "--staged" "--name-only"))
+                       str/split-lines
+                       set)]
+        (is (:ok r))
+        (is (= 1 (-> r :result :file-count)))
+        (is (= ["target.txt"] (-> r :result :files)))
+        (is (= #{"target.txt"} committed))
+        (is (= (set (map #(str "extra-" % ".txt") (range 11))) staged)
+            "unrelated staged files remain staged for their own packets"))
+      (finally
+        (delete-tree! root)))))
 
 ;; =============================================================================
 ;; INV-15: auto-approve checks (each independently)

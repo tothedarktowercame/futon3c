@@ -351,16 +351,28 @@
                                commit (when (and cg-id (:ok stage))
                                         (ssb/repo-commit
                                          {:repo repo :message msg
+                                          :files (:files pkt)
                                           :consent-gate-event-id cg-id}))]
-                           (swap! results update :commits-landed conj
-                                  (assoc pkt-summary
-                                         :cg-id cg-id
-                                         :sha (get-in commit [:result :sha])
-                                         :ok? (boolean (:ok commit))
-                                         :error (when-not (:ok commit)
-                                                  (or (:error commit)
-                                                      (:error stage)
-                                                      "unknown failure"))))))
+                           (if (:ok commit)
+                             (swap! results update :commits-landed conj
+                                    (assoc pkt-summary
+                                           :cg-id cg-id
+                                           :sha (get-in commit [:result :sha])
+                                           :ok? true))
+                             (do
+                               (when (and cg-id (:ok stage))
+                                 (ssb/repo-revert-staged
+                                  {:repo repo
+                                   :files (get-in stage [:result :staged])
+                                   :consent-gate-event-id cg-id}))
+                               (swap! results update :errors conj
+                                      (assoc pkt-summary
+                                             :cg-id cg-id
+                                             :stage-ok? (boolean (:ok stage))
+                                             :commit-ok? false
+                                             :error (or (:error commit)
+                                                        (:error stage)
+                                                        "unknown failure")))))))
 
                        :else
                        (swap! results update :deferred-packets conj
