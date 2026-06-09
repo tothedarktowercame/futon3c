@@ -44,10 +44,32 @@
 (def ^:private mission-doc-pattern
   #"/holes/missions/M-[^/]+\.md$")
 
+(def ^:private mission-doc-stem-pattern
+  #"(?:^|/)holes/missions/(M-[^/]+)\.md$")
+
 (def ^:private excursion-doc-pattern
   #"/holes/missions/E-[^/]+\.md$")
 
 (declare !state)
+
+;; D1.2: the watcher hot path only enqueues mission stems. The D1.1
+;; maintenance work runs IN-PROCESS on a separate scheduled drainer thread
+;; (no child JVM — honours I-0).
+(def ^:private maintenance-drain-interval-ms 5000)
+(def ^:private maintenance-debounce-ms 10000)
+(def ^:private maintenance-recent-limit 20)
+
+(defonce !pending-missions (atom {}))
+
+(defonce !mission-maintenance
+  (atom {:executor nil
+         :started-at nil
+         :last-drain-at nil
+         :last-enqueue nil
+         :last-run nil
+         :last-error nil
+         :runs-completed 0
+         :recent-runs []}))
 
 ;; ---------- HTTP write surface ----------
 
@@ -80,6 +102,204 @@
       (edn/read-string (:body resp))
       (throw (ex-info "HTTP non-200"
                       {:url url :status (:status resp) :body (:body resp)})))))
+
+;; ---------- mission-scope D1.1 auto-maintenance ----------
+
+(defn- now-ms []
+  (System/currentTimeMillis))
+
+(defn- mission-stem-from-path [path]
+  (some->> (str path)
+           (re-find mission-doc-stem-pattern)
+           second))
+
+(defn- trim-recent-runs [runs]
+  (vec (take-last maintenance-recent-limit runs)))
+
+(defn- notify-maintenance-failure! [{:keys [stem message]}]
+  (try
+    (-> (ProcessBuilder.
+         ["notify-send"
+          "--urgency" "normal"
+          "futon3c mission-scope maintenance"
+          (str stem ": " message)])
+        .start
+        (.waitFor 2000 TimeUnit/MILLISECONDS))
+    true
+    (catch Throwable _ false)))
+
+;; D1.2: hard upper bound on a single in-process maintenance run, so a slow or
+;; blocked ingest can't wedge the drainer thread. The run executes on a future;
+;; on timeout we log + notify and move on. In-process — no child JVM (I-0).
+(def ^:private maintenance-run-timeout-ms 180000)
+
+(defn- maintenance-summary [report]
+  (when (map? report)
+    (select-keys report
+                 [:mission :stored-count :detected-count :unchanged-count
+                  :added-count :removed-count :reworded-count :detached-count])))
+
+(defn- enqueue-mission-maintenance! [path]
+  (when (and (string? path) (.exists (io/file path)))
+    (when-let [stem (mission-stem-from-path path)]
+      (let [t (now-ms)]
+        (swap! !pending-missions
+               (fn [pending]
+                 (update pending stem
+                         (fn [old]
+                           {:stem stem
+                            :path path
+                            :queued-at (or (:queued-at old) t)
+                            :last-seen-at t
+                            :count (inc (long (or (:count old) 0)))}))))
+        (swap! !mission-maintenance
+               assoc
+               :last-enqueue {:stem stem :path path :at (str (Instant/ofEpochMilli t))}
+               :last-error nil)
+        (println (format "[mission-scope-maintenance enqueue] %s path=%s" stem path))
+        stem))))
+
+(defn- run-mission-maintenance!
+  "Run D1.1 incremental maintenance for one mission IN-PROCESS (no child JVM —
+   honours I-0). Executes on a bounded future so a slow/blocked ingest can't
+   wedge the drainer thread; on timeout we log + notify and move on. Runs on the
+   drainer thread, off the watcher cycle."
+  [{:keys [stem path queued-at last-seen-at count]}]
+  (let [started (now-ms)
+        fut (future
+              (try
+                {:report ((requiring-resolve
+                           'futon3c.scripts.mission-scope-ingest/maintain-mission!)
+                          stem)}
+                (catch Throwable t {:throwable (or (.getMessage t) (str t))})))
+        outcome (deref fut maintenance-run-timeout-ms ::timeout)
+        finished (now-ms)
+        base {:stem stem
+              :path path
+              :queued-at (some-> queued-at Instant/ofEpochMilli str)
+              :last-seen-at (some-> last-seen-at Instant/ofEpochMilli str)
+              :edit-count count
+              :started-at (str (Instant/ofEpochMilli started))
+              :finished-at (str (Instant/ofEpochMilli finished))
+              :duration-ms (- finished started)}
+        record-failure! (fn [failure]
+                          (swap! !mission-maintenance
+                                 (fn [s]
+                                   (-> s
+                                       (assoc :last-run failure :last-error failure)
+                                       (update :recent-runs #(trim-recent-runs (conj (vec %) failure))))))
+                          (notify-maintenance-failure! {:stem stem :message (:message failure)}))]
+    (cond
+      (= outcome ::timeout)
+      (let [failure (assoc base :status :timeout
+                           :message (format "in-process maintenance exceeded %dms"
+                                            maintenance-run-timeout-ms))]
+        (future-cancel fut)
+        (record-failure! failure)
+        (binding [*out* *err*]
+          (println (format "[mission-scope-maintenance timeout] %s after %dms"
+                           stem (- finished started))))
+        failure)
+
+      (:throwable outcome)
+      (let [failure (assoc base :status :error :message (:throwable outcome))]
+        (record-failure! failure)
+        (binding [*out* *err*]
+          (println (format "[mission-scope-maintenance error] %s %s" stem (:throwable outcome))))
+        failure)
+
+      :else
+      (let [summary (maintenance-summary (:report outcome))
+            run (assoc base :status :ok :summary summary)]
+        (swap! !mission-maintenance
+               (fn [s]
+                 (-> s
+                     (assoc :last-run run :last-error nil)
+                     (update :runs-completed (fnil inc 0))
+                     (update :recent-runs #(trim-recent-runs (conj (vec %) run))))))
+        (println (format "[mission-scope-maintenance run] %s ok summary=%s" stem (pr-str summary)))
+        run))))
+
+(defn- ready-maintenance-entries [t pending]
+  (->> pending
+       vals
+       (filter #(>= (- t (:last-seen-at %)) maintenance-debounce-ms))
+       (sort-by :last-seen-at)
+       vec))
+
+(defn- drain-mission-maintenance! []
+  (let [t (now-ms)
+        ready (ready-maintenance-entries t @!pending-missions)]
+    (swap! !mission-maintenance assoc :last-drain-at (str (Instant/ofEpochMilli t)))
+    (doseq [{:keys [stem] :as entry} ready]
+      (let [claimed? (atom false)]
+        (swap! !pending-missions
+               (fn [pending]
+                 (if (= entry (get pending stem))
+                   (do (reset! claimed? true)
+                       (dissoc pending stem))
+                   pending)))
+        (when @claimed?
+          (run-mission-maintenance! entry))))))
+
+(defn ensure-mission-maintenance-drainer!
+  "Start the D1.2 debounced mission-scope maintenance drainer.
+   Idempotent; safe to call after Drawbridge load-file."
+  []
+  (let [existing (:executor @!mission-maintenance)]
+    (when (or (nil? existing)
+              (.isShutdown ^ScheduledExecutorService existing))
+      (let [executor (Executors/newSingleThreadScheduledExecutor
+                      (reify java.util.concurrent.ThreadFactory
+                        (newThread [_ r]
+                          (doto (Thread. r "futon3c-mission-scope-maintenance")
+                            (.setDaemon true)))))
+            task #(try
+                    (#'drain-mission-maintenance!)
+                    (catch Throwable t
+                      (let [failure {:at (str (Instant/now))
+                                     :message (.getMessage t)}]
+                        (swap! !mission-maintenance assoc :last-error failure)
+                        (notify-maintenance-failure!
+                         {:stem "drainer" :message (:message failure)})
+                        (binding [*out* *err*]
+                          (println "[mission-scope-maintenance drainer] uncaught:"
+                                   (.getMessage t))))))]
+        (.scheduleWithFixedDelay executor task
+                                 maintenance-drain-interval-ms
+                                 maintenance-drain-interval-ms
+                                 TimeUnit/MILLISECONDS)
+        (swap! !mission-maintenance
+               assoc
+               :executor executor
+               :started-at (str (Instant/now))
+               :last-error nil)
+        (println (format "[mission-scope-maintenance] drainer started interval-ms=%d debounce-ms=%d"
+                         maintenance-drain-interval-ms maintenance-debounce-ms)))))
+  (let [s @!mission-maintenance]
+    (-> s
+        (dissoc :executor)
+        (assoc :running? (some? (:executor s))
+               :pending (vec (vals @!pending-missions))))))
+
+(defn stop-mission-maintenance-drainer! []
+  (when-let [^ScheduledExecutorService ex (:executor @!mission-maintenance)]
+    (.shutdownNow ex)
+    (.awaitTermination ex 2 TimeUnit/SECONDS))
+  (swap! !mission-maintenance assoc :executor nil)
+  nil)
+
+(defn mission-maintenance-status []
+  (let [s @!mission-maintenance
+        ex (:executor s)]
+    (-> s
+        (dissoc :executor)
+        (assoc :running? (and (some? ex)
+                              (not (.isShutdown ^ScheduledExecutorService ex)))
+               :pending (vec (vals @!pending-missions))
+               :pending-count (count @!pending-missions)
+               :debounce-ms maintenance-debounce-ms
+               :interval-ms maintenance-drain-interval-ms))))
 
 (defn- type-str [x]
   (cond
@@ -566,6 +786,9 @@
             dispatch-paths (if (and first-cycle? (not cold-scan?))
                              []
                              ingest-paths)]
+        (when-not first-cycle?
+          (doseq [p dispatch-paths]
+            (enqueue-mission-maintenance! p)))
         (when (seq dispatch-paths)
           (mark-subtask! {:phase :file-ingest-batch :repo label :count (count dispatch-paths)})
           (println (format "[cycle %d] %s: %d/%d files changed"
@@ -739,6 +962,7 @@
                      run-id (count roots) interval-ms))
     (doseq [{:keys [path label]} roots]
       (println (format "  watch %s  →  label=%s" path label)))
+    (ensure-mission-maintenance-drainer!)
     (status nil)))
 
 (defn stop!
@@ -749,6 +973,7 @@
     (when-let [^ScheduledExecutorService ex (:executor s)]
       (.shutdownNow ex)
       (.awaitTermination ex 2 TimeUnit/SECONDS))
+    (stop-mission-maintenance-drainer!)
     (reset! !state nil)
     (println "[futon3c.watcher.multi] stopped"))
   nil)
@@ -765,7 +990,8 @@
                :last-cycle-started-at (some-> (:last-cycle-started-at s) str)
                :last-cycle-finished-at (some-> (:last-cycle-finished-at s) str)
                :last-progress-at (some-> (:last-progress-at s) str)
-               :n-roots (count (:roots s))))))
+               :n-roots (count (:roots s))
+               :mission-maintenance (mission-maintenance-status)))))
 
 (defn tick!
   "Manually fire one cycle on demand. Useful for tests + interactive

@@ -1544,6 +1544,16 @@
          (sort-by #(.getName %))
          vec)))
 
+(defn maintain-mission!
+  "In-process D1.2 entry: re-detect + diff-patch ONE mission's scopes. No child
+   JVM — honours I-0; called directly by the watcher's maintenance drainer on its
+   own (off-cycle) thread. Returns the `incremental-mission!` report map."
+  [stem]
+  (incremental-mission! {:client (http-client)
+                         :base-url default-futon1a-url
+                         :penholder default-penholder
+                         :mission stem}))
+
 (defn -main [& args]
   (let [client (http-client)
         [opts missions] (loop [xs args opts {} missions []]
