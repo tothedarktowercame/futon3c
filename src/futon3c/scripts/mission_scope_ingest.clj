@@ -18,7 +18,10 @@
   #{"head" "identify" "map" "derive" "argue" "verify" "instantiate" "document"})
 (def ^:private structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
-   "relates-to" "source-material" "mission-scope-in" "mission-scope-out"])
+   "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
+   "pattern"])
+(def ^:private pattern-library-limit 5000)
+(def ^:private !pattern-library-cache (atom nil))
 
 (defn- sha1 [s]
   (let [digest (.digest (MessageDigest/getInstance "SHA-1") (.getBytes (str s) "UTF-8"))]
@@ -152,6 +155,9 @@
 (defn- target-source-ref [scope]
   (:target-source-ref scope))
 
+(defn- target-pattern-ident [scope]
+  (:target-pattern-ident scope))
+
 (defn- boundary-item-text [scope]
   (:boundary-item-text scope))
 
@@ -160,6 +166,7 @@
     "map-item" (map-item-title scope)
     "relates-to" (or (target-mission-ident scope) (heading-title scope))
     "source-material" (or (target-source-ref scope) (heading-title scope))
+    "pattern" (or (target-pattern-ident scope) (heading-title scope))
     "mission-scope-in" (or (boundary-item-text scope) (heading-title scope))
     "mission-scope-out" (or (boundary-item-text scope) (heading-title scope))
     (heading-title scope)))
@@ -211,6 +218,7 @@
                 :props {:scope/role role
                         :source/kind (:kind end)
                         :source/ref (:ref end)}}
+      "pattern" nil
       "mission" nil
       nil)))
 
@@ -264,6 +272,57 @@
                      :name rest-path
                      :type "source/file"
                      :endpoint-only? true}))))))))
+
+(defn- flexiarg-endpoint [pattern-ref]
+  (when-let [[repo rest-path] (rest (re-matches #"([^/]+)/(.+\.flexiarg)" (str pattern-ref)))]
+    (str repo "-d/file/" rest-path)))
+
+(defn- pattern-library-key [pattern-ref]
+  (when-let [[_ library-path] (re-matches #"[^/]+/library/(.+)\.flexiarg" (str pattern-ref))]
+    library-path))
+
+(defn- pattern-library-entities [client base-url]
+  (or @!pattern-library-cache
+      (let [resp (http-edn client :get
+                           (str base-url
+                                "/api/alpha/entities/latest?type=pattern%2Flibrary&limit="
+                                pattern-library-limit))
+            entities (if (<= 200 (:status resp) 299)
+                       (or (get-in resp [:body :entities]) [])
+                       [])]
+        (reset! !pattern-library-cache entities)
+        entities)))
+
+(defn- resolve-pattern-library-entity [client base-url pattern-ident pattern-ref]
+  (let [key (pattern-library-key pattern-ref)
+        candidates (cond-> #{pattern-ident}
+                     key (conj key))]
+    (some (fn [entity]
+            (when (or (contains? candidates (:external-id entity))
+                      (contains? candidates (:name entity)))
+              entity))
+          (pattern-library-entities client base-url))))
+
+(defn- resolve-pattern-node
+  "Resolve a cited flexiarg pattern to an existing substrate-2 node. The
+   detector passes the literal basename plus its library/*.flexiarg repo path.
+   The live store may represent the pattern as a pattern/library entity or as
+   a file endpoint, not an entity doc. Never fabricates: endpoint fallback
+   succeeds only when `?end=<candidate>&limit=1` finds substrate evidence."
+  [client base-url pattern-ident pattern-ref]
+  (when (seq (str pattern-ident))
+    (let [endpoint (flexiarg-endpoint pattern-ref)]
+      (or (get-entity client base-url pattern-ident)
+          (resolve-pattern-library-entity client base-url pattern-ident pattern-ref)
+          (when (seq (str pattern-ref))
+            (get-entity client base-url pattern-ref))
+          (when endpoint
+            (or (get-entity client base-url endpoint)
+                (when (endpoint-exists? client base-url endpoint)
+                  {:id endpoint
+                   :name pattern-ident
+                   :type "pattern/flexiarg"
+                   :endpoint-only? true})))))))
 
 (defn- filler-ends [ends]
   (remove #(contains? #{"entity" "environment" "heading"} (:role %)) ends))
@@ -376,6 +435,7 @@
                           "map-item" :list-item-passage-not-found
                           "relates-to" :reference-passage-not-found
                           "source-material" :source-passage-not-found
+                          "pattern" :pattern-citation-passage-not-found
                           "mission-scope-in" :scope-boundary-passage-not-found
                           "mission-scope-out" :scope-boundary-passage-not-found
                           :heading-passage-not-found))}))
@@ -446,6 +506,11 @@
                 (seq (:ref %)))
           (:ends scope)))
 
+(defn- target-pattern-ends [scope]
+  (filter #(and (= "pattern" (:role %))
+                (seq (:ident %)))
+          (:ends scope)))
+
 (defn- bounded-item-ends [scope]
   (filter #(and (= "bounded-item" (:role %))
                 (seq (:text %)))
@@ -465,6 +530,14 @@
         base (str stem "/source/" source-slug)]
     (if duplicate?
       (str base "--" (subs (sha1 (str source-ref "|" original-id)) 0 8))
+      base)))
+
+(defn- stable-pattern-scope-id [mission pattern-ident original-id duplicate?]
+  (let [stem (str/replace-first (str mission) #"^M-" "")
+        pattern-slug (truncated-slug pattern-ident)
+        base (str stem "/pattern/" pattern-slug)]
+    (if duplicate?
+      (str base "--" (subs (sha1 (str pattern-ident "|" original-id)) 0 8))
       base)))
 
 (defn- scope-boundary-polarity [scope]
@@ -615,6 +688,33 @@
                      :parent nil)))
           expanded)))
 
+(defn- stable-pattern-scopes [mission mission-path all-scopes scopes]
+  (let [expanded (mapcat (fn [scope]
+                           (for [pattern (target-pattern-ends scope)]
+                             (assoc scope
+                                    :target-pattern-ident (:ident pattern)
+                                    :target-pattern-ref (:ref pattern))))
+                         scopes)
+        pattern-counts (frequencies (map target-pattern-ident expanded))]
+    (mapv (fn [scope]
+            (let [pattern-ident (target-pattern-ident scope)
+                  duplicate? (> (get pattern-counts pattern-ident 0) 1)
+                  stable-id (stable-pattern-scope-id mission pattern-ident (:scope-id scope) duplicate?)
+                  canonical-id (str (str/replace-first (str mission) #"^M-" "")
+                                    "/pattern/"
+                                    (truncated-slug pattern-ident))
+                  anchor (anchor-for-scope mission-path all-scopes scope)]
+              (assoc scope
+                     :original-scope-id (:scope-id scope)
+                     :scope-id stable-id
+                     :stable-scope-id stable-id
+                     :canonical-scope-id canonical-id
+                     :heading-slug (str "pattern/" (truncated-slug pattern-ident))
+                     :duplicate-heading? duplicate?
+                     :anchor anchor
+                     :parent nil)))
+          expanded)))
+
 (defn- legacy-scope-id? [id]
   (boolean (re-matches #"^M-.+:scope-[0-9]+$" (str id))))
 
@@ -688,6 +788,11 @@
                    :source/kind (:target-source-kind scope)
                    :source/state (:source-state scope)
                    :source/detached-reason (:source-detached-reason scope))
+            (:target-pattern-ident scope)
+            (assoc :pattern/ident (:target-pattern-ident scope)
+                   :pattern/ref (:target-pattern-ref scope)
+                   :pattern/state (:pattern-state scope)
+                   :pattern/detached-reason (:pattern-detached-reason scope))
             (:scope-polarity scope)
             (assoc :scope/polarity (:scope-polarity scope)
                    :scope/boundary-text (:boundary-item-text scope)))})
@@ -719,6 +824,10 @@
            :source/kind (:target-source-kind scope)
            :source/state (:source-state scope)
            :source/detached-reason (:source-detached-reason scope)
+           :pattern/ident (:target-pattern-ident scope)
+           :pattern/ref (:target-pattern-ref scope)
+           :pattern/state (:pattern-state scope)
+           :pattern/detached-reason (:pattern-detached-reason scope)
            :scope/polarity (:scope-polarity scope)
            :scope/boundary-text (:boundary-item-text scope)
            :anchor/state (:state (:anchor scope))
@@ -989,6 +1098,7 @@
       "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+      "pattern" (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
       (vec scopes))))
 
 (defn- stable-scopes-for-tree [data]
@@ -1171,13 +1281,47 @@
                                         :source "mission-scope-tree"
                                         :props {:mission/id mission
                                                 :mission/path mission-path}})
+        target-entity (when (= "relates-to" (:binder-type scope))
+                        (resolve-target-mission client base-url (:target-mission-ident scope)))
+        source-entity (when (= "source-material" (:binder-type scope))
+                        (resolve-source-file client base-url (:target-source-ref scope)))
+        pattern-entity (when (= "pattern" (:binder-type scope))
+                         (resolve-pattern-node client base-url
+                                               (:target-pattern-ident scope)
+                                               (:target-pattern-ref scope)))
+        scope (cond-> scope
+                (= "relates-to" (:binder-type scope))
+                (assoc :target-state (if target-entity :linked :detached)
+                       :target-detached-reason (when-not target-entity :target-mission-not-found))
+                (= "source-material" (:binder-type scope))
+                (assoc :source-state (if source-entity :linked :detached)
+                       :source-detached-reason (when-not source-entity :source-file-not-found))
+                (= "pattern" (:binder-type scope))
+                (assoc :pattern-state (if pattern-entity :linked :detached)
+                       :pattern-detached-reason (when-not pattern-entity :pattern-node-not-found)))
         scope-entity (ensure-entity! client base-url penholder
                                      (scope-entity-spec mission mission-path scope))
-        slot-entities (->> (filler-ends (:ends scope))
+        filler-ends (cond->> (filler-ends (:ends scope))
+                      (= "relates-to" (:binder-type scope))
+                      (remove #(= "mission" (:role %)))
+                      (= "source-material" (:binder-type scope))
+                      (remove #(= "source" (:role %)))
+                      (= "pattern" (:binder-type scope))
+                      (remove #(= "pattern" (:role %))))
+        slot-entities (->> filler-ends
                            (keep (fn [end]
                                    (when-let [spec (slot-entity-spec* client base-url mission mission-path end)]
                                      {:role (:role end)
                                       :entity (ensure-entity! client base-url penholder spec)})))
+                           (concat (when target-entity
+                                     [{:role "target-mission"
+                                       :entity target-entity}])
+                                   (when source-entity
+                                     [{:role "source-file"
+                                       :entity source-entity}])
+                                   (when pattern-entity
+                                     [{:role "target-pattern"
+                                       :entity pattern-entity}]))
                            vec)
         hx (post-hyperedge! client base-url penholder
                             (scope-hyperedge mission-entity scope-entity slot-entities scope))]
@@ -1270,6 +1414,7 @@
                  "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
                  "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
                  "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+                 "pattern" (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
@@ -1291,7 +1436,9 @@
         linked-targets (atom #{})
         dangling-targets (atom #{})
         linked-sources (atom #{})
-        dangling-sources (atom #{})]
+        dangling-sources (atom #{})
+        linked-patterns (atom #{})
+        dangling-patterns (atom #{})]
     (doseq [scope scopes]
       (let [scope-entity (ensure-entity! client base-url penholder
                                          (scope-entity-spec mission mission-path scope))
@@ -1300,13 +1447,20 @@
                             (resolve-target-mission client base-url (:target-mission-ident scope)))
             source-entity (when (= "source-material" (:binder-type scope))
                             (resolve-source-file client base-url (:target-source-ref scope)))
+            pattern-entity (when (= "pattern" (:binder-type scope))
+                             (resolve-pattern-node client base-url
+                                                   (:target-pattern-ident scope)
+                                                   (:target-pattern-ref scope)))
             scope (cond-> scope
                     (= "relates-to" (:binder-type scope))
                     (assoc :target-state (if target-entity :linked :detached)
                            :target-detached-reason (when-not target-entity :target-mission-not-found))
                     (= "source-material" (:binder-type scope))
                     (assoc :source-state (if source-entity :linked :detached)
-                           :source-detached-reason (when-not source-entity :source-file-not-found)))
+                           :source-detached-reason (when-not source-entity :source-file-not-found))
+                    (= "pattern" (:binder-type scope))
+                    (assoc :pattern-state (if pattern-entity :linked :detached)
+                           :pattern-detached-reason (when-not pattern-entity :pattern-node-not-found)))
             _ (when (= "relates-to" (:binder-type scope))
                 (if target-entity
                   (swap! linked-targets conj (:id target-entity))
@@ -1315,7 +1469,11 @@
                 (if source-entity
                   (swap! linked-sources conj (:id source-entity))
                   (swap! dangling-sources conj (:target-source-ref scope))))
-            scope-entity (if (contains? #{"relates-to" "source-material"} (:binder-type scope))
+            _ (when (= "pattern" (:binder-type scope))
+                (if pattern-entity
+                  (swap! linked-patterns conj (:id pattern-entity))
+                  (swap! dangling-patterns conj (:target-pattern-ident scope))))
+            scope-entity (if (contains? #{"relates-to" "source-material" "pattern"} (:binder-type scope))
                            (ensure-entity! client base-url penholder
                                            (scope-entity-spec mission mission-path scope))
                            scope-entity)
@@ -1325,6 +1483,8 @@
                           (remove #(= "mission" (:role %)))
                           (= "source-material" (:binder-type scope))
                           (remove #(= "source" (:role %)))
+                          (= "pattern" (:binder-type scope))
+                          (remove #(= "pattern" (:role %)))
                           (contains? #{"mission-scope-in" "mission-scope-out"} (:binder-type scope))
                           (remove #(and (= "bounded-item" (:role %))
                                         (not= (:text %) (:boundary-item-text scope)))))
@@ -1338,7 +1498,10 @@
                                            :entity target-entity}])
                                        (when source-entity
                                          [{:role "source-file"
-                                           :entity source-entity}]))
+                                           :entity source-entity}])
+                                       (when pattern-entity
+                                         [{:role "target-pattern"
+                                           :entity pattern-entity}]))
                                vec)]
         (swap! entity-ids into (map (comp :id :entity) slot-entities))
         (let [hx (post-hyperedge! client base-url penholder
@@ -1366,7 +1529,9 @@
      :linked-target-count (count @linked-targets)
      :dangling-target-count (count @dangling-targets)
      :linked-source-count (count @linked-sources)
-     :dangling-source-count (count @dangling-sources)}))
+     :dangling-source-count (count @dangling-sources)
+     :linked-pattern-count (count @linked-patterns)
+     :dangling-pattern-count (count @dangling-patterns)}))
 
 (defn- scope-tree-files [dir selected]
   (let [selected (set selected)]
