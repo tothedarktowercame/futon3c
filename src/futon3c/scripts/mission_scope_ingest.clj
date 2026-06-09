@@ -19,7 +19,7 @@
 (def ^:private structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
    "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
-   "pattern"])
+   "pattern" "psr" "pur"])
 (def ^:private pattern-library-limit 5000)
 (def ^:private !pattern-library-cache (atom nil))
 
@@ -166,7 +166,7 @@
     "map-item" (map-item-title scope)
     "relates-to" (or (target-mission-ident scope) (heading-title scope))
     "source-material" (or (target-source-ref scope) (heading-title scope))
-    "pattern" (or (target-pattern-ident scope) (heading-title scope))
+    ("pattern" "psr" "pur") (or (target-pattern-ident scope) (heading-title scope))
     "mission-scope-in" (or (boundary-item-text scope) (heading-title scope))
     "mission-scope-out" (or (boundary-item-text scope) (heading-title scope))
     (heading-title scope)))
@@ -218,7 +218,7 @@
                 :props {:scope/role role
                         :source/kind (:kind end)
                         :source/ref (:ref end)}}
-      "pattern" nil
+      ("pattern" "psr" "pur") nil
       "mission" nil
       nil)))
 
@@ -435,7 +435,7 @@
                           "map-item" :list-item-passage-not-found
                           "relates-to" :reference-passage-not-found
                           "source-material" :source-passage-not-found
-                          "pattern" :pattern-citation-passage-not-found
+                          ("pattern" "psr" "pur") :pattern-citation-passage-not-found
                           "mission-scope-in" :scope-boundary-passage-not-found
                           "mission-scope-out" :scope-boundary-passage-not-found
                           :heading-passage-not-found))}))
@@ -532,10 +532,10 @@
       (str base "--" (subs (sha1 (str source-ref "|" original-id)) 0 8))
       base)))
 
-(defn- stable-pattern-scope-id [mission pattern-ident original-id duplicate?]
+(defn- stable-pattern-scope-id [mission binder pattern-ident original-id duplicate?]
   (let [stem (str/replace-first (str mission) #"^M-" "")
         pattern-slug (truncated-slug pattern-ident)
-        base (str stem "/pattern/" pattern-slug)]
+        base (str stem "/" binder "/" pattern-slug)]
     (if duplicate?
       (str base "--" (subs (sha1 (str pattern-ident "|" original-id)) 0 8))
       base)))
@@ -695,13 +695,14 @@
                                     :target-pattern-ident (:ident pattern)
                                     :target-pattern-ref (:ref pattern))))
                          scopes)
-        pattern-counts (frequencies (map target-pattern-ident expanded))]
+        pattern-counts (frequencies (map (juxt :binder-type target-pattern-ident) expanded))]
     (mapv (fn [scope]
-            (let [pattern-ident (target-pattern-ident scope)
-                  duplicate? (> (get pattern-counts pattern-ident 0) 1)
-                  stable-id (stable-pattern-scope-id mission pattern-ident (:scope-id scope) duplicate?)
+            (let [binder (:binder-type scope)
+                  pattern-ident (target-pattern-ident scope)
+                  duplicate? (> (get pattern-counts [binder pattern-ident] 0) 1)
+                  stable-id (stable-pattern-scope-id mission binder pattern-ident (:scope-id scope) duplicate?)
                   canonical-id (str (str/replace-first (str mission) #"^M-" "")
-                                    "/pattern/"
+                                    "/" binder "/"
                                     (truncated-slug pattern-ident))
                   anchor (anchor-for-scope mission-path all-scopes scope)]
               (assoc scope
@@ -709,7 +710,7 @@
                      :scope-id stable-id
                      :stable-scope-id stable-id
                      :canonical-scope-id canonical-id
-                     :heading-slug (str "pattern/" (truncated-slug pattern-ident))
+                     :heading-slug (str binder "/" (truncated-slug pattern-ident))
                      :duplicate-heading? duplicate?
                      :anchor anchor
                      :parent nil)))
@@ -828,6 +829,14 @@
            :pattern/ref (:target-pattern-ref scope)
            :pattern/state (:pattern-state scope)
            :pattern/detached-reason (:pattern-detached-reason scope)
+           :record (:record scope)
+           :record/facets (:facets scope)
+           :record/rationale (get-in scope [:facets :rationale])
+           :record/candidates (get-in scope [:facets :candidates])
+           :record/actions (get-in scope [:facets :actions])
+           :record/outcome (get-in scope [:facets :outcome])
+           :record/prediction-error (get-in scope [:facets :prediction-error])
+           :record/notes (get-in scope [:facets :notes])
            :scope/polarity (:scope-polarity scope)
            :scope/boundary-text (:boundary-item-text scope)
            :anchor/state (:state (:anchor scope))
@@ -1038,6 +1047,46 @@
                                 counts)]))
           @report)))
 
+(defn- pxr-hyperedge [mission-id pattern-ident psr-scope pur-scope pxr-scope-id]
+  {:hx/id (str "hx|mission-scope|pxr|" pxr-scope-id)
+   :hx/type "mission-scope/pxr"
+   :hx/endpoints [{:role :entity :entity-id mission-id}
+                  {:role :psr :entity-id psr-scope}
+                  {:role :pur :entity-id pur-scope}
+                  {:role :pattern :entity-id pattern-ident}]
+   :props {:scope/id pxr-scope-id
+           :scope/binder-type "pxr"
+           :pattern/ident pattern-ident
+           :pxr/psr-scope psr-scope
+           :pxr/pur-scope pur-scope
+           :scope/derived-by :psr-pur-correspondence}
+   :hx/labels ["mission-scope/pxr"]})
+
+(defn- update-pxr-wiring!
+  "Derive (pxr) edges: where a mission has BOTH a psr and a pur scope on the
+   SAME pattern, link them into the complete select->use->outcome unit — the
+   labelled example the downstream priming layer learns from. Idempotent
+   (deterministic pxr id, upsert)."
+  [{:keys [client base-url penholder dry-run?]}]
+  (let [psrs (hyperedges-by-type client base-url "mission-scope/psr")
+        purs (hyperedges-by-type client base-url "mission-scope/pur")
+        key-of (fn [h] [(scope-mission-endpoint h) (get (hx-props h) :pattern/ident)])
+        psr-by (into {} (map (juxt key-of identity) psrs))
+        report (atom {:psr-count (count psrs) :pur-count (count purs) :pxr-written 0})]
+    (doseq [pur-h purs
+            :let [k (key-of pur-h)
+                  psr-h (get psr-by k)]
+            :when (and psr-h (second k))]
+      (let [[mission-id pattern-ident] k
+            psr-scope (scope-id-from-hx psr-h)
+            pur-scope (scope-id-from-hx pur-h)
+            pxr-scope-id (str/replace (str psr-scope) "/psr/" "/pxr/")]
+        (when-not dry-run?
+          (post-hyperedge! client base-url penholder
+                           (pxr-hyperedge mission-id pattern-ident psr-scope pur-scope pxr-scope-id)))
+        (swap! report update :pxr-written inc)))
+    @report))
+
 (defn- mission-ident-from-stem [stem]
   (let [s (-> (str stem)
               (str/replace #"\.md$" "")
@@ -1098,7 +1147,7 @@
       "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
-      "pattern" (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
+      ("pattern" "psr" "pur") (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
       (vec scopes))))
 
 (defn- stable-scopes-for-tree [data]
@@ -1285,7 +1334,7 @@
                         (resolve-target-mission client base-url (:target-mission-ident scope)))
         source-entity (when (= "source-material" (:binder-type scope))
                         (resolve-source-file client base-url (:target-source-ref scope)))
-        pattern-entity (when (= "pattern" (:binder-type scope))
+        pattern-entity (when (contains? #{"pattern" "psr" "pur"} (:binder-type scope))
                          (resolve-pattern-node client base-url
                                                (:target-pattern-ident scope)
                                                (:target-pattern-ref scope)))
@@ -1296,7 +1345,7 @@
                 (= "source-material" (:binder-type scope))
                 (assoc :source-state (if source-entity :linked :detached)
                        :source-detached-reason (when-not source-entity :source-file-not-found))
-                (= "pattern" (:binder-type scope))
+                (contains? #{"pattern" "psr" "pur"} (:binder-type scope))
                 (assoc :pattern-state (if pattern-entity :linked :detached)
                        :pattern-detached-reason (when-not pattern-entity :pattern-node-not-found)))
         scope-entity (ensure-entity! client base-url penholder
@@ -1568,13 +1617,16 @@
                               "--wire-parents"
                               (recur (next xs) (assoc opts :wire-parents? true) missions)
 
+                              "--wire-pxr"
+                              (recur (next xs) (assoc opts :wire-pxr? true) missions)
+
                               "--dry-run"
                               (recur (next xs) (assoc opts :dry-run? true) missions)
 
                               (recur (next xs) opts (conj missions x)))
                             [opts (remove str/blank? missions)]))
         files (scope-tree-files default-scope-dir missions)
-        reports (when-not (or (:wire-parents? opts) (:mission opts))
+        reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:mission opts))
                   (mapv #(ingest-scope-tree! {:client client
                                               :base-url default-futon1a-url
                                               :penholder default-penholder
@@ -1599,6 +1651,13 @@
                                                 :selected missions
                                                 :dry-run? (:dry-run? opts)})
                         :dry-run? (boolean (:dry-run? opts))}))
+
+      (:wire-pxr? opts)
+      (println (pr-str {:pxr-wiring
+                        (update-pxr-wiring! {:client client
+                                             :base-url default-futon1a-url
+                                             :penholder default-penholder
+                                             :dry-run? (:dry-run? opts)})}))
 
       :else
       (do
