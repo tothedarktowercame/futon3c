@@ -33,4 +33,34 @@
         (should (string-match-p "demo/identify" text))
         (should (string-match-p ":: ## IDENTIFY" text))))))
 
+(ert-deftest mission-mode-infers-mission-from-mission-file-path ()
+  (should (equal "M-pattern-application-diagnostic"
+                 (mission-mode--mission-from-path
+                  "/home/joe/code/futon3c/holes/missions/M-pattern-application-diagnostic.md"))))
+
+(ert-deftest mission-mode-annotates-current-buffer-with-live-scopes ()
+  (let ((data '((mission . "M-demo")
+                (generated_at . "2026-06-09T00:00:00Z")
+                (scope_count . 1)
+                (type_counts . (((type . "eightfold-phase") (count . 1))))
+                (scopes . (((id . "demo/identify")
+                            (type . "eightfold-phase")
+                            (title . "IDENTIFY")
+                            (anchor_state . "anchored")
+                            (parent_state . "linked")
+                            (passage . "## IDENTIFY")))))))
+    (with-temp-buffer
+      (insert "# Mission: M-demo\n\n## IDENTIFY\n\nbody\n")
+      (mission-mode--annotate-current-buffer data)
+      (let ((labels (mapconcat
+                     (lambda (ov)
+                       (or (overlay-get ov 'after-string) ""))
+                     mission-mode--overlays
+                     "\n")))
+        (should (string-match-p "@scope eightfold-phase demo/identify" labels))
+        (should (string-match-p "@shown 1"
+                                (substring-no-properties header-line-format))))
+      (mission-mode--clear-overlays)
+      (should (null mission-mode--overlays)))))
+
 ;;; mission-mode-test.el ends here

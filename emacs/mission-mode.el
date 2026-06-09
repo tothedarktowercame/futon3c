@@ -68,6 +68,15 @@
 
 (defvar-local mission-mode--mission nil)
 (defvar-local mission-mode--data nil)
+(defvar-local mission-mode--overlays nil)
+(defvar-local mission-mode--base-header-line nil)
+
+(defvar mission-mode-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-m r") #'mission-mode-refresh)
+    (define-key map (kbd "C-c C-m v") #'mission-mode-open-view)
+    map)
+  "Keymap for `mission-mode-minor-mode'.")
 
 (defvar mission-scope-view-mode-map
   (let ((map (make-sparse-keymap)))
@@ -84,6 +93,17 @@
               buffer-read-only t)
   (when (fboundp 'arxana-ui-mark-managed)
     (arxana-ui-mark-managed "Mission Mode")))
+
+(define-minor-mode mission-mode-minor-mode
+  "Show live substrate-2 mission scopes as read-only overlays."
+  :lighter " Mission"
+  :keymap mission-mode-minor-mode-map
+  (if mission-mode-minor-mode
+      (progn
+        (setq mission-mode--base-header-line header-line-format)
+        (mission-mode-refresh))
+    (mission-mode--clear-overlays)
+    (setq header-line-format mission-mode--base-header-line)))
 
 (defun mission-mode--field (object key)
   "Return KEY from OBJECT, accepting alists and hash tables."
@@ -127,6 +147,19 @@
                (or (mission-mode--clocked-mission)
                    mission-mode-default-mission)))
 
+(defun mission-mode--mission-from-path (&optional path)
+  "Return mission ID implied by PATH, or nil."
+  (let ((path (or path buffer-file-name)))
+    (when (and path
+               (string-match-p "/holes/missions/M-[^/]+\\.md\\'" path))
+      (file-name-sans-extension (file-name-nondirectory path)))))
+
+(defun mission-mode--current-mission ()
+  "Return best mission ID for the current buffer."
+  (or mission-mode--mission
+      (mission-mode--mission-from-path)
+      (mission-mode--clocked-mission)))
+
 (defun mission-mode--fetch (mission)
   "Fetch live mission scope JSON for MISSION."
   (let* ((args (append mission-mode-command (list "--mission" mission)))
@@ -148,6 +181,62 @@
   (if (member state '("detached" "missing" "nil" ""))
       'mission-mode-warning-face
     'mission-mode-meta-face))
+
+(defun mission-mode--clear-overlays ()
+  "Remove mission-mode overlays from the current buffer."
+  (mapc #'delete-overlay mission-mode--overlays)
+  (setq mission-mode--overlays nil))
+
+(defun mission-mode--find-passage-position (passage)
+  "Return line-end position matching PASSAGE in the current buffer."
+  (when (not (string-empty-p passage))
+    (save-excursion
+      (goto-char (point-min))
+      (when (search-forward passage nil t)
+        (line-end-position)))))
+
+(defun mission-mode--overlay-label (scopes)
+  "Return after-string label for SCOPES."
+  (let ((labels
+         (mapconcat
+          (lambda (scope)
+            (format "@scope %s %s"
+                    (mission-mode--field scope :type)
+                    (mission-mode--field scope :id)))
+          scopes
+          "  ")))
+    (propertize (concat "  " labels)
+                'face 'mission-mode-meta-face)))
+
+(defun mission-mode--annotate-current-buffer (data)
+  "Annotate the current mission buffer with scope DATA."
+  (mission-mode--clear-overlays)
+  (let* ((scopes (mission-mode--as-list (mission-mode--field data :scopes)))
+         (by-passage (make-hash-table :test #'equal))
+         (found 0))
+    (dolist (scope scopes)
+      (let ((passage (mission-mode--string (mission-mode--field scope :passage))))
+        (when (not (string-empty-p passage))
+          (puthash passage
+                   (append (gethash passage by-passage) (list scope))
+                   by-passage))))
+    (maphash
+     (lambda (passage group)
+       (when-let ((pos (mission-mode--find-passage-position passage)))
+         (let ((ov (make-overlay pos pos nil t t)))
+           (overlay-put ov 'mission-mode t)
+           (overlay-put ov 'after-string (mission-mode--overlay-label group))
+           (push ov mission-mode--overlays)
+           (cl-incf found))))
+     by-passage)
+    (setq header-line-format
+          (propertize
+           (format " @mission %s  @live substrate-2  @scopes %s  @shown %s  C-c C-m r refresh  C-c C-m v view "
+                   (mission-mode--field data :mission)
+                   (mission-mode--field data :scope_count)
+                   found)
+           'face 'mission-mode-meta-face))
+    found))
 
 (defun mission-mode--insert-counts (data)
   "Insert type counts for DATA."
@@ -232,18 +321,33 @@
     (insert "\n")
     (goto-char (point-min))))
 
+(defun mission-mode--show-minor-error (mission err)
+  "Show refresh ERR for MISSION in the current buffer."
+  (mission-mode--clear-overlays)
+  (setq header-line-format
+        (propertize
+         (format " @mission %s  @live unavailable: %s "
+                 mission
+                 (error-message-string err))
+         'face 'mission-mode-warning-face)))
+
 ;;;###autoload
 (defun mission-mode-refresh ()
   "Refresh the current mission scope view."
   (interactive)
-  (let ((mission (or mission-mode--mission (mission-mode--read-mission))))
+  (let ((mission (or (mission-mode--current-mission)
+                     (mission-mode--read-mission))))
     (condition-case err
         (let ((data (mission-mode--fetch mission)))
           (setq mission-mode--mission mission
                 mission-mode--data data)
-          (mission-mode--render data))
+          (if mission-mode-minor-mode
+              (mission-mode--annotate-current-buffer data)
+            (mission-mode--render data)))
       (error
-       (mission-mode--render-error mission err)))))
+       (if mission-mode-minor-mode
+           (mission-mode--show-minor-error mission err)
+         (mission-mode--render-error mission err))))))
 
 (defun mission-mode--mission-file-candidates (mission)
   "Return likely markdown files for MISSION."
@@ -262,10 +366,12 @@
       (user-error "No mission file found for %s" mission))))
 
 ;;;###autoload
-(defun mission-mode (&optional mission)
-  "Open a live mission scope view for MISSION."
+(defun mission-mode-open-view (&optional mission)
+  "Open the full live mission scope view for MISSION."
   (interactive)
-  (let* ((mission (or mission (mission-mode--read-mission)))
+  (let* ((mission (or mission
+                      (mission-mode--current-mission)
+                      (mission-mode--read-mission)))
          (buf (get-buffer-create mission-mode-buffer-name)))
     (with-current-buffer buf
       (unless (derived-mode-p 'mission-scope-view-mode)
@@ -273,6 +379,19 @@
       (setq mission-mode--mission mission)
       (mission-mode-refresh))
     (pop-to-buffer buf)))
+
+;;;###autoload
+(defun mission-mode (&optional mission open-view)
+  "Enable live scope overlays for MISSION, or open full view with OPEN-VIEW.
+Interactively, `C-u M-x mission-mode' opens the full scope view.  Without a
+prefix in a mission markdown buffer, this enables `mission-mode-minor-mode'
+and annotates the current buffer."
+  (interactive (list nil current-prefix-arg))
+  (let ((mission (or mission (mission-mode--current-mission))))
+    (if (or open-view (not (mission-mode--mission-from-path)))
+        (mission-mode-open-view mission)
+      (setq mission-mode--mission mission)
+      (mission-mode-minor-mode 1))))
 
 (provide 'mission-mode)
 ;;; mission-mode.el ends here
