@@ -200,6 +200,32 @@ If a function returns nil, the original TEXT is used.")
   :type 'integer
   :group 'agent-chat)
 
+(defcustom agent-chat-affect-live-enabled t
+  "Non-nil means chat-turn evidence triggers the live affect runner.
+
+The runner is best-effort and non-blocking. It refreshes the materialized
+affect JSONL / WM summary, but does not participate in request dispatch."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-affect-live-directory "/home/joe/code/futon0"
+  "Working directory for `agent-chat-affect-live-command'."
+  :type 'directory
+  :group 'agent-chat)
+
+(defcustom agent-chat-affect-live-command
+  '("clojure" "-M" "-m" "futon0.rhythm.affect"
+    "--live" "--limit" "1000" "--max-transitions" "200")
+  "Command used to refresh live affect material after a chat turn.
+
+`agent-chat-emit-turn-evidence!' appends `--evidence-url' and the current
+evidence URL to this command."
+  :type '(repeat string)
+  :group 'agent-chat)
+
+(defvar agent-chat--affect-live-process nil
+  "Currently running live affect refresh process, or nil.")
+
 (defvar-local agent-chat--last-auto-clock-witness nil
   "Audit witness for the most recent auto-clock promotion.")
 
@@ -1954,6 +1980,30 @@ Replaces the `(session: ...)' text in the first line."
                  (not (string-empty-p (symbol-value last-id-var))))
       (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t))))
 
+(defun agent-chat--maybe-run-affect-live (evidence-url)
+  "Best-effort non-blocking refresh of live affect material."
+  (when (and agent-chat-affect-live-enabled
+             (listp agent-chat-affect-live-command)
+             (stringp evidence-url)
+             (agent-chat-evidence-enabled-p evidence-url)
+             (not (process-live-p agent-chat--affect-live-process)))
+    (let* ((default-directory agent-chat-affect-live-directory)
+           (command (append agent-chat-affect-live-command
+                            (list "--evidence-url" evidence-url))))
+      (setq agent-chat--affect-live-process
+            (make-process
+             :name "agent-chat-affect-live"
+             :buffer nil
+             :command command
+             :noquery t
+             :sentinel
+             (lambda (proc event)
+               (unless (process-live-p proc)
+                 (setq agent-chat--affect-live-process nil))
+               (unless (string-match-p "\\`finished" event)
+                 (message "agent-chat affect live runner: %s"
+                          (string-trim event)))))))))
+
 (defun agent-chat-emit-turn-evidence!
     (evidence-url timeout log-turns sid role text assistant-author transport tags session-var last-id-var)
   "Emit turn evidence for ROLE and TEXT using the shared evidence helpers."
@@ -1994,7 +2044,8 @@ Replaces the `(session: ...)' text in the first line."
                               `((in-reply-to . ,(symbol-value last-id-var))))))
       (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
         (set session-var sid)
-        (set last-id-var new-id)))))
+        (set last-id-var new-id)
+        (agent-chat--maybe-run-affect-live evidence-url)))))
 
 (defun agent-chat-emit-turn-commits-evidence!
     (evidence-url timeout sid assistant-author transport session-var last-id-var)

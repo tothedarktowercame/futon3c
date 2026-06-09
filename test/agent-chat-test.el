@@ -53,6 +53,28 @@
                        "first line\n> quoted line in prompt input\nfinal line"))
         (should callback)))))
 
+(ert-deftest agent-chat-affect-live-runner-builds-command ()
+  (let ((agent-chat-affect-live-enabled t)
+        (agent-chat-affect-live-directory "/tmp")
+        (agent-chat-affect-live-command '("clojure" "-M" "-m" "futon0.rhythm.affect" "--live"))
+        (agent-chat--affect-live-process nil)
+        captured)
+    (cl-letf (((symbol-function 'agent-chat-evidence-enabled-p)
+               (lambda (_url) t))
+              ((symbol-function 'process-live-p)
+               (lambda (_proc) nil))
+              ((symbol-function 'make-process)
+               (lambda (&rest args)
+                 (setq captured args)
+                 'fake-affect-process)))
+      (agent-chat--maybe-run-affect-live "http://localhost:7070/api/alpha/evidence")
+      (should (eq agent-chat--affect-live-process 'fake-affect-process))
+      (should (equal (plist-get captured :name) "agent-chat-affect-live"))
+      (should (equal (plist-get captured :command)
+                     '("clojure" "-M" "-m" "futon0.rhythm.affect" "--live"
+                       "--evidence-url" "http://localhost:7070/api/alpha/evidence")))
+      (should (null (plist-get captured :buffer))))))
+
 (ert-deftest agent-chat-ensure-prompt-markers-repairs-drifting-input-start ()
   (with-temp-buffer
     (agent-chat-test--init-buffer)
