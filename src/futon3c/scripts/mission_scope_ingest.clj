@@ -271,6 +271,33 @@
                      :parent nil)))
           scopes)))
 
+(defn- stable-heading-scope-id [mission heading original-id duplicate?]
+  (let [stem (str/replace-first (str mission) #"^M-" "")
+        base (str stem "/" (slug heading))]
+    (if duplicate?
+      (str base "--" (subs (sha1 (str heading "|" original-id)) 0 8))
+      base)))
+
+(defn- stable-heading-scopes [mission mission-path all-scopes scopes]
+  (let [slug-counts (frequencies (map (comp slug heading-title) scopes))]
+    (mapv (fn [scope]
+            (let [heading (heading-title scope)
+                  heading-slug (slug heading)
+                  duplicate? (> (get slug-counts heading-slug 0) 1)
+                  stable-id (stable-heading-scope-id mission heading (:scope-id scope) duplicate?)
+                  canonical-id (str (str/replace-first (str mission) #"^M-" "") "/" heading-slug)
+                  anchor (anchor-for-scope mission-path all-scopes scope)]
+              (assoc scope
+                     :original-scope-id (:scope-id scope)
+                     :scope-id stable-id
+                     :stable-scope-id stable-id
+                     :canonical-scope-id canonical-id
+                     :heading-slug heading-slug
+                     :duplicate-heading? duplicate?
+                     :anchor anchor
+                     :parent nil)))
+          scopes)))
+
 (defn- scope-entity-spec [mission path scope]
   {:id (:scope-id scope)
    :name (env-name scope)
@@ -293,7 +320,13 @@
                    :anchor/heading (:heading (:anchor scope))
                    :anchor/fingerprint (:fingerprint (:anchor scope))
                    :anchor/resolve-by (:resolve-by (:anchor scope))
-                   :anchor/detached-reason (:detached-reason (:anchor scope))))})
+                   :anchor/detached-reason (:detached-reason (:anchor scope)))
+            (:heading-slug scope)
+            (assoc :scope/heading-slug (:heading-slug scope)
+                   :scope/original-id (:original-scope-id scope)
+                   :scope/stable-id (:stable-scope-id scope)
+                   :scope/canonical-id (:canonical-scope-id scope)
+                   :scope/duplicate-heading? (boolean (:duplicate-heading? scope))))})
 
 (defn- scope-hyperedge [mission-entity scope-entity slot-entities scope]
   {:hx/id (str "hx|mission-scope|" (:scope-id scope))
@@ -312,6 +345,8 @@
            :scope/stable-id (:stable-scope-id scope)
            :scope/canonical-id (:canonical-scope-id scope)
            :scope/canonical-phase (:canonical-phase scope)
+           :scope/heading-slug (:heading-slug scope)
+           :scope/duplicate-heading? (:duplicate-heading? scope)
            :anchor/state (:state (:anchor scope))
            :anchor/passage (:passage (:anchor scope))
            :anchor/fingerprint (:fingerprint (:anchor scope))
@@ -342,8 +377,9 @@
         raw-scopes (:scope-hyperedges data)
         scopes (cond->> raw-scopes
                  binder-filter (filter #(= binder-filter (:binder-type %))))
-        scopes (if (= "eightfold-phase" binder-filter)
-                 (stable-eightfold-scopes mission mission-path raw-scopes (vec scopes))
+        scopes (case binder-filter
+                 "eightfold-phase" (stable-eightfold-scopes mission mission-path raw-scopes (vec scopes))
+                 "loose-section" (stable-heading-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
@@ -381,7 +417,8 @@
      :entity-count (count @entity-ids)
      :hyperedge-count (count @hx-ids)
      :detached-count (count (filter #(= :detached (get-in % [:anchor :state])) scopes))
-     :duplicate-phase-count (count (filter :duplicate-phase? scopes))}))
+     :duplicate-phase-count (count (filter :duplicate-phase? scopes))
+     :duplicate-heading-count (count (filter :duplicate-heading? scopes))}))
 
 (defn- scope-tree-files [dir selected]
   (let [selected (set selected)]
@@ -415,4 +452,5 @@
                       :entity-count (reduce + (map :entity-count reports))
                       :hyperedge-count (reduce + (map :hyperedge-count reports))
                       :detached-count (reduce + (map :detached-count reports))
-                      :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))}))))
+                      :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))
+                      :duplicate-heading-count (reduce + (map :duplicate-heading-count reports))}))))

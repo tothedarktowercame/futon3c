@@ -115,4 +115,5 @@ mission-scope-in/out → [pattern-scopes — deferred deep-dive].
 | scope-type | status | notes |
 |---|---|---|
 | eightfold-phase | **INGESTED** by codex-1 2026-06-09 — reusable anchor+ingest mechanism established | 194 scope trees scanned; 346 eightfold-phase hyperedges written with `scope-id = <mission-stem>/<canonical-phase>` where unique and duplicate same-phase headings disambiguated by heading slug/hash; anchor shape is verbatim heading passage + concept-set fingerprint + `:anchor/state`; 15 detached anchors recorded for review, no silent drops |
-| (remaining) | queued behind the first | each tuned by what the prior handoff surfaces |
+| loose-section | **INGESTED** by codex-1 2026-06-09 — applied the same anchor+ingest mechanism to non-eightfold headings | 194 scope trees scanned; 1670 loose-section hyperedges written with `scope-id = <mission-stem>/<heading-slug>` where unique and duplicate heading slugs disambiguated by an original-scope hash; anchor shape unchanged; 7 detached anchors and 6 duplicate-heading disambiguations recorded |
+| (remaining) | queued behind loose-section | each tuned by what the prior handoff surfaces |
