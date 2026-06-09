@@ -32,6 +32,33 @@
 (defn- real-graph []
   (edn/read-string (slurp graph-path)))
 
+(deftest real-expanded-graph-carries-held-ascent-pre-witnesses-test
+  (let [graph (real-graph)]
+    (is (= :wm-ranks-applicable-single-cycle-leaf
+           (get-in graph [:capabilities
+                          :efe-trustworthy-over-starmap
+                          :pre-witness
+                          0
+                          :id])))
+    (is (= :guarded-overnight-wm-run
+           (get-in graph [:capabilities
+                          :wm-overnight-unsupervised
+                          :pre-witness
+                          0
+                          :id])))
+    (is (= :candidate
+           (get-in graph [:capabilities
+                          :efe-trustworthy-over-starmap
+                          :pre-witness
+                          0
+                          :status])))
+    (is (= :candidate
+           (get-in graph [:capabilities
+                          :wm-overnight-unsupervised
+                          :pre-witness
+                          0
+                          :status])))))
+
 (def ^:private terminal-c3-candidate-docs
   [{:target "M-war-machine-pilot"
     :path ["." "holes" "missions" "M-war-machine-pilot.md"]
@@ -275,9 +302,12 @@
               "M-essay-corpus-substrate"
               "M-stack-stereolithography"
               "M-stack-geometry"
+              "M-hypergraph-operator"
               "M-expressions-of-interest"]
              filtered-targets))
-      (is (= 1 leaf-count))
+      (is (= leaf-count
+             (count (filter :graph/single-cycle-leaf? ranked))))
+      (is (pos? leaf-count))
       (is (= {:type :open-mission :target "M-essay-corpus-substrate"} top-action))
       (is (= 1 top-count))
       (is (true? (:graph/single-cycle-leaf? top)))

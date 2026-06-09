@@ -114,6 +114,7 @@
        (:attested cap) (assoc :attested true)
        (:frontier cap) (assoc :frontier true)
        (:keystone cap) (assoc :keystone true)
+       (:pre-witness cap) (assoc :pre-witness (:pre-witness cap))
        (:grounding cap) (assoc :grounding (:grounding cap))
        pudding (assoc :pudding-thesis (:id pudding)
                       :cap/altitude (:altitude pudding)))]))

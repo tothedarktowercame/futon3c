@@ -31,6 +31,27 @@
              :wm-overnight-unsupervised}
            (set (keys (:capabilities graph)))))))
 
+(deftest held-ascent-capabilities-carry-pre-witness-candidates
+  (let [graph (extractor/build-graph {:missions fixture-missions})
+        efe-witness (get-in graph [:capabilities
+                                   :efe-trustworthy-over-starmap
+                                   :pre-witness
+                                   0])
+        overnight-witness (get-in graph [:capabilities
+                                         :wm-overnight-unsupervised
+                                         :pre-witness
+                                         0])]
+    (is (= :wm-ranks-applicable-single-cycle-leaf (:id efe-witness)))
+    (is (= :efe-trustworthy-over-starmap (:attests efe-witness)))
+    (is (= :candidate (:status efe-witness)))
+    (is (seq (:success-criteria efe-witness)))
+    (is (= :guarded-overnight-wm-run (:id overnight-witness)))
+    (is (= :wm-overnight-unsupervised (:attests overnight-witness)))
+    (is (= :candidate (:status overnight-witness)))
+    (is (= [:wm-steps-forward-guardrailed :efe-trustworthy-over-starmap]
+           (:requires overnight-witness)))
+    (is (seq (:hard-gates overnight-witness)))))
+
 (deftest mission-mapping-distinguishes-real-missions-from-non-mission-builders
   (let [graph (extractor/build-graph {:missions fixture-missions})
         missions (:missions graph)
