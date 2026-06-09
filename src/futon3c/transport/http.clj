@@ -1941,6 +1941,12 @@
                                                  (:agent/session-id existing))
                         metadata* (cond-> (merge (or (:agent/metadata existing) {})
                                                  metadata)
+                                    true (dissoc :remote? "remote?"
+                                                 :proxy? "proxy?"
+                                                 :remote-proxy? "remote-proxy?"
+                                                 :origin-url "origin-url"
+                                                 :ws-bridge? "ws-bridge?"
+                                                 :note "note")
                                     (nil? campaign-id) (dissoc :campaign-id "campaign-id")
                                     (nil? mission-id) (dissoc :mission-id "mission-id")
                                     (nil? excursion-id) (dissoc :excursion-id "excursion-id"))

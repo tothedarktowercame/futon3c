@@ -1202,21 +1202,32 @@
   (mapv :agent/id (vals @!registry)))
 
 (defn find-reclaimable-agent
-  "Find the lowest-numbered idle, session-less, auto-registered local agent
-   of the given type. Returns its agent-id string, or nil."
+  "Find the lowest-numbered idle, session-less reclaimable agent of TYPE.
+
+   Reclaimable agents are either local auto-registered ghosts, or unreachable
+   remote placeholders with no invoke function. The latter covers restart
+   recovery when a stale remote `codex-1' placeholder would otherwise force
+   local auto-registration to allocate `codex-2'. Returns agent-id string, or
+   nil."
   [agent-type]
   (let [prefix (name agent-type)]
     (->> (vals @!registry)
          (filter (fn [agent]
                    (let [aid-val (get-in agent [:agent/id :id/value])
-                         meta (:agent/metadata agent)]
+                         meta (:agent/metadata agent)
+                         local-auto-ghost? (and (not (:remote? meta))
+                                                (not (:proxy? meta))
+                                                (:auto-registered? meta))
+                         unreachable-remote-placeholder?
+                         (and (:remote? meta)
+                              (not (:proxy? meta))
+                              (nil? (:agent/invoke-fn agent)))]
                      (and (= (:agent/type agent) agent-type)
                           (str/starts-with? (str aid-val) (str prefix "-"))
-                          (= (:agent/status agent) :idle)
+                          (= (or (:agent/status agent) :idle) :idle)
                           (nil? (:agent/session-id agent))
-                          (not (:remote? meta))
-                          (not (:proxy? meta))
-                          (:auto-registered? meta)))))
+                          (or local-auto-ghost?
+                              unreachable-remote-placeholder?)))))
          (sort-by #(get-in % [:agent/id :id/value]))
          first
          (#(some-> % (get-in [:agent/id :id/value]))))))

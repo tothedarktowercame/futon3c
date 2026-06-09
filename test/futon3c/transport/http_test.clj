@@ -453,6 +453,46 @@
             (when (.exists session-file)
               (.delete session-file))))))))
 
+(deftest codex-auto-register-reclaims-unreachable-remote-placeholder
+  (testing "POST /api/alpha/agents/auto reuses stale remote codex-1 instead of allocating codex-2"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-codex-reclaim"
+          cwd "/home/joe/code"
+          body (json/generate-string {"type" "codex"
+                                      "session-id" sid
+                                      "cwd" cwd})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (reg/register-agent!
+         {:agent-id {:id/value "codex-1" :id/type :continuity}
+          :type :codex
+          :invoke-fn nil
+          :capabilities [:edit :test :coordination/execute]
+          :metadata {:remote? true
+                     :note "unreachable remote placeholder"}})
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "codex-1" (:agent-id parsed)))
+          (is (nil? (reg/get-agent "codex-2"))
+              "reclaiming codex-1 avoids minting a confusing extra lane")
+          (is (= sid (:agent/session-id agent)))
+          (is (fn? (:agent/invoke-fn agent)))
+          (is (= true (get-in agent [:agent/metadata :auto-registered?])))
+          (is (nil? (get-in agent [:agent/metadata :remote?]))
+              "local registration must clear stale remote metadata")
+          (is (= sid (some-> session-file slurp str/trim))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
 (deftest agent-restore-registers-codex-exact-identity
   (testing "POST /api/alpha/agents/restore recreates an exact codex identity"
     (let [handler (make-handler)
@@ -483,6 +523,47 @@
           (is (= cwd (get-in agent [:agent/metadata :cwd])))
           (is (= sid (some-> session-file slurp str/trim)))
           (is (fn? (:agent/invoke-fn agent))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-restore-clears-stale-remote-metadata
+  (testing "POST /api/alpha/agents/restore makes a local lane stop displaying as remote"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-restore-local-codex-1"
+          body (json/generate-string {"agent-id" "codex-1"
+                                      "type" "codex"
+                                      "session-id" sid
+                                      "session-file" (.getPath session-file)
+                                      "cwd" "/home/joe/code"})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (reg/register-agent!
+         {:agent-id {:id/value "codex-1" :id/type :continuity}
+          :type :codex
+          :invoke-fn nil
+          :capabilities [:edit :test :coordination/execute]
+          :metadata {:remote? true
+                     :remote-proxy? true
+                     :origin-url "http://linode.invalid:7070"
+                     :note "stale remote placeholder"}})
+        (let [response (post handler "/api/alpha/agents/restore" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-1")]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "updated" (:action parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (fn? (:agent/invoke-fn agent)))
+          (is (nil? (get-in agent [:agent/metadata :remote?])))
+          (is (nil? (get-in agent [:agent/metadata :remote-proxy?])))
+          (is (nil? (get-in agent [:agent/metadata :origin-url])))
+          (is (nil? (get-in agent [:agent/metadata :note]))))
         (finally
           (if (some? backup)
             (spit session-file backup)
