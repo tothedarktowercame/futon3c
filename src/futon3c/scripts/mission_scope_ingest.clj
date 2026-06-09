@@ -81,6 +81,41 @@
       (ok! {:op :hyperedge :payload payload})
       (get-in [:body :hyperedge])))
 
+(defn- write-tx! [client base-url penholder tx-ops claim]
+  (-> (http-edn client :post (str base-url "/write")
+                {:penholder penholder
+                 :model {}
+                 :identity nil
+                 :tx-ops tx-ops
+                 :counter-ratchet {:allow-drop-classes #{:entity}}
+                 :claim claim})
+      (ok! {:op :write :tx-ops tx-ops})
+      :body))
+
+(defn- delete-docs! [client base-url penholder ids]
+  (let [ids (->> ids (remove str/blank?) distinct vec)]
+    (when (seq ids)
+      (write-tx! client base-url penholder
+                 (mapv (fn [id] [:xtdb.api/delete id]) ids)
+                 {:op :mission-scope/retract-legacy-position-anchors
+                  :doc-count (count ids)}))
+    {:deleted-count (count ids)}))
+
+(def ^:private !hyperedge-type-cache (atom {}))
+
+(defn- hyperedges-by-type [client base-url hx-type]
+  (if-let [cached (get @!hyperedge-type-cache hx-type)]
+    cached
+    (let [hxs (-> (http-edn client :get
+                            (str base-url "/api/alpha/hyperedges?type="
+                                 (url-encode hx-type)
+                                 "&limit=5000"))
+                  (ok! {:op :hyperedges-by-type :type hx-type})
+                  (get-in [:body :hyperedges])
+                  (or []))]
+      (swap! !hyperedge-type-cache assoc hx-type hxs)
+      hxs)))
+
 (defn- repo-name-from-path [path]
   (or (second (re-find #"/code/([^/]+)/" (str path)))
       (second (re-find #"^([^/]+)/" (str path)))))
@@ -278,8 +313,8 @@
       (str base "--" (subs (sha1 (str heading "|" original-id)) 0 8))
       base)))
 
-(defn- stable-heading-scopes [mission mission-path all-scopes scopes]
-  (let [slug-counts (frequencies (map (comp slug heading-title) scopes))]
+(defn- stable-heading-scopes [mission mission-path all-scopes collision-scopes scopes]
+  (let [slug-counts (frequencies (map (comp slug heading-title) collision-scopes))]
     (mapv (fn [scope]
             (let [heading (heading-title scope)
                   heading-slug (slug heading)
@@ -297,6 +332,39 @@
                      :anchor anchor
                      :parent nil)))
           scopes)))
+
+(defn- legacy-scope-id? [id]
+  (boolean (re-matches #"^M-.+:scope-[0-9]+$" (str id))))
+
+(defn- scope-endpoint-id [h]
+  (or (some (fn [end]
+              (when (= :environment (:role end))
+                (:entity-id end)))
+            (:hx/ends h))
+      (second (:hx/endpoints h))))
+
+(defn- legacy-position-scope-hyperedge? [binder-filter h]
+  (let [scope-id (or (get-in h [:hx/props :scope/id])
+                     (scope-endpoint-id h))]
+    (and (= (keyword "mission-scope" binder-filter) (:hx/type h))
+         (legacy-scope-id? scope-id)
+         (contains? (:hx/content h) :position))))
+
+(defn- retract-legacy-position-scopes!
+  [client base-url penholder mission-entity binder-filter]
+  (let [legacy-hxs (->> (hyperedges-by-type client base-url (str "mission-scope/" binder-filter))
+                        (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
+                        (filter #(legacy-position-scope-hyperedge? binder-filter %))
+                        vec)
+        hx-ids (keep :hx/id legacy-hxs)
+        scope-ids (->> legacy-hxs
+                       (keep scope-endpoint-id)
+                       (filter legacy-scope-id?))
+        ids (distinct (concat hx-ids scope-ids))]
+    (delete-docs! client base-url penholder ids)
+    {:legacy-hyperedge-retract-count (count (distinct hx-ids))
+     :legacy-entity-retract-count (count (distinct scope-ids))
+     :legacy-doc-retract-count (count ids)}))
 
 (defn- scope-entity-spec [mission path scope]
   {:id (:scope-id scope)
@@ -379,7 +447,15 @@
                  binder-filter (filter #(= binder-filter (:binder-type %))))
         scopes (case binder-filter
                  "eightfold-phase" (stable-eightfold-scopes mission mission-path raw-scopes (vec scopes))
-                 "loose-section" (stable-heading-scopes mission mission-path raw-scopes (vec scopes))
+                 "loose-section" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
+                 "capability-scope" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
+                                                                                   "loose-section"
+                                                                                   "capability-scope"}
+                                                                                 (:binder-type %))
+                                                                  raw-scopes)]
+                                      (stable-heading-scopes mission mission-path raw-scopes
+                                                             (vec collision-scopes)
+                                                             (vec scopes)))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
@@ -391,6 +467,11 @@
                                         :source "mission-scope-tree"
                                         :props {:mission/id mission
                                                 :mission/path mission-path}})
+        legacy-report (if binder-filter
+                        (retract-legacy-position-scopes! client base-url penholder mission-entity binder-filter)
+                        {:legacy-hyperedge-retract-count 0
+                         :legacy-entity-retract-count 0
+                         :legacy-doc-retract-count 0})
         entity-ids (atom #{(:id mission-entity)})
         hx-ids (atom #{})]
     (doseq [scope scopes]
@@ -418,7 +499,10 @@
      :hyperedge-count (count @hx-ids)
      :detached-count (count (filter #(= :detached (get-in % [:anchor :state])) scopes))
      :duplicate-phase-count (count (filter :duplicate-phase? scopes))
-     :duplicate-heading-count (count (filter :duplicate-heading? scopes))}))
+     :duplicate-heading-count (count (filter :duplicate-heading? scopes))
+     :legacy-hyperedge-retract-count (:legacy-hyperedge-retract-count legacy-report)
+     :legacy-entity-retract-count (:legacy-entity-retract-count legacy-report)
+     :legacy-doc-retract-count (:legacy-doc-retract-count legacy-report)}))
 
 (defn- scope-tree-files [dir selected]
   (let [selected (set selected)]
@@ -453,4 +537,7 @@
                       :hyperedge-count (reduce + (map :hyperedge-count reports))
                       :detached-count (reduce + (map :detached-count reports))
                       :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))
-                      :duplicate-heading-count (reduce + (map :duplicate-heading-count reports))}))))
+                      :duplicate-heading-count (reduce + (map :duplicate-heading-count reports))
+                      :legacy-hyperedge-retract-count (reduce + (map :legacy-hyperedge-retract-count reports))
+                      :legacy-entity-retract-count (reduce + (map :legacy-entity-retract-count reports))
+                      :legacy-doc-retract-count (reduce + (map :legacy-doc-retract-count reports))}))))
