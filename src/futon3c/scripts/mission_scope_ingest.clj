@@ -14,6 +14,9 @@
 (def ^:private code-root "/home/joe/code")
 (def ^:private canonical-phases
   #{"head" "identify" "map" "derive" "argue" "verify" "instantiate" "document"})
+(def ^:private structural-binders
+  ["eightfold-phase" "loose-section" "capability-scope" "map-item"
+   "relates-to" "source-material" "mission-scope-in" "mission-scope-out"])
 
 (defn- sha1 [s]
   (let [digest (.digest (MessageDigest/getInstance "SHA-1") (.getBytes (str s) "UTF-8"))]
@@ -714,6 +717,190 @@
            :scope/child child-scope}
    :hx/labels ["mission-scope/nesting"]})
 
+(declare scope-tree-files)
+
+(defn- hx-props [h]
+  (or (:hx/props h) (:props h) {}))
+
+(defn- hx-type-name [h]
+  (let [t (:hx/type h)]
+    (if (keyword? t)
+      (if-let [ns (namespace t)]
+        (str ns "/" (name t))
+        (name t))
+      (str t))))
+
+(defn- canonical-mission-scope-type-name [h]
+  (let [t (hx-type-name h)]
+    (if (str/starts-with? t "mission-scope/")
+      t
+      (if-let [binder (get (hx-props h) :scope/binder-type)]
+        (str "mission-scope/" binder)
+        t))))
+
+(defn- hx-label-names [h]
+  [(canonical-mission-scope-type-name h)])
+
+(defn- hx-endpoint-payload [h]
+  (if (seq (:hx/ends h))
+    (mapv (fn [end]
+            {:role (:role end)
+             :entity-id (:entity-id end)})
+          (:hx/ends h))
+    (mapv (fn [end]
+            (if (map? end) end {:entity-id end}))
+          (:hx/endpoints h))))
+
+(defn- merged-hyperedge-payload [h props]
+  (cond-> {:hx/id (:hx/id h)
+           :hx/type (canonical-mission-scope-type-name h)
+           :hx/endpoints (hx-endpoint-payload h)
+           :props (merge (hx-props h) props)}
+    (contains? h :hx/content) (assoc :hx/content (:hx/content h))
+    (seq (:hx/labels h)) (assoc :hx/labels (hx-label-names h))))
+
+(defn- scope-mission-endpoint [h]
+  (or (some (fn [end]
+              (when (= :entity (:role end))
+                (:entity-id end)))
+            (:hx/ends h))
+      (first (:hx/endpoints h))))
+
+(defn- scope-id-from-hx [h]
+  (or (get (hx-props h) :scope/id)
+      (some (fn [end]
+              (when (= :environment (:role end))
+                (:entity-id end)))
+            (:hx/ends h))
+      (second (:hx/endpoints h))))
+
+(defn- original-id-from-hx [h]
+  (get (hx-props h) :scope/original-id))
+
+(defn- binder-from-hx [h]
+  (or (get (hx-props h) :scope/binder-type)
+      (str/replace-first (hx-type-name h) #"^mission-scope/" "")))
+
+(defn- original-parent-map [scope-dir selected]
+  (let [files (scope-tree-files scope-dir selected)]
+    (reduce
+     (fn [m file]
+       (let [data (json/parse-string (slurp file) true)]
+         (reduce
+          (fn [acc scope]
+            (if-let [parent (:parent scope)]
+              (assoc acc (:scope-id scope)
+                     {:parent-original-id parent
+                      :child-binder (:binder-type scope)
+                      :mission (:mission data)
+                      :file (.getAbsolutePath file)})
+              acc))
+          m
+          (:scope-hyperedges data))))
+     {}
+     files)))
+
+(defn- all-structural-scope-hyperedges [client base-url]
+  (mapcat (fn [binder]
+            (concat (hyperedges-by-type client base-url (str "mission-scope/" binder))
+                    ;; Repair path for any scope hxs that were temporarily
+                    ;; written with a bare binder type instead of the canonical
+                    ;; mission-scope/<binder> type.
+                    (hyperedges-by-type client base-url binder)))
+          structural-binders))
+
+(defn- correspondence-map [hxs]
+  (reduce
+   (fn [m h]
+     (let [original-id (original-id-from-hx h)
+           stable-id (scope-id-from-hx h)]
+       (if (and (seq (str original-id)) (seq (str stable-id)))
+         (update m original-id (fnil conj #{}) stable-id)
+         m)))
+   {}
+   hxs))
+
+(defn- nesting-hyperedge* [mission-id parent-scope child-scope child-original parent-original]
+  (assoc (nesting-hyperedge {:id mission-id} parent-scope child-scope)
+         :props {:scope/parent parent-scope
+                 :scope/child child-scope
+                 :scope/original-id child-original
+                 :scope/original-parent parent-original
+                 :scope/parent-state :linked
+                 :scope/parent-resolve-by :original-id-correspondence}))
+
+(defn- parent-resolution [corr parent-original]
+  (let [matches (get corr parent-original)]
+    (cond
+      (= 1 (count matches)) {:state :linked :parent (first matches)}
+      (empty? matches) {:state :detached
+                        :reason :parent-original-id-not-found}
+      :else {:state :detached
+             :reason :parent-original-id-ambiguous
+             :matches (sort matches)})))
+
+(defn- update-parent-wiring!
+  [{:keys [client base-url penholder scope-dir selected dry-run?]}]
+  (let [hxs (vec (all-structural-scope-hyperedges client base-url))
+        corr (correspondence-map hxs)
+        parent-by-original (original-parent-map scope-dir selected)
+        report (atom {})
+        bump! (fn [binder k]
+                (swap! report update-in [binder k] (fnil inc 0)))]
+    (doseq [h hxs
+            :let [child-original (original-id-from-hx h)
+                  parent-info (get parent-by-original child-original)]
+            :when parent-info]
+      (let [binder (binder-from-hx h)
+            child-scope (scope-id-from-hx h)
+            mission-id (scope-mission-endpoint h)
+            parent-original (:parent-original-id parent-info)
+            resolution (parent-resolution corr parent-original)
+            props (cond-> {:scope/original-parent parent-original
+                            :scope/parent-state (:state resolution)
+                            :scope/parent-resolve-by :original-id-correspondence}
+                    (= :linked (:state resolution))
+                    (assoc :scope/parent (:parent resolution))
+                    (= :detached (:state resolution))
+                    (assoc :scope/parent nil
+                           :scope/parent-detached-reason (:reason resolution))
+                    (:matches resolution)
+                    (assoc :scope/parent-candidates (:matches resolution)))]
+        (bump! binder :parent-candidate-count)
+        (if (= :linked (:state resolution))
+          (do
+            (bump! binder :parent-resolved-count)
+            (when-not dry-run?
+              (post-hyperedge! client base-url penholder
+                               (merged-hyperedge-payload h props))
+              (when-let [entity (get-entity client base-url child-scope)]
+                (ensure-entity! client base-url penholder
+                                {:id (:id entity)
+                                 :name (:name entity)
+                                 :type (:type entity)
+                                 :external-id (:external-id entity)
+                                 :source (:source entity)
+                                 :props props}))
+              (post-hyperedge! client base-url penholder
+                               (nesting-hyperedge* mission-id
+                                                   (:parent resolution)
+                                                   child-scope
+                                                   child-original
+                                                   parent-original))))
+          (do
+            (bump! binder :parent-detached-count)
+            (swap! report update-in [binder :detached-reasons (:reason resolution)] (fnil inc 0))
+            (when-not dry-run?
+              (post-hyperedge! client base-url penholder
+                               (merged-hyperedge-payload h props)))))))
+    (into (sorted-map)
+          (map (fn [[binder counts]]
+                 [binder (merge {:parent-candidate-count 0
+                                 :parent-resolved-count 0
+                                 :parent-detached-count 0}
+                                counts)]))
+          @report)))
+
 (defn ingest-scope-tree!
   [{:keys [client base-url penholder path binder-filter]}]
   (let [data (json/parse-string (slurp path) true)
@@ -859,33 +1046,52 @@
   (let [client (http-client)
         [opts missions] (loop [xs args opts {} missions []]
                           (if-let [x (first xs)]
-                            (if (= "--binder" x)
+                            (case x
+                              "--binder"
                               (recur (nnext xs) (assoc opts :binder-filter (second xs)) missions)
+
+                              "--wire-parents"
+                              (recur (next xs) (assoc opts :wire-parents? true) missions)
+
+                              "--dry-run"
+                              (recur (next xs) (assoc opts :dry-run? true) missions)
+
                               (recur (next xs) opts (conj missions x)))
                             [opts (remove str/blank? missions)]))
         files (scope-tree-files default-scope-dir missions)
-        reports (mapv #(ingest-scope-tree! {:client client
-                                            :base-url default-futon1a-url
-                                            :penholder default-penholder
-                                            :binder-filter (:binder-filter opts)
-                                            :path (.getAbsolutePath %)})
-                      files)]
-    (doseq [r reports]
-      (println (pr-str r)))
-    (println (pr-str {:mission-count (count reports)
-                      :entity-count (reduce + (map :entity-count reports))
-                      :hyperedge-count (reduce + (map :hyperedge-count reports))
-                      :detached-count (reduce + (map :detached-count reports))
-                      :list-item-anchor-count (reduce + (map :list-item-anchor-count reports))
-                      :contains-line-anchor-count (reduce + (map :contains-line-anchor-count reports))
-                      :scope-in-count (reduce + (map :scope-in-count reports))
-                      :scope-out-count (reduce + (map :scope-out-count reports))
-                      :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))
-                      :duplicate-heading-count (reduce + (map :duplicate-heading-count reports))
-                      :legacy-hyperedge-retract-count (reduce + (map :legacy-hyperedge-retract-count reports))
-                      :legacy-entity-retract-count (reduce + (map :legacy-entity-retract-count reports))
-                      :legacy-doc-retract-count (reduce + (map :legacy-doc-retract-count reports))
-                      :linked-target-count (reduce + (map :linked-target-count reports))
-                      :dangling-target-count (reduce + (map :dangling-target-count reports))
-                      :linked-source-count (reduce + (map :linked-source-count reports))
-                      :dangling-source-count (reduce + (map :dangling-source-count reports))}))))
+        reports (when-not (:wire-parents? opts)
+                  (mapv #(ingest-scope-tree! {:client client
+                                              :base-url default-futon1a-url
+                                              :penholder default-penholder
+                                              :binder-filter (:binder-filter opts)
+                                              :path (.getAbsolutePath %)})
+                        files))]
+    (if (:wire-parents? opts)
+      (println (pr-str {:scope-parent-wiring
+                        (update-parent-wiring! {:client client
+                                                :base-url default-futon1a-url
+                                                :penholder default-penholder
+                                                :scope-dir default-scope-dir
+                                                :selected missions
+                                                :dry-run? (:dry-run? opts)})
+                        :dry-run? (boolean (:dry-run? opts))}))
+      (do
+        (doseq [r reports]
+          (println (pr-str r)))
+        (println (pr-str {:mission-count (count reports)
+                          :entity-count (reduce + (map :entity-count reports))
+                          :hyperedge-count (reduce + (map :hyperedge-count reports))
+                          :detached-count (reduce + (map :detached-count reports))
+                          :list-item-anchor-count (reduce + (map :list-item-anchor-count reports))
+                          :contains-line-anchor-count (reduce + (map :contains-line-anchor-count reports))
+                          :scope-in-count (reduce + (map :scope-in-count reports))
+                          :scope-out-count (reduce + (map :scope-out-count reports))
+                          :duplicate-phase-count (reduce + (map :duplicate-phase-count reports))
+                          :duplicate-heading-count (reduce + (map :duplicate-heading-count reports))
+                          :legacy-hyperedge-retract-count (reduce + (map :legacy-hyperedge-retract-count reports))
+                          :legacy-entity-retract-count (reduce + (map :legacy-entity-retract-count reports))
+                          :legacy-doc-retract-count (reduce + (map :legacy-doc-retract-count reports))
+                          :linked-target-count (reduce + (map :linked-target-count reports))
+                          :dangling-target-count (reduce + (map :dangling-target-count reports))
+                          :linked-source-count (reduce + (map :linked-source-count reports))
+                          :dangling-source-count (reduce + (map :dangling-source-count reports))}))))))
