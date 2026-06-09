@@ -68,6 +68,10 @@ Non-negotiable, because a runaway tuner could destabilise the EFE:
   stays in control (consent on large shifts; revert works).
 
 ## Relations
+- `E-possible-world-regulator` (child, 2026-06-08) — the **instrument** this charter needs: a possible-world
+  param-sweep harness scored by an Ashby-requisite-variety regulator (M-ffm business axis + C-pudding-prover
+  useful-work axis), so the delicacy is tuned by discrimination, not by shooting in the dark. The harness
+  *recommends*; live re-tuning stays here + at Joe's consent locus.
 - `M-capability-star-map` — the blend this refines (the static weights = the prior).
 - `[[project_bayesian_structure_learning]]` — the reliability-posterior machinery, reused.
 - peradam / mana reward (deferred, M-capability-star-map design note) — the candidate richer outcome signal.
