@@ -141,6 +141,33 @@ real `(psr)`/`(pur)`.
   (PUR-prediction-error → precision prior; vPSR/vPUR replay). Not D1.
 
 ### D2 — Compose the Salingaros C-field with the WM EFE  *(the unknown — why this is a mission)*
+
+**D2 PROGRESS + key finding (2026-06-09, claude-3 + Joe):**
+- **Epistemic-pole render built** (`futon6/scripts/mission_efe_field.py` → `mission-efe-field.html`): the
+  epistemic EFE pole (0.6·substrate-2 `:detached` open-affordances + 0.4·Salingaros C) painted as a *field*
+  over the Futon City carpet. Co-owned with the forward-model-contract work below.
+- **THE FINDING ("the Akira bomb", Joe) — a static composed field is NOT a useful prioritisation signal,
+  and it's structural, not a tuning bug:**
+  - EPISTEMIC pole is **diffuse**: top-10% of missions hold only **23%** of the mass; 114/199 have zero
+    `:detached`. "Lots of missions are mildly open" — true, unhelpful.
+  - PRAGMATIC pole (placeholder from `M-capability-star-map.graph.edn`: produces a pre-registered
+    *unsatisfied* cap) is **sparse**: **2/199** — the same coverage gap as M-wm-policies' off-map bug (11/88).
+    (Corroborated by claude-1's status-aware Track-1 requirement: satisfied caps must yield zero credit ⇒ the
+    live pragmatic pole is sparse by construction.)
+  - Naive composition fails both ways: **additive does NOT de-blob** (23%→24%); **multiplicative gating
+    over-collapses** to the 2 on-ascent missions (discards all off-map terrain).
+  - **Implication:** the sparse pragmatic missions are goal **anchors**; the diffuse epistemic is the
+    **terrain**; prioritisation is a **path** (anchor ← terrain) = the **rollout / policy**, NOT a static
+    potential. Demonstrated from the field side what M-wm-policies argues: evaluate *trajectories* over the
+    field, don't argmax (or just look at) it. The render did its job by proving the static approach is the bomb.
+- **Forward-model contract v1 RATIFIED** across claude-3/claude-1 (M-wm-policies futon2 `f0f7fdc`): one
+  substrate-2 state hinged on the capability-scopes; additive `g(s)`; transition flips holes ∧ capability-status
+  jointly via the capability-scope; `G(π)` vs greedy = criterion-4 witness. claude-1 owns the corrected
+  status-aware + off-map-penalised + leaf-aware pragmatic per-step (Track-1).
+- **Next keystone (claude-3 lane):** the **materialize+link** — ingest `M-capability-star-map.graph.edn`'s
+  capabilities + ascent into substrate-2 as an overlay, linked to the existing capability-scopes — so both
+  poles live on one state and the rollout has goal-anchored destinations to score toward.
+
 With missions and code in one substrate-2, run the Salingaros entropy field over the **unified** hypergraph
 (a fat file and an empty phase are both high-C now) and compose it with the WM EFE as a **layered drive**:
 - **macro** — the C-field = a *where-to-attend* prior over the whole substrate-2 (cheap, document+code derived);

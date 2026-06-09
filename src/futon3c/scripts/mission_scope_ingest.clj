@@ -1593,6 +1593,67 @@
          (sort-by #(.getName %))
          vec)))
 
+(def ^:private default-capability-graph
+  "/home/joe/code/futon0/holes/missions/M-capability-star-map.graph.edn")
+
+(defn- capability-node-spec [cap-id cap]
+  (let [nm (name cap-id)]
+    {:id (str "scope/capability/" nm)
+     :name (or (:title cap) nm)
+     :type "scope/capability"
+     :external-id (str "scope/capability/" nm)
+     :props {:capability/id nm
+             :capability/status (:status cap)
+             :capability/pre-registered? (boolean (:pre-registered? cap))
+             :capability/frontier? (boolean (:frontier cap))
+             :capability/region (:region cap)
+             :capability/attested? (boolean (:attested cap))
+             :capability/claimed? (boolean (seq (:minted-by cap)))
+             :capability/minted-by (mapv str (:minted-by cap))}}))
+
+(defn- update-capability-graph!
+  "Materialize M-capability-star-map.graph.edn into substrate-2 as the pragmatic-pole
+   overlay (D2 keystone). ENRICH each capability node (id scope/capability/<cap-id> —
+   the by-construction hinge D1's capability-scopes already endpoint) with the graph's
+   pragmatic props (status / pre-registered? / frontier? / claimed?), CREATE nodes for
+   unclaimed caps (⭐), add capability->parent ascent edges + mission->capability
+   produces edges. Idempotent (deterministic ids + ensure-entity! merges props)."
+  [{:keys [client base-url penholder graph-path dry-run?]}]
+  (let [g (edn/read-string (slurp (or graph-path default-capability-graph)))
+        caps (:capabilities g)
+        missions (:missions g)
+        report (atom {:capabilities 0 :claimed 0 :unclaimed 0 :ascent-edges 0 :produces-edges 0})]
+    (doseq [[cap-id cap] caps]
+      (let [nm (name cap-id)]
+        (when-not dry-run?
+          (ensure-entity! client base-url penholder (capability-node-spec cap-id cap)))
+        (swap! report update :capabilities inc)
+        (swap! report update (if (seq (:minted-by cap)) :claimed :unclaimed) inc)
+        (doseq [parent (:scope cap)]
+          (when-not dry-run?
+            (post-hyperedge! client base-url penholder
+                             {:hx/id (str "hx|capability-ascent|" nm "|" (name parent))
+                              :hx/type "capability/ascent"
+                              :hx/endpoints [{:role :capability :entity-id (str "scope/capability/" nm)}
+                                             {:role :parent :entity-id (str "scope/capability/" (name parent))}]
+                              :hx/labels ["capability/ascent"]
+                              :props {:capability/id nm :capability/parent (name parent)}}))
+          (swap! report update :ascent-edges inc))))
+    (doseq [[mstem minfo] missions
+            cap (:produces minfo)
+            :let [nm (name cap)]]
+      (when-not dry-run?
+        (post-hyperedge! client base-url penholder
+                         {:hx/id (str "hx|capability-produces|" mstem "|" nm)
+                          :hx/type "capability/produces"
+                          :hx/endpoints [{:role :mission :entity-id (str mstem)}
+                                         {:role :capability :entity-id (str "scope/capability/" nm)}]
+                          :hx/labels ["capability/produces"]
+                          :props {:mission (str mstem) :capability/id nm
+                                  :capability/status (get-in caps [(keyword nm) :status])}}))
+      (swap! report update :produces-edges inc))
+    @report))
+
 (defn maintain-mission!
   "In-process D1.2 entry: re-detect + diff-patch ONE mission's scopes. No child
    JVM — honours I-0; called directly by the watcher's maintenance drainer on its
@@ -1620,13 +1681,16 @@
                               "--wire-pxr"
                               (recur (next xs) (assoc opts :wire-pxr? true) missions)
 
+                              "--wire-capabilities"
+                              (recur (next xs) (assoc opts :wire-capabilities? true) missions)
+
                               "--dry-run"
                               (recur (next xs) (assoc opts :dry-run? true) missions)
 
                               (recur (next xs) opts (conj missions x)))
                             [opts (remove str/blank? missions)]))
         files (scope-tree-files default-scope-dir missions)
-        reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:mission opts))
+        reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:wire-capabilities? opts) (:mission opts))
                   (mapv #(ingest-scope-tree! {:client client
                                               :base-url default-futon1a-url
                                               :penholder default-penholder
@@ -1658,6 +1722,13 @@
                                              :base-url default-futon1a-url
                                              :penholder default-penholder
                                              :dry-run? (:dry-run? opts)})}))
+
+      (:wire-capabilities? opts)
+      (println (pr-str {:capability-graph-wiring
+                        (update-capability-graph! {:client client
+                                                   :base-url default-futon1a-url
+                                                   :penholder default-penholder
+                                                   :dry-run? (:dry-run? opts)})}))
 
       :else
       (do

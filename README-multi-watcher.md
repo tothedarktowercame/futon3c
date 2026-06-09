@@ -201,7 +201,71 @@ that were ingested for `.state/` paths during the contamination
 window. A retroactive cleanup of those edges is deferred — author an
 E-file if it bites.
 
+## False alarm + fix: source-material resolver blind-spot (2026-06-09)
+
+**Symptom.** D1 of **M-mission-scopes-into-substrate-2** ingests mission
+scope-trees into substrate-2. Its `source-material` pass reported **276 of
+415 (66%) source references `:detached`** (`:source-file-not-found`). On its
+face this looked alarming: substrate-1 (disk) and substrate-2 badly out of
+sync, the multi-watcher presumably dead or not covering most repos.
+
+**It was not a watcher failure.** A read-only investigation (bounded `?end=`
+point lookups — *not* the full-type scan, see the new pitfall) decomposed the
+237 *distinct* detached refs:
+
+- **~98 (41%) are inherently un-resolvable** — 3 commit SHAs, 11 brace/glob
+  artifacts (`bridge}.clj`), 15 bare filenames with no path, 38 relative /
+  out-of-root paths (`code/algorithms/…`), 3 `~/.claude/` memory paths, 28
+  misc. These are *citations in mission prose*, not files; `:detached` is
+  correct and they must **not** be fabricated as nodes.
+- **139 are clean repo paths (118 on disk), and 117 of those are already
+  present in substrate-2 as canonical-label hyperedge ENDPOINTS** — the file
+  is there, just not as an entity *document*.
+- **Exactly 1** is genuinely absent (a cold-scan gap), and **0** were
+  label-mismatches in the on-disk set.
+
+**Root cause — a resolver blind-spot, not a substrate gap.**
+`mission_scope_ingest/resolve-source-file` resolved files only via
+`get-entity` (entity documents). But the watcher reflects files as edge
+**endpoints** under `<repo>-d/file/<path>`, and many files have *no* standalone
+entity doc — most sharply, **non-mission `.md`**, which `WATCHED-EXTS` file-
+ingest deliberately skips (only `/holes/missions/M-*.md` is ingested, see
+*Watched extensions*); such files appear in substrate-2 only as endpoints of
+cross-reference / commit edges. So entity lookup missed them and the ingest
+falsely logged `:detached`.
+
+**Fix.** `resolve-source-file` now falls back to `endpoint-exists?` — a
+**bounded** `GET /api/alpha/hyperedges?end=<canonical>&limit=1` point lookup —
+and, when the endpoint exists, links the source-material scope to that endpoint
+id (`{:id "<repo>-d/file/<path>" :endpoint-only? true}`). It **never fabricates
+a node**: it only returns a target that already exists in the store. This
+recovers the 117 false negatives; the ~98 un-resolvable citations stay
+`:detached` by design. (`src/futon3c/scripts/mission_scope_ingest.clj`.)
+
+**Two real-but-minor coherence issues left, deprioritized (≈zero impact in the
+sample):** (a) bootstrap starts roots under non-canonical labels
+`futon4-elisp-d` / `futon5-d2` / `futon6-py-d`, while the resolver normalizes to
+`futon4-d` / `futon5-d` / `futon6-d` — a source-level mismatch, but it bit 0
+refs here; (b) every boot sets `:cold-scan? false`, so files that existed before
+the JVM started and have not changed since are never backfilled — 1 file in the
+sample. Fix either only if it starts to bite.
+
+**Caveat on the runtime evidence.** During this investigation the serving JVM
+was restarted ~10:02 UTC (prime suspect: an unbounded `hyperedges?type=` scan,
+see below), which broke the WebArxana 3100 auth surface and reset the watcher to
+a fresh `:cold-scan? false` boot. Any watcher *runtime* counters read in that
+window are post-restart artifacts; the decomposition above is source-level and
+independent of the restart.
+
 ## Pitfalls if you touch this
+
+- **Don't run an unbounded `GET /api/alpha/hyperedges?type=<type>`.** The
+  endpoint sorts/materializes the *entire* type before applying any limit, so
+  probing a large type (e.g. `code/v05/watcher-event`) hangs the client and can
+  block/OOM the single serving JVM — even though it is nominally a read. It is
+  the prime suspect for the 2026-06-09 restart. Always pass `&limit=`, or probe
+  by `?end=<id>` (a bounded point lookup). Small types (`mission-scope/*`,
+  hundreds of rows) are fine.
 
 - **Don't restart the JVM** to pick up watcher changes — use
   Drawbridge `load-file` (CLAUDE.md invariant I-0).
