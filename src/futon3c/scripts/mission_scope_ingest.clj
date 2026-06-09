@@ -144,10 +144,14 @@
 (defn- target-mission-ident [scope]
   (:target-mission-ident scope))
 
+(defn- target-source-ref [scope]
+  (:target-source-ref scope))
+
 (defn- anchor-text [scope]
   (case (:binder-type scope)
     "map-item" (map-item-title scope)
     "relates-to" (or (target-mission-ident scope) (heading-title scope))
+    "source-material" (or (target-source-ref scope) (heading-title scope))
     (heading-title scope)))
 
 (defn- env-phase [scope]
@@ -217,6 +221,13 @@
   (when (seq (str ident))
     (or (get-entity client base-url ident)
         (get-entity client base-url (str "mission|" ident)))))
+
+(defn- resolve-source-file [client base-url source-ref]
+  (when (seq (str source-ref))
+    (or (get-entity client base-url source-ref)
+        (let [[repo rest-path] (rest (re-matches #"([^/]+)/(.+)" (str source-ref)))]
+          (when (and repo rest-path)
+            (get-entity client base-url (str repo "-d/file/" rest-path)))))))
 
 (defn- filler-ends [ends]
   (remove #(contains? #{"entity" "environment" "heading"} (:role %)) ends))
@@ -306,6 +317,7 @@
         passage-info (case (:binder-type scope)
                        "map-item" (list-item-passage-info mission-path heading)
                        "relates-to" (list-item-passage-info mission-path heading)
+                       "source-material" (list-item-passage-info mission-path heading)
                        (when-let [passage (heading-passage mission-path heading)]
                          {:passage passage
                           :source :heading}))
@@ -325,6 +337,7 @@
                         (case (:binder-type scope)
                           "map-item" :list-item-passage-not-found
                           "relates-to" :reference-passage-not-found
+                          "source-material" :source-passage-not-found
                           :heading-passage-not-found))}))
 
 (defn- truncated-slug [s]
@@ -388,12 +401,25 @@
                 (seq (:ident %)))
           (:ends scope)))
 
+(defn- target-source-ends [scope]
+  (filter #(and (= "source" (:role %))
+                (seq (:ref %)))
+          (:ends scope)))
+
 (defn- stable-relates-to-scope-id [mission target-ident original-id duplicate?]
   (let [stem (str/replace-first (str mission) #"^M-" "")
         target-stem (mission-stem target-ident)
         base (str stem "/relates-to/" target-stem)]
     (if duplicate?
       (str base "--" (subs (sha1 (str target-ident "|" original-id)) 0 8))
+      base)))
+
+(defn- stable-source-scope-id [mission source-ref original-id duplicate?]
+  (let [stem (str/replace-first (str mission) #"^M-" "")
+        source-slug (truncated-slug source-ref)
+        base (str stem "/source/" source-slug)]
+    (if duplicate?
+      (str base "--" (subs (sha1 (str source-ref "|" original-id)) 0 8))
       base)))
 
 (defn- stable-heading-scopes [mission mission-path all-scopes collision-scopes scopes]
@@ -458,6 +484,33 @@
                      :stable-scope-id stable-id
                      :canonical-scope-id canonical-id
                      :heading-slug (str "relates-to/" (mission-stem target-ident))
+                     :duplicate-heading? duplicate?
+                     :anchor anchor
+                     :parent nil)))
+          expanded)))
+
+(defn- stable-source-material-scopes [mission mission-path all-scopes scopes]
+  (let [expanded (mapcat (fn [scope]
+                           (for [source (target-source-ends scope)]
+                             (assoc scope
+                                    :target-source-ref (:ref source)
+                                    :target-source-kind (:kind source))))
+                         scopes)
+        ref-counts (frequencies (map target-source-ref expanded))]
+    (mapv (fn [scope]
+            (let [source-ref (target-source-ref scope)
+                  duplicate? (> (get ref-counts source-ref 0) 1)
+                  stable-id (stable-source-scope-id mission source-ref (:scope-id scope) duplicate?)
+                  canonical-id (str (str/replace-first (str mission) #"^M-" "")
+                                    "/source/"
+                                    (truncated-slug source-ref))
+                  anchor (anchor-for-scope mission-path all-scopes scope)]
+              (assoc scope
+                     :original-scope-id (:scope-id scope)
+                     :scope-id stable-id
+                     :stable-scope-id stable-id
+                     :canonical-scope-id canonical-id
+                     :heading-slug (str "source/" (truncated-slug source-ref))
                      :duplicate-heading? duplicate?
                      :anchor anchor
                      :parent nil)))
@@ -530,7 +583,12 @@
             (assoc :target/mission-ident (:target-mission-ident scope)
                    :target/relation (:target-mission-relation scope)
                    :target/state (:target-state scope)
-                   :target/detached-reason (:target-detached-reason scope)))})
+                   :target/detached-reason (:target-detached-reason scope))
+            (:target-source-ref scope)
+            (assoc :source/ref (:target-source-ref scope)
+                   :source/kind (:target-source-kind scope)
+                   :source/state (:source-state scope)
+                   :source/detached-reason (:source-detached-reason scope)))})
 
 (defn- scope-hyperedge [mission-entity scope-entity slot-entities scope]
   {:hx/id (str "hx|mission-scope|" (:scope-id scope))
@@ -555,6 +613,10 @@
            :target/relation (:target-mission-relation scope)
            :target/state (:target-state scope)
            :target/detached-reason (:target-detached-reason scope)
+           :source/ref (:target-source-ref scope)
+           :source/kind (:target-source-kind scope)
+           :source/state (:source-state scope)
+           :source/detached-reason (:source-detached-reason scope)
            :anchor/state (:state (:anchor scope))
            :anchor/passage (:passage (:anchor scope))
            :anchor/fingerprint (:fingerprint (:anchor scope))
@@ -608,6 +670,7 @@
                                                   (vec collision-scopes)
                                                   (vec scopes)))
                  "relates-to" (stable-relates-to-scopes mission mission-path raw-scopes (vec scopes))
+                 "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)
@@ -627,29 +690,42 @@
         entity-ids (atom #{(:id mission-entity)})
         hx-ids (atom #{})
         linked-targets (atom #{})
-        dangling-targets (atom #{})]
+        dangling-targets (atom #{})
+        linked-sources (atom #{})
+        dangling-sources (atom #{})]
     (doseq [scope scopes]
       (let [scope-entity (ensure-entity! client base-url penholder
                                          (scope-entity-spec mission mission-path scope))
             _ (swap! entity-ids conj (:id scope-entity))
             target-entity (when (= "relates-to" (:binder-type scope))
                             (resolve-target-mission client base-url (:target-mission-ident scope)))
+            source-entity (when (= "source-material" (:binder-type scope))
+                            (resolve-source-file client base-url (:target-source-ref scope)))
             scope (cond-> scope
                     (= "relates-to" (:binder-type scope))
                     (assoc :target-state (if target-entity :linked :detached)
-                           :target-detached-reason (when-not target-entity :target-mission-not-found)))
+                           :target-detached-reason (when-not target-entity :target-mission-not-found))
+                    (= "source-material" (:binder-type scope))
+                    (assoc :source-state (if source-entity :linked :detached)
+                           :source-detached-reason (when-not source-entity :source-file-not-found)))
             _ (when (= "relates-to" (:binder-type scope))
                 (if target-entity
                   (swap! linked-targets conj (:id target-entity))
                   (swap! dangling-targets conj (:target-mission-ident scope))))
-            scope-entity (if (= "relates-to" (:binder-type scope))
+            _ (when (= "source-material" (:binder-type scope))
+                (if source-entity
+                  (swap! linked-sources conj (:id source-entity))
+                  (swap! dangling-sources conj (:target-source-ref scope))))
+            scope-entity (if (contains? #{"relates-to" "source-material"} (:binder-type scope))
                            (ensure-entity! client base-url penholder
                                            (scope-entity-spec mission mission-path scope))
                            scope-entity)
             _ (swap! entity-ids conj (:id scope-entity))
             filler-ends (cond->> (filler-ends (:ends scope))
                           (= "relates-to" (:binder-type scope))
-                          (remove #(= "mission" (:role %))))
+                          (remove #(= "mission" (:role %)))
+                          (= "source-material" (:binder-type scope))
+                          (remove #(= "source" (:role %))))
             slot-entities (->> filler-ends
                                (keep (fn [end]
                                        (when-let [spec (slot-entity-spec* client base-url mission mission-path end)]
@@ -657,7 +733,10 @@
                                           :entity (ensure-entity! client base-url penholder spec)})))
                                (concat (when target-entity
                                          [{:role "target-mission"
-                                           :entity target-entity}]))
+                                           :entity target-entity}])
+                                       (when source-entity
+                                         [{:role "source-file"
+                                           :entity source-entity}]))
                                vec)]
         (swap! entity-ids into (map (comp :id :entity) slot-entities))
         (let [hx (post-hyperedge! client base-url penholder
@@ -681,7 +760,9 @@
      :legacy-entity-retract-count (:legacy-entity-retract-count legacy-report)
      :legacy-doc-retract-count (:legacy-doc-retract-count legacy-report)
      :linked-target-count (count @linked-targets)
-     :dangling-target-count (count @dangling-targets)}))
+     :dangling-target-count (count @dangling-targets)
+     :linked-source-count (count @linked-sources)
+     :dangling-source-count (count @dangling-sources)}))
 
 (defn- scope-tree-files [dir selected]
   (let [selected (set selected)]
@@ -723,4 +804,6 @@
                       :legacy-entity-retract-count (reduce + (map :legacy-entity-retract-count reports))
                       :legacy-doc-retract-count (reduce + (map :legacy-doc-retract-count reports))
                       :linked-target-count (reduce + (map :linked-target-count reports))
-                      :dangling-target-count (reduce + (map :dangling-target-count reports))}))))
+                      :dangling-target-count (reduce + (map :dangling-target-count reports))
+                      :linked-source-count (reduce + (map :linked-source-count reports))
+                      :dangling-source-count (reduce + (map :dangling-source-count reports))}))))
