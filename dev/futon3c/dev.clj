@@ -53,6 +53,7 @@
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
+            [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
@@ -3640,7 +3641,26 @@ RESPOND WITH ONLY:
                  :invoke-trace-id invoke-trace-id}))
             (finally
               (clear-invoke-control! aid-val control-token)
-              (stop-ticker!)))))]
+              (stop-ticker!)))))
+              (invoke-warm-or-cold [prompt session-id]
+                (if (agent-pouch/enabled?)
+                  (try
+                    (agent-pouch/feed-turn!
+                     agent-id
+                     prompt
+                     {:claude-bin claude-bin
+                      :session-id (preferred-session-id session-file session-id session-id-atom)
+                      :model model
+                      :cwd cwd
+                      :permission-mode permission-mode
+                      :timeout-ms timeout-ms})
+                    (catch Throwable t
+                      (println (str "[kangaroo] " agent-id
+                                    " warm pouch failed; falling back cold: "
+                                    (.getMessage t)))
+                      (flush)
+                      (invoke-once prompt session-id)))
+                  (invoke-once prompt session-id)))]
         (fn [prompt session-id]
           (if (turn-queue/enabled?)
             (turn-queue/accept-and-drain!
@@ -3651,9 +3671,9 @@ RESPOND WITH ONLY:
               :prompt prompt
               :session-id session-id}
              (fn [entry]
-               (invoke-once (:prompt entry) (:session-id entry))))
+               (invoke-warm-or-cold (:prompt entry) (:session-id entry))))
             (locking !lock
-              (invoke-once prompt session-id))))))))
+              (invoke-warm-or-cold prompt session-id))))))))
 
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")

@@ -4,6 +4,7 @@
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]
             [futon3c.agency.registry]
+            [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agents.mfuton-invoke-override]
             [futon3c.agents.tickle-work-queue]
             [futon3c.agency.turn-queue :as turn-queue]
@@ -397,6 +398,10 @@
                                   (fn [& _] nil)
                                   dev/register-invoke-control!
                                   (fn [& _] nil)
+                                  agent-pouch/enabled?
+                                  (constantly false)
+                                  agent-pouch/feed-turn!
+                                  (fn [& _] (throw (ex-info "pouch path should be dark when flag is off" {})))
                                   turn-queue/enabled?
                                   (constantly false)
                                   turn-queue/accept-and-drain!
@@ -449,6 +454,60 @@
           (is (= "joe" (:from @queued)))
           (is (= "bell" (:surface @queued)))
           (is (= "msg-1" (:msg-id @queued))))))))
+
+(deftest make-claude-invoke-fn-uses-pouch-when-kangaroo-on
+  (testing "Kangaroo warm path is wired behind its own flag"
+    (let [fed (atom nil)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly false)
+                    agent-pouch/enabled?
+                    (constantly true)
+                    agent-pouch/feed-turn!
+                    (fn [agent-id prompt opts]
+                      (reset! fed {:agent-id agent-id :prompt prompt :opts opts})
+                      {:result "warm" :session-id "warm-sid"})]
+        (let [invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-warm"
+                                                    :claude-bin "unused"
+                                                    :session-id-atom (atom "atom-sid")})
+              result (invoke-fn "hello warm" "incoming-sid")]
+          (is (= {:result "warm" :session-id "warm-sid"} result))
+          (is (= "claude-warm" (:agent-id @fed)))
+          (is (= "hello warm" (:prompt @fed)))
+          (is (= "incoming-sid" (get-in @fed [:opts :session-id]))))))))
+
+(deftest make-claude-invoke-fn-falls-back-cold-when-pouch-fails
+  (testing "Kangaroo failure never strands a turn"
+    (let [claude-bin (doto (java.io.File/createTempFile "futon3c-claude-fallback-" ".sh")
+                       (.deleteOnExit))
+          _ (spit claude-bin
+                  "#!/usr/bin/env bash\nprintf '{\"type\":\"result\",\"session_id\":\"cold-sid\",\"is_error\":false}\\n'\n")
+          _ (.setExecutable claude-bin true)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly false)
+                    agent-pouch/enabled?
+                    (constantly true)
+                    agent-pouch/feed-turn!
+                    (fn [& _] (throw (ex-info "simulated pouch failure" {})))
+                    dev/start-invoke-ticker!
+                    (fn [& _] (fn [] nil))
+                    dev/emit-invoke-evidence!
+                    (fn [& _] nil)
+                    dev/context-retrieval!
+                    (fn [& _] nil)
+                    dev/register-invoke-control!
+                    (fn [& _] nil)
+                    futon3c.blackboard/blackboard!
+                    (fn [& _] nil)]
+        (let [invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-fallback"
+                                                    :claude-bin (.getPath claude-bin)
+                                                    :timeout-ms 5000})
+              result (invoke-fn "hello fallback" nil)]
+          (is (= "cold-sid" (:session-id result)))
+          (is (= "[Claude used tools but produced no text response]" (:result result))))))))
 
 (deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
   (testing "mfuton mode injects the n=3-only local contract on #math"
