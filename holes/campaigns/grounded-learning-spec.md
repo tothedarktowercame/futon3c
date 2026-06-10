@@ -23,6 +23,12 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
    └──────────────────────────────────────────────────────────────► better next closure
 ```
 
+> **THE SAFETY INVARIANT (claude-4, load-bearing — state it, don't imply it):** *the auditor NEVER
+> feeds peradams back as gradient.* Drift triggers re-grounding via the **dense closure-fold signal +
+> the operator** — never via peradam-as-reward. If re-grounding trained on peradams, they'd be pulled
+> into the loop = the exact Goodhart this whole architecture exists to prevent. The peradam DETECTS;
+> the closure-fold + operator CORRECT.
+
 ## 2. Per-agent contracts (who owns which surface)
 - **claude-3 / E-ground-G** — the cascade-fold loop: phylogeny-grounded `construct_cascade` (Build 1 ✓),
   the closure-learning hooks (Build 2 ✓ — posteriors + phylogeny-learns + gap-log), the curriculum
@@ -31,10 +37,10 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
   (now `pattern_posteriors.grounded.json`, grounded in fold-usage NOT self-grading). MUST
   **compose with wholeness scoring, not replace it** (the pointwise-greedy = cursor-bug risk). Owns
   **pattern-utility** + the A/B credit term in `construct_cascade`.
-- **claude-4 / the car (M-peradam-grounding)** — the **peradam audit**: sparse, Goodhart-safe,
-  outside the loop. Periodically check high-grounded trajectories also (later, independently) earn
-  peradams; correlation high ⇒ grounding honest, drift ⇒ re-ground. Owns **the auditor**, NOT the
-  reward.
+- **claude-4 / the car (M-peradam-grounding)** — the **peradam audit** (contract **AGREED**
+  2026-06-10): sparse, Goodhart-safe, outside the loop, bound by the safety invariant above. Owns
+  **the auditor**, NOT the reward; `ac4ae5d` (the discharge-half) is the realized-closure emitter into
+  `meme.db` the audit reads. Auditor design = Q5 (resolved, §4).
 - **the star-map (M-capability-star-map)** — the **EFE-over-graph scheduler** (G = risk + ambiguity +
   **info** + cost). Owns **EXPLORE** (picks the next hole by pragmatic+epistemic value).
 
@@ -44,6 +50,9 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
 - `pattern-phylogeny-learned.json` — the `{co_app,descent}` overlay (upvote/seed). (claude-3.)
 - `cascade-coverage-gaps.edn` — the missing-pattern backlog → curriculum. (claude-3 emits, star-map consumes.)
 - the **curriculum proposal** — ranked holes-to-learn by EFE, surfaced for operator ratification. (star-map.)
+- **per-move grounded-G** — the loop's value prediction keyed by `:move/id`; the **audit's x-axis**.
+  *(Open interface, claude-1 ↔ claude-4: claude-1's posteriors/the cascade must expose it; claude-4's
+  lift-audit joins peradams onto it.)*
 
 ## 4. The OPEN ML questions (for the mesh to decide; Fable-relay candidates marked ★)
 1. **★ Unified closure schema / grain-bridge.** Closures arrive in two grains — pattern-stem fold
@@ -57,8 +66,27 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
    EXPLORE real, not hand-waved.
 4. **Posterior composition.** How do per-pattern posteriors compose with wholeness `C` in selection —
    so trust sharpens the cascade without reintroducing pointwise-greedy? (claude-1's named risk.)
-5. **Drift / Goodhart safety.** The audit's cadence + threshold: when does "grounding drifted" fire,
-   and what re-grounds it? (Keeps the peradam strictly the auditor.)
+5. **Drift / Goodhart safety — RESOLVED (claude-4, 2026-06-10; τ pending operator ratification).**
+   The auditor:
+   - **Metric:** an out-of-sample, *independent* prediction-check. The loop predicts value
+     (grounded-G) at `t`; the peradam (dokusan-certified, operator-supplied, LATER + independent) is
+     the outcome at `t+k`. **Lift = P(peradam | high-grounded-G) / base-rate.** Lift≫1 ⇒ grounding
+     honest; lift→1 ⇒ peradams uniform across grounded-G = value decoupled from reality = **drift**.
+     Use **lift / precision@k**, not raw per-move correlation (peradams too sparse). **Join on
+     `:move/id`** (move-grain → consistent with R2; no double-count with pattern-grain learning — the
+     Q2 cross-check).
+   - **Cadence:** **peradam-accrual-event-driven** (fire when K≈5–10 new certified peradams accrue),
+     not wall-clock — respects sparsity + dokusan gating; long-interval backstop for quiet periods.
+   - **Threshold:** drift fires when **lift < τ, sustained across 2 consecutive windows**, each
+     ≥ N peradams. **τ is data-calibrated from the first batches' lift distribution + operator-ratified
+     — an `:O-*` observable** (like `:O-cascade-budget`), NOT guessed.
+   - **Re-grounding (neither action uses peradam-as-gradient — the safety invariant):** (1) re-weight
+     toward the **dense closure-fold** — drift implies the prior over-trusted self-estimate, so shrink
+     it back toward fold-grounded evidence; (2) **surface** the drifted theses/holes to the
+     operator/curriculum (a dokusan at the meta-grain). Peradam detects; closure-fold + operator correct.
+   - **Operator touchpoints (Joe):** (a) ratify τ from data; (b) the re-grounding dokusan when drift fires.
+   - **One interface to nail (claude-1 ↔ claude-4):** claude-1's posteriors must expose the **per-move
+     grounded-G** that is the audit's x-axis. *(Open interface — §3 addition.)*
 
 ## 5. Status
 Builds 1+2 live (the LEARN + part of the store↔loop). Build 3 (EXPLORE coupling) designed. The five
