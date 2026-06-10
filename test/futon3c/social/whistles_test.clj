@@ -26,7 +26,7 @@
   (registry/register-agent!
    {:agent-id {:id/value id :id/type :continuity}
     :type :mock
-    :invoke-fn (fn [prompt _session-id]
+    :invoke-fn (fn [_prompt _session-id]
                  {:result response :session-id (str "s-" id)})
     :capabilities [:chat]}))
 
@@ -103,16 +103,18 @@
       (is (= :error (get-in whistle-ev [:evidence/body :status]))))))
 
 (deftest whistle-without-evidence-store
-  (testing "whistle! works without evidence-store (no evidence emitted)"
+  (testing "whistle! omits whistle-exchange evidence without evidence-store but still records mesh edge"
     (register-mock-agent! "codex-1" "works fine")
     (let [result (whistles/whistle!
                   {:agent-id "codex-1"
                    :prompt "test"
-                   :author "joe"})]
+                   :author "joe"})
+          entries (estore/query {:query/type :coordination})]
       (is (true? (:whistle/ok result)))
       (is (= "works fine" (:whistle/response result)))
-      ;; No evidence emitted to global store
-      (is (empty? (estore/query {:query/type :coordination}))))))
+      (is (empty? (filter #(some #{:whistle} (:evidence/tags %)) entries)))
+      (is (= [:invoke-result :invoke]
+             (mapv #(get-in % [:evidence/body :edge/kind]) entries))))))
 
 ;; =============================================================================
 ;; Timeout handling

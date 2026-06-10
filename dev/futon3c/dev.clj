@@ -58,6 +58,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.replication :as ws-repl]
@@ -4632,7 +4633,13 @@ RESPOND WITH ONLY:
                                                      (long invoke-hard-timeout-ms)
                                                      soft-timeout-ms soft-timeout-ms
                                                      :else 1800000)
-                                   invoke-fut (future (reg/invoke-agent! agent-id invoke-prompt hard-timeout-ms))
+                                   invoke-fut (future
+                                                (coordination/invoke-with-edge!
+                                                 {:from sender
+                                                  :to agent-id
+                                                  :surface "irc"
+                                                  :prompt invoke-prompt
+                                                  :timeout-ms hard-timeout-ms}))
                                    resp (loop [soft-notified? false]
                                           (if (realized? invoke-fut)
                                             @invoke-fut

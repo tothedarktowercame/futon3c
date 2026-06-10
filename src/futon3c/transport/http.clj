@@ -14,6 +14,7 @@
      GET  /api/alpha/evidence/:id — retrieve single evidence entry
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      GET  /api/alpha/invoke/jobs — list recent invoke jobs
+     GET  /api/alpha/coordination/edges — list social-layer mesh edges
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
      POST /api/alpha/invoke/announce — record a queued invoke before external acceptance
      POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
@@ -58,6 +59,7 @@
             [futon3c.social.presence :as presence]
             [futon3c.social.persist :as persist]
             [futon3c.social.whistles :as whistles]
+            [futon3c.social.coordination-ledger :as coordination-ledger]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.portfolio.core :as portfolio]
@@ -3058,6 +3060,19 @@
               (json-response 502 {:ok false :err "irc-send-failed"
                                   :message (.getMessage e)}))))))))
 
+
+(defn- handle-coordination-edges
+  "GET /api/alpha/coordination/edges?limit=N — social-layer mesh edges.
+   These are projected as outgoing coordination edges for mesh_trace.py; they
+   complement the invoke-jobs ledger without replacing it."
+  [request]
+  (let [params (parse-query-params request)
+        limit (or (parse-int (get params "limit")) 50)
+        edges (coordination-ledger/recent-mesh-edges limit)]
+    (json-response 200 {:ok true
+                        :count (count edges)
+                        :edges edges})))
+
 (defn- handle-invoke-jobs
   "GET /api/alpha/invoke/jobs?limit=N — list recent invoke jobs."
   [request]
@@ -4777,6 +4792,9 @@
 
           (and (= :get method) (= "/api/alpha/invoke/jobs" uri))
           (handle-invoke-jobs request)
+
+          (and (= :get method) (= "/api/alpha/coordination/edges" uri))
+          (handle-coordination-edges request)
 
           (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/(.+)" uri))
           (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)

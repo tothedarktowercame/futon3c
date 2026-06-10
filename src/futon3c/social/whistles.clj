@@ -14,9 +14,8 @@
    Pattern references:
    - realtime/rendezvous-handshake: whistle send + response = exchange proof
    - realtime/liveness-heartbeats: whistle to idle agent proves it is responding"
-  (:require [futon3c.agency.registry :as registry]
+  (:require [futon3c.social.coordination-ledger :as coordination]
             [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.store :as estore]
             [clojure.string :as str])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -112,7 +111,11 @@
     :else
     (let [aid-val (if (map? agent-id) (:id/value agent-id) (str agent-id))
           timeout (or timeout-ms 1800000)
-          result (registry/invoke-agent! aid-val prompt timeout)
+          result (coordination/invoke-with-edge! {:from (or author "whistle")
+                                                  :to aid-val
+                                                  :surface "whistle"
+                                                  :prompt prompt
+                                                  :timeout-ms timeout})
           status (cond
                    (:ok result) :completed
                    (let [e (:error result)
