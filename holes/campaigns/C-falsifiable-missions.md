@@ -5,7 +5,7 @@ world says (the peradam), and make every architectural fork a recorded falsifiab
 decision (the observables). No single mission owns the grounded yardstick or the
 observable ledger; that is why this is a Campaign.*
 
-**Status:** RALLY (forming) — coordination shape: **convergent** (keystone-first).
+**Status:** CHARTERED (RALLY exited 2026-06-10, operator-ratified) — coordination shape: **convergent** (keystone-first).
 **Coordinator:** claude-3. **Principal:** Joe.
 **Home:** futon3c/holes/campaigns/ (coordination layer). Constituent of the same family as
 `C-pudding-prover` (which owns the peradam *recognition*; this campaign owns its *grounding
@@ -118,3 +118,10 @@ campaign's governance backbone: each constituent mission's open fork registers h
   Fable; co-led car ratified; coordination protocol = social patterns + 2 new (idempotent-handoff,
   derive-the-contract); `M-futonzero-grounding` folded in + retired as standalone. Pending operator
   checkpoints (§0): pattern-posteriors owner, the role-fork, RALLY→CHARTER, capstone form.
+- **2026-06-10 — RALLY exited → CHARTERED (operator decisions).** (1) `M-pattern-posteriors` owner =
+  **claude-1** (leads both cascade-side lanes: dialectic + learning). (2) The role-fork
+  (`:O-peradam-role`) is **operator-visible and held for a Joe discussion** — the car designs BOTH
+  arms up to the fork and surfaces it; does NOT decide unilaterally. (3) CHARTER formalised + RALLY
+  adopted into `campaign-lifecycle.md` as phase-0. Collab dispatched to claude-1 (arguing-worlds +
+  pattern-posteriors) and claude-4+claude-3 (the car). Transport-failure escalation: dropped bells →
+  **claude-6** (on `M-agency-hardening`).
