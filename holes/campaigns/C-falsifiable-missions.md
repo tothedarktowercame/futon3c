@@ -322,8 +322,14 @@ ground second. `[x]` done · `[~]` in progress · `[ ]` open.
   rollout exists (futon2.aif.rollout); both consumer v0s landed+pushed.
 - `[ ]` **A2 — kill criteria RUN on v2 data + reported honestly** (Fable T1–T4; *specified but not
   run* = the gap):
-  - `[ ]` **T1** — does multi-step search pay rent (≥~15% of top policies non-greedy: multi-step
-    `G(π)` strictly beats greedy prefix)? → **keep or kill the rollout.**
+  - `[x]` **T1 — MEASURED 0.0% (0/24 roots), well below 15%** (futon2 `scripts/t1_rent.clj`,
+    `d9f9020`). NOT a linear-chain triviality: 9/24 roots branch (one width-5), the wide beam
+    explored up to 20 policies — yet it **never** diverged from the greedy-`:prior` first move. The
+    prior and the value `G` are **aligned by construction** (G accumulates the same `:delta-g/:score`
+    the prior is derived from) → *you cannot search past your own metric*. The closed-loop diagnosis
+    made empirical. **Reading (pending Joe's kill/keep ratify → `:O-rollout-kill-criterion`): kill the
+    rollout's weight on self-graded value; re-run T1 after the car grounds `G` in real peradams (CH2).**
+    This is the cleanest Track-A→Track-B coupling: the rollout is inert *until grounded*.
   - `[ ]` **T2** — is cross-mission unlocking *emergent*, not the encoded eightfold ordering?
   - `[ ]` **T3** — does arguing-across-worlds beat the best single buildout? (real tournament
     harness, not jittered reruns)
@@ -356,3 +362,16 @@ ground second. `[x]` done · `[~]` in progress · `[ ]` open.
 **Pull A2 forward now** (fast, self-graded, decision-relevant, car-independent) — start **T1 + T4**
 (do the apparatus carry real signal or just its own metric). The car keeps its correctly-slow
 grounding path (M0 operator-pane → M1 arm). claude-1's lanes run the **T3** harness alongside.
+- **2026-06-10 — A2/T1 RUN (claude-3): multi-step rollout pays 0 rent on self-graded value.**
+  First item worked through on the §5 checklist. Measured `0/24` roots non-greedy (`0.0%`, threshold
+  `15%`) via futon2 `scripts/t1_rent.clj` (`d9f9020`, reproducible). Method: per root start-state,
+  beam-1 greedy-`:prior` depth-2 rollout vs wide-beam (explore, pick min-`G`) depth-2 rollout; rent =
+  wide beam's `G` strictly beats greedy-prior's. **Carefully NOT an artifact:** synthesized a clean
+  cap-overlay (0 errors, all 24 scored), and confirmed real choices existed (9/24 roots branch, beam
+  explored up to 20 policies) — the wide beam simply never diverged from the prior's first pick. The
+  prior and `G` are aligned by construction (G accumulates the same `:delta-g/:score` the prior is
+  derived from). **This empirically confirms the closed-loop diagnosis** ("can confidently converge to
+  artifacts of the metric") and makes the Track-A→Track-B coupling concrete: multi-step search is
+  inert until the value is grounded. **Decision pending Joe** (kill/keep on self-graded value) →
+  discharges `:O-rollout-kill-criterion`. T4 (does the prior carry real info) is the natural next A2
+  item — same root cause, complementary measurement.
