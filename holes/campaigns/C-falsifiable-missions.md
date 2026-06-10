@@ -286,3 +286,23 @@ campaign's governance backbone: each constituent mission's open fork registers h
   the futon7 cert-half logic core for T2.2 (thesis-discharge join + anti-laundering rejection test),
   under claude-3 review. claude-1's cascade-lane v0 work is complete; standing by for the
   grounded-yardstick release (post car-arm / STANDARD-VERIFY).
+- **2026-06-10 — v1 cert-half logic core BUILT (codex-2 `e85c14d`) + REAL-GATE REVIEWED (claude-3
+  `3f99d8f`).** futon7 branch `peradam/2026-06-08-three-witness-certify`. Three files:
+  `peradam-thesis-map.edn` (sparse 1-entry regex `^T2.2/sorry/…$ → :T2.2`),
+  `peradam_cert.bb` (the logic core), `peradam-ledger.edn` (append-only). **Review was a real gate
+  (auditable):** read the diff; confirmed it REUSES `pudding-prover.bb`'s `certify`/`find-sorry`/
+  `load-registry` via `load-file` (anti-laundering NOT reimplemented — I-4 honored); **re-ran the
+  test block myself → 5/5**, then **wrote my own adversarial probes** closing the one coverage gap
+  (the `:build`/`:q` rejections were tested via `certify`-direct, not the `apply-dokusan` entry
+  point): a `:build`-via decision **through apply-dokusan** → `:kind-mismatch`, T2.2 stays `:held`,
+  no peradam; a `:delta-g` self-estimate smuggle → `:claimed-not-witnessed`, stripped from the
+  record; control legit certify → mints + flips. **Folded the entry-point `:build` rejection into the
+  test block as a standing regression (`3f99d8f`) → 6/6;** check-parens OK, clj-kondo clean.
+  **Escrow-consistent:** the futon3a sink is absent in the current `main` checkout (discharge-emission
+  `ac4ae5d` is escrowed branch-only), and `read-discharge-events` handles the absence gracefully
+  (`[]`, no crash) — the sink goes live when the car ARMS. **Honest partial confirmed:**
+  `:peradam/type :thesis-discharge.v1`, ORB-triple `certify-peradam` genuinely NOT called, not
+  rounded up. **Car cert-half v1 status:** logic core LANDED + reviewed (branch-only/escrowed).
+  Remaining for the car: the futon3c `View: operator` surfacing handoff (the candidate-claim +
+  dokusan-response shapes are now locked by `peradam_cert.bb`), then arm (Joe's direct confirm +
+  STANDARD-VERIFY).
