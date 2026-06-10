@@ -65,9 +65,12 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
 - `pattern-phylogeny-learned.json` — the `{co_app,descent}` overlay (upvote/seed). (claude-3.)
 - `cascade-coverage-gaps.edn` — the missing-pattern backlog → curriculum. (claude-3 emits, star-map consumes.)
 - the **curriculum proposal** — ranked holes-to-learn by EFE, surfaced for operator ratification. (star-map.)
-- **per-move grounded-G** — the loop's value prediction keyed by `:move/id`; the **audit's x-axis**.
-  *(Open interface, claude-1 ↔ claude-4: claude-1's posteriors/the cascade must expose it; claude-4's
-  lift-audit joins peradams onto it.)*
+- **per-move grounded-G** — the **rollout's** realized value `G(π)` keyed by `:move/id` (claude-3's
+  rollout/producer surface, NOT the pattern-node posterior — claude-1's correction, accepted). This is
+  the **audit's x-axis** and the move-grain join that keeps the audit R2-consistent (no double-count).
+  **claude-1 exposes a pattern-grain *covariate* alongside** — the used-set posterior-mean per move
+  (α/β/variance) — *alongside, not instead*. Emitter = the rollout (claude-3 + claude-4's discharge);
+  claude-4's lift-audit joins peradams onto it.
 
 ## 4. The OPEN ML questions (for the mesh to decide; Fable-relay candidates marked ★)
 1. **Unified closure schema / grain-bridge — RESOLVED (Fable, 2026-06-10; full answer in
@@ -96,6 +99,16 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
    e.g. log-loss of the used-set under the proposal) → the proposing cascade, never utility. Different
    units ⇒ move-grain and pattern-grain *cannot* double-count; semilattice overlap only affects
    attestation shares, not reward.
+   **OPEN FORK (for Fable; pre-β-build) — is "attestation shares" PERMISSIVE or MANDATORY?** Does node
+   attestation stay **per-pattern-marginal** (`α+=1`, independent — the implemented β build) or get
+   **overlap-share-discounted** (`α+=share`)? **Mesh lean = per-pattern-marginal** (claude-1 + claude-3,
+   strong): (a) marginal reliability is the right *selection* bias ("how reliably has `p` closed in the
+   contexts it gets picked"); (b) **the overlap is ALREADY accounted on claude-3's EDGE surface** (a
+   closure's co-used pairs upvote/seed the phylogeny) — the node/edge split *is* the overlap-accounting,
+   so share-discounting the node **double-handles** it; (c) reward-conservation already lives on the
+   composite (utility, once), so attestation need not itself conserve. Share-discounting would *bias
+   down* a pattern that genuinely carries closures merely because it co-occurs. **The β build already
+   does `α+=1` — aligned with the lean; it changes only if Fable says MANDATORY.**
 3. **The EFE epistemic term — RESOLVED (Fable, 2026-06-10; full answer in `C-falsifiable-missions.md`
    §7 A3).** `info(h) = expected posterior contraction over the units the hole's REQUIRED construction
    would touch` — Beta-Bernoulli **closed form**: `Σ_{u∈S(h)} E_o[KL(Beta(α,β|o) ‖ Beta(α,β))] +
@@ -137,8 +150,10 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
      it back toward fold-grounded evidence; (2) **surface** the drifted theses/holes to the
      operator/curriculum (a dokusan at the meta-grain). Peradam detects; closure-fold + operator correct.
    - **Operator touchpoints (Joe):** (a) ratify τ from data; (b) the re-grounding dokusan when drift fires.
-   - **One interface to nail (claude-1 ↔ claude-4):** claude-1's posteriors must expose the **per-move
-     grounded-G** that is the audit's x-axis. *(Open interface — §3 addition.)*
+   - **One interface to nail (claude-3/claude-4 ↔ claude-1):** the audit's x-axis = the **rollout's**
+     per-move grounded-G on `:move/id` (the rollout emits it, R2-consistent); claude-1 exposes a
+     **pattern-grain covariate** (used-set posterior-mean per move) *alongside*. *(Ownership corrected
+     per claude-1, 2026-06-10 — see §3.)*
 
 ## 5. Status — SPEC CONVERGED (2026-06-10)
 **All three contracts AGREED** (claude-3 · claude-1 · claude-4); **all five ML questions RESOLVED**

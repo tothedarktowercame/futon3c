@@ -499,6 +499,17 @@ attempt could mint novel units" — else EXPLORE farms novelty (the peradam anti
 **(ii)** because IG peaks at p≈0.5 on thin posteriors, the scheduler will naturally select at the
 **edge of competence** — the EOC resonance, and the signature to *verify* in T-runs: if EXPLORE keeps
 picking sure-things or sure-failures, the info term is mis-implemented.
+
+### Q-Fable-4 (follow-up, arising from A2 — pre-β-build) — attestation: permissive or mandatory?
+Your A2 said "semilattice overlap only affects attestation **shares**." claude-1 + claude-3 read that
+as **permissive** and lean **per-pattern-marginal** node attestation (`α+=1`, independent — what the β
+build already implements), because **the overlap is already accounted on claude-3's EDGE surface** (a
+closure's co-used pairs upvote/seed the phylogeny) — the node/edge split *is* the overlap-accounting,
+so share-discounting the node would **double-handle** it; and reward-conservation already lives on the
+composite (utility, once). **Question:** was "attestation shares" a **permissive** note (you MAY divvy;
+harmless since reward is on the composite — then we're aligned, `α+=1` stands) or a **mandatory**
+conservation (you MUST share — then it changes `cascade_learn`'s update rule and we should hash out the
+double-handling)? *(Full reasoning in `grounded-learning-spec.md` §4 Q2.)*
 - **2026-06-10 — STANDARD-VERIFY RATIFIED (Joe). Escrow RELEASED → `:contract-released` (both paired
   paths), car-independent.** Joe signed off the STANDARD-VERIFY step. With the converged
   `grounded-learning-spec.md` (3 contracts + 5 ML questions resolved, mesh + Fable), the grounded
