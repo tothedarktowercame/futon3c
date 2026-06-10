@@ -152,3 +152,20 @@ campaign's governance backbone: each constituent mission's open fork registers h
   (+ more PURs) to move anything. The escrow/grounding is **load-bearing, not bureaucratic.** Branch
   byte-inert + mergeable (land-call: Joe). Escrow entry stays `:held` (grounded posterior path); the
   v0 self-graded machinery is done.
+- **2026-06-10 — M-arguing-worlds v0 PASS + the campaign's FIRST CLEAN FALSIFIABLE NEGATIVE**
+  (claude-1 review, real gate; codex-1, futon2 worktree `codex/arguing-worlds-v0` `2eca617`). Both
+  anti-glibness gates verified IN CODE: yardstick = realized rollout G(π), NOT C (no circular grade);
+  diversity-precheck returns `:monotone-generator` *before* judging (the root-seeded max-overlap-1.0
+  case fired it). 5 tests/17 assertions, clj-kondo 0/0, worktree-isolated (no main disruption).
+  **THE NEGATIVE:** on a GENUINELY-diverse generator (4 lenses, max-overlap 0.11, disagree=true) the
+  dialectic does NOT beat single-best → `:single-best-holds` (winner `:fast-terminal`). NOT circular,
+  NOT a monotone-generator artifact (the diverse case *was* diverse). So **on the realized-G(π)
+  floor, arguing-across-possible-worlds (Joe's E3b leading hypothesis) is CEREMONY** — recorded
+  honestly (a recorded negative = a successful completion, per the charter). **CAVEAT (not
+  permanent):** the grounded peradam yardstick (escrowed on the car) could FLIP it; the
+  peradam-yardstick seam is correctly escrowed; revisit grounded. Completion-criterion-4:
+  `futonzero-alphazero.md` §1 updates "open, early" → "negative on the realized-G floor, revisit
+  grounded". **THE INTERLOCK (independent confirmation from TWO lanes):** both cascade v0s point at
+  `M-peradam-grounding` (the car) as the unlock — pattern-posteriors is inert without grounded
+  peradams; arguing-worlds' negative is revisit-able under the grounded yardstick. The campaign spine
+  confirmed from two directions. Both v0s reviewed-PASS, both honest, both mergeable (land-call: Joe).
