@@ -306,3 +306,53 @@ campaign's governance backbone: each constituent mission's open fork registers h
   Remaining for the car: the futon3c `View: operator` surfacing handoff (the candidate-claim +
   dokusan-response shapes are now locked by `peradam_cert.bb`), then arm (Joe's direct confirm +
   STANDARD-VERIFY).
+
+---
+
+## 5. Technical checklist (two tracks — work through it)
+
+Reframe (Joe, 2026-06-10): the campaign's **grounding** runs indefinitely and is car-gated/slow; the
+**motivating-mission features** (the futonzero-alphazero apparatus "up and running at all") are
+parallel, self-graded-OK, *completable*, and **NOT car-gated**. The two tracks couple at one point:
+**Track A's kill criteria decide what in Track B is even worth grounding** — run the rent-test first,
+ground second. `[x]` done · `[~]` in progress · `[ ]` open.
+
+### Track A — Features running (parallel, car-independent, completable)
+- `[x]` **A1 — apparatus runs end-to-end self-graded** — prior (M-differentiable-substrate v1/v2);
+  rollout exists (futon2.aif.rollout); both consumer v0s landed+pushed.
+- `[ ]` **A2 — kill criteria RUN on v2 data + reported honestly** (Fable T1–T4; *specified but not
+  run* = the gap):
+  - `[ ]` **T1** — does multi-step search pay rent (≥~15% of top policies non-greedy: multi-step
+    `G(π)` strictly beats greedy prefix)? → **keep or kill the rollout.**
+  - `[ ]` **T2** — is cross-mission unlocking *emergent*, not the encoded eightfold ordering?
+  - `[ ]` **T3** — does arguing-across-worlds beat the best single buildout? (real tournament
+    harness, not jittered reruns)
+  - `[ ]` **T4** — does the prior carry real information, or is the peak presentational temperature?
+- `[ ]` **A3 — consumer terms wired LIVE into `construct_cascade`** (both v0-offline today):
+  - `[ ]` pattern-posteriors as a *pluggable A/B term that composes with wholeness scoring* (must not
+    reproduce the pointwise-greedy cursor bug);
+  - `[ ]` arguing-worlds tournament actually running.
+- `[ ]` **A4 — engine question E3 decided + recorded** (observable): self-play-adversary vs
+  argument-across-worlds; plus E4 (GFlowNets/semilattice) and E5 (budget-as-regulariser).
+
+### Track B — Grounding (car-gated, indefinite, makes A trustworthy)
+- `[~]` **M0 — apparatus complete, wired end-to-end on a SEEDED discharge**
+  - `[x]` discharge-half (claude-4, futon3a `ac4ae5d`/`e45c1a6`)
+  - `[x]` cert-half logic core (codex-2/claude-3, futon7 `e85c14d`/`3f99d8f`)
+  - `[ ]` operator-pane surfacing (futon3c `View: operator`)
+- `[ ]` **M1 — first REAL discharge surfaces (car ARMS)** — Joe's direct confirm + un-escrow the
+  discharge-emission onto main. (RUN/DELIVER criterion 1: functional on a real case.)
+- `[ ]` **M2 — first peradam + first rejection (Prover discriminates, T2.2)** — accept AND reject on
+  real cases (criterion 2; accept-only/reject-only = fatberg signature).
+- `[ ]` **M3 — first grounded consumption** — STANDARD-VERIFY → escrow `:contract-released` → a real
+  peradam moves a pattern-posterior OR seeds arguing-worlds' grounded tournament (criterion 3 = the
+  joint completion criterion).
+- `[ ]` **M4 — out-of-blanket peradam (T2.3)** — a real cold EOI SENT + `:send-witness` → the Ashby
+  acceptance (business milestone and prover-validation are one event); ORB-triple `certify-peradam` (v1.1).
+- `[ ]` **M5 — canaried & sustained → DISSOLUTION** — the recurrent after-each-WM-run cycle fires
+  repeatedly (present-binding, criterion 4); observables discharged-or-carried; standard adopted.
+
+### Working order
+**Pull A2 forward now** (fast, self-graded, decision-relevant, car-independent) — start **T1 + T4**
+(do the apparatus carry real signal or just its own metric). The car keeps its correctly-slow
+grounding path (M0 operator-pane → M1 arm). claude-1's lanes run the **T3** harness alongside.
