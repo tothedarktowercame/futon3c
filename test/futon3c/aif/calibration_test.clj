@@ -1,0 +1,87 @@
+(ns futon3c.aif.calibration-test
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is]]
+            [futon3c.aif.calibration :as calibration]
+            [futon3c.aif.discipline-events :as discipline]))
+
+(defn- tmp-dir []
+  (doto (java.io.File/createTempFile "calibration-" "")
+    (.delete)
+    (.mkdirs)))
+
+(defn- write-edn [path x]
+  (spit path (pr-str x))
+  path)
+
+(defn- paths-fixture []
+  (let [root (tmp-dir)
+        traces (doto (io/file root "traces") (.mkdirs))
+        pilots (io/file root "PILOTS.md")
+        folds (io/file root "closure-folds.edn")
+        ch2 (io/file root "ch2.edn")
+        discipline (io/file root "discipline.edn")]
+    {:root root
+     :paths {:traces-dir (.getPath traces)
+             :pilots-log (.getPath pilots)
+             :closure-folds (.getPath folds)
+             :ch2-events (.getPath ch2)
+             :discipline-events (.getPath discipline)}}))
+
+(deftest load-evidence-normalizes-all-kinds
+  (let [{:keys [root paths]} (paths-fixture)]
+    (try
+      (write-edn (io/file (:traces-dir paths) "g.edn")
+                 {:date "2026-06-10"
+                  :run-id "run-g"
+                  :trace [{:prediction-error 0.25
+                           :predicted-discharge -4.0
+                           :realised-discharge -3.75}]})
+      (spit (:pilots-log paths)
+            "**PRINT / FOUND.** predicted G=-2.0; realised G=-1.5\n")
+      (write-edn (:closure-folds paths)
+                 [{:scope "s1" :used [] :success true}])
+      (spit (:ch2-events paths)
+            (str (pr-str {:ch2/discharge-event true
+                          :move/id "move-1"
+                          :discharged? true
+                          :at "t"}) "\n"))
+      (discipline/append-event! {:discipline/event :guardrail-trip
+                                 :run-id "run-d"
+                                 :at "t2"
+                                 :action {:type :open-mission :target "M-y"}
+                                 :predicted -1.0}
+                                (:discipline-events paths))
+      (let [evidence (calibration/load-evidence paths)
+            by-kind (group-by :kind evidence)]
+        (is (= #{:gamma-frame :pilots-log-turn :closure-fold :ch2-discharge :discipline-event}
+               (set (keys by-kind))))
+        (is (= 0.25 (:error (first (:gamma-frame by-kind)))))
+        (is (= 0.5 (:error (first (:pilots-log-turn by-kind)))))
+        (is (true? (:success (first (:closure-fold by-kind)))))
+        (is (true? (:success (first (:ch2-discharge by-kind)))))
+        (is (= -1.0 (:predicted (first (:discipline-event by-kind))))))
+      (finally
+        (doseq [f (reverse (file-seq root))] (.delete f))))))
+
+(deftest degenerate-detection-true-and-calibratable-false
+  (let [degenerate (repeat 11 {:kind :gamma-frame :predicted 1.0 :realised 1.0 :error 0.0})
+        nondegenerate (for [i (range 11)]
+                        {:kind :gamma-frame :predicted 1.0 :realised (+ 2.0 i)})]
+    (is (= :degenerate (:verdict (calibration/calibration-report (vec degenerate)))))
+    (is (true? (:degenerate? (calibration/calibration-report (vec degenerate)))))
+    (is (= :calibratable (:verdict (calibration/calibration-report (vec nondegenerate)))))
+    (is (false? (:degenerate? (calibration/calibration-report (vec nondegenerate)))))))
+
+(deftest insufficient-evidence-when-fewer-than-ten-pairs
+  (let [evidence [{:kind :gamma-frame :predicted 1.0 :realised 1.0 :error 0.0}]]
+    (is (= :insufficient-evidence
+           (:verdict (calibration/calibration-report evidence))))))
+
+(deftest missing-sources-become-warnings-not-throws
+  (let [evidence (calibration/load-evidence {:traces-dir "/tmp/no-such-traces-dir-for-calibration"
+                                             :pilots-log "/tmp/no-such-pilots-log-for-calibration.md"
+                                             :closure-folds "/tmp/no-such-closure-folds.edn"
+                                             :ch2-events "/tmp/no-such-ch2-events.edn"
+                                             :discipline-events "/tmp/no-such-discipline-events.edn"})]
+    (is (= [] evidence))
+    (is (= 4 (count (:warnings (meta evidence)))))))
