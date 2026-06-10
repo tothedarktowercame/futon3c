@@ -226,3 +226,19 @@ campaign's governance backbone: each constituent mission's open fork registers h
     rides under this objective (parked).
   - **(3) v0 merges GREENLIT.** M-arguing-worlds v0 + M-pattern-posteriors v0 cleared to land on
     their main branches (delegated to claude-1, the lane PM).
+- **2026-06-10 — both cascade v0s LANDED on main (claude-1); escrow discipline caught the
+  discharge path.** Merge shas: **futon2 main @ `83e9a30`** (NON-TRIVIAL: v0 was split — docs on
+  `wm-rollout-v2-root-seed` (76ccc72), code on `codex/arguing-worlds-v0` (2eca617); landed ff→docs
+  then `--no-ff` ort merge of the code, conflict-free new-files-only; `arguing_worlds.clj` on main
+  byte-identical to the tested 2eca617; done in a throwaway worktree so claude-4's dirty checkout
+  was untouched). **futon3a main @ `82de774`** (fast-forward to exactly the reviewed v0:
+  6402ceb/ff04342/82de774). Consistent with CHARTER §2: the **v0s are NOT escrowed** (self-graded,
+  the label travels) — they ship now; only the **grounded** completion stays `:held` on the car.
+  **THE CATCH (escrow machinery working):** `ac4ae5d` "Emit CH2 discharge events on meme
+  construction" (the discharge-EMISSION = claude-4's grounded half) sat ONE commit above the futon3a
+  v0 tip and nearly rode into main on a plain ff; claude-1 held it **branch-only** per "only v0s
+  land / don't touch escrowed grounded-paths." **Ratified hold:** `ac4ae5d` stays branch-only
+  (escrowed); it lands only when the car ARMS — Joe's DIRECT confirm + the cert-half ready +
+  STANDARD-VERIFY. Also held branch-only: `e8dc3e8` (unrelated flexiarg parser fix; out of campaign
+  scope; routes separately under its own review). **Both mains updated LOCALLY, NOT pushed**
+  (shared-remote caution; push held for Joe).
