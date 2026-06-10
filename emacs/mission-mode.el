@@ -503,12 +503,30 @@ The long-annotation counterpart of the quick hover posframe."
   "Base URL of the WebArxana proxy used for JSON hyperedge queries."
   :type 'string :group 'mission-mode)
 
-(defun mission-mode--mission-entity-id ()
-  "Derive the substrate-2 mission entity id from the buffer's file path.
-/home/joe/code/REPO/holes/missions/M-ID.md → REPO-d/mission/ID."
+(defun mission-mode--mission-entity-ids ()
+  "Candidate substrate-2 mission entity ids for the buffer's file.
+The watcher's repo labels are irregular (futon6 → futon6-py-d,
+futon4 → futon4-elisp-d, futon5 → futon5-d2), so return candidates in
+likelihood order; the fetch tries each until one has edges. Ids are
+lowercased to match the watcher's entity convention."
   (when-let ((file (buffer-file-name)))
     (when (string-match "/code/\\([a-z0-9]+\\)/holes/missions/[ME]-\\(.+?\\)\\.md\\'" file)
-      (format "%s-d/mission/%s" (match-string 1 file) (match-string 2 file)))))
+      (let* ((repo (match-string 1 file))
+             (file-name (file-name-sans-extension
+                         (file-name-nondirectory file)))  ; e.g. E-mission-head
+             (mid (downcase (match-string 2 file))))
+        ;; Two id conventions coexist: the scope ingest lowercases and strips
+        ;; the prefix (futon6-d/mission/e-mission-head); the doc watcher keeps
+        ;; the full case-preserved filename (futon6-py-d/mission/E-mission-head).
+        (apply #'append
+               (mapcar (lambda (suffix)
+                         (list (format "%s%s/mission/%s" repo suffix file-name)
+                               (format "%s%s/mission/%s" repo suffix mid)))
+                       '("-d" "-py-d" "-elisp-d" "-d2")))))))
+
+(defun mission-mode--mission-entity-id ()
+  "First candidate entity id (back-compat)."
+  (car (mission-mode--mission-entity-ids)))
 
 (defun mission-mode--fetch-downstream (entity-id)
   "Fetch (FILES . MISSIONS) associated with ENTITY-ID from substrate-2.
@@ -898,9 +916,12 @@ point; RET jumps to it."
           (mission-mode-overview-mode)
           (setq mission-mode--overview-source src
                 mission-mode--overview-last-line nil)
-          (insert (propertize (format " %s — %d scopes\n\n"
+          (insert (propertize (format " %s — %d scopes\n"
                                       (or mission "mission") (length ovs))
                               'face 'mission-mode-title-face))
+          (insert (propertize
+                   " keys: TAB fold/pin · t expand/collapse all · RET visit · g rebuild · q quit\n\n"
+                   'face 'mission-mode-meta-face))
           (mission-mode--overview-insert-vitals src)
           (setq mission-mode--overview-index nil)
           ;; Which canon phases are placed at all (for ghost interleaving).
@@ -987,8 +1008,11 @@ point; RET jumps to it."
                       (nreverse mission-mode--overview-blocks)))))
           ;; Downstream lane: substrate-2 associations beyond the doc's own
           ;; text — the code this mission touched, and lateral missions.
-          (let* ((entity (with-current-buffer src (mission-mode--mission-entity-id)))
-                 (down (mission-mode--fetch-downstream entity))
+          (let* ((down (with-current-buffer src
+                         (seq-some (lambda (eid)
+                                     (let ((d (mission-mode--fetch-downstream eid)))
+                                       (and d (or (car d) (cdr d)) d)))
+                                   (mission-mode--mission-entity-ids))))
                  (files (car down))
                  (missions (cdr down)))
             (when files

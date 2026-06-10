@@ -767,7 +767,10 @@
          file-name (.getName (io/file path-str))
          repo-name (or repo-name (infer-repo-name-for-path repos path-str))]
      (when (and repo-name
-                (str/starts-with? file-name "M-")
+                ;; M- missions and E- excursions both carry mission structure
+                ;; (the watcher glob admits both; this gate must agree).
+                (or (str/starts-with? file-name "M-")
+                    (str/starts-with? file-name "E-"))
                 (str/ends-with? file-name ".md"))
        (parse-mission-md path-str repo-name)))))
 
