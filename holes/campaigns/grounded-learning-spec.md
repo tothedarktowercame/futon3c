@@ -51,7 +51,16 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
   **info** + cost). Owns **EXPLORE** (picks the next hole by pragmatic+epistemic value).
 
 ## 3. The data interfaces (the contracts between surfaces)
-- **Closure record** — what a closure carries. *(THE open schema question, §4.1.)*
+- **Closure record — RESOLVED (Fable, 2026-06-10): the endpoint-keyed BHK-triple arrow IS the unified
+  schema; `closure-folds` and `meme.db` are two PROJECTIONS of one `promote!` event stream.**
+  `closure = {endpoint {have,want} (identity/join) · construction {components [pattern-id…],
+  composition <rewrite-graph>, artifact <code-ref>} · provenance {agent|cyborg, …} · grain (a facet)}`.
+  A fold record is a closure whose `construction.components` are library stems; a mission-arrow
+  `promote!` is one whose components may be empty + artifact points at code. **The learning signal =
+  the `promote!` event stream**: pattern-grain reads `construction.components`, mission-grain reads
+  `endpoint`. (Implication: `cascade_learn` should consume the `meme.db` stream; `closure-folds.edn`
+  becomes a pattern-grain *view* — this also unifies agent + Cyborg closures into one signal. Build:
+  the grain-bridge, §5.)
 - `pattern_posteriors.grounded.json` — `{stem → {α,β,mean}}`, Beta(1,1) prior. (claude-3 emits, claude-1 owns.)
 - `pattern-phylogeny-learned.json` — the `{co_app,descent}` overlay (upvote/seed). (claude-3.)
 - `cascade-coverage-gaps.edn` — the missing-pattern backlog → curriculum. (claude-3 emits, star-map consumes.)
@@ -61,14 +70,14 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
   lift-audit joins peradams onto it.)*
 
 ## 4. The OPEN ML questions (for the mesh to decide; Fable-relay candidates marked ★)
-1. **★ Unified closure schema / grain-bridge** *(sharpened by claude-1's evidence)*. `meme.db`
-   closures are **entity-keyed** (`source_id`/`target_id`/`payload`=construction symbol) — **there is
-   no pattern-membership column**; "which patterns earned this closure" lives only in the
-   fold↔cascade pairing (`closure-folds`). So the two grains may **not** unify into one schema —
-   likelier they're two signals **joined on `:move/id`** (the move that did both): `closure-folds`
-   (pattern-grain) for LEARNING, `meme.db` arrow (entity-grain) for the AUDIT's realized-closure event
-   (claude-4's x-axis). **For Fable:** is `:move/id`-join-not-unify the right call, and how does a
-   `closure-folds` fold-record get *associated* with its `meme.db` closure-event?
+1. **Unified closure schema / grain-bridge — RESOLVED (Fable, 2026-06-10; full answer in
+   `C-falsifiable-missions.md` §7 A1).** Don't build a third schema: the **endpoint-keyed BHK-triple
+   arrow IS the unified closure** (see §3 "Closure record"). A fold record and a `meme.db`
+   `promote!` are the *same kind* of event, differing only in a `grain` facet; the **learning signal
+   is the one `promote!` event stream**, read by two projections (pattern-grain ← `construction.components`,
+   mission-grain ← `endpoint`). This unifies agent + Cyborg closures and preserves anti-laundering
+   structurally (a closure is a mode-crossing; attestation can't constitute one). **Build:** the
+   grain-bridge — `cascade_learn` consumes the `meme.db` stream, `closure-folds` becomes a view.
 2. **Credit assignment — RESOLVED (claude-1 + claude-3, 2026-06-10).** Credit the **USED SUBSET** of
    the cascade (NOT cascade-as-whole — too coarse; NOT edges — claude-3's surface). **Per-pattern
    Bernoulli** on the used subset: used-and-closed → `α+=1`; used-and-**didn't**-close → `β+=1`.
@@ -81,13 +90,24 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
    is **all-success-each-once data, not cascade-as-whole crediting.** **Discrimination unlock (next
    refinement):** `cascade_learn` must process **failed** folds (used-and-didn't-close → `β+=1`);
    today it skips `success:false`, so there's no β yet — record failed folds and discrimination appears.
-3. **★ The EFE epistemic term** *(partial answer from claude-1's surface)*. claude-1 exposes posterior
-   **variance** (α,β) as the per-pattern epistemic signal — Thompson-compatible: high-variance
-   low-evidence patterns get *explored*, not starved. So one epistemic component is **posterior
-   variance**. **Still for Fable:** the *hole-level* expected-information-gain — how much would closing
-   a candidate hole teach (it needs a coverage-gap pattern? a cross-cluster phylogeny edge? it advances
-   a frontier capability?) — and the formula that combines pattern-variance + edge-novelty +
-   capability-frontier into the star-map's EFE `info` term.
+   **Fable's sharpening (three currencies, never summable):** **utility** → the *composite* (the used
+   subset *as* a new first-class wiring-fragment arrow), credited **once**; **attestation**
+   (statistics, not reward) → the used components; **calibration credit** (a proper scoring rule —
+   e.g. log-loss of the used-set under the proposal) → the proposing cascade, never utility. Different
+   units ⇒ move-grain and pattern-grain *cannot* double-count; semilattice overlap only affects
+   attestation shares, not reward.
+3. **The EFE epistemic term — RESOLVED (Fable, 2026-06-10; full answer in `C-falsifiable-missions.md`
+   §7 A3).** `info(h) = expected posterior contraction over the units the hole's REQUIRED construction
+   would touch` — Beta-Bernoulli **closed form**: `Σ_{u∈S(h)} E_o[KL(Beta(α,β|o) ‖ Beta(α,β))] +
+   Σ_{e∈structure(h)} E[log BF(edge-exists vs not)]`. Large exactly when **pseudo-counts thin +
+   predictive p≈0.5**. The three candidate signals fall out as *cases*: coverage-gap pattern = a fresh
+   unit (max prior entropy → max IG); missing cross-cluster edge = first obs on an untested `θ_e` +
+   the structure-discovery BF; frontier capability = `H(cap)` reduction only (its *value* lives in the
+   PRAGMATIC term — don't leak it in twice). **Two guards:** (i) `S(h)` from the hole's *required*
+   construction, never "could mint novel units" (else EXPLORE farms novelty — the anti-farming line);
+   (ii) IG peaks at p≈0.5 on thin posteriors → the scheduler selects at the **edge of competence**
+   (EOC) — and that's the **T-run verification signature**: if EXPLORE keeps picking sure-things or
+   sure-failures, the info term is mis-implemented. *(Consumes claude-1's α/β variance — the surfaces meet.)*
 4. **Posterior composition — RESOLVED (claude-1, 2026-06-10) — provably non-greedy via 3 invariants:**
    (I) **trust-neutral at prior** — an unclosed pattern at Beta(1,1) mean 0.5 → centered 0 →
    multiplier 1.0 → `m'(p)` unchanged; (II) **multiplicative on positive margin only** — trust
@@ -120,6 +140,15 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
    - **One interface to nail (claude-1 ↔ claude-4):** claude-1's posteriors must expose the **per-move
      grounded-G** that is the audit's x-axis. *(Open interface — §3 addition.)*
 
-## 5. Status
-Builds 1+2 live (the LEARN + part of the store↔loop). Build 3 (EXPLORE coupling) designed. The five
-questions in §4 are the convergence work — claude-3/1/4 agree here before building further.
+## 5. Status — SPEC CONVERGED (2026-06-10)
+**All three contracts AGREED** (claude-3 · claude-1 · claude-4); **all five ML questions RESOLVED**
+(Q2/Q4 claude-1, Q5 claude-4, **Q1/Q3 Fable** — full Fable answers in `C-falsifiable-missions.md` §7).
+Builds 1+2 live. **Next builds, now fully specified:**
+- **The grain-bridge (Q1)** — `cascade_learn` reads the `meme.db` `promote!` event stream (the unified
+  closure); `closure-folds` becomes a pattern-grain view. Unifies agent + Cyborg closures into one signal.
+- **Failed-fold β (Q2)** — record `success:false` folds so per-pattern discrimination appears (the
+  three-currency credit model: utility→composite, attestation→components, calibration→proposer).
+- **Build 3 / EXPLORE (Q3)** — the EFE `info` term = expected posterior contraction (Beta-Bernoulli
+  closed form), coupled to the star-map; verify via the **edge-of-competence** signature in T-runs.
+- **The auditor (Q5)** — claude-4's lift-on-`:move/id`, τ as an operator-ratified `:O-*` observable.
+The convergence work is done; what remains is building to the agreed spec + Joe's STANDARD-VERIFY.
