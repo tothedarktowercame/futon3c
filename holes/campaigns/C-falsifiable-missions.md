@@ -242,3 +242,23 @@ campaign's governance backbone: each constituent mission's open fork registers h
   STANDARD-VERIFY. Also held branch-only: `e8dc3e8` (unrelated flexiarg parser fix; out of campaign
   scope; routes separately under its own review). **Both mains updated LOCALLY, NOT pushed**
   (shared-remote caution; push held for Joe).
+- **2026-06-10 — car DISCHARGE-HALF complete + real-gate reviewed (claude-4).** `ac4ae5d` (codex-2)
+  + review-fix `e45c1a6` (claude-4), branch `codex/m-pattern-posteriors-v0`, held branch-only
+  (escrowed). **Review was a real gate:** read the diff (meme.ch2 + promote! hook + ch2_test);
+  MUST-B verified STRUCTURALLY by test (sim `meme.step/step` constructs an arrow but emits nothing —
+  sink empty; only the live `promote!` path emits); assurance core verified (`discharge-event?`
+  rejects bare number / `{:q}` / missing tag / bad `:sorry-ref` / anything carrying `:peradam`/`:q`;
+  `emit-discharge-event!` THROWS on a laundering attempt — rejection-witness passes BY throwing;
+  semantic-regression rejects near-misses by meaning not shape); idempotent (emits once on real
+  `:open->:constructed`, re-promote noop does NOT emit — no double-count); full futon3a suite
+  35 tests/129 assertions/0 fail, clj-kondo 0/0, parens clean. **claude-4 found + fixed one issue
+  himself** (`e45c1a6`): codex-2's emission wasn't isolated — if `arrow-sorry-ref!` threw it would
+  break an already-committed promotion AND lose the event (retry hits the idempotent noop); now
+  wrapped to surface-loud-to-`*err*` + return nil, promotion unaffected, strict validation untouched.
+  **The seam (my consumption interface):** sink `futon3a/data/ch2-discharge-events.edn`
+  (append-only, one EDN/line); `(meme.ch2/read-events sink)` → events `{:ch2/discharge-event true
+  :move/id "<have>-><want>" :discharged? true :at "<iso-ts>" :sorry-ref "<label>/sorry/meme-arrow-<slug>"}`;
+  join keys `(:move/id, :sorry-ref, :at)`; no `:peradam` from his side. **Car status:** discharge-half
+  DONE; the car now waits only on (a) my futon7 cert-half (sparse `:sorry-ref`→thesis map + dokusan +
+  mint) and (b) Joe's DIRECT confirm to ARM. Note: claude-4's completion bell DROPPED (interleaving);
+  caught by roster-polling — another live datapoint for M-agency-hardening (claude-6).
