@@ -46,6 +46,74 @@
 (defn max-warm []
   (long-prop-or-env "FUTON3C_KANGAROO_MAX_WARM" default-max-warm))
 
+;; =============================================================================
+;; Joey gate — warm only SMALL sessions; a monster needs an explicit override
+;; =============================================================================
+;;
+;; A pouch keeps the PROCESS warm but cannot keep Anthropic's server-side prompt
+;; cache warm (5-min TTL). So warming a giant transcript is a token-cost trap: every
+;; turn past the cache window re-prefills the whole history regardless of process
+;; warmth. Policy: warm a "joey" (small session) by default; a "monster" (transcript
+;; over the threshold) stays COLD unless overridden (allow-monster! / env).
+
+(def ^:private default-joey-max-bytes (* 2 1024 1024))   ;; 2 MiB
+
+(defn joey-max-bytes []
+  (long-prop-or-env "FUTON3C_KANGAROO_JOEY_MAX_BYTES" default-joey-max-bytes))
+
+(defn session-transcript-bytes
+  "Best-effort byte size of SESSION-ID's transcript file
+   (~/.claude/projects/.../<sid>.jsonl). nil when not found — a brand-new session
+   has no transcript yet."
+  [session-id]
+  (let [sid (some-> session-id str str/trim not-empty)]
+    (when sid
+      (let [projects (io/file (System/getProperty "user.home") ".claude" "projects")]
+        (when (.isDirectory projects)
+          (some (fn [d]
+                  (let [f (io/file d (str sid ".jsonl"))]
+                    (when (.isFile f) (.length f))))
+                (.listFiles projects)))))))
+
+(defonce ^:private !monster-allowlist (atom #{}))
+
+(defn allow-monster!
+  "Operator override: warm AGENT-ID's pouch even if its session is a monster."
+  [agent-id] (swap! !monster-allowlist conj (str agent-id)) true)
+
+(defn disallow-monster! [agent-id] (swap! !monster-allowlist disj (str agent-id)) true)
+
+(defn monster-allowed?
+  "True when monsters may be warmed for AGENT-ID — globally (env) or per-agent (allowlist)."
+  [agent-id]
+  (or (bool-prop-or-env "FUTON3C_KANGAROO_ALLOW_MONSTERS" false)
+      (contains? @!monster-allowlist (str agent-id))))
+
+(defn joey-eligible?
+  "True when AGENT-ID's SESSION-ID may be warmed: an override is set, the transcript
+   is at or under joey-max-bytes, or its size is unknown (a fresh session is a joey
+   until it grows). A monster returns false, keeping the caller on the cold path."
+  [agent-id session-id]
+  (or (monster-allowed? agent-id)
+      (let [bytes (session-transcript-bytes session-id)]
+        (or (nil? bytes) (<= (long bytes) (long (joey-max-bytes)))))))
+
+(defonce ^:private !monster-logged (atom #{}))
+
+(defn note-monster-cold!
+  "Log once per (agent, session) that a monster is being kept cold, so the decision
+   is visible (loud-failure discipline). Returns the transcript bytes."
+  [agent-id session-id]
+  (let [bytes (session-transcript-bytes session-id)
+        k [(str agent-id) (some-> session-id str)]]
+    (when (and bytes (not (contains? @!monster-logged k)))
+      (swap! !monster-logged conj k)
+      (println (format "[kangaroo] %s session %.1fMB exceeds joey-max %.1fMB — staying COLD (no pouch). Override: (futon3c.agency.agent-pouch/allow-monster! \"%s\")"
+                       (str agent-id) (/ (double bytes) 1048576.0)
+                       (/ (double (joey-max-bytes)) 1048576.0) (str agent-id)))
+      (flush))
+    bytes))
+
 (defn- now-ms [] (System/currentTimeMillis))
 (defn- now [] (str (Instant/now)))
 
@@ -272,5 +340,7 @@
                      :turn-count (:turn-count pouch)
                      :pid (try (.pid ^Process (:process pouch))
                                (catch Throwable _ nil))
+                     :session-bytes (session-transcript-bytes (:session-id pouch))
+                     :joey? (joey-eligible? aid (:session-id pouch))
                      :stderr @(:stderr pouch)}]))
         @!pouches))

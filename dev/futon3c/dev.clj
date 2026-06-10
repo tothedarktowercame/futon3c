@@ -3643,24 +3643,34 @@ RESPOND WITH ONLY:
               (clear-invoke-control! aid-val control-token)
               (stop-ticker!)))))
               (invoke-warm-or-cold [prompt session-id]
-                (if (agent-pouch/enabled?)
-                  (try
-                    (agent-pouch/feed-turn!
-                     agent-id
-                     prompt
-                     {:claude-bin claude-bin
-                      :session-id (preferred-session-id session-file session-id session-id-atom)
-                      :model model
-                      :cwd cwd
-                      :permission-mode permission-mode
-                      :timeout-ms timeout-ms})
-                    (catch Throwable t
-                      (println (str "[kangaroo] " agent-id
-                                    " warm pouch failed; falling back cold: "
-                                    (.getMessage t)))
-                      (flush)
-                      (invoke-once prompt session-id)))
-                  (invoke-once prompt session-id)))]
+                (let [warm-sid (preferred-session-id session-file session-id session-id-atom)]
+                  (cond
+                    (not (agent-pouch/enabled?))
+                    (invoke-once prompt session-id)
+
+                    ;; Joey gate: only warm a small session. A monster stays cold
+                    ;; (warming a giant history is a token-cost trap) unless overridden.
+                    (not (agent-pouch/joey-eligible? agent-id warm-sid))
+                    (do (agent-pouch/note-monster-cold! agent-id warm-sid)
+                        (invoke-once prompt session-id))
+
+                    :else
+                    (try
+                      (agent-pouch/feed-turn!
+                       agent-id
+                       prompt
+                       {:claude-bin claude-bin
+                        :session-id warm-sid
+                        :model model
+                        :cwd cwd
+                        :permission-mode permission-mode
+                        :timeout-ms timeout-ms})
+                      (catch Throwable t
+                        (println (str "[kangaroo] " agent-id
+                                      " warm pouch failed; falling back cold: "
+                                      (.getMessage t)))
+                        (flush)
+                        (invoke-once prompt session-id))))))]
         (fn [prompt session-id]
           (cond
             ;; Drainer v2: an outer per-agent drainer already owns serialization for

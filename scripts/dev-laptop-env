@@ -27,6 +27,13 @@ export FUTON3C_DURABLE_QUEUE="${FUTON3C_DURABLE_QUEUE:-true}"
 # Takes effect for agents minted after start (cr new); existing agents stay cold
 # until re-minted. Set "false" to revert. Activated 2026-06-10.
 export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
+# Joey gate: a pouch warms only a SMALL session ("joey"). A "monster" (transcript
+# over FUTON3C_KANGAROO_JOEY_MAX_BYTES, default 2 MiB) stays COLD — warming a giant
+# history is a token-cost trap (the server-side prompt cache re-prefills it past its
+# 5-min TTL regardless of process warmth). Override per-agent at the REPL with
+# (futon3c.agency.agent-pouch/allow-monster! "<id>"), or globally:
+export FUTON3C_KANGAROO_JOEY_MAX_BYTES="${FUTON3C_KANGAROO_JOEY_MAX_BYTES:-2097152}"
+# export FUTON3C_KANGAROO_ALLOW_MONSTERS=true   # warm every session regardless of size
 # Drainer v2 (M-agency-hardening drainer car): a dedicated per-agent drainer thread
 # owns drain+finalization so a bell enqueues and returns instead of parking one of the
 # 4 shared invoke-executor lanes on @waiter (the lane-burn that backs the queue up).
