@@ -297,14 +297,22 @@
 
 ;; ---------- collect-file dispatch ----------
 
+(def ^:private excluded-dir-re
+  ;; Must stay in sync with futon3c.watcher.multi's exclusion regex —
+  ;; collect-repo* walking dirs the watcher excludes is how a single
+  ;; futon3a .clj ingest swept 10,734 .venv .py files into serial
+  ;; python_ast_helper subprocesses (watcher wedged 2026-06-10).
+  #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/")
+
 (defn collect-file [path]
-  (let [ext (file-ext path)]
-    (cond
-      (src-exts ext) (collect-clj-file path)
-      ((:src-exts (meta #'elisp/src-exts) elisp/src-exts) ext) (elisp/collect-file path)
-      ((:src-exts (meta #'python/src-exts) python/src-exts) ext) (python/collect-file path)
-      ((:src-exts (meta #'flexiarg/src-exts) flexiarg/src-exts) ext) (flexiarg/collect-file path)
-      :else nil)))
+  (when-not (re-find excluded-dir-re (str path))
+    (let [ext (file-ext path)]
+      (cond
+        (src-exts ext) (collect-clj-file path)
+        ((:src-exts (meta #'elisp/src-exts) elisp/src-exts) ext) (elisp/collect-file path)
+        ((:src-exts (meta #'python/src-exts) python/src-exts) ext) (python/collect-file path)
+        ((:src-exts (meta #'flexiarg/src-exts) flexiarg/src-exts) ext) (flexiarg/collect-file path)
+        :else nil))))
 
 (defn essay-home-path?
   [path]
@@ -907,7 +915,7 @@
   (let [files (->> (file-seq (io/file root))
                    (filter #(.isFile ^java.io.File %))
                    (filter #(supported-ext? (file-ext (.getPath ^java.io.File %))))
-                   (remove #(re-find #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo)/|/node_modules/|/target/"
+                   (remove #(re-find excluded-dir-re
                                      (.getPath ^java.io.File %))))
         out (atom {:vars [] :tests [] :ns-set #{} :ns→aliases {}})]
     (doseq [f files]
