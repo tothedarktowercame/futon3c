@@ -37,7 +37,9 @@
                            :predicted-discharge -4.0
                            :realised-discharge -3.75}]})
       (spit (:pilots-log paths)
-            "**PRINT / FOUND.** predicted G=-2.0; realised G=-1.5\n")
+            (str "## Turn 1 — fixture\n"
+                 "**READ.** Live WM recommended **`open-mission M-y`** (G=−5.69).\n"
+                 "**PRINT / FOUND.** predicted G=-2.0; realised G=-1.5\n"))
       (write-edn (:closure-folds paths)
                  [{:scope "s1" :used [] :success true}])
       (spit (:ch2-events paths)
@@ -56,9 +58,13 @@
         (is (= #{:gamma-frame :pilots-log-turn :closure-fold :ch2-discharge :discipline-event}
                (set (keys by-kind))))
         (is (= 0.25 (:error (first (:gamma-frame by-kind)))))
-        (is (= 0.5 (:error (first (:pilots-log-turn by-kind)))))
+        (is (= 2 (count (:pilots-log-turn by-kind))))
+        (is (= 0.5 (:error (first (filter :realised (:pilots-log-turn by-kind))))))
+        (is (= :operator-gate (:witness-class (first (:pilots-log-turn by-kind)))))
         (is (true? (:success (first (:closure-fold by-kind)))))
+        (is (= :build-discharge (:witness-class (first (:closure-fold by-kind)))))
         (is (true? (:success (first (:ch2-discharge by-kind)))))
+        (is (= :build-discharge (:witness-class (first (:ch2-discharge by-kind)))))
         (is (= -1.0 (:predicted (first (:discipline-event by-kind))))))
       (finally
         (doseq [f (reverse (file-seq root))] (.delete f))))))

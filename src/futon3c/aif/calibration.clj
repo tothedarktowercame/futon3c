@@ -81,7 +81,8 @@
                             :error (abs-error pred real (:prediction-error m))
                             :success nil
                             :source (.getPath file)
-                            :ref (or (:run-id m) run-id)})))))
+                            :ref (or (:run-id m) run-id)
+                            :witness-class :none})))))
            (catch Throwable t
              (swap! warnings conj (warn (.getPath file) (str "unreadable source: " (.getMessage t))))
              [])))
@@ -89,6 +90,38 @@
 
 (def ^:private pilot-g-re
   #"(?i)(?:predicted\s+G\s*=\s*([-+−]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?)).*?(?:realised\s+G\s*=\s*([-+−]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?))")
+
+(def ^:private pilot-turn-re
+  #"^##\s+Turn\s+(\d+)\s+[—-]\s+(.+)$")
+
+(def ^:private pilot-read-re
+  #"Live WM recommended \*\*`([^`]+)`\*\*\s*\(G=([-+−]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?)\)")
+
+(defn- pilot-pair-record [path idx line]
+  (when-let [[_ p r] (re-find pilot-g-re line)]
+    (let [pred (parse-number p)
+          real (parse-number r)]
+      {:kind :pilots-log-turn
+       :at nil
+       :predicted pred
+       :realised real
+       :error (abs-error pred real nil)
+       :success nil
+       :source (str path)
+       :ref (str "line-" (inc idx))
+       :witness-class :operator-gate})))
+
+(defn- pilot-read-record [path idx turn line]
+  (when-let [[_ _action g] (re-find pilot-read-re line)]
+    {:kind :pilots-log-turn
+     :at (:at turn)
+     :predicted (parse-number g)
+     :realised nil
+     :error nil
+     :success nil
+     :source (str path)
+     :ref (or (:turn turn) (str "line-" (inc idx)))
+     :witness-class :operator-gate}))
 
 (defn- pilots-records [path warnings]
   (let [file (io/file path)]
@@ -98,21 +131,18 @@
 
       :else
       (try
-        (->> (str/split-lines (slurp file))
-             (keep-indexed
-              (fn [idx line]
-                (when-let [[_ p r] (re-find pilot-g-re line)]
-                  (let [pred (parse-number p)
-                        real (parse-number r)]
-                    {:kind :pilots-log-turn
-                     :at nil
-                     :predicted pred
-                     :realised real
-                     :error (abs-error pred real nil)
-                     :success nil
-                     :source (str path)
-                     :ref (str "line-" (inc idx))}))))
-             vec)
+        (loop [rows (map-indexed vector (str/split-lines (slurp file)))
+               turn nil
+               out []]
+          (if-let [[idx line] (first rows)]
+            (if-let [[_ n at] (re-find pilot-turn-re line)]
+              (recur (rest rows) {:turn (str "turn-" n) :at at} out)
+              (recur (rest rows)
+                     turn
+                     (cond-> out
+                       true (into (keep identity [(pilot-pair-record path idx line)
+                                                  (pilot-read-record path idx turn line)])))))
+            out))
         (catch Throwable t
           (swap! warnings conj (warn path (str "unreadable source: " (.getMessage t))))
           [])))))
@@ -129,7 +159,8 @@
                   :error nil
                   :success (when (contains? m :success) (boolean (:success m)))
                   :source (str path)
-                  :ref (:scope m)})))
+                  :ref (:scope m)
+                  :witness-class (if (:success m) :build-discharge :none)})))
     []))
 
 (defn- edn-lines [path warnings]
@@ -160,7 +191,8 @@
                 :error nil
                 :success (when (contains? m :discharged?) (boolean (:discharged? m)))
                 :source (str path)
-                :ref (:move/id m)}))))
+                :ref (:move/id m)
+                :witness-class (if (:discharged? m) :build-discharge :none)}))))
 
 (defn- discipline-records [path warnings]
   (let [file (io/file path)]
@@ -175,7 +207,8 @@
                  :error nil
                  :success false
                  :source (str path)
-                 :ref (:run-id m)})
+                 :ref (:run-id m)
+                 :witness-class :discipline-event})
               (discipline/read-events path))
         (catch Throwable t
           (swap! warnings conj (warn path (str "unreadable source: " (.getMessage t))))
