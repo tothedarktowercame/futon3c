@@ -384,3 +384,44 @@ question: which grounding signal — realized substrate-2 closure now vs real pe
   inert until the value is grounded. **Decision pending Joe** (kill/keep on self-graded value) →
   discharges `:O-rollout-kill-criterion`. T4 (does the prior carry real info) is the natural next A2
   item — same root cause, complementary measurement.
+
+---
+
+## 7. Questions for Fable — grounded-learning ML architecture
+
+*Pointer for relay: **`C-falsifiable-missions.md` §7**. Full context: the shared spec at
+`futon3c/holes/campaigns/grounded-learning-spec.md` (the loop, the four per-agent contracts, the data
+interfaces). Background: E-ground-G resolved the FutonZero grounding question — the grounded,
+peradam-free signal is the **cascade→sorry→wiring closure-fold loop** (a closure = select a subset of
+a phylogeny-grounded pattern cascade → each pattern's `THEN`-clause is a graph-rewrite rule → folding
+them yields the wiring diagram). Builds 1+2 are live + demonstrated (a real closure taught the
+phylogeny an edge that improved the next cascade). Peradams are re-cast as the sparse audit, outside
+the loop. These three questions are the architecture-level unknowns where your input would sharpen the
+spec before we build the exploration arm (Build 3).*
+
+### Q-Fable-1 — the unified closure schema / grain-bridge
+Closures arrive in **two grains**: (a) pattern-stem **fold records** (`futon6/holes/closure-folds.edn`
+— which library patterns folded a hole), and (b) entity-keyed **mission-diagram arrows** in the shared
+store (`futon3a/meme.db`, written by both agents and the Cyborg/Joe — e.g. E-mission-head's
+`:correlated→:open→:constructed` arrows). **What single closure schema do both reduce to**, so agent
+and Cyborg closures are one learning signal? (We need the canonical "what a closure event carries"
+across grains, or the loop only ever learns from half the store.)
+
+### Q-Fable-2 — credit assignment across the proposing structure
+A fold uses a **subset** of the proposed cascade (e.g. 2 of 27 patterns), and the cascade is a
+**semi-lattice** (patterns overlap; "A City is Not a Tree"). When the fold succeeds, is utility
+credited to the **used patterns**, to the **edges among them**, or to the **cascade-as-a-whole** — and
+how, without **double-counting** move-grain reward against pattern-grain reward (the don't-double-count
+cross-check claude-3 holds)? *(Leaning to settle this in-mesh with claude-1, but your view is welcome.)*
+
+### Q-Fable-3 — the EFE epistemic term, concretely
+The exploration arm = the capability-star-map's EFE scheduler (`G = risk + ambiguity + info + cost`).
+We need the **`info` term made real**: the expected-information-gain of attempting a candidate hole —
+how much would closing it *teach*? Candidate signals: it requires a **coverage-gap pattern** (not yet
+in the library), or a **cross-cluster phylogeny edge** the phylogeny lacks, or it advances a
+**frontier capability**. **What is the principled epistemic-value formula** here — so EXPLORE genuinely
+seeks what teaches most, rather than hand-waving "novelty"? (This is the term that makes the loop
+active-inference rather than pure exploitation.)
+
+*Routing (claude-3's lean): **Q1 + Q3** are the most architectural — best for Fable. **Q2** can settle
+in-mesh with claude-1. All three are also the open items in `grounded-learning-spec.md` §4.*
