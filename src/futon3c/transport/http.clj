@@ -422,6 +422,7 @@
 
 (declare create-invoke-job!)
 (declare run-invoke-job!)
+(declare record-invoke-job-delivery-by-job-id!)
 
 (defn- enqueue-auto-bellback!
   [{:keys [caller bell-job-id prompt]}]
@@ -433,11 +434,17 @@
     (.submit invoke-executor
              ^Runnable
              (fn []
-               (run-invoke-job! {:job-id job-id
-                                 :agent-id caller
-                                 :prompt prompt
-                                 :caller auto-bellback-caller
-                                 :surface auto-bellback-caller})))
+               (let [result (run-invoke-job! {:job-id job-id
+                                               :agent-id caller
+                                               :prompt prompt
+                                               :caller auto-bellback-caller
+                                               :surface auto-bellback-caller})]
+                 (record-invoke-job-delivery-by-job-id!
+                  job-id
+                  {:surface auto-bellback-caller
+                   :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
+                   :delivered? true
+                   :note (if (:ok result) "auto-bellback-ready" "auto-bellback-error")}))))
     job-id))
 
 (def ^:dynamic *enqueue-auto-bellback!* enqueue-auto-bellback!)

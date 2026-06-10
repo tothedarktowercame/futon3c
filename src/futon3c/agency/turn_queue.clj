@@ -1,5 +1,5 @@
 (ns futon3c.agency.turn-queue
-  "Flag-gated per-agent FIFO turn queue for Car-3.
+  "Flag-gated per-agent durable FIFO turn queue.
 
    The queue is intentionally independent of registry invocation. Callers
    accept a turn, then drain the recipient queue with their existing invoke
@@ -19,14 +19,14 @@
   "True when the load-dark Car-3 queue path is explicitly enabled.
    Default is false; loading this namespace does not change invoke behavior."
   []
-  (let [prop (System/getProperty "FUTON3C_CAR3_QUEUE")]
+  (let [prop (System/getProperty "FUTON3C_DURABLE_QUEUE")]
     (if (some? prop)
       (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
-      (config/env-bool "FUTON3C_CAR3_QUEUE" false))))
+      (config/env-bool "FUTON3C_DURABLE_QUEUE" false))))
 
 (defn queue-store-path []
-  (or (config/env "FUTON3C_CAR3_QUEUE_PATH")
-      "/tmp/futon3c-car3-turn-queue.edn"))
+  (or (config/env "FUTON3C_DURABLE_QUEUE_PATH")
+      "/tmp/futon3c-durable-turn-queue.edn"))
 
 (defn- empty-state []
   {:queues {}
