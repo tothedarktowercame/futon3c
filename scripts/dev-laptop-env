@@ -22,6 +22,23 @@ export FUTON3C_ROLE="laptop"
 # reply routing, msg-id dedup). Activated 2026-06-10. Set "false" to revert to
 # the legacy lock path.
 export FUTON3C_DURABLE_QUEUE="${FUTON3C_DURABLE_QUEUE:-true}"
+# Kangaroo warm pouch (M-kangaroo): one persistent `claude --input-format
+# stream-json` process per agent instead of cold `claude -p --resume` per turn.
+# Takes effect for agents minted after start (cr new); existing agents stay cold
+# until re-minted. Set "false" to revert. Activated 2026-06-10.
+export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
+# Drainer v2 (M-agency-hardening drainer car): a dedicated per-agent drainer thread
+# owns drain+finalization so a bell enqueues and returns instead of parking one of the
+# 4 shared invoke-executor lanes on @waiter (the lane-burn that backs the queue up).
+# Validated by futon3c.agency.drainer-model-test. Default OFF until verified live; flip
+# to "true" on a restart to activate. OFF = byte-for-byte the legacy invoke path.
+export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-false}"
+# Desktop Save Mode (M-agency-hardening W5): the registry roster is persisted to
+# disk continuously (always-on); this flag turns on RESTORE-on-boot, so a JVM
+# shutdown+restart brings the same agents back registered — and warm, since
+# restore rebuilds invoke-fns via the kangaroo-gated factory. Activated
+# 2026-06-10. Roster path override: FUTON3C_AGENT_ROSTER_FILE.
+export FUTON3C_AGENT_RESTORE="${FUTON3C_AGENT_RESTORE:-true}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
 export FUTON3C_LINODE_URL="${FUTON3C_LINODE_URL:-http://172.236.28.208:7070}"

@@ -46,6 +46,8 @@
 (defonce ^:private !processors
   (atom {}))
 
+(declare run-finalizer!)
+
 (defn- load-state []
   (let [f (io/file (queue-store-path))]
     (if (.exists f)
@@ -263,6 +265,7 @@
                            :else :processed)
                   entry* (mark-terminal! entry status result)]
               (swap! !processors dissoc (:id entry))
+              (run-finalizer! (:id entry) result)        ;; no-op unless a v2 finalizer is registered
               (recur (conj processed entry*)))
             processed))
         (finally
@@ -276,3 +279,116 @@
     (when-not (= :deduped status)
       (drain! (:to entry) process-fn))
     @waiter))
+
+;; =============================================================================
+;; Drainer v2 — dedicated per-agent drainer thread (no shared invoke-lane park)
+;; =============================================================================
+;;
+;; accept-and-drain! parks the CALLING thread on @waiter when the agent is already
+;; draining. For bells that calling thread is one of the 4 shared invoke-executor
+;; lanes, so turns queued behind a slow agent burn lanes (M-agency-hardening
+;; "drainer car"). Drainer v2 gives each agent its own dedicated daemon drainer
+;; thread that owns drain + finalization, so a bell can enqueue and return without
+;; holding a shared lane. Validated by futon3c.agency.drainer-model-test BEFORE
+;; implementation. Flag-gated, load-dark; the v2 path is only reached when callers
+;; opt in via accept-async!/accept-block!, so OFF behavior is byte-for-byte the
+;; durable-queue path above.
+
+(defn drainer-v2-enabled?
+  "True when the per-agent drainer-thread path (no shared-lane parking) is enabled.
+   Default false; load-dark. Layered on the durable queue."
+  []
+  (let [prop (System/getProperty "FUTON3C_DRAINER_V2")]
+    (if (some? prop)
+      (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
+      (config/env-bool "FUTON3C_DRAINER_V2" false))))
+
+(def ^:dynamic *drained-by-outer*
+  "Bound true while a turn runs under an outer per-agent drainer (v2), so the inner
+   invoke-fn accept-and-drain! does not re-queue the same turn."
+  false)
+
+(defonce ^:private !finalizers (atom {}))   ;; id -> (fn [result] ...)
+(defonce ^:private !drainers (atom {}))      ;; agent-id -> {:lock Object :running atom :thread Thread}
+
+(def ^:private drainer-wait-ms 500)
+
+(defn run-finalizer!
+  "Invoke and clear the registered finalizer for ID with the turn RESULT.
+   No-op when none is registered (the durable-queue/old path never registers one)."
+  [id result]
+  (when-let [f (get @!finalizers id)]
+    (swap! !finalizers dissoc id)
+    (try (f result)
+         (catch Throwable t
+           (println (str "[turn-queue] finalizer " id " failed: " (.getMessage t)))))))
+
+(defn- spawn-drainer! [agent-id]
+  (let [lock (Object.)
+        running (atom true)
+        thread (Thread.
+                ^Runnable
+                (fn []
+                  (while @running
+                    (try
+                      (drain! agent-id nil)   ;; each entry carries its own processor
+                      (catch Throwable t
+                        (println (str "[turn-queue] drainer " agent-id " error: "
+                                      (.getMessage t)))))
+                    (locking lock
+                      (when (empty? (get-in (snapshot) [:queues agent-id]))
+                        (try (.wait lock (long drainer-wait-ms))
+                             (catch InterruptedException _))))))
+                (str "turn-drainer-" agent-id))]
+    (.setDaemon thread true)
+    (.start thread)
+    {:lock lock :running running :thread thread}))
+
+(defn- ensure-drainer! [agent-id]
+  (let [aid (clean-str agent-id)]
+    (when (and aid (not (get @!drainers aid)))
+      (locking !drainers
+        (when-not (get @!drainers aid)
+          (swap! !drainers assoc aid (spawn-drainer! aid)))))
+    (get @!drainers aid)))
+
+(defn- signal-drainer! [agent-id]
+  (when-let [{:keys [lock]} (get @!drainers (clean-str agent-id))]
+    (locking lock (.notifyAll lock))))
+
+(defn accept-async!
+  "Enqueue ENTRY (carrying :process-fn and optional :finalize-fn) for its recipient
+   and ensure a dedicated per-agent drainer thread processes it. Returns the accept
+   result map IMMEDIATELY without blocking. finalize-fn (if present) runs with the
+   turn's terminal result on the drainer thread. Bell-style fire-and-forget dispatch
+   that never holds a shared invoke lane."
+  [entry]
+  (let [finalize-fn (:finalize-fn entry)
+        {:keys [status entry] :as r} (accept! (dissoc entry :finalize-fn))]
+    (when (not= :deduped status)
+      (when finalize-fn
+        (swap! !finalizers assoc (:id entry) finalize-fn))
+      (ensure-drainer! (:to entry))
+      (signal-drainer! (:to entry)))
+    r))
+
+(defn accept-block!
+  "Like accept-async! but blocks the CALLING thread on the turn's waiter and returns
+   the terminal result. Use only on a non-scarce thread (e.g. an HTTP request thread),
+   never on a shared invoke-executor lane."
+  [entry]
+  (let [{:keys [status waiter]} (accept-async! entry)]
+    (if (= :deduped status)
+      {:result "[deduped turn]" :turn-queue/status :deduped}
+      @waiter)))
+
+(defn stop-all-drainers!
+  "Stop and clear every per-agent drainer thread + pending finalizers.
+   Tests/dev only."
+  []
+  (doseq [[_ {:keys [running lock thread]}] @!drainers]
+    (when running (clojure.core/reset! running false))
+    (when lock (locking lock (.notifyAll lock)))
+    (when thread (.interrupt ^Thread thread)))
+  (clojure.core/reset! !drainers {})
+  (clojure.core/reset! !finalizers {}))

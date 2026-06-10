@@ -3662,7 +3662,13 @@ RESPOND WITH ONLY:
                       (invoke-once prompt session-id)))
                   (invoke-once prompt session-id)))]
         (fn [prompt session-id]
-          (if (turn-queue/enabled?)
+          (cond
+            ;; Drainer v2: an outer per-agent drainer already owns serialization for
+            ;; this turn, so run the raw invoke without re-queuing (no shared lane held).
+            turn-queue/*drained-by-outer*
+            (invoke-warm-or-cold prompt session-id)
+
+            (turn-queue/enabled?)
             (turn-queue/accept-and-drain!
              {:from (turn-queue/prompt-field prompt :from)
               :to agent-id
@@ -3672,6 +3678,8 @@ RESPOND WITH ONLY:
               :session-id session-id}
              (fn [entry]
                (invoke-warm-or-cold (:prompt entry) (:session-id entry))))
+
+            :else
             (locking !lock
               (invoke-warm-or-cold prompt session-id))))))))
 

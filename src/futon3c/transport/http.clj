@@ -56,6 +56,7 @@
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.mesh-qa :as mesh-qa]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -2721,26 +2722,41 @@
                                             :agent-id agent-id
                                             :prompt prompt
                                             :caller caller
-                                            :surface surface})]
+                                            :surface surface})
+                run-job (fn []
+                          (run-invoke-job! {:job-id job-id
+                                            :agent-id agent-id
+                                            :prompt prompt
+                                            :caller caller
+                                            :surface surface
+                                            :timeout-ms timeout-ms
+                                            :mission-id mission-id
+                                            :evidence-store evidence-store}))
+                deliver-result (fn [result]
+                                 ;; Bell delivery means caller can obtain terminal result via canonical job query.
+                                 (record-invoke-job-delivery-by-job-id!
+                                  job-id
+                                  {:surface "bell"
+                                   :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
+                                   :delivered? true
+                                   :note (if (:ok result) "bell-job-ready" "bell-job-error")}))]
             (try
-              (.submit invoke-executor
-                       ^Runnable
-                       (fn []
-                         (let [result (run-invoke-job! {:job-id job-id
-                                                        :agent-id agent-id
-                                                        :prompt prompt
-                                                        :caller caller
-                                                        :surface surface
-                                                        :timeout-ms timeout-ms
-                                                        :mission-id mission-id
-                                                        :evidence-store evidence-store})]
-                           ;; Bell delivery means caller can obtain terminal result via canonical job query.
-                           (record-invoke-job-delivery-by-job-id!
-                            job-id
-                            {:surface "bell"
-                             :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
-                             :delivered? true
-                             :note (if (:ok result) "bell-job-ready" "bell-job-error")}))))
+              (if (turn-queue/drainer-v2-enabled?)
+                ;; Drainer v2: enqueue to the agent's dedicated drainer thread and
+                ;; return — never hold a shared invoke-executor lane for the turn.
+                (let [r (turn-queue/accept-async!
+                         {:to (str agent-id) :from caller :surface surface :prompt prompt
+                          :process-fn (fn [_entry]
+                                        (binding [turn-queue/*drained-by-outer* true]
+                                          (run-job)))
+                          :finalize-fn deliver-result})]
+                  (when (= :deduped (:status r))
+                    (finalize-invoke-job! job-id "deduped" "duplicate-msg-id" nil
+                                          {:ok true :deduped true} nil)))
+                ;; Legacy path: run on the shared invoke-executor pool.
+                (.submit invoke-executor
+                         ^Runnable
+                         (fn [] (deliver-result (run-job)))))
               (json-response 202 {:ok true
                                   :accepted true
                                   :job-id job-id
