@@ -91,11 +91,20 @@ crossed bells until agency-hardening lands.
 ## 2. ESCROW ledger (the held grounded-paths)
 
 ```
-{:from M-pattern-posteriors :on the-grounded-yardstick
- :requirement "peradam-attributed outcome moves a per-pattern posterior (the grounded update path)" :status :held}
-{:from M-arguing-worlds :on the-grounded-yardstick
- :requirement "a non-circular tournament yardstick OUTSIDE the wholeness-C loop" :status :held}
+;; STANDARD-VERIFY ratified by Joe 2026-06-10. The grounding source is RE-EXPRESSED as the CLOSURE-FOLD
+;; signal (car-independent, peradam-free) per the converged grounded-learning-spec.md — NOT the peradam.
+{:from M-pattern-posteriors :on the-grounded-CLOSURE-signal
+ :requirement "a CLOSURE-attributed outcome moves a per-pattern posterior (grounded in fold-usage, not self-graded)"
+ :status :contract-released  ;; released 2026-06-10; v0 already demonstrated (Build 2: folds bumped pattern_posteriors.grounded.json)
+ :build "the grounded A/B in construct_cascade against pattern_posteriors.grounded.json (claude-1) + failed-fold β (claude-3)"}
+{:from M-arguing-worlds :on the-grounded-CLOSURE-signal
+ :requirement "a non-circular tournament yardstick OUTSIDE the wholeness-C loop = the closure-fold outcome (real, external)"
+ :status :contract-released  ;; released 2026-06-10
+ :build "tournament scored by closure-fold outcomes, not C (claude-1)"}
 ```
+*Peradams are re-cast as the **audit** (claude-4's lift-on-`:move/id`, outside the loop) — they no
+longer gate these releases. `:satisfied` now = a closure-attributed outcome moves a posterior / seeds
+the tournament (the former is already demonstrated; full build pending).*
 Two-step release: **STANDARD-VERIFY** (the role-fork + the certificate contract verified
 fit-for-both) → `:contract-released` (paired missions build their grounded paths to the verified
 spec); **RUN/DELIVER** (the car emits real peradams) → `:satisfied`. Both paired missions' **v0**
@@ -490,3 +499,16 @@ attempt could mint novel units" — else EXPLORE farms novelty (the peradam anti
 **(ii)** because IG peaks at p≈0.5 on thin posteriors, the scheduler will naturally select at the
 **edge of competence** — the EOC resonance, and the signature to *verify* in T-runs: if EXPLORE keeps
 picking sure-things or sure-failures, the info term is mis-implemented.
+- **2026-06-10 — STANDARD-VERIFY RATIFIED (Joe). Escrow RELEASED → `:contract-released` (both paired
+  paths), car-independent.** Joe signed off the STANDARD-VERIFY step. With the converged
+  `grounded-learning-spec.md` (3 contracts + 5 ML questions resolved, mesh + Fable), the grounded
+  yardstick is **re-expressed as the closure-fold signal** (dense, real, peradam-free) — so both
+  paired grounded paths release **without** waiting on the car: **M-pattern-posteriors** (grounded in
+  fold-usage; v0 already demonstrated — Build 2 bumped `pattern_posteriors.grounded.json` from real
+  folds) and **M-arguing-worlds** (tournament yardstick = the closure-fold outcome, external to the
+  wholeness-C loop). Peradams stay the **audit** (claude-4's lift-on-`:move/id`, outside the loop),
+  no longer gating the release. `:satisfied` now = a closure-attributed outcome moves a posterior /
+  seeds the tournament. **This is the campaign's reason-to-exist met** (the closed loop grounded in
+  external reality) — and met *better* than chartered: peradam-free + car-independent, the
+  relinquishment that unblocked it. Remaining = build to the converged spec (grain-bridge, failed-fold
+  β, Build 3/EXPLORE, the auditor).
