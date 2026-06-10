@@ -70,18 +70,41 @@
         (doseq [f (reverse (file-seq root))] (.delete f))))))
 
 (deftest degenerate-detection-true-and-calibratable-false
-  (let [degenerate (repeat 11 {:kind :gamma-frame :predicted 1.0 :realised 1.0 :error 0.0})
+  (let [degenerate (repeat 11 {:kind :gamma-frame :predicted 1.0 :realised 1.0
+                               :error 0.0 :independent? true})
         nondegenerate (for [i (range 11)]
-                        {:kind :gamma-frame :predicted 1.0 :realised (+ 2.0 i)})]
+                        {:kind :gamma-frame :predicted 1.0 :realised (+ 2.0 i)
+                         :independent? true})]
     (is (= :degenerate (:verdict (calibration/calibration-report (vec degenerate)))))
     (is (true? (:degenerate? (calibration/calibration-report (vec degenerate)))))
     (is (= :calibratable (:verdict (calibration/calibration-report (vec nondegenerate)))))
     (is (false? (:degenerate? (calibration/calibration-report (vec nondegenerate)))))))
 
 (deftest insufficient-evidence-when-fewer-than-ten-pairs
-  (let [evidence [{:kind :gamma-frame :predicted 1.0 :realised 1.0 :error 0.0}]]
+  (let [evidence [{:kind :gamma-frame :predicted 1.0 :realised 1.0
+                   :error 0.0 :independent? true}]]
     (is (= :insufficient-evidence
            (:verdict (calibration/calibration-report evidence))))))
+
+(deftest non-independent-volume-cannot-flip-the-verdict
+  ;; The anti-laundering core: any volume of self-referential (proposal-mode)
+  ;; pairs leaves the verdict at :insufficient-evidence — only pairs tagged
+  ;; :independent? true (realised from an EXECUTED action) count toward
+  ;; clearance. The gate that diagnoses degeneracy must not be clearable by
+  ;; more degeneracy.
+  (let [self-referential (repeat 100 {:kind :gamma-frame :predicted 1.0
+                                      :realised 1.0 :error 0.0})
+        report (calibration/calibration-report (vec self-referential))]
+    (is (= 100 (:paired-count report)))
+    (is (= 0 (:independent-paired-count report)))
+    (is (= :insufficient-evidence (:verdict report)))
+    (is (true? (:degenerate? report)) "diagnosis still reports the degeneracy")
+    ;; and a healthy independent set alongside them clears on ITS merits only
+    (let [mixed (into (vec self-referential)
+                      (for [i (range 11)]
+                        {:kind :gamma-frame :predicted 1.0 :realised (+ 2.0 i)
+                         :independent? true}))]
+      (is (= :calibratable (:verdict (calibration/calibration-report mixed)))))))
 
 (deftest missing-sources-become-warnings-not-throws
   (let [evidence (calibration/load-evidence {:traces-dir "/tmp/no-such-traces-dir-for-calibration"

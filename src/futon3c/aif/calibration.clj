@@ -83,6 +83,10 @@
                             :success nil
                             :source (.getPath file)
                             :ref (or (:run-id m) run-id)
+                            ;; realised-on-merge frames tag :independent? true
+                            ;; (executed action, independent realised) — the
+                            ;; ONLY pairs the verdict may count.
+                            :independent? (boolean (:independent? m))
                             :witness-class :none})))))
            (catch Throwable t
              (swap! warnings conj (warn (.getPath file) (str "unreadable source: " (.getMessage t))))
@@ -244,25 +248,41 @@
   (when (seq xs)
     (/ (reduce + 0.0 xs) (double (count xs)))))
 
-(defn calibration-report [evidence]
+(defn calibration-report
+  "Report over normalized evidence. ANTI-LAUNDERING (G-SIM verdict,
+   2026-06-10): the VERDICT is computed over INDEPENDENT pairs only —
+   records tagged :independent? true, i.e. realised-G measured from an
+   EXECUTED action (the realised-on-merge binding), not a proposal-cycle
+   re-read. Self-referential pairs still appear in the stats and the
+   :degenerate? diagnosis, but no volume of them can flip the verdict
+   toward :calibratable: the gate that diagnoses degeneracy must not be
+   clearable by more degeneracy."
+  [evidence]
   (let [warnings (vec (:warnings (meta evidence)))
         n-by-kind (frequencies (map :kind evidence))
         paired (filter #(and (number? (:predicted %))
                              (number? (:realised %)))
                        evidence)
-        errors (mapv #(double (or (:error %) (Math/abs (- (:realised %) (:predicted %))))) paired)
+        pair-error #(double (or (:error %) (Math/abs (- (:realised %) (:predicted %)))))
+        errors (mapv pair-error paired)
         zero-count (count (filter zero? errors))
         nonzero-count (- (count errors) zero-count)
-        near-zero-count (count (filter #(< (Math/abs (double %)) 1.0e-3) errors))
+        near-zero-frac (fn [es] (when (seq es)
+                                  (/ (count (filter #(< (Math/abs (double %)) 1.0e-3) es))
+                                     (double (count es)))))
         paired-count (count paired)
+        independent (filterv :independent? paired)
+        independent-errors (mapv pair-error independent)
+        independent-count (count independent)
         degenerate? (and (pos? paired-count)
-                         (> (/ near-zero-count (double paired-count)) 0.8))
+                         (> (or (near-zero-frac errors) 0.0) 0.8))
         verdict (cond
-                  (< paired-count 10) :insufficient-evidence
-                  degenerate? :degenerate
+                  (< independent-count 10) :insufficient-evidence
+                  (> (or (near-zero-frac independent-errors) 0.0) 0.8) :degenerate
                   :else :calibratable)]
     {:n-by-kind n-by-kind
      :paired-count paired-count
+     :independent-paired-count independent-count
      :error-stats {:zero-count zero-count
                    :nonzero-count nonzero-count
                    :max (if (seq errors) (apply max errors) 0.0)
