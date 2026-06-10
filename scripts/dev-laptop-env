@@ -30,9 +30,9 @@ export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
 # Drainer v2 (M-agency-hardening drainer car): a dedicated per-agent drainer thread
 # owns drain+finalization so a bell enqueues and returns instead of parking one of the
 # 4 shared invoke-executor lanes on @waiter (the lane-burn that backs the queue up).
-# Validated by futon3c.agency.drainer-model-test. Default OFF until verified live; flip
-# to "true" on a restart to activate. OFF = byte-for-byte the legacy invoke path.
-export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-false}"
+# Validated by futon3c.agency.drainer-model-test. Activated 2026-06-10. Set "false"
+# to revert to the legacy invoke path (byte-for-byte). Takes effect on restart.
+export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-true}"
 # Desktop Save Mode (M-agency-hardening W5): the registry roster is persisted to
 # disk continuously (always-on); this flag turns on RESTORE-on-boot, so a JVM
 # shutdown+restart brings the same agents back registered — and warm, since
