@@ -26,7 +26,8 @@
    - mission.clj — the clone-from shape donor
    - cycle.clj — the generic engine this peripheral instantiates
    - war_machine_pilot_shapes.clj — domain config field declarations"
-  (:require [futon3c.peripheral.cycle :as cycle]
+  (:require [clojure.string :as str]
+            [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.war-machine-pilot-shapes :as pps]
             [futon3c.peripheral.war-machine-pilot-backend :as pb]
             [futon3c.peripheral.runner :as runner]
@@ -318,11 +319,57 @@
            guardrails? (assoc :needs-you-emitted (:emitted-count emitted)
                               :needs-you-path (:path emitted))))))))
 
+(def ^:private pilots-log-path
+  (str (System/getProperty "user.home") "/code/futon3c/holes/PILOTS-LOG.md"))
+
+(defn log-pilot-turn!
+  "DOCUMENT stage of the LOOP turn: append a human-readable entry to the Pilot's Log
+   (PILOTS-LOG.md, newest at top). Mechanical facts auto-fill from the cycle; the
+   inhabitant supplies the semantic account via :document {:did :found :pur}. Best-effort —
+   a log failure must never break a turn. Returns {:turn n :path p} or nil.
+     turn-data: {:agent :mode :recommendation {:target :g :rationale}
+                 :cascade {:patterns :C} :measurement {:predicted :realised :top-shift? :pre-top :post-top}
+                 :document {:did :found :pur}}"
+  [{:keys [agent mode recommendation cascade measurement document]}]
+  (try
+    (let [path pilots-log-path
+          text (slurp path)
+          n (->> (re-seq #"(?m)^## Turn (\d+)" text)
+                 (map (comp #(Integer/parseInt %) second))
+                 (reduce max 0) inc)
+          date (subs (str (java.time.Instant/now)) 0 10)
+          {:keys [target g]} recommendation
+          {:keys [patterns C]} cascade
+          {:keys [predicted realised top-shift? pre-top post-top]} measurement
+          {:keys [did found pur]} document
+          entry (str "## Turn " n " — " date " (" (or agent "pilot") ", " (name (or mode :supervised)) ")\n\n"
+                     "**READ.** WM recommended `" target "`"
+                     (when g (format " (G=%.2f)" (double g))) ".\n"
+                     (when (seq patterns)
+                       (str "Cascade" (when C (format " (C=%.2f)" (double C))) ": "
+                            (str/join " · " patterns) ".\n"))
+                     "\n**EVAL / DID.** " (or did "_(not recorded — mechanical turn)_") "\n"
+                     "\n**PRINT / FOUND.** " (or found "_(not recorded)_")
+                     (when (and predicted realised)
+                       (format "  _[predicted G=%.2f, realised G=%.2f%s]_"
+                               (double predicted) (double realised)
+                               (if top-shift? (str ", top-shift " pre-top "->" post-top) "")))
+                     "\n\n**PUR.** " (or pur "_(not recorded)_") " Mode: " (name (or mode :supervised)) ".\n")
+          idx (str/index-of text "## Turn ")
+          [head tail] (if idx [(subs text 0 idx) (subs text idx)] [text ""])
+          new-text (str (str/trimr head) "\n\n" entry "\n" tail)]
+      (spit path new-text)
+      {:turn n :path path})
+    (catch Throwable _ nil)))
+
 (defn close-live-cycle!
   "LOOP: re-read the (post-tick) judgement; realised = post G-total of the
    chosen target (or predicted if the target was resolved/absent). Build the
-   turn-record, frame it (envelope + γ), persist, and return the measurement."
-  [run-id]
+   turn-record, frame it (envelope + γ), persist, log the Pilot's-Log turn (DOCUMENT
+   stage — pass the semantic account via opts `:document {:did :found :pur}`), and
+   return the measurement."
+  ([run-id] (close-live-cycle! run-id {}))
+  ([run-id {:keys [document]}]
   (if-let [b (get @!live-cycle-runs run-id)]
     (let [post-j     (live-judgement)
           post-dT    (judgement->dT post-j)
@@ -356,9 +403,21 @@
                         :wm-mode (:wm-mode b) :mode (:mode b)
                         :tick-before (:tick-before b)
                         :tick-after (:tick-count ((requiring-resolve 'futon3c.wm.scheduler/status))))
-          path  ((requiring-resolve 'futon3c.aif.repl-trace/write-frame!) frame+ "data/repl-traces")]
+          path  ((requiring-resolve 'futon3c.aif.repl-trace/write-frame!) frame+ "data/repl-traces")
+          ;; DOCUMENT stage: append the human-readable turn to the Pilot's Log (best-effort)
+          cascade (let [c (first (filter #(= pre-top (:mission %)) (:cascade-policies post-j)))]
+                    {:patterns (:shown c) :C (:C c)})
+          logged (log-pilot-turn!
+                  {:agent (:agent b) :mode (:mode b)
+                   :recommendation {:target pre-top :g (get-in b [:pre :dT-snapshot 0 :g-total])}
+                   :cascade cascade
+                   :measurement {:predicted predicted :realised realised
+                                 :top-shift? (not= pre-top post-top)
+                                 :pre-top pre-top :post-top post-top}
+                   :document document})]
       {:ok true :frame-path path :run-id run-id
        :predicted predicted :realised realised
        :prediction-error (Math/abs (double (- realised predicted)))
-       :top-shift? (not= pre-top post-top) :pre-top pre-top :post-top post-top})
-    {:ok false :error (str "unknown run-id " run-id)}))
+       :top-shift? (not= pre-top post-top) :pre-top pre-top :post-top post-top
+       :logged-turn (:turn logged)})
+    {:ok false :error (str "unknown run-id " run-id)})))

@@ -8,6 +8,13 @@ Each entry records: **what the WM recommended**, **what the pilot did**, **what 
 (did the tooling help; honesty/earned-closure notes; supervised vs. armed). Append newest at the top. Keep
 it honest — no laundered findings.
 
+**This is now the DOCUMENT stage of the pilot cycle** (not documentation-only): `close-live-cycle!`
+(`war_machine_pilot.clj`) auto-appends a turn here as its last step. The mechanical facts (recommendation,
+cascade, predicted/realised, top-shift) auto-fill from the cycle; the inhabitant supplies the semantic
+account by passing `:document {:did … :found … :pur …}` to `close-live-cycle!`. A log failure can never
+break a turn (best-effort). So every completed cycle writes its own entry — Turn 2 onward land here
+automatically.
+
 ---
 
 ## Turn 1 — 2026-06-09 (claude-1, emacs-repl) — first cycle on the new tooling (cascade lane + v2 rollout)
