@@ -1,0 +1,154 @@
+(ns futon3c.agency.roster-store
+  "Durable agent roster snapshot for desktop-save restore.
+
+   The store persists only the payload needed by /agents/restore. It never
+   serializes invoke functions, live processes, or reset callbacks. Persistence
+   is continuous: callers install a registry watch and each registry mutation
+   rewrites the EDN snapshot so kill -9 still leaves the latest roster on disk."
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str])
+  (:import [java.time Instant]))
+
+(def ^:private roster-version 1)
+(def ^:private registry-watch-key ::persist-roster)
+
+(defn roster-store-path []
+  (or (System/getProperty "FUTON3C_AGENT_ROSTER_FILE")
+      (System/getenv "FUTON3C_AGENT_ROSTER_FILE")
+      "/tmp/futon3c-agent-roster.edn"))
+
+(defn restore-enabled?
+  "Boot-time restore flag. Persistence is always on; replay is load-dark."
+  []
+  (let [prop (System/getProperty "FUTON3C_AGENT_RESTORE")]
+    (if (some? prop)
+      (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
+      (if-let [s (System/getenv "FUTON3C_AGENT_RESTORE")]
+        (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim s))))
+        false))))
+
+(defn- now [] (str (Instant/now)))
+
+(defn- blank->nil [x]
+  (some-> x str str/trim not-empty))
+
+(defn- agent-id-value [agent]
+  (let [id (:agent/id agent)]
+    (cond
+      (map? id) (blank->nil (:id/value id))
+      (some? id) (blank->nil id)
+      :else nil)))
+
+(defn- metadata-value [metadata k]
+  (or (get metadata k)
+      (get metadata (name k))))
+
+(defn restore-payload
+  "Project one registry record to its durable /agents/restore payload."
+  [agent]
+  (let [metadata (or (:agent/metadata agent) {})
+        agent-id (agent-id-value agent)
+        agent-type (:agent/type agent)
+        contracts (or (metadata-value metadata :agency/contracts) {})]
+    (when (and agent-id agent-type)
+      (cond-> {:agent-id agent-id
+               :type agent-type}
+        (:agent/session-id agent)
+        (assoc :session-id (:agent/session-id agent))
+        (blank->nil (metadata-value metadata :session-file))
+        (assoc :session-file (blank->nil (metadata-value metadata :session-file)))
+        (blank->nil (metadata-value metadata :cwd))
+        (assoc :cwd (blank->nil (metadata-value metadata :cwd)))
+        (blank->nil (metadata-value metadata :emacs-socket))
+        (assoc :emacs-socket (blank->nil (metadata-value metadata :emacs-socket)))
+        (blank->nil (metadata-value metadata :model))
+        (assoc :model (blank->nil (metadata-value metadata :model)))
+        (blank->nil (metadata-value metadata :campaign-id))
+        (assoc :campaign-id (blank->nil (metadata-value metadata :campaign-id)))
+        (blank->nil (metadata-value metadata :mission-id))
+        (assoc :mission-id (blank->nil (metadata-value metadata :mission-id)))
+        (blank->nil (metadata-value metadata :excursion-id))
+        (assoc :excursion-id (blank->nil (metadata-value metadata :excursion-id)))
+        (seq contracts)
+        (assoc :agency/contracts contracts)
+        (seq metadata)
+        (assoc :metadata (dissoc metadata
+                                 :remote? "remote?"
+                                 :proxy? "proxy?"
+                                 :remote-proxy? "remote-proxy?"
+                                 :origin-url "origin-url"
+                                 :ws-bridge? "ws-bridge?"
+                                 :note "note"))))))
+
+(defn roster-snapshot [registry]
+  {:version roster-version
+   :generated-at (now)
+   :agents (->> (vals registry)
+                (keep restore-payload)
+                (sort-by :agent-id)
+                vec)})
+
+(defn persist-registry!
+  "Persist REGISTRY as a durable roster EDN snapshot. Returns the snapshot."
+  [registry]
+  (let [snapshot (roster-snapshot registry)
+        path (roster-store-path)
+        file (io/file path)]
+    (try
+      (when-let [parent (.getParentFile file)]
+        (.mkdirs parent))
+      (spit file (pr-str snapshot))
+      (catch Throwable t
+        (println (str "[agent-roster] persist failed: " (.getMessage t)))
+        (flush)))
+    snapshot))
+
+(defn load-roster
+  ([] (load-roster (roster-store-path)))
+  ([path]
+   (let [file (io/file path)]
+     (if (.exists file)
+       (try
+         (let [parsed (edn/read-string (slurp file))]
+           (if (map? parsed)
+             (update parsed :agents #(vec (or % [])))
+             {:version roster-version :agents []}))
+         (catch Throwable t
+           (println (str "[agent-roster] load failed: " (.getMessage t)))
+           (flush)
+           {:version roster-version :agents []}))
+       {:version roster-version :agents []}))))
+
+(defn install-registry-watch!
+  "Install continuous roster persistence on REGISTRY-ATOM. Idempotent."
+  [registry-atom]
+  (remove-watch registry-atom registry-watch-key)
+  (add-watch registry-atom registry-watch-key
+             (fn [_ _ _ new-state]
+               (persist-registry! new-state)))
+  (persist-registry! @registry-atom)
+  true)
+
+(defn restore-on-boot!
+  "Replay the durable roster through RESTORE-FN when FUTON3C_AGENT_RESTORE is on.
+
+   RESTORE-FN receives each restore payload plus :restored-detached? true. It
+   should be idempotent for existing agent IDs. Returns a report map."
+  [restore-fn]
+  (if-not (restore-enabled?)
+    {:enabled? false :attempted 0 :restored 0 :results []}
+    (let [agents (:agents (load-roster))
+          results (mapv (fn [payload]
+                          (try
+                            (restore-fn (assoc payload :restored-detached? true))
+                            (catch Throwable t
+                              {:ok false
+                               :agent-id (:agent-id payload)
+                               :err "restore-exception"
+                               :message (.getMessage t)})))
+                        agents)]
+      {:enabled? true
+       :attempted (count agents)
+       :restored (count (filter :ok results))
+       :results results})))

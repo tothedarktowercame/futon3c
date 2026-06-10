@@ -1,8 +1,10 @@
 (ns futon3c.dev.bootstrap
   "Bootstrap helpers and top-level startup orchestration for futon3c.dev."
-  (:require [futon1a.system :as f1]
+  (:require [cheshire.core :as json]
+            [futon1a.system :as f1]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.roster-store :as roster-store]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
@@ -68,6 +70,20 @@
           (println "[dev] futon5 heartbeat API disabled: nonstarter.api not on classpath")
           nil)))))
 
+
+(defn- restore-agent-via-handler!
+  [http-handler payload]
+  (let [body (json/generate-string payload)
+        response (http-handler {:request-method :post
+                                :uri "/api/alpha/agents/restore"
+                                :headers {"content-type" "application/json"}
+                                :body (java.io.ByteArrayInputStream. (.getBytes body "UTF-8"))})
+        parsed (try
+                 (json/parse-string (str (:body response)) true)
+                 (catch Throwable _
+                   {:ok false :err "invalid-restore-response"}))]
+    (assoc parsed :http/status (:status response))))
+
 (defn start-futon3c!
   "Start futon3c transport HTTP+WS. Returns system map or nil when disabled."
   [{:keys [xtdb-node evidence-store irc-interceptor irc-send-fn irc-send-base make-http-handler make-ws-handler]}]
@@ -89,10 +105,18 @@
                   (if (:websocket? request)
                     (handler request)
                     (http-handler request)))
-            result (http/start-server! app port)]
+            result (http/start-server! app port)
+            restore-report (roster-store/restore-on-boot!
+                            #(restore-agent-via-handler! http-handler %))]
         (println (str "[dev] futon3c: http://localhost:" (:port result)
                       " (patterns: " (if (seq pattern-ids) pattern-ids "none") ")"))
-        (assoc result :ws-connections connections)))))
+        (when (:enabled? restore-report)
+          (println (str "[dev] agent roster restore: restored="
+                        (:restored restore-report)
+                        " attempted=" (:attempted restore-report))))
+        (assoc result
+               :ws-connections connections
+               :agent-restore restore-report)))))
 
 (defn start-irc!
   "Start IRC server + WS relay bridge. Returns system map or nil when disabled."

@@ -1768,7 +1768,7 @@
 
 (defn- make-local-agent-invoke-fn
   "Best-effort builder for a local invoke-fn for AGENT-TYPE."
-  [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom]}]
+  [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model]}]
   (let [sid-atom (or session-id-atom
                      (make-session-id-atom initial-session-id session-file))]
     (case agent-type
@@ -1780,6 +1780,7 @@
                              :session-file session-file
                              :session-id-atom sid-atom}
                       emacs-socket (assoc :emacs-socket emacs-socket)
+                      model (assoc :model model)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
@@ -1790,6 +1791,7 @@
           (@make-fn (cond-> {:agent-id agent-id
                              :session-file session-file
                              :session-id-atom sid-atom}
+                      model (assoc :model model)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
@@ -2011,6 +2013,15 @@
             emacs-socket (some-> (or (:emacs-socket payload)
                                      (get payload "emacs-socket"))
                                  str str/trim not-empty)
+            model (some-> (or (:model payload) (get payload "model"))
+                          str str/trim not-empty)
+            raw-metadata (or (:metadata payload) (get payload "metadata") {})
+            raw-contracts (or (:agency/contracts payload)
+                              (get payload "agency/contracts")
+                              (:agency/contracts raw-metadata)
+                              (get raw-metadata "agency/contracts"))
+            restored-detached? (true? (or (:restored-detached? payload)
+                                          (get payload "restored-detached?")))
             session-file (some-> (or (:session-file payload)
                                      (get payload "session-file")
                                      (default-session-file-for-agent agent-type agent-id))
@@ -2040,14 +2051,21 @@
                             :initial-session-id initial-session-id
                             :session-id-atom sid-atom
                             :requested-cwd effective-cwd
-                            :emacs-socket emacs-socket})
-                metadata (cond-> {:auto-registered? true}
+                            :emacs-socket emacs-socket
+                            :model model})
+                metadata (cond-> (merge {:auto-registered? true}
+                                        (when (map? raw-metadata) raw-metadata))
                            (= agent-type :codex) (assoc :require-execution? true)
+                           session-file (assoc :session-file session-file)
                            effective-cwd (assoc :cwd effective-cwd)
                            campaign-id (assoc :campaign-id campaign-id)
                            mission-id (assoc :mission-id mission-id)
                            excursion-id (assoc :excursion-id excursion-id)
-                           emacs-socket (assoc :emacs-socket emacs-socket))]
+                           emacs-socket (assoc :emacs-socket emacs-socket)
+                           model (assoc :model model)
+                           (seq raw-contracts) (assoc :agency/contracts raw-contracts)
+                           restored-detached? (assoc :restore/state :restored/detached
+                                                     :restore/restored-at (str (java.time.Instant/now))))]
             (if (nil? invoke-fn)
               (json-response 500 {:ok false
                                   :err "restore-failed"
@@ -2070,13 +2088,16 @@
                                     (nil? mission-id) (dissoc :mission-id "mission-id")
                                     (nil? excursion-id) (dissoc :excursion-id "excursion-id"))
                         result (reg/update-agent!
-                        agent-id
-                        :agent/type agent-type
-                        :agent/invoke-fn invoke-fn
-                        :agent/session-reset-fn session-reset-fn
-                        :agent/capabilities (get default-capabilities agent-type [])
-                        :agent/metadata metadata*
-                                :agent/session-id effective-session-id)]
+                                agent-id
+                                :agent/type agent-type
+                                :agent/invoke-fn invoke-fn
+                                :agent/session-reset-fn session-reset-fn
+                                :agent/capabilities (get default-capabilities agent-type [])
+                                :agent/metadata metadata*
+                                :agent/session-id effective-session-id
+                                :agent/status (if restored-detached?
+                                                :restored
+                                                (:agent/status existing)))]
                     (when (and session-file effective-session-id)
                       (spit session-file effective-session-id))
                     (if (and (map? result) (= false (:ok result)))
@@ -2098,8 +2119,11 @@
                                  :session-reset-fn session-reset-fn
                                  :capabilities (get default-capabilities agent-type [])
                                  :metadata metadata})]
-                    (when (and (map? result) (:agent/id result) initial-session-id)
-                      (reg/update-agent! agent-id :agent/session-id initial-session-id))
+                    (when (and (map? result) (:agent/id result))
+                      (when initial-session-id
+                        (reg/update-agent! agent-id :agent/session-id initial-session-id))
+                      (when restored-detached?
+                        (reg/update-agent! agent-id :agent/status :restored)))
                     (if (and (map? result) (:agent/id result))
                       (json-response 201 {:ok true
                                           :action "registered"
