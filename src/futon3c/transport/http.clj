@@ -1009,7 +1009,13 @@
                                         :invoke-ready? (:invoke-ready? info)}]))
                             (:agents live-status))
         evidence-store (evidence-store-for-config config)
-        evidence-count (count (estore/query* evidence-store {}))
+        ;; Best-effort count: a full unbounded evidence scan can time out as the
+        ;; store grows and would otherwise make /health throw on every poll.
+        ;; Run it off-thread with a short deadline; report -1 if slow/erroring so
+        ;; /health stays fast and quiet rather than spamming TimeoutException.
+        evidence-count (let [f (future (try (count (estore/query* evidence-store {}))
+                                            (catch Throwable _ -1)))]
+                         (deref f 800 -1))
         irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
         irc-relay-configured? (fn? (:irc-send-fn config))
         bridge (read-bridge-health)]
