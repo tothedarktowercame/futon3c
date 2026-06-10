@@ -161,8 +161,16 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
 Builds 1+2 live. **Next builds, now fully specified:**
 - **The grain-bridge (Q1)** — `cascade_learn` reads the `meme.db` `promote!` event stream (the unified
   closure); `closure-folds` becomes a pattern-grain view. Unifies agent + Cyborg closures into one signal.
-- **Failed-fold β (Q2)** — record `success:false` folds so per-pattern discrimination appears (the
-  three-currency credit model: utility→composite, attestation→components, calibration→proposer).
+- **The β / discrimination unlock (Q2) — TWO parts; the BINDING one is recording-discipline, NOT code
+  (claude-1's evidence: `closure-folds.edn` = 5 success, 0 failure).** (1) ✓ the `cascade_learn` fix
+  (process `success:false` → `β+=1`) is **done** — but a **no-op until (2)**. (2) **Instrument
+  failure-recording (the critical path).** The recording path is **survivorship-biased**: agents log
+  folds that *worked*, never used-sets attempted that *didn't close* — so β can never grow and every
+  posterior only ratchets up (the uniform-0.667 ceiling, no matter what `cascade_learn` does). The
+  recording discipline needs a **failure branch**: a fold-attempt that doesn't close → write
+  `:success false` with its `:used` (+ evidence of the attempt). **This IS the amortization principle
+  made data** ("if no, we still learned something" = a recorded negative = the β term). Order:
+  failure-recording FIRST, then `cascade_learn` consumes it. *(Not a one-line code change.)*
 - **Build 3 / EXPLORE (Q3)** — the EFE `info` term = expected posterior contraction (Beta-Bernoulli
   closed form), coupled to the star-map; verify via the **edge-of-competence** signature in T-runs.
 - **The auditor (Q5)** — claude-4's lift-on-`:move/id`, τ as an operator-ratified `:O-*` observable.
