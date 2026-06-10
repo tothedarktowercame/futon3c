@@ -21,8 +21,14 @@
       (System/clearProperty "FUTON3C_AGENT_RESTORE")
       (reg/reset-registry!)
       (persist/reset-sessions!)
+      ;; Persistence is now installed explicitly (bootstrap does this AFTER
+      ;; restore-on-boot!, not at registry ns-load). Mirror that here so the
+      ;; continuous-persist tests exercise a watched registry; remove it in
+      ;; teardown so the watch never leaks into other test namespaces.
+      (roster/install-registry-watch! reg/!registry)
       (f path)
       (finally
+        (remove-watch reg/!registry ::roster/persist-roster)
         (reg/reset-registry!)
         (if old-path
           (System/setProperty "FUTON3C_AGENT_ROSTER_FILE" old-path)

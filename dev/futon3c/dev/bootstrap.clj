@@ -108,6 +108,12 @@
             result (http/start-server! app port)
             restore-report (roster-store/restore-on-boot!
                             #(restore-agent-via-handler! http-handler %))]
+        ;; Install continuous roster persistence ONLY now — AFTER restore-on-boot!
+        ;; has consumed the saved roster. Installing at registry ns-load fired the
+        ;; watch's initial persist against the empty boot registry and clobbered
+        ;; the saved roster before restore could read it. The initial persist here
+        ;; captures the just-restored agents going forward.
+        (roster-store/install-registry-watch! reg/!registry)
         (println (str "[dev] futon3c: http://localhost:" (:port result)
                       " (patterns: " (if (seq pattern-ids) pattern-ids "none") ")"))
         (when (:enabled? restore-report)

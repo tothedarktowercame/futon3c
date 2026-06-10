@@ -19,7 +19,6 @@
    connected-agents) is eliminated by having one authoritative store."
   (:require [clojure.string :as str]
             [futon3c.blackboard :as bb]
-            [futon3c.agency.roster-store :as roster-store]
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
@@ -84,7 +83,11 @@
 ;; `(swap! !registry ...)` from arbitrary call sites. The structural
 ;; guard lives in `scripts/check-reachable-from-boot-agent-registry.sh`.
 
-(roster-store/install-registry-watch! !registry)
+;; Roster persistence (Desktop Save / W5) is installed by `start-futon3c!`
+;; AFTER `restore-on-boot!` has consumed the saved roster — NOT here at ns-load.
+;; Installing the watch at ns-load ran an eager initial `persist-registry!`
+;; against the still-empty registry, clobbering the saved roster before restore
+;; could read it (the round-trip restored 0 agents). See dev/bootstrap.clj.
 
 (declare registry-status)
 
