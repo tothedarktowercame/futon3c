@@ -18,6 +18,8 @@ import sys, json, argparse, urllib.request
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--to", required=True, help="recipient agent-id")
+ap.add_argument("--from", dest="frm", help="sender agent-id (recorded as the mesh edge's caller; "
+                                           "enables mesh_trace + auto-bellback routing)")
 ap.add_argument("--kind", choices=["bell", "whistle"], default="bell")
 ap.add_argument("--base", default="http://localhost:7070")
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
@@ -27,7 +29,10 @@ prompt = sys.stdin.read()
 if not prompt.strip():
     sys.exit("agency_send: empty prompt on stdin")
 
-payload = json.dumps({"agent-id": a.to, "prompt": prompt})
+body = {"agent-id": a.to, "prompt": prompt}
+if a.frm:
+    body["caller"] = a.frm
+payload = json.dumps(body)
 if a.dry_run:
     print(payload); sys.exit(0)
 

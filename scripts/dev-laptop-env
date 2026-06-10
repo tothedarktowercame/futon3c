@@ -12,7 +12,16 @@ source "${script_dir}/emacs-socket-lib.sh"
 # you know what you're doing.
 
 # --- Role & network ---
-export FUTON3C_ROLE="${FUTON3C_ROLE:-laptop}"
+# Force the role (not ${FUTON3C_ROLE:-laptop}): this launcher's whole job is the
+# laptop profile, and the `:-` default silently deferred to a stale FUTON3C_ROLE
+# inherited in the shell (e.g. left by a prior dev-linode-env), which made codex-1
+# register as a remote laptop-slot and wedge after restart. Forcing it kills that.
+export FUTON3C_ROLE="laptop"
+# Durable per-agent turn queue (Car-3): accept->enqueue->drain replaces
+# lock-then-invoke for same-agent turns (ordered drain, no-drop, per-surface
+# reply routing, msg-id dedup). Activated 2026-06-10. Set "false" to revert to
+# the legacy lock path.
+export FUTON3C_DURABLE_QUEUE="${FUTON3C_DURABLE_QUEUE:-true}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
 export FUTON3C_LINODE_URL="${FUTON3C_LINODE_URL:-http://172.236.28.208:7070}"
