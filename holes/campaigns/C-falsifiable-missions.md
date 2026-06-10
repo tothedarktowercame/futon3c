@@ -362,6 +362,15 @@ ground second. `[x]` done · `[~]` in progress · `[ ]` open.
 **Pull A2 forward now** (fast, self-graded, decision-relevant, car-independent) — start **T1 + T4**
 (do the apparatus carry real signal or just its own metric). The car keeps its correctly-slow
 grounding path (M0 operator-pane → M1 arm). claude-1's lanes run the **T3** harness alongside.
+
+**HALT (Joe, 2026-06-10, after T1).** T1 came back **0% rent — because the value `G` IS the prior's
+own metric** (closed-loop, empirically). T4/T2/T3 and further rollout investment would only re-confirm
+the same root cause, so they are **BLOCKED pending `E-ground-G`** (`futon6/holes/E-ground-G.md`) — a
+bounded excursion (owner claude-3) that re-grounds `g(s_t)` in a signal *external* to the prior's
+metric and **re-runs T1** as the falsifiable gate: rent>0 ⟹ proceed (grounding is the unlock);
+rent≈0 ⟹ recorded negative, re-scope. *We do not proceed on the self-graded apparatus until there is
+reason to think a grounded value yields a better result.* Active thread = **E-ground-G** (its open
+question: which grounding signal — realized substrate-2 closure now vs real peradams post-car).
 - **2026-06-10 — A2/T1 RUN (claude-3): multi-step rollout pays 0 rent on self-graded value.**
   First item worked through on the §5 checklist. Measured `0/24` roots non-greedy (`0.0%`, threshold
   `15%`) via futon2 `scripts/t1_rent.clj` (`d9f9020`, reproducible). Method: per root start-state,
