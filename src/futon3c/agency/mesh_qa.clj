@@ -23,7 +23,9 @@
    :MQ-5 {:status :checkable
           :detail "origin :surface and delivery :surface are both in invoke-jobs"}
    :MQ-6 {:status :deferred
-          :detail "ordering belongs to the Car-3 queue authority; timestamps alone are not the invariant source"}})
+          :detail "ordering belongs to the Car-3 queue authority; timestamps alone are not the invariant source"}
+   :MQ-7 {:status :checkable
+          :detail "terminal codex invoke-jobs with http-caller/blank/unregistered callers cannot auto-bell back"}})
 
 (defn- blankish? [x]
   (or (nil? x) (str/blank? (str x))))
@@ -153,6 +155,21 @@
                    [(str aid) sid])))
          (:agents status))))
 
+(defn registry-context
+  ([] (registry-context (reg/registry-status)))
+  ([status]
+   (let [agents (:agents status)]
+     {:sessions (registry-session-map status)
+      :types (into {} (map (fn [[aid info]] [(str aid) (:type info)]) agents))
+      :registered (set (map (comp str key) agents))})))
+
+(defn- normalize-registry-context [registry]
+  (if (and (map? registry) (contains? registry :sessions))
+    registry
+    {:sessions (or registry {})
+     :types {}
+     :registered (set (keys (or registry {})))}))
+
 (defn- violation [invariant edge detail & {:as more}]
   (merge {:invariant invariant
           :ref (:edge-id edge)
@@ -223,14 +240,37 @@
                     :origin-surface (:surface e)
                     :delivery-surface (:delivery-surface e)))))
 
+
+(defn- codex-recipient? [registry-context edge]
+  (= :codex (get-in registry-context [:types (:to edge)])))
+
+(defn- unaddressable-caller? [registry-context caller]
+  (let [caller* (some-> caller str str/trim)]
+    (or (str/blank? (or caller* ""))
+        (= "http-caller" caller*)
+        (not (contains? (:registered registry-context) caller*)))))
+
+(defn check-mq-7-unaddressable-caller
+  [edges registry-context]
+  (vec (for [e edges
+             :when (and (= :invoke-job (:source e))
+                        (terminal? (:terminal-state e))
+                        (codex-recipient? registry-context e)
+                        (unaddressable-caller? registry-context (:from e)))]
+         (violation :MQ-7 e
+                    (str "codex completion has no addressable caller (" (:from e) ")")
+                    :caller (:from e)))))
+
 (defn check-mesh
-  ([edges] (check-mesh edges (registry-session-map)))
-  ([edges registry-sessions]
-   (let [violations (vec (concat (check-mq-1-delivery-integrity edges)
+  ([edges] (check-mesh edges (registry-context)))
+  ([edges registry]
+   (let [registry* (normalize-registry-context registry)
+         violations (vec (concat (check-mq-1-delivery-integrity edges)
                                  (check-mq-2-orphaned-bells edges)
                                  (check-mq-3-caller-attribution edges)
-                                 (check-mq-4-recipient-fidelity edges registry-sessions)
-                                 (check-mq-5-surface-return edges)))
+                                 (check-mq-4-recipient-fidelity edges (:sessions registry*))
+                                 (check-mq-5-surface-return edges)
+                                 (check-mq-7-unaddressable-caller edges registry*)))
          counts (merge (zipmap (keys checkability) (repeat 0))
                        (frequencies (map :invariant violations)))]
      {:ok (empty? violations)

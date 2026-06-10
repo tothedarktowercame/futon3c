@@ -4,7 +4,8 @@
    This ratifies the MQ invariant set before the implementation. MQ-6 is
    intentionally deferred: current edge data has no per-recipient queue-order
    authority beyond timestamps, so ordering belongs to the Car-3 queue work."
-  (:require [clojure.test :refer [deftest is]]))
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is]]))
 
 (def terminal-states #{"succeeded" "failed" "error" "timeout" "cancelled"})
 
@@ -20,6 +21,15 @@
     (or (= s d)
         (and (= s "http") (= d "http"))
         (and (= s "bell") (= d "job-status")))))
+
+(defn- codex-recipient? [registry edge]
+  (= :codex (get-in registry [:types (:to edge)])))
+
+(defn- unaddressable-caller? [registry caller]
+  (let [caller* (some-> caller str str/trim)]
+    (or (str/blank? (or caller* ""))
+        (= "http-caller" caller*)
+        (not (contains? (:registered registry) caller*)))))
 
 (defn model-violations
   [edges registry-sessions]
@@ -38,14 +48,20 @@
             :when (and (:bellback-of e) orig (not= (:to e) (:from orig)))]
         {:invariant :MQ-3 :ref (:edge-id e)})
       (for [e edges
-            :let [expected (get registry-sessions (:to e))]
+            :let [expected (get-in registry-sessions [:sessions (:to e)])]
             :when (and (:session-id e) expected (not= (:session-id e) expected))]
         {:invariant :MQ-4 :ref (:edge-id e)})
       (for [e edges
             :when (and (terminal? e)
                        (:delivery-surface e)
                        (not (compatible-surface? (:surface e) (:delivery-surface e))))]
-        {:invariant :MQ-5 :ref (:edge-id e)})))))
+        {:invariant :MQ-5 :ref (:edge-id e)})
+      (for [e edges
+            :when (and (= :invoke-job (:source e))
+                       (terminal? e)
+                       (codex-recipient? registry-sessions e)
+                       (unaddressable-caller? registry-sessions (:from e)))]
+        {:invariant :MQ-7 :ref (:edge-id e)})))))
 
 (def conforming-trace
   [{:edge-id "j1" :from "claude-6" :to "codex-1" :surface "bell"
@@ -56,8 +72,10 @@
     :session-id "s-claude" :bellback-of "j1"}])
 
 (deftest conforming-trace-has-no-violations
-  (is (empty? (model-violations conforming-trace {"codex-1" "s-codex"
-                                                  "claude-6" "s-claude"}))))
+  (is (empty? (model-violations conforming-trace {:sessions {"codex-1" "s-codex"
+                                                             "claude-6" "s-claude"}
+                                                  :types {"codex-1" :codex}
+                                                  :registered #{"claude-6" "codex-1"}}))))
 
 (deftest adversarial-traces-trip-exactly-one-invariant
   (let [cases {:MQ-1 [{:edge-id "j" :from "a" :to "b" :surface "http"
@@ -79,8 +97,24 @@
                        :delivery-surface "emacs"}]}]
     (doseq [[invariant trace] cases]
       (is (= [invariant]
-             (mapv :invariant (model-violations trace {"b" "s-b"})))
+             (mapv :invariant (model-violations trace {:sessions {"b" "s-b"}
+                                      :types {"b" :claude}
+                                      :registered #{"a" "b" "c"}})))
           (str invariant " adversarial trace should trip only itself")))))
+
+(deftest mq7-unaddressable-caller-model
+  (let [base {:edge-id "j" :source :invoke-job :from "claude-6" :to "codex-1"
+              :surface "bell" :terminal-state "succeeded" :delivered? true
+              :delivery-surface "job-status"}
+        registry {:sessions {}
+                  :types {"codex-1" :codex "claude-1" :claude}
+                  :registered #{"claude-6" "codex-1" "claude-1"}}]
+    (is (empty? (model-violations [base] registry)))
+    (is (= [:MQ-7]
+           (mapv :invariant
+                 (model-violations [(assoc base :from "http-caller")] registry))))
+    (is (empty? (model-violations [(assoc base :from "http-caller" :to "claude-1")]
+                                  registry)))))
 
 (deftest mq6-is-deferred-capture-gap
   (is (= :deferred-to-queue-work (get {:MQ-6 :deferred-to-queue-work} :MQ-6))))

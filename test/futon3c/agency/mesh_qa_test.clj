@@ -60,7 +60,23 @@
   (let [edges [(mesh-qa/job->edge terminal-job)]
         report (mesh-qa/check-mesh edges {"codex-1" "s-codex"})]
     (is (:ok report))
-    (is (zero? (:violation-count report)))))
+    (is (zero? (:violation-count report)))
+    (is (contains? (:counts report) :MQ-7))))
+
+(deftest mq7-flags-unaddressable-codex-caller-only
+  (let [codex-job (mesh-qa/job->edge terminal-job)
+        registry {:sessions {"codex-1" "s-codex"}
+                  :types {"codex-1" :codex "claude-1" :claude}
+                  :registered #{"claude-6" "codex-1" "claude-1"}}]
+    (is (empty? (mesh-qa/check-mq-7-unaddressable-caller [codex-job] registry)))
+    (is (= [:MQ-7]
+           (mapv :invariant
+                 (mesh-qa/check-mq-7-unaddressable-caller
+                  [(assoc codex-job :from "http-caller")] registry))))
+    (is (empty? (mesh-qa/check-mq-7-unaddressable-caller
+                 [(assoc codex-job :from "http-caller" :to "claude-1")] registry)))
+    (is (= 1 (get-in (mesh-qa/check-mesh [(assoc codex-job :from "http-caller")] registry)
+                     [:counts :MQ-7])))))
 
 (deftest qa-http-route-returns-report
   (with-redefs [mesh-qa/current-report (fn [limit]
