@@ -26,7 +26,9 @@
    - mission.clj — the clone-from shape donor
    - cycle.clj — the generic engine this peripheral instantiates
    - war_machine_pilot_shapes.clj — domain config field declarations"
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.war-machine-pilot-shapes :as pps]
             [futon3c.peripheral.war-machine-pilot-backend :as pb]
@@ -212,6 +214,35 @@
 
 (defonce ^:private !live-cycle-runs (atom {}))
 
+(def ^:private live-runs-dir
+  (str (System/getProperty "user.home") "/code/futon3c/data/repl-traces"))
+
+(defn- begin-state-path [run-id]
+  (str live-runs-dir "/" run-id ".begin.edn"))
+
+(defn- persist-begin-state!
+  "Durability for the begin→close window (Turn-3 finding, 2026-06-10): the
+   atom alone dies with its process — a begin staged from one JVM (e.g. a
+   CLI run) is invisible to a close in another, and 'unknown run-id' eats
+   the DOCUMENT stage. Best-effort: a persist failure must not break begin."
+  [run-id begin]
+  (try
+    (io/make-parents (begin-state-path run-id))
+    (spit (begin-state-path run-id)
+          (binding [*print-length* nil *print-level* nil]
+            (pr-str begin)))
+    (catch Throwable _ nil)))
+
+(defn- recover-begin-state
+  "Fallback for close-live-cycle! when the atom misses: read the persisted
+   begin-state from disk. Returns nil when absent/unreadable."
+  [run-id]
+  (try
+    (let [f (io/file (begin-state-path run-id))]
+      (when (.exists f)
+        (edn/read-string (slurp f))))
+    (catch Throwable _ nil)))
+
 (defn- live-judgement []
   (let [r (pb/wm-api-query {})]
     (if (:ok r)
@@ -323,6 +354,7 @@
                      :v v :predicted-discharge predicted :cg-id cg-id
                      :tick-before tick-before :tick-queued tick}]
          (swap! !live-cycle-runs assoc run-id begin)
+         (persist-begin-state! run-id begin)
          (cond-> result
            guardrails? (assoc :needs-you-emitted (:emitted-count emitted)
                               :needs-you-path (:path emitted))))))))
@@ -378,7 +410,8 @@
    return the measurement."
   ([run-id] (close-live-cycle! run-id {}))
   ([run-id {:keys [document]}]
-  (if-let [b (get @!live-cycle-runs run-id)]
+  (if-let [b (or (get @!live-cycle-runs run-id)
+                 (recover-begin-state run-id))]
     (let [post-j     (live-judgement)
           post-dT    (judgement->dT post-j)
           v          (get-in b [:pre :v])
