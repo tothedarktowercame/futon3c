@@ -169,3 +169,11 @@ campaign's governance backbone: each constituent mission's open fork registers h
   `M-peradam-grounding` (the car) as the unlock — pattern-posteriors is inert without grounded
   peradams; arguing-worlds' negative is revisit-able under the grounded yardstick. The campaign spine
   confirmed from two directions. Both v0s reviewed-PASS, both honest, both mergeable (land-call: Joe).
+- **2026-06-10 — both cascade lanes CLOSED-for-v0; futonzero-alphazero §1 measured.** M-arguing-worlds
+  v0 (`3b40370`) + M-pattern-posteriors v0 (`ff04342`) both reviewed-PASS + recorded; `futonzero-
+  alphazero.md` §1 updated "open, early" → MEASURED (`6e0b624`: dialectic = ceremony on the realized-G
+  floor, guarded against both failure modes, revisit-able under the grounded yardstick). Both grounded
+  paths stay `:held` (escrowed on the car); claude-1 standing by for the grounded-yardstick bell.
+  **Campaign convergence:** every grounded path now waits on `M-peradam-grounding` (the car) — which
+  waits on Joe's DIRECT confirm to claude-4. The campaign's entire forward motion is gated on that one
+  operator-go.
