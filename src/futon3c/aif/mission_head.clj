@@ -11,8 +11,7 @@
                            evidence-precision-registry, expected-free-energy-scorecard,
                            policy-precision-commitment-temperature, candidate-pattern-action-space)"
   (:require [futon3c.aif.observe :as obs]
-            [futon3c.aif.invariant :as invariant]
-            [futon3c.peripheral.mission-shapes :as ms]))
+            [cheshire.core :as json]))
 
 ;; =============================================================================
 ;; Mission action arena (from peripheral-aif-vocabulary.sexp)
@@ -36,6 +35,100 @@
    :epistemic 0.4
    :effort 0.2})
 
+;; =============================================================================
+;; Health seeding (E-mission-head H2)
+;; =============================================================================
+
+(defn- clamp01
+  [x]
+  (obs/clamp01 (or x 0.0)))
+
+(defn seed-from-health
+  "Map a mission health artifact into initial MissionAifHead belief state.
+
+   Channel mapping:
+   - health.bit-confidence -> :priors-quality/bit-confidence
+   - health.xenotype-completeness -> :priors-quality/xenotype-completeness
+   - health.anchor-proximity -> :anchor-proximity raw observation, when present
+   - sigil -> :sigil raw observation, when present
+
+   These are priors-quality observations. They are deliberately NOT merged into
+   the ten EFE channels consumed by select-mission-action, and therefore cannot
+   gate or optimize mission actions. They only seed/audit the head's belief
+   state."
+  [health-map]
+  (let [health (:health health-map)
+        sigil (:sigil health-map)
+        bit (clamp01 (:bit-confidence health))
+        xenotype (clamp01 (:xenotype-completeness health))]
+    {:health/observed? (boolean health)
+     :health/source {:mission (:mission health-map)
+                     :generated-at (:generated-at health-map)
+                     :generator (:generator health-map)}
+     :health/degraded? (nil? sigil)
+     :beliefs {:priors-quality {:bit-confidence bit
+                                :xenotype-completeness xenotype}
+               :health-reading (:reading health)
+               :anchor-proximity (:anchor-proximity health)
+               :sigil sigil}
+     :observation {:decision-kind :observe
+                   :consumes-health? true
+                   :channels {:priors-quality/bit-confidence bit
+                              :priors-quality/xenotype-completeness xenotype}
+                   :raw health-map}}))
+
+(defonce ^:private !mission-heads
+  (atom {}))
+
+(declare make-mission-aif-head)
+
+(defn load-health-artifact
+  "Read a health artifact JSON file, returning nil when absent."
+  [path]
+  (when (and path (.exists (java.io.File. path)))
+    (json/parse-string (slurp path) true)))
+
+(defn health-artifact-paths
+  "Candidate <mission>.health.json locations next to a mission doc."
+  [{:keys [mission-id mission-spec-path]}]
+  (let [doc (when mission-spec-path (java.io.File. mission-spec-path))
+        dir (when doc (.getParentFile doc))
+        basename (when doc
+                   (let [n (.getName doc)
+                         i (.lastIndexOf n ".")]
+                     (if (pos? i) (subs n 0 i) n)))]
+    (cond-> []
+      (and dir mission-id) (conj (.getPath (java.io.File. dir (str mission-id ".health.json"))))
+      (and dir basename) (conj (.getPath (java.io.File. dir (str basename ".health.json")))))))
+
+(defn mission-head-for-context
+  "Construct a MissionAifHead for a mission context, seeded from a sibling
+   health artifact when present."
+  [context]
+  (let [health (some load-health-artifact (health-artifact-paths context))
+        seed (when health (seed-from-health health))
+        config (cond-> {:tau 1.0
+                        :mission-id (:mission-id context)}
+                 health (assoc :health-artifact health
+                               :health-seed seed
+                               :initial-beliefs (:beliefs seed)))]
+    (make-mission-aif-head config nil)))
+
+(defn register-mission-head!
+  [mission-id head]
+  (when mission-id
+    (swap! !mission-heads assoc mission-id head))
+  ((requiring-resolve 'futon3c.aif.invariant/register-aif-head!) :mission head)
+  head)
+
+(defn register-mission-head-for-context!
+  [context]
+  (register-mission-head! (:mission-id context) (mission-head-for-context context)))
+
+(defn mission-aif-head-for
+  [mission-id]
+  (get @!mission-heads mission-id))
+
 (defn- pragmatic-value
   "How much does this action advance the mission?"
   [action channels]
@@ -49,7 +142,7 @@
 
 (defn- epistemic-value
   "How much would this action reduce uncertainty?"
-  [action channels]
+  [action _channels]
   (case action
     :advance-phase   0.3
     :revise-approach 0.7
@@ -130,7 +223,7 @@
    4. Either begin next cycle or signal blocked/complete
 
    Returns same shape as select-pattern for drop-in substitution."
-  [state observation]
+  [_state observation]
   (let [channels (:channels observation)
         obligations (or (:obligation-satisfaction channels) 0.0)
         compliance (or (:structural-law-compliance channels) 1.0)]
@@ -195,13 +288,21 @@
 (defn mission-check-law
   "AifHead.check-law implementation for Mission Peripheral.
    Consults inventory db and AIF head coverage invariant."
-  [head state transition]
-  ;; Check AIF head coverage invariant
-  (let [coverage-result (invariant/check-aif-head-law)]
-    (if-not (:ok coverage-result)
-      coverage-result
-      ;; All structural checks passed
-      {:ok true})))
+  [head _state transition]
+  (cond
+    (and (#{:gate :optimize} (get-in transition [:context :decision-kind]))
+         (get-in transition [:context :consumes-health?]))
+    {:ok false
+     :error {:code :structural-law-violation
+             :law-family :measure-never-target
+             :law-id :health-readout-observe-only
+             :message "Health readout may seed/observe/audit, but never gate or optimize"}}
+
+    (get-in head [:config :enforce-aif-head-coverage?])
+    ((requiring-resolve 'futon3c.aif.invariant/check-aif-head-law))
+
+    :else
+    {:ok true}))
 
 (defn mission-select-pattern
   "AifAdapter.select-pattern implementation for Mission Peripheral.

@@ -24,6 +24,7 @@
    specified, the peripheral operates in exploration mode with wider
    tool access."
   (:require [futon3c.peripheral.cycle :as cycle]
+            [futon3c.aif.mission-head :as mh]
             [futon3c.peripheral.mission-backend :as mb]
             [futon3c.peripheral.mission-shapes :as ms]
             [futon3c.peripheral.real-backend]
@@ -68,9 +69,11 @@
 
 (defn- state-init
   "Initialize domain-specific state fields from context.
-   Adds :mission-id to the base cycle state."
+   Adds :mission-id and a MissionAifHead to the base cycle state."
   [context]
-  {:mission-id (:mission-id context)})
+  (let [head (mh/register-mission-head-for-context! context)]
+    {:mission-id (:mission-id context)
+     :aif-head head}))
 
 ;; =============================================================================
 ;; Fruit and exit context
@@ -126,6 +129,17 @@
                        :cycles-completed (:cycles-completed state)}
        :snapshot/tags [(keyword "mission" (str mission-id)) :snapshot]})))
 
+(defn- on-cycle-complete
+  "Observe a completed cycle with the mission AIF head.
+
+   This is observe/default-mode only: health-seeded beliefs are not used for
+   gating or optimization here."
+  [state]
+  (when-let [head (:aif-head state)]
+    (let [observation (mh/mission-observe head state {:mission-state {}
+                                                     :current-cycle nil})]
+      (mh/mission-default-mode-fn head state observation))))
+
 ;; =============================================================================
 ;; Table 25 phase tags
 ;; =============================================================================
@@ -157,7 +171,8 @@
    :exit-context-fn exit-context
    :phase-tags-fn phase-tags
    :autoconf-fn autoconf
-   :state-snapshot-fn state-snapshot})
+   :state-snapshot-fn state-snapshot
+   :on-cycle-complete on-cycle-complete})
 
 ;; =============================================================================
 ;; Factory
@@ -174,7 +189,8 @@
         {:cwd (System/getProperty "user.dir")
          :futon3a-python (if (.exists (java.io.File. venv-python))
                            venv-python
-                           "python3")}
+                           "python3")
+         :aif-head-resolver mh/mission-aif-head-for}
         backend))
     backend))
 
