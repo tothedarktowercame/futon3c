@@ -1428,3 +1428,21 @@ machinery for unattended operation.
 The pilot shows up well across all four depths today. The depths it does not yet
 *inhabit autonomously overnight* are named above and owned by named follow-ons —
 which is itself the discipline the mission was about.
+
+---
+
+## LOOP — Pilot's Log (the doc-currency follow-on, activated 2026-06-09)
+
+The named open follow-on — *LOOP-learning + doc-currency automation* — now has a durable home:
+**`futon3c/holes/PILOTS-LOG.md`**, the running record of WM pilot LOOP turns (`READ → EVAL → PRINT →
+DOCUMENT`). Each turn logs what the WM recommended, what the pilot did, what it found, and a PUR (did the
+tooling help; earned-closure/honesty notes; supervised vs. armed). This makes the geno-layer
+"loop-preparation for the next turn" (§2) a standing artefact, and the exo-layer doc-currency requirement
+(Closing Checkpoint) concrete — the LOOP keeps the substrate *and* this log current.
+
+**Turn 1 (2026-06-09)** — first cycle on the new policy-EFE tooling (the cascade-policy lane + the v2
+rollout). The WM recommended *advance M-capability-star-map*; the cascade gave the method (the
+`ideal-actual-gap` lens); the pilot surfaced a real finding — the capability graph's `:grounding` is *prose*,
+not machine-checkable, so capability-functioning can't be machine-verified from it. Mode: **supervised**
+(Part B — the WM driving a real `promote!` — remains held for explicit operator arming). Full entry in the
+log; future turns append there.
