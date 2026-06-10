@@ -177,3 +177,20 @@ campaign's governance backbone: each constituent mission's open fork registers h
   **Campaign convergence:** every grounded path now waits on `M-peradam-grounding` (the car) — which
   waits on Joe's DIRECT confirm to claude-4. The campaign's entire forward motion is gated on that one
   operator-go.
+- **2026-06-10 — `:O-peradam-role` DISCHARGED → CALIBRATION ANCHOR (operator decision, Joe).**
+  The peradam is a **calibration** (Lee-Sedol-to-AlphaZero), NOT a training target / currency.
+  **Evidence (Joe's reasoning):** (a) enough drive-signal already exists — patterns (normative) +
+  missions (optative); the loop doesn't need the peradam as a *third* drive. (b) The peradam's value
+  is the proof-is-in-the-pudding *un-game-ability*; used as an audit it can't be gamed (the
+  anti-laundering core). (c) Daumal's peradam-as-currency (spend-to-climb = Arm A/training) is set
+  aside in favour of the Buddhist pāramī reading (a perfection, always-perfecting, never spent =
+  the standing audit). **Why it's the deeper resolution:** the three-witness scarcity that's fatal
+  for *training* (cf. pattern-posteriors' inert null) is ideal for *calibration*; and it answers
+  Fable's closed-loop critique as the un-game-able falsifier the loop can't optimize away, with
+  drive from real signals (patterns/missions). **Loop-closure (wrinkle, op-confirm pending):**
+  calibration does not auto-correct — the audit feeds back THROUGH the operator + pattern-library
+  (human-in-the-loop), not an automatic gradient. **Shapes:** CH2 = audit-not-train
+  (M-differentiable-substrate §8.7); pattern-posteriors learns from PURs, *calibrated* by peradams;
+  arguing-worlds' grounded yardstick = the audit. Hybrid (sparse trained-arm gated by the audit) =
+  reversible future option iff the patterns/missions drive proves too weak. Registry
+  `:decision`/`:evidence` for `:O-peradam-role` to be filled by the car (futon7).
