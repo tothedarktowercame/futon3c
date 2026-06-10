@@ -31,12 +31,18 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
 
 ## 2. Per-agent contracts (who owns which surface)
 - **claude-3 / E-ground-G** — the cascade-fold loop: phylogeny-grounded `construct_cascade` (Build 1 ✓),
-  the closure-learning hooks (Build 2 ✓ — posteriors + phylogeny-learns + gap-log), the curriculum
-  coupling to the star-map (Build 3). Owns the **edge-correctness** + **cascade** surfaces.
-- **claude-1 / M-pattern-posteriors** — the **pattern posteriors**: consumes the fold-utility signal
-  (now `pattern_posteriors.grounded.json`, grounded in fold-usage NOT self-grading). MUST
-  **compose with wholeness scoring, not replace it** (the pointwise-greedy = cursor-bug risk). Owns
-  **pattern-utility** + the A/B credit term in `construct_cascade`.
+  the closure-learning hooks (Build 2 ✓), the curriculum coupling to the star-map (Build 3). Owns the
+  **co-app EDGE surface** (phylogeny upvote/seed overlay) + the cascade.
+- **claude-1 / M-pattern-posteriors** — the **pattern posteriors** (contract **AGREED** 2026-06-10):
+  consumes the fold-utility signal (`pattern_posteriors.grounded.json`, grounded in fold-usage). Owns
+  the **pattern-NODE surface** (α/β trust) + the A/B credit term; MUST compose with wholeness, not
+  replace it.
+
+> **THE NODE/EDGE SURFACE SPLIT (claude-1, makes non-double-count STRUCTURAL):** one closure projects
+> **orthogonally** onto two surfaces — **vertices** (claude-1's per-pattern α/β) and **co-app edges**
+> (claude-3's phylogeny overlay). They are non-double-counting **by construction, not by bookkeeping**:
+> a node-trust scalar and an edge-weight are never the same number. **claude-3 holds edges, claude-1
+> holds nodes — confirmed.**
 - **claude-4 / the car (M-peradam-grounding)** — the **peradam audit** (contract **AGREED**
   2026-06-10): sparse, Goodhart-safe, outside the loop, bound by the safety invariant above. Owns
   **the auditor**, NOT the reward; `ac4ae5d` (the discharge-half) is the realized-closure emitter into
@@ -55,17 +61,43 @@ AUDIT     peradams (sparse, OUTSIDE the loop) periodically check the grounding h
   lift-audit joins peradams onto it.)*
 
 ## 4. The OPEN ML questions (for the mesh to decide; Fable-relay candidates marked ★)
-1. **★ Unified closure schema / grain-bridge.** Closures arrive in two grains — pattern-stem fold
-   records (`closure-folds.edn`) and entity-keyed mission-diagram arrows (`meme.db`). What is the ONE
-   closure schema both reduce to, so agent + Cyborg closures are a single learning signal?
-2. **★ Credit assignment.** A fold uses a *subset* of the cascade. How is utility/credit assigned —
-   to used patterns, to the edges among them, to the cascade-as-whole? (Ties to claude-3's
-   don't-double-count cross-check: R2 move-grain vs pattern-grain must not double-count.)
-3. **★ The EFE epistemic term.** Concretely, expected-information-gain for a candidate hole: how much
-   would closing it teach (a new pattern? a cross-cluster edge? a capability)? The formula that makes
-   EXPLORE real, not hand-waved.
-4. **Posterior composition.** How do per-pattern posteriors compose with wholeness `C` in selection —
-   so trust sharpens the cascade without reintroducing pointwise-greedy? (claude-1's named risk.)
+1. **★ Unified closure schema / grain-bridge** *(sharpened by claude-1's evidence)*. `meme.db`
+   closures are **entity-keyed** (`source_id`/`target_id`/`payload`=construction symbol) — **there is
+   no pattern-membership column**; "which patterns earned this closure" lives only in the
+   fold↔cascade pairing (`closure-folds`). So the two grains may **not** unify into one schema —
+   likelier they're two signals **joined on `:move/id`** (the move that did both): `closure-folds`
+   (pattern-grain) for LEARNING, `meme.db` arrow (entity-grain) for the AUDIT's realized-closure event
+   (claude-4's x-axis). **For Fable:** is `:move/id`-join-not-unify the right call, and how does a
+   `closure-folds` fold-record get *associated* with its `meme.db` closure-event?
+2. **Credit assignment — RESOLVED (claude-1 + claude-3, 2026-06-10).** Credit the **USED SUBSET** of
+   the cascade (NOT cascade-as-whole — too coarse; NOT edges — claude-3's surface). **Per-pattern
+   Bernoulli** on the used subset: used-and-closed → `α+=1`; used-and-**didn't**-close → `β+=1`.
+   Cross-stage **non-double-count invariant** (claude-3's R2 cross-check, stated testably): no
+   closure-derived scalar enters BOTH a move-weight AND a pattern-posterior later **summed in one
+   selection score** — satisfied by construction (R2 at MOVE-RANKING, the posterior at WITHIN-CASCADE
+   CONSTRUCTION; different stages, never summed into one `G`), reinforced by the node/edge split.
+   **Fold-record answer (claude-3):** `closure-folds.edn` *already* records the **used subset**
+   (`:used`); `cascade_learn` credits only those — so the `(1,0)/0.667` uniformity in `grounded.json`
+   is **all-success-each-once data, not cascade-as-whole crediting.** **Discrimination unlock (next
+   refinement):** `cascade_learn` must process **failed** folds (used-and-didn't-close → `β+=1`);
+   today it skips `success:false`, so there's no β yet — record failed folds and discrimination appears.
+3. **★ The EFE epistemic term** *(partial answer from claude-1's surface)*. claude-1 exposes posterior
+   **variance** (α,β) as the per-pattern epistemic signal — Thompson-compatible: high-variance
+   low-evidence patterns get *explored*, not starved. So one epistemic component is **posterior
+   variance**. **Still for Fable:** the *hole-level* expected-information-gain — how much would closing
+   a candidate hole teach (it needs a coverage-gap pattern? a cross-cluster phylogeny edge? it advances
+   a frontier capability?) — and the formula that combines pattern-variance + edge-novelty +
+   capability-frontier into the star-map's EFE `info` term.
+4. **Posterior composition — RESOLVED (claude-1, 2026-06-10) — provably non-greedy via 3 invariants:**
+   (I) **trust-neutral at prior** — an unclosed pattern at Beta(1,1) mean 0.5 → centered 0 →
+   multiplier 1.0 → `m'(p)` unchanged; (II) **multiplicative on positive margin only** — trust
+   re-weights `m'(p)=rel·connectivity` (already wholeness-coherent); a high-trust LOW-connectivity
+   pattern still gets low `m'` → not chosen; **trust cannot manufacture a place, only re-order among
+   candidates that already earn one by wholeness** (modulate only when `m'(p)>0`); (III) **bounded +
+   saturation-external** — multiplier in `[1−0.5w, 1+0.5w]`; the posterior never alters the
+   coverage-saturation stop or budget. **Exploit/explore split at this surface:** composition consumes
+   the **mean** (EXPLOIT); the star-map's EXPLORE consumes the **variance** (α,β) for the epistemic
+   boost (Thompson-compatible) — a partial answer to Q3 from the posterior side (see Q3).
 5. **Drift / Goodhart safety — RESOLVED (claude-4, 2026-06-10; τ pending operator ratification).**
    The auditor:
    - **Metric:** an out-of-sample, *independent* prediction-check. The loop predicts value
