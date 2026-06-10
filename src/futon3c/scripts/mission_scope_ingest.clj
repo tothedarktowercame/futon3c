@@ -19,7 +19,7 @@
 (def ^:private structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
    "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
-   "pattern" "psr" "pur"])
+   "pattern" "psr" "pur" "plain-argument"])
 (def ^:private pattern-library-limit 5000)
 (def ^:private !pattern-library-cache (atom nil))
 
@@ -407,6 +407,25 @@
          sort
          vec)))
 
+(defn- content-position-passage
+  "Passage from the detector's own `hx/content :position` — the line at that
+   byte offset in the mission file. The detector already localised the scope;
+   re-deriving the anchor from title text (`heading-passage`) is what mis-anchors
+   phases onto the Status line (it names every phase, and first-occurrence wins)."
+  [mission-path scope]
+  (when-let [pos (get-in scope [:hx/content :position])]
+    (let [f (mission-file mission-path)]
+      (try
+        (when (.exists f)
+          (let [text (slurp f)
+                pos (max 0 (min (long pos) (dec (count text))))
+                bol (inc (long (or (str/last-index-of text "\n" pos) -1)))
+                eol (long (or (str/index-of text "\n" pos) (count text)))
+                line (str/trim (subs text bol (max bol eol)))]
+            (when (seq line)
+              {:passage line :source :content-position})))
+        (catch Exception _ nil)))))
+
 (defn- anchor-for-scope [mission-path scopes scope]
   (let [heading (anchor-text scope)
         passage-info (case (:binder-type scope)
@@ -415,9 +434,17 @@
                        "source-material" (list-item-passage-info mission-path heading)
                        "mission-scope-in" (list-item-passage-info mission-path heading)
                        "mission-scope-out" (list-item-passage-info mission-path heading)
-                       (when-let [passage (heading-passage mission-path heading)]
-                         {:passage passage
-                          :source :heading}))
+                       ;; PSR/PUR records anchor on their own record line (the
+                       ;; detector's `anchor-line`), not on a heading — the
+                       ;; `Pattern chosen:` / `Pattern:` line IS the anchor.
+                       ("psr" "pur")
+                       (when-let [line (some-> (:anchor-line scope) str/trim not-empty)]
+                         {:passage line
+                          :source :record-line})
+                       (or (content-position-passage mission-path scope)
+                           (when-let [passage (heading-passage mission-path heading)]
+                             {:passage passage
+                              :source :heading})))
         passage (:passage passage-info)
         concepts (bound-concept-set scopes scope)
         basis (pr-str {:heading (or passage heading)
@@ -594,6 +621,35 @@
                      :duplicate-heading? duplicate?
                      :anchor anchor
                      :parent nil)))
+          scopes)))
+
+(defn- stable-record-scopes
+  "PSR/PUR record scopes. Stable ids keyed by binder + pattern ident; the
+   anchor is the record's own `Pattern chosen:`/`Pattern:` line (carried by
+   the detector as :anchor-line and resolved in `anchor-for-scope`). Without
+   this enrichment psr/pur scopes fall through the binder dispatch with no
+   :anchor at all and ingest as passage-less rows."
+  [mission mission-path all-scopes scopes]
+  (let [ident-counts (frequencies (map (juxt :binder-type :pattern-ident) scopes))]
+    (mapv (fn [scope]
+            (let [pattern-ident (or (:pattern-ident scope) (:scope-id scope))
+                  binder (:binder-type scope)
+                  duplicate? (> (get ident-counts [binder pattern-ident] 0) 1)
+                  stem (str/replace-first (str mission) #"^M-" "")
+                  base (str stem "/" binder "/" (truncated-slug pattern-ident))
+                  stable-id (if duplicate?
+                              (str base "-" (subs (sha1 (str (:scope-id scope))) 0 8))
+                              base)
+                  scope (assoc scope :target-pattern-ident pattern-ident)
+                  anchor (anchor-for-scope mission-path all-scopes scope)]
+              (assoc scope
+                     :original-scope-id (:scope-id scope)
+                     :scope-id stable-id
+                     :stable-scope-id stable-id
+                     :canonical-scope-id base
+                     :heading-slug (str binder "/" (truncated-slug pattern-ident))
+                     :duplicate-heading? duplicate?
+                     :anchor anchor)))
           scopes)))
 
 (defn- stable-relates-to-scopes [mission mission-path all-scopes scopes]
@@ -1126,6 +1182,9 @@
     (case binder
       "eightfold-phase" (stable-eightfold-scopes mission mission-path raw-scopes (vec scopes))
       "loose-section" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
+      ;; plain-argument: heading-bound like a loose-section (defined ARGUE
+      ;; sub-scope, Joe 2026-06-10).
+      "plain-argument" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
       "capability-scope" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
                                                                        "loose-section"
                                                                        "capability-scope"}
@@ -1442,6 +1501,9 @@
         scopes (case binder-filter
                  "eightfold-phase" (stable-eightfold-scopes mission mission-path raw-scopes (vec scopes))
                  "loose-section" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
+      ;; plain-argument: heading-bound like a loose-section (defined ARGUE
+      ;; sub-scope, Joe 2026-06-10).
+      "plain-argument" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
                  "capability-scope" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
                                                                                    "loose-section"
                                                                                    "capability-scope"}
@@ -1464,6 +1526,7 @@
                  "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
                  "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
                  "pattern" (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
+                 ("psr" "pur") (stable-record-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
         mission-id (mission-doc-id mission mission-path)

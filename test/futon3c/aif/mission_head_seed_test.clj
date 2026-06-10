@@ -12,7 +12,8 @@
   {:mission "M-test"
    :generated-at "2026-06-10T12:00:00Z"
    :generator "fixture"
-   :sigil {:bit "101" :source "HEAD"}
+   ;; contract-shaped (fable-1 review): healthy sigil carries :xenotype-32
+   :sigil {:exotype "00011100" :xenotype-32 "00011100·00011001·10101100·11001000" :per-section {}}
    :health {:bit-confidence 0.72
             :xenotype-completeness 0.41
             :anchor-proximity {:nearest "T2"}
@@ -26,11 +27,14 @@
     (is (= 0.41 (get-in seed [:beliefs :priors-quality :xenotype-completeness])))
     (is (= :observe (get-in seed [:observation :decision-kind])))
     (is (:consumes-health? (:observation seed)))
-    (is (= {:bit "101" :source "HEAD"} (get-in seed [:beliefs :sigil]))))
+    (is (= "00011100·00011001·10101100·11001000" (get-in seed [:beliefs :sigil :xenotype-32]))))
   (testing "degraded mode when sigil is null"
     (let [seed (mh/seed-from-health (assoc sample-health :sigil nil))]
       (is (:health/degraded? seed))
-      (is (nil? (get-in seed [:beliefs :sigil]))))))
+      (is (nil? (get-in seed [:beliefs :sigil])))))
+  (testing "degraded mode when sigil object present but xenotype null (the producer's REAL degraded shape)"
+    (let [seed (mh/seed-from-health (assoc sample-health :sigil {:exotype "00001000" :xenotype-32 nil :per-section nil}))]
+      (is (:health/degraded? seed)))))
 
 (deftest mission-head-construction-loads-sibling-health-artifact
   (let [dir (fix/temp-dir!)

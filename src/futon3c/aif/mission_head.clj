@@ -65,7 +65,10 @@
      :health/source {:mission (:mission health-map)
                      :generated-at (:generated-at health-map)
                      :generator (:generator health-map)}
-     :health/degraded? (nil? sigil)
+     ;; Degraded = no computable xenotype. The producer keeps the sigil OBJECT
+     ;; in degraded mode (whole-text exotype present, xenotype-32 null) — check
+     ;; the xenotype, not the container (fable-1 review fix, H2).
+     :health/degraded? (or (nil? sigil) (nil? (:xenotype-32 sigil)))
      :beliefs {:priors-quality {:bit-confidence bit
                                 :xenotype-completeness xenotype}
                :health-reading (:reading health)
