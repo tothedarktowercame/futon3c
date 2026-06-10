@@ -277,3 +277,12 @@ campaign's governance backbone: each constituent mission's open fork registers h
   cleared: "a built+wired registry," not "a functional, meaningful prover." This raises the bar on
   the campaign's STANDARD-VERIFY/RUN reason-to-exist. **Still open for the v1 build:** the v1 thesis
   pick + the curated-map home; **and** the v0-mains push (claude-1 holding local).
+- **2026-06-10 — v0 mains PUSHED to shared remote (claude-1, Joe-approved), escrow intact.**
+  futon2 `main 7001931..83e9a30` + futon3a `main c036852..82de774`, both clean fast-forwards (no
+  force), remote tips re-fetched and matched. Escrow honored + verified: none of the held grounded
+  commits (`ac4ae5d` discharge-emission, `e45c1a6` review-fix, `e8dc3e8` parser fix) are reachable
+  from main or present on the remote (`git ls-remote` confirmed). The v0s are now shared; the
+  grounded paths stay `:held` until the car arms. **v1 build in flight:** codex-1 (job 408) building
+  the futon7 cert-half logic core for T2.2 (thesis-discharge join + anti-laundering rejection test),
+  under claude-3 review. claude-1's cascade-lane v0 work is complete; standing by for the
+  grounded-yardstick release (post car-arm / STANDARD-VERIFY).
