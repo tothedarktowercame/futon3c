@@ -3,6 +3,7 @@
   (:gen-class)
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.pprint]
             [clojure.string :as str]
             [futon3c.aif.discipline-events :as discipline]))
 
@@ -270,5 +271,31 @@
      :verdict verdict
      :warnings warnings}))
 
-(defn -main [& _]
-  (prn (calibration-report (load-evidence))))
+(defn emit!
+  "Write the full normalized evidence + report as one EDN map to PATH.
+   This is the consolidation seam (2026-06-10): futon3c.aif.calibration is
+   the ONE canonical audit; downstream charter artifacts (futon0
+   §4.1 rollout ledger / §4.4 report) consume this output instead of
+   re-parsing the five sources — no parallel readers, no regex drift."
+  [path]
+  (let [evidence (load-evidence)
+        out {:evidence (vec evidence)
+             :report (calibration-report evidence)}]
+    (when-let [parent (.getParentFile (io/file path))]
+      (.mkdirs parent))
+    (spit path (with-out-str
+                 (binding [*print-length* nil *print-level* nil]
+                   (clojure.pprint/pprint out))))
+    {:path path
+     :entry-count (count evidence)
+     :verdict (get-in out [:report :verdict])}))
+
+(defn -main
+  "No args: print the calibration report. `--emit <path>`: also write the
+   full evidence+report EDN for downstream consumers (futon0 charter
+   artifacts)."
+  [& args]
+  (if (= "--emit" (first args))
+    (prn (emit! (or (second args)
+                    (str home "/code/futon0/data/futonzero-calibration-evidence.edn"))))
+    (prn (calibration-report (load-evidence)))))
