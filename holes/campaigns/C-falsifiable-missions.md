@@ -262,3 +262,18 @@ campaign's governance backbone: each constituent mission's open fork registers h
   DONE; the car now waits only on (a) my futon7 cert-half (sparse `:sorry-ref`→thesis map + dokusan +
   mint) and (b) Joe's DIRECT confirm to ARM. Note: claude-4's completion bell DROPPED (interleaving);
   caught by roster-polling — another live datapoint for M-agency-hardening (claude-6).
+- **2026-06-10 — cert-half spec APPROVED (Joe) + Invariant-Queue concern → RUN/DELIVER bar.** Joe
+  approved the dokusan cert-half spec (futon7 M-peradam-grounding Checkpoint 1, `c190c6e`) and
+  flagged a concern (not a blocker): the **Pudding Prover is structurally akin to the
+  operational-invariant inventory** (`M-invariant-queue-unstuck`), which was built well but **ended
+  up underused — a fatberg / "list of claims about the past," not a dashboard of present binding**.
+  Recorded as a carried concern + a sharpened **RUN/DELIVER bar** (futon7 `5a83f40`): RUN/DELIVER
+  must prove the Prover ITSELF functional+meaningful, not just that the cert-half wiring fires —
+  (1) fires on a real (non-seeded) discharge; (2) DISCRIMINATES — Ashby accept-out-of-blanket (T2.3
+  cold-EOI-sent) AND reject near-miss/laundering, on real cases not fixtures (accept-only or
+  reject-only = the fatberg signature); (3) peradam CONSUMED not write-only (the campaign's joint
+  completion criterion, sharpened — consumption distinguishes a live yardstick from a fatberg);
+  (4) CANARIED (the after-each-WM-run cycle as the present-binding signal). Honesty label until
+  cleared: "a built+wired registry," not "a functional, meaningful prover." This raises the bar on
+  the campaign's STANDARD-VERIFY/RUN reason-to-exist. **Still open for the v1 build:** the v1 thesis
+  pick + the curated-map home; **and** the v0-mains push (claude-1 holding local).
