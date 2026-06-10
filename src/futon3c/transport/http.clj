@@ -4811,6 +4811,12 @@
       (and (= :get method) (= "/api/alpha/forward-model" uri))
       (handle-forward-model request config)
 
+      (and (= :get method) (= "/api/alpha/coordination/edges" uri))
+      (handle-coordination-edges request)
+
+      (and (= :get method) (= "/api/alpha/coordination/qa" uri))
+      (handle-coordination-qa request)
+
       :else nil)))
 
 (defn make-handler
@@ -4904,12 +4910,6 @@
 
           (and (= :get method) (= "/api/alpha/invoke/jobs" uri))
           (handle-invoke-jobs request)
-
-          (and (= :get method) (= "/api/alpha/coordination/edges" uri))
-          (handle-coordination-edges request)
-
-          (and (= :get method) (= "/api/alpha/coordination/qa" uri))
-          (handle-coordination-qa request)
 
           (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/(.+)" uri))
           (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)
