@@ -53,6 +53,7 @@
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
             [futon3c.evidence.boundary :as boundary]
@@ -3411,9 +3412,8 @@ RESPOND WITH ONLY:
           !turn-count (atom 0)
           buf-name (str "*invoke: " agent-id "*")
           bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
-      (fn [prompt session-id]
-        (locking !lock
-          (let [prompt-str (cond
+      (letfn [(invoke-once [prompt session-id]
+                (let [prompt-str (cond
                            (string? prompt) prompt
                            (map? prompt)    (or (:prompt prompt) (:text prompt)
                                                 (json/generate-string prompt))
@@ -3640,7 +3640,20 @@ RESPOND WITH ONLY:
                  :invoke-trace-id invoke-trace-id}))
             (finally
               (clear-invoke-control! aid-val control-token)
-              (stop-ticker!)))))))))
+              (stop-ticker!)))))]
+        (fn [prompt session-id]
+          (if (turn-queue/enabled?)
+            (turn-queue/accept-and-drain!
+             {:from (turn-queue/prompt-field prompt :from)
+              :to agent-id
+              :surface (turn-queue/prompt-field prompt :surface)
+              :msg-id (turn-queue/prompt-field prompt :msg-id)
+              :prompt prompt
+              :session-id session-id}
+             (fn [entry]
+               (invoke-once (:prompt entry) (:session-id entry))))
+            (locking !lock
+              (invoke-once prompt session-id))))))))
 
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")

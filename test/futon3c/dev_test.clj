@@ -6,6 +6,8 @@
             [futon3c.agency.registry]
             [futon3c.agents.mfuton-invoke-override]
             [futon3c.agents.tickle-work-queue]
+            [futon3c.agency.turn-queue :as turn-queue]
+            [futon3c.blackboard]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.evidence.store]
             [futon3c.dev.apm-conductor-v2 :as apm-v2]
@@ -395,6 +397,10 @@
                                   (fn [& _] nil)
                                   dev/register-invoke-control!
                                   (fn [& _] nil)
+                                  turn-queue/enabled?
+                                  (constantly false)
+                                  turn-queue/accept-and-drain!
+                                  (fn [& _] (throw (ex-info "queue path should be dark when flag is off" {})))
                                   futon3c.blackboard/blackboard!
                                   (fn [& _] nil)]
                       (dev/make-claude-invoke-fn
@@ -409,6 +415,40 @@
       (is (re-find #"--resume file-sid\b" argv))
       (is (not (re-find #"incoming-stale" argv)))
       (is (not (re-find #"atom-sid" argv))))))
+
+(deftest make-claude-invoke-fn-uses-turn-queue-when-flag-on
+  (testing "Car-3 queue path is load-dark but wired when the flag is enabled"
+    (let [queued (atom nil)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly true)
+                    turn-queue/accept-and-drain!
+                    (fn [entry process-fn]
+                      (reset! queued entry)
+                      (is (fn? process-fn))
+                      {:result "queued"})
+                    dev/start-invoke-ticker!
+                    (fn [& _] (fn [] nil))
+                    dev/emit-invoke-evidence!
+                    (fn [& _] nil)
+                    dev/context-retrieval!
+                    (fn [& _] nil)
+                    dev/register-invoke-control!
+                    (fn [& _] nil)]
+        (let [invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-queue"})
+              ;; The local process path is not exercised: the stubbed
+              ;; accept-and-drain! returns before calling process-fn.
+              result (invoke-fn {:prompt "outer"
+                                 :from "joe"
+                                 :surface "bell"
+                                 :msg-id "msg-1"}
+                                "sid")]
+          (is (= {:result "queued"} result))
+          (is (= "claude-queue" (:to @queued)))
+          (is (= "joe" (:from @queued)))
+          (is (= "bell" (:surface @queued)))
+          (is (= "msg-1" (:msg-id @queued))))))))
 
 (deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
   (testing "mfuton mode injects the n=3-only local contract on #math"

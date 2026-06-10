@@ -83,11 +83,11 @@
 
 (defn check-c1-causal-markers
   "C3-C1: every non-duplicate turn has a sequence marker; per recipient, sequence
-   markers are unique for distinct msg-ids; stale/superseded work must be marked
-   stale or reconciled rather than delivered as normal work."
+   markers are unique for distinct msg-ids; work whose seq is below the
+   recipient's already-drained frontier at processing time must be marked stale
+   or reconciled rather than delivered as normal work."
   [trace]
-  (let [outs (outcome-by-turn trace)
-        missing (for [{:keys [id seq]} (:turns trace)
+  (let [missing (for [{:keys [id seq]} (:turns trace)
                       :when (nil? seq)]
                   (violation :C3-C1 id "turn has no causal sequence marker"))
         duplicate-seq (mapcat
@@ -99,19 +99,24 @@
                                                    " for " to))
                                   turns))))
                        (group-by (juxt :to :seq) (:turns trace)))
-        stale-normal (let [max-seq-by-agent (into {}
-                                                  (map (fn [[to turns]]
-                                                         [to (when-let [seqs (seq (keep :seq turns))]
-                                                               (apply max seqs))])
-                                                       (group-by :to (:turns trace))))]
-                       (for [{:keys [id to seq]} (:turns trace)
-                             :let [status (:status (outs id))
-                                   max-seq (get max-seq-by-agent to)]
-                             :when (and seq max-seq
-                                        (< seq max-seq)
-                                        (= :processed status))]
-                         (violation :C3-C1 id
-                                    "older seq was delivered as normal work instead of stale/reconciled")))]
+        stale-normal (let [turns (by-id (:turns trace) :id)]
+                       (second
+                        (reduce
+                         (fn [[frontiers violations] {:keys [turn-id status]}]
+                           (let [{:keys [to seq]} (turns turn-id)
+                                 frontier (get frontiers to 0)
+                                 stale? (and seq (< seq frontier))
+                                 frontiers* (if (and seq (not= :deduped status))
+                                              (update frontiers to (fnil max 0) seq)
+                                              frontiers)]
+                             [frontiers*
+                              (if (and stale? (= :processed status))
+                                (conj violations
+                                      (violation :C3-C1 turn-id
+                                                 "seq below drained frontier was delivered as normal work instead of stale/reconciled"))
+                                violations)]))
+                         [{} []]
+                         (sort-by :processed-order (:outcomes trace)))))]
     (vec (concat missing duplicate-seq stale-normal))))
 
 (defn queue-violations [trace]
@@ -126,16 +131,11 @@
             :msg-id "m1" :seq 1 :accepted-at 1}
            {:id "t2" :from "claude-3" :to "claude-4" :surface "bell"
             :msg-id "m2" :seq 2 :accepted-at 2}
-           ;; Operator replay: accepted, but deduped, not processed twice.
-           {:id "t2-replay" :from "claude-3" :to "claude-4" :surface "bell"
-            :msg-id "m2" :seq 2 :accepted-at 3}
-           ;; Stale/crossed update: visible as reconciled, not normal work.
            {:id "t3" :from "claude-3" :to "claude-4" :surface "bell"
-            :msg-id "m3" :seq 3 :accepted-at 4}]
-   :outcomes [{:turn-id "t1" :status :stale :delivered-surface "emacs-repl" :processed-order 1}
-              {:turn-id "t2" :status :stale :delivered-surface "bell" :processed-order 2}
-              {:turn-id "t2-replay" :status :deduped :delivered-surface "bell" :processed-order 3}
-              {:turn-id "t3" :status :processed :delivered-surface "bell" :processed-order 4}]})
+            :msg-id "m3" :seq 3 :accepted-at 3}]
+   :outcomes [{:turn-id "t1" :status :processed :delivered-surface "emacs-repl" :processed-order 1}
+              {:turn-id "t2" :status :processed :delivered-surface "bell" :processed-order 2}
+              {:turn-id "t3" :status :processed :delivered-surface "bell" :processed-order 3}]})
 
 (deftest conforming-trace-satisfies-all-invariants
   (is (empty? (queue-violations conforming-trace))))
@@ -172,10 +172,10 @@
     (is (= [:C3-C1 :C3-C1] (mapv :invariant (queue-violations trace))))))
 
 (deftest adversarial-stale-normal-work-caught-by-c1
-  (let [trace {:turns [{:id "old" :from "c3" :to "agent" :surface "bell" :msg-id "m1" :seq 1 :accepted-at 1}
-                       {:id "new" :from "c4" :to "agent" :surface "bell" :msg-id "m2" :seq 2 :accepted-at 2}]
-               :outcomes [{:turn-id "old" :status :processed :delivered-surface "bell" :processed-order 1}
-                          {:turn-id "new" :status :processed :delivered-surface "bell" :processed-order 2}]}]
+  (let [trace {:turns [{:id "new" :from "c4" :to "agent" :surface "bell" :msg-id "m2" :seq 2 :accepted-at 1}
+                       {:id "old" :from "c3" :to "agent" :surface "bell" :msg-id "m1" :seq 1 :accepted-at 2}]
+               :outcomes [{:turn-id "new" :status :processed :delivered-surface "bell" :processed-order 1}
+                          {:turn-id "old" :status :processed :delivered-surface "bell" :processed-order 2}]}]
     (is (= [:C3-C1] (mapv :invariant (queue-violations trace))))))
 
 (deftest adversarial-missing-seq-caught-by-c1
