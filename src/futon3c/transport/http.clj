@@ -357,6 +357,91 @@
       t
       (str (subs t 0 217) "..."))))
 
+(def ^:private auto-bellback-caller "auto-bellback")
+
+(defn- auto-bellback-enabled?
+  []
+  (let [raw (some-> (System/getenv "FUTON3C_AUTO_BELLBACK") str/trim str/lower-case)]
+    (not (#{"0" "false" "no" "off"} raw))))
+
+(defn- terminal-invoke-state?
+  [state]
+  (#{"done" "succeeded" "failed" "error" "timeout" "cancelled"} (str state)))
+
+(defn- auto-bellback-job?
+  [job]
+  (or (= auto-bellback-caller (some-> (:caller job) str str/trim))
+      (= auto-bellback-caller (some-> (:surface job) str str/trim))
+      (= auto-bellback-caller (some-> (:kind job) str str/trim))))
+
+(defn- valid-auto-bellback-caller?
+  [caller agent-id caller-registered?]
+  (let [caller-id (some-> caller str str/trim)]
+    (and (boolean caller-registered?)
+         (not (str/blank? (str caller-id)))
+         (not (#{"http-caller" "joe"} caller-id))
+         (not= caller-id (some-> agent-id str str/trim)))))
+
+(defn should-auto-bellback?
+  "Pure auto-bellback decision predicate. Recipient type and caller registration
+   are passed in so tests and future recipient widening stay local."
+  [job recipient-type caller-registered? enabled?]
+  (boolean
+   (and enabled?
+        (terminal-invoke-state? (:state job))
+        (= :codex recipient-type)
+        (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
+        (not (auto-bellback-job? job))
+        (not (true? (get-in job [:auto-bellback :sent?]))))))
+
+(defn- auto-bellback-recipient?
+  [agent-id]
+  (= :codex (:agent/type (reg/get-agent (str agent-id)))))
+
+(defn- auto-bellback-caller-registered?
+  [caller]
+  (boolean (reg/get-agent (str caller))))
+
+(defn- auto-bellback-prompt
+  [{:keys [job-id agent-id state result-summary terminal-message]}]
+  (let [summary (or (some-> result-summary str str/trim not-empty)
+                    (some-> terminal-message str str/trim not-empty)
+                    "No result summary recorded.")]
+    (str "🔔 " agent-id " finished job `" job-id "` (state: `" state "`). "
+         summary
+         "\nDetails: /api/alpha/invoke/jobs/" job-id)))
+
+(defn- auto-bellback-request
+  [job]
+  (let [recipient-type (when (auto-bellback-recipient? (:agent-id job)) :codex)
+        caller-registered? (auto-bellback-caller-registered? (:caller job))]
+    (when (should-auto-bellback? job recipient-type caller-registered? (auto-bellback-enabled?))
+      {:caller (str/trim (str (:caller job)))
+       :bell-job-id (str "auto-bellback-" (:job-id job))
+       :prompt (auto-bellback-prompt job)})))
+
+(declare create-invoke-job!)
+(declare run-invoke-job!)
+
+(defn- enqueue-auto-bellback!
+  [{:keys [caller bell-job-id prompt]}]
+  (let [job-id (create-invoke-job! {:requested-job-id bell-job-id
+                                    :agent-id caller
+                                    :prompt prompt
+                                    :caller auto-bellback-caller
+                                    :surface auto-bellback-caller})]
+    (.submit invoke-executor
+             ^Runnable
+             (fn []
+               (run-invoke-job! {:job-id job-id
+                                 :agent-id caller
+                                 :prompt prompt
+                                 :caller auto-bellback-caller
+                                 :surface auto-bellback-caller})))
+    job-id))
+
+(def ^:dynamic *enqueue-auto-bellback!* enqueue-auto-bellback!)
+
 (defn- auto-record-direct-delivery-surface?
   "True when /api/alpha/invoke should auto-record delivery to the caller.
    Direct Emacs callers receive the terminal response in-band over HTTP, while
@@ -523,7 +608,8 @@
         result-text (when (string? (:result result)) (:result result))
         summary (when result-text (summarize-result-text result-text))
         artifact-ref (or (first-artifact-ref result-text)
-                         (first-artifact-ref summary))]
+                         (first-artifact-ref summary))
+        bellback-request (atom nil)]
     (update-invoke-jobs-ledger!
      (fn [ledger]
        (if-let [job (get-in ledger [:jobs job-id])]
@@ -540,11 +626,27 @@
                                       :execution execution)
                                (append-job-event terminal-state
                                                  {:code terminal-code
-                                                  :message terminal-message}))]
+                                                  :message terminal-message}))
+               request (auto-bellback-request updated-job)
+               updated-job (if request
+                             (do
+                               (reset! bellback-request request)
+                               (assoc updated-job
+                                      :auto-bellback {:sent? true
+                                                      :bell-job-id (:bell-job-id request)
+                                                      :at finished-at}))
+                             updated-job)]
            (cond-> (assoc-in ledger [:jobs job-id] updated-job)
              (and (string? trace-id) (not (str/blank? trace-id)))
              (assoc-in [:trace->job trace-id] job-id)))
-         ledger)))))
+         ledger)))
+    (when-let [request @bellback-request]
+      (try
+        (*enqueue-auto-bellback!* request)
+        (catch Throwable t
+          (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
+                        (.getMessage t)))
+          (flush))))))
 
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]
