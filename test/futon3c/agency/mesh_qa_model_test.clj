@@ -27,9 +27,9 @@
 
 (defn- unaddressable-caller? [registry caller]
   (let [caller* (some-> caller str str/trim)]
-    (or (str/blank? (or caller* ""))
-        (= "http-caller" caller*)
-        (not (contains? (:registered registry) caller*)))))
+    (and (not (str/blank? (or caller* "")))
+         (not (#{"http-caller" "joe"} caller*))
+         (not (contains? (:registered registry) caller*)))))
 
 (defn model-violations
   [edges registry-sessions]
@@ -112,7 +112,9 @@
     (is (empty? (model-violations [base] registry)))
     (is (= [:MQ-7]
            (mapv :invariant
-                 (model-violations [(assoc base :from "http-caller")] registry))))
+                 (model-violations [(assoc base :from "claude-missing")] registry))))
+    (is (empty? (model-violations [(assoc base :from "http-caller")] registry)))
+    (is (empty? (model-violations [(assoc base :from "joe")] registry)))
     (is (empty? (model-violations [(assoc base :from "http-caller" :to "claude-1")]
                                   registry)))))
 

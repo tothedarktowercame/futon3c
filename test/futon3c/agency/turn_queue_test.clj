@@ -3,7 +3,7 @@
             [futon3c.agency.turn-queue :as turn-queue]))
 
 (defn- with-temp-queue [f]
-  (let [path (.getPath (java.io.File/createTempFile "futon3c-car3-turn-queue-" ".edn"))]
+  (let [path (.getPath (java.io.File/createTempFile "futon3c-durable-turn-queue-" ".edn"))]
     (with-redefs [turn-queue/queue-store-path (constantly path)]
       (turn-queue/clear!)
       (try

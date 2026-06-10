@@ -72,10 +72,14 @@
     (is (= [:MQ-7]
            (mapv :invariant
                  (mesh-qa/check-mq-7-unaddressable-caller
-                  [(assoc codex-job :from "http-caller")] registry))))
+                  [(assoc codex-job :from "claude-missing")] registry))))
+    (is (empty? (mesh-qa/check-mq-7-unaddressable-caller
+                 [(assoc codex-job :from "http-caller")] registry)))
+    (is (empty? (mesh-qa/check-mq-7-unaddressable-caller
+                 [(assoc codex-job :from "joe")] registry)))
     (is (empty? (mesh-qa/check-mq-7-unaddressable-caller
                  [(assoc codex-job :from "http-caller" :to "claude-1")] registry)))
-    (is (= 1 (get-in (mesh-qa/check-mesh [(assoc codex-job :from "http-caller")] registry)
+    (is (= 1 (get-in (mesh-qa/check-mesh [(assoc codex-job :from "claude-missing")] registry)
                      [:counts :MQ-7])))))
 
 (deftest qa-http-route-returns-report

@@ -109,6 +109,25 @@
       #(finalize! "job-3"))
     (is (empty? @enqueued))))
 
+(deftest auto-bellback-job-records-delivery
+  (register-agent! "claude-6" :claude)
+  (let [direct-executor (proxy [java.util.concurrent.AbstractExecutorService] []
+                          (shutdown [] nil)
+                          (shutdownNow [] [])
+                          (isShutdown [] false)
+                          (isTerminated [] false)
+                          (awaitTermination [_ _] true)
+                          (execute [r] (.run r)))]
+    (with-redefs [http/invoke-executor direct-executor]
+      (let [job-id (#'http/enqueue-auto-bellback!
+                    {:caller "claude-6"
+                     :bell-job-id "auto-bellback-delivery-1"
+                     :prompt "bell back from test"})
+            delivery (:delivery (job job-id))]
+        (is (= "delivered" (:status delivery)))
+        (is (= "auto-bellback" (:surface delivery)))
+        (is (= "auto-bellback-ready" (:note delivery)))))))
+
 (deftest feature-flag-off-disables-auto-bellback
   (register-agent! "codex-1" :codex)
   (register-agent! "claude-6" :claude)

@@ -246,9 +246,9 @@
 
 (defn- unaddressable-caller? [registry-context caller]
   (let [caller* (some-> caller str str/trim)]
-    (or (str/blank? (or caller* ""))
-        (= "http-caller" caller*)
-        (not (contains? (:registered registry-context) caller*)))))
+    (and (not (str/blank? (or caller* "")))
+         (not (#{"http-caller" "joe"} caller*))
+         (not (contains? (:registered registry-context) caller*)))))
 
 (defn check-mq-7-unaddressable-caller
   [edges registry-context]
