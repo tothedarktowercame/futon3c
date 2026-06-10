@@ -70,6 +70,10 @@
     (str "Open " (or path target)
          ", confirm scope, greenlight (or decline).")
 
+    :advance-mission
+    (str "Advance " (or path target)
+         ": work its open holes, or confirm close-readiness (close is yours).")
+
     :learn-action-class
     (str "Feed the WM an input source for " (target-area target)
          " (see M-war-machine-input-sources).")
@@ -79,9 +83,9 @@
 
 (defn- why-blocked [class target]
   (case class
-    :open-mission
+    (:open-mission :advance-mission)
     (str "WM ranked " target
-         ", but guardrails require operator confirmation unless it is a bounded open-mission advancement with open holes.")
+         ", but guardrails require operator confirmation unless it is a bounded advancement of an open mission with open holes.")
 
     :learn-action-class
     (str "WM wants to learn action class " target

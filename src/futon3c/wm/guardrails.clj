@@ -7,7 +7,15 @@
   (:require [clojure.string :as str]))
 
 (def autonomous-action-types
-  #{:address-sorry :fire-pattern :open-mission})
+  #{:address-sorry :fire-pattern :open-mission :advance-mission})
+
+(def mission-action-types
+  "Mission-targeting action types sharing the bounded-advancement guardrail:
+   autonomous ONLY as advancement of an open mission with open holes.
+   :advance-mission is the enumerator's type for already-open missions
+   (pilot cycle #1, 2026-06-10); :open-mission retained for
+   genuinely-unopened targets."
+  #{:open-mission :advance-mission})
 
 (def operator-only-action-types
   #{:learn-action-class})
@@ -159,7 +167,7 @@
       (marker-present? action) :niche-deform
       (outward-op? action) :outward-irreversible
       (not (contains? autonomous-action-types type)) :operator-only
-      (and (= :open-mission type) (not (open-mission-with-holes? target ctx))) :open-mission-no-holes
+      (and (mission-action-types type) (not (open-mission-with-holes? target ctx))) :open-mission-no-holes
       :else nil)))
 
 (defn nag-warrant
