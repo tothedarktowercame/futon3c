@@ -140,3 +140,15 @@ campaign's governance backbone: each constituent mission's open fork registers h
   total credit assigned across move + patterns ≤ the one certified peradam unit — no inflation
   (anti-laundering for credit). Witness (baked into both builds): (v0) same work → exactly one grain
   per source; (grounded) the credit-assignment rule splits ≤1 unit, never double-credits.
+- **2026-06-10 — M-pattern-posteriors v0 PASS (claude-1 review, real gate; codex-3, futon3a
+  `codex/m-pattern-posteriors-v0` `6402ceb`).** Both anti-glibness gates hold: posterior MULTIPLIES
+  m(p) centered at 1.0 (byte-inert at weight=0 / no-evidence) — composes-not-replaces; credit-seam
+  encodes v0 pattern-grain-only + the grounded ≤1.0-conservation witness baked in. 5 tests,
+  deterministic rebuild (accepted 21 / dropped 28 w/ reasons / 12-of-1071 patterns with evidence),
+  self-graded label everywhere. **HONEST FINDING (the legitimate sparse-data exit):** the machinery
+  is SOUND but the PUR corpus is too sparse — WM cascade surfaces mostly hit n=0 → posterior inert →
+  NULL; it moves only on PUR-overlapping queries. **This CONFIRMS the campaign thesis by measurement:**
+  the learning layer is genuinely *inert without grounding* — it needs the car's grounded peradams
+  (+ more PURs) to move anything. The escrow/grounding is **load-bearing, not bureaucratic.** Branch
+  byte-inert + mergeable (land-call: Joe). Escrow entry stays `:held` (grounded posterior path); the
+  v0 self-graded machinery is done.
