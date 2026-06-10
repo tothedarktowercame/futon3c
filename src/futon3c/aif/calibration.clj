@@ -6,12 +6,16 @@
             [clojure.string :as str]
             [futon3c.aif.discipline-events :as discipline]))
 
+(def ^:private home (System/getProperty "user.home"))
+
 (def default-paths
-  {:traces-dir "data/repl-traces"
-   :pilots-log "holes/PILOTS-LOG.md"
-   :closure-folds "/home/joe/code/futon6/holes/closure-folds.edn"
-   :ch2-events "/home/joe/code/futon3a/data/ch2-discharge-events.edn"
-   :discipline-events "data/discipline-events.edn"})
+  ;; All absolute (anchored at user.home) — the harness must read the same
+  ;; evidence regardless of caller cwd (CLI from futon3c vs the serving JVM).
+  {:traces-dir (str home "/code/futon3c/data/repl-traces")
+   :pilots-log (str home "/code/futon3c/holes/PILOTS-LOG.md")
+   :closure-folds (str home "/code/futon6/holes/closure-folds.edn")
+   :ch2-events (str home "/code/futon3a/data/ch2-discharge-events.edn")
+   :discipline-events (str home "/code/futon3c/data/discipline-events.edn")})
 
 (defn- warn [source message]
   {:source (str source) :warning message})
@@ -187,11 +191,19 @@
           ch2-events (:ch2-events default-paths)
           discipline-events (:discipline-events default-paths)}}]
    (let [warnings (atom [])
-         records (vec (concat (gamma-records traces-dir warnings)
-                              (pilots-records pilots-log warnings)
-                              (closure-records closure-folds warnings)
-                              (ch2-records ch2-events warnings)
-                              (discipline-records discipline-events warnings)))]
+         sourced [[:gamma-frame traces-dir (gamma-records traces-dir warnings)]
+                  [:pilots-log-turn pilots-log (pilots-records pilots-log warnings)]
+                  [:closure-fold closure-folds (closure-records closure-folds warnings)]
+                  [:ch2-discharge ch2-events (ch2-records ch2-events warnings)]
+                  [:discipline-event discipline-events (discipline-records discipline-events warnings)]]
+         ;; A source that exists but yields zero records is a coverage gap that
+         ;; must not look identical to a healthy parse (no silent caps): warn.
+         _ (doseq [[kind path records] sourced
+                   :when (and (empty? records)
+                              (.exists (io/file path))
+                              (not-any? #(= (str path) (:source %)) @warnings))]
+             (swap! warnings conj (warn path (str "source present, 0 " (name kind) " records parsed"))))
+         records (vec (mapcat peek sourced))]
      (with-meta records {:warnings @warnings}))))
 
 (defn- mean [xs]

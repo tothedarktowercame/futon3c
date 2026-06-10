@@ -8,7 +8,9 @@
   #{:teleport-refused :guardrail-trip :operator-decline :operator-merge})
 
 (defn default-path []
-  "data/discipline-events.edn")
+  ;; Absolute — the sink must be the same file regardless of caller cwd
+  ;; (CLI vs serving JVM); matches calibration/default-paths.
+  (str (System/getProperty "user.home") "/code/futon3c/data/discipline-events.edn"))
 
 (defn discipline-event
   "Validate and normalize one out-of-band discipline event."
