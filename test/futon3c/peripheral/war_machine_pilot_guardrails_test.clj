@@ -33,13 +33,32 @@
     futon3c.wm.scheduler/request-tick! (fn [] {:queued? true})
     (throw (ex-info "unexpected requiring-resolve" {:sym sym}))))
 
-(deftest default-begin-live-cycle-keeps-top-action-test
+(deftest default-begin-live-cycle-rides-guardrails-test
+  ;; The DEFAULT flight path rides guardrails (pilot cycle #1, 2026-06-10):
+  ;; operator-only top action is stepped past + NAGged; v = first :autonomous.
+  (let [path (temp-file)]
+    (try
+      (with-redefs [futon3c.peripheral.war-machine-pilot/live-judgement
+                    (fn []
+                      (judgement [(ranked 1 :learn-action-class :open-mission -9.0)
+                                  (ranked 2 :address-sorry "sorry/foo" -1.0)]))
+                    clojure.core/requiring-resolve scheduler-resolve]
+        (let [result (pilot/begin-live-cycle! {:tick? false
+                                               :needs-you-path path})]
+          (is (= true (:ok result)))
+          (is (= {:type :address-sorry :target "sorry/foo"} (:v result)))
+          (is (= 1 (:needs-you-emitted result)))))
+      (finally
+        (delete-tree! (.getParent (io/file path)))))))
+
+(deftest raw-mode-keeps-top-action-test
+  ;; :guardrails? false = explicit opt-out, raw field read, no classification.
   (with-redefs [futon3c.peripheral.war-machine-pilot/live-judgement
                 (fn []
                   (judgement [(ranked 1 :learn-action-class :open-mission -9.0)
                               (ranked 2 :address-sorry "sorry/foo" -1.0)]))
                 clojure.core/requiring-resolve scheduler-resolve]
-    (let [result (pilot/begin-live-cycle! {:tick? false})]
+    (let [result (pilot/begin-live-cycle! {:tick? false :guardrails? false})]
       (is (= true (:ok result)))
       (is (= {:type :learn-action-class :target :open-mission} (:v result)))
       (is (not (contains? result :needs-you-emitted)))

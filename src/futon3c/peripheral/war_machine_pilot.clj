@@ -254,11 +254,19 @@
 
 (defn begin-live-cycle!
   "READ → EVAL → PRINT(proposal) → request async tick. Fast, non-blocking, no
-   substrate mutation. Stashes full begin-state by run-id; returns a summary."
+   substrate mutation. Stashes full begin-state by run-id; returns a summary.
+
+   Guardrails ride BY DEFAULT (pilot cycle #1, 2026-06-10): the selection
+   delegates to wm/guardrails — operator-only and unearnable actions are
+   stepped past and NAGged via wm/needs-you, and the chosen v is the first
+   :autonomous (e.g. bounded advancement of an open mission with open holes).
+   Without this the default flight path was `(first dT)` with no
+   classification — the pilot faced operator-only actions with no executor
+   and had to hold by hand. Pass :guardrails? false for a raw field read."
   ([] (begin-live-cycle! {}))
   ([{:keys [agent v-attribution emit-bell? tick? mode guardrails? guardrails-ctx needs-you-path needs-you-top-k]
      :or {agent "claude-2" v-attribution :pilot-autonomous emit-bell? false
-          tick? true mode :supervised-proposal}}]
+          tick? true mode :supervised-proposal guardrails? true}}]
    (let [run-id (str "live-" (java.util.UUID/randomUUID))
          j      (live-judgement)
          dT     (judgement->dT j)
