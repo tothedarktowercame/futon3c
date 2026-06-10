@@ -50,19 +50,21 @@
   "Build the social-layer mesh-edge evidence entry. Mirrors
    futon3c.social.bells/make-bell-evidence but uses :mesh-edge tags and typed
    edge fields consumed by /api/alpha/coordination/edges and mesh_trace.py."
-  [{:keys [from to surface kind ok? error at session-id]}]
+  [{:keys [from to surface kind ok? error at session-id edge-id]}]
   (let [from* (normalize-from from)
         to* (or (normalize-agent-id to) "unknown")
         surface* (normalize-surface surface)
         kind* (event-kind kind)
-        at* (or at (now-str))]
+        at* (or at (now-str))
+        edge-id* (or edge-id session-id (str "mesh-edge-" (UUID/randomUUID)))]
     {:evidence/id (str "e-" (UUID/randomUUID))
      :evidence/subject {:ref/type :agent :ref/id to*}
      :evidence/type :coordination
      :evidence/claim-type :step
      :evidence/author from*
      :evidence/at at*
-     :evidence/body (cond-> {:edge/kind kind*
+     :evidence/body (cond-> {:edge/id edge-id*
+                             :edge/kind kind*
                              :edge/from from*
                              :edge/to to*
                              :edge/surface surface*
@@ -70,7 +72,7 @@
                       (some? ok?) (assoc :edge/ok? (boolean ok?))
                       error (assoc :edge/error (str error)))
      :evidence/tags [:coordination :mesh-edge]
-     :evidence/session-id (or session-id (str "mesh-edge-" (UUID/randomUUID)))}))
+     :evidence/session-id edge-id*}))
 
 (defn record-invoke-edge!
   "Append one mesh-edge evidence entry. Accepts optional :evidence-store for
@@ -87,7 +89,9 @@
   (let [from* (normalize-from from)
         to* (or (normalize-agent-id to) "unknown")
         surface* (normalize-surface surface)
-        base {:from from* :to to* :surface surface* :evidence-store evidence-store}]
+        edge-id (str "mesh-edge-" (UUID/randomUUID))
+        base {:from from* :to to* :surface surface* :edge-id edge-id
+              :session-id edge-id :evidence-store evidence-store}]
     (record-invoke-edge! (assoc base :kind :invoke))
     (try
       (let [result (if (some? timeout-ms)
@@ -109,6 +113,7 @@
   [entry]
   (let [body (:evidence/body entry)]
     {:id (:evidence/id entry)
+     :edge-id (:edge/id body)
      :at (or (:edge/at body) (:evidence/at entry))
      :from (:edge/from body)
      :to (:edge/to body)
@@ -125,4 +130,5 @@
    (->> (estore/query {:query/type :coordination
                        :query/tags [:coordination :mesh-edge]
                        :query/limit (or limit 50)})
+        (filter #(get-in % [:evidence/body :edge/from]))
         (mapv edge-public-view))))

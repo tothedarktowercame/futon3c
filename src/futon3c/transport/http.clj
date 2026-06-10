@@ -15,6 +15,7 @@
      GET  /api/alpha/evidence/:id/chain — retrieve ancestor reply chain
      GET  /api/alpha/invoke/jobs — list recent invoke jobs
      GET  /api/alpha/coordination/edges — list social-layer mesh edges
+     GET  /api/alpha/coordination/qa — run mesh misrouting QA
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
      POST /api/alpha/invoke/announce — record a queued invoke before external acceptance
      POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
@@ -54,6 +55,7 @@
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as federation]
+            [futon3c.agency.mesh-qa :as mesh-qa]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -3061,6 +3063,14 @@
                                   :message (.getMessage e)}))))))))
 
 
+
+(defn- handle-coordination-qa
+  "GET /api/alpha/coordination/qa?limit=N — unified mesh misrouting QA."
+  [request]
+  (let [params (parse-query-params request)
+        limit (or (parse-int (get params "limit")) 100)]
+    (json-response 200 (mesh-qa/current-report limit))))
+
 (defn- handle-coordination-edges
   "GET /api/alpha/coordination/edges?limit=N — social-layer mesh edges.
    These are projected as outgoing coordination edges for mesh_trace.py; they
@@ -4795,6 +4805,9 @@
 
           (and (= :get method) (= "/api/alpha/coordination/edges" uri))
           (handle-coordination-edges request)
+
+          (and (= :get method) (= "/api/alpha/coordination/qa" uri))
+          (handle-coordination-qa request)
 
           (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/(.+)" uri))
           (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)
