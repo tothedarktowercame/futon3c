@@ -15,7 +15,7 @@ closed-loop synthesis) and `futon2/docs/futonzero-alphazero.md` §1/§5 — plus
 Fable planning session that chartered the three constituent missions and added the observable
 ledger. `M-futonzero-grounding` (claude-3, the earlier umbrella sketch) folds in here as the
 diagnosis; it is **retired as a standalone mission** (this campaign is its capstone form,
-resolving `:O-capstone-form` toward *campaign*, pending operator ratification).
+resolving `:O-capstone-form` → *campaign*, **operator-ratified 2026-06-10**).
 
 ---
 
@@ -203,3 +203,26 @@ campaign's governance backbone: each constituent mission's open fork registers h
   "low-coverage AND un-calibrated" — two distinct axes, two distinct remedies. A cleaner finding
   than the original null, and a direct product of the calibration choice. ≤1.0-conservation applies
   on the calibration path; escrow stays `:held`.
+- **2026-06-10 — GOAL-DEFINITION RESOLVED + Campaign RATIFIED + v0 merges greenlit (operator
+  decisions, Joe).** Three decisions cleared in one turn:
+  - **(1) `:O-goal-definition` DISCHARGED → SPARSE + EXPLICIT + DOKUSAN.** How a substrate-2
+    discharge earns a peradam: **sparse** (a discharge certifies a curated Mount-Analogue thesis
+    *only if* it satisfies that thesis's `:pudding-requires` — peradams land only at real
+    altitude-achievements, not routine code-work); **explicit** (the thesis names its own
+    discharge-condition in plain terms — NO semantic matcher, which would reopen the Goodhart
+    surface the campaign exists to close); **DOKUSAN** (the recognition is *interactive*: the
+    system can only **propose a claim** — "this discharge may have reached thesis T"; the operator
+    **certifies it in an interactive examination**, the live sibling of the three-witness
+    certificate — you can't fake insight to the examiner, which is where the human-grain
+    un-game-ability comes from). **Shareable:** a qualified peer can run the dokusan → distributed
+    recognition (the peer-learning core). This makes "the loop closes through the operator" concrete
+    — the peradam is minted by interactive certification, not an automatic gradient. **Shapes the
+    car (futon7 cert-half, claude-3):** the half is a *dokusan interface* — surface candidate claims
+    (discharge event matches a thesis `:pudding-requires`) → operator interactively certifies
+    (provides the witness `certify` checks) → mint peradam bound to `:move/id`. Reuses existing
+    `certify`/3-witness; dokusan is the interactive witness-provision step.
+  - **(2) `:O-capstone-form` DISCHARGED → CAMPAIGN (ratified as specified).** `C-falsifiable-missions`
+    stands as a Campaign; `M-futonzero-grounding` retirement confirmed; `M-war-machine` disposition
+    rides under this objective (parked).
+  - **(3) v0 merges GREENLIT.** M-arguing-worlds v0 + M-pattern-posteriors v0 cleared to land on
+    their main branches (delegated to claude-1, the lane PM).
