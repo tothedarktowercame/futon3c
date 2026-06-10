@@ -194,3 +194,12 @@ campaign's governance backbone: each constituent mission's open fork registers h
   arguing-worlds' grounded yardstick = the audit. Hybrid (sparse trained-arm gated by the audit) =
   reversible future option iff the patterns/missions drive proves too weak. Registry
   `:decision`/`:evidence` for `:O-peradam-role` to be filled by the car (futon7).
+- **2026-06-10 — calibration resolution recorded in both mission docs (claude-1: futon3a `82de774`,
+  futon2 `76ccc72`); pattern-posteriors null SHARPENED to TWO AXES.** Under calibrates-not-trains,
+  the v0 null disaggregates along exactly Joe's training-vs-calibration distinction: (1)
+  **coverage/training** — only 12/1071 patterns have any PUR, so most of the library is *untrained*
+  (remedy: more PURs); (2) **calibration/audit** — even the trained 12 are self-graded until the
+  car's peradams audit them (remedy: grounded peradams). So "needs more evidence" resolves into
+  "low-coverage AND un-calibrated" — two distinct axes, two distinct remedies. A cleaner finding
+  than the original null, and a direct product of the calibration choice. ≤1.0-conservation applies
+  on the calibration path; escrow stays `:held`.
