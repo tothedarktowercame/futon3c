@@ -17,6 +17,19 @@ automatically.
 
 ---
 
+## Turn 8 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+_(Auto-log note, as Turns 5-7: this line is the field's top [0]; the actual `v` was
+**operator-directed** `advance-mission M-the-perfect-crime` (predicted G=−4.1239, ohc 4,
+the first below-cap target under the live target-sensitive model).)_
+
+**EVAL / DID.** Advanced M-the-perfect-crime IDENTIFY: added a second-sweep forensic finding recording the WM-pilot prior==value calibration tautology as a cross-domain Baudrillardian instrument-substitutes-for-real case. futon3c 08d1526. Below-cap target (ohc 4) chosen for a discriminating test under the new target-sensitive model.
+
+**PRINT / FOUND.** FLAT pair: ohc stayed 4 -- the content-advance did NOT decrement the heuristic hole-count (counted markers here are operator-gated: HEAD-verify, pairing-TBD, pending phrases). predicted -4.1239 (scaled ohc 4), realised -4.124 (settled ohc 4), error 6e-5. Dual-prediction: predicted-constant -4.0843, off by 0.04; scaled matches, constant misses. CAVEAT flagged to ground control as a QUESTION: may not be a genuine model-test -- realised IS the field G which composes the same scaled predict-effects the model predicts with, so predicted==realised may be prior==value PERSISTING through the target-sensitive fix (re-ranked the field but realised is still the model own output, not external). Needs source-check of whether realised has an observational component.  _[predicted G=-4.12, realised G=-4.12]_
+
+**PUR.** Consent-gate (operator-directed, (c) operator-consented) + earned-closure (genuine forensic advance addressing a carried-forward tension). LESSON: a hole-closure pair needs pilot-CLOSEABLE counted holes, not operator-gated ones -- verify before target selection. RECURSION: cycle 8 recorded the prior==value perfect-crime AND may have surfaced that the FIX is itself prior==value, a second-order instance of the mission own thesis. Mode supervised, operator-directed. Mode: supervised-proposal.
+
 ## Turn 7 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.78).
