@@ -262,6 +262,8 @@
                (let [action (:action e)]
                  {:action (assoc action :type (some-> (:type action) keyword))
                   :g-total (:G-total e)
+                  ;; dual-prediction logging: frozen constant-model counterfactual
+                  :g-constant (:G-constant e)
                   :rank    (:rank e)})))))
 
 (defn- guarded-selection
@@ -367,7 +369,8 @@
              tick        (when tick? ((requiring-resolve 'futon3c.wm.scheduler/request-tick!)))
              begin {:ok true :run-id run-id :agent agent :v-attribution v-attribution
                     :wm-mode (:mode j) :mode mode
-                    :pre {:dT-snapshot dT :v v :predicted-discharge predicted}
+                    :pre {:dT-snapshot dT :v v :predicted-discharge predicted
+                          :predicted-constant (:g-constant top)}
                     :cg-id cg-id
                     :artefact {:kind (if (= mode :substantive)
                                        :substantive-action
@@ -491,6 +494,7 @@
                        :dT-snapshot (get-in b [:pre :dT-snapshot])
                        :v v :v-attribution (:v-attribution b)
                        :predicted-discharge predicted
+                       :predicted-constant (get-in b [:pre :predicted-constant])
                        :cg-id (:cg-id b) :artefact (:artefact b)
                        :delta-grad? false
                        :p' "post-tick" :realised-discharge realised}

@@ -44,7 +44,7 @@
   (let [{:keys [step p dT-snapshot v v-attribution predicted-discharge cg-id
                 artefact new-edge-family p' realised-discharge
                 prediction-error independent? evidence-ref realised-source
-                realised-read]} m
+                realised-read predicted-constant]} m
         dg (cond (contains? m :delta-∇?)    (:delta-∇? m)
                  (contains? m :delta-grad?) (:delta-grad? m)
                  :else ::absent)
@@ -78,7 +78,11 @@
       ;; WHOLE differential across the executed cycle — recorded for the
       ;; future field-delta realised-semantics design, NOT verdict-counted.
       (some? (:field-delta m))    (assoc :field-delta (:field-delta m))
-      (some? realised-read)       (assoc :realised-read realised-read))))
+      (some? realised-read)       (assoc :realised-read realised-read)
+      ;; dual-prediction logging (2026-06-11): the frozen constant model's
+      ;; counterfactual prediction for the same pair — constant-vs-scaled
+      ;; discriminates on the SAME evidence.
+      (some? predicted-constant)  (assoc :predicted-constant predicted-constant))))
 
 ;; ---------------------------------------------------------------------------
 ;; accumulator — what the live loop drives, one record per turn-cycle

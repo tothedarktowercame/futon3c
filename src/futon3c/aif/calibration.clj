@@ -89,6 +89,7 @@
                             :independent? (boolean (:independent? m))
                             :realised-source (:realised-source m)
                             :realised-read (:realised-read m)
+                            :predicted-constant (parse-number (:predicted-constant m))
                             :witness-class :none})))))
            (catch Throwable t
              (swap! warnings conj (warn (.getPath file) (str "unreadable source: " (.getMessage t))))
