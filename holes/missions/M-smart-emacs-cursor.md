@@ -73,6 +73,9 @@ contract), `futon3c/scripts/smart-cursor-e2e-cycle.sh` (external drive).
 `futon6/scripts/mission_scope_detect.py` + `futon3c/src/futon3c/scripts/
 mission_scope_ingest.clj` + `mission-mode.el` (the scope render),
 `futon6/holes/E-scope-audit.md` (the audit method missions are born under).
+futon3/library/mission-coherence/logic-model-before-code.flexiarg — the
+method section 5 runs under, bound here so the Skolem audit finds no free
+variables in its own birthplace mission.
 
 ## 3. DERIVE — the loop, decomposed (sketch; ARGUE items marked)
 
