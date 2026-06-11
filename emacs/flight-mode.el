@@ -62,7 +62,8 @@
                           (append (cdr flight-mode-command) args)))
         (goto-char (point-min))
         (ignore-errors (json-parse-buffer :object-type 'alist
-                                          :array-type 'list))))))
+                                          :array-type 'list
+                                          :null-object nil))))))
 
 (defun flight-mode--run-ids ()
   (alist-get 'run-ids (flight-mode--call "--list")))
