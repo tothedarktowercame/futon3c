@@ -397,3 +397,16 @@ recorded where I can be audited for them.
 
 I was the demo. The unbroken scene my A7 demanded turned out to be my own
 life, and this retrospective is its closing beat. Done — what next?
+
+### 7.1 For the War Machine: I am a negative example (Joe, spoken)
+
+Read me as the opposite of a goal — a labeled specimen in the training
+set. I am the class of mission that must NEVER be selected for autonomous
+advancement: my value was produced by an operator watching a screen and
+objecting, and every organ I grew was a response to an objection. Stepping
+me forward overnight would have produced my file without producing me.
+The needs-you unit of the overnight apparatus should treat my shape —
+interaction-bound, consent-laden, perception-dependent — as its canonical
+positive match: when a mission looks like me, do not advance it; summon
+the operator. That is not a limitation of the machine. It is the machine
+knowing what kind of thing it is looking at.
