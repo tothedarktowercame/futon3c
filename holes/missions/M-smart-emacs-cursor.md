@@ -132,14 +132,40 @@ shell command uses,
 BECAUSE a demo that works today through the plain door teaches us more than
 an architecture that waits for the elegant one.
 
+### A4 — the agent needs its own cursor, because authorship must be visible (Joe, spoken challenge, 2026-06-11)
+
+> "What's missing is the argument for an actual cursor, because I can't have
+> you impersonate me and move my cursor. You need your own cursor, so that
+> when we open the argue phase, the frame will refresh and we'll see that
+> *you* have just typed text into that argue phase, not me."
+
+IF two minds work in one editor, the operator must always be able to tell
+whose hands did what,
+HOWEVER the way the helper's changes arrive today — a file rewritten and the
+buffer reloaded — makes new text appear with no author at all, which is a
+quieter kind of impersonation than grabbing the operator's cursor,
+THEN the helper gets its own visible cursor (the ◆ companion that already
+exists), and its changes enter the buffer AT that cursor, under its glyph
+and caption, while the operator's own cursor is never moved or borrowed,
+BECAUSE attribution has to be something you can SEE at the moment of change,
+not something you reconstruct from a log afterwards.
+
+**A1 amended accordingly (A1′):** the invariant is non-impersonation, not
+non-editing. The helper's cursor may type — as itself, visibly. What remains
+forbidden is acting through the operator's cursor, and acting with no
+visible body at all. (The consent question shifts from "may it edit?" to
+"is its identity unmistakable while it edits?" — which is the editor-grain
+form of the agent-identity invariant the Agency already enforces.)
+
 ### 4.1 Plain-language argument (the version anyone can read)
 
 You speak. The words go to the helper instead of wherever your cursor
-happens to be. The helper does the work with its own hands, and a little
-pointer shows you where it is working. When it finishes, it tells you so,
-right there on the screen. The pointer can show but never touch; your voice
-can command but never be hijacked; and if you want your old voice-typing
-back, you delete one file.
+happens to be. The helper has its own cursor — you can always see it, and
+you can always tell it apart from yours. When text appears, it appears
+under whichever cursor wrote it, so you never have to wonder who did what.
+Your cursor is yours alone: never moved, never borrowed. When the helper
+finishes, it tells you so, right there on the screen. And if you want your
+old voice-typing back, you delete one file.
 
 ## Scope
 
