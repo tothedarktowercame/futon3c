@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 17 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 17: minted collaboration-coherence/determined-fork-proto-psr -- determined forks get a warrant not a question.
+
+**PRINT / FOUND.** PROPOSAL-mode substrate. The autonomous-arc rule itself, graduated; ChipWitz institutional form. Canonical = the cycle-5 over-ask.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Arc-2 cycle 17 (metronome) + earned-closure. Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 16 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
