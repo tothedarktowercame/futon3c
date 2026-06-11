@@ -17,6 +17,18 @@ automatically.
 
 ---
 
+## Turn 7 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.78).
+_(Auto-log note, as Turns 5/6: this line is the field's top [0]; the actual `v` was
+**operator-directed** `advance-mission M-futonzero-generative` (predicted G=−4.3626).)_
+
+**EVAL / DID.** §4.2 toy field fixture landed (codex-1 b32b421; my charter-fit review + fable-1 code-gate PASS with 1 reviewer-direct test addition for an untested laundering mode). Marked §4.2 done (4 holes to 3, doc futon0 b4f7ef3). First build-dispatch-lane cycle: claude-3 spec+dispatch, fable-1 gate, codex-1 author.
+
+**PRINT / FOUND.** Measured pair #3: predicted -4.3626 (4-hole), realised -4.3622 (3-hole SETTLED reading as-of 10:58:36), error 0.0004. KEY FINDING: settled 3-hole G approx settled 4-hole approx settled 5-hole approx -4.36, so closing real holes barely moves the SETTLED G (consistent with cycle 5). Cycle 6 error 0.277 was a TRANSIENT artifact: its realised was caught right after the edit-scan (spike) before settling back to -4.36. Cycles 6 and 7 used inconsistent realised-read timing (transient vs settled). The realised-read protocol needs defining (settled after stable scans); cycle 6 likely needs re-measurement. Realised-source measured.  _[predicted G=-4.36, realised G=-4.36, top-shift ->sorry/pattern-measure-never-target]_
+
+**PUR.** Consent-gate (operator-directed cycle 7) plus earned-closure (build-backed real hole closed). Build-dispatch lane exercised cleanly, author-not-reviewer 3-way held (fable-1 caught an untested laundering mode I also missed). Vigilance: caught the transient-vs-settled artifact by noticing the 4-hole predicted differs from cycle-6 4-hole realised and verifying the settled value is a stable -4.36. Flagging the realised-read-timing methodology to ground control. Mode supervised, operator-directed. Mode: supervised-proposal.
+
 ## Turn 6 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.74).
