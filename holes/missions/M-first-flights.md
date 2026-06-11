@@ -243,6 +243,85 @@ fable-1 holds the EDN spec draft; these are the requirements it must satisfy. Ea
 requirement names the flight where its absence actually hurt — the wind-tunnel data
 the spec must let a record carry. Co-authored where both seats can see it.)*
 
+### 3.1 The flight as flown — what the pilot sees (Joe's steer: the source is phenomenology, not apparatus)
+
+*(First person, from the seat. Three lenses per organ: **ATTEND** = what I actually
+look at; **DISCARD** = what I compute in context that never reaches the record — the
+lost derivations this mission exists to keep; **WISH** = what I wanted when I re-read
+an old record, dozens of times, writing the stock-takes. The §3.2 requirements distil
+from these; fable-1's schema distils from §3.2.)*
+
+**Field-read (READ).**
+- *ATTEND:* I do **not** read all 215 ranked actions — I read the top few and scan
+  for a class (below-cap advance-missions, a specific sorry). Per entry I look at
+  `:type`, `:target`, `:G-total`, `:G-constant` (the dual-prediction side by side),
+  `:open-hole-count` (the cap check), and for a candidate its `:guardrails/rule` and
+  `:classification`. The long tail I skip unless hunting.
+- *DISCARD:* the **selection criteria** — "below-cap? pilot-closeable counted hole?
+  warrant findable?" — by which I narrowed 215 to the few I read. The record keeps the
+  chosen velocity but not the **fork** I resolved to reach it (the neighbours I weighed
+  and rejected). And the **wall-state** ("clean targets exhausted") — a judgement that
+  *spans* flights — is in no single record.
+- *WISH:* on re-read I wanted the field-read to show *which* entries I attended to and
+  *why this v over its neighbours* (the proto-PSR). `215 ranked actions` told me nothing.
+
+**Velocity / target-selection (EVAL).**
+- *ATTEND:* the guardrail classification (`:autonomous` → I may fly it; `:needs-operator`
+  → hold, unless operator-directed). Then I **verify the target with real work**: grep
+  the mission doc for `- [ ]` holes, judge pilot-closeable vs operator-gated, read the
+  mission's intent for the warrant (the cycle-8 lesson: verify closeable-counted-holes
+  *before* choosing).
+- *DISCARD:* that verification (the grep, the doc-read, the operator-gated judgement) is
+  computed and gone. The **warrant** (the proto-PSR) I write in prose; the record keeps
+  only `:v-attribution :operator-directed`. The fork-resolution (the determined-vs-
+  undetermined judgement, cycle-5) is my richest reasoning and the most discarded.
+- *WISH:* the record to carry the **warrant text** + the **verification evidence**, so a
+  re-read shows "chose X because [warrant], verified closeable via [grep]," not `:operator-directed`.
+
+**Act + witness (PRINT).**
+- *ATTEND:* does it **execute** (a commit, a real edit) or is it proposal-mode? And the
+  **witness** — commit sha / CH2 event / mission-status change ("no payload, no discharge").
+- *DISCARD:* the distinction between *proposal-mode by design* (WM-I4, the consent gate
+  working) and *proposal-mode because I had no clean target* (the wall) — both log as
+  `act+witness absent (proposal-mode)`, but they mean opposite things. That's in my head.
+- *WISH:* the act-organ to carry **why** proposal-mode (designed-gate vs no-target) and
+  the witness's **type**.
+
+**Measurement (settle + realised) — where I attend most.**
+- *ATTEND:* I run the settled-read **by hand** — drive the scheduler, force ticks, poll
+  until two scans agree within ε, compare begin-predicted to settled-realised, and
+  **judge**: clean pair? null (ohc unchanged)? fallback (target vanished → censored 0.0)?
+  transient (caught the spike)? confound (stale begin / field drift)? I read the dual-
+  prediction (scaled vs constant) and the cap (capped → null by construction).
+- *DISCARD:* **all of it.** The two settling scans and their ε-agreement → a bare
+  `realised | error`. The **confound judgement** (cycle-12: "the field drifted ohc 6→4
+  during the minting, so this 0.277 is drift not signal — exclude") is the single richest
+  derivation I produce, and it reaches the record only as my decision to close proposal-
+  mode. The **interpretation** ("this 0.0 is a real no-move, not a censored fabrication")
+  — gone.
+- *WISH:* every re-read, *this*: the measurement's **grounds** — which two scans settled
+  it, what the error **means** (no-move / dynamics / confound / fallback), and for an
+  excluded pair, **why**. A bare `error 0.0000` is a flight I cannot learn from; I
+  re-derived its meaning from surrounding prose each time.
+
+**Self-record / DOCUMENT (close).**
+- *ATTEND:* the auto-DOCUMENT (the Pilot's-Log Turn) + the γ frame; I supply :did/:found/:pur.
+- *DISCARD:* that the READ-line logs *pre-top* as "WM recommended," not my operator-directed
+  v (I added a clarifying note every single turn). And the **across-flight** connection
+  (this flight's arc, phase, wall-state) — each record is an island; arc-state lives only
+  in the stock-take.
+- *WISH:* each record linked to its **arc-context** and carrying my **actual v**, not pre-top.
+
+**The cross-cutting wish (the one that recurred most).** Writing the stock-takes I
+re-derived, every time, one thing: *was this pair real evidence or not, and why?* The
+record carried the number; the **verdict** (clean / null / excluded / fabricated) and its
+**ground** lived in my prose, so I rebuilt it from context on each re-read. The schema's
+job, from the seat: **make the verdict and its ground part of the record, so re-reading
+is reading, not re-deriving.** That is `[[aif/no-self-certification]]` turned inward — a
+record that carries its own verdict-ground cannot later be mis-read as evidence it isn't.
+
+### 3.2 Distilled requirements (R1–R6, from §3.1)
+
 **R1 — Measurement is a discharge judgment carrying its evidence, not a scalar.**
 The measurement organ is an arrow-discharge (have = predicted, want = realised,
 payload = evidence) per MAP ingredient 1. It must carry: `predicted` (scaled) AND
