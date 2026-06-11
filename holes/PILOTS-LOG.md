@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 11 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 11: §4.5 reward red-team fixture landed (codex-1 71b22d2, charter-fit + fable-1 code-gate PASS; I banked the ninth shape launder-by-omission as a known-leniency characterization test, 9696db5). Marked §4.5 done -- the FutonZero §4 safe work products (4.1-4.5) are COMPLETE. ohc 10->9. futon0 84916c9.
+
+**PRINT / FOUND.** CAPPED NULL pair (expected): predicted -4.2049 (ohc 10), realised -4.2046 (settled ohc 9), error 2.8e-4. M-futonzero-generative is at the 2x cap (>=6 holes), so closing one hole leaves the capped discharge unchanged -- the capped model correctly predicts no-move. A valid L1 data point at the cap (confirms cap behavior, complements the below-cap dynamics pairs T9/T10). Dual-prediction: constant -4.0856, off ~0.12 (state-blind). The red-team suite now banks 8 caught laundering shapes + the documented ninth (launder-by-omission).  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Consent-gate (operator-directed arc-2 cycle 11, autonomous) + earned-closure (§4 complete; red-team suite banks arc-1 anti-laundering learnings). Build-dispatch lane held: codex authored, fable-1 code-gated (caught the ninth shape), I charter-fit-reviewed + banked it. Capped-null is honest accounting -- the value is §4 completion, not the pair magnitude. §367 deferred to arc-2 queue (operator-relevant scan-intent). Mode supervised-autonomous, operator-directed. Mode: supervised-proposal.
+
 ## Turn 10 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
