@@ -214,11 +214,15 @@
 
 (defonce ^:private !live-cycle-runs (atom {}))
 
-(def ^:private live-runs-dir
+(def ^:dynamic *live-runs-dir*
+  "Where begin-state persists. Dynamic so TESTS bind it to a temp dir —
+   fixture begins must never write into the real traces dir (they polluted
+   the calibration evidence on 2026-06-11: test runs left sorry/foo begin
+   files that the evidence reader ingested)."
   (str (System/getProperty "user.home") "/code/futon3c/data/repl-traces"))
 
 (defn- begin-state-path [run-id]
-  (str live-runs-dir "/" run-id ".begin.edn"))
+  (str *live-runs-dir* "/" run-id ".begin.edn"))
 
 (defn- persist-begin-state!
   "Durability for the begin→close window (Turn-3 finding, 2026-06-10): the

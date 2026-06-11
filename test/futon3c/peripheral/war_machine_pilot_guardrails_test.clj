@@ -33,6 +33,18 @@
     futon3c.wm.scheduler/request-tick! (fn [] {:queued? true})
     (throw (ex-info "unexpected requiring-resolve" {:sym sym}))))
 
+(defmacro with-tmp-runs-dir
+  "Bind the pilot's begin-state dir to a temp dir for the body — fixture
+   begins must never write into the real traces dir (calibration-evidence
+   pollution, 2026-06-11)."
+  [& body]
+  `(let [dir# (Files/createTempDirectory "wm-pilot-runs-test"
+                                         (into-array FileAttribute []))]
+     (try
+       (binding [pilot/*live-runs-dir* (str dir#)]
+         ~@body)
+       (finally (delete-tree! (str dir#))))))
+
 (deftest default-begin-live-cycle-rides-guardrails-test
   ;; The DEFAULT flight path rides guardrails (pilot cycle #1, 2026-06-10):
   ;; operator-only top action is stepped past + NAGged; v = first :autonomous.
@@ -43,8 +55,8 @@
                       (judgement [(ranked 1 :learn-action-class :open-mission -9.0)
                                   (ranked 2 :address-sorry "sorry/foo" -1.0)]))
                     clojure.core/requiring-resolve scheduler-resolve]
-        (let [result (pilot/begin-live-cycle! {:tick? false
-                                               :needs-you-path path})]
+        (let [result (with-tmp-runs-dir (pilot/begin-live-cycle! {:tick? false
+                                               :needs-you-path path}))]
           (is (= true (:ok result)))
           (is (= {:type :address-sorry :target "sorry/foo"} (:v result)))
           (is (= 1 (:needs-you-emitted result)))))
@@ -58,7 +70,7 @@
                   (judgement [(ranked 1 :learn-action-class :open-mission -9.0)
                               (ranked 2 :address-sorry "sorry/foo" -1.0)]))
                 clojure.core/requiring-resolve scheduler-resolve]
-    (let [result (pilot/begin-live-cycle! {:tick? false :guardrails? false})]
+    (let [result (with-tmp-runs-dir (pilot/begin-live-cycle! {:tick? false :guardrails? false}))]
       (is (= true (:ok result)))
       (is (= {:type :learn-action-class :target :open-mission} (:v result)))
       (is (not (contains? result :needs-you-emitted)))
@@ -72,9 +84,9 @@
                       (judgement [(ranked 1 :learn-action-class :open-mission -9.0)
                                   (ranked 2 :address-sorry "sorry/foo" -1.0)]))
                     clojure.core/requiring-resolve scheduler-resolve]
-        (let [result (pilot/begin-live-cycle! {:guardrails? true
+        (let [result (with-tmp-runs-dir (pilot/begin-live-cycle! {:guardrails? true
                                                :tick? false
-                                               :needs-you-path path})]
+                                               :needs-you-path path}))]
           (is (= true (:ok result)))
           (is (= {:type :address-sorry :target "sorry/foo"} (:v result)))
           (is (= 1 (:needs-you-emitted result)))
@@ -94,12 +106,12 @@
                     (fn []
                       (judgement [(ranked 1 :learn-action-class :open-mission -9.0)
                                   (ranked 2 :open-mission "M-net-new" -8.0)]))]
-        (let [result (pilot/begin-live-cycle! {:guardrails? true
+        (let [result (with-tmp-runs-dir (pilot/begin-live-cycle! {:guardrails? true
                                                :tick? false
                                                :needs-you-path path
                                                :guardrails-ctx
                                                {:mission-status-fn
-                                                (fn [_] {:open? false :open-hole-count 1})}})]
+                                                (fn [_] {:open? false :open-hole-count 1})}}))]
           (is (= false (:ok result)))
           (is (= :no-autonomous-action (:reason result)))
           (is (= 2 (:needs-you-emitted result)))

@@ -91,7 +91,13 @@
            (catch Throwable t
              (swap! warnings conj (warn (.getPath file) (str "unreadable source: " (.getMessage t))))
              [])))
-       (sort-by #(.getName %) (filter #(.isFile %) (file-seq dir)))))))
+       (->> (file-seq dir)
+            (filter #(.isFile ^java.io.File %))
+            ;; *.begin.edn are begin-STATE staging files (pilot durability,
+            ;; 2026-06-11), not γ frames — their embedded predicted values
+            ;; would leak unpaired records into the evidence. Skip them.
+            (remove #(.endsWith (.getName ^java.io.File %) ".begin.edn"))
+            (sort-by #(.getName ^java.io.File %)))))))
 
 (def ^:private pilot-g-re
   #"(?i)(?:predicted\s+G\s*=\s*([-+−]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?)).*?(?:realised\s+G\s*=\s*([-+−]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?))")
