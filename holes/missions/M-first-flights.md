@@ -170,3 +170,68 @@ established with the M-substrate-metric boundary explicit; 2005 lineage claim
 recorded; exit conditions drafted.
 **Test state:** n/a (no code in this mission yet).
 **Next:** MAP per above.
+
+## 2. MAP — production sites, consumers, calculus ingredients (fable-1, 2026-06-11 evening)
+
+*(Taken up by ground control, who built the Orville-half instruments this
+week and holds their live context. Co-owned with fable-2 — the mint and the
+human-cockpit standard are theirs; the machine-trace production sites are
+mine; the shape spec gets written where both can see it.)*
+
+### Production sites (where the record is made)
+
+| site | role | shape-relevant detail |
+|---|---|---|
+| `futon3c/src/futon3c/aif/repl_trace.clj` `turn-record` | normalises one flight's lifecycle into the spec shape | WHITELIST design — absent-unless-supplied (the ghost discipline already lives here); extended 5× this week (`:independent?`, `:evidence-ref`, `:realised-source`, `:realised-read`, `:predicted-constant`, `:field-delta`) — the calculus half-exists as TAGS awaiting composition into terms |
+| `war_machine_pilot.clj` `begin-live-cycle!` / `close-live-cycle!` | produces the lifecycle the record normalises | begin persists durable begin-state; close computes realised + tags + field-delta and emits the discipline event — the DERIVATIONS exist at this site and are thrown away after the judgment is recorded |
+| `scripts/flight_scope_view.bb` | the projector (organ judgments) | KEY MAP FINDING: several organ *judgments* are computed AT RENDER TIME by projector `cond` logic (e.g. "absent (proposal-mode)", "untagged"). Judgment-without-derivation is partly a PROJECTOR artifact — the shape spec should move these judgments into the record WITH their grounds, so the renderer renders instead of adjudicating |
+
+### Consumers (who must keep reading after the reshape)
+
+`emacs/flight-mode.el` (the panel — render lane lands here) ·
+`futon3c.aif.calibration` `gamma-records` (the evidence reader — backfill
+compatibility is ITS requirement) · `scripts/repl_spec_verify.clj` (V1–V5
+checker — the logic model should EXTEND this, not duplicate it) · futon0
+rollout ledger (consumes `--emit`) · piano roll / VSATARCS evidence kinds.
+
+### Calculus ingredients (located, with the compositions visible)
+
+1. **BHK arrows** (futon3a, endpoint-keyed `(have, want)`, `:payload` =
+   construction evidence, CH2 discharge events): **measurement-as-discharge
+   already has its calculus here** — "no payload, no discharge" is this
+   week's enforced rule (`:executed?` without `:evidence-ref` THROWS). A
+   flight's measurement organ is an arrow-discharge in all but datatype.
+2. **sorrys.edn schema v2 `:kind`**: the typed-hole vocabulary
+   (`:prototyping-forward`, `:external-dependency`, …) — ghosts-as-sorries
+   should reuse it: a ghost is `sorry = type without term, context-fixed`
+   (the standing definition), and a flight's ghosts have exactly that shape:
+   the slot is typed, the context (run-id) is fixed, the term is absent.
+3. **mission-mode binder taxonomy** (14 types per the fable-2 cockpit work —
+   note: GREW today; `map-item`, firing `source-material`. Inventory
+   lesson: the shape spec must be generated/checked against the live
+   detector, not hand-frozen).
+4. **The admissibility tags as judgment forms**: `:realised-source`,
+   `:realised-read`, `:independent?` are already three-valued judgment
+   slots with enforcement; the spec's job is to make each carry its
+   GROUND (which scan, which ε-check, which witness) instead of bare
+   keywords.
+
+### Codex handoff boundaries (per protocol)
+
+Owner-side (not bellable): the EDN shape spec (exit-1) + the logic model
+(exit-2, extending `repl_spec_verify.clj`'s V1–V5). Bellable: the
+flight-mode render elaboration (RET-descend, binder overlays) once the spec
+exists; the projector rewrite to spec; the substrate-2 round-trip ingest
+(exit-4) as a scope-bounded build.
+
+### Checkpoint 1 — 2026-06-11 (late)
+**What was done:** MAP per Checkpoint 0's brief: three production sites
+located with the central finding (derivations exist at close-time and are
+discarded; some judgments are projector-computed at render time); five
+consumer contracts named incl. the verifier as the logic model's home;
+four calculus ingredients located with their compositions sketched
+(arrow-discharge ≅ measurement, sorry-kind ≅ ghost-type, tags → grounded
+judgment forms). Handoff boundaries set.
+**Test state:** n/a (no new code; MAP is reading).
+**Next:** DERIVE — the flight-as-derivation EDN schema (exit-1), with the
+Capability Preservation Matrix over the current record's every field.
