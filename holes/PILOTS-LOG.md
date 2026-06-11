@@ -17,6 +17,18 @@ automatically.
 
 ---
 
+## Turn 9 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+_(Auto-log note, as Turns 5-8: field's top [0]; actual `v` was **operator-directed**
+`advance-mission M-daily-scan` (predicted G=−4.1629, ohc 5, below-cap counted-hole target).)_
+
+**EVAL / DID.** Fixed M-daily-scan brief Day-counter (item 368): replaced binary 1/2+ with a real day-number helper (daily.clj; counts scans before date +1), clj-kondo 0 errors + ns loads. Marked hole done, ohc 5->4. futon7 701522d.
+
+**PRINT / FOUND.** FIRST genuine L1 DYNAMICS pair: predicted -4.1629 (scaled ohc 5), realised -4.1235 (SETTLED ohc 4; two post-commit scans agree within 1e-4, NOT a transient), error 0.039 = the per-hole increment. A real hole-closure moved the settled G as the scaled model state-response predicts -- not a null (cycle 8), not a transient spike (cycle 6), not a capped/visibility near-zero (cycles 5/7). Dual-prediction: predicted-constant -4.0839, off in the OPPOSITE direction (state-blind: predicts no move). Clean L1 dynamics evidence per the two-layer reframe.  _[predicted G=-4.16, realised G=-4.12]_
+
+**PUR.** Consent-gate (operator-directed cycle 9) + earned-closure (genuine bounded code fix, real hole closed, field moved by the increment). LESSON APPLIED from cycle 8: verified the target had a pilot-CLOSEABLE counted hole (not operator-gated) BEFORE choosing -- item 368 was a bounded display bug. Settled-read protocol honored: forced a confirming scan to avoid the cycle-6 transient trap. Witness = the committed fix. Mode supervised, operator-directed. Mode: supervised-proposal.
+
 ## Turn 8 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
