@@ -1,7 +1,7 @@
 # M-first-flights — we have flight data (Orville); we need the data shapes (Wilbur)
 
 Date: 2026-06-11
-Status: IDENTIFY → MAP → DERIVE done (same evening); next is the schema draft.
+Status: ARGUE (2026-06-11; IDENTIFY → MAP → DERIVE → ARGUE same evening). Next: VERIFY (the logic model), then the schema draft.
 Owners: fable-2 (mint, human-cockpit standard), claude-3 (the flight half),
 fable-1 (machine-trace production sites; schema and logic model).
 
@@ -19,6 +19,13 @@ Cross-references:
 
 ## HEAD
 
+Observed live on 2026-06-11, Joe reading the flight-mode panel on the Stack
+HUD:
+
+> "whereas the mission-mode buffers are approaching a functional programming
+> (Scratch) or proof-theoretic (futon6) anatomy, the flight-mode buffer is
+> just a list of numbers (and nulls)."
+
 The flights are real and recorded; the records are lists of numbers and nulls.
 Reshape the data before attempting the longer flight.
 
@@ -32,13 +39,6 @@ nothing. The mission is satisfied when records carry their derivations, so
 error has structure to propagate into.
 
 ## 1. IDENTIFY — the tension
-
-Observed live on 2026-06-11, Joe reading the flight-mode panel on the Stack
-HUD:
-
-> "whereas the mission-mode buffers are approaching a functional programming
-> (Scratch) or proof-theoretic (futon6) anatomy, the flight-mode buffer is
-> just a list of numbers (and nulls)."
 
 The record in question (flight `live-d2068cc1`, complete, verbatim):
 
@@ -248,7 +248,109 @@ A flight that taught the model nothing (a true proposal-mode null) and a
 flight that lied to it (a censored 0.0) must be distinguishable in the data.
 That distinction is the point: error needs structure to propagate into.
 
-## 4. Consequence if the shapes land
+## 4. ARGUE — why this design is right, not just workable
+
+The design being argued: a flight record is a derivation. Each organ carries
+its judgment and the ground for that judgment; absences are typed sorries;
+the measurement is a discharge with evidence; flights link to flights. The
+register R0–R10 is the contract.
+
+### Pattern cross-reference (with PSR catch-up)
+
+Nine library patterns bear on the design; six of them were minted from the
+very flights this mission wants to reshape, which is the strongest available
+evidence that the requirements are real.
+
+- `realtime/structured-events-only`: the oldest applicable rule — the trace
+  must be typed events, not prose. The current record half-obeys it (typed
+  slots) and half-defies it (the grounds live in prose). The design finishes
+  the job. PSR: chosen as the base discipline for the whole record shape.
+- `structure/two-projections-of-one-quantity`: a flight is one event; the γ
+  frame, the panel rendering, and the substrate-2 ingest are three
+  projections of it. The schema is the shared quantity; renderers and stores
+  must be pure projections (R5). PSR: chosen to justify "the renderer never
+  adjudicates."
+- `aif/no-self-certification`: a verdict may only be moved by evidence its
+  maker did not manufacture. Applied inward (R1, R3): a record cannot claim
+  "settled" or "measured" without carrying the witness for the claim. PSR:
+  chosen as the schema's enforcement principle — the logic model rejects
+  unwitnessed tags structurally.
+- `aif/measurement-window-hygiene`: the settle window (threshold, two scans,
+  epsilon) becomes R3's first-class object. PSR: the pattern's own cases
+  (the transient spike, the stale begin) are the schema's adversarial tests.
+- `aif/two-layer-calibration`: the record must keep dynamics evidence and
+  value evidence distinguishable; the interpretation-class field (R1) is
+  where that distinction lives per pair.
+- `futon-theory/crime-relocates-to-a-scarcer-witness`: each laundering fix
+  pushed the crime toward scarcer witnesses; this design is the limit move —
+  the witness is pushed INTO the record itself, so the cheapest place to
+  check a claim is the claim's own row.
+- `collaboration-coherence/determined-fork-proto-psr`: R7 records the
+  warrant. The pattern says determined forks should be flown on a named
+  warrant; the schema makes the naming durable and queryable.
+- `futon-theory/honest-map-over-flattering-counter`: R6's backfill rule —
+  old records flagged derivation-thin rather than silently upgraded — is
+  this pattern applied to data migration.
+- `peripherals/pilot-plus-ground-control`: the roles that produce and gate
+  these records; R8's witness-ground (who verified, what was re-run) encodes
+  the three-way review into the record.
+
+### Theoretical coherence
+
+IDENTIFY anchored the mission in two claims: that error needs structure to
+propagate into (the AIF reading), and that a flight record should be a term
+in a calculus (the proof-theoretic reading). The design serves both with one
+move, because a derivation IS the structure error propagates through, and a
+record whose judgments carry grounds IS a proof term with named inference
+steps. The ghosts-as-sorries identification is not an analogy: a ghost slot
+satisfies the standing definition of a sorry exactly (type without term,
+context fixed). The theory has not shifted; it has converged from two sides.
+
+### Trade-offs
+
+- Records get heavier. Mitigated by linking rather than inlining (the raw dT
+  is referenced, not embedded; R4) — and the heaviest grounds (the settle
+  window) are a handful of timestamps and one epsilon.
+- Writing costs move to close-time. Mitigated by the MAP finding: the
+  grounds are already computed at close-time today; the change is persisting
+  instead of discarding them.
+- Two reader paths during the backfill window (derivation-thin vs full).
+  Accepted deliberately (R6) — the alternative, silent upgrade, is the exact
+  laundering shape this stack exists to refuse.
+- The scalar stays a scalar. The design does not give -4.9225 geometry; that
+  is M-substrate-metric's work, and pretending otherwise here would re-scope
+  the bottleneck this mission explicitly fenced out.
+
+### Generalization
+
+The shape is not flight-specific. "Judgment with ground, absence as typed
+sorry, outcome as witnessed discharge" applies to any instrumented loop
+turn: the daily scan's probes (where the 無 resolution already demands
+term-provenance), codex build gates (R8 is already their record in
+miniature), and the human cockpit's own operations. If the schema works for
+flights, the same calculus is the candidate for every trace in the stack —
+which is why getting it right at the smallest grain matters.
+
+### Plain-language argument
+
+Every flight already does careful work to check its own results — but it
+throws the checking away and keeps only the conclusions. So when we re-read
+an old flight, we can see what it decided but not why, and two opposite
+situations can look identical. The fix is to make every record keep its
+receipts: what was checked, against what, with what result. Then a reader —
+human or machine — can tell a real result from an accident without taking
+anyone's word for it.
+
+### Exit check
+
+The design is inevitable in the required sense: every requirement traces to
+a named failure that actually happened, every ingredient already exists and
+is enforced somewhere in the stack, and the only new thing is their
+composition. The plain-language argument stands alone. ARGUE is satisfied;
+VERIFY's hooks are the logic model (exit-2) with the stale-begin confound as
+its canonical adversarial case.
+
+## 5. Consequence if the shapes land
 
 The piano roll changes type, from numeric tape to proof script — a sequence
 of terms with open sorries. Flights compose the way mission documents
@@ -256,7 +358,7 @@ compose; the agreement between the two cockpits becomes checkable rather
 than rhetorical; and the forward model gets structure for its error to
 propagate into.
 
-## 5. Scope
+## 6. Scope
 
 In: the data shape for flight records (flight-as-derivation); the render lane
 (flight-mode rows elaborated with the mission-mode anatomy, RET descending
@@ -267,7 +369,7 @@ tension-proposer wiring (M-aif2); any autonomy change at the consent gate —
 proposal-mode stays a typed absence, this mission makes it renderable, not
 fillable.
 
-## 6. Exit conditions
+## 7. Exit conditions
 
 1. A written shape spec (EDN schema) for flight-as-derivation, with the
    capability preservation matrix discipline.
@@ -313,3 +415,11 @@ plain markdown"); content preserved, the salvo transcript condensed into
 
 Next: the schema draft against R0–R10 (fable-1, owner-side), the logic
 model, then the pilot flies the conforming witness flight.
+
+Checkpoint 4 (2026-06-11, night): ARGUE — per mission-lifecycle.md: nine
+library patterns cross-referenced with PSRs (six of them minted from these
+very flights), theoretical coherence confirmed (the two IDENTIFY readings
+converge on one move), four trade-offs accepted explicitly, generalization
+noted (the shape is the candidate for every trace in the stack), and the
+plain-language argument written. Exit criterion met: every requirement
+traces to a real failure; the only new thing is the composition.
