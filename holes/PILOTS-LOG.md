@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 12 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.63).
+
+**EVAL / DID.** Arc-2 cycle 12: graduated subsumption-claim-discipline to a library pattern (futon3 6e76dc8: library/code-coherence/subsumption-claim-discipline.flexiarg; recorded on M-the-perfect-crime futon3c a05ae7c). A genuine carried-forward item done -- the two-sided live-check discipline is now library-grade.
+
+**PRINT / FOUND.** NO CLEAN PAIR (closed PROPOSAL-mode, untagged). The begin captured predicted -4.4017 (M-the-perfect-crime ohc ~6) but the field DRIFTED the mission to ohc 4 (-4.125) during the minutes spent minting the pattern -- a STALE BEGIN. My graduation edit itself was a null at the counter (ohc 4 pre and post). So any close-error (~0.277) would be entirely field-drift, NOT the action -- confounded, excluded from the calibration to keep the dataset clean. LESSON: for cycles with substantial content-work, capture the begin TIGHT (right before the action), not before the work.  _[predicted G=-4.40, realised G=-4.12, top-shift sorry/pattern-measure-never-target->]_
+
+**PUR.** Consent-gate (operator-directed arc-2 cycle 12, autonomous) + earned-closure (the pattern is genuinely minted + graduated). Autonomous self-correction: detected + EXCLUDED a confounded pair rather than record a misleading 0.277. The genuine deliverable stands; the calibration honestly gets no pair this cycle. Mode supervised-autonomous, proposal (measurement confounded by stale begin). Mode: supervised-proposal.
+
 ## Turn 11 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
