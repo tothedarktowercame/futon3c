@@ -378,6 +378,18 @@ points (A or B) are first-class, carrying the warrant that determined them
 or the queue-entry when undetermined. This refines R4 and R7; the
 data-shape diagrams are in the day-in-the-life doc.
 
+Second VERIFY finding (V-f2, Joe): G is defined over policies, not
+actions — the field's per-action temperatures are G(s, a), a one-step
+approximation the charter itself calls "one-step-biased." The schema
+therefore types every prediction with its approximation grain
+(`g-grain: one-step-action` today; policy-grade is a typed ghost blocked
+by the rollout-engine excursion), records the velocity as a policy
+PREFIX (the pilot's intended plan sketch, not just the first action),
+and notes that the cascade is the policy-shaped object in the current
+stack. Refines R1 and the velocity row of the preservation matrix;
+boundary unchanged (building policy-G is the rollout engine's charter,
+not this mission's).
+
 ## 5. Consequence if the shapes land
 
 The piano roll changes type, from numeric tape to proof script — a sequence

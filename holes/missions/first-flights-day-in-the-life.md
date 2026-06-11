@@ -221,3 +221,34 @@ candidate an optional cascade (psi, patterns, C) from which a
 pattern-grade warrant is drawn when one exists. Choice points are
 first-class: a fork with its warrant and resolution, or its queue-entry
 when undetermined.
+
+### Shape 4 — the correction: G is defined over policies, not actions
+
+Joe, on the verify-read: G is supposed to be defined over policies. The
+diagrams above inherit the apparatus's one-step bias — each "temperature"
+is G(s, a) for a single action, where active inference proper scores
+G(s, π) over a policy (a plan, a sequence). The stack already admits this
+(the FutonZero charter's value-network row says "one-step-biased";
+predict-multi-horizon chains K steps of the same action — a degenerate
+policy; the policy-rollout engine is a chartered, unbuilt excursion).
+
+Three consequences for the record shape:
+
+1. The prediction organ must carry its approximation class. Today's
+   numbers are typed `g-grain: one-step-action`, never bare — so when
+   policy-grade G arrives, the two are distinguishable in the data and the
+   calibration evidence never silently mixes grains. The policy-grade slot
+   is meanwhile a typed ghost (`:not-yet`, blocked-by the rollout engine).
+2. The velocity organ is honestly a policy prefix. What the pilot chooses
+   is never just "advance M-daily-scan" — it is the plan "fix item 368,
+   commit, force a scan, settle, close," whose value is the plan's, not
+   the first action's. The record should carry the intended plan sketch
+   alongside the chosen action, so the realised flight can be compared
+   with the plan that justified it.
+3. The cascade lean lands deeper than presentation: a pattern cascade IS a
+   policy-shaped object — a composed course of action assembled from the
+   library — where a ranked action is not. If the field's options are ever
+   to be scored AS policies, the cascade (or a rollout) is the thing whose
+   G makes sense. The temperature gauge isn't just flat; it is attached to
+   the wrong type, and the shapes above should be read as the record
+   keeping that honest until the substrate catches up.
