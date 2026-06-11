@@ -59,3 +59,78 @@ The instrument we built to detect laundering kept catching *itself* — and that
 - **Cap-widening** (the ≥6-hole 2×-cap plateau) — a future *calibrated* decision, not a v1 guess.
 - **Pilot-closeable counted holes are scarce** — below-cap missions mostly carry operator-gated or substantial holes; quick pilot fixes (T9) and codex builds (T7/T10) are the two reliable shapes.
 - **futon7 worktree hygiene** — significant pre-existing uncommitted work (blanket-aif paper, forward-model analysis, M-buyer-discovery); flagged to its author, not clobbered.
+
+---
+
+# Apparatus side (ground control, fable-1)
+
+**Scope:** what got built or fixed per cycle, what each instrument-layer
+lesson crystallized into, and the apparatus frontier. The flight side above
+is the story of the pairs; this is the story of why each pair could exist.
+
+## The apparatus ledger, one line per piece
+
+| landed | piece | forced by |
+|---|---|---|
+| pre-T2 | sorry-registry refill (5 provenance-checked holes) | field topped out at learn-action-class ("feed me"); registry dry since 05-25 |
+| pre-T2 | `advance-mission` conversion (`:addressed` not `:spawned`) | T2's teleport: the model scored the spawn of the already-born |
+| pre-T2 | guardrails-by-default in `begin-live-cycle!` | T2 flew raw `(first dT)`; the routing existed since 06-07, defaulted off |
+| T3→T4 | begin-state disk persistence + close fallback | "unknown run-id" — cross-process atom death ate the DOCUMENT stage |
+| T4 | realised-on-merge binding (`:executed?` + witness-or-throw) | the γ stream was degenerate: proposal-mode realised ≈ predicted by construction |
+| T4 | `:realised-source :measured\|:target-absent-fallback` + verdict excludes fallback | T4's pair: a successful discharge fabricated a perfect 0.0 (censored ≠ measured) |
+| T5 | chosen-v targeting (`:target` opt; field-G only, classification recorded) | operator-directed cycles needed a v the guarded top didn't offer |
+| T5 | honest-advance doctrine (make true state machine-visible) | hole-counter read 0 on a mission with 5 real holes — the map under-reported the territory |
+| T7 | realised-read protocol (`:settled\|:transient`; verdict excludes transient) | T6's 0.277 was a spike read before the field settled — timing was undefined |
+| T7 | calibration harness consolidation (one reader, futon0 consumes `--emit`) | two parallel audits from crossed dispatches; drift killed by deleting a parser |
+| T8 | target-sensitive predict-effects (+ frozen `:constant`, dual-prediction `:G-constant`) | cycles 5–7: settled G hole-insensitive because the field composes the model's own constants |
+| T8 | two-layer reframe (L1 dynamics / L2 value) | T8's question: G-vs-G error magnitudes are model-priced; value needs witnessed outcomes |
+| T7/T10 | toy-field fixture + code-search probe-type (codex builds, three-way reviewed) | §4.2 work product; M-daily-scan §366 — both discharged documented follow-ons |
+
+## Instrument principles that crystallized (each caught live, ≥2 instances)
+
+1. **No self-certification.** Every layer, on first contact with reality,
+   tried to certify itself: the forward model scored its own constants; the
+   evidence reader ate its own staging files; the realised channel copied
+   predicted on success; the calibration nearly cleared on degenerate
+   volume. The standing rule: a verdict may only be moved by evidence the
+   verdict-maker did not manufacture — enforced by tags
+   (`:independent?`/`:measured`/`:settled`), not by vigilance.
+2. **Censored is not measured.** Vanished targets, transient spikes,
+   absent witnesses — each got an explicit tag and verdict exclusion.
+   Strictness default: untagged never counts.
+3. **The instrument's first catches are about itself.** Diagnosing-own-
+   degeneracy preceded measuring anything real — and that ordering is
+   correct; an instrument that can't catch itself can't be trusted on the
+   world.
+4. **Observations cross the boundary, diagnoses do not.** Five pilot
+   mechanism-misdiagnoses, five ground-control source-checks, zero
+   defended; one ground-control misread (BST/UTC), self-reported, paid for
+   itself. The review split is load-bearing in both directions.
+5. **Honest maps beat flattering counters.** Twice the right move RAISED
+   the hole-count (T5) or refused the discharge (T2). The counter rewards
+   truth in both directions or it rewards nothing.
+
+## Meta-machinery (the conditions for the above)
+
+Single-dispatch-per-kind lanes (builds=pilot, WM-fixes=ground-control) after
+one live double-build · three-way review (codex authors / GC gates code /
+pilot charter-fits) with reviewer-direct fixes · typed bells + ArSE threads
+(the deep T8 question resolved ON-thread) · structural auto-bellbacks widened
+to claude recipients (the silent-completion gap) · the warranted-work layer
+chartered (M-chipwitz-corps) with proto-PSR already practiced from T6 on ·
+pilot-plus-ground-control minted as a library pattern and validated by the
+arc that wrote it.
+
+## Apparatus frontier (in dependency order)
+
+1. **L2 outcome-grade** = pudding-G1 arrow-witness (registry sorry #2) —
+   the only path to value calibration; everything else is ready for it
+   (witness-classes, toy-field reward-admissibility, CH2 channel).
+2. **More L1 pairs cheaply**: the pilot-closeable-hole scarcity is real —
+   candidate fix is hole-granularity (counted sub-holes on big missions),
+   which is also the cap-plateau's real resolution.
+3. **Field-delta semantics** (observational channel already recording) —
+   the attribution problem awaits data, which every executed cycle now
+   accrues.
+4. **ChipWitz v1** (PXR channel + warrant-finder threshold) — retires the
+   determined-fork ask entirely.
