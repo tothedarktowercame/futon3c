@@ -186,3 +186,34 @@ Call ON-DONE when the run completes. Returns immediately."
 
 (provide 'futon-agent-cursor)
 ;;; futon-agent-cursor.el ends here
+
+;;;; Come-and-look: the operator summons the agent's attention -----------
+
+(defvar futon-look-inbox "/tmp/futon-voice-inbox.jsonl"
+  "Where look events land — the same inbox the agent already watches.")
+
+(defun futon-look (&optional note)
+  "Summon the agent to look at what the operator sees, here.
+Captures the active region (or the paragraph at point), file, and line
+into the agent's inbox, and places the agent cursor at point — the
+summons IS the consent (M-smart-emacs-cursor A4). With prefix arg,
+prompt for a NOTE to ride along."
+  (interactive (list (when current-prefix-arg (read-string "Note for the agent: "))))
+  (let* ((text (if (use-region-p)
+                   (buffer-substring-no-properties (region-beginning) (region-end))
+                 (save-excursion
+                   (buffer-substring-no-properties
+                    (progn (backward-paragraph) (point))
+                    (progn (forward-paragraph) (point))))))
+         (payload `((at . ,(format-time-string "%Y-%m-%dT%H:%M:%S.%3NZ" nil t))
+                    (kind . "look")
+                    (file . ,(or (buffer-file-name) (buffer-name)))
+                    (line . ,(line-number-at-pos))
+                    (note . ,(or note ""))
+                    (text . ,(string-trim text)))))
+    (with-temp-buffer
+      (insert (json-encode payload) "\n")
+      (append-to-file (point-min) (point-max) futon-look-inbox))
+    (futon-agent-cursor-goto (current-buffer) (point) "looking with you")
+    (message "futon-look: sent %d chars from %s:%d"
+             (length text) (buffer-name) (line-number-at-pos))))
