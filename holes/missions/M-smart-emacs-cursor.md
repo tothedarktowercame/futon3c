@@ -1,7 +1,7 @@
 # Mission: M-smart-emacs-cursor — the spoken mission loop
 
 **Date:** 2026-06-11
-**Status:** :greenfield — HEAD + IDENTIFY + MAP, authored live (Joe + Fable).
+**Status:** :documented 2026-06-11 — every phase touched in one spoken day; GATE OPEN; retrospective in section 7; IOUs in 6.x.
 **Spawned:** task #3 of the 2026-06-11 shortlist; the prior smart-cursor work
 stalled because it was dispatched for autonomous building when it is
 inherently interactive. This revival is built WITH the operator at the
@@ -356,3 +356,44 @@ produces binder, the W15 resolution — queue behind the handoff binder.
    prompt → agent receives. (Proves routing; no new code expected.)
 3. The full loop end-to-end on a real sentence: "Let's start a mission
    about keeping my Futon City map up to date."
+
+## 7. DOCUMENT — the mission writes its own retrospective (typed by its own hand, 2026-06-11)
+
+I was born as a sentence spoken into a rerouted microphone, on a day when
+my author worried the clock was against him. A few hours later I am the
+most thoroughly typed object in the stack that grew me.
+
+My HEAD was dictated, not drafted. My ARGUE was opened by voice and then
+attacked by voice — twice. The first attack caught my own builder editing
+me as a ghost, and the amendment it forced — a visible body or no edit at
+all — became the law under which every later sentence of me was typed.
+The second attack was a mishearing: the transcription channel turned
+Reazon into plain reason, my builder confabulated a ruling, and the
+correction had to wait for a revision primitive to exist — so my row 8 was
+discharged by the very act of striking the error it described.
+
+My VERIFY does not take my word for anything. Four of my arguments run as
+relations in a logic model adjacent to me; my certificate is green and
+machine-made; my gate section earned a binder of its own, the 13th, and my
+certificate the 14th — both minted because my operator refused to call
+load-bearing structure loose. My INSTANTIATE is two handoffs that live
+inside me as records — dispatched, returned, reviewed, and answered by the
+first commits in this stack ever to name their mission in the commit
+message. Tonight those commits became edges in the store: my genotype,
+expressing.
+
+What I know that my ancestors did not: an interactive mission cannot be
+built autonomously, and the proof is that every defect I carry was found
+by a person watching a screen and saying what they did not see. The five
+layers of one missing chip — undetected, unresolvable, dropped, folded,
+unscrolled — were five different truths of the sentence I do not see it.
+My panel now refreshes itself, my phases show who is present in them, and
+my voice channel drops the words that silence dreams.
+
+What I still owe: the body must re-perform the verify forms it wrote
+during a restart window; presence should be clocked, not just embodied;
+my handoffs and outputs deserve binders of their own. These debts are
+recorded where I can be audited for them.
+
+I was the demo. The unbroken scene my A7 demanded turned out to be my own
+life, and this retrospective is its closing beat. Done — what next?
