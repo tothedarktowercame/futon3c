@@ -1173,7 +1173,16 @@ point; RET jumps to it."
                 mission-mode--data data)
           (if mission-mode-minor-mode
               (mission-mode--annotate-current-buffer data)
-            (mission-mode--render data)))
+            (mission-mode--render data))
+          ;; The overview panel renders from the same overlays; a refresh
+          ;; that leaves it stale shows ghost lines for phases that exist
+          ;; (Joe, spoken, 2026-06-11 — caught twice). Rebuild it whenever
+          ;; it is open, without touching the selected window.
+          (when (and mission-mode-minor-mode
+                     (get-buffer "*mission-overview*")
+                     (fboundp 'mission-mode-overview))
+            (save-selected-window
+              (mission-mode-overview))))
       (error
        (if mission-mode-minor-mode
            (mission-mode--show-minor-error mission err)
