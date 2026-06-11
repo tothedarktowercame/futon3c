@@ -394,7 +394,7 @@ interpretation-classes) are the additions. A flight that "taught the model nothi
 **distinguishable in the data**, because that distinction is the entire point: error
 needs structure to propagate into.
 
-## 3. DERIVE — what the pilot sees (whistle salvos, claude-3 × fable-1, Joe watching the HUD)
+### 3.3 The salvo record (synchronous co-design transcript, claude-3 × fable-1)
 
 *Requirements from the seat, per Joe: "DERIVE should be based on what
 claude-3 sees as the WM pilot." Each salvo is one synchronous whistle
@@ -500,24 +500,61 @@ carried), `:re-measures` (T7 retracting T6's transient), `:confounded-by`
 (partials' replacement; the Turn-6 amendment). Weak fifth:
 `:cites-finding`. All currently prose, none queryable.
 
-### DERIVE requirements, consolidated (the schema contract)
+### 3.4 Unified requirements register (R0–R10 — supersedes both prior lists)
 
-R1 verdict-class on every pair (clean/null/fallback/transient/confound) —
-never recoverable from the number alone · R2 warrant recorded (the
-determined/undetermined judgment + what determined it) · R3 settle-ground
-{scan-a, scan-b, threshold, ε, |ΔG|} · R4 witness-ground {ref,
-verified-by, verification} · R5 per-target verification {holes,
-classification, evidence-lines} · R6 render = judgment + ground (decision
-neighbourhood first, raw dT on second descend) · R7 act ∈ {executed,
-proposal, refused(+finding)}; partials carry reason-class +
-superseded-by · R8 typed inter-flight links {applies-lesson-of,
-re-measures, confounded-by, supersedes}.
+*(§3.2's R1–R6 and the salvo consolidation were written in parallel and
+overlap; this register is the single schema contract. §3.2's numbering is
+kept as the spine; the salvo record contributes R7–R10 and two extensions.)*
 
-### Checkpoint 2 — 2026-06-11 (late evening)
+- **R0** Capability preservation — every current field has a typed home;
+  nothing silently dropped (§3.2 CPM).
+- **R1** Measurement is a discharge judgment carrying its evidence +
+  interpretation-class (clean/null/fallback/transient/confound) — the
+  `0.0000` ambiguity dies here. Counterfactual first-class.
+- **R2** Ghosts are typed sorries with reason-class — EXTENDED per salvo 4:
+  the act-organ has THREE states (`:executed`/`:proposal-mode`/**`:refused`
+  carrying its finding as payload** — T2 drove three fixes and has no
+  frame); abandoned partials carry {reason-class ∈ :superseded /
+  :operator-redirect / :stale, :superseded-by} and must be distinguishable
+  from a crash.
+- **R3** The measurement window is first-class: {begin-time, action-commit,
+  settle-threshold (+85s rule), scan-a/scan-b :as-of, ε, |ΔG|} — the
+  settled tag becomes schema-checkable, not pilot vigilance.
+- **R4** Field-read carries its ranked list as bound entities — EXTENDED
+  per salvo 3: first RET-descend renders the DECISION NEIGHBOURHOOD
+  (chosen v + weighed-and-rejected neighbours with reject-reasons +
+  warrant + cap-band marker); raw dT on second descend.
+- **R5** Judgments carry grounds; the renderer is a pure function of the
+  record.
+- **R6** Backfill: Orville records representable but distinguishable
+  (derivation-thin flagged, never silently upgraded).
+- **R7** **The warrant is recorded**: the determined/undetermined judgment
+  + what determined it (standing contract / doc next-step / pattern /
+  operator direction). The cycle-5 "correct escalation?" dispute was
+  unarbitrable from any record — the judgment ChipWitz rests on must live
+  in the data. (Salvo 3; absent from §3.2.)
+- **R8** Witness-ground: {ref, verified-by, verification} — for codex
+  builds, that the gates were re-run before the sha was accepted.
+- **R9** Per-target verification record: {holes-found, per-hole
+  classification (bounded-doable/operator-gated/standing), evidence-lines}
+  — the grep-and-read work done every flight, currently discarded.
+- **R10** Typed inter-flight links: {:applies-lesson-of, :re-measures,
+  :confounded-by, :supersedes} (+weak :cites-finding) — each from a real
+  case; R2's :excluded-confound reason realized as a queryable LINK; the
+  piano roll becomes a graph.
+
+### Checkpoint 2/3 — 2026-06-11 (late evening; reconciled)
 **What was done:** DERIVE requirements gathered from the pilot's seat via
 four synchronous whistle salvos (crossing-immune, Joe watching the HUD);
 folded live with per-salvo scope reingest. Eight requirements consolidated;
 every one traces to a named real case from the twenty flights.
-**Next:** the schema draft (fable-1, owner-side) against R1–R8 + the logic
-model extending repl_spec_verify; then the pilot flies the
+**Reconciliation note:** the flight-half (§3.1/§3.2) and the salvo record
+(§3.3) were produced in parallel — same evening, two seats; §3.4 unifies
+them into one register (R0–R10). The pilot's DERIVE flight itself hit the
+stale-begin confound it documents (begin before writing; field drifted;
+pair excluded proposal-mode) — the canonical exit-2 test case: a record
+carrying its confound-verdict-with-ground would have recorded that
+exclusion AS DATA.
+**Next:** the schema draft (fable-1, owner-side) against §3.4 R0–R10 + the
+logic model extending repl_spec_verify V1–V5; then the pilot flies the
 conforming-witness flight against it.
