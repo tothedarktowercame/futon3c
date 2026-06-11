@@ -43,7 +43,8 @@
   [m]
   (let [{:keys [step p dT-snapshot v v-attribution predicted-discharge cg-id
                 artefact new-edge-family p' realised-discharge
-                prediction-error independent? evidence-ref realised-source]} m
+                prediction-error independent? evidence-ref realised-source
+                realised-read]} m
         dg (cond (contains? m :delta-∇?)    (:delta-∇? m)
                  (contains? m :delta-grad?) (:delta-grad? m)
                  :else ::absent)
@@ -76,7 +77,8 @@
       ;; observational field-delta (Option C, 2026-06-11): movement of the
       ;; WHOLE differential across the executed cycle — recorded for the
       ;; future field-delta realised-semantics design, NOT verdict-counted.
-      (some? (:field-delta m))    (assoc :field-delta (:field-delta m)))))
+      (some? (:field-delta m))    (assoc :field-delta (:field-delta m))
+      (some? realised-read)       (assoc :realised-read realised-read))))
 
 ;; ---------------------------------------------------------------------------
 ;; accumulator — what the live loop drives, one record per turn-cycle

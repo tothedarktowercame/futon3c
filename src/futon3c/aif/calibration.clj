@@ -88,6 +88,7 @@
                             ;; ONLY pairs the verdict may count.
                             :independent? (boolean (:independent? m))
                             :realised-source (:realised-source m)
+                            :realised-read (:realised-read m)
                             :witness-class :none})))))
            (catch Throwable t
              (swap! warnings conj (warn (.getPath file) (str "unreadable source: " (.getMessage t))))
@@ -284,7 +285,11 @@
         ;; :target-absent-fallback, or absent on pre-tagging frames, is NOT
         ;; calibration evidence. Strict by default: only :measured counts.
         independent (filterv #(and (:independent? %)
-                                   (= :measured (:realised-source %)))
+                                   (= :measured (:realised-source %))
+                                   ;; transient reads (spike caught before the
+                                   ;; field settled) are timing artifacts, not
+                                   ;; calibration evidence (cycles 5-7 finding)
+                                   (not= :transient (:realised-read %)))
                              paired)
         independent-errors (mapv pair-error independent)
         independent-count (count independent)

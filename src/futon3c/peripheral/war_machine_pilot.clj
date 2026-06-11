@@ -447,10 +447,17 @@
    rule as CH2's payload. Proposal-mode closes (the default) stay untagged
    and can never move the verdict."
   ([run-id] (close-live-cycle! run-id {}))
-  ([run-id {:keys [document executed? evidence-ref]}]
+  ([run-id {:keys [document executed? evidence-ref realised-read]}]
   (when (and executed? (not evidence-ref))
     (throw (ex-info ":executed? true requires :evidence-ref — independence is a claim that needs a witness (no payload, no discharge)"
                     {:run-id run-id})))
+  ;; realised-read protocol (cycles 5-7 finding: transient-vs-settled timing
+  ;; was undefined, making pairs incomparable — cycle 6 caught a spike).
+  ;; Pilot attests the read point: :settled = two consecutive scans agree
+  ;; within epsilon before close; :transient = first-post-commit read.
+  ;; Calibration excludes :transient from the verdict.
+  (when (and realised-read (not (#{:settled :transient} realised-read)))
+    (throw (ex-info ":realised-read must be :settled or :transient" {:got realised-read})))
   (if-let [b (or (get @!live-cycle-runs run-id)
                  (recover-begin-state run-id))]
     (let [post-j     (live-judgement)
@@ -490,7 +497,8 @@
                 executed? (assoc :independent? true
                                  :evidence-ref evidence-ref
                                  :realised-source realised-source
-                                 :field-delta field-delta)))
+                                 :field-delta field-delta)
+                (and executed? realised-read) (assoc :realised-read realised-read)))
           ;; the merge itself is an out-of-band gradient event — record it
           ;; in the discipline channel (best-effort; never breaks a close)
           _ (when executed?
