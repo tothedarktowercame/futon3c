@@ -393,3 +393,131 @@ interpretation-classes) are the additions. A flight that "taught the model nothi
 (proposal-mode `0.0000`) and a flight that lied to it (censored `0.0000`) must be
 **distinguishable in the data**, because that distinction is the entire point: error
 needs structure to propagate into.
+
+## 3. DERIVE — what the pilot sees (whistle salvos, claude-3 × fable-1, Joe watching the HUD)
+
+*Requirements from the seat, per Joe: "DERIVE should be based on what
+claude-3 sees as the WM pilot." Each salvo is one synchronous whistle
+round; distilled verbatim-sense; the schema follows these.*
+
+### Salvo 1 — READ and the choice of v
+
+**Field read-order (actual, not nominal):** rank+G-total → action :type
+(decides MEASURABILITY: sorries vanish → fallback; missions persist →
+measurable) → :target (recognition) → **:G-constant (the dual-prediction
+gap = how discriminating a pair here would be)** → :open-hole-count (the
+cap check: ≥6 = null-by-construction) → guardrails classification+rule →
+:rationale. **Always skipped:** :weight, :structural-pressure-per-action,
+ranks ~6–214 unless hunting a class.
+
+**The five checks before trusting a target (in order):** (1) cap check;
+(2) **pilot-closeable-hole check** — `grep -nE '^\s*-\s*\[ \]'` on
+:mission-path THEN reading the matched lines to classify each hole
+(bounded-doable / operator-gated / standing-task); (3) warrant check
+(proto-PSR — findable ⇒ name it and fly); (4) operator-relevance check
+(genuinely Joe's ⇒ safe-default + queue); (5) guardrail class.
+
+**Named DISCARDS (work done in context, lost to the record):** the grep +
+doc-read of check 2 — the hole CLASSIFICATION (bounded/gated/standing) is
+computed every flight and never recorded. ⇒ Schema requirement R1: the
+record carries per-target verification {holes-found, classification,
+evidence-lines}. R2: read-order implies the dT snapshot should be
+field-TYPED, not positional — what the pilot reads first is the record's
+primary fields.
+
+### Salvo 2 — the act and the settled close
+
+**The act sequence (actual):** prep-uncommitted → begin {:target} (note
+run-id + predicted) → commit → capture sha (witness) AND commit-time →
+**compute settle-threshold = commit-time + ~85s** (one scan duration —
+"> commit" alone reads the pre-edit doc: a scan can complete after the
+commit having started before it) → force request-tick! (300s periodic too
+slow; watch for stale :running?, re-force on :queued? false) → **the
+settled-read: two scans with DISTINCT :as-of, both past threshold,
+agreeing within ε=0.005 on the target's G** → judge the pair (clean /
+null / fallback / transient / CONFOUND — was the drift mine or
+independent?) → close with :executed? + :realised-read + :evidence-ref.
+
+**The headline discard (R3):** the settle-comparison — which two scans,
+their :as-of stamps, their ε-agreement, the computed threshold — lives
+ONLY in pilot context + a bash poll. The record gets the bare tag
+`:realised-read :settled`. The richest derivation produced per flight is
+100% discarded. ⇒ R3: `:realised-read` becomes a judgment WITH ground:
+{scan-a as-of, scan-b as-of, threshold, ε, |ΔG|}.
+
+**Witness grounds (R4):** the record holds one string (:evidence-ref
+"futon7 701522d"); the GROUND — for codex builds, that the pilot re-ran
+the tests before accepting the sha — is not there. ⇒ R4: witness carries
+{ref, verified-by, verification (tests re-run, gates)}.
+
+**Pair-classification (R5):** clean/null/fallback/transient/confound is
+judged every flight; only fragments survive as tags. ⇒ R5: the pair
+carries its classification + the confound check (ohc before/after,
+drift attribution).
+
+### Salvo 3 — what re-reading wanted and couldn't have
+
+**Three concrete failures of the current record under re-read** (all from
+this week): (1) **verdict-class unrecoverable** — writing the stock-take's
+pairs-by-layer table, `0.0000` could mean true-null (T8) or censored
+fabrication (T4); same number, prose re-read required every time. (2)
+**exclusion grounds lost** — T6's transient window and T12's drift-confound
+lived only in :pur prose; the Turn-6 amendment had to reconstruct the
+finding by hand. (3) **warrant absent** — the cycle-5 "correct escalation?"
+dispute could not be checked against any record; the determined-vs-
+undetermined judgment that ChipWitz rests on is recorded nowhere.
+All three = "the judgment is there, its GROUND isn't" (R1/R2/R3 confirmed
+from the re-reader's seat).
+
+**RET-descend on field-read (render requirement R6):** NOT the 215 — a
+dump flattens like a count. First descend = **the decision
+neighbourhood**: chosen v (full entry) + the few neighbours actually
+weighed-and-rejected, each with its reject-reason (capped /
+operator-gated-hole / over-ask) + the proto-PSR warrant + a cap-band
+marker explaining why most of the field is equivalent. Second descend =
+the raw dT for whoever wants it. Render the judgment and its ground, not
+the differential.
+
+### Salvo 4 — refusals, partials, and composition
+
+**A refusal is a complete flight** (the act-organ needs THREE states):
+`:executed` (with witness) / `:proposal-mode` (gated-by-design, WM-I4) /
+**`:refused`** — attempted-and-declined, carrying its FINDING as payload
+(T2's "target already closed → teleport" drove three live fixes and has
+no frame at all). Downstream organs become typed ghosts with reasons
+(`measurement :not-applicable (refused-before-act)`). ⇒ R7.
+
+**A partial must say why it stopped and what replaced it**: `:abandoned` +
+reason-class (`:superseded` / `:operator-redirect` / `:stale`) +
+`:superseded-by <run-id>`. Discipline: abandoned-by-decision must be
+DISTINGUISHABLE from a lost record (crash), or the trace can't be
+trusted. ⇒ R7b.
+
+**Four typed inter-flight links, each from a real case** (⇒ R8 — the
+piano roll becomes a graph): `:applies-lesson-of` (T9←T8, methodology
+carried), `:re-measures` (T7 retracting T6's transient), `:confounded-by`
+(T12 — the exclusion-ground as a LINK not prose), `:supersedes`
+(partials' replacement; the Turn-6 amendment). Weak fifth:
+`:cites-finding`. All currently prose, none queryable.
+
+### DERIVE requirements, consolidated (the schema contract)
+
+R1 verdict-class on every pair (clean/null/fallback/transient/confound) —
+never recoverable from the number alone · R2 warrant recorded (the
+determined/undetermined judgment + what determined it) · R3 settle-ground
+{scan-a, scan-b, threshold, ε, |ΔG|} · R4 witness-ground {ref,
+verified-by, verification} · R5 per-target verification {holes,
+classification, evidence-lines} · R6 render = judgment + ground (decision
+neighbourhood first, raw dT on second descend) · R7 act ∈ {executed,
+proposal, refused(+finding)}; partials carry reason-class +
+superseded-by · R8 typed inter-flight links {applies-lesson-of,
+re-measures, confounded-by, supersedes}.
+
+### Checkpoint 2 — 2026-06-11 (late evening)
+**What was done:** DERIVE requirements gathered from the pilot's seat via
+four synchronous whistle salvos (crossing-immune, Joe watching the HUD);
+folded live with per-salvo scope reingest. Eight requirements consolidated;
+every one traces to a named real case from the twenty flights.
+**Next:** the schema draft (fable-1, owner-side) against R1–R8 + the logic
+model extending repl_spec_verify; then the pilot flies the
+conforming-witness flight against it.
