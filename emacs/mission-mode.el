@@ -322,7 +322,10 @@ the same or shallower level."
   (pcase type
     ("eightfold-phase" 'mission-mode-badge-phase-face)
     ("loose-section" 'mission-mode-badge-section-face)
-    ((or "pattern" "psr" "pur") 'mission-mode-badge-pattern-face)
+    ;; verify-gate rides the pattern purple (Joe, spoken, 2026-06-11):
+    ;; logic models are important — same visual family as the patterns
+    ;; they instantiate.
+    ((or "pattern" "psr" "pur" "verify-gate") 'mission-mode-badge-pattern-face)
     ("capability-scope" 'mission-mode-badge-capability-face)
     ("map-item" 'mission-mode-badge-map-face)
     (_ 'mission-mode-badge-other-face)))
