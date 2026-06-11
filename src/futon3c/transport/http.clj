@@ -421,6 +421,15 @@
          (not (#{"http-caller" "joe"} caller-id))
          (not= caller-id (some-> agent-id str str/trim)))))
 
+(def auto-bellback-recipient-types
+  "Agent types whose job completions auto-bellback to the registered caller.
+   v1 was codex-only; widened to :claude 2026-06-11 (Joe): claude agents'
+   turns complete silently on the warm-pouch path unless THEY remember to
+   bell — the completion contract should be structural, not behavioral.
+   Loop-safety is unchanged: bellback jobs carry caller \"auto-bellback\"
+   (unregistered + excluded), so a bellback never bellbacks."
+  #{:codex :claude})
+
 (defn should-auto-bellback?
   "Pure auto-bellback decision predicate. Recipient type and caller registration
    are passed in so tests and future recipient widening stay local."
@@ -428,14 +437,15 @@
   (boolean
    (and enabled?
         (terminal-invoke-state? (:state job))
-        (= :codex recipient-type)
+        (contains? auto-bellback-recipient-types recipient-type)
         (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
         (not (auto-bellback-job? job))
         (not (true? (get-in job [:auto-bellback :sent?]))))))
 
-(defn- auto-bellback-recipient?
+(defn- auto-bellback-recipient-type
   [agent-id]
-  (= :codex (:agent/type (reg/get-agent (str agent-id)))))
+  (let [t (:agent/type (reg/get-agent (str agent-id)))]
+    (when (contains? auto-bellback-recipient-types t) t)))
 
 (defn- auto-bellback-caller-registered?
   [caller]
@@ -461,7 +471,7 @@
 
 (defn- auto-bellback-request
   [job]
-  (let [recipient-type (when (auto-bellback-recipient? (:agent-id job)) :codex)
+  (let [recipient-type (auto-bellback-recipient-type (:agent-id job))
         caller-registered? (auto-bellback-caller-registered? (:caller job))]
     (when (should-auto-bellback? job recipient-type caller-registered? (auto-bellback-enabled?))
       {:caller (str/trim (str (:caller job)))

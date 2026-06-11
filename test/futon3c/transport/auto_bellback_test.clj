@@ -83,15 +83,27 @@
             :bell-job-id "auto-bellback-job-1"}
            (select-keys (:auto-bellback (job "job-1")) [:sent? :bell-job-id])))))
 
-(deftest non-codex-recipient-does-not-bell-back
+(deftest claude-recipient-bells-back-to-registered-caller
+  ;; Widened 2026-06-11 (Joe): claude completions were structurally silent —
+  ;; only an agent REMEMBERING to bell covered the gap (it stopped happening
+  ;; on warm-pouch turns). Completion contract is structural now.
   (register-agent! "claude-4" :claude)
   (register-agent! "claude-6" :claude)
   (create-job! {:job-id "job-2" :agent-id "claude-4" :caller "claude-6"})
   (let [enqueued (atom [])]
     (with-redefs-fn {#'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
       #(finalize! "job-2"))
+    (is (= 1 (count @enqueued)))
+    (is (= "claude-6" (:caller (first @enqueued))))))
+
+(deftest unregistered-or-ineligible-recipient-does-not-bell-back
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-2b" :agent-id "ghost-9" :caller "claude-6"})
+  (let [enqueued (atom [])]
+    (with-redefs-fn {#'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(finalize! "job-2b"))
     (is (empty? @enqueued))
-    (is (nil? (:auto-bellback (job "job-2"))))))
+    (is (nil? (:auto-bellback (job "job-2b"))))))
 
 (deftest invalid-callers-do-not-bell-back
   (register-agent! "codex-1" :codex)
@@ -152,7 +164,10 @@
   (let [base {:job-id "job-5" :agent-id "codex-1" :caller "claude-6" :state "done"}]
     (is (true? (http/should-auto-bellback? base :codex true true)))
     (is (false? (http/should-auto-bellback? (assoc base :state "running") :codex true true)))
-    (is (false? (http/should-auto-bellback? base :claude true true)))
+    (is (true? (http/should-auto-bellback? base :claude true true))
+        "claude recipients widened in 2026-06-11")
+    (is (false? (http/should-auto-bellback? base nil true true))
+        "unregistered/ineligible recipient type never bells")
     (is (false? (http/should-auto-bellback? (assoc base :caller nil) :codex true true)))
     (is (false? (http/should-auto-bellback? (assoc base :auto-bellback {:sent? true}) :codex true true)))
     (is (false? (http/should-auto-bellback? base :codex true false)))))
