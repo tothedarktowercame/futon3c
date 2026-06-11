@@ -19,7 +19,7 @@
 (def ^:private structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
    "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
-   "pattern" "psr" "pur" "plain-argument"])
+   "pattern" "psr" "pur" "plain-argument" "verify-gate"])
 (def ^:private pattern-library-limit 5000)
 (def ^:private !pattern-library-cache (atom nil))
 
@@ -1185,6 +1185,8 @@
       ;; plain-argument: heading-bound like a loose-section (defined ARGUE
       ;; sub-scope, Joe 2026-06-10).
       "plain-argument" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
+      ;; verify-gate: heading-bound (defined VERIFY sub-scope, the 13th binder)
+      "verify-gate" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
       "capability-scope" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
                                                                        "loose-section"
                                                                        "capability-scope"}
@@ -1504,6 +1506,8 @@
       ;; plain-argument: heading-bound like a loose-section (defined ARGUE
       ;; sub-scope, Joe 2026-06-10).
       "plain-argument" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
+      ;; verify-gate: heading-bound (defined VERIFY sub-scope, the 13th binder)
+      "verify-gate" (stable-heading-scopes mission mission-path raw-scopes (vec scopes) (vec scopes))
                  "capability-scope" (let [collision-scopes (filter #(contains? #{"eightfold-phase"
                                                                                    "loose-section"
                                                                                    "capability-scope"}
