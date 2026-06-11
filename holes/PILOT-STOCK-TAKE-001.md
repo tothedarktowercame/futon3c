@@ -226,5 +226,36 @@ policy update, no hidden scheduler.
 
 ## Operator's read
 
-*(Joe — yours. The two sides above are what your agents saw; this section
-is what the operator saw, including anything the instruments missed.)*
+I found the mention of M-daily-scan particularly exciting, because
+M-daily-scan is my routine for looking at ways in which the work I do
+could be useful to others (potentially making money!).  If the War
+Machine get not only scan its own code but scan its context / niche,
+it can potentially contribute to that process effectively, which is
+mentioned in the Pudding Prover (T2.2 — a cold EOI can be AUTHORED by
+the engine — drafted into the outbox, ready to send).
+
+This suggests that whether or not the War Machine "knows it", it is
+"on trail" at least some of the time, making progress mostly
+autonomously towards closing Pudding Prover items.  Of course, the
+proof is in the pudding — regarding T2.2 it could write EOIs that are
+not actually any use to anyone!
+
+Still, I think the overall workflow is evidence that "applied chaos
+works for a system that can eat its own tail".  I was pleased that we
+had some notion of "loss" — e.g. the increasing spread of G from
+multiways that don't discriminate over anything, to a resonable
+spread, in cycle-8:
+
+> the BEFORE/AFTER field comparison (the BEFORE is saved — six
+> advance-missions tied at exactly −4.3608, the constant model's
+> signature), then cycle 8 clears to claude-3 with the new contract.
+
+The other thing that we commented on is the non-need to ask me to
+certify a choice where an agent has an obvious preference — all they
+need to do is supply the warrant and they can proceed.
+
+I'd like to see the next 10 cycles run back to back without
+interrupting me, and give clear evidence of improvement both in terms
+of the WM model itself, and possibly progress on the
+capability-star-map and pudding prover — and I personally think we
+would be ready for that.
