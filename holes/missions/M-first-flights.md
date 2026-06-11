@@ -1,7 +1,7 @@
 # M-first-flights — we have flight data (Orville); we need the data shapes (Wilbur)
 
 Date: 2026-06-11
-Status: ARGUE (2026-06-11; IDENTIFY → MAP → DERIVE → ARGUE same evening). Next: VERIFY (the logic model), then the schema draft.
+Status: VERIFY (2026-06-11; IDENTIFY → MAP → DERIVE → ARGUE → VERIFY-in-progress same evening). VERIFY = mockups + day-in-the-life narrative (Joe verifies interactively), then the logic model, then piecewise build with claude-3 stepping.
 Owners: fable-2 (mint, human-cockpit standard), claude-3 (the flight half),
 fable-1 (machine-trace production sites; schema and logic model).
 
@@ -349,6 +349,24 @@ is enforced somewhere in the stack, and the only new thing is their
 composition. The plain-language argument stands alone. ARGUE is satisfied;
 VERIFY's hooks are the logic model (exit-2) with the stale-begin confound as
 its canonical adversarial case.
+
+## 5. VERIFY (in progress) — mockups + narrative first, logic model second
+
+Per Joe: a logic model is one way to do VERIFY, not the only way. The plan
+here is reader-verification first, machine-verification second:
+
+1. A narrative walkthrough — "a day in the life of a War Machine pilot" —
+   with mockups of real flights rendered in the new shape:
+   `first-flights-day-in-the-life.md` (this directory). Convention: values
+   the current records contain are verbatim; values only the new shape
+   would record are marked `~` illustrative — those are exactly what we
+   currently discard. Joe verifies interactively: each beat should read
+   without prose archaeology, the verbatim/illustrative split should be
+   honest, and anything still missing on a re-read is a new requirement.
+2. The logic model (extending repl_spec_verify V1–V5), with the
+   stale-begin confound as the canonical adversarial record.
+3. Build piece by piece, claude-3 stepping through the realised model
+   after each piece (the seat that specified the shape checks the shape).
 
 ## 5. Consequence if the shapes land
 
