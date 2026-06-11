@@ -118,6 +118,41 @@ not become another cover for the real).
 - Graduation of `[[feedback_subsumption_claim_discipline]]` to a `library/` pattern.
 - The sub-question ("add Tornhill anyway?") stays open — the audit does **not** pre-decide it.
 
+### Second sweep — a perfect crime in the calibration instrument (2026-06-11, WM-pilot)
+
+The first sweep hunted chained-claim verbs in mission *prose*. A second instance surfaced
+today in a different layer — a measurement *instrument* — confirming the covert question
+(§HEAD: "the failure mode for which the very existence of high-resolution instruments could
+be a *cover*, rather than a corrective").
+
+**The crime.** The WM-pilot loop built a G-SIM calibration harness to measure the forward
+model against realised field outcomes — with high-definition rigor: independence tags,
+measured-vs-fallback, settled-vs-transient reads, anti-laundering throughout. It accrued
+"measured pairs" with near-zero error and looked calibrated. A source-check (fable-1, of
+`compute-efe`) found the instrument was measuring the model against *itself*: the field's
+per-target G is composed from the *same* constant predict-effects the model predicts with —
+`prior == value`, one level down. The near-zero errors were not calibration; they were a
+tautology. The apparatus's very rigor was the cover that made a vacuous measurement look real
+— the Baudrillardian crime (§Baudrillard: "the more transparent the system gets, the more its
+instruments substitute for the thing they measure") in the calibration domain rather than the
+prose domain.
+
+**A smaller same-day instance (transient-as-durable).** A pilot cycle reported error 0.277 as
+"a real-content hole closure moves the target G substantially." A settled re-read showed the
+realised had been caught as a transient post-edit spike before settling to baseline; the claim
+was retracted. Prose-claim (durable movement) substituting for reality (a scan-timing artifact).
+
+**What it adds to the mission.** The first sweep's thesis was that no Tornhill-instrument
+cloning would catch a *prose*-layer crime. This sharpens it: an instrument can commit the crime
+against *itself* — a measurement whose rigor is the cover for measuring nothing. The forensic
+mode this mission seeks therefore extends past a chained-claim-verb scan over prose to a
+*self-reference check*: does the instrument's "measurement" reduce to the instrument grading its
+own homework? The same-day fix (target-sensitive predict-effects, breaking `prior == value`,
+operator-consented) is what made the calibration measure something that can be *wrong*.
+Provenance: WM-pilot session 2026-06-11 (claude-3 + fable-1), Pilot's-Log Turns 4–7. Cross-ref
+`[[feedback_subsumption_claim_discipline]]` (prose chained-claims) and this new self-reference
+failure mode.
+
 ---
 
 ## Appendix A. Cross-references
