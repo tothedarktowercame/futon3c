@@ -368,6 +368,16 @@ here is reader-verification first, machine-verification second:
 3. Build piece by piece, claude-3 stepping through the realised model
    after each piece (the seat that specified the shape checks the shape).
 
+First VERIFY finding (V-f1, from Joe's read of the Morning beat): the
+field-read must not be a temperature gauge. Its typed home has three
+layers — the gauge (ranked list, linked), the decision neighbourhood
+(candidates weighed, reject-reasons), and per candidate an optional
+pattern CASCADE (psi, patterns, C — the M-memes-arrows sense; thickness is
+information: thin says plain code, thick says pattern territory). Choice
+points (A or B) are first-class, carrying the warrant that determined them
+or the queue-entry when undetermined. This refines R4 and R7; the
+data-shape diagrams are in the day-in-the-life doc.
+
 ## 5. Consequence if the shapes land
 
 The piano roll changes type, from numeric tape to proof script — a sequence
