@@ -270,6 +270,21 @@ Provenance note: the forms reached disk by ordinary write during the
 Agency restart; this binding paragraph is typed. The full re-performance
 — hop, type, run, return — remains owed and INSTANTIATE will collect it.
 
+#### PUR — Pattern Use Record (minted by voice, 2026-06-11: the purple IS the use)
+
+- Pattern: `mission-coherence/logic-model-before-code`
+- Actions taken: the scene invariants argued in section 4 were expressed
+  as Reazon violation-pattern relations over ground traces; the gate ran
+  headless; the certificate was stored adjacent and bound in section 5.1.
+- Outcome: success — conforming six-beat trace clean, all four adversarial
+  traces caught, verdict GATE OPEN
+  (futon3c/holes/missions/M-smart-emacs-cursor.cert).
+- Prediction error: the pattern was written for core.logic on the JVM and
+  ported to Reazon without strain — substrate portability exceeded
+  expectations. And the model ran AFTER much of what it verifies: the live
+  session itself was the adversarial trace, so before-code bent to
+  before-further-code without losing its teeth.
+
 ## Scope
 
 ### Scope in
