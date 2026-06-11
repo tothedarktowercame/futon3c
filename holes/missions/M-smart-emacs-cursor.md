@@ -322,6 +322,17 @@ excursion built today, adopted at the first opportunity.
   mission_scopes_updated frame in place. APPROVED — activation at the
   flag, the manual reingest dance ends.
 
+### 6.1 The output tape, live (Joe spoken: mission as genotype, code as phenotype)
+
+Four code/v05/commit-to-mission hyperedges now stand in substrate-2 with
+provenance trailer — bfdb482 (H1), b1b71ad (H2), aace99c (voice filter),
+a816db9 (phase presence) — the first cargo ever carried by the transducer
+lane (E-mealy-style-transducer), backfilled by hand on the spoken decision;
+the watcher flag FUTON3C_COMMIT_MISSION_EDGES makes it automatic at the
+next activation. The Skolem audit code-channel can now answer
+code-discharged with real edges. Outbound scopes in the mission tree — a
+produces binder, the W15 resolution — queue behind the handoff binder.
+
 ## Scope
 
 ### Scope in
