@@ -316,7 +316,11 @@ excursion built today, adopted at the first opportunity.
 - Acceptance: flag OFF byte-for-byte; ON = doc save leads to fresh scopes
   without operator action; hermetic tests.
 - Job: invoke-1781178866664-684-b47bd48f (dispatched 2026-06-11, fable-2 bell)
-- Bell-back: pending
+- Bell-back: DONE 2026-06-11 — commit b1b71ad (Add watcher scope lane reingest),
+  Mission: trailer verified. Review (fable-2): kondo 0/0, parens OK,
+  watcher tests 7/20 green, FUTON3C_WATCHER_SCOPE_LANE flag dark,
+  mission_scopes_updated frame in place. APPROVED — activation at the
+  flag, the manual reingest dance ends.
 
 ## Scope
 

@@ -981,6 +981,28 @@ point; RET jumps to it."
                   (insert indent chip " "
                           (propertize (truncate-string-to-width title 46 nil nil "…")
                                       'face (mission-mode--depth-face depth))
+                          ;; Phase-grain PRESENCE (Joe, spoken, 2026-06-11):
+                          ;; not just "the doc left off here" but "a body is
+                          ;; HERE NOW" — the agent cursor inside this phase
+                          ;; span marks the phase live at a glance.
+                          (or (and phase
+                                   (boundp 'futon-agent-cursor--marker)
+                                   futon-agent-cursor--marker
+                                   (marker-buffer futon-agent-cursor--marker)
+                                   (eq (marker-buffer futon-agent-cursor--marker) src)
+                                   (>= (marker-position futon-agent-cursor--marker)
+                                       (overlay-start ov))
+                                   (< (marker-position futon-agent-cursor--marker)
+                                      (overlay-end ov))
+                                   (propertize
+                                    (format "  ◆ %s is here now"
+                                            (if (boundp 'futon-agent-cursor-id)
+                                                futon-agent-cursor-id
+                                              "agent"))
+                                    'face (if (facep 'futon-agent-cursor-glyph-face)
+                                              'futon-agent-cursor-glyph-face
+                                            'success)))
+                              "")
                           "\n")
                   (push (list start depth (and phase t)) line-entries)
                   (push (cons (overlay-start ov) start) mission-mode--overview-index)
