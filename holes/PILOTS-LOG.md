@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 13 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 13: minted aif/no-self-certification library pattern (futon3 c337bf8) -- the arc deepest discipline (a verdict moves only on evidence its maker did not manufacture; structural tags not vigilance). Genuine substrate.
+
+**PRINT / FOUND.** PROPOSAL-mode (no measured pair): a free-floating library mint closes no M-futonzero-generative hole, so no field movement to measure. WALL CONFIRMED across cycles 11-13: clean below-cap dynamics targets are EXHAUSTED, and the high-value pudding-prover G1 arrow-witness binding is scope-out of M-peradam-grounding + external-dependency + arming-gated (not a clean autonomous build). So arc-2 model-evidence = the 4 clean dual-pred pairs (T8-T11) + their analysis; remaining cycles graduate the arc disciplines to library patterns (genuine substrate) absent clean pairs/builds.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Operator-directed arc-2 cycle 13 (fable-1 metronome) + earned-closure (genuine pattern minted). Honest: proposal-mode because a substrate mint is not a measured advance of the nominal target. Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 12 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.63).
