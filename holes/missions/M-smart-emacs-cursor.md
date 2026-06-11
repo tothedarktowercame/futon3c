@@ -172,6 +172,13 @@ the editor's command-grain seriality means the real problem will be
 intention conflict, not byte conflict. Revisit when a second typing body
 exists and the modal discipline is deliberately broken.
 
+### A6 — witnessed: this paragraph was typed by the agent's own cursor (fable-2, 2026-06-11)
+
+IF authorship must be visible at the moment of change,
+HOWEVER every earlier edit in this mission arrived by file-write and reload — authorless,
+THEN this argument is its own witness: it entered the buffer character by character at the ◆ cursor you just watched, while your cursor stayed yours,
+BECAUSE the best argument for a typing body is the sight of one.
+
 ### 4.1 Plain-language argument (the version anyone can read)
 
 You speak. The words go to the helper instead of wherever your cursor
