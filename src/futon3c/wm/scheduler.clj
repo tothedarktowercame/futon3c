@@ -118,7 +118,9 @@
 (defn- refresh-one-window! [generate days]
   (let [started-ns (System/nanoTime)
         started-at (Instant/now)
-        bundle (http/apply-wm-operator-clear (generate days))
+        bundle (-> (generate days)
+                   http/apply-wm-operator-clear
+                   ((requiring-resolve 'futon3c.wm.promote/apply-operator-promote)))
         {:keys [payload body]} (render-payload-json bundle)
         finished-at (Instant/now)
         duration-ms (long (/ (- (System/nanoTime) started-ns) 1000000))]
