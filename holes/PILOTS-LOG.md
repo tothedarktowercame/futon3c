@@ -17,6 +17,43 @@ automatically.
 
 ---
 
+## Turn 5 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.46).
+_(Auto-log note: this line is the field's top [0]. The actual `v` this cycle was
+**operator-directed** `advance-mission M-futonzero-generative` (predicted G=−4.0849) —
+Joe's choice B, not the field top. `log-pilot-turn!` records pre-top as the
+"recommendation," which on an operator-directed cycle differs from the chosen v.)_
+
+**EVAL / DID.** Made M-futonzero-generative true open state machine-visible: added a Remaining Work checklist (2 done+dated for sections 4.1 and 4.4, 5 open for 4.2/4.3/4.5 plus G-SIM and G-REWARD) and a dated checkpoint. Committed futon0 477f7ea.
+
+**PRINT / FOUND.** Partial-discharge worked: target stayed ranked (rank 10, guardrail rule cleared from open-mission-no-holes to nil, holes now visible), so realised read a genuine post-field G. First realised-source measured pair. Error is tiny (predicted -4.085, realised -4.085) because the hole-visibility edit barely moved this mission own EFE G: small but genuinely measured, not a censored zero fallback (post-entry exists; realised is the field own independent number).  _[predicted G=-4.08, realised G=-4.09, top-shift sorry/pattern-measure-never-target->]_
+
+**PUR.** Pattern is consent-gate (operator-directed: Joe chose target B) plus earned-closure (field moved: rule cleared). Option-C partial-discharge delivered the first non-fallback measured pair. Vigilance: a near-zero error is what ground control flagged as suspicious in Turn 4; here it is legitimate (measured, target persists) and I verified the mechanism (rule nil, post-entry present) before claiming it. About 11 more measured pairs needed for calibratable. Mode supervised, operator-directed. Mode: supervised-proposal.
+
+## Turn 4 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `sorry/pattern-two-projections-of-one-quantity` (G=-4.73).
+
+**EVAL / DID.** marked pattern-two-projections sorry :addressed, pattern minted c1c0325
+
+**PRINT / FOUND.** field moved, sorry dropped from ranked-actions, first independent pair  _[predicted G=-4.73, realised G=-4.73, top-shift sorry/pattern-two-projections-of-one-quantity->sorry/pattern-measure-never-target]_
+
+**PUR.** executed cycle with committed evidence-ref, independent pair via the realised-on-merge binding Mode: supervised-proposal.
+
+**Ground-control correction (fable-1, same day) — the pair was a FALLBACK, not a measurement.** The
+discharge succeeded so the target *vanished* from the post-field, and `close-live-cycle!`'s
+absent-target fallback copied predicted→realised → `:prediction-error 0.0` **by construction** (a
+*censored* observation, not a measured one — and a suspicious "perfect" result I should have questioned).
+The verdict now counts ONLY `:realised-source :measured` pairs; this frame is retroactively EXCLUDED, so
+the independent **measured** count stays 0. **No diminishment of what Turn 4 proved: the PIPE is verified
+end-to-end** — executed, witnessed (`futon3 c1c0325 + futon2 b3acaaa`), merge-event, auto-DOCUMENT, field
+moved, and the full sorry-mining round-trip closed store-side (arrow `arr-4d50ce67-10b` promoted
+`:constructed` w/ payload; CH2 discharge `futon3a/sorry/meme-arrow-969d5eb3d8b6b363`). The first
+*measured* pair needs a discharge whose **target retains a post-field reading** (partial discharge) or
+**field-delta realised semantics** (realised = movement of the whole differential, not the target's own
+G) — a design fork for Joe.
+
 ## Turn 3 — 2026-06-10 (claude-3, emacs-repl) — first earned address-sorry on the refilled registry; minted a cited-but-unwritten pattern
 
 *Hand-written: `close-live-cycle!` raised `unknown run-id` — the staged run-state (stashed by
