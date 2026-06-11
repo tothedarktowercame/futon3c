@@ -3,6 +3,56 @@
 ;;; Commentary:
 ;; Read-only Emacs view over substrate-2 mission-scope hyperedges.
 ;; Entry point: M-x mission-mode
+;;
+;; THE SCOPE PIPELINE (documented 2026-06-11, per Joe -- this header is the
+;; canonical inventory; update it when binders change):
+;;
+;;   futon6/scripts/mission_scope_detect.py        md -> scope-tree JSON
+;;   futon3c/src/futon3c/scripts/mission_scope_ingest.clj
+;;                                                 tree -> substrate-2 (7071)
+;;   futon3c/scripts/mission-scope-reingest.sh     fast loop (per-binder; a
+;;       plain full-run SKIPS enrichments -- W2' -- so always reingest
+;;       binder-by-binder, which this script does)
+;;   futon3c/scripts/mission-scope-view-fast.sh    substrate-2 -> view JSON
+;;   mission-mode.el                               the panel (this file)
+;;
+;; BINDER VOCABULARY (the scope types the detector emits and the ingest
+;; dispatches; one line of semantics each):
+;;   eightfold-phase    HEAD/IDENTIFY/MAP/DERIVE/ARGUE/VERIFY/INSTANTIATE/
+;;                      DOCUMENT sections; missing phases render as ghost
+;;                      lines; closures-in-passing (a phase satisfied inside
+;;                      another section) are detected inline, closing ghosts.
+;;   loose-section      any ##/### heading that is not an eightfold phase.
+;;   capability-scope   sections naming a capability the mission exercises.
+;;   mission-scope-in   one bullet of "Scope in" -- polarity :in, anchored
+;;                      to its exact line.
+;;   mission-scope-out  one bullet of "Scope out" -- polarity :out (the
+;;                      mission's behavioral constraints as typed, anchored,
+;;                      machine-visible objects).
+;;   psr / pur          Pattern Selection/Use Records (backticked +
+;;                      namespaced idents supported; anchored via the
+;;                      detector's :anchor-line).
+;;   plain-argument     plain-language IF/HOWEVER/THEN/BECAUSE blocks.
+;;   relates-to         cross-mission reference slots.
+;;   source-material    cited-source slots.
+;;   concept            HEAD-grade named concepts (kernel extraction;
+;;                      Interest-Network-grade extraction is W10).
+;;
+;; KNOWN GAPS (so the panel's silences are legible):
+;;   counted-hole       NOT YET A BINDER: `- [ ]`/`- [x]` checklist items
+;;                      (e.g. "Remaining Work") are invisible to the scope
+;;                      lane even though they are exactly what WM flights
+;;                      act on and what the futon2 mission-registry
+;;                      hole-counter counts (separately, by regex). The
+;;                      hole-granularity work should land the counted-hole
+;;                      binder so hole-counts, flights' acts, and this panel
+;;                      read ONE object. (Census: 2026-06-11
+;;                      M-futonzero-generative -- 33 scopes, charter fully
+;;                      typed, all 7 Remaining-Work checkboxes invisible.)
+;;   gate               G-SIM/G-REWARD-style hard gates detect as
+;;                      loose-sections; a typed gate scope with clearance
+;;                      state would let the panel show gate status.
+;;   relates-to / source-material currently fire 0 on most docs (W4).
 
 ;;; Code:
 
