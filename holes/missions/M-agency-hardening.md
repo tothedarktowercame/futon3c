@@ -61,6 +61,23 @@ unproven numbers or workflow claims with evidence-backed ones.
 - `holes/missions/M-tickle-overnight.md` documents Tickle overnight
   orchestration.
 
+## Spun-off excursions
+
+- **`holes/excursions/E-crossed-bells.md`** — the "crossed bells" symptom
+  (datapoints #5) reframed as its OWN issue: a *conversation-semantics* problem,
+  not transport. The durable queue + drainer v2 + caller capture made the transport
+  transactional, yet agents still mis-*thread* bells — they can't tell a NEW request
+  from a REPLY to their own outstanding request (the A↔B simultaneous-bell case). The
+  excursion sketches a **bell router**: a shared thread-id + `in-reply-to` surfaced in
+  the bell's surface contract, so the conversation thread is visible to the agents.
+  Server-side sibling: `E-per-turn-isolation.md` (overlapping-turn sink/session
+  isolation — the same crossing one layer down).
+- **`holes/missions/M-typed-bells.md`** (was `E-typed-bells.md`, promoted to a mission
+  2026-06-11) — the child of E-crossed-bells: the bell router recovered the conversation
+  *graph*; typing the bells recovers its *illocutionary semantics* (ask/answer/challenge/…)
+  so `:query`/`:answer` populate ArSE at birth. Grounded in Corneli et al. 2017 (IATC).
+  This grew past a single-agent bounded scope-out, hence the promotion.
+
 ## Invariants
 
 1. **IRC independence:** IRC service availability must not depend on the

@@ -204,6 +204,27 @@ capable agents that know where they are.
 replies" — `irc-invoke-prompt` in dev.clj and `codex-repl--surface-contract` in
 codex-repl.el.
 
+### Typed Bell Contract
+
+When `FUTON3C_TYPED_BELLS` is enabled, a bell may declare its illocutionary
+type with `type` and an optional referent with `ref`. Valid types are `query`,
+`answer`, `assert`, `challenge`, `agree`, `define`, `retract`, `suggest`, and
+`request`. Untyped bells remain ordinary requests; unknown types are rejected.
+
+Use `type=query` when you are asking another agent to help resolve a question.
+If no `ref` is supplied, the server creates an ArSE thread and stamps the thread
+id into the job's `ref`. Use `type=answer --ref <ask-id>` when answering that
+thread; answers without a `ref` are malformed.
+
+Shell example:
+
+```bash
+python3 futon3c/scripts/agency_send.py --to codex-1 --from claude-6 \
+  --kind bell --type query <<'EOF'
+Is the S3 ArSE bridge active in this JVM?
+EOF
+```
+
 ## Development Protocol
 
 Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):

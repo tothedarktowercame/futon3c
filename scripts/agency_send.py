@@ -12,6 +12,8 @@ for ANY characters:
 
 --kind bell    -> POST /api/alpha/bell    (async, 202 + job-id)
 --kind whistle -> POST /api/alpha/whistle (blocking, terminal JSON)
+--type query   -> typed bell performative when FUTON3C_TYPED_BELLS is enabled
+--ref ask-...  -> ArSE thread / referent for answer or routed query
 --dry-run prints the payload instead of sending.
 """
 import sys, json, argparse, urllib.request
@@ -22,6 +24,10 @@ ap.add_argument("--from", dest="frm", help="sender agent-id (recorded as the mes
                                            "enables mesh_trace + auto-bellback routing)")
 ap.add_argument("--kind", choices=["bell", "whistle"], default="bell")
 ap.add_argument("--base", default="http://localhost:7070")
+ap.add_argument("--type", choices=["query", "answer", "assert", "challenge", "agree",
+                                   "define", "retract", "suggest", "request"],
+                help="typed-bell performative; server accepts it only when FUTON3C_TYPED_BELLS is on")
+ap.add_argument("--ref", help="typed-bell referent, usually an ArSE thread id")
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
 a = ap.parse_args()
 
@@ -29,9 +35,21 @@ prompt = sys.stdin.read()
 if not prompt.strip():
     sys.exit("agency_send: empty prompt on stdin")
 
+# Loud-failure for the load-bearing mesh edge (M-agency-hardening): a bell
+# without --from logs as 'http-caller' with NO mesh edge, so auto-bellback has
+# no recipient and the reply silently can't route back. Surface it at send time.
+if not a.frm:
+    print("agency_send: WARNING — no --from <id>. This bell logs as 'http-caller' "
+          "with NO mesh edge; auto-bellback cannot route a reply back to you. "
+          "Pass --from <your-id>.", file=sys.stderr)
+
 body = {"agent-id": a.to, "prompt": prompt}
 if a.frm:
     body["caller"] = a.frm
+if a.type:
+    body["type"] = a.type
+if a.ref:
+    body["ref"] = a.ref
 payload = json.dumps(body)
 if a.dry_run:
     print(payload); sys.exit(0)

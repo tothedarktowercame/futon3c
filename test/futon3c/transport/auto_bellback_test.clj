@@ -1,5 +1,6 @@
 (ns futon3c.transport.auto-bellback-test
-  (:require [clojure.java.io :as io]
+  (:require [cheshire.core :as json]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
@@ -38,6 +39,14 @@
 (defn- job
   [job-id]
   (#'http/get-invoke-job job-id))
+
+(defn- parse-body
+  [response]
+  (json/parse-string (:body response) true))
+
+(defn- json-request
+  [m]
+  {:body (json/generate-string m)})
 
 (use-fixtures
   :each
@@ -147,3 +156,214 @@
     (is (false? (http/should-auto-bellback? (assoc base :caller nil) :codex true true)))
     (is (false? (http/should-auto-bellback? (assoc base :auto-bellback {:sent? true}) :codex true true)))
     (is (false? (http/should-auto-bellback? base :codex true false)))))
+
+;; --- Bell router (E-crossed-bells): explicit, self-describing bellback replies ---
+
+(defn- direct-executor []
+  (proxy [java.util.concurrent.AbstractExecutorService] []
+    (shutdown [] nil) (shutdownNow [] []) (isShutdown [] false)
+    (isTerminated [] false) (awaitTermination [_ _] true)
+    (execute [r] (.run r))))
+
+(deftest bell-router-default-off
+  (System/clearProperty "FUTON3C_BELL_ROUTER")
+  (is (false? (#'http/bell-router-enabled?))))
+
+(deftest bell-router-on-makes-bellback-an-explicit-reply
+  (System/setProperty "FUTON3C_BELL_ROUTER" "true")
+  (try
+    (register-agent! "codex-1" :codex)
+    (register-agent! "claude-6" :claude)
+    (create-job! {:job-id "job-br1" :agent-id "codex-1" :caller "claude-6"})
+    (let [enqueued (atom [])]
+      (with-redefs-fn {#'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+        #(finalize! "job-br1"))
+      (let [req (first @enqueued)]
+        (is (= "claude-6" (:caller req)) "still delivered to the original caller")
+        (is (= "job-br1" (:reply-to req)) "carries the original bell id")
+        (is (str/includes? (:prompt req) "RE: your bell"))
+        (is (str/includes? (:prompt req) "job `job-br1` to codex-1"))
+        (is (str/includes? (:prompt req) "bell or whistle codex-1 directly"))))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
+(deftest bell-router-on-records-bellback-of-on-the-reply-job
+  (System/setProperty "FUTON3C_BELL_ROUTER" "true")
+  (try
+    (register-agent! "claude-6" :claude)
+    (with-redefs [http/invoke-executor (direct-executor)]
+      (let [job-id (#'http/enqueue-auto-bellback!
+                    {:caller "claude-6" :bell-job-id "auto-bellback-br2"
+                     :prompt "RE: your bell ..." :reply-to "job-br2"})]
+        (is (= "job-br2" (:bellback-of (job job-id)))
+            "the reply job explicitly records the bell it answers")))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
+(deftest bell-router-off-omits-bellback-of
+  (System/clearProperty "FUTON3C_BELL_ROUTER")
+  (register-agent! "claude-6" :claude)
+  (with-redefs [http/invoke-executor (direct-executor)]
+    (let [job-id (#'http/enqueue-auto-bellback!
+                  {:caller "claude-6" :bell-job-id "auto-bellback-br3"
+                   :prompt "x" :reply-to "job-br3"})]
+      (is (nil? (:bellback-of (job job-id))) "off path records no correlation"))))
+
+(deftest bell-router-surface-header-shows-thread
+  (System/setProperty "FUTON3C_BELL_ROUTER" "true")
+  (try
+    (let [new-req (#'http/wrap-surface-header "body" "bell" "claude-3" nil {:bell-id "J9"})
+          reply (#'http/wrap-surface-header "body" "bell" "claude-3" nil
+                                            {:bell-id "R9" :in-reply-to "J1"})]
+      (is (str/includes? new-req "Thread: bell `J9` — NEW request"))
+      (is (str/includes? new-req "in-reply-to=`J9`") "tells the recipient how to reply in-thread")
+      (is (str/includes? reply "REPLY to bell `J1`")))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
+(deftest bell-router-off-omits-thread-line
+  (System/clearProperty "FUTON3C_BELL_ROUTER")
+  (is (not (str/includes?
+            (#'http/wrap-surface-header "body" "bell" "claude-3" nil {:bell-id "J9"})
+            "Thread:"))
+      "off path adds no thread header (byte-for-byte)"))
+
+;; --- Typed bells (M-typed-bells): type/ref on the wire + ArSE bridge ---
+
+(deftest typed-bells-default-off
+  (System/clearProperty "FUTON3C_TYPED_BELLS")
+  (is (false? (#'http/typed-bells-enabled?))))
+
+(deftest typed-bells-off-ignores-type-and-ref
+  (System/clearProperty "FUTON3C_TYPED_BELLS")
+  (with-redefs-fn {#'http/invoke-executor (direct-executor)
+                   #'http/run-invoke-job! (fn [_] {:ok true})
+                   #'http/arse-ask! (fn [& _] (throw (ex-info "must not write ArSE" {})))}
+    (fn []
+      (let [response (#'http/handle-bell
+                      (json-request {"agent-id" "claude-6"
+                                     "prompt" "Is this wired?"
+                                     "caller" "codex-1"
+                                     "job-id" "typed-off-1"
+                                     "type" "query"
+                                     "ref" "ask-existing"})
+                      {})
+            body (parse-body response)
+            j (job "typed-off-1")]
+        (is (= 202 (:status response)))
+        (is (= "typed-off-1" (:job-id body)))
+        (is (not (contains? j :bell-type)))
+        (is (not (contains? j :ref)))))))
+
+(deftest typed-bells-rejects-unknown-type
+  (System/setProperty "FUTON3C_TYPED_BELLS" "true")
+  (try
+    (let [response (#'http/handle-bell
+                    (json-request {"agent-id" "claude-6"
+                                   "prompt" "x"
+                                   "type" "frobnicate"})
+                    {})]
+      (is (= 400 (:status response)))
+      (is (= "invalid-bell-type" (:err (parse-body response)))))
+    (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))
+
+(deftest typed-bells-answer-requires-ref
+  (System/setProperty "FUTON3C_TYPED_BELLS" "true")
+  (try
+    (let [response (#'http/handle-bell
+                    (json-request {"agent-id" "claude-6"
+                                   "prompt" "yes"
+                                   "type" "answer"})
+                    {})]
+      (is (= 400 (:status response)))
+      (is (= "answer-ref-required" (:err (parse-body response)))))
+    (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))
+
+(deftest typed-query-creates-arse-thread-and-stamps-job-ref
+  (System/setProperty "FUTON3C_TYPED_BELLS" "true")
+  (try
+    (let [asked (atom [])]
+      (with-redefs-fn {#'http/invoke-executor (direct-executor)
+                       #'http/run-invoke-job! (fn [_] {:ok true})
+                       #'http/arse-ask! (fn [_config req]
+                                          (swap! asked conj req)
+                                          {:ok true :status 201 :thread-id "ask-typed-1"
+                                           :evidence-id "arse-q-ask-typed-1"})}
+        (fn []
+          (let [response (#'http/handle-bell
+                          (json-request {"agent-id" "claude-6"
+                                         "prompt" "Is S3 complete?"
+                                         "caller" "codex-1"
+                                         "job-id" "typed-query-1"
+                                         "type" "query"})
+                          {})
+                body (parse-body response)
+                j (job "typed-query-1")]
+            (is (= 202 (:status response)))
+            (is (= :query (:bell-type j)))
+            (is (= "ask-typed-1" (:ref j)))
+            (is (= "ask-typed-1" (:ref body)))
+            (is (= 1 (count @asked)))
+            (is (= "codex-1" (:author (first @asked))))))))
+    (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))
+
+(deftest typed-answer-writes-arse-answer-and-records-ref
+  (System/setProperty "FUTON3C_TYPED_BELLS" "true")
+  (try
+    (let [answered (atom [])]
+      (with-redefs-fn {#'http/invoke-executor (direct-executor)
+                       #'http/run-invoke-job! (fn [_] {:ok true})
+                       #'http/arse-answer! (fn [_config req]
+                                             (swap! answered conj req)
+                                             {:ok true :status 200 :thread-id (:thread-id req)
+                                              :evidence-id "arse-a-ask-typed-1"})}
+        (fn []
+          (let [response (#'http/handle-bell
+                          (json-request {"agent-id" "claude-6"
+                                         "prompt" "yes"
+                                         "caller" "codex-1"
+                                         "job-id" "typed-answer-1"
+                                         "type" "answer"
+                                         "ref" "ask-typed-1"})
+                          {})
+                j (job "typed-answer-1")]
+            (is (= 202 (:status response)))
+            (is (= :answer (:bell-type j)))
+            (is (= "ask-typed-1" (:ref j)))
+            (is (= [{:thread-id "ask-typed-1" :answer "yes" :author "codex-1"}]
+                   @answered))))))
+    (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))
+
+(deftest typed-query-replay-with-same-job-id-does-not-write-second-arse-thread
+  (System/setProperty "FUTON3C_TYPED_BELLS" "true")
+  (try
+    (let [n (atom 0)]
+      (with-redefs-fn {#'http/invoke-executor (direct-executor)
+                       #'http/run-invoke-job! (fn [_] {:ok true})
+                       #'http/arse-ask! (fn [& _]
+                                          (swap! n inc)
+                                          {:ok true :status 201 :thread-id "ask-once"
+                                           :evidence-id "arse-q-ask-once"})}
+        (fn []
+          (#'http/handle-bell
+           (json-request {"agent-id" "claude-6" "prompt" "once"
+                          "caller" "codex-1" "job-id" "typed-once"
+                          "type" "query"})
+           {})
+          (let [response (#'http/handle-bell
+                          (json-request {"agent-id" "claude-6" "prompt" "once"
+                                         "caller" "codex-1" "job-id" "typed-once"
+                                         "type" "query"})
+                          {})
+                body (parse-body response)]
+            (is (= 1 @n))
+            (is (true? (:reused? body)))
+            (is (= "ask-once" (:ref body)))))))
+    (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))
+
+(deftest typed-bells-surface-header-shows-type-and-ref
+  (System/setProperty "FUTON3C_TYPED_BELLS" "true")
+  (try
+    (let [header (#'http/wrap-surface-header
+                  "body" "bell" "codex-1" nil
+                  {:bell-id "J10" :type :query :ref "ask-typed-1"})]
+      (is (str/includes? header "Type: query"))
+      (is (str/includes? header "help resolve ArSE `ask-typed-1`")))
+    (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))

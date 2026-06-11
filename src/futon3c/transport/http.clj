@@ -57,6 +57,7 @@
             [futon3c.agency.federation :as federation]
             [futon3c.agency.mesh-qa :as mesh-qa]
             [futon3c.agency.turn-queue :as turn-queue]
+            [futon3c.agency.bell-router :as bell-router]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -365,6 +366,43 @@
   (let [raw (some-> (System/getenv "FUTON3C_AUTO_BELLBACK") str/trim str/lower-case)]
     (not (#{"0" "false" "no" "off"} raw))))
 
+(defn- bell-router-enabled?
+  "Bell-router slice (E-crossed-bells): make a bellback an EXPLICIT, self-describing
+   reply — carry `:bellback-of <original-job>` for the conversation graph, and frame
+   the prompt as 'RE: your bell …' so the receiving agent can thread it instead of
+   mis-reading a context-free 'auto-bellback'. Default OFF; load-dark."
+  []
+  (let [prop (System/getProperty "FUTON3C_BELL_ROUTER")]
+    (if (some? prop)
+      (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
+      (let [raw (some-> (System/getenv "FUTON3C_BELL_ROUTER") str/trim str/lower-case)]
+        (boolean (and raw (not (#{"0" "false" "no" "off" ""} raw))))))))
+
+(def ^:private allowed-bell-types
+  #{:query :answer :assert :challenge :agree :define :retract :suggest :request})
+
+(defn- typed-bells-enabled?
+  "M-typed-bells rollout flag. Default OFF: type/ref payload fields are ignored,
+   and the legacy bell path remains inert."
+  []
+  (let [prop (System/getProperty "FUTON3C_TYPED_BELLS")]
+    (if (some? prop)
+      (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
+      (let [raw (some-> (System/getenv "FUTON3C_TYPED_BELLS") str/trim str/lower-case)]
+        (boolean (and raw (not (#{"0" "false" "no" "off" ""} raw))))))))
+
+(defn- normalize-bell-type
+  [raw]
+  (let [t (if (or (nil? raw) (str/blank? (str raw)))
+            :request
+            (keyword (str/lower-case (str/trim (name raw)))))]
+    (when (contains? allowed-bell-types t)
+      t)))
+
+(defn- nonblank-str
+  [x]
+  (some-> x str str/trim not-empty))
+
 (defn- terminal-invoke-state?
   [state]
   (#{"done" "succeeded" "failed" "error" "timeout" "cancelled"} (str state)))
@@ -408,9 +446,18 @@
   (let [summary (or (some-> result-summary str str/trim not-empty)
                     (some-> terminal-message str str/trim not-empty)
                     "No result summary recorded.")]
-    (str "🔔 " agent-id " finished job `" job-id "` (state: `" state "`). "
-         summary
-         "\nDetails: /api/alpha/invoke/jobs/" job-id)))
+    (if (bell-router-enabled?)
+      ;; Self-describing reply: the receiving agent reads this as a reply to ITS bell,
+      ;; not a context-free 'auto-bellback' it has to guess at (E-crossed-bells).
+      (str "🔔 RE: your bell — job `" job-id "` to " agent-id
+           " finished (state `" state "`).\n"
+           summary
+           "\n(Automated bellback. To continue this thread, bell or whistle "
+           agent-id " directly.)"
+           "\nDetails: /api/alpha/invoke/jobs/" job-id)
+      (str "🔔 " agent-id " finished job `" job-id "` (state: `" state "`). "
+           summary
+           "\nDetails: /api/alpha/invoke/jobs/" job-id))))
 
 (defn- auto-bellback-request
   [job]
@@ -419,6 +466,7 @@
     (when (should-auto-bellback? job recipient-type caller-registered? (auto-bellback-enabled?))
       {:caller (str/trim (str (:caller job)))
        :bell-job-id (str "auto-bellback-" (:job-id job))
+       :reply-to (str (:job-id job))   ;; the original bell this answers (bell-router)
        :prompt (auto-bellback-prompt job)})))
 
 (declare create-invoke-job!)
@@ -426,12 +474,17 @@
 (declare record-invoke-job-delivery-by-job-id!)
 
 (defn- enqueue-auto-bellback!
-  [{:keys [caller bell-job-id prompt]}]
+  [{:keys [caller bell-job-id prompt reply-to]}]
   (let [job-id (create-invoke-job! {:requested-job-id bell-job-id
                                     :agent-id caller
                                     :prompt prompt
+                                    ;; caller stays "auto-bellback" — loop-safety + mesh
+                                    ;; heuristics key on it. The correlation is explicit
+                                    ;; via :bellback-of, and the agent-facing thread is in
+                                    ;; the reframed prompt (bell-router).
                                     :caller auto-bellback-caller
-                                    :surface auto-bellback-caller})]
+                                    :surface auto-bellback-caller
+                                    :bellback-of (when (bell-router-enabled?) reply-to)})]
     (.submit invoke-executor
              ^Runnable
              (fn []
@@ -516,7 +569,7 @@
        msg])))
 
 (defn- create-invoke-job!
-  [{:keys [requested-job-id agent-id prompt caller surface]}]
+  [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref]}]
   (let [created-id (atom nil)]
     (update-invoke-jobs-ledger!
      (fn [ledger]
@@ -537,25 +590,28 @@
                  job-id (or usable-requested auto-id)
                  created-at (str (Instant/now))
                  mode (invoke-job-mode prompt)
-                 job {:job-id job-id
-                      :agent-id (str agent-id)
-                      :caller (str (or caller "http-caller"))
-                      :surface (str (or surface "http"))
-                      :mode mode
-                      :state "queued"
-                      :created-at created-at
-                      :started-at nil
-                      :finished-at nil
-                      :terminal-code nil
-                      :terminal-message nil
-                      :session-id nil
-                      :trace-id nil
-                      :result-summary nil
-                      :artifact-ref nil
-                      :execution {:executed? false :tool-events 0 :command-events 0}
-                      :delivery {:status "pending"}
-                      :event-seq 0
-                      :events []}]
+                 job (cond-> {:job-id job-id
+                               :agent-id (str agent-id)
+                               :caller (str (or caller "http-caller"))
+                               :surface (str (or surface "http"))
+                               :bellback-of (some-> bellback-of str)   ;; bell-router: this job is a reply to <job-id>
+                               :mode mode
+                               :state "queued"
+                               :created-at created-at
+                               :started-at nil
+                               :finished-at nil
+                               :terminal-code nil
+                               :terminal-message nil
+                               :session-id nil
+                               :trace-id nil
+                               :result-summary nil
+                               :artifact-ref nil
+                               :execution {:executed? false :tool-events 0 :command-events 0}
+                               :delivery {:status "pending"}
+                               :event-seq 0
+                               :events []}
+                        bell-type (assoc :bell-type bell-type)
+                        (some? ref) (assoc :ref (str ref)))]
              (reset! created-id job-id)
              (-> ledger
                  (assoc :next-seq next-seq)
@@ -1289,20 +1345,17 @@
                        :last_updated (.toString (Instant/now)))]
     (spit path (json/generate-string updated {:pretty true}))))
 
-(defn- handle-arse-ask
-  "POST /api/alpha/arse/ask — post a new ArSE question.
-   Body: {\"title\": \"...\", \"question\": \"...\", \"tags\": [...], \"author\": \"...\"}
-   Dual-writes to filesystem store + evidence landscape."
-  [request config]
-  (let [payload (parse-json-map (read-body request))]
-    (if (nil? payload)
-      (json-response 400 {:ok false :err "invalid-json"})
-      (let [title (or (:title payload) "")
-            question (or (:question payload) "")
-            tags (or (:tags payload) [])
-            author (or (:author payload) "agent")
-            entities (arse-load-entities)
-            thread-id (str "ask-" (quot (System/currentTimeMillis) 1000)
+(defn- arse-ask!
+  [config {:keys [title question tags author]}]
+  (let [title (or title "")
+        question (or question "")
+        tags (vec (or tags []))
+        author (or author "agent")
+        entities (arse-load-entities)]
+    (if (str/blank? title)
+      {:ok false :status 400 :err "title-required"
+       :message "Question title is required"}
+      (let [thread-id (str "ask-" (quot (System/currentTimeMillis) 1000)
                            "-" (count entities))
             entity {:entity/id thread-id
                     :entity/type "QAPair"
@@ -1318,28 +1371,79 @@
                     :source_problem ""
                     :unanswered true
                     :author author}]
-        (if (str/blank? title)
-          (json-response 400 {:ok false :err "title-required"
-                              :message "Question title is required"})
-          (do
-            ;; Write to filesystem store
-            (arse-save-entities (conj entities entity))
-            (arse-update-manifest (inc (count entities)))
-            ;; Write question evidence entry
+        (arse-save-entities (conj entities entity))
+        (arse-update-manifest (inc (count entities)))
+        (let [evidence-store (evidence-store-for-config config)
+              q-id (str "arse-q-" thread-id)
+              q-entry {:evidence-id q-id
+                       :subject {:ref/type :arse-thread :ref/id thread-id}
+                       :type :arse-qa
+                       :claim-type :question
+                       :author author
+                       :body {:title title :text question}
+                       :tags (mapv keyword tags)}
+              result (boundary/append! evidence-store q-entry)]
+          {:ok true
+           :status 201
+           :thread-id thread-id
+           :evidence-id q-id
+           :evidence-ok (:ok result)})))))
+
+(defn- arse-answer!
+  [config {:keys [thread-id answer author]}]
+  (let [thread-id (or (nonblank-str thread-id) "")
+        answer-text (or answer "")
+        author (or author "agent")]
+    (if (str/blank? thread-id)
+      {:ok false :status 400 :err "thread-id-required"
+       :message "thread-id is required"}
+      (let [entities (arse-load-entities)
+            target-idx (first (keep-indexed
+                               (fn [i e]
+                                 (when (= (or (:entity/id e) (:thread_id e))
+                                          thread-id)
+                                   i))
+                               entities))]
+        (if (nil? target-idx)
+          {:ok false :status 404 :err "not-found"
+           :message (str "Question not found: " thread-id)}
+          (let [target (nth entities target-idx)
+                updated (-> target
+                            (assoc :answer-body answer-text)
+                            (dissoc :unanswered))
+                entities' (assoc (vec entities) target-idx updated)]
+            (arse-save-entities entities')
             (let [evidence-store (evidence-store-for-config config)
                   q-id (str "arse-q-" thread-id)
-                  q-entry {:evidence-id q-id
+                  a-id (str "arse-a-" thread-id)
+                  a-entry {:evidence-id a-id
                            :subject {:ref/type :arse-thread :ref/id thread-id}
                            :type :arse-qa
-                           :claim-type :question
+                           :claim-type :conclusion
                            :author author
-                           :body {:title title :text question}
-                           :tags (mapv keyword tags)}
-                  result (boundary/append! evidence-store q-entry)]
-              (json-response 201 {:ok true
-                                  :thread-id thread-id
-                                  :evidence-id q-id
-                                  :evidence-ok (:ok result)}))))))))
+                           :body {:text answer-text}
+                           :tags (mapv keyword (or (:tags target) []))
+                           :in-reply-to q-id}
+                  result (boundary/append! evidence-store a-entry)]
+              {:ok true
+               :status 200
+               :thread-id thread-id
+               :evidence-id a-id
+               :evidence-ok (:ok result)})))))))
+
+(defn- handle-arse-ask
+  "POST /api/alpha/arse/ask — post a new ArSE question.
+   Body: {\"title\": \"...\", \"question\": \"...\", \"tags\": [...], \"author\": \"...\"}
+   Dual-writes to filesystem store + evidence landscape."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [result (arse-ask! config {:title (:title payload)
+                                      :question (:question payload)
+                                      :tags (:tags payload)
+                                      :author (:author payload)})]
+        (json-response (:status result) result)))))
 
 (defn- handle-arse-answer
   "POST /api/alpha/arse/answer — answer an existing ArSE question.
@@ -1349,46 +1453,11 @@
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"})
-      (let [thread-id (or (:thread-id payload) (get payload "thread-id") "")
-            answer-text (or (:answer payload) "")
-            author (or (:author payload) "agent")]
-        (if (str/blank? thread-id)
-          (json-response 400 {:ok false :err "thread-id-required"
-                              :message "thread-id is required"})
-          (let [entities (arse-load-entities)
-                target-idx (first (keep-indexed
-                                   (fn [i e]
-                                     (when (= (or (:entity/id e) (:thread_id e))
-                                              thread-id)
-                                       i))
-                                   entities))]
-            (if (nil? target-idx)
-              (json-response 404 {:ok false :err "not-found"
-                                  :message (str "Question not found: " thread-id)})
-              (let [target (nth entities target-idx)
-                    updated (-> target
-                                (assoc :answer-body answer-text)
-                                (dissoc :unanswered))
-                    entities' (assoc (vec entities) target-idx updated)]
-                ;; Write to filesystem store
-                (arse-save-entities entities')
-                ;; Write answer evidence entry
-                (let [evidence-store (evidence-store-for-config config)
-                      q-id (str "arse-q-" thread-id)
-                      a-id (str "arse-a-" thread-id)
-                      a-entry {:evidence-id a-id
-                               :subject {:ref/type :arse-thread :ref/id thread-id}
-                               :type :arse-qa
-                               :claim-type :conclusion
-                               :author author
-                               :body {:text answer-text}
-                               :tags (mapv keyword (or (:tags target) []))
-                               :in-reply-to q-id}
-                      result (boundary/append! evidence-store a-entry)]
-                  (json-response 200 {:ok true
-                                      :thread-id thread-id
-                                      :evidence-id a-id
-                                      :evidence-ok (:ok result)}))))))))))
+      (let [result (arse-answer! config {:thread-id (or (:thread-id payload)
+                                                        (get payload "thread-id"))
+                                         :answer (:answer payload)
+                                         :author (:author payload)})]
+        (json-response (:status result) result)))))
 
 (defn- handle-arse-unanswered
   "GET /api/alpha/arse/unanswered — list unanswered ArSE questions."
@@ -2225,8 +2294,10 @@
    on every turn — even when session history has messages from other surfaces.
    Also includes the agent's pattern backpack if any patterns are active."
   ([prompt surface caller]
-   (wrap-surface-header prompt surface caller nil))
+   (wrap-surface-header prompt surface caller nil nil))
   ([prompt surface caller agent-id]
+   (wrap-surface-header prompt surface caller agent-id nil))
+  ([prompt surface caller agent-id thread]
    (if (and surface (not (str/blank? (str surface))))
      (let [backpack (when agent-id
                       (some-> (get @reg/!registry (str agent-id))
@@ -2235,6 +2306,20 @@
             "Surface: " surface "\n"
             (when (and caller (not (str/blank? (str caller))))
               (str "Caller: " caller "\n"))
+            ;; bell-router: thread context so the recipient can thread the bell and
+            ;; reply IN-THREAD (no crossing). NEW request shows the id to reply-to.
+            (when (and (bell-router-enabled?) (:bell-id thread))
+              (if (:in-reply-to thread)
+                (str "Thread: bell `" (:bell-id thread) "` — REPLY to bell `"
+                     (:in-reply-to thread) "`\n")
+                (str "Thread: bell `" (:bell-id thread) "` — NEW request. To answer "
+                     "in-thread, bell/whistle " caller " with in-reply-to=`"
+                     (:bell-id thread) "`.\n")))
+            (when (and (typed-bells-enabled?) (:type thread))
+              (str "Type: " (name (:type thread))
+                   (when (:ref thread)
+                     (str " — help resolve ArSE `" (:ref thread) "`"))
+                   "\n"))
             (when (seq backpack)
               (str "Backpack: "
                    (str/join ", " (map (fn [{:keys [sigil pattern]}]
@@ -2287,10 +2372,12 @@
 
 (defn- wrap-agent-facing-surface
   "Apply authoritative surface header plus any live agent-facing projection."
-  [prompt surface caller agent-id]
-  (str (wrap-surface-header "" surface caller agent-id)
-       (or (surface-projection-block agent-id) "")
-       prompt))
+  ([prompt surface caller agent-id]
+   (wrap-agent-facing-surface prompt surface caller agent-id nil))
+  ([prompt surface caller agent-id thread]
+   (str (wrap-surface-header "" surface caller agent-id thread)
+        (or (surface-projection-block agent-id) "")
+        prompt)))
 
 (defn- parse-minibuffer-directive
   [raw]
@@ -2537,7 +2624,13 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
-      (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
+      (let [thread (when (= "bell" (some-> surface str str/trim))
+                     (let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])]
+                       {:bell-id job-id
+                        :in-reply-to (:bellback-of job)
+                        :type (:bell-type job)
+                        :ref (:ref job)}))
+            effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id thread)
             raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
             result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
@@ -2685,6 +2778,43 @@
     (catch Exception e
       (json-response 500 {:ok false :error (.getMessage e)}))))
 
+(defn- bell-type-payload
+  [payload]
+  (or (:type payload) (get payload "type")
+      (:bell-type payload) (get payload "bell-type")
+      (:bell_type payload) (get payload "bell_type")))
+
+(defn- bell-ref-payload
+  [payload]
+  (or (:ref payload) (get payload "ref")
+      (:bell-ref payload) (get payload "bell-ref")
+      (:bell_ref payload) (get payload "bell_ref")))
+
+(defn- maybe-typed-bell-arse-bridge!
+  [config {:keys [bell-type ref prompt caller]}]
+  (case bell-type
+    :query
+    (if ref
+      {:ok true :ref ref}
+      (let [prompt-str (str prompt)
+            result (arse-ask! config {:title (subs prompt-str 0 (min 96 (count prompt-str)))
+                                      :question prompt-str
+                                      :tags ["typed-bell"]
+                                      :author caller})]
+        (if (:ok result)
+          {:ok true :ref (:thread-id result) :arse result}
+          (assoc result :ok false))))
+
+    :answer
+    (let [result (arse-answer! config {:thread-id ref
+                                       :answer (str prompt)
+                                       :author caller})]
+      (if (:ok result)
+        {:ok true :ref ref :arse result}
+        (assoc result :ok false)))
+
+    {:ok true :ref ref}))
+
 (defn- handle-bell
   "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
    Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":1800000}
@@ -2705,6 +2835,15 @@
             requested-job-id (or (:job-id payload) (get payload "job-id")
                                  (:job_id payload) (get payload "job_id"))
             mission-id (or (:mission-id payload) (get payload "mission-id"))
+            ;; bell-router: a bell that answers another bell carries its id, so the
+            ;; conversation graph correlates the reply (not just auto-bellbacks).
+            in-reply-to (or (:in-reply-to payload) (get payload "in-reply-to")
+                            (:in_reply_to payload) (get payload "in_reply_to")
+                            (:reply-to payload) (get payload "reply-to"))
+            raw-bell-type (bell-type-payload payload)
+            typed? (typed-bells-enabled?)
+            bell-type (when typed? (normalize-bell-type raw-bell-type))
+            ref (when typed? (nonblank-str (bell-ref-payload payload)))
             timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
                                long)
             evidence-store (evidence-store-for-config config)]
@@ -2717,58 +2856,95 @@
           (json-response 400 {:ok false :err "missing-prompt"
                               :message "prompt is required"})
 
+          (and typed? (nil? bell-type))
+          (json-response 400 {:ok false :err "invalid-bell-type"
+                              :message (str "type must be one of "
+                                            (str/join ", " (sort (map name allowed-bell-types))))})
+
+          (and typed? (= :answer bell-type) (nil? ref))
+          (json-response 400 {:ok false :err "answer-ref-required"
+                              :message "type=answer requires ref"})
+
           :else
-          (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
-                                            :agent-id agent-id
-                                            :prompt prompt
-                                            :caller caller
-                                            :surface surface})
-                run-job (fn []
-                          (run-invoke-job! {:job-id job-id
-                                            :agent-id agent-id
-                                            :prompt prompt
-                                            :caller caller
-                                            :surface surface
-                                            :timeout-ms timeout-ms
-                                            :mission-id mission-id
-                                            :evidence-store evidence-store}))
-                deliver-result (fn [result]
-                                 ;; Bell delivery means caller can obtain terminal result via canonical job query.
-                                 (record-invoke-job-delivery-by-job-id!
-                                  job-id
-                                  {:surface "bell"
-                                   :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
-                                   :delivered? true
-                                   :note (if (:ok result) "bell-job-ready" "bell-job-error")}))]
-            (try
-              (if (turn-queue/drainer-v2-enabled?)
-                ;; Drainer v2: enqueue to the agent's dedicated drainer thread and
-                ;; return — never hold a shared invoke-executor lane for the turn.
-                (let [r (turn-queue/accept-async!
-                         {:to (str agent-id) :from caller :surface surface :prompt prompt
-                          :process-fn (fn [_entry]
-                                        (binding [turn-queue/*drained-by-outer* true]
-                                          (run-job)))
-                          :finalize-fn deliver-result})]
-                  (when (= :deduped (:status r))
-                    (finalize-invoke-job! job-id "deduped" "duplicate-msg-id" nil
-                                          {:ok true :deduped true} nil)))
-                ;; Legacy path: run on the shared invoke-executor pool.
-                (.submit invoke-executor
-                         ^Runnable
-                         (fn [] (deliver-result (run-job)))))
-              (json-response 202 {:ok true
-                                  :accepted true
-                                  :job-id job-id
-                                  :state "queued"
-                                  :mode (invoke-job-mode prompt)
-                                  :status-url (str "/api/alpha/invoke/jobs/" job-id)})
-              (catch Throwable t
-                (finalize-invoke-job! job-id "failed" "invoke-submit-failed" (.getMessage t) {:ok false} nil)
-                (json-response 503 {:ok false
-                                    :job-id job-id
-                                    :error "invoke-submit-failed"
-                                    :message (.getMessage t)})))))))))
+          (if-let [existing-job (when (and typed? (nonblank-str requested-job-id))
+                                  (get-in (ensure-invoke-jobs-ledger!)
+                                          [:jobs (nonblank-str requested-job-id)]))]
+            (json-response 202 {:ok true
+                                :accepted true
+                                :reused? true
+                                :job-id (:job-id existing-job)
+                                :state (:state existing-job)
+                                :bell-type (:bell-type existing-job)
+                                :ref (:ref existing-job)
+                                :status-url (str "/api/alpha/invoke/jobs/" (:job-id existing-job))})
+            (let [bridge (if typed?
+                           (maybe-typed-bell-arse-bridge!
+                            config {:bell-type bell-type
+                                    :ref ref
+                                    :prompt prompt
+                                    :caller caller})
+                           {:ok true})
+                  ref' (:ref bridge)]
+              (if-not (:ok bridge)
+                (json-response (or (:status bridge) 400)
+                               (select-keys bridge [:ok :err :message :thread-id :evidence-id]))
+                (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+                                                  :agent-id agent-id
+                                                  :prompt prompt
+                                                  :caller caller
+                                                  :surface surface
+                                                  :bellback-of (when (bell-router-enabled?) in-reply-to)
+                                                  :bell-type (when typed? bell-type)
+                                                  :ref (when typed? ref')})
+                      run-job (fn []
+                                (run-invoke-job! {:job-id job-id
+                                                  :agent-id agent-id
+                                                  :prompt prompt
+                                                  :caller caller
+                                                  :surface surface
+                                                  :timeout-ms timeout-ms
+                                                  :mission-id mission-id
+                                                  :evidence-store evidence-store}))
+                      deliver-result (fn [result]
+                                       ;; Bell delivery means caller can obtain terminal result via canonical job query.
+                                       (record-invoke-job-delivery-by-job-id!
+                                        job-id
+                                        {:surface "bell"
+                                         :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
+                                         :delivered? true
+                                         :note (if (:ok result) "bell-job-ready" "bell-job-error")}))]
+                  (try
+                    (if (turn-queue/drainer-v2-enabled?)
+                      ;; Drainer v2: enqueue to the agent's dedicated drainer thread and
+                      ;; return — never hold a shared invoke-executor lane for the turn.
+                      (let [r (turn-queue/accept-async!
+                               {:to (str agent-id) :from caller :surface surface :prompt prompt
+                                :process-fn (fn [_entry]
+                                              (binding [turn-queue/*drained-by-outer* true]
+                                                (run-job)))
+                                :finalize-fn deliver-result})]
+                        (when (= :deduped (:status r))
+                          (finalize-invoke-job! job-id "deduped" "duplicate-msg-id" nil
+                                                {:ok true :deduped true} nil)))
+                      ;; Legacy path: run on the shared invoke-executor pool.
+                      (.submit invoke-executor
+                               ^Runnable
+                               (fn [] (deliver-result (run-job)))))
+                    (json-response 202 (cond-> {:ok true
+                                                :accepted true
+                                                :job-id job-id
+                                                :state "queued"
+                                                :mode (invoke-job-mode prompt)
+                                                :status-url (str "/api/alpha/invoke/jobs/" job-id)}
+                                         typed? (assoc :bell-type bell-type
+                                                       :ref ref'
+                                                       :arse (:arse bridge))))
+                    (catch Throwable t
+                      (finalize-invoke-job! job-id "failed" "invoke-submit-failed" (.getMessage t) {:ok false} nil)
+                      (json-response 503 {:ok false
+                                          :job-id job-id
+                                          :error "invoke-submit-failed"
+                                          :message (.getMessage t)}))))))))))))
 
 (defn- handle-invoke-announce
   "POST /api/alpha/invoke/announce — record a canonical queued invoke before any
@@ -3237,6 +3413,17 @@
     (json-response 200 {:ok true
                         :count (count edges)
                         :edges edges})))
+
+(defn- handle-coordination-threads
+  "GET /api/alpha/coordination/threads?limit=N — the bell conversation graph
+   (E-crossed-bells): open bells, who-owes-whom (:by-agent), and A<->B crossings,
+   correlated by the explicit :bellback-of. The :crossings list is the actionable
+   signal — one side should whistle to reconcile (README-bells-and-whistles.md)."
+  [request]
+  (let [params (parse-query-params request)
+        limit (or (parse-int (get params "limit")) 200)
+        graph (bell-router/graph (recent-invoke-jobs limit))]
+    (json-response 200 (assoc graph :ok true))))
 
 (defn- handle-invoke-jobs
   "GET /api/alpha/invoke/jobs?limit=N — list recent invoke jobs."
@@ -4869,6 +5056,9 @@
 
       (and (= :get method) (= "/api/alpha/coordination/qa" uri))
       (handle-coordination-qa request)
+
+      (and (= :get method) (= "/api/alpha/coordination/threads" uri))
+      (handle-coordination-threads request)
 
       :else nil)))
 

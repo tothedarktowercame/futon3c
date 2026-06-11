@@ -67,7 +67,11 @@
      :delivery-surface (some-> (:surface delivery) str)
      :session-id (some-> (:session-id job) str)
      :ok? (= "succeeded" (str/lower-case state))
-     :bellback-of nil
+     ;; bell-router: carry the EXPLICIT correlation (the bell this job answers).
+     ;; edge-id == job-id, so this references the parent edge directly.
+     :bellback-of (some-> (:bellback-of job) str str/trim not-empty)
+     :type (:bell-type job)
+     :ref (some-> (:ref job) str str/trim not-empty)
      :raw job}))
 
 (defn- mesh-event-id [event]
@@ -121,16 +125,19 @@
                evidence-edges)))
 
 (defn derive-bellbacks
-  "Best-effort: later reverse-direction edges are marked as bellbacks. Misrouted
-   bellbacks without an explicit parent cannot be inferred from current data."
+  "Explicit `:bellback-of` (set by the bell-router) WINS; for edges without it, fall
+   back to the best-effort heuristic (a later reverse-direction edge is a bellback).
+   Misrouted bellbacks without an explicit parent still can't be inferred reliably —
+   the bell-router is the fix that makes them explicit."
   [edges]
   (let [ordered (sort-by #(or (:accepted-at %) "") edges)
         awaiting (atom {})]
     (mapv (fn [edge]
-            (let [back-key [(:to edge) (:from edge)]
-                  prior (first (get @awaiting back-key))
-                  edge* (if prior (assoc edge :bellback-of prior) edge)]
-              (when prior
+            (let [explicit? (some? (:bellback-of edge))
+                  back-key [(:to edge) (:from edge)]
+                  prior (when-not explicit? (first (get @awaiting back-key)))
+                  edge* (if (and (not explicit?) prior) (assoc edge :bellback-of prior) edge)]
+              (when (and (not explicit?) prior)
                 (swap! awaiting update back-key #(vec (rest %))))
               (swap! awaiting update [(:from edge) (:to edge)] (fnil conj []) (:edge-id edge))
               edge*))
