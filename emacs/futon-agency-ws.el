@@ -29,6 +29,8 @@
 (declare-function websocket-close "websocket" (websocket))
 (declare-function websocket-frame-text "websocket" (frame))
 (declare-function websocket-frame-p "websocket" (frame))
+(declare-function posframe-show "posframe" (buffer-or-name &rest args))
+(defvar futon-agent-cursor--marker)
 
 (defgroup futon-agency-ws nil
   "Shared WebSocket connector for the futon3c Agency."
@@ -61,6 +63,21 @@ The key \"*\" receives every frame.")
 (defvar futon-agency-ws--reconnect-delay 1)
 (defvar futon-agency-ws--last-frame nil)
 (defvar futon-agency-ws--frame-count 0)
+
+(defcustom futon-agency-completion-watched-agents '("fable-2" "claude-3")
+  "Agent ids whose invoking→idle transitions should raise a completion bubble."
+  :type '(repeat string)
+  :group 'futon-agency-ws)
+
+(defcustom futon-agency-completion-posframe-timeout 5
+  "Seconds before an agent completion posframe disappears."
+  :type 'number
+  :group 'futon-agency-ws)
+
+(defvar futon-agency-completion--previous-status nil
+  "Previous agents_status snapshot as an alist of (agent-id . status).")
+
+(defvar futon-agency-completion--bubble-buffer " *futon-agent-completion* ")
 
 (defun futon-agency-ws--require-websocket ()
   (unless (require 'websocket nil t)
@@ -171,6 +188,68 @@ A handler error never kills the socket loop."
            futon-agency-ws--frame-count
            futon-agency-ws-observer-id))
 
+;;;; Completion bubbles ------------------------------------------------------
+
+(defun futon-agency-completion--status-map (frame)
+  "Return FRAME's agents as an alist of (agent-id . status)."
+  (mapcar (lambda (entry)
+            (let ((agent (if (symbolp (car entry))
+                             (symbol-name (car entry))
+                           (format "%s" (car entry))))
+                  (info (cdr entry)))
+              (cons agent (alist-get 'status info))))
+          (or (alist-get 'agents frame) '())))
+
+(defun futon-agency-completion--done-agents (previous current &optional watched)
+  "Return watched agents moving from invoking in PREVIOUS to idle in CURRENT."
+  (let ((watched (or watched futon-agency-completion-watched-agents)))
+    (cl-loop for agent in watched
+             when (and (equal (cdr (assoc agent previous)) "invoking")
+                       (equal (cdr (assoc agent current)) "idle"))
+             collect agent)))
+
+(defun futon-agency-completion--cursor-marker ()
+  "Return the placed agent cursor marker, or nil."
+  (and (boundp 'futon-agent-cursor--marker)
+       (markerp futon-agent-cursor--marker)
+       (marker-buffer futon-agent-cursor--marker)
+       futon-agent-cursor--marker))
+
+(defun futon-agency-completion--show (agent)
+  "Render AGENT's completion bubble without moving point or stealing focus."
+  (let ((text (format "%s done — what next?" agent))
+        (marker (futon-agency-completion--cursor-marker)))
+    (if (and marker (require 'posframe nil t))
+        (with-current-buffer (marker-buffer marker)
+          (posframe-show futon-agency-completion--bubble-buffer
+                         :string text
+                         :position marker
+                         :timeout futon-agency-completion-posframe-timeout
+                         :accept-focus nil))
+      (message "%s" text))))
+
+(defun futon-agency-completion--handle-agents-status (frame)
+  "Detect watched invoking→idle transitions in an agents_status FRAME."
+  (let* ((current (futon-agency-completion--status-map frame))
+         (done (futon-agency-completion--done-agents
+                futon-agency-completion--previous-status current)))
+    (setq futon-agency-completion--previous-status current)
+    (dolist (agent done)
+      (futon-agency-completion--show agent))))
+
+(defun futon-agency-completion-bubbles-enable ()
+  "Subscribe completion bubbles to agents_status frames and connect the socket."
+  (interactive)
+  (futon-agency-ws-subscribe "agents_status" #'futon-agency-completion--handle-agents-status)
+  (unless (and futon-agency-ws--ws (websocket-openp futon-agency-ws--ws))
+    (futon-agency-ws-connect)))
+
+(defun futon-agency-completion-bubbles-disable ()
+  "Unsubscribe completion bubbles from agents_status frames."
+  (interactive)
+  (futon-agency-ws-unsubscribe "agents_status" #'futon-agency-completion--handle-agents-status)
+  (setq futon-agency-completion--previous-status nil))
+
 ;;;; The first subscriber: the agents HUD ------------------------------------
 
 (defcustom futon-agency-hud-buffer-name "*agents-ws*"
@@ -229,6 +308,7 @@ Single writer; never selects the window or steals point."
   "Subscribe the HUD renderer and connect the shared socket."
   (interactive)
   (futon-agency-ws-subscribe "agents_status" #'futon-agency-hud--render)
+  (futon-agency-ws-subscribe "agents_status" #'futon-agency-completion--handle-agents-status)
   (unless (and futon-agency-ws--ws (websocket-openp futon-agency-ws--ws))
     (futon-agency-ws-connect)))
 
