@@ -41,6 +41,20 @@ _(Auto-log note, as Turn 5: this line is the field's top [0]; the actual `v` was
 
 **PUR.** Pattern consent-gate (operator-directed: cycle 6 GO) plus earned-closure (real content hole closed, field moved). Codex pool busy, so flew a pilot-doable real advance (4.3 spec authoring, owner lane) instead of the 4.2 build (deferred to codex). Applied the determined-fork lesson: warrant findable (doc next safe work product + standing contract), so proto-PSR and fly, no operator question. Mode supervised, operator-directed. Mode: supervised-proposal.
 
+**Amendment (cycle 7, 2026-06-11) — pair #2's realised was TRANSIENT, not durable.**
+Cycle 7 read the SAME 4-hole state at a settled point: G=−4.3626, ≈ the 5-hole and
+3-hole settled values (all ~−4.36). So the realised −4.0861 logged above was a SPIKE
+caught at the first post-edit scan before the G settled back to −4.36 — the 0.277
+error is a scan-timing artifact, NOT durable field movement. The "moves the target G
+substantially" claim is **RETRACTED**. Per ground control, frames are not retro-edited;
+this pair predates the `:realised-read :settled|:transient` tag and ages out of
+verdict-eligibility once the tag is required. **Deeper cause** (fable-1 source-check of
+`compute-efe`): hole-count only gates a slice predicate — the per-target G is composed
+from the *same* constant predict-effects the model predicts with, so settled G is
+hole-insensitive **by construction** (prior == value, one level down). The calibration
+was measuring the model against itself; the fix is target-sensitive predict-effects (a
+genuine operator choice — it re-ranks the whole field).
+
 ## Turn 5 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.46).
