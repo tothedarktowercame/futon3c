@@ -31,9 +31,14 @@ case "${args[0]}" in
     # inbox carries what was actually said (invert_layout.py parses the keymap
     # out of the voice script itself — no drift).
     text="${args[*]:1}"
+    # Whisper hallucinates filler on near-silence ("you", "thank you", ...);
+    # drop bare fillers so the inbox carries speech, not room tone.
+    decoded=$(printf '%s' "$text" | python3 /home/joe/code/futon3c/scripts/voice-route/invert_layout.py)
+    case "$(printf '%s' "$decoded" | tr -d '[:space:].!,' | tr '[:upper:]' '[:lower:]')" in
+      you|thankyou|thanks|thanksforwatching|"") exit 0 ;;
+    esac
     printf '{"at":"%s","kind":"utterance","text":%s}\n' \
-      "$ts" "$(printf '%s' "$text" \
-        | python3 /home/joe/code/futon3c/scripts/voice-route/invert_layout.py \
+      "$ts" "$(printf '%s' "$decoded" \
         | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
       >> "$INBOX"
     ;;
