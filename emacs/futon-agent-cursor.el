@@ -60,8 +60,14 @@
                        (if caption (concat ": " caption) ""))
                'face 'futon-agent-cursor-badge-face)))
 
-(defun futon-agent-cursor-goto (buffer pos &optional caption)
-  "Place the agent cursor in BUFFER at POS, showing CAPTION on the badge."
+(defun futon-agent-cursor-goto (buffer pos &optional caption take-operator)
+  "Place the agent cursor in BUFFER at POS, showing CAPTION on the badge.
+
+With TAKE-OPERATOR non-nil, also move the window's point so the view
+genuinely travels (A4 nuance, spoken 2026-06-11: redisplay anchors a
+window to its point, so a view cannot move while the point stays behind —
+and moving the operator ON THEIR EXPLICIT REQUEST is service, not
+impersonation; the forbidden thing is doing it unasked)."
   (with-current-buffer buffer
     (futon-agent-cursor-dismiss)
     (setq futon-agent-cursor--marker (copy-marker pos t))
@@ -69,14 +75,18 @@
     (overlay-put futon-agent-cursor--overlay 'futon-agent-cursor t)
     (overlay-put futon-agent-cursor--overlay 'before-string
                  (futon-agent-cursor--badge caption))
-    ;; Make sure the body is on screen in some window showing BUFFER,
-    ;; without selecting it or moving the operator's point.
-    (when-let ((win (get-buffer-window buffer)))
-      (unless (pos-visible-in-window-p pos win)
-        (set-window-start win (max (point-min)
-                                   (save-excursion (goto-char pos)
-                                                   (forward-line -8)
-                                                   (point))))))
+    ;; Search every frame for a window showing BUFFER (the daemon's notion
+    ;; of "selected frame" is not the operator's).
+    (when-let ((win (get-buffer-window buffer t)))
+      (if take-operator
+          (progn
+            (set-window-point win pos)
+            (with-selected-window win (recenter 8)))
+        (unless (pos-visible-in-window-p pos win)
+          (set-window-start win (max (point-min)
+                                     (save-excursion (goto-char pos)
+                                                     (forward-line -8)
+                                                     (point)))))))
     pos))
 
 (defun futon-agent-cursor--tick ()
