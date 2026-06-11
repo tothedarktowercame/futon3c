@@ -99,6 +99,48 @@ mission_scope_ingest.clj` + `mission-mode.el` (the scope render),
    no agent WS identity. The full agent-inhabited drive waits on W5
    (REPL/agency shared process).
 
+## 4. ARGUE (opened by voice, 2026-06-11 — "Let's start the argue phase.")
+
+### A1 — the cursor narrates; it does not type
+
+IF the spoken loop needs the operator to see work happening in the editor,
+HOWEVER a cursor that can type is a hand that can act without being watched,
+THEN the companion cursor only ever points, sweeps, and captions, while the
+agent's ordinary tools (file writes, the editor server) do the changing,
+BECAUSE the proof that the work happened should come from the same channel
+the work actually used — and a pointer that cannot edit needs no consent
+machinery to be trusted.
+
+### A2 — one voice channel, owned at the seam where text is born
+
+IF speech should reach the agent no matter where the operator's cursor sits,
+HOWEVER keyboard focus is the operating system's router and it follows the
+operator's attention, not their intent,
+THEN we intercept at the single point where the voice system turns sound
+into text, and deliver that text to an inbox the agent watches,
+BECAUSE the place where something is born is the only place it can be
+redirected without chasing it. (Decided AND built today; the toggle file
+means the old behavior is one `rm` away.)
+
+### A3 — the driver stays outside until the house has two doors
+
+IF the full vision has the agent inhabiting the editor connection directly,
+HOWEVER a live working session can only be lived in once (the fable-1
+lesson), and the warm-process work has not yet given one session two doors,
+THEN version one drives the editor from outside, through the same door any
+shell command uses,
+BECAUSE a demo that works today through the plain door teaches us more than
+an architecture that waits for the elegant one.
+
+### 4.1 Plain-language argument (the version anyone can read)
+
+You speak. The words go to the helper instead of wherever your cursor
+happens to be. The helper does the work with its own hands, and a little
+pointer shows you where it is working. When it finishes, it tells you so,
+right there on the screen. The pointer can show but never touch; your voice
+can command but never be hijacked; and if you want your old voice-typing
+back, you delete one file.
+
 ## Scope
 
 ### Scope in
