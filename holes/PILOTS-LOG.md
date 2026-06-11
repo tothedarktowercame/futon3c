@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 16 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 16: minted aif/two-layer-calibration -- the arc key architectural finding (L1 dynamics-consistency vs L2 witnessed-outcome value).
+
+**PRINT / FOUND.** PROPOSAL-mode substrate. L1 cheap never-value-evidence; L2 scarce witnessed gated; prior==value escapes only via external witnessed referent. Names the structure the FutonZero calibration produced.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Arc-2 cycle 16 (metronome) + earned-closure. Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 15 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
