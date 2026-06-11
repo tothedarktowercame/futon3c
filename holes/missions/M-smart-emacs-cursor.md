@@ -285,6 +285,35 @@ Agency restart; this binding paragraph is typed. The full re-performance
   session itself was the adversarial trace, so before-code bent to
   before-further-code without losing its teeth.
 
+## 6. INSTANTIATE (opened by voice, 2026-06-11) — handoffs, on the record
+
+Discipline (Joe, spoken): codex handoffs are recorded HERE, in the mission,
+so the dispatch, the bell-back, and the commits form one traceable chain.
+Each handoff instructs the worker to put a Mission: M-smart-emacs-cursor
+trailer in its commit messages — the commit-to-mission edge the transducer
+excursion built today, adopted at the first opportunity.
+
+### H1 — handoff: completion-bubble subscriber (to codex-1)
+
+- Spec: futon-agency-ws.el learns agent state transitions (invoking to
+  idle) from agents_status frames and fires the posframe bubble at the
+  agent cursor when a watched agent completes — the bubble stops being
+  hand-fired (VERIFY row 6 follow-on).
+- Acceptance: transition detection hermetic-tested; bubble never steals
+  focus; watched-agent list customizable.
+- Job: invoke-1781178866343-683-497c41fe (dispatched 2026-06-11, fable-2 bell)
+- Bell-back: pending
+
+### H2 — handoff: watcher-integrated scope lane (to codex-2)
+
+- Spec: the futon3c watcher triggers mission-scope reingest on mission-doc
+  change, debounced, flag-gated dark — the scope panel stops needing manual
+  reingest (E-scope-audit W12; the staleness Joe caught twice tonight).
+- Acceptance: flag OFF byte-for-byte; ON = doc save leads to fresh scopes
+  without operator action; hermetic tests.
+- Job: invoke-1781178866664-684-b47bd48f (dispatched 2026-06-11, fable-2 bell)
+- Bell-back: pending
+
 ## Scope
 
 ### Scope in
