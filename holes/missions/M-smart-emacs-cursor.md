@@ -179,6 +179,19 @@ HOWEVER every earlier edit in this mission arrived by file-write and reload — 
 THEN this argument is its own witness: it entered the buffer character by character at the ◆ cursor you just watched, while your cursor stayed yours,
 BECAUSE the best argument for a typing body is the sight of one.
 
+### A7 — the form of the first demo (argued by voice, typed by the body)
+
+IF the demo must prove the whole loop and not a montage of parts,
+THEN it is one unbroken spoken scene, six beats, no hands on the keyboard:
+(1) the operator speaks a mission request; (2) the words reach the agent
+through the inbox, off-focus; (3) the agent authors the mission file,
+detector-readable from birth; (4) the ◆ cursor brings it up in
+mission-mode, scopes live; (5) the cursor types the HEAD into the buffer,
+visibly, as itself; (6) the bubble asks — done, what next — and the next
+spoken sentence begins the ARGUE round.
+BECAUSE each beat is the witness of the one before it: a montage can be
+faked, a scene cannot.
+
 ### 4.1 Plain-language argument (the version anyone can read)
 
 You speak. The words go to the helper instead of wherever your cursor
@@ -188,6 +201,31 @@ under whichever cursor wrote it, so you never have to wonder who did what.
 Your cursor is yours alone: never moved, never borrowed. When the helper
 finishes, it tells you so, right there on the screen. And if you want your
 old voice-typing back, you delete one file.
+
+## 5. VERIFY — does the build carry the demo (opened by voice, 2026-06-11)
+
+Feature checklist, evidence-first; the demo is GO when every demo-blocking
+row is BUILT.
+
+1. voice reaches the agent off-focus — BUILT (shim 60ae5b6; this very
+   section was commanded by voice).
+2. agent authors and ingests missions — BUILT (this file; the scope count
+   in the header line is the receipt).
+3. visible agent cursor with identity badge — BUILT (a865865).
+4. typing body — BUILT (A6 is its own witness).
+5. navigation, including take-operator — BUILT (18d7dfe; the operator was
+   carried to ARGUE by it).
+6. completion bubble — BUILT, hand-fired; auto-fire from completion events
+   via futon-agency-ws is a follow-on, not demo-blocking.
+7. one-command demo launch — MISSING and DEMO-BLOCKING: a cold Emacs must
+   reach demo-ready state from a single entry point (load the three el
+   files, register the observer, connect, enable).
+8. revision primitive — the body can type but not yet delete. MISSING, not
+   demo-blocking: the six beats only add text.
+9. smart-cursor.el migration onto the shared connector — deferred to v2.
+
+Exit: build row 7, rehearse the scene once end to end, then the demo is
+real.
 
 ## Scope
 
