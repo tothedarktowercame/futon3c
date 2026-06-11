@@ -407,9 +407,22 @@
    chosen target (or predicted if the target was resolved/absent). Build the
    turn-record, frame it (envelope + γ), persist, log the Pilot's-Log turn (DOCUMENT
    stage — pass the semantic account via opts `:document {:did :found :pur}`), and
-   return the measurement."
+   return the measurement.
+
+   REALISED-ON-MERGE (closes :sorry/wm-realised-on-merge-binding): pass
+   `:executed? true :evidence-ref <witness>` when the cycle's action actually
+   EXECUTED (substantive mode / operator merge) — the realised-G then comes
+   from a field the action genuinely moved, the γ pair is tagged
+   :independent? true, and the calibration verdict may count it. Independence
+   is a CLAIM that needs a WITNESS: :executed? without :evidence-ref (commit
+   sha, CH2 event, mission-status change …) throws — anti-laundering, same
+   rule as CH2's payload. Proposal-mode closes (the default) stay untagged
+   and can never move the verdict."
   ([run-id] (close-live-cycle! run-id {}))
-  ([run-id {:keys [document]}]
+  ([run-id {:keys [document executed? evidence-ref]}]
+  (when (and executed? (not evidence-ref))
+    (throw (ex-info ":executed? true requires :evidence-ref — independence is a claim that needs a witness (no payload, no discharge)"
+                    {:run-id run-id})))
   (if-let [b (or (get @!live-cycle-runs run-id)
                  (recover-begin-state run-id))]
     (let [post-j     (live-judgement)
@@ -422,13 +435,26 @@
           pre-top    (get-in b [:pre :dT-snapshot 0 :action :target])
           post-top   (get-in post-dT [0 :action :target])
           tr ((requiring-resolve 'futon3c.aif.repl-trace/turn-record)
-              {:step 0 :p "pre-tick"
-               :dT-snapshot (get-in b [:pre :dT-snapshot])
-               :v v :v-attribution (:v-attribution b)
-               :predicted-discharge predicted
-               :cg-id (:cg-id b) :artefact (:artefact b)
-               :delta-grad? false
-               :p' "post-tick" :realised-discharge realised})
+              (cond-> {:step 0 :p "pre-tick"
+                       :dT-snapshot (get-in b [:pre :dT-snapshot])
+                       :v v :v-attribution (:v-attribution b)
+                       :predicted-discharge predicted
+                       :cg-id (:cg-id b) :artefact (:artefact b)
+                       :delta-grad? false
+                       :p' "post-tick" :realised-discharge realised}
+                executed? (assoc :independent? true
+                                 :evidence-ref evidence-ref)))
+          ;; the merge itself is an out-of-band gradient event — record it
+          ;; in the discipline channel (best-effort; never breaks a close)
+          _ (when executed?
+              (try ((requiring-resolve 'futon3c.aif.discipline-events/append-event!)
+                    {:discipline/event :operator-merge
+                     :run-id run-id
+                     :at (str (java.time.Instant/now))
+                     :action v
+                     :predicted predicted
+                     :note (str "executed cycle; evidence: " evidence-ref)})
+                   (catch Throwable _ nil)))
           ;; LOOP :autonomy — auto-mine learning from the post-tick judgement
           ;; (futon3c.aif.loop-learning): patterns from REPL-cycle structure +
           ;; sorries from WM gap-signals minus registry-tracked. :auto-mined.
@@ -456,9 +482,10 @@
                                  :top-shift? (not= pre-top post-top)
                                  :pre-top pre-top :post-top post-top}
                    :document document})]
-      {:ok true :frame-path path :run-id run-id
-       :predicted predicted :realised realised
-       :prediction-error (Math/abs (double (- realised predicted)))
-       :top-shift? (not= pre-top post-top) :pre-top pre-top :post-top post-top
-       :logged-turn (:turn logged)})
+      (cond-> {:ok true :frame-path path :run-id run-id
+               :predicted predicted :realised realised
+               :prediction-error (Math/abs (double (- realised predicted)))
+               :top-shift? (not= pre-top post-top) :pre-top pre-top :post-top post-top
+               :logged-turn (:turn logged)}
+        executed? (assoc :independent? true :evidence-ref evidence-ref)))
     {:ok false :error (str "unknown run-id " run-id)})))
