@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 19 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 19: minted futon-theory/honest-map-over-flattering-counter -- truth must move the counter both ways.
+
+**PRINT / FOUND.** PROPOSAL-mode substrate (last arc-2 discipline pattern; 7 total). Canonical = cycle-5 make-visible + cycle-2 no-teleport.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Arc-2 cycle 19 (Joe manual kick) + earned-closure. Next: cycle 20 STOCK-TAKE-002. Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 18 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
