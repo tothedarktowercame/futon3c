@@ -299,17 +299,38 @@
    classification — the pilot faced operator-only actions with no executor
    and had to hold by hand. Pass :guardrails? false for a raw field read."
   ([] (begin-live-cycle! {}))
-  ([{:keys [agent v-attribution emit-bell? tick? mode guardrails? guardrails-ctx needs-you-path needs-you-top-k]
+  ([{:keys [agent v-attribution emit-bell? tick? mode guardrails? guardrails-ctx needs-you-path needs-you-top-k
+            target]
      :or {agent "claude-2" v-attribution :pilot-autonomous emit-bell? false
           tick? true mode :supervised-proposal guardrails? true}}]
    (let [run-id (str "live-" (java.util.UUID/randomUUID))
          j      (live-judgement)
          dT     (judgement->dT j)
-         guarded (when guardrails?
+         ;; CHOSEN-V (cycle-5 apparatus, 2026-06-11): :target selects a
+         ;; SPECIFIC ranked entry instead of the guarded top. Guardrails are
+         ;; STILL CONSULTED and the classification recorded — but an
+         ;; operator-directed choice proceeds even when :needs-operator,
+         ;; because the operator's direction IS the consent the gate exists
+         ;; to obtain (consent satisfied upstream, not bypassed). The chosen
+         ;; target must exist in the live differential — predicted-G must be
+         ;; the field's own number, never an invented one.
+         chosen (when target
+                  (first (filter #(= target (get-in % [:action :target])) dT)))
+         _ (when (and target (nil? chosen))
+             (throw (ex-info "chosen :target not in the live differential — predicted-G must come from the field"
+                             {:target target :n-ranked (count dT)})))
+         chosen (when chosen
+                  (let [ctx (or guardrails-ctx {})]
+                    (assoc chosen
+                           :guardrails/classification (guardrails/classify-action (:action chosen) ctx)
+                           :guardrails/rule (guardrails/guardrail-rule (:action chosen) ctx))))
+         v-attribution (if target :operator-directed v-attribution)
+         guarded (when (and guardrails? (not target))
                    (guarded-selection dT (or guardrails-ctx {})))
-         top    (if guardrails?
-                  (:autonomous guarded)
-                  (first dT))]
+         top    (cond
+                  target      chosen
+                  guardrails? (:autonomous guarded)
+                  :else       (first dT))]
      (if (nil? top)
        (if guardrails?
          (let [items (mapv #(needs-you/action->needs-you-item % run-id)
@@ -361,7 +382,10 @@
          (persist-begin-state! run-id begin)
          (cond-> result
            guardrails? (assoc :needs-you-emitted (:emitted-count emitted)
-                              :needs-you-path (:path emitted))))))))
+                              :needs-you-path (:path emitted))
+           target (assoc :guardrails/classification (:guardrails/classification top)
+                         :guardrails/rule (:guardrails/rule top)
+                         :v-attribution v-attribution)))))))
 
 (def ^:private pilots-log-path
   (str (System/getProperty "user.home") "/code/futon3c/holes/PILOTS-LOG.md"))

@@ -99,6 +99,31 @@
       (finally
         (delete-tree! (.getParent (io/file path)))))))
 
+(deftest chosen-target-selects-from-live-differential-test
+  ;; cycle-5 apparatus: :target picks a specific ranked entry; guardrails are
+  ;; consulted + recorded but an operator-directed choice proceeds; a target
+  ;; absent from the field THROWS (predicted-G must come from the field).
+  (with-redefs [futon3c.peripheral.war-machine-pilot/live-judgement
+                (fn []
+                  (judgement [(ranked 1 :address-sorry "sorry/foo" -1.0)
+                              (ranked 2 :advance-mission "M-zeta" -4.0)]))
+                clojure.core/requiring-resolve scheduler-resolve]
+    (let [result (with-tmp-runs-dir
+                   (pilot/begin-live-cycle!
+                    {:tick? false :target "M-zeta"
+                     :guardrails-ctx {:mission-status-fn
+                                      (fn [_] {:open? true :open-hole-count 0})}}))]
+      (is (= true (:ok result)))
+      (is (= {:type :advance-mission :target "M-zeta"} (:v result)))
+      (is (= -4.0 (:predicted-discharge result)) "predicted = the FIELD's G for the chosen entry")
+      (is (= :operator-directed (:v-attribution result)))
+      (is (= :needs-operator (:guardrails/classification result))
+          "classification recorded honestly even though operator direction proceeds")
+      (is (= :open-mission-no-holes (:guardrails/rule result))))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"not in the live differential"
+                          (with-tmp-runs-dir
+                            (pilot/begin-live-cycle! {:tick? false :target "M-not-ranked"}))))))
+
 (deftest guardrails-mode-soft-stops-when-no-autonomous-action-test
   (let [path (temp-file)]
     (try
