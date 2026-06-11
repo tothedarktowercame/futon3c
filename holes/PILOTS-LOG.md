@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 21 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** M-first-flights DERIVE (flight-half of exit-1): authored the pilot requirements R1-R6 + Capability Preservation Matrix (aac5b23) and -- per Joe steer -- the PHENOMENOLOGY (3.1, the flight as flown, first-person organ-by-organ attend/discard/wish; 0f9b3ff). Mission advanced MAP->DERIVE. fable-1 EDN spec distils from this.
+
+**PRINT / FOUND.** PROPOSAL-mode, pair EXCLUDED -- a LIVE SELF-DEMONSTRATION: this flight on M-first-flights hit the exact stale-begin confound the mission documents (R3/3.1). I wrote substantial content after the begin (predicted -4.1608), so the field drifted (M-first-flights now ohc 6/capped, G -4.20); the begin is stale, the pair confounded. Per measurement-window-hygiene (cycle 15, my mint) the honest close is excluded. The instrument flew on the mission about itself and exhibited the very thinness the mission fixes.  _[predicted G=-4.16, realised G=-4.20, top-shift ->M-first-flights]_
+
+**PUR.** Operator-directed (Joe new charter names claude-3 the flight owner) + earned-closure (the DERIVE artifact is genuine + witnessed by two commits). The recursion is the point: a flight record carrying its own confound-verdict-with-ground -- the schema this mission designs -- would have recorded this exclusion AS DATA, not as pilot prose. That is exactly R1/R3. Mode supervised, operator-directed, proposal (measurement confounded by stale begin). Mode: supervised-proposal.
+
 ## Turn 20 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
