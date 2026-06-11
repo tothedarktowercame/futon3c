@@ -17,6 +17,19 @@ automatically.
 
 ---
 
+## Turn 10 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+_(Auto-log note, as Turns 5-9: field's top [0]; actual `v` was **operator-directed**
+`advance-mission M-daily-scan` (predicted G=−4.1233, ohc 4). **This turn's DOCUMENT is the
+ten-cycle stock-take — full flight-side review in `holes/PILOT-STOCK-TAKE-001.md`.**)_
+
+**EVAL / DID.** Cycle 10 Phase B: marked M-daily-scan item 366 done (code-search probe-type; codex-1 3b97d26 charter-fit reviewed + code-gated; offline tests 3/8/0). ohc 4->3. futon7 88b3cb1.
+
+**PRINT / FOUND.** Second clean L1 DYNAMICS pair: predicted -4.1233 (ohc 4), realised -4.0847 (SETTLED ohc 3 = the continuity point), error 0.0386 -- consistent with cycle 9 0.0394, confirming a roughly LINEAR per-hole increment ~0.039 across two transitions. STOCK-TAKE of the ten-cycle arc (flight side) written to holes/PILOT-STOCK-TAKE-001.md. Headline: 4 L1 near-zero/null + 2 clean dynamics pairs; cycles 4 and 6 excluded (fallback + transient); both models NEARLY TIED over 3 post-switch pairs (scaled 0.026 vs constant 0.027, winning on opposite cases -- L1 is dynamics not value-discriminating); discipline census 8 (6 merges, 1 teleport-refused, 1 decline). Arc taught: the loop surfaced its own value function was circular (prior==value), fixed it, caught the fix relocating the crime; two-layer calibration named (L1 dynamics live, L2 value gated at pudding-G1).  _[predicted G=-4.12, realised G=-4.08]_
+
+**PUR.** Consent-gate (operator-directed cycle 10) + earned-closure (codex build landed + verified, real hole closed, field moved by the increment). Second build-dispatch-lane cycle. HONESTY: the stock-take caught my own 2-pair overclaim (scaled 2x better); the 3rd pair evened it to tied; corrected in the doc -- verify-before-assert on my own summary. The ten-cycle arc closes here; next layer = L2 pudding-G1 arrow-witness (registry sorry #2). Joe convenes the stock-take with fable-1 apparatus side. Mode supervised, operator-directed. Mode: supervised-proposal.
+
 ## Turn 9 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
