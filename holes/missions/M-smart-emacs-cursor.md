@@ -224,6 +224,20 @@ row is BUILT.
    demo-blocking: the six beats only add text.
 9. smart-cursor.el migration onto the shared connector — deferred to v2.
 
+Row 7 — BUILT: scripts/demo-ready.sh, first run all green — observer
+registered, ws open and ready, posframe + mission-mode + agent-cursor
+loaded, voice route ON, six agents on the roster. The body cannot yet
+strike the MISSING above (see row 8); let this line stand as the
+correction.
+
+Method ruling (Joe, spoken): this VERIFY closes by REASON over live
+evidence, not by a core.logic model — the substrate is Emacs, the demo
+runs in the world, and every row above carries its own witness. The
+logic-model discipline stays for designs whose adversarial traces cannot
+be lived; this one was.
+
+VERIFY: GO — rehearse the scene.
+
 Exit: build row 7, rehearse the scene once end to end, then the demo is
 real.
 
