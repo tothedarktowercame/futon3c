@@ -50,6 +50,13 @@ export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-true}"
 # shutdown+restart brings the same agents back registered — and warm, since
 # restore rebuilds invoke-fns via the kangaroo-gated factory. Activated
 # 2026-06-10. Roster path override: FUTON3C_AGENT_ROSTER_FILE.
+# Typed bells (M-typed-bells): a bell may declare an IAT illocutionary type
+# (type=query/answer/...) + an optional ref; query/answer populate ArSE at send-time.
+# Default OFF preserves the legacy bell path byte-for-byte; turning ON activates the
+# live ArSE-population monitoring. Reviewed (author≠reviewer) on commit b4ed15f;
+# logic model TB-1..7 PASS. Activated 2026-06-11 for live ArSE-usage monitoring. Set
+# "false" to revert. Watch-item once live: holes/tickets/T-typed-bell-arse-write-async.md.
+export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
 export FUTON3C_AGENT_RESTORE="${FUTON3C_AGENT_RESTORE:-true}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"

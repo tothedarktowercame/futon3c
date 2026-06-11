@@ -1,7 +1,13 @@
 # M-typed-bells — type the coordination channel; make ArSE populate by construction
 
 Date: 2026-06-11
-Status: **INSTANTIATE complete; flag-gated OFF by default** (2026-06-11). Logic model
+Status: **COMPLETE through DOCUMENT; flag-gated OFF by default** (2026-06-11). Full lifecycle
+IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE→review→DOCUMENT. Codex authored (`b4ed15f`),
+Claude owner reviewed independently (author≠reviewer) — diff read against TB-1…7/D1–D6, tests +
+clj-kondo re-run; PASS. Watch-item carried into DOCUMENT as
+`holes/tickets/T-typed-bell-arse-write-async.md`. Open threads are activations, not unfinished
+work: (1) live C-adopt demo once `FUTON3C_TYPED_BELLS` is ON (Joe's call); (2) deferred S4/S5.
+Logic model
 TB-1…7 PASSES (`typed_bells_invariants_test`: 3 tests/25 assertions/0 fail — witness clean,
 7/7 adversarial caught). Implementation slices S1/S2/S3/S-expose landed behind
 `FUTON3C_TYPED_BELLS`; default OFF preserves the legacy bell path. Focused INSTANTIATE
@@ -451,6 +457,42 @@ other at once whether the second message was a fresh question or just a reply, w
 confusion they hit today. One little label turns throwaway chatter into a growing, searchable
 record — and it's an idea from a 2017 paper we can finally run live instead of just study.
 
+## Review checkpoint — Claude owner, independent gate (2026-06-11)
+
+Codex implemented + committed (`b4ed15f`, "Instantiate typed bells"); reviewed here under the
+author≠reviewer protocol. **Verdict: PASS, merge-as-is (flag OFF). No defects; one
+watch-item for flag-ON.**
+
+What I checked (read the diff + re-ran the verify, not a rubber stamp):
+- **Re-ran focused tests** → reproduced exactly **31 tests / 101 assertions / 0 failures**.
+- **clj-kondo** on the 3 changed `.clj` files → **errors: 0** (15 warnings, all pre-existing
+  `http.clj` — matches the report); test namespaces compile + load clean.
+- **Read the implementation against TB-1…7 / D1–D6** (not just the green bar):
+  - TB-1/D3 — unknown type → `400 invalid-bell-type`; `normalize-bell-type` maps nil/blank →
+    `:request`, so **untyped-while-ON is not rejected** (backward-compat holds).
+  - TB-2 — `typed?` gates type/ref extraction, both 400 guards, the bridge, the `Type:` header,
+    and the job fields; OFF path unchanged (+ explicit `typed-bells-off-ignores-type-and-ref`).
+  - TB-3 — answer-without-ref → `400 answer-ref-required` (+ test).
+  - TB-4 — `maybe-typed-bell-arse-bridge!` `case` writes only on `:query`/`:answer`; **default
+    branch `{:ok true :ref ref}` is inert** (no write, no throw) for the other seven; a
+    `:query` *with* `:ref` routes without writing. Safety + liveness both hold.
+  - TB-5 — `:query` stamps the job `:ref` with the new thread-id; `:answer` posts via
+    `arse-answer!` against `:ref` (+ tests).
+  - TB-6 — `bell_router/graph` `reply-of` treats an `:answer` whose `:ref` ∈ bell-ids as a
+    reply, so the referent leaves `:open` and cannot appear in `:crossings` (real code + test).
+  - TB-7 — replay with the same job-id returns `202 reused` **before** the bridge runs → no
+    second ArSE thread (+ explicit replay test).
+  - D5 — the ArSE write fires send-time in `handle-bell`, before `create-invoke-job!`.
+- **Accepted deviation from DERIVE:** no separate `agency/arse_bridge.clj`; the bridge is
+  inline (`maybe-typed-bell-arse-bridge!`) and Codex refactored the ArSE HTTP handlers into
+  reusable `arse-ask!`/`arse-answer!` so the bridge calls them **in-process** (cleaner than an
+  HTTP self-call; MAP §8 allowed a drain-finalizer branch as the alternative).
+
+**Watch-item for when the flag flips ON (not a merge blocker):** the synchronous
+`entities.json` read+write on the `POST /bell` request thread. Carried into DOCUMENT as a
+deferred-item ticket → **`holes/tickets/T-typed-bell-arse-write-async.md`** (full context +
+fix direction there).
+
 ## VERIFY (2026-06-11)
 
 ### Logic model — TB-1…7 checked before any protocol/bridge code
@@ -562,9 +604,75 @@ and `AGENTS.md`, with shell examples using the canonical send tool.
   futon3c.agency.bell-router-test -n futon3c.transport.auto-bellback-test` —
   31 tests, 101 assertions, 0 failures, 0 errors.
 
+## DOCUMENT (2026-06-11)
+
+The "how to use it" surfaces shipped *with* the code (S-expose, by design — adoption is the
+C-adopt criterion, not an afterthought). DOCUMENT's job here is to (a) confirm those surfaces
+are in place and (b) capture the deferred-item a future agent must be able to pick up.
+
+### Exposure surfaces in place (the C-adopt documentation half)
+
+| Surface | What it carries | State |
+|---|---|---|
+| `~/code/futon3c/CLAUDE.md` | "Typed Bell Contract" — types, query/answer semantics, shell example | committed (`b4ed15f`) |
+| `AGENTS.md` | "M-typed-bells protocol available behind flag" — Codex-side how-to | working-tree |
+| `README-bells-and-whistles.md` | typed-bell section in the bells/whistles doc | committed |
+| `README-arse.md` | typed-bell → ArSE population path | committed |
+| `scripts/agency_send.py` | `--type`/`--ref` flags (the one-keystroke ergonomic) | committed |
+| in-band `Type:` surface header | the strongest pull — recipients *see* the type live | committed |
+
+These satisfy the *documentation* half of **C-adopt**. The *behavioural* half — a fresh agent
+sending a correct `:query` from the docs alone and seeing it land in ArSE — is a **live demo
+still owed**, and only runnable once `FUTON3C_TYPED_BELLS` is ON on the JVM (Joe's call).
+
+### Deferred-item ticket (carried from the review watch-item)
+
+- **`holes/tickets/T-typed-bell-arse-write-async.md`** (WATCH) — the synchronous
+  `entities.json` read+write on the `POST /bell` thread. Not a defect (flag-OFF + Q&A-only +
+  no new I/O class), but a thing to *watch for* once the flag is live and ArSE fills: move the
+  ArSE write off the request thread (async enqueue) while preserving TB-5/TB-7. Full context +
+  fix direction in the ticket, with enough for a new agent to pick it up cold.
+
+### Still-deferred design scope (not tickets yet — future missions/slices)
+
+- **S4 — work-queue unification** (broadcast `:query` ↔ ArSE `next-unprocessed`; directed
+  `:query` ↔ assignment). Designed in DERIVE, not built. May spin its own excursion.
+- **S5 — sub-typologies + SEMATCH** (Martin–Pease / Tausczik–Kittur sub-types; the Q↔A blind
+  matching benchmark). Deferred until live traffic earns the sub-types (paper's own caution).
+
+### DOCUMENT exit
+
+The capability is discoverable from the agent-facing docs without reading this mission file;
+the one deferred risk has a pickup-ready ticket; remaining design scope (S4/S5) is named with
+enough context to reopen. **Mission lifecycle complete through DOCUMENT** — the only open
+threads are (1) the live C-adopt demo on flag-ON and (2) the named deferred scope, both of
+which are Joe's-call activations rather than unfinished work.
+
+## Live activation checkpoint (2026-06-11)
+
+Flag activated on the laptop JVM (`scripts/dev-laptop-env` → `FUTON3C_TYPED_BELLS=true`).
+
+- **C-adopt validated in the wild.** ArSE store carries **2 typed-bell QAPairs**
+  (`tags:["typed-bell"]`, which only the bridge sets), both from **claude-3**, both
+  **complete question→answer round-trips** (its FutonZero ground-control "cycle closed →
+  source-checked confirmation" exchange). A real `:query` minted an ArSE thread and a real
+  `:answer` closed it, lossless, with no `!ask` — the behavioural half of C-adopt, met live.
+  Volume is low (matches "agents aren't using it all the time yet").
+- **Bug found + fixed (small blast radius window).** `arse-ask!` hard-coded `:synthetic true`
+  (inherited from the synthetic-QA-seed handler it was refactored out of), so genuine
+  agent/human questions were mislabeled as generated seed data — latent, but bites S4 (the
+  work-queue is built around *synthetic* QA). Fixed both ends while only 2 entries were
+  affected: (a) code — `arse-ask!` now writes `:synthetic false` (the real-ask path; provenance
+  is the `typed-bell` tag), reloaded **live via Drawbridge** (`load-file`, no JVM restart);
+  (b) data — the 2 mislabeled entries corrected to `:synthetic false` (24 genuine seed entries
+  left untouched), verified through the JVM's own `arse-load-entities`. clj-kondo errors: 0.
+  Adjacent check: `:unanswered` is *not* mislabeled (`arse-answer!` `dissoc`s it correctly).
+
 ## Relations
 
 - `src/futon3c/logic/typed_bells_invariants.clj` + its test — the VERIFY logic model (TB-1…7).
+- `holes/tickets/T-typed-bell-arse-write-async.md` — DOCUMENT deferred-item (the flag-ON
+  synchronous-ArSE-write watch-item).
 - `holes/excursions/E-typed-bells.md` — the design sketch + full prior-art reading this
   mission promotes.
 - `holes/excursions/E-crossed-bells.md` / `src/futon3c/agency/bell_router.clj` — parent;

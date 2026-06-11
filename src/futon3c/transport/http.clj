@@ -1376,7 +1376,12 @@
                     :tags tags
                     :score 0
                     :answer-score 0
-                    :synthetic true
+                    ;; arse-ask! is the REAL-ask path: both callers (the /arse/ask
+                    ;; HTTP endpoint and the typed-bell bridge) are genuine
+                    ;; agent/human questions, NOT generated seed data. Synthetic
+                    ;; seed QA is written by other means; provenance for bell-asks
+                    ;; is carried by the "typed-bell" tag. (M-typed-bells, 2026-06-11)
+                    :synthetic false
                     :source_node ""
                     :source_problem ""
                     :unanswered true
