@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 15 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 15: minted aif/measurement-window-hygiene (futon3 ab7692a) -- consolidates the stale-begin + transient-readback measurement-hygiene lessons into one pattern.
+
+**PRINT / FOUND.** PROPOSAL-mode substrate (no measured pair; clean dynamics targets walled). Genuine library contribution: order operations prepare->baseline->act->settle->read, exclude drift/transient confounds. Both failure modes were caught live in arc-1/2 as fake 0.277 moves.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Operator-directed arc-2 cycle 15 (fable-1 metronome) + earned-closure (genuine pattern). Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 14 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.35).
