@@ -108,6 +108,99 @@ fleet-wide latency win, not a fable-1 patch; a managed revival of the old
   use it to bind the pouch to the agent's session-file. **DERIVE core complete
   (E1+E2); the mechanism is proven.**
 
+### E5 — Resume-latency, caching & compaction economics (Max + claude-3 case study), 2026-06-11 ✅
+
+- **Question:** is warming a giant session a *token*-cost trap (re-prefilling the
+  whole history past the 5-min prompt-cache TTL), and can we "compact before resume"
+  to make a days-long session load fast? Prompted by the joey gate (added 2026-06-10,
+  commit `042fad2`) and Joe's 30-min turn cadence.
+- **Method:** `/claude-api` skill for API-level caching/compaction facts; a
+  `claude-code-guide` agent + `claude --help` for the CLI knobs
+  (`T-kangaroo-caching-and-compaction.md`); auth probe of `dev-laptop-env` + the live
+  JVM env + `~/.claude`; read-only inspection of claude-3's transcript.
+- **Findings:**
+  1. **The knobs are env vars, not CLI flags.** TTL: `ENABLE_PROMPT_CACHING_1H=1`
+     (1-hour cache TTL; default 5-min for API-key users; `FORCE_PROMPT_CACHING_5M=1`
+     forces 5-min). Compaction: auto-compaction *does* run in the pouch's `--print
+     --input-format stream-json` headless mode (default ~95%; tune via
+     `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` / `CLAUDE_CODE_AUTO_COMPACT_WINDOW`; disable via
+     `DISABLE_AUTO_COMPACT`). **No on-demand compaction trigger in headless** —
+     `/compact` is interactive-only; no stream-json stdin control message. `--resume`
+     inherits prior compaction (resumed context = the summary), first turn a cache miss.
+  2. **The pouches run on Joe's Max SUBSCRIPTION, not an API key** — no
+     `ANTHROPIC_API_KEY` / `_AUTH_TOKEN` / `CLAUDE_CODE_OAUTH_TOKEN` anywhere
+     (dev-laptop-env or live JVM env); `~/.claude/.credentials.json` login is inherited
+     by the spawned `claude` processes. Subscription users get the **1-hour TTL
+     automatically within included usage** + transparent auto-compaction. ⇒ The
+     token-trap the joey gate guarded against **does not apply within included usage**,
+     and `ENABLE_PROMPT_CACHING_1H` is a no-op for this setup. (It revives only if
+     Agency's load exceeds the included allotment, where CC drops to 5-min TTL.)
+  3. **claude-3 case study:** transcript `8146485e…` = **29 MB, 10,356 lines, ~4 days
+     (2026-06-06 → 06-10), already auto-compacted 5×** (`compactMetadata` /
+     `isCompactSummary` ×5). So its *context* is already small (post-last-compaction
+     summary); the **resume slowness is the 29 MB FILE** — disk read + parse to
+     reconstruct — NOT the context size. Compaction shrinks what the model sees, NOT
+     the append-only `.jsonl`. "Compact before resume" is therefore *already happening*
+     and won't speed the resume; the latency lever is FILE size (prune/fork the
+     `.jsonl` — CC exposes no such op; risky surgery) or **warm-to-amortize** (pay the
+     29 MB read once at pouch spawn instead of every cold turn).
+- **Design implication — joey gate REFRAMED.** Two of the gate's three rationales are
+  now handled elsewhere: the *token-trap* by Max's auto-1h-TTL (within usage), and
+  *slow-spawn-holding-a-shared-lane* by **drainer v2** (the spawn runs on the agent's
+  own drainer thread, not a shared invoke lane). What survives is **resume-latency
+  hygiene + RAM** — and for an *actively-used* monster (claude-3) warming actually
+  WINS (amortize the 29 MB read once vs re-reading cold every turn), so the gate is
+  counterproductive there. ⇒ Keep the joey gate as a conservative DEFAULT, but
+  `allow-monster!` the monsters Joe uses heavily (claude-3 is the canonical override).
+  The `.jsonl`-bytes metric remains the right proxy for the surviving (latency) axis.
+  **Open:** a real `--resume` latency number for 29 MB (measure on a throwaway copy —
+  no live-agent collision); and a session-file prune/fork tool if file-latency must be
+  attacked directly.
+
+### E6 — Live cold-resume latency: bytes is the WRONG proxy, 2026-06-11 ✅
+
+- **Question (E5's open item):** real `--resume` latency for the monsters, measured
+  on the LIVE production path (evict pouch → "just say hello" bell → agency drain →
+  pouch respawn), not a synthetic copy.
+- **Method:** `agent-pouch/evict!` both warm pouches via Drawbridge, bell each agent
+  (`agency_send.py`, hello ping), read spawn→first-result off `pouch/snapshot`
+  (`:spawned-at` vs `:last-used-ms`) + job-event timeline (accepted→done).
+- **Result — INVERSION:**
+  - **claude-3** (29 MB `.jsonl`, auto-compacted ×5): accepted→done **20.6 s**
+    (pouch spawn→result 20.3 s).
+  - **fable-1** (5.8 MB `.jsonl`, one long uncompacted day, Fable model):
+    accepted→done **36.6 s** (spawn→result 36.3 s).
+  - The 5× smaller FILE took 1.8× LONGER to resume. Both well under the old 67 s
+    anchor, and both are now once-per-spawn costs (subsequent turns warm, ~3 s class).
+- **Derived fact:** `.jsonl` bytes does NOT predict resume latency — the dominant
+  cost is the LIVE (post-compaction) context prefill + model, not file parse. This
+  partially corrects E5's "the resume slowness is the 29 MB FILE" inference: 29 MB
+  parsed + answered in 20 s, while a small-but-uncompacted session took 36 s.
+- **Design implication:** the joey gate's byte metric survives only as a coarse
+  RAM/disk-hygiene proxy; for the latency axis it actively misranks. With the durable
+  monster allowlist (`FUTON3C_KANGAROO_MONSTER_ALLOWLIST`, default `claude-3,fable-1`)
+  the practical exposure is low; if calibration (T-kangaroo ticket item 2) ever
+  matters, the right metric is estimated live-context size, not transcript bytes —
+  and the threshold can comfortably go UP.
+
+### Observability parity (review fix, 2026-06-11)
+
+The v1 warm path skipped invoke-once's whole observability contract: evidence
+events (invoke-start/complete), the `*invoke:*` blackboard updates, the 5s
+ticker (the `*agents*` refresh), live tool-activity surfacing
+(`update-invoke-activity!`), the interrupt control (a warm turn could NOT be
+interrupted — it ran to timeout), and `context-retrieval!` (pattern retrieval —
+Joe: must-have). Fixed for parity: `feed-turn!` gained an `:on-event` hook
+(exceptions swallowed — observability can't kill a turn); the warm branch in
+`make-claude-invoke-fn` now emits evidence, drives the blackboard + ticker,
+surfaces tool activity, registers an interrupt (= evict the pouch; cold-fallback
+discipline holds), fires pattern retrieval, and returns `:invoke-trace-id`.
+Principle: **warmth must not darken the turn** — pruning observability (e.g.
+whether blackboard stays) is a decision over BOTH paths, not a silent warm-path
+default. Known residual asymmetry: cold keeps only the LAST assistant message's
+text (resets on post-tool text), warm concatenates all assistant text —
+unchanged for now, flagged.
+
 ### Open experiments (refinements — not gates)
 
 - **E3:** crash/error signalling in the event stream → the trigger for the
