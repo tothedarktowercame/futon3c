@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 20 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 20: wrote STOCK-TAKE-002 flight side (holes/PILOT-STOCK-TAKE-002.md). ARC COMPLETE.
+
+**PRINT / FOUND.** Arc-2 delivered: §4 work products complete; the 2.55x model-evidence (scaled vs constant, n=4, mechanism = state-sensitive no-move prediction); 7 library-grade discipline patterns; the clean-target wall named; pudding-G1 L2 queued as the gated next step; kick-log observations for the autorunner discussion.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Arc-2 cycle 20 (Joe manual kick) + earned-closure. The arc self-corrected live (excluded the T12 confound, banked the ninth shape, named the wall not padded). Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 19 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
