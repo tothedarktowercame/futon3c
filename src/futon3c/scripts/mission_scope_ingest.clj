@@ -789,6 +789,30 @@
          (legacy-scope-id? scope-id)
          (contains? (:hx/content h) :position))))
 
+(defn- retract-stale-generation-scopes!
+  "True the scope lane against the CURRENT detector tree. Scope ids are
+  heading-slug based, so a doc rewrite mints new ids and the old
+  generation survives as ghosts — mission-mode then renders EVERY
+  generation at once (caught live by Joe on M-first-flights 2026-06-11:
+  three '## 3. DERIVE' generations, 46 scopes). For this mission+binder,
+  any stored scope whose id is absent from SELECTED-IDS is retracted."
+  [client base-url penholder mission-entity binder-filter selected-ids]
+  (let [stale-hxs (->> (hyperedges-by-type client base-url (str "mission-scope/" binder-filter))
+                       (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
+                       (remove #(let [sid (or (get-in % [:hx/props :scope/id])
+                                              (scope-endpoint-id %))]
+                                  (or (nil? sid) (contains? selected-ids sid))))
+                       vec)
+        hx-ids (keep :hx/id stale-hxs)
+        scope-ids (->> stale-hxs
+                       (keep scope-endpoint-id)
+                       (remove #(contains? selected-ids %)))
+        ids (distinct (concat hx-ids scope-ids))]
+    (delete-docs! client base-url penholder ids)
+    {:stale-hyperedge-retract-count (count (distinct hx-ids))
+     :stale-entity-retract-count (count (distinct scope-ids))
+     :stale-doc-retract-count (count ids)}))
+
 (defn- retract-legacy-position-scopes!
   [client base-url penholder mission-entity binder-filter]
   (let [legacy-hxs (->> (hyperedges-by-type client base-url (str "mission-scope/" binder-filter))
@@ -1236,6 +1260,24 @@
        (filter #(= mission (get (hx-props %) :mission)))
        vec))
 
+(defn- retract-absent-binder-scopes!
+  "Binder types with stored scopes for MISSION but ZERO presence in the
+  current detector tree are wholly stale generations (the per-binder
+  ingest loop never visits them, so their ghosts survive rewrites —
+  M-first-flights 2026-06-11: 5 map-item + 2 pattern ghosts from a
+  superseded draft). Retract every scope of the absent binder types."
+  [client base-url penholder mission tree-binders]
+  (let [stale-hxs (->> (stored-scope-hyperedges-for-mission client base-url mission)
+                       (remove #(contains? tree-binders (name (:hx/type %))))
+                       vec)
+        hx-ids (keep :hx/id stale-hxs)
+        scope-ids (keep scope-endpoint-id stale-hxs)
+        ids (distinct (concat hx-ids scope-ids))]
+    (delete-docs! client base-url penholder ids)
+    {:absent-binder-hyperedge-retract-count (count (distinct hx-ids))
+     :absent-binder-entity-retract-count (count (distinct scope-ids))
+     :absent-binder-types (->> stale-hxs (map #(name (:hx/type %))) distinct sort vec)}))
+
 (defn- concept-ids-from-hx [h]
   (->> (:hx/ends h)
        (filter #(= :concept (:role %)))
@@ -1551,6 +1593,13 @@
                         {:legacy-hyperedge-retract-count 0
                          :legacy-entity-retract-count 0
                          :legacy-doc-retract-count 0})
+        stale-report (if binder-filter
+                       (retract-stale-generation-scopes! client base-url penholder
+                                                         mission-entity binder-filter
+                                                         selected-ids)
+                       {:stale-hyperedge-retract-count 0
+                        :stale-entity-retract-count 0
+                        :stale-doc-retract-count 0})
         entity-ids (atom #{(:id mission-entity)})
         hx-ids (atom #{})
         linked-targets (atom #{})
@@ -1646,6 +1695,9 @@
      :legacy-hyperedge-retract-count (:legacy-hyperedge-retract-count legacy-report)
      :legacy-entity-retract-count (:legacy-entity-retract-count legacy-report)
      :legacy-doc-retract-count (:legacy-doc-retract-count legacy-report)
+     :stale-hyperedge-retract-count (:stale-hyperedge-retract-count stale-report)
+     :stale-entity-retract-count (:stale-entity-retract-count stale-report)
+     :stale-doc-retract-count (:stale-doc-retract-count stale-report)
      :linked-target-count (count @linked-targets)
      :dangling-target-count (count @dangling-targets)
      :linked-source-count (count @linked-sources)
@@ -1758,10 +1810,13 @@
                               "--dry-run"
                               (recur (next xs) (assoc opts :dry-run? true) missions)
 
+                              "--true-up"
+                              (recur (next xs) (assoc opts :true-up? true) missions)
+
                               (recur (next xs) opts (conj missions x)))
                             [opts (remove str/blank? missions)]))
         files (scope-tree-files default-scope-dir missions)
-        reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:wire-capabilities? opts) (:mission opts))
+        reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:wire-capabilities? opts) (:mission opts) (:true-up? opts))
                   (mapv #(ingest-scope-tree! {:client client
                                               :base-url default-futon1a-url
                                               :penholder default-penholder
@@ -1769,6 +1824,21 @@
                                               :path (.getAbsolutePath %)})
                         files))]
     (cond
+      (:true-up? opts)
+      (println (pr-str {:true-up
+                        (mapv (fn [file]
+                                (let [data (json/parse-string (slurp file) true)
+                                      mission (:mission data)
+                                      tree-binders (->> (keys (:scope-count-by-binder-type data))
+                                                        (map name)
+                                                        set)]
+                                  (assoc (retract-absent-binder-scopes!
+                                          client default-futon1a-url default-penholder
+                                          mission tree-binders)
+                                         :mission mission
+                                         :tree-binders (vec (sort tree-binders)))))
+                              files)}))
+
       (:mission opts)
       (println (pr-str {:incremental-mission
                         (incremental-mission! {:client client

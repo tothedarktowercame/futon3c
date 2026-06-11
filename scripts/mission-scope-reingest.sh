@@ -20,12 +20,21 @@ EOF
 )
 
 cd /home/joe/code/futon3c
+# Always reload: a when-not guard here once let edited ingest code silently
+# NOT run (the live ns predated the edit). load-file is cheap and
+# Drawbridge-safe; this script must always run the code that is on disk.
+bash scripts/proof-eval.sh "(do (load-file \"src/futon3c/scripts/mission_scope_ingest.clj\") :ok)" >/dev/null
 for b in $binders; do
-  bash scripts/proof-eval.sh "(do (when-not (find-ns 'futon3c.scripts.mission-scope-ingest)
-        (load-file \"src/futon3c/scripts/mission_scope_ingest.clj\"))
-      (with-out-str
+  bash scripts/proof-eval.sh "(do (with-out-str
         (futon3c.scripts.mission-scope-ingest/-main \"--binder\" \"$b\" \"$mission\"))
       :ok)" >/dev/null
   echo "[reingest] $mission $b ok"
 done
+# True-up: retract scopes of binder types absent from the current tree —
+# the per-binder loop above never visits them, so a rewrite's ghosts
+# (e.g. map-item scopes from a superseded draft) would survive forever.
+bash scripts/proof-eval.sh "(do (with-out-str
+      (futon3c.scripts.mission-scope-ingest/-main \"--true-up\" \"$mission\"))
+    :ok)" >/dev/null
+echo "[reingest] $mission true-up ok"
 echo "[reingest] $mission complete (${binders})"
