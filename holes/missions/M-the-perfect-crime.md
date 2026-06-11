@@ -115,7 +115,7 @@ not become another cover for the real).
 
 - The **perfect-crime register** (sorrys-on-authoring, distinct from `sorrys.edn` — entity-of-record
   is the prose location), seeded from the punch list once candidates are live-checked.
-- Graduation of `[[feedback_subsumption_claim_discipline]]` to a `library/` pattern.
+- ~~Graduation of `[[feedback_subsumption_claim_discipline]]` to a `library/` pattern.~~ **DONE 2026-06-11** (WM-pilot arc-2 cycle 12): minted `library/code-coherence/subsumption-claim-discipline.flexiarg` (futon3 `6e76dc8`) — two-sided live-check (both X and Y live or both flagged), canonical instance = the Tornhill-subsumption audit.
 - The sub-question ("add Tornhill anyway?") stays open — the audit does **not** pre-decide it.
 
 ### Second sweep — a perfect crime in the calibration instrument (2026-06-11, WM-pilot)
