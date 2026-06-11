@@ -248,8 +248,8 @@ real.
 
 ### 5.1 The gate, bound (typed by the body, 2026-06-11)
 
-The Reazon model lives adjacent: M-smart-emacs-cursor.verify.el, with its
-certificate in M-smart-emacs-cursor.cert. Each relation formalizes an
+The Reazon model lives adjacent: futon3c/holes/missions/M-smart-emacs-cursor.verify.el, with its
+certificate in futon3c/holes/missions/M-smart-emacs-cursor.cert. Each relation formalizes an
 argument from section 4 — the two readings of one mission, coupled:
 
 - I1 edit-without-body catches what A4 and A1-prime forbid: an edit with
