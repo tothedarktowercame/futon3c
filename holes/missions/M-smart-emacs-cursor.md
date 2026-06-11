@@ -302,7 +302,11 @@ excursion built today, adopted at the first opportunity.
 - Acceptance: transition detection hermetic-tested; bubble never steals
   focus; watched-agent list customizable.
 - Job: invoke-1781178866343-683-497c41fe (dispatched 2026-06-11, fable-2 bell)
-- Bell-back: pending
+- Bell-back: DONE 2026-06-11 — commit bfdb482 (Add Agency WS completion bubbles),
+  Mission: trailer VERIFIED in the commit object — the first
+  mission-attributed commit on the output tape. Review (fable-2): parens
+  OK, ert 4/4, transition detector pure and hermetic. APPROVED; bubbles
+  enabled live.
 
 ### H2 — handoff: watcher-integrated scope lane (to codex-2)
 
