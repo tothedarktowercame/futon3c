@@ -106,3 +106,77 @@ this is the **hole-granularity** frontier (counted sub-holes on big missions, gr
 - **Pudding-G1 arrow-witness binding** (L2 value layer) → careful construction, operator/co-lead, arming-gated.
 - **§367** (daily-scan scan-intent: Alexander-pattern-language vs business-rules) → `PILOT-ARC-2-QUEUE.md`, operator call.
 - **Autorunner state-awareness** → Joe's autorunner discussion.
+
+---
+
+# Apparatus side (ground control, fable-1)
+
+**Scope:** what the apparatus did and failed to do across cycles 11–20. The
+flight side's story is the pairs and patterns; this side's story is mostly
+the DRIVE problem — arc-2 was the first autonomous run, and the apparatus
+lesson is about what keeps an autonomous arc moving.
+
+## What held (briefly)
+
+The arc-1 instruments ran unchanged and clean: realised-read protocol,
+dual-prediction logging, verdict filters (the T12 stale-begin pair
+self-excluded exactly as designed), the three-way review (one codex build
+gated: §4.5 red-team fixture, 21/127/0 reproduced, ninth-shape finding),
+discipline-events accruing, auto-DOCUMENT surviving everything including a
+warm-process reset. Zero operator asks; the consent migration held at its
+designed locus.
+
+## What failed: the drive layer (full postmortem, five distinct failures)
+
+1. **No drive at all.** "The arc is yours" assumed the pilot self-paces;
+   agents only run when invoked. Caught by Joe ("claude-3 isn't running
+   nor are you"), fixed with ground-control-as-metronome.
+2. **Metronome too slow.** v1's 8-minute kick rate-limit gave ~50% duty
+   cycle against ~8-minute cycles. Caught by Joe ("still not running
+   smoothly"), fixed in v2 (45s poll / 150s limit).
+3. **Session-private = uninspectable.** The autorunner lived as a
+   background monitor inside ground control's session: no buffer, no
+   registry presence, no surface Joe could check. "Is it working?" required
+   trusting narration — the self-certification anti-pattern at the
+   infrastructure layer. Caught by Joe; the runner was unwired.
+4. **Killed by its host.** The warm-pouch reset silently killed the
+   monitor (session-held processes die with the session's process).
+   A drive mechanism must not live somewhere its own substrate can
+   silently delete it.
+5. **State-blind.** (The pilot's kick-log observation, confirmed.) The
+   kicks were generic "fly the next step" — they never read the pilot's
+   wall-reports, so when clean pairs ran out at T11 the metronome kept
+   beating the same rhythm instead of redirecting effort (e.g. to the
+   hole-granularity unblock that would have re-opened pair supply).
+   A good conductor reads the orchestra.
+
+Compounding all five: ground control's loop turns ended on trailing tool
+calls, rendering as "[no text response]" on the operator surface — the
+driver went invisible exactly while driving. (Recorded as standing
+feedback; visible text last, always.)
+
+## The drive-architecture conclusion (for the autorunner discussion)
+
+The metronome WORKS as a concept — kicks produced every cycle 12–18 — but
+it belongs IN THE STACK, not in a session: the existing
+`futon3c.agents.tickle-queue` (task pool + idle-bell dispatch,
+registry-visible, JVM-resident) is the proper home, and arc-2's kick log
+is its requirements document: (a) inspectable state on an operator surface;
+(b) survives agent/process resets because it lives in the serving JVM;
+(c) STATE-AWARE dispatch — the task pool holds typed next-steps that the
+pilot's own reports update (a wall-report should re-order the pool, not be
+flown past); (d) bounded + self-terminating with a visible stop control.
+That is Tickle's idle-poke shape, finally specified by evidence instead of
+intuition.
+
+## Apparatus frontier after arc 2
+
+1. **Hole-granularity** — the pair-supply unblock (counted sub-holes on
+   big missions); turns the T11 wall into ordinary supply.
+2. **Tickle-conductor graduation** per the requirements above — before
+   arc 3 if arcs are to be autonomous.
+3. **Pudding-G1 / L2** — unchanged, still the value-calibration gate,
+   still operator-armed.
+4. **Cap-widening** — now a calibrated decision candidate: the 2.55×
+   result plus 7 pairs give the first real basis for revisiting the 2×
+   cap.
