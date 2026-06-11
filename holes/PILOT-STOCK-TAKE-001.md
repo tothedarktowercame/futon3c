@@ -102,8 +102,8 @@ is the story of the pairs; this is the story of why each pair could exist.
    degeneracy preceded measuring anything real — and that ordering is
    correct; an instrument that can't catch itself can't be trusted on the
    world.
-4. **Observations cross the boundary, diagnoses do not.** Five pilot
-   mechanism-misdiagnoses, five ground-control source-checks, zero
+4. **Observations cross the boundary, diagnoses do not.** Four pilot
+   mechanism-misdiagnoses, four ground-control source-checks, zero
    defended; one ground-control misread (BST/UTC), self-reported, paid for
    itself. The review split is load-bearing in both directions.
 5. **Honest maps beat flattering counters.** Twice the right move RAISED
