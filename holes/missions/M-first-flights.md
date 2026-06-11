@@ -409,25 +409,45 @@ tension-proposer wiring (M-aif2); any autonomy change at the consent gate —
 proposal-mode stays a typed absence, this mission makes it renderable, not
 fillable.
 
-## 7. Exit conditions
+## 7. Exit conditions (phased, per Joe's V-f2 compromise)
+
+The mission exits in two phases, matching the two grains of G: the action
+grain we can record honestly today, and the policy grain that waits on the
+rollout engine. Phase A is this mission's commitment; Phase B is its
+standing obligation, armed when the substrate catches up.
+
+Phase A — actions (one-step grain, buildable now):
 
 1. A written shape spec (EDN schema) for flight-as-derivation, with the
-   capability preservation matrix discipline.
+   capability preservation matrix discipline and every prediction typed
+   `g-grain: one-step-action`.
 2. A logic model before code, extending repl_spec_verify's V1–V5: a
    conforming witness record passes; per-invariant adversarial records are
-   caught — including "judgment without derivation," which must be
-   representable but distinguishable. The canonical test case exists: the
-   DERIVE flight itself hit the stale-begin confound it documents (begun
-   before the writing; the field drifted; the pair was excluded in
-   proposal-mode). A record carrying its confound-verdict-with-ground would
-   have recorded that exclusion as data.
+   caught — including "judgment without derivation" (the stale-begin
+   confound flight is the canonical case) and "mixed grains" (a record
+   claiming policy-grade G without the rollout engine must be rejected).
 3. flight-mode renders one real flight in the new shape: ghosts as typed
-   holes, measurement as discharge with linked evidence, RET-descend on the
-   field-read.
-4. One round-trip: a flight record ingested into substrate-2, browsable from
-   the human cockpit like an essay.
+   holes, measurement as discharge with linked evidence, RET-descend on
+   the field-read (gauge → neighbourhood → cascade where present).
+4. One round-trip: a flight record ingested into substrate-2, browsable
+   from the human cockpit like an essay.
 5. Joe flies one session reading the new instrument beside the old; the
-   operator's verdict is the gate.
+   operator's verdict is the Phase-A gate.
+
+Phase B — policies (opens when the rollout engine lands; not before):
+
+6. The prediction organ's policy-grade slot fills: G(s, π) over the
+   pilot's plan sketch, with the one-step numbers retained beside it so
+   the two grains calibrate against each other on the same flights.
+7. Plan-vs-realised: the velocity organ's policy prefix is compared, step
+   by step, against the flight as actually flown — deviations typed
+   (improvised / blocked / redirected), because the deviations are where
+   the policy model learns.
+8. The cascade scored as a policy: at least one flight whose candidate
+   cascade carries a rollout-grade G, closing the loop between the
+   M-memes-arrows cascade object and the AIF policy object.
+9. Joe's second side-by-side verdict, on policy-grade records — the
+   Phase-B gate.
 
 ## Checkpoints
 
@@ -463,3 +483,11 @@ converge on one move), four trade-offs accepted explicitly, generalization
 noted (the shape is the candidate for every trace in the stack), and the
 plain-language argument written. Exit criterion met: every requirement
 traces to a real failure; the only new thing is the composition.
+
+Checkpoint 5 (2026-06-11, night): VERIFY findings V-f1 (field-read =
+gauge + neighbourhood + cascade; choice points first-class) and V-f2
+(G is over policies — predictions typed by grain, velocity as policy
+prefix, cascade as the policy-shaped object) folded in from Joe's
+interactive read of the day-in-the-life narrative. Exit conditions split
+into Phase A (actions, now) and Phase B (policies, armed by the rollout
+engine) per Joe's compromise.
