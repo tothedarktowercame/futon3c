@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Start the Whisper voice-typing interface with the ydotool shim on PATH.
+# Used as my-chatgpt-shell-voice-command for the routed mode
+# (M-smart-emacs-cursor). The shim itself is a no-op passthrough unless
+# /tmp/futon-voice-route.on exists.
+export PATH="/home/joe/code/futon3c/scripts/voice-route:$PATH"
+exec /home/joe/opt/voice-typing-linux/voice "$@"

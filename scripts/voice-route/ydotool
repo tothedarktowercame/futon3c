@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# ydotool shim — the M-smart-emacs-cursor voice reroute (2026-06-11).
+#
+# Sits ahead of the real ydotool in the voice process's PATH. When the
+# control file is present, transcribed text is routed to the futon voice
+# inbox instead of being typed at whatever window has focus — decoupling
+# speech from cursor position. Without the control file, exec the real
+# ydotool: normal voice typing, byte-for-byte.
+#
+# Toggle:  touch /tmp/futon-voice-route.on   (route to inbox)
+#          rm    /tmp/futon-voice-route.on   (type at focus, as before)
+
+REAL=/home/joe/.local/bin/ydotool
+CONTROL=/tmp/futon-voice-route.on
+INBOX=/tmp/futon-voice-inbox.jsonl
+
+if [[ ! -e "$CONTROL" ]]; then
+  exec "$REAL" "$@"
+fi
+
+# Strip a --socket-path option if present (we don't need it for routing).
+args=("$@")
+if [[ "${args[0]}" == "--socket-path" ]]; then
+  args=("${args[@]:2}")
+fi
+
+ts=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+case "${args[0]}" in
+  type)
+    # The voice script pre-maps text for the dvorak layout; invert it so the
+    # inbox carries what was actually said (invert_layout.py parses the keymap
+    # out of the voice script itself — no drift).
+    text="${args[*]:1}"
+    printf '{"at":"%s","kind":"utterance","text":%s}\n' \
+      "$ts" "$(printf '%s' "$text" \
+        | python3 /home/joe/code/futon3c/scripts/voice-route/invert_layout.py \
+        | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
+      >> "$INBOX"
+    ;;
+  key)
+    # The enter-keyword ("rocket") arrives as key 28:1 28:0 — a commit marker.
+    printf '{"at":"%s","kind":"commit"}\n' "$ts" >> "$INBOX"
+    ;;
+  *)
+    exec "$REAL" "${args[@]}"
+    ;;
+esac
+exit 0
