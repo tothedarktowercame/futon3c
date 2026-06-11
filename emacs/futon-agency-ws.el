@@ -64,8 +64,11 @@ The key \"*\" receives every frame.")
 (defvar futon-agency-ws--last-frame nil)
 (defvar futon-agency-ws--frame-count 0)
 
-(defcustom futon-agency-completion-watched-agents '("fable-2" "claude-3")
-  "Agent ids whose invoking→idle transitions should raise a completion bubble."
+(defcustom futon-agency-completion-watched-agents '("fable-2")
+  "Agent ids whose invoking→idle transitions should raise a completion bubble.
+Keep this to agents the operator is actively collaborating with through
+the agent cursor — bubbles for unrelated agents are noise (Joe, live
+2026-06-11: a floating \"claude-3 done\" bubble, \"not needed or useful\")."
   :type '(repeat string)
   :group 'futon-agency-ws)
 
@@ -216,16 +219,24 @@ A handler error never kills the socket loop."
        futon-agent-cursor--marker))
 
 (defun futon-agency-completion--show (agent)
-  "Render AGENT's completion bubble without moving point or stealing focus."
-  (let ((text (format "%s done — what next?" agent))
-        (marker (futon-agency-completion--cursor-marker)))
-    (if (and marker (require 'posframe nil t))
-        (with-current-buffer (marker-buffer marker)
-          (posframe-show futon-agency-completion--bubble-buffer
-                         :string text
-                         :position marker
-                         :timeout futon-agency-completion-posframe-timeout
-                         :accept-focus nil))
+  "Render AGENT's completion bubble without moving point or stealing focus.
+The bubble anchors at the agent cursor ONLY when that cursor's buffer is
+actually showing in a window — posframe with an undisplayed anchor has no
+valid poshandler and falls to 0,0 of some frame, where it sticks (Joe hit
+this live, 2026-06-11). Any other case degrades to a `message'."
+  (let* ((text (format "%s done — what next?" agent))
+         (marker (futon-agency-completion--cursor-marker))
+         (anchor-visible (and marker
+                              (get-buffer-window (marker-buffer marker) t))))
+    (if (and anchor-visible (require 'posframe nil t))
+        (condition-case nil
+            (with-current-buffer (marker-buffer marker)
+              (posframe-show futon-agency-completion--bubble-buffer
+                             :string text
+                             :position marker
+                             :timeout futon-agency-completion-posframe-timeout
+                             :accept-focus nil))
+          (error (message "%s" text)))
       (message "%s" text))))
 
 (defun futon-agency-completion--handle-agents-status (frame)
