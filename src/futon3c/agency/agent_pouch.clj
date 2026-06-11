@@ -83,10 +83,22 @@
 
 (defn disallow-monster! [agent-id] (swap! !monster-allowlist disj (str agent-id)) true)
 
+(defn- env-monster-allowlist
+  "Per-agent overrides that survive a JVM restart (the in-memory allowlist does
+   not): comma-separated agent ids in FUTON3C_KANGAROO_MONSTER_ALLOWLIST."
+  []
+  (let [raw (or (System/getProperty "FUTON3C_KANGAROO_MONSTER_ALLOWLIST")
+                (config/env "FUTON3C_KANGAROO_MONSTER_ALLOWLIST"))]
+    (into #{}
+          (comp (map str/trim) (remove str/blank?))
+          (str/split (str (or raw "")) #","))))
+
 (defn monster-allowed?
-  "True when monsters may be warmed for AGENT-ID — globally (env) or per-agent (allowlist)."
+  "True when monsters may be warmed for AGENT-ID — globally (env), per-agent
+   durable (env allowlist), or per-agent in-memory (allow-monster!)."
   [agent-id]
   (or (bool-prop-or-env "FUTON3C_KANGAROO_ALLOW_MONSTERS" false)
+      (contains? (env-monster-allowlist) (str agent-id))
       (contains? @!monster-allowlist (str agent-id))))
 
 (defn joey-eligible?
@@ -168,20 +180,23 @@
   true)
 
 (defn evict-idle!
-  "Evict pouches idle longer than TTL-MS. Returns evicted agent ids."
+  "Evict pouches idle longer than TTL-MS. A pouch mid-turn (:in-flight?) is
+   never idle, however old its last-used stamp — destroying it would kill the
+   live turn. Returns evicted agent ids."
   ([] (evict-idle! (idle-ttl-ms)))
   ([ttl-ms]
    (let [cutoff (- (now-ms) (long ttl-ms))
          evicted (atom [])]
      (doseq [[aid pouch] @!pouches
-             :when (< (long (:last-used-ms pouch 0)) cutoff)]
+             :when (and (not (:in-flight? pouch))
+                        (< (long (:last-used-ms pouch 0)) cutoff))]
        (when (evict! aid)
          (swap! evicted conj aid)))
      @evicted)))
 
 (defn- enforce-cap! []
   (let [limit (max 1 (long (max-warm)))
-        pouches @!pouches]
+        pouches (remove (fn [[_ p]] (:in-flight? p)) @!pouches)]
     (when (> (count pouches) limit)
       (doseq [[aid _] (->> pouches
                            (sort-by (fn [[_ p]] (:last-used-ms p 0)))
@@ -260,7 +275,7 @@
     :message {:role "user"
               :content [{:type "text" :text (prompt-str prompt)}]}}))
 
-(defn- read-turn* [pouch]
+(defn- read-turn* [pouch on-event]
   (let [text (StringBuilder.)
         sid (atom (:session-id pouch))]
     (loop []
@@ -271,6 +286,10 @@
         (if (str/blank? line)
           (recur)
           (let [event (json/parse-string line true)]
+            (when on-event
+              ;; Observability hook (e.g. surfacing tool activity to the
+              ;; registry); a hook failure must never kill the turn.
+              (try (on-event event) (catch Throwable _)))
             (case (:type event)
               "assistant"
               (let [t (text-from-assistant event)]
@@ -290,10 +309,14 @@
                  :pouch/warm? true
                  :pouch/agent-id (:agent-id pouch)})
 
+              "error"
+              (throw (ex-info "pouch stream emitted an error event"
+                              {:agent-id (:agent-id pouch) :event event}))
+
               (recur))))))))
 
-(defn- read-turn-with-timeout [pouch timeout-ms]
-  (let [f (future (read-turn* pouch))
+(defn- read-turn-with-timeout [pouch timeout-ms on-event]
+  (let [f (future (read-turn* pouch on-event))
         v (deref f (long timeout-ms) ::timeout)]
     (if (= v ::timeout)
       (do
@@ -305,9 +328,11 @@
   "Feed PROMPT to AGENT-ID's warm pouch and read until the result event.
 
    Options:
-   :claude-bin, :session-id, :model, :cwd, :permission-mode, :timeout-ms.
+   :claude-bin, :session-id, :model, :cwd, :permission-mode, :timeout-ms,
+   :on-event (fn [parsed-event] — called for every stream event; exceptions
+   are swallowed so observability can't kill the turn).
    Throws on spawn/feed/read failure so callers can cold-fallback."
-  [agent-id prompt {:keys [timeout-ms] :as opts}]
+  [agent-id prompt {:keys [timeout-ms on-event] :as opts}]
   (let [pouch (ensure-pouch! agent-id opts)
         timeout (or timeout-ms default-timeout-ms)
         lock (:lock pouch)]
@@ -315,9 +340,16 @@
       (try
         (when-not (alive? pouch)
           (throw (ex-info "pouch process is not alive" {:agent-id (str agent-id)})))
+        ;; Mark in-flight + touch last-used BEFORE the (possibly very long) turn,
+        ;; so idle-eviction/cap enforcement never destroys a pouch mid-turn.
+        (swap! !pouches
+               (fn [m] (cond-> m
+                         (contains? m (str agent-id))
+                         (update (str agent-id) assoc
+                                 :in-flight? true :last-used-ms (now-ms)))))
         (.write ^BufferedWriter (:writer pouch) (str (user-line prompt) "\n"))
         (.flush ^BufferedWriter (:writer pouch))
-        (let [result (read-turn-with-timeout pouch timeout)]
+        (let [result (read-turn-with-timeout pouch timeout on-event)]
           (swap! !pouches update (str agent-id)
                  #(when %
                     (assoc %
@@ -327,13 +359,21 @@
           result)
         (catch Throwable t
           (evict! agent-id)
-          (throw t))))))
+          (throw t))
+        (finally
+          ;; Only clear the flag on a still-registered pouch — after an evict!
+          ;; (error path) there is no entry, and update would reinstate a nil one.
+          (swap! !pouches
+                 (fn [m] (cond-> m
+                           (contains? m (str agent-id))
+                           (update (str agent-id) dissoc :in-flight?)))))))))
 
 (defn snapshot []
   (into {}
         (map (fn [[aid pouch]]
                [aid {:agent-id aid
                      :alive? (alive? pouch)
+                     :in-flight? (boolean (:in-flight? pouch))
                      :session-id (:session-id pouch)
                      :spawned-at (:spawned-at pouch)
                      :last-used-ms (:last-used-ms pouch)

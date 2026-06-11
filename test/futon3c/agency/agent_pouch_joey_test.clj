@@ -39,6 +39,22 @@
   (is (nil? (pouch/session-transcript-bytes nil)))
   (is (nil? (pouch/session-transcript-bytes ""))))
 
+(deftest env-monster-allowlist-is-durable-override
+  (with-redefs [pouch/joey-max-bytes (constantly 1000)
+                pouch/session-transcript-bytes (constantly 5000)]
+    (let [old (System/getProperty "FUTON3C_KANGAROO_MONSTER_ALLOWLIST")]
+      (try
+        (System/setProperty "FUTON3C_KANGAROO_MONSTER_ALLOWLIST" "claude-3, fable-1")
+        (is (true? (boolean (pouch/joey-eligible? "claude-3" "s"))))
+        (is (true? (boolean (pouch/joey-eligible? "fable-1" "s")))
+            "whitespace around ids is tolerated")
+        (is (false? (boolean (pouch/joey-eligible? "claude-4" "s")))
+            "allowlist is per-agent, not global")
+        (finally
+          (if old
+            (System/setProperty "FUTON3C_KANGAROO_MONSTER_ALLOWLIST" old)
+            (System/clearProperty "FUTON3C_KANGAROO_MONSTER_ALLOWLIST")))))))
+
 (deftest joey-max-bytes-reads-property
   (let [old (System/getProperty "FUTON3C_KANGAROO_JOEY_MAX_BYTES")]
     (try

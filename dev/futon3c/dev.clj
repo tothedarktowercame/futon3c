@@ -3654,23 +3654,134 @@ RESPOND WITH ONLY:
                     (do (agent-pouch/note-monster-cold! agent-id warm-sid)
                         (invoke-once prompt session-id))
 
+                    ;; Warm path: same observability contract as invoke-once —
+                    ;; evidence events, invoke buffer, ticker (the *agents* 5s
+                    ;; refresh), live tool activity, interrupt control, pattern
+                    ;; retrieval. Warmth must not darken the turn.
                     :else
-                    (try
-                      (agent-pouch/feed-turn!
-                       agent-id
-                       prompt
-                       {:claude-bin claude-bin
-                        :session-id warm-sid
-                        :model model
-                        :cwd cwd
-                        :permission-mode permission-mode
-                        :timeout-ms timeout-ms})
-                      (catch Throwable t
-                        (println (str "[kangaroo] " agent-id
-                                      " warm pouch failed; falling back cold: "
-                                      (.getMessage t)))
-                        (flush)
-                        (invoke-once prompt session-id))))))]
+                    (let [prompt-str (cond
+                                       (string? prompt) prompt
+                                       (map? prompt)    (or (:prompt prompt) (:text prompt)
+                                                            (json/generate-string prompt))
+                                       :else            (str prompt))
+                          aid-val (str agent-id)
+                          invoke-trace-id (str "invoke-" (UUID/randomUUID))
+                          control-token (str "claude-pouch-" (UUID/randomUUID))
+                          warm-attempt
+                          (do
+                            (println (str "[invoke] " aid-val " warm pouch feed (session: "
+                                          (when warm-sid (subs (str warm-sid) 0 (min 8 (count (str warm-sid))))) ")"))
+                            (flush)
+                            (emit-invoke-evidence! agent-id "invoke-start"
+                                                   {"prompt-preview" (subs prompt-str 0 (min 200 (count prompt-str)))
+                                                    "warm" true}
+                                                   :session-id warm-sid
+                                                   :tags ["invoke-start"])
+                            (try
+                              (bb/blackboard! buf-name
+                                              (str "Invoke: " agent-id " (warm pouch)\n"
+                                                   "Session: " warm-sid "\n"
+                                                   "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
+                                                   (when (> (count prompt-str) 300) "...")
+                                                   "\n\nStarting...")
+                                              (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                              (catch Throwable _))
+                            (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str warm-sid 5000 :bb-opts bb-opts)]
+                              ;; Interrupting a warm turn = evict the pouch: the
+                              ;; process dies, read-turn throws, feed-turn! evicts
+                              ;; (idempotent) and the error surfaces; next turn
+                              ;; re-spawns warm or falls back cold.
+                              (register-invoke-control!
+                               aid-val control-token
+                               {:interrupt!
+                                (fn []
+                                  (agent-pouch/evict! aid-val)
+                                  {:ok true
+                                   :agent-id aid-val
+                                   :action :interrupt-issued
+                                   :message "warm pouch evicted (turn interrupted)"
+                                   :interrupted? true})})
+                              (try
+                                (let [warm-result
+                                      (agent-pouch/feed-turn!
+                                       agent-id
+                                       prompt
+                                       {:claude-bin claude-bin
+                                        :session-id warm-sid
+                                        :model model
+                                        :cwd cwd
+                                        :permission-mode permission-mode
+                                        :timeout-ms timeout-ms
+                                        ;; Surface tool activity to the registry
+                                        ;; (→ *agents* buffer), like the cold
+                                        ;; path's stdout loop does.
+                                        :on-event
+                                        (fn [event]
+                                          (when (= "assistant" (:type event))
+                                            (let [content (get-in event [:message :content])
+                                                  tools (when (sequential? content)
+                                                          (->> content
+                                                               (filter #(= "tool_use" (:type %)))
+                                                               (map :name)
+                                                               seq))]
+                                              (when tools
+                                                (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
+                                                                                        'update-invoke-activity!)]
+                                                  (update-activity!
+                                                   aid-val
+                                                   (str "using " (str/join ", " tools))))))))})
+                                      warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
+                                      result-text (str (or (:result warm-result) ""))]
+                                  ;; Persist like invoke-once does (cold path, above): today
+                                  ;; stream-json --resume keeps the sid stable so this is a
+                                  ;; no-op rewrite, but if the CLI ever forks on resume the
+                                  ;; session file must follow the pouch or the next turn
+                                  ;; respawns from the stale sid and orphans the warm turns.
+                                  (when (and session-file warm-result-sid)
+                                    (persist-session-id! session-file warm-result-sid))
+                                  (emit-invoke-evidence! agent-id "invoke-complete"
+                                                         {"warm" true
+                                                          "result-preview" (subs result-text 0 (min 300 (count result-text)))}
+                                                         :session-id warm-result-sid
+                                                         :tags ["invoke-complete"])
+                                  (try
+                                    (bb/blackboard! buf-name
+                                                    (str "Invoke: " agent-id " — DONE (warm pouch)\n"
+                                                         "Session: " warm-result-sid "\n"
+                                                         "Output: " (count result-text) " chars\n"
+                                                         (invoke-trace-response-block agent-id warm-result-sid invoke-trace-id result-text))
+                                                    (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                    (catch Throwable _))
+                                  (println (str "[invoke] " aid-val " warm-turn done text-len=" (count result-text)))
+                                  (flush)
+                                  ;; Context retrieval: fire-and-forget (pattern
+                                  ;; retrieval is a must-have on warm turns too).
+                                  (future
+                                    (context-retrieval!
+                                     {:agent-id agent-id
+                                      :session-id warm-sid
+                                      :prompt-str prompt-str
+                                      :response-text result-text
+                                      :turn-counter !turn-count
+                                      :bb-opts bb-opts}))
+                                  (assoc warm-result :invoke-trace-id invoke-trace-id))
+                                (catch Throwable t
+                                  (println (str "[kangaroo] " agent-id
+                                                " warm pouch failed; falling back cold: "
+                                                (.getMessage t)))
+                                  (flush)
+                                  (emit-invoke-evidence! agent-id "invoke-error"
+                                                         {"warm" true
+                                                          "error" (str (.getMessage t))}
+                                                         :session-id warm-sid
+                                                         :tags ["invoke-error"])
+                                  ::pouch-failed)
+                                (finally
+                                  (clear-invoke-control! aid-val control-token)
+                                  (stop-ticker!)))))]
+                      (if (= ::pouch-failed warm-attempt)
+                        (invoke-once prompt session-id)
+                        warm-attempt)))))]
         (fn [prompt session-id]
           (cond
             ;; Drainer v2: an outer per-agent drainer already owns serialization for

@@ -34,6 +34,11 @@ export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
 # (futon3c.agency.agent-pouch/allow-monster! "<id>"), or globally:
 export FUTON3C_KANGAROO_JOEY_MAX_BYTES="${FUTON3C_KANGAROO_JOEY_MAX_BYTES:-2097152}"
 # export FUTON3C_KANGAROO_ALLOW_MONSTERS=true   # warm every session regardless of size
+# Durable per-agent monster overrides (E5: warming an ACTIVELY-USED monster WINS —
+# amortize the transcript read once at spawn instead of every cold turn; on the Max
+# subscription the token-trap rationale doesn't apply within included usage). The
+# in-memory allow-monster! list dies with the JVM; this one survives restart.
+export FUTON3C_KANGAROO_MONSTER_ALLOWLIST="${FUTON3C_KANGAROO_MONSTER_ALLOWLIST:-claude-3,fable-1}"
 # Drainer v2 (M-agency-hardening drainer car): a dedicated per-agent drainer thread
 # owns drain+finalization so a bell enqueues and returns instead of parking one of the
 # 4 shared invoke-executor lanes on @waiter (the lane-burn that backs the queue up).
@@ -126,6 +131,14 @@ for arg in "$@"; do
       export FUTON3C_TICKLE_AUTOSTART=true
       export FUTON3C_FM_CONDUCTOR_AUTOSTART=true
       echo "[dev] Tickle + FM conductor: will start at boot"
+      ;;
+    --fresh)
+      # Legacy clean boot: skip restore-on-boot so the JVM comes up with NO
+      # restored agents (mint new ones via cr/cx) and fresh invoke lanes/drainers.
+      # The roster is still persisted continuously — --fresh just doesn't REPLAY
+      # it this boot, so it's non-destructive (a later non-fresh boot restores).
+      export FUTON3C_AGENT_RESTORE=false
+      echo "[dev] --fresh: restore-on-boot OFF — clean slate (no agents restored)"
       ;;
     *)
       remaining_args+=("$arg")
