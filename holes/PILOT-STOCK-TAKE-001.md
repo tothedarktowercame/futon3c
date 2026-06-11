@@ -134,3 +134,85 @@ arc that wrote it.
    accrues.
 4. **ChipWitz v1** (PXR channel + warrant-finder threshold) — retires the
    determined-fork ask entirely.
+
+---
+
+# Retrospective — the first ten-cycle arc, read whole
+
+*(Convened 2026-06-11. Drafted by ground control from both sides above;
+the operator's-read section is Joe's to write or dictate.)*
+
+## What actually happened, in one paragraph
+
+Over two days and ten LOOP turns, a human operator and two agents took the
+War Machine from an instrument that confidently recommended impossible
+actions to one that makes falsifiable per-target predictions, measures them
+against settled reads of a world it does not control, refuses every form of
+self-manufactured evidence so far discovered, and keeps an honest public
+account of both models it carries. No autonomous actions executed; one
+operator close, three codex builds, five live WM fixes, and seven
+independent pairs — two of them clean dynamics measurements showing the
+field's value function is linear in visible remaining work, at ~0.039 per
+hole. The loop's principal discovery was about itself: its calibration was
+circular, twice, in two different ways — and the machinery for catching
+the third way is now the named next layer.
+
+## Where the two sides agree (the Daumal test)
+
+The flight account and the apparatus account were written separately and
+agree on every load-bearing point — which, per the house rule, is what
+makes the points real:
+
+1. **The arc's product is the instrument, not the pairs.** Seven pairs is
+   not a dataset; a measurement loop that catches its own laundering at
+   four distinct layers is an instrument worth flying for another ten.
+2. **L1/L2 is the campaign's true shape.** G-vs-G dynamics evidence accrues
+   cheaply forever and will never clear G-SIM's value half. The witnessed-
+   outcome layer is not an enhancement — it is the gate, and pudding-G1 is
+   its named construction.
+3. **The disciplines outperformed the instruments.** Every major catch
+   (teleport, censored pair, transient spike, relocated circularity)
+   happened at a discipline boundary — earned-closure, settled-read,
+   author≠reviewer, verify-the-mechanism — before the corresponding
+   structural guard existed. The guards then made each catch permanent.
+   This ordering (discipline catches → structure encodes) repeated four
+   times; it is probably the development method, not an accident of it.
+4. **The roles error-correct in opposite directions and need each other.**
+   Five pilot mechanism-misdiagnoses were source-checked by ground control;
+   ground control's one misread was self-reported; the operator's two
+   genuine choice points (start FutonZero; re-rank the field) were both
+   correctly escalated and both decided above the level they were asked at.
+
+## Decisions taken in-arc (all operator-consented where required)
+
+Field re-ranked under the target-sensitive model (with frozen counterfactual)
+· two-layer calibration adopted · realised-read protocol + fallback/transient
+exclusions made structural · single-dispatch-per-kind lanes + three-way
+review · ChipWitz chartered with proto-PSR practiced immediately ·
+auto-bellbacks made structural for claude recipients.
+
+## The one pending decision
+
+**L2 outcome-grade = pudding-G1 arrow-witness binding** (registry sorry #2,
+field rank [2]). Everything downstream is built and idle: witness-classes in
+the canonical reader, the toy field's reward-admissibility quad-guard, the
+CH2 channel, six operator-merge events already banked as future L2 evidence.
+The charter holds reward as a labelled evaluation artifact until this gate;
+arming it is an operator decision with M-peradam-grounding's conditions
+attached (Joe-confirm + cert-half + STANDARD-VERIFY).
+
+## The next arc (conditional sketch)
+
+If L2 is armed: cycles 11–20 fly the same supervised shape, each executed
+cycle minting an L1 dynamics pair AND an L2 witnessed-outcome record;
+first constant-vs-scaled analysis at ~10 L1 pairs; first outcome-vs-
+prediction reading when L2 records reach quorum. If L2 stays gated: the
+arc accrues L1 + banks L2 evidence unlabelled, and the cheap frontier is
+hole-granularity (more pilot-closeable counted holes) and ChipWitz v1.
+Either way the scope-outs hold: no autonomous runner, no reward-trained
+policy update, no hidden scheduler.
+
+## Operator's read
+
+*(Joe — yours. The two sides above are what your agents saw; this section
+is what the operator saw, including anything the instruments missed.)*
