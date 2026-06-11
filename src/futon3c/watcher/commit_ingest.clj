@@ -9,6 +9,7 @@
      code/v05/precedes       (edge)    commit_t → commit_{t+1}
      code/v05/edits          (edge)    commit → var (per-repo prefixed; v0 HEAD-snapshot)
      code/v05/block-trailer  (edge)    commit ↔ block-tag (only when commit body carries Block: trailer)
+     code/v05/commit→mission (edge)    commit → mission (flag-gated, default off)
 
    Block: trailer detection feeds the metabolic-balance/mana economy:
    per M-bounded-in-flight-state, every Block (one revolution of the
@@ -29,7 +30,8 @@
             [clojure.edn :as edn]
             [clojure.java.shell :refer [sh]]
             [babashka.http-client :as http]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            [futon3c.agency.registry :as registry]))
 
 (def FUTON1A (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def FUTON3C (or (System/getenv "FUTON3C_URL") "http://localhost:7070"))
@@ -40,7 +42,7 @@
 
 (def directed-types
   #{"code/v05/authored" "code/v05/precedes" "code/v05/edits"
-    "code/v05/block-trailer"})
+    "code/v05/block-trailer" "code/v05/commit→mission"})
 
 (defn directed-endpoints [hx-type endpoints]
   (if (and (directed-types hx-type) (= 2 (count endpoints)))
@@ -81,6 +83,11 @@
    M-bounded-in-flight-state."
   #"(?m)^\s*Block:\s+([a-z][a-z0-9-]*?)-(\d{4}-\d{2}-\d{2})-([A-Za-z0-9._-]+)\s*$")
 
+(def ^:private mission-footer-pattern
+  "Matches a mission attribution trailer: `Mission: <ident>`.
+   The trailer is the declared provenance for code/v05/commit→mission."
+  #"(?m)^\s*Mission:\s+([A-Za-z][A-Za-z0-9._-]*)\s*$")
+
 (defn parse-block-trailer
   "Extract a Block: trailer map from a commit body, or nil."
   [body]
@@ -91,14 +98,24 @@
        :ymd  (nth m 2)
        :slug (nth m 3)})))
 
+(defn parse-mission-trailer
+  "Extract a Mission: trailer ident from a commit body, or nil."
+  [body]
+  (when (string? body)
+    (some-> (re-find mission-footer-pattern body)
+            second
+            str/trim
+            not-empty)))
+
 (defn list-commits
   "Returns vector of commit maps in chronological order (oldest first).
    With since-sha=nil → all commits (full --reverse log).
    With since-sha=<sha> → commits strictly after that sha.
 
-   Each commit map: {:sha :email :name :ts :subject :body :block}.
+   Each commit map: {:sha :email :name :ts :subject :body :block :mission}.
    :body holds the full commit body (subject + blank + body); :block
-   holds the parsed Block: trailer or nil.
+   holds the parsed Block: trailer or nil; :mission holds the parsed
+   Mission: trailer or nil.
 
    Field separator: U+001F (Unit Separator). Record separator: U+001E
    (Record Separator). Both are guaranteed not to appear in commit
@@ -126,7 +143,8 @@
                      :ts (when (seq ts) (parse-long ts))
                      :subject subject
                      :body body
-                     :block (parse-block-trailer body)})))))))
+                     :block (parse-block-trailer body)
+                     :mission (parse-mission-trailer body)})))))))
 
 (defn files-changed
   "Names of files added/modified in this commit (no deletions)."
@@ -275,6 +293,61 @@
                                         {:sid sid :ts ts}))))))]
       (when (seq candidates)
         (:sid (apply max-key :ts candidates))))))
+
+;; ---------- commit→mission attribution (E-mealy-style-transducer) ----------
+
+(def commit-mission-edge-type "code/v05/commit→mission")
+
+(defn commit-mission-edges-enabled?
+  "Dark-launch flag for commit→mission edge writes. Default OFF."
+  []
+  (boolean
+   (#{"1" "true" "yes" "on"}
+    (some-> (System/getenv "FUTON3C_COMMIT_MISSION_EDGES")
+            str/lower-case
+            str/trim))))
+
+(defn- agent-mission-for-session
+  "Return the current registry mission-id for SESSION-ID, if any."
+  [session-id]
+  (when (seq (str session-id))
+    (let [agents (-> (registry/registry-status) :agents vals)]
+      (some (fn [agent]
+              (when (= session-id (:session-id agent))
+                (some-> (:mission-id agent) str str/trim not-empty)))
+            agents))))
+
+(defn commit-mission-attribution
+  "Resolve commit→mission attribution.
+
+   Declared Mission: trailers win. If no trailer exists, use the existing
+   timestamp-window session resolver and the Agency registry mission-id.
+   Heuristic attribution is tagged and never overwrites a trailer edge."
+  [{:keys [mission ts]}]
+  (if (seq mission)
+    {:mission-id mission
+     :relation/provenance "trailer"}
+    (when-let [commit-ts-ms (when ts (* 1000 (long ts)))]
+      (when-let [session-id (resolve-session-for-commit commit-ts-ms)]
+        (when-let [mission-id (agent-mission-for-session session-id)]
+          {:mission-id mission-id
+           :session-id session-id
+           :relation/provenance "session-heuristic"})))))
+
+(defn ingest-commit-mission-edge!
+  "Emit one code/v05/commit→mission edge when the dark-launch flag is on.
+   Returns nil without side effects when disabled or unattributed."
+  [labels base-props {:keys [sha] :as commit}]
+  (when (and (commit-mission-edges-enabled?) sha)
+    (when-let [attribution (commit-mission-attribution commit)]
+      (post-hyperedge! commit-mission-edge-type
+                       [sha (:mission-id attribution)]
+                       labels
+                       (cond-> (merge base-props
+                                      {"relation/provenance"
+                                       (:relation/provenance attribution)})
+                         (:session-id attribution)
+                         (assoc "session-id" (:session-id attribution)))))))
 
 ;; ---------- mana credit ----------
 
@@ -426,6 +499,14 @@
               r (ingest-edits-for-commit! labels base-props repo-label
                                           c file->vars repo-root)]
         (check! r))
+
+      (when (commit-mission-edges-enabled?)
+        (when verbose?
+          (println "[L4→L0] writing commit→mission edges (flag-gated)"))
+        (doseq [c commits
+                :let [r (ingest-commit-mission-edge! labels base-props c)]
+                :when r]
+          (check! r)))
 
       ;; Mana credits: one +1 per Block-footered commit, idempotent on sha
       (doseq [c commits
