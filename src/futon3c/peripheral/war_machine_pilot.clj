@@ -436,6 +436,12 @@
           target     (:target v)
           post-entry (first (filter #(= target (get-in % [:action :target])) post-dT))
           realised   (if post-entry (:g-total post-entry) predicted)
+          ;; A vanished target means the discharge SUCCEEDED but realised-G
+          ;; has no measurement — the fallback copies predicted, which would
+          ;; fabricate a perfect prediction-error of 0.0. Tag the source so
+          ;; calibration can exclude fallback pairs from the verdict
+          ;; (a censored observation is not evidence of calibration).
+          realised-source (if post-entry :measured :target-absent-fallback)
           pre-top    (get-in b [:pre :dT-snapshot 0 :action :target])
           post-top   (get-in post-dT [0 :action :target])
           tr ((requiring-resolve 'futon3c.aif.repl-trace/turn-record)
@@ -447,7 +453,8 @@
                        :delta-grad? false
                        :p' "post-tick" :realised-discharge realised}
                 executed? (assoc :independent? true
-                                 :evidence-ref evidence-ref)))
+                                 :evidence-ref evidence-ref
+                                 :realised-source realised-source)))
           ;; the merge itself is an out-of-band gradient event — record it
           ;; in the discipline channel (best-effort; never breaks a close)
           _ (when executed?

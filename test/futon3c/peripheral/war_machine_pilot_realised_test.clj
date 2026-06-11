@@ -40,7 +40,8 @@
         tr (repl-trace/turn-record {:step 0 :predicted-discharge -2.0
                                     :realised-discharge -1.0
                                     :independent? true
-                                    :evidence-ref "commit abc123"})
+                                    :evidence-ref "commit abc123"
+                                    :realised-source :measured})
         _ (spit (io/file dir "live-x.edn")
                 (pr-str {:run-id "live-x" :date "2026-06-11" :trace [tr]}))
         evidence (calibration/load-evidence {:traces-dir (.getPath dir)

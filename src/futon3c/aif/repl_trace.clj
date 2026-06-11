@@ -43,7 +43,7 @@
   [m]
   (let [{:keys [step p dT-snapshot v v-attribution predicted-discharge cg-id
                 artefact new-edge-family p' realised-discharge
-                prediction-error independent? evidence-ref]} m
+                prediction-error independent? evidence-ref realised-source]} m
         dg (cond (contains? m :delta-∇?)    (:delta-∇? m)
                  (contains? m :delta-grad?) (:delta-grad? m)
                  :else ::absent)
@@ -71,7 +71,8 @@
       ;; gate that diagnoses degeneracy must not be clearable by more
       ;; degeneracy). Absent unless supplied, like every other field.
       (some? independent?)        (assoc :independent? independent?)
-      (some? evidence-ref)        (assoc :evidence-ref evidence-ref))))
+      (some? evidence-ref)        (assoc :evidence-ref evidence-ref)
+      (some? realised-source)     (assoc :realised-source realised-source))))
 
 ;; ---------------------------------------------------------------------------
 ;; accumulator — what the live loop drives, one record per turn-cycle

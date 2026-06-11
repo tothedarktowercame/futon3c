@@ -87,6 +87,7 @@
                             ;; (executed action, independent realised) — the
                             ;; ONLY pairs the verdict may count.
                             :independent? (boolean (:independent? m))
+                            :realised-source (:realised-source m)
                             :witness-class :none})))))
            (catch Throwable t
              (swap! warnings conj (warn (.getPath file) (str "unreadable source: " (.getMessage t))))
@@ -277,7 +278,14 @@
                                   (/ (count (filter #(< (Math/abs (double %)) 1.0e-3) es))
                                      (double (count es)))))
         paired-count (count paired)
-        independent (filterv :independent? paired)
+        ;; verdict-eligible = independent AND explicitly MEASURED realised.
+        ;; A vanished-target close falls back to realised:=predicted (a
+        ;; censored observation, error 0.0 by construction) — :realised-source
+        ;; :target-absent-fallback, or absent on pre-tagging frames, is NOT
+        ;; calibration evidence. Strict by default: only :measured counts.
+        independent (filterv #(and (:independent? %)
+                                   (= :measured (:realised-source %)))
+                             paired)
         independent-errors (mapv pair-error independent)
         independent-count (count independent)
         degenerate? (and (pos? paired-count)

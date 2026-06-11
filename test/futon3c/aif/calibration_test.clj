@@ -71,10 +71,10 @@
 
 (deftest degenerate-detection-true-and-calibratable-false
   (let [degenerate (repeat 11 {:kind :gamma-frame :predicted 1.0 :realised 1.0
-                               :error 0.0 :independent? true})
+                               :error 0.0 :independent? true :realised-source :measured})
         nondegenerate (for [i (range 11)]
                         {:kind :gamma-frame :predicted 1.0 :realised (+ 2.0 i)
-                         :independent? true})]
+                         :independent? true :realised-source :measured})]
     (is (= :degenerate (:verdict (calibration/calibration-report (vec degenerate)))))
     (is (true? (:degenerate? (calibration/calibration-report (vec degenerate)))))
     (is (= :calibratable (:verdict (calibration/calibration-report (vec nondegenerate)))))
@@ -82,7 +82,7 @@
 
 (deftest insufficient-evidence-when-fewer-than-ten-pairs
   (let [evidence [{:kind :gamma-frame :predicted 1.0 :realised 1.0
-                   :error 0.0 :independent? true}]]
+                   :error 0.0 :independent? true :realised-source :measured}]]
     (is (= :insufficient-evidence
            (:verdict (calibration/calibration-report evidence))))))
 
@@ -103,8 +103,25 @@
     (let [mixed (into (vec self-referential)
                       (for [i (range 11)]
                         {:kind :gamma-frame :predicted 1.0 :realised (+ 2.0 i)
-                         :independent? true}))]
+                         :independent? true :realised-source :measured}))]
       (is (= :calibratable (:verdict (calibration/calibration-report mixed)))))))
+
+(deftest fallback-realised-cannot-count-as-independent
+  ;; A vanished-target close copies predicted as realised (error 0.0 by
+  ;; construction — a censored observation, not a measurement). Tagged
+  ;; :target-absent-fallback — or untagged, on pre-tagging frames — such
+  ;; pairs are excluded from the verdict even when :independent? true.
+  (let [fallback (repeat 11 {:kind :gamma-frame :predicted -4.0 :realised -4.0
+                             :error 0.0 :independent? true
+                             :realised-source :target-absent-fallback})
+        untagged (repeat 11 {:kind :gamma-frame :predicted -4.0 :realised -4.0
+                             :error 0.0 :independent? true})
+        report-f (calibration/calibration-report (vec fallback))
+        report-u (calibration/calibration-report (vec untagged))]
+    (is (= 0 (:independent-paired-count report-f)))
+    (is (= :insufficient-evidence (:verdict report-f)))
+    (is (= 0 (:independent-paired-count report-u)) "strict: only explicit :measured counts")
+    (is (= :insufficient-evidence (:verdict report-u)))))
 
 (deftest missing-sources-become-warnings-not-throws
   (let [evidence (calibration/load-evidence {:traces-dir "/tmp/no-such-traces-dir-for-calibration"
