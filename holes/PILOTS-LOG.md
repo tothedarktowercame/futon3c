@@ -17,6 +17,18 @@ automatically.
 
 ---
 
+## Turn 6 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.74).
+_(Auto-log note, as Turn 5: this line is the field's top [0]; the actual `v` was
+**operator-directed** `advance-mission M-futonzero-generative` (predicted G=−4.3634).)_
+
+**EVAL / DID.** Authored §4.3 policy/value vocabulary v0 (pattern-as-policy + value-estimate shapes, no actuator) at holes/missions/M-futonzero-generative.policy-value-vocabulary.edn; marked §4.3 done (5 holes to 4). Committed futon0 11f0f96.
+
+**PRINT / FOUND.** Measured pair #2: predicted -4.3634 (5-hole state at begin), realised reads the post-commit scan where the mission persists at rank 10. Error far larger than cycle 5 (2.4e-4): a real-content hole closure moves the target G substantially. Caveat: on a live multi-agent field the movement is not cleanly attributable to one action (the attribution problem ground control flagged), but the 5-hole G was stable at -4.363 across two pre-close scans, so most of the jump tracks the hole closure. Realised-source measured.  _[predicted G=-4.36, realised G=-4.09, top-shift sorry/pattern-measure-never-target->]_
+
+**PUR.** Pattern consent-gate (operator-directed: cycle 6 GO) plus earned-closure (real content hole closed, field moved). Codex pool busy, so flew a pilot-doable real advance (4.3 spec authoring, owner lane) instead of the 4.2 build (deferred to codex). Applied the determined-fork lesson: warrant findable (doc next safe work product + standing contract), so proto-PSR and fly, no operator question. Mode supervised, operator-directed. Mode: supervised-proposal.
+
 ## Turn 5 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.46).
