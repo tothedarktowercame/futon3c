@@ -180,3 +180,78 @@ intuition.
 4. **Cap-widening** — now a calibrated decision candidate: the 2.55×
    result plus 7 pairs give the first real basis for revisiting the 2×
    cap.
+
+## Operator's read
+
+So, apart from the drive-architecture issues — which we can solve
+outside of the WM in a consolidation and clean-up pass — what's
+concerning for me is that the WM is getting lower mean error, but not
+clearly increasing in autonomy (i.e., not clearly "learning" or
+"gaining capability").  Adding new patterns is kind of cool, but if
+that's all we are getting from a given cycle — no PSR, PUR or evidence
+that the pattern was needed or useful — it seems very expensive.
+
+It may well be that after 20 rounds, operator guidance is really
+needed, and I am OK with that, but in that case what's needed is not a
+review of the WM's run-as-such but a side-by-side review of the run
+with the Operator asks.
+
+---
+
+# Side-by-side: the run vs the operator asks (ground control, in response to the Operator's read)
+
+The ledger, reconstructed from PILOTS-LOG, bells, and the emacs transcript —
+every operator touch across both arcs, classified by LAYER:
+
+| cycles | operator touches | layer | nature |
+|---|---|---|---|
+| 1–10 (arc 1) | pacing EVERY cycle ("cycle N next") | drive | by design (supervised) |
+| 2 | close star-map + caveats-spinout | content/strategic | genuine — the discharge WAS the operator's |
+| 2-staged | "start FutonZero?" → campaign steer | content/strategic | genuine, answered above the asked level |
+| 5 | "OK with B" | content | OVER-ASK (determined fork; the ChipWitz lesson) |
+| 5-fork | realised-semantics A/B/C → staged C | content/design | genuine (instrument semantics) |
+| 8 | target-sensitive re-rank consent | content/strategic | genuine (re-aims the field) |
+| 11–20 (arc 2) | **zero content asks** (§367 queued, not asked) | content | the charter held |
+| 11–20 (arc 2) | ~5 interventions: "not running", "not smooth", "unwire it", comms debugging, "finish 19–20" | **drive** | ALL apparatus, none WM-content |
+
+**The honest headline:** between arc 1 and arc 2, *content*-steering went
+from operator-paced-every-cycle to fully self-steered (asks → 0, one fork
+correctly queued). *Drive*-steering did not improve at all — the
+babysitting moved down a layer and continued at the same rate. The loop
+gained decision-autonomy and gained no temporal-autonomy. So the Operator's
+read is correct: lower mean error ≠ rising capability, because capability
+in the charter's own Sen sense includes *keeping oneself moving*, and that
+freedom was never acquired — it was simulated by ground control's
+hand-cranking. (The drive-architecture work is therefore not "outside the
+WM" entirely: temporal self-maintenance is part of what the lifeform has to
+demonstrate, even if the mechanism lives in Cyder/Tickle.)
+
+**On the pattern-mint expense:** partially guilty, with the evidence split:
+- *Demonstrated-need mints* (2): `two-projections-of-one-quantity` (a cited
+  pattern that didn't exist — the ARGUE leaned on it; store arrow as
+  provenance) and `measure-never-target` (three live instances before
+  minting). These had PSR-grade warrant at mint time.
+- *Lesson-codification mints* (5, mostly arc-2): warranted by recurrence
+  within the arcs, but **zero third-party usage evidence yet** — no
+  attestation counts, no later PSR citing them. The Operator's read is
+  right that these are functionings whose capability value is undemonstrated.
+- The cheap honest test already exists in the stack: the
+  pattern-attestation pipeline (the WM's own `:activations-Nd` from PSR
+  evidence). Proposal: a minted pattern that accrues no attestations within
+  N sessions gets flagged on the honest-map principle — unused mints
+  surface instead of padding the bank. Mint-PSRs become mandatory (ChipWitz
+  PXR channel), and the mint itself is only the FIRST half of a closure —
+  the PUR lands when someone *uses* it.
+
+**For the convene — arc-3 capability metrics, so "learning" is measured
+not asserted:**
+1. operator-touches per cycle, BY LAYER (content vs drive) — arc 2 scored
+   0 and ~0.5; arc 3 must hold 0 content while driving drive→0 via the
+   Cyder/Tickle work (E-drive-prior-art.md has the design).
+2. pattern-attestation follow-through on the 7 mints (usage or flagged).
+3. pair-supply restored via hole-granularity → the 10-pair model
+   comparison the charter wanted.
+4. L2 readiness: the side-by-side's strategic asks (star-map close,
+   campaign steer, re-rank consent) are exactly the decision-shapes that
+   pudding-G1's witness discipline will need to certify — the operator-ask
+   ledger doubles as L2's training examples.
