@@ -3472,6 +3472,9 @@ RESPOND WITH ONLY:
               ;; assistant message so the final result is the actual answer.
               text-acc (StringBuilder.)
               last-had-tools? (atom false)
+              ;; all tool names seen this turn — used to make a tool-last /
+              ;; no-text turn legible instead of an opaque placeholder.
+              tools-acc (atom [])
               result-sid (atom nil)
               result-error (atom false)
               aid-val (str agent-id)
@@ -3523,6 +3526,7 @@ RESPOND WITH ONLY:
                                                 (when (and (not tools) @last-had-tools?)
                                                   (.setLength text-acc 0))
                                                 (.append text-acc text))
+                                              (when tools (swap! tools-acc into tools))
                                               (reset! last-had-tools? (boolean tools))
                                               ;; Emit to streaming event sink (if any)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
@@ -3632,7 +3636,11 @@ RESPOND WITH ONLY:
                      :bb-opts bb-opts})))
               (if ok?
                 {:result (if (str/blank? text)
-                           "[Claude used tools but produced no text response]"
+                           ;; tool-last / no-text turn: surface what was called.
+                           (let [names (->> @tools-acc (remove nil?) distinct vec)]
+                             (if (seq names)
+                               (str "[no text — called: " (str/join ", " names) "]")
+                               "[no text or tool calls in this turn]"))
                            text)
                  :session-id final-sid
                  :invoke-trace-id invoke-trace-id}

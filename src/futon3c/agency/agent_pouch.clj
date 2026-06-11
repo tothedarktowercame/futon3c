@@ -145,6 +145,27 @@
                                              content))
       :else "")))
 
+(defn- tool-names-from-assistant
+  "Tool names invoked in this assistant event (empty when none)."
+  [event]
+  (let [content (get-in event [:message :content])]
+    (when (sequential? content)
+      (keep (fn [block]
+              (when (= "tool_use" (:type block))
+                (:name block)))
+            content))))
+
+(defn- no-text-summary
+  "Legible stand-in for a turn that produced tool calls but no text. Surfaces the
+   tool names so a tool-last turn is inspectable from any surface instead of an
+   opaque '[…produced no text response]' (M-agency-hardening, no-text-path
+   appendix). Strictly more information than the old placeholder, never less."
+  [tool-names]
+  (let [names (->> tool-names (remove nil?) distinct vec)]
+    (if (seq names)
+      (str "[no text — called: " (str/join ", " names) "]")
+      "[no text or tool calls in this turn]")))
+
 (defn- alive? [pouch]
   (boolean (and (:process pouch)
                 (.isAlive ^Process (:process pouch)))))
@@ -277,6 +298,7 @@
 
 (defn- read-turn* [pouch on-event]
   (let [text (StringBuilder.)
+        tools (java.util.ArrayList.)
         sid (atom (:session-id pouch))]
     (loop []
       (let [line (.readLine ^BufferedReader (:reader pouch))]
@@ -295,6 +317,7 @@
               (let [t (text-from-assistant event)]
                 (when-not (str/blank? t)
                   (.append text t))
+                (doseq [n (tool-names-from-assistant event)] (.add tools n))
                 (recur))
 
               "result"
@@ -303,7 +326,9 @@
                   (reset! sid event-sid))
                 {:result (let [s (str text)]
                            (if (str/blank? s)
-                             "[Claude used tools but produced no text response]"
+                             ;; tool-last / no-text turn: surface what was called
+                             ;; instead of an opaque placeholder.
+                             (no-text-summary (vec tools))
                              s))
                  :session-id @sid
                  :pouch/warm? true
@@ -314,6 +339,23 @@
                               {:agent-id (:agent-id pouch) :event event}))
 
               (recur))))))))
+
+(defn- drain-pending!
+  "Discard any stale buffered output on the pouch reader before a new turn.
+   Under feed-turn!'s per-pouch lock the process is idle between turns, so
+   anything readable here is orphaned output from a prior anomaly (an
+   unconsumed `result`). Dropping it guarantees each turn reads ITS OWN
+   output — otherwise a single unconsumed result shifts every later response
+   one turn behind (M-agency-hardening: warm-pouch response desync, 2026-06-11).
+   Returns the number of stale lines dropped (0 in the normal case)."
+  [pouch]
+  (let [^BufferedReader r (:reader pouch)]
+    (loop [n 0]
+      (if (.ready r)
+        (if (nil? (.readLine r))
+          n
+          (recur (inc n)))
+        n))))
 
 (defn- read-turn-with-timeout [pouch timeout-ms on-event]
   (let [f (future (read-turn* pouch on-event))
@@ -347,6 +389,13 @@
                          (contains? m (str agent-id))
                          (update (str agent-id) assoc
                                  :in-flight? true :last-used-ms (now-ms)))))
+        ;; Resync guard: drop any stale buffered output before writing, so this
+        ;; turn reads its own result (not a prior turn's). A no-op normally.
+        (let [drained (drain-pending! pouch)]
+          (when (pos? drained)
+            (println (str "[pouch] " (str agent-id) " drained " drained
+                          " stale line(s) before turn — resynced response alignment"))
+            (flush)))
         (.write ^BufferedWriter (:writer pouch) (str (user-line prompt) "\n"))
         (.flush ^BufferedWriter (:writer pouch))
         (let [result (read-turn-with-timeout pouch timeout on-event)]

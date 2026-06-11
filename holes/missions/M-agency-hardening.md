@@ -336,3 +336,76 @@ Deliverables:
 9. Perform hard-kill overnight-cycle recovery drill.
 10. Decide the Tickle claim level.
 11. Rewrite the abstract.
+
+## Appendix: the no-text invoke path (checkpoint, 2026-06-11)
+
+**Symptom.** Operator saw `[Claude used tools but produced no text response]` spam
+across surfaces — agents appeared stuck/unreadable (notably fable-1 driving an
+autonomous arc; the spam read as a hung loop).
+
+**Root cause (source-checked, not the obvious one).** The warm-pouch text
+extractor (`agency/agent_pouch.clj read-turn*`) is *faithful*: it accumulates text
+from every assistant event and only substitutes the placeholder when a turn truly
+contained zero text blocks. So this was **not** dropped text — agents were genuinely
+ending turns with a tool call and no trailing text (a tool-*last* turn; e.g. ending a
+loop turn on `ScheduleWakeup`). The placeholder was an accurate but **opaque** report:
+Agency held the `tool_use` data (the `on-event` hook sees every tool block) yet threw
+it away on the no-text path, so the operator saw "[no text]" instead of *what the agent
+did*. Confirmed live by fable-1's own account once recovered ("I'd been ending loop
+turns with `ScheduleWakeup` as the last action — renders as that placeholder").
+
+**Fix (flag-free, strictly more information).** On the no-text path, surface the tool
+names instead of the opaque string: `[no text — called: ScheduleWakeup, Bash]` (deduped,
+in order), falling back to `[no text or tool calls in this turn]`. Applied at all three
+invoke text-extraction sites:
+- `src/futon3c/agency/agent_pouch.clj` — warm/kangaroo `read-turn*` (+ `tool-names-from-assistant`,
+  `no-text-summary` helpers). **Reloaded live via Drawbridge** + smoke-tested.
+- `dev/futon3c/dev.clj` — cold invoke (`tools-acc` accumulator). Takes effect for newly
+  registered agents / next restart (the invoke-fn closure is captured at registration).
+- `scripts/claude_ws_invoke_bridge.clj` — WS invoke bridge. Next bridge run.
+
+clj-kondo errors: 0. The warm fix is live now; cold/WS land on next restart/run.
+
+**Adjacent recovery (same episode).** fable-1's warm pouch had degenerated into a
+tool-only spin after 36 turns / 11.3 MB; an `evict!` + cold rebuild (same session
+`41e58a57`, I-1 preserved) restored coherent text — localizing that *specific* stick to
+warm-process state, not the session transcript. The evict also killed fable-1's
+session-private background autorunner → **M-kangaroo finding:** warm-pouch resets kill
+resident agents' background processes; session-held monitors need reset-survival or a
+post-reset restart hook.
+
+**Distinct follow-on (not done here).** The reliable-loop-keeper question: fable-1's
+ad-hoc, session-private autorunner is the self-certification anti-pattern (un-inspectable
+except by trusting its narration). The right home is the existing registry-visible
+`tickle-queue`/conductor (task pool + idle-bell dispatch), not a hand-rolled script.
+Its own pass.
+
+## Appendix: warm-pouch response desync (checkpoint, 2026-06-11)
+
+**Symptom.** Warm agents answered **one prompt behind** — prompt N returned prompt
+N-1's response. An orchestrator (fable-1) driving an autonomous arc on stale answers
+looked exactly like confusion/confabulation ("are you there" → an unrelated older answer);
+a big part of "the loop isn't running smoothly."
+
+**Confirmed (two-token probe, not inference).** Sent `ZEBRA-ALPHA-41` then `ZEBRA-BETA-58`
+as back-to-back whistles: probe A returned a *stale* answer; probe B returned
+**`ZEBRA-ALPHA-41`** (probe A's answer). Exact one-turn shift, definitive.
+
+**Root cause.** A warm pouch's `read-turn*` reads stdout until the `result` event. If a
+turn's `result` is ever left **unconsumed** in the reader buffer (transient trigger: a
+mid-session Drawbridge reload, an out-of-band feed, or a read that returned without
+draining its tail), every later turn reads that stale result one-early. `feed-turn!`'s
+per-pouch lock + read-until-result then keeps it shifted *permanently* — the shift never
+self-heals.
+
+**Fix (self-correcting, no-op normally).** `agency/agent_pouch.clj`: a `drain-pending!`
+that discards any stale buffered output at the **start of `feed-turn!`, before writing the
+prompt**. Under the per-pouch lock the process is idle between turns, so anything readable
+then is orphaned and safe to drop. A desync from *any* cause now clears within one turn
+instead of persisting; it logs `[pouch] <id> drained N stale line(s)` when it actually
+fires (a deeper-signal hook if it fires every turn).
+
+**Verified live.** Reloaded via Drawbridge (`:reload`; `defonce !pouches` preserved the
+warm pouches). Re-probe `MANGO-CHARLIE-3` / `MANGO-DELTA-9` → each returned its own token.
+The first post-fix turn drained the pending stale result and **resynced fable-1 without
+eviction** (kept its warm session). clj-kondo: 0 errors, 0 warnings.

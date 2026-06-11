@@ -114,6 +114,7 @@
           proc (.start pb)
           ;; Accumulate text and session-id from the stream
           text-acc (StringBuilder.)
+          tools-acc (atom [])   ;; tool names this turn — for legible no-text turns
           result-sid (atom nil)
           result-ok (atom true)
           ;; Read stream-json lines as they arrive
@@ -127,8 +128,14 @@
                                    (case (:type parsed)
                                      ;; Text from Claude — extract and callback immediately
                                      "assistant"
-                                     (when-let [text (extract-text-from-assistant-message parsed)]
-                                       (when-not (str/blank? text)
+                                     (let [content (get-in parsed [:message :content])
+                                           tools (when (sequential? content)
+                                                   (->> content
+                                                        (filter #(= "tool_use" (:type %)))
+                                                        (keep :name)))
+                                           text (extract-text-from-assistant-message parsed)]
+                                       (when (seq tools) (swap! tools-acc into tools))
+                                       (when (and text (not (str/blank? text)))
                                          (.append text-acc text)
                                          (when on-text (on-text text))))
 
@@ -172,7 +179,11 @@
         (if (and (zero? exit) @result-ok)
           {:ok true
            :result (if (str/blank? text)
-                     "[Claude used tools but produced no text response]"
+                     ;; tool-last / no-text turn: surface what was called.
+                     (let [names (->> @tools-acc (remove nil?) distinct vec)]
+                       (if (seq names)
+                         (str "[no text — called: " (str/join ", " names) "]")
+                         "[no text or tool calls in this turn]"))
                      text)
            :session-id final-sid}
           {:ok false
