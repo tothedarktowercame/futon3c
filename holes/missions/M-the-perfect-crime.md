@@ -153,6 +153,22 @@ Provenance: WM-pilot session 2026-06-11 (claude-3 + fable-1), Pilot's-Log Turns 
 `[[feedback_subsumption_claim_discipline]]` (prose chained-claims) and this new self-reference
 failure mode.
 
+**The crime relocates; it is never killed (the pudding-prover rationale, derived from below).**
+A forensic corollary surfaced when the `prior == value` finding was fixed the same day
+(target-sensitive predict-effects). The fix did not abolish the crime — it pushed it into a
+*scarcer witness*. The constant model's **state-blindness** was exposed (it predicts the same
+regardless of world-change); fixing that exposed the scaled model's **increment-circularity**
+(G-vs-G tests whether the world *moved*, never the per-hole *coefficient* — the agreement scale
+is still model-priced). The next witness is the **outcome**: did real functioning result? —
+where a three-witness certificate ([[project_pudding_peradams]]) lives. So the discipline this
+mission seeks is not a single detector but a **ladder of scarcer witnesses**: high-definition
+instruments substitute for the real until the witness becomes too expensive to fake. That
+laddering, reached here from the calibration domain, *is* the pudding-prover's rationale arrived
+at from below. Named with ground control: **two-layer calibration** — L1 G-vs-G = dynamics /
+consistency (cheap, every cycle, never value evidence); L2 outcome-vs-prediction = value, gated
+at pudding G1 (the arrow-witness binding, registry sorry #2). Each relocation costs the launderer
+more — which is the point.
+
 ---
 
 ## Appendix A. Cross-references
