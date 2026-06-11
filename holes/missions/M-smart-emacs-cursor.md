@@ -157,6 +157,21 @@ visible body at all. (The consent question shifts from "may it edit?" to
 "is its identity unmistakable while it edits?" — which is the editor-grain
 form of the agent-identity invariant the Agency already enforces.)
 
+### A5 — concurrent editing deferred; the demo's concurrency is modal (Joe, spoken, 2026-06-11)
+
+> "The question I would have is whether we need to also use CRDT — but I
+> don't think we need that for a first demo, because I'm actually not typing
+> into the same buffer you are. I'm just talking with my voice."
+
+Resolved as spoken: in v1 the operator speaks and the agent types — two
+bodies, two channels, no contention for one buffer. CRDT-grade machinery is
+the answer to a problem this modality does not have. Recorded so it is
+reached for at the right moment and not before: it becomes live only when
+both cursors type into one buffer in the same span of time — and even then,
+the editor's command-grain seriality means the real problem will be
+intention conflict, not byte conflict. Revisit when a second typing body
+exists and the modal discipline is deliberately broken.
+
 ### 4.1 Plain-language argument (the version anyone can read)
 
 You speak. The words go to the helper instead of wherever your cursor
