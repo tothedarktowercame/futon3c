@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 14 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `sorry/pattern-measure-never-target` (G=-4.35).
+
+**EVAL / DID.** Arc-2 cycle 14: wrote the constant-vs-scaled analysis (futon3c 71391da, holes/PILOT-ARC-2-ANALYSIS.md) -- the model-evidence deliverable. Scaled model 2.55x more accurate than the constant counterfactual over 4 dual-pred pairs (mean 0.0196 vs 0.0499).
+
+**PRINT / FOUND.** MODEL-EVIDENCE: the operator-consented target-sensitive switch improved the WM model -- 2.55x lower mean error, mechanism = state-sensitive NO-MOVE prediction (scaled nails the null/capped pairs T8/T11 where the state-blind constant misses by 0.04-0.12; on moves T9/T10 they are comparable). Proposal-mode (analysis is a document action, not a measured advance). Honest: n=4 not the charter 10 (clean-target wall); directional not robust.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Operator-directed arc-2 cycle 14 (fable-1 metronome) + earned-closure (genuine model-evidence computed from the authoritative calibration evidence). The arc-2 deliverable centerpiece. Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 13 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
