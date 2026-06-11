@@ -230,13 +230,15 @@ loaded, voice route ON, six agents on the roster. The body cannot yet
 strike the MISSING above (see row 8); let this line stand as the
 correction.
 
-Method ruling (Joe, spoken): this VERIFY closes by REASON over live
-evidence, not by a core.logic model — the substrate is Emacs, the demo
-runs in the world, and every row above carries its own witness. The
-logic-model discipline stays for designs whose adversarial traces cannot
-be lived; this one was.
-
-VERIFY: GO — rehearse the scene.
+Method ruling (Joe, spoken — and FIRST MISHEARD by the transcription
+channel as plain reason; the body struck its own error and retyped this,
+discharging row 8 in the act): verify with a REAZON logic model —
+miniKanren in Emacs Lisp, logic-model-before-code in the substrate of the
+build itself. core.logic stays for JVM designs; Emacs verifies Emacs.
+Reazon is confirmed loaded in the operator Emacs. VERIFY therefore holds
+at the gate until the scene invariants run as Reazon relations: one
+conforming trace satisfying all of them, and one adversarial trace per
+invariant, each caught.
 
 Exit: build row 7, rehearse the scene once end to end, then the demo is
 real.

@@ -136,6 +136,38 @@ Call ON-DONE (no args) when the run completes. Returns immediately."
         (run-at-time 0 futon-agent-cursor-interval #'futon-agent-cursor--tick))
   t)
 
+(defvar futon-agent-cursor--delete-remaining 0)
+
+(defun futon-agent-cursor--delete-tick ()
+  (if (or (<= futon-agent-cursor--delete-remaining 0)
+          (null futon-agent-cursor--marker))
+      (futon-agent-cursor--finish)
+    (let ((n (min futon-agent-cursor-chunk futon-agent-cursor--delete-remaining)))
+      (setq futon-agent-cursor--delete-remaining
+            (- futon-agent-cursor--delete-remaining n))
+      (with-current-buffer (marker-buffer futon-agent-cursor--marker)
+        (let ((pos (marker-position futon-agent-cursor--marker)))
+          (delete-region pos (min (point-max) (+ pos n)))
+          (move-overlay futon-agent-cursor--overlay pos pos))))))
+
+(defun futon-agent-cursor-delete (n &optional on-done)
+  "Visibly delete N characters forward from the agent cursor.
+The revision primitive (VERIFY row 8): same identity rules as typing —
+the badge shows the act, the operator's point is never touched.
+Call ON-DONE when the run completes. Returns immediately."
+  (unless (and futon-agent-cursor--marker
+               (marker-buffer futon-agent-cursor--marker))
+    (user-error "Agent cursor is not placed; call futon-agent-cursor-goto first"))
+  (when futon-agent-cursor--timer (cancel-timer futon-agent-cursor--timer))
+  (setq futon-agent-cursor--delete-remaining n
+        futon-agent-cursor--on-done on-done
+        futon-agent-cursor--typing t)
+  (overlay-put futon-agent-cursor--overlay 'before-string
+               (futon-agent-cursor--badge "revising…"))
+  (setq futon-agent-cursor--timer
+        (run-at-time 0 futon-agent-cursor-interval #'futon-agent-cursor--delete-tick))
+  t)
+
 (defun futon-agent-cursor-dismiss ()
   "Remove the agent cursor and stop any typing run."
   (interactive)
