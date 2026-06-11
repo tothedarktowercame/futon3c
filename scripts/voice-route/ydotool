@@ -37,6 +37,11 @@ case "${args[0]}" in
     case "$(printf '%s' "$decoded" | tr -d '[:space:].!,' | tr '[:upper:]' '[:lower:]')" in
       you|thankyou|thanks|thanksforwatching|"") exit 0 ;;
     esac
+    # Joe, spoken 2026-06-11: drop ANY utterance of two words or fewer —
+    # real commands arrive as whole paragraphs; fragments are noise.
+    if [ "$(printf '%s' "$decoded" | wc -w)" -le 2 ]; then
+      exit 0
+    fi
     printf '{"at":"%s","kind":"utterance","text":%s}\n' \
       "$ts" "$(printf '%s' "$decoded" \
         | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
