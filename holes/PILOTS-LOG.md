@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 18 — 2026-06-11 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `` (G=-4.50).
+
+**EVAL / DID.** Arc-2 cycle 18: minted futon-theory/crime-relocates-to-a-scarcer-witness -- the witness-ladder insight (laundering relocates, never dies; ladder ends at witnessed outcome).
+
+**PRINT / FOUND.** PROPOSAL-mode substrate. The pudding-prover rationale derived from below; deepest theory-level finding of the arc. Three rungs forced by the calibration saga.  _[predicted G=-4.20, realised G=-4.20]_
+
+**PUR.** Arc-2 cycle 18 (metronome) + earned-closure. Mode supervised-autonomous, proposal. Mode: supervised-proposal.
+
 ## Turn 17 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).
