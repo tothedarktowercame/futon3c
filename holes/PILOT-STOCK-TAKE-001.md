@@ -178,10 +178,22 @@ makes the points real:
    This ordering (discipline catches → structure encodes) repeated four
    times; it is probably the development method, not an accident of it.
 4. **The roles error-correct in opposite directions and need each other.**
-   Five pilot mechanism-misdiagnoses were source-checked by ground control;
-   ground control's one misread was self-reported; the operator's two
-   genuine choice points (start FutonZero; re-rank the field) were both
-   correctly escalated and both decided above the level they were asked at.
+   Four pilot mechanism-misdiagnoses (stale-judgement → forward-model;
+   scan-reads-scope-trees → missing Status line; atom-reset → cross-JVM;
+   malformed grep → "runtime store") were source-checked by ground control,
+   none defended — the count per the pilot's own log; ground control's one
+   misread (BST/UTC) was self-reported. The operator's two GENUINE choice
+   points were correctly escalated and both decided above the level they
+   were asked at: the workstream-start consent (cycle 2's staged advance of
+   M-futonzero-mvp at IDENTIFY — a greenlight no warrant determined,
+   answered with the whole campaign steer) and the field re-rank (T8). One
+   escalation the retrospective must OWN rather than credit: the cycle-5
+   A/B fork was a DETERMINED fork over-asked — the warrant existed and was
+   findable — and became the arc's proto-PSR/ChipWitz lesson precisely
+   because it was an error. (The reviewer of this synthesis caught its
+   first draft crediting that over-ask as correct escalation — a mild
+   instance of the self-flattering account the whole arc is about, caught
+   by the same review split, which is the point.)
 
 ## Decisions taken in-arc (all operator-consented where required)
 
