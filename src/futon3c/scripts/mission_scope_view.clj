@@ -12,7 +12,7 @@
 (def structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
    "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
-   "pattern" "psr" "pur" "plain-argument" "verify-gate"])
+   "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"])
 
 (defn- url-encode [s]
   (URLEncoder/encode (str s) "UTF-8"))

@@ -101,6 +101,12 @@
 (defface mission-mode-badge-pattern-face
   '((t :background "#7c3aed" :foreground "white" :weight bold :height 0.85))
   "Badge for pattern/psr/pur scopes." :group 'mission-mode)
+(defface mission-mode-badge-cert-pass-face
+  '((t :background "#16a34a" :foreground "white" :weight bold :height 0.85))
+  "Badge for passing certificate scopes." :group 'mission-mode)
+(defface mission-mode-badge-cert-fail-face
+  '((t :background "#dc2626" :foreground "white" :weight bold :height 0.85))
+  "Badge for failing certificate scopes." :group 'mission-mode)
 (defface mission-mode-badge-capability-face
   '((t :background "#15803d" :foreground "white" :weight bold :height 0.85))
   "Badge for capability scopes." :group 'mission-mode)
@@ -339,7 +345,17 @@ the same or shallower level."
   (let* ((type (mission-mode--string (mission-mode--field scope :type)))
          (anchor-state (mission-mode--string (mission-mode--field scope :anchor_state)))
          (bad (member anchor-state '("detached" "missing" "nil" "")))
-         (face (if bad 'mission-mode-warning-face (mission-mode--badge-face type))))
+         (title (mission-mode--string (mission-mode--field scope :title)))
+         (face (cond
+                (bad 'mission-mode-warning-face)
+                ;; certificate chips wear their verdict (Joe, spoken):
+                ;; green pass, red fail — read from the title the detector
+                ;; stamped mechanically from the stated verdict.
+                ((equal type "certificate")
+                 (if (string-match-p "fail" (downcase title))
+                     'mission-mode-badge-cert-fail-face
+                   'mission-mode-badge-cert-pass-face))
+                (t (mission-mode--badge-face type)))))
     (propertize (format " %s·%s%s " type (mission-mode--scope-short-id scope)
                         (if bad "!" ""))
                 'face face)))
