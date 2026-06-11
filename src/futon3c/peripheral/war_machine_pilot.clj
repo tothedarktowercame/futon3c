@@ -442,6 +442,17 @@
           ;; calibration can exclude fallback pairs from the verdict
           ;; (a censored observation is not evidence of calibration).
           realised-source (if post-entry :measured :target-absent-fallback)
+          ;; Option C (2026-06-11): on executed cycles also record the WHOLE
+          ;; differential's movement — observational only (attribution on a
+          ;; live multi-agent stack is unsolved; this accumulates the data to
+          ;; design field-delta realised-semantics properly).
+          g-sum (fn [entries] (reduce + 0.0 (keep :g-total entries)))
+          field-delta (when executed?
+                        {:pre-total (g-sum (get-in b [:pre :dT-snapshot]))
+                         :post-total (g-sum post-dT)
+                         :delta (- (g-sum post-dT)
+                                   (g-sum (get-in b [:pre :dT-snapshot])))
+                         :semantics :observational-not-verdict-counted})
           pre-top    (get-in b [:pre :dT-snapshot 0 :action :target])
           post-top   (get-in post-dT [0 :action :target])
           tr ((requiring-resolve 'futon3c.aif.repl-trace/turn-record)
@@ -454,7 +465,8 @@
                        :p' "post-tick" :realised-discharge realised}
                 executed? (assoc :independent? true
                                  :evidence-ref evidence-ref
-                                 :realised-source realised-source)))
+                                 :realised-source realised-source
+                                 :field-delta field-delta)))
           ;; the merge itself is an out-of-band gradient event — record it
           ;; in the discipline channel (best-effort; never breaks a close)
           _ (when executed?

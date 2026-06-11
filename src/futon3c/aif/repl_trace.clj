@@ -72,7 +72,11 @@
       ;; degeneracy). Absent unless supplied, like every other field.
       (some? independent?)        (assoc :independent? independent?)
       (some? evidence-ref)        (assoc :evidence-ref evidence-ref)
-      (some? realised-source)     (assoc :realised-source realised-source))))
+      (some? realised-source)     (assoc :realised-source realised-source)
+      ;; observational field-delta (Option C, 2026-06-11): movement of the
+      ;; WHOLE differential across the executed cycle — recorded for the
+      ;; future field-delta realised-semantics design, NOT verdict-counted.
+      (some? (:field-delta m))    (assoc :field-delta (:field-delta m)))))
 
 ;; ---------------------------------------------------------------------------
 ;; accumulator — what the live loop drives, one record per turn-cycle

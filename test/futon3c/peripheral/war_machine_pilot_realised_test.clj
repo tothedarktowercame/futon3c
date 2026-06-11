@@ -14,6 +14,17 @@
             [futon3c.aif.repl-trace :as repl-trace]
             [futon3c.peripheral.war-machine-pilot :as pilot]))
 
+(deftest turn-record-threads-field-delta
+  ;; Option C: observational channel, present only when supplied
+  (let [fd {:pre-total -10.0 :post-total -8.5 :delta 1.5
+            :semantics :observational-not-verdict-counted}
+        tagged (repl-trace/turn-record {:step 0 :predicted-discharge -2.0
+                                        :realised-discharge -1.0
+                                        :field-delta fd})
+        plain (repl-trace/turn-record {:step 0 :predicted-discharge -2.0})]
+    (is (= fd (:field-delta tagged)))
+    (is (not (contains? plain :field-delta)))))
+
 (deftest turn-record-threads-independence-tag
   (let [tagged (repl-trace/turn-record {:step 0 :predicted-discharge -2.0
                                         :realised-discharge -1.0
