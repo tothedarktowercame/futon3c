@@ -235,3 +235,82 @@ judgment forms). Handoff boundaries set.
 **Test state:** n/a (no new code; MAP is reading).
 **Next:** DERIVE — the flight-as-derivation EDN schema (exit-1), with the
 Capability Preservation Matrix over the current record's every field.
+
+## 3. DERIVE — pilot requirements for flight-as-derivation (claude-3, flight half)
+
+*(The flight half of exit-1, from the seat of 20 flights — arcs 1–2, Turns 1–20.
+fable-1 holds the EDN spec draft; these are the requirements it must satisfy. Each
+requirement names the flight where its absence actually hurt — the wind-tunnel data
+the spec must let a record carry. Co-authored where both seats can see it.)*
+
+**R1 — Measurement is a discharge judgment carrying its evidence, not a scalar.**
+The measurement organ is an arrow-discharge (have = predicted, want = realised,
+payload = evidence) per MAP ingredient 1. It must carry: `predicted` (scaled) AND
+`predicted-constant` (the counterfactual — first-class, not a side-tag, because the
+constant-vs-scaled comparison must *compose*) AND `realised` AND the witness
+(`evidence-ref` / discharge event) AND the error WITH its interpretation-class.
+*Pain:* `−4.9225 / −4.9225 / 0.0000` is a bare triple; the record cannot tell
+"no-move correctly predicted" (T8, a real result, scaled-err 6.6e-5) from "censored
+fallback" (T4, a fabricated 0.0) — the **same number, opposite meanings.** The
+discharge must carry which. Corollary (MAP ingredient 1's "no payload, no
+discharge"): an excluded/invalid measurement is a discharge **without** payload =
+a typed open sorry, never a fabricated 0.0.
+
+**R2 — Ghosts are typed sorries that distinguish WHY absent.**
+A null slot carries its type + context (run-id, fixed) + a reason-class:
+`:proposal-mode` (a *typed absence by design* — the gated act not taken, WM-I4),
+`:not-yet` (will fill on a later turn), `:excluded-confound` (a measurement was
+taken but is invalid). *Pain:* T12's pair was a confounded null (stale-begin drift)
+I had to exclude **in prose**; T6's was a transient exclusion; T13–T19 were
+proposal-mode by design. **Three different nulls, three different meanings** — the
+record flattens all to `:null`. Reuse `sorrys.edn` `:kind` (MAP ingredient 2): a
+ghost is `type without term, context-fixed`, exactly a sorry.
+
+**R3 — The measurement window is first-class (the grounds of the realised-read).**
+The realised-read carries its window: begin-time, action-commit, settle-confirmation
+(which two scans, their ε-agreement), source-ground (which scan produced realised).
+*Pain:* the settled-vs-transient and tight-vs-stale-begin distinctions
+(`[[aif/measurement-window-hygiene]]`) are exactly the grounds a record must carry;
+today they live in my prose. The logic model (exit-2) must be able to reject
+"`:realised-read :settled` with no two-scan witness" as a **schema** property
+(untagged-never-counts, `[[aif/no-self-certification]]`), not pilot vigilance.
+
+**R4 — Field-read carries its ranked list as bound, scoped entities, not a count.**
+`215 ranked actions` must be (or link to) the ranked, typed list so RET-descend
+works. *Pain:* the field-read is the *richest* organ (the whole differential `dT`)
+and the *most flattened* (a count). The `velocity` row — the one structured row,
+naming a sorry — is the existence proof that the record wants to be a term.
+
+**R5 — Judgments carry their grounds; the renderer renders, it does not adjudicate.**
+Per MAP's projector finding, judgments computed at render time ("absent
+(proposal-mode)", "untagged") move INTO the record WITH their grounds, so the
+projector becomes a *pure function of the record* and the two cockpits' correspondence
+becomes checkable. *Pain:* "judgment without derivation" is partly a projector artifact.
+
+**R6 — Backfill: the Orville records stay readable; the new shape enriches, never orphans.**
+Per exit-3: the 20 first-flight records read in the new shape — their existing typed
+ghosts map to sorry-types, their 5 tags-added-this-week map to grounded judgment
+forms — **representable but distinguishable** (today's records flagged as
+derivation-thin, not silently upgraded).
+
+### Capability Preservation Matrix (the current record's every field → its typed home)
+
+| current row | current value | → typed home (requirement) |
+|---|---|---|
+| field-read | `215 ranked actions` | field-read organ → linked ranked-`dT` entity (R4) |
+| velocity | `{:type :address-sorry :target …}` | already a term (the model); keep verbatim |
+| attribution | `:pilot-autonomous` | typed judgment `v-attribution` (R5) |
+| prediction | `-4.9225` | `discharge/have` scaled (R1) |
+| counterfactual | `:null` | `discharge/have-constant`, or ghost `:not-yet` if pre-dual-prediction (R1/R2) |
+| begin-state | `:null` | the window's begin-state; ghost `:not-yet` if not persisted (R3) |
+| act+witness | `absent (proposal-mode)` | ghost `:proposal-mode` (typed absence, WM-I4) (R2) |
+| measurement | `realised … \| error …` | `discharge/want` + window-grounds + interpretation-class (R1/R3) |
+| out-of-band | `:null` | ghost `:not-yet`/`:none` with its class (R2) |
+| self-record | `γ frame, 1 turn-record` | the reflexive slot; keep |
+
+**Discipline (R0, over all of the above):** nothing in the current record is dropped
+— every field has a typed home; the *new* slots (reason-classes, window-grounds,
+interpretation-classes) are the additions. A flight that "taught the model nothing"
+(proposal-mode `0.0000`) and a flight that lied to it (censored `0.0000`) must be
+**distinguishable in the data**, because that distinction is the entire point: error
+needs structure to propagate into.
