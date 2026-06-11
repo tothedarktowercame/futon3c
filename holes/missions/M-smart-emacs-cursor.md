@@ -243,6 +243,30 @@ invariant, each caught.
 Exit: build row 7, rehearse the scene once end to end, then the demo is
 real.
 
+### 5.1 The gate, bound (typed by the body, 2026-06-11)
+
+The Reazon model lives adjacent: M-smart-emacs-cursor.verify.el, with its
+certificate in M-smart-emacs-cursor.cert. Each relation formalizes an
+argument from section 4 — the two readings of one mission, coupled:
+
+- I1 edit-without-body catches what A4 and A1-prime forbid: an edit with
+  no visible ◆ placed first.
+- I2 move-without-request catches what the A4 navigation nuance forbids:
+  the operator carried somewhere they did not ask to go.
+- I3 voice-at-focus catches what A2 forbids: an utterance landing at the
+  keyboard focus while the route is on.
+- I4 racing-push-render catches the flicker class the shared connector
+  was built to end: a HUD write from anything but the one ws subscriber.
+
+Verdict on record: GATE OPEN — conforming six-beat trace clean, all four
+adversaries caught. Rerun anytime:
+emacs --batch -L futon4/dev/vendor/reazon -l M-smart-emacs-cursor.verify.el
+--eval (princ (msec-verify-certificate))
+
+Provenance note: the forms reached disk by ordinary write during the
+Agency restart; this binding paragraph is typed. The full re-performance
+— hop, type, run, return — remains owed and INSTANTIATE will collect it.
+
 ## Scope
 
 ### Scope in
