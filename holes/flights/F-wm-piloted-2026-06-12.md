@@ -126,3 +126,13 @@ Pipeline shape is the anatomy-v0 sweep again: deterministic harvest,
 per-mission loss (missing cross-refs, unbound certificates), DP passes
 to clean, then train. Same architecture for papers, missions, flights —
 third time today the corpora have converged.
+
+**4c ratified (Joe): "All we'd have to do is reassemble the pattern
+cross-references we've made as cascades rather than as lists, and we'd
+be good to go."** And the reassembly evidence is AUTHORED: patterns
+are cited at specific checkpoints/phases, so cite-site order + phase
+context gives the cascade wiring deterministically — no model needed
+for v0. Output format: the golden-graph EDN schema (a cascade IS a
+hyperedge graph; nodes = patterns/problem/holes, edges = feeds/
+discharges with :via quotes). Status: :ratified-car, queued for the
+first free codex slot, behind the five in-flight tasks.
