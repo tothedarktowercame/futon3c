@@ -5,7 +5,8 @@
    shapes (entities carry no :labels — the 8d5d094 regression); footgun-1
    merge idempotency (re-ingest does not clobber another lane's props); and
    annotation docs carry labels + base-props."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.watcher.file-ingest :as file-ingest]
             [futon3c.watcher.flight-ingest :as fi]
             [futon3c.watcher.projections.flight :as flight]))
@@ -38,9 +39,32 @@
 (deftest write-gate-refuses-without-operator-env
   (if (System/getenv "FUTON3C_FLIGHT_INGEST_WRITE")
     (println "SKIP write-gate-refuses test: FUTON3C_FLIGHT_INGEST_WRITE is set in this environment")
-    (is (thrown-with-msg? clojure.lang.ExceptionInfo
-                          #"operator gate"
-                          (fi/assert-write-gate!)))))
+    (with-redefs [fi/write-sentinel-path
+                  (str (System/getProperty "java.io.tmpdir") "/no-such-sentinel.edn")]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"operator gate"
+                            (fi/assert-write-gate!))))))
+
+(deftest write-gate-sentinel-form
+  (let [tmp (str (System/getProperty "java.io.tmpdir")
+                 "/flight-ingest-sentinel-test-" (System/nanoTime) ".edn")]
+    (with-redefs [fi/write-sentinel-path tmp]
+      (testing "unexpired sentinel arms the gate"
+        (spit tmp (pr-str {:until (str (.plusSeconds (java.time.Instant/now) 600))
+                           :by "test-operator"}))
+        (is (nil? (fi/assert-write-gate!))))
+      (testing "expired sentinel refuses"
+        (spit tmp (pr-str {:until (str (.minusSeconds (java.time.Instant/now) 1))
+                           :by "test-operator"}))
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                              #"operator gate"
+                              (fi/assert-write-gate!))))
+      (testing "malformed sentinel refuses"
+        (spit tmp "{:until :not-a-timestamp")
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                              #"operator gate"
+                              (fi/assert-write-gate!)))))
+    (io/delete-file tmp true)))
 
 (deftest write-path-call-shapes-and-idempotency
   (let [posted-entities (atom [])

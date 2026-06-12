@@ -11,19 +11,43 @@
    FUTON3C_FLIGHT_INGEST_WRITE=1 — the live --write belongs to Joe."
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
+            [clojure.edn :as edn]
             [futon3c.watcher.projections.flight :as flight])
   (:import (java.net URLEncoder)))
 
 (def futon1a-url (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
+(def write-sentinel-path
+  "The in-JVM form of the operator gate. Discovered at Joe's first live
+   --write: the ingest chain (file-ingest -> mission-control-backend ->
+   blackboard) opens RocksDB at load time, which the serving JVM holds — so
+   the write can only run INSIDE the serving JVM (I-0), where an env var
+   cannot be set. Same consent idiom as wm-operator-promote: an explicit,
+   expiring operator artifact."
+  (str (System/getProperty "user.home") "/code/storage/futon0/flight-ingest-write.edn"))
+
+(defn- sentinel-armed? []
+  (try
+    (let [f (java.io.File. ^String write-sentinel-path)]
+      (when (.exists f)
+        (let [{:keys [until]} (edn/read-string (slurp f))
+              until-inst (when (string? until) (java.time.Instant/parse until))]
+          (boolean (and until-inst (.isAfter until-inst (java.time.Instant/now)))))))
+    (catch Exception _ false)))
+
 (defn assert-write-gate!
-  "Throw unless the operator has armed the live write. Separate fn so the
-   write-path test can exercise the call shapes with the gate explicitly
-   stubbed, while this gate itself is tested to refuse."
+  "Throw unless the operator has armed the live write — either form:
+   FUTON3C_FLIGHT_INGEST_WRITE=1 in the env (CLI runs), or the expiring
+   sentinel file at write-sentinel-path, {:until <ISO> :by <who>} (in-JVM
+   runs via Drawbridge). Separate fn so the write-path test can exercise
+   the call shapes with the gate explicitly stubbed, while the gate itself
+   is tested to refuse."
   []
-  (when-not (= "1" (System/getenv "FUTON3C_FLIGHT_INGEST_WRITE"))
+  (when-not (or (= "1" (System/getenv "FUTON3C_FLIGHT_INGEST_WRITE"))
+                (sentinel-armed?))
     (throw (ex-info "Refusing live flight ingest without operator gate"
-                    {:required-env "FUTON3C_FLIGHT_INGEST_WRITE=1"}))))
+                    {:required-env "FUTON3C_FLIGHT_INGEST_WRITE=1"
+                     :or-sentinel write-sentinel-path}))))
 
 (defn- url-encode [s]
   (URLEncoder/encode (str s) "UTF-8"))
