@@ -197,3 +197,15 @@ mission->pattern part is OPERATIONAL — the bulk fix for all missions
 is a loop over mission-scope-reingest.sh, not new code. (Checkpoint
 harvest, promissory ghost-phases, certificate discharges-edges remain
 genuinely missing.)
+
+## Sortie 5a — per-cite anchors (16:53-16:58)
+
+Joe's look at line 301 exposed the granularity gap: the pattern scope
+was a single positionless rollup (9 ends, no anchor) — nothing for
+mission-mode to render at the bullet, no cite order for cascade
+reassembly. Pilot fixed the detector live (futon6: pattern_slots
+captures match offsets; assembly emits one scope per cite at
+sec.content_start+offset, the inline-closure idiom), re-detected,
+reingested: NINE positioned pattern scopes (16649..18671), old rollup
+retracted by true-up. Mission-mode now has chips at every cite;
+cascade harvest (4c) gets ordering for free.
