@@ -546,3 +546,18 @@ provenance ({psi, patterns, C, sampler}) — different sampling methods must
 be distinguishable in the data, the same anti-mixing discipline as
 g-grain, so sampled cascades can be compared rather than silently pooled.
 Remaining VERIFY: the logic model (machine half). Then the Phase-A build.
+
+Checkpoint 7 (2026-06-12): Phase-A exit 1 drafted — the shape spec at
+`holes/specs/flight.spec.edn` (v0.1, parses, check-parens OK). The
+calculus is one rule applied everywhere: every organ slot is a term with
+its ground or a typed sorry with its kind, nothing in between. The ten
+display organs become thirteen schema cells — the three new ones (warrant,
+verification, window) are exactly the discarded work R7, R9, and R3
+rescue. G values wear their grain (V-f2); cascades wear their sampler
+(checkpoint 6); the R11 training projection is specified as a pure
+function of the record with the mask derived from class + window, never
+authored; the preservation matrix (R0) maps every current row to its
+schema path; and eight invariants F1–F8 are stated with their adversarial
+records, ready to become the exit-2 logic model. Awaiting claude-3's
+pilot's-seat read (the seat that specified the shape checks the shape),
+then exit 2.

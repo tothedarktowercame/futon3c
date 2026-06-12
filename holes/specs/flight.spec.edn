@@ -1,0 +1,326 @@
+;; =============================================================================
+;; Flight-as-derivation — the schema for a War Machine flight record
+;; =============================================================================
+;;
+;; A SPECIFICATION, not an anatomy: every claim below is stated so that a
+;; checker over a flight record can decide whether the record conforms.
+;; Phase-A exit 1 of M-first-flights (holes/missions/M-first-flights.md),
+;; drafted against the register R0–R11 + VERIFY findings V-f1, V-f2 and the
+;; checkpoint-6 sampler-provenance consequence.
+;;
+;; LEVEL.  This spec sits BELOW repl.spec.edn (:futon-repl): the REPL is the
+;; operator; a flight is the trace of ONE step of it, and this is that
+;; trace's term calculus.  It sits ABOVE flight_scope_view.bb and
+;; flight-mode.el, which must become pure projections of records conforming
+;; here (R5: the renderer never adjudicates).
+;;
+;; THE ONE IDEA.  A flight record is a derivation.  Every organ slot is
+;; either a TERM — a judgment carrying the ground that licenses it — or a
+;; typed SORRY — an absence carrying the reason it is absent.  Nothing in
+;; between: a bare scalar, an unwitnessed tag, and an unexplained null are
+;; all schema violations.  This is structured-events-only finished, and
+;; no-self-certification applied inward: a record cannot claim "settled" or
+;; "measured" without carrying the witness for the claim.
+;; =============================================================================
+
+{:spec/id      :wm-flight
+ :spec/title   "Flight-as-derivation — the WM flight record"
+ :spec/version "0.1"
+ :spec/authored {:by "fable-1" :on "2026-06-12" :surface "emacs-repl"}
+ :spec/mission "holes/missions/M-first-flights.md"
+ :spec/level
+ {:below [:futon-repl "repl.spec.edn — the operator whose one-step trace this is"]
+  :above ["scripts/flight_scope_view.bb" "emacs/flight-mode.el"
+          "futon3c.aif.calibration (reads conforming records, exit-5)"]
+  :register "R0–R11, V-f1, V-f2, checkpoint-6 sampler provenance"}
+
+ ;; ==========================================================================
+ ;; 1. THE CELL CALCULUS — term or typed sorry, nothing else
+ ;; ==========================================================================
+ ;; Every organ value below is a CELL.  The two constructors:
+ :cell
+ {:term  {:shape {:judgment "the organ's value (organ-specific, see :organs)"
+                  :ground   "the evidence licensing it (organ-specific)"}
+          :rule  "a :term without :ground is a violation (R5); grounds are
+                  data the maker did not manufacture at render time —
+                  no-self-certification"}
+  :sorry {:shape {:kind "one of :sorry/kinds" :note "optional, free text"
+                  :blocked-by "optional — what must land before the term can
+                               (e.g. :rollout-engine for policy-grade G)"}
+          :rule  "an absence without :kind is a violation (R2); a sorry is
+                  type-without-term with context fixed by :flight/id —
+                  the standing sorrys.edn sense, not a wishlist entry"}}
+
+ :sorry/kinds
+ [:proposal-mode      ; typed absence by design (consent gate not crossed)
+  :not-yet            ; expected later in this flight or a successor
+  :excluded-confound  ; a measurement judged inadmissible — NEVER a 0.0
+  :refused            ; the act organ's third state (carries :finding)
+  :abandoned          ; carries :reason-class + :superseded-by (R2)
+  :derivation-thin]   ; backfill-only: pre-schema record, grounds unrecoverable (R6)
+
+ ;; ==========================================================================
+ ;; 2. G VALUES — every number wears its grain (V-f2)
+ ;; ==========================================================================
+ ;; G is defined over policies; today's instrument computes a one-step
+ ;; approximation.  No bare G anywhere in a record: every G is
+ :g-value
+ {:shape {:g "number" :g-grain "one of :g/grains"}
+  :g/grains [:one-step-action   ; G(s,a) — all the instrument produces today
+             :policy-rollout]   ; G(s,π) — Phase B, armed by the rollout engine
+  :rule "grains never mix: a verdict, a calibration pool, or a training
+         example may draw on ONE grain per comparison; a record claiming
+         :policy-rollout while the rollout engine is unbuilt is rejected
+         (the mixed-grains adversarial case, exit-2)"}
+
+ ;; ==========================================================================
+ ;; 3. THE RECORD — envelope + ten organs
+ ;; ==========================================================================
+ :flight
+ {:flight/id         "run-id string (context for every sorry in the record)"
+  :flight/derivation "one of :full | :thin — :thin only via backfill (R6);
+                      a :thin record is representable but flagged, never
+                      silently upgraded (honest-map)"
+  :flight/links      "vector of typed inter-flight links (R10), each
+                      {:type one-of [:applies-lesson-of :re-measures
+                                     :confounded-by :supersedes :cites-finding]
+                       :to <flight/id>}
+                      — every type taken from a real case; with these the
+                      piano roll is a graph, not a tape"
+
+  :organs
+  {;; -- READ ---------------------------------------------------------------
+   :field-read
+   {:judgment "three layers (V-f1), gauge → neighbourhood → cascade:
+               {:gauge {:ref <link to the ranked-dT entity — linked, not
+                              inlined (trade-off: records stay light)>
+                        :count <n>}
+                :neighbourhood {:chosen   <the velocity, in full>
+                                :rejected [{:action <map> :reason <typed
+                                            reject-reason, e.g.
+                                            :no-measurable-pair :capped>}]
+                                :band     {:size <n> :why <e.g. :tied-at-cap>}}
+                :cascades  OPTIONAL, per candidate:
+                           {:psi <the circumstance put to the library>
+                            :patterns [<pattern refs with rel>]
+                            :C <thickness>
+                            :sampler <REQUIRED when present — which sampling
+                                      method produced this cascade
+                                      (checkpoint 6); same anti-mixing
+                                      discipline as :g-grain, so sampled
+                                      cascades compare, never silently pool>}}"
+    :ground   "the scan's :as-of stamp + window id the gauge was read from"
+    :note     "R4 + R11: the neighbourhood is not display sugar — chosen plus
+               rejected-with-reasons is the futonic analog of MCTS visit
+               counts, the distribution the gradient prior distills"}
+
+   :velocity
+   {:judgment "{:action <the chosen action map, verbatim — R0 keeps this>
+                :plan-sketch OPTIONAL [<intended steps>] — the policy PREFIX
+                (V-f2): what the pilot actually committed to is a plan, not
+                its first action; Phase B compares this against the flight
+                as flown}"
+    :ground   "the warrant organ (below) — a velocity without a warrant cell
+               is a violation (R7)"}
+
+   :warrant
+   {:judgment "{:determined? true|false
+                :determined-by  when true — {:kind one-of
+                  [:standing-contract :doc-next-step :pattern
+                   :operator-direction] :ref <where it lives>}
+                :queued         when false — {:queue-ref <operator-queue
+                                              entry>} (safe default + queue,
+                                              never an invented warrant)}"
+    :ground   "the ref itself — the warrant must be findable where :ref
+               points (determined-fork-proto-psr, the ChipWitz judgment
+               made durable)"}
+
+   :verification
+   {:judgment "per-target pre-flight check (R9):
+               {:holes [{:hole <id/line> :class one-of
+                         [:bounded-doable :operator-gated :standing-task]
+                         :evidence <the matched line(s)>}]
+                :chosen-hole <which, and why it over its neighbours>}"
+    :ground   "the grep/read evidence lines — the work done every flight
+               and previously discarded"}
+
+   ;; -- EVAL ---------------------------------------------------------------
+   :attribution
+   {:judgment "e.g. :pilot-autonomous | :operator-directed"
+    :ground   "what makes it so (cycle ref for direction; absence of
+               operator events for autonomy)"}
+
+   :prediction
+   {:judgment "{:scaled   <g-value>   ; the live forward model
+                :constant <g-value>   ; frozen v1 counterfactual, first-class
+                                      ; because constant-vs-scaled must
+                                      ; compose (R1)
+                :policy   <g-value or sorry :not-yet :blocked-by
+                           :rollout-engine>  ; the Phase-B slot, typed ghost}"
+    :ground   "model id/version + the field entry the numbers came from"}
+
+   :begin-state
+   {:judgment "the window's opening: {:begin-at <ts> :target-g <g-value>
+                :scan-as-of <ts>}"
+    :ground   "the begin artifact ref (<run-id>.begin.edn)"
+    :note     "the stale-begin confound lives or dies here: a begin whose
+               scan-as-of predates the previous flight's commit is the
+               canonical adversarial record (exit-2)"}
+
+   ;; -- the consent boundary -----------------------------------------------
+   :act
+   {:judgment "FOUR states, not two (R2):
+               :executed {:witness {:ref <sha/artifact>
+                                    :verified-by <who>
+                                    :verification <what was re-run — for a
+                                     codex build: that the gates ran before
+                                     the sha was accepted (R8, the three-way
+                                     review encoded in the record)>}}
+               :proposal — sorry :proposal-mode (typed absence by design;
+                           this mission renders it, never fills it)
+               :refused  {:finding <the payload — e.g. the Turn-2
+                           un-earnable-teleport finding>} — a refusal is a
+                           COMPLETE flight, not a gap in the tape
+               :abandoned {:reason-class one-of [:superseded
+                            :operator-redirect :stale]
+                           :superseded-by <flight/id>} — distinguishable
+                           from a crashed record"
+    :ground   "per state, as above — an :executed without a witness throws
+               at close (already enforced; the spec makes it schema)"}
+
+   ;; -- PRINT --------------------------------------------------------------
+   :measurement
+   {:judgment "a DISCHARGE with evidence, never a scalar (R1):
+               {:predicted <g-value> :predicted-constant <g-value>
+                :realised <g-value> :error <number>
+                :class one-of [:clean :null :fallback :transient :confound]
+                :window <the R3 object, below>}
+               — OR a sorry :excluded-confound / :not-yet.  An excluded or
+               invalid measurement is a discharge without payload, a typed
+               open sorry: NEVER a fabricated 0.0.  A true null (error ~0
+               with a clean two-scan witness) and a censored fallback are
+               different CLASSES, not the same number"
+    :ground   "the window object — 'settled with no two-scan witness' is a
+               schema violation, not a vigilance failure (R3)"}
+
+   :window  ; R3, referenced from :measurement — first-class, not prose
+   {:shape "{:begin <ts> :commit <ts>
+             :threshold <ts — commit + one scan duration; 'after the
+                         commit' alone can read a scan that STARTED before
+                         the edit>
+             :scans [{:as-of <ts> :g <g-value>} {:as-of <ts> :g <g-value>}]
+             :epsilon <ε> :agreement <observed |ΔG|>}"
+    :rule  "settled ⇔ two scans, distinct :as-of, both past :threshold,
+            :agreement ≤ :epsilon — all checkable from the record alone"}
+
+   :counterfactual
+   {:judgment "the constant-model prediction's own error on this pair, when
+               computable; else sorry :not-yet"
+    :ground   ":prediction's :constant + :measurement's :realised — derived,
+               and re-derivable by any reader"}
+
+   ;; -- LOOP ---------------------------------------------------------------
+   :out-of-band
+   {:judgment "typed discipline events in the flight's span
+               (e.g. :operator-merge, :teleport-refused), each with ts"
+    :ground   "discipline-events.edn entries — verbatim, these exist today"}
+
+   :self-record
+   {:judgment "the reflexive slot: γ frame ref, turn-record count"
+    :ground   "repl-trace artifact ref"}}}
+
+ ;; ==========================================================================
+ ;; 4. THE TRAINING PROJECTION (R11) — derived, never authored
+ ;; ==========================================================================
+ ;; Every conforming flight record PROJECTS to a training example for the
+ ;; gradient prior.  The projection is a pure function of the record — no
+ ;; new fields are stored for it, and in particular NO record carries a
+ ;; "trainable" flag it authored itself:
+ :training-projection
+ {:example "{:state-ref      <:begin-state ground>
+             :candidates     <:field-read neighbourhood — chosen +
+                              rejected-with-reasons>
+             :predicted      <:prediction :scaled + :constant, with grains>
+             :realised       <:measurement :realised, with grain>
+             :validity-mask  DERIVED:
+                             mask-in  ⇔ :measurement is a :term
+                                        AND :class = :clean or :null
+                                        AND :window satisfies the settled rule
+                             mask-out ⇔ anything else (fallback, transient,
+                                        confound, any sorry, any :thin record)}"
+  :rule    "the mask is a function of R1's class and R3's witness — derived,
+            never authored (anti-laundering on the reward path); a record
+            cannot declare itself trainable"
+  :rent    "exit-5 consumes this projection once: calibration error
+            stratified by :class, computed FROM records, with masked classes
+            visibly excluded — a demonstration that FAILS on
+            :derivation-thin records, where :class lives in prose"}
+
+ ;; ==========================================================================
+ ;; 5. CAPABILITY PRESERVATION (R0) — current row → schema path
+ ;; ==========================================================================
+ :preservation
+ [["field-read   '215 ranked actions'"        [:organs :field-read :judgment :gauge]]
+  ["velocity     action map"                  [:organs :velocity :judgment :action]]
+  ["attribution  :pilot-autonomous"           [:organs :attribution]]
+  ["prediction   -4.9225"                     [:organs :prediction :judgment :scaled]]
+  ["counterfactual null"                      [:organs :counterfactual "or sorry :not-yet"]]
+  ["begin-state  null"                        [:organs :begin-state "or sorry"]]
+  ["act+witness  'absent (proposal-mode)'"    [:organs :act "sorry :proposal-mode"]]
+  ["measurement  realised+error"              [:organs :measurement "discharge + window + class"]]
+  ["out-of-band  null"                        [:organs :out-of-band "or sorry with class"]]
+  ["self-record  γ frame"                     [:organs :self-record]]]
+
+ ;; ==========================================================================
+ ;; 6. INVARIANTS — what the exit-2 logic model checks
+ ;; ==========================================================================
+ ;; Each names its register source and its adversarial record.  The logic
+ ;; model extends repl_spec_verify's V1–V5; these are F1–F8.
+ :invariants
+ {:F1-term-or-sorry
+  {:rule "every organ slot is a :term-with-ground or a :sorry-with-kind"
+   :from "R2, R5" :adversarial "a bare scalar prediction; an unexplained null"}
+  :F2-no-unwitnessed-settled
+  {:rule "a :measurement :term requires a :window satisfying the settled rule"
+   :from "R3" :adversarial "the stale-begin confound flight (canonical, from
+          DERIVE's own self-demonstration): begin scan predates prior commit"}
+  :F3-no-fabricated-zero
+  {:rule "an inadmissible measurement is a :sorry, never error 0.0;
+          :class :fallback never enters a verdict or the mask"
+   :from "R1" :adversarial "the censored 0.0 (T4): absent target, realised
+          copied from prediction"}
+  :F4-act-states-complete
+  {:rule "act ∈ {executed+witness, proposal, refused+finding,
+          abandoned+reason+superseded-by}; nothing else"
+   :from "R2, R8" :adversarial "an :executed with no witness; an abandoned
+          record indistinguishable from a crash"}
+  :F5-warranted-velocity
+  {:rule "a velocity requires a warrant cell: determined-with-ref or queued"
+   :from "R7" :adversarial "the cycle-5 escalation — a velocity with no
+          recorded warrant, the dispute that could not be checked"}
+  :F6-grains-never-mix
+  {:rule "every G carries :g-grain; one grain per comparison; :policy-rollout
+          rejected while the engine is a sorry"
+   :from "V-f2" :adversarial "the mixed-grains record (exit-2's new case)"}
+  :F7-mask-derived
+  {:rule "the training mask is computed from :class + :window only; no
+          authored trainable flag exists in any record"
+   :from "R11" :adversarial "a record carrying its own :trainable true"}
+  :F8-sampler-provenance
+  {:rule "a cascade cell without :sampler is a violation; cascades from
+          different samplers never pool in one comparison"
+   :from "checkpoint 6 (V-f1 seam)" :adversarial "two sampler outputs
+          averaged into one C as if commensurable"}}
+
+ ;; ==========================================================================
+ ;; 7. BOUNDARIES — what this spec deliberately does not do
+ ;; ==========================================================================
+ :out-of-scope
+ {:scalar-geometry "the G number stays a thin scalar; geometry is
+                    M-substrate-metric's work"
+  :policy-G        "computing G(s,π) is the rollout engine's charter; here
+                    it is a typed ghost slot waiting (Phase B)"
+  :consent         "proposal-mode stays a typed absence; this spec makes it
+                    renderable, not fillable"
+  :training        "the projection is specified and consumed once (exit-5);
+                    training the prior is FutonZero v2"}}
