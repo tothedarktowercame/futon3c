@@ -299,3 +299,26 @@ want=flights-as-anatomy-corpus-canonical-organ-order-typed-grounds,
 :construction/:open, construction named (flight-pretty-print, in
 flight), payload cross-refs the substrate-2 scope + cascade EDN.
 Promotion to substrate-2 on witnessed discharge (contract B).
+
+## Sortie 10 — VERIFY is diagram-checking, not condition-checking (17:27)
+
+Joe: "It's great that we know how to use core.logic — a lovely tool.
+But what we should be checking and verifying is the WIRING DIAGRAM
+that is the third term of the triple that each flight is meant to
+mint."
+
+The triple each flight mints: (typed hole, term, wiring diagram) —
+the sorry from DERIVE (have→want arrow), the construction from
+INSTANTIATE, and the diagram showing HOW the term fills the hole
+(which is the trace/cascade read as composition). VERIFY's logic
+model = type-checking that third term: boundary must equal the
+derive-gate's (have, want); interior applications each carry their
+witness; composition closes with no dangling wires. core.logic is the
+CHECKER (relational composition checks, the Reazon idiom from the
+Arxana window constraints), not the content — the content is the
+diagram. Gates stop being arbitrary conditions and become exactly:
+does the diagram compose, is every wire typed, is every node
+witnessed.
+
+(Joins the peradam labor→arrow→fruit doctrine: the wiring diagram is
+what makes the arrow's discharge AUDITABLE — the certificate's body.)
