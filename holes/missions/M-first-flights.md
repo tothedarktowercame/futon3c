@@ -459,7 +459,19 @@ Phase A — actions (one-step grain, buildable now):
    the field-read (gauge → neighbourhood → cascade where present).
 4. One round-trip: a flight record ingested into substrate-2, browsable
    from the human cockpit like an essay.
-5. Joe flies one session reading the new instrument beside the old; the
+5. The loop-closing demonstration (G-REWARD-shaped, where exits 1–4 are
+   G-SIM-shaped): run the calibration lane over the twenty backfilled
+   records plus the conforming witness flight and exhibit one number that
+   moves — minimally, calibration error stratified by interpretation
+   class, computed from the records themselves (clean-class error beside
+   pooled error; fallback and confound classes visibly masked out by the
+   R11-derived validity mask, with counts). The demonstration must be one
+   that fails on derivation-thin records — today the classes live in
+   prose, so today this stratification cannot be computed at all. This is
+   deliberately minimal: not "train the prior" (FutonZero v2's work), just
+   one demonstrated consumption proving the typing pays rent in the
+   learner.
+6. Joe flies one session reading the new instrument beside the old; the
    operator's verdict is the Phase-A gate.
 
 Phase B — policies (opens when the rollout engine lands; not before):
