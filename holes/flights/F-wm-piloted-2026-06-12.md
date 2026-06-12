@@ -351,3 +351,21 @@ mining fails (DP/random-access improvement, same as papers).
 Architecture = anatomy-v0 for the mission corpus: deterministic
 harvest, per-mission loss, bulk passes. Dispatch-shaped; queued behind
 the five in-flight codex tasks.
+
+## Sortie 12 — Phase B's dependency order (17:32, ruling)
+
+Joe: "Going on to the last part of INSTANTIATE — all this brouhaha of
+G over policies and metrics: we can't expect that to come out of the
+substrate by itself UNTIL WE GET ALL OF THESE TERMS."
+
+The ruling that sequences Phase B: policy-grade G(s, π) is defined
+over policies = distributions over CASCADES; it has nothing to range
+over until the substrate holds the terms — minted holes, cascades,
+wiring diagrams, witnessed discharges. So the order is: triple-mining
+(sortie 11) + typed-at-birth records (4d) populate the substrate FIRST;
+then G over policies becomes COMPUTABLE rather than mocked, and the
+metric's golden triplets fall out of the same mined terms (patterns
+that co-fired in witnessed discharges are near). The V-f2 compromise
+(G over policies, not single actions) gets its operational floor: the
+mined dataset IS the state-action space. No more brouhaha — a
+dependency, stated and scheduled.
