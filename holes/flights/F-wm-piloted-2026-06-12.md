@@ -176,3 +176,24 @@ phase sections; (3) pattern-crossref scopes emitting
 mission->pattern edges into substrate-2; (4) typed-at-birth slots
 documented for future records (4d). One build; feeds mission-mode
 legibility, the WM advance queue, the EFE field, AND cascade harvest.
+
+## Sortie 5 — pilot tags the patterns into substrate-2, live (16:49-16:55)
+
+Ground control directed: fix THIS mission now, log as WM progress.
+Pilot executed: (1) detector output inspected — ALL NINE pattern
+cross-refs already harvested (one pattern hyperedge, nine role-typed
+pattern ends, flexiarg refs resolved); (2) substrate-2 queried —
+first-flights pattern edges absent; (3) mission-scope-reingest.sh run
+(per-binder, Drawbridge, JVM untouched); (4) verified: all nine
+first-flights/pattern/* hyperedges live in substrate-2 with mission +
+flexiarg + concept ends.
+
+CORRECTION (W2 honesty): pilot's earlier "only 1 pattern edge in the
+whole store" was a limit-200 truncated-query misread — the store
+holds hundreds across many missions. Revised finding: the pattern
+lane works corpus-wide; missions that predate it just need
+reingesting. The 4e detector-bundle item shrinks accordingly: the
+mission->pattern part is OPERATIONAL — the bulk fix for all missions
+is a loop over mission-scope-reingest.sh, not new code. (Checkpoint
+harvest, promissory ghost-phases, certificate discharges-edges remain
+genuinely missing.)
