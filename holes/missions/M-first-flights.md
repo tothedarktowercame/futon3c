@@ -71,6 +71,20 @@ number that has none). The substrate debt is the thin-scalar bottleneck and
 belongs to M-substrate-metric, not this mission. This mission stops at: the
 record carries the derivation the substrate can already produce.
 
+There is a third debt, and it is why this mission matters from the
+ground-control seat: return-channel debt. Flight records exist and nothing
+trains on them — FutonZero's own caveat is that realized-G does not yet
+train the gradient prior (the loop's R2), so today's records are
+write-only: produced, rendered, re-read by people, never consumed by the
+learner they are nominally for. The rendering and substrate debts explain
+why the records are hard to read; the return-channel debt is why fixing
+readability alone would be satisficing — this mission could complete fully
+while FutonZero gets no closer to its loop. Boundary: building the
+training loop is FutonZero v2's work, not this mission's; this mission's
+obligation is that the records be consumable by that loop — typed grains,
+admissibility tags, grounds in the data — so that when R2 arrives it reads
+flights, not prose.
+
 The lineage claim (Joe): "I have been piloting a hypertext-based version of
 the War Machine since 2005 — Arxana was first created then — now with agent
 support and invariant-backed fidelity." The human cockpit is twenty-one years
