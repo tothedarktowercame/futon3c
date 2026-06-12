@@ -73,8 +73,10 @@
                     "essay/id" (get-in projection [:essay :id])}
         entities (cons (:essay projection) (:sections projection))]
     (doseq [entity entities]
-      (post-entity! (flight/merge-entity-for-upsert (fetch-existing-entity (:id entity)) entity)
-                    labels))
+      ;; post-entity! is single-arity {:id :name :type :props}; entities carry no
+      ;; labels (labels live on the hyperedge docs, per the watcher's own essay
+      ;; ingest). Passing `labels` here threw ArityException on live --write.
+      (post-entity! (flight/merge-entity-for-upsert (fetch-existing-entity (:id entity)) entity)))
     (doseq [annotation (:annotations projection)]
       (post-hyperedge-doc! (annotation-doc annotation base-props labels)))
     {:mode :write
