@@ -5,7 +5,7 @@
 ;; A SPECIFICATION, not an anatomy: every claim below is stated so that a
 ;; checker over a flight record can decide whether the record conforms.
 ;; Phase-A exit 1 of M-first-flights (holes/missions/M-first-flights.md),
-;; drafted against the register R0–R11 + VERIFY findings V-f1, V-f2 and the
+;; drafted against the register R0–R12 + VERIFY findings V-f1, V-f2 and the
 ;; checkpoint-6 sampler-provenance consequence.
 ;;
 ;; LEVEL.  This spec sits BELOW repl.spec.edn (:futon-repl): the REPL is the
@@ -25,14 +25,14 @@
 
 {:spec/id      :wm-flight
  :spec/title   "Flight-as-derivation — the WM flight record"
- :spec/version "0.1"
+ :spec/version "0.2"
  :spec/authored {:by "fable-1" :on "2026-06-12" :surface "emacs-repl"}
  :spec/mission "holes/missions/M-first-flights.md"
  :spec/level
  {:below [:futon-repl "repl.spec.edn — the operator whose one-step trace this is"]
   :above ["scripts/flight_scope_view.bb" "emacs/flight-mode.el"
           "futon3c.aif.calibration (reads conforming records, exit-5)"]
-  :register "R0–R11, V-f1, V-f2, checkpoint-6 sampler provenance"}
+  :register "R0–R12, V-f1, V-f2, checkpoint-6 sampler provenance"}
 
  ;; ==========================================================================
  ;; 1. THE CELL CALCULUS — term or typed sorry, nothing else
@@ -112,7 +112,12 @@
     :ground   "the scan's :as-of stamp + window id the gauge was read from"
     :note     "R4 + R11: the neighbourhood is not display sugar — chosen plus
                rejected-with-reasons is the futonic analog of MCTS visit
-               counts, the distribution the gradient prior distills"}
+               counts, the distribution the gradient prior distills.
+               Cost honesty (seat-read): the rejected reasons are NOT a free
+               read-off — the pilot currently does this reasoning fast and
+               implicitly, and recording it is a small articulation cost;
+               the projector rewrite must not assume the data is lying
+               there free"}
 
    :velocity
    {:judgment "{:action <the chosen action map, verbatim — R0 keeps this>
@@ -127,13 +132,21 @@
    {:judgment "{:determined? true|false
                 :determined-by  when true — {:kind one-of
                   [:standing-contract :doc-next-step :pattern
-                   :operator-direction] :ref <where it lives>}
+                   :operator-direction :pilot-synthesis] :ref <where it
+                  lives — except :pilot-synthesis, see ground>}
                 :queued         when false — {:queue-ref <operator-queue
                                               entry>} (safe default + queue,
                                               never an invented warrant)}"
-    :ground   "the ref itself — the warrant must be findable where :ref
-               points (determined-fork-proto-psr, the ChipWitz judgment
-               made durable)"}
+    :ground   "for ref kinds: the ref itself — the warrant must be findable
+               where :ref points (determined-fork-proto-psr, the ChipWitz
+               judgment made durable).  For :pilot-synthesis (claude-3's
+               seat-read fix): many real determined forks resolve by a
+               composed judgment over weak signals, not one findable
+               artifact — forcing those into a :ref would make the pilot
+               INVENT one, the exact no-self-certification failure this
+               spec exists to prevent.  Its ground is the recorded
+               reasoning itself (optionally :method); the synthesis is the
+               warrant, recorded verbatim"}
 
    :verification
    {:judgment "per-target pre-flight check (R9):
@@ -211,7 +224,11 @@
              :scans [{:as-of <ts> :g <g-value>} {:as-of <ts> :g <g-value>}]
              :epsilon <ε> :agreement <observed |ΔG|>}"
     :rule  "settled ⇔ two scans, distinct :as-of, both past :threshold,
-            :agreement ≤ :epsilon — all checkable from the record alone"}
+            :agreement ≤ :epsilon — all checkable from the record alone"
+    :note  "cost honesty (seat-read): the scans are close-time LABOUR —
+            the pilot drives ticks and polls to settle; recording adds no
+            new compute, but this cell is not merely 'discarded data',
+            it is performed work being kept"}
 
    :counterfactual
    {:judgment "the constant-model prediction's own error on this pair, when
@@ -221,9 +238,18 @@
 
    ;; -- LOOP ---------------------------------------------------------------
    :out-of-band
-   {:judgment "typed discipline events in the flight's span
-               (e.g. :operator-merge, :teleport-refused), each with ts"
-    :ground   "discipline-events.edn entries — verbatim, these exist today"}
+   {:judgment "typed events in the flight's span, two families:
+               discipline events (e.g. :operator-merge, :teleport-refused),
+               and OPERATOR STEERS (R12): {:type :operator-steer :at <ts>
+               :content <the steer, verbatim or ref>} — mid-flight,
+               content-bearing direction that is neither a begin-time
+               :operator-direction nor an abandon-redirect.  A flight's
+               co-pilotedness is DERIVED from the presence of steer events,
+               never authored as a flag (the R11 discipline again); the
+               canonical case is the DERIVE flight itself, reshaped live
+               by four whistle salvos"
+    :ground   "discipline-events.edn entries verbatim; steers carry their
+               source (whistle/bell/surface ref)"}
 
    :self-record
    {:judgment "the reflexive slot: γ frame ref, turn-record count"
@@ -310,7 +336,13 @@
   {:rule "a cascade cell without :sampler is a violation; cascades from
           different samplers never pool in one comparison"
    :from "checkpoint 6 (V-f1 seam)" :adversarial "two sampler outputs
-          averaged into one C as if commensurable"}}
+          averaged into one C as if commensurable"}
+  :F9-steering-recorded
+  {:rule "content-bearing mid-flight operator steers are events in
+          :out-of-band; co-pilotedness is derived from their presence,
+          never an authored flag"
+   :from "R12 (seat-read)" :adversarial "the DERIVE flight re-read as
+          solo — four whistle salvos invisible in the record"}}
 
  ;; ==========================================================================
  ;; 7. BOUNDARIES — what this spec deliberately does not do

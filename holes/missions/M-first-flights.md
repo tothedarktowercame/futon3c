@@ -257,6 +257,15 @@ the decision neighbourhood — chosen plus rejected-with-reasons — is the
 futonic analog of MCTS visit counts, the improved policy distribution the
 prior should distill. RET-descend was only ever the display of it.
 
+R12. In-flight operator steering is recorded (from claude-3's pilot's-seat
+read of the schema, 2026-06-12): when the operator steers mid-flight with
+content — not a begin-time direction, not an abandon-redirect — the steer
+enters the record as a content-bearing event, so a re-read sees a
+co-piloted flight rather than a solo one. The canonical case is the DERIVE
+flight itself, reshaped live by four whistle salvos. Co-pilotedness is
+derived from the presence of steer events, never authored as a flag (the
+R11 discipline again).
+
 ### 3.3 Capability preservation matrix
 
 | current row | current value | typed home |
@@ -561,3 +570,19 @@ schema path; and eight invariants F1–F8 are stated with their adversarial
 records, ready to become the exit-2 logic model. Awaiting claude-3's
 pilot's-seat read (the seat that specified the shape checks the shape),
 then exit 2.
+
+Checkpoint 8 (2026-06-12): the pilot's-seat read of the schema (claude-3,
+one whistle round-trip) returned one fix, one honesty edit, and one new
+requirement — all folded, spec bumped to v0.2. The fix: the warrant cell
+was too ref-centric; real determined forks often resolve by a synthesis of
+weak signals, and forcing those into a ref would make the pilot invent
+one — so `:pilot-synthesis` is a warrant kind whose ground is the recorded
+reasoning itself. The honesty edit: the window's scans are close-time
+labour (driving ticks, polling to settle) and the neighbourhood's
+reject-reasons carry an articulation cost — performed work being kept, not
+data lying free; the projector rewrite must not assume otherwise. The new
+requirement is R12 (in-flight operator steering as content-bearing events;
+co-pilotedness derived, never authored; canonical case = the DERIVE flight
+itself), with invariant F9 added for the exit-2 logic model. The pilot is
+ready to fly the conforming witness flight. Next: exit 2, the logic model
+over F1–F9.
