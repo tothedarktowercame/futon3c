@@ -41,6 +41,11 @@
   "Command prefix used to fetch flight scope JSON."
   :type '(repeat string) :group 'flight-mode)
 
+(defcustom flight-pretty-print-command
+  '("bb" "-cp" "src:scripts:resources:." "scripts/flight_pretty_print.clj")
+  "Command prefix used to render a .flight.edn record as canonical text."
+  :type '(repeat string) :group 'flight-mode)
+
 (defcustom flight-mode-buffer-name "*flight-mode*"
   "Buffer name for the flight organ view."
   :type 'string :group 'flight-mode)
@@ -135,6 +140,38 @@
   (with-temp-buffer
     (pp x (current-buffer))
     (buffer-string)))
+
+(defun flight-mode--flight-file-at-point ()
+  "Return the best .flight.edn path for point or the current buffer."
+  (or (let ((artifact (get-text-property (point) 'flight-artifact)))
+        (when (and (stringp artifact)
+                   (string-suffix-p ".flight.edn" artifact))
+          artifact))
+      (alist-get 'record-path flight-mode--data)
+      (when (and buffer-file-name
+                 (string-suffix-p ".flight.edn" buffer-file-name))
+        buffer-file-name)))
+
+(defun flight-pretty-print (&optional file)
+  "Render FILE, or the flight at point/current buffer, as canonical text."
+  (interactive)
+  (let ((path (or file (flight-mode--flight-file-at-point))))
+    (unless (and path (file-exists-p path))
+      (user-error "No .flight.edn file at point or current buffer"))
+    (let ((default-directory flight-mode-project-dir)
+          (buf (get-buffer-create "*flight-pretty-print*")))
+      (with-current-buffer buf
+        (let ((inhibit-read-only t))
+          (erase-buffer)
+          (unless (zerop (apply #'call-process
+                                (car flight-pretty-print-command)
+                                nil t nil
+                                (append (cdr flight-pretty-print-command)
+                                        (list "--file" path))))
+            (error "flight-pretty-print failed:\n%s" (buffer-string)))
+          (goto-char (point-min))
+          (special-mode)))
+      (display-buffer buf))))
 
 (defun flight-mode--detail (title &rest sections)
   "Show a read-only detail buffer named TITLE with SECTIONS."
