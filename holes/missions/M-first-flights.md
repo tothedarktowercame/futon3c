@@ -790,3 +790,19 @@ stepped flight (14 entities + 13 annotations). The live --write is
 Joe's: FUTON3C_FLIGHT_INGEST_WRITE=1 clojure -M
 scripts/ingest_flight_to_futon1a.clj --write. Phase-A remaining: exit 6
 (the side-by-side, the gate).
+
+Checkpoint 18 (2026-06-12): the cascade-sampling seam is confirmed live
+from the consumer side. fable-2 independently verified the R11 dump
+(33 examples, mask {:in 2 :out 31}, zero cascades — exact) and mapped
+E-cascade-sampler-sampler's contest harness (futon2-arguing-worlds
+52e3568) directly onto the V-f1 cascade slot: :psi <- circumstance :psi,
+:patterns <- buildout :pattern-set, :C <- buildout :C, :sampler <-
+:sampler/id (the referee stamps every scored buildout, so F8
+anti-pooling holds by construction). One adapter nuance for whoever
+writes it: the harness's :pattern-set is bare pattern keys; the spec
+wants pattern refs WITH rel — wrap at the adapter or enrich
+harness-side. The loop as it now stands: contest runs over frozen
+circumstances -> per-candidate cascades land in V-f1 tagged by sampler
+-> the R11 projection picks them up unchanged -> flight-stratification
+reads them. The contest is the data generator for the slot that is
+currently empty.
