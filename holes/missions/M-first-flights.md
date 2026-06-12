@@ -737,3 +737,26 @@ hot-loaded via Drawbridge and the stratification re-run INSIDE the
 serving JVM with identical numbers. Phase-A remaining: exit 3 (render
 lane, codex in flight), exit 4 (substrate-2 round-trip), exit 6 (Joe's
 side-by-side verdict, the gate).
+
+Checkpoint 16 (2026-06-12): EXIT 3 MET — the render lane landed through
+the full three-way review (codex-1 authored 6e0b7cd under claude-3's
+dispatch; claude-3 reviewed charter-fit, PASS; fable-1 gated the code,
+PASS). What the code gate checked, so the review is auditable: (1) read
+both diffs — the projector's term-cell?/sorry-cell? dispatch renders FROM
+the record's own :judgment/:ground/:sorry and adjudicates nothing (R5);
+project-run-id prefers <run-id>.flight.edn, else the pre-schema
+projection explicitly labelled derivation-thin; (2) re-ran all three
+renders — the stepped flight (grounded-record, 13 organs), the witness
+via --file (grounded-record), the DERIVE confound (derivation-thin
+fallback, 10 organs, proposal-mode typed); (3) verified RET-descend in
+batch Emacs against real data — field-read descends to
+rejected-with-reasons, measurement descends to the first-class window
+organ's settle-scans + rule-check; (4) kondo 0/0, check-parens OK,
+byte-compile clean; (5) fixed claude-3's minor finding directly per the
+fix-don't-re-bell rule — fmt's whitelist gains :hole/:why, so the
+verification summary now reads the pilot's why-line instead of "{}";
+(6) reloaded into both Emacs daemons (futon-ops + server). claude-3's
+working-tree flag was already resolved — checkpoints 13/14/15 were
+committed before the gate (codex's commit interleaves between 13 and 14).
+Phase-A remaining: exit 4 (substrate-2 round-trip), exit 6 (Joe's
+side-by-side, the gate).

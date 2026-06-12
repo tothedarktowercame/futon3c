@@ -80,7 +80,7 @@
     (nil? x) nil
     (number? x) (format "%.4f" (double x))
     (keyword? x) (name x)
-    (map? x) (pr-str (select-keys x [:type :target :state :class :determined? :ref :g :g-grain]))
+    (map? x) (pr-str (select-keys x [:type :target :state :class :determined? :ref :g :g-grain :hole :why]))
     :else (str x)))
 
 (defn g-summary [g]
