@@ -45,12 +45,17 @@
   (let [sl (short-list c)
         on-asc (contains? ascent c)
         compute-gated (boolean (:compute-gated (caps c)))
+        parked (get-in (caps c) [:operator-disposition :state])
         has-mission (boolean (seq sl))
         gen (max-gen sl)
         tractable (and has-mission (not compute-gated))
         score (+ (if on-asc 100 0) (if tractable 10 0) (* 0.1 gen) (if compute-gated -50 0))]
     {:cap c :score (double score) :on-ascent on-asc :short-list sl :generativity gen
-     :disposition (cond compute-gated :needs-superpod
+     ;; an operator-set :operator-disposition (e.g. :parked) is a DECISION, not an
+     ;; oversight — it overrides the no-mission NAG so the cap stops registering as
+     ;; an unaddressed hole.
+     :disposition (cond parked parked
+                        compute-gated :needs-superpod
                         (not has-mission) :needs-operator-to-name-pre-witness
                         :else :playable)}))
 
@@ -68,5 +73,13 @@
 (println "\n;; STRATEGIC PICK — the level to persist on next:")
 (if pick
   (println "   " (name (:cap pick)) "  via short-list" (:short-list pick))
-  (println "    (none playable — all held caps need superpod or a named pre-witness ⇒ NAG)"))
+  (println "    (none playable — held caps are superpod-gated, awaiting a named pre-witness, or operator-parked ⇒ NAG)"))
+
+(let [dispositioned (filter #(get-in caps [(:cap %) :operator-disposition]) ranked)]
+  (when (seq dispositioned)
+    (println "\n;; OPERATOR-DISPOSITIONED — decisions, NOT oversights (see :operator-disposition):")
+    (doseq [{:keys [cap disposition]} dispositioned]
+      (let [od (get-in caps [cap :operator-disposition])]
+        (println (format "   %-30s %-18s %s" (name cap) (name disposition)
+                         (or (:revisit od) (some-> (:gated-by od) name (->> (str "gated-by: "))) "")))))))
 (System/exit (if pick 0 1))

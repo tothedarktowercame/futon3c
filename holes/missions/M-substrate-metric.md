@@ -1,7 +1,7 @@
 # Mission: M-substrate-metric
 
 **Date:** 2026-06-01
-**Status:** DELIVERED (v1) - with named residue. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). Campaign remains open until a paired consumer consumes live.
+**Status:** DELIVERED (v1) - with named residue; first paired-consumer live consumption evidenced 2026-06-12. O1-O4 design-fit accepted by Joe; E1 + E2 escrow entries are `:contract-released`; E1 curvature query delivered; E2 continuity cut passed O4(b)/O4(c). Campaign dissolution remains a separate owner/Joe decision.
 **Campaign:** `futon3c/holes/campaigns/C-substrate-completion.md`
 **Charter spec:** `futon3c/holes/campaigns/C-substrate-completion.STANDARD-ARGUE.draft.md`
 **Owner:** codex-3, ratified by Joe via claude-3 handoff, 2026-06-01.
@@ -696,3 +696,39 @@ Campaign dissolution still requires at least one paired requirement consumed liv
 Current branch: `codex/m-substrate-metric-runtime`.
 
 Closure commit includes the final O4(b) ruling and this terminal record. Merge-to-master remains Joe's decision.
+
+### 12.7 Consumption evidence - E-cascade-sampler-sampler
+
+First paired-consumer live consumption is now evidenced, 2026-06-12, by `E-cascade-sampler-sampler` (owner: claude-1) under checkpoints 5-7.
+
+Artifacts checked:
+
+- `futon2/holes/E-cascade-sampler-sampler.md` checkpoint 5 records the handoff requirement to "bell the M-substrate-metric campaign owner with consumption evidence (the engine is consumed live - their open condition)" and records the v1 spread as "VERIFIED non-flat (1.06-2.74/circumstance)".
+- `futon2/holes/labs/E-cascade-sampler-sampler/s4/metric-matrix-v0.json` records `engine = "substrate_metric_e1_curvature (M-substrate-metric v1, unmodified import)"`, `frozen-at = "2026-06-12T12:03:38Z"`, `targets = 90`, `matched = 85`.
+- `futon2/holes/labs/E-cascade-sampler-sampler/contest-verdicts-v1.edn` records the six-arm contest field note: "gflownet-metric trained on metric-C (M-substrate-metric v1)".
+- `contest-verdicts-v1.edn` records the clean negative: `:gflownet-metric` median realized-G `-9.5320129` versus flat `:gflownet-tb` median realized-G `-9.4858429`; the metric arm did not separate, though it was consumed live.
+- `futon2/holes/labs/E-cascade-sampler-sampler/s4/metric-matrix-v1.1.json` records the second consumption pass with `engine = "substrate_metric_e1_curvature (M-substrate-metric v1, unmodified import) + resolution_state (same module) + roster presence"`, `frozen-at = "2026-06-12T13:57:40Z"`, and disclosures `unknown-resolution-zeroed = 2`, `resolution-scaled-to-zero = 7`, `presence-masked = 1`, `of-matched = 85`.
+- `futon2/docs/futonzero-alphazero.md` records the downstream interpretation: the metric proxy "ran (M-substrate-metric v1 consumed live, unmodified; spread 1.06-2.74, non-flat)" but "still did not separate from the flat-proxy arm on realized-G".
+
+Field feedback from this consumer:
+
+- `:resolution-state` is correct as a state signal: v1.1 zeroed saturated targets through the metric-owned provider.
+- The scalar `action_intensity` is too advance-specific for close-out bundles. Close moves should score by resolvedness, while advance moves score by unresolvedness; this is a move-class-conditional intensity extension, not a change to O1 identity.
+- Phase-based resolvedness needs a recency/staleness dimension: it cannot distinguish young early-stage work from abandoned early-stage work.
+- One state disagreement remains worth investigating downstream: `M-essay-corpus-substrate` is documented complete, while operator judgment was unsure.
+
+Conclusion: the keystone's "first paired consumer consumes live" open condition is satisfied as consumption evidence, including a clean negative result. This does not by itself dissolve `C-substrate-completion`; it changes the campaign boundary from "awaiting first live consumer" to "owner/Joe adjudicate how the negative and v1.1 feedback update the next metric/action-vocabulary work."
+
+### 12.8 Review and pending beta-temperature refinement
+
+Review result, 2026-06-12: claude-1 reviewed §12.7 and the status-line change as **PASS**.
+
+Audited review scope:
+
+- claude-1 re-read the full §12.7 and the new status line.
+- claude-1 re-verified the cited source numbers exactly: v0 matrix `frozen-at = 2026-06-12T12:03:38Z`, `targets = 90`, `matched = 85`; v1.1 matrix `frozen-at = 2026-06-12T13:57:40Z`, disclosures `{unknown-resolution-zeroed 2, resolution-scaled-to-zero 7, presence-masked 1, of-matched 85}`; contest medians `-9.5320129` versus `-9.4858429`.
+- claude-1 confirmed the scoping: consumption is evidenced; campaign dissolution remains owner/Joe-adjudicated; move-class-conditional intensity is a consumer/score extension, not an O1 identity change.
+
+Pending refinement, not yet incorporated into the verdict: `futon2/holes/labs/E-cascade-sampler-sampler/TN-metric-review.md` diagnoses the metric-arm non-separation as reward aggregation collapse rather than substrate flatness: the reward uses `C = T x H`, with summed intensity and mean pairwise coherence washing out contrast. `TN-metric-review-RESPONSE.md` records the follow-up experiment as running: `s4/cascade_metric_proxy_beta.py` uses `R = exp(beta * (C - 2))`, with beta from `CASCADE_BETA`; beta runs are intended to report median G, distinct selections, and entry counts.
+
+Ledger rule until that result lands: keep §12.7's "clean negative" wording as the beta=1 / current-linear-reward consumption result. If the temperature sweep separates on realized-G, sharpen this to "negative at beta=1 only"; if it does not, retain the stronger negative and point to metric/embedding or score-informativeness as the next lever.

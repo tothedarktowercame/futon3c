@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 23 — 2026-06-12 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `M-first-flights` (G=-4.12).
+
+**EVAL / DID.** :stepped-build-order-step-2
+
+**PRINT / FOUND.** off-continuity ohc-4 null DISCRIMINATES: scaled error 7.65e-5 vs constant error 0.0396  _[predicted G=-4.12, realised G=-4.12]_
+
+**PUR.** a null at an off-continuity begin is model-informative, unlike the continuity-point witness which was increment-clean but model-indifferent Mode: supervised-proposal.
+
 ## Turn 22 — 2026-06-12 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `M-first-flights` (G=-4.12).

@@ -1,7 +1,16 @@
 # M-agency-hardening -- Conference-ready IRC-backed Agency
 
 Date: 2026-06-07
-Status: Proposed
+Status: CLOSED 2026-06-12 (Joe's call). Core delivered + durable: auto-bellback +
+mesh-edge coverage + mesh-QA + MQ-7, all reviewed/integrated/live; the durable
+per-agent FIFO turn-queue (`FUTON3C_DURABLE_QUEUE`, drainer-v2) landed on master and
+activated; crossed-bell locus (session-id resolution) verified from source. Final
+hardening this session: operator/REPL turns made first-class via E2
+(`FUTON3C_REPL_THROUGH_QUEUE`) — same delivery guarantee as bells, single-writer,
+reply-routed; and the "bells arrive twice" report shown to be auto-bellback, not a
+delivery bug (exactly-once holds, measured). See
+`holes/missions/turn-delivery-invariants.md`. Deferred follow-ons (not blockers):
+E3 operator-priority lane; M-kangaroo warm-pouch successor.
 Target: Before the conference session approximately one month after
 2026-06-07.
 
