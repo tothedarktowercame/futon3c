@@ -427,6 +427,38 @@ stack. Refines R1 and the velocity row of the preservation matrix;
 boundary unchanged (building policy-G is the rollout engine's charter,
 not this mission's).
 
+## 5b. INSTANTIATE (in progress — opened live, WM piloted flight 2026-06-12)
+
+Opened by the pilot (fable-2) at ground control's direction, during the
+first piloted War Machine flight (notebook:
+`holes/flights/F-wm-piloted-2026-06-12.md`). What stands as
+instantiate-grade artifact so far:
+
+1. **Pattern lane materialized.** The nine §Pattern-cross-reference
+   cites are live substrate-2 hyperedges (`first-flights/pattern/*`),
+   one scope PER cite, anchored at its cite-site (detector fix in
+   futon6 `mission_scope_detect.py`; positions 16649–18671). Mission-mode
+   renders a chip at every cite.
+2. **The cascade.** `holes/flights/first-flights-cascade.edn` (+ svg,
+   rendered from the EDN alone) — the nine patterns as an Alexander
+   semilattice: problem at top, `:differentiates` edges carrying the
+   PSR rationales, two genuine joins, discharge edge closing on the
+   problem. The mission's ARGUE in pattern-theoretic form. Certified
+   "okay first draft" by ground control (render polish queued).
+3. **Satiety against reality.** Each cascade node carries `:realized`
+   evidence from the Phase A record; the hungry remainder is exactly
+   two nodes — `structured-events-only` (grounds still in prose, the
+   mission's own line-301 admission) and the problem node itself.
+4. **The ratified car, in flight.** flight-pretty-print (checkpoint 21)
+   dispatched to codex-3 at 16:39 — the `.flight.edn` →
+   canonical-organ-order renderer that puts flights into the anatomy
+   atlas as the third corpus and begins discharging the typed-grounds
+   debt. Lands with checkpoint 22 on the pilot's review.
+
+INSTANTIATE remains open until flight-pretty-print is reviewed and the
+typed-grounds migration has a plan; Phase B (policy-grade G(s, π) on
+the rollout engine) is the standing obligation beyond it.
+
 ## 5. Consequence if the shapes land
 
 The piano roll changes type, from numeric tape to proof script — a sequence
