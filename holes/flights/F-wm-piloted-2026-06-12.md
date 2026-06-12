@@ -369,3 +369,35 @@ that co-fired in witnessed discharges are near). The V-f2 compromise
 (G over policies, not single actions) gets its operational floor: the
 mined dataset IS the state-action space. No more brouhaha — a
 dependency, stated and scheduled.
+
+## FLIGHT CLOSED (ground control, ~17:35): "we can safely say that we have advanced this mission"
+
+The advance, enumerated (all committed, all live):
+- Nine pattern cites tagged into substrate-2 with per-cite anchors
+  (detector fix, corpus-general).
+- The first cascade artifact (ARGUE in pattern form), certified draft,
+  satiety-against-reality annotated.
+- INSTANTIATE opened, de-ghosted (4-layer fix chain, 3 bulk-pass items).
+- The first sorry-arrow minted into live meme.db (arr-7535a5b6-e59),
+  derive-gate certificate in the mission, and the gate itself minted as
+  a durable pattern (derive-exits-on-a-minted-sorry.flexiarg).
+- The wiring diagram (the triple's third term) drawn, witnessed where
+  Phase A left witnesses, hunger typed where owed — surfacing
+  typed-grounds migration as :design-hungry (unplanned).
+- Polish-notation phase semantics + VERIFY-as-diagram-checking ruled
+  and logged (sorties 8, 10).
+- The retrospective triple-mining work order specified (sortie 11) and
+  Phase B formally HELD on it (sortie 12; mission status updated).
+
+Still in flight after the cockpit closes (continue as ordinary work):
+codex-1 (WM mission scan), codex-3 (heads/self-watch, then
+flight-pretty-print -> pilot review -> ckpt 22 -> arrow witness),
+codex-4 (loop arrows + mana diagnosis), codex-2 (anatomy-v0 sweep ->
+overnight CT run). Bulk passes queued: mission-mode two-pilot-seats
+discipline; reingest sweep over all missions; triple-mining dispatch.
+
+Engine fixes landed during flight: futon2 774eaa2 (ignition), futon6
+detector fixes (5b-numbering, per-cite anchors). The first piloted WM
+flight is itself the strongest specimen yet for the flight corpus:
+problem -> cascade -> holes -> discharges, with the operator's voice
+as the act-gate throughout.
