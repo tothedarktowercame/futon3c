@@ -136,3 +136,20 @@ for v0. Output format: the golden-graph EDN schema (a cascade IS a
 hyperedge graph; nodes = patterns/problem/holes, edges = feeds/
 discharges with :via quotes). Status: :ratified-car, queued for the
 first free codex slot, behind the five in-flight tasks.
+
+## Sortie 4d — look at M-first-flights.md:301 (realtime/structured-events-only)
+
+Joe points at the mission's own PSR: "the trace must be typed events,
+not prose. The current record half-obeys it (typed slots) and
+half-defies it (the grounds live in prose)."
+
+This is the forward/backward split for everything ratified today:
+- BACKWARD (harvest): checkpoint prose mining works precisely because
+  authors half-structured it — but it is retrofit, not a way of life.
+- FORWARD (typed at birth): new records obey structured-events-only —
+  checkpoints carry typed slots (:certificate, :next-car, :discharges
+  PHASE), cascades are born as EDN, flights emit typed organs. The
+  M-typed-bells precedent exactly (type at birth -> ArSE at birth).
+The harvest pass is therefore ALSO the migration: it defines the typed
+shapes that future records emit natively, and prose-mining decays to
+zero as the corpus turns over. The mission predicted its own fix.
