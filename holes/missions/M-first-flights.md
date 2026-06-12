@@ -243,6 +243,20 @@ R10. Typed inter-flight links: applies-lesson-of, re-measures, confounded-by,
 supersedes (and a weak cites-finding). Each is taken from a real case; each
 is currently prose and unqueryable. With them the piano roll becomes a graph.
 
+R11. Every flight record projects to a training example for the gradient
+prior (the learner's requirement, from the whistle review against
+futonzero-alphazero.md): (state-ref, the candidate set with chosen and
+rejected-with-reasons, predicted-G of both kinds with their g-grain,
+realized-G, and a validity mask). Two warrants. First, the confound typing
+gains a mechanical consumer: the mask is DERIVED from the typed verdicts
+already required (R1's interpretation class, R3's window witness) — never
+authored, so no record can declare itself trainable; confounded and
+censored pairs mask out of training, which is the anti-laundering
+discipline applied to the reward path. Second, this is R4's real warrant:
+the decision neighbourhood — chosen plus rejected-with-reasons — is the
+futonic analog of MCTS visit counts, the improved policy distribution the
+prior should distill. RET-descend was only ever the display of it.
+
 ### 3.3 Capability preservation matrix
 
 | current row | current value | typed home |
