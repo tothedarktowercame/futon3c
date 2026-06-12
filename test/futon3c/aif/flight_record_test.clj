@@ -146,6 +146,47 @@
     (is (< (Math/abs (- 0.0101 (get-in r [:organs :counterfactual :judgment :constant-error]))) 1e-9)
         "constant-error = |realised - predicted-constant|, derived")))
 
+(def frame-fixture
+  {:run-id "live-old-0001" :agent "claude-3"
+   :trace [{:v {:type :advance-mission :target "M-x"}
+            :v-attribution :operator-directed
+            :dT-snapshot [{:action {:type :advance-mission :target "M-x"} :g-total -4.1 :rank 1}]
+            :predicted-discharge -4.12 :predicted-constant -4.08
+            :realised-discharge -4.084
+            :independent? true :evidence-ref "futon7 88b3cb1"
+            :realised-source :measured :realised-read :settled}]})
+
+(deftest backfill-is-thin-and-honest
+  (let [r (fr/backfill-record frame-fixture)]
+    (is (= :thin (:flight/derivation r)))
+    (testing "every organ is still a cell"
+      (doseq [[k c] (:organs r)]
+        (is (cell-ok? c) (str k ": " (pr-str c)))))
+    (testing "tags become terms; prose judgments become :derivation-thin sorries"
+      (is (= :derivation-thin (get-in r [:organs :warrant :sorry :kind])))
+      (is (= :derivation-thin (get-in r [:organs :verification :sorry :kind])))
+      (is (= :derivation-thin (get-in r [:organs :begin-state :sorry :kind])))
+      (is (= :executed (get-in r [:organs :act :judgment :state])))
+      (is (= "futon7 88b3cb1" (get-in r [:organs :act :judgment :witness :ref])))
+      (is (= :one-step-action (get-in r [:organs :measurement :judgment :realised :g-grain]))))
+    (testing "clean-vs-null lived in prose — class honestly absent on settled measured pairs"
+      (is (nil? (get-in r [:organs :measurement :judgment :class])))
+      (is (= :settled (get-in r [:organs :measurement :judgment :realised-read]))))))
+
+(deftest backfill-derives-only-mechanical-classes
+  (let [fallback (assoc-in frame-fixture [:trace 0 :realised-source] :target-absent-fallback)
+        transient* (assoc-in frame-fixture [:trace 0 :realised-read] :transient)]
+    (is (= :fallback (get-in (fr/backfill-record fallback)
+                             [:organs :measurement :judgment :class])))
+    (is (= :transient (get-in (fr/backfill-record transient*)
+                              [:organs :measurement :judgment :class])))))
+
+(deftest backfill-proposal-mode-stays-typed-absence
+  (let [proposal (update-in frame-fixture [:trace 0] dissoc :independent? :evidence-ref)
+        r (fr/backfill-record proposal)]
+    (is (= :proposal-mode (get-in r [:organs :act :sorry :kind]))
+        "proposal-mode was a typed absence by design, not thinness")))
+
 (deftest write-round-trips
   (let [dir (str (System/getProperty "java.io.tmpdir") "/flight-record-test-" (System/nanoTime))
         r (compose {:flight {:window window-fixture :class :clean}})

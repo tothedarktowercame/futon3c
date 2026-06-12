@@ -118,7 +118,11 @@
 (defn- check-f2 [record]
   (let [m (organ record :measurement)
         viols
-        (when (and (term? m)
+        ;; thin records (R6 backfill) carry no window by definition — the
+        ;; :derivation-thin flag is the explanation and the mask already
+        ;; excludes them; the settled rule binds :full records only
+        (when (and (= :full (:flight/derivation record))
+                   (term? m)
                    (contains? #{:clean :null} (get-in m [:judgment :class])))
           (let [w (window-of record m)]
             (cond
@@ -141,9 +145,15 @@
   (let [m (organ record :measurement)
         viols
         (when (term? m)
-          (let [{:keys [predicted realised error class]} (:judgment m)]
+          (let [{:keys [predicted realised error class]} (:judgment m)
+                thin? (= :thin (:flight/derivation record))]
             (concat
-             (when-not (contains? measurement-classes class)
+             ;; class is required on :full records; on thin backfills the
+             ;; clean-vs-null judgment lived in prose and is honestly absent
+             ;; (only the mechanical :fallback/:transient derive) — but a
+             ;; PRESENT class must still be from the enum
+             (when-not (or (contains? measurement-classes class)
+                           (and thin? (nil? class)))
                [(str "measurement: interpretation class " (pr-str class)
                      " missing or not one of " measurement-classes)])
              (when (and (g-value? predicted) (g-value? realised))
@@ -179,9 +189,14 @@
                 (:judgment a)]
             (case state
               :executed
-              (when-not (and (map? witness) (:ref witness)
-                             (:verified-by witness) (:verification witness))
-                ["act: :executed without a full witness {:ref :verified-by :verification} (R8 — who re-ran what before the sha was trusted)"])
+              ;; on thin backfills :verification (who re-ran what) was
+              ;; prose — :ref + :verified-by are the recoverable data
+              (let [need (if (= :thin (:flight/derivation record))
+                           [:ref :verified-by]
+                           [:ref :verified-by :verification])]
+                (when-not (and (map? witness) (every? witness need))
+                  [(str "act: :executed without a full witness " need
+                        " (R8 — who re-ran what before the sha was trusted)")]))
               :refused
               (when-not finding
                 ["act: :refused without its :finding payload — a refusal is a complete flight, not a gap"])
@@ -204,7 +219,11 @@
   (let [v (organ record :velocity)
         w (organ record :warrant)
         viols
-        (when (term? v)
+        (when (and (term? v)
+                   ;; thin backfills: the warrant lived in prose; the
+                   ;; :derivation-thin sorry IS the honest record of that
+                   (not (and (= :thin (:flight/derivation record))
+                             (= :derivation-thin (get-in w [:sorry :kind])))))
           (if-not (term? w)
             ["velocity present but the warrant cell is no term — the cycle-5 shape: a fork flown with no recorded warrant (R7)"]
             (let [{:keys [determined? determined-by queued]} (:judgment w)]

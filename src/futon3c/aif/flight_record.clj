@@ -182,6 +182,78 @@
                        (or window-ground
                            "pilot settle protocol (close-time labour, kept)"))))}))
 
+(defn backfill-record
+  "Build-order step 4: re-emit a pre-schema γ frame as an honest
+   DERIVATION-THIN flight record (R6). What the frame carries as DATA
+   (the tags: v, attribution, predictions, realised, source, read,
+   evidence-ref) becomes terms with 'backfilled from γ frame' grounds;
+   every judgment that lived in prose or was discarded (warrant,
+   verification, the settle window, the clean-vs-null class beyond the
+   mechanically-derivable :fallback/:transient, the neighbourhood)
+   becomes a :derivation-thin sorry. Never upgraded, never trainable —
+   the mask derivation requires :full."
+  [frame]
+  (let [tr (first (or (:trace frame) (:gamma frame)))
+        run-id (:run-id frame)
+        agent (:agent frame)
+        thin {:sorry {:kind :derivation-thin
+                      :note "pre-schema record; this ground was prose or discarded"}}
+        v (:v tr)
+        predicted (:predicted-discharge tr)
+        predicted-constant (:predicted-constant tr)
+        realised (:realised-discharge tr)
+        source (:realised-source tr)
+        rread (:realised-read tr)
+        executed? (true? (:independent? tr))
+        gamma-ref (str run-id ".edn")]
+    {:flight/id run-id
+     :flight/derivation :thin
+     :flight/links []
+     :organs
+     {:field-read
+      {:judgment {:gauge {:ref (str gamma-ref " :trace 0 :dT-snapshot")
+                          :count (count (:dT-snapshot tr))}
+                  :neighbourhood thin}
+       :ground (str "backfilled from γ frame " gamma-ref)}
+      :velocity {:judgment {:action v} :ground :warrant}
+      :warrant thin
+      :verification thin
+      :attribution {:judgment (:v-attribution tr)
+                    :ground "γ frame :v-attribution (backfilled tag)"}
+      :prediction
+      {:judgment {:scaled (g1 predicted)
+                  :constant (g1 predicted-constant)
+                  :policy (ghost :not-yet :rollout-engine)}
+       :ground "γ frame predicted fields (backfilled tags)"}
+      :begin-state thin
+      :act (if executed?
+             {:judgment {:state :executed
+                         :witness {:ref (:evidence-ref tr)
+                                   :verified-by agent}}
+              :ground "γ frame :evidence-ref (backfilled; verification detail was prose)"}
+             (ghost :proposal-mode))
+      :measurement
+      {:judgment (cond-> {:predicted (g1 predicted)
+                          :predicted-constant (g1 predicted-constant)
+                          :realised (g1 realised)
+                          :error (when (and (number? realised) (number? predicted))
+                                   (Math/abs (double (- realised predicted))))
+                          :class (cond
+                                   (= :target-absent-fallback source) :fallback
+                                   (= :transient rread) :transient
+                                   :else nil)
+                          :realised-source source}
+                   rread (assoc :realised-read rread))
+       :ground "γ frame tags (backfilled); clean-vs-null beyond the mechanical derivation lived in prose — absent honestly"}
+      :counterfactual
+      (if (and (number? realised) (number? predicted-constant))
+        {:judgment {:constant-error (Math/abs (double (- realised predicted-constant)))}
+         :ground "derived: |realised - predicted-constant|; re-derivable"}
+        thin)
+      :out-of-band thin
+      :self-record {:judgment {:gamma-ref gamma-ref}
+                    :ground "the frame itself"}}}))
+
 (defn write-flight-record!
   "Persist RECORD as <dir>/<run-id>.flight.edn (pretty, no length limits).
    Best-effort contract is the CALLER's (a persist failure must not break a

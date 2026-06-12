@@ -689,3 +689,25 @@ not a story; step 2 doing its job on its first live use. Gates: 9 tests /
 51 assertions; kondo 0/0; check-parens OK; Drawbridge reloaded; the
 stepped record re-verifies CONFORMS with mask IN. Next: exit 3, the
 render lane (bellable; claude-3 dispatches per single-dispatch-per-kind).
+
+Checkpoint 14 (2026-06-12): build-order step 4 done — the backfill pass.
+`backfill-record` (futon3c.aif.flight-record) re-emits a pre-schema γ
+frame as an honest derivation-thin record: the tags that exist as data
+(velocity, attribution, predictions, realised, source, read,
+evidence-ref) become terms with backfilled grounds; every judgment that
+lived in prose (warrant, verification, window, neighbourhood, the
+clean-vs-null class beyond the mechanical :fallback/:transient) becomes a
+:derivation-thin sorry. `scripts/flight_backfill.bb` ran it: 31 frames
+backfilled, all conforming-as-thin with mask OUT; with the witness and
+the stepped flight that is 33 conforming records in data/repl-traces
+(live-c1028918 left unfilled deliberately — it is codex's named
+derivation-thin-fallback test fixture for the in-flight exit-3 build, and
+the canonical adversarial stays a no-record run until that lands). The
+verifier gained the matching honesty relaxations: F2/F3-class/F4-
+verification/F5 bind :full records only — on thin records the
+:derivation-thin flag IS the explanation, and the mask already refuses
+them. Self-test still 9/9. Exit 5 is now ARMED: the stratification demo
+has its population — 2 full records with classes as data, 31 thin where
+the class question cannot even be asked, which is precisely the
+before/after the loop-closing exit exists to exhibit. Gates: 12 tests /
+75 assertions; kondo 0/0; check-parens OK.
