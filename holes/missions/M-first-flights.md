@@ -1,7 +1,7 @@
 # M-first-flights — we have flight data (Orville); we need the data shapes (Wilbur)
 
 Date: 2026-06-11
-Status: VERIFY (2026-06-11; IDENTIFY → MAP → DERIVE → ARGUE → VERIFY-in-progress same evening). VERIFY = mockups + day-in-the-life narrative (Joe verifies interactively), then the logic model, then piecewise build with claude-3 stepping.
+Status: PHASE A COMPLETE (2026-06-12, operator side-by-side verdict PASS — checkpoint 20). Full lifecycle IDENTIFY → MAP → DERIVE → ARGUE → VERIFY → INSTANTIATE ran 2026-06-11/12. Phase B (policy-grade G(s, π)) is the standing obligation, armed when the rollout engine lands; the prediction organ holds the typed ghost. Mission-close is the operator's call.
 Owners: fable-2 (mint, human-cockpit standard), claude-3 (the flight half),
 fable-1 (machine-trace production sites; schema and logic model).
 
@@ -825,3 +825,22 @@ sections are live in substrate-2 (e.g.
 arxana/essay/flight/live-df706c45.../organ/measurement). Exit 4 is now
 DONE in fact, not just gated. Remaining: exit 6 alone — the side-by-side,
 the Phase-A gate.
+
+Checkpoint 20 (2026-06-12): PHASE A GATE PASSED — operator side-by-side
+verdict, Joe: "It passes my review!" The read that preceded the verdict
+exercised exactly what the design promised: the UI works, "the organs are
+healthy"; the measurement question (is a tiny-error :null just
+got-what-we-predicted?) resolved to the load-bearing distinction — a
+witnessed no-move with its two-scan window versus the censored copy,
+plus the off-continuity discrimination readable from the same line; and
+the sorries question resolved UNPROMPTED to the design's central
+distinction — Joe read :holes []/:hole :none-with-rationale as
+checked-and-empty knowledge, not as absence, which is the
+term-versus-typed-sorry calculus working at the operator's eye. All six
+Phase-A exits are now met in fact: the schema (v0.4), the logic model
+(F1-F9, both real witnesses), the render lane, the substrate-2
+round-trip (landed under the operator sentinel, 14 entities + 13
+annotations verified live), the loop-closing stratification (the 517x
+visible in the learner's lane), and the operator's verdict. Phase B
+stands armed on the rollout engine. Mission-close remains the
+operator's call.
