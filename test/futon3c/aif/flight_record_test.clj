@@ -187,6 +187,20 @@
     (is (= :proposal-mode (get-in r [:organs :act :sorry :kind]))
         "proposal-mode was a typed absence by design, not thinness")))
 
+(deftest validity-mask-derives-never-authored
+  (testing "the canonical producer-side mask agrees with the verifier's rule on the fixtures"
+    (let [full-clean (compose {:flight {:window window-fixture :class :clean}})
+          full-no-window (compose {:flight {:class :clean}})
+          thin (fr/backfill-record frame-fixture)]
+      (is (= {:mask :in :reason :clean-or-null-settled} (fr/validity-mask full-clean)))
+      (is (= {:mask :out :reason :window-unsettled} (fr/validity-mask full-no-window)))
+      (is (= {:mask :out :reason :derivation-thin} (fr/validity-mask thin)))
+      (is (= {:mask :out :reason :fallback}
+             (fr/validity-mask (assoc-in full-clean [:organs :measurement :judgment :class] :fallback)))
+          "the censored fallback masks out by name")
+      (is (= {:mask :out :reason :class-absent}
+             (fr/validity-mask (assoc-in full-clean [:organs :measurement :judgment :class] nil)))))))
+
 (deftest write-round-trips
   (let [dir (str (System/getProperty "java.io.tmpdir") "/flight-record-test-" (System/nanoTime))
         r (compose {:flight {:window window-fixture :class :clean}})

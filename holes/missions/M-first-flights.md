@@ -711,3 +711,29 @@ has its population — 2 full records with classes as data, 31 thin where
 the class question cannot even be asked, which is precisely the
 before/after the loop-closing exit exists to exhibit. Gates: 12 tests /
 75 assertions; kondo 0/0; check-parens OK.
+
+Checkpoint 15 (2026-06-12): EXIT 5 MET — the loop-closing demonstration
+ran, and the number moves. `futon3c.aif.calibration/flight-stratification`
+(the calibration lane extended) consumed all 33 flight records once,
+deriving the R11 mask from class + window per record (the canonical
+producer-side `validity-mask` in futon3c.aif.flight-record; the bb
+verifier keeps a standalone copy, cross-checked by tests). The exhibit,
+exact numbers from the live run: POOLED (the number the unstratified
+lane produces) mean error 0.0204 over 33 — censored shapes, transients
+and class-unknowns flattened into one scalar. STRATIFIED (the number
+that moves): :clean n=1 error 0.03941 (the per-hole increment, the
+witness flight); :null n=1 error 0.00008 with mean-constant-error 0.0396
+beside it — the off-continuity 517x discrimination VISIBLE IN THE
+LEARNER'S LANE OUTPUT, not in pilot prose. Masked out, with counts: 31
+derivation-thin records that cannot enter any stratum because their
+class lived in prose — the demonstration fails on thin records exactly
+as the exit requires (ground truth checked: zero gamma frames ever
+carried the fallback tag, so every thin class is genuinely
+prose-lost; the :fallback-masks-out-by-name path is unit-tested and
+waits for real input). G-REWARD-shaped where exits 1-4 were G-SIM-shaped:
+one demonstrated consumption proving the typing pays rent in the
+learner. Gates: 13 tests / 80 assertions; kondo 0/0; check-parens OK;
+hot-loaded via Drawbridge and the stratification re-run INSIDE the
+serving JVM with identical numbers. Phase-A remaining: exit 3 (render
+lane, codex in flight), exit 4 (substrate-2 round-trip), exit 6 (Joe's
+side-by-side verdict, the gate).

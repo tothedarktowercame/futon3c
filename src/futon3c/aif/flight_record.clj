@@ -182,6 +182,68 @@
                        (or window-ground
                            "pilot settle protocol (close-time labour, kept)"))))}))
 
+;; ---------------------------------------------------------------------------
+;; the R11 validity mask — canonical producer-side implementation
+;; (scripts/flight_spec_verify.clj carries a standalone copy so the bb
+;; verifier stays classpath-free; flight_record_test cross-checks the two
+;; on fixtures)
+;; ---------------------------------------------------------------------------
+
+(defn settled-window?
+  "R3: two scans, distinct :as-of, both past :threshold, agreement <= ε,
+   begin <= commit < threshold, agreement = |g1-g2|."
+  [w]
+  (let [{:keys [begin commit threshold scans epsilon agreement]} w
+        [s1 s2] scans
+        gnum #(get-in % [:g :g])]
+    (boolean
+     (and (map? w)
+          (string? begin) (string? commit) (string? threshold)
+          (<= (compare begin commit) 0) (neg? (compare commit threshold))
+          (= 2 (count scans))
+          (apply distinct? (map :as-of scans))
+          (every? #(neg? (compare threshold (:as-of %))) scans)
+          (number? (gnum s1)) (number? (gnum s2))
+          (number? epsilon) (number? agreement)
+          (<= agreement epsilon)
+          (< (Math/abs (- agreement (Math/abs (- (double (gnum s1))
+                                                 (double (gnum s2))))))
+             1e-6)))))
+
+(defn window-of
+  "Resolve a record's R3 window: inline in the measurement judgment, or
+   the keyword :window pointing at the thirteenth organ."
+  [record]
+  (let [w (get-in record [:organs :measurement :judgment :window])]
+    (if (map? w) w (get-in record [:organs :window :judgment]))))
+
+(defn validity-mask
+  "R11, derived never authored: {:mask :in|:out :reason <kw>}.
+   mask :in <=> :full record AND measurement is a term AND class :clean or
+   :null AND the window satisfies the settled rule. Reasons name the FIRST
+   failing conjunct — they are the stratification's mask-out counts."
+  [record]
+  (let [m (get-in record [:organs :measurement])
+        class (get-in m [:judgment :class])]
+    (cond
+      (not= :full (:flight/derivation record))
+      {:mask :out :reason :derivation-thin}
+
+      (not (and (map? m) (contains? m :judgment) (contains? m :ground)
+                (not (contains? m :sorry))))
+      {:mask :out :reason :no-measurement-term}
+
+      (nil? class)
+      {:mask :out :reason :class-absent}
+
+      (not (contains? #{:clean :null} class))
+      {:mask :out :reason class}
+
+      (not (settled-window? (window-of record)))
+      {:mask :out :reason :window-unsettled}
+
+      :else {:mask :in :reason :clean-or-null-settled})))
+
 (defn backfill-record
   "Build-order step 4: re-emit a pre-schema γ frame as an honest
    DERIVATION-THIN flight record (R6). What the frame carries as DATA

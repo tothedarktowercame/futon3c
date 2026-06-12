@@ -5,7 +5,8 @@
             [clojure.java.io :as io]
             [clojure.pprint]
             [clojure.string :as str]
-            [futon3c.aif.discipline-events :as discipline]))
+            [futon3c.aif.discipline-events :as discipline]
+            [futon3c.aif.flight-record :as flight]))
 
 (def ^:private home (System/getProperty "user.home"))
 
@@ -310,6 +311,64 @@
      :degenerate? (boolean degenerate?)
      :verdict verdict
      :warnings warnings}))
+
+(defn flight-stratification
+  "M-first-flights Phase-A exit 5 — the loop-closing demonstration: the
+   calibration lane consumes flight-as-derivation records ONCE, exhibiting
+   calibration error stratified by interpretation class, computed FROM the
+   records (R1's class, R3's window, R11's derived mask — never authored),
+   with masked-out classes visibly counted. This consumption FAILS on
+   derivation-thin records by construction: their class lived in prose, so
+   they appear only in the mask-out counts (:derivation-thin), never in a
+   stratum. G-REWARD-shaped where exits 1-4 are G-SIM-shaped: not training
+   the prior (FutonZero v2's work), one demonstrated read by the learner's
+   lane proving the typing pays rent."
+  ([] (flight-stratification (:traces-dir default-paths)))
+  ([traces-dir]
+   (let [recs (->> (file-seq (io/file traces-dir))
+                   (filter #(and (.isFile ^java.io.File %)
+                                 (.endsWith (.getName ^java.io.File %) ".flight.edn")))
+                   (sort-by #(.getName ^java.io.File %))
+                   (keep #(try (edn/read-string (slurp %)) (catch Throwable _ nil)))
+                   vec)
+         rows (mapv (fn [r]
+                      (let [mj (get-in r [:organs :measurement :judgment])
+                            pred (get-in mj [:predicted :g])
+                            real (get-in mj [:realised :g])
+                            pred-c (get-in mj [:predicted-constant :g])]
+                        {:id (:flight/id r)
+                         :derivation (:flight/derivation r)
+                         :class (:class mj)
+                         :error (when (and (number? pred) (number? real))
+                                  (Math/abs (- (double real) (double pred))))
+                         :constant-error (when (and (number? pred-c) (number? real))
+                                           (Math/abs (- (double real) (double pred-c))))
+                         :mask (flight/validity-mask r)}))
+                    recs)
+         masked-in (filterv #(= :in (get-in % [:mask :mask])) rows)
+         pooled-errors (vec (keep :error rows))
+         stratum (fn [xs] {:n (count xs)
+                           :mean-error (mean (keep :error xs))
+                           :mean-constant-error (mean (keep :constant-error xs))})]
+     {:population {:records (count recs)
+                   :by-derivation (frequencies (map :derivation rows))}
+      ;; the number the unstratified lane would produce: every numeric pair
+      ;; pooled — censored fallbacks (error 0.0 by construction), transients,
+      ;; and class-unknown thins all flatten into one mean
+      :pooled {:n (count pooled-errors) :mean-error (mean pooled-errors)}
+      ;; the number that MOVES: per-class error over mask-in records only
+      :stratified (into {} (for [[c xs] (group-by :class masked-in)]
+                             [c (stratum xs)]))
+      :mask-in-count (count masked-in)
+      ;; the visible exclusions, by first failing conjunct of the derived mask
+      :masked-out (frequencies (map #(get-in % [:mask :reason])
+                                    (remove #(= :in (get-in % [:mask :mask])) rows)))
+      ;; inside the thin count, the classes that DID survive as data (the
+      ;; mechanical :fallback/:transient derivations) vs prose-lost (nil) —
+      ;; the censored fallbacks are visibly here, never in a stratum
+      :masked-out-thin-classes (frequencies
+                                (map :class (filter #(= :thin (:derivation %)) rows)))
+      :rows rows})))
 
 (defn emit!
   "Write the full normalized evidence + report as one EDN map to PATH.
