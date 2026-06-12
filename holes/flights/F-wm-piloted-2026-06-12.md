@@ -322,3 +322,32 @@ witnessed.
 
 (Joins the peradam labor→arrow→fruit doctrine: the wiring diagram is
 what makes the arrow's discharge AUDITABLE — the certificate's body.)
+
+## Sortie 11 — the retrospective triple-mining work order (17:30, ground control)
+
+Joe: "We can go back to old missions and mine these out. What was the
+ARGUMENT, and what was the WIRING DIAGRAM, from every mission that's
+closed so far? And we should be able to VALIDATE that in substrate-2 —
+say: yeah, it built this. Here's the sketch with patterns; here's what
+was missing beforehand that motivated it. And we have all of the HEAD
+and the IDENTIFY and the MAP to go on if DERIVE itself isn't
+sufficient."
+
+THE WORK ORDER (absorbs 4c cascade-reassembly + the detector bundle):
+per CLOSED mission, mine the triple —
+1. **hole**: have/want from DERIVE; fallback chain HEAD -> IDENTIFY ->
+   MAP where derive is thin (old missions predate the gate);
+2. **argument**: the cascade — pattern cites with cite-site order
+   (per-cite anchors now landed) + checkpoint context;
+3. **wiring**: the composition — checkpoints as witnessed applications,
+   closing commits as the term;
+and **validate against substrate-2**: "it built this" = the term's
+artifacts exist in the store/repos (endpoint verification — the
+retrospective WITNESS). Outputs: sorry-arrows minted :constructed into
+meme.db; cascade training set (the assembler's corpus); wiring
+diagrams (third terms) for the anatomy atlas; per-mission loss where
+mining fails (DP/random-access improvement, same as papers).
+
+Architecture = anatomy-v0 for the mission corpus: deterministic
+harvest, per-mission loss, bulk passes. Dispatch-shaped; queued behind
+the five in-flight codex tasks.
