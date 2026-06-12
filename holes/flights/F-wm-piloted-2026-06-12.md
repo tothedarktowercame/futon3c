@@ -401,3 +401,12 @@ detector fixes (5b-numbering, per-cite anchors). The first piloted WM
 flight is itself the strongest specimen yet for the flight corpus:
 problem -> cascade -> holes -> discharges, with the operator's voice
 as the act-gate throughout.
+
+**Post-flight addendum (Joe, on dispatching the miner):** like the
+structure-first arXiv mining, the triple corpus doesn't have to be
+perfect — "we could have whole missions devoted to 'improving wiring
+diagrams' etc." The loss histogram is the backlog generator: each loss
+class (thin holes, listy cascades, unverifiable artifacts) can seed a
+mission, and those missions mint their own triples — the corpus
+improves itself under the same discipline it records. Admissibility =
+recursion safety (per-class can-propose?) is the standing guard.
