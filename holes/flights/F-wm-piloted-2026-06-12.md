@@ -102,3 +102,27 @@ circumstances, judged by the grounded harness). It was never wired to
 mission-mode/WM. WM cycle 1, step 1 = run the cascade assembler over
 the mission's retrieved patterns + the mission's open hole as the
 circumstance. The contest lane and the WM lane are the same lane.
+
+## Sortie 4c — the training set already exists: closed missions ARE cascades (16:46)
+
+Joe: "We've done hundreds of missions, probably, that are completed —
+most of which have pattern cross-references. If we wanted to build a
+training dataset of cascades, we have no further to look than our
+actual closed missions."
+
+Each closed mission is a LABELED cascade: circumstance = its IDENTIFY
+tension; selected patterns = the cross-references; outcome = closure
+with certificates (success label). The R12 lesson at corpus scale,
+again: don't synthesize training circumstances (contest v0 did, for
+fairness reasons that made sense then) — HARVEST the authored history.
+One bulk pass over closed missions yields:
+- the cascade training set for the assembler (GFlowNet lane gets real
+  reward-labeled trajectories instead of proxy targets);
+- metric golden triplets for free (patterns that co-fired in closed
+  missions are near each other / near that problem class);
+- prior cascade SHAPES for the ruling surface (what certified
+  composition looks like, historically).
+Pipeline shape is the anatomy-v0 sweep again: deterministic harvest,
+per-mission loss (missing cross-refs, unbound certificates), DP passes
+to clean, then train. Same architecture for papers, missions, flights —
+third time today the corpora have converged.
