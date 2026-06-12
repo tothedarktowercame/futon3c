@@ -368,6 +368,12 @@
              tick-before (:tick-count ((requiring-resolve 'futon3c.wm.scheduler/status)))
              tick        (when tick? ((requiring-resolve 'futon3c.wm.scheduler/request-tick!)))
              begin {:ok true :run-id run-id :agent agent :v-attribution v-attribution
+                    ;; flight-record grounds (M-first-flights step 2): the
+                    ;; begin instant and the scan freshness, recorded not
+                    ;; reconstructed (the stale-begin confound is checkable
+                    ;; only if these are data)
+                    :begin-at (str (java.time.Instant/now))
+                    :scan-as-of (some-> (:as-of j) str)
                     :wm-mode (:mode j) :mode mode
                     :pre {:dT-snapshot dT :v v :predicted-discharge predicted
                           :predicted-constant (:g-constant top)}
@@ -450,7 +456,7 @@
    rule as CH2's payload. Proposal-mode closes (the default) stay untagged
    and can never move the verdict."
   ([run-id] (close-live-cycle! run-id {}))
-  ([run-id {:keys [document executed? evidence-ref realised-read]}]
+  ([run-id {:keys [document executed? evidence-ref realised-read flight]}]
   (when (and executed? (not evidence-ref))
     (throw (ex-info ":executed? true requires :evidence-ref — independence is a claim that needs a witness (no payload, no discharge)"
                     {:run-id run-id})))
@@ -504,12 +510,16 @@
                                  :field-delta field-delta)
                 (and executed? realised-read) (assoc :realised-read realised-read)))
           ;; the merge itself is an out-of-band gradient event — record it
-          ;; in the discipline channel (best-effort; never breaks a close)
+          ;; in the discipline channel (best-effort; never breaks a close).
+          ;; ONE instant shared with the flight record's oob organ, so the
+          ;; two stores agree to the nanosecond (grounds are exact where
+          ;; exact values exist — the witness-flight conformance lesson)
+          merge-at (when executed? (str (java.time.Instant/now)))
           _ (when executed?
               (try ((requiring-resolve 'futon3c.aif.discipline-events/append-event!)
                     {:discipline/event :operator-merge
                      :run-id run-id
-                     :at (str (java.time.Instant/now))
+                     :at merge-at
                      :action v
                      :predicted predicted
                      :note (str "executed cycle; evidence: " evidence-ref)})
@@ -540,11 +550,35 @@
                    :measurement {:predicted predicted :realised realised
                                  :top-shift? (not= pre-top post-top)
                                  :pre-top pre-top :post-top post-top}
-                   :document document})]
+                   :document document})
+          ;; flight-as-derivation record (M-first-flights step 2): persist
+          ;; the grounds this close already computed + whatever the pilot
+          ;; supplied via :flight — missing pilot judgments become typed
+          ;; sorries, never fabrications. Best-effort like the log.
+          flight-path
+          (try
+            (let [rec ((requiring-resolve 'futon3c.aif.flight-record/compose-flight-record)
+                       {:run-id run-id :begin b :agent (:agent b)
+                        :predicted predicted
+                        :predicted-constant (get-in b [:pre :predicted-constant])
+                        :realised realised :realised-source realised-source
+                        :executed? executed? :evidence-ref evidence-ref
+                        :merge-event (when executed?
+                                       {:type :operator-merge :at merge-at
+                                        :note (str "executed close; evidence: " evidence-ref)})
+                        :frame-path path :logged-turn (:turn logged)
+                        :flight (cond-> (or flight {})
+                                  (and (= :transient realised-read)
+                                       (nil? (:class flight)))
+                                  (assoc :class :transient))})]
+              ((requiring-resolve 'futon3c.aif.flight-record/write-flight-record!)
+               rec *live-runs-dir*))
+            (catch Throwable _ nil))]
       (cond-> {:ok true :frame-path path :run-id run-id
                :predicted predicted :realised realised
                :prediction-error (Math/abs (double (- realised predicted)))
                :top-shift? (not= pre-top post-top) :pre-top pre-top :post-top post-top
-               :logged-turn (:turn logged)}
+               :logged-turn (:turn logged)
+               :flight-path flight-path}
         executed? (assoc :independent? true :evidence-ref evidence-ref)))
     {:ok false :error (str "unknown run-id " run-id)})))

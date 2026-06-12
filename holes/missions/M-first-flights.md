@@ -631,3 +631,24 @@ both witnesses from real flights. Phase-A remaining: exits 3 (render
 lane), 4 (substrate-2 round-trip), 5 (the loop-closing stratification),
 6 (Joe's side-by-side); build-order step 2 (close-live-cycle! persists
 the grounds) ends hand-recording.
+
+Checkpoint 11 (2026-06-12): build-order step 2 landed — close-live-cycle!
+persists the flight record; no pilot ever hand-records again. New pure ns
+`futon3c.aif.flight-record` (compose + write `<run-id>.flight.edn` beside
+the γ frame); the composition rule is the mission's discipline made code:
+apparatus facts become terms with grounds, pilot judgments pass through
+the new `:flight` opt (neighbourhood, warrant, verification, window,
+class, plan-sketch, steers, links), and absences become typed sorries —
+nothing fabricated: no guessed class (only the censored fallback derives
+mechanically, plus :transient from the read protocol), no invented
+warrant, no verification asserted on the pilot's behalf; a record missing
+a pilot judgment fails the verifier honestly. begin-live-cycle! now
+records :begin-at and :scan-as-of (the stale-begin confound is checkable
+only if these are data), and the merge event shares ONE instant between
+discipline-events.edn and the record's oob organ (the exact-timestamp
+lesson from the witness conformance pass). Recording change only — no
+behavior change. Gates: 36 tests / 191 assertions across flight-record +
+the four pilot suites, 0 failures; kondo 0/0; check-parens OK; hot-loaded
+into the serving JVM via Drawbridge (defonce-safe). Next: claude-3 steps
+it live (the seat that specified checks the realised model), then the
+render lane (exit 3).
