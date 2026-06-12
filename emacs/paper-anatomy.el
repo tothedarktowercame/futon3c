@@ -196,3 +196,97 @@
 
 (provide 'paper-anatomy)
 ;;; paper-anatomy.el ends here
+
+;;;; The block panel — mission-mode's Scratch-style side lane (Joe, spoken
+;;;; 2026-06-12: "the same type of scratch-based markup along the side as
+;;;; Mission Mode does... maybe in a different buffer").
+
+(defface paper-anatomy-block-bind
+  '((t :background "#2a4d9a" :foreground "white" :weight bold))
+  "Block chip: bind family.")
+(defface paper-anatomy-block-constrain
+  '((t :background "#7a3ba8" :foreground "white" :weight bold))
+  "Block chip: constrain family.")
+(defface paper-anatomy-block-math
+  '((t :background "#46506b" :foreground "white" :weight bold))
+  "Block chip: math family.")
+(defface paper-anatomy-block-golden
+  '((t :background "#0f766e" :foreground "white" :weight bold))
+  "Block chip: golden layer.")
+(defface paper-anatomy-block-hole
+  '((t :background "#9a7b1a" :foreground "white" :weight bold))
+  "Block chip: hole.")
+
+(defun paper-anatomy--block-face (meta)
+  (let ((kind (plist-get meta :kind))
+        (layer (plist-get meta :layer)))
+    (cond ((equal kind "hole") 'paper-anatomy-block-hole)
+          ((equal layer "golden") 'paper-anatomy-block-golden)
+          ((string-prefix-p "bind" kind) 'paper-anatomy-block-bind)
+          ((string-prefix-p "constrain" kind) 'paper-anatomy-block-constrain)
+          (t 'paper-anatomy-block-math))))
+
+(defvar-local paper-anatomy--panel-key nil)
+
+(defun paper-anatomy--panel-render ()
+  "Render the block panel for the scopes at point (outermost first)."
+  (let* ((src (current-buffer))
+         (here (point))
+         (ovs (seq-filter (lambda (o) (overlay-get o 'paper-anatomy))
+                          (overlays-at here)))
+         (near (seq-filter (lambda (o) (overlay-get o 'paper-anatomy))
+                           (overlays-in (line-beginning-position)
+                                        (line-end-position))))
+         (key (mapcar #'overlay-start (append ovs near))))
+    (unless (equal key paper-anatomy--panel-key)
+      (setq paper-anatomy--panel-key key)
+      (let ((buf (get-buffer-create (format "*Paper Blocks: %s*"
+                                            paper-anatomy--paper))))
+        (with-current-buffer buf
+          (let ((inhibit-read-only t))
+            (erase-buffer)
+            (special-mode)
+            (insert (propertize "AT POINT\n" 'face 'bold))
+            (dolist (o (sort ovs (lambda (a b)
+                                   (< (- (overlay-end b) (overlay-start b))
+                                      (- (overlay-end a) (overlay-start a))))))
+              (paper-anatomy--insert-block o src))
+            (when (cl-set-difference near ovs)
+              (insert (propertize "\nTHIS LINE\n" 'face 'bold))
+              (dolist (o (cl-set-difference near ovs))
+                (paper-anatomy--insert-block o src)))))
+        (display-buffer buf '((display-buffer-in-side-window)
+                              (side . right) (window-width . 46)
+                              (inhibit-same-window . t)))))))
+
+(defun paper-anatomy--insert-block (o src)
+  (let* ((meta (overlay-get o 'paper-anatomy))
+         (kind (plist-get meta :kind))
+         (span (with-current-buffer src
+                 (buffer-substring-no-properties
+                  (overlay-start o)
+                  (min (overlay-end o) (+ (overlay-start o) 120)))))
+         (start (overlay-start o)))
+    (insert (propertize (format " %s " kind)
+                        'face (paper-anatomy--block-face meta))
+            " ")
+    (insert-text-button
+     (truncate-string-to-width (replace-regexp-in-string "\n" "⏎" span) 38)
+     'action (lambda (_) (let ((w (get-buffer-window src t)))
+                           (when w (select-window w) (goto-char start))))
+     'help-echo (plist-get meta :tip))
+    (insert "\n")
+    (let ((tip (plist-get meta :tip)))
+      (when (and tip (not (equal tip kind)))
+        (insert (propertize (format "   %s\n"
+                                    (truncate-string-to-width tip 42))
+                            'face 'shadow))))))
+
+(defun paper-anatomy--panel-post-command ()
+  (when (derived-mode-p 'paper-anatomy-mode)
+    (ignore-errors (paper-anatomy--panel-render))))
+
+(add-hook 'paper-anatomy-mode-hook
+          (lambda ()
+            (add-hook 'post-command-hook
+                      #'paper-anatomy--panel-post-command nil t)))
