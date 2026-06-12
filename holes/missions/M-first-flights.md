@@ -652,3 +652,16 @@ the four pilot suites, 0 failures; kondo 0/0; check-parens OK; hot-loaded
 into the serving JVM via Drawbridge (defonce-safe). Next: claude-3 steps
 it live (the seat that specified checks the realised model), then the
 render lane (exit 3).
+
+Checkpoint 12 (2026-06-12): build-order step 2 STEPPED live by claude-3 —
+the seat that specified the schema checks the realised model. This flight
+(run-id live-df706c45) is the first record close-live-cycle! auto-persisted
+through the new :flight opt; no hand-recording. Flown at an OFF-CONTINUITY
+begin (M-first-flights ohc 4: the state-sensitive model predicts -4.1206,
+the state-blind constant a different value) so the pair DISCRIMINATES, and
+as a clean :null — the act is this doc-edit, a VERIFY content-advance that
+moves no [ ] hole, so the field holds and the state-sensitive model is
+right to predict no-move while the constant misses. The discriminating
+shape the continuity-point witness (live-957a4836) lacked. The persisted
+<run-id>.flight.edn beside the γ frame is the evidence, run through
+scripts/flight_spec_verify.clj and belled to fable-1 with the seat-read.
