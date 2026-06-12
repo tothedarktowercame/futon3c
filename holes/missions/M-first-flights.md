@@ -467,8 +467,13 @@ instantiate-grade artifact so far:
    debt. Lands with checkpoint 22 on the pilot's review.
 
 INSTANTIATE remains open until flight-pretty-print is reviewed and the
-typed-grounds migration has a plan; Phase B (policy-grade G(s, π) on
-the rollout engine) is the standing obligation beyond it.
+typed-grounds migration has a plan. Phase B (policy-grade G(s, π)) is
+HELD by ground-control ruling (2026-06-12 17:32): G ranges over
+cascades, so it cannot come out of the substrate until the terms exist —
+hold until the retrospective triple-mining dataset lands (flight
+notebook sortie 11) and a metric relating that dataset is understood.
+The mined dataset is the state-action space; arming condition revised
+from "rollout engine lands" to "terms constructed + metric understood".
 
 ## 5. Consequence if the shapes land
 
