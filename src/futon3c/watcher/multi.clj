@@ -44,13 +44,13 @@
 (def RENAMED-LINK-TYPE "edge/renamed-to")
 
 (def ^:private mission-doc-pattern
-  #"/holes/missions/M-[^/]+\.md$")
+  #"/holes/(?:missions/)?M-[^/]+\.md$")
 
 (def ^:private mission-doc-stem-pattern
-  #"(?:^|/)holes/missions/([^/]+)\.md$")
+  #"(?:^|/)holes/(?:missions/)?((?:M|E)-[^/]+)\.md$")
 
 (def ^:private excursion-doc-pattern
-  #"/holes/missions/E-[^/]+\.md$")
+  #"/holes/(?:missions/|excursions/)?E-[^/]+\.md$")
 
 (declare !state)
 

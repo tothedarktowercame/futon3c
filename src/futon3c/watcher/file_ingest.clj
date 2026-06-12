@@ -35,10 +35,10 @@
 (def ^:private home (System/getProperty "user.home"))
 
 (def ^:private mission-doc-pattern
-  #"/holes/missions/M-[^/]+\.md$")
+  #"/holes/(?:missions/)?M-[^/]+\.md$")
 
 (def ^:private excursion-doc-pattern
-  #"/holes/missions/E-[^/]+\.md$")
+  #"/holes/(?:missions/|excursions/)?E-[^/]+\.md$")
 
 (def ^:private sorry-registry-pattern
   ;; R-A.1 (M-war-machine-first-outing): sorrys.edn relocated data/ → resources/
