@@ -285,6 +285,17 @@ A flight that taught the model nothing (a true proposal-mode null) and a
 flight that lied to it (a censored 0.0) must be distinguishable in the data.
 That distinction is the point: error needs structure to propagate into.
 
+### 3.4 Derive gate (retrofitted 2026-06-12 under derive-exits-on-a-minted-sorry)
+
+Derive gate verdict: PASS — typed hole minted: `arr-7535a5b6-e59` (meme.db):
+have `flight-records-organs-typed-grounds-in-prose` → want
+`flights-as-anatomy-corpus-canonical-organ-order-typed-grounds`,
+`:construction`/`:open`, construction named (flight-pretty-print, ckpt 21).
+Gate ruled during the WM piloted flight (notebook sortie 9); this mission ran
+DERIVE before the gate existed, so the certificate is retrofitted, honestly
+labelled — the ARGUE cascade's problem node was back-filled, which is the
+exact failure the gate now prevents in future missions.
+
 ## 4. ARGUE — why this design is right, not just workable
 
 The design being argued: a flight record is a derivation. Each organ carries
