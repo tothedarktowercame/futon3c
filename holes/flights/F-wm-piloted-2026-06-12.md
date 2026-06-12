@@ -153,3 +153,26 @@ This is the forward/backward split for everything ratified today:
 The harvest pass is therefore ALSO the migration: it defines the typed
 shapes that future records emit natively, and prose-mining decays to
 zero as the corpus turns over. The mission predicted its own fix.
+
+## Sortie 4e — pattern cross-references carry no substrate tags (16:48)
+
+Joe: "We've authored this mission, we've selected the patterns — or
+cross-referenced them anyway — but we don't have tags or markup
+showing that they [bind to substrate-2]."
+
+The cross-reference list is authored but UNBOUND: no scope marks the
+citation site, no mission->pattern edge lands in substrate-2. So the
+missions-connect-through-patterns bipartite graph — the backbone of
+the EFE field and of cascade harvest (4c) — is not materialized from
+the mission text at all. Fourth member of the binding-gap family this
+sortie: certificate unbound (4a), owed-work unharvested (sortie 4),
+checkpoints without discharges-edges, and now pattern cites without
+mission->pattern edges.
+
+DETECTOR BUNDLE (consolidated, dispatch when slot frees):
+mission-scope detector upgrade = (1) checkpoint harvest (certificates,
+ratified cars) + discharges-edges; (2) promissory scopes for ghost
+phase sections; (3) pattern-crossref scopes emitting
+mission->pattern edges into substrate-2; (4) typed-at-birth slots
+documented for future records (4d). One build; feeds mission-mode
+legibility, the WM advance queue, the EFE field, AND cascade harvest.
