@@ -531,3 +531,18 @@ prefix, cascade as the policy-shaped object) folded in from Joe's
 interactive read of the day-in-the-life narrative. Exit conditions split
 into Phase A (actions, now) and Phase B (policies, armed by the rollout
 engine) per Joe's compromise.
+
+Checkpoint 6 (2026-06-11, close of the verify-read): operator verdict on
+the narrative half of VERIFY — accepted as Phase-A preparation that
+properly acknowledges Phase B. Joe's standing course-holding criterion,
+recorded: do not drift from the vision of a real policy-grade G(s, π);
+build progressively toward milestones of that nature, with fable-2's
+review (the return-channel debt, R11, the loop-closing exit) taken into
+account. Incoming modular lane: Joe and fable-2 will explore different
+ways of SAMPLING CASCADES. The receiving seam already exists in the
+register: V-f1's per-candidate cascade slot. One schema consequence,
+recorded now so the seam stays clean: the cascade field carries sampler
+provenance ({psi, patterns, C, sampler}) — different sampling methods must
+be distinguishable in the data, the same anti-mixing discipline as
+g-grain, so sampled cascades can be compared rather than silently pooled.
+Remaining VERIFY: the logic model (machine half). Then the Phase-A build.
