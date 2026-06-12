@@ -87,7 +87,7 @@
   (when (map? g)
     (str (fmt (:g g)) " " (name (:g-grain g)))))
 
-(defn term-summary [organ-key judgment]
+(defn term-summary [organ-key judgment derivation]
   (case organ-key
     :field-read
     (let [gauge (:gauge judgment)
@@ -109,7 +109,14 @@
     :begin-state (str "begin " (:begin-at judgment) "; target " (g-summary (:target-g judgment)))
     :act (str (name (:state judgment))
               (when-let [r (get-in judgment [:witness :ref])] (str " " r)))
-    :measurement (str (name (:class judgment))
+    :measurement (str (if-let [c (:class judgment)]
+                        (name c)
+                        ;; fable-2's review edge: a nil class must say WHY —
+                        ;; on a thin backfill it is prose-lost; on a full
+                        ;; record it is a judgment the pilot has not made
+                        (if (= :thin derivation)
+                          "class absent (derivation-thin: prose-lost)"
+                          "class NOT-YET-JUDGED"))
                       "; predicted " (g-summary (:predicted judgment))
                       "; realised " (g-summary (:realised judgment))
                       "; error " (fmt (:error judgment)))
@@ -121,7 +128,7 @@
                       "; turns " (:turn-record-count judgment))
     (fmt judgment)))
 
-(defn cell->organ [record-path organ-key cell]
+(defn cell->organ [record-path derivation organ-key cell]
   (let [organ-name (name organ-key)]
     (cond
       (sorry-cell? cell)
@@ -136,7 +143,7 @@
       (term-cell? cell)
       {:organ organ-name
        :state "present"
-       :value (term-summary organ-key (:judgment cell))
+       :value (term-summary organ-key (:judgment cell) derivation)
        :artifact record-path
        :anchor nil
        :judgment (:judgment cell)
@@ -159,7 +166,7 @@
      :organs (->> (concat organ-order (remove (set organ-order) (keys organs)))
                   distinct
                   (keep #(when-let [cell (get organs %)]
-                           (cell->organ record-path % cell)))
+                           (cell->organ record-path (:flight/derivation record) % cell)))
                   vec)}))
 
 (defn project-thin [rid]

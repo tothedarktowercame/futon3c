@@ -498,6 +498,25 @@ Phase B — policies (opens when the rollout engine lands; not before):
 9. Joe's second side-by-side verdict, on policy-grade records — the
    Phase-B gate.
 
+## 8. Grounding note — a flight is a morphism-trace (from Joe's checkpoint-18 review)
+
+What is a flight, in programming terms? Joe's review supplies the grounding,
+via Tull, Kleiner and St Clere Smithe, "Active Inference in String Diagrams"
+(arXiv:2308.00861 — active inference in a monoidal category with copy and
+discard, where free energy is compositional). A flight is a morphism-trace:
+one application of the pilot-as-optic. The forward wire is field-read →
+prediction → velocity → gate → act; the backward wire is measurement →
+interpretation class → self-record → R11 training example. The R11
+projection IS the optic's backward wire — which is why it fed the return
+channel so cleanly when the sampler contest's trainability probe consumed
+it. Copying is the self-record organ; discarding is :proposal-mode — the
+consent gate is a categorical discard, which gives WM-I4 ("the WM does not
+act unilaterally") a formal home rather than a policy gloss. And
+compositional free energy is the license for reading the piano roll as a
+composition: R10's typed inter-flight links are horizontal composition of
+morphism-traces. This note anchors the flight anatomy the way Mount
+Analogue anchors the mission anatomy paper.
+
 ## Checkpoints
 
 Checkpoint 0 (2026-06-11): mission minted at IDENTIFY from the live
@@ -844,3 +863,24 @@ annotations verified live), the loop-closing stratification (the 517x
 visible in the learner's lane), and the operator's verdict. Phase B
 stands armed on the rollout engine. Mission-close remains the
 operator's call.
+
+Checkpoint 21 (2026-06-12): post-gate review traffic, all folded. fable-2's
+Task-6 agent-half review: PASS (organ shape honors the whistle-ratified
+register; per-organ thinness on backfill judged better than spec). Their
+one edge — :class nil renders ambiguously — was a live CRASH one level
+down: the grounded render path NPE'd on every thin record ((name nil) in
+the measurement summary); fixed with exactly the asked-for disambiguation
+("class absent (derivation-thin: prose-lost)" vs "class NOT-YET-JUDGED"),
+verified both ways. From Joe's by-hand half, two items taken: (1) the
+flight-pretty-print proposal ACCEPTED — a pure R5 renderer from
+.flight.edn to canonical-organ-order text so the mission-scope detector
+runs over flights (vocabulary mapping: field-read≈source-material,
+act-gate≈verify-gate, measurement≈certificate by error class,
+sorries=existing hole types); flights become the third corpus in the
+anatomy atlas; home = flight-mode.el + a detector mapping table; next car
+on this mission. (2) The grounding note landed as §8: a flight is a
+morphism-trace (Tull et al., arXiv:2308.00861) — R11 = the optic's
+backward wire, consent gate = categorical discard (WM-I4's formal home),
+R10 links = horizontal composition. Early return-channel signal noted
+with we-do discipline: the trainability probe came back pipe-trains
++0.21 — at n=1, a single point, not yet evidence.
