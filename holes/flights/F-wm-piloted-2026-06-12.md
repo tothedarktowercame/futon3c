@@ -82,3 +82,23 @@ inside a loose-section wrapper, with no discharges-edge to the VERIFY
 phase it certifies, and the eightfold-phase scopes sit beside it
 unconnected. Same R4 shape: the use and the binder both exist;
 the edge doesn't. INSTANTIATE still shows no owed-work scope.
+
+## Sortie 4b — pattern cross-references are a LIST, not a cascade (16:45)
+
+Joe, on the mission's "pattern cross references" section: "we've
+retrieved patterns... but this isn't formatted as a pattern cascade.
+It's formatted as a list. A clear missed opportunity — formatting
+retrieved patterns as a cascade was meant to be the VERY FIRST
+requirement of a cycle in the war machine. So we haven't actually even
+initiated the first cycle."
+
+Finding: retrieval exists, composition doesn't. The flat list is the
+1-d projection (registry-as-projection) of what should be a typed
+composition: which pattern feeds which, FOR THIS PROBLEM, with roles.
+ROOT CAUSE OF PHASE A: the cascade assembler is the missing organ —
+and it is NOT missing from the stack: E-cascade-sampler-sampler builds
+exactly this object (samplers assemble pattern cascades over
+circumstances, judged by the grounded harness). It was never wired to
+mission-mode/WM. WM cycle 1, step 1 = run the cascade assembler over
+the mission's retrieved patterns + the mission's open hole as the
+circumstance. The contest lane and the WM lane are the same lane.
