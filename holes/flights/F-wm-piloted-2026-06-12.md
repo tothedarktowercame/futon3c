@@ -278,3 +278,24 @@ contest's samplers already build cascades stepwise = emitting the
 prefix string left to right), exactly a GFlowNet trajectory, and
 exactly a flight (the morphism-trace read left to right). One
 serialization for cascades, flights, and training data.
+
+## Sortie 9 — the derive gate (17:23, ruling) + sorry minted into meme.db
+
+Joe's ruling: "this sorry should be a GATE at the end of the derive
+section — we can't go on to argue until we know what we're arguing
+about. Fine to start with a free-form head, a vague gap, map what's
+there. But derive is where the sorry must be DERIVED — we can't expect
+the sorrys handed to us on a golden plate."
+
+Minted durable as futon3/library/futon-theory/
+derive-exits-on-a-minted-sorry.flexiarg (DERIVE→ARGUE gated on a
+persisted (have→want) arrow; mechanically checkable by the
+mission-scope detector: DERIVE present ∧ no sorry-arrow ⇒ gate hole).
+
+And the first instance preceded the ruling by minutes:
+arr-7535a5b6-e59 in live meme.db — M-first-flights INSTANTIATE hole,
+have=flight-records-organs-typed-grounds-in-prose,
+want=flights-as-anatomy-corpus-canonical-organ-order-typed-grounds,
+:construction/:open, construction named (flight-pretty-print, in
+flight), payload cross-refs the substrate-2 scope + cascade EDN.
+Promotion to substrate-2 on witnessed discharge (contract B).
