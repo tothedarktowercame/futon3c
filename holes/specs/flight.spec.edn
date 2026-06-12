@@ -25,7 +25,7 @@
 
 {:spec/id      :wm-flight
  :spec/title   "Flight-as-derivation — the WM flight record"
- :spec/version "0.2"
+ :spec/version "0.3"
  :spec/authored {:by "fable-1" :on "2026-06-12" :surface "emacs-repl"}
  :spec/mission "holes/missions/M-first-flights.md"
  :spec/level
@@ -276,7 +276,12 @@
                                         confound, any sorry, any :thin record)}"
   :rule    "the mask is a function of R1's class and R3's witness — derived,
             never authored (anti-laundering on the reward path); a record
-            cannot declare itself trainable"
+            cannot declare itself trainable.  AND (logic-model finding,
+            exit-2 self-test run 1): mask-in additionally requires the
+            record to CONFORM to F1-F9 — the class+window rule alone lets a
+            record that fabricates a consistent settled window mask in even
+            while F3 catches the fraud; no record failing any invariant may
+            train"
   :rent    "exit-5 consumes this projection once: calibration error
             stratified by :class, computed FROM records, with masked classes
             visibly excluded — a demonstration that FAILS on

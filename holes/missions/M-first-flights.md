@@ -586,3 +586,21 @@ co-pilotedness derived, never authored; canonical case = the DERIVE flight
 itself), with invariant F9 added for the exit-2 logic model. The pilot is
 ready to fly the conforming witness flight. Next: exit 2, the logic model
 over F1–F9.
+
+Checkpoint 9 (2026-06-12): Phase-A exit 2 done — the logic model at
+`scripts/flight_spec_verify.clj` (companion of repl_spec_verify.clj: that
+one checks the operator's steps V1–V5 over a trace; this one checks one
+step's record F1–F9). Self-test: the hand-authored witness conforms with
+mask-in; the derivation-thin backfill record conforms-as-thin with
+mask-out (the exit-5 demonstration's seed); nine adversarials — each from
+a real failure among the first twenty flights — are each caught by the
+invariant that names them, 9/9. The model earned its keep on run 1: the
+mask's class+window rule alone let the censored-0.0 adversarial mask IN
+(a fabricated-but-consistent settled window passes R3 while F3 catches
+the exact-copy fraud), so the projection rule now additionally requires
+full conformance — no record failing any invariant may train. Spec bumped
+to v0.3 with the finding. Witness EDN at
+`holes/specs/traces/flight-witness-model.edn` (the file-arg path verified
+against it); it stands in only until claude-3's real conforming witness
+flight lands (belled, in progress). Gates: kondo 0/0, check-parens OK,
+self-test exit 0.
