@@ -209,3 +209,19 @@ sec.content_start+offset, the inline-closure idiom), re-detected,
 reingested: NINE positioned pattern scopes (16649..18671), old rollup
 retracted by true-up. Mission-mode now has chips at every cite;
 cascade harvest (4c) gets ordering for free.
+
+## Sortie 6 — the first cascade (16:57-16:59)
+
+Pilot assembled the nine tagged patterns into an Alexander semilattice
+(first-flights-cascade.edn + svg, c0815c8): problem at top,
+:differentiates edges with PSR-quoted :via rationales, two genuine
+joins (measurement-window, determined-fork), discharge edge closing on
+the problem. The mission's ARGUE in pattern-theoretic form.
+
+Ground control verdict: "okay first draft. I don't really think the
+picture looks GREAT, but it's okay." — CERTIFIED AS DRAFT; render
+quality flagged. Known cause: render-golden-graph.bb is the generic
+hyperedge renderer (ellipse hubs per edge); cascades want level-ranked
+layout (rank=same per :level, direct context->pattern arrows, :via as
+edge labels). Polish item, queued — the DATA is certified, the
+projection needs work (two-projections-of-one-quantity, fittingly).
