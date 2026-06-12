@@ -24,7 +24,9 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'json)
+(require 'pp)
 (require 'subr-x)
 
 (defgroup flight-mode nil
@@ -53,6 +55,7 @@
 
 (defvar flight-mode--run-id nil)
 (defvar flight-mode--timer nil)
+(defvar-local flight-mode--data nil)
 
 (defun flight-mode--call (&rest args)
   "Run the projector with ARGS; return parsed JSON or nil."
@@ -75,13 +78,16 @@
 
 (defun flight-mode--render (data)
   (let ((inhibit-read-only t))
+    (setq flight-mode--data data)
     (erase-buffer)
-    (insert (propertize (format "Flight %s — %s\n"
+    (insert (propertize (format "Flight %s — %s — %s\n"
                                 (alist-get 'run-id data)
                                 (if (eq (alist-get 'complete? data) t)
-                                    "complete" "IN PROGRESS / partial"))
+                                    "complete" "IN PROGRESS / partial")
+                                (or (alist-get 'derivation-label data)
+                                    "legacy projection"))
                         'face 'bold))
-    (insert (propertize " keys: g refresh · l choose run · n/p next/prev · RET visit artifact · a auto\n\n"
+    (insert (propertize " keys: g refresh · l choose run · n/p next/prev · RET descend/visit · a auto\n\n"
                         'face 'shadow))
     (dolist (o (alist-get 'organs data))
       (let* ((state (alist-get 'state o))
@@ -92,7 +98,8 @@
         (insert (propertize line
                             'face (flight-mode--state-face state)
                             'flight-artifact (alist-get 'artifact o)
-                            'flight-anchor (alist-get 'anchor o)))))
+                            'flight-anchor (alist-get 'anchor o)
+                            'flight-organ o))))
     (goto-char (point-min))))
 
 (defun flight-mode-refresh ()
@@ -123,15 +130,83 @@
 (defun flight-mode-next-run () (interactive) (flight-mode--step-run 1))
 (defun flight-mode-prev-run () (interactive) (flight-mode--step-run -1))
 
+(defun flight-mode--pp (x)
+  "Pretty-print X for a detail buffer."
+  (with-temp-buffer
+    (pp x (current-buffer))
+    (buffer-string)))
+
+(defun flight-mode--detail (title &rest sections)
+  "Show a read-only detail buffer named TITLE with SECTIONS."
+  (let ((buf (get-buffer-create (format "*flight %s*" title))))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (propertize (format "%s\n\n" title) 'face 'bold))
+        (dolist (section sections)
+          (pcase-let ((`(,heading . ,body) section))
+            (insert (propertize (format "%s\n" heading) 'face 'bold))
+            (insert (if (stringp body) body (flight-mode--pp body)))
+            (unless (bolp) (insert "\n"))
+            (insert "\n"))))
+      (special-mode))
+    (display-buffer buf)))
+
+(defun flight-mode--organ-by-name (name)
+  "Return organ NAME from the current flight data."
+  (cl-find-if (lambda (o) (equal (alist-get 'organ o) name))
+              (alist-get 'organs flight-mode--data)))
+
+(defun flight-mode--descend-field-read (organ)
+  "Show field-read gauge, neighbourhood, and cascade data for ORGAN."
+  (let* ((j (alist-get 'judgment organ))
+         (gauge (alist-get 'gauge j))
+         (nbh (alist-get 'neighbourhood j)))
+    (flight-mode--detail
+     "field-read"
+     (cons "ground" (or (alist-get 'ground organ) "<no ground in thin projection>"))
+     (cons "gauge" gauge)
+     (cons "chosen" (alist-get 'chosen nbh))
+     (cons "rejected-with-reasons" (or (alist-get 'rejected nbh) []))
+     (cons "band" (alist-get 'band nbh))
+     (cons "cascades" (or (alist-get 'cascades j)
+                           (alist-get 'cascades nbh)
+                           "<none recorded>")))))
+
+(defun flight-mode--descend-measurement (organ)
+  "Show measurement and its first-class window organ for ORGAN."
+  (let* ((j (alist-get 'judgment organ))
+         (window-organ (flight-mode--organ-by-name "window"))
+         (window (or (alist-get 'judgment window-organ)
+                     (alist-get 'window j))))
+    (flight-mode--detail
+     "measurement-window"
+     (cons "measurement-ground" (or (alist-get 'ground organ) "<no ground in thin projection>"))
+     (cons "measurement" j)
+     (cons "window-ground" (or (alist-get 'ground window-organ) "<no first-class window organ>"))
+     (cons "settle-scans" (alist-get 'scans window))
+     (cons "rule-check" (or (alist-get 'rule-check window) window)))))
+
 (defun flight-mode-visit-artifact ()
-  "Open the artifact behind the organ at point (at its anchor line if known)."
+  "Descend into the organ at point, or open its source artifact."
   (interactive)
-  (when-let ((f (get-text-property (point) 'flight-artifact)))
-    (let ((anchor (get-text-property (point) 'flight-anchor)))
-      (find-file-other-window f)
-      (when (numberp anchor)
-        (goto-char (point-min))
-        (forward-line (1- anchor))))))
+  (let ((organ (get-text-property (point) 'flight-organ)))
+    (cond
+     ((alist-get 'sorry organ)
+      (flight-mode--detail
+       (format "sorry %s" (alist-get 'organ organ))
+       (cons "typed-sorry" (alist-get 'sorry organ))
+       (cons "why" (or (alist-get 'value organ) "<no note>"))))
+     ((equal (alist-get 'organ organ) "field-read")
+      (flight-mode--descend-field-read organ))
+     ((equal (alist-get 'organ organ) "measurement")
+      (flight-mode--descend-measurement organ))
+     ((when-let ((f (get-text-property (point) 'flight-artifact)))
+        (let ((anchor (get-text-property (point) 'flight-anchor)))
+          (find-file-other-window f)
+          (when (numberp anchor)
+            (goto-char (point-min))
+            (forward-line (1- anchor)))))))))
 
 (defun flight-mode-toggle-auto ()
   "Toggle 5s auto-refresh (for watching a live flight fill in)."
