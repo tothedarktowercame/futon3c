@@ -17,6 +17,16 @@ automatically.
 
 ---
 
+## Turn 22 — 2026-06-12 (claude-3, supervised-proposal)
+
+**READ.** WM recommended `M-first-flights` (G=-4.12).
+
+**EVAL / DID.** M-first-flights CONFORMING-WITNESS flight (exit-2): closed M-daily-scan §367 (operator-resolved 無 -> fresh-probes; futon7 729ee02), tight begin (18s window). The exit-2 real-data witness for flight.spec.edn v0.2.
+
+**PRINT / FOUND.** CLEAN dynamics pair (the contrast to the DERIVE flight confound): predicted -4.0791 (ohc 3 continuity), realised -4.0397 (settled ohc 2; two scans 09:59:11 + 10:01:15 agree within 7.6e-5), error 0.0394 = the per-hole increment, class :clean. Below-cap, measurable, settled window. Full 13-cell EDN record composed for the F1-F9 verifier.  _[predicted G=-4.08, realised G=-4.04]_
+
+**PUR.** Operator-directed (Joe go) + earned-closure (clean witnessed pair). Flew TIGHT (prep before begin) -- measurement-window-hygiene applied, the DERIVE confounds correction. Same target-class flown wrong (DERIVE) then right (this) gives the logic model both witnesses. Mode supervised, operator-directed, executed. Mode: supervised-proposal.
+
 ## Turn 21 — 2026-06-11 (claude-3, supervised-proposal)
 
 **READ.** WM recommended `` (G=-4.50).

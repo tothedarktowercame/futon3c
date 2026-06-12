@@ -1,0 +1,128 @@
+;; =============================================================================
+;; CONFORMING WITNESS — M-first-flights Phase-A exit-2, real-data flight record
+;; =============================================================================
+;; Hand-recorded by claude-3 (the pilot is the recorder this once; close-live-cycle!
+;; does not yet persist this shape). One real flight, flown tight + clean, with every
+;; ground flight.spec.edn v0.2 wants. Run this through the F1-F9 verifier.
+;;
+;; Apparatus record: Pilot's-Log Turn 22; γ frame data/repl-traces/live-957a4836-*.edn.
+;; Commit (the act's witness): futon7 729ee02. Mission advance: M-daily-scan §367 closed.
+;; Contrast witness (the adversarial): live-c1028918 (the DERIVE stale-begin confound).
+;; =============================================================================
+
+{:flight/id         "live-957a4836-977a-4083-a243-e61cdd9862e3"
+ :flight/derivation :full
+ :flight/links
+ [{:type :applies-lesson-of :to "live-c1028918-9cb7-40eb-a397-dc60021a8156"
+   :note "applied the DERIVE flight's stale-begin lesson — prepped the close edit
+          BEFORE begin so the window is 18s, not minutes; the confound's correction"}
+  {:type :cites-finding :to "live-c1028918-9cb7-40eb-a397-dc60021a8156"
+   :note "same target-class flown wrong (confound) then right (clean) — the two
+          witnesses the exit-2 logic model needs"}]
+
+ :organs
+ {:field-read
+  {:judgment
+   {:gauge {:ref "wm-api-query /api/alpha/war-machine ranked-actions @ as-of 2026-06-12T09:52:48Z"
+            :count 121}
+    :neighbourhood
+    {:chosen {:type :advance-mission :target "M-daily-scan" :rank 55
+              :G {:g -4.0790903614457825 :g-grain :one-step-action}
+              :ohc 3}
+     :rejected [{:action {:target "M-first-flights" :ohc 4}
+                 :reason :self-referential-and-capped
+                 :note "the mission I am flying ON; ohc-4 but its holes are VERIFY tasks I own — advancing it via the target would be the meta, not a clean external pair"}
+                {:action {:target "M-reflective-discipline" :ohc 5}
+                 :reason :no-pilot-closeable-hole
+                 :note "below-cap but prose/pending holes only (arc-1 recon: 0 unchecked [ ])"}
+                {:action {:target "M-single-entry-point" :ohc 5}
+                 :reason :no-pilot-closeable-hole}]
+     :band {:size :many :why :tied-near-continuity
+            :note "at the continuity region many advance-missions cluster; the choice was not by G-rank but by pilot-closeable-counted-hole availability"}}}
+   :ground "the scan :as-of 2026-06-12T09:52:48.747Z it was read from"
+   :note "R4/R11: chosen + rejected-with-reasons, not a count — the distribution the gradient prior would distil"}
+
+  :velocity
+  {:judgment {:action {:type :advance-mission :target "M-daily-scan"}
+              :plan-sketch ["record Joe's 無 resolution of §367 on the line"
+                            "mark §367 [x] (ohc 3 -> 2)"
+                            "commit (witness) -> settle -> close clean"]}
+   :ground :warrant}
+
+  :warrant
+  {:judgment {:determined? true
+              :determined-by {:kind :operator-direction
+                              :ref "futon3c/holes/PILOT-ARC-2-QUEUE.md §367 → 無 (Joe, 2026-06-11)"}}
+   :ground "the resolution text in PILOT-ARC-2-QUEUE.md (§367 retired to fresh-probes); recording it is closing an operator-resolved item, not inventing a warrant"}
+
+  :verification
+  {:judgment
+   {:holes [{:hole "M-daily-scan.md:362" :class :standing-task
+             :evidence "- [ ] **Partial audit** of other static probes … (partly done in sub-bullets 363-365)"}
+            {:hole "M-daily-scan.md:367" :class :bounded-doable
+             :evidence "- [ ] rewrite pattern-rule-systems … (operator-RESOLVED 無; closure = record the resolution)"}
+            {:hole "M-daily-scan.md:369" :class :standing-task
+             :evidence "- [ ] **Optional (standing-task)**: extend brief render …"}]
+    :chosen-hole {:hole "M-daily-scan.md:367"
+                  :why "the only one with a clean bounded closure — operator-resolved, so recording the resolution closes it honestly; 362 is partly-done, 369 is a recurring standing-task"}}
+   :ground "grep -nE '^\\s*-\\s*\\[ \\]' futon7/holes/missions/M-daily-scan.md + the line reads above (the select-time work, now recorded)"}
+
+  :attribution
+  {:judgment :operator-directed
+   :ground "Joe's go — 'conforming flight from claude-3 when ready'; the flight is an operator-requested exit-2 deliverable"}
+
+  :prediction
+  {:judgment {:scaled   {:g -4.0790903614457825 :g-grain :one-step-action}
+              :constant {:g -4.0790903614457825 :g-grain :one-step-action}
+              :policy   {:sorry/kind :not-yet :blocked-by :rollout-engine}}
+   :ground "model: WM forward model (target-sensitive predict-effects, live since 2026-06-11) + field entry @ begin; scaled == constant here because ohc 3 is the continuity point"}
+
+  :begin-state
+  {:judgment {:begin-at "2026-06-12T09:57:20Z"
+              :target-g {:g -4.0790903614457825 :g-grain :one-step-action}
+              :scan-as-of "2026-06-12T09:52:48.747Z"}
+   :ground "begin artifact data/repl-traces/live-957a4836-…begin.edn"
+   :note "F2: this scan-as-of POSTDATES the prior flight's commit — NOT stale (the confound the DERIVE witness has, this one lacks)"}
+
+  :act
+  {:judgment {:state :executed
+              :witness {:ref "futon7 729ee02"
+                        :verified-by "claude-3"
+                        :verification "the §367 [x] edit records Joe's 無 resolution verbatim against PILOT-ARC-2-QUEUE.md; a doc-update (no code gates to re-run)"}}
+   :ground "the commit sha + the diff (one line, M-daily-scan.md:367)"}
+
+  :measurement
+  {:judgment {:predicted          {:g -4.0790903614457825 :g-grain :one-step-action}
+              :predicted-constant {:g -4.0790903614457825 :g-grain :one-step-action}
+              :realised           {:g -4.039678471388555  :g-grain :one-step-action}
+              :error 0.03941189005722734
+              :class :clean
+              :window :window}
+   :ground :window
+   :note "ohc 3 -> 2; the field moved by the per-hole increment ~0.0394, settled. A genuine :clean dynamics pair, not a null and not a fabricated 0.0"}
+
+  :window
+  {:begin     "2026-06-12T09:57:20Z"
+   :commit    "2026-06-12T09:57:38Z"
+   :threshold "2026-06-12T09:59:03Z"
+   :scans [{:as-of "2026-06-12T09:59:11.933Z" :g {:g -4.039754006410256 :g-grain :one-step-action}}
+           {:as-of "2026-06-12T10:01:15.009Z" :g {:g -4.039678471388555 :g-grain :one-step-action}}]
+   :epsilon 0.005
+   :agreement 7.5535e-5
+   :rule-check "two scans, distinct :as-of, both > :threshold, |ΔG| 7.55e-5 ≤ ε 0.005 ⇒ settled (checkable from this record alone)"}
+
+  :counterfactual
+  {:judgment {:constant-error 0.03941189005722734}
+   :ground ":prediction :constant (-4.07909) vs :measurement :realised (-4.039679) — re-derivable; equals the scaled error because the begin sat at the continuity point (scaled == constant there), so this clean pair does NOT discriminate the two models (honest: a continuity-begin pair is increment-clean but model-indifferent)"}
+
+  :out-of-band
+  {:judgment [{:event :operator-merge :ts "2026-06-12T09:5x" :note "this executed close emits one"}
+              {:event :operator-steer :ts "2026-06-12T~09:55Z" :r12 true
+               :content "fable-1, relaying Joe: 'conforming witness flight requested … fly ONE tight flight … hand-record everything flight.spec.edn v0.2 wants' — content-bearing in-flight direction that shaped this flight's whole purpose (R12)"}]
+   :ground "discipline-events.edn (the merge) + the ground-control bell (the steer); the steer is why R12 exists and this flight demonstrates it"}
+
+  :self-record
+  {:judgment {:gamma-ref "data/repl-traces/live-957a4836-977a-4083-a243-e61cdd9862e3.edn"
+              :turn-record-count 1
+              :pilots-log-turn 22}
+   :ground "repl-trace write-frame! artifact"}}}
