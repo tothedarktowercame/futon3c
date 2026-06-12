@@ -17,39 +17,40 @@
    :via "we have flight data (Orville) but not yet the data shapes we need"}
   {:id :pilot-ground-control
    :form "peripherals/pilot-plus-ground-control"
-   :role :concept :satiety :full :level 1
+   :role :concept :satiety :full :realized "operative — this very piloted flight is the pattern running" :level 1
    :via "the roles that produce and gate these records; R8's witness-ground encodes the three-way review into the record"}
   {:id :crime-relocates
    :form "futon-theory/crime-relocates-to-a-scarcer-witness"
-   :role :concept :satiety :full :level 2
+   :role :concept :satiety :full :realized "the schema design IS the limit move; shipped v0.4" :level 2
    :via "each laundering fix pushed the crime toward scarcer witnesses; this design is the limit move — the witness is pushed INTO the record itself"}
   {:id :structured-events
    :form "realtime/structured-events-only"
-   :role :concept :satiety :full :level 3
+   :role :concept :satiety {:hungry-for :payoff}
+   :owed "half-defied: the grounds still live in prose; the design finishes the job (mission PSR, line 301) — flight-pretty-print (dispatched 16:39) + typed-grounds migration" :level 3
    :via "the trace must be typed events, not prose... chosen as the base discipline for the whole record shape"}
   {:id :two-projections
    :form "structure/two-projections-of-one-quantity"
-   :role :concept :satiety :full :level 4
+   :role :concept :satiety :full :realized "render lane shipped; renderer never adjudicates (Phase A exit)" :level 4
    :via "the schema is the shared quantity; renderers and stores must be pure projections (R5)"}
   {:id :no-self-cert
    :form "aif/no-self-certification"
-   :role :concept :satiety :full :level 4
+   :role :concept :satiety :full :realized "logic model F1-F9 rejects unwitnessed tags (Phase A exit)" :level 4
    :via "a record cannot claim 'settled' or 'measured' without carrying the witness for the claim"}
   {:id :measurement-window
    :form "aif/measurement-window-hygiene"
-   :role :concept :satiety :full :level 5
+   :role :concept :satiety :full :realized "settle window first-class; witnessed no-move with two-scan window (ckpt 20)" :level 5
    :via "the settle window (threshold, two scans, epsilon) becomes R3's first-class object"}
   {:id :two-layer-calibration
    :form "aif/two-layer-calibration"
-   :role :concept :satiety :full :level 5
+   :role :concept :satiety :full :realized "interpretation-class field live per pair" :level 5
    :via "dynamics evidence and value evidence distinguishable; the interpretation-class field (R1) is where that distinction lives"}
   {:id :determined-fork
    :form "collaboration-coherence/determined-fork-proto-psr"
-   :role :concept :satiety :full :level 5
+   :role :concept :satiety :full :realized "R7 warrant slot durable+queryable" :level 5
    :via "determined forks should be flown on a named warrant; the schema makes the naming durable and queryable (R7)"}
   {:id :honest-map
    :form "futon-theory/honest-map-over-flattering-counter"
-   :role :concept :satiety :full :level 5
+   :role :concept :satiety :full :realized "backfill flags derivation-thin: 31/33 refused silent upgrade" :level 5
    :via "old records flagged derivation-thin rather than silently upgraded (R6)"}]
  :hyperedges
  [{:kind :differentiates

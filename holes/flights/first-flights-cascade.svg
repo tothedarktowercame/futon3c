@@ -35,9 +35,10 @@
 <!-- n326803397 -->
 <g id="node4" class="node">
 <title>n326803397</title>
-<path fill="#d3f3df" stroke="black" d="M902.5,-38.5C902.5,-38.5 775.5,-38.5 775.5,-38.5 769.5,-38.5 763.5,-32.5 763.5,-26.5 763.5,-26.5 763.5,-14.5 763.5,-14.5 763.5,-8.5 769.5,-2.5 775.5,-2.5 775.5,-2.5 902.5,-2.5 902.5,-2.5 908.5,-2.5 914.5,-8.5 914.5,-14.5 914.5,-14.5 914.5,-26.5 914.5,-26.5 914.5,-32.5 908.5,-38.5 902.5,-38.5"/>
-<text text-anchor="middle" x="839" y="-23.5" font-family="Helvetica,sans-Serif" font-size="10.00">realtime/structured&#45;events&#45;only</text>
-<text text-anchor="middle" x="839" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">concept</text>
+<polygon fill="#d3f3df" stroke="#c0392b" stroke-width="2" stroke-dasharray="5,2" points="914.5,-41 763.5,-41 763.5,0 914.5,0 914.5,-41"/>
+<text text-anchor="middle" x="839" y="-29" font-family="Helvetica,sans-Serif" font-size="10.00">realtime/structured&#45;events&#45;only</text>
+<text text-anchor="middle" x="839" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">concept</text>
+<text text-anchor="middle" x="839" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">HUNGRY: payoff</text>
 </g>
 <!-- n102613800 -->
 <g id="node5" class="node">
@@ -137,8 +138,8 @@
 <!-- e2&#45;&gt;n326803397 -->
 <g id="edge6" class="edge">
 <title>e2&#45;&gt;n326803397</title>
-<path fill="none" stroke="#666666" d="M662.22,-92.55C680.1,-85.65 703.97,-76.38 725,-68 745.73,-59.74 768.52,-50.48 788.23,-42.42"/>
-<polygon fill="#666666" stroke="#666666" points="789.71,-45.59 797.64,-38.56 787.06,-39.11 789.71,-45.59"/>
+<path fill="none" stroke="#666666" d="M662.22,-92.55C680.1,-85.65 703.97,-76.38 725,-68 743.69,-60.56 764.04,-52.3 782.3,-44.84"/>
+<polygon fill="#666666" stroke="#666666" points="783.72,-48.04 791.65,-41.02 781.07,-41.56 783.72,-48.04"/>
 <text text-anchor="middle" x="759" y="-61.6" font-family="Helvetica,sans-Serif" font-size="8.00">pattern</text>
 </g>
 <!-- e3 -->
@@ -150,8 +151,8 @@
 <!-- e3&#45;&gt;n326803397 -->
 <g id="edge7" class="edge">
 <title>e3&#45;&gt;n326803397</title>
-<path fill="none" stroke="#666666" d="M914.17,-94.2C898.79,-88.56 880.49,-80.01 867,-68 860.67,-62.36 855.33,-54.94 851.06,-47.68"/>
-<polygon fill="#666666" stroke="#666666" points="854.07,-45.88 846.24,-38.73 847.9,-49.2 854.07,-45.88"/>
+<path fill="none" stroke="#666666" d="M914.17,-94.2C898.79,-88.56 880.49,-80.01 867,-68 861.29,-62.91 856.39,-56.38 852.36,-49.83"/>
+<polygon fill="#666666" stroke="#666666" points="855.35,-48.02 847.4,-41.02 849.25,-51.45 855.35,-48.02"/>
 <text text-anchor="middle" x="880" y="-61.6" font-family="Helvetica,sans-Serif" font-size="8.00">context</text>
 </g>
 <!-- e3&#45;&gt;n102613800 -->
@@ -170,8 +171,8 @@
 <!-- e4&#45;&gt;n326803397 -->
 <g id="edge9" class="edge">
 <title>e4&#45;&gt;n326803397</title>
-<path fill="none" stroke="#666666" d="M1206.25,-92.79C1187.72,-85.92 1162.84,-76.57 1141,-68 1131.17,-64.14 1129.26,-61.51 1119,-59 1034.46,-38.3 1009.94,-54.76 924,-41 922.74,-40.8 921.47,-40.59 920.19,-40.37"/>
-<polygon fill="#666666" stroke="#666666" points="920.75,-36.92 910.29,-38.58 919.5,-43.8 920.75,-36.92"/>
+<path fill="none" stroke="#666666" d="M1206.25,-92.79C1187.72,-85.92 1162.84,-76.57 1141,-68 1131.17,-64.14 1129.26,-61.51 1119,-59 1037.52,-39.04 1011.79,-53.62 924.93,-40.98"/>
+<polygon fill="#666666" stroke="#666666" points="925.32,-37.5 914.9,-39.44 924.25,-44.42 925.32,-37.5"/>
 <text text-anchor="middle" x="1154" y="-61.6" font-family="Helvetica,sans-Serif" font-size="8.00">context</text>
 </g>
 <!-- e4&#45;&gt;n901649820 -->
@@ -270,8 +271,8 @@
 <!-- e9&#45;&gt;n326803397 -->
 <g id="edge19" class="edge">
 <title>e9&#45;&gt;n326803397</title>
-<path fill="none" stroke="#666666" d="M765.91,-88.43C778.85,-76.58 797.39,-59.6 812.56,-45.71"/>
-<polygon fill="#666666" stroke="#666666" points="815.13,-48.11 820.14,-38.77 810.4,-42.94 815.13,-48.11"/>
+<path fill="none" stroke="#666666" d="M765.91,-88.43C778.17,-77.2 795.46,-61.37 810.14,-47.93"/>
+<polygon fill="#666666" stroke="#666666" points="812.53,-50.49 817.54,-41.15 807.8,-45.32 812.53,-50.49"/>
 <text text-anchor="middle" x="810" y="-61.6" font-family="Helvetica,sans-Serif" font-size="8.00">context</text>
 </g>
 <!-- e9&#45;&gt;n1398759811 -->
