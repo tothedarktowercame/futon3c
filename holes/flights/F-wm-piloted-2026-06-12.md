@@ -248,3 +248,33 @@ synchronous fetch in refresh can wedge Emacs — needs async or timeout.
 
 INSTANTIATE now stands open in the mission, the overview, and the
 substrate, with the same content in all three.
+
+## Sortie 8 — the phases in Polish notation (17:19-17:20, ground control)
+
+Joe, voice: before INSTANTIATE, rethink VERIFY — "or maybe DERIVE. In
+a phase like derive, we should be FINDING THE HOLE. We've just mapped
+the software stack; derive is where we derive the solution that fits
+into that stack — even before we create the cascade. That's exactly
+the correct order. We need to think about these arrows in a kind of
+POLISH NOTATION."
+
+The reading, ratified live by the pilot:
+- MAP charts the stack; DERIVE states the typed hole — the :want,
+  operator-first, BEFORE any operand exists. Type before term.
+- ARGUE's cascade is then a PREFIX EXPRESSION: each :differentiates
+  edge is an operator applied to (context, pattern) operands;
+  the semilattice linearizes operator-first.
+- VERIFY supplies the witness per application (no-self-certification:
+  the pilot's :realized annotations on the cascade are currently
+  UNWITNESSED CLAIMS — VERIFY's job is precisely the witness column:
+  each :realized gets a ref to test/commit/checkpoint).
+- INSTANTIATE evaluates the expression: term lands in the hole.
+
+Why Polish notation is load-bearing, not decoration: with known
+arities (each pattern's slots), prefix form needs no parentheses —
+A CASCADE SERIALIZES UNAMBIGUOUSLY as a linear sequence of pattern
+applications. That linear form is exactly a sampler trajectory (the
+contest's samplers already build cascades stepwise = emitting the
+prefix string left to right), exactly a GFlowNet trajectory, and
+exactly a flight (the morphism-trace read left to right). One
+serialization for cascades, flights, and training data.
