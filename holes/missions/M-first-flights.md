@@ -760,3 +760,33 @@ working-tree flag was already resolved — checkpoints 13/14/15 were
 committed before the gate (codex's commit interleaves between 13 and 14).
 Phase-A remaining: exit 4 (substrate-2 round-trip), exit 6 (Joe's
 side-by-side, the gate).
+
+Checkpoint 17 (2026-06-12): EXIT 4 CODE-GATED PASS — the substrate-2
+round-trip is ready for the operator's --write. Three-way review complete
+(codex-1 authored 3a922b3 + 1a31b52; claude-3 charter-fit PASS and fixed
+the post-entity! arity bug directly, 8d5d094; fable-1 code gate). What
+the code gate checked and changed, auditably: (1) read all three commits
+— the projection (flight = essay, 13 organs = sections, grounds/sorries =
+annotations) matches the essay browsable shape; both relayed futon1a
+footguns handled (merge-entity-for-upsert fetch-merge-upserts; browsing
+is via section entities, not ego-graph hyperedges); the write is
+double-gated (--write flag AND FUTON3C_FLIGHT_INGEST_WRITE=1) and the
+refusal was re-verified from the real CLI path. (2) Tightened the ingest
+boundary: ingestable-flight? now also requires the SETTLED WINDOW for
+clean/null claims (F2 at the substrate boundary — an unsettled "clean"
+must not become canonical substrate), using the canonical
+settled-window?/window-of from flight-record; codex's fixture updated to
+carry a real window; refuses-unsettled-window test added. (3) Closed
+claude-3's root-cause flag per fix-don't-re-bell: the --write path had no
+test because the script executes -main on load — extracted the write
+logic to futon3c.watcher.flight-ingest (script is now a thin CLI; the
+operator gate is its own assert-write-gate!), and the new
+flight_ingest_test covers the gate refusal, the call shapes (the 8d5d094
+no-labels-on-entities regression), footgun-1 merge idempotency
+(re-ingest preserves another lane's props), and annotation label/props
+shapes. Gates: 20 tests / 103 assertions across the three touched
+suites; kondo 0/0; check-parens OK; dry-run re-verified on the real
+stepped flight (14 entities + 13 annotations). The live --write is
+Joe's: FUTON3C_FLIGHT_INGEST_WRITE=1 clojure -M
+scripts/ingest_flight_to_futon1a.clj --write. Phase-A remaining: exit 6
+(the side-by-side, the gate).

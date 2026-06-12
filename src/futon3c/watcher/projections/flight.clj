@@ -4,7 +4,8 @@
   derivation-thin or transient records and does not write substrate-2."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [futon3c.aif.flight-record :as fr]))
 
 (def organ-order
   [:field-read
@@ -78,7 +79,11 @@
        (let [measurement (get-in record [:organs :measurement])]
          (or (nil? measurement)
              (typed-sorry? measurement)
-             (contains? allowed-measurement-classes (measurement-class record))))))
+             (and (contains? allowed-measurement-classes (measurement-class record))
+                  ;; F2 at the substrate boundary (code-gate tightening): a
+                  ;; clean/null claim must carry its settled two-scan witness —
+                  ;; an unsettled "clean" must not become canonical substrate
+                  (fr/settled-window? (fr/window-of record)))))))
 
 (defn assert-ingestable! [record]
   (when-not (ingestable-flight? record)
