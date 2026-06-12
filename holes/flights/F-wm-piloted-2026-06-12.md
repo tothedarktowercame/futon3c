@@ -71,3 +71,14 @@ rest to the team. Notebook is APPEND-ONLY during the flight.
 - [ ] codex-2 bell-back: anatomy-v0 sweep build -> launch overnight CT run
 - [ ] Pilot: review all, checkpoint M-first-flights, re-run engine,
       compare panel before/after (the loop-closure measurement)
+
+## Sortie 4a — look at *mission-overview* (16:44, refinement)
+
+Joe's look shows the overview tree: certificate·certificate-pass DOES
+exist ("Status: PHASE A COMPLETE...") — the certificate detector
+fired. Refinement of the sortie-4 finding: the gap is not detection
+but BINDING — the certificate floats as a top-level status scope
+inside a loose-section wrapper, with no discharges-edge to the VERIFY
+phase it certifies, and the eightfold-phase scopes sit beside it
+unconnected. Same R4 shape: the use and the binder both exist;
+the edge doesn't. INSTANTIATE still shows no owed-work scope.
