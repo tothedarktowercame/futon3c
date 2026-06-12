@@ -1,0 +1,102 @@
+;; CASCADE — M-first-flights as a pattern language (Alexander semilattice).
+;; Built live during the WM piloted flight, 2026-06-12, from the nine
+;; substrate-2-tagged pattern cites (positions 16649..18671) and their PSR
+;; texts. Largest context first; each edge says how the lower pattern
+;; DIFFERENTIATES the space its context sets, FOR THIS MISSION.
+;; This is the mission's argument in pattern-theoretic form.
+;; Schema: golden-graphs/SCHEMA.md v1 + cascade kinds (:differentiates,
+;; :jointly-with) — candidate extension for schema v2.
+{:mission "M-first-flights"
+ :artifact :cascade
+ :region {:label "first-flights-pattern-language"
+          :source "M-first-flights.md §Pattern cross-reference"}
+ :nodes
+ [{:id :problem
+   :form "flight records: data without shape (Orville without Wilbur)"
+   :role :scope :satiety {:hungry-for :payoff}
+   :via "we have flight data (Orville) but not yet the data shapes we need"}
+  {:id :pilot-ground-control
+   :form "peripherals/pilot-plus-ground-control"
+   :role :concept :satiety :full :level 1
+   :via "the roles that produce and gate these records; R8's witness-ground encodes the three-way review into the record"}
+  {:id :crime-relocates
+   :form "futon-theory/crime-relocates-to-a-scarcer-witness"
+   :role :concept :satiety :full :level 2
+   :via "each laundering fix pushed the crime toward scarcer witnesses; this design is the limit move — the witness is pushed INTO the record itself"}
+  {:id :structured-events
+   :form "realtime/structured-events-only"
+   :role :concept :satiety :full :level 3
+   :via "the trace must be typed events, not prose... chosen as the base discipline for the whole record shape"}
+  {:id :two-projections
+   :form "structure/two-projections-of-one-quantity"
+   :role :concept :satiety :full :level 4
+   :via "the schema is the shared quantity; renderers and stores must be pure projections (R5)"}
+  {:id :no-self-cert
+   :form "aif/no-self-certification"
+   :role :concept :satiety :full :level 4
+   :via "a record cannot claim 'settled' or 'measured' without carrying the witness for the claim"}
+  {:id :measurement-window
+   :form "aif/measurement-window-hygiene"
+   :role :concept :satiety :full :level 5
+   :via "the settle window (threshold, two scans, epsilon) becomes R3's first-class object"}
+  {:id :two-layer-calibration
+   :form "aif/two-layer-calibration"
+   :role :concept :satiety :full :level 5
+   :via "dynamics evidence and value evidence distinguishable; the interpretation-class field (R1) is where that distinction lives"}
+  {:id :determined-fork
+   :form "collaboration-coherence/determined-fork-proto-psr"
+   :role :concept :satiety :full :level 5
+   :via "determined forks should be flown on a named warrant; the schema makes the naming durable and queryable (R7)"}
+  {:id :honest-map
+   :form "futon-theory/honest-map-over-flattering-counter"
+   :role :concept :satiety :full :level 5
+   :via "old records flagged derivation-thin rather than silently upgraded (R6)"}]
+ :hyperedges
+ [{:kind :differentiates
+   :ends [{:role :context :node :problem}
+          {:role :pattern :node :pilot-ground-control}]
+   :via "the social form inside which flights happen at all: pilot flies, ground control gates"}
+  {:kind :differentiates
+   :ends [{:role :context :node :pilot-ground-control}
+          {:role :pattern :node :crime-relocates}]
+   :via "two roles reviewing means claims can launder between them; the diagnosis: push the witness into the record itself"}
+  {:kind :differentiates
+   :ends [{:role :context :node :crime-relocates}
+          {:role :pattern :node :structured-events}]
+   :via "a witness can only live IN the record if the record is typed events — prose cannot carry checkable witnesses"}
+  {:kind :differentiates
+   :ends [{:role :context :node :structured-events}
+          {:role :pattern :node :two-projections}]
+   :via "typed events need ONE schema; panel, gamma frame, and substrate-2 ingest become pure projections that never adjudicate"}
+  {:kind :differentiates
+   :ends [{:role :context :node :structured-events}
+          {:role :pattern :node :no-self-cert}]
+   :via "typed events make enforcement structural: the logic model rejects unwitnessed tags"}
+  {:kind :differentiates
+   :ends [{:role :context :node :no-self-cert}
+          {:role :pattern :node :measurement-window}]
+   :via "a 'measured' claim's witness is the settle window itself: threshold, two scans, epsilon"}
+  {:kind :jointly-with
+   :ends [{:role :context :node :two-projections}
+          {:role :pattern :node :measurement-window}]
+   :via "the window is schema object, not renderer behavior — semilattice join, two parents"}
+  {:kind :differentiates
+   :ends [{:role :context :node :no-self-cert}
+          {:role :pattern :node :two-layer-calibration}]
+   :via "witnessed claims split by KIND: dynamics evidence vs value evidence, per pair, via interpretation-class"}
+  {:kind :differentiates
+   :ends [{:role :context :node :pilot-ground-control}
+          {:role :pattern :node :determined-fork}]
+   :via "when the pilot flies a determined fork, the warrant is named and recorded (R7) — ground control reads the warrant, not the vibe"}
+  {:kind :jointly-with
+   :ends [{:role :context :node :structured-events}
+          {:role :pattern :node :determined-fork}]
+   :via "the warrant is a typed slot — second parent in the semilattice"}
+  {:kind :differentiates
+   :ends [{:role :context :node :no-self-cert}
+          {:role :pattern :node :honest-map}]
+   :via "migration is where self-certification sneaks back in; backfill flags derivation-thin instead of upgrading silently"}
+  {:kind :differentiates
+   :ends [{:role :context :node :measurement-window}
+          {:role :pattern :node :problem}]
+   :via "DISCHARGE: with organs, witnesses, windows, and warrants typed, the flight record is a term in a calculus — Wilbur's shape for Orville's data"}]}
