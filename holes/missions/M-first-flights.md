@@ -932,3 +932,21 @@ backward wire, consent gate = categorical discard (WM-I4's formal home),
 R10 links = horizontal composition. Early return-channel signal noted
 with we-do discipline: the trainability probe came back pipe-trains
 +0.21 — at n=1, a single point, not yet evidence.
+
+Checkpoint 22 (2026-06-12): flight-pretty-print DELIVERED and reviewed
+(author codex-3 fe0ae24, reviewer fable-2; author≠reviewer held). What
+the review checked: byte-identical re-runs on live-df706c45 (the
+mint-standard flight); two further flights render clean; canonical
+organ order with Atlas-role per organ (field-read=:source-material —
+the third-corpus join is IN the output); sorries render as typed holes
+(:kind :not-yet/:blocked-by :rollout-engine visible in measurement);
+mapping table shipped as data (data/flight-pretty-print-mapping.edn);
+flight-mode.el lane added, check-parens clean; 3 tests/7 assertions
+pass. One wart: scripts/flight_pretty_print.clj needs `bb -cp src` —
+classpath note added here so the next runner doesn't trip.
+INSTANTIATE consequence: the first half of the structured-events debt
+is discharged WITH WITNESS (this checkpoint); sorry-arrow
+arr-7535a5b6-e59 stays :open — its construction names BOTH
+pretty-print and the typed-grounds migration, and the latter is still
+:design-hungry (no plan). The cascade's structured-events node flips
+half: rendering debt paid, grounds-in-prose debt remains.
