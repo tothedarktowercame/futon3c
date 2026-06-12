@@ -53,7 +53,15 @@
     (if (.exists f)
       (try
         (let [parsed (edn/read-string (slurp f))]
-          (merge (empty-state) (select-keys parsed (keys (empty-state)))))
+          ;; Clear :draining on load. It is an IN-FLIGHT drain lock, not durable
+          ;; state: a fresh JVM has no drain in progress, so any persisted :draining
+          ;; is stale. A crash mid-drain (e.g. OOM) otherwise restores every agent
+          ;; stuck in :draining, making acquire-drain! fail forever and ALL restored
+          ;; agents permanently un-drainable (queued bells never run). Pending
+          ;; queues/entries/frontier are kept; only the drain lock is reset.
+          ;; (M-agency-hardening, OOM-restore self-recovery, 2026-06-12.)
+          (-> (merge (empty-state) (select-keys parsed (keys (empty-state))))
+              (assoc :draining #{})))
         (catch Throwable _
           (empty-state)))
       (empty-state))))
@@ -355,6 +363,28 @@
 (defn- signal-drainer! [agent-id]
   (when-let [{:keys [lock]} (get @!drainers (clean-str agent-id))]
     (locking lock (.notifyAll lock))))
+
+(defn resume-pending-drainers!
+  "Boot-time recovery: spawn a drainer for every agent that has a NON-EMPTY persisted
+   queue. Drainers are otherwise spawned lazily by accept-async! when a bell arrives;
+   after a restart, restored turns already sit in the queue but no new bell triggers
+   that spawn, so those turns — and the agent — are stuck (un-drainable) until knocked.
+   Restored turns have no in-memory processor, so the drainer reconciles them (clearing
+   the false 'invoking' state) and stays alive for new bells. No-op unless drainer-v2 is
+   on. Call once after the registry is restored. Pairs with load-state clearing :draining.
+   (M-agency-hardening, OOM-restore self-recovery, 2026-06-12.)"
+  []
+  (when (drainer-v2-enabled?)
+    (let [agents (->> (:queues (snapshot))
+                      (keep (fn [[aid q]] (when (seq q) aid)))
+                      vec)]
+      (doseq [aid agents]
+        (ensure-drainer! aid)
+        (signal-drainer! aid))
+      (when (seq agents)
+        (println (str "[turn-queue] resume-pending-drainers! — spawned drainers for "
+                      (count agents) " restored agent(s) with queued turns: " agents)))
+      agents)))
 
 (defn accept-async!
   "Enqueue ENTRY (carrying :process-fn and optional :finalize-fn) for its recipient

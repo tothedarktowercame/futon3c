@@ -57,6 +57,17 @@ export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-true}"
 # logic model TB-1..7 PASS. Activated 2026-06-11 for live ArSE-usage monitoring. Set
 # "false" to revert. Watch-item once live: holes/tickets/T-typed-bell-arse-write-async.md.
 export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
+# Invoke-executor lanes: shared pool for agent invocations. Bumped 4 -> 8
+# (2026-06-12) now that drainer-v2 keeps bell turns off these lanes, so a Codex
+# swarm can run in parallel to Claude WIP. Takes effect on JVM restart.
+export FUTON3C_INVOKE_LANES="${FUTON3C_INVOKE_LANES:-8}"
+# E2 (turn-delivery-invariants.md): route /invoke-stream (REPL/operator turns) through the
+# durable turn-queue + per-agent drainer, so an operator turn gets the SAME guarantees as a
+# bell — single-writer (no shared-lane race), durable, reply routed to its own SSE channel.
+# Default OFF preserves the legacy direct-invoke path byte-for-byte; requires drainer-v2.
+# Verified live 2026-06-12 (single-writer + own-reply + no cross-talk; OFF regression clean).
+# Activated 2026-06-12 per Joe ("REPL turns shouldn't get lost"). Set "false" to revert.
+export FUTON3C_REPL_THROUGH_QUEUE="${FUTON3C_REPL_THROUGH_QUEUE:-true}"
 export FUTON3C_AGENT_RESTORE="${FUTON3C_AGENT_RESTORE:-true}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"

@@ -5,6 +5,7 @@
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.roster-store :as roster-store]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
@@ -114,6 +115,11 @@
         ;; the saved roster before restore could read it. The initial persist here
         ;; captures the just-restored agents going forward.
         (roster-store/install-registry-watch! reg/!registry)
+        ;; Restored turns sit in per-agent queues, but no bell arrives to trigger the
+        ;; lazy drainer spawn — so spawn drainers for restored agents NOW, or their
+        ;; queued turns (and the agents) stay stuck/un-drainable after a restart.
+        ;; Pairs with turn-queue/load-state clearing the stale :draining lock.
+        (turn-queue/resume-pending-drainers!)
         (println (str "[dev] futon3c: http://localhost:" (:port result)
                       " (patterns: " (if (seq pattern-ids) pattern-ids "none") ")"))
         (when (:enabled? restore-report)

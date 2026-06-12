@@ -106,9 +106,19 @@
 ;; Invoke thread pool — keeps long-running agent invocations off http-kit threads
 ;; =============================================================================
 
+(def ^:private invoke-lane-count
+  ;; Shared invoke-executor lanes. Bumped 4 -> 8 (2026-06-12) now that drainer-v2
+  ;; keeps bells off these lanes; 8 lets a Codex swarm run parallel to Claude WIP.
+  ;; Override with FUTON3C_INVOKE_LANES. Takes effect on JVM restart (defonce pool).
+  (or (try (some-> (or (System/getProperty "FUTON3C_INVOKE_LANES")
+                       (System/getenv "FUTON3C_INVOKE_LANES"))
+                   str/trim not-empty Long/parseLong)
+           (catch Exception _ nil))
+      8))
+
 (defonce ^ExecutorService invoke-executor
   (Executors/newFixedThreadPool
-   4
+   invoke-lane-count
    (let [ctr (atom 0)]
      (reify java.util.concurrent.ThreadFactory
        (newThread [_ r]
@@ -3012,6 +3022,16 @@
                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)
                                 :job job})))))))
 
+(defn- repl-through-queue?
+  "E2 (turn-delivery-invariants.md): route /invoke-stream (REPL/operator turns) through the
+   durable turn-queue + per-agent drainer — same guarantees as a bell (single-writer, durable,
+   reply-routed) — instead of a direct invoke on a shared lane. Default OFF; load-dark; requires
+   drainer-v2. Toggle: FUTON3C_REPL_THROUGH_QUEUE (sys-prop or env)."
+  []
+  (let [v (or (System/getProperty "FUTON3C_REPL_THROUGH_QUEUE")
+              (System/getenv "FUTON3C_REPL_THROUGH_QUEUE"))]
+    (boolean (and v (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim v))))))))
+
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
    Same request body as /invoke. Returns application/x-ndjson with chunked events:
@@ -3054,79 +3074,88 @@
                               (hk/send! channel
                                 (str (json/generate-string event) "\n")
                                 false)
-                              (catch Throwable _)))]
-              ;; Install event sink on the agent
-              (reg/set-invoke-event-sink! aid sink-fn)
-              ;; Clean up on client disconnect
-              (hk/on-close channel
-                (fn [_status]
-                  (reg/clear-invoke-event-sink! aid)))
-              ;; Run invoke on executor thread
-              (.submit invoke-executor
-                ^Runnable
-                (fn []
-                  (try
-                    (let [caller (or (some-> payload :caller str)
-                                     (some-> payload (get "caller") str)
-                                     "http-caller")
-                          surface (or (some-> payload :surface str)
-                                      (some-> payload (get "surface") str))
-                          mission-id (or (:mission-id payload) (get payload "mission-id"))
-                          timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
-                                             long)
-                          evidence-store (evidence-store-for-config config)
-                          ev-opts (when mission-id [:mission-id mission-id])
-                          effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
-                          raw-result (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)
-                          result (maybe-route-surface-writes agent-id raw-result)
-                          sid (:session-id result)]
-                      ;; Emit evidence (same as handle-invoke)
+                              (catch Throwable _)))
+                  caller (or (some-> payload :caller str)
+                             (some-> payload (get "caller") str)
+                             "http-caller")
+                  surface (or (some-> payload :surface str)
+                              (some-> payload (get "surface") str))
+                  mission-id (or (:mission-id payload) (get payload "mission-id"))
+                  timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
+                                     long)
+                  evidence-store (evidence-store-for-config config)
+                  ev-opts (when mission-id [:mission-id mission-id])
+                  effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
+                  ;; Terminal done/error emission from an invoke result — shared by the
+                  ;; queued (E2) path and the legacy direct path.
+                  emit-terminal!
+                  (fn [result]
+                    (let [sid (:session-id result)]
                       (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                              (or ev-opts []))
                       (if (:ok result)
                         (do
                           (apply emit-invoke-evidence! evidence-store (str agent-id) (str (:result result)) sid
                                  (or ev-opts []))
-                          ;; Send done event and close
-                          (try
-                            (hk/send! channel
-                              (str (json/generate-string
-                                     (cond-> {:type "done"
-                                              :ok true
-                                              :result (:result result)
-                                              :session-id sid}
-                                       (:invoke-meta result)
-                                       (assoc :invoke-meta (:invoke-meta result))))
-                                   "\n")
-                              false)
-                            (catch Throwable _)))
+                          (sink-fn (cond-> {:type "done"
+                                            :ok true
+                                            :result (:result result)
+                                            :session-id sid}
+                                     (:invoke-meta result)
+                                     (assoc :invoke-meta (:invoke-meta result)))))
                         (let [err (:error result)
                               code (if (map? err) (:error/code err) :invoke-failed)
                               msg (if (map? err) (:error/message err) (str err))]
-                          (try
-                            (hk/send! channel
-                              (str (json/generate-string
-                                     {:type "done"
-                                      :ok false
-                                      :error (name code)
-                                      :message msg})
-                                   "\n")
-                              false)
-                            (catch Throwable _)))))
-                    (catch Throwable t
-                      (try
-                        (hk/send! channel
-                          (str (json/generate-string
-                                 {:type "done"
-                                  :ok false
-                                  :error "invoke-error"
-                                  :message (.getMessage t)})
-                               "\n")
-                          false)
-                        (catch Throwable _)))
-                    (finally
-                      (reg/clear-invoke-event-sink! aid)
-                      (hk/close channel))))))))))))
+                          (sink-fn {:type "done" :ok false :error (name code) :message msg})))))]
+              ;; Clean up on client disconnect
+              (hk/on-close channel
+                (fn [_status]
+                  (reg/clear-invoke-event-sink! aid)))
+              (if (and (repl-through-queue?) (turn-queue/drainer-v2-enabled?))
+                ;; E2: route the REPL/operator turn through the durable turn-queue so it gets
+                ;; the SAME guarantees as a bell — single-writer (the agent's drainer, no
+                ;; shared-lane race with concurrent bells), durable queue entry, reply streamed
+                ;; back to THIS channel. The event sink is installed INSIDE process-fn (drainer
+                ;; thread, exclusive to this turn) so a bell drained just before it cannot
+                ;; cross-talk onto this channel.
+                (turn-queue/accept-async!
+                 {:to aid :from caller :surface (or surface "repl")
+                  :prompt effective-prompt
+                  :process-fn
+                  (fn [_entry]
+                    (reg/set-invoke-event-sink! aid sink-fn)
+                    (try
+                      (binding [turn-queue/*drained-by-outer* true]
+                        (maybe-route-surface-writes
+                         agent-id
+                         (reg/invoke-agent! aid effective-prompt timeout-ms)))
+                      (finally
+                        (reg/clear-invoke-event-sink! aid))))
+                  :finalize-fn
+                  (fn [result]
+                    (try
+                      (emit-terminal! result)
+                      (catch Throwable t
+                        (sink-fn {:type "done" :ok false :error "invoke-error"
+                                  :message (.getMessage t)}))
+                      (finally
+                        (hk/close channel))))})
+                ;; Legacy (flag OFF / no drainer-v2): direct invoke on a shared lane.
+                (.submit invoke-executor
+                  ^Runnable
+                  (fn []
+                    (reg/set-invoke-event-sink! aid sink-fn)
+                    (try
+                      (emit-terminal!
+                       (maybe-route-surface-writes
+                        agent-id
+                        (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)))
+                      (catch Throwable t
+                        (sink-fn {:type "done" :ok false :error "invoke-error"
+                                  :message (.getMessage t)}))
+                      (finally
+                        (reg/clear-invoke-event-sink! aid)
+                        (hk/close channel)))))))))))))
 
 (defn- invoke-job-terminal-state?
   [state]

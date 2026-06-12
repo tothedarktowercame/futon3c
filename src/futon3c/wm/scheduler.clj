@@ -105,12 +105,30 @@
 (defn snapshot-for-days [days]
   (get-in @!wm-snapshot [:by-days days]))
 
+(defn- trim-action-predictions
+  "Drop the heavy per-action :prediction/:next-belief (a full belief map ~115KB each × ~121
+   actions ≈ 14MB, ~96% of the whole WM payload) from the judgement before serialization.
+   It is a transient forward-model byproduct retained only to score the action; the WM viewer
+   never reads it (core.cljs: 'this panel does not present predictions'). The light prediction
+   fields (:next-observation, :predicted-events, :action) are kept. Shrinks /api/alpha/war-machine
+   ~15MB → ~0.6MB. (Joe, 2026-06-12.)"
+  [judgement]
+  (if (seq (:ranked-actions judgement))
+    (update judgement :ranked-actions
+            (fn [acts]
+              (mapv (fn [a]
+                      (if (get-in a [:prediction :next-belief])
+                        (update a :prediction dissoc :next-belief)
+                        a))
+                    acts)))
+    judgement))
+
 (defn- render-payload-json
   [{:keys [data judgement] :as bundle}]
   (let [{:keys [data judgement]} (http/wm-response-payload bundle)
         payload (http/stringify-wm-response
                  (-> data
-                     (assoc :judgement judgement)
+                     (assoc :judgement (trim-action-predictions judgement))
                      (assoc :pilot-inhabitations (http/derive-pilot-inhabitations))))]
     {:payload payload
      :body (json/generate-string payload)}))

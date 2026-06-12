@@ -667,6 +667,22 @@
              timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))
              prompt-preview (let [s (str prompt)]
                               (subs s 0 (min 120 (count s))))
+             _trace (when (not= "false" (System/getProperty "FUTON3C_INVOKE_TRACE"))
+                      ;; Step-0 duplicate-delivery instrument (turn-delivery-invariants.md, D1).
+                      ;; A doubled bell shows TWO lines: same msg-id+preview, different thread
+                      ;; (turn-drainer-* = accept-async queue; conductor/tickle + invoke-executor
+                      ;; = the second dispatcher). A clean whistle shows ONE line.
+                      ;; Writes to /tmp/invoke-trace.log (println-to-stdout goes to Joe's dev
+                      ;; terminal, ungreppable). Silence via (System/setProperty "FUTON3C_INVOKE_TRACE" "false").
+                      (let [line (str "[invoke-trace] at=" (now)
+                                      " agent=" aid-val
+                                      " msg-id=" (some-> (re-find #"(?i)Msg-?ID:\s*(\S+)" (str prompt)) second)
+                                      " thread=" (.getName (Thread/currentThread))
+                                      " preview=" (pr-str prompt-preview))]
+                        (println line)
+                        (try (spit "/tmp/invoke-trace.log" (str line "\n") :append true)
+                             (catch Throwable _))
+                        (flush)))
              project-agents! (fn []
                                (bb/project-agents!
                                 {:agents (into {}
