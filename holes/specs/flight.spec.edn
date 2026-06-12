@@ -25,7 +25,7 @@
 
 {:spec/id      :wm-flight
  :spec/title   "Flight-as-derivation — the WM flight record"
- :spec/version "0.3"
+ :spec/version "0.4"
  :spec/authored {:by "fable-1" :on "2026-06-12" :surface "emacs-repl"}
  :spec/mission "holes/missions/M-first-flights.md"
  :spec/level
@@ -168,8 +168,10 @@
                 :constant <g-value>   ; frozen v1 counterfactual, first-class
                                       ; because constant-vs-scaled must
                                       ; compose (R1)
-                :policy   <g-value or sorry :not-yet :blocked-by
-                           :rollout-engine>  ; the Phase-B slot, typed ghost}"
+                :policy   <g-value or {:sorry {:kind :not-yet :blocked-by
+                           :rollout-engine}} — the canonical inner-sorry
+                           shape, same constructor as organ cells>  ; the
+                           Phase-B slot, typed ghost}"
     :ground   "model id/version + the field entry the numbers came from"}
 
    :begin-state
@@ -216,7 +218,14 @@
     :ground   "the window object — 'settled with no two-scan witness' is a
                schema violation, not a vigilance failure (R3)"}
 
-   :window  ; R3, referenced from :measurement — first-class, not prose
+   :window  ; R3 — a first-class THIRTEENTH ORGAN (a cell like any other:
+            ; judgment = the window map, ground = how the scans were
+            ; obtained). :measurement's :judgment :window either inlines
+            ; the map or points at this organ with the keyword :window —
+            ; both conformant (disambiguated v0.4, from the real witness
+            ; flight: the pilot read the layout as a sibling cell, the
+            ; checker assumed inline; the pilot's reading matched
+            ; checkpoint 7's own words, "thirteen schema cells")
    {:shape "{:begin <ts> :commit <ts>
              :threshold <ts — commit + one scan duration; 'after the
                          commit' alone can read a scan that STARTED before

@@ -604,3 +604,30 @@ to v0.3 with the finding. Witness EDN at
 against it); it stands in only until claude-3's real conforming witness
 flight lands (belled, in progress). Gates: kondo 0/0, check-parens OK,
 self-test exit 0.
+
+Checkpoint 10 (2026-06-12): the conforming witness flight is REAL and the
+record CONFORMS — exit 2 met on real data. claude-3 flew live-957a4836
+tight (18s begin window, the DERIVE confound's correction): closed
+M-daily-scan §367 (the operator's 無 resolution recorded; act witness
+futon7 729ee02), ohc 3→2, predicted −4.0791 vs realised −4.0397, error
+0.0394 = the per-hole increment, two post-threshold scans agreeing within
+7.6e-5, class :clean. The hand-recorded thirteen-cell record
+(holes/specs/flight.witness.live-957a4836.edn, ea44a84) passes F1–F9
+after one conformance pass: 9/9, derived mask IN, co-piloted TRUE (the
+R12 steer = the flight-request bell itself). The run surfaced two
+convergence findings, both folded: (1) the checker assumed an inline
+window while the pilot read the spec layout as a thirteenth sibling cell
+— the pilot's reading matched checkpoint 7's own words, so the checker
+now resolves both and the spec disambiguates (v0.4); (2) the record's
+out-of-band vocabulary drifted (:event/:ts vs :type/:at) and two
+timestamps were placeholders — fixed against the stores verbatim
+(discipline-events.edn merge at 10:02:02.743Z; the steer = the bell job's
+created-at 09:54:30.935Z). Honest extra from the pilot: the begin sat at
+the continuity point (scaled == constant there), so this clean pair is
+increment-clean but MODEL-INDIFFERENT — discriminating pairs need
+off-continuity begins. The adversarial twin (live-c1028918, the DERIVE
+stale-begin confound) is named in the witness's typed links: exit 2 holds
+both witnesses from real flights. Phase-A remaining: exits 3 (render
+lane), 4 (substrate-2 round-trip), 5 (the loop-closing stratification),
+6 (Joe's side-by-side); build-order step 2 (close-live-cycle! persists
+the grounds) ends hand-recording.

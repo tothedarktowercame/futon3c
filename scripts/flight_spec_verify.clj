@@ -55,6 +55,14 @@
   (and (map? g) (number? (:g g)) (contains? g-grains (:g-grain g))))
 
 (defn- organ [record k] (get-in record [:organs k]))
+
+(defn- window-of
+  "Resolve a measurement's R3 window: inline map, or the keyword :window
+   pointing at the first-class :window organ (both spec-conformant — the
+   real witness flight read the spec's layout as a thirteenth cell)."
+  [record m]
+  (let [w (get-in m [:judgment :window])]
+    (if (map? w) w (get-in record [:organs :window :judgment]))))
 (defn- abs* [x] (Math/abs (double x)))
 (defn- ts<= [a b] (and (string? a) (string? b) (<= (compare a b) 0)))
 (defn- ts< [a b] (and (string? a) (string? b) (neg? (compare a b))))
@@ -94,7 +102,7 @@
                :when (not (and (contains? link-types (:type l)) (:to l)))]
            (str "link " (pr-str l) " — :type must be one of " link-types
                 " with a :to (R10)"))
-         (for [k organ-keys
+         (for [k (distinct (concat organ-keys (keys (:organs record))))
                :let [c (organ record k)]
                :when (not (or (term? c) (typed-sorry? c)))]
            (str (name k) ": neither a term-with-ground nor a typed sorry — "
@@ -112,7 +120,7 @@
         viols
         (when (and (term? m)
                    (contains? #{:clean :null} (get-in m [:judgment :class])))
-          (let [w (get-in m [:judgment :window])]
+          (let [w (window-of record m)]
             (cond
               (nil? w)
               ["measurement: class claims settled but carries no window (R3)"]
@@ -272,7 +280,7 @@
         in? (and (= :full (:flight/derivation record))
                  (term? m)
                  (contains? #{:clean :null} cls)
-                 (settled-window? (get-in m [:judgment :window])))]
+                 (settled-window? (window-of record m)))]
     {:state-ref (:ground (organ record :begin-state))
      :candidates (get-in (organ record :field-read) [:judgment :neighbourhood])
      :predicted (get-in m [:judgment :predicted])

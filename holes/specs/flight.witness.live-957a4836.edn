@@ -74,7 +74,7 @@
   :prediction
   {:judgment {:scaled   {:g -4.0790903614457825 :g-grain :one-step-action}
               :constant {:g -4.0790903614457825 :g-grain :one-step-action}
-              :policy   {:sorry/kind :not-yet :blocked-by :rollout-engine}}
+              :policy   {:sorry {:kind :not-yet :blocked-by :rollout-engine}}}
    :ground "model: WM forward model (target-sensitive predict-effects, live since 2026-06-11) + field entry @ begin; scaled == constant here because ohc 3 is the continuity point"}
 
   :begin-state
@@ -102,24 +102,28 @@
    :note "ohc 3 -> 2; the field moved by the per-hole increment ~0.0394, settled. A genuine :clean dynamics pair, not a null and not a fabricated 0.0"}
 
   :window
-  {:begin     "2026-06-12T09:57:20Z"
-   :commit    "2026-06-12T09:57:38Z"
-   :threshold "2026-06-12T09:59:03Z"
-   :scans [{:as-of "2026-06-12T09:59:11.933Z" :g {:g -4.039754006410256 :g-grain :one-step-action}}
-           {:as-of "2026-06-12T10:01:15.009Z" :g {:g -4.039678471388555 :g-grain :one-step-action}}]
-   :epsilon 0.005
-   :agreement 7.5535e-5
-   :rule-check "two scans, distinct :as-of, both > :threshold, |ΔG| 7.55e-5 ≤ ε 0.005 ⇒ settled (checkable from this record alone)"}
+  {:judgment
+   {:begin     "2026-06-12T09:57:20Z"
+    :commit    "2026-06-12T09:57:38Z"
+    :threshold "2026-06-12T09:59:03Z"
+    :scans [{:as-of "2026-06-12T09:59:11.933Z" :g {:g -4.039754006410256 :g-grain :one-step-action}}
+            {:as-of "2026-06-12T10:01:15.009Z" :g {:g -4.039678471388555 :g-grain :one-step-action}}]
+    :epsilon 0.005
+    :agreement 7.5535e-5
+    :rule-check "two scans, distinct :as-of, both > :threshold, |ΔG| 7.55e-5 ≤ ε 0.005 ⇒ settled (checkable from this record alone)"}
+   :ground "two WM scans read live (as-of stamps verbatim from the scan store); settle poll bytow5u9h drove the ticks — close-time labour, kept (the seat-read's honesty note)"}
 
   :counterfactual
   {:judgment {:constant-error 0.03941189005722734}
    :ground ":prediction :constant (-4.07909) vs :measurement :realised (-4.039679) — re-derivable; equals the scaled error because the begin sat at the continuity point (scaled == constant there), so this clean pair does NOT discriminate the two models (honest: a continuity-begin pair is increment-clean but model-indifferent)"}
 
   :out-of-band
-  {:judgment [{:event :operator-merge :ts "2026-06-12T09:5x" :note "this executed close emits one"}
-              {:event :operator-steer :ts "2026-06-12T~09:55Z" :r12 true
-               :content "fable-1, relaying Joe: 'conforming witness flight requested … fly ONE tight flight … hand-record everything flight.spec.edn v0.2 wants' — content-bearing in-flight direction that shaped this flight's whole purpose (R12)"}]
-   :ground "discipline-events.edn (the merge) + the ground-control bell (the steer); the steer is why R12 exists and this flight demonstrates it"}
+  {:judgment [{:type :operator-merge :at "2026-06-12T10:02:02.743298262Z"
+               :note "the executed close's merge event, verbatim from discipline-events.edn"}
+              {:type :operator-steer :at "2026-06-12T09:54:30.935Z" :r12 true
+               :content "fable-1, relaying Joe: 'conforming witness flight requested … fly ONE tight flight … hand-record everything flight.spec.edn v0.2 wants' — content-bearing in-flight direction that shaped this flight's whole purpose (R12)"
+               :source "bell job invoke-1781258070935-775-15e62d75 (created-at, verbatim)"}]
+   :ground "discipline-events.edn (the merge) + the ground-control bell job record (the steer); the steer is why R12 exists and this flight demonstrates it. Conformance pass (fable-1): keys :event/:ts -> spec's :type/:at; placeholder timestamps replaced with the exact store values"}
 
   :self-record
   {:judgment {:gamma-ref "data/repl-traces/live-957a4836-977a-4083-a243-e61cdd9862e3.edn"
