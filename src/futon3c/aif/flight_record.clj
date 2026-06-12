@@ -29,6 +29,38 @@
 
 (defn- g1 [g] (when (number? g) {:g g :g-grain :one-step-action}))
 
+(defn- cell?
+  "Already a spec cell — a term ({:judgment :ground}) or a typed sorry."
+  [m]
+  (and (map? m) (or (contains? m :judgment) (contains? m :sorry))))
+
+(defn- cellify
+  "Wrap a bare pilot judgment as a term cell, deriving the ground ONLY
+   where the derivation is mechanically honest (the ground is inside the
+   judgment itself); pass an already-wrapped cell through untouched.
+
+   Fixes the asymmetric :flight contract claude-3's step-read caught
+   (live-df706c45): :neighbourhood/:window were wrapped by compose while
+   :warrant/:verification had to arrive pre-wrapped — an undocumented
+   split contract the first stepping pilot tripped over."
+  [m derived-ground]
+  (cond
+    (nil? m) nil
+    (cell? m) m
+    :else {:judgment m :ground derived-ground}))
+
+(defn- warrant-ground
+  "For ref kinds the spec ground IS the ref (findable where it points);
+   for :pilot-synthesis it is the recorded reasoning. Both live inside the
+   judgment, so deriving the ground restates, never invents."
+  [w]
+  (let [{:keys [kind ref reasoning]} (:determined-by w)]
+    (cond
+      reasoning (str "the recorded reasoning (kind " kind "): " reasoning)
+      ref (str "ref (findable where it points): " ref)
+      (:queued w) (str "queued undetermined: " (get-in w [:queued :queue-ref]))
+      :else "supplied at close; see judgment")))
+
 (defn compose-flight-record
   "Pure: begin-state + close-time computation + pilot-supplied :flight map
    -> a spec-shaped flight record. See ns docstring for the composition rule.
@@ -39,7 +71,15 @@
           :frame-path :logged-turn
           :flight {:neighbourhood :cascades :plan-sketch :warrant
                    :verification :window :window-ground :class
-                   :act-verification :steers :links :counterfactual-note}}"
+                   :act-verification :steers :links :counterfactual-note}}
+
+   THE :flight OPT CONTRACT (symmetric since the live-df706c45 step-read):
+   :warrant, :verification, :window each accept EITHER the bare judgment
+   (compose wraps it, deriving the ground only from content the judgment
+   already carries) OR a pre-wrapped {:judgment :ground} cell (passed
+   through untouched). :neighbourhood and :cascades are inner data of the
+   field-read judgment, never cells. :class is a bare keyword; :steers,
+   :links are vectors of event/link maps."
   [{:keys [run-id begin agent predicted predicted-constant realised
            realised-source executed? evidence-ref merge-event
            frame-path logged-turn flight]}]
@@ -70,9 +110,12 @@
                     plan-sketch (assoc :plan-sketch (vec plan-sketch)))
         :ground :warrant}
 
-       :warrant (or warrant (ghost :not-yet))
+       :warrant (or (cellify warrant (warrant-ground warrant))
+                    (ghost :not-yet))
 
-       :verification (or verification (ghost :not-yet))
+       :verification (or (cellify verification
+                                  "evidence lines inline in the judgment (the select-time grep/read work, recorded)")
+                         (ghost :not-yet))
 
        :attribution
        {:judgment (:v-attribution begin)
@@ -135,9 +178,9 @@
 
        window
        (assoc :window
-              {:judgment window
-               :ground (or window-ground
-                           "pilot settle protocol (close-time labour, kept)")}))}))
+              (cellify window
+                       (or window-ground
+                           "pilot settle protocol (close-time labour, kept)"))))}))
 
 (defn write-flight-record!
   "Persist RECORD as <dir>/<run-id>.flight.edn (pretty, no length limits).

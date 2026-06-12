@@ -97,6 +97,37 @@
     (is (= :operator-steer (get-in r [:organs :out-of-band :judgment 0 :type])))
     (is (= [{:type :re-measures :to "live-prior"}] (:flight/links r)))))
 
+(deftest flight-opt-contract-is-symmetric
+  ;; the live-df706c45 step-read finding: warrant/verification needed
+  ;; pre-wrapping while neighbourhood/window arrived bare — the first
+  ;; stepping pilot tripped over the split. Both shapes must now work.
+  (testing "bare judgments get wrapped, grounds derived from their own content"
+    (let [r (compose {:flight {:warrant {:determined? true
+                                         :determined-by {:kind :standing-contract
+                                                         :ref "QUEUE.md#x"}}
+                               :verification {:holes [{:hole "l:1" :class :bounded-doable
+                                                       :evidence "- [ ] x"}]
+                                              :chosen-hole "l:1"}
+                               :window window-fixture}})]
+      (is (= :standing-contract (get-in r [:organs :warrant :judgment :determined-by :kind])))
+      (is (.contains ^String (get-in r [:organs :warrant :ground]) "QUEUE.md#x")
+          "warrant ground derived from the ref inside the judgment")
+      (is (= "l:1" (get-in r [:organs :verification :judgment :chosen-hole])))
+      (is (string? (get-in r [:organs :verification :ground])))
+      (is (= window-fixture (get-in r [:organs :window :judgment])))))
+  (testing "pre-wrapped cells pass through untouched (no double-wrap)"
+    (let [warrant-cell {:judgment {:determined? false :queued {:queue-ref "q#1"}}
+                        :ground "the queue entry itself"}
+          window-cell {:judgment window-fixture :ground "scans via poll p-1"}
+          r (compose {:flight {:warrant warrant-cell :window window-cell}})]
+      (is (= warrant-cell (get-in r [:organs :warrant])))
+      (is (= window-cell (get-in r [:organs :window])))))
+  (testing "pilot-synthesis warrant ground derives from the reasoning"
+    (let [r (compose {:flight {:warrant {:determined? true
+                                         :determined-by {:kind :pilot-synthesis
+                                                         :reasoning "wall blocks pairs AND substrate is the safe default"}}}})]
+      (is (.contains ^String (get-in r [:organs :warrant :ground]) "wall blocks pairs")))))
+
 (deftest fallback-class-derives-mechanically
   (let [r (compose {:realised-source :target-absent-fallback :realised -4.1})]
     (is (= :fallback (get-in r [:organs :measurement :judgment :class]))

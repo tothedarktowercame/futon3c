@@ -665,3 +665,27 @@ right to predict no-move while the constant misses. The discriminating
 shape the continuity-point witness (live-957a4836) lacked. The persisted
 <run-id>.flight.edn beside the γ frame is the evidence, run through
 scripts/flight_spec_verify.clj and belled to fable-1 with the seat-read.
+
+Checkpoint 13 (2026-06-12): the step-read's apparatus finding fixed — the
+:flight opt contract is now symmetric and documented. claude-3's stepping
+flight (live-df706c45, checkpoint 12) tripped the split contract: compose
+wrapped :neighbourhood/:window but required :warrant/:verification to
+arrive pre-wrapped, an undocumented asymmetry that cost the first
+stepping pilot a failed first verify. Fix: cellify — each of :warrant /
+:verification / :window accepts either the bare judgment (compose wraps,
+deriving the ground ONLY from content the judgment already carries: the
+ref for ref-kind warrants, the reasoning for :pilot-synthesis, the inline
+evidence lines for verification) or a pre-wrapped cell passed through
+untouched. Contract documented in the compose docstring. The stepping
+flight itself is the prize: an OFF-CONTINUITY NULL (ohc 4, clean :null,
+settled to 0.0) on which the state-sensitive model erred 7.65e-5 against
+the constant model's 0.0396 — ~517x — so a null at an off-continuity
+begin is the cheapest discriminating pair available under the clean-
+target wall (pattern mint = the pilot's, with live-df706c45 and
+live-957a4836 as the canonical contrast cases). And the loose begin
+window (3.4 min, a file-race re-prep) was flagged in the record's own
+window-ground and is checkable from :begin-at — the confound is data now,
+not a story; step 2 doing its job on its first live use. Gates: 9 tests /
+51 assertions; kondo 0/0; check-parens OK; Drawbridge reloaded; the
+stepped record re-verifies CONFORMS with mask IN. Next: exit 3, the
+render lane (bellable; claude-3 dispatches per single-dispatch-per-kind).
