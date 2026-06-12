@@ -225,3 +225,26 @@ hyperedge renderer (ellipse hubs per edge); cascades want level-ranked
 layout (rank=same per :level, direct context->pattern arrows, :via as
 edge labels). Polish item, queued — the DATA is certified, the
 projection needs work (two-projections-of-one-quantity, fittingly).
+
+## Sortie 7 — INSTANTIATE de-ghosted (17:05-17:18)
+
+The ghost took FOUR distinct fixes to lift, each a real corpus-general
+defect found by ground control's eyes:
+1. Detector: clean_title didn't strip letter-suffixed section numbers
+   ("5b.") → classified loose-section (futon6 fix, committed).
+2. Operator buffer predated the agent's disk edit (autosave-modified,
+   zero unique content) → lossless revert.
+3. Overlay marker drift: pre-revert overlays slid 32 lines on revert —
+   the Consequence chip wore the 5b title; C-c m o re-renders overlays,
+   never re-fetches.
+4. Full mission-mode rerun by the operator → eightfold-phase·instantiate
+   placed; ghost line gone. CONFIRMED by Joe: "it has finally showed up!"
+
+BULK-PASS ITEMS minted: (a) mission-mode refresh should
+revert-if-unmodified before placing overlays (two-pilot-seats
+discipline: agent edits disk, operator holds buffer); (b) overview
+should warn when overlays predate the last buffer revert; (c)
+synchronous fetch in refresh can wedge Emacs — needs async or timeout.
+
+INSTANTIATE now stands open in the mission, the overview, and the
+substrate, with the same content in all three.
