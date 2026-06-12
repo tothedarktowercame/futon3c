@@ -3,7 +3,12 @@
   "Bootstrap one WM flight record into the Arxana essay projection. Dry-run is
   the default; --write is intentionally double-gated for the operator step."
   (:require [clojure.pprint :as pp]
-            [futon3c.watcher.projections.flight :as flight]))
+            [babashka.http-client :as http]
+            [cheshire.core :as json]
+            [futon3c.watcher.projections.flight :as flight])
+  (:import (java.net URLEncoder)))
+
+(def futon1a-url (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def default-record
   "data/repl-traces/live-df706c45-d0b4-402a-9f0f-5222d42ab470.flight.edn")
@@ -35,6 +40,21 @@
    :sample-section (select-keys (first (:sections projection)) [:id :name :type])
    :sample-annotation (select-keys (first (:annotations projection)) [:id :hx-type :endpoints])})
 
+(defn- url-encode [s]
+  (URLEncoder/encode (str s) "UTF-8"))
+
+(defn- fetch-existing-entity [entity-id]
+  (let [resp (http/get (str futon1a-url "/api/alpha/entity/" (url-encode entity-id))
+                       {:headers {"Accept" "application/json"}
+                        :throw false})]
+    (when (= 200 (:status resp))
+      (:entity (json/parse-string (:body resp) true)))))
+
+(defn- annotation-doc [annotation base-props labels]
+  (-> annotation
+      (update :props #(merge base-props (or % {})))
+      (assoc :labels labels)))
+
 (defn ingest-projection!
   "Live substrate write. This is intentionally gated; do not call in reviews
   unless the operator has set FUTON3C_FLIGHT_INGEST_WRITE=1."
@@ -53,9 +73,10 @@
                     "essay/id" (get-in projection [:essay :id])}
         entities (cons (:essay projection) (:sections projection))]
     (doseq [entity entities]
-      (post-entity! entity labels))
+      (post-entity! (flight/merge-entity-for-upsert (fetch-existing-entity (:id entity)) entity)
+                    labels))
     (doseq [annotation (:annotations projection)]
-      (post-hyperedge-doc! annotation base-props labels))
+      (post-hyperedge-doc! (annotation-doc annotation base-props labels)))
     {:mode :write
      :entities (count entities)
      :annotations (count (:annotations projection))}))

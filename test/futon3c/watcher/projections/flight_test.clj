@@ -21,11 +21,26 @@
     (is (= "arxana/flight-organ-annotation" (:hx-type (first (:annotations projection)))))
     (is (= #{"annotated" "flight"}
            (set (map :role (:endpoints (first (:annotations projection)))))))
+    (is (every? :id (:endpoints (first (:annotations projection)))))
     (is (= "typed-sorry"
            (some (fn [section]
                    (when (= "warrant" (get-in section [:props :organ/key]))
                      (get-in section [:props :organ/state])))
                  (:sections projection))))))
+
+(deftest merge-entity-for-upsert-preserves-existing-props
+  (let [existing {:id "entity-1"
+                  :name "Existing"
+                  :type "arxana/essay"
+                  :props {:other-lane "keep" :flight/id "old"}}
+        projected {:id "entity-1"
+                   :name "Projected"
+                   :type "arxana/essay"
+                   :props {:flight/id "new" :section-count 13}}
+        merged (flight/merge-entity-for-upsert existing projected)]
+    (is (= "Projected" (:name merged)))
+    (is (= {:other-lane "keep" :flight/id "new" :section-count 13}
+           (:props merged)))))
 
 (deftest refuses-derivation-thin-record
   (testing "thin records are fallback-only, not canonical substrate writes"

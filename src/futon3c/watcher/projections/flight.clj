@@ -130,6 +130,19 @@
      {:ground (json-safe-value (:ground cell))
       :judgment (json-safe-value (:judgment cell))})))
 
+(defn merge-entity-for-upsert
+  "Merge a projected entity with an already-existing substrate entity before
+  POST /entity. futon1a entity upsert replaces props, so live ingest must write
+  the union instead of clobbering props added by another lane."
+  [existing projected]
+  (let [existing (or existing {})
+        existing-props (or (:props existing) {})
+        projected-props (or (:props projected) {})
+        merged (merge existing projected)
+        merged-props (merge existing-props projected-props)]
+    (cond-> merged
+      (seq merged-props) (assoc :props merged-props))))
+
 (defn project-record
   "Return the essay projection for an already-read, conforming flight record."
   [source-file record]
@@ -156,8 +169,8 @@
                                   cell (get-in record [:organs organ])]
                               {:id (str sid "/annotation/ground")
                                :hx-type "arxana/flight-organ-annotation"
-                               :endpoints [{:role "annotated" :entity-id sid}
-                                           {:role "flight" :entity-id eid}]
+                               :endpoints [{:role "annotated" :id sid}
+                                           {:role "flight" :id eid}]
                                :props (annotation-props flight-id organ cell)}))
                           organs)]
     {:essay {:id eid
