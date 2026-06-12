@@ -806,3 +806,22 @@ circumstances -> per-candidate cascades land in V-f1 tagged by sampler
 -> the R11 projection picks them up unchanged -> flight-stratification
 reads them. The contest is the data generator for the slot that is
 currently empty.
+
+Checkpoint 19 (2026-06-12): THE LIVE WRITE LANDED — and the operator's
+first touch found the gap every review missed, which is what the gate is
+for. Joe's CLI --write failed: the ingest chain (file-ingest ->
+mission-control-backend -> blackboard) opens RocksDB at LOAD time, and
+the serving JVM holds that store — so the write can only ever run inside
+the serving JVM (I-0 applies to writes), where an env var cannot be set.
+The dry-run never touches the chain and the CLI gate-refusal throws
+before the require, so no review path could surface it. Fix: the gate
+gained the house-idiom second form — an expiring operator sentinel
+(storage/futon0/flight-ingest-write.edn, {:until :by}, same shape as
+wm-operator-promote; unexpired-arms/expired-refuses/malformed-refuses
+all tested), and the write ran via Drawbridge inside the serving JVM
+under Joe's sentinel: {:mode :write :entities 14 :annotations 13}.
+Round-trip verified from the API: the essay entity and its organ
+sections are live in substrate-2 (e.g.
+arxana/essay/flight/live-df706c45.../organ/measurement). Exit 4 is now
+DONE in fact, not just gated. Remaining: exit 6 alone — the side-by-side,
+the Phase-A gate.
