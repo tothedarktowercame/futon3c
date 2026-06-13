@@ -64,6 +64,8 @@
   "DP: recognised but role-gap (amber).")
 (defface paper-anatomy-dp-unknown '((t :background "#fbdcdc" :underline "#b03030"))
   "DP: genuine unknown (red).")
+(defface paper-anatomy-dp-concept-typed '((t :background "#bfe8e0" :underline "#0d7a6e"))
+  "DP: role-gap resolved to a concept via the authority (teal).")
 
 (defun paper-anatomy--face (layer kind)
   (pcase layer
@@ -72,6 +74,7 @@
             ("classified" 'paper-anatomy-dp-classified)
             ("role-gap" 'paper-anatomy-dp-role-gap)
             ("unknown" 'paper-anatomy-dp-unknown)
+            ("concept-typed" 'paper-anatomy-dp-concept-typed)
             (_ 'paper-anatomy-dp-classified)))
     ("golden" (pcase kind
                 ("defined" 'paper-anatomy-defined)
@@ -241,12 +244,119 @@
           ((string-prefix-p "constrain" kind) 'paper-anatomy-block-constrain)
           (t 'paper-anatomy-block-math))))
 
+;;;; Capability dashboard — the Paper Blocks panel as MVC. The header shows
+;;;; which capabilities are demonstrated on THIS paper (✓), which can be
+;;;; toggled in (○ → RET reprocesses the paper into a gold for it), and which
+;;;; are not yet built (·).
+
+(defcustom paper-anatomy-futon6 "/home/joe/code/futon6"
+  "futon6 root, where the capability generators live."
+  :type 'directory :group 'paper-anatomy)
+
+(defvar paper-anatomy-capabilities
+  '((dp-classification
+     :label "math-lexeme classification"
+     :detect (:layer "dp" :kinds ("classified" "role-gap" "unknown" "concept-typed"))
+     :status :base)
+    (concept-typing
+     :label "role-gap → concept (NNexus/nLab)"
+     :detect (:layer "dp" :kinds ("concept-typed"))
+     :gen ("python3" "scripts/dp_paper_view.py" :base "--with-concept-authority")
+     :status :togglable)
+    (golden-scopes :label "scope anatomy (bind/constrain/mexpr)"
+                   :detect (:layer "base") :status :other-view)
+    (definienda :label "defined-in-paper"
+                :detect (:layer "golden" :kinds ("defined")) :status :other-view)
+    (canon-holes :label "canon holes"
+                 :detect (:layer "golden" :kinds ("hole")) :status :other-view)
+    (env-tex :label "TeX environments"
+             :detect (:layer "golden" :kinds ("envtex")) :status :other-view)
+    (latexml-deep :label "latexml deep parse" :status :not-yet)
+    (authored-layer :label "label/ref/cite harvest" :status :not-yet))
+  "Capabilities the paper-anatomy surface can demonstrate. Each entry:
+:label, optional :detect {:layer L :kinds (...)} predicate over the loaded
+marks, optional :gen generator (:base → the base paper id), and :status one
+of :base :togglable :other-view :not-yet.")
+
+(defun paper-anatomy--present-layer-kinds ()
+  "Hash-set of \"layer\" and \"layer/kind\" strings present in this buffer."
+  (let ((s (make-hash-table :test 'equal)))
+    (dolist (o (overlays-in (point-min) (point-max)))
+      (when-let ((m (overlay-get o 'paper-anatomy)))
+        (puthash (plist-get m :layer) t s)
+        (puthash (format "%s/%s" (plist-get m :layer) (plist-get m :kind)) t s)))
+    s))
+
+(defun paper-anatomy--capability-demonstrated-p (cap present)
+  (let* ((d (plist-get (cdr cap) :detect))
+         (layer (plist-get d :layer))
+         (kinds (plist-get d :kinds)))
+    (cond ((null d) nil)
+          (kinds (seq-some (lambda (k) (gethash (format "%s/%s" layer k) present)) kinds))
+          (t (gethash layer present)))))
+
+(defun paper-anatomy--base-paper ()
+  (replace-regexp-in-string "-dp\\'" "" (or paper-anatomy--paper "")))
+
+(defun paper-anatomy-toggle-capability (cap-id)
+  "Fold capability CAP-ID into this paper (the Controller): run its generator
+and reload, turning the paper into a gold demonstrating that capability."
+  (interactive
+   (list (intern (completing-read
+                  "Fold in capability: "
+                  (mapcar (lambda (c) (symbol-name (car c)))
+                          (seq-filter (lambda (c) (plist-get (cdr c) :gen))
+                                      paper-anatomy-capabilities))))))
+  (let* ((cap (assq cap-id paper-anatomy-capabilities))
+         (gen (plist-get (cdr cap) :gen))
+         (base (paper-anatomy--base-paper))
+         (args (mapcar (lambda (a) (if (eq a :base) base a)) (cdr gen)))
+         (default-directory paper-anatomy-futon6))
+    (message "paper-anatomy: folding in %s …" cap-id)
+    (let ((rc (apply #'call-process (car gen) nil "*paper-anatomy-gen*" nil args)))
+      (if (zerop rc)
+          (progn (paper-anatomy-open (format "%s-dp" base))
+                 (message "paper-anatomy: %s folded in — reloaded" cap-id))
+        (message "paper-anatomy: generator for %s failed (rc %s) — see *paper-anatomy-gen*"
+                 cap-id rc)))))
+
+(defun paper-anatomy--insert-capability-header (paper present)
+  "Insert the capability dashboard for PAPER given PRESENT layer/kind set."
+  (insert (propertize (format "CAPABILITIES · %s\n" paper) 'face 'bold))
+  (dolist (cap paper-anatomy-capabilities)
+    (let* ((id (car cap)) (pl (cdr cap))
+           (demoed (paper-anatomy--capability-demonstrated-p cap present))
+           (status (plist-get pl :status))
+           (mark (cond (demoed "✓")
+                       ((eq status :togglable) "○")
+                       ((eq status :not-yet) "·")
+                       (t "–")))
+           (face (cond (demoed 'success)
+                       ((eq status :togglable) 'warning)
+                       (t 'shadow))))
+      (insert (propertize (format " %s " mark) 'face face))
+      (if (and (not demoed) (plist-get pl :gen))
+          (insert-text-button (plist-get pl :label)
+                              'action (let ((cid id))
+                                        (lambda (_) (paper-anatomy-toggle-capability cid)))
+                              'help-echo "RET: fold this capability in (reprocess)")
+        (insert (propertize (plist-get pl :label) 'face (if demoed 'default 'shadow))))
+      (insert (cond (demoed "")
+                    ((eq status :togglable) "  [fold in]")
+                    ((eq status :not-yet) "  (not yet)")
+                    ((eq status :other-view) "  (other view)")
+                    (t "")))
+      (insert "\n")))
+  (insert (propertize "─────────────\n" 'face 'shadow)))
+
 (defvar-local paper-anatomy--panel-key nil)
 
 (defun paper-anatomy--panel-render ()
   "Render the block panel for the scopes at point (outermost first)."
   (let* ((src (current-buffer))
          (here (point))
+         (paper paper-anatomy--paper)
+         (present (paper-anatomy--present-layer-kinds))
          (ovs (seq-filter (lambda (o) (overlay-get o 'paper-anatomy))
                           (overlays-at here)))
          (near (seq-filter (lambda (o) (overlay-get o 'paper-anatomy))
@@ -261,6 +371,7 @@
           (let ((inhibit-read-only t))
             (erase-buffer)
             (special-mode)
+            (paper-anatomy--insert-capability-header paper present)
             (insert (propertize "AT POINT\n" 'face 'bold))
             (dolist (o (sort ovs (lambda (a b)
                                    (< (- (overlay-end b) (overlay-start b))
