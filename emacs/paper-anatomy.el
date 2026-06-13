@@ -157,13 +157,39 @@
            (layer (alist-get 'layer m))
            (kind (alist-get 'kind m)))
       (when (< start end)
-        (let ((ov (make-overlay start end)))
-          (overlay-put ov 'face (paper-anatomy--face layer kind))
+        (let* ((term-index (alist-get 'term-index m))
+               (ov (make-overlay start end))
+               (face (cond
+                      ((equal kind "definiendum")
+                       (list :foreground (paper-anatomy--graded-gray term-index)
+                             :weight 'bold))
+                      ((equal kind "definiens")
+                       (list :foreground (paper-anatomy--graded-gray term-index)
+                             :underline t))
+                      (t (paper-anatomy--face layer kind)))))
+          ;; definiendum/definiens sit ABOVE the blue Let scope
+          (when (member kind '("definiendum" "definiens"))
+            (overlay-put ov 'priority 50))
+          (overlay-put ov 'face face)
           (overlay-put ov 'paper-anatomy (list :layer layer :kind kind
+                                               :term-index term-index
                                                :tip (alist-get 'tip m)
                                                :fields (alist-get 'fields m)))
           (overlay-put ov 'help-echo
                        (format "[%s] %s" layer (alist-get 'tip m))))))))
+
+(defcustom paper-anatomy-definiendum-grays
+  '("gray95" "gray85" "gray75" "gray67" "gray60"
+    "gray54" "gray49" "gray45" "gray42" "gray40")
+  "Foreground grays for definienda/definiens, indexed by which defined term
+they are in the sentence (Joe's gray-gradient idea, readable on the dark
+blue Let scope). Set to (\"gray10\" \"gray20\" ...) for a light theme."
+  :type '(repeat color) :group 'paper-anatomy)
+
+(defun paper-anatomy--graded-gray (term-index)
+  "Gray for the TERM-INDEX-th defined term in a Let sentence."
+  (let ((i (mod (or term-index 0) (length paper-anatomy-definiendum-grays))))
+    (nth i paper-anatomy-definiendum-grays)))
 
 (defun paper-anatomy--apply-defects (paper)
   "Overlay minted proofread defects for PAPER — the learning loop, around
