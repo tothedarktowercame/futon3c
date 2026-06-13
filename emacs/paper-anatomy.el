@@ -73,6 +73,19 @@
 (defface paper-anatomy-dp-let-binder '((t :background "#2a4d9a" :foreground "#eef2ff" :weight bold))
   "DP: a Let-binder scope (dark blue, echoing mission-mode bind).")
 
+;; Proofread learning loop: a tagged defect is minted as a record; the fix
+;; discharges it; both are surfaced AROUND POINT here (Joe, 2026-06-13).
+(defcustom paper-anatomy-defects-dir "/home/joe/code/futon6/data/proofread-defects"
+  "Where the proofread learning-loop defect records live."
+  :type 'directory :group 'paper-anatomy)
+(defface paper-anatomy-defect-open
+  '((t :background "#7a1f1f" :foreground "#ffe0e0" :weight bold
+       :underline (:color "#ff7070" :style wave)))
+  "Proofread defect: open (⚑).")
+(defface paper-anatomy-defect-fixed
+  '((t :background "#165c3a" :foreground "#d6ffe8" :weight bold))
+  "Proofread defect: discharged by a fix (✓).")
+
 (defun paper-anatomy--face (layer kind)
   (pcase layer
     ("sub" 'paper-anatomy-sub)
@@ -83,6 +96,8 @@
             ("concept-typed" 'paper-anatomy-dp-concept-typed)
             ("let-binder" 'paper-anatomy-dp-let-binder)
             (_ 'paper-anatomy-dp-classified)))
+    ("defect" (if (equal kind "fixed") 'paper-anatomy-defect-fixed
+                'paper-anatomy-defect-open))
     ("golden" (pcase kind
                 ("defined" 'paper-anatomy-defined)
                 ("hole" 'paper-anatomy-hole)
@@ -121,7 +136,8 @@
         (erase-buffer)
         (insert text)
         (goto-char (point-min))
-        (paper-anatomy--apply-marks marks))
+        (paper-anatomy--apply-marks marks)
+        (paper-anatomy--apply-defects paper))
       (paper-anatomy-mode)
       (setq paper-anatomy--paper paper))
     (pop-to-buffer buf)))
@@ -149,6 +165,42 @@
           (overlay-put ov 'help-echo
                        (format "[%s] %s" layer (alist-get 'tip m))))))))
 
+(defun paper-anatomy--apply-defects (paper)
+  "Overlay minted proofread defects for PAPER — the learning loop, around
+point. Open defects flag red (⚑); discharged ones show green (✓) with the
+fix. Reads paper-anatomy-defects-dir/<paper>.edn."
+  (let ((file (expand-file-name (format "%s.edn" paper) paper-anatomy-defects-dir)))
+    (when (file-readable-p file)
+      (let* ((json-object-type 'alist) (json-array-type 'vector)
+             (defects (ignore-errors (json-read-file file))))
+        (dotimes (i (length defects))
+          (let* ((d (aref defects i))
+                 (pos (1+ (or (alist-get 'position d) 0)))
+                 (status (alist-get 'status d))
+                 (fix (alist-get 'fix d))
+                 (end (min (point-max)
+                           (save-excursion (goto-char (min pos (point-max)))
+                                           (line-end-position)))))
+            (when (and (> pos 0) (< pos end))
+              (let ((ov (make-overlay pos end)))
+                (overlay-put ov 'face (if (equal status "fixed")
+                                          'paper-anatomy-defect-fixed
+                                        'paper-anatomy-defect-open))
+                (overlay-put ov 'priority 100)
+                (overlay-put ov 'help-echo
+                             (format "%s %s%s" (if (equal status "fixed") "✓" "⚑")
+                                     (alist-get 'verdict d)
+                                     (if fix (concat " → " fix) "")))
+                (overlay-put ov 'paper-anatomy
+                             (list :layer "defect" :kind status
+                                   :tip (format "%s · %s"
+                                                (alist-get 'verdict d)
+                                                (or fix (alist-get 'note d) ""))
+                                   :fields (list (list "defect" (alist-get 'verdict d))
+                                                 (list "status" status)
+                                                 (list (if fix "fix" "want")
+                                                       (or fix (alist-get 'want d) "")))))))))))))
+
 ;;;###autoload
 (defun paper-anatomy-reload (&optional paper)
   "Refresh PAPER's overlays from its JSON IN PLACE — no window, point, or
@@ -166,13 +218,11 @@ text is unchanged (same paper); only marks are rebuilt."
                (data (json-read-file file))
                (marks (alist-get 'marks data)))
           (paper-anatomy--clear-overlays-buffer)
-          (paper-anatomy--apply-marks marks)))
-      ;; refresh the panel from wherever the operator's point already is,
-      ;; without selecting the window or moving point
-      (when-let ((win (get-buffer-window buf t)))
-        (with-selected-window win
-          (setq paper-anatomy--panel-key :force)
-          (ignore-errors (paper-anatomy--panel-render)))))
+          (paper-anatomy--apply-marks marks)
+          (paper-anatomy--apply-defects paper))
+        ;; force the panel to re-render on the operator's next cursor move —
+        ;; never select the window or move point ourselves (cursor-safe).
+        (setq paper-anatomy--panel-key :stale)))
     buf))
 
 (defun paper-anatomy--mark-at-point ()
@@ -283,7 +333,10 @@ text is unchanged (same paper); only marks are rebuilt."
 (defun paper-anatomy--block-face (meta)
   (let ((kind (plist-get meta :kind))
         (layer (plist-get meta :layer)))
-    (cond ((equal kind "hole") 'paper-anatomy-block-hole)
+    (cond ((equal layer "defect") (if (equal kind "fixed")
+                                       'paper-anatomy-block-golden
+                                     'paper-anatomy-block-hole))
+          ((equal kind "hole") 'paper-anatomy-block-hole)
           ((equal kind "let-binder") 'paper-anatomy-block-bind)
           ((equal layer "golden") 'paper-anatomy-block-golden)
           ((string-prefix-p "bind" kind) 'paper-anatomy-block-bind)
@@ -327,6 +380,10 @@ text is unchanged (same paper); only marks are rebuilt."
                  :detect (:layer "golden" :kinds ("hole")) :status :other-view)
     (env-tex :label "TeX environments"
              :detect (:layer "golden" :kinds ("envtex")) :status :other-view)
+    (proofread-loop
+     :label "proofread learning loop (defect → fix, minted)"
+     :detect (:layer "defect")
+     :status :base)
     (latexml-deep :label "latexml deep parse" :status :not-yet)
     (authored-layer :label "label/ref/cite harvest" :status :not-yet))
   "Capabilities the paper-anatomy surface can demonstrate. Each entry:
