@@ -74,6 +74,8 @@
   "DP: a Let-binder scope (dark blue, echoing mission-mode bind).")
 (defface paper-anatomy-dp-math '((t :box (:line-width (-1 . -1) :color "#6a7aa0")))
   "DP: a $...$ math scope envelope (boxed; RULE: every $-span is a scope).")
+(defface paper-anatomy-dp-symbol '((t :foreground "#a9c7ef" :weight bold))
+  "DP: a symbol inside a math scope (content; satisfies the hungry envelope).")
 
 ;; Proofread learning loop: a tagged defect is minted as a record; the fix
 ;; discharges it; both are surfaced AROUND POINT here (Joe, 2026-06-13).
@@ -98,6 +100,7 @@
             ("concept-typed" 'paper-anatomy-dp-concept-typed)
             ("let-binder" 'paper-anatomy-dp-let-binder)
             ("math" 'paper-anatomy-dp-math)
+            ("symbol" 'paper-anatomy-dp-symbol)
             (_ 'paper-anatomy-dp-classified)))
     ("defect" (if (equal kind "fixed") 'paper-anatomy-defect-fixed
                 'paper-anatomy-defect-open))
