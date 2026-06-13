@@ -7,7 +7,6 @@
 
    AtomBackend wraps a Clojure atom with {:entries {} :order []},
    providing the same CAS-based semantics as the original store.clj."
-  (:require [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]
            [java.time.format DateTimeParseException]))
 

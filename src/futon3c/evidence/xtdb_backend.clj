@@ -77,22 +77,18 @@
     (xtdb/await-tx node tx put-timeout)))
 
 (def ^:private query-timeout-ms
-  "Hard ceiling for the (currently unbounded) evidence scan, in ms.
-   MITIGATION ONLY (2026-06-13): -query pulls every entry with (pull e [*])
-   and filters/sorts/limits in application code, so even ?limit=1 scans the
-   whole corpus and, past a certain size, blows the default XTDB query
-   timeout — hanging a handler thread and 500ing callers (WM self-watch,
-   health checks). This bound makes the scan fail FAST and lets -query
-   degrade gracefully instead of wedging. The real fix is filter/order/limit
-   pushdown into datalog (handed to codex-1); remove this once that lands."
+  "Hard ceiling for evidence XTDB queries, in ms.
+   Defense-in-depth around the remaining unbounded paths (-all and broad
+   id scans): callers degrade rather than wedging handler threads if XTDB
+   stalls under load."
   (long (or (some-> (System/getProperty "futon3c.evidence.query-timeout-ms")
                     Long/parseLong)
             15000)))
 
 (defn- query-all-entries
   "Datalog query returning all evidence entries.
-   NOTE: full-corpus pull — see query-timeout-ms. Bounded so a slow scan
-   throws TimeoutException (caught in -query) rather than hanging the thread."
+   Used by -all only; -query uses query-entries so filters/order/limit are
+   pushed into XTDB before entity pulls."
   [node]
   (->> (xtdb/q (db node)
                {:find '[(pull e [*])]
@@ -100,6 +96,61 @@
                 :timeout query-timeout-ms})
        (map first)
        (map strip-xt-id)))
+
+(defn- add-eq-filter
+  [query-state attr value]
+  (let [v (symbol (str "v" (count (:args query-state))))]
+    (-> query-state
+        (update :where conj ['e attr v])
+        (update :in conj v)
+        (update :args conj value))))
+
+(defn- add-tag-filter
+  [query-state tag]
+  (let [v (symbol (str "v" (count (:args query-state))))]
+    (-> query-state
+        (update :where conj ['e :evidence/tags v])
+        (update :in conj v)
+        (update :args conj tag))))
+
+(defn- query-state
+  "Build the bounded XTDB query for -query.
+
+   Pushed into datalog: subject, type, claim-type, author, tag membership,
+   default ephemeral exclusion, order, and positive limit. `since` remains an
+   application-level filter so malformed timestamps keep the AtomBackend
+   fallback semantics. HTTP-only filters (session-id and pattern-id) are also
+   kept outside this backend; the HTTP handler already withholds :query/limit
+   from the backend and applies its limit after those filters, preventing the
+   classic push-limit-before-app-filter under-return."
+  [{:query/keys [subject type claim-type author include-ephemeral? tags limit]}]
+  (let [base {:where '[[e :evidence/id _]
+                       [e :evidence/at t]]
+              :in []
+              :args []}
+        base (if (true? include-ephemeral?)
+               base
+               (update base :where conj '(not [e :evidence/ephemeral? true])))
+        base (cond-> base
+               subject (add-eq-filter :evidence/subject subject)
+               type (add-eq-filter :evidence/type type)
+               claim-type (add-eq-filter :evidence/claim-type claim-type)
+               author (add-eq-filter :evidence/author author))
+        base (reduce add-tag-filter base (seq tags))
+        q (cond-> {:find '[e t]
+                   :where (:where base)
+                   :order-by '[[t :desc]]
+                   :timeout query-timeout-ms}
+            (seq (:in base)) (assoc :in (:in base))
+            (and (int? limit) (pos? limit)) (assoc :limit limit))]
+    {:query q :args (:args base)}))
+
+(defn- query-entries
+  "Return query entries newest-first while pulling only surviving ids."
+  [node params]
+  (let [{:keys [query args]} (query-state params)
+        ids (map first (apply xtdb/q (db node) query args))]
+    (keep #(entity node %) ids)))
 
 (defrecord XtdbBackend [node]
   backend/EvidenceBackend
@@ -137,13 +188,14 @@
 
   (-query [_ params]
     (try
-      (let [entries (query-all-entries node)]
+      (let [entries (query-entries node params)]
+        ;; Final pass preserves shared AtomBackend semantics for app-level
+        ;; filters such as :query/since and malformed timestamp fallback.
         (backend/filter-and-sort-entries entries params))
       (catch java.util.concurrent.TimeoutException _
         (binding [*out* *err*]
-          (println (str "[evidence] WARN query-all-entries timed out after "
+          (println (str "[evidence] WARN XTDB evidence query timed out after "
                         query-timeout-ms "ms — degraded to empty result. "
-                        "Full-corpus scan needs datalog pushdown (codex-1). "
                         "params=" (pr-str params))))
         [])))
 

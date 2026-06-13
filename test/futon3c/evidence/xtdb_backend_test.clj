@@ -134,6 +134,40 @@
     (let [xs (backend/-query *backend* {:query/limit 2})]
       (is (= 2 (count xs))))))
 
+(deftest query-with-limit-and-type-uses-pushdown
+  (testing "limit is pushed after type filtering, not before it"
+    (append! (fix/make-evidence-entry {:evidence/id "new-wrong"
+                                       :evidence/type :presence-event
+                                       :evidence/at (str (Instant/ofEpochMilli 4000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "new-match"
+                                       :evidence/type :reflection
+                                       :evidence/at (str (Instant/ofEpochMilli 3000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "old-match"
+                                       :evidence/type :reflection
+                                       :evidence/at (str (Instant/ofEpochMilli 2000))}))
+    (with-redefs-fn {#'futon3c.evidence.xtdb-backend/query-all-entries
+                     (fn [_]
+                       (throw (ex-info "full scan should not be used by -query" {})))}
+      (fn []
+        (let [xs (backend/-query *backend* {:query/type :reflection
+                                            :query/limit 1})]
+          (is (= ["new-match"] (mapv :evidence/id xs))))))))
+
+(deftest query-with-limit-and-tags-does-not-under-return
+  (testing "tag membership is pushed before limit"
+    (append! (fix/make-evidence-entry {:evidence/id "new-wrong"
+                                       :evidence/tags [:other]
+                                       :evidence/at (str (Instant/ofEpochMilli 4000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "new-match"
+                                       :evidence/tags [:mission :backfill]
+                                       :evidence/at (str (Instant/ofEpochMilli 3000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "old-match"
+                                       :evidence/tags [:mission :backfill]
+                                       :evidence/at (str (Instant/ofEpochMilli 2000))}))
+    (let [xs (backend/-query *backend* {:query/tags [:mission :backfill]
+                                        :query/limit 1})]
+      (is (= ["new-match"] (mapv :evidence/id xs))))))
+
 (deftest query-filters-by-since
   (testing "-query filters by since timestamp"
     (append! (fix/make-evidence-entry {:evidence/id "e1" :evidence/at (str (Instant/ofEpochMilli 1000))}))

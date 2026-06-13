@@ -124,6 +124,21 @@
     (let [xs (backend/-query *backend* {:query/limit 2})]
       (is (= 2 (count xs))))))
 
+(deftest query-with-limit-and-type-does-not-under-return
+  (testing "limit is applied after type filtering"
+    (append! (fix/make-evidence-entry {:evidence/id "new-wrong"
+                                       :evidence/type :presence-event
+                                       :evidence/at (str (Instant/ofEpochMilli 4000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "new-match"
+                                       :evidence/type :reflection
+                                       :evidence/at (str (Instant/ofEpochMilli 3000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "old-match"
+                                       :evidence/type :reflection
+                                       :evidence/at (str (Instant/ofEpochMilli 2000))}))
+    (let [xs (backend/-query *backend* {:query/type :reflection
+                                        :query/limit 1})]
+      (is (= ["new-match"] (mapv :evidence/id xs))))))
+
 (deftest query-filters-by-tags
   (testing "-query filters by tags (AND semantics)"
     (append! (fix/make-evidence-entry {:evidence/id "e1" :evidence/tags [:mission :backfill]}))
