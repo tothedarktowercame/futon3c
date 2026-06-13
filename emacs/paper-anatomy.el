@@ -502,6 +502,25 @@ and reload, turning the paper into a gold demonstrating that capability."
 
 (defvar-local paper-anatomy--panel-key nil)
 
+(defun paper-anatomy--sentence-bounds ()
+  "Return (BEG . END) of the sentence at point, split on \". \" (the English
+period — same convention as the scope clamp; Joe: scope per sentence, not per
+line, because one source line wraps several sentences). Bounded to the
+surrounding paragraph so it never runs across the whole buffer."
+  (save-excursion
+    (let* ((here (point))
+           (lim-beg (save-excursion (backward-paragraph) (point)))
+           (lim-end (save-excursion (forward-paragraph) (point)))
+           (beg (or (save-excursion
+                      (goto-char here)
+                      (when (search-backward ". " lim-beg t) (+ (point) 2)))
+                    lim-beg))
+           (end (or (save-excursion
+                      (goto-char here)
+                      (when (search-forward ". " lim-end t) (1- (point))))
+                    lim-end)))
+      (cons (min beg here) (max end here)))))
+
 (defun paper-anatomy--panel-render ()
   "Render the block panel for the scopes at point (outermost first)."
   (let* ((src (current-buffer))
@@ -510,9 +529,9 @@ and reload, turning the paper into a gold demonstrating that capability."
          (present (paper-anatomy--present-layer-kinds))
          (ovs (seq-filter (lambda (o) (overlay-get o 'paper-anatomy))
                           (overlays-at here)))
+         (sb (paper-anatomy--sentence-bounds))
          (near (seq-filter (lambda (o) (overlay-get o 'paper-anatomy))
-                           (overlays-in (line-beginning-position)
-                                        (line-end-position))))
+                           (overlays-in (car sb) (cdr sb))))
          (key (mapcar #'overlay-start (append ovs near))))
     (unless (equal key paper-anatomy--panel-key)
       (setq paper-anatomy--panel-key key)
@@ -534,7 +553,7 @@ and reload, turning the paper into a gold demonstrating that capability."
                 (paper-anatomy--insert-block
                  o src (paper-anatomy--nesting-depth o sorted))))
             (when (cl-set-difference near ovs)
-              (insert (propertize "\nTHIS LINE\n" 'face 'bold))
+              (insert (propertize "\nTHIS SENTENCE\n" 'face 'bold))
               (dolist (o (cl-set-difference near ovs))
                 (paper-anatomy--insert-block o src 0)))))
         (display-buffer buf '((display-buffer-in-side-window)
