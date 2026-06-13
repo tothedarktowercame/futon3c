@@ -55,9 +55,24 @@
 (defface paper-anatomy-envtex '((t :background "#e4ecf4" :underline "#1d3a4d"))
   "golden: real TeX environment head.")
 
+;; DP-run classification overlay (M-distributed-proofreaders): each control
+;; sequence in a math span coloured by its current classification.
+(defface paper-anatomy-dp-classified '((t :background "#d3f3df"))
+  "DP: recognised + role-typed (green).")
+(defface paper-anatomy-dp-role-gap
+  '((t :background "#fdf3d7" :underline (:color "#9a7b1a" :style wave)))
+  "DP: recognised but role-gap (amber).")
+(defface paper-anatomy-dp-unknown '((t :background "#fbdcdc" :underline "#b03030"))
+  "DP: genuine unknown (red).")
+
 (defun paper-anatomy--face (layer kind)
   (pcase layer
     ("sub" 'paper-anatomy-sub)
+    ("dp" (pcase kind
+            ("classified" 'paper-anatomy-dp-classified)
+            ("role-gap" 'paper-anatomy-dp-role-gap)
+            ("unknown" 'paper-anatomy-dp-unknown)
+            (_ 'paper-anatomy-dp-classified)))
     ("golden" (pcase kind
                 ("defined" 'paper-anatomy-defined)
                 ("hole" 'paper-anatomy-hole)
