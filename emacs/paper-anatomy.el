@@ -117,30 +117,63 @@
          (buf (get-buffer-create (format "*Paper Anatomy: %s*" paper))))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
-        ;; clear prior anatomy overlays so reloads replace, not accumulate
-        (remove-overlays (point-min) (point-max) 'paper-anatomy nil)
-        (dolist (o (overlays-in (point-min) (point-max)))
-          (when (overlay-get o 'paper-anatomy) (delete-overlay o)))
+        (paper-anatomy--clear-overlays-buffer)
         (erase-buffer)
         (insert text)
         (goto-char (point-min))
-        (dotimes (i (length marks))
-          (let* ((m (aref marks i))
-                 (start (1+ (alist-get 'start m)))
-                 (end (min (point-max) (1+ (alist-get 'end m))))
-                 (layer (alist-get 'layer m))
-                 (kind (alist-get 'kind m)))
-            (when (< start end)
-              (let ((ov (make-overlay start end)))
-                (overlay-put ov 'face (paper-anatomy--face layer kind))
-                (overlay-put ov 'paper-anatomy (list :layer layer :kind kind
-                                                     :tip (alist-get 'tip m)
-                                                     :fields (alist-get 'fields m)))
-                (overlay-put ov 'help-echo
-                             (format "[%s] %s" layer (alist-get 'tip m))))))))
+        (paper-anatomy--apply-marks marks))
       (paper-anatomy-mode)
       (setq paper-anatomy--paper paper))
     (pop-to-buffer buf)))
+
+(defun paper-anatomy--clear-overlays-buffer ()
+  "Delete all paper-anatomy overlays in the current buffer."
+  (remove-overlays (point-min) (point-max) 'paper-anatomy nil)
+  (dolist (o (overlays-in (point-min) (point-max)))
+    (when (overlay-get o 'paper-anatomy) (delete-overlay o))))
+
+(defun paper-anatomy--apply-marks (marks)
+  "Build overlays from MARKS (vector of alists) over the current buffer text."
+  (dotimes (i (length marks))
+    (let* ((m (aref marks i))
+           (start (1+ (alist-get 'start m)))
+           (end (min (point-max) (1+ (alist-get 'end m))))
+           (layer (alist-get 'layer m))
+           (kind (alist-get 'kind m)))
+      (when (< start end)
+        (let ((ov (make-overlay start end)))
+          (overlay-put ov 'face (paper-anatomy--face layer kind))
+          (overlay-put ov 'paper-anatomy (list :layer layer :kind kind
+                                               :tip (alist-get 'tip m)
+                                               :fields (alist-get 'fields m)))
+          (overlay-put ov 'help-echo
+                       (format "[%s] %s" layer (alist-get 'tip m))))))))
+
+;;;###autoload
+(defun paper-anatomy-reload (&optional paper)
+  "Refresh PAPER's overlays from its JSON IN PLACE — no window, point, or
+text hijack. Use this (not paper-anatomy-open) for capability folds and
+agent-driven reloads: the operator's cursor is never moved. Assumes the
+text is unchanged (same paper); only marks are rebuilt."
+  (interactive)
+  (let* ((paper (or paper paper-anatomy--paper))
+         (buf (and paper (get-buffer (format "*Paper Anatomy: %s*" paper)))))
+    (when buf
+      (with-current-buffer buf
+        (let* ((file (expand-file-name (format "fable-%s-emacs.json" paper)
+                                       paper-anatomy-dir))
+               (json-object-type 'alist)
+               (data (json-read-file file))
+               (marks (alist-get 'marks data)))
+          (paper-anatomy--clear-overlays-buffer)
+          (paper-anatomy--apply-marks marks)))
+      ;; refresh the panel from wherever the operator's point already is,
+      ;; without selecting the window or moving point
+      (when-let ((win (get-buffer-window buf t)))
+        (with-selected-window win
+          (setq paper-anatomy--panel-key :force)
+          (ignore-errors (paper-anatomy--panel-render)))))
+    buf))
 
 (defun paper-anatomy--mark-at-point ()
   (seq-find (lambda (ov) (overlay-get ov 'paper-anatomy))
@@ -338,8 +371,8 @@ and reload, turning the paper into a gold demonstrating that capability."
     (message "paper-anatomy: folding in %s …" cap-id)
     (let ((rc (apply #'call-process (car gen) nil "*paper-anatomy-gen*" nil args)))
       (if (zerop rc)
-          (progn (paper-anatomy-open (format "%s-dp" base))
-                 (message "paper-anatomy: %s folded in — reloaded" cap-id))
+          (progn (paper-anatomy-reload (format "%s-dp" base))
+                 (message "paper-anatomy: %s folded in — reloaded (cursor kept)" cap-id))
         (message "paper-anatomy: generator for %s failed (rc %s) — see *paper-anatomy-gen*"
                  cap-id rc)))))
 
