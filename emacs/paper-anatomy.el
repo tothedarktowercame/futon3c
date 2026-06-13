@@ -74,8 +74,10 @@
   "DP: a Let-binder scope (dark blue, echoing mission-mode bind).")
 (defface paper-anatomy-dp-math '((t :box (:line-width (-1 . -1) :color "#6a7aa0")))
   "DP: a $...$ math scope envelope (boxed; RULE: every $-span is a scope).")
-(defface paper-anatomy-dp-symbol '((t :foreground "#a9c7ef" :weight bold))
-  "DP: a symbol inside a math scope (content; satisfies the hungry envelope).")
+(defface paper-anatomy-dp-symbol '((t :foreground "#8893a8" :slant italic))
+  "DP: an UNGROUNDED symbol inside math (content present, grounding owed).")
+(defface paper-anatomy-dp-symbol-grounded '((t :foreground "#7fd6b0" :weight bold))
+  "DP: a symbol GROUNDED to its binder (e.g. H : Hopf algebra) — debt paid.")
 
 ;; Proofread learning loop: a tagged defect is minted as a record; the fix
 ;; discharges it; both are surfaced AROUND POINT here (Joe, 2026-06-13).
@@ -101,6 +103,7 @@
             ("let-binder" 'paper-anatomy-dp-let-binder)
             ("math" 'paper-anatomy-dp-math)
             ("symbol" 'paper-anatomy-dp-symbol)
+            ("symbol-grounded" 'paper-anatomy-dp-symbol-grounded)
             (_ 'paper-anatomy-dp-classified)))
     ("defect" (if (equal kind "fixed") 'paper-anatomy-defect-fixed
                 'paper-anatomy-defect-open))
