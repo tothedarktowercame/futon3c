@@ -126,7 +126,8 @@
               (let ((ov (make-overlay start end)))
                 (overlay-put ov 'face (paper-anatomy--face layer kind))
                 (overlay-put ov 'paper-anatomy (list :layer layer :kind kind
-                                                     :tip (alist-get 'tip m)))
+                                                     :tip (alist-get 'tip m)
+                                                     :fields (alist-get 'fields m)))
                 (overlay-put ov 'help-echo
                              (format "[%s] %s" layer (alist-get 'tip m))))))))
       (paper-anatomy-mode)
@@ -242,6 +243,7 @@
   (let ((kind (plist-get meta :kind))
         (layer (plist-get meta :layer)))
     (cond ((equal kind "hole") 'paper-anatomy-block-hole)
+          ((equal kind "let-binder") 'paper-anatomy-block-bind)
           ((equal layer "golden") 'paper-anatomy-block-golden)
           ((string-prefix-p "bind" kind) 'paper-anatomy-block-bind)
           ((string-prefix-p "constrain" kind) 'paper-anatomy-block-constrain)
@@ -410,11 +412,21 @@ and reload, turning the paper into a gold demonstrating that capability."
                            (when w (select-window w) (goto-char start))))
      'help-echo (plist-get meta :tip))
     (insert "\n")
-    (let ((tip (plist-get meta :tip)))
-      (when (and tip (not (equal tip kind)))
+    (let ((fields (plist-get meta :fields))
+          (tip (plist-get meta :tip)))
+      (cond
+       ;; Scratch-style nested fields (mission-mode idiom): label · value.
+       (fields
+        (dolist (f (append fields nil))
+          (let ((label (elt f 0)) (val (elt f 1)))
+            (insert (propertize (format "    %-7s " label) 'face 'shadow)
+                    (propertize (truncate-string-to-width (format "%s" val) 34)
+                                'face 'default)
+                    "\n"))))
+       ((and tip (not (equal tip kind)))
         (insert (propertize (format "   %s\n"
                                     (truncate-string-to-width tip 42))
-                            'face 'shadow))))))
+                            'face 'shadow)))))))
 
 (defun paper-anatomy--panel-post-command ()
   (when (derived-mode-p 'paper-anatomy-mode)
