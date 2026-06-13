@@ -66,6 +66,8 @@
   "DP: genuine unknown (red).")
 (defface paper-anatomy-dp-concept-typed '((t :background "#bfe8e0" :underline "#0d7a6e"))
   "DP: role-gap resolved to a concept via the authority (teal).")
+(defface paper-anatomy-dp-let-binder '((t :background "#dde7fb" :underline "#2a4d9a" :weight bold))
+  "DP: a Let-binder scope (blue, echoing mission-mode bind).")
 
 (defun paper-anatomy--face (layer kind)
   (pcase layer
@@ -75,6 +77,7 @@
             ("role-gap" 'paper-anatomy-dp-role-gap)
             ("unknown" 'paper-anatomy-dp-unknown)
             ("concept-typed" 'paper-anatomy-dp-concept-typed)
+            ("let-binder" 'paper-anatomy-dp-let-binder)
             (_ 'paper-anatomy-dp-classified)))
     ("golden" (pcase kind
                 ("defined" 'paper-anatomy-defined)
@@ -262,6 +265,11 @@
      :label "role-gap → concept (NNexus/nLab)"
      :detect (:layer "dp" :kinds ("concept-typed"))
      :gen ("python3" "scripts/dp_paper_view.py" :base "--with-concept-authority")
+     :status :togglable)
+    (let-binders
+     :label "Let-binder scopes (Let $X$ be a …)"
+     :detect (:layer "dp" :kinds ("let-binder"))
+     :gen ("python3" "scripts/dp_paper_view.py" :base "--with-binders" "--with-concept-authority")
      :status :togglable)
     (golden-scopes :label "scope anatomy (bind/constrain/mexpr)"
                    :detect (:layer "base") :status :other-view)
