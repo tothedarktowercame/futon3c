@@ -37,37 +37,41 @@
   "Where proofreading tags land — the futon-look channel."
   :type 'file :group 'paper-anatomy)
 
-(defface paper-anatomy-bind '((t :background "#dde7fb" :underline "#2a4d9a"))
+;; Dark scheme — matches the *Paper Blocks* chip palette (dark bg, light fg)
+;; so overlays read well on a dark Emacs theme.
+(defface paper-anatomy-bind '((t :background "#2a4d9a" :foreground "#eef2ff"))
   "bind/* scopes.")
-(defface paper-anatomy-constrain '((t :background "#efe3f7" :underline "#7a3ba8"))
+(defface paper-anatomy-constrain '((t :background "#7a3ba8" :foreground "#f6eefc"))
   "constrain/* scopes.")
-(defface paper-anatomy-quant '((t :background "#e3eef7" :underline "#1a6a9a"))
+(defface paper-anatomy-quant '((t :background "#1a6a9a" :foreground "#eaf6ff"))
   "quant/* + assume/* scopes.")
-(defface paper-anatomy-mexpr '((t :background "#eef0f7"))
+(defface paper-anatomy-mexpr '((t :background "#46506b" :foreground "#e8e8f0"))
   "math expression envelopes.")
-(defface paper-anatomy-sub '((t :foreground "#7851a9" :weight bold))
+(defface paper-anatomy-sub '((t :foreground "#c9a8ff" :weight bold))
   "math subterms.")
-(defface paper-anatomy-defined '((t :background "#d3f3df" :underline "#0f766e"))
+(defface paper-anatomy-defined '((t :background "#0f766e" :foreground "#e8fff8"))
   "golden: defined-in-paper.")
 (defface paper-anatomy-hole
-  '((t :background "#fdf3d7" :underline (:color "#9a7b1a" :style wave)))
+  '((t :background "#8a6d12" :foreground "#fff8e0"
+       :underline (:color "#d8b020" :style wave)))
   "golden: needs canon link.")
-(defface paper-anatomy-envtex '((t :background "#e4ecf4" :underline "#1d3a4d"))
+(defface paper-anatomy-envtex '((t :background "#1d3a4d" :foreground "#e0eef6"))
   "golden: real TeX environment head.")
 
 ;; DP-run classification overlay (M-distributed-proofreaders): each control
 ;; sequence in a math span coloured by its current classification.
-(defface paper-anatomy-dp-classified '((t :background "#d3f3df"))
-  "DP: recognised + role-typed (green).")
+(defface paper-anatomy-dp-classified '((t :background "#1f6f4a" :foreground "#e6fff0"))
+  "DP: recognised + role-typed (dark green).")
 (defface paper-anatomy-dp-role-gap
-  '((t :background "#fdf3d7" :underline (:color "#9a7b1a" :style wave)))
-  "DP: recognised but role-gap (amber).")
-(defface paper-anatomy-dp-unknown '((t :background "#fbdcdc" :underline "#b03030"))
-  "DP: genuine unknown (red).")
-(defface paper-anatomy-dp-concept-typed '((t :background "#bfe8e0" :underline "#0d7a6e"))
-  "DP: role-gap resolved to a concept via the authority (teal).")
-(defface paper-anatomy-dp-let-binder '((t :background "#dde7fb" :underline "#2a4d9a" :weight bold))
-  "DP: a Let-binder scope (blue, echoing mission-mode bind).")
+  '((t :background "#8a6d12" :foreground "#fff8e0"
+       :underline (:color "#d8b020" :style wave)))
+  "DP: recognised but role-gap (dark amber).")
+(defface paper-anatomy-dp-unknown '((t :background "#8a2f2f" :foreground "#ffe6e6"))
+  "DP: genuine unknown (dark red).")
+(defface paper-anatomy-dp-concept-typed '((t :background "#0d7a6e" :foreground "#e6fffb"))
+  "DP: role-gap resolved to a concept via the authority (dark teal).")
+(defface paper-anatomy-dp-let-binder '((t :background "#2a4d9a" :foreground "#eef2ff" :weight bold))
+  "DP: a Let-binder scope (dark blue, echoing mission-mode bind).")
 
 (defun paper-anatomy--face (layer kind)
   (pcase layer
@@ -392,27 +396,47 @@ and reload, turning the paper into a gold demonstrating that capability."
             (special-mode)
             (paper-anatomy--insert-capability-header paper present)
             (insert (propertize "AT POINT\n" 'face 'bold))
-            (dolist (o (sort ovs (lambda (a b)
-                                   (< (- (overlay-end b) (overlay-start b))
-                                      (- (overlay-end a) (overlay-start a))))))
-              (paper-anatomy--insert-block o src))
+            ;; outermost first; indent each by how many others strictly contain it
+            (let ((sorted (sort (copy-sequence ovs)
+                                (lambda (a b)
+                                  (or (< (overlay-start a) (overlay-start b))
+                                      (and (= (overlay-start a) (overlay-start b))
+                                           (> (overlay-end a) (overlay-end b))))))))
+              (dolist (o sorted)
+                (paper-anatomy--insert-block
+                 o src (paper-anatomy--nesting-depth o sorted))))
             (when (cl-set-difference near ovs)
               (insert (propertize "\nTHIS LINE\n" 'face 'bold))
               (dolist (o (cl-set-difference near ovs))
-                (paper-anatomy--insert-block o src)))))
+                (paper-anatomy--insert-block o src 0)))))
         (display-buffer buf '((display-buffer-in-side-window)
                               (side . right) (window-width . 46)
                               (inhibit-same-window . t)))))))
 
-(defun paper-anatomy--insert-block (o src)
+(defun paper-anatomy--nesting-depth (o others)
+  "Number of overlays in OTHERS that strictly contain O."
+  (cl-count-if
+   (lambda (x)
+     (and (not (eq x o))
+          (<= (overlay-start x) (overlay-start o))
+          (>= (overlay-end x) (overlay-end o))
+          (or (< (overlay-start x) (overlay-start o))
+              (> (overlay-end x) (overlay-end o)))))
+   others))
+
+(defun paper-anatomy--insert-block (o src &optional depth)
   (let* ((meta (overlay-get o 'paper-anatomy))
          (kind (plist-get meta :kind))
+         (depth (or depth 0))
+         (indent (make-string (* 2 depth) ?\s))
+         (tree (if (> depth 0) "└ " ""))
          (span (with-current-buffer src
                  (buffer-substring-no-properties
                   (overlay-start o)
                   (min (overlay-end o) (+ (overlay-start o) 120)))))
          (start (overlay-start o)))
-    (insert (propertize (format " %s " kind)
+    (insert indent (propertize tree 'face 'shadow)
+            (propertize (format " %s " kind)
                         'face (paper-anatomy--block-face meta))
             " ")
     (insert-text-button
@@ -428,12 +452,14 @@ and reload, turning the paper into a gold demonstrating that capability."
        (fields
         (dolist (f (append fields nil))
           (let ((label (elt f 0)) (val (elt f 1)))
-            (insert (propertize (format "    %-7s " label) 'face 'shadow)
+            (insert indent
+                    (propertize (format "    %-7s " label) 'face 'shadow)
                     (propertize (truncate-string-to-width (format "%s" val) 34)
                                 'face 'default)
                     "\n"))))
        ((and tip (not (equal tip kind)))
-        (insert (propertize (format "   %s\n"
+        (insert indent
+                (propertize (format "   %s\n"
                                     (truncate-string-to-width tip 42))
                             'face 'shadow)))))))
 
