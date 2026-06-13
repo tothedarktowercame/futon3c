@@ -113,6 +113,10 @@
          (buf (get-buffer-create (format "*Paper Anatomy: %s*" paper))))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
+        ;; clear prior anatomy overlays so reloads replace, not accumulate
+        (remove-overlays (point-min) (point-max) 'paper-anatomy nil)
+        (dolist (o (overlays-in (point-min) (point-max)))
+          (when (overlay-get o 'paper-anatomy) (delete-overlay o)))
         (erase-buffer)
         (insert text)
         (goto-char (point-min))
@@ -272,6 +276,11 @@
      :label "Let-binder scopes (Let $X$ be a …)"
      :detect (:layer "dp" :kinds ("let-binder"))
      :gen ("python3" "scripts/dp_paper_view.py" :base "--with-binders" "--with-concept-authority")
+     :status :togglable)
+    (scope-manifest
+     :label "superpod scope manifest (40-type detector)"
+     :detect (:layer "scope")
+     :gen ("python3" "scripts/dp_paper_view.py" :base "--with-scopes" "--with-concept-authority")
      :status :togglable)
     (golden-scopes :label "scope anatomy (bind/constrain/mexpr)"
                    :detect (:layer "base") :status :other-view)
