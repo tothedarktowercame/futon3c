@@ -72,6 +72,8 @@
   "DP: role-gap resolved to a concept via the authority (dark teal).")
 (defface paper-anatomy-dp-let-binder '((t :background "#2a4d9a" :foreground "#eef2ff" :weight bold))
   "DP: a Let-binder scope (dark blue, echoing mission-mode bind).")
+(defface paper-anatomy-dp-math '((t :box (:line-width (-1 . -1) :color "#6a7aa0")))
+  "DP: a $...$ math scope envelope (boxed; RULE: every $-span is a scope).")
 
 ;; Proofread learning loop: a tagged defect is minted as a record; the fix
 ;; discharges it; both are surfaced AROUND POINT here (Joe, 2026-06-13).
@@ -95,6 +97,7 @@
             ("unknown" 'paper-anatomy-dp-unknown)
             ("concept-typed" 'paper-anatomy-dp-concept-typed)
             ("let-binder" 'paper-anatomy-dp-let-binder)
+            ("math" 'paper-anatomy-dp-math)
             (_ 'paper-anatomy-dp-classified)))
     ("defect" (if (equal kind "fixed") 'paper-anatomy-defect-fixed
                 'paper-anatomy-defect-open))
@@ -167,9 +170,12 @@
                        (list :foreground (paper-anatomy--graded-gray term-index)
                              :underline t))
                       (t (paper-anatomy--face layer kind)))))
-          ;; definiendum/definiens sit ABOVE the blue Let scope
-          (when (member kind '("definiendum" "definiens"))
-            (overlay-put ov 'priority 50))
+          ;; definiendum/definiens sit ABOVE the blue Let scope; the math
+          ;; envelope sits BELOW the inner token marks (it's the boxed span)
+          (cond ((member kind '("definiendum" "definiens"))
+                 (overlay-put ov 'priority 50))
+                ((equal kind "math")
+                 (overlay-put ov 'priority -10)))
           (overlay-put ov 'face face)
           (overlay-put ov 'paper-anatomy (list :layer layer :kind kind
                                                :term-index term-index
