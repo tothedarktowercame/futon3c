@@ -76,12 +76,28 @@
         tx (xtdb/submit-tx node tx-ops)]
     (xtdb/await-tx node tx put-timeout)))
 
+(def ^:private query-timeout-ms
+  "Hard ceiling for the (currently unbounded) evidence scan, in ms.
+   MITIGATION ONLY (2026-06-13): -query pulls every entry with (pull e [*])
+   and filters/sorts/limits in application code, so even ?limit=1 scans the
+   whole corpus and, past a certain size, blows the default XTDB query
+   timeout — hanging a handler thread and 500ing callers (WM self-watch,
+   health checks). This bound makes the scan fail FAST and lets -query
+   degrade gracefully instead of wedging. The real fix is filter/order/limit
+   pushdown into datalog (handed to codex-1); remove this once that lands."
+  (long (or (some-> (System/getProperty "futon3c.evidence.query-timeout-ms")
+                    Long/parseLong)
+            15000)))
+
 (defn- query-all-entries
-  "Datalog query returning all evidence entries."
+  "Datalog query returning all evidence entries.
+   NOTE: full-corpus pull — see query-timeout-ms. Bounded so a slow scan
+   throws TimeoutException (caught in -query) rather than hanging the thread."
   [node]
   (->> (xtdb/q (db node)
-               '{:find [(pull e [*])]
-                 :where [[e :evidence/id _]]})
+               {:find '[(pull e [*])]
+                :where '[[e :evidence/id _]]
+                :timeout query-timeout-ms})
        (map first)
        (map strip-xt-id)))
 
@@ -120,8 +136,16 @@
     (entity-exists? node id))
 
   (-query [_ params]
-    (let [entries (query-all-entries node)]
-      (backend/filter-and-sort-entries entries params)))
+    (try
+      (let [entries (query-all-entries node)]
+        (backend/filter-and-sort-entries entries params))
+      (catch java.util.concurrent.TimeoutException _
+        (binding [*out* *err*]
+          (println (str "[evidence] WARN query-all-entries timed out after "
+                        query-timeout-ms "ms — degraded to empty result. "
+                        "Full-corpus scan needs datalog pushdown (codex-1). "
+                        "params=" (pr-str params))))
+        [])))
 
   (-forks-of [_ evidence-id]
     (let [results (->> (xtdb/q (db node)
