@@ -78,6 +78,12 @@
   "DP: an UNGROUNDED symbol inside math (content present, grounding owed).")
 (defface paper-anatomy-dp-symbol-grounded '((t :foreground "#7fd6b0" :weight bold))
   "DP: a symbol GROUNDED to its binder (e.g. H : Hopf algebra) — debt paid.")
+(defface paper-anatomy-dp-proof-move
+  '((t :foreground "#e0a33a" :slant italic
+       :underline (:color "#c98a2b" :style wave)))
+  "DP: an informal proof move — the prose rhetoric of a proof step (\"it is
+not difficult to check\", \"left to the reader\", \"clearly\"). Amber, distinct
+from the structural scope layers; the wave marks the deferred verification.")
 
 ;; Proofread learning loop: a tagged defect is minted as a record; the fix
 ;; discharges it; both are surfaced AROUND POINT here (Joe, 2026-06-13).
@@ -104,6 +110,7 @@
             ("math" 'paper-anatomy-dp-math)
             ("symbol" 'paper-anatomy-dp-symbol)
             ("symbol-grounded" 'paper-anatomy-dp-symbol-grounded)
+            ("proof-move" 'paper-anatomy-dp-proof-move)
             (_ 'paper-anatomy-dp-classified)))
     ("defect" (if (equal kind "fixed") 'paper-anatomy-defect-fixed
                 'paper-anatomy-defect-open))
