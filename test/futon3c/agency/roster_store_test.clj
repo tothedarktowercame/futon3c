@@ -15,10 +15,12 @@
 (defn- with-temp-roster [f]
   (let [path (temp-path)
         old-path (System/getProperty "FUTON3C_AGENT_ROSTER_FILE")
-        old-restore (System/getProperty "FUTON3C_AGENT_RESTORE")]
+        old-restore (System/getProperty "FUTON3C_AGENT_RESTORE")
+        old-allow-drop (System/getProperty "FUTON3C_ROSTER_ALLOW_DROP")]
     (try
       (System/setProperty "FUTON3C_AGENT_ROSTER_FILE" path)
       (System/clearProperty "FUTON3C_AGENT_RESTORE")
+      (System/clearProperty "FUTON3C_ROSTER_ALLOW_DROP")
       (reg/reset-registry!)
       (persist/reset-sessions!)
       ;; Persistence is now installed explicitly (bootstrap does this AFTER
@@ -36,6 +38,9 @@
         (if old-restore
           (System/setProperty "FUTON3C_AGENT_RESTORE" old-restore)
           (System/clearProperty "FUTON3C_AGENT_RESTORE"))
+        (if old-allow-drop
+          (System/setProperty "FUTON3C_ROSTER_ALLOW_DROP" old-allow-drop)
+          (System/clearProperty "FUTON3C_ROSTER_ALLOW_DROP"))
         (when (.exists (io/file path))
           (.delete (io/file path)))))))
 
@@ -52,6 +57,20 @@
 
 (defn- parse-body [response]
   (json/parse-string (:body response) true))
+
+(defn- registry-with-agents
+  [ids]
+  (into {}
+        (map (fn [id]
+               [id {:agent/id {:id/value id :id/type :continuity}
+                    :agent/type :codex}]))
+        ids))
+
+(defn- persisted-agent-ids
+  []
+  (->> (:agents (edn/read-string (slurp (roster/roster-store-path))))
+       (map :agent-id)
+       vec))
 
 (deftest persist-load-round-trip-restorable-fields
   (let [path (roster/roster-store-path)]
@@ -91,6 +110,24 @@
     (is (= 1 (count (:agents (edn/read-string (slurp path))))))
     (reg/unregister-agent! "claude-gone")
     (is (= [] (:agents (edn/read-string (slurp path)))))))
+
+(deftest counter-ratchet-refuses-unexpected-bulk-roster-drop
+  (roster/persist-registry! (registry-with-agents ["a" "b" "c" "d"]))
+  (let [before (slurp (roster/roster-store-path))]
+    (roster/persist-registry! (registry-with-agents ["a" "b"]))
+    (is (= before (slurp (roster/roster-store-path))))
+    (is (= ["a" "b" "c" "d"] (persisted-agent-ids)))))
+
+(deftest counter-ratchet-allows-single-agent-deregistration
+  (roster/persist-registry! (registry-with-agents ["a" "b" "c"]))
+  (roster/persist-registry! (registry-with-agents ["a" "b"]))
+  (is (= ["a" "b"] (persisted-agent-ids))))
+
+(deftest counter-ratchet-allow-drop-escape-permits-bulk-drop
+  (roster/persist-registry! (registry-with-agents ["a" "b" "c" "d"]))
+  (System/setProperty "FUTON3C_ROSTER_ALLOW_DROP" "true")
+  (roster/persist-registry! (registry-with-agents ["a"]))
+  (is (= ["a"] (persisted-agent-ids))))
 
 (deftest restore-on-boot-flag-off-does-not-replay
   (spit (roster/roster-store-path)

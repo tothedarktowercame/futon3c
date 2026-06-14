@@ -12,6 +12,9 @@
 
 (def ^:private roster-version 1)
 (def ^:private registry-watch-key ::persist-roster)
+(def ^:private roster-drop-tolerance 1)
+
+(declare load-roster)
 
 (defn roster-store-path []
   (or (System/getProperty "FUTON3C_AGENT_ROSTER_FILE")
@@ -32,6 +35,19 @@
 
 (defn- blank->nil [x]
   (some-> x str str/trim not-empty))
+
+(defn- truthy-config?
+  [k]
+  (let [prop (System/getProperty k)]
+    (if (some? prop)
+      (#{"1" "true" "yes" "on"} (str/lower-case (str/trim prop)))
+      (when-let [s (System/getenv k)]
+        (#{"1" "true" "yes" "on"} (str/lower-case (str/trim s)))))))
+
+(defn allow-drop?
+  "Explicit escape hatch for sanctioned bulk roster shrinkage."
+  []
+  (boolean (truthy-config? "FUTON3C_ROSTER_ALLOW_DROP")))
 
 (defn- agent-id-value [agent]
   (let [id (:agent/id agent)]
@@ -89,6 +105,32 @@
                 (sort-by :agent-id)
                 vec)})
 
+(defn- agent-count
+  [snapshot]
+  (count (or (:agents snapshot) [])))
+
+(defn- on-disk-agent-count
+  [path]
+  (when (.exists (io/file path))
+    (agent-count (load-roster path))))
+
+(defn- unexpected-roster-drop?
+  [prev-count next-count]
+  (> (- prev-count next-count) roster-drop-tolerance))
+
+(defn- refuse-roster-clobber?
+  [path snapshot]
+  (let [prev-count (or (on-disk-agent-count path) 0)
+        next-count (agent-count snapshot)
+        drop (- prev-count next-count)]
+    (and (pos? drop)
+         (unexpected-roster-drop? prev-count next-count)
+         (not (allow-drop?))
+         {:prev-count prev-count
+          :next-count next-count
+          :drop drop
+          :tolerance roster-drop-tolerance})))
+
 (defn persist-registry!
   "Persist REGISTRY as a durable roster EDN snapshot. Returns the snapshot."
   [registry]
@@ -98,7 +140,24 @@
     (try
       (when-let [parent (.getParentFile file)]
         (.mkdirs parent))
-      (spit file (pr-str snapshot))
+      (if-let [{:keys [prev-count next-count drop tolerance]} (refuse-roster-clobber? path snapshot)]
+        (do
+          (println (str "[agent-roster] COUNTER-RATCHET REFUSED roster persist: "
+                        "on-disk agents=" prev-count
+                        " new agents=" next-count
+                        " drop=" drop
+                        " tolerance=" tolerance
+                        " path=" path
+                        " — durable snapshot preserved; set "
+                        "FUTON3C_ROSTER_ALLOW_DROP=true only for intentional bulk removal"))
+          (flush))
+        (do
+          ;; Rotate one backup before overwriting, so a clobber (e.g. a clean boot
+          ;; that came up with fewer agents) leaves the prior snapshot recoverable at
+          ;; <path>.bak. (M-agency-hardening roster safety, 2026-06-13.)
+          (when (.exists file)
+            (try (io/copy file (io/file (str path ".bak"))) (catch Throwable _)))
+          (spit file (pr-str snapshot))))
       (catch Throwable t
         (println (str "[agent-roster] persist failed: " (.getMessage t)))
         (flush)))
