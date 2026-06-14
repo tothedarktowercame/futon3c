@@ -144,6 +144,29 @@ missions and papers are two instantiations, not two theories. M-first-flights
   ≤2 sorries (TODO'd); literature/exemplar sources cited in the docstring
   (E-mission-head.md; the 0809.2517 golden graph). You may commit.
 
+**T8 · DarkTower/FirstFlightsExample.lean** (difficulty M; the THIRD by-example,
+the M-first-flights cascade→sorry→wiring fold — the *fill-as-graph-rewrite-fold*
+grain not yet shown in Lean). Distinct file (don't edit the committed
+Examples.lean). Source: `futon3c/holes/missions/M-typed-holes-example-first-flights.md`
++ `futon3c/holes/flights/first-flights-wiring.edn`.
+- `namespace FirstFlightsExample`, compiling with `rfl`/`decide` witnesses, 0-sorry
+  target. Model:
+  - the checkpoint wiring as a small `BV.seq` chain of checkpoint atoms (a 3–4
+    checkpoint slice is fine — represent the mined `:composes` chain);
+  - the **sorry** = the unfilled want-port as a `TypedHole` position with a hungry
+    `satiety` (the `:hungry-for :payoff` port);
+  - the **cascade** = a tiny `ScopeQuery` store of candidate patterns; selecting
+    the matching one = answering the query (the fill) — answer by `rfl`;
+  - a `:jointly-with` pair as `BV.copar` — exercise the connective the mined
+    linear `:composes` could NOT (the excursion's gap #3), shown here by example;
+  - the **fold**: filling the want-port hole (a `Fill`/`Discharge`), with an
+    example that the filled checkpoint is no longer hungry.
+- Docstring point: this is the *fold* grain of `fill` (cascade-selected
+  graph-rewrite), complementing the atomic `PFunctor.comp` grain — the two grains
+  named in `M-typed-holes-example-first-flights.md` §4.
+- **Acceptance:** `lake build DarkTower.FirstFlightsExample` clean; `rfl`/`decide`
+  witnesses; ≤2 sorries (TODO'd); cites the exemplar sources. You may commit.
+
 ## Dispatch table (wave 1)
 | task | file | difficulty | depends on |
 |---|---|---|---|
