@@ -106,6 +106,25 @@ the store; make them first-class."
   Shows `fill` is two-grained (atomic Poly substitution **+** cascade-driven
   graph-rewrite fold), the fold grain being the cascade→ML leg.
 
+## Lean leg (DarkTower) — status (2026-06-14)
+
+Wave 1 of the Lean formalisation landed in `mathlib4/DarkTower/`, all reviewed
+PASS (claude-2, real gate: read + decls verified), **0 sorry**, `lake build
+DarkTower` green. **7/10 manifest concepts now formalised** — see
+`M-typed-holes-lean-manifest.edn` for the per-concept file+sha.
+
+| file | concepts | sha |
+|---|---|---|
+| `DarkTower/TypedHole.lean` | typed-hole, hole-type, satiety-grading | `a420bd1` |
+| `DarkTower/Fill.lean` | fill, fill-laws (unit+assoc as Equivs) | `b23232d` |
+| `DarkTower/Comb.lean` | comb (dependent lens; full category Poly) | `b64d3c1` |
+| `DarkTower/Discharge.lean` | discharge-duality (comonad coalgebra) | `75e4725` |
+
+Handoffs + audit: `M-typed-holes-lean-handoffs.md`, `M-typed-holes-mathlib-audit.edn`.
+**Remaining (wave 2):** `bv-hole-algebra` + `scope-as-query` (greenfield — see
+`M-typed-holes-lean-handoffs.md` §WAVE 2 / the design note `*-wave2-design.md`);
+`illocutionary-hole` (outside mathlib — IATC, a labelled-transition layer).
+
 ## Relations
 
 - **BV-combs excursion** (futon6 `9cd66b5`, `holes/bv-comb-typing.edn`) — the

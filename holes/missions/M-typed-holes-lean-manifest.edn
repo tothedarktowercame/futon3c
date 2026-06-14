@@ -1,63 +1,69 @@
 ;; M-typed-holes — LEAN MANIFEST
 ;; A *manifest* of concepts to formalise *in Lean* (pun fully intended:
 ;; a manifest of things to make Lean; and the Poly substrate is a manifold-
-;; adjacent positions-and-directions structure). We do NOT formalise yet — this
-;; is the to-formalise list, structured so each entry can later be lifted into
+;; adjacent positions-and-directions structure). Each entry can be lifted into
 ;; the iiching CT pattern language (futon5 tools/iiching, resources/iiching-ct).
+;;
+;; UPDATE 2026-06-14: 7/10 entries now FORMALISED in mathlib4/DarkTower/ (wave 1,
+;; all reviewed PASS by claude-2, 0 sorry, lake build DarkTower green). The
+;; mathlib audit (M-typed-holes-mathlib-audit.edn) scoped them first.
 ;;
 ;; Entry shape:
 ;;   {:concept   <kw>            ; the thing to formalise
 ;;    :gloss     "<informal>"    ; one-line meaning
 ;;    :ct-target "<Poly/CT>"     ; the categorical object/morphism it should be
 ;;    :projections [<consumer kws>] ; which of the six rooms it shows up in
-;;    :lean      :unformalised   ; status (never :formalised here — manifest only)
+;;    :lean      :unformalised | {:status :formalised :darktower "<file>" :sha "<sha>"}
 ;;    :iiching   <pattern-kw>}   ; the pattern-language hook it would lift to
 ;;
 ;; Consumers (the six projections): :mining :proofs :grounding :combs :queries :coord
 {:mission "M-typed-holes"
- :status :manifest-only
- :note "concepts to formalise in Lean — NOT formalised; to be lifted to iiching"
+ :status :partially-formalised
+ :note "7/10 formalised in DarkTower (wave 1); 3 remain: bv-hole-algebra + scope-as-query (wave 2, greenfield) + illocutionary-hole (outside mathlib)"
  :entries
  [{:concept :typed-hole
    :gloss "a node carrying a set of typed slots awaiting fillers"
    :ct-target "object of Poly: p = Σ_{i∈p(1)} y^{p[i]}; the hole = a direction at a position"
    :projections [:mining :proofs :grounding :combs :queries :coord]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/TypedHole.lean" :sha "a420bd1"}
    :iiching :pattern/typed-hole}
 
   {:concept :hole-type
    :gloss "the type a hole accepts; a well-typed filler must match it"
    :ct-target "the direction-set p[i] at position i (a dependent family)"
    :projections [:mining :grounding :coord]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/TypedHole.lean" :sha "a420bd1"}
    :iiching :pattern/hole-type}
 
   {:concept :fill
    :gloss "supply a hole with a well-typed filler — the stack's one universal operation"
    :ct-target "substitution/composition in Poly (the comonoid counit on the position)"
    :projections [:mining :proofs :grounding :combs :queries :coord]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/Fill.lean" :sha "b23232d"}
    :iiching :pattern/fill}
 
   {:concept :fill-laws
    :gloss "filling with the trivial filler is identity; sequential fills associate"
    :ct-target "the monoid/operad of fills (unit + associativity of substitution)"
    :projections [:combs :queries]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/Fill.lean" :sha "b23232d"
+          :note "unit + associativity proved as object-level Equivs"}
    :iiching :pattern/fill-laws}
 
   {:concept :comb
    :gloss "a process/scope with holes — a context ⟨A ; - ; B⟩"
    :ct-target "a morphism in Poly (a dependent lens); the comb of optics/cybernetics"
    :projections [:combs :queries]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/Comb.lean" :sha "b64d3c1"
+          :note "dependent lens: onPos forward, onDir BACKWARD; full category laws; n-hole coend comb deferred"}
    :iiching :pattern/comb-lens}
 
   {:concept :discharge-duality
    :gloss "open↔filled pairs across the stack: sorry↔proof, query↔answer, ungrounded↔binder"
    :ct-target "the counit ε that consumes a hole; a hole and its discharge are dual"
    :projections [:proofs :grounding :coord]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/Discharge.lean" :sha "75e4725"
+          :note "comonad coalgebra; fill_commutes_with_discharge proved"}
    :iiching :pattern/discharge-duality}
 
   {:concept :bv-hole-algebra
@@ -78,7 +84,8 @@
    :gloss "the mined :hungry-for tag = the hole's type, already emitted by the miner"
    :ct-target "a grading of positions by direction-type; the data witness of :hole-type"
    :projections [:mining]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/TypedHole.lean" :sha "a420bd1"
+          :note "SatietyGrade (parse/payoff/canon/bundling/role) + GradedObject projection"}
    :iiching :pattern/satiety-grading}
 
   {:concept :illocutionary-hole
