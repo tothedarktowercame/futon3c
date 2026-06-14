@@ -90,6 +90,16 @@ the store; make them first-class."
   types). Verify deterministically (isolation, not corpus dashboards — see the
   determinism car).
 
+## Worked examples (IDENTIFY)
+
+- `M-typed-holes-example-mission-head.md` — **E-mission-head** semi-formalised as
+  a BV-typed wiring diagram (phase `seq` × two-readings `copar` × coherence wires
+  × typed holes: ghost-line / open-arrow / `:hungry-for` / failed-fill). It has
+  no mined `:composes`, so the wiring is constructed from its anatomy
+  (`anatomy-of-a-futonic-mission.md`) — which makes it *exercise `par`/`copar`*
+  (unreachable on the linear mined skeletons) and shows active-inference =
+  hole-filling (prediction error = unfilled typed hole).
+
 ## Relations
 
 - **BV-combs excursion** (futon6 `9cd66b5`, `holes/bv-comb-typing.edn`) — the
