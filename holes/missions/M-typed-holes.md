@@ -120,13 +120,16 @@ DarkTower` green. **7/10 manifest concepts now formalised** — see
 | `DarkTower/Comb.lean` | comb (dependent lens; full category Poly) | `b64d3c1` |
 | `DarkTower/Discharge.lean` | discharge-duality (comonad coalgebra) | `75e4725` |
 | `DarkTower/ScopeQuery.lean` | scope-as-query (finite unifier; `(Joe knows ?)` by rfl; `queryComb`) | `1f85ad2` |
+| `DarkTower/BV.lean` | bv-hole-algebra (BV syntax + congruence + medial/switch; greenfield) | `d1e0888` |
 
-**8/10 manifest concepts formalised.** Handoffs + audit:
-`M-typed-holes-lean-handoffs.md`, `M-typed-holes-mathlib-audit.edn`,
-`M-typed-holes-lean-wave2-design.md`.
-**Remaining:** `bv-hole-algebra` (T6 — greenfield, no prior formalisation in any
-prover; design in `*-wave2-design.md` §T6); `illocutionary-hole` (outside
-mathlib — IATC, a labelled-transition layer).
+**9/10 manifest concepts formalised** — `lake build DarkTower` green, 0 sorry
+across all. Handoffs + audit: `M-typed-holes-lean-handoffs.md`,
+`M-typed-holes-mathlib-audit.edn`, `M-typed-holes-lean-wave2-design.md`.
+**Remaining:** `illocutionary-hole` only (outside mathlib — IATC speech-acts, a
+labelled-transition layer tying typed-bells to the typed-hole datatype).
+**Caveat on BV:** syntax + structural congruence are faithful (seq non-comm); the
+`medial`/`switch` rules are schematic — exact Guglielmi-BV fidelity + cut-elim
+deferred (a future proof-theory pass).
 
 ## Relations
 

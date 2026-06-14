@@ -4,10 +4,10 @@
 ;; adjacent positions-and-directions structure). Each entry can be lifted into
 ;; the iiching CT pattern language (futon5 tools/iiching, resources/iiching-ct).
 ;;
-;; UPDATE 2026-06-14: 8/10 entries now FORMALISED in mathlib4/DarkTower/ (wave 1
-;; + T5 scope-as-query), all reviewed PASS by claude-2, 0 sorry, lake build
-;; DarkTower green. The mathlib audit (M-typed-holes-mathlib-audit.edn) scoped
-;; them first. Remaining: bv-hole-algebra (T6, greenfield), illocutionary-hole.
+;; UPDATE 2026-06-14: 9/10 entries now FORMALISED in mathlib4/DarkTower/ (wave 1
+;; + T5 scope-as-query + T6 bv-hole-algebra), all reviewed PASS by claude-2, 0
+;; sorry, lake build DarkTower green. The mathlib audit scoped them first.
+;; Remaining: illocutionary-hole (outside mathlib — IATC labelled-transition).
 ;;
 ;; Entry shape:
 ;;   {:concept   <kw>            ; the thing to formalise
@@ -20,7 +20,7 @@
 ;; Consumers (the six projections): :mining :proofs :grounding :combs :queries :coord
 {:mission "M-typed-holes"
  :status :partially-formalised
- :note "8/10 formalised in DarkTower; 2 remain: bv-hole-algebra (wave 2, greenfield) + illocutionary-hole (outside mathlib)"
+ :note "9/10 formalised in DarkTower; 1 remains: illocutionary-hole (outside mathlib — IATC)"
  :entries
  [{:concept :typed-hole
    :gloss "a node carrying a set of typed slots awaiting fillers"
@@ -71,7 +71,8 @@
    :gloss "combine hole-patterns: seq (compose/path), copar (conjoin), par (alternate)"
    :ct-target "BV deep-inference connectives over Poly positions; the medial rule as interleave"
    :projections [:combs :queries]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/BV.lean" :sha "d1e0888"
+          :note "greenfield: BV syntax + structural congruence (seq non-comm) + medial/switch Step; SCHEMATIC rules, exact BV proof-theory fidelity + cut-elim deferred"}
    :iiching :pattern/bv-connectives}
 
   {:concept :scope-as-query
