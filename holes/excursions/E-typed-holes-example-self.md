@@ -26,9 +26,8 @@ holes**: the unwritten phases are live ghost lines.
  :missing-node :HEAD             ;; never opened — not even a ghost (see below)
  :bv/copar                       ;; two readings, must cohere (well-formed iff they do)
  [{:reading :structural          ;; the mission doc's written sections
-   :bv/seq [:IDENTIFY :MAP :DERIVE              ;; SATED — written
-            {:ghost :ARGUE}                     ;; ghost lines (unwritten phases)
-            {:ghost :VERIFY} {:ghost :INSTANTIATE}
+   :bv/seq [:IDENTIFY :MAP :DERIVE :ARGUE       ;; SATED — written
+            {:ghost :VERIFY} {:ghost :INSTANTIATE}   ;; ghost lines (unwritten phases)
             {:ghost :DOCUMENT}]}
   {:reading :self-model          ;; this mission's own typed-hole model (substrate-2)
    :note "the datatype it defines, pointed at itself"}]
@@ -36,7 +35,7 @@ holes**: the unwritten phases are live ghost lines.
  {:IDENTIFY    :full   ;; charter + 4 exemplars + residue analysis + mathlib audit
   :MAP         :full   ;; M-typed-holes-MAP.md (a75205d): ready/missing + survey Q1-Q6
   :DERIVE      :full   ;; M-typed-holes-DERIVE.md — FILLED this session (was :hungry-for :design)
-  :ARGUE       {:hungry-for :design}
+  :ARGUE       :full   ;; M-typed-holes-ARGUE.md — FILLED this session ("as planned"; AIF re-run queued)
   :VERIFY      {:hungry-for :payoff}
   :INSTANTIATE {:hungry-for :payoff}
   :DOCUMENT    {:hungry-for :payoff}}}
@@ -60,8 +59,11 @@ Two things only this live/reflexive case shows:
    :full` — the ghost above became a sated node *as we watched*. The mission's
    own progress is a **fill-sequence**, self-similar with its subject matter; the
    AIF reading is literal (an unwritten phase is prediction error; writing it is
-   the action that discharges it). The remaining ghosts (`ARGUE`…`DOCUMENT`) are
-   the still-open holes.
+   the action that discharges it). This session **two** ghosts filled in a row —
+   `DERIVE` then `ARGUE` — `satiety` `hungry→full` each, watched live. Remaining
+   open holes: `VERIFY`, `INSTANTIATE`, `DOCUMENT`. (Queued twist: an *AIF-driven
+   re-run* of `ARGUE` — re-filling an already-filled hole by a different route, to
+   compare how the front matter changes the structure.)
 
    **A meta-hole the typing surfaced:** M-typed-holes has **no `HEAD` node at
    all** — not even a ghost; the phase was *skipped*, so the lifecycle's expected

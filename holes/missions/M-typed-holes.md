@@ -190,6 +190,22 @@ fidelity contract (route the six projections through one `fill`; drop nothing).
 **Deferred (Joe):** this mission has no HEAD and no AIF workup — post-DERIVE, add
 both and optionally re-derive to see how the front matter reshapes the structure.
 
+## ARGUE (2026-06-14) — see `M-typed-holes-ARGUE.md`
+
+Phase 4 ("as planned"; an AIF-driven re-run is queued for comparison). Three
+applied patterns — `single-authority-registration` (one `fill`, enforced
+pre-hoc not post-hoc → D1/D3), `construct-an-explicit-witness` (proof = built
+witness → D4/I5), `exotype-determines-behaviour` (the hole's type determines
+behaviour) — + 2 catch-up PSRs. Coherence: DERIVE is the *runtime shadow* of the
+already-formalised Lean datatype (every decision has a proved correlate).
+Trade-offs accepted (recall for precision; per-store opt for schema uniformity;
+abstract-illocution for ArSE-by-use; immediacy for gated-build). The alternative
+(keep six fills) is confronted: post-hoc reconciliation is racy/untestable, so
+unifying makes the disunity impossible by construction — the design reads
+*inevitable*. Elevator pitch: *the system built "a slot waiting to be filled" six
+times; build it once, and asking a question = proving a theorem = filling the
+slot, witnessed.*
+
 ## Relations
 
 - **BV-combs excursion** (futon6 `9cd66b5`, `holes/bv-comb-typing.edn`) — the
