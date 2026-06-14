@@ -4,9 +4,10 @@
 ;; adjacent positions-and-directions structure). Each entry can be lifted into
 ;; the iiching CT pattern language (futon5 tools/iiching, resources/iiching-ct).
 ;;
-;; UPDATE 2026-06-14: 7/10 entries now FORMALISED in mathlib4/DarkTower/ (wave 1,
-;; all reviewed PASS by claude-2, 0 sorry, lake build DarkTower green). The
-;; mathlib audit (M-typed-holes-mathlib-audit.edn) scoped them first.
+;; UPDATE 2026-06-14: 8/10 entries now FORMALISED in mathlib4/DarkTower/ (wave 1
+;; + T5 scope-as-query), all reviewed PASS by claude-2, 0 sorry, lake build
+;; DarkTower green. The mathlib audit (M-typed-holes-mathlib-audit.edn) scoped
+;; them first. Remaining: bv-hole-algebra (T6, greenfield), illocutionary-hole.
 ;;
 ;; Entry shape:
 ;;   {:concept   <kw>            ; the thing to formalise
@@ -19,7 +20,7 @@
 ;; Consumers (the six projections): :mining :proofs :grounding :combs :queries :coord
 {:mission "M-typed-holes"
  :status :partially-formalised
- :note "7/10 formalised in DarkTower (wave 1); 3 remain: bv-hole-algebra + scope-as-query (wave 2, greenfield) + illocutionary-hole (outside mathlib)"
+ :note "8/10 formalised in DarkTower; 2 remain: bv-hole-algebra (wave 2, greenfield) + illocutionary-hole (outside mathlib)"
  :entries
  [{:concept :typed-hole
    :gloss "a node carrying a set of typed slots awaiting fillers"
@@ -77,7 +78,8 @@
    :gloss "a partial hyperedge {:kind K :ends [{:role r :node ?v} …]} answered by unifying against the store"
    :ct-target "a representable presheaf / pattern; answering = the Poly fill over the store"
    :projections [:queries :mining]
-   :lean :unformalised
+   :lean {:status :formalised :darktower "DarkTower/ScopeQuery.lean" :sha "1f85ad2"
+          :note "first-order finite unifier; (Joe knows ?)->mary by rfl; queryComb ties holes to Comb"}
    :iiching :pattern/scope-query}
 
   {:concept :satiety-grading

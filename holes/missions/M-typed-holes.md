@@ -119,11 +119,14 @@ DarkTower` green. **7/10 manifest concepts now formalised** — see
 | `DarkTower/Fill.lean` | fill, fill-laws (unit+assoc as Equivs) | `b23232d` |
 | `DarkTower/Comb.lean` | comb (dependent lens; full category Poly) | `b64d3c1` |
 | `DarkTower/Discharge.lean` | discharge-duality (comonad coalgebra) | `75e4725` |
+| `DarkTower/ScopeQuery.lean` | scope-as-query (finite unifier; `(Joe knows ?)` by rfl; `queryComb`) | `1f85ad2` |
 
-Handoffs + audit: `M-typed-holes-lean-handoffs.md`, `M-typed-holes-mathlib-audit.edn`.
-**Remaining (wave 2):** `bv-hole-algebra` + `scope-as-query` (greenfield — see
-`M-typed-holes-lean-handoffs.md` §WAVE 2 / the design note `*-wave2-design.md`);
-`illocutionary-hole` (outside mathlib — IATC, a labelled-transition layer).
+**8/10 manifest concepts formalised.** Handoffs + audit:
+`M-typed-holes-lean-handoffs.md`, `M-typed-holes-mathlib-audit.edn`,
+`M-typed-holes-lean-wave2-design.md`.
+**Remaining:** `bv-hole-algebra` (T6 — greenfield, no prior formalisation in any
+prover; design in `*-wave2-design.md` §T6); `illocutionary-hole` (outside
+mathlib — IATC, a labelled-transition layer).
 
 ## Relations
 
