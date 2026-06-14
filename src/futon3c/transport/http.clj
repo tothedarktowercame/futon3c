@@ -56,6 +56,7 @@
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.mesh-qa :as mesh-qa]
+            [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.bell-router :as bell-router]
             [futon3c.social.mode :as mode]
@@ -343,6 +344,7 @@
     |
     ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b))")
 
+#_{:clj-kondo/ignore [:unused-private-var]}
 (defn- first-matching-ref
   [pattern text]
   (when (string? text)
@@ -841,6 +843,7 @@
          (flush))
        n))))
 
+#_{:clj-kondo/ignore [:unused-private-var]}
 (defonce ^:private !stale-job-reaper
   (let [running (atom true)
         thread (Thread.
@@ -1102,6 +1105,7 @@
                          (deref f 800 -1))
         irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
         irc-relay-configured? (fn? (:irc-send-fn config))
+        queue-hardening (agency-invariants/queue-hardening-status)
         bridge (read-bridge-health)]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
@@ -1110,6 +1114,7 @@
                          "irc-relay-configured" irc-relay-configured?
                          "irc-send-base" irc-send-base
                          "evidence" evidence-count
+                         "queue-hardening" queue-hardening
                          "started-at" (str started-at)
                          "uptime-seconds" uptime-seconds
                          "bridge" bridge})))
@@ -2273,7 +2278,7 @@
    semantic research records rather than transport-level prompt/response
    envelopes. Semantic turn evidence is recorded elsewhere (`chat-turn`,
    `context-retrieval`, invoke lifecycle, etc.)."
-  [evidence-store author text session-id & {:keys [mission-id]}]
+  [_evidence-store _author _text _session-id & {:keys [_mission-id]}]
   nil)
 
 (defn- emit-review-snapshot!
@@ -3022,15 +3027,14 @@
                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)
                                 :job job})))))))
 
-(defn- repl-through-queue?
+(defn repl-through-queue?
   "E2 (turn-delivery-invariants.md): route /invoke-stream (REPL/operator turns) through the
    durable turn-queue + per-agent drainer — same guarantees as a bell (single-writer, durable,
-   reply-routed) — instead of a direct invoke on a shared lane. Default OFF; load-dark; requires
-   drainer-v2. Toggle: FUTON3C_REPL_THROUGH_QUEUE (sys-prop or env)."
+   reply-routed) — instead of a direct invoke on a shared lane. Default TRUE (2026-06-14):
+   proven, so it survives a stale-env OOM-resume that doesn't carry the flag; requires
+   drainer-v2. Set FUTON3C_REPL_THROUGH_QUEUE=false to force the legacy direct-invoke path."
   []
-  (let [v (or (System/getProperty "FUTON3C_REPL_THROUGH_QUEUE")
-              (System/getenv "FUTON3C_REPL_THROUGH_QUEUE"))]
-    (boolean (and v (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim v))))))))
+  (agency-invariants/repl-through-queue-enabled?))
 
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
@@ -3057,7 +3061,7 @@
                               :message "prompt is required"})
 
           :else
-          #_{:clj-kondo/ignore [:unresolved-symbol]}
+          #_{:clj-kondo/ignore [:deprecated-var]}
           (hk/with-channel request channel
             ;; Send initial response with a keepalive comment to start chunked stream
             (hk/send! channel
@@ -3221,6 +3225,7 @@
                                         :surface "whistle"})
             mode (invoke-job-mode prompt)
             started-ms (System/currentTimeMillis)]
+        #_{:clj-kondo/ignore [:deprecated-var]}
         (hk/with-channel request channel
           (let [closed? (atom false)
                 delivery-recorded? (atom false)
@@ -3362,6 +3367,7 @@
                                 :message "prompt is required"})
 
             :else
+            #_{:clj-kondo/ignore [:deprecated-var]}
             (hk/with-channel request channel
               (.submit invoke-executor
                        ^Runnable
@@ -4094,7 +4100,7 @@
   "GET /api/alpha/enrich/file?path=... — composite enrichment for a source file.
    Queries futon1a hyperedge store for all enrichment layers and returns
    missions, patterns, evidence counts, tensions, and deps per symbol."
-  [request config]
+  [request _config]
   (let [params (parse-query-params request)
         path (or (get params "path") (get params :path))]
     (if (or (nil? path) (str/blank? (str path)))
@@ -4145,7 +4151,7 @@
   (let [body (read-body request)
         payload (try
                   (some-> body (json/parse-string true))
-                  (catch Exception e
+                  (catch Exception _
                     ::bad-json))
         path (or (:path payload) (get payload "path"))
         repo (or (:repo payload) (get payload "repo"))
@@ -4190,7 +4196,7 @@
 (defn- handle-mc-tensions
   "GET /api/alpha/mc/tensions — export structured tension data.
    Returns typed tension entries pre-shaped for hyperedge creation."
-  [config]
+  [_config]
   (try
     (let [result (mcb/build-tension-export)]
       (json-response 200 {:ok true
@@ -4499,6 +4505,7 @@
 (def ^:private pilot-inhabitations-edn-path
   "/home/joe/code/futon5a/data/pilot-inhabitations.edn")
 
+#_{:clj-kondo/ignore [:unused-private-var]}
 (defn- pattern-id->collection-name
   "Pattern-ids in the evidence store are keywords like :iiching/exotype-000.
    The collection name is the keyword's namespace (\"iiching\").  Falls back
@@ -4641,12 +4648,6 @@
           latest-end   (latest-by-time ends)
           ;; current inhabitant: latest start whose :pilot-agent doesn't
           ;; appear as the agent of a later :inhabitation-end.
-          start-after-end? (or (nil? latest-end)
-                               (compare (or (:at latest-start)
-                                            (:at-approx latest-start) "")
-                                        (or (:at latest-end)
-                                            (:at-approx latest-end) ""))
-                               0)
           current-active? (and latest-start
                                (or (nil? latest-end)
                                    (> (compare (or (:at latest-start)

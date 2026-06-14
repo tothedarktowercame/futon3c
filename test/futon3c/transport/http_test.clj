@@ -80,6 +80,24 @@
   [response]
   (json/parse-string (:body response) true))
 
+(defn- with-system-properties
+  [settings f]
+  (let [ks (keys settings)
+        old-values (into {}
+                         (map (fn [k] [k (System/getProperty k)]))
+                         ks)]
+    (try
+      (doseq [[k v] settings]
+        (if (some? v)
+          (System/setProperty k v)
+          (System/clearProperty k)))
+      (f)
+      (finally
+        (doseq [[k v] old-values]
+          (if (some? v)
+            (System/setProperty k v)
+            (System/clearProperty k)))))))
+
 (defn- with-live-server
   "Run test body against a real local HTTP server (required for async channel paths)."
   [handler f]
@@ -1429,6 +1447,23 @@
       (is (= "ok" (:status parsed)))
       (is (= true (:irc-relay-configured parsed)))
       (is (= "http://172.236.28.208:7070" (:irc-send-base parsed))))))
+
+(deftest health-includes-queue-hardening-status
+  (testing "GET /health includes red A3 status when one hardening gate is off"
+    (with-system-properties
+      {"FUTON3C_DURABLE_QUEUE" "true"
+       "FUTON3C_DRAINER_V2" "false"
+       "FUTON3C_REPL_THROUGH_QUEUE" "true"}
+      (fn []
+        (let [handler (make-handler)
+              response (get-req handler "/health")
+              parsed (parse-body response)
+              queue-hardening (:queue-hardening parsed)]
+          (is (= 200 (:status response)))
+          (is (= "ok" (:status parsed)))
+          (is (= false (:ok? queue-hardening)))
+          (is (= false (get-in queue-hardening [:gates :drainer-v2])))
+          (is (= ["drainer-v2"] (:degraded queue-hardening))))))))
 
 (deftest health-includes-uptime
   (testing "GET /health includes started-at and non-decreasing uptime seconds"

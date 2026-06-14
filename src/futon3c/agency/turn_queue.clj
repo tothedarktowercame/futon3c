@@ -16,13 +16,15 @@
 (def ^:private max-history 200)
 
 (defn enabled?
-  "True when the load-dark Car-3 queue path is explicitly enabled.
-   Default is false; loading this namespace does not change invoke behavior."
+  "True when the durable Car-3 queue path is enabled.  Default TRUE (2026-06-14):
+   the durable queue is proven + was already activated via dev-laptop-env, so it
+   defaults on to survive a stale-env OOM-resume that doesn't carry the flag.  Set
+   FUTON3C_DURABLE_QUEUE=false to force the legacy lock-then-timeout path."
   []
   (let [prop (System/getProperty "FUTON3C_DURABLE_QUEUE")]
     (if (some? prop)
       (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
-      (config/env-bool "FUTON3C_DURABLE_QUEUE" false))))
+      (config/env-bool "FUTON3C_DURABLE_QUEUE" true))))
 
 (defn queue-store-path []
   (or (config/env "FUTON3C_DURABLE_QUEUE_PATH")
@@ -304,12 +306,13 @@
 
 (defn drainer-v2-enabled?
   "True when the per-agent drainer-thread path (no shared-lane parking) is enabled.
-   Default false; load-dark. Layered on the durable queue."
+   Default TRUE (2026-06-14): proven + previously activated, defaults on so a stale-env
+   OOM-resume keeps it. Layered on the durable queue. Set FUTON3C_DRAINER_V2=false to disable."
   []
   (let [prop (System/getProperty "FUTON3C_DRAINER_V2")]
     (if (some? prop)
       (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
-      (config/env-bool "FUTON3C_DRAINER_V2" false))))
+      (config/env-bool "FUTON3C_DRAINER_V2" true))))
 
 (def ^:dynamic *drained-by-outer*
   "Bound true while a turn runs under an outer per-agent drainer (v2), so the inner

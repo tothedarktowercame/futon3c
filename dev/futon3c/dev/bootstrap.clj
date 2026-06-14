@@ -3,6 +3,7 @@
   (:require [cheshire.core :as json]
             [futon1a.system :as f1]
             [futon3c.agency.federation :as federation]
+            [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.roster-store :as roster-store]
             [futon3c.agency.turn-queue :as turn-queue]
@@ -120,6 +121,9 @@
         ;; queued turns (and the agents) stay stuck/un-drainable after a restart.
         ;; Pairs with turn-queue/load-state clearing the stale :draining lock.
         (turn-queue/resume-pending-drainers!)
+        ;; A3 boot integrity gate: the durable-queue trio should be active whenever
+        ;; Agency serves.  Do not refuse boot; make degradation unmistakable.
+        (agency-invariants/warn-queue-hardening!)
         (println (str "[dev] futon3c: http://localhost:" (:port result)
                       " (patterns: " (if (seq pattern-ids) pattern-ids "none") ")"))
         (when (:enabled? restore-report)
