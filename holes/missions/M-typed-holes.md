@@ -138,9 +138,17 @@ deferred (a future proof-theory pass).
 a `TypedHole`, grounding as `Discharge`/`Fill`, "which concept grounds H?" as a
 `ScopeQuery` answering `HopfAlgebra` by rfl). `(typed-hole, fill)` is
 domain-agnostic — missions and papers are two instantiations, not two theories.
-This is the "futon6 first rung **by example**, not a rollout." Future tightenings:
-`PaperExample` store is single-node-typed (use `Sum Symbol Concept`); add a
-`queryComb`-on-exemplar line; add an M-first-flights (cascade→sorry→wiring) example.
+This is the "futon6 first rung **by example**, not a rollout."
+
+**Three exemplars now in Lean** (all reviewed PASS, 0 sorry):
+- `Examples.lean` `MissionExample` (E-mission-head — mission domain) — `36b44b7`
+- `Examples.lean` `PaperExample` (0809.2517 grounding — paper domain) — `36b44b7`
+- `FirstFlightsExample.lean` (M-first-flights — the cascade→sorry→wiring **fold**
+  grain: hungry want-port → folded; cascade-select = `ScopeQuery.answers`;
+  `:jointly-with` = `BV.copar`) — `58fb0b7`
+
+Future tightenings: `PaperExample` store is single-node-typed (use
+`Sum Symbol Concept`); add a `queryComb`-on-exemplar line.
 
 ## Relations
 
