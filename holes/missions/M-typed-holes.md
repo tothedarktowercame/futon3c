@@ -19,6 +19,46 @@ to be formal — ML/cascade-based once the cascade lands), **theoretically
 backed** (`E-the-dark-tower-2`, Poly), and **data-backed** (the math.ct mining
 already emits typed holes).
 
+## HEAD — AIF workup (carried back 2026-06-14; "best of class")
+
+*This mission was developed the **non-AIF "as planned" route**: it had the prose
+HEAD above but skipped the AIF lifeform workup (recast-as-design-pattern, sigil,
+birth vitals, failure conditions). That route is a **shortcut / graceful
+degradation** of the full HEAD→AIF path — fine when feasibility is high, at the
+cost of leaving the **adoption gate unstated**. The counterfactual
+`../excursions/E-typed-holes-aif-alternate.md` ran the AIF path; both routes
+reached the **same design**, but the AIF route uniquely produced the failure
+conditions + death clause below. Carrying them back makes this the best-of-class
+version; per that excursion, DERIVE is **not** re-run (both routes agree).*
+
+**HEAD as a design pattern (AIF terminal vocabulary):**
+- **IF** the stack keeps building *a slot waiting to be filled* six times (query,
+  `sorry`, ungrounded symbol, comb hole, hungry mined node, `type=query` bell);
+- **HOWEVER** they are built separately — the shared datatype (typed hole) and op
+  (fill) are invisible, there is no shared query layer, and ArSE sits starved;
+- **THEN** name the one datatype (typed hole = Poly position+directions) and the
+  one op (fill), six surfaces as projections, every fill witnessed in ArSE;
+- **BECAUSE** one operator is deterministic/testable where six are racy; *asking =
+  proving*; a self-representing stack needs its central datatype to be one thing.
+
+**Sigil:** `[compute: futon5/scripts/head_exotype_probe.py @ the HEAD]` — not run
+(counterfactual / CPU loaded). Predicted profile: actionable half (THEN/BECAUSE)
+anchors strongly, intent half (IF/HOWEVER) weaker.
+
+**Birth vitals:** born *late and healthy* — the datatype is already 9/10
+formalised in DarkTower, so the risk is **adoption, not feasibility**.
+
+**Failure conditions (the adoption gate — the AIF route's unique contribution):**
+1. **dead if** no projection actually routes through the single `fill` (it stays
+   six implementations — the unification is decorative);
+2. **dead if** ArSE stays starved — fills are not witnessed, so "proof = witnessed
+   fill" never lands;
+3. **dead if** the query layer never runs over a real store (substrate-2a / MO).
+
+**Death clause:** declare M-typed-holes dead, publicly, if by an agreed deadline
+none of the six projections is re-routed through the shared `fill` **and** no fill
+is witnessed in ArSE.
+
 ## The gap
 
 The same object — *a node carrying a set of typed slots awaiting fillers* — is

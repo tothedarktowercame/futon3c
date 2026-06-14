@@ -23,7 +23,7 @@ holes**: the unwritten phases are live ghost lines.
 
 ```edn
 {:mission "M-typed-holes"
- :missing-node :HEAD             ;; never opened — not even a ghost (see below)
+ :head {:prose :present :aif-workup :carried-back-2026-06-14}  ;; was the gap; now filled (see below)
  :bv/copar                       ;; two readings, must cohere (well-formed iff they do)
  [{:reading :structural          ;; the mission doc's written sections
    :bv/seq [:IDENTIFY :MAP :DERIVE :ARGUE       ;; SATED — written
@@ -67,12 +67,18 @@ Two things only this live/reflexive case shows:
    a death clause** — the adoption gate the "as planned" route had no place for,
    and the HEAD this self-typing flagged as missing.)
 
-   **A meta-hole the typing surfaced:** M-typed-holes has **no `HEAD` node at
-   all** — not even a ghost; the phase was *skipped*, so the lifecycle's expected
-   opening node is simply absent (`:missing-node :HEAD`). The AIF/organism reading
-   (E-mission-head §4) would flag this as a missing interoceptive root. Per Joe,
-   the post-DERIVE plan is to add a HEAD + the AIF workup and optionally
-   re-derive — i.e. *open and fill the node the self-typing just revealed missing*.
+   **A meta-hole the typing surfaced — now filled.** The first cut said "no
+   `HEAD` node at all"; the precise truth is the charter had a **prose HEAD** but
+   lacked its **AIF workup** (the design-pattern recast + sigil + birth vitals +
+   failure conditions). That AIF workup was the missing node. It has since been
+   **carried back** into `M-typed-holes.md` (`## HEAD — AIF workup`): the
+   IF/HOWEVER/THEN/BECAUSE recast, the failure conditions, and a death clause —
+   the adoption gate the non-AIF "as planned" route had no place for. The non-AIF
+   route is now recorded in the charter as a **shortcut / graceful degradation**
+   of the full HEAD→AIF lifeform path (fine when feasibility is high; the cost is
+   the unstated adoption gate). So the self-typing did its job: it flagged a real
+   missing node, and writing it *filled* it — the dogfood eating its own tail,
+   honestly.
 
 2. **The recursion has a floor.** A mission typed by the typed-hole framework
    would invite typing *its* typing… This excursion is the base case: it types
