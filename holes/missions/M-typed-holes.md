@@ -113,6 +113,11 @@ the store; make them first-class."
   mission, paper, **and query** handled by one machinery. First rung of the
   prove-theorems-by-query arc (`substrate-2` = our stack; `substrate-2a` = mined
   math.ct; theorem = a scope/hole, proof = a witnessed fill via ArSE).
+- `../excursions/E-typed-holes-example-self.md` — **the reflexive/live one**:
+  M-typed-holes typed as a typed-hole object *itself*, mid-flight — IDENTIFY/MAP
+  sated, DERIVE…DOCUMENT as ghost `TypedHole`s. The only case with open holes
+  watched live (writing the next phase = filling a hole); a *paired excursion* so
+  the recursion bottoms out. The framework typing its own defining mission.
 
 ## Lean leg (DarkTower) — status (2026-06-14)
 
