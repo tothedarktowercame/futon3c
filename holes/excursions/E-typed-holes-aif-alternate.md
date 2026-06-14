@@ -30,16 +30,19 @@ the sigil here is described, not fabricated — bitstrings/cosines are marked
   and a self-representing stack needs its central datatype to be a single thing it
   can point at itself.
 
-## 2. Sigil (the installed Shem — counterfactual)
+## 2. Sigil (the installed Shem — now COMPUTED)
 
-Per E-mission-head's `:sigil`: the HEAD's IF/HOWEVER/THEN/BECAUSE would be
-compiled to a xenotype-32 bit-pattern with per-clause bit-confidence and nearest
-i-ching/iiching anchors. `[compute: head_exotype_probe.py @ HEAD above; ridge over
-the anchor set]`. Predicted shape (not run): the **THEN/BECAUSE** clauses anchor
-strongly (the actionable half is concrete — one datatype, one op, witness in
-ArSE), the **IF/HOWEVER** weaker (the intent half is broad). Same profile
-E-mission-head showed ("actionable half projects well; intent half needs
-HEAD-grain anchors").
+No longer counterfactual — `head_exotype_probe.py` was run on the HEAD (via
+`.venv`; `M-typed-holes.health.json`). Whole-HEAD exotype **`00011000`** →
+**`iching/hexagram-45-cui`** (萃 *Cui*, "Gathering Together"), an *exact* bit-match
+— the HEAD lands on the hexagram for gathering-into-one. Per-clause xenotype-32
+`00101000·01001000·00001001·00001000` (mean-conf 0.40, completeness 0.89), anchors
+**IF → 需 Xu "Waiting"** (the slot waiting to be filled — cos 0.415, strongest),
+HOWEVER → 比 Bi "Holding Together", THEN → 解 Jie "Deliverance", BECAUSE → 屯 Zhun
+"Difficulty at the Beginning". (Prediction-vs-actual: I'd guessed THEN/BECAUSE
+would anchor strongest; in fact **IF** did — the "waiting" clause is the most
+distinctive. Honest miss, recorded.) Full readout in `M-typed-holes.md` §HEAD —
+sigil; this is the CT-domain hook the sigil provides.
 
 ## 3. Birth vitals + failure conditions (the AIF-unique artifact)
 

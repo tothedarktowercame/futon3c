@@ -31,19 +31,40 @@ reached the **same design**, but the AIF route uniquely produced the failure
 conditions + death clause below. Carrying them back makes this the best-of-class
 version; per that excursion, DERIVE is **not** re-run (both routes agree).*
 
-**HEAD as a design pattern (AIF terminal vocabulary):**
-- **IF** the stack keeps building *a slot waiting to be filled* six times (query,
-  `sorry`, ungrounded symbol, comb hole, hungry mined node, `type=query` bell);
-- **HOWEVER** they are built separately — the shared datatype (typed hole) and op
-  (fill) are invisible, there is no shared query layer, and ArSE sits starved;
-- **THEN** name the one datatype (typed hole = Poly position+directions) and the
-  one op (fill), six surfaces as projections, every fill witnessed in ArSE;
-- **BECAUSE** one operator is deterministic/testable where six are racy; *asking =
-  proving*; a self-representing stack needs its central datatype to be one thing.
+**HEAD as a design pattern (AIF terminal vocabulary — recast for the sigil):**
 
-**Sigil:** `[compute: futon5/scripts/head_exotype_probe.py @ the HEAD]` — not run
-(counterfactual / CPU loaded). Predicted profile: actionable half (THEN/BECAUSE)
-anchors strongly, intent half (IF/HOWEVER) weaker.
+**IF:** the stack keeps building a slot waiting to be filled six times — a query
+waiting for an answer, a sorry waiting for a proof, an ungrounded symbol waiting
+for a binder, a comb hole, a hungry mined node, a type-query bell.
+
+**HOWEVER:** they are built separately; the shared datatype (the typed hole) and
+the shared operation (fill) are invisible; there is no shared query layer; and
+ArSE, the witness store, sits starved.
+
+**THEN:** name the one datatype — a typed hole, a Poly position with typed
+directions — and the one operation, fill, with the six surfaces as projections,
+and record every fill in ArSE so it is witnessed.
+
+**BECAUSE:** one operator is deterministic and testable where six are racy and
+un-auditable; asking a question and proving a theorem become the same act; and a
+self-representing stack needs its central datatype to be a single thing.
+
+## HEAD — sigil, birth vitals & failure conditions
+
+**Sigil (computed 2026-06-14 — `futon5/scripts/head_exotype_probe.py` via `.venv`,
+`--emit-health` → `M-typed-holes.health.json`):**
+- whole-HEAD exotype **`00011000`** (bit-confidence 0.33), nearest anchor
+  **`iching/hexagram-45-cui`** — 萃 *Cui*, "Gathering Together / Massing" — an
+  **exact bit-match** (cos 0.321). The HEAD lands on the hexagram for *gathering
+  scattered things into one*, which is exactly what the mission does.
+- xenotype-32 (per-clause): `00101000·01001000·00001001·00001000`, mean-conf 0.40,
+  xenotype-completeness 0.89. The per-clause CT anchors are apt:
+  **IF → 需 Xu "Waiting"** (cos 0.415, strongest — the clause is literally about a
+  slot *waiting* to be filled); **HOWEVER → 比 Bi "Holding Together"**; **THEN → 解
+  Jie "Deliverance"**; **BECAUSE → 屯 Zhun "Difficulty at the Beginning"**.
+- health: *"alive with moderate signal"* — consistent with the born-late-and-healthy
+  vitals below. (This is the sigil's CT-domain hook: the HEAD's exotype is an
+  i-ching/iiching pattern address, joinable to the iiching CT pattern lexicon.)
 
 **Birth vitals:** born *late and healthy* — the datatype is already 9/10
 formalised in DarkTower, so the risk is **adoption, not feasibility**.

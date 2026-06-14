@@ -1,0 +1,50 @@
+{
+  "mission": "M-typed-holes",
+  "generated-at": "2026-06-14T20:21:39.710804+00:00",
+  "generator": "head_exotype_probe.py",
+  "sigil": {
+    "exotype": "00011000",
+    "xenotype-32": "00101000\u00b701001000\u00b700001001\u00b700001000",
+    "per-section": {
+      "IF": {
+        "bits": "00101000",
+        "conf": 0.31,
+        "anchor": "iching/hexagram-05-xu",
+        "cos": 0.415
+      },
+      "HOWEVER": {
+        "bits": "01001000",
+        "conf": 0.52,
+        "anchor": "iching/hexagram-08-bi",
+        "cos": 0.263
+      },
+      "THEN": {
+        "bits": "00001001",
+        "conf": 0.3,
+        "anchor": "iching/hexagram-40-jie",
+        "cos": 0.239
+      },
+      "BECAUSE": {
+        "bits": "00001000",
+        "conf": 0.46,
+        "anchor": "iching/hexagram-03-zhun",
+        "cos": 0.202
+      }
+    }
+  },
+  "health": {
+    "bit-confidence": 0.4,
+    "xenotype-completeness": 0.89,
+    "anchor-proximity": {
+      "strong": [
+        "IF"
+      ],
+      "weak": [
+        "HOWEVER",
+        "THEN",
+        "BECAUSE"
+      ]
+    },
+    "reading": "alive with moderate signal: xenotype completeness 0.89; strong anchors ['IF'], weak anchors ['HOWEVER', 'THEN', 'BECAUSE']."
+  }
+}
