@@ -106,6 +106,44 @@ structural congruence, medial/switch rules. NO proof-assistant formalisation
 exists anywhere (audit) — pure greenfield from Guglielmi (arXiv:cs/9910023).
 Biggest task; dispatch last, alone, with a design pass first.
 
+### WAVE 3 — by-example instantiation (Joe, 2026-06-14): concepts via exemplars
+
+The "futon6 first rung BY EXAMPLE, not a rollout" — and it must span the TWO
+reasoning domains Joe named: **missions** and **papers / research-programmes**
+(the latter building on the math.ct representation). Instantiate the landed
+DarkTower vocabulary (`TypedHole`/`Fill`/`Comb`/`Discharge`/`ScopeQuery`/`BV`) on
+the actual exemplars, in Lean, so the unification is shown by example.
+
+**T7 · DarkTower/Examples.lean** (difficulty M; depends on all wave-1/2 files).
+Two namespaces, both compiling with `#eval`/`example … := rfl` witnesses, 0-sorry
+target:
+
+- `namespace MissionExample` (E-mission-head — the MISSION domain):
+  - the lifecycle as a `BV.seq` chain of phase atoms
+    `⟨HEAD ; IDENTIFY ; … ; DOCUMENT⟩` (use the `BV` from BV.lean; an `inductive
+    Phase` for the atoms);
+  - the two readings (scope ∥ organism) as `BV.copar` (held together);
+  - a ghost / unwritten phase as a `TypedHole` position with `satiety` = a hungry
+    grade; "writing a phase" as a `Cong`/`Step` move (or a `Fill`);
+  - example lemmas: the seq chain reassociates (`BV.Cong`), the ghost is a hole.
+
+- `namespace PaperExample` (math.ct grounding — the PAPER / research-programme
+  domain; data from 0809.2517 "Let `H` be a Hopf algebra"):
+  - the ungrounded symbol `H` as a `TypedHole` position hungry for its concept;
+  - grounding (the use→binder edge) as `Discharge` (the `ungrounded↔binder`
+    polarity of `discharge-duality`) and/or a `Fill`;
+  - "which concept grounds `H`?" as a `ScopeQuery` over a tiny binder-store
+    (`(symbol H, ?concept)` → `Hopf algebra`), answered by `rfl`;
+  - example: ungrounded = open hole, grounded = filled, by `rfl`/`decide`.
+
+The point (state it in the module docstring): the SAME `TypedHole`/`fill`
+machinery types a mission and a paper — `(typed-hole, fill)` is domain-agnostic;
+missions and papers are two instantiations, not two theories. M-first-flights
+(the cascade→sorry→wiring fold) is a good THIRD example for a later pass.
+- **Acceptance:** compiles; both namespaces present with `rfl`/`decide` witnesses;
+  ≤2 sorries (TODO'd); literature/exemplar sources cited in the docstring
+  (E-mission-head.md; the 0809.2517 golden graph). You may commit.
+
 ## Dispatch table (wave 1)
 | task | file | difficulty | depends on |
 |---|---|---|---|
