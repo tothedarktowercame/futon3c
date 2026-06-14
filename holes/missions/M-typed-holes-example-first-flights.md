@@ -102,6 +102,26 @@ the witness is measurement.
    Reinforces the first-rung priority: surface the holes (`satiety`/`:jointly-with`)
    that the artifacts carry onto the `:composes` layer.
 
+## In Lean (DarkTower)
+
+The landed DarkTower types instantiate this exemplar's two `fill` grains:
+
+| this doc (cascade→sorry→wiring) | DarkTower Lean |
+|---|---|
+| **sorry** = unfilled want-port (typed hole) | `TypedHole` with hungry `satiety` (`TypedHole.lean`) |
+| **cascade** = candidate-pattern menu + select | `ScopeQuery` store + `answers` (the select = the matching answer) (`ScopeQuery.lean`) |
+| **wiring/fold** = graph-rewrite filling the hole | `Fill`/`Discharge` (the fold grain) |
+| `:jointly-with` (n-ary parallel) | `BV.copar` (the connective the mined linear `:composes` can't emit — gap #3) |
+| the mined `:composes` chain | `BV.seq` of checkpoint atoms |
+
+The **two grains of `fill`** (§ above) are now concrete: the *atomic* grain is
+`DarkTower/Fill.lean` (`PFunctor.comp` + the unit/assoc laws); the *fold* grain
+(cascade-selected graph-rewrite) is `DarkTower/FirstFlightsExample.lean` (T8) —
+the worked instantiation of this exemplar. So "answering = filling" and
+"folding a sorry-topology into a wiring" are the same `fill`, two grains, both in
+Lean.
+
 *Cross-refs:* `M-typed-holes.md`, `M-typed-holes-example-mission-head.md`,
-`M-typed-holes-lean-manifest.edn` (`:fill`, `:scope-as-query`), futon6
-`holes/bv-comb-typing.edn`, futon6 `holes/early-closures.md`.
+`M-typed-holes-lean-manifest.edn` (`:fill`, `:scope-as-query`),
+`mathlib4/DarkTower/FirstFlightsExample.lean` (T8, the fold grain),
+futon6 `holes/bv-comb-typing.edn`, futon6 `holes/early-closures.md`.

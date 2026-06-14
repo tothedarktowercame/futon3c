@@ -117,6 +117,24 @@ satiety→`:composes` projection — would sit beside this one to show the contr
 mined-but-linear (needs the holes wired on) vs. anatomy-rich-but-hand-authored
 (shows the par/copar target).
 
+## In Lean (DarkTower)
+
+This exemplar is now instantiated in `mathlib4/DarkTower/Examples.lean`
+§`MissionExample` (`36b44b7`, 0 sorry), against the landed DarkTower types:
+
+| this doc (semi-formal) | DarkTower Lean |
+|---|---|
+| phase `seq` chain `⟨HEAD;…;DOCUMENT⟩` | `BV.seq` over `inductive Phase` (`BV.lean`) |
+| two readings `copar` `(scope,organism)` | `BV.copar` over `inductive Reading` |
+| ghost line = typed hole | `TypedHole` with `satiety = payoff` at the unwritten phase (`TypedHole.lean`) |
+| seq reassociation (the medial setting) | `BV.Cong.seq_assoc` (proved); "write a phase" = `BV.Step.cong` |
+
+So the EDN sketch above is no longer just notation: its connectives are the
+actual `BV`/`TypedHole` constructors, and the well-formedness claims are
+`rfl`/`decide`-checked Lean. The coherence cross-wires (§2c) remain prose — a
+formal `copar`-interaction functor is future work.
+
 *Cross-refs:* `M-typed-holes.md` (charter), `M-typed-holes-lean-manifest.edn`,
-futon6 `holes/bv-comb-typing.edn` (the BV-combs excursion), futon6
+`mathlib4/DarkTower/Examples.lean` (`MissionExample`), futon6
+`holes/bv-comb-typing.edn` (the BV-combs excursion), futon6
 `holes/anatomy-of-a-futonic-mission.md` (the informal source).
