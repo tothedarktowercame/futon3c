@@ -117,11 +117,16 @@ The landed DarkTower types instantiate this exemplar's two `fill` grains:
 The **two grains of `fill`** (§ above) are now concrete: the *atomic* grain is
 `DarkTower/Fill.lean` (`PFunctor.comp` + the unit/assoc laws); the *fold* grain
 (cascade-selected graph-rewrite) is `DarkTower/FirstFlightsExample.lean`
-(`58fb0b7`, reviewed PASS, 0 sorry) — the worked instantiation of this exemplar:
-the hungry want-port `TypedHole` folds to not-hungry; cascade-select =
-`ScopeQuery.answers` (by rfl); `:jointly-with` = `BV.copar`. So "answering =
-filling" and "folding a sorry-topology into a wiring" are the same `fill`, two
-grains, both in Lean.
+(`58fb0b7` + fold `6d47cd0d`, reviewed PASS, 0 sorry) — the worked instantiation
+of this exemplar: the hungry want-port `TypedHole` folds to not-hungry;
+cascade-select = `ScopeQuery.answers` (by rfl); `:jointly-with` = `BV.copar`.
+The fold is now **one applied operation** `fold q db h` (not two snapshots),
+*conditioned on the cascade*: `fold_selected : fold selectedQuery cascadeStore
+wantPortHole = foldedPort`, and the negative witness `fold_empty_store_leaves_hungry`
+(empty cascade ⇒ hole stays hungry — the rewrite is not unconditional). So
+"answering = filling" and "folding a sorry-topology into a wiring" are the same
+`fill`, two grains, both in Lean. (Residual idealization: `fold` conditions on
+selection-existence, not yet on which pattern — a future faithful step.)
 
 *Cross-refs:* `M-typed-holes.md`, `M-typed-holes-example-mission-head.md`,
 `M-typed-holes-lean-manifest.edn` (`:fill`, `:scope-as-query`),
