@@ -52,11 +52,38 @@ satiety-grading). Build on `PFunctor` (`Mathlib/Data/PFunctor/Univariate/Basic.l
 
 **T3 · DarkTower/Comb.lean** (difficulty L; covers comb = dependent lens =
 PFunctor morphism). mathlib has NO optics (audit: zero Lens/Optic/Tambara).
-Blueprint: Riley *Categories of Optics* (arXiv:1809.00738); Agda
-`ps-lenses-agda`; `sinhp/Poly` morphisms.
-- `structure Comb` (a dependent lens / `PFunctor.Hom`): `onPos : P.A → Q.A` and
-  `onDir : (a : P.A) → Q.B (onPos a) → P.B a`; `id` + `comp`; state the lens
-  laws (prove what's clean, sorry+TODO the rest).
+
+**WHICH "Comb" (Joe — formalise the CORRECT one):** the base object is a
+**dependent lens = a morphism of polynomial functors** (a.k.a. a Poly morphism /
+"Spivak lens"). The defining data and — the crux — the *directions*:
+- `onPos : P.A → Q.A` — forward on positions;
+- `onDir : (a : P.A) → Q.B (onPos a) → P.B a` — **BACKWARD** on directions
+  (from `Q`'s directions at the image position back to `P`'s directions). Getting
+  this direction right IS the correctness condition; a forward `onDir` is the
+  wrong object.
+This 1-hole comb (= dependent lens) is the base; the **`comb` shape proper**
+(n-hole, sequential `⟨A;-;B;-;C⟩`) is the coend/open-diagram generalisation —
+note it in the docstring as the intended next layer, do NOT build it yet.
+
+Literature pointers (cite the right ones, exclude the wrong):
+- **Niu–Spivak, *Polynomial Functors: A Mathematical Theory of Interaction*
+  (arXiv:2312.00990)** — Poly morphisms = dependent lenses; the canonical target.
+- **Spivak, *Generalized Lens Categories via functors Cᵒᵖ → Cat* (arXiv:1908.02202)**
+  — dependent lenses as morphisms.
+- **Riley, *Categories of Optics* (arXiv:1809.00738)** — the general optic; a lens
+  is the cartesian case.
+- nLab "dependent lens" / "polynomial functor" (the morphism section).
+- multi-hole generalisation (FUTURE, note only): **Román, *Open Diagrams via
+  Coend Calculus* (arXiv:2004.07353)** and **Román, *Comb Diagrams for
+  Discrete-Time Feedback* (arXiv:2003.06214)** — the actual "comb" string-diagram.
+- blueprints for the laws: Agda `ps-lenses-agda`; `sinhp/Poly` morphisms.
+- **NOT** these: graph-theoretic combs; quantum combs in finite-dim Hilbert
+  spaces (Chiribella–D'Ariano–Perinotti 2009 — the physics origin, wrong setting);
+  cofree-comonad "combs". We want the categorical Poly/lens object.
+
+- `structure Comb (P Q : PFunctor)` with `onPos`/`onDir` as above; `id` + `comp`
+  (composition reverses on directions); state the lens/comb laws (prove what's
+  clean, `sorry`+TODO the rest). Match DarkTower house style + literature grounding.
 - Acceptance: structure + id + comp compile; laws stated; ≤2 sorries, each TODO'd.
 
 **T4 · DarkTower/Discharge.lean** (difficulty M; covers discharge-duality). Build
