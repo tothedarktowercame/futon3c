@@ -1,0 +1,89 @@
+;; M-typed-holes — LEAN MANIFEST
+;; A *manifest* of concepts to formalise *in Lean* (pun fully intended:
+;; a manifest of things to make Lean; and the Poly substrate is a manifold-
+;; adjacent positions-and-directions structure). We do NOT formalise yet — this
+;; is the to-formalise list, structured so each entry can later be lifted into
+;; the iiching CT pattern language (futon5 tools/iiching, resources/iiching-ct).
+;;
+;; Entry shape:
+;;   {:concept   <kw>            ; the thing to formalise
+;;    :gloss     "<informal>"    ; one-line meaning
+;;    :ct-target "<Poly/CT>"     ; the categorical object/morphism it should be
+;;    :projections [<consumer kws>] ; which of the six rooms it shows up in
+;;    :lean      :unformalised   ; status (never :formalised here — manifest only)
+;;    :iiching   <pattern-kw>}   ; the pattern-language hook it would lift to
+;;
+;; Consumers (the six projections): :mining :proofs :grounding :combs :queries :coord
+{:mission "M-typed-holes"
+ :status :manifest-only
+ :note "concepts to formalise in Lean — NOT formalised; to be lifted to iiching"
+ :entries
+ [{:concept :typed-hole
+   :gloss "a node carrying a set of typed slots awaiting fillers"
+   :ct-target "object of Poly: p = Σ_{i∈p(1)} y^{p[i]}; the hole = a direction at a position"
+   :projections [:mining :proofs :grounding :combs :queries :coord]
+   :lean :unformalised
+   :iiching :pattern/typed-hole}
+
+  {:concept :hole-type
+   :gloss "the type a hole accepts; a well-typed filler must match it"
+   :ct-target "the direction-set p[i] at position i (a dependent family)"
+   :projections [:mining :grounding :coord]
+   :lean :unformalised
+   :iiching :pattern/hole-type}
+
+  {:concept :fill
+   :gloss "supply a hole with a well-typed filler — the stack's one universal operation"
+   :ct-target "substitution/composition in Poly (the comonoid counit on the position)"
+   :projections [:mining :proofs :grounding :combs :queries :coord]
+   :lean :unformalised
+   :iiching :pattern/fill}
+
+  {:concept :fill-laws
+   :gloss "filling with the trivial filler is identity; sequential fills associate"
+   :ct-target "the monoid/operad of fills (unit + associativity of substitution)"
+   :projections [:combs :queries]
+   :lean :unformalised
+   :iiching :pattern/fill-laws}
+
+  {:concept :comb
+   :gloss "a process/scope with holes — a context ⟨A ; - ; B⟩"
+   :ct-target "a morphism in Poly (a dependent lens); the comb of optics/cybernetics"
+   :projections [:combs :queries]
+   :lean :unformalised
+   :iiching :pattern/comb-lens}
+
+  {:concept :discharge-duality
+   :gloss "open↔filled pairs across the stack: sorry↔proof, query↔answer, ungrounded↔binder"
+   :ct-target "the counit ε that consumes a hole; a hole and its discharge are dual"
+   :projections [:proofs :grounding :coord]
+   :lean :unformalised
+   :iiching :pattern/discharge-duality}
+
+  {:concept :bv-hole-algebra
+   :gloss "combine hole-patterns: seq (compose/path), copar (conjoin), par (alternate)"
+   :ct-target "BV deep-inference connectives over Poly positions; the medial rule as interleave"
+   :projections [:combs :queries]
+   :lean :unformalised
+   :iiching :pattern/bv-connectives}
+
+  {:concept :scope-as-query
+   :gloss "a partial hyperedge {:kind K :ends [{:role r :node ?v} …]} answered by unifying against the store"
+   :ct-target "a representable presheaf / pattern; answering = the Poly fill over the store"
+   :projections [:queries :mining]
+   :lean :unformalised
+   :iiching :pattern/scope-query}
+
+  {:concept :satiety-grading
+   :gloss "the mined :hungry-for tag = the hole's type, already emitted by the miner"
+   :ct-target "a grading of positions by direction-type; the data witness of :hole-type"
+   :projections [:mining]
+   :lean :unformalised
+   :iiching :pattern/satiety-grading}
+
+  {:concept :illocutionary-hole
+   :gloss "a typed bell opens a hole (query/challenge…) filled by a typed reply (answer/agree…)"
+   :ct-target "the IATC speech-act dialogue (Corneli et al. 2017) as hole/fill on the coordination channel"
+   :projections [:coord]
+   :lean :unformalised
+   :iiching :pattern/illocutionary-hole}]}
