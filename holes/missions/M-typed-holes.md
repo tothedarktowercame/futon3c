@@ -177,6 +177,19 @@ design problem is the **shared `fill` operator + the proving loop**, not the
 datatype (which exists). Full inventory, survey Q&A (Q1–Q6), and surprises in
 `M-typed-holes-MAP.md`.
 
+## DERIVE (2026-06-14) — see `M-typed-holes-DERIVE.md`
+
+Phase 3. Designs the MAP-identified problem: a **single runtime `fill(hole,
+filler, witness)`** the six projections share (D1), a **store-agnostic query
+layer** over the uniform `hx/` schema (D2), **typed fills only** (D3, the
+precision gate), **proof = witnessed fill** via an ArSE record (D4/I5),
+`illocutionary-hole` realised as **ArSE wiring** not new formalism (D5), and the
+proving loop **designed now, built gated** behind the mining wrap (D6). Six
+checkable invariants (I1–I6), entity/relation types, data-flow, and a light
+fidelity contract (route the six projections through one `fill`; drop nothing).
+**Deferred (Joe):** this mission has no HEAD and no AIF workup — post-DERIVE, add
+both and optionally re-derive to see how the front matter reshapes the structure.
+
 ## Relations
 
 - **BV-combs excursion** (futon6 `9cd66b5`, `holes/bv-comb-typing.edn`) — the

@@ -23,10 +23,11 @@ holes**: the unwritten phases are live ghost lines.
 
 ```edn
 {:mission "M-typed-holes"
+ :missing-node :HEAD             ;; never opened — not even a ghost (see below)
  :bv/copar                       ;; two readings, must cohere (well-formed iff they do)
  [{:reading :structural          ;; the mission doc's written sections
-   :bv/seq [:IDENTIFY :MAP                       ;; SATED — written
-            {:ghost :DERIVE} {:ghost :ARGUE}     ;; ghost lines (unwritten phases)
+   :bv/seq [:IDENTIFY :MAP :DERIVE              ;; SATED — written
+            {:ghost :ARGUE}                     ;; ghost lines (unwritten phases)
             {:ghost :VERIFY} {:ghost :INSTANTIATE}
             {:ghost :DOCUMENT}]}
   {:reading :self-model          ;; this mission's own typed-hole model (substrate-2)
@@ -34,7 +35,7 @@ holes**: the unwritten phases are live ghost lines.
  :satiety
  {:IDENTIFY    :full   ;; charter + 4 exemplars + residue analysis + mathlib audit
   :MAP         :full   ;; M-typed-holes-MAP.md (a75205d): ready/missing + survey Q1-Q6
-  :DERIVE      {:hungry-for :design}   ;; the shared fill operator + the proving loop
+  :DERIVE      :full   ;; M-typed-holes-DERIVE.md — FILLED this session (was :hungry-for :design)
   :ARGUE       {:hungry-for :design}
   :VERIFY      {:hungry-for :payoff}
   :INSTANTIATE {:hungry-for :payoff}
@@ -53,11 +54,21 @@ holes**: the unwritten phases are live ghost lines.
 
 Two things only this live/reflexive case shows:
 
-1. **A typed-hole object with open holes, watched live.** Writing the next phase
-   *is* a fill: when `DERIVE` lands, M-typed-holes' `satiety[:DERIVE]` goes
-   `:hungry-for :design → :full`. The mission's own progress is a **fill-sequence**
-   — self-similar with its own subject matter. The AIF reading is literal: an
-   unwritten phase is prediction error; writing it is the action that discharges it.
+1. **A typed-hole object with open holes, watched live — and now observed
+   filling.** Writing a phase *is* a fill: this session `DERIVE` landed
+   (`M-typed-holes-DERIVE.md`), so `satiety[:DERIVE]` went `:hungry-for :design →
+   :full` — the ghost above became a sated node *as we watched*. The mission's
+   own progress is a **fill-sequence**, self-similar with its subject matter; the
+   AIF reading is literal (an unwritten phase is prediction error; writing it is
+   the action that discharges it). The remaining ghosts (`ARGUE`…`DOCUMENT`) are
+   the still-open holes.
+
+   **A meta-hole the typing surfaced:** M-typed-holes has **no `HEAD` node at
+   all** — not even a ghost; the phase was *skipped*, so the lifecycle's expected
+   opening node is simply absent (`:missing-node :HEAD`). The AIF/organism reading
+   (E-mission-head §4) would flag this as a missing interoceptive root. Per Joe,
+   the post-DERIVE plan is to add a HEAD + the AIF workup and optionally
+   re-derive — i.e. *open and fill the node the self-typing just revealed missing*.
 
 2. **The recursion has a floor.** A mission typed by the typed-hole framework
    would invite typing *its* typing… This excursion is the base case: it types
