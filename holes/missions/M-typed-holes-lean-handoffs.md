@@ -167,6 +167,30 @@ Examples.lean). Source: `futon3c/holes/missions/M-typed-holes-example-first-flig
 - **Acceptance:** `lake build DarkTower.FirstFlightsExample` clean; `rfl`/`decide`
   witnesses; ≤2 sorries (TODO'd); cites the exemplar sources. You may commit.
 
+**T9 · DarkTower/FirstFlightsExample.lean — the fold as ONE applied operation**
+(difficulty M; follow-on to T8, closing the review gap: T8 showed the fold's
+pieces side-by-side; T9 composes them into a single applied rewrite). EXTEND the
+existing `FirstFlightsExample` namespace (it is committed `58fb0b7`; just add to
+it). Keep all existing decls + the 0-sorry gate.
+- Add `def fold` that takes the cascade query + store + the sorry hole and
+  PRODUCES the folded hole, **conditioned on the cascade selection**: roughly
+  `fold (q) (db) (h : TypedHole) : TypedHole :=`
+  `  if (ScopeQuery.answers q db).isEmpty then h else <h re-graded: want-port payoff→canon>`
+  — i.e. the cascade-answer (the select) drives the re-grade (the rewrite/fill).
+- Lemmas (by `rfl`/`decide`, 0 sorry):
+  1. `fold selectedQuery cascadeStore wantPortHole = foldedPort` — the applied
+     fold takes the sorry to the wiring (the morphism, not two snapshots);
+  2. `¬ IsHungry (fold selectedQuery cascadeStore wantPortHole) Checkpoint.wantPort`
+     — sated after;
+  3. a NEGATIVE conditioning witness: with an empty / non-matching cascade store,
+     `fold` leaves the hole HUNGRY (the fold genuinely needs the cascade select —
+     it is not unconditional).
+- Tie it to the layer: note in a docstring that `fold`'s discharge reading is
+  `DischargeKind.queryAnswer` (already defined). Optionally a `Step`/relation
+  form.
+- **Acceptance:** `lake build DarkTower.FirstFlightsExample` clean; the 3 lemmas
+  proved; 0 sorry; existing decls untouched. Commit the extension.
+
 ## Dispatch table (wave 1)
 | task | file | difficulty | depends on |
 |---|---|---|---|
