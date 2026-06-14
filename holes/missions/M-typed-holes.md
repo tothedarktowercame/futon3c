@@ -105,6 +105,14 @@ the store; make them first-class."
   explicit `(typed hole, term, wiring)` triple in `first-flights-wiring.edn`).
   Shows `fill` is two-grained (atomic Poly substitution **+** cascade-driven
   graph-rewrite fold), the fold grain being the cascade→ML leg.
+- `M-typed-holes-example-scope-query.md` — **queries-as-scopes, dogfooded** on
+  real mined CT (`scripts/scope_query_dogfood.py` over the 0809.2517 golden
+  graph): a query is a partial hyperedge, answering = filling its holes from the
+  store; the Lean `ScopeQuery.answers` spec and this runtime agree on real data
+  ("which concept grounds A?" → `azumaya-algebra`). The third example genre —
+  mission, paper, **and query** handled by one machinery. First rung of the
+  prove-theorems-by-query arc (`substrate-2` = our stack; `substrate-2a` = mined
+  math.ct; theorem = a scope/hole, proof = a witnessed fill via ArSE).
 
 ## Lean leg (DarkTower) — status (2026-06-14)
 
