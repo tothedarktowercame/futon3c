@@ -158,6 +158,20 @@ This is the "futon6 first rung **by example**, not a rollout."
 Future tightenings: `PaperExample` store is single-node-typed (use
 `Sum Symbol Concept`); add a `queryComb`-on-exemplar line.
 
+## MAP (2026-06-14) — see `M-typed-holes-MAP.md`
+
+Phase 2 per `futon4/holes/mission-lifecycle.md` (survey, not design). Headline of
+the ready-vs-missing map: **ready** — the typed-hole datatype (Lean DarkTower,
+9/10), the uniform `hx/` scope schema across stores, the mined hole-types
+(`satiety`), the structural scope-query runtime, ArSE/typed-bells, and the mined
+CT + MO stores. **Missing** — a *single runtime `fill` operator* shared across the
+six projections (today there are six separate fills), the ArSE↔ScopeQuery↔store
+**proving loop**, the `illocutionary-hole` wiring, the live satiety→`:composes`
+projection, and substrate-2a import (gated). **What MAP hands to DERIVE:** the
+design problem is the **shared `fill` operator + the proving loop**, not the
+datatype (which exists). Full inventory, survey Q&A (Q1–Q6), and surprises in
+`M-typed-holes-MAP.md`.
+
 ## Relations
 
 - **BV-combs excursion** (futon6 `9cd66b5`, `holes/bv-comb-typing.edn`) — the
