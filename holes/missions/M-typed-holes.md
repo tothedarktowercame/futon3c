@@ -131,6 +131,17 @@ labelled-transition layer tying typed-bells to the typed-hole datatype).
 `medial`/`switch` rules are schematic — exact Guglielmi-BV fidelity + cut-elim
 deferred (a future proof-theory pass).
 
+**By-example demonstration** (`DarkTower/Examples.lean`, `36b44b7`, reviewed PASS,
+0 sorry): the SAME vocabulary types **both reasoning domains** Joe named —
+`MissionExample` (E-mission-head: lifecycle `BV.seq` chain + scope∥organism
+`BV.copar` + ghost `TypedHole`) and `PaperExample` (0809.2517: ungrounded `H` as
+a `TypedHole`, grounding as `Discharge`/`Fill`, "which concept grounds H?" as a
+`ScopeQuery` answering `HopfAlgebra` by rfl). `(typed-hole, fill)` is
+domain-agnostic — missions and papers are two instantiations, not two theories.
+This is the "futon6 first rung **by example**, not a rollout." Future tightenings:
+`PaperExample` store is single-node-typed (use `Sum Symbol Concept`); add a
+`queryComb`-on-exemplar line; add an M-first-flights (cascade→sorry→wiring) example.
+
 ## Relations
 
 - **BV-combs excursion** (futon6 `9cd66b5`, `holes/bv-comb-typing.edn`) — the
