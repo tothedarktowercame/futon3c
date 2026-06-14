@@ -99,6 +99,12 @@ the store; make them first-class."
   (`anatomy-of-a-futonic-mission.md`) — which makes it *exercise `par`/`copar`*
   (unreachable on the linear mined skeletons) and shows active-inference =
   hole-filling (prediction error = unfilled typed hole).
+- `M-typed-holes-example-first-flights.md` — **M-first-flights** types the *fill
+  operation itself*: the "cascade → sorry → wiring" gain-of-function, with all
+  three terms on disk (`first-flights-cascade.edn`, the typed-hole arrow, an
+  explicit `(typed hole, term, wiring)` triple in `first-flights-wiring.edn`).
+  Shows `fill` is two-grained (atomic Poly substitution **+** cascade-driven
+  graph-rewrite fold), the fold grain being the cascade→ML leg.
 
 ## Relations
 
