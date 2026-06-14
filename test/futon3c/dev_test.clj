@@ -5,12 +5,14 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.agency.registry]
             [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.clock-store :as clock-store]
             [futon3c.agents.mfuton-invoke-override]
             [futon3c.agents.tickle-work-queue]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.evidence.store]
+            [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.apm-conductor-v2 :as apm-v2]
             [futon3c.dev :as dev]))
 
@@ -455,6 +457,35 @@
           (is (= "bell" (:surface @queued)))
           (is (= "msg-1" (:msg-id @queued))))))))
 
+(deftest emit-invoke-evidence-carries-agent-session-clock
+  (testing "invoke evidence body is enriched with the current agent clock"
+    (let [store-atom (var-get #'dev/!evidence-store)
+          old-store @store-atom
+          emitted (atom nil)]
+      (try
+        (clock-store/reset-store!)
+        (clock-store/set-dispatch-mission! "claude-clock" "sid" "M-agent-work")
+        (reset! store-atom :test-store)
+        (with-redefs [dev-invoke/emit-invoke-evidence!
+                      (fn [store agent-id event-type body-map & opts]
+                        (reset! emitted {:store store
+                                         :agent-id agent-id
+                                         :event-type event-type
+                                         :body body-map
+                                         :opts opts}))]
+          (#'dev/emit-invoke-evidence! "claude-clock" "invoke-complete"
+                                       {"ok" true}
+                                       :session-id "sid"
+                                       :tags ["invoke-complete"]))
+        (is (= :test-store (:store @emitted)))
+        (is (= "M-agent-work" (get-in @emitted [:body "mission-id"])))
+        (is (= "M-agent-work" (get-in @emitted [:body "clocked-mission"])))
+        (is (= "dispatch-mission-id"
+               (get-in @emitted [:body "auto-clock-witness" :rule])))
+        (finally
+          (reset! store-atom old-store)
+          (clock-store/reset-store!))))))
+
 (deftest make-claude-invoke-fn-uses-pouch-when-kangaroo-on
   (testing "Kangaroo warm path is wired behind its own flag"
     (let [fed (atom nil)]
@@ -472,7 +503,9 @@
                                                     :claude-bin "unused"
                                                     :session-id-atom (atom "atom-sid")})
               result (invoke-fn "hello warm" "incoming-sid")]
-          (is (= {:result "warm" :session-id "warm-sid"} result))
+          (is (= {:result "warm" :session-id "warm-sid"}
+                 (dissoc result :invoke-trace-id)))
+          (is (string? (:invoke-trace-id result)))
           (is (= "claude-warm" (:agent-id @fed)))
           (is (= "hello warm" (:prompt @fed)))
           (is (= "incoming-sid" (get-in @fed [:opts :session-id]))))))))
@@ -507,7 +540,7 @@
                                                     :timeout-ms 5000})
               result (invoke-fn "hello fallback" nil)]
           (is (= "cold-sid" (:session-id result)))
-          (is (= "[Claude used tools but produced no text response]" (:result result))))))))
+          (is (= "[no text or tool calls in this turn]" (:result result))))))))
 
 (deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
   (testing "mfuton mode injects the n=3-only local contract on #math"

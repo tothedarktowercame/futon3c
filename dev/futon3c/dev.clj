@@ -54,6 +54,7 @@
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
@@ -988,27 +989,50 @@
    Uses the configured in-process evidence store — no HTTP round-trip."
   [agent-id event-type body-map & {:keys [session-id tags]}]
   (when-let [store @!evidence-store]
-    (dev-invoke/emit-invoke-evidence! store agent-id event-type body-map
-                                      :session-id session-id
-                                      :tags tags)))
+    (let [clock-fields (clock-store/evidence-clock-fields agent-id session-id)]
+      (dev-invoke/emit-invoke-evidence! store agent-id event-type
+                                        (merge body-map clock-fields)
+                                        :session-id session-id
+                                        :tags tags))))
 
-(defn- sha256-hex
-  "Hex SHA-256 for TEXT."
-  [text]
-  (dev-invoke/sha256-hex text))
+(defn- prompt-field*
+  [prompt k]
+  (when (map? prompt)
+    (or (get prompt k)
+        (get prompt (name k)))))
 
-(defn- escape-elisp-string
-  "Escape a string for embedding in an elisp double-quoted string."
-  [s]
-  (dev-invoke/escape-elisp-string s))
+(defn- record-dispatch-clock!
+  [agent-id session-id prompt]
+  (when-let [mission-id (prompt-field* prompt :mission-id)]
+    (clock-store/set-dispatch-mission! agent-id session-id mission-id)))
 
-(defn- format-delivery-receipt-line
-  [invoke-trace-id {:keys [surface destination delivered? note]}]
-  (dev-invoke/format-delivery-receipt-line invoke-trace-id
-                                           {:surface surface
-                                            :destination destination
-                                            :delivered? delivered?
-                                            :note note}))
+(defn- record-agent-tool-use!
+  [agent-id session-id tool-detail]
+  (try
+    (clock-store/record-tool-use! agent-id session-id tool-detail)
+    (catch Throwable t
+      (println (str "[auto-clock] agent tool-use reclock failed for "
+                    agent-id ": " (.getMessage t)))
+      (flush)
+      nil)))
+
+(defn- assistant-tool-details
+  [assistant-event]
+  (let [content (get-in assistant-event [:message :content])]
+    (when (sequential? content)
+      (->> content
+           (filter #(= "tool_use" (:type %)))
+           (mapv (fn [block]
+                   (cond-> {:name (:name block)}
+                     (:id block)
+                     (assoc :id (:id block))
+                     (:input block)
+                     (assoc :input (:input block)))))))))
+
+(defn- record-agent-tool-details!
+  [agent-id session-id tool-details]
+  (doseq [tool-detail tool-details]
+    (record-agent-tool-use! agent-id session-id tool-detail)))
 
 (defn- invoke-meta-trace-id
   "Extract invoke trace id from invoke-meta maps with keyword or string keys."
@@ -1159,21 +1183,12 @@
                         :out
                         (json/parse-string true))
                     (catch Exception _ []))
-        ;; 2. Scan recent IRC for acks
-        recent-msgs (irc-recent 50)
-        ack-patterns #"(?i)(ack|received|on it|working on|will do|reviewing|filed|posted|updated|opened PR|opened pull)"
-        acked-by (into #{}
-                       (keep (fn [{:keys [nick text]}]
-                               (when (and text (re-find ack-patterns text))
-                                 nick)))
-                       recent-msgs)
         now (Instant/now)]
     ;; 3. Process each issue
     (doseq [issue gh-issues]
       (let [n (:number issue)
             labels (gh-issue-labels issue)
-            phase (issue-phase labels)
-            closed? (= "closed" (str/lower-case (or (:state issue) "")))]
+            phase (issue-phase labels)]
         (when (and (not= 1 n) (not= :unknown phase))
           ;; Auto-promote: proposal with APPROVE comment → ct-approved
           (when (and (= :proposal phase)
@@ -1199,7 +1214,7 @@
                             (catch Exception _ gh-issues))]
       ;; 5. Update task atom
       (swap! !tickle-tasks
-             (fn [tasks]
+             (fn [_tasks]
                (reduce
                 (fn [ts issue]
                   (let [n (:number issue)
@@ -1302,7 +1317,7 @@
   (let [msgs (irc-recent 30)
         now (str (Instant/now))
         processed (atom [])]
-    (doseq [{:keys [nick text at] :as msg} msgs]
+    (doseq [{:keys [nick text at]} msgs]
       (when-let [{:keys [task-ref artifact]} (parse-done-signal text)]
         (let [sig-key {:at at :nick nick}]
           (when-not (contains? @!done-signals-seen sig-key)
@@ -1492,7 +1507,7 @@ RESPOND WITH ONLY:
         agent-summary (str/join "\n"
                         (map (fn [[id a]]
                                (str "  " id " (" (name (or (:agent/type a) :unknown)) ")"
-                                    (when-let [ws (:agent/ws-connected? a)] " [ws]")))
+                                    (when (:agent/ws-connected? a) " [ws]")))
                              agents))]
     (str "Current time: " (Instant/now) "\n\n"
          "## Registered agents\n"
@@ -1605,7 +1620,7 @@ RESPOND WITH ONLY:
     (println "───────────────────────────────────────────────────────")
     (println "  #     Phase              Assignee   Title")
     (println "───────────────────────────────────────────────────────")
-    (doseq [{:keys [gh-issue status phase assignee title]} tasks]
+    (doseq [{:keys [gh-issue status assignee title]} tasks]
       (println (format "  #%-3d  %-18s %-10s %s"
                        (or gh-issue 0)
                        (name (or status :unknown))
@@ -1726,7 +1741,7 @@ RESPOND WITH ONLY:
                                            (future
                                              (when-let [restart-fn (resolve 'futon3c.dev/restart-agents!)]
                                                (restart-fn)))))}
-                     :on-cycle (fn [{:keys [scanned stalled paged escalated] :as cycle-result}]
+                     :on-cycle (fn [{:keys [stalled paged] :as cycle-result}]
                                  (let [entry (assoc cycle-result :at (str (Instant/now)))]
                                    ;; Track history (keep last 20 cycles)
                                    (swap! !scan-history
@@ -2093,7 +2108,8 @@ RESPOND WITH ONLY:
            cooldown-ms (conj :cooldown-ms cooldown-ms)
            agent-id (conj :agent-id agent-id)
            timeout-ms (conj :timeout-ms timeout-ms)
-           (some? review?) (conj :review? review?))))
+           (some? review?) (conj :review? review?)
+           order (conj :order order))))
 
 ;; =============================================================================
 ;; Mentor peripheral — claude-2 on the configured FrontierMath room
@@ -3189,7 +3205,7 @@ RESPOND WITH ONLY:
   "Notify mechanical conductor that an agent is now available.
    DEPRECATED: Registry !on-idle now fires tickle-queue/enqueue! directly.
    Kept for backwards compatibility — calls enqueue! if available."
-  [agent-id {:keys [ok? session-id invoke-trace-id]}]
+  [_agent-id {:keys [_ok? _session-id _invoke-trace-id]}]
   ;; Bell-driven dispatch: registry mark-idle! → !on-idle → enqueue! → dispatch.
   ;; This function is now a no-op; the registry handles it.
   nil)
@@ -3509,6 +3525,7 @@ RESPOND WITH ONLY:
                                                                (filter #(= "tool_use" (:type %)))
                                                                (map :name)
                                                                seq))
+                                                  tool-details (assistant-tool-details parsed)
                                                   text (extract-text-from-assistant-message parsed)]
                                               ;; Surface tool activity to registry when available.
                                               (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
@@ -3527,6 +3544,8 @@ RESPOND WITH ONLY:
                                                   (.setLength text-acc 0))
                                                 (.append text-acc text))
                                               (when tools (swap! tools-acc into tools))
+                                              (when (seq tool-details)
+                                                (record-agent-tool-details! aid-val used-sid tool-details))
                                               (reset! last-had-tools? (boolean tools))
                                               ;; Emit to streaming event sink (if any)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
@@ -3534,18 +3553,9 @@ RESPOND WITH ONLY:
                                                 (when-let [sink (get-sink aid-val)]
                                                   (try
                                                     (when tools
-                                                      (let [tool-details
-                                                            (->> content
-                                                                 (filter #(= "tool_use" (:type %)))
-                                                                 (mapv (fn [block]
-                                                                         (cond-> {:name (:name block)}
-                                                                           (:id block)
-                                                                           (assoc :id (:id block))
-                                                                           (:input block)
-                                                                           (assoc :input (:input block))))))]
-                                                        (sink {:type "tool_use"
-                                                               :tools (vec tools)
-                                                               :tool_details tool-details})))
+                                                      (sink {:type "tool_use"
+                                                             :tools (vec tools)
+                                                             :tool_details tool-details}))
                                                     (when (and text (not (str/blank? text)))
                                                       (sink {:type "text" :text text}))
                                                     (catch Throwable _)))))
@@ -3731,7 +3741,10 @@ RESPOND WITH ONLY:
                                                           (->> content
                                                                (filter #(= "tool_use" (:type %)))
                                                                (map :name)
-                                                               seq))]
+                                                               seq))
+                                                  tool-details (assistant-tool-details event)]
+                                              (when (seq tool-details)
+                                                (record-agent-tool-details! aid-val warm-sid tool-details))
                                               (when tools
                                                 (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
                                                                                         'update-invoke-activity!)]
@@ -3791,6 +3804,9 @@ RESPOND WITH ONLY:
                         (invoke-once prompt session-id)
                         warm-attempt)))))]
         (fn [prompt session-id]
+          (record-dispatch-clock! agent-id
+                                  (preferred-session-id session-file session-id session-id-atom)
+                                  prompt)
           (cond
             ;; Drainer v2: an outer per-agent drainer already owns serialization for
             ;; this turn, so run the raw invoke without re-queuing (no shared lane held).
@@ -4180,6 +4196,7 @@ RESPOND WITH ONLY:
             used-sid (or invoke-sid "new")
             control-token (str (UUID/randomUUID))
             !interrupted? (atom false)]
+        (record-dispatch-clock! agent-id invoke-sid prompt)
         ;; Reset trace for this invocation
         (reset! !event-trace [])
         (reset! !invoke-start-ms (System/currentTimeMillis))
@@ -4268,7 +4285,6 @@ RESPOND WITH ONLY:
                            (let [exec-enforce? (or (codex-work-claim-without-execution? prompt-str initial)
                                                    (codex-task-reply-without-execution? prompt-str initial))
                                  micro-enforce? (codex-task-micro-update? prompt-str initial)
-                                 format-enforce? (codex-format-refusal? prompt-str initial)
                                  retry-prompt (cond
                                                 exec-enforce?
                                                 (codex-execution-followup-prompt prompt-str (:result initial))
@@ -4773,14 +4789,16 @@ RESPOND WITH ONLY:
                       (str target-nick " is now gated — mention-only mode"))))
                  (flush)))
              (let [ungated? (contains? @!ungated-nicks (str/lower-case nick))
-                   addressed? (or ungated? (mentioned? text nick))]
-               (if (and addressed?
-                        (not= sender nick)
-                        ;; Don't dispatch !gate/!ungate commands as prompts
-                        (not (re-matches #"(?i)^!(un)?gate\s+.*" text)))
-                 (let [prompt (if ungated? text (strip-mention text nick))]
-                   (if (str/blank? prompt)
-                     (do
+                   addressed? (or ungated? (mentioned? text nick))
+                       dispatchable? (and addressed?
+                                          (not= sender nick)
+                                          ;; Don't dispatch !gate/!ungate commands as prompts
+                                          (not (re-matches #"(?i)^!(un)?gate\s+.*" text)))]
+               (cond
+                     dispatchable?
+                     (let [prompt (if ungated? text (strip-mention text nick))]
+                       (if (str/blank? prompt)
+                         (do
                        (println (str "[irc] " nick ": mention detected but prompt empty, ignoring"))
                        (flush))
                      (do
@@ -4866,10 +4884,11 @@ RESPOND WITH ONLY:
                                     :note (if fallback-delivered?
                                             "dispatch-relay-error-fallback"
                                              (str "dispatch-relay-error: " (.getMessage e)))})))
-                               (flush)))))))
-                  (do
-                    (println (str "[irc] " nick ": not mentioned, skipping"))
-                    (flush)))))))))
+                               (flush))))))))
+                     :else
+                     (do
+                       (println (str "[irc] " nick ": not mentioned, skipping"))
+                       (flush))))))))
     )
     ((:join-virtual-nick! irc-server) channel nick)
     (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → " channel " (mention-gated)"))
