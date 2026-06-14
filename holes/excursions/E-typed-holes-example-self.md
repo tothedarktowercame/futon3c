@@ -61,9 +61,11 @@ Two things only this live/reflexive case shows:
    AIF reading is literal (an unwritten phase is prediction error; writing it is
    the action that discharges it). This session **two** ghosts filled in a row —
    `DERIVE` then `ARGUE` — `satiety` `hungry→full` each, watched live. Remaining
-   open holes: `VERIFY`, `INSTANTIATE`, `DOCUMENT`. (Queued twist: an *AIF-driven
-   re-run* of `ARGUE` — re-filling an already-filled hole by a different route, to
-   compare how the front matter changes the structure.)
+   open holes: `VERIFY`, `INSTANTIATE`, `DOCUMENT`. (Done — the *AIF-driven
+   re-run* of `ARGUE` is `E-typed-holes-aif-alternate.md`: both routes converge on
+   the same design, but the AIF route additionally yields **failure conditions +
+   a death clause** — the adoption gate the "as planned" route had no place for,
+   and the HEAD this self-typing flagged as missing.)
 
    **A meta-hole the typing surfaced:** M-typed-holes has **no `HEAD` node at
    all** — not even a ghost; the phase was *skipped*, so the lifecycle's expected

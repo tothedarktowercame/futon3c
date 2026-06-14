@@ -118,6 +118,12 @@ the store; make them first-class."
   sated, DERIVE…DOCUMENT as ghost `TypedHole`s. The only case with open holes
   watched live (writing the next phase = filling a hole); a *paired excursion* so
   the recursion bottoms out. The framework typing its own defining mission.
+- `../excursions/E-typed-holes-aif-alternate.md` — **the counterfactual**:
+  M-typed-holes down the HEAD→AIF lifeform path (sigil/vitals/death-clause +
+  ARGUE-as-aif⁺-battle), compared to the "as planned" route. Finding: both routes
+  reach the *same* design (inevitability backed twice), but the AIF route uniquely
+  yields **failure conditions + a death clause** — the adoption gate to carry back
+  into the charter (Joe's deferred HEAD+AIF plan).
 
 ## Lean leg (DarkTower) — status (2026-06-14)
 
