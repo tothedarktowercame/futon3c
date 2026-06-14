@@ -26,8 +26,8 @@ holes**: the unwritten phases are live ghost lines.
  :head {:prose :present :aif-workup :carried-back-2026-06-14}  ;; was the gap; now filled (see below)
  :bv/copar                       ;; two readings, must cohere (well-formed iff they do)
  [{:reading :structural          ;; the mission doc's written sections
-   :bv/seq [:IDENTIFY :MAP :DERIVE :ARGUE       ;; SATED — written
-            {:ghost :VERIFY} {:ghost :INSTANTIATE}   ;; ghost lines (unwritten phases)
+   :bv/seq [:IDENTIFY :MAP :DERIVE :ARGUE :VERIFY   ;; SATED — written
+            {:ghost :INSTANTIATE}                    ;; ghost lines (unwritten phases)
             {:ghost :DOCUMENT}]}
   {:reading :self-model          ;; this mission's own typed-hole model (substrate-2)
    :note "the datatype it defines, pointed at itself"}]
@@ -36,7 +36,7 @@ holes**: the unwritten phases are live ghost lines.
   :MAP         :full   ;; M-typed-holes-MAP.md (a75205d): ready/missing + survey Q1-Q6
   :DERIVE      :full   ;; M-typed-holes-DERIVE.md — FILLED this session (was :hungry-for :design)
   :ARGUE       :full   ;; M-typed-holes-ARGUE.md — FILLED this session ("as planned"; AIF re-run queued)
-  :VERIFY      {:hungry-for :payoff}
+  :VERIFY      :full   ;; M-typed-holes-VERIFY.md — FILLED this session; two-cert scope (design-cert LANDED Coverage.lean 84b61e9; wiring-cert PARTIAL, open arrow to D1)
   :INSTANTIATE {:hungry-for :payoff}
   :DOCUMENT    {:hungry-for :payoff}}}
 ```
@@ -59,13 +59,18 @@ Two things only this live/reflexive case shows:
    :full` — the ghost above became a sated node *as we watched*. The mission's
    own progress is a **fill-sequence**, self-similar with its subject matter; the
    AIF reading is literal (an unwritten phase is prediction error; writing it is
-   the action that discharges it). This session **two** ghosts filled in a row —
-   `DERIVE` then `ARGUE` — `satiety` `hungry→full` each, watched live. Remaining
-   open holes: `VERIFY`, `INSTANTIATE`, `DOCUMENT`. (Done — the *AIF-driven
-   re-run* of `ARGUE` is `E-typed-holes-aif-alternate.md`: both routes converge on
-   the same design, but the AIF route additionally yields **failure conditions +
-   a death clause** — the adoption gate the "as planned" route had no place for,
-   and the HEAD this self-typing flagged as missing.)
+   the action that discharges it). This session **three** ghosts filled in a row —
+   `DERIVE`, `ARGUE`, then `VERIFY` — `satiety` `hungry→full` each, watched live.
+   Remaining open holes: `INSTANTIATE`, `DOCUMENT`. (`VERIFY` is the sharpest
+   instance yet of the self-similarity: `M-typed-holes-VERIFY.md` types the
+   VERIFY phase *itself* as a **scope with two typed holes** — `?design-cert`,
+   `?wiring-cert` — each filled by a certificate that is *itself a fill* (a Lean
+   proof; a runtime query-answer). So filling the `:VERIFY` ghost was an act of
+   filling two sub-holes with witnessed fills — the framework verifying itself
+   using the very (hole, fill) it defines. The design cert landed
+   (`DarkTower/Coverage.lean`, `84b61e9`, reviewed PASS); the wiring cert is
+   partial, its hunger *being* failure-condition #1 from the AIF workup. The
+   `ARGUE` AIF-driven re-run is `E-typed-holes-aif-alternate.md`.)
 
    **A meta-hole the typing surfaced — now filled.** The first cut said "no
    `HEAD` node at all"; the precise truth is the charter had a **prose HEAD** but
