@@ -335,7 +335,7 @@
        (:server irc-sys)))
     (when register-claude?
       (register-claude-agent!
-       {:agent-id "claude-1"
+       {:agent-id (config/site-qualify "claude-1")
         :session-file (io/file (or (config/env "CLAUDE_SESSION_FILE")
                                    "/tmp/futon-session-id"))
         :socket (or (config/env "CLAUDE_EMACS_SOCKET")
