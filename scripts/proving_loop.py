@@ -59,14 +59,23 @@ SCOPES = [
 ]
 
 
-def load_scopequery():
-    path = Path(__file__).with_name("scope_query_dogfood.py")
-    spec = importlib.util.spec_from_file_location("scope_query_dogfood", path)
+def _load_sibling(name: str):
+    path = Path(__file__).with_name(f"{name}.py")
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"could not load {path}")
     module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module  # dataclasses need the module registered before exec
     spec.loader.exec_module(module)
     return module
+
+
+def load_scopequery():
+    return _load_sibling("scope_query_dogfood")
+
+
+def load_fill():
+    return _load_sibling("fill")
 
 
 def read_manifest_count() -> int | None:
@@ -96,31 +105,6 @@ def http_json(method: str, path: str, payload: dict[str, Any] | None = None) -> 
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"{method} {path} failed: HTTP {exc.code}: {detail}") from exc
     return json.loads(body)
-
-
-def ask(scope: Scope) -> dict[str, Any]:
-    return http_json(
-        "POST",
-        "/ask",
-        {
-            "title": scope.title,
-            "question": scope.question,
-            "author": AUTHOR,
-            "tags": TAGS,
-        },
-    )
-
-
-def answer(thread_id: str, answer_text: str) -> dict[str, Any]:
-    return http_json(
-        "POST",
-        "/answer",
-        {
-            "thread-id": thread_id,
-            "answer": answer_text,
-            "author": AUTHOR,
-        },
-    )
 
 
 def unanswered_thread_ids() -> set[str]:
@@ -218,25 +202,37 @@ def main() -> int:
         raise RuntimeError("hard bound exceeded: more than 10 ArSE writes")
 
     scopequery = load_scopequery()
+    fillmod = load_fill()
     before = read_manifest_count()
     rows: list[dict[str, Any]] = []
 
     for scope in SCOPES:
         witness = compute_witness(scopequery, scope)
-        ask_res = ask(scope)
-        if not ask_res.get("ok"):
-            raise RuntimeError(f"ask failed: {ask_res}")
-        thread_id = ask_res["thread-id"]
-        answer_res = answer(thread_id, answer_text(scope, witness))
-        if not answer_res.get("ok"):
-            raise RuntimeError(f"answer failed: {answer_res}")
+        # answer/query projection: route the discharge through the SINGLE fill (I3).
+        hole = fillmod.TypedHole(
+            id=f"{scope.paper}:{scope.subject}",
+            hungry_for="concept",
+            projection=fillmod.KIND_ANSWER,
+            source={"paper": scope.paper, "scope": scope.scope_text},
+        )
+        note = answer_text(scope, witness)
+        record = fillmod.fill(
+            hole,
+            ", ".join(witness["fills"]) or None,
+            kind=fillmod.KIND_ANSWER,
+            note=note,
+            author=AUTHOR,
+            tags=TAGS,
+        )
+        if not record.filled:
+            raise RuntimeError(f"scope unexpectedly open: {scope.scope_text}")
         rows.append(
             {
                 "paper": scope.paper,
                 "scope": scope.scope_text,
-                "thread_id": thread_id,
-                "question_evidence": ask_res.get("evidence-id", ""),
-                "answer_evidence": answer_res.get("evidence-id", ""),
+                "thread_id": record.thread_id,
+                "question_evidence": record.question_evidence or "",
+                "answer_evidence": record.answer_evidence or "",
                 "fills": witness["fills"],
                 "open_count": witness["open_count"],
             }
