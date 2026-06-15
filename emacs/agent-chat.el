@@ -1292,17 +1292,26 @@ Returns the buffer content up to the separator line."
 ;; --- HTTP helpers ---
 
 (defun agent-chat--json-encodable (value)
-  "Return VALUE converted to a form acceptable to Emacs JSON encoders."
+  "Return VALUE converted to a form acceptable to Emacs JSON encoders.
+Booleans and nil must be handled BEFORE the generic symbol case: in Emacs
+Lisp `nil' and `t' are symbols, so `(symbol-name nil)' => \"nil\" and
+`(symbol-name t)' => \"t\".  Letting those through stamped the literal string
+\"nil\" into restore payloads (session-id/mission-id/...), which then poisoned
+the roster and crashed invoke on `(subs \"nil\" 0 8)'.  Here `t' maps to JSON
+true and nil-valued object keys are OMITTED (server treats missing == null)."
   (cond
    ((hash-table-p value) value)
+   ((eq value t) t)
+   ((null value) nil)
    ((symbolp value)
     (symbol-name value))
    ((and (listp value) (consp value) (consp (car value)))
     (let ((obj (make-hash-table :test 'equal)))
       (dolist (entry value obj)
-        (puthash (format "%s" (car entry))
-                 (agent-chat--json-encodable (cdr entry))
-                 obj))))
+        (unless (null (cdr entry))
+          (puthash (format "%s" (car entry))
+                   (agent-chat--json-encodable (cdr entry))
+                   obj)))))
    ((listp value)
     (mapcar #'agent-chat--json-encodable value))
    ((vectorp value)

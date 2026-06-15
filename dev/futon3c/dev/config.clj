@@ -415,14 +415,27 @@
 ;; Session ID management
 ;; ---------------------------------------------------------------------------
 
+;; Sentinel strings that must never be treated as (or persisted as) a real
+;; session id.  A literal "nil"/"null" reaching the session file or registry
+;; (e.g. an Emacs payload that stringified nil) otherwise builds `--resume nil`
+;; and crashes invoke; rejecting them here lets a poisoned file self-heal to a
+;; fresh CLI-minted session.
+(def ^:private session-id-sentinels #{"nil" "null" "none" "false"})
+
+(defn valid-session-id
+  "Normalize S to a real session id string, or nil when blank/sentinel."
+  [s]
+  (when-let [t (some-> s str str/trim not-empty)]
+    (when-not (contains? session-id-sentinels (str/lower-case t))
+      t)))
+
 (defn read-session-id [f]
   (when (.exists f)
-    (let [s (str/trim (slurp f))]
-      (when-not (str/blank? s) s))))
+    (valid-session-id (slurp f))))
 
 (defn persist-session-id!
   [f sid]
-  (when (and sid (not (str/blank? sid)))
+  (when-let [sid (valid-session-id sid)]
     (try (spit f sid)
          (catch Exception e
            (println (str "[dev] session-id persist warning: " (.getMessage e)))))))
@@ -443,8 +456,8 @@
    Priority without file: incoming invoke session -> sid atom."
   [session-file incoming-session-id session-id-atom]
   (let [file-sid (some-> (session-file->file session-file) read-session-id)
-        incoming (some-> incoming-session-id str str/trim not-empty)
-        atom-sid (some-> session-id-atom deref str str/trim not-empty)]
+        incoming (valid-session-id incoming-session-id)
+        atom-sid (valid-session-id (some-> session-id-atom deref))]
     (if (session-file->file session-file)
       (or file-sid incoming)
       (or incoming atom-sid))))

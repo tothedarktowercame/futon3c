@@ -3455,7 +3455,7 @@ RESPOND WITH ONLY:
               _ (println (str "[invoke] " agent-id " claude -p "
                               (subs (pr-str prompt-str) 0
                                     (min 80 (count (pr-str prompt-str))))
-                              "... (session: " (when used-sid (subs used-sid 0 8)) ")"))
+                              "... (session: " (when used-sid (subs used-sid 0 (min 8 (count used-sid)))) ")"))
               _ (flush)
               ;; Evidence: invoke started
               _ (emit-invoke-evidence! agent-id "invoke-start"
