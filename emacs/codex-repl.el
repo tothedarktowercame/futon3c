@@ -4504,7 +4504,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
         (setq-local codex-repl-agency-agent-id agent-id))
       (when session-file
         (setq-local codex-repl-session-file session-file))
-      (when (and working-directory
+      (when (and (stringp working-directory)
                  (file-directory-p working-directory))
         (setq-local default-directory (file-name-as-directory working-directory)))
       (agent-chat-set-clock! target nil t)
@@ -4594,9 +4594,15 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
   (interactive (list (codex-repl--read-attach-agent-id)))
   (let* ((state (or (codex-repl--fetch-lane-process-state agent-id)
                     (codex-repl--recent-agent-state agent-id)))
-         (session-file (or (plist-get state :session-file)
+         ;; Guard against JSON-null leaking in as :null (the state plist comes
+         ;; from a parse that doesn't force :null-object nil): a non-string
+         ;; value must fall through to the default, not propagate (it would
+         ;; crash file-directory-p and serialize back as ":null").
+         (session-file (or (let ((sf (plist-get state :session-file)))
+                             (and (stringp sf) sf))
                            (codex-repl--default-session-file-for-agent agent-id)))
-         (working-directory (or (plist-get state :working-directory)
+         (working-directory (or (let ((wd (plist-get state :working-directory)))
+                                  (and (stringp wd) wd))
                                 default-directory))
          (buffer (codex-repl--open-instance (codex-repl--lane-buffer-name agent-id)
                                             (codex-repl--lane-invoke-buffer-name agent-id)
