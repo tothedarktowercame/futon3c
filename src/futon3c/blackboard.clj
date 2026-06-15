@@ -836,7 +836,13 @@
                             (str "  " (name aid) " [" type-str
                                  (when remote? " remote")
                                  ", " route-label
-                                 (when ws-bridge? ", ws-bridge")
+                                 ;; Annotate ws-bridge only when the agent is
+                                 ;; actually invoked via the bridge. A locally
+                                 ;; invocable agent (e.g. the laptop's codex-1,
+                                 ;; which also exposes an outbound bridge to the
+                                 ;; hub) is `local` — the ws-bridge? metadata flag
+                                 ;; documents the bridge, it is not the route.
+                                 (when (and ws-bridge? (not= route :local)) ", ws-bridge")
                                  (when surface (str ", " surface))
                                  (when lane (str ", lane=" lane))
                                  (when role (str ", role=" role))
