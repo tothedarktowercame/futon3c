@@ -21,8 +21,10 @@ export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://172.236.28.208:7070}"
 export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
 
 # --- Agents: Claude runs here, Codex runs on laptop ---
-# Claude-1 lives on workspace1 (its blackboard goes there)
-export CLAUDE_EMACS_SOCKET="${CLAUDE_EMACS_SOCKET:-workspace1}"
+# Unified Emacs: claude-1's blackboard falls back to FUTON3C_EMACS_SOCKET
+# (the single futon-ops daemon, as on the laptop). Leave CLAUDE_EMACS_SOCKET
+# unset unless you deliberately want a separate daemon. Any interactive Emacs
+# can keep the default "server" socket.
 export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
 export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
 export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-true}"
