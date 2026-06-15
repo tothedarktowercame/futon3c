@@ -442,6 +442,22 @@
         ws* (atom nil)
         bridge-state* (atom {:status :starting})
         registration-failure* (atom nil)
+        ;; Self-recovering reconnect: exponential backoff (reset on a live
+        ;; onOpen) so a down/half-open remote is not hammered every 5s, plus an
+        ;; in-loop reachability re-probe (see ensure-registered!) so the bridge
+        ;; reconnects on its own when the peer returns — without thrashing while
+        ;; it's gone. (Fixes the flat-5s no-backoff/no-give-up loop.)
+        backoff-base-ms 5000
+        backoff-cap-ms 300000
+        backoff-ms* (atom backoff-base-ms)
+        reset-backoff! (fn [] (reset! backoff-ms* backoff-base-ms))
+        backoff-sleep! (fn []
+                         (let [base (long @backoff-ms*)
+                               jitter (long (rand-int (max 1 (quot base 4))))]
+                           (when @running? (Thread/sleep (+ base jitter)))
+                           (swap! backoff-ms*
+                                  (fn [ms] (min backoff-cap-ms
+                                                (* 2 (long (or ms backoff-base-ms))))))))
         client (HttpClient/newHttpClient)
         replication-interval-ms (long (max 1 (or replication-interval-ms 30000)))
         replication-enabled? (and evidence-replication? evidence-store)
@@ -475,8 +491,23 @@
                           {:status (.statusCode resp)
                            :body (.body resp)}))
         ensure-registered! (fn []
-                             (if-not register-http-base
-                               true
+                             (cond
+                               (not register-http-base) true
+                               ;; Cheap liveness gate: an HTTP probe (catches the
+                               ;; half-open "TCP accepts but Agency is dead" case
+                               ;; that a bare connect misses) so we don't spend a
+                               ;; full register+connect cycle on a down peer.
+                               (not (config/agency-reachable? register-http-base 1500))
+                               (let [{:keys [count emit? first?]}
+                                     (note-repeated-failure! registration-failure*
+                                                             "remote-unreachable" 12)]
+                                 (when emit?
+                                   (println (str "[dev] codex ws bridge: remote " register-http-base
+                                                 " unreachable; backing off ~" (long @backoff-ms*) "ms"
+                                                 (when-not first? (str " (repeated " count " times)"))))
+                                   (flush))
+                                 false)
+                               :else
                                (try
                                  (reset! bridge-state* {:status :registering
                                                         :target register-http-base})
@@ -631,7 +662,7 @@
                  (while @running?
                    (if-not (ensure-registered!)
                      (when @running?
-                       (Thread/sleep 5000))
+                       (backoff-sleep!))
                      (let [closed (promise)
                            url (ws-url)
                            text-buf (StringBuilder.)]
@@ -643,6 +674,7 @@
                          (let [listener (reify WebSocket$Listener
                                           (onOpen [_ ws]
                                             (reset! ws* ws)
+                                            (reset-backoff!)
                                             (reset! bridge-state* {:status :connected
                                                                    :target url})
                                             (send-json! ws {"type" "ready"
@@ -712,13 +744,19 @@
                                (println (str "[dev] codex ws bridge connect failed: " (.getMessage e)))
                                (flush)))))))
                    (when @running?
-                     (Thread/sleep 5000))))]
+                     (backoff-sleep!))))]
     {:stop-fn (fn []
                 (reset! bridge-state* {:status :stopped})
                 (reset! running? false)
                 (when-let [ws @ws*]
+                  ;; Bound the close handshake: sendClose returns a
+                  ;; CompletableFuture that only completes once the *remote*
+                  ;; peer acks. An unreachable peer (e.g. a dead remote Linode)
+                  ;; would otherwise make `.join` park forever and hang the
+                  ;; whole shutdown hook — graceful Ctrl-C never exits. Cap it.
                   (try
-                    (.join (.sendClose ws WebSocket/NORMAL_CLOSURE "shutdown"))
+                    (.get (.sendClose ws WebSocket/NORMAL_CLOSURE "shutdown")
+                          2 java.util.concurrent.TimeUnit/SECONDS)
                     (catch Exception _)))
                 (when replication
                   ((:stop-fn replication)))
