@@ -13,6 +13,9 @@ source "${script_dir}/emacs-socket-lib.sh"
 
 # --- Role & network ---
 export FUTON3C_ROLE="${FUTON3C_ROLE:-linode}"
+# Site code: prefixes this box's locally-registered agent ids (lon-claude-1)
+# so federated peers can mirror them. lucy = London.
+export FUTON3C_SITE="${FUTON3C_SITE:-lon}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
 export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://172.236.28.208:7070}"
@@ -28,6 +31,11 @@ export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
 export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
 export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
 export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-true}"
+
+# claude CLI lives in ~/.local/bin here, which isn't on the JVM's
+# non-interactive launch PATH — point CLAUDE_BIN at the absolute path so the
+# local claude agent (lon-claude-1) is invocable.
+export CLAUDE_BIN="${CLAUDE_BIN:-/home/joe/.local/bin/claude}"
 
 # --- Codex settings (for relay/proxy, not local execution) ---
 export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"

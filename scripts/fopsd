@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+server_name="${FUTON_OPS_SERVER:-futon-ops}"
+# Chemacs profile to launch under. Unset => "graph" (laptop default).
+# Set to empty (FUTON_OPS_PROFILE="") to start a plain Emacs daemon with no
+# --with-profile flag, for boxes without chemacs2 (e.g. lucy).
+profile_name="${FUTON_OPS_PROFILE-graph}"
+emacs_bin="${EMACS_BIN:-emacs}"
+emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
+
+socket_live() {
+  if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
+    return 1
+  fi
+  "${emacsclient_bin}" -s "${server_name}" -e t >/dev/null 2>&1
+}
+
+if socket_live; then
+  exit 0
+fi
+
+profile_args=()
+if [[ -n "${profile_name}" ]]; then
+  profile_args=(--with-profile "${profile_name}")
+fi
+
+FUTON_EMACS="${FUTON_EMACS:-1}" \
+FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}" \
+  "${emacs_bin}" "${profile_args[@]+"${profile_args[@]}"}" \
+  --daemon="${server_name}" >/dev/null 2>&1
+
+for _ in $(seq 1 160); do
+  if socket_live; then
+    exit 0
+  fi
+  sleep 0.25
+done
+
+echo "fopsd: timed out waiting for Emacs daemon '${server_name}'" >&2
+exit 1

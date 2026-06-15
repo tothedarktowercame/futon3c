@@ -26,12 +26,16 @@ export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
 export FUTON3C_RELAY_CLAUDE="${FUTON3C_RELAY_CLAUDE:-false}"
 export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-false}"
 
-# --- Agents: NONE registered locally yet. claude-1 would collide with lucy's;
-#     flip FUTON3C_REGISTER_CLAUDE=true once site-prefixed ids (chi-claude-1)
-#     land so this box registers a distinct agent. ---
-export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-false}"
+# --- Agents: registers chi-claude-1 (site-qualified via FUTON3C_SITE=chi), a
+#     distinct id that lucy mirrors as a proxy. Plain claude-1 would collide
+#     with lucy's protected id and be refused. ---
+export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
 export FUTON3C_REGISTER_CLAUDE2="${FUTON3C_REGISTER_CLAUDE2:-false}"
 export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
+# claude CLI lives in ~/.local/bin here, which isn't on the JVM's
+# non-interactive launch PATH — point CLAUDE_BIN at the absolute path so
+# chi-claude-1 is invocable.
+export CLAUDE_BIN="${CLAUDE_BIN:-/home/joe/.local/bin/claude}"
 
 # --- Federation: peer with lucy (announce local agents; mirror lucy's) ---
 export FUTON3C_PEERS="${FUTON3C_PEERS:-http://172.236.28.208:7070}"
