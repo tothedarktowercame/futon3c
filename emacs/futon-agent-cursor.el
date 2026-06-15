@@ -217,3 +217,82 @@ prompt for a NOTE to ride along."
     (futon-agent-cursor-goto (current-buffer) (point) "looking with you")
     (message "futon-look: sent %d chars from %s:%d"
              (length text) (buffer-name) (line-number-at-pos))))
+
+;;;; Pool dispatch: throw a one-liner + context at ANY idle agent ----------
+;; Like `futon-look', but instead of the single shared inbox it PUSHES the
+;; message to a non-busy agent picked from the Agency roster — the operator
+;; need not think about which agent.  Round-robin spreads work across the pool.
+
+(defvar futon-dispatch-api-url "http://localhost:7070"
+  "Agency base URL for `futon-dispatch'.")
+
+(defvar futon-dispatch-types '("claude")
+  "Restrict the dispatch pool to these agent TYPES.
+Default '(\"claude\") keeps the OPERATOR's pool to Claude-family agents (claude +
+fable, both reported as type \"claude\"); Codex is excluded — the Claudes hand work
+ONWARD to Codex themselves via the agency handoff, so the operator passes only to
+Claudes.  Set to nil to allow any idle agent (incl. codex).")
+
+(defvar futon-dispatch--rr 0
+  "Round-robin cursor over the current idle pool.")
+
+(defun futon-dispatch--pool ()
+  "Idle agent-ids from the Agency roster (filtered by `futon-dispatch-types'),
+sorted for a stable round-robin."
+  (with-temp-buffer
+    (when (zerop (call-process "curl" nil t nil "-s" "--max-time" "5"
+                               (concat futon-dispatch-api-url "/api/alpha/agents")))
+      (goto-char (point-min))
+      (let* ((json (ignore-errors (json-read)))
+             (agents (alist-get 'agents json)))
+        (sort
+         (delq nil
+               (mapcar
+                (lambda (pair)
+                  (let* ((a (cdr pair))
+                         (status (alist-get 'status a))
+                         (type (alist-get 'type a)))
+                    (when (and (equal status "idle")
+                               (or (null futon-dispatch-types)
+                                   (member type futon-dispatch-types)))
+                      (symbol-name (car pair)))))
+                agents))
+         #'string<)))))
+
+(defun futon-dispatch--pick ()
+  "Round-robin an idle agent from the pool, or nil when the pool is empty."
+  (let ((pool (futon-dispatch--pool)))
+    (when pool
+      (prog1 (nth (mod futon-dispatch--rr (length pool)) pool)
+        (setq futon-dispatch--rr (1+ futon-dispatch--rr))))))
+
+(defun futon-dispatch (message)
+  "Dispatch MESSAGE plus the context here to an auto-picked idle agent.
+Captures the active region (or paragraph at point), file and line, and PUSHES
+them with MESSAGE to a non-busy agent from the pool via /api/alpha/invoke — the
+summons IS the consent, exactly like `futon-look', but you don't choose which
+agent.  Reports who it went to; the agent's reply surfaces in *agents*."
+  (interactive "sDispatch to pool: ")
+  (let ((agent (futon-dispatch--pick)))
+    (if (not agent)
+        (message "futon-dispatch: no idle agent available right now")
+      (let* ((text (if (use-region-p)
+                       (buffer-substring-no-properties (region-beginning) (region-end))
+                     (save-excursion
+                       (buffer-substring-no-properties
+                        (progn (backward-paragraph) (point))
+                        (progn (forward-paragraph) (point))))))
+             (file (or (buffer-file-name) (buffer-name)))
+             (line (line-number-at-pos))
+             (prompt (format "[futon-dispatch — operator pool message]\nContext: %s:%d\n\n%s\n\n--- operator says ---\n%s"
+                             file line (string-trim text) message))
+             (payload (json-encode `(("agent-id" . ,agent)
+                                     ("prompt" . ,prompt)
+                                     ("caller" . "joe")
+                                     ("surface" . "futon-dispatch")))))
+        (call-process "curl" nil 0 nil "-s" "--max-time" "15" "-X" "POST"
+                      (concat futon-dispatch-api-url "/api/alpha/invoke")
+                      "-H" "Content-Type: application/json"
+                      "-d" payload)
+        (message "futon-dispatch → %s  (%d chars + note from %s:%d)"
+                 agent (length text) (buffer-name) line)))))
