@@ -8,7 +8,8 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.dev.config :as config])
+            [futon3c.dev.config :as config]
+            [futon3c.util.cwd :as cwd])
   (:import [java.io BufferedReader BufferedWriter InputStreamReader OutputStreamWriter]
            [java.time Instant]
            [java.util.concurrent TimeUnit TimeoutException]))
@@ -249,7 +250,7 @@
              (.redirectInput java.lang.ProcessBuilder$Redirect/PIPE)
              (.redirectOutput java.lang.ProcessBuilder$Redirect/PIPE)
              (.redirectError java.lang.ProcessBuilder$Redirect/PIPE))
-        _ (when cwd (.directory pb (io/file cwd)))
+        _ (when-let [d (cwd/resolve-cwd cwd)] (.directory pb (io/file d)))
         proc (.start pb)
         stderr (atom [])
         pouch {:agent-id aid

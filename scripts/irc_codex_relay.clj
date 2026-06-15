@@ -39,7 +39,17 @@
 (def irc-channel (env "IRC_CHANNEL" "#futon"))
 
 (def codex-bin (env "CODEX_BIN" "codex"))
-(def codex-cwd (env "CODEX_CWD" (System/getProperty "user.dir")))
+(defn- expand-cwd
+  "Expand a leading ~ to the user's home (ProcessBuilder/sh don't shell-expand ~,
+   so a literal \"~/\" working dir fails to launch). Blank → the JVM's own cwd."
+  [s]
+  (let [s (when s (.trim (str s)))]
+    (cond
+      (or (nil? s) (= s "")) (System/getProperty "user.dir")
+      (= s "~") (System/getProperty "user.home")
+      (.startsWith s "~/") (str (System/getProperty "user.home") (subs s 1))
+      :else s)))
+(def codex-cwd (expand-cwd (env "CODEX_CWD" (System/getProperty "user.dir"))))
 (def codex-model (env "CODEX_MODEL" ""))
 (def codex-sandbox (env "CODEX_SANDBOX" "danger-full-access"))
 (def codex-approval (env "CODEX_APPROVAL" "never"))

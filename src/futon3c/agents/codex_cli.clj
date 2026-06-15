@@ -5,7 +5,8 @@
    (fn [prompt session-id] -> {:result string|nil :session-id string|nil :error string?})."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [futon3c.util.cwd :as cwd]))
 
 (defn- coerce-prompt
   [prompt]
@@ -245,8 +246,8 @@
    Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
   [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event on-process-started on-process-exit]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
-        _ (when (and (string? cwd) (not (str/blank? cwd)))
-            (.directory pb (io/file cwd)))
+        _ (when-let [d (cwd/resolve-cwd cwd)]
+            (.directory pb (io/file d)))
         emit-runtime! (fn [evt]
                         (when on-runtime-event
                           (try

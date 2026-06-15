@@ -66,6 +66,7 @@
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.replication :as ws-repl]
             [futon3c.dev.config :as config]
+            [futon3c.util.cwd :as cwd]
             [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.irc :as dev-irc]
             [futon3c.dev.apm :as dev-apm]
@@ -3515,7 +3516,7 @@ RESPOND WITH ONLY:
               ;; Launch process with ProcessBuilder
               pb (let [pb* (doto (ProcessBuilder. ^java.util.List (vec args))
                             (.redirectInput (java.lang.ProcessBuilder$Redirect/from (java.io.File. "/dev/null"))))]
-                      (when cwd (.directory pb* (java.io.File. cwd)))
+                      (when-let [d (cwd/resolve-cwd cwd)] (.directory pb* (java.io.File. d)))
                       pb*)
               proc (.start pb)
               ;; Drain stderr in background (prevents buffer blocking)
