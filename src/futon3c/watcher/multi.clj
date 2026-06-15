@@ -67,6 +67,15 @@
 
 (defonce !pending-missions (atom {}))
 
+;; Single-flight latch for the scope-lane reingest. A reingest runs on a future
+;; whose deref times out at `maintenance-run-timeout-ms`, but `future-cancel`
+;; can't interrupt a thread spinning in a native RocksDB scan — so a timed-out
+;; run keeps grinding a core as a zombie. This latch is set true while a run is
+;; in flight and cleared from the future's own `finally` (i.e. when it ACTUALLY
+;; finishes, now bounded by the futon1a query `:timeout`), so the drainer won't
+;; pile a second runaway on top of one that's still alive.
+(defonce ^:private !maintenance-inflight (atom false))
+
 (defonce !mission-maintenance
   (atom {:executor nil
          :started-at nil
@@ -243,10 +252,14 @@
    cycle."
   [{:keys [stem path queued-at last-seen-at count]}]
   (let [started (now-ms)
+        _ (reset! !maintenance-inflight true)
         fut (future
               (try
                 {:report (reingest-mission-scopes! {:stem stem :path path})}
-                (catch Throwable t {:throwable (or (.getMessage t) (str t))})))
+                (catch Throwable t {:throwable (or (.getMessage t) (str t))})
+                ;; Cleared only when the run TRULY ends (not on deref timeout),
+                ;; so a zombie scan still holds the single-flight latch.
+                (finally (reset! !maintenance-inflight false))))
         outcome (deref fut maintenance-run-timeout-ms ::timeout)
         finished (now-ms)
         base {:stem stem
@@ -306,16 +319,24 @@
   (let [t (now-ms)
         ready (ready-maintenance-entries t @!pending-missions)]
     (swap! !mission-maintenance assoc :last-drain-at (str (Instant/ofEpochMilli t)))
-    (doseq [{:keys [stem] :as entry} ready]
-      (let [claimed? (atom false)]
-        (swap! !pending-missions
-               (fn [pending]
-                 (if (= entry (get pending stem))
-                   (do (reset! claimed? true)
-                       (dissoc pending stem))
-                   pending)))
-        (when @claimed?
-          (run-mission-maintenance! entry))))))
+    (if (and (seq ready) @!maintenance-inflight)
+      ;; A prior reingest is still alive (possibly a zombie past its deref
+      ;; timeout). Leave `ready` in pending and retry next tick (~1s) rather
+      ;; than launching an overlapping run.
+      (println "[mission-scope-lane drain skip] reingest still in flight; deferring")
+      ;; `:while` stops claiming the moment a run goes long (sets the latch and
+      ;; times out), so we never dissoc an entry we won't actually process.
+      (doseq [{:keys [stem] :as entry} ready
+              :while (not @!maintenance-inflight)]
+        (let [claimed? (atom false)]
+          (swap! !pending-missions
+                 (fn [pending]
+                   (if (= entry (get pending stem))
+                     (do (reset! claimed? true)
+                         (dissoc pending stem))
+                     pending)))
+          (when @claimed?
+            (run-mission-maintenance! entry)))))))
 
 (declare stop-mission-maintenance-drainer!)
 

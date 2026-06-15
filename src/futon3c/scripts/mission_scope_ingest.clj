@@ -111,6 +111,16 @@
 
 (def ^:private !hyperedge-type-cache (atom {}))
 
+(defn- reset-run-caches!
+  "Clear the process-global query caches at the start of each ingest run. These
+   atoms persist across in-process `-main` invocations in the one serving JVM, so
+   without this a reingest serves STALE hyperedge / pattern-library reads from a
+   prior run — exactly the data a reingest exists to refresh. Within a single run
+   the caches still coalesce repeated reads."
+  []
+  (reset! !hyperedge-type-cache {})
+  (reset! !pattern-library-cache nil))
+
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
     cached
@@ -1788,6 +1798,7 @@
                          :mission stem}))
 
 (defn -main [& args]
+  (reset-run-caches!)
   (let [client (http-client)
         [opts missions] (loop [xs args opts {} missions []]
                           (if-let [x (first xs)]
