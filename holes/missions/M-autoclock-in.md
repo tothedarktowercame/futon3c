@@ -221,3 +221,55 @@ Implemented in `futon3c/emacs/agent-chat.el` as an additive third auto-clock rul
 
 Batch smoke coverage was added in `futon3c/test/agent-chat-edit-activity-smoke.el` for the accepted v1 cases:
 3 saves switch, 1 save does not, alternating saves do not thrash, active `M-bar` switches to repeated `M-foo`, and single-active is preserved.
+
+## INSTANTIATE-4 candidate — AGENT-side reclock (Joe, 2026-06-14)
+
+**The gap that broke it (2026-06-14, claude-2 / M-typed-holes).** Joe lost track of which
+agent/mission was doing the typed-holes formal-modelling work; the mission-session history view
+(reconstructed from clock-tagged turn evidence) showed claude-2 under **E-the-dark-tower** with
+**M-typed-holes invisible** — even though claude-2 demonstrably worked it (signed the doc, commits
+`c694d55`/`a75205d`). Root cause: **all three rules above key off OPERATOR signals only** —
+INSTANTIATE-1 watches the operator's REPL user-turns, INSTANTIATE-2 the `eoi-new` launcher,
+INSTANTIATE-3 the **Emacs `after-save-hook`** (operator saves). An *agent* edits mission docs
+through its **tools** (never an Emacs save) and its work is its own invoke turns (not the operator's
+REPL turns), so **no rule ever fires for agent work** — exactly as INSTANTIATE-3 admits
+("agent/tool edits that bypass Emacs save are out of scope for v1"). Since agents do most of the
+mission work, the clock tracks the operator's focus but is blind to the agents → the history is
+incomplete.
+
+**The rule (agent-edit-activity reclock — the agent-side mirror of INSTANTIATE-3).** The clock-bearing
+side here is the **JVM**, not Emacs. Maintain a **per-agent-session clock** (mission/campaign/excursion)
+in futon3c, and reclock it from agent-native signals, same explicit-not-fuzzy discipline:
+
+1. **Primary — agent tool-edits to `{C,M,E}-*.md`.** The agent's `Edit`/`Write`/`MultiEdit` tool-uses
+   are already surfaced to the JVM during invoke (the `:on-event` tool_use stream in
+   `make-claude-invoke-fn`). Extract the `file_path`; if it resolves by exact basename to an existing
+   `{C,M,E}-*` doc, accrue a per-session edit count (window W). On threshold N + dominance (hysteresis,
+   no thrash), **switch** that agent-session's clock to the target — switch-not-floor, because sustained
+   editing is unambiguous "this agent is working on X now" (same grade as INSTANTIATE-2/3, not a passing
+   mention). The file path is the witness; no fuzzy/prose matching. *This is the signal that captures the
+   claude-2 case.*
+2. **Secondary — dispatch/invoke `mission-id`.** When an agent is invoked/belled carrying a `:mission-id`
+   (handoffs name a mission; `emit-invoke-evidence!` already records it), set the session clock on
+   receipt. Cheap, but only fires when the dispatcher names the mission — so it complements, doesn't
+   replace, the edit signal (claude-2's autonomous work carried no mission-id, which is why it was lost).
+
+**Recording.** The agent's invoke-evidence (`emit-invoke-evidence!`) must carry the session's current
+clock (mission/campaign/excursion) — that is what makes agent turns show up in the history. Each reclock
+records an audit witness `(rule . "agent-edit-activity") (source . "agent-tool-edit") (file . "…") …`,
+mirroring the operator witnesses.
+
+**Companion — the history VIEW.** The data exists once agent turns are clock-tagged; surface it: query
+clock-tagged evidence → a **session↔mission timeline** ("git history for mission-session interactions",
+Joe's framing). Prototyped 2026-06-14 by scanning `/api/alpha/evidence` for clock fields — promote that
+to a real surface (an `/api/alpha/...` endpoint and/or an Emacs view).
+
+**Decisions / open qs.** N/W defaults (reuse INSTANTIATE-3's 3 / 600s as a start; calibrate to agent
+edit cadence); whether to also count edits to a mission's *code* files (the `file→mission` edges) or docs
+only (v1: docs only); where the per-session clock store lives (registry metadata vs a dedicated
+clock-store atom, durable so it survives the per-turn cold-resume); switch-not-floor confirmed (vs Rule 0).
+Detection point: the invoke `:on-event` stream is where session→file is already linked — alternative is a
+dedicated tool-use evidence consumer if tool-uses are persisted with file paths. **Owner:** codex (handoff,
+this mission's pattern); reviewer: claude-owner (author≠reviewer). Gates: clj-kondo + check-parens +
+tests; do NOT restart the JVM (dev.clj invoke path is boot-code — note next-restart; the clock-store +
+evidence-tagging can reload/verify via proof-eval.sh).
