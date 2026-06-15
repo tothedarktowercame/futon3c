@@ -429,6 +429,13 @@ If nil, reads from .admintoken in the project root at first use."
 
 ;;; Auto-registration
 
+(defun claude-repl--claude-agent-id-p (agent-id)
+  "Non-nil if AGENT-ID names a Claude agent, plain or site-qualified.
+Matches claude-1, lon-claude-1, chi-claude-1 — so federated remote
+claudes are first-class in the REPL picker, idle-finder and recents."
+  (and (stringp agent-id)
+       (string-match-p "\\`\\(?:[a-z0-9]+-\\)?claude-" agent-id)))
+
 (defun claude-repl--find-idle-agent ()
   "Find an existing idle claude agent from the registry.
 Workspace-aware: prefers agents whose emacs-socket matches this
@@ -460,7 +467,7 @@ Falls back to unbound idle agents, then returns nil."
              (claude-entries
               (seq-filter
                (lambda (pair)
-                 (and (string-prefix-p "claude-" (car pair))
+                 (and (claude-repl--claude-agent-id-p (car pair))
                       (let ((status (alist-get 'status (cdr pair))))
                         (or (null status)
                             (equal status "idle")))))
@@ -1393,7 +1400,7 @@ Then auto-register with the server and load existing session-id."
       (car
        (sort
         (cl-loop for (agent-id . agent) in agents
-                 when (and (string-prefix-p "claude-" agent-id)
+                 when (and (claude-repl--claude-agent-id-p agent-id)
                            (equal (alist-get 'session-id agent) session-id))
                  collect agent-id)
         #'string<)))))
@@ -1526,7 +1533,7 @@ created without churning your window layout (switch with \\[switch-to-buffer])."
         (let* ((agent-id (string-remove-prefix ":" (symbol-name k)))
                (type (and (listp agent) (plist-get agent :type)))
                (claude? (or (equal type "claude")
-                            (string-prefix-p "claude-" agent-id)
+                            (claude-repl--claude-agent-id-p agent-id)
                             (string-prefix-p "fable-" agent-id))))
           (condition-case err
               (cond
