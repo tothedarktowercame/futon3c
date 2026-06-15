@@ -1505,5 +1505,46 @@ Alias for `claude-repl-attach-agent' for backward compatibility."
    (list (claude-repl--read-attach-agent-id)))
   (claude-repl-attach-agent agent-id))
 
+;;;###autoload
+(defun emacs-agency-restore ()
+  "Re-open a REPL buffer for every agent registered in the Agency.
+After an Emacs crash/OOM the JVM registry survives (and now restores itself),
+but Emacs loses its REPL buffers — this reconnects one per registered agent:
+claude/fable agents via `claude-repl-attach-agent', codex agents via
+`codex-repl-attach-agent'.  Already-open agents are skipped.  Buffers are
+created without churning your window layout (switch with \\[switch-to-buffer])."
+  (interactive)
+  (let* ((parsed (claude-repl--live-agents-response))
+         ;; The roster JSON parses to a plist with keyword keys; :agents is itself
+         ;; a plist of (:agent-id-keyword agent-data-plist) pairs.
+         (agents (plist-get parsed :agents))
+         (opened '()) (skipped '()) (failed '()))
+    (if (null agents)
+        (message "emacs-agency-restore: no agents in the registry (is the JVM up at %s?)"
+                 claude-repl-api-url)
+      (cl-loop for (k agent) on agents by #'cddr do
+        (let* ((agent-id (string-remove-prefix ":" (symbol-name k)))
+               (type (and (listp agent) (plist-get agent :type)))
+               (claude? (or (equal type "claude")
+                            (string-prefix-p "claude-" agent-id)
+                            (string-prefix-p "fable-" agent-id))))
+          (condition-case err
+              (cond
+               ((and claude? (claude-repl-find-buffer-by-agent-id agent-id))
+                (push agent-id skipped))
+               (claude?
+                (save-window-excursion (claude-repl-attach-agent agent-id))
+                (push agent-id opened))
+               ((fboundp 'codex-repl-attach-agent)
+                (save-window-excursion (codex-repl-attach-agent agent-id))
+                (push agent-id opened))
+               (t (push agent-id skipped)))
+            (error (push (format "%s(%s)" agent-id (error-message-string err)) failed)))))
+      (message "emacs-agency-restore: opened %d [%s]%s%s"
+               (length opened) (string-join (reverse opened) " ")
+               (if skipped (format " · skipped %d already-open [%s]"
+                                   (length skipped) (string-join (reverse skipped) " ")) "")
+               (if failed (format " · FAILED: %s" (string-join (reverse failed) "; ")) "")))))
+
 (provide 'claude-repl)
 ;;; claude-repl.el ends here

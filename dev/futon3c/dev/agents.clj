@@ -271,7 +271,21 @@
         role (:role role-info)
         role-cfg (config/role-defaults role)
         register-claude? (config/env-bool "FUTON3C_REGISTER_CLAUDE" (:register-claude? role-cfg))
-        register-codex? (config/env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
+        register-codex? (config/env-bool "FUTON3C_REGISTER_CODEX"
+                          (or (:register-codex? role-cfg)
+                              ;; Robustness (2026-06-14): a box told to relay codex (role
+                              ;; :linode) but with NO bridge target to relay TO must actually
+                              ;; BE the host — register codex LOCAL rather than as a dead
+                              ;; "awaiting WS bridge" placeholder.  Guards a stale
+                              ;; FUTON3C_ROLE=linode that survives an OOM-resume (the
+                              ;; codex-1-comes-up-remote bug).  A real relaying linode has a
+                              ;; bridge target (FUTON3C_LAPTOP_URL / CODEX_REMOTE_BASE / peer),
+                              ;; so this stays false there.
+                              (and (= role :linode)
+                                   (not (or (config/env "FUTON3C_CODEX_REMOTE_BASE")
+                                            (config/env "FUTON3C_LAPTOP_URL")
+                                            (config/env "FUTON3C_IRC_SEND_BASE")
+                                            (config/first-peer-url))))))
         register-corpus? (config/env-bool "FUTON3C_REGISTER_CORPUS" false)
         register-tickle? (config/env-bool "FUTON3C_REGISTER_TICKLE" false)
         register-scribe? (config/env-bool "FUTON3C_REGISTER_SCRIBE" false)

@@ -22,14 +22,17 @@
       "/tmp/futon3c-agent-roster.edn"))
 
 (defn restore-enabled?
-  "Boot-time restore flag. Persistence is always on; replay is load-dark."
+  "Boot-time restore flag.  Default TRUE (2026-06-14): the roster restores on boot
+   unless explicitly disabled.  Robust against the launch env not propagating
+   FUTON3C_AGENT_RESTORE (e.g. an OOM-resume) — restore still happens.  Use a
+   `--fresh` boot (which sets FUTON3C_AGENT_RESTORE=false) for a deliberate reset."
   []
   (let [prop (System/getProperty "FUTON3C_AGENT_RESTORE")]
     (if (some? prop)
       (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
       (if-let [s (System/getenv "FUTON3C_AGENT_RESTORE")]
         (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim s))))
-        false))))
+        true))))
 
 (defn- now [] (str (Instant/now)))
 
@@ -179,15 +182,37 @@
            {:version roster-version :agents []}))
        {:version roster-version :agents []}))))
 
+(defn persist-enabled?
+  "Whether continuous roster persistence is on.  Default TRUE.
+   A clean/--fresh boot sets FUTON3C_ROSTER_PERSIST=false so the empty/minimal
+   registry does NOT overwrite (clobber) the durable snapshot — the snapshot is
+   preserved for a later non-fresh boot to restore.  (Distinct from
+   FUTON3C_AGENT_RESTORE, which gates replay-on-boot.)"
+  []
+  (let [prop (System/getProperty "FUTON3C_ROSTER_PERSIST")]
+    (if (some? prop)
+      (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
+      (if-let [s (System/getenv "FUTON3C_ROSTER_PERSIST")]
+        (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim s))))
+        true))))
+
 (defn install-registry-watch!
-  "Install continuous roster persistence on REGISTRY-ATOM. Idempotent."
+  "Install continuous roster persistence on REGISTRY-ATOM. Idempotent.
+   No-op when persistence is disabled (FUTON3C_ROSTER_PERSIST=false, e.g. a
+   --fresh boot) — so a clean session cannot clobber the durable snapshot, and a
+   later non-fresh boot restores the preserved roster."
   [registry-atom]
-  (remove-watch registry-atom registry-watch-key)
-  (add-watch registry-atom registry-watch-key
-             (fn [_ _ _ new-state]
-               (persist-registry! new-state)))
-  (persist-registry! @registry-atom)
-  true)
+  (if-not (persist-enabled?)
+    (do (println "[agent-roster] persistence DISABLED (FUTON3C_ROSTER_PERSIST=false) — durable snapshot preserved, not overwritten")
+        (flush)
+        false)
+    (do
+      (remove-watch registry-atom registry-watch-key)
+      (add-watch registry-atom registry-watch-key
+                 (fn [_ _ _ new-state]
+                   (persist-registry! new-state)))
+      (persist-registry! @registry-atom)
+      true)))
 
 (defn restore-on-boot!
   "Replay the durable roster through RESTORE-FN when FUTON3C_AGENT_RESTORE is on.

@@ -151,12 +151,16 @@ for arg in "$@"; do
       echo "[dev] Tickle + FM conductor: will start at boot"
       ;;
     --fresh)
-      # Legacy clean boot: skip restore-on-boot so the JVM comes up with NO
-      # restored agents (mint new ones via cr/cx) and fresh invoke lanes/drainers.
-      # The roster is still persisted continuously — --fresh just doesn't REPLAY
-      # it this boot, so it's non-destructive (a later non-fresh boot restores).
+      # Clean boot: skip restore-on-boot so the JVM comes up with NO restored
+      # agents (mint new ones via cr/cx) and fresh invoke lanes/drainers.
+      # CRITICAL: also SUSPEND persistence (FUTON3C_ROSTER_PERSIST=false).  Without
+      # this, "persistence always on" overwrote the durable snapshot with the empty
+      # --fresh registry, so a later non-fresh boot had nothing to restore — the
+      # roster-loss bug of 2026-06-13.  With persistence suspended, --fresh is truly
+      # non-destructive: the snapshot is preserved and a later non-fresh boot restores it.
       export FUTON3C_AGENT_RESTORE=false
-      echo "[dev] --fresh: restore-on-boot OFF — clean slate (no agents restored)"
+      export FUTON3C_ROSTER_PERSIST=false
+      echo "[dev] --fresh: restore-on-boot OFF + persistence SUSPENDED — clean slate, durable roster snapshot preserved"
       ;;
     *)
       remaining_args+=("$arg")
