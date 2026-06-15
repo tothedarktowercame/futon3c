@@ -1,8 +1,12 @@
 # Mission: M-typed-holes
 
-**Status:** IDENTIFY (charter, 2026-06-14) — spun out of a Joe↔claude-2 design
-conversation. No implementation yet; this records the unification + the first
-data-backed rung.
+**Status:** **CLOSED (2026-06-15, Joe).** Ran the full lifecycle
+IDENTIFY→MAP→DERIVE→ARGUE→VERIFY→INSTANTIATE→DOCUMENT in two sessions
+(2026-06-14 design; 2026-06-15 build). The single runtime `fill` is built and all
+six projections route through it (D1, failure-condition #1 closed); see
+`## CLOSED` at the foot of this doc for the close-out, extensions, and the new
+hole-type the close surfaced. *(Charter, 2026-06-14: spun out of a Joe↔claude-2
+design conversation; recorded the unification + the first data-backed rung.)*
 **Owner:** claude-2 (charter author); Joe + agents for refinement/review.
 **Repo:** futon3c (coordination/stack home, next to `M-typed-bells`); consumes
 futon6 mining data and futon5a theory.
@@ -307,6 +311,45 @@ wiring. **Open / Joe's call:** mission-close; full-corpus substrate-2a reimport;
 the satiety-transition upgrade (cascade-feed schematic leg in `?design-cert`);
 concurrency-safe ArSE writes (the parallel-writer lost-update risk did not bite
 here but the store is not locked — see `T-typed-bell-arse-write-async`).
+
+## CLOSED (2026-06-15, Joe)
+
+**Close-out bar — what shipped:**
+- the single runtime `fill(hole, filler, kind=…)` (`futon3c/scripts/fill.py`,
+  `f7ca75b`), witnessed in ArSE (I3+I5) with the I1 typed-fill gate;
+- **all six projections routed through it** as adapters (answer/query, reply/bell,
+  ground/symbol, compose/comb, discharge/proof, cascade-feed/mining) — keystone by
+  the Claude owner, six adapters Codex-authored + claude-1-reviewed (author ≠
+  reviewer); 19 witnessed fills, integrity sweep clean, **failure-condition #1
+  closed**;
+- VERIFY's two certificates: design (`DarkTower/Coverage.lean`, 0 `sorryAx`) +
+  wiring (substrate-2a import `12fa355` + proving loop `a573b54`);
+- DOCUMENT: the CT **"Reprise and technical explainer"** supplement,
+  `futon6/holes/anatomy-of-a-futonic-mission.md` §9 — which reports the host
+  paper's own §5.3 debt ("two projections of one quantity") **discharged**.
+
+**Extensions, typed as holes** (the reflexive close — the mission about holes
+records its own future work *as* holes). These are **open arrows** (named target,
+construction owed): the satiety→sated *transition* (upgrades the cascade-feed
+schematic leg in `?design-cert`); concurrency-safe ArSE writes
+(`T-typed-bell-arse-write-async`); full-corpus substrate-2a reimport (80→9,733,
+measured against the QA baseline); the last-mile UI/registry unification (§7's
+counted-hole-as-first-class-scope); a formal `copar`-interaction functor.
+
+**New hole-type surfaced by the close (Joe) — the *unaimed (outbound) arrow*.**
+A hole that gestures at an extension *direction* but whose **target type is not
+yet specified**. It is strictly weaker than the two hole-types we already had:
+- **ghost line** — typed by an *expected phase* (the standard form knows what is
+  missing);
+- **open arrow** — typed by a *named but unbuilt target* (target specified, only
+  the construction owed).
+
+The unaimed arrow has neither a structural expectation nor a named target — only
+the knowledge that *some* outbound extension belongs here. Many "maybe we
+could…" extensions are exactly this: a real direction, target-type still open
+(`TypedHole` `hungry_for = :unspecified`/⊤). It is a candidate third entry in the
+hole-type taxonomy, and is itself an unaimed arrow for a future mission. Fittingly,
+the mission about typing holes closes by discovering a hole-type it had not named.
 
 ## Relations
 
