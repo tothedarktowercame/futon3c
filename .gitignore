@@ -33,3 +33,7 @@ library/social/cluster-tooling-bootstrap.flexiarg
 data/
 .shadow-cljs/
 tmp/
+hs_err_pid*.log
+replay_pid*.log
+core.*
+*.hprof
