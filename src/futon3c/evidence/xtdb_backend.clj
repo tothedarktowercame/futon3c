@@ -117,26 +117,47 @@
   "Build the bounded XTDB query for -query.
 
    Pushed into datalog: subject, type, claim-type, author, tag membership,
-   default ephemeral exclusion, order, and positive limit. `since` remains an
-   application-level filter so malformed timestamps keep the AtomBackend
-   fallback semantics. HTTP-only filters (session-id and pattern-id) are also
+   order, positive limit, and a conservative
+   `:evidence/at` lower bound (1s below `since`) so a `:query/since` no longer
+   full-scans the whole store. Precise `since` filtering — and the malformed-
+   `since` all-entries fallback — stays at the application level
+   (`backend/filter-and-sort-entries`); the datalog bound can only OVER-include
+   near the boundary, never under-return. HTTP-only filters (session-id and pattern-id) are also
    kept outside this backend; the HTTP handler already withholds :query/limit
    from the backend and applies its limit after those filters, preventing the
    classic push-limit-before-app-filter under-return."
-  [{:query/keys [subject type claim-type author include-ephemeral? tags limit]}]
-  (let [base {:where '[[e :evidence/id _]
-                       [e :evidence/at t]]
+  [{:query/keys [subject type claim-type author tags limit since]}]
+  (let [base {;; NB: lead with :evidence/at (not :evidence/id) — the latter forces
+              ;; a full ~64k scan that defeats the `since` range-seek below.
+              ;; :evidence/at is present on every entry, so e is still fully bound.
+              ;; Ephemeral exclusion is NOT pushed here either: a `(not ...)`
+              ;; negation also forces a full scan (measured ~20s vs ~0.1s without
+              ;; it), and backend/filter-and-sort-entries already removes
+              ;; ephemeral entries application-side.
+              :where '[[e :evidence/at t]]
               :in []
               :args []}
-        base (if (true? include-ephemeral?)
-               base
-               (update base :where conj '(not [e :evidence/ephemeral? true])))
         base (cond-> base
                subject (add-eq-filter :evidence/subject subject)
                type (add-eq-filter :evidence/type type)
                claim-type (add-eq-filter :evidence/claim-type claim-type)
                author (add-eq-filter :evidence/author author))
         base (reduce add-tag-filter base (seq tags))
+        ;; Conservative :evidence/at lower bound (1s below `since`) pushed into
+        ;; datalog to prune the scan — fixes the full-store-scan timeout (the
+        ;; 60k+-entry degrade-to-empty). Only for a parseable `since`; a
+        ;; malformed `since` keeps the app-level all-entries fallback. The bound
+        ;; is 1s low so it can only over-include near the boundary (the precise
+        ;; app filter removes those), never drop a wanted entry.
+        since-lower (when since
+                      (try (.toString (.minusSeconds ^Instant (backend/parse-instant since) 1))
+                           (catch Exception _ nil)))
+        base (if since-lower
+               (-> base
+                   (update :where conj '[(<= since-lb t)])
+                   (update :in conj 'since-lb)
+                   (update :args conj since-lower))
+               base)
         q (cond-> {:find '[e t]
                    :where (:where base)
                    :order-by '[[t :desc]]

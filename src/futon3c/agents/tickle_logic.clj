@@ -250,10 +250,13 @@
 
 (defn build-live-db
   "Convenience wrapper around `reg/registry-status` and the evidence store for
-   REPL diagnostics / invariant checks."
-  [{:keys [registry-status evidence-store] :as opts}]
-  (let [entries (or (:evidence-entries opts)
-                    (estore/query* evidence-store {}))]
+   REPL diagnostics / invariant checks. Bounds the evidence pull to `:since`
+   (default last 7 days) so it doesn't full-scan the whole store (~64k entries);
+   pass `:since` in opts to widen the watchdog window for older last-evidence."
+  [{:keys [registry-status evidence-store since] :as opts}]
+  (let [since (or since (str (.minusSeconds (java.time.Instant/now) (* 7 24 60 60))))
+        entries (or (:evidence-entries opts)
+                    (estore/query* evidence-store {:query/since since}))]
     (build-db (assoc opts
                      :registry-status (or registry-status (reg/registry-status))
                      :evidence-entries entries))))

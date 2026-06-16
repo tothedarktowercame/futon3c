@@ -106,9 +106,11 @@
   [evidence-store]
   (if-not evidence-store
     #{}
-    (let [entries (estore/query* evidence-store {})
+    ;; Push the :arse-generation tag into the query (selective index seek, ~20ms)
+    ;; rather than scanning the whole evidence store (~64k entries → 15s timeout).
+    ;; The workflow-complete/kick-complete OR stays an app-side filter.
+    (let [entries (estore/query* evidence-store {:query/tags [:arse-generation]})
           arse-entries (->> entries
-                           (filter #(some #{:arse-generation} (:evidence/tags %)))
                            (filter #(some #{:workflow-complete :kick-complete}
                                           (:evidence/tags %))))]
       (->> arse-entries
