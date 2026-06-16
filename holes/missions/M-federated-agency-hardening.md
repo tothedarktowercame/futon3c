@@ -103,6 +103,60 @@ emacs repl-attach proxy-aware so it stops minting local phantoms for remote agen
 (d) lift the warm-pouch self-heal to run at the home point. Each is a candidate
 sub-checkpoint here.
 
+## Checkpoint 2 — 2026-06-16 (remote health probe + firewall topology)
+
+**What was done:** probed the health of the two remote claude agents (`lon-claude-1`
+on London, `chi-claude-1` on Chicago) from the laptop and over SSH, and attempted the
+Joe-approved no-JVM-restart fix on London. Findings:
+
+**Box / region map (from `~/.ssh/config`, all SSH on :2222):**
+- `lucy-joe` = 172.236.28.208 = **London** = the federation hub (laptop's only `peers` entry).
+- `linode-chicago` (= `linode-joe`) = 172.236.108.82 = **Chicago**.
+
+**Chicago — `chi-claude-1`: UP ✓.** Box healthy, futon3c JVM serving, 7070 listening
+locally; `chi-claude-1` registered, **status idle**, session `042f5d3d-…`, route local.
+The *real* Chicago agent is alive and well on its home box. No action needed there.
+
+**London — `lon-claude-1`: agent healthy in-registry, but the box's HTTP API is wedged.**
+- JVM alive (pid 2784025), **Drawbridge 6768 responsive**, **`futon-ops` emacs responsive**
+  (`(+ 2 2)`→4), load 0.16, **no threads stuck in app code** (only idle `main`/xtdb).
+- `lon-claude-1` registered + **idle**, session `72c65a23-…`, and **that conversation
+  EXISTS on disk** at `~/.claude/projects/-home-joe-code-futon3c/72c65a23-….jsonl` — so on
+  its home box the agent is genuine (contrast the laptop, where the same id was a phantom
+  with no conversation, Checkpoint 1).
+- **BUT port 7070 won't serve**: localhost curl times out; `ss` shows `LISTEN 51 50` on
+  `*:7070` — the accept backlog is full (51 > 50), connections pile up unaccepted. The
+  http-kit 7070 listener is wedged (server-loop alive in epoll-wait, but not
+  accepting/responding) while the rest of the JVM is fine.
+
+**KEY federation-transport finding — the firewall, not just routing.**
+- laptop → linode `:7070` **times out** (firewalled at the linode edge; box pings at 7.6 ms,
+  SSH:2222 is open). So the laptop cannot reach either box's Agency API over HTTP.
+- **linode ↔ linode `:7070` works**: London → Chicago `:7070` answered in 0.18 s. The
+  firewall allows datacenter-internal :7070 but blocks the laptop's home IP.
+- Implication for the mission: even with `self-url`/announce wired (Checkpoint 1 gaps),
+  laptop↔linode federation can't traverse on `:7070` as configured — the laptop needs an
+  SSH tunnel (`ssh -L 7070:localhost:7070 lucy-joe`) or an opened firewall port. The
+  **linode↔linode** federation leg, by contrast, has an open transport today.
+
+**Attempted fix (London, Joe-approved: bounce 7070 via Drawbridge, no JVM restart) — FAILED.**
+Rebuilt the handler from live singletons (`!evidence-store`, `(:node @!f1-sys)`; no IRC
+system present) and called `(:server @!f3c-sys)` to stop + `http/start-server!` to rebind,
+via Drawbridge. The stop signalled, but the wedged server **does not release the listen
+socket** (server-loop can't process the close), so the rebind throws
+`java.net.BindException: Address already in use`. (Clojure wraps this as a misleading
+"Syntax error macroexpanding at (1:1)" — the form actually ran.) Net effect: London's 7070
+is in the **same wedged state as before** (still listening, still not responding, registry
+intact — no worse), plus a harmless lingering second `server-loop` thread from the failed
+binds. **Conclusion: an in-process Drawbridge bounce cannot work while the wedged server
+holds the port; freeing it needs either a reflective force-close of the http-kit listen
+socket (uncertain, risks further JVM destabilisation) or a JVM restart (frees everything,
+reloads current code; drops warm pouches; registry restored via `restore-on-boot!`).**
+Deferred to Joe's call — and low urgency, since `lon-claude-1` is unreachable from the
+laptop regardless (firewall + federation gaps above).
+
+**Test state:** n/a (probe + one failed in-process bounce; no committed code change).
+
 ## Adjacent observations — 2026-06-15 (to fold into later checkpoints)
 
 **(A) No real-time turn throughput from pouched agents.** Watching agents that run
