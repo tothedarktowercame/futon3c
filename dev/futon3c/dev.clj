@@ -3759,7 +3759,11 @@ RESPOND WITH ONLY:
                                    :message "warm pouch evicted (turn interrupted)"
                                    :interrupted? true})})
                               (try
-                                (let [warm-result
+                                (let [;; Accumulate assistant text across the turn's stream-json
+                                      ;; events so the warm path can surface it INCREMENTALLY
+                                      ;; (it otherwise shows nothing until the final block at DONE).
+                                      stream-acc (StringBuilder.)
+                                      warm-result
                                       (agent-pouch/feed-turn!
                                        agent-id
                                        prompt
@@ -3781,6 +3785,11 @@ RESPOND WITH ONLY:
                                                                (filter #(= "tool_use" (:type %)))
                                                                (map :name)
                                                                seq))
+                                                  text (when (sequential? content)
+                                                         (not-empty
+                                                          (str/join (->> content
+                                                                         (filter #(= "text" (:type %)))
+                                                                         (keep :text)))))
                                                   tool-details (assistant-tool-details event)]
                                               (when (seq tool-details)
                                                 (record-agent-tool-details! aid-val warm-sid tool-details))
@@ -3789,7 +3798,31 @@ RESPOND WITH ONLY:
                                                                                         'update-invoke-activity!)]
                                                   (update-activity!
                                                    aid-val
-                                                   (str "using " (str/join ", " tools))))))))})
+                                                   (str "using " (str/join ", " tools)))))
+                                              ;; Emit to the streaming event sink (→ /invoke-stream →
+                                              ;; the *claude-repl* buffer), exactly like the cold path —
+                                              ;; this is what makes warm turns stream INTO the REPL.
+                                              (when-let [get-sink (ns-resolve 'futon3c.agency.registry
+                                                                              'get-invoke-event-sink)]
+                                                (when-let [sink (get-sink aid-val)]
+                                                  (try
+                                                    (when tools
+                                                      (sink {:type "tool_use" :tools (vec tools) :tool_details tool-details}))
+                                                    (when text
+                                                      (sink {:type "text" :text text}))
+                                                    (catch Throwable _))))
+                                              ;; Stream assistant text chunks to the invoke buffer as
+                                              ;; they arrive — mirrors the tool-activity surfacing
+                                              ;; above so the warm pouch shows its prose incrementally
+                                              ;; instead of only the final block at DONE.
+                                              (when text
+                                                (.append stream-acc text)
+                                                (try
+                                                  (bb/blackboard! buf-name
+                                                                  (str "Invoke: " agent-id " — streaming (warm pouch)\n\n"
+                                                                       stream-acc)
+                                                                  (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                                  (catch Throwable _))))))})
                                       warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
                                       result-text (str (or (:result warm-result) ""))]
                                   ;; Persist like invoke-once does (cold path, above): today
