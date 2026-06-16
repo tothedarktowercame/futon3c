@@ -87,15 +87,19 @@ export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
 export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 
-# Pin codex-1's WS bridge to THIS laptop's own Agency, not the Linode hub.
-# By default (role=laptop) the bridge targets FUTON3C_LINODE_URL (London), so
-# codex-1's worker — which runs here on the laptop — registers into the remote
-# hub; every London restart then drops/zombies the bridge and codex-1 silently
-# loses work. The codex worker is local, and its work (e.g. claude-4 dispatches)
-# originates locally, so bridge it to the local Agency to remove the London
-# dependency. Trade-off: London-side agents no longer reach codex-1 directly
-# (that path needs the federation proxy work in M-federated-agency-hardening).
-export FUTON3C_CODEX_WS_BASE="${FUTON3C_CODEX_WS_BASE:-ws://127.0.0.1:7070}"
+# Run codex-1 INLINE (direct local invoke-fn, route :local) instead of via a WS
+# bridge. By default (role=laptop) codex registers through a WS bridge to the
+# Linode hub (FUTON3C_LINODE_URL), so the laptop-resident codex worker depended
+# on a remote box: every hub restart zombied the bridge and codex-1 silently
+# dropped work. The worker is local and its work originates locally, so the
+# bridge buys nothing here (evidence replication is off for a local target
+# anyway) and only adds a failure mode. Disabling it registers codex-1 with a
+# direct local invoke-fn — no bridge to zombie, no remote dependency. This is
+# the configuration verified working 2026-06-16 (whistle round-trip). The
+# liveness-ping fix in dev.clj still hardens the bridge path for boxes that DO
+# use it. Trade-off: Linode-side agents can't reach codex-1 directly — that
+# needs the federation-proxy work in M-federated-agency-hardening.
+export FUTON3C_CODEX_WS_BRIDGE="${FUTON3C_CODEX_WS_BRIDGE:-false}"
 
 # --- Blackboard / HUD defaults ---
 export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
