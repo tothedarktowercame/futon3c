@@ -157,6 +157,24 @@ laptop regardless (firewall + federation gaps above).
 
 **Test state:** n/a (probe + one failed in-process bounce; no committed code change).
 
+**Resolution — 2026-06-16 (clean restart on merged code).** Joe's call: bring London
+down and clean-`fdev`-start it on the laptop's latest code. Done. London had
+**uncommitted federation work** (the `self-url` + `site-qualify` wiring this mission
+called for — gaps #1, #3) in `scripts/dev-linode-env` (`FUTON3C_SITE=lon`,
+`FUTON3C_SELF_URL=http://172.236.28.208:7070`) and `config.clj`/`agents.clj`; preserved it
+(branch `lon-federation`, then cherry-picked onto the laptop's `agency-fixes-2026-06-11`
+— only `dev-linode-env` was London-unique; the config/agents site-qualify was already on
+the branch). Killed the wedged JVM (SIGTERM ignored → SIGKILL, confirming the wedge) and
+ran `fdev --no-attach`. London is back: 7070 serving, roster restored
+(`claude-2`/`codex-1`/`lon-claude-1`, all idle), now on current code (incl. the
+evidence-query and streaming fixes London was missing) **with `FUTON3C_SELF_URL` and
+`FUTON3C_SITE=lon` live** — so gap #1 is closed on London and `claude-1` correctly
+registers as `lon-claude-1`. **Still open:** laptop→linode `:7070` firewall (gap above) —
+`lon-claude-1` remains unreachable *from the laptop* until a tunnel/opened port or the
+announce side lands; and the announce/peering (gap #2) is unbuilt. The federation config
+on London is committed (`53acac4`); pushing it back to origin so the laptop/GitHub also
+carry the `dev-linode-env` site defaults is a small follow-up (not yet done).
+
 ## Adjacent observations — 2026-06-15 (to fold into later checkpoints)
 
 **(A) No real-time turn throughput from pouched agents.** Watching agents that run
