@@ -248,6 +248,57 @@ session; its shell was the direct child — confirming "466749 is me", do-not-ki
   `0.0.0.0:8000` (reachable off-box) — agency-spawned dev services should default to
   `127.0.0.1`.
 
+## Phase transition — 2026-06-16: hot-fixes → a logic model of Agency (Joe)
+
+> "I think we may have done just about as much as we can do with 'hot fixes' — the next
+> step would be to actually build a logic model of Agency so we can prove that it behaves
+> according to the various invariants that we've bumped into without writing them down."
+
+Every failure this mission chased was a symptom of an **unstated invariant that nothing
+checks**. The hot-fixes (session sentinel, codex liveness ping, inline codex, the London
+restart) each patched one symptom. The durable move is to **formalise the invariants and
+prove them**, following the futon logic-model discipline already used elsewhere
+(`src/futon3c/agents/tickle_logic.clj` — `core.logic`/`pldb` with `db-rel invoke-readyo`;
+the typed-bells logic model TB-1..7 from M-typed-bells). Build an **Agency logic model**:
+encode agency state as facts (agents, sessions, connections, routes, peers) and the
+invariants below as relations / checkable goals, so `run*` can FIND violations and the
+invariants can be PROVEN over the modelled state space. Each invariant gets an id, a
+logic-model check, and a test — the VERIFY artifact this mission has been missing.
+
+### Invariants bumped into (evidence-first; candidates AG-1..AG-7 for the model)
+
+Prose invariants I-0..I-5 already live in `futon3c/CLAUDE.md`; these are the ones this
+mission surfaced that are **not yet written down or checked**:
+
+- **AG-1 Singular identity & session integrity** (extends I-1). One agent ↔ one session-id
+  ↔ one live inhabitant ↔ one conversation. *Violations seen:* `lon-claude-1` resumed a
+  conversation cross-contaminated with `chi-claude-1` (identity crossing); `--resume`
+  bifurcated one live session into two inhabitants (Observation above). *Property:* no two
+  registry agents share a session-id; a session-id has exactly one live writer (lease).
+- **AG-2 Home-point routing.** An invoke must reach the agent's home point (where its real
+  conversation/worker lives), never run as a local phantom. *Violation:* the laptop ran
+  `lon-`/`chi-claude-1` locally (Checkpoint 1). *Property:* a local registration for a
+  remote-homed agent is ill-formed; route(agent) → home.
+- **AG-3 Connection-state honesty.** `:connected` ⇒ a live underlying channel; a dead
+  channel ⇒ eventually `:disconnected` ∧ reconnecting. *Violation:* the codex WS bridge
+  sat `:connected` with no socket for up to 10 min (063096f liveness fix). 
+- **AG-4 Continuous reachability, not registration-frozen.** Remote-target health is a
+  function of current state, not a latch set once at registration. *Violation:* the codex
+  reachability gate ran only at registration, so a later hub outage zombied the agent.
+- **AG-5 Total, diagnosable invoke-readiness.** ∀ agent: invoke-ready? (route ∈
+  {:local,:ws}) ∨ carries a diagnostic explaining why not. *Partially modelled already* by
+  `registry/invoke-routing-info`; the model should make it total + provable.
+- **AG-6 Session capacity / freshness.** A context-exhausted session must reset to a fresh
+  thread, not fail every invoke. *Violation:* codex-1 session `019ecbd7` ("ran out of
+  room") failed all invokes until reset (this session).
+- **AG-7 Server accept-liveness.** Listening ⇒ accepting (bounded accept latency); a full,
+  unserviced accept backlog is a violation. *Violation:* London's http-kit listened with a
+  saturated backlog while not responding (the wedge that triggered the restart).
+
+These are candidates, not final — DERIVE should consolidate/rename and check for overlap
+(e.g. AG-3 and AG-4 may be one liveness invariant). Next mission step: **MAP** the agency
+state into the logic-model fact schema, then **DERIVE** the AG-* relations.
+
 ## Cross-references
 
 - `M-agency-hardening.md` — the local/IRC layer (closed); the single-box predecessor.
