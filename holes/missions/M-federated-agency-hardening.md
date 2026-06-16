@@ -103,7 +103,7 @@ emacs repl-attach proxy-aware so it stops minting local phantoms for remote agen
 (d) lift the warm-pouch self-heal to run at the home point. Each is a candidate
 sub-checkpoint here.
 
-## Checkpoint 2 — 2026-06-16 (remote health probe + firewall topology)
+## Checkpoint 2 — 2026-06-16 (remote health probe; wedge fixed; firewall claim retracted)
 
 **What was done:** probed the health of the two remote claude agents (`lon-claude-1`
 on London, `chi-claude-1` on Chicago) from the laptop and over SSH, and attempted the
@@ -129,15 +129,17 @@ The *real* Chicago agent is alive and well on its home box. No action needed the
   http-kit 7070 listener is wedged (server-loop alive in epoll-wait, but not
   accepting/responding) while the rest of the JVM is fine.
 
-**KEY federation-transport finding — the firewall, not just routing.**
-- laptop → linode `:7070` **times out** (firewalled at the linode edge; box pings at 7.6 ms,
-  SSH:2222 is open). So the laptop cannot reach either box's Agency API over HTTP.
-- **linode ↔ linode `:7070` works**: London → Chicago `:7070` answered in 0.18 s. The
-  firewall allows datacenter-internal :7070 but blocks the laptop's home IP.
-- Implication for the mission: even with `self-url`/announce wired (Checkpoint 1 gaps),
-  laptop↔linode federation can't traverse on `:7070` as configured — the laptop needs an
-  SSH tunnel (`ssh -L 7070:localhost:7070 lucy-joe`) or an opened firewall port. The
-  **linode↔linode** federation leg, by contrast, has an open transport today.
+**~~KEY federation-transport finding — the firewall~~ — RETRACTED 2026-06-16, was a
+misdiagnosis.** I originally concluded laptop→linode `:7070` was firewalled because curl
+timed out. **It was not the firewall — it was the wedged old London JVM not accepting
+connections** (the full `LISTEN 51 50` accept backlog). After the clean restart, the laptop
+reaches **both** boxes' `:7070` directly: London `200` in ~57 ms, Chicago `200` in ~228 ms,
+and the laptop sees each box's real roster over HTTP. There is **no firewall block** on
+`:7070` from the laptop. (Joe also corrected the framing: laptop↔linode has long worked via
+IRC and bells/whistles over a WebSocket link — reachability was never the wall I painted.)
+So Checkpoint 1's gaps #2/#3 stand on their own: the boxes are mutually reachable; what's
+missing is the **announce/proxy routing** so the laptop stops running `lon-`/`chi-` as
+local phantoms and instead routes to the home box.
 
 **Attempted fix (London, Joe-approved: bounce 7070 via Drawbridge, no JVM restart) — FAILED.**
 Rebuilt the handler from live singletons (`!evidence-store`, `(:node @!f1-sys)`; no IRC
@@ -152,8 +154,9 @@ binds. **Conclusion: an in-process Drawbridge bounce cannot work while the wedge
 holds the port; freeing it needs either a reflective force-close of the http-kit listen
 socket (uncertain, risks further JVM destabilisation) or a JVM restart (frees everything,
 reloads current code; drops warm pouches; registry restored via `restore-on-boot!`).**
-Deferred to Joe's call — and low urgency, since `lon-claude-1` is unreachable from the
-laptop regardless (firewall + federation gaps above).
+Deferred to Joe's call. (Originally framed as low-urgency because I believed
+`lon-claude-1` was unreachable from the laptop due to a firewall — that belief was wrong;
+see the RETRACTED finding above. The restart was in fact the whole fix.)
 
 **Test state:** n/a (probe + one failed in-process bounce; no committed code change).
 
@@ -169,11 +172,17 @@ ran `fdev --no-attach`. London is back: 7070 serving, roster restored
 (`claude-2`/`codex-1`/`lon-claude-1`, all idle), now on current code (incl. the
 evidence-query and streaming fixes London was missing) **with `FUTON3C_SELF_URL` and
 `FUTON3C_SITE=lon` live** — so gap #1 is closed on London and `claude-1` correctly
-registers as `lon-claude-1`. **Still open:** laptop→linode `:7070` firewall (gap above) —
-`lon-claude-1` remains unreachable *from the laptop* until a tunnel/opened port or the
-announce side lands; and the announce/peering (gap #2) is unbuilt. The federation config
-on London is committed (`53acac4`); pushing it back to origin so the laptop/GitHub also
-carry the `dev-linode-env` site defaults is a small follow-up (not yet done).
+registers as `lon-claude-1`. **Post-restart the laptop reaches London `:7070` directly
+(200 / ~57 ms) and Chicago `:7070` (200 / ~228 ms) — no firewall.** **Still open (the real
+gap):** the laptop runs `lon-claude-1`/`chi-claude-1` as **local phantoms** (`:invoke-route
+:local`), so a "say hello" spawns a *local* claude (here with the bare-`~/` cwd bug and a
+crossed session that introduced itself as `chi-claude-1`) instead of routing to the home
+box — Checkpoint 1's gaps #2/#3, now unblocked since both boxes are reachable. There is
+also a **stuck WS connection** laptop→London `:7070` (≈63 KB queued London→laptop, unread)
+worth investigating — likely the federation/relay bridge that should carry this routing.
+The federation config on London is committed (`53acac4`); pushing it to origin so the
+laptop/GitHub also carry the `dev-linode-env` site defaults is a small follow-up (not yet
+done).
 
 ## Adjacent observations — 2026-06-15 (to fold into later checkpoints)
 
@@ -208,6 +217,36 @@ resume) may be wasteful in the **claude→codex** direction, or more generally f
 refinement: make completion-bellbacks **non-invoking** (record the mesh edge / notify
 without spawning a responder turn), or suppress auto-bellback for directions/types
 where the recipient has nothing to do. Not yet investigated — flagged per Joe.
+
+## Observation — 2026-06-16 (`--resume` bifurcates a live session; I-1 violation)
+
+While driving the mark3 Linode run from the Emacs REPL, an **agency-spawned headless
+twin of this very session** was found running concurrently: `claude --print
+--input-format stream-json --permission-mode bypassPermissions --resume <session-id>`,
+parented by the `make dev` JVM under tmux `futon-dev`. Both incarnations shared the
+session id and the working tree; the headless twin was autonomously re-executing the
+session's background Bash (an IATC reconstruction loop) — racing the interactive
+incarnation on shared output files **and** the single GPU, and **regenerating "ghost"
+loop/​shell processes on every kill** until the twin's parent `claude` PID was killed at
+the source. PIDs that day: `450692` (twin, under `make dev`) vs `466749` (the interactive
+session; its shell was the direct child — confirming "466749 is me", do-not-kill).
+
+- **Expectation (Joe, per `futon3/docs/guides/README-peripherals.md`):** stopping input to
+  the REPL and `--resume`-ing on the CLI should **capture / hand off** the live session to
+  a single inhabitant — not fork it. Observed behavior is **bifurcation**: two live
+  inhabitants of one session id.
+- **This is a direct I-1 violation** (futon3c CLAUDE.md — "one agent = one session = one
+  identity; an agent already running is never represented by spawning a new process").
+- **Suspected cause:** the M-kangaroo warm-pouch changes may have altered resume/capture
+  semantics (historically, early Agency *did* run bifurcated agents as a known mode).
+- **Hardening asks:** (1) `--resume <id>` must detect an already-live inhabitant and
+  **attach-or-refuse**, never fork — a per-session-id single-writer lease/lock; (2) the
+  agency auto-spawn path (`make dev`) must not headlessly resume a session that has a live
+  interactive inhabitant; (3) until (1)/(2) land, concurrent incarnations sharing one cwd
+  and output dir cause file races — argues for **per-incarnation git worktrees / output
+  dirs** as a stopgap. Also surfaced: an auto-started `vllm serve` was bound to
+  `0.0.0.0:8000` (reachable off-box) — agency-spawned dev services should default to
+  `127.0.0.1`.
 
 ## Cross-references
 
