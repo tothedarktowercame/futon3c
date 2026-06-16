@@ -734,7 +734,39 @@
                            (.join (.buildAsync (.newWebSocketBuilder client)
                                                (URI/create url)
                                                listener))
-                           (deref closed 600000 nil))
+                           ;; Liveness-polled wait. This previously parked up to 10 min
+                           ;; on `closed`, which is delivered ONLY from onClose/onError —
+                           ;; but java.net.http does not surface a silently-dropped TCP
+                           ;; connection there (no read-timeout / no keepalive). A killed
+                           ;; remote (e.g. a Linode JVM restart) therefore left the bridge
+                           ;; stuck at :connected, dropping every invoke until this
+                           ;; timeout. Instead ping every ~25s: a ping on a dead socket
+                           ;; completes exceptionally, so we detect the drop and fall
+                           ;; through to reconnect within one interval. (A ping racing an
+                           ;; in-flight send can fail spuriously and force an early
+                           ;; reconnect — cheap, since backoff resets on the next onOpen,
+                           ;; and far better than a 10-minute zombie.)
+                           (loop []
+                             (when (and @running? (not (realized? closed)))
+                               (when (= ::tick (deref closed 25000 ::tick))
+                                 (let [ws @ws*
+                                       alive? (boolean
+                                               (and ws
+                                                    (try
+                                                      (.get (.sendPing ^WebSocket ws
+                                                                       (java.nio.ByteBuffer/allocate 0))
+                                                            5 java.util.concurrent.TimeUnit/SECONDS)
+                                                      true
+                                                      (catch Exception _ false))))]
+                                   (if alive?
+                                     (recur)
+                                     (do
+                                       (reset! ws* nil)
+                                       (when @running?
+                                         (reset! bridge-state* {:status :disconnected
+                                                                :target url
+                                                                :reason "liveness-ping-failed"}))
+                                       (deliver closed true))))))))
                          (catch Exception e
                            (if (unreachable-network-exception? e)
                              (pause-bridge! :connect e)
