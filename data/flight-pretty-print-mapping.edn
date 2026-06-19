@@ -1,0 +1,76 @@
+{:version "0.1"
+ :source "M-first-flights Checkpoint 21 + section 8"
+ :canonical-organ-order
+ [:field-read
+  :velocity
+  :warrant
+  :verification
+  :attribution
+  :prediction
+  :counterfactual
+  :begin-state
+  :act
+  :measurement
+  :window
+  :out-of-band
+  :self-record]
+ :organ-vocabulary
+ {:field-read {:atlas-role :source-material
+               :aliases [:source-material]
+               :wire :forward}
+  :velocity {:atlas-role :morphism
+             :aliases [:chosen-action :policy-prefix]
+             :wire :forward}
+  :warrant {:atlas-role :binder
+            :aliases [:determination-ground]
+            :wire :forward}
+  :verification {:atlas-role :verify-gate
+                 :aliases [:hole-check :select-time-verification]
+                 :wire :forward}
+  :attribution {:atlas-role :binder
+                :aliases [:actor :agency]
+                :wire :forward}
+  :prediction {:atlas-role :expected-free-energy
+               :aliases [:forward-model :prediction]
+               :wire :forward}
+  :counterfactual {:atlas-role :counterfactual-certificate
+                   :aliases [:constant-model-comparison]
+                   :wire :backward}
+  :begin-state {:atlas-role :state-reference
+                :aliases [:begin-window-state]
+                :wire :forward}
+  :act {:atlas-role :verify-gate
+        :aliases [:act-gate :consent-gate]
+        :wire :forward}
+  :measurement {:atlas-role :certificate
+                :aliases [:discharge :measurement]
+                :wire :backward}
+  :window {:atlas-role :certificate-ground
+           :aliases [:settle-window :two-scan-witness]
+           :wire :backward}
+  :out-of-band {:atlas-role :trace-event
+                :aliases [:operator-steer :merge-event]
+                :wire :backward}
+  :self-record {:atlas-role :self-record
+                :aliases [:copy-organ :gamma-frame]
+                :wire :backward}}
+ :measurement-class-vocabulary
+ {:clean {:certificate :clean-dynamics}
+  :null {:certificate :null-dynamics}
+  :fallback {:certificate :fallback-censored}
+  :transient {:certificate :transient-window}
+  :confound {:certificate :confounded-window}
+  :excluded-confound {:certificate :excluded-confound}
+  :class-absent-derivation-thin {:certificate :derivation-thin-prose-lost}
+  :class-not-yet-judged {:certificate :not-yet-judged}}
+ :sorry-vocabulary
+ {:derivation-thin {:hole-type :derivation-thin
+                    :atlas-hole :externalized-ground-missing}
+  :not-yet {:hole-type :not-yet
+            :atlas-hole :promissory-hole}
+  :proposal-mode {:hole-type :proposal-mode
+                  :atlas-hole :consent-discard}
+  :excluded-confound {:hole-type :excluded-confound
+                      :atlas-hole :confounded-measurement}
+  :typed-gap {:hole-type :typed-gap
+              :atlas-hole :typed-hole}}}

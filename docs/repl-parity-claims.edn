@@ -1,0 +1,113 @@
+{:contract/version 1
+ :contract/name "repl-parity-ratchet"
+ :contract/description
+ "Invariants guaranteeing the Emacs REPL surface is at least as good as
+  the CLI on every dimension that matters. Each claim, once verified, is
+  a ratchet tooth — it never regresses. The set of verified claims is
+  the evidence that Joe's Last CLI Session will happen.
+
+  Framing: CLI is the null hypothesis. Each claim is a property where
+  the REPL matches or exceeds CLI. When all claims are verified, the
+  null hypothesis is rejected — there is no reason to prefer CLI."
+
+ :claims
+ [;; === Entry ceremony (landed 2026-04-09) ===
+
+  {:claim/id :entry/zero-prestart
+   :claim/description "cr/cx auto-starts Agency if not running. No manual pre-flight."
+   :cli-baseline "claude starts with no prerequisites"
+   :implementation/files ["bin/cr" "bin/cx"]
+   :verification/required #{:commit :manual-test}
+   :status :verified}
+
+  {:claim/id :entry/no-hang-inside-emacs
+   :claim/description "cr/cx from an Emacs shell buffer never hangs Emacs."
+   :cli-baseline "claude in a terminal never hangs the terminal"
+   :implementation/files ["bin/cr" "bin/cx"]
+   :verification/required #{:commit :manual-test}
+   :status :verified}
+
+  {:claim/id :entry/immediate-session
+   :claim/description "cr new / cx new establishes a real session (with session-id) on first turn via inhabitation contract. No ghost state."
+   :cli-baseline "claude starts responding immediately"
+   :implementation/files ["bin/cr" "bin/cx"
+                          "src/futon3c/transport/http.clj"]
+   :verification/required #{:commit :manual-test}
+   :status :verified}
+
+  {:claim/id :entry/nick-hygiene
+   :claim/description "Ghost agents (idle, no session, auto-registered) are reclaimed at point of entry. Registry stays clean."
+   :cli-baseline "N/A (CLI has no registry)"
+   :implementation/files ["src/futon3c/agency/registry.clj"
+                          "src/futon3c/transport/http.clj"]
+   :verification/required #{:commit :test}
+   :status :verified}
+
+  ;; === Evidence (critical path for Click 2) ===
+
+  {:claim/id :evidence/every-turn-logged
+   :claim/description "Every substantive agent turn through the REPL is logged as evidence. CLI usage creates evidence debt; REPL usage does not."
+   :cli-baseline "CLI logs nothing"
+   :implementation/files ["emacs/claude-repl.el" "emacs/codex-repl.el"
+                          "emacs/agent-chat.el"]
+   :verification/required #{:commit :test :query}
+   :status :testing}
+
+  {:claim/id :evidence/frame-persistence
+   :claim/description "Every turn is a frame in SQLite with prompt, assistant text, tool events, and tool output. Survives buffer clear, reconnect, Emacs restart."
+   :cli-baseline "CLI has terminal scrollback only (volatile)"
+   :implementation/files ["emacs/claude-repl.el"]
+   :verification/required #{:commit :test}
+   :status :testing}
+
+  ;; === Interrupt ===
+
+  {:claim/id :interrupt/server-side-kill
+   :claim/description "C-c C-c kills the server-side process tree, not just the local curl. The agent actually stops within 2 seconds."
+   :cli-baseline "Ctrl-C in terminal sends SIGINT, agent stops immediately"
+   :implementation/files ["emacs/agent-chat.el"
+                          "src/futon3c/transport/http.clj"]
+   :verification/required #{:commit :manual-test}
+   :status :testing}
+
+  ;; === Tool visibility ===
+
+  {:claim/id :tools/input-visible
+   :claim/description "Tool call input (command, file path, search query) is visible inline or on hover. Never just an opaque [Bash] marker."
+   :cli-baseline "CLI shows full tool input inline"
+   :implementation/files ["emacs/claude-repl.el" "emacs/agent-chat.el"]
+   :verification/required #{:commit :manual-test}
+   :status :testing}
+
+  {:claim/id :tools/output-accessible
+   :claim/description "Tool output is accessible via cursor-over popup or C-c C-f frame inspector. Not stored in the chat buffer, but always reachable."
+   :cli-baseline "CLI shows full tool output inline (verbose but available)"
+   :implementation/files ["emacs/claude-repl.el" "emacs/agent-chat.el"]
+   :verification/required #{:commit :manual-test}
+   :status :open}
+
+  ;; === Streaming UX ===
+
+  {:claim/id :streaming/cursor-stability
+   :claim/description "Streaming text never moves point or scrolls the view when user is reading earlier content. Scroll-to-bottom only when point is at prompt."
+   :cli-baseline "Terminal streaming appends at bottom; user scroll position is independent"
+   :implementation/files ["emacs/agent-chat.el"]
+   :verification/required #{:commit :manual-test}
+   :status :open}
+
+  ;; === Session continuity ===
+
+  {:claim/id :session/resume-from-cli
+   :claim/description "A session started in CLI can be resumed under the REPL (cr SESSION-ID). Evidence logging begins from that point."
+   :cli-baseline "claude --resume resumes in CLI"
+   :implementation/files ["bin/cr" "bin/cx"
+                          "emacs/claude-repl.el"]
+   :verification/required #{:commit :manual-test}
+   :status :testing}
+
+  {:claim/id :session/survive-restart
+   :claim/description "Agent identity, session file, and evidence chain survive buffer clear, reconnect, and Emacs restart."
+   :cli-baseline "CLI session file survives terminal close"
+   :implementation/files ["emacs/claude-repl.el"]
+   :verification/required #{:commit :manual-test}
+   :status :testing}]}

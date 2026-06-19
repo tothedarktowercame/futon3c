@@ -1,0 +1,65 @@
+;; WIRING DIAGRAM — the third term of M-first-flights' triple.
+;; Triple: (typed hole arr-7535a5b6-e59, term flight-pretty-print+migration,
+;;          THIS DIAGRAM). Boundary ports = the minted arrow's endpoints,
+;; VERBATIM (VERIFY gate 1). Interior = the DERIVE-ARGUE-VERIFY heart;
+;; every application node carries a :witness or a typed hunger (gates 2-3).
+;; The anatomy of a mission and the anatomy of a flight are the same shape
+;; (Joe, voice, 17:28): heart = derive/argue/verify = field-read/act/measure.
+{:mission "M-first-flights"
+ :artifact :wiring-diagram
+ :triple {:hole "arr-7535a5b6-e59 (meme.db)"
+          :term "flight-pretty-print (in flight, codex-3) + typed-grounds migration (unplanned)"
+          :diagram :this}
+ :nodes
+ [{:id :have-port :role :scope
+   :form "flight-records-organs-typed-grounds-in-prose"
+   :satiety :full
+   :via "boundary port = arrow source endpoint, verbatim (ent-b7cc0cad)"}
+  {:id :want-port :role :scope
+   :form "flights-as-anatomy-corpus-canonical-organ-order-typed-grounds"
+   :satiety {:hungry-for :payoff}
+   :via "boundary port = arrow target endpoint, verbatim (ent-83075f56)"}
+  {:id :schema-v04 :role :compound
+   :form "flight schema v0.4 (organs: judgment+ground | typed :sorry)"
+   :satiety :full
+   :witness "ckpt 20: all six Phase-A exits met; operator verdict PASS"
+   :via "DERIVE's requirements register R0-R10 realized as the schema"}
+  {:id :logic-model :role :concept
+   :form "logic model F1-F9 (no-self-certification structural)"
+   :satiety :full
+   :witness "both real witnesses ran (ckpt 20); 31/33 backfill refusals (R6)"
+   :via "VERIFY: rejects unwitnessed tags — gate 3 enforced pointwise"}
+  {:id :substrate-roundtrip :role :concept
+   :form "substrate-2 round-trip (14 entities + 13 annotations)"
+   :satiety :full
+   :witness "landed under operator sentinel, verified live (ckpt 20)"
+   :via "two-projections: the store projection verified against the schema"}
+  {:id :pretty-print :role :concept
+   :form "flight-pretty-print: .flight.edn -> canonical-organ-order text"
+   :satiety {:hungry-for :payoff}
+   :owed "construction in flight (codex-3, dispatched 16:39); witness = pilot review + ckpt 22"
+   :via "the discharging morphism: flights become the anatomy atlas's third corpus"}
+  {:id :typed-grounds :role :concept
+   :form "typed-grounds migration (grounds out of prose)"
+   :satiety {:hungry-for :design}
+   :owed "no plan yet — the second half of structured-events-only's debt (line 301)"
+   :via "the remaining interior gap between pretty-print and the want port"}]
+ :hyperedges
+ [{:kind :composes
+   :ends [{:role :from :node :have-port} {:role :to :node :schema-v04}]
+   :via "records as they exist enter the schema's organ typing"}
+  {:kind :composes
+   :ends [{:role :from :node :schema-v04} {:role :to :node :logic-model}]
+   :via "typed organs submit to the witness check"}
+  {:kind :composes
+   :ends [{:role :from :node :logic-model} {:role :to :node :substrate-roundtrip}]
+   :via "witnessed records project into substrate-2"}
+  {:kind :composes
+   :ends [{:role :from :node :substrate-roundtrip} {:role :to :node :pretty-print}]
+   :via "stored flights render canonical-organ-order (the third corpus)"}
+  {:kind :composes
+   :ends [{:role :from :node :pretty-print} {:role :to :node :typed-grounds}]
+   :via "rendering exposes which grounds are still prose; migration types them"}
+  {:kind :composes
+   :ends [{:role :from :node :typed-grounds} {:role :to :node :want-port}]
+   :via "with grounds typed, the want port closes — arrow discharges"}]}

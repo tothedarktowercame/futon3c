@@ -69,8 +69,36 @@ Or from IRC: `!reset claude-1`
 bash scripts/proof-eval.sh '(load-file "src/futon3c/transport/http.clj")'
 ```
 
-Note: reloading redefines functions but does NOT refresh the HTTP
-handler closure. For routing changes, the server needs a restart.
+#### Reload-safety: what a reload picks up, and what it doesn't
+
+`load-file` redefines a namespace's vars in place. Whether a running
+server sees the change depends on *how* each function is referenced:
+
+- **Handler bodies are reload-safe.** The route dispatcher
+  (`transport/http.clj` `make-handler`) is a `cond` of *direct symbol
+  calls* — `(handle-dispatch request config)`, not `(#'handle-dispatch …)`.
+  A bare top-level symbol inside a fn body compiles to a **call-time var
+  dereference**, so editing a handler body and reloading is seen on the
+  next request with no restart. The same idiom keeps the watcher
+  (`(file-ingest/dispatch! …)`) and the scheduler (`(fn [] (tick!))`,
+  `scheduler.clj`) reload-safe.
+- **Route-table changes are NOT reload-safe.** Adding or removing a `cond`
+  branch (a new endpoint) changes `make-handler`'s source, but the server
+  still holds the closure returned by the *original* `make-handler` call
+  at startup. The new branch appears only after the handler is re-wired
+  (re-invoke `make-handler` and swap the running app's handler) or the
+  server is restarted.
+- **The hazard to watch: a fn captured as a value.** Stale closures bite
+  only when a fn is stored in a data structure (`{:handler f}` dispatch
+  map), registered once as a callback, or closed over by a thread started
+  once — there the *value* is frozen at capture time. In those sites use
+  the `#'var` indirection so the var is re-resolved per call. The futon3c
+  serving path currently has none of these in the request path (audited
+  2026-05-30, pilot cycle `cg-6965e5e6`); add `#'var` if you introduce one.
+
+Reload-safety = reconstructibility from disk: a reload is safe iff it
+equals a restart. Direct-symbol-call dispatch keeps that true for handler
+bodies; a value-captured fn is the exception that needs `#'var`.
 
 ### Run Diagnostics
 

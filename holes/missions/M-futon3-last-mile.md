@@ -1,4 +1,5 @@
 # Mission: Futon3x Last Mile — Independent Agent Runs
+Status: archived
 
 **Date:** 2026-02-19
 **Status:** IDENTIFY (mission proposal, brushed up 2026-02-24)

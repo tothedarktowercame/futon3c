@@ -1,4 +1,5 @@
 # Mission: Social Exotype
+Status: archived
 
 Status: DONE-NEEDS-RETRO (Parts I-III substantively complete, traceability docs deferred)
 

@@ -300,16 +300,7 @@ Call from REPL init functions after `agent-chat-init-buffer'."
 Call from streaming sentinels that bypass the `agent-chat-send-input'
 callback (i.e. when the REPL handled response display directly).
 Computes elapsed from `agent-chat--turn-start-time' automatically."
-  (let ((elapsed (if agent-chat--turn-start-time
-                     (- (float-time) agent-chat--turn-start-time)
-                   0)))
-    (setq agent-chat--turn-start-time nil)
-    (when (functionp agent-chat--on-turn-end)
-      (condition-case err
-          (funcall agent-chat--on-turn-end elapsed)
-        (error
-         (message "agent-chat turn-end hook error: %s"
-                  (error-message-string err)))))))
+  (agent-chat-finish-turn!))
 
 ;;; Interactive diagnostics
 

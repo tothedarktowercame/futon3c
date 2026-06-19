@@ -84,6 +84,36 @@
     (string? x) (when-not (str/blank? x) (str/trim x))
     :else nil))
 
+(defn- env-list
+  [k]
+  (when-let [raw (System/getenv k)]
+    (->> (str/split raw #",")
+         (map str/trim)
+         (remove str/blank?)
+         vec)))
+
+(defn- protected-local-agent-ids
+  "Continuity ids that must not be claimed by imported proxy agents.
+
+   These are operator-facing local lanes. Federation may mirror other peer
+   agents normally, but it must not let a remote proxy silently occupy the
+   continuity id that local REPLs treat as the default target."
+  []
+  (or (seq (env-list "FUTON3C_PROTECTED_LOCAL_AGENT_IDS"))
+      (->> [(or (some-> (System/getenv "FUTON3C_CODEX_AGENT_ID") str/trim not-empty)
+                "codex-1")
+            (or (some-> (System/getenv "FUTON3C_VSCODE_AGENT_ID") str/trim not-empty)
+                "codex-vscode")
+            "claude-1"
+            "claude-2"]
+           (remove str/blank?)
+           distinct
+           vec)))
+
+(defn- protected-local-agent-id?
+  [agent-id]
+  (contains? (set (protected-local-agent-ids)) agent-id))
+
 ;; =============================================================================
 ;; Proxy invoke-fn — forwards dispatch to origin Agency
 ;; =============================================================================
@@ -215,6 +245,18 @@
 
       (nil? agent-type)
       {:ok false :agent-id aid :action :invalid-type}
+
+      ;; Never let a remote proxy occupy an operator-facing local continuity id.
+      ;; `cr new` and similar local REPL flows assume these ids are either owned
+      ;; by a real local agent or unbound, never silently rebound to a peer.
+      ;; If a protected id is already contaminated by proxy state, evict it.
+      (and (protected-local-agent-id? aid)
+           (or (nil? existing)
+               (get-in existing [:agent/metadata :proxy?])))
+      (do
+        (when existing
+          (reg/unregister-agent! aid))
+        {:ok true :agent-id aid :action :skipped-protected-id})
 
       ;; Never overwrite a real local agent with a proxy import.
       (and existing (not (get-in existing [:agent/metadata :proxy?])))

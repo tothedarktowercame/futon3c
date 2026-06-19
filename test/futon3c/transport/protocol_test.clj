@@ -264,6 +264,29 @@
           parsed (json/parse-string frame true)]
       (is (= "ready_ack" (:type parsed))))))
 
+(deftest render-peripheral-event
+  (testing "peripheral_event frame renders typed WS payload"
+    (let [frame (proto/render-peripheral-event :explore :cursor-state {:point 42})
+          parsed (json/parse-string frame true)]
+      (is (= "peripheral_event" (:type parsed)))
+      (is (= "explore" (:peripheral_id parsed)))
+      (is (= "cursor-state" (:event parsed)))
+      (is (= {:point 42} (:payload parsed)))))
+
+  (testing "internal peripheral_event representation normalizes strings"
+    (let [event (proto/make-peripheral-event "explore" "cursor-state" {:point 9})]
+      (is (= :peripheral-event (:ws/type event)))
+      (is (= :explore (:peripheral-id event)))
+      (is (= :cursor-state (:event event)))
+      (is (= {:point 9} (:payload event)))
+      (is (shapes/valid? shapes/WsPeripheralEvent event))))
+
+  (testing "peripheral_event payload must remain structured"
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"payload must be a map"
+         (proto/make-peripheral-event :explore :cursor-state "not-a-map")))))
+
 ;; =============================================================================
 ;; extract-params tests — per realtime/request-param-resilience (L1, L3)
 ;; =============================================================================

@@ -14,8 +14,8 @@
    Pattern references:
    - realtime/rendezvous-handshake: whistle send + response = exchange proof
    - realtime/liveness-heartbeats: whistle to idle agent proves it is responding"
-  (:require [futon3c.agency.registry :as registry]
-            [futon3c.evidence.store :as estore]
+  (:require [futon3c.social.coordination-ledger :as coordination]
+            [futon3c.evidence.boundary :as boundary]
             [clojure.string :as str])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -37,7 +37,8 @@
    :evidence/claim-type :step
    :evidence/author (or author "whistle-dispatcher")
    :evidence/at (now-str)
-   :evidence/body {:agent-id agent-id
+   :evidence/body {:event :whistle-exchange
+                   :agent-id agent-id
                    :prompt (truncate prompt 200)
                    :response (truncate response 500)
                    :status status}
@@ -110,7 +111,11 @@
     :else
     (let [aid-val (if (map? agent-id) (:id/value agent-id) (str agent-id))
           timeout (or timeout-ms 1800000)
-          result (registry/invoke-agent! aid-val prompt timeout)
+          result (coordination/invoke-with-edge! {:from (or author "whistle")
+                                                  :to aid-val
+                                                  :surface "whistle"
+                                                  :prompt prompt
+                                                  :timeout-ms timeout})
           status (cond
                    (:ok result) :completed
                    (let [e (:error result)
@@ -124,7 +129,7 @@
                            (if (map? e) (:error/message e) (str e))))]
       ;; Emit evidence
       (when evidence-store
-        (estore/append* evidence-store
+        (boundary/append! evidence-store
                         (make-whistle-evidence
                          aid-val prompt response-str status
                          (or author "whistle-dispatcher")

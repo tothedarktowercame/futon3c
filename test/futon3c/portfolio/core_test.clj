@@ -2,7 +2,10 @@
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.portfolio.observe :as obs]
             [futon3c.portfolio.perceive :as perc]
-            [futon3c.portfolio.core :as core]))
+            [futon3c.portfolio.core :as core]
+            [futon3c.portfolio.adjacent :as adjacent]
+            [futon3c.portfolio.logic :as logic]
+            [futon3c.peripheral.mission-control-backend :as mc-backend]))
 
 ;; =============================================================================
 ;; Test fixtures
@@ -138,3 +141,42 @@
     (testing "delta direction is correct"
       ;; bid 0.5, clear gap-count 0.6 → delta = -0.1
       (is (neg? (:gap-count delta))))))
+
+(deftest portfolio-step-records-run-metadata
+  (let [store (atom {:entries {} :order []})
+        review {:portfolio/missions []
+                :portfolio/mana {}
+                :portfolio/summary {}
+                :portfolio/coverage {}}
+        observation test-observation]
+    (reset! core/!state fresh-state)
+    (with-redefs [obs/gather-mc-state (fn [_evidence-store provided-review]
+                                        (or provided-review review))
+                  obs/observe (fn [_mc-state] observation)
+                  mc-backend/build-portfolio-review (fn [] review)
+                  logic/build-db (fn [_missions _mana _opts] {:mock true})
+                  logic/structural-summary (fn [_logic-db] {:critical-path []})
+                  adjacent/compute-adjacent-set (fn [_missions _mana _opts]
+                                                  test-adjacent)]
+      (let [result (core/portfolio-step!
+                    store
+                    {:agenda-id "wm.close-s6.v1"
+                     :claim "Close S6 by stepping Portfolio Inference using THE-STACK"
+                     :observation-source {:kind :aif-stack
+                                          :path "futon5a/holes/stories/THE-STACK.aif.edn"}})
+            entries (vals (:entries @store))
+            step-entry (first (filter #(some #{:step} (:evidence/tags %)) entries))]
+        (testing "result carries run metadata"
+          (is (string? (get-in result [:run :run-id])))
+          (is (= "wm.close-s6.v1" (get-in result [:run :agenda-id])))
+          (is (= 0 (get-in result [:run :step-before])))
+          (is (= 1 (get-in result [:run :step-after]))))
+        (testing "step evidence is linked to the agenda"
+          (is step-entry)
+          (is (= "wm.close-s6.v1" (get-in step-entry [:evidence/body :run :agenda-id])))
+          (is (= "wm.close-s6.v1" (get-in step-entry [:evidence/body :agenda :id])))
+          (is (= "futon5a/holes/stories/THE-STACK.aif.edn"
+                 (get-in step-entry [:evidence/body :observation-source :path]))))
+        (testing "result exposes emitted evidence refs"
+          (is (= 4 (count (get-in result [:evidence :entries]))))
+          (is (every? :evidence-id (get-in result [:evidence :entries]))))))))

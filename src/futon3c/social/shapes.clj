@@ -139,7 +139,9 @@
 
 (def PeripheralId
   "Peripheral identifier — the core peripherals plus extensions."
-  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission :mission-control :arse :mentor])
+  [:enum :explore :edit :test :deploy :reflect :proof :discipline :chat
+   :alfworld :mission :mission-control :arse :mentor :portfolio-inference
+   :emacs-cursor :war-machine-pilot :night-shift])
 
 (def ToolSet
   "Set of tools available to a peripheral."
@@ -367,6 +369,15 @@
    [:ws/type [:= :peripheral-stop]]
    [:reason :string]])
 
+(def WsPeripheralEvent
+  "Internal peripheral_event frame before JSON rendering.
+   Server-emitted only in the current transport seam."
+  [:map
+   [:ws/type [:= :peripheral-event]]
+   [:peripheral-id :keyword]
+   [:event :keyword]
+   [:payload :map]])
+
 ;; =============================================================================
 ;; Validation helpers
 ;; =============================================================================
@@ -412,4 +423,5 @@
    :TypedAgentId        TypedAgentId
    :WsPeripheralStart   WsPeripheralStart
    :WsToolAction        WsToolAction
-   :WsPeripheralStop    WsPeripheralStop})
+   :WsPeripheralStop    WsPeripheralStop
+   :WsPeripheralEvent   WsPeripheralEvent})

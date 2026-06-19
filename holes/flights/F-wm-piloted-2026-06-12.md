@@ -1,0 +1,412 @@
+# In-flight notebook — WM piloted flight, 2026-06-12
+
+Pilot: fable-2. Ground control: Joe (voice). Charter: fable-2 enters
+the War Machine as pilot, narrates what it sees, fixes live, hands the
+rest to the team. Notebook is APPEND-ONLY during the flight.
+
+## Sortie 1 — ignition + instrument sweep (~16:25)
+
+- IGNITION FAILURE: engine would not start; compute-delta-t-mission's
+  requiring-resolve fallback throws instead of nils. Fixed live by
+  pilot, futon2 774eaa2. Full panel: /tmp/wm-flight-1.md.
+- DEAD FEEDS (handed off): mission scan reads a dead store, "0
+  missions" (codex-1); mission-aif-head classpath failure surfaces as
+  Priority #1 + Self-Watch evidence API dead (codex-3); 4/6 loop-health
+  arrows 0%-never + all session mana balances zero — diagnose
+  dead-feed vs real-gap (codex-4).
+- LIVE INSTRUMENTS: working-tree drain (futon7a 22d), temporal
+  coupling (futon3c<->futon5a 0.79), workstream balance (stack 74%,
+  avoided range), R12 Beta posteriors.
+- KEY LIVE READING: R12 address-sorry intrinsic 0.049 (12 follow-
+  throughs / 226 emissions) — the machine has measured its own
+  recommendations' uselessness correctly for weeks; nothing consults
+  the reading.
+- PHASE A DISEASE CONFIRMED: priorities are 11 channel-gap scalar
+  nags; no chains. Hermit mode, G-epistemic 0.94 — "I don't know
+  enough" with no way to say what to learn.
+
+## Sortie 2 — Joe's interface (~16:30)
+
+- Joe's surface showed a 50-day-old cached prior as Recommended Next
+  Move; evidence-landscape turns absent. Another Claude took the
+  interface fix (not this flight's lane).
+- After their fix: live recommendation "advance mission M-first-flights"
+  — ACCURATE (matches actual frontier). First live-true recommendation
+  in 50 days.
+
+## Sortie 3 — the tile click, performed by hand (~16:36)
+
+- The recommendation tile has no descend wiring (R12 disease: authored
+  link rendered inert). Pilot performed the click manually:
+  M-first-flights -> Phase A PASSED (ckpt 20), Phase B armed, ratified
+  next car = flight-pretty-print (ckpt 21).
+- Chain assembled across three surfaces = problem -> cascade -> hole ->
+  solution; Joe certified by inspection (the ruling-surface act,
+  futon2/holes/ruling-surface-certification.md).
+- flight-pretty-print DISPATCHED to codex-3 (queued behind its WM fix).
+  On bell-back: pilot reviews, writes ckpt 22, multi-watcher reingests,
+  WM re-reads — the first full observed WM loop closure, if it lands.
+
+## Sortie 4 — advance typing + mission-anatomy gaps (~16:40)
+
+- Joe specified the automation: advance TYPES = mission satiety —
+  :checkpoint-only / :ratified-car / :design / :operator-ruling. The
+  WM loop runs without narration by routing on hunger type. (Recorded
+  in ruling-surface-certification.md.)
+- Mission-mode on M-first-flights (27 scopes) shows the paper-walk
+  diseases in the mission corpus: owed work not harvested from
+  checkpoint prose (R12); INSTANTIATE ghost section instead of typed
+  promissory hole (R8); VERIFY without bound pass-certificate (R4);
+  loose checkpoints with no discharges-edges to phases.
+- NEXT DISPATCH (when a codex slot frees): mission-scope detector
+  upgrade — checkpoint harvest (certificates + ratified cars),
+  promissory scopes for ghost phases, certificate-binding edges. One
+  build feeds both mission-mode legibility and the WM advance queue.
+
+## Open in-flight items
+
+- [ ] codex-1 bell-back: mission scan -> substrate-2
+- [ ] codex-3 bell-back x2: heads/self-watch; then flight-pretty-print
+- [ ] codex-4 bell-back: loop-arrows + mana verdict table
+- [ ] codex-2 bell-back: anatomy-v0 sweep build -> launch overnight CT run
+- [ ] Pilot: review all, checkpoint M-first-flights, re-run engine,
+      compare panel before/after (the loop-closure measurement)
+
+## Sortie 4a — look at *mission-overview* (16:44, refinement)
+
+Joe's look shows the overview tree: certificate·certificate-pass DOES
+exist ("Status: PHASE A COMPLETE...") — the certificate detector
+fired. Refinement of the sortie-4 finding: the gap is not detection
+but BINDING — the certificate floats as a top-level status scope
+inside a loose-section wrapper, with no discharges-edge to the VERIFY
+phase it certifies, and the eightfold-phase scopes sit beside it
+unconnected. Same R4 shape: the use and the binder both exist;
+the edge doesn't. INSTANTIATE still shows no owed-work scope.
+
+## Sortie 4b — pattern cross-references are a LIST, not a cascade (16:45)
+
+Joe, on the mission's "pattern cross references" section: "we've
+retrieved patterns... but this isn't formatted as a pattern cascade.
+It's formatted as a list. A clear missed opportunity — formatting
+retrieved patterns as a cascade was meant to be the VERY FIRST
+requirement of a cycle in the war machine. So we haven't actually even
+initiated the first cycle."
+
+Finding: retrieval exists, composition doesn't. The flat list is the
+1-d projection (registry-as-projection) of what should be a typed
+composition: which pattern feeds which, FOR THIS PROBLEM, with roles.
+ROOT CAUSE OF PHASE A: the cascade assembler is the missing organ —
+and it is NOT missing from the stack: E-cascade-sampler-sampler builds
+exactly this object (samplers assemble pattern cascades over
+circumstances, judged by the grounded harness). It was never wired to
+mission-mode/WM. WM cycle 1, step 1 = run the cascade assembler over
+the mission's retrieved patterns + the mission's open hole as the
+circumstance. The contest lane and the WM lane are the same lane.
+
+## Sortie 4c — the training set already exists: closed missions ARE cascades (16:46)
+
+Joe: "We've done hundreds of missions, probably, that are completed —
+most of which have pattern cross-references. If we wanted to build a
+training dataset of cascades, we have no further to look than our
+actual closed missions."
+
+Each closed mission is a LABELED cascade: circumstance = its IDENTIFY
+tension; selected patterns = the cross-references; outcome = closure
+with certificates (success label). The R12 lesson at corpus scale,
+again: don't synthesize training circumstances (contest v0 did, for
+fairness reasons that made sense then) — HARVEST the authored history.
+One bulk pass over closed missions yields:
+- the cascade training set for the assembler (GFlowNet lane gets real
+  reward-labeled trajectories instead of proxy targets);
+- metric golden triplets for free (patterns that co-fired in closed
+  missions are near each other / near that problem class);
+- prior cascade SHAPES for the ruling surface (what certified
+  composition looks like, historically).
+Pipeline shape is the anatomy-v0 sweep again: deterministic harvest,
+per-mission loss (missing cross-refs, unbound certificates), DP passes
+to clean, then train. Same architecture for papers, missions, flights —
+third time today the corpora have converged.
+
+**4c ratified (Joe): "All we'd have to do is reassemble the pattern
+cross-references we've made as cascades rather than as lists, and we'd
+be good to go."** And the reassembly evidence is AUTHORED: patterns
+are cited at specific checkpoints/phases, so cite-site order + phase
+context gives the cascade wiring deterministically — no model needed
+for v0. Output format: the golden-graph EDN schema (a cascade IS a
+hyperedge graph; nodes = patterns/problem/holes, edges = feeds/
+discharges with :via quotes). Status: :ratified-car, queued for the
+first free codex slot, behind the five in-flight tasks.
+
+## Sortie 4d — look at M-first-flights.md:301 (realtime/structured-events-only)
+
+Joe points at the mission's own PSR: "the trace must be typed events,
+not prose. The current record half-obeys it (typed slots) and
+half-defies it (the grounds live in prose)."
+
+This is the forward/backward split for everything ratified today:
+- BACKWARD (harvest): checkpoint prose mining works precisely because
+  authors half-structured it — but it is retrofit, not a way of life.
+- FORWARD (typed at birth): new records obey structured-events-only —
+  checkpoints carry typed slots (:certificate, :next-car, :discharges
+  PHASE), cascades are born as EDN, flights emit typed organs. The
+  M-typed-bells precedent exactly (type at birth -> ArSE at birth).
+The harvest pass is therefore ALSO the migration: it defines the typed
+shapes that future records emit natively, and prose-mining decays to
+zero as the corpus turns over. The mission predicted its own fix.
+
+## Sortie 4e — pattern cross-references carry no substrate tags (16:48)
+
+Joe: "We've authored this mission, we've selected the patterns — or
+cross-referenced them anyway — but we don't have tags or markup
+showing that they [bind to substrate-2]."
+
+The cross-reference list is authored but UNBOUND: no scope marks the
+citation site, no mission->pattern edge lands in substrate-2. So the
+missions-connect-through-patterns bipartite graph — the backbone of
+the EFE field and of cascade harvest (4c) — is not materialized from
+the mission text at all. Fourth member of the binding-gap family this
+sortie: certificate unbound (4a), owed-work unharvested (sortie 4),
+checkpoints without discharges-edges, and now pattern cites without
+mission->pattern edges.
+
+DETECTOR BUNDLE (consolidated, dispatch when slot frees):
+mission-scope detector upgrade = (1) checkpoint harvest (certificates,
+ratified cars) + discharges-edges; (2) promissory scopes for ghost
+phase sections; (3) pattern-crossref scopes emitting
+mission->pattern edges into substrate-2; (4) typed-at-birth slots
+documented for future records (4d). One build; feeds mission-mode
+legibility, the WM advance queue, the EFE field, AND cascade harvest.
+
+## Sortie 5 — pilot tags the patterns into substrate-2, live (16:49-16:55)
+
+Ground control directed: fix THIS mission now, log as WM progress.
+Pilot executed: (1) detector output inspected — ALL NINE pattern
+cross-refs already harvested (one pattern hyperedge, nine role-typed
+pattern ends, flexiarg refs resolved); (2) substrate-2 queried —
+first-flights pattern edges absent; (3) mission-scope-reingest.sh run
+(per-binder, Drawbridge, JVM untouched); (4) verified: all nine
+first-flights/pattern/* hyperedges live in substrate-2 with mission +
+flexiarg + concept ends.
+
+CORRECTION (W2 honesty): pilot's earlier "only 1 pattern edge in the
+whole store" was a limit-200 truncated-query misread — the store
+holds hundreds across many missions. Revised finding: the pattern
+lane works corpus-wide; missions that predate it just need
+reingesting. The 4e detector-bundle item shrinks accordingly: the
+mission->pattern part is OPERATIONAL — the bulk fix for all missions
+is a loop over mission-scope-reingest.sh, not new code. (Checkpoint
+harvest, promissory ghost-phases, certificate discharges-edges remain
+genuinely missing.)
+
+## Sortie 5a — per-cite anchors (16:53-16:58)
+
+Joe's look at line 301 exposed the granularity gap: the pattern scope
+was a single positionless rollup (9 ends, no anchor) — nothing for
+mission-mode to render at the bullet, no cite order for cascade
+reassembly. Pilot fixed the detector live (futon6: pattern_slots
+captures match offsets; assembly emits one scope per cite at
+sec.content_start+offset, the inline-closure idiom), re-detected,
+reingested: NINE positioned pattern scopes (16649..18671), old rollup
+retracted by true-up. Mission-mode now has chips at every cite;
+cascade harvest (4c) gets ordering for free.
+
+## Sortie 6 — the first cascade (16:57-16:59)
+
+Pilot assembled the nine tagged patterns into an Alexander semilattice
+(first-flights-cascade.edn + svg, c0815c8): problem at top,
+:differentiates edges with PSR-quoted :via rationales, two genuine
+joins (measurement-window, determined-fork), discharge edge closing on
+the problem. The mission's ARGUE in pattern-theoretic form.
+
+Ground control verdict: "okay first draft. I don't really think the
+picture looks GREAT, but it's okay." — CERTIFIED AS DRAFT; render
+quality flagged. Known cause: render-golden-graph.bb is the generic
+hyperedge renderer (ellipse hubs per edge); cascades want level-ranked
+layout (rank=same per :level, direct context->pattern arrows, :via as
+edge labels). Polish item, queued — the DATA is certified, the
+projection needs work (two-projections-of-one-quantity, fittingly).
+
+## Sortie 7 — INSTANTIATE de-ghosted (17:05-17:18)
+
+The ghost took FOUR distinct fixes to lift, each a real corpus-general
+defect found by ground control's eyes:
+1. Detector: clean_title didn't strip letter-suffixed section numbers
+   ("5b.") → classified loose-section (futon6 fix, committed).
+2. Operator buffer predated the agent's disk edit (autosave-modified,
+   zero unique content) → lossless revert.
+3. Overlay marker drift: pre-revert overlays slid 32 lines on revert —
+   the Consequence chip wore the 5b title; C-c m o re-renders overlays,
+   never re-fetches.
+4. Full mission-mode rerun by the operator → eightfold-phase·instantiate
+   placed; ghost line gone. CONFIRMED by Joe: "it has finally showed up!"
+
+BULK-PASS ITEMS minted: (a) mission-mode refresh should
+revert-if-unmodified before placing overlays (two-pilot-seats
+discipline: agent edits disk, operator holds buffer); (b) overview
+should warn when overlays predate the last buffer revert; (c)
+synchronous fetch in refresh can wedge Emacs — needs async or timeout.
+
+INSTANTIATE now stands open in the mission, the overview, and the
+substrate, with the same content in all three.
+
+## Sortie 8 — the phases in Polish notation (17:19-17:20, ground control)
+
+Joe, voice: before INSTANTIATE, rethink VERIFY — "or maybe DERIVE. In
+a phase like derive, we should be FINDING THE HOLE. We've just mapped
+the software stack; derive is where we derive the solution that fits
+into that stack — even before we create the cascade. That's exactly
+the correct order. We need to think about these arrows in a kind of
+POLISH NOTATION."
+
+The reading, ratified live by the pilot:
+- MAP charts the stack; DERIVE states the typed hole — the :want,
+  operator-first, BEFORE any operand exists. Type before term.
+- ARGUE's cascade is then a PREFIX EXPRESSION: each :differentiates
+  edge is an operator applied to (context, pattern) operands;
+  the semilattice linearizes operator-first.
+- VERIFY supplies the witness per application (no-self-certification:
+  the pilot's :realized annotations on the cascade are currently
+  UNWITNESSED CLAIMS — VERIFY's job is precisely the witness column:
+  each :realized gets a ref to test/commit/checkpoint).
+- INSTANTIATE evaluates the expression: term lands in the hole.
+
+Why Polish notation is load-bearing, not decoration: with known
+arities (each pattern's slots), prefix form needs no parentheses —
+A CASCADE SERIALIZES UNAMBIGUOUSLY as a linear sequence of pattern
+applications. That linear form is exactly a sampler trajectory (the
+contest's samplers already build cascades stepwise = emitting the
+prefix string left to right), exactly a GFlowNet trajectory, and
+exactly a flight (the morphism-trace read left to right). One
+serialization for cascades, flights, and training data.
+
+## Sortie 9 — the derive gate (17:23, ruling) + sorry minted into meme.db
+
+Joe's ruling: "this sorry should be a GATE at the end of the derive
+section — we can't go on to argue until we know what we're arguing
+about. Fine to start with a free-form head, a vague gap, map what's
+there. But derive is where the sorry must be DERIVED — we can't expect
+the sorrys handed to us on a golden plate."
+
+Minted durable as futon3/library/futon-theory/
+derive-exits-on-a-minted-sorry.flexiarg (DERIVE→ARGUE gated on a
+persisted (have→want) arrow; mechanically checkable by the
+mission-scope detector: DERIVE present ∧ no sorry-arrow ⇒ gate hole).
+
+And the first instance preceded the ruling by minutes:
+arr-7535a5b6-e59 in live meme.db — M-first-flights INSTANTIATE hole,
+have=flight-records-organs-typed-grounds-in-prose,
+want=flights-as-anatomy-corpus-canonical-organ-order-typed-grounds,
+:construction/:open, construction named (flight-pretty-print, in
+flight), payload cross-refs the substrate-2 scope + cascade EDN.
+Promotion to substrate-2 on witnessed discharge (contract B).
+
+## Sortie 10 — VERIFY is diagram-checking, not condition-checking (17:27)
+
+Joe: "It's great that we know how to use core.logic — a lovely tool.
+But what we should be checking and verifying is the WIRING DIAGRAM
+that is the third term of the triple that each flight is meant to
+mint."
+
+The triple each flight mints: (typed hole, term, wiring diagram) —
+the sorry from DERIVE (have→want arrow), the construction from
+INSTANTIATE, and the diagram showing HOW the term fills the hole
+(which is the trace/cascade read as composition). VERIFY's logic
+model = type-checking that third term: boundary must equal the
+derive-gate's (have, want); interior applications each carry their
+witness; composition closes with no dangling wires. core.logic is the
+CHECKER (relational composition checks, the Reazon idiom from the
+Arxana window constraints), not the content — the content is the
+diagram. Gates stop being arbitrary conditions and become exactly:
+does the diagram compose, is every wire typed, is every node
+witnessed.
+
+(Joins the peradam labor→arrow→fruit doctrine: the wiring diagram is
+what makes the arrow's discharge AUDITABLE — the certificate's body.)
+
+## Sortie 11 — the retrospective triple-mining work order (17:30, ground control)
+
+Joe: "We can go back to old missions and mine these out. What was the
+ARGUMENT, and what was the WIRING DIAGRAM, from every mission that's
+closed so far? And we should be able to VALIDATE that in substrate-2 —
+say: yeah, it built this. Here's the sketch with patterns; here's what
+was missing beforehand that motivated it. And we have all of the HEAD
+and the IDENTIFY and the MAP to go on if DERIVE itself isn't
+sufficient."
+
+THE WORK ORDER (absorbs 4c cascade-reassembly + the detector bundle):
+per CLOSED mission, mine the triple —
+1. **hole**: have/want from DERIVE; fallback chain HEAD -> IDENTIFY ->
+   MAP where derive is thin (old missions predate the gate);
+2. **argument**: the cascade — pattern cites with cite-site order
+   (per-cite anchors now landed) + checkpoint context;
+3. **wiring**: the composition — checkpoints as witnessed applications,
+   closing commits as the term;
+and **validate against substrate-2**: "it built this" = the term's
+artifacts exist in the store/repos (endpoint verification — the
+retrospective WITNESS). Outputs: sorry-arrows minted :constructed into
+meme.db; cascade training set (the assembler's corpus); wiring
+diagrams (third terms) for the anatomy atlas; per-mission loss where
+mining fails (DP/random-access improvement, same as papers).
+
+Architecture = anatomy-v0 for the mission corpus: deterministic
+harvest, per-mission loss, bulk passes. Dispatch-shaped; queued behind
+the five in-flight codex tasks.
+
+## Sortie 12 — Phase B's dependency order (17:32, ruling)
+
+Joe: "Going on to the last part of INSTANTIATE — all this brouhaha of
+G over policies and metrics: we can't expect that to come out of the
+substrate by itself UNTIL WE GET ALL OF THESE TERMS."
+
+The ruling that sequences Phase B: policy-grade G(s, π) is defined
+over policies = distributions over CASCADES; it has nothing to range
+over until the substrate holds the terms — minted holes, cascades,
+wiring diagrams, witnessed discharges. So the order is: triple-mining
+(sortie 11) + typed-at-birth records (4d) populate the substrate FIRST;
+then G over policies becomes COMPUTABLE rather than mocked, and the
+metric's golden triplets fall out of the same mined terms (patterns
+that co-fired in witnessed discharges are near). The V-f2 compromise
+(G over policies, not single actions) gets its operational floor: the
+mined dataset IS the state-action space. No more brouhaha — a
+dependency, stated and scheduled.
+
+## FLIGHT CLOSED (ground control, ~17:35): "we can safely say that we have advanced this mission"
+
+The advance, enumerated (all committed, all live):
+- Nine pattern cites tagged into substrate-2 with per-cite anchors
+  (detector fix, corpus-general).
+- The first cascade artifact (ARGUE in pattern form), certified draft,
+  satiety-against-reality annotated.
+- INSTANTIATE opened, de-ghosted (4-layer fix chain, 3 bulk-pass items).
+- The first sorry-arrow minted into live meme.db (arr-7535a5b6-e59),
+  derive-gate certificate in the mission, and the gate itself minted as
+  a durable pattern (derive-exits-on-a-minted-sorry.flexiarg).
+- The wiring diagram (the triple's third term) drawn, witnessed where
+  Phase A left witnesses, hunger typed where owed — surfacing
+  typed-grounds migration as :design-hungry (unplanned).
+- Polish-notation phase semantics + VERIFY-as-diagram-checking ruled
+  and logged (sorties 8, 10).
+- The retrospective triple-mining work order specified (sortie 11) and
+  Phase B formally HELD on it (sortie 12; mission status updated).
+
+Still in flight after the cockpit closes (continue as ordinary work):
+codex-1 (WM mission scan), codex-3 (heads/self-watch, then
+flight-pretty-print -> pilot review -> ckpt 22 -> arrow witness),
+codex-4 (loop arrows + mana diagnosis), codex-2 (anatomy-v0 sweep ->
+overnight CT run). Bulk passes queued: mission-mode two-pilot-seats
+discipline; reingest sweep over all missions; triple-mining dispatch.
+
+Engine fixes landed during flight: futon2 774eaa2 (ignition), futon6
+detector fixes (5b-numbering, per-cite anchors). The first piloted WM
+flight is itself the strongest specimen yet for the flight corpus:
+problem -> cascade -> holes -> discharges, with the operator's voice
+as the act-gate throughout.
+
+**Post-flight addendum (Joe, on dispatching the miner):** like the
+structure-first arXiv mining, the triple corpus doesn't have to be
+perfect — "we could have whole missions devoted to 'improving wiring
+diagrams' etc." The loss histogram is the backlog generator: each loss
+class (thin holes, listy cascades, unverifiable artifacts) can seed a
+mission, and those missions mint their own triples — the corpus
+improves itself under the same discipline it records. Admissibility =
+recursion safety (per-class can-propose?) is the standing guard.

@@ -61,6 +61,29 @@
   "Maximum time for a single eval request (5 minutes)."
   300000)
 
+(def ^:private eval-log-file "/tmp/futon3c-eval.log")
+(def ^:private eval-log-max-bytes 5000000)
+(def ^:private eval-log-summary-chars 500)
+
+(defn- truncate-str [s n]
+  (when (some? s)
+    (let [s (str s)]
+      (if (> (count s) n) (str (subs s 0 n) "…<truncated>") s))))
+
+(defn- eval-log!
+  "Append one EDN line to the eval forensic log. Rotates to .1 at max bytes.
+   Written before eval (:type :request) and after (:type :response) so a body
+   that wedges or kills the JVM still leaves a trail."
+  [entry]
+  (try
+    (let [f (java.io.File. eval-log-file)]
+      (when (and (.exists f) (> (.length f) eval-log-max-bytes))
+        (.renameTo f (java.io.File. (str eval-log-file ".1"))))
+      (spit eval-log-file
+            (str (pr-str (assoc entry :at (str (java.time.Instant/now)))) \newline)
+            :append true))
+    (catch Throwable _ nil)))
+
 (defn- read-body
   "Read the request body as a string."
   [request]
@@ -72,38 +95,53 @@
 
 (defn- eval-handler
   "Ring handler for /eval. Accepts POST with Clojure code as body.
-   Returns EDN-encoded result. Timeout after eval-timeout-ms."
+   Returns EDN-encoded result. Timeout after eval-timeout-ms.
+   Every non-blank request is written to eval-log-file before and after eval."
   [request]
   (if (not= :post (:request-method request))
     {:status 405
      :headers {"content-type" "text/plain"}
      :body "POST only"}
-    (let [code (read-body request)]
+    (let [code (read-body request)
+          remote (:remote-addr request)]
       (if (str/blank? code)
         {:status 400
          :headers {"content-type" "text/plain"}
          :body "empty code"}
-        (try
-          (let [f (future
-                    (try
-                      {:ok true :value (load-string code)}
-                      (catch Throwable t
-                        {:ok false
-                         :error (.getMessage t)
-                         :type (.getName (class t))})))
-                result (deref f eval-timeout-ms ::timeout)]
-            (if (= result ::timeout)
-              (do (future-cancel f)
-                  {:status 504
-                   :headers {"content-type" "application/edn"}
-                   :body (pr-str {:ok false :error "eval timeout" :timeout-ms eval-timeout-ms})})
-              {:status (if (:ok result) 200 500)
+        (let [start-ns (System/nanoTime)]
+          (eval-log! {:type :request :remote remote :bytes (count code) :code code})
+          (try
+            (let [f (future
+                      (try
+                        {:ok true :value (load-string code)}
+                        (catch Throwable t
+                          {:ok false
+                           :error (.getMessage t)
+                           :type (.getName (class t))})))
+                  result (deref f eval-timeout-ms ::timeout)
+                  elapsed-ms (long (/ (- (System/nanoTime) start-ns) 1000000))]
+              (if (= result ::timeout)
+                (do (future-cancel f)
+                    (eval-log! {:type :response :remote remote :elapsed-ms elapsed-ms
+                                :ok false :error "eval timeout"})
+                    {:status 504
+                     :headers {"content-type" "application/edn"}
+                     :body (pr-str {:ok false :error "eval timeout" :timeout-ms eval-timeout-ms})})
+                (do (eval-log! {:type :response :remote remote :elapsed-ms elapsed-ms
+                                :ok (boolean (:ok result))
+                                :summary (if (:ok result)
+                                           (truncate-str (pr-str (:value result)) eval-log-summary-chars)
+                                           (truncate-str (str (:type result) ": " (:error result))
+                                                         eval-log-summary-chars))})
+                    {:status (if (:ok result) 200 500)
+                     :headers {"content-type" "application/edn"}
+                     :body (pr-str result)})))
+            (catch Throwable t
+              (eval-log! {:type :response :remote remote :ok false
+                          :error (.getMessage t) :exception-type (.getName (class t))})
+              {:status 500
                :headers {"content-type" "application/edn"}
-               :body (pr-str result)}))
-          (catch Throwable t
-            {:status 500
-             :headers {"content-type" "application/edn"}
-             :body (pr-str {:ok false :error (.getMessage t) :type (.getName (class t))})}))))))
+               :body (pr-str {:ok false :error (.getMessage t) :type (.getName (class t))})})))))))
 
 ;; =============================================================================
 ;; Server startup with route dispatch

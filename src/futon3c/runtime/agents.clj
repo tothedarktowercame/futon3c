@@ -75,49 +75,53 @@
    - :type (:claude | :codex | :tickle | :mock | :peripheral)
    - :invoke-fn ((fn [prompt session-id] ...))
    - :capabilities (optional vector, defaults by type)
-   - :ttl-ms, :metadata (optional passthrough)"
-  [{:keys [agent-id type invoke-fn capabilities ttl-ms metadata]}]
+   - :ttl-ms, :metadata, :session-reset-fn (optional passthrough)"
+  [{:keys [agent-id type invoke-fn capabilities ttl-ms metadata session-reset-fn]}]
   (reg/register-agent!
    {:agent-id {:id/value agent-id :id/type :continuity}
     :type type
     :invoke-fn invoke-fn
     :capabilities (vec (or capabilities (get default-capabilities type [])))
     :ttl-ms ttl-ms
+    :session-reset-fn session-reset-fn
     :metadata (merge {:agency/contracts {:bell-on-complete? (boolean invoke-fn)}}
                      metadata)}))
 
 (defn register-codex!
   "Convenience wrapper for registering a Codex agent."
-  [{:keys [agent-id invoke-fn capabilities ttl-ms metadata]
+  [{:keys [agent-id invoke-fn capabilities ttl-ms metadata session-reset-fn]
     :or {agent-id "codex-1"}}]
   (register-agent! {:agent-id agent-id
                     :type :codex
                     :invoke-fn invoke-fn
                     :capabilities capabilities
                     :ttl-ms ttl-ms
+                    :session-reset-fn session-reset-fn
                     :metadata (assoc (or metadata {})
                                      :require-execution? true)}))
 
 (defn register-claude!
   "Convenience wrapper for registering a Claude agent."
-  [{:keys [agent-id invoke-fn capabilities ttl-ms metadata]
+  [{:keys [agent-id invoke-fn capabilities ttl-ms metadata session-reset-fn]
     :or {agent-id "claude-1"}}]
   (register-agent! {:agent-id agent-id
                     :type :claude
                     :invoke-fn invoke-fn
                     :capabilities capabilities
                     :ttl-ms ttl-ms
+                    :session-reset-fn session-reset-fn
                     :metadata metadata}))
 
 (defn register-tickle!
   "Convenience wrapper for registering a Tickle agent."
-  [{:keys [agent-id invoke-fn capabilities ttl-ms metadata]
+  [{:keys [agent-id invoke-fn capabilities ttl-ms metadata session-reset-fn]
     :or {agent-id "tickle-1"}}]
   (register-agent! {:agent-id agent-id
                     :type :tickle
                     :invoke-fn invoke-fn
                     :capabilities capabilities
                     :ttl-ms ttl-ms
+                    :session-reset-fn session-reset-fn
                     :metadata metadata}))
 
 (defn registry-snapshot

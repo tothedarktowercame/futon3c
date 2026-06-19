@@ -7,9 +7,9 @@
    R4 (loud failure): never nil, errors are typed and component-scoped."
   (:require [clojure.string :as str]
             [futon3c.social.shapes :as shapes]
-            [futon3c.agency.registry :as reg]
+            [futon3c.social.coordination-ledger :as coordination]
             [futon3c.peripheral.registry :as preg]
-            [futon3c.evidence.store :as estore]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.social.persist :as persist])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -168,7 +168,7 @@
                  :evidence/session-id session-id
                  :evidence/author (if (map? agent-id) (:id/value agent-id) (str agent-id))
                  :evidence/at (now-str)}
-          result (estore/append* evidence-store entry)]
+          result (boundary/append! evidence-store entry)]
       (when (:ok result)
         (:evidence/id entry)))))
 
@@ -238,7 +238,11 @@
 (defn- direct-invoke
   "Existing direct invocation path — coordination messages."
   [classified-message target]
-  (let [resp (reg/invoke-agent! target (coerce-prompt (:msg/payload classified-message)))
+  (let [prompt (coerce-prompt (:msg/payload classified-message))
+        resp (coordination/invoke-with-edge! {:from (:msg/from classified-message)
+                                               :to target
+                                               :surface "dispatch"
+                                               :prompt prompt})
         receipt (when (= true (:ok resp))
                   {:receipt/msg-id (:msg/id classified-message)
                    :receipt/to target

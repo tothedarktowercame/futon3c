@@ -18,7 +18,22 @@
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.evidence.store :as evidence-store]
-            [futon3c.social.shapes :as shapes]))
+            [futon3c.social.shapes :as shapes])
+  (:import [java.io File]))
+
+(defn- temp-dir!
+  []
+  (let [dir (File/createTempFile "futon3c-mission-control" "tmp")]
+    (.delete dir)
+    (.mkdirs dir)
+    (.getAbsolutePath dir)))
+
+(defn- rm-rf!
+  [^String path]
+  (let [root (File. path)]
+    (when (.exists root)
+      (doseq [f (reverse (file-seq root))]
+        (.delete ^File f)))))
 
 ;; =============================================================================
 ;; Backend: status classification
@@ -54,7 +69,117 @@
           (is (= :md-file (:mission/source entry)))
           (is (= "futon3c" (:mission/repo entry)))
           (is (string? (:mission/date entry)))
-          (is (keyword? (:mission/status entry))))))))
+          (is (keyword? (:mission/status entry)))
+          (is (contains? entry :mission/owner)))))))
+
+(deftest parse-mission-md-extracts-owner
+  (testing "T-9b: Owner header extracted into :mission/owner"
+    (let [tmp (temp-dir!)]
+      (try
+        (let [missions-dir (io/file tmp "futonx" "holes" "missions")
+              path (io/file missions-dir "M-owner-fixture.md")]
+          (.mkdirs missions-dir)
+          (spit path (str "# Mission: Owner Fixture\n\n"
+                          "**Date:** 2026-05-21\n"
+                          "**Status:** IDENTIFY\n"
+                          "**Owner:** claude-2 (co-owner claude-4)\n"))
+          (let [entry (mcb/parse-mission-md (.getAbsolutePath path) :futonx)]
+            (is (= "claude-2 (co-owner claude-4)" (:mission/owner entry)))
+            (is (= "owner-fixture" (:mission/id entry)))))
+        (finally
+          (rm-rf! tmp))))))
+
+(deftest parse-mission-path-infers-repo-from-root-map
+  (testing "single mission path parsing can infer repo from configured roots"
+    (let [tmp (temp-dir!)]
+      (try
+        (let [repo-root (io/file tmp "futonx")
+              missions-dir (io/file repo-root "holes" "missions")
+              path (io/file missions-dir "M-sample.md")]
+          (.mkdirs missions-dir)
+          (spit path (str "# Mission: Sample\n\n"
+                          "**Date:** 2026-04-29\n"
+                          "**Status:** IDENTIFY\n"))
+          (let [entry (mcb/parse-mission-path {:futonx (.getAbsolutePath repo-root)}
+                                             (.getAbsolutePath path)
+                                             nil)]
+            (is (= "sample" (:mission/id entry)))
+            (is (= "futonx" (:mission/repo entry)))
+            (is (= :in-progress (:mission/status entry)))))
+        (finally
+          (rm-rf! tmp))))))
+
+(deftest parse-excursion-md-extracts-parent-owner-and_slug
+  (let [tmp (temp-dir!)]
+    (try
+      (let [missions-dir (io/file tmp "futonx" "holes" "missions")
+            path (io/file missions-dir "E-support-coverage.md")]
+        (.mkdirs missions-dir)
+        (spit path (str "# Excursion: Support Coverage\n\n"
+                        "**Status:** SCOPED — first cycle\n"
+                        "**Date:** 2026-05-27\n"
+                        "**Author + end-to-end owner:** claude-1\n"
+                        "**Parent mission:** `futon3c/holes/missions/M-war-machine-pilot.md`.\n"
+                        "Related code: `/home/joe/code/futon3c/src/futon3c/aif/stack_generator.clj`\n"
+                        "Cross-ref: M-pattern-mining\n"))
+        (let [entry (mcb/parse-excursion-md (.getAbsolutePath path) :futonx)]
+          (is (= "support-coverage" (:excursion/id entry)))
+          (is (= "Support Coverage" (:excursion/title entry)))
+          (is (= :open (:excursion/status entry)))
+          (is (= "claude-1" (:excursion/owner entry)))
+          (is (= "futon3c-d/mission/war-machine-pilot"
+                 (:excursion/parent-mission entry)))
+          (is (some #{"M-pattern-mining"} (:excursion/cross-refs entry)))
+          (is (some #{"futon3c/src/futon3c/aif/stack_generator.clj"
+                      "/home/joe/code/futon3c/src/futon3c/aif/stack_generator.clj"}
+                    (:excursion/code-paths entry)))))
+      (finally
+        (rm-rf! tmp)))))
+
+(deftest parse-excursion-md-keeps-vertex-when-parent-missing
+  (let [tmp (temp-dir!)]
+    (try
+      (let [missions-dir (io/file tmp "futony" "holes" "missions")
+            path (io/file missions-dir "E-orphan.md")]
+        (.mkdirs missions-dir)
+        (spit path (str "# Excursion: Orphan\n\n"
+                        "**Status:** COMPLETE\n"
+                        "**End-to-end owner:** Codex\n"))
+        (let [entry (mcb/parse-excursion-md (.getAbsolutePath path) :futony)]
+          (is (= "orphan" (:excursion/id entry)))
+          (is (= :complete (:excursion/status entry)))
+          (is (= "Codex" (:excursion/owner entry)))
+          (is (nil? (:excursion/parent-mission entry)))))
+      (finally
+        (rm-rf! tmp)))))
+
+(deftest mission-sync-evidence-is-versioned-by-content
+  (testing "sync evidence id changes when file content changes"
+    (let [tmp (temp-dir!)
+          repo-root (io/file tmp "futony")
+          missions-dir (io/file repo-root "holes" "missions")
+          path (io/file missions-dir "M-sample.md")]
+      (try
+        (.mkdirs missions-dir)
+        (spit path (str "# Mission: Sample\n\n"
+                        "**Date:** 2026-04-29\n"
+                        "**Status:** IDENTIFY\n"))
+        (let [entry-a (mcb/parse-mission-path {:futony (.getAbsolutePath repo-root)}
+                                              (.getAbsolutePath path)
+                                              nil)
+              ev-a (mcb/mission->sync-evidence entry-a)]
+          (spit path (str "# Mission: Sample\n\n"
+                          "**Date:** 2026-04-29\n"
+                          "**Status:** COMPLETE\n"))
+          (let [entry-b (mcb/parse-mission-path {:futony (.getAbsolutePath repo-root)}
+                                                (.getAbsolutePath path)
+                                                nil)
+                ev-b (mcb/mission->sync-evidence entry-b)]
+            (is (not= (:evidence/id ev-a) (:evidence/id ev-b)))
+            (is (= [:mission :sync :snapshot] (:evidence/tags ev-a)))
+            (is (= :complete (get-in ev-b [:evidence/body :mission/status])))))
+        (finally
+          (rm-rf! tmp))))))
 
 (deftest parse-devmap-edn-extracts-fields
   (testing "parsing a real devmap EDN extracts mission/id and state"
@@ -222,6 +347,7 @@
   (testing "portfolio review has all required fields"
     (let [review (mcb/build-portfolio-review)]
       (is (vector? (:portfolio/missions review)))
+      (is (map? (:portfolio/turn-counts review)))
       (is (vector? (:portfolio/devmap-summaries review)))
       (is (vector? (:portfolio/coverage review)))
       (is (map? (:portfolio/mana review)))
@@ -232,6 +358,36 @@
       ;; Substantive: we should have missions and devmaps
       (is (pos? (count (:portfolio/missions review))))
       (is (pos? (count (:portfolio/devmap-summaries review)))))))
+
+(deftest mission-turn-count-telemetry-attaches-per-mission-counts
+  (testing "historical and live turn counts are attached per mission with a grand total"
+    (with-redefs-fn {#'mcb/historical-mission-turn-counts
+                     (fn []
+                       {:mission-counts {"autoclock-in" {:historical-turn-count 3
+                                                          :historical-commit-count 4}}
+                        :total-historical-turns 3
+                        :total-historical-commits 4})
+                     #'mcb/live-mission-turn-counts
+                     (fn [& _]
+                       {:mission-counts {"autoclock-in" {:live-turn-count 2}
+                                         "mission-control" {:live-turn-count 1}}
+                        :total-live-turns 3})}
+      (fn []
+        (let [telemetry (mcb/mission-turn-count-telemetry nil)
+              missions (mcb/attach-turn-counts
+                        [{:mission/id "autoclock-in"
+                          :mission/status :in-progress
+                          :mission/source :md-file}
+                         {:mission/id "mission-control"
+                          :mission/status :in-progress
+                          :mission/source :md-file}]
+                        telemetry)
+              by-id (into {} (map (juxt :mission/id identity) missions))]
+          (is (= 5 (get-in by-id ["autoclock-in" :mission/turn-count])))
+          (is (= 3 (get-in by-id ["autoclock-in" :mission/historical-turn-count])))
+          (is (= 2 (get-in by-id ["autoclock-in" :mission/live-turn-count])))
+          (is (= 1 (get-in by-id ["mission-control" :mission/turn-count])))
+          (is (= 6 (:total-turns telemetry))))))))
 
 ;; =============================================================================
 ;; Peripheral lifecycle

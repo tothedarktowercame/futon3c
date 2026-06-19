@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/home/joe/code/futon3c/scripts/emacs-socket-lib.sh
+source "${script_dir}/emacs-socket-lib.sh"
+
+# linode2 (Chicago / metameso) worker profile — a LEAN federated Agency node.
+# No IRC host (agents coordinate via bells/whistles), no WM-UI, no extra
+# watchers. Federates into lucy. Run via ~/bin/fdev (role auto-detects linode2).
+#
+# Modular by design: features are off by default here; relaunch with more as
+# the box's job grows.
+
+# --- Role, site, network ---
+export FUTON3C_ROLE="${FUTON3C_ROLE:-linode2}"
+# Site prefix for agent ids (chi-claude-1, …). Honoured once the site-prefix
+# change lands; harmless until then. Lucy uses lon; the laptop stays undecorated.
+export FUTON3C_SITE="${FUTON3C_SITE:-chi}"
+export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
+export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
+export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://172.236.108.82:7070}"
+
+# --- No IRC on this box (only lucy hosts ngircd) ---
+export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
+export FUTON3C_RELAY_CLAUDE="${FUTON3C_RELAY_CLAUDE:-false}"
+export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-false}"
+
+# --- Agents: NONE registered locally yet. claude-1 would collide with lucy's;
+#     flip FUTON3C_REGISTER_CLAUDE=true once site-prefixed ids (chi-claude-1)
+#     land so this box registers a distinct agent. ---
+export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-false}"
+export FUTON3C_REGISTER_CLAUDE2="${FUTON3C_REGISTER_CLAUDE2:-false}"
+export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
+
+# --- Federation: peer with lucy (announce local agents; mirror lucy's) ---
+export FUTON3C_PEERS="${FUTON3C_PEERS:-http://172.236.28.208:7070}"
+
+# --- Codex settings (parity; no local codex execution here) ---
+export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
+export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
+export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
+
+# --- Blackboard / HUD ---
+export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
+export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
+
+# --- Futon1a / Futon4 compatibility ---
+export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
+export FUTON1A_STATIC_DIR="${FUTON1A_STATIC_DIR:-${HOME}/code/futon4/dev/web}"
+export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
+export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_ALLOWED_PENHOLDERS:-${FUTON1A_COMPAT_PENHOLDER}}"
+export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/alpha}"
+export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
+export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
+
+# --- Emacs daemon socket (unified futon-ops; fdev passes FUTON3C_EMACS_SOCKET) ---
+if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
+  export FUTON3C_EMACS_SOCKET="$(futon_preferred_emacs_socket || true)"
+fi
+
+exec make dev "$@"

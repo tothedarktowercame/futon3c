@@ -1,0 +1,188 @@
+;; =============================================================================
+;; M-war-machine-first-outing — WIRING DIAGRAM (v0.1, growing)
+;; =============================================================================
+;;
+;; Started 2026-05-30 (claude-5 + Joe, emacs-repl) during the clustered DERIVE.
+;; Joe: "this clustered approach is almost certainly going to lead to a very
+;; interesting wiring diagram. We might want to start populating it already."
+;;
+;; This is the wiring of the FIRST OUTING as an AIF loop: a `/loop`-driven REPL
+;; cycle (v·∇ over the WM field, per holes/specs/repl.spec.edn) wrapped in a
+;; gated harness that commits earned discharges to a staging branch the operator
+;; merges. Nodes = the readiness criteria (R-A..R-N) bound to the apparatus they
+;; touch; edges = the dependency / data-flow interlocks surfaced during DERIVE.
+;;
+;; Status convention on nodes: :decided (DERIVE resolved) | :open (DERIVE pending)
+;; | :apparatus (pre-existing component this outing composes).
+;; This artefact GROWS as DERIVE continues (R-J/R-L/R-N still open).
+;; =============================================================================
+
+{:wiring/id      :war-machine-first-outing
+ :wiring/version "0.1"
+ :wiring/mission "futon3c/holes/missions/M-war-machine-first-outing.md"
+ :wiring/started {:by "claude-5" :on "2026-05-30" :surface "emacs-repl"}
+ :wiring/note    "The outing is an AIF loop; criteria are contracts on its edges.
+                  Grows with DERIVE — open criteria are present as stub nodes."
+
+ ;; ----------------------------------------------------------------------------
+ ;; PORTS — what crosses the boundary of the outing
+ ;; ----------------------------------------------------------------------------
+ :ports
+ {:input
+  [{:id :I-field    :name "WM judgement / dT" :type :wm-api-query
+    :source "futon3c WM scan (ranked-actions)" :timescale :per-cycle}
+   {:id :I-registry :name "sorry registry"     :type :edn-file
+    :source "futon2/resources/sorrys.edn (R-A.1, tracked)" :timescale :per-cycle}
+   {:id :I-operator :name "operator merge + sentinel" :type :human-decision
+    :source "Joe — branch review/merge; OUTING-OFF sentinel" :timescale :post-run}]
+  :output
+  [{:id :O-ledger   :name "discharge commits" :type :git-commits
+    :sink "wm-outing/<date> staging branch (R-C = R-A ledger = R-M surface)"}
+   {:id :O-frames   :name "γ frames"          :type :edn-files
+    :sink "futon3c/data/repl-traces/live-*.edn"}
+   {:id :O-summary  :name "run summary"        :type :edn-file
+    :sink "futon3c/data/outings/<date>.edn (R-M, the one new artefact)"}
+   {:id :O-violations :name "live violations"  :type :family-fired-evidence
+    :sink "futon1a :7071 → Arxana Live-Violations surface (R-A.2)"}]}
+
+ ;; ----------------------------------------------------------------------------
+ ;; COMPONENTS — criteria bound to apparatus
+ ;; ----------------------------------------------------------------------------
+ :components
+ [{:id :driver         :criterion :R-B :status :decided
+   :role "paces THIS session's agent through cycles"
+   :binds "harness /loop (I-1-clean; autorunner = deferred successor)"}
+
+  {:id :cycle          :criterion :core :status :apparatus
+   :role "the v·∇ REPL step"
+   :binds "war_machine_pilot/begin-live-cycle! + close-live-cycle!"
+   :sequence [:READ :EVAL :PRINT :tick :close :emit-frame]}
+
+  {:id :fork-choice    :criterion :R-I :status :decided
+   :role "EVAL selects v (§8 pattern-warrant)"
+   :binds "repl.spec.edn §8; allowlist :address-sorry autonomous; escalate
+           :open-mission and ∇-deforming PRINTs to operator; warrant recorded"}
+
+  {:id :gate-G1        :criterion :R-E :status :decided
+   :role "conformance gate" :binds "scripts/repl_spec_verify.clj (V1–V4 hard)"}
+  {:id :gate-G2        :criterion :R-E :status :decided
+   :role "regression gate" :binds ":sorry-closures-stick check-fn (R-A.2)"}
+  {:id :gate-G3        :criterion :R-E :status :decided
+   :role "earned-discharge gate" :binds "close.top-shift? TRUE iff a discharge
+          was claimed (V2 no-teleport / no fake-finish)"}
+
+  {:id :ledger         :criterion :R-A.1 :status :decided
+   :role "version-controlled closure ledger / reversibility"
+   :binds "move sorrys.edn → futon2/resources/ (tracked); git log = ledger,
+           git revert = undo. Migration retargets sorry_registry / watcher /
+           ingest / wm_outer_loop; Drawbridge-reload, no JVM restart (I-0)"}
+  {:id :regression     :criterion :R-A.2 :status :decided
+   :role "invariant: a discharged sorry must stay discharged"
+   :binds "probe family :sorry-closures-stick; predicate = :resolved-at present
+           AND :status :open; :reopened-at discipline; Arxana surface, no new UI"}
+
+  {:id :gate-at-merge  :criterion :R-C :status :decided
+   :role "consent gate" :binds "commit to wm-outing/<date>; operator merges to
+          master (autopen substitutes operator here later)"}
+  {:id :bounds         :criterion :R-K :status :decided
+   :role "outing duration" :binds "~10–15 cycles OR ~60–90 min, whichever first"}
+  {:id :halt           :criterion :R-D :status :decided
+   :role "stop criteria"
+   :binds "HARD: G1|G2|G3 fail, uncaught error, tick-SLA breach.
+           SOFT: bounds reached, stuck-detector (3× no field movement),
+           OUTING-OFF sentinel"}
+  {:id :review-surface :criterion :R-M :status :decided
+   :role "morning review"
+   :binds "branch git log + CONFORMS frames + Arxana violations + run-summary
+           .edn; read against R-L prediction"}
+
+  {:id :learning       :criterion :R-F :status :decided
+   :role "LOOP-learning" :binds "accept v0: agent-supplied :learning in-frame +
+          loop_learning.clj auto-miner; automation deferred (M-a-sorry-enterprise)"}
+  {:id :promotion-off  :criterion :R-G :status :decided
+   :role "don't-flood" :binds "candidate→registry promotion OFF; registry mutated
+          only by earned discharge; hole-budget monitor deferred (E-cheesemonger)"}
+  {:id :doc-currency   :criterion :R-H :status :decided
+   :role "exo currency" :binds "manual regen at run-end (generate_vsatarcs_md.bb)
+          iff run-summary flags a pheno/geno change; automation deferred"}
+
+  {:id :latency        :criterion :R-J :status :decided
+   :role "scheduler/tick robustness"
+   :binds "per-cycle {tick-wait-s, wall-clock} telemetry; 120s tick-land SLA →
+           hard-halt; the bounded outing IS the soak (50-cycle supervised-proposal
+           soak deferred); reuses scheduler/status + bounded poll"}
+  {:id :prediction     :criterion :R-L :status :decided
+   :role "pre-launch scored prediction"
+   :binds "M-war-machine-first-outing-expectations.md, authored before cycle 1;
+           scores Σ-pred-error trend, top-shift rate, regression count (=0),
+           discharges-vs-halts; §5 is its skeleton"}
+  {:id :safety-net     :criterion :R-N :status :deferred
+   :role "stall escalation"
+   :binds "Tickle-as-watchdog DEFERRED for the supervised outing (operator +
+           R-D stuck-detector cover it); wire before first agent-absent run"}]
+
+ ;; ----------------------------------------------------------------------------
+ ;; EDGES — the interlocks (the 'interesting' part)
+ ;; ----------------------------------------------------------------------------
+ :edges
+ [{:from :driver :to :cycle :type :drives}
+  {:from :I-field :to :cycle :type :feeds :note "READ discloses dT"}
+  {:from :cycle :to :fork-choice :type :contains :note "EVAL"}
+  {:from :fork-choice :to :I-operator :type :escalates
+   :note "R-I: :open-mission / ∇-deform → halt-for-operator"}
+  {:from :cycle :to :O-frames :type :emits :note "close → γ frame"}
+  {:from :O-frames :to :gate-G1 :type :gated-by}
+  {:from :I-registry :to :gate-G2 :type :checked-by :note "regression scan"}
+  {:from :cycle :to :gate-G3 :type :checked-by :note "top-shift honesty"}
+  {:from :gate-G1 :to :gate-at-merge :type :commits-iff :note "G1∧G2∧G3"}
+  {:from :gate-G2 :to :gate-at-merge :type :commits-iff}
+  {:from :gate-G3 :to :gate-at-merge :type :commits-iff}
+  {:from :gate-G1 :to :halt :type :triggers-on-fail}
+  {:from :gate-G2 :to :halt :type :triggers-on-fail}
+  {:from :gate-G3 :to :halt :type :triggers-on-fail}
+  {:from :bounds :to :halt :type :triggers-soft}
+  {:from :gate-at-merge :to :O-ledger :type :writes :note "commit per earned cycle"}
+  {:from :ledger :to :O-ledger :type :enables
+   :note "R-A.1 tracked registry MAKES the branch a ledger — same structure as R-C"}
+  {:from :O-ledger :to :I-operator :type :reviewed-by :note "merge to master"}
+  {:from :regression :to :O-violations :type :emits :note "probe family-fired; ALSO G2"}
+  {:from :regression :to :gate-G2 :type :same-predicate
+   :note "one check-fn, two callers: per-cycle gate + hourly Arxana probe"}
+  {:from :promotion-off :to :I-registry :type :constrains
+   :note "registry mutated only by earned discharge → keeps ledger clean + no flood"}
+  {:from :learning :to :O-frames :type :populates :note ":learning block (V6)"}
+  {:from :doc-currency :to :O-summary :type :conditioned-on
+   :note "regen iff summary flags pheno/geno change"}
+  {:from :O-ledger :to :review-surface :type :assembled-into}
+  {:from :O-frames :to :review-surface :type :assembled-into}
+  {:from :O-violations :to :review-surface :type :assembled-into}
+  {:from :O-summary :to :review-surface :type :is}
+  {:from :prediction :to :review-surface :type :compared-against :note "R-L"}
+  {:from :cycle :to :latency :type :measured-by :note "tick-wait + wall-clock per cycle"}
+  {:from :latency :to :halt :type :triggers-on-fail :note "120s tick-land SLA breach"}
+  {:from :latency :to :O-summary :type :records-into}
+  {:from :safety-net :to :cycle :type :monitors :note "DEFERRED until agent-absent run"}]
+
+ ;; ----------------------------------------------------------------------------
+ ;; INVARIANTS the wiring must preserve (cross-checks for VERIFY)
+ ;; ----------------------------------------------------------------------------
+ :invariants
+ [{:id :I-1 :plain "one agent, one session — /loop re-pokes, never clones"}
+  {:id :I-0 :plain "one JVM — reloads via Drawbridge, never restart"}
+  {:id :earned-discharge :plain "no commit to the branch unless G1∧G2∧G3 pass"}
+  {:id :gate-at-merge    :plain "nothing reaches master without operator merge"}
+  {:id :ledger-completeness :plain "every discharge is a commit; git log is total"}
+  {:id :no-flood :plain "registry grows only by earned discharge (promotion OFF)"}]
+
+ :open-criteria []
+ :derive-status :closed
+ :derive-closed-on "2026-05-30"
+ :verification
+ {:status :passes
+  :model "src/futon3c/logic/outing_invariants.clj (core.logic + pldb)"
+  :method "logic model checked before code: witness trace clean + 8/8 adversarial caught"
+  :on "2026-05-30"
+  :scope "verifies the DESIGN; INSTANTIATE must make the harness refine it (emit
+          traces in the record shape; gate commits on query-violations)"}
+ :argue-status :closed
+ :watchword "The safety mechanism (regression-as-invariant) is itself a sample of the outing's output."}

@@ -28,6 +28,11 @@
       (when-not (str/blank? text)
         (subs text 0 (min max-len (count text)))))))
 
+(defn- make-session-reset-fn
+  [session-file sid-atom]
+  (fn []
+    (config/clear-session-state! session-file sid-atom)))
+
 (defn- register-codex-lane-process!
   [{:keys [agent-id session-file metadata read-session-id !codex-ws-bridge
            codex-lane-runtime-state clear-codex-lane-runtime-state!]}]
@@ -55,6 +60,9 @@
                       last-terminal (:last-terminal runtime)
                       runtime-state (or (:runtime runtime)
                                         (:runtime last-terminal))
+                      bridge @!codex-ws-bridge
+                      bridge-running? (boolean (some-> bridge :running? deref))
+                      bridge-state (some-> bridge :state deref)
                       session-id (or (:session-id runtime)
                                      (:session-id agent)
                                      (read-session-id session-file))
@@ -77,7 +85,9 @@
                            :surface (:surface metadata)
                            :lane (:lane metadata)
                            :ws-bridge-running? (and (true? (:ws-bridge? metadata))
-                                                    (some? @!codex-ws-bridge))
+                                                    bridge-running?)
+                           :ws-bridge-status (some-> (:status bridge-state) name)
+                           :ws-bridge-reason (:reason bridge-state)
                            :lifecycle-status (some-> (:lifecycle-status runtime) name)
                            :last-terminal-status (some-> (or (:last-terminal-status runtime)
                                                              (:status last-terminal))
@@ -124,10 +134,12 @@
                     :session-id-atom sid-atom
                     :emacs-socket socket})]
     (rt/register-claude! {:agent-id agent-id
-                          :invoke-fn invoke-fn})
+                          :invoke-fn invoke-fn
+                          :session-reset-fn (make-session-reset-fn session-file sid-atom)})
     (reg/update-agent! agent-id
                        :agent/type :claude
                        :agent/invoke-fn invoke-fn
+                       :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                        :agent/metadata metadata
                        :agent/capabilities [:explore :edit :test :coordination/execute])
     (when initial-sid
@@ -157,7 +169,7 @@
         invoke-fn (make-codex-invoke-fn
                    {:codex-bin (config/env "CODEX_BIN" "codex")
                     :profile (config/env "CODEX_PROFILE")
-                    :model (config/env "CODEX_MODEL" "gpt-5-codex")
+                    :model (config/env "CODEX_MODEL")
                     :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
                     :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                          (config/env "CODEX_APPROVAL" "never"))
@@ -169,10 +181,12 @@
                     :session-id-atom sid-atom})]
     (rt/register-codex! {:agent-id agent-id
                          :invoke-fn invoke-fn
+                         :session-reset-fn (make-session-reset-fn session-file sid-atom)
                          :metadata metadata})
     (reg/update-agent! agent-id
                        :agent/type :codex
                        :agent/invoke-fn invoke-fn
+                       :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                        :agent/capabilities [:edit :test :coordination/execute]
                        :agent/metadata metadata)
     (when initial-sid
@@ -201,16 +215,40 @@
         ws-base (or explicit-ws-base
                     (when (= role :laptop) peer-ws-base)
                     (str "ws://127.0.0.1:" ws-port))
-        remote-ws-target? (and (pos? (long ws-port))
-                               (not (config/local-ws-target? ws-base ws-port)))
+        structurally-remote? (and (pos? (long ws-port))
+                                  (not (config/local-ws-target? ws-base ws-port)))
         register-http-base (or (some-> (config/env "FUTON3C_CODEX_WS_HTTP_BASE") str/trim not-empty)
-                               (when remote-ws-target?
+                               (when structurally-remote?
                                  (config/normalize-http-base (or peer-base ws-base))))
+        ;; Gate remote bridging on ACTUAL reachability, not just "is a peer URL
+        ;; configured". A configured-but-down peer (e.g. a linode whose Agency
+        ;; isn't running) must fall back to local — otherwise codex registers as
+        ;; remote (ws-remote?/skip-federation-proxy?), the bridge can't reach its
+        ;; home, and a local bell spawns a codex exec whose reporting is
+        ;; decoupled from the local job tracker (the "exec running, 0 evidence"
+        ;; wedge). Probe is skipped (assumed reachable) for a local ws target.
+        peer-probe-timeout-ms (config/env-int "FUTON3C_PEER_PROBE_TIMEOUT_MS" 1500)
+        remote-reachable? (and structurally-remote?
+                               (config/agency-reachable?
+                                (or register-http-base
+                                    (config/normalize-http-base (or peer-base ws-base)))
+                                peer-probe-timeout-ms))
+        ;; Only treat the target as remote when it is BOTH non-local AND live.
+        remote-ws-target? (and structurally-remote? remote-reachable?)
         evidence-replication? (config/env-bool "FUTON3C_CODEX_WS_REPLICATE_EVIDENCE"
                                                remote-ws-target?)
         replication-interval-ms (or (config/env-int "EVIDENCE_REPLICATION_INTERVAL_MS" 30000)
                                     30000)
-        ws-bridge-enabled? (and codex-ws-bridge? (pos? (long ws-port)))]
+        ;; Enable the ws-bridge for a local target as before, or for a remote
+        ;; target only when it answered the probe. A down remote ⇒ disabled ⇒
+        ;; codex falls through to the plain-local inline-invoke branch.
+        ws-bridge-enabled? (and codex-ws-bridge? (pos? (long ws-port))
+                                (or (not structurally-remote?) remote-reachable?))]
+    (when (and structurally-remote? (not remote-reachable?) codex-ws-bridge?)
+      (println (str "[dev] codex ws bridge: peer Agency "
+                    (or register-http-base peer-base ws-base)
+                    " unreachable (probe " peer-probe-timeout-ms
+                    "ms) — registering codex locally (inline invoke) instead of remote bridge.")))
     {:ws-port ws-port
      :peer-base peer-base
      :peer-ws-base peer-ws-base
@@ -233,8 +271,24 @@
         role (:role role-info)
         role-cfg (config/role-defaults role)
         register-claude? (config/env-bool "FUTON3C_REGISTER_CLAUDE" (:register-claude? role-cfg))
-        register-codex? (config/env-bool "FUTON3C_REGISTER_CODEX" (:register-codex? role-cfg))
+        register-codex? (config/env-bool "FUTON3C_REGISTER_CODEX"
+                          (or (:register-codex? role-cfg)
+                              ;; Robustness (2026-06-14): a box told to relay codex (role
+                              ;; :linode) but with NO bridge target to relay TO must actually
+                              ;; BE the host — register codex LOCAL rather than as a dead
+                              ;; "awaiting WS bridge" placeholder.  Guards a stale
+                              ;; FUTON3C_ROLE=linode that survives an OOM-resume (the
+                              ;; codex-1-comes-up-remote bug).  A real relaying linode has a
+                              ;; bridge target (FUTON3C_LAPTOP_URL / CODEX_REMOTE_BASE / peer),
+                              ;; so this stays false there.
+                              (and (= role :linode)
+                                   (not (or (config/env "FUTON3C_CODEX_REMOTE_BASE")
+                                            (config/env "FUTON3C_LAPTOP_URL")
+                                            (config/env "FUTON3C_IRC_SEND_BASE")
+                                            (config/first-peer-url))))))
         register-corpus? (config/env-bool "FUTON3C_REGISTER_CORPUS" false)
+        register-tickle? (config/env-bool "FUTON3C_REGISTER_TICKLE" false)
+        register-scribe? (config/env-bool "FUTON3C_REGISTER_SCRIBE" false)
         register-vscode-codex? (config/env-bool "FUTON3C_REGISTER_VSCODE_CODEX" true)
         vscode-codex-agent-id (or (some-> (config/env "FUTON3C_VSCODE_AGENT_ID") str/trim not-empty)
                                   "codex-vscode")
@@ -305,10 +359,15 @@
         :read-session-id read-session-id}))
     (when register-corpus?
       (register-corpus-agent!))
-    (peripheral-agents/register-tickle-agent!
-     {:make-claude-invoke-fn make-claude-invoke-fn
-      :make-tickle-invoke-fn make-tickle-invoke-fn
-      :read-session-id read-session-id})
+    (when register-tickle?
+      (peripheral-agents/register-tickle-agent!
+       {:make-claude-invoke-fn make-claude-invoke-fn
+        :make-tickle-invoke-fn make-tickle-invoke-fn
+        :read-session-id read-session-id}))
+    (when register-scribe?
+      (peripheral-agents/register-scribe-agent!
+       {:make-claude-invoke-fn make-claude-invoke-fn
+        :read-session-id read-session-id}))
     (let [codex-bin-name (config/env "CODEX_BIN" "codex")
           codex-bin-exists? (binary-on-path? codex-bin-name)
           register-codex? (if (and register-codex? (not codex-bin-exists?))
@@ -333,7 +392,7 @@
                invoke-fn (make-codex-invoke-fn
                           {:codex-bin (config/env "CODEX_BIN" "codex")
                            :profile (config/env "CODEX_PROFILE")
-                           :model (config/env "CODEX_MODEL" "gpt-5-codex")
+                           :model (config/env "CODEX_MODEL")
                            :sandbox (config/env "CODEX_SANDBOX" "danger-full-access")
                            :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                                 (config/env "CODEX_APPROVAL" "never"))
@@ -343,7 +402,7 @@
                           :agent-id codex-agent-id
                           :session-file session-file
                           :session-id-atom sid-atom})
-              {:keys [ws-base remote-ws-target? register-http-base
+              {:keys [ws-port ws-base remote-ws-target? register-http-base
                       evidence-replication? replication-interval-ms
                       ws-bridge-enabled?]}
               (codex-registration-config {:f3c-sys f3c-sys
@@ -372,10 +431,12 @@
                            :replication-interval-ms replication-interval-ms})]
               (rt/register-codex! {:agent-id codex-agent-id
                                    :invoke-fn codex-invoke-fn
+                                   :session-reset-fn (make-session-reset-fn session-file sid-atom)
                                    :metadata codex-metadata})
               (reg/update-agent! codex-agent-id
                                  :agent/type :codex
                                  :agent/invoke-fn codex-invoke-fn
+                                 :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                                  :agent/capabilities [:edit :test :coordination/execute]
                                  :agent/metadata codex-metadata)
               (when initial-sid
@@ -395,13 +456,15 @@
                             (when initial-sid
                               (str " (session: " (short-session initial-sid) ")")))))
             (do
-              (when codex-ws-bridge?
+              (when (and codex-ws-bridge? (<= (long (or ws-port 0)) 0))
                 (println "[dev] codex ws bridge requested but FUTON3C_PORT is disabled; falling back to inline invoke"))
               (rt/register-codex! {:agent-id codex-agent-id
-                                   :invoke-fn invoke-fn})
+                                   :invoke-fn invoke-fn
+                                   :session-reset-fn (make-session-reset-fn session-file sid-atom)})
               (reg/update-agent! codex-agent-id
                                  :agent/type :codex
                                  :agent/invoke-fn invoke-fn
+                                 :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                                  :agent/capabilities [:edit :test :coordination/execute])
               (when initial-sid
                 (reg/update-agent! codex-agent-id :agent/session-id initial-sid))

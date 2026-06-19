@@ -5,7 +5,8 @@
    (fn [prompt session-id] -> {:result string|nil :session-id string|nil :error string?})."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [futon3c.util.cwd :as cwd]))
 
 (defn- coerce-prompt
   [prompt]
@@ -245,8 +246,8 @@
    Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
   [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event on-process-started on-process-exit]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
-        _ (when (and (string? cwd) (not (str/blank? cwd)))
-            (.directory pb (io/file cwd)))
+        _ (when-let [d (cwd/resolve-cwd cwd)]
+            (.directory pb (io/file d)))
         emit-runtime! (fn [evt]
                         (when on-runtime-event
                           (try
@@ -439,7 +440,7 @@
    opts:
    - :codex-bin (default \"codex\")
    - :profile (optional Codex config profile passed as `codex -p <profile> exec`)
-   - :model (optional, default \"gpt-5-codex\")
+   - :model (optional; when absent, use Codex CLI config/default)
    - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
    - :reasoning-effort (optional, e.g. low|medium|high)
@@ -449,7 +450,6 @@
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
            on-event on-runtime-event on-process-started on-process-exit]
     :or {codex-bin "codex"
-         model "gpt-5-codex"
          sandbox "danger-full-access"
          approval-policy "never"
          timeout-ms 1800000}}]

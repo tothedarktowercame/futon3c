@@ -15,9 +15,12 @@
 ;; AIF head binding registry
 ;; =============================================================================
 
+;; Atom mapping peripheral-id → AifHead implementation.
+;; Populated by register-aif-head! when peripherals are initialized.
+;; NB: defonce takes no docstring (arity 2) — a docstring here was an
+;; ArityException that prevented this ns (and futon3c.aif.mission-head,
+;; which requires it) from ever loading. Fixed 2026-05-29.
 (defonce ^:private !aif-head-bindings
-  "Atom mapping peripheral-id → AifHead implementation.
-   Populated by register-aif-head! when peripherals are initialized."
   (atom {}))
 
 (defn register-aif-head!

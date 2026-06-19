@@ -270,6 +270,20 @@
     ;; :default returns nil, so project! should be a no-op
     (is (nil? (bb/project! :nonexistent {:any "state"})))))
 
+(deftest project-defaults-to-async-mode
+  (testing "project! marks fire-and-forget projections async by default"
+    (let [calls (atom [])]
+      (with-redefs [bb/render-blackboard (fn [_ _] "rendered")
+                    bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (is (nil? (bb/project! :mission-control {:steps []})))
+        (is (= 1 (count @calls)))
+        (is (= "*mission-control*" (:buffer-name (first @calls))))
+        (is (true? (get-in @calls [0 :opts :async?])))))))
+
 ;; Note: project! with a real peripheral-id would call emacsclient,
 ;; which we don't want in the test suite. The render tests above
 ;; validate the content; the emacsclient integration is tested manually.
@@ -283,6 +297,7 @@
                                                         :opts opts})
                                      {:ok true})]
         (reset! bb/!display-agents-window true)
+        (bb/set-external-hud-enabled! false)
         (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
         (is (= 1 (count @calls)))
         (is (= "*agents*" (:buffer-name (first @calls))))
@@ -302,3 +317,45 @@
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :no-display]))))
       (bb/set-agents-window-display! true))))
+
+(deftest project-agents-external-hud-suppresses-popup
+  (testing "*agents* projection updates without forcing popup in external HUD mode"
+    (let [calls (atom [])]
+      (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (bb/set-agents-window-display! true)
+        (bb/set-external-hud-enabled! true)
+        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (is (= 1 (count @calls)))
+        (is (= "*agents*" (:buffer-name (first @calls))))
+        (is (true? (get-in @calls [0 :opts :no-display]))))
+      (bb/set-external-hud-enabled! false)
+      (bb/set-agents-window-display! true))))
+
+(deftest project-agents-runs-in-async-mode
+  (testing "*agents* projection marks opts :async? so a slow Emacs cannot backpressure the ticker"
+    (let [calls (atom [])]
+      (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (is (= 1 (count @calls)))
+        (is (true? (get-in @calls [0 :opts :async?])))))))
+
+(deftest project-processes-runs-in-async-mode
+  (testing "*processes* projection marks opts :async? so process snapshots cannot block on Emacs"
+    (let [calls (atom [])]
+      (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                     (swap! calls conj {:buffer-name buffer-name
+                                                        :content content
+                                                        :opts opts})
+                                     {:ok true})]
+        (bb/project-processes! [])
+        (is (= 1 (count @calls)))
+        (is (= "*processes*" (:buffer-name (first @calls))))
+        (is (true? (get-in @calls [0 :opts :async?])))))))

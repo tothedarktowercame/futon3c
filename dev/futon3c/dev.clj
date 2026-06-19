@@ -2,7 +2,7 @@
   "Dev server: boots futon1a (XTDB), futon3c (HTTP+WS), IRC, and Drawbridge.
 
    Claude and Codex are registered at startup with inline invoke-fns that run
-   their CLIs in-JVM. Evidence emission (start, heartbeat, complete) and
+   their CLIs in-JVM. Evidence emission (start, complete) and
    blackboard updates are built into the invoke path. No external bridge
    scripts needed for local agents — WS bridges are for remote scenarios.
 
@@ -27,7 +27,7 @@
      CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)
      CODEX_BIN          — path to codex CLI binary (default: codex)
      CODEX_PROFILE      — optional Codex config profile passed as `codex -p <profile>`
-     CODEX_MODEL        — codex model (default: gpt-5-codex)
+     CODEX_MODEL        — optional codex model override (unset uses Codex config)
      CODEX_SANDBOX      — codex sandbox (default: danger-full-access)
      CODEX_APPROVAL_POLICY / CODEX_APPROVAL
                         — codex approval policy (default: never)
@@ -45,6 +45,7 @@
      FUTON3C_REGISTER_CLAUDE2 — whether to register claude-2 (mentor, workspace2)
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host
      FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)
+     FUTON3C_PROCESS_WATCHDOG_AUTOSTART — auto-start infra process watchdog on boot (default true)
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
@@ -52,13 +53,20 @@
             [futon3c.agents.tickle :as tickle]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
+            [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
+            [futon3c.process-watchdog :as process-watchdog]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.replication :as ws-repl]
             [futon3c.dev.config :as config]
+            [futon3c.util.cwd :as cwd]
             [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.irc :as dev-irc]
             [futon3c.dev.apm :as dev-apm]
@@ -75,6 +83,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.java.io :as io]
+            [futon.notions :as notions]
             )
   (:import [java.time Instant Duration]
            [java.util UUID]
@@ -90,6 +99,9 @@
 (declare mirror-apm-conductor-v2-to-codex-repl!)
 
 (defonce !agents-blackboard-ticker-stop
+  (atom nil))
+
+(defonce !process-watchdog
   (atom nil))
 
 (defn env
@@ -266,6 +278,20 @@
       (str class-name ": " message)
       class-name)))
 
+(defn- unreachable-network-exception?
+  "True when the exception chain indicates the remote target is not reachable,
+   so the ws bridge should pause until an explicit restart."
+  [^Throwable t]
+  (boolean
+   (some (fn [cause]
+           (or (instance? java.net.http.HttpConnectTimeoutException cause)
+               (instance? java.net.ConnectException cause)
+               (instance? java.net.NoRouteToHostException cause)
+               (instance? java.net.SocketTimeoutException cause)
+               (instance? java.net.UnknownHostException cause)
+               (instance? java.nio.channels.UnresolvedAddressException cause)))
+         (take-while some? (iterate #(.getCause ^Throwable %) t)))))
+
 (defn- note-repeated-failure!
   [state* detail interval]
   (let [state (swap! state*
@@ -309,26 +335,91 @@
          (true? (or (:ws-bridge? metadata)
                     (get metadata "ws-bridge?"))))))
 
+(def ^:private default-codex-reclaim-stale-ms
+  "Default age past which a same-id same-type codex record is considered
+   reclaimable even if its metadata lacks `:ws-bridge? true`."
+  (* 10 60 1000))
+
+(defn- codex-reclaim-stale-ms
+  []
+  (or (try
+        (some-> (System/getenv "FUTON3C_CODEX_RECLAIM_STALE_MS")
+                str/trim
+                not-empty
+                Long/parseLong)
+        (catch Throwable _ nil))
+      default-codex-reclaim-stale-ms))
+
+(defn- agent-last-active-ms
+  "Extract last-active millis from a parsed agent response body.
+   Returns nil when absent or unparsable."
+  [parsed]
+  (let [agent (or (:agent parsed) parsed)
+        raw (or (:last-active agent) (get agent "last-active"))]
+    (when raw
+      (try
+        (.toEpochMilli (Instant/parse (str raw)))
+        (catch Throwable _ nil)))))
+
+(defn- codex-record-reclaimable-as-stale?
+  "True when the existing agent record has the right id+type but appears
+   abandoned (last-active older than the stale threshold). Used as a
+   fallback to `compatible-codex-ws-bridge-agent?` so a stale record
+   without the expected metadata flags can still be replaced."
+  [agent-id response-body stale-threshold-ms]
+  (let [parsed (parse-json-body-safe response-body)
+        agent (or (:agent parsed) parsed)
+        response-agent-id (or (:agent-id parsed)
+                              (get-in agent [:id :id/value])
+                              (:id/value (:id agent)))
+        agent-type (or (:type agent) (:agent/type agent))
+        kw-type (cond
+                  (keyword? agent-type) agent-type
+                  (string? agent-type) (keyword agent-type)
+                  :else nil)
+        last-ms (agent-last-active-ms parsed)]
+    (boolean
+     (and (= (str agent-id) (some-> response-agent-id str))
+          (= :codex kw-type)
+          last-ms
+          (> (- (System/currentTimeMillis) last-ms) (or stale-threshold-ms 0))))))
+
 (defn- classify-codex-ws-bridge-registration
   "Classify the outcome of the bridge's HTTP registration handshake.
-   Duplicate registration is accepted only when the existing remote record is a
-   compatible codex ws-bridge entry, preserving any in-flight agent state."
-  [agent-id register-status register-body existing-status existing-body]
+   On 409 we reuse a compatible existing ws-bridge record; if not
+   compatible but the record is stale (same id+type, last-active older
+   than the reclaim threshold), we request a DELETE+retry reclaim."
+  [agent-id register-status register-body existing-status existing-body
+   & {:keys [stale-threshold-ms]
+      :or {stale-threshold-ms nil}}]
   (cond
     (= 201 register-status)
     {:ok? true :action :registered}
 
     (= 409 register-status)
-    (if (and (= 200 existing-status)
+    (let [threshold (or stale-threshold-ms (codex-reclaim-stale-ms))]
+      (cond
+        (and (= 200 existing-status)
              (compatible-codex-ws-bridge-agent? agent-id existing-body))
-      {:ok? true :action :kept-existing}
-      {:ok? false
-       :action :conflict
-       :message (str "remote agent conflict for " agent-id
-                     " (register-status=" register-status
-                     ", existing-status=" existing-status ")")
-       :detail {:register-body register-body
-                :existing-body existing-body}})
+        {:ok? true :action :kept-existing}
+
+        (and (= 200 existing-status)
+             (codex-record-reclaimable-as-stale? agent-id existing-body threshold))
+        {:ok? false
+         :action :stale-reclaim
+         :message (str "reclaiming stale " agent-id " (last-active > "
+                       threshold "ms)")
+         :detail {:register-body register-body
+                  :existing-body existing-body}}
+
+        :else
+        {:ok? false
+         :action :conflict
+         :message (str "remote agent conflict for " agent-id
+                       " (register-status=" register-status
+                       ", existing-status=" existing-status ")")
+         :detail {:register-body register-body
+                  :existing-body existing-body}}))
 
     :else
     {:ok? false
@@ -350,7 +441,24 @@
   (let [sid* (atom initial-sid)
         running? (atom true)
         ws* (atom nil)
+        bridge-state* (atom {:status :starting})
         registration-failure* (atom nil)
+        ;; Self-recovering reconnect: exponential backoff (reset on a live
+        ;; onOpen) so a down/half-open remote is not hammered every 5s, plus an
+        ;; in-loop reachability re-probe (see ensure-registered!) so the bridge
+        ;; reconnects on its own when the peer returns — without thrashing while
+        ;; it's gone. (Fixes the flat-5s no-backoff/no-give-up loop.)
+        backoff-base-ms 5000
+        backoff-cap-ms 300000
+        backoff-ms* (atom backoff-base-ms)
+        reset-backoff! (fn [] (reset! backoff-ms* backoff-base-ms))
+        backoff-sleep! (fn []
+                         (let [base (long @backoff-ms*)
+                               jitter (long (rand-int (max 1 (quot base 4))))]
+                           (when @running? (Thread/sleep (+ base jitter)))
+                           (swap! backoff-ms*
+                                  (fn [ms] (min backoff-cap-ms
+                                                (* 2 (long (or ms backoff-base-ms))))))))
         client (HttpClient/newHttpClient)
         replication-interval-ms (long (max 1 (or replication-interval-ms 30000)))
         replication-enabled? (and evidence-replication? evidence-store)
@@ -360,6 +468,18 @@
         register-http-base (some-> register-http-base str/trim (str/replace #"/$" ""))
         send-json! (fn [^WebSocket ws payload]
                      (.join (.sendText ws (json/generate-string payload) true)))
+        pause-bridge! (fn [stage ^Throwable e]
+                        (let [summary (exception-summary e)]
+                          (reset! bridge-state* {:status :paused
+                                                 :stage stage
+                                                 :reason summary
+                                                 :paused-at (str (Instant/now))})
+                          (println (str "[dev] codex ws bridge paused after unreachable "
+                                        (name stage) " failure: " summary
+                                        ". Run start-agents! to retry."))
+                          (flush)
+                          (reset! running? false)
+                          false))
         request-json! (fn [method url payload]
                         (let [builder (doto (HttpRequest/newBuilder (URI/create url))
                                         (.header "Content-Type" "application/json")
@@ -372,9 +492,26 @@
                           {:status (.statusCode resp)
                            :body (.body resp)}))
         ensure-registered! (fn []
-                             (if-not register-http-base
-                               true
+                             (cond
+                               (not register-http-base) true
+                               ;; Cheap liveness gate: an HTTP probe (catches the
+                               ;; half-open "TCP accepts but Agency is dead" case
+                               ;; that a bare connect misses) so we don't spend a
+                               ;; full register+connect cycle on a down peer.
+                               (not (config/agency-reachable? register-http-base 1500))
+                               (let [{:keys [count emit? first?]}
+                                     (note-repeated-failure! registration-failure*
+                                                             "remote-unreachable" 12)]
+                                 (when emit?
+                                   (println (str "[dev] codex ws bridge: remote " register-http-base
+                                                 " unreachable; backing off ~" (long @backoff-ms*) "ms"
+                                                 (when-not first? (str " (repeated " count " times)"))))
+                                   (flush))
+                                 false)
+                               :else
                                (try
+                                 (reset! bridge-state* {:status :registering
+                                                        :target register-http-base})
                                  (let [url (str register-http-base "/api/alpha/agents")
                                        agent-url (str register-http-base "/api/alpha/agents/" agent-id)
                                        payload (json/generate-string {"agent-id" agent-id
@@ -384,18 +521,38 @@
                                        {register-status :status register-body :body} (attempt-register!)
                                        existing (when (= 409 register-status)
                                                   (request-json! :get agent-url nil))
+                                       initial (classify-codex-ws-bridge-registration
+                                                agent-id
+                                                register-status
+                                                register-body
+                                                (:status existing)
+                                                (:body existing))
                                        {:keys [ok? action message detail]}
-                                       (classify-codex-ws-bridge-registration
-                                        agent-id
-                                        register-status
-                                        register-body
-                                        (:status existing)
-                                        (:body existing))]
+                                       (if (= :stale-reclaim (:action initial))
+                                         (do
+                                           (println (str "[dev] codex ws bridge "
+                                                         (:message initial)
+                                                         "; deleting + re-registering"))
+                                           (flush)
+                                           (request-json! :delete agent-url nil)
+                                           (let [{st2 :status body2 :body} (attempt-register!)]
+                                             (if (= 201 st2)
+                                               {:ok? true :action :reclaimed-stale}
+                                               {:ok? false
+                                                :action :reclaim-failed
+                                                :message (str "stale reclaim POST failed: status=" st2)
+                                                :detail {:register-body body2
+                                                         :existing-body (:body existing)}})))
+                                         initial)]
                                    (when ok?
                                      (clear-repeated-failure! registration-failure*
                                                               "[dev] codex ws bridge registration"))
                                    (when (and ok? (= :kept-existing action))
                                      (println (str "[dev] codex ws bridge reusing existing remote registration for "
+                                                   agent-id))
+                                     (flush))
+                                   (when (and ok? (= :reclaimed-stale action))
+                                     (println (str "[dev] codex ws bridge reclaimed stale registration for "
                                                    agent-id))
                                      (flush))
                                    (when-not ok?
@@ -416,18 +573,22 @@
                                          (flush))))
                                    ok?)
                                  (catch Exception e
-                                   (let [summary (exception-summary e)
-                                         {:keys [count emit? first?]}
-                                         (note-repeated-failure! registration-failure*
-                                                                 (str "exception: " summary)
-                                                                 12)]
-                                     (when emit?
-                                       (println (str "[dev] codex ws bridge registration exception: "
-                                                     summary
-                                                     (when-not first?
-                                                       (str " (repeated " count " times)"))))
-                                       (flush)))
-                                   false))))
+                                   (if (and register-http-base
+                                            (unreachable-network-exception? e))
+                                     (pause-bridge! :registration e)
+                                     (do
+                                       (let [summary (exception-summary e)
+                                             {:keys [count emit? first?]}
+                                             (note-repeated-failure! registration-failure*
+                                                                     (str "exception: " summary)
+                                                                     12)]
+                                         (when emit?
+                                           (println (str "[dev] codex ws bridge registration exception: "
+                                                         summary
+                                                         (when-not first?
+                                                           (str " (repeated " count " times)"))))
+                                           (flush)))
+                                       false))))))
         ws-url (fn []
                  (str (str/replace ws-base #"/$" "")
                       ws-path
@@ -501,15 +662,22 @@
         worker (future
                  (while @running?
                    (if-not (ensure-registered!)
-                     (Thread/sleep 5000)
+                     (when @running?
+                       (backoff-sleep!))
                      (let [closed (promise)
-                           url (ws-url)]
+                           url (ws-url)
+                           text-buf (StringBuilder.)]
                        (try
+                         (reset! bridge-state* {:status :connecting
+                                                :target url})
                          (println (str "[dev] codex ws bridge connecting: " url))
                          (flush)
                          (let [listener (reify WebSocket$Listener
-                                         (onOpen [_ ws]
+                                          (onOpen [_ ws]
                                             (reset! ws* ws)
+                                            (reset-backoff!)
+                                            (reset! bridge-state* {:status :connected
+                                                                   :target url})
                                             (send-json! ws {"type" "ready"
                                                             "agent_id" agent-id
                                                             "session_id" (or @sid* (str "sess-" (System/currentTimeMillis)))})
@@ -523,22 +691,29 @@
                                                   (println (str "[dev] codex ws bridge replication init failed: "
                                                                 (.getMessage e))))))
                                             (.request ws 1))
-                                          (onText [_ ws data _last]
-                                            (try
-                                              (let [frame (json/parse-string (str data) true)]
-                                                (when (= "invoke" (:type frame))
-                                                  (handle-invoke! ws frame))
-                                                (when (= "invoke_delivery" (:type frame))
-                                                  (handle-invoke-delivery! frame))
-                                                (when replication
-                                                  ((:handle-frame! replication) frame)))
-                                              (catch Exception e
-                                                (println (str "[dev] codex ws bridge parse failed: "
-                                                              (.getMessage e)))))
+                                          (onText [_ ws data last?]
+                                            (.append text-buf data)
+                                            (when last?
+                                              (let [full (.toString text-buf)]
+                                                (.setLength text-buf 0)
+                                                (try
+                                                  (let [frame (json/parse-string full true)]
+                                                    (when (= "invoke" (:type frame))
+                                                      (handle-invoke! ws frame))
+                                                    (when (= "invoke_delivery" (:type frame))
+                                                      (handle-invoke-delivery! frame))
+                                                    (when replication
+                                                      ((:handle-frame! replication) frame)))
+                                                  (catch Exception e
+                                                    (println (str "[dev] codex ws bridge parse failed: "
+                                                                  (.getMessage e)))))))
                                             (.request ws 1)
                                             (CompletableFuture/completedFuture nil))
                                           (onClose [_ _ws _code _reason]
                                             (reset! ws* nil)
+                                            (when @running?
+                                              (reset! bridge-state* {:status :disconnected
+                                                                     :target url}))
                                             (when replication
                                               ((:set-send-fn! replication) nil)
                                               ((:reset-connection! replication)))
@@ -546,6 +721,10 @@
                                             (CompletableFuture/completedFuture nil))
                                           (onError [_ _ws e]
                                             (reset! ws* nil)
+                                            (when @running?
+                                              (reset! bridge-state* {:status :error
+                                                                     :target url
+                                                                     :reason (.getMessage e)}))
                                             (when replication
                                               ((:set-send-fn! replication) nil)
                                               ((:reset-connection! replication)))
@@ -557,27 +736,49 @@
                                                listener))
                            (deref closed 600000 nil))
                          (catch Exception e
-                           (println (str "[dev] codex ws bridge connect failed: " (.getMessage e)))
-                           (flush)))))
+                           (if (unreachable-network-exception? e)
+                             (pause-bridge! :connect e)
+                             (do
+                               (reset! bridge-state* {:status :connect-failed
+                                                      :target url
+                                                      :reason (.getMessage e)})
+                               (println (str "[dev] codex ws bridge connect failed: " (.getMessage e)))
+                               (flush)))))))
                    (when @running?
-                     (Thread/sleep 5000))))]
+                     (backoff-sleep!))))]
     {:stop-fn (fn []
+                (reset! bridge-state* {:status :stopped})
                 (reset! running? false)
                 (when-let [ws @ws*]
+                  ;; Bound the close handshake: sendClose returns a
+                  ;; CompletableFuture that only completes once the *remote*
+                  ;; peer acks. An unreachable peer (e.g. a dead remote Linode)
+                  ;; would otherwise make `.join` park forever and hang the
+                  ;; whole shutdown hook — graceful Ctrl-C never exits. Cap it.
                   (try
-                    (.join (.sendClose ws WebSocket/NORMAL_CLOSURE "shutdown"))
+                    (.get (.sendClose ws WebSocket/NORMAL_CLOSURE "shutdown")
+                          2 java.util.concurrent.TimeUnit/SECONDS)
                     (catch Exception _)))
                 (when replication
                   ((:stop-fn replication)))
                 (future-cancel worker))
-     :sid* sid*}))
+     :sid* sid*
+     :running? running?
+     :state bridge-state*}))
 
 ;; =============================================================================
 ;; Runtime atoms — populated by -main, accessible from Drawbridge REPL
 ;; =============================================================================
 
 (defonce !f1-sys (atom nil))
-(defonce !evidence-store (atom nil))
+
+;; ^:durable metadata (M-reachable-from-boot 2026-05-01): this atom is
+;; the dev-side handle to the authoritative evidence store produced by
+;; bootstrap. Outside tests, only `bootstrap.clj` may reset it; direct
+;; `(reset! !evidence-store ...)` / `(swap! !evidence-store ...)` from
+;; elsewhere are refused by
+;; `scripts/check-reachable-from-boot-dev-evidence-store.sh`.
+(defonce ^{:durable true} !evidence-store (atom nil))
 
 ;; Ring buffer for recent context retrieval results (displayed in HUD)
 (defonce !recent-context (atom []))
@@ -593,7 +794,8 @@
 
 (defn- run-futon3a-search
   "Run futon3a semantic search against a query string.
-   Returns a vector of {:id :title :score} maps, or nil on failure."
+   Returns an enriched vector of result maps when available, or raw
+   {:id :title :score :rank} maps on fallback."
   [query-text]
   (let [futon3a-root (or (System/getenv "FUTON3A_ROOT")
                          (str (System/getProperty "user.home") "/code/futon3a"))
@@ -615,7 +817,85 @@
                            (filter #(str/starts-with? % "["))
                            first)]
         (when json-line
-          (json/parse-string json-line true))))))
+          (let [results (json/parse-string json-line true)]
+            (try
+              (notions/enrich-results results)
+              (catch Throwable _
+                results))))))))
+
+(defn- normalize-hotwords
+  [hotwords]
+  (cond
+    (set? hotwords) (vec (sort hotwords))
+    (sequential? hotwords) (vec hotwords)
+    :else nil))
+
+(defn- normalize-sigils
+  [sigils]
+  (cond
+    (string? sigils) (->> (str/split sigils #"\s+")
+                          (remove str/blank?)
+                          vec
+                          not-empty)
+    (sequential? sigils) (vec sigils)
+    :else nil))
+
+(defn- normalize-context-result
+  [rank result]
+  (cond-> {:id (:id result)
+           :title (or (:title result) (:id result) "")
+           :score (double (or (:score result) 0.0))
+           :rank (or (:rank result) rank)
+           :retrieval-source "futon3a"
+           :retrieval-method "embeddings"}
+    (:path result)
+    (assoc :pattern-path (:path result))
+
+    (:rationale result)
+    (assoc :retrieval-rationale (:rationale result))
+
+    (:tokipona result)
+    (assoc :tokipona (:tokipona result))
+
+    (:sigil result)
+    (assoc :sigil (:sigil result))
+
+    (normalize-hotwords (:hotwords result))
+    (assoc :hotwords (normalize-hotwords (:hotwords result)))
+
+    (normalize-sigils (:sigils result))
+    (assoc :sigils (normalize-sigils (:sigils result)))
+
+    (:energy result)
+    (assoc :energy (name (:energy result)))
+
+    (contains? result :devmap?)
+    (assoc :devmap? (boolean (:devmap? result)))
+
+    (:if result)
+    (assoc :if (:if result))
+
+    (:however result)
+    (assoc :however (:however result))
+
+    (:then result)
+    (assoc :then (:then result))
+
+    (:because result)
+    (assoc :because (:because result))
+
+    (seq (:next-steps result))
+    (assoc :next-steps (vec (:next-steps result)))))
+
+(defn- context-result-map
+  "Project retrieval results into a durable, replayable evidence packet.
+   Keeps the notification-friendly core fields and adds compact structural
+   pattern details so downstream readers like the WM can re-rank against
+   something richer than {id,title,score}."
+  [results]
+  (mapv (fn [[idx result]]
+          (normalize-context-result (inc idx) result))
+        (map-indexed vector results)))
 
 (defn- format-context-body
   "Format retrieval results as a notification body string."
@@ -633,7 +913,7 @@
   [agent-id session-id turn-n query-text result-map]
   (try
     (when-let [store @!evidence-store]
-      (let [result (estore/append* store
+      (let [result (boundary/append! store
                      {:subject {:ref/type :agent :ref/id (str agent-id)}
                       :type :coordination
                       :claim-type :step
@@ -689,7 +969,7 @@
       (when (seq results)
         (let [body (format-context-body results)
               turn-n (swap! turn-counter inc)
-              result-map (mapv #(select-keys % [:id :title :score]) results)
+              result-map (context-result-map results)
               eid (or (emit-context-evidence! agent-id session-id turn-n proto-text result-map)
                       (str "t" turn-n))
               cert (str eid " \u00b7 " agent-id)]
@@ -748,27 +1028,50 @@
    Uses the configured in-process evidence store — no HTTP round-trip."
   [agent-id event-type body-map & {:keys [session-id tags]}]
   (when-let [store @!evidence-store]
-    (dev-invoke/emit-invoke-evidence! store agent-id event-type body-map
-                                      :session-id session-id
-                                      :tags tags)))
+    (let [clock-fields (clock-store/evidence-clock-fields agent-id session-id)]
+      (dev-invoke/emit-invoke-evidence! store agent-id event-type
+                                        (merge body-map clock-fields)
+                                        :session-id session-id
+                                        :tags tags))))
 
-(defn- sha256-hex
-  "Hex SHA-256 for TEXT."
-  [text]
-  (dev-invoke/sha256-hex text))
+(defn- prompt-field*
+  [prompt k]
+  (when (map? prompt)
+    (or (get prompt k)
+        (get prompt (name k)))))
 
-(defn- escape-elisp-string
-  "Escape a string for embedding in an elisp double-quoted string."
-  [s]
-  (dev-invoke/escape-elisp-string s))
+(defn- record-dispatch-clock!
+  [agent-id session-id prompt]
+  (when-let [mission-id (prompt-field* prompt :mission-id)]
+    (clock-store/set-dispatch-mission! agent-id session-id mission-id)))
 
-(defn- format-delivery-receipt-line
-  [invoke-trace-id {:keys [surface destination delivered? note]}]
-  (dev-invoke/format-delivery-receipt-line invoke-trace-id
-                                           {:surface surface
-                                            :destination destination
-                                            :delivered? delivered?
-                                            :note note}))
+(defn- record-agent-tool-use!
+  [agent-id session-id tool-detail]
+  (try
+    (clock-store/record-tool-use! agent-id session-id tool-detail)
+    (catch Throwable t
+      (println (str "[auto-clock] agent tool-use reclock failed for "
+                    agent-id ": " (.getMessage t)))
+      (flush)
+      nil)))
+
+(defn- assistant-tool-details
+  [assistant-event]
+  (let [content (get-in assistant-event [:message :content])]
+    (when (sequential? content)
+      (->> content
+           (filter #(= "tool_use" (:type %)))
+           (mapv (fn [block]
+                   (cond-> {:name (:name block)}
+                     (:id block)
+                     (assoc :id (:id block))
+                     (:input block)
+                     (assoc :input (:input block)))))))))
+
+(defn- record-agent-tool-details!
+  [agent-id session-id tool-details]
+  (doseq [tool-detail tool-details]
+    (record-agent-tool-use! agent-id session-id tool-detail)))
 
 (defn- invoke-meta-trace-id
   "Extract invoke trace id from invoke-meta maps with keyword or string keys."
@@ -919,21 +1222,12 @@
                         :out
                         (json/parse-string true))
                     (catch Exception _ []))
-        ;; 2. Scan recent IRC for acks
-        recent-msgs (irc-recent 50)
-        ack-patterns #"(?i)(ack|received|on it|working on|will do|reviewing|filed|posted|updated|opened PR|opened pull)"
-        acked-by (into #{}
-                       (keep (fn [{:keys [nick text]}]
-                               (when (and text (re-find ack-patterns text))
-                                 nick)))
-                       recent-msgs)
         now (Instant/now)]
     ;; 3. Process each issue
     (doseq [issue gh-issues]
       (let [n (:number issue)
             labels (gh-issue-labels issue)
-            phase (issue-phase labels)
-            closed? (= "closed" (str/lower-case (or (:state issue) "")))]
+            phase (issue-phase labels)]
         (when (and (not= 1 n) (not= :unknown phase))
           ;; Auto-promote: proposal with APPROVE comment → ct-approved
           (when (and (= :proposal phase)
@@ -959,7 +1253,7 @@
                             (catch Exception _ gh-issues))]
       ;; 5. Update task atom
       (swap! !tickle-tasks
-             (fn [tasks]
+             (fn [_tasks]
                (reduce
                 (fn [ts issue]
                   (let [n (:number issue)
@@ -1062,7 +1356,7 @@
   (let [msgs (irc-recent 30)
         now (str (Instant/now))
         processed (atom [])]
-    (doseq [{:keys [nick text at] :as msg} msgs]
+    (doseq [{:keys [nick text at]} msgs]
       (when-let [{:keys [task-ref artifact]} (parse-done-signal text)]
         (let [sig-key {:at at :nick nick}]
           (when-not (contains? @!done-signals-seen sig-key)
@@ -1159,20 +1453,17 @@ RESPOND WITH ONLY:
   "Add a pattern to an agent's backpack (stored in registry metadata).
    Pattern is {:pattern \"f0/p2\" :sigil \"才\" :query \"...\" :at \"...\"}."
   [agent-id pattern-entry]
-  (swap! reg/!registry
-         update-in [agent-id :agent/metadata :backpack]
-         (fn [bp] (vec (conj (or bp []) pattern-entry)))))
+  (reg/backpack-add! agent-id pattern-entry))
 
 (defn backpack-clear!
   "Clear an agent's pattern backpack."
   [agent-id]
-  (swap! reg/!registry
-         assoc-in [agent-id :agent/metadata :backpack] []))
+  (reg/backpack-clear! agent-id))
 
 (defn backpack
   "Read an agent's current pattern backpack."
   [agent-id]
-  (get-in @reg/!registry [agent-id :agent/metadata :backpack]))
+  (reg/backpack agent-id))
 
 (defn make-tickle-invoke-fn
   "Create an invoke-fn for tickle-1 that wraps each prompt with the tickle
@@ -1255,7 +1546,7 @@ RESPOND WITH ONLY:
         agent-summary (str/join "\n"
                         (map (fn [[id a]]
                                (str "  " id " (" (name (or (:agent/type a) :unknown)) ")"
-                                    (when-let [ws (:agent/ws-connected? a)] " [ws]")))
+                                    (when (:agent/ws-connected? a) " [ws]")))
                              agents))]
     (str "Current time: " (Instant/now) "\n\n"
          "## Registered agents\n"
@@ -1368,7 +1659,7 @@ RESPOND WITH ONLY:
     (println "───────────────────────────────────────────────────────")
     (println "  #     Phase              Assignee   Title")
     (println "───────────────────────────────────────────────────────")
-    (doseq [{:keys [gh-issue status phase assignee title]} tasks]
+    (doseq [{:keys [gh-issue status assignee title]} tasks]
       (println (format "  #%-3d  %-18s %-10s %s"
                        (or gh-issue 0)
                        (name (or status :unknown))
@@ -1459,7 +1750,7 @@ RESPOND WITH ONLY:
                                                (when auto-restart?
                                                  "\nAction: restarting agent layer")))
                                          ;; 2. Emit escalation evidence
-                                         (estore/append* evidence-store
+                                         (boundary/append! evidence-store
                                                          {:subject {:ref/type :agent
                                                                     :ref/id agent-id}
                                                           :type :coordination
@@ -1489,7 +1780,7 @@ RESPOND WITH ONLY:
                                            (future
                                              (when-let [restart-fn (resolve 'futon3c.dev/restart-agents!)]
                                                (restart-fn)))))}
-                     :on-cycle (fn [{:keys [scanned stalled paged escalated] :as cycle-result}]
+                     :on-cycle (fn [{:keys [stalled paged] :as cycle-result}]
                                  (let [entry (assoc cycle-result :at (str (Instant/now)))]
                                    ;; Track history (keep last 20 cycles)
                                    (swap! !scan-history
@@ -1562,6 +1853,54 @@ RESPOND WITH ONLY:
     (reset! !tickle nil)
     (cyder/deregister! "tickle-watchdog")
     (println "[dev] Tickle stopped.")))
+
+(defn start-process-watchdog!
+  "Start the infrastructure process watchdog.
+
+   Watches heartbeat-capable CYDER daemons and sends desktop notifications
+   when they become missing, stale, stuck, or erroring. Initial default
+   scope is the multi-watcher because a blocked sidecar path there freezes
+   substrate-2 incremental ingest silently."
+  ([] (start-process-watchdog! {}))
+  ([opts]
+   (when @!process-watchdog
+     (process-watchdog/stop!)
+     (reset! !process-watchdog nil)
+     (cyder/deregister! "process-watchdog"))
+   (let [evidence-store @!evidence-store
+         interval-ms (or (:interval-ms opts) process-watchdog/default-interval-ms)
+         profiles (or (:profiles opts) process-watchdog/default-profiles)]
+     (process-watchdog/start! {:interval-ms interval-ms
+                               :profiles profiles
+                               :evidence-store evidence-store
+                               :notify-fn process-watchdog/default-notify!})
+     (reset! !process-watchdog {:interval-ms interval-ms
+                                :profiles (vec (keys profiles))})
+     (cyder/deregister! "process-watchdog")
+     (cyder/register!
+      {:id "process-watchdog"
+       :type :daemon
+       :layer :repl
+       :stop-fn (fn []
+                  (process-watchdog/stop!)
+                  (reset! !process-watchdog nil))
+       :state-fn process-watchdog/status
+       :step-fn (fn []
+                  (process-watchdog/tick!))
+       :metadata {:interval-ms interval-ms
+                  :monitored-processes (vec (keys profiles))}})
+     (println (str "[dev] process-watchdog started: interval="
+                   interval-ms "ms monitored=" (vec (keys profiles))))
+     @!process-watchdog)))
+
+(defn stop-process-watchdog!
+  "Stop the infrastructure process watchdog."
+  []
+  (when @!process-watchdog
+    (process-watchdog/stop!)
+    (reset! !process-watchdog nil)
+    (cyder/deregister! "process-watchdog")
+    (println "[dev] process-watchdog stopped.")))
 
 ;; =============================================================================
 ;; FM-001 task dispatch — Tickle assigns proof obligations on the configured FrontierMath room
@@ -1808,7 +2147,8 @@ RESPOND WITH ONLY:
            cooldown-ms (conj :cooldown-ms cooldown-ms)
            agent-id (conj :agent-id agent-id)
            timeout-ms (conj :timeout-ms timeout-ms)
-           (some? review?) (conj :review? review?))))
+           (some? review?) (conj :review? review?)
+           order (conj :order order))))
 
 ;; =============================================================================
 ;; Mentor peripheral — claude-2 on the configured FrontierMath room
@@ -2904,7 +3244,7 @@ RESPOND WITH ONLY:
   "Notify mechanical conductor that an agent is now available.
    DEPRECATED: Registry !on-idle now fires tickle-queue/enqueue! directly.
    Kept for backwards compatibility — calls enqueue! if available."
-  [agent-id {:keys [ok? session-id invoke-trace-id]}]
+  [_agent-id {:keys [_ok? _session-id _invoke-trace-id]}]
   ;; Bell-driven dispatch: registry mark-idle! → !on-idle → enqueue! → dispatch.
   ;; This function is now a no-op; the registry handles it.
   nil)
@@ -2922,7 +3262,6 @@ RESPOND WITH ONLY:
 (defn- start-invoke-ticker!
   "Start a background thread that updates both *agents* and the invoke buffer
    with elapsed time, file change detection, and a progress spinner.
-   Also emits evidence heartbeats every 30s for long-running invocations.
    Returns a function that stops the ticker when called."
   [buf-name agent-id prompt-str used-sid interval-ms
    & {:keys [bb-opts event-trace runtime-state publish-runtime!]}]
@@ -2930,8 +3269,6 @@ RESPOND WITH ONLY:
         start-ms (System/currentTimeMillis)
         spinner-chars [\| \/ \- \\]
         tick (atom 0)
-        heartbeat-interval 30000 ;; evidence heartbeat every 30s
-        last-heartbeat-ms (atom start-ms)
         prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
         aid-val (str agent-id)
         thread (Thread.
@@ -3013,15 +3350,7 @@ RESPOND WITH ONLY:
                           :changed-files changed-files
                           :trace (vec (or trace-entries []))})
                         ;; Update agents buffer
-                        (bb/project-agents! (reg/registry-status))
-                        ;; Evidence heartbeat (every 30s, not every tick)
-                        (when (>= (- now-ms @last-heartbeat-ms) heartbeat-interval)
-                          (reset! last-heartbeat-ms now-ms)
-                          (emit-invoke-evidence! agent-id "invoke-heartbeat"
-                                                 {"elapsed-seconds" (quot elapsed 1000)
-                                                  "prompt-preview" prompt-preview}
-                                                 :session-id used-sid
-                                                 :tags ["heartbeat"])))
+                        (bb/project-agents! (reg/registry-status)))
                       (catch InterruptedException _
                         (reset! running false))
                       (catch Throwable _))))
@@ -3035,7 +3364,11 @@ RESPOND WITH ONLY:
 (defn- start-agents-blackboard-ticker!
   "Keep *agents* aligned with the current registry view, including polled
    external state such as ProcessHandle-based Codex detection and expiring
-   external invoke heartbeats."
+   external invoke heartbeats.
+
+   Coalesces in-flight projections: if the previous tick's blackboard call
+   is still running when a new tick fires, that tick is skipped so we don't
+   pile emacsclient requests against a slow/wedged Emacs."
   ([] (start-agents-blackboard-ticker! 5000))
   ([interval-ms]
    (when-let [stop-fn @!agents-blackboard-ticker-stop]
@@ -3043,12 +3376,28 @@ RESPOND WITH ONLY:
        (stop-fn)
        (catch Throwable _)))
    (let [running (atom true)
+         in-flight? (atom false)
+         skipped (atom 0)
          thread (Thread.
                  (fn []
                    (while @running
                      (try
                        (Thread/sleep interval-ms)
-                       (bb/project-agents! (reg/registry-status))
+                       (if @in-flight?
+                         (let [n (swap! skipped inc)]
+                           (when (zero? (mod n 12))
+                             (println (str "[dev] agents-blackboard ticker: "
+                                           n " ticks coalesced (prior projection still in flight)"))
+                             (flush)))
+                         (do
+                           (reset! in-flight? true)
+                           (reset! skipped 0)
+                           (future
+                             (try
+                               (bb/project-agents! (reg/registry-status))
+                               (catch Throwable _)
+                               (finally
+                                 (reset! in-flight? false))))))
                        (catch InterruptedException _
                          (reset! running false))
                        (catch Throwable _))))
@@ -3071,11 +3420,12 @@ RESPOND WITH ONLY:
 
    Streams stderr to the *invoke: <agent-id>* Emacs buffer for live visibility.
    Periodically refreshes the *agents* buffer to show elapsed time.
-   Emits evidence (start, heartbeat, complete) to the evidence store.
+   Emits evidence (start, complete) to the evidence store.
 
    Serialized via locking — only one `claude -p` process at a time (I-1).
-   First call with nil session-id generates a new UUID via --session-id.
-   Subsequent calls use --resume.
+   First call with nil session-id invokes with no session flag; Claude CLI
+   mints the UUID and returns it in the result stream (I-1: identity is
+   owned by the CLI, not by custom code). Subsequent calls use --resume.
 
    opts:
      :claude-bin       — path to claude CLI (default \"claude\")
@@ -3098,7 +3448,7 @@ RESPOND WITH ONLY:
                         :session-id-atom session-id-atom
                         :profile (env "CODEX_PROFILE")
                         :model (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_MODEL")
-                                   (env "CODEX_MODEL" "gpt-5-codex"))
+                                   (env "CODEX_MODEL"))
                         :sandbox (or (env "FUTON3C_CLAUDE_COMPAT_CODEX_SANDBOX")
                                      (env "CODEX_SANDBOX")
                                      "workspace-write")
@@ -3118,31 +3468,33 @@ RESPOND WITH ONLY:
           !turn-count (atom 0)
           buf-name (str "*invoke: " agent-id "*")
           bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]
-      (fn [prompt session-id]
-        (locking !lock
-          (let [prompt-str (cond
+      (letfn [(invoke-once [prompt session-id]
+                (let [prompt-str (cond
                            (string? prompt) prompt
                            (map? prompt)    (or (:prompt prompt) (:text prompt)
                                                 (json/generate-string prompt))
                            :else            (str prompt))
-              ;; Session resolution: caller > atom > new random UUID
-              effective-sid (or session-id
-                               (when session-id-atom @session-id-atom))
-              new-sid (when-not effective-sid (str (UUID/randomUUID)))
+              ;; I-1: Claude owns identity. When a session file is configured,
+              ;; prefer persisted continuity over potentially stale registry
+              ;; state, matching Codex invoke semantics.
+              ;; When neither file/incoming/atom is present, invoke without
+              ;; --resume and let the CLI mint the UUID; we read it back from
+              ;; the result stream (see :session_id capture into result-sid
+              ;; below).
+              effective-sid (preferred-session-id session-file session-id session-id-atom)
               args (cond-> [claude-bin "-p"
                             "--permission-mode" permission-mode
                             "--output-format" "stream-json" "--verbose"]
                      model         (into ["--model" model])
                      effective-sid (into ["--resume" (str effective-sid)])
-                     new-sid       (into ["--session-id" new-sid])
                      :always       (into ["--" prompt-str]))
-              used-sid (or effective-sid new-sid)
+              used-sid effective-sid
               invoke-trace-id (str "invoke-" (UUID/randomUUID))
               prompt-preview (subs prompt-str 0 (min 200 (count prompt-str)))
               _ (println (str "[invoke] " agent-id " claude -p "
                               (subs (pr-str prompt-str) 0
                                     (min 80 (count (pr-str prompt-str))))
-                              "... (session: " (when used-sid (subs used-sid 0 8)) ")"))
+                              "... (session: " (when used-sid (subs used-sid 0 (min 8 (count used-sid)))) ")"))
               _ (flush)
               ;; Evidence: invoke started
               _ (emit-invoke-evidence! agent-id "invoke-start"
@@ -3160,12 +3512,11 @@ RESPOND WITH ONLY:
                                   (merge {:width 80 :slot 1 :no-display true} bb-opts))
                   (catch Throwable _))
               ;; Start ticker: updates invoke buffer + agents buffer every 5s
-              ;; Also emits evidence heartbeats every 30s
               stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000 :bb-opts bb-opts)
               ;; Launch process with ProcessBuilder
               pb (let [pb* (doto (ProcessBuilder. ^java.util.List (vec args))
                             (.redirectInput (java.lang.ProcessBuilder$Redirect/from (java.io.File. "/dev/null"))))]
-                      (when cwd (.directory pb* (java.io.File. cwd)))
+                      (when-let [d (cwd/resolve-cwd cwd)] (.directory pb* (java.io.File. d)))
                       pb*)
               proc (.start pb)
               ;; Drain stderr in background (prevents buffer blocking)
@@ -3176,6 +3527,9 @@ RESPOND WITH ONLY:
               ;; assistant message so the final result is the actual answer.
               text-acc (StringBuilder.)
               last-had-tools? (atom false)
+              ;; all tool names seen this turn — used to make a tool-last /
+              ;; no-text turn legible instead of an opaque placeholder.
+              tools-acc (atom [])
               result-sid (atom nil)
               result-error (atom false)
               aid-val (str agent-id)
@@ -3210,6 +3564,7 @@ RESPOND WITH ONLY:
                                                                (filter #(= "tool_use" (:type %)))
                                                                (map :name)
                                                                seq))
+                                                  tool-details (assistant-tool-details parsed)
                                                   text (extract-text-from-assistant-message parsed)]
                                               ;; Surface tool activity to registry when available.
                                               (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
@@ -3227,6 +3582,9 @@ RESPOND WITH ONLY:
                                                 (when (and (not tools) @last-had-tools?)
                                                   (.setLength text-acc 0))
                                                 (.append text-acc text))
+                                              (when tools (swap! tools-acc into tools))
+                                              (when (seq tool-details)
+                                                (record-agent-tool-details! aid-val used-sid tool-details))
                                               (reset! last-had-tools? (boolean tools))
                                               ;; Emit to streaming event sink (if any)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
@@ -3234,18 +3592,9 @@ RESPOND WITH ONLY:
                                                 (when-let [sink (get-sink aid-val)]
                                                   (try
                                                     (when tools
-                                                      (let [tool-details
-                                                            (->> content
-                                                                 (filter #(= "tool_use" (:type %)))
-                                                                 (mapv (fn [block]
-                                                                         (cond-> {:name (:name block)}
-                                                                           (:id block)
-                                                                           (assoc :id (:id block))
-                                                                           (:input block)
-                                                                           (assoc :input (:input block))))))]
-                                                        (sink {:type "tool_use"
-                                                               :tools (vec tools)
-                                                               :tool_details tool-details})))
+                                                      (sink {:type "tool_use"
+                                                             :tools (vec tools)
+                                                             :tool_details tool-details}))
                                                     (when (and text (not (str/blank? text)))
                                                       (sink {:type "text" :text text}))
                                                     (catch Throwable _)))))
@@ -3336,7 +3685,11 @@ RESPOND WITH ONLY:
                      :bb-opts bb-opts})))
               (if ok?
                 {:result (if (str/blank? text)
-                           "[Claude used tools but produced no text response]"
+                           ;; tool-last / no-text turn: surface what was called.
+                           (let [names (->> @tools-acc (remove nil?) distinct vec)]
+                             (if (seq names)
+                               (str "[no text — called: " (str/join ", " names) "]")
+                               "[no text or tool calls in this turn]"))
                            text)
                  :session-id final-sid
                  :invoke-trace-id invoke-trace-id}
@@ -3345,7 +3698,174 @@ RESPOND WITH ONLY:
                  :invoke-trace-id invoke-trace-id}))
             (finally
               (clear-invoke-control! aid-val control-token)
-              (stop-ticker!)))))))))
+              (stop-ticker!)))))
+              (invoke-warm-or-cold [prompt session-id]
+                (let [warm-sid (preferred-session-id session-file session-id session-id-atom)]
+                  (cond
+                    (not (agent-pouch/enabled?))
+                    (invoke-once prompt session-id)
+
+                    ;; Joey gate: only warm a small session. A monster stays cold
+                    ;; (warming a giant history is a token-cost trap) unless overridden.
+                    (not (agent-pouch/joey-eligible? agent-id warm-sid))
+                    (do (agent-pouch/note-monster-cold! agent-id warm-sid)
+                        (invoke-once prompt session-id))
+
+                    ;; Warm path: same observability contract as invoke-once —
+                    ;; evidence events, invoke buffer, ticker (the *agents* 5s
+                    ;; refresh), live tool activity, interrupt control, pattern
+                    ;; retrieval. Warmth must not darken the turn.
+                    :else
+                    (let [prompt-str (cond
+                                       (string? prompt) prompt
+                                       (map? prompt)    (or (:prompt prompt) (:text prompt)
+                                                            (json/generate-string prompt))
+                                       :else            (str prompt))
+                          aid-val (str agent-id)
+                          invoke-trace-id (str "invoke-" (UUID/randomUUID))
+                          control-token (str "claude-pouch-" (UUID/randomUUID))
+                          warm-attempt
+                          (do
+                            (println (str "[invoke] " aid-val " warm pouch feed (session: "
+                                          (when warm-sid (subs (str warm-sid) 0 (min 8 (count (str warm-sid))))) ")"))
+                            (flush)
+                            (emit-invoke-evidence! agent-id "invoke-start"
+                                                   {"prompt-preview" (subs prompt-str 0 (min 200 (count prompt-str)))
+                                                    "warm" true}
+                                                   :session-id warm-sid
+                                                   :tags ["invoke-start"])
+                            (try
+                              (bb/blackboard! buf-name
+                                              (str "Invoke: " agent-id " (warm pouch)\n"
+                                                   "Session: " warm-sid "\n"
+                                                   "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
+                                                   (when (> (count prompt-str) 300) "...")
+                                                   "\n\nStarting...")
+                                              (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                              (catch Throwable _))
+                            (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str warm-sid 5000 :bb-opts bb-opts)]
+                              ;; Interrupting a warm turn = evict the pouch: the
+                              ;; process dies, read-turn throws, feed-turn! evicts
+                              ;; (idempotent) and the error surfaces; next turn
+                              ;; re-spawns warm or falls back cold.
+                              (register-invoke-control!
+                               aid-val control-token
+                               {:interrupt!
+                                (fn []
+                                  (agent-pouch/evict! aid-val)
+                                  {:ok true
+                                   :agent-id aid-val
+                                   :action :interrupt-issued
+                                   :message "warm pouch evicted (turn interrupted)"
+                                   :interrupted? true})})
+                              (try
+                                (let [warm-result
+                                      (agent-pouch/feed-turn!
+                                       agent-id
+                                       prompt
+                                       {:claude-bin claude-bin
+                                        :session-id warm-sid
+                                        :model model
+                                        :cwd cwd
+                                        :permission-mode permission-mode
+                                        :timeout-ms timeout-ms
+                                        ;; Surface tool activity to the registry
+                                        ;; (→ *agents* buffer), like the cold
+                                        ;; path's stdout loop does.
+                                        :on-event
+                                        (fn [event]
+                                          (when (= "assistant" (:type event))
+                                            (let [content (get-in event [:message :content])
+                                                  tools (when (sequential? content)
+                                                          (->> content
+                                                               (filter #(= "tool_use" (:type %)))
+                                                               (map :name)
+                                                               seq))
+                                                  tool-details (assistant-tool-details event)]
+                                              (when (seq tool-details)
+                                                (record-agent-tool-details! aid-val warm-sid tool-details))
+                                              (when tools
+                                                (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
+                                                                                        'update-invoke-activity!)]
+                                                  (update-activity!
+                                                   aid-val
+                                                   (str "using " (str/join ", " tools))))))))})
+                                      warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
+                                      result-text (str (or (:result warm-result) ""))]
+                                  ;; Persist like invoke-once does (cold path, above): today
+                                  ;; stream-json --resume keeps the sid stable so this is a
+                                  ;; no-op rewrite, but if the CLI ever forks on resume the
+                                  ;; session file must follow the pouch or the next turn
+                                  ;; respawns from the stale sid and orphans the warm turns.
+                                  (when (and session-file warm-result-sid)
+                                    (persist-session-id! session-file warm-result-sid))
+                                  (emit-invoke-evidence! agent-id "invoke-complete"
+                                                         {"warm" true
+                                                          "result-preview" (subs result-text 0 (min 300 (count result-text)))}
+                                                         :session-id warm-result-sid
+                                                         :tags ["invoke-complete"])
+                                  (try
+                                    (bb/blackboard! buf-name
+                                                    (str "Invoke: " agent-id " — DONE (warm pouch)\n"
+                                                         "Session: " warm-result-sid "\n"
+                                                         "Output: " (count result-text) " chars\n"
+                                                         (invoke-trace-response-block agent-id warm-result-sid invoke-trace-id result-text))
+                                                    (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                    (catch Throwable _))
+                                  (println (str "[invoke] " aid-val " warm-turn done text-len=" (count result-text)))
+                                  (flush)
+                                  ;; Context retrieval: fire-and-forget (pattern
+                                  ;; retrieval is a must-have on warm turns too).
+                                  (future
+                                    (context-retrieval!
+                                     {:agent-id agent-id
+                                      :session-id warm-sid
+                                      :prompt-str prompt-str
+                                      :response-text result-text
+                                      :turn-counter !turn-count
+                                      :bb-opts bb-opts}))
+                                  (assoc warm-result :invoke-trace-id invoke-trace-id))
+                                (catch Throwable t
+                                  (println (str "[kangaroo] " agent-id
+                                                " warm pouch failed; falling back cold: "
+                                                (.getMessage t)))
+                                  (flush)
+                                  (emit-invoke-evidence! agent-id "invoke-error"
+                                                         {"warm" true
+                                                          "error" (str (.getMessage t))}
+                                                         :session-id warm-sid
+                                                         :tags ["invoke-error"])
+                                  ::pouch-failed)
+                                (finally
+                                  (clear-invoke-control! aid-val control-token)
+                                  (stop-ticker!)))))]
+                      (if (= ::pouch-failed warm-attempt)
+                        (invoke-once prompt session-id)
+                        warm-attempt)))))]
+        (fn [prompt session-id]
+          (record-dispatch-clock! agent-id
+                                  (preferred-session-id session-file session-id session-id-atom)
+                                  prompt)
+          (cond
+            ;; Drainer v2: an outer per-agent drainer already owns serialization for
+            ;; this turn, so run the raw invoke without re-queuing (no shared lane held).
+            turn-queue/*drained-by-outer*
+            (invoke-warm-or-cold prompt session-id)
+
+            (turn-queue/enabled?)
+            (turn-queue/accept-and-drain!
+             {:from (turn-queue/prompt-field prompt :from)
+              :to agent-id
+              :surface (turn-queue/prompt-field prompt :surface)
+              :msg-id (turn-queue/prompt-field prompt :msg-id)
+              :prompt prompt
+              :session-id session-id}
+             (fn [entry]
+               (invoke-warm-or-cold (:prompt entry) (:session-id entry))))
+
+            :else
+            (locking !lock
+              (invoke-warm-or-cold prompt session-id))))))))
 
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")
@@ -3563,7 +4083,7 @@ RESPOND WITH ONLY:
    opts:
       :codex-bin          — path to codex CLI (default \"codex\")
       :profile            — optional Codex config profile passed to codex
-      :model              — model name (default \"gpt-5-codex\")
+      :model              — optional model name (unset uses Codex CLI config/default)
       :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
@@ -3574,7 +4094,7 @@ RESPOND WITH ONLY:
      :session-id-atom    — atom holding current session ID (optional)"
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
             session-file session-id-atom]
-    :or {codex-bin "codex" model "gpt-5-codex" sandbox "danger-full-access"
+    :or {codex-bin "codex" sandbox "danger-full-access"
          approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
@@ -3715,6 +4235,7 @@ RESPOND WITH ONLY:
             used-sid (or invoke-sid "new")
             control-token (str (UUID/randomUUID))
             !interrupted? (atom false)]
+        (record-dispatch-clock! agent-id invoke-sid prompt)
         ;; Reset trace for this invocation
         (reset! !event-trace [])
         (reset! !invoke-start-ms (System/currentTimeMillis))
@@ -3803,7 +4324,6 @@ RESPOND WITH ONLY:
                            (let [exec-enforce? (or (codex-work-claim-without-execution? prompt-str initial)
                                                    (codex-task-reply-without-execution? prompt-str initial))
                                  micro-enforce? (codex-task-micro-update? prompt-str initial)
-                                 format-enforce? (codex-format-refusal? prompt-str initial)
                                  retry-prompt (cond
                                                 exec-enforce?
                                                 (codex-execution-followup-prompt prompt-str (:result initial))
@@ -3895,6 +4415,18 @@ RESPOND WITH ONLY:
                                   "error" (when-not ok? (:error result))}
                                  :session-id (or final-sid used-sid)
                                  :tags ["invoke-complete"])
+          ;; Context retrieval: fire-and-forget. Mirrors the Claude path at
+          ;; make-claude-invoke-fn so Codex turns also produce
+          ;; :event "context-retrieval" evidence + the futon3a notification.
+          (when ok?
+            (future
+              (context-retrieval!
+                {:agent-id agent-id
+                 :session-id (or final-sid used-sid)
+                 :prompt-str prompt-str
+                 :response-text (str (or (:result result) ""))
+                 :turn-counter (atom prior-turn-count)
+                 :bb-opts nil})))
           ;; Final blackboard update
           (try
             (bb/blackboard! buf-name
@@ -4296,14 +4828,16 @@ RESPOND WITH ONLY:
                       (str target-nick " is now gated — mention-only mode"))))
                  (flush)))
              (let [ungated? (contains? @!ungated-nicks (str/lower-case nick))
-                   addressed? (or ungated? (mentioned? text nick))]
-               (if (and addressed?
-                        (not= sender nick)
-                        ;; Don't dispatch !gate/!ungate commands as prompts
-                        (not (re-matches #"(?i)^!(un)?gate\s+.*" text)))
-                 (let [prompt (if ungated? text (strip-mention text nick))]
-                   (if (str/blank? prompt)
-                     (do
+                   addressed? (or ungated? (mentioned? text nick))
+                       dispatchable? (and addressed?
+                                          (not= sender nick)
+                                          ;; Don't dispatch !gate/!ungate commands as prompts
+                                          (not (re-matches #"(?i)^!(un)?gate\s+.*" text)))]
+               (cond
+                     dispatchable?
+                     (let [prompt (if ungated? text (strip-mention text nick))]
+                       (if (str/blank? prompt)
+                         (do
                        (println (str "[irc] " nick ": mention detected but prompt empty, ignoring"))
                        (flush))
                      (do
@@ -4326,7 +4860,13 @@ RESPOND WITH ONLY:
                                                      (long invoke-hard-timeout-ms)
                                                      soft-timeout-ms soft-timeout-ms
                                                      :else 1800000)
-                                   invoke-fut (future (reg/invoke-agent! agent-id invoke-prompt hard-timeout-ms))
+                                   invoke-fut (future
+                                                (coordination/invoke-with-edge!
+                                                 {:from sender
+                                                  :to agent-id
+                                                  :surface "irc"
+                                                  :prompt invoke-prompt
+                                                  :timeout-ms hard-timeout-ms}))
                                    resp (loop [soft-notified? false]
                                           (if (realized? invoke-fut)
                                             @invoke-fut
@@ -4383,10 +4923,11 @@ RESPOND WITH ONLY:
                                     :note (if fallback-delivered?
                                             "dispatch-relay-error-fallback"
                                              (str "dispatch-relay-error: " (.getMessage e)))})))
-                               (flush)))))))
-                  (do
-                    (println (str "[irc] " nick ": not mentioned, skipping"))
-                    (flush)))))))))
+                               (flush))))))))
+                     :else
+                     (do
+                       (println (str "[irc] " nick ": not mentioned, skipping"))
+                       (flush))))))))
     )
     ((:join-virtual-nick! irc-server) channel nick)
     (println (str "[dev] Dispatch relay: " nick " → invoke-agent! → " channel " (mention-gated)"))
@@ -4465,6 +5006,7 @@ RESPOND WITH ONLY:
     :start-irc! start-irc!
     :start-agents! start-agents!
     :start-tickle! start-tickle!
+    :start-process-watchdog! start-process-watchdog!
     :start-fm-conductor! start-fm-conductor!
     :start-drawbridge! start-drawbridge!
     :start-agents-blackboard-ticker! start-agents-blackboard-ticker!

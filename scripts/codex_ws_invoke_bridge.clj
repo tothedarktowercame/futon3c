@@ -14,7 +14,7 @@
      AGENT_ID            codex-1
      CODEX_BIN           codex
      CODEX_CWD           <pwd>
-     CODEX_MODEL         gpt-5-codex
+     CODEX_MODEL         optional model override (unset uses Codex config)
      CODEX_SANDBOX       danger-full-access
      CODEX_APPROVAL      never
      CODEX_REASONING_EFFORT low|medium|high (optional)
@@ -45,8 +45,18 @@
 (def agent-type (str/lower-case (env "AGENT_TYPE" "codex")))
 
 (def codex-bin (env "CODEX_BIN" "codex"))
-(def codex-cwd (env "CODEX_CWD" (System/getProperty "user.dir")))
-(def codex-model (env "CODEX_MODEL" "gpt-5-codex"))
+(defn- expand-cwd
+  "Expand a leading ~ to the user's home (ProcessBuilder/sh don't shell-expand ~,
+   so a literal \"~/\" working dir fails to launch). Blank → the JVM's own cwd."
+  [s]
+  (let [s (when s (.trim (str s)))]
+    (cond
+      (or (nil? s) (= s "")) (System/getProperty "user.dir")
+      (= s "~") (System/getProperty "user.home")
+      (.startsWith s "~/") (str (System/getProperty "user.home") (subs s 1))
+      :else s)))
+(def codex-cwd (expand-cwd (env "CODEX_CWD" (System/getProperty "user.dir"))))
+(def codex-model (env "CODEX_MODEL" ""))
 (def codex-sandbox (env "CODEX_SANDBOX" "danger-full-access"))
 (def codex-approval (env "CODEX_APPROVAL" "never"))
 (def codex-reasoning-effort (System/getenv "CODEX_REASONING_EFFORT"))
@@ -332,9 +342,6 @@
 (def ^:private evidence-url
   (str (str/replace agency-http-base #"/$" "") "/api/alpha/evidence"))
 
-(def ^:private heartbeat-interval-ms
-  (parse-int (env "HEARTBEAT_INTERVAL_MS" "30000") 30000))
-
 (defn- emit-evidence!
   "POST an evidence entry to the Agency evidence store. Fire-and-forget."
   [event-type body-map & {:keys [session-id tags]}]
@@ -362,33 +369,6 @@
         (println "[bridge] evidence emit failed:" (.getMessage e))
         (flush)))))
 
-(defn- start-heartbeat!
-  "Start a background thread that emits heartbeat evidence every N seconds.
-   Returns a stop function."
-  [invoke-id prompt-preview session-id]
-  (let [running (atom true)
-        start-ms (System/currentTimeMillis)
-        thread (Thread.
-                (fn []
-                  (while @running
-                    (try
-                      (Thread/sleep heartbeat-interval-ms)
-                      (when @running
-                        (let [elapsed-s (quot (- (System/currentTimeMillis) start-ms) 1000)]
-                          (emit-evidence! "invoke-heartbeat"
-                                          {"invoke-id" invoke-id
-                                           "elapsed-seconds" elapsed-s
-                                           "prompt-preview" prompt-preview}
-                                          :session-id session-id
-                                          :tags ["heartbeat"])))
-                      (catch InterruptedException _
-                        (reset! running false))
-                      (catch Exception _))))
-                (str "heartbeat-" invoke-id))]
-    (.setDaemon thread true)
-    (.start thread)
-    (fn [] (reset! running false) (.interrupt thread))))
-
 (defn- handle-invoke-frame!
   [^WebSocket ws sid* frame]
   (let [invoke-id (:invoke_id frame)
@@ -404,12 +384,7 @@
                            "prompt-preview" prompt-preview}
                           :session-id incoming-session
                           :tags ["invoke-start"])
-          ;; Start heartbeat
-          (let [stop-heartbeat! (start-heartbeat! invoke-id prompt-preview incoming-session)
-                initial (try
-                          (invoke-codex! prompt-str incoming-session sid*)
-                          (finally
-                            (stop-heartbeat!)))
+          (let [initial (invoke-codex! prompt-str incoming-session sid*)
                 ;; ---- H-1: Enforcement retry ----
                 outcome (if (and (:ok initial) (enforcement-needed? prompt-str initial))
                           (let [reason (enforcement-reason prompt-str initial)

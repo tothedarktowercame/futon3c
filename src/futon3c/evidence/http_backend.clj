@@ -7,15 +7,55 @@
             [cheshire.core :as json]
             [clojure.string :as str]
             [org.httpkit.client :as http])
-  (:import [java.time Instant]))
+  (:import [java.net URLEncoder]
+           [java.time Instant]))
 
 (defn- api-url [base-url path]
   (str (str/replace base-url #"/$" "") path))
+
+(defn- path-segment [s]
+  (URLEncoder/encode (str s) "UTF-8"))
 
 (defn- parse-response [resp]
   (when-let [body (:body resp)]
     (try (json/parse-string body true)
          (catch Exception _ nil))))
+
+(defn- enum-name [x]
+  (cond
+    (keyword? x) (name x)
+    (some? x) (str x)
+    :else nil))
+
+(defn- http-append-payload
+  "Encode a validated EvidenceEntry into the public HTTP append shape.
+   The server endpoint normalizes unqualified payload keys; sending raw
+   :evidence/... JSON keys is rejected before the boundary can persist it."
+  [entry]
+  (cond-> {:evidence-id (:evidence/id entry)
+           :subject (:evidence/subject entry)
+           :type (enum-name (:evidence/type entry))
+           :claim-type (enum-name (:evidence/claim-type entry))
+           :author (:evidence/author entry)
+           :body (:evidence/body entry)
+           :tags (mapv enum-name (:evidence/tags entry))}
+    (:evidence/pattern-id entry)
+    (assoc :pattern-id (enum-name (:evidence/pattern-id entry)))
+
+    (:evidence/session-id entry)
+    (assoc :session-id (:evidence/session-id entry))
+
+    (:evidence/in-reply-to entry)
+    (assoc :in-reply-to (:evidence/in-reply-to entry))
+
+    (:evidence/fork-of entry)
+    (assoc :fork-of (:evidence/fork-of entry))
+
+    (contains? entry :evidence/conjecture?)
+    (assoc :conjecture? (:evidence/conjecture? entry))
+
+    (contains? entry :evidence/ephemeral?)
+    (assoc :ephemeral? (:evidence/ephemeral? entry))))
 
 (defrecord HttpBackend [base-url]
   backend/EvidenceBackend
@@ -23,7 +63,7 @@
   (-append [_ entry]
     (let [resp @(http/post (api-url base-url "/api/alpha/evidence")
                            {:headers {"Content-Type" "application/json"}
-                            :body (json/generate-string entry)
+                            :body (json/generate-string (http-append-payload entry))
                             :timeout 5000})
           parsed (parse-response resp)]
       (if (:ok parsed)
@@ -34,7 +74,8 @@
          :error/at (str (Instant/now))})))
 
   (-get [_ evidence-id]
-    (let [resp @(http/get (api-url base-url (str "/api/alpha/evidence/" evidence-id))
+    (let [resp @(http/get (api-url base-url (str "/api/alpha/evidence/"
+                                                 (path-segment evidence-id)))
                           {:timeout 5000})
           parsed (parse-response resp)]
       (:entry parsed)))

@@ -24,7 +24,7 @@
   (when (mfuton-mode/mfuton-mode?)
     {:codex-bin "codex"
      :profile profile
-     :model (or model "gpt-5-codex")
+     :model model
      :sandbox (or sandbox "workspace-write")
      :approval-policy (or approval-policy "untrusted")
      :reasoning-effort reasoning-effort

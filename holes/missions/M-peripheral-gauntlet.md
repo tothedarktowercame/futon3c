@@ -1,4 +1,5 @@
 # Mission: Peripheral Gauntlet
+Status: archived
 
 ## Derivation
 

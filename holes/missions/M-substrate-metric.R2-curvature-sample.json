@@ -1,0 +1,332 @@
+{
+  "bridge_candidate_count": 576,
+  "component_count": 5,
+  "curvature_distribution": {
+    "max": 0.5,
+    "median": 0.041666666666667074,
+    "min": -0.5555555555555558,
+    "p10": 0.01639344262295006,
+    "p90": 0.09090909090909072
+  },
+  "curvature_edges_sampled": 200,
+  "edge_cap": 200,
+  "edge_count": 1691,
+  "fetched_by_type": {
+    "code/v05/file->mission": 0,
+    "code/v05/file\u2192mission": 1039,
+    "code/v05/mission-cross-ref": 656,
+    "code/v05/related-mission": 23,
+    "code/v05/sorry->related-missions": 0
+  },
+  "largest_component": 908,
+  "limit_per_type": 2000,
+  "node_count": 922,
+  "report": "substrate-metric/e1-or-sample",
+  "timing": {
+    "max_ms_per_edge": 9.376994799822569,
+    "mean_ms_per_edge": 1.2789932591840625,
+    "total_seconds": 2.078681407030672
+  },
+  "top_negative_edges": [
+    {
+      "bridge_score": 2715,
+      "edge": [
+        "futon4-d/mission/essays-diachronic-model",
+        "futon4-elisp-d/mission/essays-edit-cycle"
+      ],
+      "kappa": -0.5555555555555558,
+      "relation": "mission-cross-ref",
+      "w1": 1.5555555555555558
+    },
+    {
+      "bridge_score": 1812,
+      "edge": [
+        "futon4-d/mission/or-training-as-learning-system.v1",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ],
+      "kappa": -0.357142857142857,
+      "relation": "mission-cross-ref",
+      "w1": 1.357142857142857
+    },
+    {
+      "bridge_score": 1812,
+      "edge": [
+        "futon6-d/mission/canon-fingerprint-store",
+        "futon6-py-d/mission/bayesian-structure-learning"
+      ],
+      "kappa": -0.16666666666666652,
+      "relation": "mission-cross-ref",
+      "w1": 1.1666666666666665
+    },
+    {
+      "bridge_score": 1812,
+      "edge": [
+        "futon3-d/file/musn/service.clj",
+        "futon3-d/mission/native-plan-coherence"
+      ],
+      "kappa": -0.16666666666666652,
+      "relation": "file->mission",
+      "w1": 1.1666666666666665
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        ".claude-d/file/projects/-home-joe-code/memory/project_aliveness_synthesis.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/docs/four-frame-correspondence.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/holes/missions/M-weird-modernism.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/enrichment/rational-reconstruction.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/futon-theory/agent-contract.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-action.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-concentration.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-effort.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-intention.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-livelihood.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-mindfulness.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-speech.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-view.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/peripherals/read-only-first-then-extend.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/realtime/learn-as-you-go.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/t4r/dtp-fit.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3-d/file/library/t4r/exec-summary.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon3c-d/mission/invariant-queue-unstuck",
+        "futon4-elisp-d/mission/peeragogy-rewrite"
+      ],
+      "kappa": 0.016666666666665275,
+      "relation": "mission-cross-ref",
+      "w1": 0.9833333333333347
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "algorithms-d/file/apm-daily-batch.md",
+        "futon5a-d/mission/stack-stereolithography"
+      ],
+      "kappa": 0.021276595744680438,
+      "relation": "file->mission",
+      "w1": 0.9787234042553196
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon0-d/file/README-boundary.md",
+        "futon5a-d/mission/recommendation-bindings"
+      ],
+      "kappa": 0.021276595744680438,
+      "relation": "file->mission",
+      "w1": 0.9787234042553196
+    },
+    {
+      "bridge_score": 907,
+      "edge": [
+        "futon0-d/file/web/war-machine/src/war_machine/client/aif_join.cljs",
+        "futon5a-d/mission/recommendation-bindings"
+      ],
+      "kappa": 0.021276595744680438,
+      "relation": "file->mission",
+      "w1": 0.9787234042553196
+    }
+  ],
+  "top_propose_candidates": [
+    {
+      "action_intensity": 0.5000000000000002,
+      "min_incident_kappa": -0.5555555555555558,
+      "node": "futon4-d/mission/essays-diachronic-model",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "identify",
+        "phase": "identify"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon4-d/mission/essays-diachronic-model",
+        "futon4-elisp-d/mission/essays-edit-cycle"
+      ]
+    },
+    {
+      "action_intensity": 0.3214285714285713,
+      "min_incident_kappa": -0.357142857142857,
+      "node": "futon4-d/mission/or-training-as-learning-system.v1",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "identify",
+        "phase": "identify"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon4-d/mission/or-training-as-learning-system.v1",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ]
+    },
+    {
+      "action_intensity": 0.14999999999999988,
+      "min_incident_kappa": -0.16666666666666652,
+      "node": "futon6-d/mission/canon-fingerprint-store",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "derive",
+        "phase": "derive"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon6-d/mission/canon-fingerprint-store",
+        "futon6-py-d/mission/bayesian-structure-learning"
+      ]
+    }
+  ]
+}

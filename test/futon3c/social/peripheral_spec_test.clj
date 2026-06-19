@@ -16,10 +16,12 @@
       :peripherals))
 
 (deftest peripherals-edn-loads
-  (testing "peripherals.edn is loadable and has nine peripherals"
+  (testing "peripherals.edn is loadable and includes the current runtime envelopes"
     (let [peripherals (load-peripherals)]
-      (is (= 13 (count peripherals)))
-      (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :chat :alfworld :mission :mission-control :arse :mentor}
+      (is (= 17 (count peripherals)))
+      (is (= #{:explore :edit :test :deploy :reflect :proof :discipline :chat
+               :alfworld :mission :mission-control :arse :mentor
+               :portfolio-inference :emacs-cursor :war-machine-pilot :night-shift}
              (set (keys peripherals)))))))
 
 (deftest all-peripherals-validate-against-shape

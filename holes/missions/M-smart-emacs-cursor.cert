@@ -1,0 +1,11 @@
+CERTIFICATE — M-smart-emacs-cursor VERIFY (Reazon)
+conforming trace: CLEAN (0 violations)
+adversary I1 edit-without-body: CAUGHT
+adversary I2 move-without-request: CAUGHT
+adversary I3 voice-at-focus: CAUGHT
+adversary I4 racing-push-render: CAUGHT
+verdict: GATE OPEN
+
+produced: 2026-06-11, headless batch run
+command: emacs --batch -L futon4/dev/vendor/reazon -l M-smart-emacs-cursor.verify.el --eval '(princ (msec-verify-certificate))'
+provenance: forms authored fable-2; arrived by ordinary file write during the Agency restart window — the body owes a re-performance (hop, type, run, return) when the projection is back up

@@ -2,11 +2,14 @@
   "Environment parsing, deployment role detection, and session ID management.
 
    Extracted from futon3c.dev (Phase 1 of TN-dev-clj-decomposition).
-   All functions are pure or read-only (env vars, files). No runtime atoms."
+   All functions are pure or read-only (env vars, files, network probes).
+   No runtime atoms."
   (:require [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str])
-  (:import [java.net URI InetAddress NetworkInterface]))
+  (:import [java.net URI InetAddress NetworkInterface]
+           [java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers]
+           [java.time Duration]))
 
 ;; ---------------------------------------------------------------------------
 ;; Environment helpers
@@ -274,6 +277,36 @@
     (catch Exception _
       nil)))
 
+(defn agency-reachable?
+  "Quick liveness probe of a peer Agency at HTTP-BASE: does it answer a GET
+   `/api/alpha/agents` with a 2xx status within TIMEOUT-MS (default 2000)?
+   Returns true iff so; any connect/timeout/non-2xx/parse failure ⇒ false.
+
+   An HTTP-level probe (not a bare TCP connect) is required on purpose: a down
+   peer's port can still accept TCP (firewall / half-open / stale listener)
+   while the Agency HTTP layer is dead, which a socket probe reads as a false
+   positive. `/api/alpha/agents` is used rather than `/health` because it is
+   fast and confirms the Agency is actually serving.
+
+   Used to gate remote ws-bridge registration: a configured-but-down peer
+   (e.g. a linode whose Agency isn't running) must fall back to local rather
+   than register an agent as remote with decoupled reporting. Read-only."
+  ([http-base] (agency-reachable? http-base 2000))
+  ([http-base timeout-ms]
+   (boolean
+    (when-let [base (normalize-http-base http-base)]
+      (try
+        (let [timeout (Duration/ofMillis (long timeout-ms))
+              client (.. (HttpClient/newBuilder) (connectTimeout timeout) build)
+              req (.. (HttpRequest/newBuilder (URI/create (str base "/api/alpha/agents")))
+                      (timeout timeout)
+                      GET
+                      build)
+              resp (.send client req (HttpResponse$BodyHandlers/discarding))
+              status (.statusCode resp)]
+          (and (>= status 200) (< status 300)))
+        (catch Throwable _ false))))))
+
 (defn local-ip-set
   "Best-effort set of local interface IP addresses (IPv4/IPv6 textual forms)."
   []
@@ -369,7 +402,8 @@
     :laptop {:irc-port 0
              :irc-bind-host "127.0.0.1"
              :register-claude? false
-             :register-codex? true}
+             :register-codex? true
+             :direct-xtdb? true}
     ;; Legacy behavior when role is not set.
     {:irc-port 6667
      :irc-bind-host "0.0.0.0"
@@ -381,14 +415,27 @@
 ;; Session ID management
 ;; ---------------------------------------------------------------------------
 
+;; Sentinel strings that must never be treated as (or persisted as) a real
+;; session id.  A literal "nil"/"null" reaching the session file or registry
+;; (e.g. an Emacs payload that stringified nil) otherwise builds `--resume nil`
+;; and crashes invoke; rejecting them here lets a poisoned file self-heal to a
+;; fresh CLI-minted session.
+(def ^:private session-id-sentinels #{"nil" "null" "none" "false"})
+
+(defn valid-session-id
+  "Normalize S to a real session id string, or nil when blank/sentinel."
+  [s]
+  (when-let [t (some-> s str str/trim not-empty)]
+    (when-not (contains? session-id-sentinels (str/lower-case t))
+      t)))
+
 (defn read-session-id [f]
   (when (.exists f)
-    (let [s (str/trim (slurp f))]
-      (when-not (str/blank? s) s))))
+    (valid-session-id (slurp f))))
 
 (defn persist-session-id!
   [f sid]
-  (when (and sid (not (str/blank? sid)))
+  (when-let [sid (valid-session-id sid)]
     (try (spit f sid)
          (catch Exception e
            (println (str "[dev] session-id persist warning: " (.getMessage e)))))))
@@ -409,8 +456,27 @@
    Priority without file: incoming invoke session -> sid atom."
   [session-file incoming-session-id session-id-atom]
   (let [file-sid (some-> (session-file->file session-file) read-session-id)
-        incoming (some-> incoming-session-id str str/trim not-empty)
-        atom-sid (some-> session-id-atom deref str str/trim not-empty)]
+        incoming (valid-session-id incoming-session-id)
+        atom-sid (valid-session-id (some-> session-id-atom deref))]
     (if (session-file->file session-file)
       (or file-sid incoming)
       (or incoming atom-sid))))
+
+(defn clear-session-state!
+  "Clear persisted and in-memory session continuity.
+
+   Returns {:ok true} on success or {:ok false :error \"...\"} when the backing
+   session file exists but cannot be removed."
+  [session-file session-id-atom]
+  (try
+    (when session-id-atom
+      (reset! session-id-atom nil))
+    (when-let [file (session-file->file session-file)]
+      (when (and (.exists ^java.io.File file)
+                 (not (.delete ^java.io.File file)))
+        (throw (ex-info "could not delete session file"
+                        {:session-file (.getPath ^java.io.File file)}))))
+    {:ok true}
+    (catch Exception e
+      {:ok false
+       :error (.getMessage e)})))

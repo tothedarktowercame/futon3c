@@ -19,7 +19,6 @@
    connected-agents) is eliminated by having one authoritative store."
   (:require [clojure.string :as str]
             [futon3c.blackboard :as bb]
-            [futon3c.social.shapes :as shapes]
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
@@ -50,6 +49,7 @@
 
 (def ^:private ws-invoke-timeout-ms 120000)
 (def ^:private external-invoke-fresh-ms 15000)
+(def ^:private surface-projection-fresh-ms 300000)
 
 (def ^:dynamic *resolve-invoke-job-counts*
   "Best-effort resolver for futon3c.transport.http/active-invoke-job-counts.
@@ -71,9 +71,23 @@
     :agent/registered-at Instant
     :agent/last-active Instant
     :agent/ttl-ms     long (optional — bounded lifecycle R5)
-    :agent/metadata   map}"}
+    :agent/metadata   map}"
+           :durable true}
   !registry
   (atom {}))
+
+;; ^:durable metadata (M-reachable-from-boot 2026-05-01): `!registry` is
+;; the authoritative routing container. External code must go through the
+;; helper surface in this namespace (`register-agent!`,
+;; `unregister-agent!`, etc.), not direct `(reset! !registry ...)` or
+;; `(swap! !registry ...)` from arbitrary call sites. The structural
+;; guard lives in `scripts/check-reachable-from-boot-agent-registry.sh`.
+
+;; Roster persistence (Desktop Save / W5) is installed by `start-futon3c!`
+;; AFTER `restore-on-boot!` has consumed the saved roster — NOT here at ns-load.
+;; Installing the watch at ns-load ran an eager initial `persist-registry!`
+;; against the still-empty registry, clobbering the saved roster before restore
+;; could read it (the round-trip restored 0 agents). See dev/bootstrap.clj.
 
 (declare registry-status)
 
@@ -232,11 +246,14 @@
      :session-id    - Optional. Initial session ID.
      :ttl-ms        - Optional. Bounded lifecycle in milliseconds (R5).
      :metadata      - Optional. Arbitrary metadata map.
+     :session-reset-fn - Optional. Zero-arity fn that clears any backing
+                         session continuity (session file, atom, etc.).
 
    Returns:
      Agent record on success (R1: typed result).
      {:ok false :error SocialError} on failure (R2: duplicate → error, not overwrite)."
-  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata]}]
+  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata
+           session-reset-fn]}]
   (let [aid-val (agent-id-value agent-id)
         typed-id (if (map? agent-id)
                    agent-id
@@ -247,9 +264,21 @@
                       :agent/invoke-fn invoke-fn
                       :agent/capabilities (vec (or capabilities []))
                       :agent/session-id session-id
+                      :agent/session-reset-fn session-reset-fn
                       :agent/registered-at ts
                       :agent/last-active ts
                       :agent/ttl-ms ttl-ms
+                      ;; E-pilot-hop-trigger-wiring: agent-side fields for
+                      ;; the bidirectional hop pointer (claude-2 A1 in
+                      ;; ~/code/storage/hop-wiring-scratch.md).  Default
+                      ;; nil/[] so existing agents are unaffected.
+                      :agent/current-peripheral nil
+                      :agent/hop-stack []
+                      ;; Peripheral-side field (only populated when this
+                      ;; record represents a :type :peripheral entry).
+                      ;; Bidirectional pointer back to the agent currently
+                      ;; inhabiting this peripheral.
+                      :agent/current-inhabitant nil
                       :agent/metadata (merge {:agency/contracts {:bell-on-complete? (boolean invoke-fn)}}
                                              (or metadata {}))}
         ;; R2: Atomic check-and-set — reject duplicate, don't overwrite
@@ -331,6 +360,225 @@
                    m))))
     @result))
 
+;; =============================================================================
+;; E-pilot-hop-trigger-wiring: bidirectional hop primitives
+;; =============================================================================
+;;
+;; war-machine-pilot ⇄ {street-sweeper, night-shift, ...} transition mechanic.
+;; Spec: futon3c/holes/missions/E-pilot-hop-trigger-wiring.md.
+;; Co-design: claude-2 A1 in ~/code/storage/hop-wiring-scratch.md.
+;;
+;; Hop semantics: an AGENT (e.g. claude-1) inhabits a PERIPHERAL (e.g.
+;; war-machine-pilot).  A hop transitions the agent's inhabitation to a
+;; new peripheral (e.g. street-sweeper) while pushing the prior one onto
+;; the agent's hop-stack.  Hop-back pops the stack.
+;;
+;; The pointer is BIDIRECTIONAL: agent records carry :current-peripheral
+;; + :hop-stack; peripheral records carry :current-inhabitant.  Both sides
+;; updated atomically in a single swap! so there is no consistency window.
+;;
+;; Foreign-hop-in rejection (operator-approved hard mode, design choice
+;; #2 in the spec): if the destination peripheral's :current-inhabitant
+;; is non-nil AND not the requesting agent, the hop is rejected.
+
+(defn- hop-update-agent
+  [agent prev-peri new-peri]
+  (-> agent
+      (assoc :agent/current-peripheral new-peri)
+      ;; Only push prev onto stack if there WAS a prev; pushing nil
+      ;; would corrupt subsequent hop-back operations.
+      (update :agent/hop-stack
+              (fn [stack]
+                (let [s (or stack [])]
+                  (if prev-peri (conj s prev-peri) s))))
+      (assoc :agent/last-active (now))))
+
+(defn- hop-back-update-agent
+  [agent]
+  (let [stack (or (:agent/hop-stack agent) [])
+        prev  (peek stack)
+        rest  (if (seq stack) (pop stack) [])]
+    {:agent (-> agent
+                (assoc :agent/current-peripheral prev)
+                (assoc :agent/hop-stack rest)
+                (assoc :agent/last-active (now)))
+     :popped prev}))
+
+(def ^:dynamic *enable-hop-event-emission?*
+  "Whether hop! / hop-back! emit :hop-in / :hop-out entries to
+   pilot-inhabitations.edn.  Default true (production).  Tests rebind
+   to false to avoid polluting the live substrate."
+  true)
+
+(defn- emit-hop-event!
+  "Lazily call futon3c.agency.hop-events/log-hop-event! to append a
+   :hop-in / :hop-out entry to pilot-inhabitations.edn.  Lazy require
+   avoids a compile-time cycle.  Errors are swallowed (the registry
+   transition has already succeeded; substrate-write is best-effort)."
+  [event-kind payload]
+  (when *enable-hop-event-emission?*
+    (try
+      (when-let [f (requiring-resolve 'futon3c.agency.hop-events/log-hop-event!)]
+        (f event-kind payload))
+      (catch Throwable _ nil))))
+
+(defn hop!
+  "Transition AGENT-ID's inhabitation to NEW-PERIPHERAL-ID.
+
+   Bidirectional atomic update of both registry records:
+     agent : :current-peripheral <- new; :hop-stack <- conj prev
+     new peripheral : :current-inhabitant <- agent
+     prev peripheral (if any) : :current-inhabitant <- nil (only if it was the agent)
+
+   Foreign-hop-in rejection: if new peripheral's :current-inhabitant is
+   non-nil and != agent, hop is rejected with :error :peripheral-occupied.
+
+   Returns:
+     {:ok true :from <prev-peri-id-or-nil> :to <new-peri-id> :agent-id ...}
+     {:ok false :error :peripheral-occupied :by <other-agent-id>}
+     {:ok false :error :agent-not-registered}
+     {:ok false :error :peripheral-not-registered}
+     {:ok false :error :hop-to-same-peripheral} (no-op rejected loudly per R4)"
+  [agent-id new-peripheral-id]
+  (let [aid-val (agent-id-value agent-id)
+        peri-val (agent-id-value new-peripheral-id)
+        result (atom nil)]
+    (swap!
+     !registry
+     (fn [m]
+       (let [agent (get m aid-val)
+             new-peri (get m peri-val)]
+         (cond
+           (nil? agent)
+           (do (reset! result {:ok false
+                               :error :agent-not-registered
+                               :agent-id aid-val})
+               m)
+
+           (nil? new-peri)
+           (do (reset! result {:ok false
+                               :error :peripheral-not-registered
+                               :peripheral-id peri-val})
+               m)
+
+           (= peri-val (:agent/current-peripheral agent))
+           (do (reset! result {:ok false
+                               :error :hop-to-same-peripheral
+                               :peripheral-id peri-val})
+               m)
+
+           (and (some? (:agent/current-inhabitant new-peri))
+                (not= aid-val (:agent/current-inhabitant new-peri)))
+           (do (reset! result {:ok false
+                               :error :peripheral-occupied
+                               :peripheral-id peri-val
+                               :by (:agent/current-inhabitant new-peri)})
+               m)
+
+           :else
+           (let [prev-peri (:agent/current-peripheral agent)
+                 agent'    (hop-update-agent agent prev-peri peri-val)
+                 new-peri' (assoc new-peri :agent/current-inhabitant aid-val)
+                 m'        (-> m
+                               (assoc aid-val agent')
+                               (assoc peri-val new-peri'))
+                 ;; Clear prev peripheral's inhabitant only if it was the
+                 ;; agent we are hopping (defensive — should always be).
+                 m''       (if (and prev-peri (get m' prev-peri))
+                             (update m' prev-peri
+                                     (fn [p]
+                                       (if (= aid-val (:agent/current-inhabitant p))
+                                         (assoc p :agent/current-inhabitant nil)
+                                         p)))
+                             m')]
+             (reset! result {:ok true
+                             :from prev-peri
+                             :to peri-val
+                             :agent-id aid-val})
+             m'')))))
+    (let [r @result]
+      (when (:ok r)
+        (emit-hop-event! :hop-in
+                         {:agent-id (:agent-id r)
+                          :from-peri (:from r)
+                          :to-peri (:to r)}))
+      r)))
+
+(defn hop-back!
+  "Pop AGENT-ID's :hop-stack and return inhabitation to the previous
+   peripheral.  Single atomic swap! restoring bidirectional pointers.
+
+   Returns:
+     {:ok true :from <current-peri> :to <prev-peri-or-nil> :agent-id ...}
+     {:ok false :error :hop-stack-empty}
+     {:ok false :error :agent-not-registered}"
+  [agent-id]
+  (let [aid-val (agent-id-value agent-id)
+        result (atom nil)]
+    (swap!
+     !registry
+     (fn [m]
+       (let [agent (get m aid-val)]
+         (cond
+           (nil? agent)
+           (do (reset! result {:ok false
+                               :error :agent-not-registered
+                               :agent-id aid-val})
+               m)
+
+           (empty? (:agent/hop-stack agent))
+           (do (reset! result {:ok false
+                               :error :hop-stack-empty
+                               :agent-id aid-val})
+               m)
+
+           :else
+           (let [current-peri (:agent/current-peripheral agent)
+                 {:keys [agent popped]} (hop-back-update-agent agent)
+                 m'           (assoc m aid-val agent)
+                 ;; Clear current peripheral's :current-inhabitant if it
+                 ;; was the agent (defensive).
+                 m''          (if (and current-peri (get m' current-peri))
+                                (update m' current-peri
+                                        (fn [p]
+                                          (if (= aid-val (:agent/current-inhabitant p))
+                                            (assoc p :agent/current-inhabitant nil)
+                                            p)))
+                                m')
+                 ;; Set popped (= new current) peripheral's
+                 ;; :current-inhabitant to the agent.
+                 m'''         (if (and popped (get m'' popped))
+                                (assoc-in m'' [popped :agent/current-inhabitant] aid-val)
+                                m'')]
+             (reset! result {:ok true
+                             :from current-peri
+                             :to popped
+                             :agent-id aid-val})
+             m''')))))
+    (let [r @result]
+      (when (:ok r)
+        (emit-hop-event! :hop-out
+                         {:agent-id (:agent-id r)
+                          :from-peri (:from r)
+                          :to-peri (:to r)}))
+      r)))
+
+(defn current-peripheral
+  "Return AGENT-ID's currently-inhabited peripheral id, or nil."
+  [agent-id]
+  (:agent/current-peripheral (get @!registry (agent-id-value agent-id))))
+
+(defn current-inhabitant
+  "Return PERIPHERAL-ID's current-inhabitant agent id, or nil."
+  [peripheral-id]
+  (:agent/current-inhabitant (get @!registry (agent-id-value peripheral-id))))
+
+(defn hop-stack
+  "Return AGENT-ID's hop-stack (vector of peripheral ids; top of stack
+   is the last-departed peripheral)."
+  [agent-id]
+  (or (:agent/hop-stack (get @!registry (agent-id-value agent-id))) []))
+
 (defn reset-session!
   "Clear an agent's session-id so the next invoke starts a fresh conversation.
    Useful when a session becomes poisoned (e.g. invalid tool-use in history).
@@ -340,25 +588,61 @@
      {:ok false :error SocialError} if agent not found."
   [agent-id]
   (let [aid-val (agent-id-value agent-id)
-        result (atom nil)]
-    (swap! !registry
-           (fn [m]
-             (if-let [agent (get m aid-val)]
-               (let [old-sid (:agent/session-id agent)]
-                 (reset! result {:ok true
-                                 :agent-id aid-val
-                                 :old-session-id old-sid})
-                 (assoc m aid-val (assoc agent
-                                        :agent/session-id nil
-                                        :agent/last-active (now))))
-               (do (reset! result
-                           {:ok false
-                            :error (make-social-error
-                                    :agent-not-found
-                                    (str "Agent not registered: " aid-val)
-                                    :agent-id aid-val)})
-                   m))))
-    @result))
+        agent (get @!registry aid-val)]
+    (if-let [agent agent]
+      (let [old-sid (:agent/session-id agent)
+            reset-fn (:agent/session-reset-fn agent)
+            reset-result
+            (if reset-fn
+              (try
+                (let [result (reset-fn)]
+                  (cond
+                    (or (nil? result) (true? result)) {:ok true}
+                    (and (map? result) (= false (:ok result))) result
+                    :else {:ok true}))
+                (catch Exception e
+                  {:ok false
+                   :error (make-social-error
+                           :session-reset-failed
+                           (.getMessage e)
+                           :agent-id aid-val
+                           :exception-class (.getName (class e)))}))
+              {:ok true})]
+        (if (= false (:ok reset-result))
+          {:ok false
+           :error (or (:error reset-result)
+                      (make-social-error
+                       :session-reset-failed
+                       (str "Session reset failed for " aid-val)
+                       :agent-id aid-val))}
+          (let [result (atom nil)]
+            (swap! !registry
+                   (fn [m]
+                     (if-let [agent* (get m aid-val)]
+                       (do
+                         (reset! result {:ok true
+                                         :agent-id aid-val
+                                         :old-session-id old-sid})
+                         (assoc m aid-val
+                                (-> agent*
+                                    (assoc :agent/session-id nil
+                                           :agent/last-active (now))
+                                    (dissoc :agent/external-invokes
+                                            :agent/external-heartbeat-at))))
+                       (do
+                         (reset! result
+                                 {:ok false
+                                  :error (make-social-error
+                                          :agent-not-found
+                                          (str "Agent not registered: " aid-val)
+                                          :agent-id aid-val)})
+                         m))))
+            @result)))
+      {:ok false
+       :error (make-social-error
+               :agent-not-found
+               (str "Agent not registered: " aid-val)
+               :agent-id aid-val)})))
 
 ;; =============================================================================
 ;; Invocation (R1: delivery receipt, R4: loud failure)
@@ -383,6 +667,22 @@
              timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))
              prompt-preview (let [s (str prompt)]
                               (subs s 0 (min 120 (count s))))
+             _trace (when (not= "false" (System/getProperty "FUTON3C_INVOKE_TRACE"))
+                      ;; Step-0 duplicate-delivery instrument (turn-delivery-invariants.md, D1).
+                      ;; A doubled bell shows TWO lines: same msg-id+preview, different thread
+                      ;; (turn-drainer-* = accept-async queue; conductor/tickle + invoke-executor
+                      ;; = the second dispatcher). A clean whistle shows ONE line.
+                      ;; Writes to /tmp/invoke-trace.log (println-to-stdout goes to Joe's dev
+                      ;; terminal, ungreppable). Silence via (System/setProperty "FUTON3C_INVOKE_TRACE" "false").
+                      (let [line (str "[invoke-trace] at=" (now)
+                                      " agent=" aid-val
+                                      " msg-id=" (some-> (re-find #"(?i)Msg-?ID:\s*(\S+)" (str prompt)) second)
+                                      " thread=" (.getName (Thread/currentThread))
+                                      " preview=" (pr-str prompt-preview))]
+                        (println line)
+                        (try (spit "/tmp/invoke-trace.log" (str line "\n") :append true)
+                             (catch Throwable _))
+                        (flush)))
              project-agents! (fn []
                                (bb/project-agents!
                                 {:agents (into {}
@@ -577,8 +877,11 @@
    STATE may include:
    {:status \"invoking\"|\"idle\"|:invoking|:idle
     :session-id string
+    :campaign-id string
+    :excursion-id string
     :prompt-preview string
-    :activity string}
+    :activity string
+    :mission-id string}
 
    Invoking state is treated as live only while refreshed within
    `external-invoke-fresh-ms`; callers should heartbeat during long runs."
@@ -614,7 +917,13 @@
                                   (some-> (:prompt-preview state) str str/trim not-empty)
                                   (assoc :prompt-preview (some-> (:prompt-preview state) str str/trim))
                                   (some-> (:activity state) str str/trim not-empty)
-                                  (assoc :activity (some-> (:activity state) str str/trim)))))
+                                  (assoc :activity (some-> (:activity state) str str/trim))
+                                  (some-> (:campaign-id state) str str/trim not-empty)
+                                  (assoc :campaign-id (some-> (:campaign-id state) str str/trim))
+                                  (some-> (:mission-id state) str str/trim not-empty)
+                                  (assoc :mission-id (some-> (:mission-id state) str str/trim))
+                                  (some-> (:excursion-id state) str str/trim not-empty)
+                                  (assoc :excursion-id (some-> (:excursion-id state) str str/trim)))))
                        agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
                                 next-external
                                 (assoc :agent/external-invokes next-external)
@@ -636,6 +945,83 @@
   "Clear externally-driven invoke state for AGENT-ID-VAL and SOURCE."
   [agent-id-val source]
   (report-external-invoke! agent-id-val source {:status :idle}))
+
+(defn report-surface-projection!
+  "Record or refresh a live agent-facing surface projection.
+
+   SOURCE is a stable surface key such as \"emacs-cursor:editor-main\".
+   PROJECTION is a structured map describing the live read/write surface.
+   Nil or empty projections are rejected; callers should use
+   `clear-surface-projection!` when the surface is no longer active."
+  [agent-id-val source projection]
+  (let [aid-val (agent-id-value agent-id-val)
+        source-key (some-> source str str/trim not-empty)
+        now* (now)
+        normalized (when (map? projection)
+                     (not-empty
+                      (cond-> {}
+                        (some-> (:surface projection) str str/trim not-empty)
+                        (assoc :surface (some-> (:surface projection) str str/trim))
+                        (some-> (:peripheral-id projection) name str/trim not-empty)
+                        (assoc :peripheral-id (keyword (name (:peripheral-id projection))))
+                        (some-> (:editor-id projection) str str/trim not-empty)
+                        (assoc :editor-id (some-> (:editor-id projection) str str/trim))
+                        (some-> (:mode projection) str str/trim not-empty)
+                        (assoc :mode (some-> (:mode projection) str str/trim))
+                        (some-> (:buffer-surface projection) map? boolean)
+                        (assoc :buffer-surface (:buffer-surface projection))
+                        (some-> (:minibuffer-surface projection) map? boolean)
+                        (assoc :minibuffer-surface (:minibuffer-surface projection))
+                        (some-> (:buffer-summary projection) str str/trim not-empty)
+                        (assoc :buffer-summary (some-> (:buffer-summary projection) str str/trim))
+                        (some-> (:write-surface projection) str str/trim not-empty)
+                        (assoc :write-surface (some-> (:write-surface projection) str str/trim))
+                        (some-> (:write-contract projection) str str/trim not-empty)
+                        (assoc :write-contract (some-> (:write-contract projection) str str/trim))
+                        (some-> (:debug projection) map? boolean)
+                        (assoc :debug (:debug projection)))))]
+    (when (and source-key normalized)
+      (swap! !registry
+             (fn [m]
+               (if-let [agent (get m aid-val)]
+                 (let [existing (get-in agent [:agent/surface-projections source-key])
+                       next-projections
+                       (assoc (or (:agent/surface-projections agent) {})
+                              source-key
+                              (merge {:source source-key
+                                      :started-at (or (:started-at existing) now*)
+                                      :updated-at now*}
+                                     normalized))]
+                   (assoc m aid-val
+                          (assoc agent :agent/surface-projections next-projections)))
+                 m)))
+      (bb/project-agents! (registry-status))
+      (broadcast-agents-ws!))
+    {:ok true
+     :agent-id aid-val
+     :source source-key
+     :active? (boolean (and source-key normalized))}))
+
+(defn clear-surface-projection!
+  "Clear a live surface projection for AGENT-ID-VAL and SOURCE."
+  [agent-id-val source]
+  (let [aid-val (agent-id-value agent-id-val)
+        source-key (some-> source str str/trim not-empty)]
+    (when source-key
+      (swap! !registry
+             (fn [m]
+               (if-let [agent (get m aid-val)]
+                 (let [remaining (dissoc (:agent/surface-projections agent) source-key)
+                       agent* (cond-> agent
+                                true (dissoc :agent/surface-projections)
+                                (seq remaining) (assoc :agent/surface-projections remaining))]
+                   (assoc m aid-val agent*))
+                 m)))
+      (bb/project-agents! (registry-status))
+      (broadcast-agents-ws!))
+    {:ok true
+     :agent-id aid-val
+     :source source-key}))
 
 (defn set-invoke-event-sink!
   "Set a streaming event callback for an agent. sink-fn: (fn [event-map])."
@@ -659,6 +1045,26 @@
            (if-let [a (get m agent-id-val)]
              (assoc m agent-id-val (dissoc a :agent/invoke-event-sink))
              m))))
+
+(defn- surface-projection-live?
+  [entry]
+  (let [updated-at ^Instant (:updated-at entry)]
+    (and (instance? Instant updated-at)
+         (<= (- (.toEpochMilli (now))
+                (.toEpochMilli updated-at))
+             surface-projection-fresh-ms))))
+
+(defn current-surface-projection
+  "Return the freshest live surface projection for AGENT-ID-VAL, or nil."
+  [agent-id-val]
+  (let [aid-val (agent-id-value agent-id-val)
+        agent (get @!registry aid-val)]
+    (->> (:agent/surface-projections agent)
+         vals
+         (filter surface-projection-live?)
+         (sort-by (fn [entry]
+                    (.toEpochMilli ^Instant (:updated-at entry))))
+         last)))
 
 ;; =============================================================================
 ;; Introspection
@@ -723,6 +1129,12 @@
                   (let [base-status (or (:agent/status agent) :idle)
                         routing-info (invoke-routing-info aid agent)
                         external-invoke (freshest-external-invoke agent)
+                        surface-projection (->> (:agent/surface-projections agent)
+                                                vals
+                                                (filter surface-projection-live?)
+                                                (sort-by (fn [entry]
+                                                           (.toEpochMilli ^Instant (:updated-at entry))))
+                                                last)
                         last-heartbeat (:agent/external-heartbeat-at agent)
                         recent-heartbeat?
                         (and (instance? Instant last-heartbeat)
@@ -731,6 +1143,15 @@
                                  external-invoke-fresh-ms))
                         session-id (or (:session-id external-invoke)
                                        (:agent/session-id agent))
+                        campaign-id (or (:campaign-id external-invoke)
+                                        (get-in agent [:agent/metadata :campaign-id])
+                                        (get-in agent [:agent/metadata "campaign-id"]))
+                        mission-id (or (:mission-id external-invoke)
+                                       (get-in agent [:agent/metadata :mission-id])
+                                       (get-in agent [:agent/metadata "mission-id"]))
+                        excursion-id (or (:excursion-id external-invoke)
+                                         (get-in agent [:agent/metadata :excursion-id])
+                                         (get-in agent [:agent/metadata "excursion-id"]))
                         {:keys [queued-jobs running-jobs nonterminal-jobs]}
                         (get invoke-job-counts aid {})
                         external-codex-invoking?
@@ -761,6 +1182,9 @@
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id
+                                  :campaign-id campaign-id
+                                  :mission-id mission-id
+                                  :excursion-id excursion-id
                                   :registered-at (str (:agent/registered-at agent))
                                   :last-active (str (:agent/last-active agent))
                                   :capabilities (:agent/capabilities agent)
@@ -783,7 +1207,10 @@
                            (assoc :invoke-started-at (str invoke-started-at)
                                   :invoke-prompt-preview invoke-prompt-preview)
                            invoke-activity
-                           (assoc :invoke-activity invoke-activity))]))
+                           (assoc :invoke-activity invoke-activity)
+                           surface-projection
+                           (assoc :surface-projection
+                                  (dissoc surface-projection :started-at :updated-at)))]))
                 registry))
      :count (count registry)
      :ws-connected ws-connected
@@ -797,21 +1224,32 @@
   (mapv :agent/id (vals @!registry)))
 
 (defn find-reclaimable-agent
-  "Find the lowest-numbered idle, session-less, auto-registered local agent
-   of the given type. Returns its agent-id string, or nil."
+  "Find the lowest-numbered idle, session-less reclaimable agent of TYPE.
+
+   Reclaimable agents are either local auto-registered ghosts, or unreachable
+   remote placeholders with no invoke function. The latter covers restart
+   recovery when a stale remote `codex-1' placeholder would otherwise force
+   local auto-registration to allocate `codex-2'. Returns agent-id string, or
+   nil."
   [agent-type]
   (let [prefix (name agent-type)]
     (->> (vals @!registry)
          (filter (fn [agent]
                    (let [aid-val (get-in agent [:agent/id :id/value])
-                         meta (:agent/metadata agent)]
+                         meta (:agent/metadata agent)
+                         local-auto-ghost? (and (not (:remote? meta))
+                                                (not (:proxy? meta))
+                                                (:auto-registered? meta))
+                         unreachable-remote-placeholder?
+                         (and (:remote? meta)
+                              (not (:proxy? meta))
+                              (nil? (:agent/invoke-fn agent)))]
                      (and (= (:agent/type agent) agent-type)
                           (str/starts-with? (str aid-val) (str prefix "-"))
-                          (= (:agent/status agent) :idle)
+                          (= (or (:agent/status agent) :idle) :idle)
                           (nil? (:agent/session-id agent))
-                          (not (:remote? meta))
-                          (not (:proxy? meta))
-                          (:auto-registered? meta)))))
+                          (or local-auto-ghost?
+                              unreachable-remote-placeholder?)))))
          (sort-by #(get-in % [:agent/id :id/value]))
          first
          (#(some-> % (get-in [:agent/id :id/value]))))))
@@ -822,3 +1260,21 @@
   (let [n (count @!registry)]
     (reset! !registry {})
     n))
+
+(defn backpack-add!
+  "Append a pattern entry to an agent's backpack under :agent/metadata."
+  [agent-id pattern-entry]
+  (swap! !registry
+         update-in [agent-id :agent/metadata :backpack]
+         (fn [bp] (vec (conj (or bp []) pattern-entry)))))
+
+(defn backpack-clear!
+  "Clear an agent's pattern backpack."
+  [agent-id]
+  (swap! !registry
+         assoc-in [agent-id :agent/metadata :backpack] []))
+
+(defn backpack
+  "Read an agent's current pattern backpack."
+  [agent-id]
+  (get-in @!registry [agent-id :agent/metadata :backpack]))

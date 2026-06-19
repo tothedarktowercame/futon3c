@@ -1,4 +1,5 @@
 # M-sliding-blackboard: Code Block Extraction for Emacs Chat
+Status: parked
 
 ## Origin
 

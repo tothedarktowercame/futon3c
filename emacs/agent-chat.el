@@ -7,6 +7,7 @@
 (require 'cl-lib)
 (require 'browse-url)
 (require 'json)
+(require 'seq)
 (require 'subr-x)
 (require 'url)
 (require 'url-util)
@@ -69,6 +70,16 @@
   "Face for tool-use lines like [Read], [Edit], etc."
   :group 'agent-chat)
 
+(defface agent-chat-turn-flair-face
+  '((t :inherit font-lock-comment-face))
+  "Face for transcript turn-end rule and duration text."
+  :group 'agent-chat)
+
+(defface agent-chat-turn-flair-target-face
+  '((t :inherit font-lock-comment-face :weight bold))
+  "Face for the clocked-in target label in transcript turn-end flair."
+  :group 'agent-chat)
+
 ;;; Buffer state
 
 (defvar-local agent-chat--prompt-marker nil
@@ -85,6 +96,18 @@
 
 (defvar-local agent-chat--session-id nil
   "Current session ID displayed in the buffer header.")
+
+(defvar-local agent-chat--mission-id nil
+  "Mission ID clocked into the current chat session, or nil for no mission.")
+
+(defvar-local agent-chat--campaign-id nil
+  "Campaign ID clocked into the current chat session, or nil for no campaign.")
+
+(defvar-local agent-chat--excursion-id nil
+  "Excursion ID clocked into the current chat session, or nil for no excursion.")
+
+(defvar-local agent-chat--clock-change-fn nil
+  "Optional function called after the chat clock target changes.")
 
 (defvar-local agent-chat--session-turn-count nil
   "Cached number of evidence chat turns recorded for the current session.")
@@ -113,6 +136,18 @@ Distinct from agent-name which is the display name.")
 
 (defvar-local agent-chat--turn-start-time nil
   "Epoch time (float) when the current turn started.")
+
+(defvar-local agent-chat--turn-counter 0
+  "Monotonic local turn counter for the current chat buffer.")
+
+(defvar-local agent-chat--current-turn-id nil
+  "Local turn ID currently in flight.")
+
+(defvar-local agent-chat--last-flair-turn-id nil
+  "Turn ID for which turn-end flair was last rendered.")
+
+(defvar-local agent-chat--turn-git-heads nil
+  "Git repo HEAD snapshot captured at the start of the current turn.")
 
 (defvar-local agent-chat--on-turn-end nil
   "Function called with elapsed seconds (float) after each turn completes.
@@ -144,7 +179,879 @@ If a function returns nil, the original TEXT is used.")
 (defvar-local agent-chat--last-emitted-session-id nil
   "Last session ID for which a session-start evidence entry was emitted.")
 
+(defvar-local agent-chat--pending-user-turn-text nil
+  "User turn text staged until a real session ID is available.")
+
+(defvar-local agent-chat-auto-clock-enabled t
+  "Non-nil means explicit resolved turn target mentions may auto-clock the buffer.")
+
+(defcustom agent-chat-edit-activity-clock-enabled t
+  "Non-nil means repeated saves to C-/M-/E- mission docs may reclock chats."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-edit-activity-clock-threshold 3
+  "Number of saves to one C-/M-/E- mission doc required for edit reclocking."
+  :type 'integer
+  :group 'agent-chat)
+
+(defcustom agent-chat-edit-activity-clock-window-seconds 600
+  "Recent-save window, in seconds, for edit-activity reclocking."
+  :type 'integer
+  :group 'agent-chat)
+
+(defcustom agent-chat-affect-live-enabled t
+  "Non-nil means chat-turn evidence triggers the live affect runner.
+
+The runner is best-effort and non-blocking. It refreshes the materialized
+affect JSONL / WM summary, but does not participate in request dispatch."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defcustom agent-chat-affect-live-directory "/home/joe/code/futon0"
+  "Working directory for `agent-chat-affect-live-command'."
+  :type 'directory
+  :group 'agent-chat)
+
+(defcustom agent-chat-affect-live-command
+  '("clojure" "-M" "-m" "futon0.rhythm.affect"
+    "--live" "--limit" "1000" "--max-transitions" "200")
+  "Command used to refresh live affect material after a chat turn.
+
+`agent-chat-emit-turn-evidence!' appends `--evidence-url' and the current
+evidence URL to this command."
+  :type '(repeat string)
+  :group 'agent-chat)
+
+(defvar agent-chat--affect-live-process nil
+  "Currently running live affect refresh process, or nil.")
+
+(defvar-local agent-chat--last-auto-clock-witness nil
+  "Audit witness for the most recent auto-clock promotion.")
+
+(defvar-local agent-chat--creation-clock-watch-timer nil
+  "Timer watching for a just-created mission to become clockable.")
+
+(defvar-local agent-chat--edit-activity-last-reclock-target nil
+  "Last target ID reclocked by the edit-activity rule in this chat buffer.")
+
+(defvar agent-chat--edit-activity-save-events (make-hash-table :test 'equal)
+  "Recent C-/M-/E- mission doc saves keyed by exact clock target ID.")
+
+(defcustom agent-chat-commit-repo-roots nil
+  "Git repo roots scanned for commits made during a chat turn.
+When nil, immediate futon* repos under ~/code plus the current
+`default-directory' git root are scanned."
+  :type '(choice (const nil) (repeat directory))
+  :group 'agent-chat)
+
 ;;; Display
+
+(defun agent-chat-normalize-clock-id (value)
+  "Return normalized clock target VALUE string, or nil for no target."
+  (let ((s (cond
+            ((null value) nil)
+            ((symbolp value) (symbol-name value))
+            (t (format "%s" value)))))
+    (when s
+      (let ((trimmed (string-trim s)))
+        (unless (or (string-empty-p trimmed)
+                    (member (downcase trimmed)
+                            '("nil" "none" "no mission" "no-mission")))
+          trimmed)))))
+
+(defun agent-chat-normalize-mission-id (mission)
+  "Return normalized MISSION string, or nil for no mission."
+  (agent-chat-normalize-clock-id mission))
+
+(defun agent-chat-normalize-campaign-id (campaign)
+  "Return normalized CAMPAIGN string, or nil for no campaign."
+  (agent-chat-normalize-clock-id campaign))
+
+(defun agent-chat-normalize-excursion-id (excursion)
+  "Return normalized EXCURSION string, or nil for no excursion."
+  (agent-chat-normalize-clock-id excursion))
+
+(defun agent-chat--parse-clock-target-string (target &optional inherit-current)
+  "Parse TARGET into (:campaign-id C :mission-id M :excursion-id E).
+When INHERIT-CURRENT is non-nil, mission-only and excursion-only targets
+inherit the current parent path."
+  (let ((raw (agent-chat-normalize-clock-id target)))
+    (cond
+     ((null raw) (list :campaign-id nil :mission-id nil :excursion-id nil))
+     ((string-match-p "\\(?:›\\|>\\|/\\)" raw)
+      (let ((campaign nil)
+            (mission nil)
+            (excursion nil))
+        (dolist (part (split-string raw "\\s-*\\(?:›\\|>\\|/\\)\\s-*" t))
+          (let ((id (agent-chat-normalize-clock-id part)))
+            (cond
+             ((and id (string-prefix-p "C-" id)) (setq campaign id))
+             ((and id (string-prefix-p "M-" id)) (setq mission id))
+             ((and id (string-prefix-p "E-" id)) (setq excursion id))
+             ((null campaign) (setq campaign id))
+             ((null mission) (setq mission id))
+             (t (setq excursion id)))))
+        (list :campaign-id campaign :mission-id mission :excursion-id excursion)))
+     ((string-prefix-p "C-" raw)
+      (list :campaign-id raw :mission-id nil :excursion-id nil))
+     ((string-prefix-p "M-" raw)
+      (list :campaign-id (and inherit-current agent-chat--campaign-id)
+            :mission-id raw
+            :excursion-id nil))
+     ((string-prefix-p "E-" raw)
+      (list :campaign-id (and inherit-current agent-chat--campaign-id)
+            :mission-id (and inherit-current agent-chat--mission-id)
+            :excursion-id raw))
+     (t
+      (list :campaign-id nil :mission-id raw :excursion-id nil)))))
+
+(defun agent-chat-parse-clock-target (target &optional inherit-current)
+  "Parse TARGET into a campaign/mission/excursion plist.
+TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
+:excursion-id."
+  (cond
+   ((and (listp target) (or (plist-member target :campaign-id)
+                            (plist-member target :mission-id)
+                            (plist-member target :excursion-id)))
+    (list :campaign-id (agent-chat-normalize-campaign-id
+                        (plist-get target :campaign-id))
+          :mission-id (agent-chat-normalize-mission-id
+                       (plist-get target :mission-id))
+          :excursion-id (agent-chat-normalize-excursion-id
+                         (plist-get target :excursion-id))))
+   (t
+    (agent-chat--parse-clock-target-string target inherit-current))))
+
+(defun agent-chat-mission-label ()
+  "Return display label for the current campaign/mission/excursion clock-in."
+  (let ((parts (delq nil (list agent-chat--campaign-id
+                               agent-chat--mission-id
+                               agent-chat--excursion-id))))
+    (if parts
+        (string-join parts " › ")
+      "no mission")))
+
+(defun agent-chat-mission-segment ()
+  "Return a compact prompt/header segment for the clock-in path."
+  (format "[%s]" (agent-chat-mission-label)))
+
+(defun agent-chat--format-duration (seconds)
+  "Return a compact duration string for SECONDS."
+  (let* ((total (max 0 (floor (or seconds 0))))
+         (minutes (/ total 60))
+         (secs (% total 60)))
+    (if (> minutes 0)
+        (format "%dm %02ds" minutes secs)
+      (format "%ds" secs))))
+
+(defun agent-chat--turn-flair-width ()
+  "Return display width for the transcript turn-end flair."
+  (max 40
+       (or (when-let ((win (get-buffer-window (current-buffer))))
+             (window-body-width win))
+           fill-column
+           80)))
+
+(defun agent-chat--ensure-prompt-markers! ()
+  "Ensure prompt markers are usable, repairing from the live prompt if needed."
+  (let (prompt-pos)
+    (when-let ((marker-pos (and (markerp agent-chat--prompt-marker)
+                                (marker-position agent-chat--prompt-marker))))
+      (save-excursion
+        (goto-char marker-pos)
+        (cond
+         ((looking-at-p "> ")
+          (setq prompt-pos marker-pos))
+         ((looking-at-p "^─+$")
+          (forward-line 1)
+          (when (looking-at-p "> ")
+            (setq prompt-pos (line-beginning-position)))))))
+    (unless prompt-pos
+      (save-excursion
+        (goto-char (point-max))
+        (when (re-search-backward "^> " nil t)
+          (setq prompt-pos (line-beginning-position)))))
+    (when prompt-pos
+      (setq agent-chat--prompt-marker (copy-marker prompt-pos t))
+      (setq agent-chat--separator-start (copy-marker prompt-pos))
+      (set-marker-insertion-type agent-chat--prompt-marker t)
+      (setq agent-chat--input-start (copy-marker (+ prompt-pos 2) nil))
+      (set-marker-insertion-type agent-chat--input-start nil)))
+  (and (markerp agent-chat--prompt-marker)
+       (marker-position agent-chat--prompt-marker)))
+
+(defun agent-chat--delete-existing-turn-flair-before-prompt ()
+  "Delete an existing Cooked/rule flair block immediately before the prompt."
+  (let ((prompt-pos (and (markerp agent-chat--prompt-marker)
+                         (marker-position agent-chat--prompt-marker))))
+    (when prompt-pos
+      (save-excursion
+        (goto-char prompt-pos)
+        (let ((end prompt-pos)
+              (start nil)
+              (keep-scanning t))
+          (while (and keep-scanning
+                      (> (line-beginning-position) (point-min)))
+            (forward-line -1)
+            (if (or (looking-at-p "^Cooked for ")
+                    (looking-at-p "^─+ \\*.*\\*$")
+                    (looking-at-p "^─+$"))
+                (setq start (line-beginning-position))
+              (setq keep-scanning nil)))
+          (when start
+            (delete-region start end)
+            (set-marker agent-chat--prompt-marker start)
+            (when (markerp agent-chat--separator-start)
+              (set-marker agent-chat--separator-start start))))))))
+
+(defun agent-chat--insert-turn-end-flair (&optional elapsed)
+  "Render the transcript turn-end clock-in flair before the input prompt."
+  (when (agent-chat--ensure-prompt-markers!)
+    (let* ((inhibit-read-only t)
+           (label (format "*%s*" (agent-chat-mission-label)))
+           (width (agent-chat--turn-flair-width))
+           (rule-count (max 1 (- width (string-width label) 1)))
+           (rule (make-string rule-count ?─)))
+      (save-excursion
+        (goto-char (marker-position agent-chat--prompt-marker))
+        (agent-chat--delete-existing-turn-flair-before-prompt)
+        (goto-char (marker-position agent-chat--prompt-marker))
+        ;; The initial buffer has a plain separator before the prompt.  Once
+        ;; turn flair takes over, the marker lives immediately before the
+        ;; prompt line and new flair is inserted as transcript text.
+        (when (looking-at-p "^─+$")
+          (delete-region (line-beginning-position)
+                         (min (point-max) (1+ (line-end-position)))))
+        (when (numberp elapsed)
+          (insert (propertize (format "Cooked for %s\n"
+                                      (agent-chat--format-duration elapsed))
+                              'face 'agent-chat-turn-flair-face)))
+        (insert (propertize rule 'face 'agent-chat-turn-flair-face)
+                " "
+                (propertize label 'face 'agent-chat-turn-flair-target-face)
+                "\n")
+        (let ((prompt-start (point)))
+          (set-marker agent-chat--prompt-marker prompt-start)
+          (when (markerp agent-chat--separator-start)
+            (set-marker agent-chat--separator-start prompt-start))
+          (set-marker-insertion-type agent-chat--prompt-marker t))))))
+
+(defun agent-chat-finish-turn! (&optional elapsed)
+  "Run shared turn-end behavior with optional ELAPSED seconds."
+  (unless agent-chat--current-turn-id
+    (setq agent-chat--current-turn-id
+          (format "%s-turn-%d-%s"
+                  (or agent-chat--agent-id agent-chat--agent-name "agent")
+                  (or agent-chat--turn-counter 0)
+                  (or agent-chat--turn-start-time (float-time)))))
+  (unless (and agent-chat--current-turn-id
+               (equal agent-chat--current-turn-id agent-chat--last-flair-turn-id))
+    (let ((duration (or elapsed
+                        (and agent-chat--turn-start-time
+                             (- (float-time) agent-chat--turn-start-time))
+                        0)))
+      (setq agent-chat--turn-start-time nil)
+      (when (functionp agent-chat--on-turn-end)
+        (condition-case turn-err
+            (funcall agent-chat--on-turn-end duration)
+          (error
+           (message "agent-chat turn-end hook error: %s"
+                    (error-message-string turn-err)))))
+      (agent-chat--insert-turn-end-flair duration)
+      (setq agent-chat--last-flair-turn-id agent-chat--current-turn-id))))
+
+(defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)
+  "Clock the current chat buffer into TARGET, or clear with nil/blank.
+TARGET may be C-*, M-*, E-*, or a C-* > M-* > E-* path.  With
+INHERIT-CURRENT, mission-only and excursion-only targets keep the current
+parent path.  When SUPPRESS-CALLBACK is non-nil, do not call
+`agent-chat--clock-change-fn'."
+  (let ((parsed (agent-chat-parse-clock-target target inherit-current)))
+    (setq agent-chat--campaign-id (plist-get parsed :campaign-id))
+    (setq agent-chat--mission-id (plist-get parsed :mission-id))
+    (setq agent-chat--excursion-id (plist-get parsed :excursion-id)))
+  (agent-chat--update-session-header-line)
+  (when (and (not suppress-callback)
+             (functionp agent-chat--clock-change-fn))
+    (condition-case clock-err
+        (funcall agent-chat--clock-change-fn)
+      ((error quit)
+       (message "agent-chat clock change callback warning: %s"
+                (error-message-string clock-err)))))
+  (list :campaign-id agent-chat--campaign-id
+        :mission-id agent-chat--mission-id
+        :excursion-id agent-chat--excursion-id))
+
+(defun agent-chat-set-mission! (mission)
+  "Clock the current chat buffer into MISSION, or clear with nil/blank."
+  (agent-chat-set-clock! mission))
+
+(defun agent-chat-read-clock-target (&optional prompt)
+  "Read a campaign/mission/excursion target from the minibuffer; blank clears it."
+  (let ((input (read-string
+                (or prompt "Clock target (C-*, M-*, E-*, C-* > M-* > E-*, blank for no mission): "))))
+    (agent-chat-parse-clock-target input t)))
+
+(defun agent-chat-read-mission (&optional prompt)
+  "Read a campaign/mission target from the minibuffer; blank means no mission."
+  (agent-chat-read-clock-target prompt))
+
+(defun agent-chat-clock-in (target)
+  "Clock the current running chat buffer into TARGET.
+TARGET may be a campaign, mission, excursion, path, or blank."
+  (interactive (list (agent-chat-read-clock-target)))
+  (agent-chat-set-clock! target t)
+  (message "clocked in: %s" (agent-chat-mission-label)))
+
+(defun agent-chat-excurse (excursion)
+  "Clock an EXCURSION under the current campaign/mission path."
+  (interactive (list (agent-chat-normalize-excursion-id
+                      (read-string "Excursion (E-*, blank to clear): "))))
+  (if excursion
+      (agent-chat-set-clock!
+       (list :campaign-id agent-chat--campaign-id
+             :mission-id agent-chat--mission-id
+             :excursion-id excursion)
+       t)
+    (agent-chat-clear-excursion))
+  (message "clocked in: %s" (agent-chat-mission-label)))
+
+(defun agent-chat-clear-excursion ()
+  "Clear only the active excursion, preserving campaign/mission."
+  (interactive)
+  (agent-chat-set-clock!
+   (list :campaign-id agent-chat--campaign-id
+         :mission-id agent-chat--mission-id
+         :excursion-id nil)
+   t)
+  (message "clocked in: %s" (agent-chat-mission-label)))
+
+(defcustom agent-chat-clock-target-roots nil
+  "Repository roots searched for holes clock target completions.
+When nil, use the current git root plus futon* directories under ~/code."
+  :type '(choice (const nil) (repeat directory))
+  :group 'agent-chat)
+
+(defun agent-chat--git-root-for-clock-targets ()
+  "Return the current git root for clock target completion, or nil."
+  (when (executable-find "git")
+    (let ((default-directory (or default-directory "~/")))
+      (with-temp-buffer
+        (when (zerop (call-process "git" nil t nil
+                                   "rev-parse" "--show-toplevel"))
+          (let ((root (string-trim (buffer-string))))
+            (unless (string-empty-p root)
+              root)))))))
+
+(defun agent-chat--clock-target-roots ()
+  "Return repository roots to search for clock target IDs."
+  (let ((roots (append (mapcar #'expand-file-name agent-chat-clock-target-roots)
+                       (list (agent-chat--git-root-for-clock-targets))))
+        (code-root (expand-file-name "~/code")))
+    (when (file-directory-p code-root)
+      (dolist (name (directory-files code-root nil "\\`futon"))
+        (let ((root (expand-file-name name code-root)))
+          (when (file-directory-p root)
+            (push root roots)))))
+    (delete-dups (delq nil roots))))
+
+(defun agent-chat--clock-target-candidates (kind)
+  "Return completion candidates for KIND, one of `campaign', `mission', `excursion'."
+  (let* ((dir-name (pcase kind
+                     ('campaign "campaigns")
+                     ('mission "missions")
+                     ('excursion "excursions")))
+         (prefix (pcase kind
+                   ('campaign "C-")
+                   ('mission "M-")
+                   ('excursion "E-")))
+         candidates)
+    (dolist (root (agent-chat--clock-target-roots))
+      ;; scan both holes/<kind>/ (standard) AND holes/ directly (futon7 etc. put
+      ;; mission/campaign docs at the top of holes/, not in a subdir)
+      (dolist (sub (list (concat "holes/" dir-name) "holes"))
+        (let ((dir (and root (expand-file-name sub root))))
+          (when (and dir (file-directory-p dir))
+            (dolist (file (directory-files dir nil (concat "\\`" prefix "[^.]+")))
+              (when (string-match (concat "\\`\\(" (regexp-quote prefix) "[^.]+\\)") file)
+                (push (match-string 1 file) candidates)))))))
+    (sort (delete-dups candidates) #'string<)))
+
+(defun agent-chat--read-clock-id (kind prompt)
+  "Read a clock target ID of KIND with PROMPT."
+  (let ((candidates (agent-chat--clock-target-candidates kind)))
+    (agent-chat-normalize-clock-id
+     (completing-read prompt candidates nil nil))))
+
+(defun agent-chat--explicit-clock-target-tokens (text)
+  "Return explicit C-/M-/E- target tokens named in TEXT."
+  (let ((start 0)
+        tokens)
+    (while (string-match
+            "\\(?:\\`\\|[^[:alnum:]_-]\\)\\([CME]-[[:alnum:]_-]+\\)\\(?:\\'\\|[^[:alnum:]_-]\\)"
+            text start)
+      (push (match-string 1 text) tokens)
+      (setq start (match-end 1)))
+    (nreverse (delete-dups tokens))))
+
+(defun agent-chat--resolve-auto-clock-token (token)
+  "Return (KIND . TOKEN) when TOKEN exists as a clock target, else nil."
+  (cond
+   ((string-prefix-p "C-" token)
+    (when (member token (agent-chat--clock-target-candidates 'campaign))
+      (cons 'campaign token)))
+   ((string-prefix-p "M-" token)
+    (when (member token (agent-chat--clock-target-candidates 'mission))
+      (cons 'mission token)))
+   ((string-prefix-p "E-" token)
+    (when (member token (agent-chat--clock-target-candidates 'excursion))
+      (cons 'excursion token)))))
+
+(defun agent-chat--auto-clock-target-from-text (text)
+  "Return a witnessed auto-clock target plist for TEXT, or nil.
+The rule is explicit-not-fuzzy: all C-/M-/E- tokens in TEXT must resolve by
+exact ID, and at most one target may be named per level."
+  (let* ((tokens (agent-chat--explicit-clock-target-tokens text))
+         (resolved (delq nil (mapcar #'agent-chat--resolve-auto-clock-token tokens)))
+         (unresolved (seq-remove
+                      (lambda (token)
+                        (assoc token (mapcar (lambda (entry)
+                                               (cons (cdr entry) t))
+                                             resolved)))
+                      tokens))
+         campaign mission excursion ambiguous)
+    (dolist (entry resolved)
+      (pcase (car entry)
+        ('campaign
+         (if campaign (setq ambiguous t) (setq campaign (cdr entry))))
+        ('mission
+         (if mission (setq ambiguous t) (setq mission (cdr entry))))
+        ('excursion
+         (if excursion (setq ambiguous t) (setq excursion (cdr entry))))))
+    (when (and resolved (null unresolved) (not ambiguous))
+      (list :campaign-id campaign
+            :mission-id mission
+            :excursion-id excursion
+            :tokens tokens
+            :rule "explicit-resolved-target"))))
+
+(defun agent-chat--clock-target-equal-p (target)
+  "Return non-nil when TARGET equals the current buffer clock target."
+  (and (equal (plist-get target :campaign-id) agent-chat--campaign-id)
+       (equal (plist-get target :mission-id) agent-chat--mission-id)
+       (equal (plist-get target :excursion-id) agent-chat--excursion-id)))
+
+(defun agent-chat--normalize-creation-mission-id (mission)
+  "Return normalized mission id for creation-clock MISSION."
+  (when-let ((id (agent-chat-normalize-mission-id mission)))
+    (if (string-prefix-p "M-" id)
+        id
+      (concat "M-" id))))
+
+(defun agent-chat--mission-clock-target-exists-p (mission)
+  "Return non-nil when MISSION resolves as a filesystem-backed mission target."
+  (member mission (agent-chat--clock-target-candidates 'mission)))
+
+(defun agent-chat--cancel-creation-clock-watch! ()
+  "Cancel the current buffer's creation-clock watch timer, if any."
+  (when (timerp agent-chat--creation-clock-watch-timer)
+    (cancel-timer agent-chat--creation-clock-watch-timer))
+  (setq agent-chat--creation-clock-watch-timer nil))
+
+(defun agent-chat-creation-clock-mission! (mission &optional source)
+  "Clock this buffer into just-created MISSION when it now exists.
+This is a distinct post-creation rule, not the mention-based auto-clock rule:
+it may switch an already active clock because mission creation is explicit
+operator intent, not a passing mention.  Return the audit witness, or nil when
+MISSION is not yet a filesystem-backed mission target."
+  (interactive (list (agent-chat--read-clock-id 'mission "Created mission M-*: ")
+                     "manual-creation-clock"))
+  (when-let ((mission-id (agent-chat--normalize-creation-mission-id mission)))
+    (when (agent-chat--mission-clock-target-exists-p mission-id)
+      (let ((old-target (agent-chat-mission-label)))
+        (agent-chat-set-clock! (list :campaign-id nil
+                                     :mission-id mission-id
+                                     :excursion-id nil)
+                               nil t)
+        (setq agent-chat--last-auto-clock-witness
+              `((rule . "creation-clock")
+                (source . ,(or source "mission-created"))
+                (tokens . ,(vector mission-id))
+                (old-target . ,old-target)
+                (new-target . ,(agent-chat-mission-label))))
+        (agent-chat-insert-message
+         "system"
+         (format "[creation-clock: %s -> %s via %s]"
+                 old-target
+                 (agent-chat-mission-label)
+                 mission-id))
+        agent-chat--last-auto-clock-witness))))
+
+(defun agent-chat-watch-creation-clock-mission! (mission &optional source timeout-seconds interval-seconds)
+  "Watch for MISSION to be created, then clock this buffer into it.
+The watcher resolves through `agent-chat--clock-target-candidates', so it only
+fires after the mission exists on disk.  It deliberately does not require the
+no-target floor; the creation-clock rule is explicit creation intent."
+  (when-let ((mission-id (agent-chat--normalize-creation-mission-id mission)))
+    (agent-chat--cancel-creation-clock-watch!)
+    (let* ((buf (current-buffer))
+           (started (float-time))
+           (timeout (or timeout-seconds 7200))
+           (interval (or interval-seconds 5))
+           timer)
+      (setq timer
+            (run-at-time
+             0 interval
+             (lambda ()
+               (if (not (buffer-live-p buf))
+                   (cancel-timer timer)
+                 (with-current-buffer buf
+                   (cond
+                    ((agent-chat-creation-clock-mission! mission-id
+                                                         (or source "mission-created"))
+                     (agent-chat--cancel-creation-clock-watch!))
+                    ((> (- (float-time) started) timeout)
+                     (agent-chat--cancel-creation-clock-watch!))))))))
+      (setq agent-chat--creation-clock-watch-timer timer)
+      mission-id)))
+
+(defun agent-chat--maybe-auto-clock-from-turn (text)
+  "Auto-clock from explicit resolved target mentions in TEXT.
+Only fires when the buffer is at the no-target floor (no campaign, mission, or
+excursion clocked): auto-clock fills the floor, it never switches or overrides
+an active clocking.  A mention made while already clocked is left for
+turn-level mention capture (NNexus-style), not promotion.
+Returns the promotion witness plist, or nil when no promotion happened."
+  (when (and agent-chat-auto-clock-enabled
+             (null agent-chat--campaign-id)
+             (null agent-chat--mission-id)
+             (null agent-chat--excursion-id))
+    (when-let ((target (agent-chat--auto-clock-target-from-text text)))
+      (unless (agent-chat--clock-target-equal-p target)
+        (let ((old-target (agent-chat-mission-label)))
+          (agent-chat-set-clock! (list :campaign-id (plist-get target :campaign-id)
+                                       :mission-id (plist-get target :mission-id)
+                                       :excursion-id (plist-get target :excursion-id))
+                                 nil t)
+          (setq agent-chat--last-auto-clock-witness
+                `((rule . ,(plist-get target :rule))
+                  (source . "user-turn-explicit-token")
+                  (tokens . ,(apply #'vector (plist-get target :tokens)))
+                  (old-target . ,old-target)
+                  (new-target . ,(agent-chat-mission-label))))
+          (agent-chat-insert-message
+           "system"
+           (format "[auto-clock: %s -> %s via %s]"
+                   old-target
+                   (agent-chat-mission-label)
+                   (string-join (plist-get target :tokens) ", ")))
+          agent-chat--last-auto-clock-witness)))))
+
+(defun agent-chat--edit-activity-file-target (file)
+  "Return an exact clock target plist witnessed by saved mission doc FILE.
+Only C-/M-/E- markdown files under a holes/ tree are accepted, and the basename
+must resolve exactly through `agent-chat--clock-target-candidates'."
+  (let* ((path (and file (expand-file-name file)))
+         (base (and path (file-name-nondirectory path))))
+    (when (and path
+               base
+               (string-match-p "\\(?:\\`\\|/\\)holes/" path)
+               (string-match "\\`\\([CME]-[^/]+\\)\\.md\\'" base))
+      (let* ((id (match-string 1 base))
+             (kind (cond
+                    ((string-prefix-p "C-" id) 'campaign)
+                    ((string-prefix-p "M-" id) 'mission)
+                    ((string-prefix-p "E-" id) 'excursion))))
+        (when (and kind (member id (agent-chat--clock-target-candidates kind)))
+          (list :campaign-id (and (eq kind 'campaign) id)
+                :mission-id (and (eq kind 'mission) id)
+                :excursion-id (and (eq kind 'excursion) id)
+                :id id
+                :file path))))))
+
+(defun agent-chat--edit-activity-prune-events (now)
+  "Drop edit-activity save events outside the configured window at NOW."
+  (let ((cutoff (- now agent-chat-edit-activity-clock-window-seconds)))
+    (maphash
+     (lambda (id events)
+       (let ((kept (seq-filter (lambda (event) (>= (car event) cutoff))
+                               events)))
+         (if kept
+             (puthash id kept agent-chat--edit-activity-save-events)
+           (remhash id agent-chat--edit-activity-save-events))))
+     agent-chat--edit-activity-save-events)))
+
+(defun agent-chat--edit-activity-counts (now)
+  "Return recent edit-activity save counts at NOW as ((ID . COUNT) ...)."
+  (agent-chat--edit-activity-prune-events now)
+  (let (counts)
+    (maphash
+     (lambda (id events)
+       (push (cons id (length events)) counts))
+     agent-chat--edit-activity-save-events)
+    counts))
+
+(defun agent-chat--edit-activity-dominant-p (target-id now)
+  "Return non-nil when TARGET-ID is the clearly dominant recent edit target.
+The winner must meet the save threshold and exceed the next target by a
+conservative margin.  With the default threshold of 3, alternating edits like
+foo/bar/foo/bar/foo do not switch at a transient 3-to-2 edge."
+  (let* ((counts (agent-chat--edit-activity-counts now))
+         (target-count (or (cdr (assoc target-id counts)) 0))
+         (others (seq-remove (lambda (entry) (equal (car entry) target-id))
+                             counts))
+         (next-count (or (car (sort (mapcar #'cdr others) #'>)) 0))
+         (margin (max 1 (1- agent-chat-edit-activity-clock-threshold))))
+    (and (>= target-count agent-chat-edit-activity-clock-threshold)
+         (>= target-count (+ next-count margin)))))
+
+(defun agent-chat--edit-activity-target-for-id (target)
+  "Return clock target plist for exact edit-activity TARGET."
+  (list :campaign-id (plist-get target :campaign-id)
+        :mission-id (plist-get target :mission-id)
+        :excursion-id (plist-get target :excursion-id)))
+
+(defun agent-chat--maybe-edit-activity-reclock (target count)
+  "Maybe switch the current chat buffer to edit-activity TARGET with COUNT.
+Unlike the explicit mention rule, this may switch an already active clock
+because repeated editing is treated as operator intent."
+  (let* ((target-id (plist-get target :id))
+         (clock-target (agent-chat--edit-activity-target-for-id target)))
+    (when (and target-id
+               (not (agent-chat--clock-target-equal-p clock-target))
+               (not (equal target-id agent-chat--edit-activity-last-reclock-target)))
+      (let ((old-target (agent-chat-mission-label)))
+        (agent-chat-set-clock! clock-target nil t)
+        (setq agent-chat--edit-activity-last-reclock-target target-id)
+        (setq agent-chat--last-auto-clock-witness
+              `((rule . "edit-activity")
+                (source . "repeated-file-edits")
+                (file . ,(plist-get target :file))
+                (edit-count . ,count)
+                (window-seconds . ,agent-chat-edit-activity-clock-window-seconds)
+                (old-target . ,old-target)
+                (new-target . ,(agent-chat-mission-label))))
+        (agent-chat-insert-message
+         "system"
+         (format "[edit-activity-clock: %s -> %s via %s]"
+                 old-target
+                 (agent-chat-mission-label)
+                 (plist-get target :file)))
+        agent-chat--last-auto-clock-witness))))
+
+(defun agent-chat--chat-buffers ()
+  "Return live buffers that appear to be agent-chat buffers."
+  (seq-filter
+   (lambda (buf)
+     (and (buffer-live-p buf)
+          (buffer-local-boundp 'agent-chat--agent-name buf)
+          (buffer-local-value 'agent-chat--agent-name buf)
+          (buffer-local-boundp 'agent-chat--prompt-marker buf)
+          (markerp (buffer-local-value 'agent-chat--prompt-marker buf))))
+   (buffer-list)))
+
+(defun agent-chat--record-edit-activity-save (file &optional now buffers)
+  "Record mission doc FILE save and maybe reclock chat BUFFERS.
+NOW is an epoch timestamp used by batch smoke checks."
+  (when (and agent-chat-edit-activity-clock-enabled
+             (> agent-chat-edit-activity-clock-threshold 0)
+             (> agent-chat-edit-activity-clock-window-seconds 0))
+    (when-let ((target (agent-chat--edit-activity-file-target file)))
+      (let* ((timestamp (or now (float-time)))
+             (target-id (plist-get target :id))
+             (events (gethash target-id agent-chat--edit-activity-save-events)))
+        (puthash target-id
+                 (cons (cons timestamp (plist-get target :file)) events)
+                 agent-chat--edit-activity-save-events)
+        (agent-chat--edit-activity-prune-events timestamp)
+        (when (agent-chat--edit-activity-dominant-p target-id timestamp)
+          (let ((count (length (gethash target-id
+                                        agent-chat--edit-activity-save-events)))
+                witnesses)
+            (dolist (buf (or buffers (agent-chat--chat-buffers)))
+              (when (buffer-live-p buf)
+                (with-current-buffer buf
+                  (when-let ((witness (agent-chat--maybe-edit-activity-reclock
+                                       target count)))
+                    (push witness witnesses)))))
+            (nreverse witnesses)))))))
+
+(defun agent-chat--after-save-edit-activity-clock ()
+  "After-save hook for edit-activity reclocking from mission docs."
+  (when buffer-file-name
+    (agent-chat--record-edit-activity-save buffer-file-name)))
+
+(add-hook 'after-save-hook #'agent-chat--after-save-edit-activity-clock)
+
+(defun agent-chat-clock-campaign (campaign)
+  "Clock into CAMPAIGN only."
+  (interactive (list (agent-chat--read-clock-id 'campaign "Campaign C-*: ")))
+  (agent-chat-set-clock! (list :campaign-id campaign
+                               :mission-id nil
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-mission (mission)
+  "Clock into MISSION only."
+  (interactive (list (agent-chat--read-clock-id 'mission "Mission M-*: ")))
+  (agent-chat-set-clock! (list :campaign-id nil
+                               :mission-id mission
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-campaign-mission (campaign mission)
+  "Clock into CAMPAIGN and MISSION."
+  (interactive
+   (list (agent-chat--read-clock-id 'campaign "Campaign C-*: ")
+         (agent-chat--read-clock-id 'mission "Mission M-*: ")))
+  (agent-chat-set-clock! (list :campaign-id campaign
+                               :mission-id mission
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-campaign-excursion (campaign excursion)
+  "Clock into CAMPAIGN and EXCURSION."
+  (interactive
+   (list (agent-chat--read-clock-id 'campaign "Campaign C-*: ")
+         (agent-chat--read-clock-id 'excursion "Excursion E-*: ")))
+  (agent-chat-set-clock! (list :campaign-id campaign
+                               :mission-id nil
+                               :excursion-id excursion)
+                         nil t))
+
+(defun agent-chat-clock-mission-excursion (mission excursion)
+  "Clock into MISSION and EXCURSION."
+  (interactive
+   (list (agent-chat--read-clock-id 'mission "Mission M-*: ")
+         (agent-chat--read-clock-id 'excursion "Excursion E-*: ")))
+  (agent-chat-set-clock! (list :campaign-id nil
+                               :mission-id mission
+                               :excursion-id excursion)
+                         nil t))
+
+(defun agent-chat-clock-excursion (excursion)
+  "Clock into EXCURSION under the current campaign/mission path."
+  (interactive (list (agent-chat--read-clock-id 'excursion "Excursion E-*: ")))
+  (agent-chat-set-clock! (list :campaign-id agent-chat--campaign-id
+                               :mission-id agent-chat--mission-id
+                               :excursion-id excursion)
+                         nil t))
+
+(defun agent-chat-clock-clear-excursion ()
+  "Clear the active excursion for the hydra, preserving campaign/mission."
+  (interactive)
+  (agent-chat-set-clock! (list :campaign-id agent-chat--campaign-id
+                               :mission-id agent-chat--mission-id
+                               :excursion-id nil)
+                         nil t))
+
+(defun agent-chat-clock-no-mission ()
+  "Clear the entire clock target."
+  (interactive)
+  (agent-chat-set-clock! nil nil t))
+
+(defun agent-chat-clock-menu ()
+  "Show the 🍒 clock-in hydra."
+  (interactive)
+  (if (and (or (fboundp 'defhydra)
+               (require 'hydra nil t))
+           (fboundp 'defhydra))
+      (progn
+        (eval
+         '(defhydra agent-chat-clock-hydra
+            (:hint nil :color blue)
+            "
+🍒 Clock target: %(agent-chat-mission-label)
+
+_c_: Campaign              _m_: Mission              _b_: bare Excursion
+_p_: Campaign → Mission    _x_: Campaign → Excursion _v_: Mission → Excursion
+_e_: clear Excursion       _n_: no mission           _q_: quit
+"
+            ("c" agent-chat-clock-campaign)
+            ("m" agent-chat-clock-mission)
+            ("p" agent-chat-clock-campaign-mission)
+            ("x" agent-chat-clock-campaign-excursion)
+            ("v" agent-chat-clock-mission-excursion)
+            ("b" agent-chat-clock-excursion)
+            ("e" agent-chat-clock-clear-excursion)
+            ("n" agent-chat-clock-no-mission)
+            ("q" nil)))
+        (agent-chat-clock-hydra/body))
+    (call-interactively #'agent-chat-clock-in)))
+
+(defun agent-chat--git-root (&optional directory)
+  "Return git root for DIRECTORY, or nil when DIRECTORY is not in a repo."
+  (let ((default-directory (or directory default-directory)))
+    (when (executable-find "git")
+      (let ((out (with-temp-buffer
+                   (when (zerop (call-process "git" nil t nil
+                                              "rev-parse" "--show-toplevel"))
+                     (string-trim (buffer-string))))))
+        (unless (or (null out) (string-empty-p out))
+          (file-name-as-directory out))))))
+
+(defun agent-chat--discover-commit-repo-roots ()
+  "Return repo roots to scan for commits around a turn."
+  (let* ((configured (and agent-chat-commit-repo-roots
+                          (mapcar #'file-name-as-directory
+                                  agent-chat-commit-repo-roots)))
+         (code-dir (expand-file-name "~/code"))
+         (futon-roots
+          (when (file-directory-p code-dir)
+            (cl-loop for path in (directory-files code-dir t "\\`futon[0-9a-z].*")
+                     when (file-directory-p (expand-file-name ".git" path))
+                     collect (file-name-as-directory path))))
+         (current (agent-chat--git-root default-directory)))
+    (delete-dups (delq nil (append configured (list current) futon-roots)))))
+
+(defun agent-chat--git-head (repo)
+  "Return current HEAD hash for REPO, or nil."
+  (let ((default-directory repo))
+    (with-temp-buffer
+      (when (zerop (call-process "git" nil t nil "rev-parse" "HEAD"))
+        (string-trim (buffer-string))))))
+
+(defun agent-chat-start-turn-commit-window! ()
+  "Capture git HEADs at the start of the current turn."
+  (setq agent-chat--turn-git-heads
+        (cl-loop for repo in (agent-chat--discover-commit-repo-roots)
+                 for head = (agent-chat--git-head repo)
+                 when head collect (cons repo head))))
+
+(defun agent-chat--parse-git-log-records (repo text)
+  "Parse git log TEXT for REPO into JSON-encodable commit alists."
+  (cl-loop for record in (split-string (or text "") "\036" t)
+           for fields = (split-string record "\037")
+           when (>= (length fields) 4)
+           collect `((repo . ,(file-name-nondirectory
+                               (directory-file-name repo)))
+                     (repo-path . ,(directory-file-name repo))
+                     (sha . ,(nth 0 fields))
+                     (committed-at . ,(nth 1 fields))
+                     (author . ,(nth 2 fields))
+                     (subject . ,(nth 3 fields)))))
+
+(defun agent-chat--git-commits-after (repo old-head)
+  "Return commits in REPO after OLD-HEAD."
+  (let ((default-directory repo))
+    (with-temp-buffer
+      (when (zerop (call-process
+                    "git" nil t nil
+                    "log" "--reverse"
+                    "--format=%H%x1f%cI%x1f%an%x1f%s%x1e"
+                    (format "%s..HEAD" old-head)))
+        (agent-chat--parse-git-log-records repo (buffer-string))))))
+
+(defun agent-chat-finish-turn-commits ()
+  "Return commits made since `agent-chat-start-turn-commit-window!'."
+  (let ((commits
+         (cl-loop for (repo . old-head) in agent-chat--turn-git-heads
+                  for new-head = (agent-chat--git-head repo)
+                  when (and new-head (not (equal old-head new-head)))
+                  append (agent-chat--git-commits-after repo old-head))))
+    (setq agent-chat--turn-git-heads nil)
+    commits))
 
 (defun agent-chat-insert-message (name text)
   "Insert a message from NAME with TEXT above the prompt.
@@ -184,7 +1091,6 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
                   (overlay-put ov 'face 'agent-chat-tool-line-face)
                   (overlay-put ov 'priority 10))))))))
     (when at-end
-      (goto-char (point-max))
       (agent-chat-scroll-to-bottom))))
 
 (defun agent-chat-scroll-to-bottom ()
@@ -193,8 +1099,8 @@ Only scrolls when the end of the buffer is already visible in the
 window, meaning the user is following the output. If the user has
 scrolled away, their view and cursor are left undisturbed."
   (when-let ((win (get-buffer-window (current-buffer))))
-    (when (pos-visible-in-window-p (point-max) win)
-      (set-window-point win (point-max))
+    (when (and (pos-visible-in-window-p (point-max) win)
+               (>= (window-point win) (max (point-min) (1- (point-max)))))
       (with-selected-window win
         (recenter -2)))))
 
@@ -386,17 +1292,26 @@ Returns the buffer content up to the separator line."
 ;; --- HTTP helpers ---
 
 (defun agent-chat--json-encodable (value)
-  "Return VALUE converted to a form acceptable to Emacs JSON encoders."
+  "Return VALUE converted to a form acceptable to Emacs JSON encoders.
+Booleans and nil must be handled BEFORE the generic symbol case: in Emacs
+Lisp `nil' and `t' are symbols, so `(symbol-name nil)' => \"nil\" and
+`(symbol-name t)' => \"t\".  Letting those through stamped the literal string
+\"nil\" into restore payloads (session-id/mission-id/...), which then poisoned
+the roster and crashed invoke on `(subs \"nil\" 0 8)'.  Here `t' maps to JSON
+true and nil-valued object keys are OMITTED (server treats missing == null)."
   (cond
    ((hash-table-p value) value)
+   ((eq value t) t)
+   ((null value) nil)
    ((symbolp value)
     (symbol-name value))
    ((and (listp value) (consp value) (consp (car value)))
     (let ((obj (make-hash-table :test 'equal)))
       (dolist (entry value obj)
-        (puthash (format "%s" (car entry))
-                 (agent-chat--json-encodable (cdr entry))
-                 obj))))
+        (unless (null (cdr entry))
+          (puthash (format "%s" (car entry))
+                   (agent-chat--json-encodable (cdr entry))
+                   obj)))))
    ((listp value)
     (mapcar #'agent-chat--json-encodable value))
    ((vectorp value)
@@ -735,9 +1650,17 @@ additionally posted to the evidence HTTP endpoint."
              (on-launch-error (plist-get hooks :on-launch-error)))
         (delete-region (marker-position agent-chat--input-start) (point-max))
         (agent-chat-insert-message "joe" trimmed)
+        (agent-chat--maybe-auto-clock-from-turn trimmed)
         (when (functionp before-send)
           (funcall before-send trimmed))
+        (setq agent-chat--last-auto-clock-witness nil)
         (agent-chat-insert-thinking)
+        (cl-incf agent-chat--turn-counter)
+        (setq agent-chat--current-turn-id
+              (format "%s-turn-%d"
+                      (or agent-chat--agent-id agent-name "agent")
+                      agent-chat--turn-counter))
+        (agent-chat-start-turn-commit-window!)
         (setq agent-chat--turn-start-time (float-time))
         (redisplay)
         (condition-case err
@@ -762,22 +1685,12 @@ additionally posted to the evidence HTTP endpoint."
                                     (agent-chat-insert-message agent-name response)
                                     (when (functionp on-response)
                                       (funcall on-response response))
-                                    ;; Turn timing and invariants
-                                    (let ((elapsed (if agent-chat--turn-start-time
-                                                       (- (float-time)
-                                                          agent-chat--turn-start-time)
-                                                     0)))
-                                      (setq agent-chat--turn-start-time nil)
-                                      (when (functionp agent-chat--on-turn-end)
-                                        (condition-case turn-err
-                                            (funcall agent-chat--on-turn-end elapsed)
-                                          (error
-                                           (message "agent-chat turn-end hook error: %s"
-                                                    (error-message-string turn-err))))))
-                                    (goto-char (point-max))
+                                    ;; Turn timing, invariants, and transcript flair.
+                                    (agent-chat-finish-turn!)
                                     (agent-chat-scroll-to-bottom))))))))
           (error
            (setq agent-chat--pending-process nil)
+           (setq agent-chat--turn-git-heads nil)
            (agent-chat-remove-thinking)
            (let ((msg (format "[Error launching %s process: %s]"
                               agent-name
@@ -839,6 +1752,10 @@ CONFIG keys:
   :face-alist  - alist of (name . face) for speakers
   :agent-name  - \"claude\" or \"codex\"
   :agent-id    - registry agent-id (e.g. \"claude-1\") for walkie-talkie
+  :campaign-id - optional campaign id clocked into this session
+  :mission-id  - optional mission id clocked into this session
+  :excursion-id - optional excursion id clocked into this session
+  :clock-change-fn - optional 0-arg function called after clock-in changes
   :thinking-text   - e.g. \"claude is thinking...\"
   :thinking-prop   - symbol for text property"
   (let ((title (plist-get config :title))
@@ -848,6 +1765,10 @@ CONFIG keys:
         (face-alist (plist-get config :face-alist))
         (agent-name (plist-get config :agent-name))
         (agent-id (plist-get config :agent-id))
+        (campaign-id (plist-get config :campaign-id))
+        (mission-id (plist-get config :mission-id))
+        (excursion-id (plist-get config :excursion-id))
+        (clock-change-fn (plist-get config :clock-change-fn))
         (thinking-text (plist-get config :thinking-text))
         (thinking-prop (plist-get config :thinking-prop))
         (evidence-url (plist-get config :evidence-url))
@@ -857,6 +1778,10 @@ CONFIG keys:
           (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
     (setq agent-chat--agent-name agent-name)
     (setq agent-chat--agent-id agent-id)
+    (setq agent-chat--campaign-id (agent-chat-normalize-campaign-id campaign-id))
+    (setq agent-chat--mission-id (agent-chat-normalize-mission-id mission-id))
+    (setq agent-chat--excursion-id (agent-chat-normalize-excursion-id excursion-id))
+    (setq agent-chat--clock-change-fn clock-change-fn)
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
@@ -870,7 +1795,7 @@ CONFIG keys:
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face)))
-    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session\n\n"
+    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers
     (setq agent-chat--prompt-marker (point-marker))
@@ -880,6 +1805,7 @@ CONFIG keys:
       (insert "> ")
       (overlay-put (make-overlay prompt-start (point)) 'face prompt-face))
     (setq agent-chat--input-start (point-marker))
+    (set-marker-insertion-type agent-chat--input-start nil)
     ;; Marker advances when messages are inserted
     (set-marker-insertion-type agent-chat--prompt-marker t)
     (agent-chat-enable-markdown-font-lock)
@@ -903,21 +1829,24 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
 
 (defun agent-chat--session-header-text ()
   "Return the formatted session header text with turn counts."
-  (format "(session: %s%s)"
+  (format "(session: %s%s) %s"
           (or agent-chat--session-id "pending")
           (if (numberp agent-chat--session-turn-count)
               (format ", turns: %d" agent-chat--session-turn-count)
-            "")))
+            "")
+          (agent-chat-mission-segment)))
 
 (defun agent-chat--update-session-header-line ()
   "Refresh the session header line (session id + turns)."
   (let ((inhibit-read-only t))
     (save-excursion
       (goto-char (point-min))
-      (when (re-search-forward "(session:[^\n]+)" (line-end-position 2) t)
-        (replace-match (propertize (agent-chat--session-header-text)
-                                   'face 'font-lock-comment-face)
-                       nil nil)))))
+      (when (re-search-forward "(session:" (line-end-position 2) t)
+        (let ((beg (match-beginning 0))
+              (end (line-end-position)))
+          (delete-region beg end)
+          (insert (propertize (agent-chat--session-header-text)
+                              'face 'font-lock-comment-face)))))))
 
 (defun agent-chat-update-session-id (new-id)
   "Update the session ID displayed in the buffer header.
@@ -980,6 +1909,26 @@ Replaces the `(session: ...)' text in the first line."
         (or (plist-get parsed :evidence/id)
             (plist-get (plist-get parsed :entry) :evidence/id))))))
 
+(defun agent-chat--mission-body-fields ()
+  "Return campaign/mission/excursion evidence fields for the current buffer."
+  (let ((campaign (agent-chat-normalize-campaign-id agent-chat--campaign-id))
+        (mission (agent-chat-normalize-mission-id agent-chat--mission-id))
+        (excursion (agent-chat-normalize-excursion-id agent-chat--excursion-id)))
+    (append
+     (when campaign
+       `((campaign-id . ,campaign)
+         (clocked-campaign . ,campaign)))
+     (when mission
+       `((mission-id . ,mission)
+         (clocked-mission . ,mission)))
+     (when excursion
+       `((excursion-id . ,excursion)
+         (clocked-excursion . ,excursion)))
+     (when (or campaign mission excursion)
+       `((clocked-target . ,(agent-chat-mission-label))))
+     (when agent-chat--last-auto-clock-witness
+       `((auto-clock-witness . ,agent-chat--last-auto-clock-witness))))))
+
 (defun agent-chat-evidence-fetch-latest-id (evidence-url timeout sid)
   "Fetch most recent evidence id for session SID."
   (when (and (agent-chat-evidence-enabled-p evidence-url)
@@ -1028,9 +1977,10 @@ Replaces the `(session: ...)' text in the first line."
                        (claim-type . "goal")
                        (author . ,(or (getenv "USER") user-login-name "joe"))
                        (session-id . ,sid)
-                       (body . ((event . "session-start")
-                                (source . ,source)
-                                (mode . "emacs")))
+                       (body . ,(append `((event . "session-start")
+                                          (source . ,source)
+                                          (mode . "emacs"))
+                                        (agent-chat--mission-body-fields)))
                        (tags . ,(apply #'vector tags)))))
         (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
           (set last-id-var new-id))
@@ -1038,6 +1988,30 @@ Replaces the `(session: ...)' text in the first line."
     (unless (and (stringp (symbol-value last-id-var))
                  (not (string-empty-p (symbol-value last-id-var))))
       (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t))))
+
+(defun agent-chat--maybe-run-affect-live (evidence-url)
+  "Best-effort non-blocking refresh of live affect material."
+  (when (and agent-chat-affect-live-enabled
+             (listp agent-chat-affect-live-command)
+             (stringp evidence-url)
+             (agent-chat-evidence-enabled-p evidence-url)
+             (not (process-live-p agent-chat--affect-live-process)))
+    (let* ((default-directory agent-chat-affect-live-directory)
+           (command (append agent-chat-affect-live-command
+                            (list "--evidence-url" evidence-url))))
+      (setq agent-chat--affect-live-process
+            (make-process
+             :name "agent-chat-affect-live"
+             :buffer nil
+             :command command
+             :noquery t
+             :sentinel
+             (lambda (proc event)
+               (unless (process-live-p proc)
+                 (setq agent-chat--affect-live-process nil))
+               (unless (string-match-p "\\`finished" event)
+                 (message "agent-chat affect live runner: %s"
+                          (string-trim event)))))))))
 
 (defun agent-chat-emit-turn-evidence!
     (evidence-url timeout log-turns sid role text assistant-author transport tags session-var last-id-var)
@@ -1066,10 +2040,12 @@ Replaces the `(session: ...)' text in the first line."
                       (claim-type . ,claim-type)
                       (author . ,author)
                       (session-id . ,sid)
-                      (body . ((event . "chat-turn")
-                               (transport . ,transport)
-                               (role . ,role)
-                               (text . ,trimmed)))
+                      (body . ,(append `((event . "chat-turn")
+                                         (transport . ,transport)
+                                         (role . ,role)
+                                         (turn-id . ,agent-chat--current-turn-id)
+                                         (text . ,trimmed))
+                                       (agent-chat--mission-body-fields)))
                       (tags . ,(apply #'vector (append tags (list role-tag)))))))
       (when (and (stringp (symbol-value last-id-var))
                  (not (string-empty-p (symbol-value last-id-var))))
@@ -1077,7 +2053,44 @@ Replaces the `(session: ...)' text in the first line."
                               `((in-reply-to . ,(symbol-value last-id-var))))))
       (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
         (set session-var sid)
-        (set last-id-var new-id)))))
+        (set last-id-var new-id)
+        (agent-chat--maybe-run-affect-live evidence-url)))))
+
+(defun agent-chat-emit-turn-commits-evidence!
+    (evidence-url timeout sid assistant-author transport session-var last-id-var)
+  "Emit a turn-commits evidence event for commits made in the current turn."
+  (when (and (stringp sid)
+             (not (string-empty-p sid))
+             (agent-chat-evidence-enabled-p evidence-url))
+    (let ((commits (agent-chat-finish-turn-commits)))
+      (when commits
+        (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var)
+        (let* ((body (append `((event . "turn-commits")
+                               (transport . ,transport)
+                               (turn-id . ,agent-chat--current-turn-id)
+                               (commit-count . ,(length commits))
+                               (commits . ,(apply #'vector commits)))
+                             (agent-chat--mission-body-fields)))
+               (tags (append (list transport "turn-commits" "git")
+                             (when (or agent-chat--campaign-id
+                                       agent-chat--mission-id
+                                       agent-chat--excursion-id)
+                               (list "target-clocked"))))
+               (payload `((subject . ((ref/type . "session")
+                                      (ref/id . ,sid)))
+                          (type . "coordination")
+                          (claim-type . "observation")
+                          (author . ,assistant-author)
+                          (session-id . ,sid)
+                          (body . ,body)
+                          (tags . ,(apply #'vector tags)))))
+          (when (and (stringp (symbol-value last-id-var))
+                     (not (string-empty-p (symbol-value last-id-var))))
+            (setq payload (append payload
+                                  `((in-reply-to . ,(symbol-value last-id-var))))))
+          (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
+            (set session-var sid)
+            (set last-id-var new-id)))))))
 
 (defconst agent-chat--session-turn-limit 1000
   "Maximum number of evidence entries to fetch when counting session turns.")
@@ -1108,11 +2121,13 @@ Replaces the `(session: ...)' text in the first line."
 (defun agent-chat--refresh-session-turn-count ()
   "Refresh cached session turn count by querying the evidence API."
   (if (and (stringp agent-chat--session-id)
-           (not (string-empty-p agent-chat--session-id)))
+           (not (string-empty-p agent-chat--session-id))
+           (not (string= agent-chat--session-id "pending"))
+           (not (string-match-p "(awaiting session)" agent-chat--session-id)))
       (let ((count (agent-chat--fetch-session-turn-count agent-chat--session-id)))
         (setq agent-chat--session-turn-count count)
         (agent-chat--update-session-header-line))
-    (setq agent-chat--session-turn-count nil)
+    (setq agent-chat--session-turn-count 0)
     (agent-chat--update-session-header-line)))
 
 (defun agent-chat-note-turn-recorded ()
@@ -1122,6 +2137,17 @@ Replaces the `(session: ...)' text in the first line."
         (cl-incf agent-chat--session-turn-count)
       (setq agent-chat--session-turn-count 1))
     (agent-chat--update-session-header-line)))
+
+(defun agent-chat-stage-pending-user-turn (text)
+  "Remember TEXT as the current user turn until a session ID is known."
+  (when (and (stringp text)
+             (not (string-empty-p (string-trim text))))
+    (setq agent-chat--pending-user-turn-text (string-trim text))))
+
+(defun agent-chat-consume-pending-user-turn ()
+  "Return and clear any staged sessionless user turn text."
+  (prog1 agent-chat--pending-user-turn-text
+    (setq agent-chat--pending-user-turn-text nil)))
 
 ;;; Transport availability checks (shared)
 
@@ -1181,6 +2207,13 @@ Replaces the `(session: ...)' text in the first line."
 (defvar agent-chat--popup-window nil
   "Window used for terminal-mode popup fallback.")
 
+(defvar agent-chat--posframe-available
+  (require 'posframe nil t)
+  "Cached availability of the posframe feature.
+The cursor-sensor → tool-overlay-popup path can invoke popup-show /
+popup-hide hundreds of times per second; calling `require' each time
+costs a load-path scan whose answer never changes between invocations.")
+
 (defun agent-chat-popup-show (text &optional title)
   "Show TEXT in a floating popup near point.
 Uses posframe in GUI Emacs, a transient bottom window in terminal.
@@ -1195,10 +2228,13 @@ Optional TITLE appears as a header line."
         (when title
           (setq-local header-line-format
                       (propertize (format " %s" title) 'face 'bold)))
-        (special-mode)))
+        ;; Only initialize mode on first creation; re-running special-mode
+        ;; fires global-mode-enable hooks (corfu, font-lock, ...) every show.
+        (unless (derived-mode-p 'special-mode)
+          (special-mode))))
     (if (display-graphic-p)
         ;; GUI: posframe child frame
-        (when (require 'posframe nil t)
+        (when agent-chat--posframe-available
           (posframe-show buf
                          :position (point)
                          :max-width agent-chat-popup-max-width
@@ -1226,7 +2262,7 @@ Optional TITLE appears as a header line."
   "Dismiss the popup."
   (interactive)
   (if (display-graphic-p)
-      (when (require 'posframe nil t)
+      (when agent-chat--posframe-available
         (posframe-hide agent-chat--popup-buffer))
     (when (window-live-p agent-chat--popup-window)
       (quit-window nil agent-chat--popup-window)

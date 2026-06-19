@@ -20,6 +20,7 @@
    Design: emacsclient is the transport. No protocol to design, no
    endpoint to build. Emacs IS the sliding blackboard."
   (:require [clojure.string :as str]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.dev.config :as config]
             [futon3c.evidence.store :as estore])
   (:import [java.util UUID]))
@@ -102,6 +103,13 @@
    Can be toggled at runtime with `set-agents-window-display!`."
   (atom (env-bool (System/getenv "FUTON3C_DISPLAY_AGENTS_WINDOW"))))
 
+(def !external-hud-enabled
+  "When true, blackboard buffers update normally but do not auto-display in
+   the main Emacs layout. Intended for a dedicated TTY HUD frame."
+  (atom (boolean
+         (when-let [raw (System/getenv "FUTON3C_EXTERNAL_HUD")]
+           (env-bool raw)))))
+
 (defn agents-window-display-enabled?
   "Return true when *agents* should be force-displayed."
   []
@@ -112,6 +120,17 @@
    Returns the new boolean state."
   [enabled?]
   (reset! !display-agents-window (boolean enabled?)))
+
+(defn external-hud-enabled?
+  "Return true when blackboard HUD buffers should avoid forced GUI popups."
+  []
+  @!external-hud-enabled)
+
+(defn set-external-hud-enabled!
+  "Enable or disable external HUD mode.
+   Returns the new boolean state."
+  [enabled?]
+  (reset! !external-hud-enabled (boolean enabled?)))
 
 ;; =============================================================================
 ;; Emacsclient primitive
@@ -130,6 +149,30 @@
   (or (some-> (System/getenv "EMACSCLIENT_BIN") str/trim not-empty)
       "emacsclient"))
 
+(defn- build-emacsclient-cmd
+  [elisp socket-override extra-args]
+  (let [socket (or socket-override
+                   @!emacs-socket
+                   (System/getenv "FUTON3C_EMACS_SOCKET")
+                   (System/getenv "EMACS_SOCKET_NAME"))
+        emacs-bin (emacsclient-bin)
+        base (if socket [emacs-bin "-s" socket] [emacs-bin])]
+    (-> (into [] base)
+        (into (or extra-args []))
+        (into ["--eval" elisp]))))
+
+(defn- reap-emacsclient!
+  "Finally-guard for emacsclient processes: force-kill if still alive,
+   then wait briefly so the child is reaped and the file descriptors close."
+  [proc]
+  (when (and proc (.isAlive proc))
+    (.destroyForcibly proc)
+    (when-not (.waitFor proc 250 java.util.concurrent.TimeUnit/MILLISECONDS)
+      (println (str "[bb] emacsclient pid="
+                    (try (.pid proc) (catch Throwable _ "?"))
+                    " still alive after destroyForcibly"))
+      (flush))))
+
 (defn- run-emacsclient!
   "Run emacsclient --eval with the given elisp. Returns {:ok bool :output str}.
    Non-blocking: uses a short timeout. Failures are swallowed (the blackboard
@@ -137,26 +180,48 @@
    Optional socket-override targets a specific Emacs daemon (e.g. \"workspace2\")."
   ([elisp] (run-emacsclient! elisp nil))
   ([elisp socket-override]
-  (try
-    (let [socket (or socket-override
-                     @!emacs-socket
-                     (System/getenv "FUTON3C_EMACS_SOCKET")
-                     (System/getenv "EMACS_SOCKET_NAME"))
-          emacs-bin (emacsclient-bin)
-          cmd (if socket
-                [emacs-bin "-s" socket "--eval" elisp]
-                [emacs-bin "--eval" elisp])
-          pb (ProcessBuilder. cmd)
-          _ (.redirectErrorStream pb true)
-          proc (.start pb)
-          finished? (.waitFor proc 2 java.util.concurrent.TimeUnit/SECONDS)]
-      (if finished?
-        {:ok (zero? (.exitValue proc))
-         :output (slurp (.getInputStream proc))}
-        (do (.destroyForcibly proc)
-            {:ok false :output "timeout"})))
-    (catch Exception e
-      {:ok false :output (.getMessage e)}))))
+   (let [proc-box (atom nil)]
+     (try
+       (let [pb (doto (ProcessBuilder. ^java.util.List
+                                       (build-emacsclient-cmd elisp socket-override nil))
+                  (.redirectErrorStream true))
+             proc (.start pb)
+             _ (reset! proc-box proc)
+             finished? (.waitFor proc 2 java.util.concurrent.TimeUnit/SECONDS)]
+         (if finished?
+           {:ok (zero? (.exitValue proc))
+            :output (slurp (.getInputStream proc))}
+           {:ok false :output "timeout"}))
+       (catch Exception e
+         {:ok false :output (or (.getMessage e) (.. e getClass getSimpleName))})
+       (finally
+         (reap-emacsclient! @proc-box))))))
+
+(defn- run-emacsclient-async!
+  "Fire-and-forget emacsclient for idempotent UI projections.
+   Uses emacsclient -n so Emacs receives the eval and the client exits
+   immediately without waiting for a reply. Returns {:ok bool :output nil|str}.
+   The next poll will redo the projection if this one is dropped.
+
+   Does NOT forcibly kill the child on timeout: with -n the client should
+   exit in milliseconds, and a >1s wait means Emacs is briefly wedged.
+   Killing emacsclient mid-handshake makes Emacs log
+   \"Process server <PID> no longer connected to pipe; closed it\" — letting
+   the client complete on its own avoids that noise; the process exits
+   naturally once Emacs unwedges."
+  ([elisp] (run-emacsclient-async! elisp nil))
+  ([elisp socket-override]
+   (try
+     (let [pb (doto (ProcessBuilder. ^java.util.List
+                                     (build-emacsclient-cmd elisp socket-override ["-n"]))
+              (.redirectErrorStream true))
+           proc (.start pb)
+           finished? (.waitFor proc 1 java.util.concurrent.TimeUnit/SECONDS)]
+       (if finished?
+         {:ok (zero? (.exitValue proc)) :output nil}
+         {:ok false :output "timeout"}))
+     (catch Exception e
+       {:ok false :output (or (.getMessage e) (.. e getClass getSimpleName))}))))
 
 (defn blackboard!
   "Project content to a named Emacs buffer.
@@ -209,8 +274,9 @@
                     (or post-elisp "")
                     "))"
                     (or display-form "")
-                    "nil)")]
-     (run-emacsclient! elisp (:emacs-socket opts)))))
+                    "nil)")
+         runner (if (:async? opts) run-emacsclient-async! run-emacsclient!)]
+     (runner elisp (:emacs-socket opts)))))
 
 (defn blackboard-eval!
   "Run arbitrary elisp via emacsclient. For cases where text content
@@ -536,7 +602,7 @@
                                    [(:author state) :agent/metadata :emacs-socket])
                            (catch Exception _ nil)))]
           (blackboard! "*mentor*" content
-                       (cond-> {:width 55 :slot 2}
+                       (cond-> {:width 55 :slot 2 :async? true}
                          socket (assoc :emacs-socket socket)))
           (emit-blackboard-evidence! :mentor state content))
         nil)
@@ -757,6 +823,14 @@
                                             :local "ready"
                                             :ws "ready"
                                             "registered-only")
+                                session-id (:session-id info)
+                                session-tag (cond
+                                              session-id
+                                              (str "session=" (subs session-id
+                                                                    0 (min 8 (count session-id))))
+                                              (and (not remote?) (= route :local))
+                                              "no session"
+                                              :else nil)
                                 last-active-str (format-relative-time
                                                   (:last-active info) now-ms)]
                             (str "  " (name aid) " [" type-str
@@ -788,7 +862,9 @@
                                                            (str queued-jobs " queued"))
                                                          last-active-str]))
                                                ")"))
-                                        " — " readiness)
+                                        " — " readiness
+                                        (when session-tag
+                                          (str ", " session-tag)))
                                    (name status)))))
                         (sort-by key agents)))
          (when (seq ws-unregistered)
@@ -804,14 +880,14 @@
   (when *enabled*
     (try
       (let [content (format-agent-status registry-status)
-            opts (cond-> {:width 60 :slot 0}
-                   (not (agents-window-display-enabled?))
+            opts (cond-> {:width 60 :slot 0 :async? true}
+                   (or (external-hud-enabled?)
+                       (not (agents-window-display-enabled?)))
                    (assoc :no-display true))
-            ;; Collect distinct sockets from agent metadata + default
             sockets (->> (:agents registry-status)
                          (keep (fn [[_ info]] (get-in info [:metadata :emacs-socket])))
                          (into #{})
-                         (#(conj % nil)))]  ;; nil = default socket
+                         (#(conj % nil)))]
         (doseq [socket sockets]
           (blackboard! "*agents*" content
                        (if socket (assoc opts :emacs-socket socket) opts))))
@@ -839,7 +915,7 @@
 
 (def ^:private expected-daemons
   "Process IDs that should normally be running. Shows ✖ DOWN when absent."
-  #{"fm-conductor" "tickle-watchdog"})
+  #{"fm-conductor" "tickle-watchdog" "process-watchdog"})
 
 (defn format-process-status
   "Format CYDER process registry for blackboard display.
@@ -927,9 +1003,12 @@
   [registry-entries]
   (when *enabled*
     (try
-      (let [content (format-process-status registry-entries)]
-        (blackboard! "*processes*" content {:width 60 :slot 1
-                                           :post-elisp processes-highlight-elisp}))
+      (let [content (format-process-status registry-entries)
+            opts (cond-> {:width 60 :slot 1 :async? true
+                          :post-elisp processes-highlight-elisp}
+                   (external-hud-enabled?)
+                   (assoc :no-display true))]
+        (blackboard! "*processes*" content opts))
       (catch Throwable _ nil))))
 
 ;; =============================================================================
@@ -941,7 +1020,7 @@
   [peripheral-id state content]
   (when-let [store (:evidence-store state)]
     (try
-      (estore/append* store
+      (boundary/append! store
                       {:evidence/id (str "e-bb-" (UUID/randomUUID))
                        :evidence/subject {:ref/type :peripheral
                                           :ref/id (name peripheral-id)}
@@ -978,7 +1057,8 @@
    (when *enabled*
      (try
        (when-let [content (render-blackboard peripheral-id state)]
-         (let [buf-name (str "*" (name peripheral-id) "*")]
+         (let [buf-name (str "*" (name peripheral-id) "*")
+               opts (merge {:async? true} opts)]
            (blackboard! buf-name content opts)
            (emit-blackboard-evidence! peripheral-id state content)
            nil))

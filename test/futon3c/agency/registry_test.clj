@@ -16,7 +16,10 @@
   :each
   (fn [f]
     (reg/reset-registry!)
-    (f)))
+    ;; Suppress live-file pollution during tests: hop! / hop-back!
+    ;; would otherwise append entries to pilot-inhabitations.edn.
+    (binding [reg/*enable-hop-event-emission?* false]
+      (f))))
 
 ;; =============================================================================
 ;; Ported from futon3: timeout enforcement
@@ -176,6 +179,48 @@
       (is (= :invoke-exception (:error/code (:error result))))
       (is (shapes/valid? shapes/SocialError (:error result))))))
 
+(deftest reset-session-clears-backing-continuity
+  (testing "reset-session! clears registry session plus backing file/atom"
+    (let [session-file (java.io.File/createTempFile "futon3c-reset-session-" ".sid")
+          sid-atom (atom "sess-reset")
+          reset-fn (fn []
+                     (reset! sid-atom nil)
+                     (when (.exists session-file)
+                       (.delete session-file))
+                     {:ok true})]
+      (try
+        (spit session-file "sess-reset")
+        (reg/register-agent!
+         {:agent-id (fix/make-agent-id "reset-me")
+          :type :codex
+          :invoke-fn (fn [_ _] {:result "ok"})
+          :capabilities [:edit]
+          :session-id "sess-reset"
+          :session-reset-fn reset-fn})
+        (let [result (reg/reset-session! (fix/make-agent-id "reset-me"))]
+          (is (:ok result))
+          (is (= "sess-reset" (:old-session-id result)))
+          (is (nil? @sid-atom))
+          (is (false? (.exists session-file)))
+          (is (nil? (:session-id (get-in (reg/registry-status) [:agents "reset-me"])))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file)))))))
+
+(deftest reset-session-fails-loudly-when-backing-reset-fails
+  (testing "reset-session! preserves continuity when backing reset fails"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "reset-fail")
+      :type :codex
+      :invoke-fn (fn [_ _] {:result "ok"})
+      :capabilities [:edit]
+      :session-id "sess-still-live"
+      :session-reset-fn (fn [] {:ok false :error "cannot clear backing continuity"})})
+    (let [result (reg/reset-session! (fix/make-agent-id "reset-fail"))]
+      (is (= false (:ok result)))
+      (is (= "sess-still-live"
+             (:session-id (get-in (reg/registry-status) [:agents "reset-fail"])))))))
+
 (deftest unregister-missing-returns-social-error
   (testing "unregister of missing agent returns SocialError"
     (let [result (reg/unregister-agent! (fix/make-agent-id "nobody"))]
@@ -325,6 +370,41 @@
         (is (= :idle (:status info)))
         (is (= "019cd4ad-c5b9-76c0-af08-50d8af0803c7" (:session-id info)))))))
 
+(deftest registry-status-surfaces-live-surface-projection
+  (testing "live surface projections are queryable and exposed in registry-status"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-surface")
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]})
+    (with-redefs [reg/running-codex-session-ids (constantly #{})
+                  futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                  futon3c.blackboard/project-agents! (fn [_] nil)]
+      (reg/report-surface-projection!
+       "codex-surface"
+       "emacs-cursor:editor-main"
+       {:surface "emacs-cursor"
+        :editor-id "editor-main"
+        :mode "follow"
+        :buffer-summary "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+        :write-surface "minibuffer"})
+      (let [projection (reg/current-surface-projection "codex-surface")
+            info (get-in (reg/registry-status) [:agents "codex-surface"])]
+        (is (= "emacs-cursor" (:surface projection)))
+        (is (= "editor-main" (:editor-id projection)))
+        (is (= "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+               (:buffer-summary projection)))
+        (is (= {:source "emacs-cursor:editor-main"
+                :surface "emacs-cursor"
+                :editor-id "editor-main"
+                :mode "follow"
+                :buffer-summary "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+                :write-surface "minibuffer"}
+               (:surface-projection info))))
+      (reg/clear-surface-projection! "codex-surface" "emacs-cursor:editor-main")
+      (is (nil? (reg/current-surface-projection "codex-surface")))
+      (is (nil? (get-in (reg/registry-status) [:agents "codex-surface" :surface-projection]))))))
+
 (deftest registry-status-includes-ws-connected-unregistered
   (testing "registry-status surfaces ws-connected agent ids that are not registered locally"
     (with-redefs [reg/running-codex-session-ids (constantly #{})
@@ -392,3 +472,148 @@
     (let [n (reg/shutdown-all!)]
       (is (= 5 n))
       (is (= 0 (:count (reg/registry-status)))))))
+
+;; =============================================================================
+;; E-pilot-hop-trigger-wiring tests
+;; =============================================================================
+
+(defn- register-agent-mock! [id]
+  (reg/register-agent!
+   {:agent-id (fix/make-agent-id id)
+    :type :claude
+    :invoke-fn (fn [_p _s] {:result "ok"})
+    :capabilities []}))
+
+(defn- register-peripheral-mock! [id]
+  (reg/register-agent!
+   {:agent-id (fix/make-agent-id id)
+    :type :peripheral
+    :invoke-fn (fn [_p _s] {:result "ok"})
+    :capabilities []}))
+
+(deftest hop-into-vacant-peripheral
+  (testing "Agent can hop into a vacant peripheral; bidirectional pointers set"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "street-sweeper")
+    (let [r (reg/hop! "claude-1" "street-sweeper")]
+      (is (:ok r))
+      (is (= "street-sweeper" (:to r)))
+      (is (nil? (:from r)))
+      (is (= "street-sweeper" (reg/current-peripheral "claude-1")))
+      (is (= "claude-1" (reg/current-inhabitant "street-sweeper")))
+      (is (= ["claude-1"] (vec (map :agent/current-inhabitant
+                                    [(reg/get-agent "street-sweeper")])))))))
+
+(deftest hop-pushes-prev-onto-stack
+  (testing "Hop pushes prev peripheral onto agent's hop-stack"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "war-machine-pilot")
+    (let [r (reg/hop! "claude-1" "street-sweeper")]
+      (is (:ok r))
+      (is (= "war-machine-pilot" (:from r)))
+      (is (= "street-sweeper" (:to r)))
+      (is (= ["war-machine-pilot"] (reg/hop-stack "claude-1")))
+      (is (= "street-sweeper" (reg/current-peripheral "claude-1")))
+      (is (= "claude-1" (reg/current-inhabitant "street-sweeper")))
+      (is (nil? (reg/current-inhabitant "war-machine-pilot"))
+          "Prev peripheral's inhabitant should be cleared after hop"))))
+
+(deftest hop-back-restores-prev
+  (testing "Hop-back pops stack and restores prev inhabitation; pointers reverse"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "war-machine-pilot")
+    (reg/hop! "claude-1" "street-sweeper")
+    (let [r (reg/hop-back! "claude-1")]
+      (is (:ok r))
+      (is (= "street-sweeper" (:from r)))
+      (is (= "war-machine-pilot" (:to r)))
+      (is (= "war-machine-pilot" (reg/current-peripheral "claude-1")))
+      (is (= "claude-1" (reg/current-inhabitant "war-machine-pilot")))
+      (is (nil? (reg/current-inhabitant "street-sweeper")))
+      (is (empty? (reg/hop-stack "claude-1"))))))
+
+(deftest hop-rejects-occupied-peripheral
+  (testing "Foreign-hop-in is rejected when peripheral is occupied by another agent"
+    (register-agent-mock! "claude-1")
+    (register-agent-mock! "claude-2")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "street-sweeper")
+    (let [r (reg/hop! "claude-2" "street-sweeper")]
+      (is (false? (:ok r)))
+      (is (= :peripheral-occupied (:error r)))
+      (is (= "claude-1" (:by r)))
+      ;; Original inhabitant unchanged
+      (is (= "claude-1" (reg/current-inhabitant "street-sweeper")))
+      ;; Foreign agent didn't gain a current-peripheral
+      (is (nil? (reg/current-peripheral "claude-2"))))))
+
+(deftest hop-rejects-unregistered-agent
+  (testing "Hop with unregistered agent fails loudly"
+    (register-peripheral-mock! "street-sweeper")
+    (let [r (reg/hop! "ghost" "street-sweeper")]
+      (is (false? (:ok r)))
+      (is (= :agent-not-registered (:error r))))))
+
+(deftest hop-rejects-unregistered-peripheral
+  (testing "Hop into nonexistent peripheral fails loudly"
+    (register-agent-mock! "claude-1")
+    (let [r (reg/hop! "claude-1" "no-such-peri")]
+      (is (false? (:ok r)))
+      (is (= :peripheral-not-registered (:error r))))))
+
+(deftest hop-rejects-same-peripheral
+  (testing "Hopping into the peripheral the agent is already in is rejected"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "street-sweeper")
+    (reg/hop! "claude-1" "street-sweeper")
+    (let [r (reg/hop! "claude-1" "street-sweeper")]
+      (is (false? (:ok r)))
+      (is (= :hop-to-same-peripheral (:error r))))))
+
+(deftest hop-back-rejects-empty-stack
+  (testing "Hop-back with empty stack fails loudly"
+    (register-agent-mock! "claude-1")
+    (let [r (reg/hop-back! "claude-1")]
+      (is (false? (:ok r)))
+      (is (= :hop-stack-empty (:error r))))))
+
+(deftest bidirectional-pointer-consistency-property
+  (testing "After any sequence of hop! / hop-back!, agent.current-peripheral
+            == peripheral.current-inhabitant invariant holds"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (register-peripheral-mock! "street-sweeper")
+    (register-peripheral-mock! "night-shift")
+    (let [ops [(fn [] (reg/hop! "claude-1" "war-machine-pilot"))
+               (fn [] (reg/hop! "claude-1" "street-sweeper"))
+               (fn [] (reg/hop-back! "claude-1"))
+               (fn [] (reg/hop! "claude-1" "night-shift"))
+               (fn [] (reg/hop-back! "claude-1"))
+               (fn [] (reg/hop-back! "claude-1"))]]
+      (doseq [op ops]
+        (op)
+        (let [agent-peri (reg/current-peripheral "claude-1")]
+          (if agent-peri
+            (is (= "claude-1" (reg/current-inhabitant agent-peri))
+                (str "After op, agent points at " agent-peri
+                     " but " agent-peri " says inhabitant = "
+                     (reg/current-inhabitant agent-peri)))
+            ;; If agent is not in any peripheral, no peripheral should
+            ;; claim them as inhabitant.
+            (doseq [p ["war-machine-pilot" "street-sweeper" "night-shift"]]
+              (is (not= "claude-1" (reg/current-inhabitant p))
+                  (str "Agent is in NO peripheral but " p
+                       " still claims them as inhabitant")))))))))
+
+(deftest legal-self-rehop-blocked-as-noop
+  (testing "An agent attempting to hop into its own current peripheral is
+            rejected with :hop-to-same-peripheral (R4: loud failure, not silent no-op)"
+    (register-agent-mock! "claude-1")
+    (register-peripheral-mock! "war-machine-pilot")
+    (reg/hop! "claude-1" "war-machine-pilot")
+    (let [r (reg/hop! "claude-1" "war-machine-pilot")]
+      (is (false? (:ok r))))))

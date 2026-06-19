@@ -20,6 +20,7 @@
             [clojure.set]
             [clojure.string :as str]
             [futon3c.bridge :as bridge]
+            [futon3c.aif.mission-head :as mh]
             [futon3c.peripheral.mission-shapes :as ms]
             [futon3c.peripheral.proof-dag :as dag]
             [futon3c.peripheral.tools :as tools])
@@ -270,6 +271,8 @@
           {:ok true :result cycle}))
       (mission-error :not-found (str "No mission state for " mission-id)))))
 
+(declare check-aif-law)
+
 (defn- validate-phase-advance
   "Check that all required outputs for the current phase are present,
    and consult AIF head structural law check if available.
@@ -314,7 +317,7 @@
                           (let [propose-data (get-in cycle [:cycle/phase-data :propose])]
                             (ms/compute-prediction-divergence propose-data phase-data)))
              law-result (try
-                          (.check_law aif-head state transition)
+                          (check-aif-law aif-head state transition)
                           (catch Exception e
                             {:ok false
                              :error {:code :foundational-invariant-breach
@@ -341,10 +344,28 @@
        ;; No AIF head — backward compatible
        :else nil))))
 
+(defn- resolve-aif-head
+  [config mission-id]
+  (or (:aif-head config)
+      (when-let [f (:aif-head-resolver config)]
+        (f mission-id))))
+
+(defn- check-aif-law
+  [aif-head state transition]
+  (cond
+    (nil? aif-head)
+    {:ok true}
+
+    (fn? aif-head)
+    (aif-head state transition)
+
+    :else
+    (mh/mission-check-law aif-head state transition)))
+
 (defn- tool-cycle-advance
   "Advance a cycle to the next phase.
    Enforces phase order and required outputs."
-  [cache cwd args]
+  [cache cwd args config]
   (let [mission-id (first args)
         cycle-id (second args)
         phase-data (nth args 2)
@@ -359,7 +380,9 @@
                            (str "Cycle " cycle-id " is already completed"))
 
             :else
-            (if-let [err (validate-phase-advance cycle phase-data)]
+            (if-let [err (validate-phase-advance cycle phase-data
+                                                (resolve-aif-head config mission-id)
+                                                state)]
               err
               (let [updated-cycle (-> cycle
                                       (assoc :cycle/phase next-phase
@@ -858,7 +881,7 @@
         (= tool-id :mission-spec-get)   (tool-mission-spec-get cache cwd args)
         (= tool-id :mission-spec-update) (tool-mission-spec-update cache cwd args)
         (= tool-id :cycle-begin)        (tool-cycle-begin cache cwd args)
-        (= tool-id :cycle-advance)      (tool-cycle-advance cache cwd args)
+        (= tool-id :cycle-advance)      (tool-cycle-advance cache cwd args config)
         (= tool-id :cycle-get)          (tool-cycle-get cache cwd args)
         (= tool-id :cycle-list)         (tool-cycle-list cache cwd args)
         (= tool-id :failed-approach-add) (tool-failed-approach-add cache cwd args)

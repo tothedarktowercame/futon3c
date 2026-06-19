@@ -1,0 +1,348 @@
+{
+  "bridge_candidate_count": 577,
+  "component_count": 5,
+  "curvature_distribution": {
+    "max": 1.0,
+    "median": 0.0399999999999997,
+    "min": -0.5555555555555558,
+    "p10": 0.016666666666665275,
+    "p90": 0.09090909090909072
+  },
+  "curvature_edges_sampled": 577,
+  "edge_cap": 2000,
+  "edge_count": 1692,
+  "fetched_by_type": {
+    "code/v05/file->mission": 0,
+    "code/v05/file\u2192mission": 1042,
+    "code/v05/mission-cross-ref": 657,
+    "code/v05/related-mission": 23,
+    "code/v05/sorry->related-missions": 0
+  },
+  "largest_component": 909,
+  "limit_per_type": 2000,
+  "node_count": 923,
+  "report": "substrate-metric/e1-or-sample",
+  "timing": {
+    "max_ms_per_edge": 22.054853849112988,
+    "mean_ms_per_edge": 2.497453424931089,
+    "total_seconds": 3.315970194991678
+  },
+  "top_negative_edges": [
+    {
+      "bridge_score": 2718,
+      "edge": [
+        "futon4-d/mission/essays-diachronic-model",
+        "futon4-elisp-d/mission/essays-edit-cycle"
+      ],
+      "kappa": -0.5555555555555558,
+      "relation": "mission-cross-ref",
+      "w1": 1.5555555555555558
+    },
+    {
+      "bridge_score": 1814,
+      "edge": [
+        "futon4-d/mission/or-training-as-learning-system.v1",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ],
+      "kappa": -0.357142857142857,
+      "relation": "mission-cross-ref",
+      "w1": 1.357142857142857
+    },
+    {
+      "bridge_score": 1814,
+      "edge": [
+        "futon6-d/mission/canon-fingerprint-store",
+        "futon6-py-d/mission/bayesian-structure-learning"
+      ],
+      "kappa": -0.16666666666666652,
+      "relation": "mission-cross-ref",
+      "w1": 1.1666666666666665
+    },
+    {
+      "bridge_score": 1814,
+      "edge": [
+        "futon3-d/file/musn/service.clj",
+        "futon3-d/mission/native-plan-coherence"
+      ],
+      "kappa": -0.16666666666666652,
+      "relation": "file->mission",
+      "w1": 1.1666666666666665
+    },
+    {
+      "bridge_score": 6,
+      "edge": [
+        "futon6-d/mission/bayesian-structure-learning",
+        "futon6-py-d/mission/symbol-grounding"
+      ],
+      "kappa": -0.16666666666666652,
+      "relation": "mission-cross-ref",
+      "w1": 1.1666666666666665
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        ".claude-d/file/projects/-home-joe-code/memory/project_aliveness_synthesis.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/docs/four-frame-correspondence.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/holes/missions/M-weird-modernism.md",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/enrichment/rational-reconstruction.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/futon-theory/agent-contract.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-action.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-concentration.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-effort.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-intention.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-livelihood.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-mindfulness.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-speech.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/liberation/noble/right-view.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/peripherals/read-only-first-then-extend.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/realtime/learn-as-you-go.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/t4r/dtp-fit.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/t4r/exec-summary.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/t4r/legacy.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/t4r/rationale.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    },
+    {
+      "bridge_score": 908,
+      "edge": [
+        "futon3-d/file/library/t4r/supplement.flexiarg",
+        "futon3c-d/mission/pilot-appearance"
+      ],
+      "kappa": 0.01639344262295006,
+      "relation": "file->mission",
+      "w1": 0.9836065573770499
+    }
+  ],
+  "top_propose_candidates": [
+    {
+      "action_intensity": 0.5000000000000002,
+      "min_incident_kappa": -0.5555555555555558,
+      "node": "futon4-d/mission/essays-diachronic-model",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "identify",
+        "phase": "identify"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon4-d/mission/essays-diachronic-model",
+        "futon4-elisp-d/mission/essays-edit-cycle"
+      ]
+    },
+    {
+      "action_intensity": 0.3214285714285713,
+      "min_incident_kappa": -0.357142857142857,
+      "node": "futon4-d/mission/or-training-as-learning-system.v1",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "identify",
+        "phase": "identify"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon4-d/mission/or-training-as-learning-system.v1",
+        "futon4-elisp-d/mission/or-training-as-learning-system"
+      ]
+    },
+    {
+      "action_intensity": 0.14999999999999988,
+      "min_incident_kappa": -0.16666666666666652,
+      "node": "futon6-d/mission/canon-fingerprint-store",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "derive",
+        "phase": "derive"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon6-d/mission/canon-fingerprint-store",
+        "futon6-py-d/mission/bayesian-structure-learning"
+      ]
+    },
+    {
+      "action_intensity": 0.14999999999999988,
+      "min_incident_kappa": -0.16666666666666652,
+      "node": "futon6-d/mission/bayesian-structure-learning",
+      "node_type": "mission",
+      "raw_resolution": {
+        "normalized": "derive",
+        "phase": "derive"
+      },
+      "relation": "mission-cross-ref",
+      "resolvedness": 0.1,
+      "strain_edge": [
+        "futon6-d/mission/bayesian-structure-learning",
+        "futon6-py-d/mission/symbol-grounding"
+      ]
+    }
+  ]
+}

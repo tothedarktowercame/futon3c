@@ -1,0 +1,279 @@
+{:mission "M-typed-holes"
+ :audit-date "2026-06-14"
+ :scope "Audit only; no Lean formalisation written."
+ :method {:mathlib "Verified against full /home/joe/code/mathlib4 source tree plus mathlib4 docs; did not use futon6/data/mathlib-defs.json for absence."
+          :absence-probes ["rg Lens/Optic/Tambara/DependentLens under Mathlib"
+                           "rg BV/DeepInference/medial/copar/par/seq under Mathlib/Logic Mathlib/CategoryTheory Mathlib/Order"
+                           "rg PFunctor.Hom/Morphism under Mathlib/Data/PFunctor"]
+          :web "Searched non-mathlib Lean, Agda, Coq, Idris 2, and source literature for partial/absent entries."}
+ :concepts
+ {:typed-hole
+  {:status :present
+   :decls [{:name "PFunctor"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:30"
+            :notes "A polynomial functor is fields A and B : A -> Type; P alpha is Sigma a, B a -> alpha."
+            :url "https://leanprover-community.github.io/mathlib4_docs/Mathlib/Data/PFunctor/Univariate/Basic.html"}
+           {:name "MvPFunctor"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Multivariate/Basic.lean:30"
+            :notes "Multivariate positions A with direction/type-vector family B : A -> TypeVec n."
+            :url "https://leanprover-community.github.io/mathlib4_docs/Mathlib/Data/PFunctor/Multivariate/Basic.html"}
+           {:name "PFunctor.Idx"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:130"
+            :notes "Indexes a location/direction inside an applied polynomial functor."}]
+   :gap nil
+   :other-formalisations []
+   :portability "Already in mathlib; external Poly work can inform richer APIs but is not needed for the base object."
+   :build-scope nil
+   :difficulty nil
+   :confidence "High: source and mathlib docs explicitly define positions A and directions B."}
+
+  :hole-type
+  {:status :present
+   :decls [{:name "PFunctor.B"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:34"
+            :notes "The direction family B over a position A is exactly the hole-type substrate."}
+           {:name "MvPFunctor.B"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Multivariate/Basic.lean:33"
+            :notes "Multivariate direction family B a : TypeVec n."}
+           {:name "PFunctor.liftp_iff"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:178"
+            :notes "Useful API exposing quantified predicates over directions."}
+           {:name "MvPFunctor.liftP_iff"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Multivariate/Basic.lean:135"
+            :notes "Multivariate predicate lifting over direction slots."}]
+   :gap nil
+   :other-formalisations []
+   :portability "Already in mathlib as a dependent family; use B a directly for :hungry-for / accepted-filler typing."
+   :build-scope nil
+   :difficulty nil
+   :confidence "High: B fields are first-class source declarations."}
+
+  :fill
+  {:status :partial
+   :decls [{:name "PFunctor.comp"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:148"
+            :notes "Composition/substitution of univariate polynomial functors."}
+           {:name "PFunctor.comp.mk"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:153"
+            :notes "Constructor from P2 (P1 alpha) to composed polynomial."}
+           {:name "PFunctor.comp.get"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:158"
+            :notes "Destructor back to P2 (P1 alpha)."}
+           {:name "MvPFunctor.comp"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Multivariate/Basic.lean:114"
+            :notes "Multivariate polynomial composition."}
+           {:name "MvPFunctor.comp.get_mk"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Multivariate/Basic.lean:129"
+            :notes "Round-trip lemma for multivariate composition."}
+           {:name "MvPFunctor.comp.mk_get"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Multivariate/Basic.lean:133"
+            :notes "Round-trip lemma for multivariate composition."}]
+   :gap "Mathlib has polynomial composition/substitution, but no named typed-hole fill operation, no API phrased as consuming a specific direction at a position, and no Poly counit/fill semantics."
+   :other-formalisations [{:system :lean4-non-mathlib
+                           :decl-or-lib "sinhp/Poly"
+                           :url "https://github.com/sinhp/Poly"
+                           :notes "Lean 4 polynomial functor formalisation including sums/products/composition, monoidal category C[X], multivariate bicategory/double category, and differentiation."}
+                          {:system :source
+                           :decl-or-lib "Niu-Spivak Polynomial Functors"
+                           :url "https://arxiv.org/abs/2312.00990"
+                           :notes "Canonical Poly source for interaction protocols; arXiv page describes a 372-page monograph on polynomial endofunctors on Set and interaction."}]
+   :portability "Port as a thin wrapper over PFunctor.comp/MvPFunctor.comp first; richer interaction/fill laws can be compared against sinhp/Poly."
+   :build-scope "Define a Fill record/function selecting a position and direction, express accepted filler type via B, then relate whole-node substitution to PFunctor.comp."
+   :difficulty :M
+   :confidence "High for partial: source contains composition; rg found no named fill/counit-over-position API."}
+
+  :fill-laws
+  {:status :partial
+   :decls [{:name "PFunctor.comp"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:148"
+            :notes "Underlying substitution operation exists."}
+           {:name "MvPFunctor.comp.get_mk"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Multivariate/Basic.lean:129"
+            :notes "Round-trip support for composition constructors/destructors."}
+           {:name "CategoryTheory.MonoidalCategory"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Monoidal/Category.lean"
+            :notes "Generic monoidal substrate exists, but not instantiated for PFunctor.comp here."}]
+   :gap "No PFunctor.comp associativity/unit theorem or operad/monoid of fills found in Mathlib/Data/PFunctor; composition exists without the mission laws packaged."
+   :other-formalisations [{:system :lean4-non-mathlib
+                           :decl-or-lib "sinhp/Poly"
+                           :url "https://github.com/sinhp/Poly"
+                           :notes "README lists composition, monoidal category C[X], and multivariate bicategory/double category of polynomial functors."}
+                          {:system :source
+                           :decl-or-lib "Niu-Spivak Polynomial Functors"
+                           :url "https://arxiv.org/abs/2312.00990"
+                           :notes "Canonical theory source for composition/substitution laws in Poly."}]
+   :portability "Likely reusable proof ideas from sinhp/Poly; direct mathlib work is proving associativity/unit around existing comp encodings."
+   :build-scope "Add identity polynomial, prove left/right identity and associativity up to definitional/equivalence shape, then package as monoid/operad-of-fills if needed."
+   :difficulty :M
+   :confidence "Medium-high: direct rg over Data/PFunctor found comp but no comp_assoc/unit API."}
+
+  :comb
+  {:status :absent
+   :decls [{:name "CategoryTheory.Profunctor"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Profunctor/Basic.lean:52"
+            :notes "Generic profunctor substrate only; file TODO says composition and bicategory are future work."}
+           {:name "CategoryTheory.ProfunctorCore"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Profunctor/Basic.lean:38"
+            :notes "Constructor for bifunctors C -> D^op -> Type."}]
+   :gap "No Lens/Optic/Tambara/dependent-lens or PFunctor morphism API in mathlib. Generic profunctors are present, but the comb target is a morphism in Poly / dependent lens."
+   :other-formalisations [{:system :agda
+                           :decl-or-lib "ps-lenses-agda / Lens.agda"
+                           :url "https://github.com/kztk-m/ps-lenses-agda"
+                           :notes "Agda formalisation of partial state lenses with lawfulness of combinators/primitives."}
+                          {:system :agda
+                           :decl-or-lib "agda-lenses"
+                           :url "https://github.com/omelkonian/agda-lenses"
+                           :notes "Agda lenses library with generic deriving."}
+                          {:system :idris2
+                           :decl-or-lib "idris2-lens"
+                           :url "https://github.com/tokinanpa/idris2-lens"
+                           :notes "Idris 2 profunctor optics library for lenses/prisms/traversals."}
+                          {:system :source/agda
+                           :decl-or-lib "Roman, Profunctor optics and traversals"
+                           :url "https://arxiv.org/abs/2001.08045"
+                           :notes "Paper reports Haskell implementations and partial Agda formalisations of the profunctor representation theorem."}
+                          {:system :source
+                           :decl-or-lib "Riley, Categories of Optics"
+                           :url "https://arxiv.org/abs/1809.00738"
+                           :notes "Canonical categorical source for optics/laws; use as definition target."}]
+   :portability "Agda/Idris libraries help with user-facing lens laws; mathlib will still need a Poly-specific dependent-lens definition and probably profunctor composition first."
+   :build-scope "Define PFunctor/MvPFunctor morphisms as dependent lenses; prove identity/composition; later relate to generic Profunctor once profunctor composition lands."
+   :difficulty :L
+   :confidence "High absence: source rg found Profunctor but no Lens/Optic/Tambara/PFunctor.Hom."}
+
+  :discharge-duality
+  {:status :partial
+   :decls [{:name "CategoryTheory.Comonad"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Monad/Basic.lean:67"
+            :notes "Comonad has counit epsilon and comultiplication delta with laws."}
+           {:name "CategoryTheory.Comonad.ε"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Monad/Basic.lean:69"
+            :notes "The generic counit natural transformation."}
+           {:name "CategoryTheory.Comonad.Coalgebra"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Monad/Algebra.lean:260"
+            :notes "Eilenberg-Moore coalgebra for a comonad."}
+           {:name "CategoryTheory.Comonad.cofree"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Monad/Algebra.lean:355"
+            :notes "Cofree coalgebra construction."}]
+   :gap "Generic comonad/counit/coalgebra substrate is present, but there is no typed-hole discharge duality tying sorry/proof, query/answer, or ungrounded/binder to Poly positions."
+   :other-formalisations [{:system :agda
+                           :decl-or-lib "agda-categories Categories.Comonad / Categories.Adjoint.Construction.CoKleisli / CoEilenbergMoore"
+                           :url "https://agda.github.io/agda-categories/index.html"
+                           :notes "Index lists Comonad, CoKleisli, and CoEilenbergMoore modules."}
+                          {:system :coq
+                           :decl-or-lib "jwiegley/category-theory"
+                           :url "https://github.com/jwiegley/category-theory"
+                           :notes "Axiom-free Coq category theory library; includes monad-related modules and broad categorical substrate."}
+                          {:system :source
+                           :decl-or-lib "Jacobs, Introduction to Coalgebra"
+                           :url "https://www.cambridge.org/core/books/introduction-to-coalgebra/0EACA706C8E8D6F96568EE0F3D112CD6"
+                           :notes "Canonical coalgebra/comonad background; useful for discharge semantics."}]
+   :portability "Mathlib's comonad API is enough for the categorical substrate; the mission layer is mostly modelling choices."
+   :build-scope "Represent each projection's open/filled pair as a coalgebra/counit instance or a typed relation, then prove it commutes with Fill."
+   :difficulty :M
+   :confidence "High partial: exact Comonad/Coalgebra declarations exist; mission-specific discharge names do not."}
+
+  :bv-hole-algebra
+  {:status :absent
+   :decls []
+   :gap "No BV/deep-inference syntax, seq/par/copar connectives, medial rule, or calculus-of-structures API found in mathlib."
+   :other-formalisations [{:system :source
+                           :decl-or-lib "Guglielmi, A System of Interaction and Structure"
+                           :url "https://arxiv.org/abs/cs/9910023"
+                           :notes "Introduces logical system BV and calculus of structures; arXiv abstract states BV extends MLL by a non-commutative self-dual operator and uses rewriting inside structures at any depth."}
+                          {:system :source
+                           :decl-or-lib "Guglielmi, Deep Inference"
+                           :url "https://researchportal.bath.ac.uk/en/publications/deep-inference/"
+                           :notes "Canonical overview chapter for deep inference."}
+                          {:system :source
+                           :decl-or-lib "Deep inference and probabilistic coherence spaces"
+                           :url "https://www.cs.mcgill.ca/~prakash/Pubs/seqcats.pdf"
+                           :notes "Categorical model of BV via BV-categories; source for categorical scoping."}]
+   :portability "No reusable proof-assistant formalisation found in this audit; port starts from syntax/rules, not from mathlib."
+   :build-scope "Define BV structures/connectives and structural congruence, then medial/switch/seq rules; only afterwards connect to Poly positions."
+   :difficulty :L
+   :confidence "High absence for mathlib; web search found source literature/categorical models but no active Coq/Agda/Lean BV library."}
+
+  :scope-as-query
+  {:status :absent
+   :decls [{:name "CategoryTheory.Functor.RepresentableBy"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Yoneda.lean:110"
+            :notes "Representable presheaf substrate."}
+           {:name "CategoryTheory.yonedaLemma"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Yoneda.lean:837"
+            :notes "Yoneda/evaluation bridge for representables."}
+           {:name "CategoryTheory.Presheaf.freeYoneda"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/Generator/Presheaf.lean:36"
+            :notes "Free Yoneda presheaf generator substrate."}]
+   :gap "Representable presheaves exist, but there is no hyperedge query object, no XTDB/store unification semantics, and no Poly fill-over-store operation."
+   :other-formalisations [{:system :agda
+                           :decl-or-lib "agda-categories Categories.Category.Construction.Presheaves / Properties.Presheaves"
+                           :url "https://agda.github.io/agda-categories/index.html"
+                           :notes "Index lists presheaf construction and presheaf properties modules."}
+                          {:system :agda
+                           :decl-or-lib "1Lab"
+                           :url "https://github.com/the1lab/1lab"
+                           :notes "Agda/HoTT formalised reference with category-theory and presheaf work; useful background but not an XTDB query formalisation."}
+                          {:system :source
+                           :decl-or-lib "Yoneda / representable presheaf literature"
+                           :url "https://leanprover-community.github.io/mathlib4_docs/Mathlib/CategoryTheory/Yoneda.html"
+                           :notes "Mathlib's own Yoneda formalisation is the best immediate source for the representable substrate."}]
+   :portability "Representable-presheaf facts are directly available in mathlib; query-answer/unification is project-specific and should be layered above them."
+   :build-scope "Define a scope pattern category/signature, encode partial hyperedges as presheaf elements, and implement answer as a Fill/unification relation over the store."
+   :difficulty :L
+   :confidence "High concept absence; substrate is real but does not name or implement query semantics."}
+
+  :satiety-grading
+  {:status :absent
+   :decls [{:name "GradedFunLike"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/FunLike/Graded.lean:28"
+            :notes "General class for grading-preserving functions."}
+           {:name "CategoryTheory.GradedObject"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/GradedObject.lean:43"
+            :notes "A beta-graded object is a function beta -> C."}
+           {:name "CategoryTheory.GradedObject.eval"
+            :path "/home/joe/code/mathlib4/Mathlib/CategoryTheory/GradedObject.lean:74"
+            :notes "Projection of a graded object to a component."}
+           {:name "PFunctor.B"
+            :path "/home/joe/code/mathlib4/Mathlib/Data/PFunctor/Univariate/Basic.lean:34"
+            :notes "The direction family to grade positions by."}]
+   :gap "Generic grading and Poly direction families exist, but there is no satiety/:hungry-for datatype, no grading of Poly positions by direction-type, and no miner-data witness formalisation."
+   :other-formalisations [{:system :lean4-non-mathlib
+                           :decl-or-lib "sinhp/Poly"
+                           :url "https://github.com/sinhp/Poly"
+                           :notes "Richer Poly library with differentiation and multivariate structures that may inform grading-by-direction APIs."}
+                          {:system :source
+                           :decl-or-lib "Niu-Spivak Polynomial Functors"
+                           :url "https://arxiv.org/abs/2312.00990"
+                           :notes "Canonical source for positions/directions as interaction interfaces."}]
+   :portability "Easy to define locally on top of PFunctor.B; reuse generic graded object only if later categorical grading is needed."
+   :build-scope "Introduce finite/keyword grade type for hungry-for tags, define grade : Sigma p.A p.B -> Grade or position -> direction-type, and prove projection consistency with hole-type."
+   :difficulty :S
+   :confidence "High absence for named concept; high substrate confidence from GradedObject/GradedFunLike and PFunctor.B."}
+
+  :illocutionary-hole
+  {:status :absent
+   :decls []
+   :gap "No speech-act/dialogue/IATC formalisation in mathlib; this is outside mathlib's mathematical library scope."
+   :other-formalisations [{:system :source
+                           :decl-or-lib "Corneli et al., Towards Mathematical AI via a Model of Mathematical Q&A Dialogues"
+                           :url "https://dave.murray-rust.org/paper_store/corneli2017MathematicalAI.pdf"
+                           :notes "Defines IAT+Content/IATC; performatives include agree, assert, challenge, define, query, retract, suggest."}
+                          {:system :source
+                           :decl-or-lib "Speech Acts, Stanford Encyclopedia of Philosophy"
+                           :url "https://plato.stanford.edu/entries/speech-acts/"
+                           :notes "Canonical philosophical background for illocutionary acts, requests, assertions, promises, etc."}
+                          {:system :source
+                           :decl-or-lib "Traum, Speech Acts for Dialogue Agents"
+                           :url "https://helios2.mi.parisdescartes.fr/~moraitis/webpapers/SpeechActs-Dialogues.pdf"
+                           :notes "Dialogue-agent source for speech acts as actions changing dialogue/world state."}]
+   :portability "Formalise as a small project-specific labelled transition system or typed relation, not as a mathlib contribution."
+   :build-scope "Define illocution labels, expected reply/fill relation, references, and composition with typed bells; later relate query/answer labels to Fill."
+   :difficulty :M
+   :confidence "High absence: no relevant mathlib names; source literature is conceptual rather than proof-assistant formalisation."}}
+ :summary {:present 2
+           :partial 3
+           :absent 5
+           :critical-path [:fill :fill-laws :comb :scope-as-query]
+           :notes ["Critical path assumes :typed-hole and :hole-type are already supplied by mathlib PFunctor/MvPFunctor."
+                   ":fill unlocks the six projections; :fill-laws gives compositional algebra; :comb supplies wiring/process morphisms; :scope-as-query connects store queries to Fill."]}}

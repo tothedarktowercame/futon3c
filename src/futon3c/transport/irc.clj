@@ -23,7 +23,8 @@
    - realtime/connection-state-machine (L2): client registration lifecycle
    - realtime/loop-failure-signals (F3): errors surface, not swallowed
    - realtime/structured-events-only (R9): evidence entries are typed maps"
-  (:require [futon3c.evidence.store :as estore]
+  (:require [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.store :as estore]
             [futon3c.transport.protocol :as proto]
             [clojure.string :as str])
   (:import [java.io BufferedReader BufferedWriter InputStreamReader OutputStreamWriter]
@@ -46,7 +47,7 @@
   [evidence-store client-id context error-msg]
   (when evidence-store
     (try
-      (estore/append* evidence-store
+      (boundary/append! evidence-store
                       {:evidence/id (str "e-" (UUID/randomUUID))
                        :evidence/subject {:ref/type :component :ref/id "irc-server"}
                        :evidence/type :coordination
@@ -179,7 +180,7 @@
         emit-evidence!
         (fn [channel from text]
           (when evidence-store
-            (estore/append* evidence-store
+            (boundary/append! evidence-store
                             {:evidence/id (str "e-" (UUID/randomUUID))
                              :evidence/subject {:ref/type :thread :ref/id (str "irc/" channel)}
                              :evidence/type :forum-post
@@ -456,7 +457,7 @@
         emit-evidence!
         (fn [channel from text]
           (when evidence-store
-            (estore/append* evidence-store
+            (boundary/append! evidence-store
                             {:evidence/id (str "e-" (UUID/randomUUID))
                              :evidence/subject {:ref/type :thread :ref/id (str "irc/" channel)}
                              :evidence/type :forum-post
@@ -602,7 +603,7 @@
               (send-fn cid (str ":" from-nick " PRIVMSG " channel " :" msg))))
           (try
             (when evidence-store
-              (estore/append* evidence-store
+              (boundary/append! evidence-store
                               {:evidence/id (str "e-" (UUID/randomUUID))
                                :evidence/subject {:ref/type :thread :ref/id (str "irc/" channel)}
                                :evidence/type :forum-post

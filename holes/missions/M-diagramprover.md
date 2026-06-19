@@ -1,4 +1,5 @@
 # Mission: DiagramProver — Pattern-Driven Proof Search
+Status: parked
 
 **Date:** 2026-04-01 (IDENTIFY), 2026-04-01 (MAP), 2026-04-01 (DERIVE),
 2026-04-01 (ARGUE), 2026-04-01 (VERIFY begun)

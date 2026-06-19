@@ -8,12 +8,17 @@
             [cheshire.core :as json]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.transport.http :as http]
+            [futon3c.transport.peripheral-events]
+            [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.portfolio.core :as portfolio]
+            [futon3c.portfolio.perceive :as perceive]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.string :as str]))
 
 ;; =============================================================================
 ;; Fixtures
@@ -25,6 +30,11 @@
     (reg/reset-registry!)
     (persist/reset-sessions!)
     (estore/reset-store!)
+    (reset! portfolio/!state {:mu perceive/default-mu
+                              :prec perceive/default-precision
+                              :pending nil
+                              :recent []
+                              :step-count 0})
     (enc/clear-cache!)
     (http/reset-invoke-jobs!)
     (f)))
@@ -69,6 +79,24 @@
   "Parse the JSON body string from a Ring response."
   [response]
   (json/parse-string (:body response) true))
+
+(defn- with-system-properties
+  [settings f]
+  (let [ks (keys settings)
+        old-values (into {}
+                         (map (fn [k] [k (System/getProperty k)]))
+                         ks)]
+    (try
+      (doseq [[k v] settings]
+        (if (some? v)
+          (System/setProperty k v)
+          (System/clearProperty k)))
+      (f)
+      (finally
+        (doseq [[k v] old-values]
+          (if (some? v)
+            (System/setProperty k v)
+            (System/clearProperty k)))))))
 
 (defn- with-live-server
   "Run test body against a real local HTTP server (required for async channel paths)."
@@ -126,6 +154,32 @@
 (defn- write-corpus!
   [dir corpus-name entries]
   (spit (io/file dir (str corpus-name ".edn")) (pr-str entries)))
+
+;; =============================================================================
+;; Mission sync endpoint
+;; =============================================================================
+
+(deftest mc-sync-mission-pushes-versioned-snapshot
+  (testing "POST /api/alpha/mc/sync-mission parses and stores a mission snapshot"
+    (with-temp-dir
+      (fn [dir]
+        (let [missions-dir (io/file dir "holes" "missions")
+              path (io/file missions-dir "M-sample.md")
+              _ (.mkdirs missions-dir)
+              _ (spit path (str "# Mission: Sample\n\n"
+                                "**Date:** 2026-04-29\n"
+                                "**Status:** IDENTIFY\n"))
+              handler (make-handler {:evidence-store estore/!store})
+              body (json/generate-string {"path" (.getAbsolutePath path)
+                                          "repo" "futonz"})
+              response (post handler "/api/alpha/mc/sync-mission" body)
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "sample" (get-in parsed [:mission :mission/id])))
+          (is (= "futonz" (get-in parsed [:mission :mission/repo])))
+          (is (string? (:evidence/id parsed)))
+          (is (true? (:created parsed))))))))
 
 ;; =============================================================================
 ;; POST /dispatch tests
@@ -328,9 +382,369 @@
             (is (false? (:ok invoke-parsed)))
             (is (= "invoke-error" (:error invoke-parsed)))))))))
 
+(deftest agent-auto-register-seeds-session-id
+  (testing "POST /api/alpha/agents/auto seeds session continuity at registration time"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-session-id-claude-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-http-register"
+          body (json/generate-string {"type" "claude"
+                                      "session-id" sid})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "claude-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "claude-1" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= sid (some-> session-file slurp str/trim))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-auto-register-fresh-ignores-stale-file
+  (testing "POST /api/alpha/agents/auto with no session-id deletes stale session file (I-1)"
+    ;; Regression: a stale /tmp/futon-session-id-<aid> from a prior
+    ;; incarnation of this agent-id must not be silently adopted as the
+    ;; new agent's session. Otherwise two agents can share one session
+    ;; (observed: claude-3 and claude-6 both resuming 14459c97...).
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-session-id-claude-1")
+          backup (when (.exists session-file) (slurp session-file))
+          stale-sid "stale-from-prior-incarnation"
+          body (json/generate-string {"type" "claude"})]
+      (try
+        (spit session-file stale-sid)
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "claude-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "claude-1" (:agent-id parsed)))
+          (is (nil? (:session-id parsed))
+              "fresh lane must not echo back a session-id")
+          (is (nil? (:agent/session-id agent))
+              "fresh lane must not inherit the stale file's session-id")
+          (is (not (.exists session-file))
+              "stale session file must be deleted on fresh registration"))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest codex-auto-register-seeds-session-id
+  (testing "POST /api/alpha/agents/auto creates a fresh codex lane with its own session file"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-codex-register"
+          cwd "/home/joe/code"
+          body (json/generate-string {"type" "codex"
+                                      "session-id" sid
+                                      "cwd" cwd})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "codex-1" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= (.getPath session-file) (:session-file parsed)))
+          (is (= cwd (:cwd parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= true (get-in agent [:agent/metadata :require-execution?])))
+          (is (= sid (some-> session-file slurp str/trim)))
+          (is (fn? (:agent/invoke-fn agent))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest codex-auto-register-reclaims-unreachable-remote-placeholder
+  (testing "POST /api/alpha/agents/auto reuses stale remote codex-1 instead of allocating codex-2"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-codex-reclaim"
+          cwd "/home/joe/code"
+          body (json/generate-string {"type" "codex"
+                                      "session-id" sid
+                                      "cwd" cwd})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (reg/register-agent!
+         {:agent-id {:id/value "codex-1" :id/type :continuity}
+          :type :codex
+          :invoke-fn nil
+          :capabilities [:edit :test :coordination/execute]
+          :metadata {:remote? true
+                     :note "unreachable remote placeholder"}})
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "codex-1" (:agent-id parsed)))
+          (is (nil? (reg/get-agent "codex-2"))
+              "reclaiming codex-1 avoids minting a confusing extra lane")
+          (is (= sid (:agent/session-id agent)))
+          (is (fn? (:agent/invoke-fn agent)))
+          (is (= true (get-in agent [:agent/metadata :auto-registered?])))
+          (is (nil? (get-in agent [:agent/metadata :remote?]))
+              "local registration must clear stale remote metadata")
+          (is (= sid (some-> session-file slurp str/trim))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-restore-registers-codex-exact-identity
+  (testing "POST /api/alpha/agents/restore recreates an exact codex identity"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-99")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-restore-codex-99"
+          cwd "/home/joe/code"
+          body (json/generate-string {"agent-id" "codex-99"
+                                      "type" "codex"
+                                      "session-id" sid
+                                      "session-file" (.getPath session-file)
+                                      "cwd" cwd})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/restore" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-99")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "registered" (:action parsed)))
+          (is (= "codex-99" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= (.getPath session-file) (:session-file parsed)))
+          (is (= cwd (:cwd parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= true (get-in agent [:agent/metadata :require-execution?])))
+          (is (= cwd (get-in agent [:agent/metadata :cwd])))
+          (is (= sid (some-> session-file slurp str/trim)))
+          (is (fn? (:agent/invoke-fn agent))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-restore-clears-stale-remote-metadata
+  (testing "POST /api/alpha/agents/restore makes a local lane stop displaying as remote"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-codex-session-id-codex-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-restore-local-codex-1"
+          body (json/generate-string {"agent-id" "codex-1"
+                                      "type" "codex"
+                                      "session-id" sid
+                                      "session-file" (.getPath session-file)
+                                      "cwd" "/home/joe/code"})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (reg/register-agent!
+         {:agent-id {:id/value "codex-1" :id/type :continuity}
+          :type :codex
+          :invoke-fn nil
+          :capabilities [:edit :test :coordination/execute]
+          :metadata {:remote? true
+                     :remote-proxy? true
+                     :origin-url "http://linode.invalid:7070"
+                     :note "stale remote placeholder"}})
+        (let [response (post handler "/api/alpha/agents/restore" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "codex-1")]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "updated" (:action parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (fn? (:agent/invoke-fn agent)))
+          (is (nil? (get-in agent [:agent/metadata :remote?])))
+          (is (nil? (get-in agent [:agent/metadata :remote-proxy?])))
+          (is (nil? (get-in agent [:agent/metadata :origin-url])))
+          (is (nil? (get-in agent [:agent/metadata :note]))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-restore-existing-preserves-session-id-when-omitted
+  (testing "POST /api/alpha/agents/restore refreshes invoke-fn without clearing session-id"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-session-id-claude-88")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-restore-claude-88"
+          initial-body (json/generate-string {"agent-id" "claude-88"
+                                              "type" "claude"
+                                              "session-id" sid
+                                              "session-file" (.getPath session-file)
+                                              "cwd" "/home/joe/code"})
+          refresh-body (json/generate-string {"agent-id" "claude-88"
+                                              "type" "claude"
+                                              "session-file" (.getPath session-file)
+                                              "cwd" "/home/joe/code/futon3c"})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [initial-response (post handler "/api/alpha/agents/restore" initial-body)
+              _ (spit session-file "stale-session-from-before-restart")
+              refresh-response (post handler "/api/alpha/agents/restore" refresh-body)
+              parsed (parse-body refresh-response)
+              agent (reg/get-agent "claude-88")]
+          (is (= 201 (:status initial-response)))
+          (is (= 200 (:status refresh-response)))
+          (is (true? (:ok parsed)))
+          (is (= "updated" (:action parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= sid (some-> session-file slurp str/trim)))
+          (is (= "/home/joe/code/futon3c"
+                 (get-in agent [:agent/metadata :cwd]))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
+(deftest agent-restore-uses-claude-session-cwd
+  (testing "POST /api/alpha/agents/restore uses Claude transcript cwd over caller cwd"
+    (let [handler (make-handler)
+          projects-root (doto (io/file (System/getProperty "java.io.tmpdir")
+                                       (str "claude-projects-" (java.util.UUID/randomUUID)))
+                          (.mkdirs))
+          transcript-dir (doto (io/file projects-root "-home-joe-code")
+                           (.mkdirs))
+          session-file (java.io.File/createTempFile "futon3c-http-claude-cwd-" ".sid")
+          transcript-session "sess-restore-claude-cwd"
+          transcript-cwd "/home/joe/code"
+          wrong-cwd "/home/joe/code/futon5a/essays/ukrn-open-research-training-plos-one"
+          transcript-file (io/file transcript-dir (str transcript-session ".jsonl"))
+          original-claude-session-cwd (var-get #'futon3c.transport.http/claude-session-cwd)
+          body (json/generate-string {"agent-id" "claude-cwd"
+                                      "type" "claude"
+                                      "session-id" transcript-session
+                                      "session-file" (.getPath session-file)
+                                      "cwd" wrong-cwd})]
+      (try
+        (spit transcript-file
+              (json/generate-string {:type "user"
+                                     :sessionId transcript-session
+                                     :cwd transcript-cwd}))
+        (with-redefs [futon3c.transport.http/claude-session-cwd
+                      (fn
+                        ([session-id]
+                         (original-claude-session-cwd projects-root session-id))
+                        ([root session-id]
+                         (original-claude-session-cwd root session-id)))]
+          (let [response (post handler "/api/alpha/agents/restore" body)
+                parsed (parse-body response)
+                agent (reg/get-agent "claude-cwd")]
+            (is (= 201 (:status response)))
+            (is (true? (:ok parsed)))
+            (is (= transcript-cwd (:cwd parsed)))
+            (is (= transcript-cwd (get-in agent [:agent/metadata :cwd])))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file))
+          (doseq [f (reverse (file-seq projects-root))]
+            (.delete f)))))))
+
+(deftest agent-reset-session-clears-backing-continuity
+  (testing "POST /api/alpha/agents/:id/reset-session clears registry and backing session state"
+    (let [handler (make-handler)
+          session-file (java.io.File/createTempFile "futon3c-http-reset-" ".sid")
+          sid-atom (atom "sess-http-reset")]
+      (try
+        (spit session-file "sess-http-reset")
+        (reg/register-agent!
+         {:agent-id {:id/value "codex-reset" :id/type :continuity}
+          :type :codex
+          :invoke-fn (fn [_ _] {:result "ok"})
+          :capabilities [:edit]
+          :session-id "sess-http-reset"
+          :session-reset-fn (fn []
+                              (reset! sid-atom nil)
+                              (when (.exists session-file)
+                                (.delete session-file))
+                              {:ok true})})
+        (let [response (post handler "/api/alpha/agents/codex-reset/reset-session" "{}")
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "sess-http-reset" (:old-session-id parsed)))
+          (is (nil? @sid-atom))
+          (is (false? (.exists session-file)))
+          (is (nil? (:session-id (get-in (reg/registry-status) [:agents "codex-reset"])))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file)))))))
+
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================
+
+(deftest claude-invoke-recovers-from-missing-conversation-session
+  (testing "Claude missing-conversation resume failure clears continuity and retries once"
+    (let [handler (make-handler)
+          session-file (java.io.File/createTempFile "futon3c-http-claude-stale-" ".sid")
+          attempts (atom [])
+          sid-atom (atom "stale-claude-session")]
+      (try
+        (spit session-file "stale-claude-session")
+        (reg/register-agent!
+         {:agent-id {:id/value "claude-stale" :id/type :continuity}
+          :type :claude
+          :invoke-fn (fn [_prompt session-id]
+                       (swap! attempts conj session-id)
+                       (if (= "stale-claude-session" session-id)
+                         {:error "Exit 1: No conversation found with session ID: stale-claude-session"
+                          :session-id session-id}
+                         {:result "fresh ok"
+                          :session-id "fresh-claude-session"}))
+          :capabilities [:explore]
+          :session-id "stale-claude-session"
+          :session-reset-fn (fn []
+                              (reset! sid-atom nil)
+                              (when (.exists session-file)
+                                (.delete session-file))
+                              {:ok true})})
+        (let [response (post handler "/api/alpha/invoke"
+                             (json/generate-string {"agent-id" "claude-stale"
+                                                    "prompt" "hello"}))
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "fresh ok" (:result parsed)))
+          (is (= "fresh-claude-session" (:session-id parsed)))
+          (is (= ["stale-claude-session" nil] @attempts))
+          (is (nil? @sid-atom))
+          (is (= "stale-claude-session"
+                 (get-in parsed [:session-recovery :old-session-id])))
+          (is (= "claude-missing-conversation"
+                 (get-in parsed [:session-recovery :reason]))))
+        (finally
+          (when (.exists session-file)
+            (.delete session-file)))))))
 
 (deftest codex-task-no-execution-detection
   (testing "task-mode codex reply without execution evidence is rejected"
@@ -377,6 +791,67 @@
                                      :tool-events 0
                                      :command-events 0}}}
           true)))))
+
+(deftest wrap-agent-facing-surface-includes-live-emacs-projection
+  (testing "invoke prompt includes the active Emacs read/write surface contract"
+    (with-redefs [reg/current-surface-projection
+                  (fn [_]
+                    {:surface "emacs-cursor"
+                     :editor-id "editor-main"
+                     :mode "follow"
+                     :buffer-summary "buffer=foo.clj user=(line 7 col 2 point 101) remote=nil"
+                     :write-surface "minibuffer"})]
+      (let [prompt (#'futon3c.transport.http/wrap-agent-facing-surface
+                    "Investigate the current form."
+                    "emacs-repl"
+                    "joe"
+                    "codex-8")]
+        (is (str/includes? prompt "Surface: emacs-repl"))
+        (is (str/includes? prompt "Live surface projection:"))
+        (is (str/includes? prompt "Editor: editor-main"))
+        (is (str/includes? prompt "Read surface `buffer`: buffer=foo.clj"))
+        (is (str/includes? prompt "Write surface `minibuffer`: emit lines `MINIBUFFER: <text-or-json>`"))
+        (is (str/includes? prompt "\"command\":\"eval-sexp\""))
+        (is (str/includes? prompt "\"command\":\"run-script\""))))))
+
+(deftest maybe-route-surface-writes-strips-and-relays-minibuffer-directives
+  (testing "MINIBUFFER directives are removed from visible output and relayed to Emacs"
+    (let [sent (atom [])]
+      (with-redefs [reg/current-surface-projection
+                    (fn [_]
+                      {:surface "emacs-cursor"
+                       :editor-id "editor-main"})
+                    futon3c.transport.peripheral-events/send-peripheral-event!
+                    (fn [agent-id peripheral-id event payload]
+                      (swap! sent conj {:agent-id agent-id
+                                        :peripheral-id peripheral-id
+                                        :event event
+                                        :payload payload})
+                      true)]
+        (let [result (#'futon3c.transport.http/maybe-route-surface-writes
+                      "codex-8"
+                      {:ok true
+                       :result (str "Summary complete.\n"
+                                    "MINIBUFFER: {\"command\":\"refresh-context\"}\n"
+                                    "MINIBUFFER: Inspect current defun")
+                       :invoke-meta {:execution {:executed? true}}})]
+          (is (= "Summary complete." (:result result)))
+          (is (= {:minibuffer-events 2
+                  :routed-events 2}
+                 (get-in result [:invoke-meta :surface-write])))
+          (is (= [{:agent-id "codex-8"
+                   :peripheral-id :emacs-cursor
+                   :event :minibuffer
+                   :payload {:command "refresh-context"
+                             :request-id "minibuffer-0"}}
+                  {:agent-id "codex-8"
+                   :peripheral-id :emacs-cursor
+                   :event :minibuffer
+                   :payload {:command "message"
+                             :message "Inspect current defun"
+                             :prompt "Inspect current defun"
+                             :request-id "minibuffer-1"}}]
+                 @sent)))))))
 
 (deftest invoke-registered-codex-agent
   (testing "POST /api/alpha/invoke invokes codex agent via registry"
@@ -876,7 +1351,7 @@
                                       "delivered" true
                                       "note" "ngircd-bridge"})]
       (with-redefs [futon3c.transport.http/*resolve-delivery-recorder* (fn [] nil)
-                    futon3c.transport.ws.invoke/send-frame!
+                    ws-invoke/send-frame!
                     (fn [agent-id payload]
                       (swap! calls conj {:agent-id agent-id :payload payload})
                       true)]
@@ -972,6 +1447,23 @@
       (is (= "ok" (:status parsed)))
       (is (= true (:irc-relay-configured parsed)))
       (is (= "http://172.236.28.208:7070" (:irc-send-base parsed))))))
+
+(deftest health-includes-queue-hardening-status
+  (testing "GET /health includes red A3 status when one hardening gate is off"
+    (with-system-properties
+      {"FUTON3C_DURABLE_QUEUE" "true"
+       "FUTON3C_DRAINER_V2" "false"
+       "FUTON3C_REPL_THROUGH_QUEUE" "true"}
+      (fn []
+        (let [handler (make-handler)
+              response (get-req handler "/health")
+              parsed (parse-body response)
+              queue-hardening (:queue-hardening parsed)]
+          (is (= 200 (:status response)))
+          (is (= "ok" (:status parsed)))
+          (is (= false (:ok? queue-hardening)))
+          (is (= false (get-in queue-hardening [:gates :drainer-v2])))
+          (is (= ["drainer-v2"] (:degraded queue-hardening))))))))
 
 (deftest health-includes-uptime
   (testing "GET /health includes started-at and non-decreasing uptime seconds"
@@ -1320,6 +1812,31 @@
           ;; Graceful shutdown
           ((:server server-info)))))))
 
+(deftest http-kit-shutdown-race-suppression
+  (testing "expected shutdown races are suppressed only after stop begins"
+    (let [submit-race (java.util.concurrent.RejectedExecutionException. "executor closed")
+          close-race (java.nio.channels.ClosedChannelException.)]
+      (is (true? (#'http/suppress-http-kit-error?
+                  :stopped
+                  "failed to submit task to executor service"
+                  submit-race)))
+      (is (true? (#'http/suppress-http-kit-error?
+                  nil
+                  "increase :queue-size if this happens often"
+                  submit-race)))
+      (is (true? (#'http/suppress-http-kit-error?
+                  :stopped
+                  "accept incoming request"
+                  close-race)))
+      (is (false? (#'http/suppress-http-kit-error?
+                   :running
+                   "failed to submit task to executor service"
+                   submit-race)))
+      (is (false? (#'http/suppress-http-kit-error?
+                   :stopped
+                   "some other message"
+                   submit-race))))))
+
 (deftest start-server-stop-closes-gracefully
   (testing "calling the stop function shuts down the server"
     (let [free-port (with-open [ss (java.net.ServerSocket. 0)]
@@ -1372,15 +1889,157 @@
 
 (deftest portfolio-step-returns-recommendation
   (testing "POST /api/alpha/portfolio/step runs AIF step and returns recommendation"
-    (let [handler (make-handler)
+    (let [handler (make-handler {:evidence-store estore/!store})
           response (post handler "/api/alpha/portfolio/step"
-                         (json/generate-string {:emit-evidence false}))
+                         (json/generate-string {:agenda-id "wm.close-s6.v1"
+                                                :claim "Close S6 by stepping Portfolio Inference using THE-STACK"
+                                                :observation-source {:kind "aif-stack"
+                                                                     :path "futon5a/holes/stories/THE-STACK.aif.edn"}}))
           parsed (parse-body response)]
       (is (= 200 (:status response)))
       (is (true? (:ok parsed)))
       (is (string? (:recommendation parsed)))
       (is (contains? parsed :diagnostics))
-      (is (contains? parsed :action)))))
+      (is (contains? parsed :action))
+      (is (string? (:run-id parsed)))
+      (is (= "wm.close-s6.v1" (:agenda-id parsed)))
+      (is (= {:before 0 :after 1} (:step-count parsed)))
+      (is (= "futon5a/holes/stories/THE-STACK.aif.edn"
+             (get-in parsed [:observation-source :path])))
+      (is (= 4 (count (get-in parsed [:evidence :entries]))))
+      (let [evidence-response (get-req-with-query handler
+                                                  "/api/alpha/evidence"
+                                                  "tag=portfolio,step")
+            evidence-parsed (parse-body evidence-response)
+            step-entry (first (:entries evidence-parsed))]
+        (is (= 200 (:status evidence-response)))
+        (is (= 1 (:count evidence-parsed)))
+        (is (= "wm.close-s6.v1" (get-in step-entry [:evidence/body :run :agenda-id])))
+        (is (= (:run-id parsed) (get-in step-entry [:evidence/body :run :run-id])))))))
+
+(deftest aif-stack-live-rolls-forward-s6-agenda
+  (testing "GET /api/alpha/aif-stack/live marks v1 rolled-forward, exposes v2 as documented-but-underspecified, and updates the S6 counter"
+    (let [handler (make-handler {:evidence-store estore/!store})
+          _step-response (post handler "/api/alpha/portfolio/step"
+                               (json/generate-string {:agenda-id "wm.close-s6.v1"
+                                                      :claim "Close S6 by stepping Portfolio Inference using THE-STACK"
+                                                     :observation-source {:kind "aif-stack"
+                                                                           :path "futon5a/holes/stories/THE-STACK.aif.edn"}}))
+          response (get-req handler "/api/alpha/aif-stack/live")
+          parsed (parse-body response)
+          s6-node (first (filter #(= "S6" (:id %)) (:stack-nodes parsed)))
+          queue (get parsed :candidate-queue)
+          inspectability (get-in queue [:by-leaf-family :inspectability])
+          unmapped (get queue :unmapped-families)]
+      (is (= 200 (:status response)))
+      (is (= "wm.close-s6.v1" (get-in parsed [:reading :next-move :agenda :id])))
+      (is (= "rolled-forward" (get-in parsed [:reading :next-move :agenda :status])))
+      (is (= "portfolio-step-evidence"
+             (get-in parsed [:reading :next-move :agenda :witness :kind])))
+      (is (= "wm.close-s6.v1"
+             (get-in parsed [:reading :next-move :agenda :witness :run :agenda-id])))
+      (is (= 0
+             (get-in parsed [:reading :next-move :agenda :witness :run :step-before])))
+      (is (= 1
+             (get-in parsed [:reading :next-move :agenda :witness :run :step-after])))
+      (is (= "stack-self-step-count"
+             (get-in parsed [:reading :next-move :agenda :effect-witness :kind])))
+      (is (= 1
+             (get-in parsed [:reading :next-move :agenda :effect-witness :after])))
+      (is (= "wm.close-s6.v2"
+             (get-in parsed [:reading :next-move :agenda :successor :id])))
+      (is (= "underspecified"
+             (get-in parsed [:reading :next-move :agenda :successor :status])))
+      (is (= false
+             (get-in parsed [:reading :next-move :agenda :successor :recommendation-grade?])))
+      (is (= true
+             (get-in parsed [:reading :next-move :agenda :successor :documented?])))
+      (is (= ["action-surface" "step-witness" "effect-witness" "successor-witness"]
+             (get-in parsed [:reading :next-move :agenda :successor :missing-fields])))
+      (is (= "clear the completed War Machine item and set the next item for work via the Candidate Queue invariant"
+             (get-in parsed [:reading :next-move :agenda :successor :specifically])))
+      (is (= 1 (:live-self-step-count s6-node)))
+      (is (= "PI loop step-count = 1; HGO spec-only" (:gap s6-node)))
+      (is (string? (:generated-at queue)))
+      (is (pos? (:run-count queue)))
+      (is (pos? (:top-rank inspectability)))
+      (is (pos? (:item-count inspectability)))
+      (is (some #(= "human-visible-inspectability" %) (:families inspectability)))
+      (is (some #(= "strategic-closure-specification" (:family-id %)) unmapped)))))
+
+(deftest war-machine-serves-cached-snapshot
+  (testing "GET /api/alpha/war-machine returns the cached snapshot plus freshness metadata"
+    (let [handler (make-handler)
+          as-of (java.time.Instant/parse "2026-05-25T12:00:00Z")
+          response (with-redefs [requiring-resolve
+                                 (fn [sym]
+                                   (case sym
+                                     futon3c.wm.scheduler/ensure-started!
+                                     (fn [] {:ok true})
+                                     futon3c.wm.scheduler/snapshot-for-days
+                                     (fn [days]
+                                       (when (= 14 days)
+                                         {:as-of as-of
+                                          :payload {"window" {"days" 14}
+                                                    "judgement" {"mode" "steady"}}}))
+                                     futon3c.wm.scheduler/status
+                                     (fn []
+                                       {:running? true
+                                        :period-seconds 300
+                                        :days-windows [14 90]})
+                                     futon3c.wm.scheduler/request-window!
+                                     (fn [_days] {:ok true})
+                                     nil))
+                                 futon3c.transport.http/current-vsatarcs-status
+                                 (fn []
+                                   {:available? true
+                                    :build {:status :violation}
+                                    :stories [{:story/id "leaf-invariants"
+                                               :headline "drift"
+                                               :build/status :violation}]
+                                    :wm-escalation {:tier :warning}})]
+                     (get-req-with-query handler "/api/alpha/war-machine" "days=14"))
+          parsed (parse-body response)]
+      (is (= 200 (:status response)))
+      (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
+      (is (= 14 (get-in parsed [:window :days])))
+      (is (= "steady" (get-in parsed [:judgement :mode])))
+      (is (= true (get-in parsed [:vsatarcs-status :available?])))
+      (is (= "violation" (get-in parsed [:vsatarcs-status :build :status])))
+      (is (= "2026-05-25T12:00:00Z" (:as-of parsed)))
+      (is (integer? (:scan-age-seconds parsed)))
+      (is (= 300 (get-in parsed [:scheduler :period-seconds]))))))
+
+(deftest war-machine-returns-503-while-background-warmup-starts
+  (testing "GET /api/alpha/war-machine returns 503 and requests a background warmup when no snapshot exists yet"
+    (let [handler (make-handler)
+          requested-days (atom [])
+          response (with-redefs [requiring-resolve
+                                 (fn [sym]
+                                   (case sym
+                                     futon3c.wm.scheduler/ensure-started!
+                                     (fn [] {:ok true})
+                                     futon3c.wm.scheduler/snapshot-for-days
+                                     (fn [_days] nil)
+                                     futon3c.wm.scheduler/status
+                                     (fn []
+                                       {:running? true
+                                        :period-seconds 300
+                                        :days-windows [14 90]})
+                                     futon3c.wm.scheduler/request-window!
+                                     (fn [days]
+                                       (swap! requested-days conj days)
+                                       {:ok true})
+                                     nil))]
+                     (get-req-with-query handler "/api/alpha/war-machine" "days=90"))
+          parsed (parse-body response)]
+      (is (= 503 (:status response)))
+      (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
+      (is (= "60" (get-in response [:headers "Retry-After"])))
+      (is (= [90] @requested-days))
+      (is (= "war-machine-snapshot-unavailable" (:error parsed)))
+      (is (= 90 (:days parsed)))
+      (is (= 60 (:retry-after-seconds parsed))))))
 
 (deftest portfolio-heartbeat-rejects-invalid-json
   (testing "POST /api/alpha/portfolio/heartbeat with bad JSON returns 400"

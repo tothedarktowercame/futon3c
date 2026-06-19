@@ -15,7 +15,9 @@
 
    All tools are read-only with respect to external systems.
    Evidence emission happens at the peripheral level, not here."
-  (:require [clojure.edn :as edn]
+  (:require [babashka.http-client :as http]
+            [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set :as cset]
             [clojure.string :as str]
@@ -24,6 +26,16 @@
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.mission-backend :as mb]
             [futon3c.peripheral.tools :as tools]))
+
+(def ^:private futon1a-url
+  (or (System/getenv "FUTON1A_URL")
+      "http://localhost:7071"))
+
+(def ^:private mission-doc-hyperedge-type
+  "code/v05/mission-doc")
+
+(def ^:private historical-turn-backfill-path
+  "/home/joe/code/futon5a/data/turn-commit-mission-backfill.json")
 
 ;; =============================================================================
 ;; Configuration — repo paths
@@ -164,6 +176,7 @@
         (str/starts-with? s "done")             :complete
         (str/starts-with? s "blocked")          :blocked
         (str/starts-with? s "ready")            :ready
+        (str/starts-with? s "testing")          :testing
         (str/starts-with? s "pass")             :complete
         (str/starts-with? s "deferred")         :deferred
         (str/starts-with? s "nonstarter")       :nonstarter
@@ -180,6 +193,18 @@
         (str/starts-with? s "superseded")       :complete
         (str/starts-with? s "abandoned")        :nonstarter
         (str/starts-with? s "not implemented")  :ready
+        ;; Status-audit additions (2026-05-23, M-weird-modernism follow-up):
+        ;; cover the dominant raw-status patterns that previously fell
+        ;; through to :unknown.
+        (str/starts-with? s "archived")         :archived
+        (str/starts-with? s "parked")           :deferred
+        (str/starts-with? s "head")             :in-progress
+        (str/starts-with? s "not started")      :ready
+        (str/starts-with? s "not yet started")  :ready
+        (str/starts-with? s "specified")        :ready
+        (str/starts-with? s "partial")          :in-progress
+        (str/starts-with? s "stage")            :in-progress
+        (re-find #"^(?:phase\s+\d+\s+partial|partial[-\s]complete)" s) :in-progress
         ;; "Phase N complete, Phase M pending" → in-progress (partially done)
         (re-find #"^phase\s+\d+\s+complete" s)  :in-progress
         ;; Derivation keywords: check if the *derivation step itself* is marked complete.
@@ -191,6 +216,12 @@
           :complete
           :in-progress)
         :else :unknown))))
+
+(defn- in-progress-status?
+  "Return true when status counts as in-progress/active."
+  [status]
+  (or (= status :in-progress)
+      (= status :testing)))
 
 (defn- count-checkboxes
   "Count checked and total checkboxes in markdown text.
@@ -210,34 +241,387 @@
     (zero? checked)             :ready
     (> checked 0)               :in-progress))
 
+;; =============================================================================
+;; T-9b: Content enrichment helpers — port of futon3a/missions.clj utilities
+;; so substrate-2 hyperedges carry summary, cross-refs, code-paths, and phase
+;; directly, removing the need for downstream consumers (futon3a, etc.) to
+;; re-parse the source markdown.
+;; =============================================================================
+
+(def ^:private mission-ref-pattern
+  #"\b(M-[A-Za-z0-9][A-Za-z0-9-]*)\b")
+
+(def ^:private absolute-code-path-pattern
+  #"/home/joe/code/[^\s`)\],;]+")
+
+(def ^:private tilde-code-path-pattern
+  #"~/code/[^\s`)\],;]+")
+
+(def ^:private repo-relative-path-pattern
+  #"\b(?:futon[0-9a-z-]+|npt)/[A-Za-z0-9._/\-]+")
+
+(def ^:private default-code-root
+  (str (System/getProperty "user.home") "/code"))
+
+(defn- normalize-spaces [s]
+  (-> s (str/replace #"\s+" " ") str/trim))
+
+(defn- normalize-code-path [path]
+  (cond
+    (str/starts-with? path "~/code/")
+    (str/replace path #"^~" (System/getProperty "user.home"))
+
+    (re-matches repo-relative-path-pattern path)
+    (str default-code-root "/" path)
+
+    :else path))
+
+(defn- extract-cross-refs
+  "Return distinct M-X mission references from BODY, excluding SELF-ID."
+  [body self-id]
+  (->> (re-seq mission-ref-pattern body)
+       (map second)
+       (remove #(= % (str "M-" self-id)))
+       distinct
+       vec))
+
+(defn- strip-trailing-path-punct
+  "Strip trailing punctuation that sentences leave on otherwise-valid
+   path captures (periods, commas, parens, quotes, etc.). Repeats so
+   `wyrd.,` reduces cleanly to `wyrd`."
+  [s]
+  (str/replace s #"[.,;:!?'\")\]]+\z" ""))
+
+(defn- code-path-has-real-extension?
+  "True when PATH's last segment looks like a real file extension —
+   a dot followed by 1-8 alphanumeric chars starting with a letter.
+   Filters captures like `futon-theory/wyrd` that come from prose
+   references rather than actual filesystem paths."
+  [path]
+  (let [last-segment (last (str/split path #"/"))]
+    (boolean (re-find #"\.[A-Za-z][A-Za-z0-9]{0,7}\z" (or last-segment "")))))
+
+(defn- extract-code-paths
+  "Return distinct normalized code paths from BODY. Filters out captures
+   that don't look like real filesystem paths: trailing sentence punctuation
+   is stripped, and the path must have a real-looking extension in its
+   last segment."
+  [body]
+  (->> (concat (re-seq absolute-code-path-pattern body)
+               (re-seq tilde-code-path-pattern body)
+               (re-seq repo-relative-path-pattern body))
+       (map strip-trailing-path-punct)
+       (filter code-path-has-real-extension?)
+       (map normalize-code-path)
+       distinct
+       vec))
+
+(def ^:private phase-patterns-ordered
+  [[:document    #"(?i)\bDOCUMENT\b"]
+   [:instantiate #"(?i)\bINSTANTIATE\b"]
+   [:verify      #"(?i)\bVERIFY\b"]
+   [:argue       #"(?i)\bARGUE\b"]
+   [:derive      #"(?i)\bDERIVE\b"]
+   [:map         #"(?i)\bMAP\b"]
+   [:identify    #"(?i)\bIDENTIFY\b"]
+   [:head        #"(?i)\bHEAD\b"]
+   [:complete    #"(?i)\b(COMPLETE|COMPLETED|CLOSED)\b"]])
+
+(defn- match-phase [text]
+  (some (fn [[phase re]]
+          (when (re-find re (or text ""))
+            phase))
+        phase-patterns-ordered))
+
+(defn- classify-phase
+  "Classify the mission's current phase keyword from its status header
+   (preferred) and body (fallback)."
+  [raw-status lines]
+  (or (match-phase raw-status)
+      (some match-phase lines)
+      :unknown))
+
+(defn- italic-scaffold-line? [line]
+  (boolean
+   (or (re-matches #"^\s*\*[^*]+\*\s*$" (or line ""))
+       (re-matches #"^\s*_[^_]+_\s*$" (or line "")))))
+
+(def ^:private front-matter-key-pattern
+  "Matches markdown bold-key front-matter lines like `**Status:** IDENTIFY`,
+   `**Cross-refs:**` (trailing colon, no value on the same line), or
+   `**Owner:** Joe`. Used to skip such lines during summary extraction
+   so they don't bleed into the captured paragraph. Pragmatic: any line
+   starting with `**Word…**` (with optional trailing colon) is treated
+   as front-matter, even if it's a legitimate sentence opener — the
+   front-matter failure mode is dominant in mission docs."
+  #"^\s*\*\*[A-Za-z][^*]*\*\*:?")
+
+(defn- front-matter-line? [line]
+  (boolean (re-find front-matter-key-pattern (or line ""))))
+
+(defn- extract-first-paragraph
+  "Pull out a single body paragraph from LINES, skipping front-matter
+   scaffolding at the start and stopping at the next non-prose element.
+
+   Drop predicate skips: blank lines, `#` headings, HTML comments,
+   blockquotes, table rows, bullet items, code fences, lines beginning
+   with 2+ spaces (treated as bullet-list continuations), and markdown
+   bold-key front-matter (`**Key:**`-style).
+
+   Take predicate stops at: blank lines, headings, comments, tables,
+   code fences, bullets, and front-matter — so a paragraph that ends
+   when a list begins doesn't slurp the list."
+  [lines]
+  (->> lines
+       (drop-while #(or (str/blank? %)
+                        (str/starts-with? % "#")
+                        (str/starts-with? % "<!--")
+                        (str/starts-with? % ">")
+                        (str/starts-with? % "|")
+                        (str/starts-with? % "- ")
+                        (str/starts-with? % "* ")
+                        (str/starts-with? % "  ")
+                        (str/starts-with? % "```")
+                        (front-matter-line? %)))
+       (take-while #(and (not (str/blank? %))
+                         (not (str/starts-with? % "#"))
+                         (not (str/starts-with? % "<!--"))
+                         (not (str/starts-with? % "|"))
+                         (not (str/starts-with? % "```"))
+                         (not (str/starts-with? % "- "))
+                         (not (str/starts-with? % "* "))
+                         (not (front-matter-line? %))))
+       (str/join " ")
+       normalize-spaces))
+
+(defn- subsection-lines [lines heading-re]
+  (let [indexed (map-indexed vector lines)
+        start (some (fn [[idx line]]
+                      (when (re-find heading-re line)
+                        idx))
+                    indexed)]
+    (when start
+      (->> (drop (inc start) lines)
+           (take-while #(not (re-matches #"^#{1,6}\s+.*$" %)))
+           vec))))
+
+(defn- section-paragraph [lines heading-re]
+  (some-> (subsection-lines lines heading-re)
+          extract-first-paragraph
+          not-empty))
+
+(defn- identify-fallback-paragraph [lines]
+  (when-let [section (subsection-lines lines #"^##\s+1(?:bis)?\.\s+IDENTIFY")]
+    (->> section
+         (drop-while #(or (str/blank? %)
+                          (re-matches #"^###\s+.*$" %)
+                          (str/starts-with? % "<!--")
+                          (italic-scaffold-line? %)))
+         extract-first-paragraph
+         not-empty)))
+
+(defn- post-status-paragraph [lines]
+  (when-let [status-idx (some (fn [[idx line]]
+                                (when (re-find #"(?i)^\*\*Status:\*\*\s+" line)
+                                  idx))
+                              (map-indexed vector lines))]
+    (->> (drop (inc status-idx) lines)
+         extract-first-paragraph
+         not-empty)))
+
+(defn- mission-summary
+  "Best-effort one-paragraph summary of the mission body, preferring
+   explicit summary sections (Plain-language argument, Motivation) over
+   IDENTIFY-section fallback, post-status paragraph, then the first body
+   paragraph. Returns empty string if nothing usable is found."
+  [lines]
+  (or (section-paragraph lines #"(?i)^###\s+Plain-language argument")
+      (section-paragraph lines #"^###\s+Motivation")
+      (section-paragraph lines #"^###\s+Motivation \(re-run")
+      (identify-fallback-paragraph lines)
+      (post-status-paragraph lines)
+      (some-> (drop 1 lines) extract-first-paragraph not-empty)
+      ""))
+
+;; ---------------------------------------------------------------------
+;; T-9c: PSR / PUR section extraction
+;; ---------------------------------------------------------------------
+
+(def ^:private record-heading-pattern
+  "Matches any markdown heading of level 2 or deeper whose text begins
+   with PSR or PUR (case-insensitive), e.g. `## PSR`, `### PSR/PUR per
+   phase`, `#### PSR-1: \\`pattern-name\\``, `### Pattern Selection
+   Records (PSRs)`. Level-1 (`#`) is excluded because mission bodies
+   rarely use it as a top-level heading and `# PSR-A1:` lines often
+   appear inside code fences as in-block titles, not as real document
+   headings."
+  #"(?i)^#{2,}\s+(?:Pattern\s+(?:Selection|Use)\s+Records?\s*\(?(PSRs?|PURs?)\)?|((?:PSR|PUR)s?)\b)\s*[:\-—/]*\s*(.*)$")
+
+(def ^:private any-heading-pattern #"^#{2,}\s+\S")
+
+(defn- group-bullet-blocks
+  "Walk record-body LINES and group each `- Key: value` bullet with its
+   indented continuation lines, stopping at the next bullet, the next
+   heading, or a blank line. Returns a vec of vecs."
+  [lines]
+  (loop [remaining lines, groups []]
+    (if (empty? remaining)
+      groups
+      (let [[line & rest-lines] remaining]
+        (if (re-find #"^-\s+" line)
+          (let [conts (take-while #(and (not (str/blank? %))
+                                        (not (re-find any-heading-pattern %))
+                                        (not (re-find #"^-\s+" %)))
+                                  rest-lines)
+                after (drop (count conts) rest-lines)]
+            (recur after (conj groups (vec (cons line conts)))))
+          (recur rest-lines groups))))))
+
+(defn- parse-bullet-block
+  "Convert BLOCK (a vec whose first element is `- Key: value` and the
+   rest are continuation lines) into `[key value]` where KEY is the
+   lowercased, hyphenated bullet label and VALUE is the joined text.
+   Returns nil if the first line isn't bullet-shaped."
+  [block]
+  (when (seq block)
+    (let [first-line (first block)]
+      (when-let [m (re-matches #"^-\s+\*{0,2}([^:*][^:*]*?)\*{0,2}:\s*(.*)$" first-line)]
+        (let [k (-> (nth m 1) str/trim str/lower-case
+                    (str/replace #"\s+" "-"))
+              v (str/trim (nth m 2))
+              cont-text (->> (rest block)
+                             (map str/trim)
+                             (remove str/blank?)
+                             (str/join " "))
+              full-v (if (seq cont-text)
+                       (str/trim (str v (when (seq v) " ") cont-text))
+                       v)]
+          [k full-v])))))
+
+(defn- collect-record-body
+  "Collect body lines for a record section, stopping at the next heading."
+  [lines]
+  (->> lines (take-while #(not (re-find any-heading-pattern %))) vec))
+
+(defn- parse-record
+  "Convert a [heading-line body-lines] tuple into a record map
+   `{:title <str-or-nil> :fields {key value ...}}`. TYPE is `\"PSR\"` or
+   `\"PUR\"` (uppercase) — used to extract the optional title suffix
+   after the type marker in the heading."
+  [type heading body-lines]
+  (let [match (re-find record-heading-pattern heading)
+        ;; Group 1 is the bare PSR/PUR(s), group 2 is the parenthesised
+        ;; variant from "Pattern Selection Records (PSRs)". The trailing
+        ;; capture (group 3) is whatever follows the type marker.
+        title-suffix (when match (nth match 3 nil))
+        title-suffix (when (and title-suffix (seq (str/trim title-suffix)))
+                       (str/trim title-suffix))
+        groups (group-bullet-blocks body-lines)
+        fields (into {} (keep parse-bullet-block) groups)]
+    (cond-> {:fields fields}
+      title-suffix (assoc :title title-suffix))))
+
+(defn- extract-records
+  "Extract all PSR or PUR records from mission LINES. TYPE-RE is a regex
+   matching the section type marker (uppercase). Returns a vec of record
+   maps."
+  [lines type-re]
+  (loop [remaining lines, results []]
+    (if (empty? remaining)
+      results
+      (let [[line & rest-lines] remaining]
+        (if (and (re-find any-heading-pattern line)
+                 (re-find type-re line))
+          (let [body (collect-record-body rest-lines)
+                rec (parse-record (str/upper-case (second (re-find type-re line)))
+                                  line body)
+                after (drop (count body) rest-lines)]
+            (recur after (conj results rec)))
+          (recur rest-lines results))))))
+
+(defn- extract-psrs
+  "Extract all `## PSR`, `### PSR`, `#### PSR-N: title`, `### Pattern
+   Selection Records (PSRs)` etc. sections from LINES."
+  [lines]
+  (extract-records lines #"(?i)\b(PSR)s?\b"))
+
+(defn- extract-purs
+  "Mirror of `extract-psrs` for PUR sections."
+  [lines]
+  (extract-records lines #"(?i)\b(PUR)s?\b"))
+
+;; ---------------------------------------------------------------------
+;; End T-9c
+;; ---------------------------------------------------------------------
+
+(defn- file-mtime-iso
+  "Return PATH's last-modified time as an ISO local-date string
+   (yyyy-mm-dd), or nil if the file is missing / cannot be read."
+  [^String path]
+  (try
+    (let [f (io/file path)]
+      (when (.exists f)
+        (let [instant (java.time.Instant/ofEpochMilli (.lastModified f))
+              date    (-> instant
+                          (.atZone (java.time.ZoneId/systemDefault))
+                          .toLocalDate)]
+          (.format date java.time.format.DateTimeFormatter/ISO_LOCAL_DATE))))
+    (catch Exception _ nil)))
+
 (defn parse-mission-md
-  "Parse a mission .md file into a MissionEntry."
+  "Parse a mission .md file into a MissionEntry. T-9b: now extracts the
+   content-enrichment fields (`:mission/summary`, `:mission/cross-refs`,
+   `:mission/code-paths`, `:mission/phase`) that downstream consumers
+   previously re-parsed for, plus the file's last-modified date
+   (`:mission/mtime`) for downstream staleness heuristics. These flow
+   into the substrate-2 hyperedge props via
+   `futon3c.watcher.file-ingest/ingest-mission-doc!`."
   [path repo-name]
   (try
     (let [text (slurp path)
+          lines (str/split-lines text)
           ;; Header extraction searches only the first 80 lines to avoid
           ;; picking up subsection **Status**: lines from the body.
-          header-text (->> (str/split-lines text)
-                           (take 80)
-                           (str/join "\n"))
+          header-text (->> lines (take 80) (str/join "\n"))
           filename (.getName (io/file path))
           mission-id (str/replace filename #"^M-|\.md$" "")
+          title (when-let [m (re-find #"(?m)^#\s+(?:Mission:\s*)?(.+)$" header-text)]
+                  (str/trim (second m)))
           raw-status (extract-header header-text "Status")
           date (extract-header header-text "Date")
           blocked-by (extract-header header-text "Blocked by")
+          owner (extract-header header-text "Owner")
           explicit-status (classify-status raw-status)
           checkboxes (count-checkboxes text)
           inferred-status (when (and (nil? explicit-status) checkboxes)
                             (infer-status-from-checkboxes checkboxes))
-          status (or explicit-status inferred-status :unknown)]
+          status (or explicit-status inferred-status :unknown)
+          ;; T-9b content enrichment
+          summary (mission-summary lines)
+          cross-refs (extract-cross-refs text mission-id)
+          code-paths (extract-code-paths text)
+          phase (classify-phase raw-status lines)
+          mtime (file-mtime-iso path)
+          ;; T-9c: PSR / PUR section extraction (mission-embedded records)
+          psrs (extract-psrs lines)
+          purs (extract-purs lines)]
       (cond-> {:mission/id mission-id
                :mission/status status
                :mission/source :md-file
                :mission/repo (name repo-name)
                :mission/path (str path)
+               :mission/title title
                :mission/date date
                :mission/blocked-by blocked-by
-               :mission/raw-status raw-status}
+               :mission/owner owner
+               :mission/raw-status raw-status
+               :mission/summary summary
+               :mission/cross-refs cross-refs
+               :mission/code-paths code-paths
+               :mission/phase phase
+               :mission/mtime mtime
+               :mission/psrs psrs
+               :mission/purs purs}
         checkboxes
         (assoc :mission/gates checkboxes)
         (and (nil? explicit-status) inferred-status)
@@ -251,6 +635,144 @@
        :mission/repo (name repo-name)
        :mission/path (str path)
        :mission/raw-status (str "parse-error: " (.getMessage e))})))
+
+(defn- classify-excursion-status
+  "Coarse v0 excursion status:
+   - complete/archived => :complete
+   - any other recognised status => :open
+   - missing/unclassified => :unknown
+
+   Preserve the full raw string separately for fidelity."
+  [raw]
+  (let [base (classify-status raw)
+        s (some-> raw
+                  str/trim
+                  (str/replace #"\*+" "")
+                  str/lower-case)]
+    (cond
+      (nil? s) :unknown
+      (or (= base :complete)
+          (= base :archived)
+          (str/starts-with? s "executed"))
+      :complete
+
+      (or (= base :ready)
+          (= base :in-progress)
+          (= base :testing)
+          (= base :blocked)
+          (= base :deferred)
+          (= base :nonstarter)
+          (str/starts-with? s "scoped")
+          (str/starts-with? s "spec")
+          (str/starts-with? s "accepted")
+          (str/starts-with? s "partially executed"))
+      :open
+
+      (= base :unknown) :unknown
+      :else :open)))
+
+(defn- normalize-parent-mission-endpoint
+  "Best-effort normalize a Parent mission header value to a canonical
+   `<repo>-d/mission/<slug>` endpoint. Returns nil when the line does not
+   name a resolvable mission path or id."
+  [raw repo-name]
+  (when (and raw (not (str/blank? raw)))
+    (let [text (-> raw
+                   (str/replace "`" "")
+                   normalize-path-separators)
+          repo+slug (or (some->> (re-find #"(?i)(?:^|/)(futon[0-9a-z.-]+|vsat(?:\.wiki)?|npt)/holes/missions/M-([A-Za-z0-9][A-Za-z0-9-]*)\.md" text)
+                                 rest)
+                        (when-let [slug (second (re-find #"\bM-([A-Za-z0-9][A-Za-z0-9-]*)\.md\b" text))]
+                          [(name repo-name) slug])
+                        (when-let [slug (second (re-find #"\bM-([A-Za-z0-9][A-Za-z0-9-]*)\b" text))]
+                          [(name repo-name) slug]))]
+      (when repo+slug
+        (let [[repo slug] repo+slug]
+          (str repo "-d/mission/" slug))))))
+
+(defn parse-excursion-md
+  "Parse an E-prefix excursion markdown file into an excursion-entry map.
+
+   Reuses the mission parser's content-enrichment heuristics for summary,
+   cross-refs, and code-path extraction, but preserves the E-prefix-specific
+   header semantics: bounded scope-out, parent mission, and end-to-end owner."
+  [path repo-name]
+  (try
+    (let [text (slurp path)
+          lines (str/split-lines text)
+          header-text (->> lines (take 120) (str/join "\n"))
+          filename (.getName (io/file path))
+          excursion-id (str/replace filename #"^E-|\.md$" "")
+          title (when-let [m (re-find #"(?m)^#\s+(?:Excursion:\s*)?(.+)$" header-text)]
+                  (str/trim (second m)))
+          raw-status (extract-header header-text "Status")
+          date (extract-header header-text "Date")
+          owner (or (extract-header header-text "Author + end-to-end owner")
+                    (extract-header header-text "End-to-end owner")
+                    (extract-header header-text "Owner")
+                    (extract-header header-text "Author"))
+          parent-raw (extract-header header-text "Parent mission")
+          parent-endpoint (normalize-parent-mission-endpoint parent-raw repo-name)
+          summary (mission-summary lines)
+          cross-refs (extract-cross-refs text excursion-id)
+          code-paths (extract-code-paths text)
+          mtime (file-mtime-iso path)]
+      {:excursion/id excursion-id
+       :excursion/title title
+       :excursion/status (classify-excursion-status raw-status)
+       :excursion/raw-status raw-status
+       :excursion/date date
+       :excursion/owner owner
+       :excursion/parent-mission parent-endpoint
+       :excursion/parent-mission-raw parent-raw
+       :excursion/summary summary
+       :excursion/cross-refs cross-refs
+       :excursion/code-paths code-paths
+       :excursion/mtime mtime
+       :excursion/source :md-file
+       :excursion/repo (name repo-name)
+       :excursion/path (str path)})
+    (catch Exception e
+      {:excursion/id (str path)
+       :excursion/status :unknown
+       :excursion/source :md-file
+       :excursion/repo (name repo-name)
+       :excursion/path (str path)
+       :excursion/raw-status (str "parse-error: " (.getMessage e))})))
+
+(defn- path-under-root?
+  [root path]
+  (let [root (some-> root io/file .getCanonicalPath normalize-path-separators)
+        path (some-> path io/file .getCanonicalPath normalize-path-separators)]
+    (and root path
+         (or (= root path)
+             (str/starts-with? path (str root "/"))))))
+
+(defn infer-repo-name-for-path
+  "Best-effort repo inference for an absolute path using known repo roots.
+   Returns a repo keyword or nil."
+  ([path] (infer-repo-name-for-path default-repo-roots path))
+  ([repos path]
+   (some (fn [[repo-name root]]
+           (when (path-under-root? root path)
+             repo-name))
+         repos)))
+
+(defn parse-mission-path
+  "Parse a single mission markdown path with explicit or inferred repo name.
+   Returns a MissionEntry or nil when the file does not look like a mission."
+  ([path] (parse-mission-path default-repo-roots path nil))
+  ([repos path repo-name]
+   (let [path-str (str path)
+         file-name (.getName (io/file path-str))
+         repo-name (or repo-name (infer-repo-name-for-path repos path-str))]
+     (when (and repo-name
+                ;; M- missions and E- excursions both carry mission structure
+                ;; (the watcher glob admits both; this gate must agree).
+                (or (str/starts-with? file-name "M-")
+                    (str/starts-with? file-name "E-"))
+                (str/ends-with? file-name ".md"))
+       (parse-mission-md path-str repo-name)))))
 
 (defn- classify-devmap-state
   "Convert an EDN :mission/state keyword to a MissionStatus."
@@ -331,19 +853,282 @@
            vec)
       [])))
 
+;; =============================================================================
+;; T-9b: Substrate-2 as primary source for mission inventory
+;; =============================================================================
+
+(def ^:private stale-in-progress-days
+  "When an :in-progress mission's source file hasn't been modified for
+   this many days, the read-side overrides its status to
+   :stale-in-progress so that downstream UIs (Arxana Browser, WM
+   surface) can distinguish actively-worked-on missions from
+   indefinitely-pending ones. The raw header status is preserved in
+   `:mission/raw-status`."
+  7)
+
+(defn- days-since
+  "Return whole days between the ISO local-date string MTIME-STR and
+   today (system zone). Returns nil if MTIME-STR can't be parsed."
+  [mtime-str]
+  (when mtime-str
+    (try
+      (let [mtime-date (java.time.LocalDate/parse mtime-str)
+            today (java.time.LocalDate/now)]
+        (.between java.time.temporal.ChronoUnit/DAYS mtime-date today))
+      (catch Exception _ nil))))
+
+(defn- apply-staleness-override
+  "If STATUS is :in-progress and DAYS-STALE exceeds
+   `stale-in-progress-days`, return :stale-in-progress. Otherwise return
+   STATUS unchanged."
+  [status days-stale]
+  (if (and (= :in-progress status)
+           (some? days-stale)
+           (> days-stale stale-in-progress-days))
+    :stale-in-progress
+    status))
+
+(defn- hyperedge-props->mission-entry
+  "Convert a substrate-2 mission-doc hyperedge's :hx/props map back into
+   the MissionEntry shape expected by build-inventory and downstream
+   consumers. Sets `:mission/source` to `:substrate-2` to distinguish
+   from the legacy `:md-file` filesystem-scan source. T-9b: also
+   computes `:mission/days-stale` from `:mission/mtime` and overrides
+   `:mission/status` to `:stale-in-progress` when an in-progress mission
+   has been untouched for more than `stale-in-progress-days`."
+  [props]
+  (let [g (fn [k] (get props k))
+        status-str (g :mission/status)
+        base-status (or (some-> status-str classify-status) :unknown)
+        phase-raw (g :mission/phase)
+        phase (cond
+                (nil? phase-raw) nil
+                (keyword? phase-raw) phase-raw
+                (string? phase-raw) (keyword phase-raw)
+                :else nil)
+        mtime (g :mission/mtime)
+        days-stale (days-since mtime)
+        status (apply-staleness-override base-status days-stale)
+        gates (g :mission/gates)]
+    (cond-> {:mission/id (g :mission/id)
+             :mission/status status
+             :mission/source :substrate-2
+             :mission/repo (g :mission/repo)
+             :mission/path (g :source-file)
+             :mission/title (g :mission/title)
+             :mission/date (g :mission/date)
+             :mission/blocked-by (g :mission/blocked-by)
+             :mission/owner (g :mission/owner)
+             :mission/raw-status (g :mission/raw-status)
+             :mission/summary (g :mission/summary)
+             :mission/cross-refs (or (g :mission/cross-refs) [])
+             :mission/code-paths (or (g :mission/code-paths) [])
+             :mission/phase phase
+             :mission/mtime mtime
+             :mission/days-stale days-stale
+             :mission/psrs (or (g :mission/psrs) [])
+             :mission/purs (or (g :mission/purs) [])}
+      gates (assoc :mission/gates gates))))
+
+(defn- fetch-substrate-2-missions
+  "Query futon1a for all current `code/v05/mission-doc` hyperedges and
+   return them as MissionEntry-shaped maps. Returns nil if substrate-2
+   is unreachable; build-inventory falls back to filesystem scan in
+   that case."
+  []
+  (try
+    (let [url (str futon1a-url
+                   "/api/alpha/hyperedges?type=" mission-doc-hyperedge-type
+                   "&limit=500")
+          resp (http/get url {:headers {"Accept" "application/json"}
+                              :throw false
+                              :timeout 5000})]
+      (when (= 200 (:status resp))
+        (let [parsed (json/parse-string (:body resp) true)
+              hxes (:hyperedges parsed)]
+          (->> hxes
+               (map :hx/props)
+               (filter some?)
+               (mapv hyperedge-props->mission-entry)))))
+    (catch Exception _ nil)))
+
 (defn build-inventory
   "Build the full cross-repo mission inventory.
-   repos: map of {repo-name root-path} (defaults to default-repo-roots)."
+
+   **T-9b**: PRIMARY source is now substrate-2 (futon1a hyperedge
+   query). The filesystem walker (`scan-mission-files`) is preserved
+   as a fallback only when substrate-2 is unreachable. The previous
+   behaviour — three independent parsers competing for the same
+   markdown files — is consolidated to one: the watcher's
+   `ingest-mission-doc!` writes substrate-2; build-inventory reads it.
+
+   repos: map of {repo-name root-path} (defaults to default-repo-roots).
+   In substrate-2 mode the `repos` arg is used only for devmap scanning
+   and as filesystem fallback; substrate-2 covers all repos already
+   ingested, regardless of the requested subset."
   ([] (build-inventory default-repo-roots))
   ([repos]
-   (let [md-missions (into []
-                           (mapcat (fn [[repo-name root]]
-                                     (scan-mission-files root repo-name)))
-                           repos)
+   (let [md-missions (or (fetch-substrate-2-missions)
+                         ;; Fallback: substrate-2 unreachable. Scan filesystem
+                         ;; via the canonical parser so the API stays usable.
+                         (into []
+                               (mapcat (fn [[repo-name root]]
+                                         (scan-mission-files root repo-name)))
+                               repos))
          devmap-missions (if-let [f5 (:futon5 repos)]
                            (scan-devmap-files f5)
                            [])]
      (into md-missions devmap-missions))))
+
+;; =============================================================================
+;; Turn-count telemetry
+;; =============================================================================
+
+(defn- normalize-turn-mission-id
+  [mission-id]
+  (some-> mission-id str str/trim not-empty (str/replace #"^M-" "")))
+
+(defn- load-historical-turn-backfill
+  []
+  (let [f (io/file historical-turn-backfill-path)]
+    (when (.exists f)
+      (try
+        (json/parse-string (slurp f) true)
+        (catch Exception e
+          {:error (.getMessage e)})))))
+
+(defn- historical-mission-turn-counts
+  []
+  (let [backfill (load-historical-turn-backfill)
+        records (:records backfill)
+        by-mission (reduce
+                    (fn [acc rec]
+                      (if-let [mid (normalize-turn-mission-id (:bestguess_mission rec))]
+                        (-> acc
+                            (update-in [mid :turns]
+                                       (fnil conj #{})
+                                       (:turn_epoch rec))
+                            (update-in [mid :commits] (fnil inc 0)))
+                        acc))
+                    {}
+                    (or records []))
+        mission-counts (into {}
+                             (map (fn [[mid {:keys [turns commits]}]]
+                                    [mid {:historical-turn-count (count (disj (or turns #{}) nil))
+                                          :historical-commit-count (or commits 0)}]))
+                             by-mission)]
+    {:source :turn-commit-mission-backfill
+     :source-path historical-turn-backfill-path
+     :source-error (:error backfill)
+     :historical-user-turns-logged (:n_user_turns_logged backfill)
+     :historical-commits-total (:n_commits backfill)
+     :historical-commits-attributed-to-turn (:commits_attributed_to_turn backfill)
+     :historical-commits-with-bestguess-mission (:commits_with_bestguess_mission backfill)
+     :mission-counts mission-counts
+     :total-historical-turns (reduce + (map :historical-turn-count (vals mission-counts)))
+     :total-historical-commits (reduce + (map :historical-commit-count (vals mission-counts)))}))
+
+(defn- body-field
+  [body k]
+  (or (get body k)
+      (get body (name k))))
+
+(defn- chat-user-turn-entry?
+  [entry]
+  (let [body (:evidence/body entry)
+        event (body-field body :event)
+        role (body-field body :role)]
+    (and (= "chat-turn" (some-> event name))
+         (= "user" (str role)))))
+
+(defn- live-turn-entry-mission-id
+  [entry]
+  (let [body (:evidence/body entry)]
+    (normalize-turn-mission-id
+     (or (body-field body :mission-id)
+         (body-field body :clocked-mission)))))
+
+(defn- live-mission-turn-counts
+  ([] (live-mission-turn-counts estore/!store))
+  ([evidence-store]
+   ;; chat-turn evidence is :evidence/type :coordination but spans several
+   ;; claim-types (question / observation / correction), so filtering on
+   ;; :query/claim-type :question silently dropped most turns. Filter on type
+   ;; only; chat-user-turn-entry? narrows to event=chat-turn + role=user.
+   (let [entries (try
+                   (estore/query* evidence-store
+                                  {:query/type :coordination
+                                   :query/limit 50000})
+                   (catch Exception _ []))
+         by-mission (reduce
+                     (fn [acc entry]
+                       (if (and (chat-user-turn-entry? entry)
+                                (live-turn-entry-mission-id entry))
+                         (let [mid (live-turn-entry-mission-id entry)
+                               body (:evidence/body entry)
+                               turn-id (or (body-field body :turn-id)
+                                           (:evidence/id entry))]
+                           (update acc mid (fnil conj #{}) turn-id))
+                         acc))
+                     {}
+                     entries)
+         mission-counts (into {}
+                              (map (fn [[mid turn-ids]]
+                                     [mid {:live-turn-count (count turn-ids)}]))
+                              by-mission)]
+     {:source :live-evidence
+      :query-limit 50000
+      :mission-counts mission-counts
+      :total-live-turns (reduce + (map :live-turn-count (vals mission-counts)))})))
+
+(defn mission-turn-count-telemetry
+  "Return per-mission turn counts from historical backfill plus live evidence."
+  ([] (mission-turn-count-telemetry estore/!store))
+  ([evidence-store]
+   (let [historical (historical-mission-turn-counts)
+         live (live-mission-turn-counts evidence-store)
+         mission-ids (sort (cset/union (set (keys (:mission-counts historical)))
+                                       (set (keys (:mission-counts live)))))
+         mission-counts (into {}
+                              (map (fn [mid]
+                                     (let [h (get-in historical [:mission-counts mid] {})
+                                           l (get-in live [:mission-counts mid] {})
+                                           h-turns (or (:historical-turn-count h) 0)
+                                           l-turns (or (:live-turn-count l) 0)]
+                                       [mid (merge {:historical-turn-count h-turns
+                                                    :historical-commit-count (or (:historical-commit-count h) 0)
+                                                    :live-turn-count l-turns
+                                                    :turn-count (+ h-turns l-turns)}
+                                                   h l)])))
+                              mission-ids)]
+     {:mission-counts mission-counts
+      :total-turns (reduce + (map :turn-count (vals mission-counts)))
+      :total-historical-turns (:total-historical-turns historical)
+      :total-live-turns (:total-live-turns live)
+      :total-historical-commits (:total-historical-commits historical)
+      :historical historical
+      :live live})))
+
+(defn attach-turn-counts
+  "Attach per-mission turn-count telemetry to inventory rows."
+  [missions turn-telemetry]
+  (let [counts (:mission-counts turn-telemetry)]
+    (mapv (fn [mission]
+            (let [mid (normalize-turn-mission-id (:mission/id mission))
+                  c (get counts mid)]
+              (cond-> mission
+                c (assoc :mission/turn-count (:turn-count c)
+                         :mission/historical-turn-count (:historical-turn-count c)
+                         :mission/live-turn-count (:live-turn-count c)
+                         :mission/historical-commit-count (:historical-commit-count c)))))
+          missions)))
+
+(defn build-inventory-with-turn-counts
+  "Build mission inventory rows with turn-count telemetry attached."
+  ([] (build-inventory-with-turn-counts default-repo-roots))
+  ([repos]
+   (attach-turn-counts (build-inventory repos)
+                       (mission-turn-count-telemetry))))
 
 ;; =============================================================================
 ;; Mission doc fidelity audit (GF / drift)
@@ -601,29 +1386,36 @@
 
 (defn- summarize-portfolio
   "Generate a human-readable portfolio summary."
-  [missions devmap-summaries coverage mana doc-drift]
-  (let [total-missions (count missions)
-        complete (count (filter #(= :complete (:mission/status %)) missions))
-        in-progress (count (filter #(= :in-progress (:mission/status %)) missions))
-        blocked (count (filter #(= :blocked (:mission/status %)) missions))
-        ready (count (filter #(= :ready (:mission/status %)) missions))
-        total-devmaps (count devmap-summaries)
-        valid-devmaps (count (filter :devmap/all-valid devmap-summaries))
-        avg-coverage (if (seq coverage)
-                       (/ (reduce + (map :coverage/coverage-pct coverage)) (count coverage))
-                       0.0)]
-    (str total-missions " missions"
-         " (" complete " complete"
-         ", " in-progress " in-progress"
-         ", " blocked " blocked"
-         ", " ready " ready)"
-         ". " total-devmaps " devmaps"
-         " (" valid-devmaps " valid)."
-         " Avg coverage: " (format "%.0f%%" (* 100 avg-coverage)) "."
-         " Doc drift: " (:audit/drift doc-drift) "/" (:audit/total doc-drift)
-         " drift, " (:audit/open-section-obligations doc-drift)
-         " open section obligations."
-         (when-not (:mana/available mana) " Mana system not yet initialized."))))
+  ([missions devmap-summaries coverage mana doc-drift]
+   (summarize-portfolio missions devmap-summaries coverage mana doc-drift nil))
+  ([missions devmap-summaries coverage mana doc-drift turn-counts]
+   (let [total-missions (count missions)
+         complete (count (filter #(= :complete (:mission/status %)) missions))
+         in-progress (count (filter #(in-progress-status? (:mission/status %)) missions))
+         blocked (count (filter #(= :blocked (:mission/status %)) missions))
+         ready (count (filter #(= :ready (:mission/status %)) missions))
+         total-devmaps (count devmap-summaries)
+         valid-devmaps (count (filter :devmap/all-valid devmap-summaries))
+         avg-coverage (if (seq coverage)
+                        (/ (reduce + (map :coverage/coverage-pct coverage)) (count coverage))
+                        0.0)]
+     (str total-missions " missions"
+          " (" complete " complete"
+          ", " in-progress " in-progress"
+          ", " blocked " blocked"
+          ", " ready " ready)"
+          ". " total-devmaps " devmaps"
+          " (" valid-devmaps " valid)."
+          " Avg coverage: " (format "%.0f%%" (* 100 avg-coverage)) "."
+          " Doc drift: " (:audit/drift doc-drift) "/" (:audit/total doc-drift)
+          " drift, " (:audit/open-section-obligations doc-drift)
+          " open section obligations."
+          (when turn-counts
+            (str " Turn telemetry: " (:total-turns turn-counts 0)
+                 " typed turns ("
+                 (:total-historical-turns turn-counts 0) " historical, "
+                 (:total-live-turns turn-counts 0) " live)."))
+          (when-not (:mana/available mana) " Mana system not yet initialized.")))))
 
 (defn- find-gaps
   "Identify gaps: devmap components without missions, blocked missions, etc."
@@ -643,10 +1435,11 @@
                                               ")"))))
                                 vec)
         uncovered (mapcat (fn [c]
-                            (map (fn [comp-id]
-                                   (str (name (:coverage/devmap-id c))
-                                        "/" (name comp-id) " — no mission"))
-                                 (:coverage/uncovered c)))
+                            (keep (fn [comp-id]
+                                    (when (and (:coverage/devmap-id c) comp-id)
+                                      (str (name (:coverage/devmap-id c))
+                                           "/" (name comp-id) " — no mission")))
+                                  (:coverage/uncovered c)))
                           coverage)]
     (into (into (mapv (fn [m]
                         (str (:mission/id m) " — blocked"
@@ -713,7 +1506,9 @@
 (defn- find-actionable
   "Identify actionable missions: ready or in-progress, not blocked."
   [missions]
-  (let [actionable (filter #(#{:ready :in-progress} (:mission/status %)) missions)]
+  (let [actionable (filter #(or (= :ready (:mission/status %))
+                                (in-progress-status? (:mission/status %)))
+                           missions)]
     (mapv (fn [m]
             (str (:mission/id m)
                  " (" (name (:mission/status m)) ")"
@@ -726,16 +1521,19 @@
   ([] (build-portfolio-review default-repo-roots))
   ([repos]
    (let [missions-raw (build-inventory repos)
-         missions (attach-doc-audit repos missions-raw)
+         turn-counts (mission-turn-count-telemetry)
+         missions (attach-turn-counts (attach-doc-audit repos missions-raw)
+                                      turn-counts)
          futon5-root (or (:futon5 repos) (:futon5 default-repo-roots))
          devmap-summaries (read-all-devmaps futon5-root repos)
          coverage (compute-coverage devmap-summaries missions)
          mana (query-mana futon5-root)
          doc-drift (summarize-doc-drift missions)
-         summary (summarize-portfolio missions devmap-summaries coverage mana doc-drift)
+         summary (summarize-portfolio missions devmap-summaries coverage mana doc-drift turn-counts)
          gaps (find-gaps missions coverage)
          actionable (find-actionable missions)]
      {:portfolio/missions missions
+      :portfolio/turn-counts turn-counts
       :portfolio/devmap-summaries devmap-summaries
       :portfolio/coverage coverage
       :portfolio/mana mana
@@ -1036,6 +1834,46 @@
                                           :mission/devmap-id
                                           :mission/gates])
      :evidence/tags [:mission :backfill :snapshot]}))
+
+(defn- file-sha256
+  [path]
+  (let [md (java.security.MessageDigest/getInstance "SHA-256")
+        bytes (java.nio.file.Files/readAllBytes (.toPath (io/file path)))]
+    (.update md bytes)
+    (apply str (map #(format "%02x" %) (.digest md)))))
+
+(defn mission->sync-evidence
+  "Convert a MissionEntry into a versioned EvidenceEntry suitable for
+   push-based mission sync. Each distinct file content version gets a
+   stable evidence id derived from the content hash, so repeated saves
+   of unchanged content dedupe while real edits append a new snapshot."
+  [mission]
+  (let [mid (:mission/id mission)
+        repo (or (:mission/repo mission) "unknown")
+        src (name (:mission/source mission))
+        path (:mission/path mission)
+        sha (when (and path (.exists (io/file path)))
+              (file-sha256 path))
+        sha-short (subs (or sha "missing") 0 (min 12 (count (or sha "missing"))))
+        now (str (java.time.Instant/now))]
+    {:evidence/id (str "e-mission-sync-" mid "-" repo "-" sha-short)
+     :evidence/subject {:ref/type :mission :ref/id mid}
+     :evidence/type :coordination
+     :evidence/claim-type :observation
+     :evidence/author "mission-control/sync"
+     :evidence/at now
+     :evidence/body (cond-> (select-keys mission [:mission/id :mission/status
+                                                  :mission/title
+                                                  :mission/source :mission/repo
+                                                  :mission/path
+                                                  :mission/date
+                                                  :mission/blocked-by
+                                                  :mission/raw-status
+                                                  :mission/devmap-id
+                                                  :mission/gates])
+                      true (assoc :event :mission-sync-snapshot)
+                      sha (assoc :mission/content-sha sha))
+     :evidence/tags [:mission :sync :snapshot]}))
 
 (defn backfill-inventory
   "Convert a full mission inventory into backfill evidence entries.

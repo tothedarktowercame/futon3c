@@ -1,0 +1,167 @@
+{:leaf "pilot-appearance-argument"
+ :name "Pilot Appearance Argument"
+ :format :aif+
+ :version 2
+ :date "2026-05-25"
+ :source "futon3c/holes/missions/M-pilot-appearance.md"
+ :note "Mission-local AIF+ argument companion for M-pilot-appearance. This is not yet part of futon5a/holes/stories; it uses the same node/edge/reading shape so the argument can be inspected and later lifted into broader AIF+/AIF2 machinery."
+
+ :sources
+ ["futon3c/holes/missions/M-pilot-appearance.md"
+  "futon3c/holes/missions/pilot-handoff/scene_04_pilot_phase_3.cljc"
+  "futon3c/holes/missions/pilot-handoff/protocols.cljc"
+  "futon3c/holes/missions/pilot-handoff/repl_printer.cljc"
+  "futon3/library/futon-theory/four-types.flexiarg"
+  "futon3/library/futon-theory/agent-contract.flexiarg"
+  "futon3/library/peripherals/read-only-first-then-extend.flexiarg"
+  "futon3/library/peripherals/surface-earns-inhabitation.flexiarg"
+  "futon3/library/peripherals/inhabitation-feeds-evolution.flexiarg"
+  "futon3/library/liberation/noble/right-view.flexiarg"
+  "futon3/library/liberation/noble/right-effort.flexiarg"
+  "futon3/library/liberation/noble/right-mindfulness.flexiarg"
+  "futon3/library/liberation/noble/right-concentration.flexiarg"
+  "futon3/library/t4r/rationale.flexiarg"
+  "futon3/library/t4r/dtp-fit.flexiarg"
+  "futon3/library/t4r/training.flexiarg"
+  "futon3/library/t4r/legacy.flexiarg"
+  "futon3/library/t4r/supplement.flexiarg"]
+
+ :spine
+ [:n0 :n1 :n2 :n3 :n4 :n5 :nC]
+
+ :nodes
+ [{:id :n0
+   :type :claim
+   :ref "M-pilot-appearance/ARGUE-thesis"
+   :content "the pilot's appearance should be treated as a four-depth, four-turn, capability-developing apparatus for inhabiting and handing off the stack"
+   :status :in-progress
+   :role :family-claim}
+
+  {:id :n1
+   :type :claim
+   :ref "M-pilot-appearance/four-depth-map"
+   :content "the appearance problem is a typed projection over an existing four-depth stack: pheno=code, geno=AIF+War Machine, exo=VSATARCS, xeno=outward pilot artefact"
+   :status :prototype
+   :role :foundation}
+
+  {:id :n2
+   :type :claim
+   :ref "M-pilot-appearance/pilot-cycle"
+   :content "the visible 4-card Pilot's Cycle is a compressed operational face of a fuller 8-factor discipline; REPL gives the turn grammar, four foundations give attentional content, and R1-R12 give audit backing"
+   :status :prototype
+   :role :pillar}
+
+  {:id :n3
+   :type :claim
+   :ref "M-pilot-appearance/handoff-capability"
+   :content "the deck belongs to capability development and succession: it trains one inhabitant to leave a trace another inhabitant can read, judge, extend, and contest"
+   :status :prototype
+   :role :anchor}
+
+  {:id :n4
+   :type :claim
+   :ref "scene_04_pilot_phase_3"
+   :content "the Phase-3 exemplar already proves the frame can be rendered operationally as a scene trace plus a 4-card cycle that steps the protocols and REPL printer together"
+   :status :operational
+   :role :capstone}
+
+  {:id :n5
+   :type :claim
+   :ref "M-pilot-appearance/inhabitability-criterion"
+   :content "the surface earns its place only if repeated use is easier and truer than ad hoc articulation and if that use improves later handoffs and later versions of the deck"
+   :status :spec-only
+   :role :criterion}
+
+  {:id :nC
+   :type :conflict
+   :ref nil
+   :content "decorative-compression risk: the 4-card deck could collapse into glib UI or contemplative branding detached from stack duties, proof obligations, and real handoff work"
+   :status :prototype
+   :role :load-bearing-conflict
+   :bites #{:n0 :n2 :n3 :n4}}
+
+  {:id :nC2
+   :type :conflict
+   :ref nil
+   :content "provisional-language risk: the card labels and exact contract/log wording remain unsettled, so the visible deck language can drift ahead of the stronger structural claim"
+   :status :prototype
+   :role :process-conflict
+   :bites #{:n2 :n3 :n4}}
+
+  {:id :nF
+   :type :falsifiability
+   :ref nil
+   :content "if repeated inhabitants do not produce cleaner logs, sharper judgments, clearer consent gates, or more continuous handoffs than ad hoc notes, the appearance thesis weakens"
+   :status :spec-only}
+
+  {:id :nP
+   :type :preference
+   :ref nil
+   :content "validate the frame through repeated inhabitation and handoff before polishing or canonising card labels"
+   :status :spec-only
+   :role :priority-ordering
+   :over [:n5 :n4]}]
+
+ :edges
+ [{:from :n1 :to :n0 :type :supports
+   :note "four-types grounds the level structure; the pilot surface traverses pre-existing depths rather than inventing a fifth"}
+
+  {:from :n2 :to :n0 :type :supports
+   :note "liberation/noble/right-* plus REPL plus four foundations plus R1-R12 justify the four-turn compression"}
+
+  {:from :n3 :to :n0 :type :supports
+   :note "talk4real supplies the capability-development and succession reading of the deck"}
+
+  {:from :n4 :to :n0 :type :supports
+   :note "scene_04 is exhibited evidence that the frame can already operate as a rendered stack frame"}
+
+  {:from :n5 :to :n0 :type :supports
+   :note "surface-earns-inhabitation and inhabitation-feeds-evolution provide the acceptance criterion for the thesis"}
+
+  {:from :n2 :to :n1 :type :depends-on
+   :note "the cycle only makes sense if the stack-facing four-depth map is coherent"}
+
+  {:from :n3 :to :n2 :type :operationalises
+   :note "the succession claim explains why the 4-card cycle is worth exposing to a user at all"}
+
+  {:from :n4 :to :n2 :type :instantiates
+   :note "the current prototype is an operational instance of the proposed cycle"}
+
+  {:from :n5 :to :n4 :type :qualifies
+   :note "the prototype is evidence, but not yet vindication; repeated use must still earn the surface"}
+
+  {:from :nF :to :n0 :type :would-refute
+   :note "failure to improve real handoff quality weakens the main claim"}
+
+  {:from :nC :to :n0 :type :attacks
+   :note "if the deck is decorative, the thesis fails at its central point"}
+  {:from :nC :to :n2 :type :attacks
+   :note "compression can go glib if not backed by the fuller discipline"}
+  {:from :nC :to :n3 :type :attacks
+   :note "handoff rhetoric without real traces or learning would be empty"}
+  {:from :nC :to :n4 :type :attacks
+   :note "a mockup can still be ornamental if it never earns repeated use"}
+
+  {:from :nC2 :to :n2 :type :attacks
+   :note "unsettled labels can distort the claimed structure"}
+  {:from :nC2 :to :n3 :type :attacks
+   :note "contract/log wording is part of the succession claim, so drift matters"}
+  {:from :nC2 :to :n4 :type :attacks
+   :note "the prototype currently proves operability more than final wording"}
+
+  {:from :nP :over [:n5 :n4] :type :preference-frame
+   :note "prove inhabitation value before freezing names"}]
+
+ :reading
+ {:next-move
+  {:close :n5
+   :rationale "The cheapest strong dis-bite of the load-bearing conflict is not another round of naming work but a small repeated-use validation loop. If later inhabitants can use the frame to produce cleaner Inhabitation Log entries and more continuous handoff traces than ad hoc notes, then n5 lands and the thesis gains its strongest non-rhetorical support. If they cannot, the prototype should be revised before the deck language is canonised."
+   :specifically "Run at least two real or simulated inhabitant handoffs through the scene_04 frame plus the Inhabitation Log slot, then compare the resulting trace quality against an unstructured baseline."}
+
+  :one-paragraph
+  "The argument's thesis (n0) is that pilot appearance is not a fifth level and not decorative chrome, but a four-depth, four-turn, capability-developing apparatus for inhabiting and handing off the stack. The level structure (n1) comes from the mission-specific projection of four-types: pheno=code, geno=AIF+War Machine, exo=VSATARCS, xeno=outward pilot artefact. The turn structure (n2) compresses a fuller eightfold discipline into a usable face: REPL provides the turn grammar, the four foundations provide attentional content, and R1-R12 provide audit backing. The succession claim (n3), strengthened by talk4real, says the deck is really a training and handoff surface, not a presentation layer. The current prototype witness (n4) shows that this can already be rendered operationally as a scene trace plus a 4-card cycle. The load-bearing conflict (nC) is decorative-compression risk: if the deck becomes glib UI or contemplative branding detached from proof obligations and handoff work, the whole thesis fails. The acceptance criterion (n5) therefore matters most: the surface must earn inhabitation through repeated use. Next move: validate n5 with repeated handoff trials before canonising labels."
+
+  :format-notes
+  ["uses mission-local AIF+ leaf shape without assuming membership in futon5a/holes/stories"
+   "treats the inhabitability criterion as a first-class claim rather than only a prose caution, so later validation can close or weaken it explicitly"
+   "separates the load-bearing conflict (decorative compression) from the process-conflict (provisional wording), because the former is architectural while the latter is mostly a DERIVE polish issue"]}}

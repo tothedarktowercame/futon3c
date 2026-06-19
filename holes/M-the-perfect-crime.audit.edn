@@ -1,0 +1,202 @@
+{:audit/of :M-the-perfect-crime
+ :audit/kind :chained-claim-corpus-pass
+ :audit/date "2026-06-07"
+ :audit/by "claude-1 (WM watched cycle 1, pilot fork-resolution)"
+ :audit/method "mechanical grep for chained-claim/subsumption verbs over */holes/{missions,excursions}/{M,E}-*.md (excl. <repo>/.state sandbox)"
+ :audit/verbs ["subsumes" "subsumption" "becomes free" "for free" "falls out of" "by-product" "as a (free) bonus"]
+ :audit/caveat "These are AUDIT CANDIDATES (a chained-claim VERB is present), NOT confirmed perfect-crimes. The Baudrillardian test — is BOTH the subsumer X AND the subsumed Y actually LIVE? — is the next-stage per-candidate check (IDENTIFY). Many uses are legitimate. M-the-perfect-crime's own definitional uses are excluded."
+ :audit/totals {:raw-hits 84 :files 39 :candidate-hits-excl-self 74 :candidate-files 38}
+ :audit/by-verb {:as-a-bonus 1 :byproduct 2 :falls-out-of 12 :for-free 15 :other 1 :subsumes 16 :subsumption 27}
+ :audit/known-confirmed-2026-05-27 ["M-pattern-application-diagnostic" "M-futon-enrichment" "E-cross-prototype-geometry" "M-action-cost-modelling §3.8"]
+ :audit/candidates
+ [
+  {:file "futon3c/holes/missions/M-archaeology-control.md" :n 8
+   :hits [
+    {:line 20 :verb :subsumption :text "latent-work artifact has its own subsumption test against a stronger"}
+    {:line 33 :verb :subsumption :text "- **Subsumption shape.** Artifact A is obsolete relative to record P"}
+    {:line 34 :verb :subsumes :text "when A's information content is subsumed by P, and A occupies a"}
+    {:line 58 :verb :subsumption :text "existing narrow form. Subsumption test: `git stash show -p N |"}
+    {:line 63 :verb :subsumption :text "`register-family-check!` for the same family-id. Subsumption"}
+    {:line 69 :verb :subsumption :text "closed. Subsumption test: per-track-id heuristic (e.g. Track 4.3"}
+    {:line 165 :verb :subsumption :text "git apply --reverse --check` per stash. Real subsumption."}
+    {:line 186 :verb :subsumption :text "subsumption-witness-siblings.md` + PUR at the corresponding"}
+   ]}
+  {:file "futon3c/holes/missions/M-bounded-disposition.md" :n 8
+   :hits [
+    {:line 4 :verb :subsumption :text "**Sibling missions:** [M-archaeology-control](M-archaeology-control.md) (subsumption-witness shape; obsolescence-recognition/* siblings); [M-invariant-queue-ext"}
+    {:line 38 :verb :subsumption :text "- **Distinct from subsumption-witness** (M-archaeology-control). That"}
+    {:line 39 :verb :subsumes :text "shape is a binary fired-once predicate (\"is A subsumed by P?\")."}
+    {:line 42 :verb :subsumes :text "obsolescence (autostashes subsumed by HEAD) while others witness"}
+    {:line 51 :verb :subsumption :text "subsumption-witness."}
+    {:line 121 :verb :subsumption :text "(subsumption-witness). The two missions exhibit two different"}
+    {:line 128 :verb :subsumption :text "up its second shape (after subsumption-witness)."}
+    {:line 207 :verb :subsumption :text "exhibit two distinct shapes (subsumption-witness, bounded-disposition)."}
+   ]}
+  {:file "futon3c/holes/missions/M-single-locus.md" :n 5
+   :hits [
+    {:line 3 :verb :subsumption :text "**Sibling missions:** [M-archaeology-control](M-archaeology-control.md) (subsumption-witness shape); [M-bounded-disposition](M-bounded-disposition.md) (bounded-"}
+    {:line 35 :verb :subsumption :text "- **Distinct from subsumption-witness and bounded-disposition.** The"}
+    {:line 74 :verb :subsumes :text "- **`single-locus/artifact-live-copy`** — handed to Codex. Subsumes"}
+    {:line 100 :verb :subsumption :text "M-archaeology-control (subsumption-witness),"}
+    {:line 188 :verb :subsumption :text "- M-archaeology-control (subsumption-witness; iteration 0)"}
+   ]}
+  {:file "futon5a/holes/excursions/E-interest-mining.md" :n 4
+   :hits [
+    {:line 98 :verb :falls-out-of :text "kinds**, and the rewrite rules fall out of them:"}
+    {:line 271 :verb :falls-out-of :text "- **New-vs-bogus falls out of the grounding map:** bright deeply-grounded recurring star (core); dim rim star"}
+    {:line 334 :verb :for-free :text "structure — hide them in the content view (hiding the apex drops them for free, since the links filter"}
+    {:line 728 :verb :subsumes :text "- **D zoom/LOD** — the scale axis = **item (1) scaling/GoogleMaps subsumed**: zoom out → only high-magnitude"}
+   ]}
+  {:file "futon5a/holes/missions/M-war-machine-wiring.md" :n 4
+   :hits [
+    {:line 54 :verb :for-free :text "head; a TM-on-manifold doesn't get that coupling for free. This is"}
+    {:line 1720 :verb :subsumption :text "| eb02d6d | M-archaeology-control + M-bounded-disposition | introduce subsumption-witness + bounded-disposition shapes (6 sibling invariants) |"}
+    {:line 1796 :verb :subsumption :text "**After eb02d6d** (subsumption-witness + bounded-disposition shapes):"}
+    {:line 1797 :verb :subsumption :text "- T at `unrecognized-shape-space` drops; the queue's shape vocabulary expanded from forbidden-pattern to forbidden-pattern + subsumption-witness + bounded-dispo"}
+   ]}
+  {:file "futon0/holes/missions/M-the-futon-stack.md" :n 3
+   :hits [
+    {:line 35 :verb :subsumption :text "| `subsumption-witness` | **forgetting** — knowing what's superseded | `obsolescence-recognition/autostash` |"}
+    {:line 224 :verb :subsumption :text "Sub[subsumption-witness<br/>forgetting]"}
+    {:line 391 :verb :subsumption :text "- `archaeology/check-deferred-stub-obsolescence` is no longer self-recursive: registered post-boot it walked `@probe/family-check-fns` containing itself, loopin"}
+   ]}
+  {:file "futon3/holes/missions/M-pattern-application-diagnostic.md" :n 3
+   :hits [
+    {:line 20 :verb :subsumes :text "var→tension; subsumes Tornhill's hotspot / temporal-coupling"}
+    {:line 620 :verb :other :text "hyperedges, explicitly subsuming Tornhill's `code-maat`"}
+    {:line 637 :verb :falls-out-of :text "(which files always change together) fall out of the"}
+   ]}
+  {:file "futon3c/holes/missions/M-invariant-queue-unstuck.md" :n 3
+   :hits [
+    {:line 37 :verb :falls-out-of :text "- **Queue-as-projection (Joe 2026-04-29 reframe; load-bearing).** The structural-law-inventory file is a one-dimensional projection of something that should be "}
+    {:line 60 :verb :falls-out-of :text "Counts and per-source thresholds fall out of the mechanism, not the design. The mission ships the apparatus; whatever it surfaces, surfaces."}
+    {:line 628 :verb :falls-out-of :text "- **Projection-vs-enumeration reframe absorbed (load-bearing).** New theoretical anchoring point: the queue is one-dimensional projection of something alive thr"}
+   ]}
+  {:file "futon3c/holes/missions/M-mission-control.md" :n 3
+   :hits [
+    {:line 225 :verb :for-free :text "This reuses the generic engine and gets Table 25 auto-tagging for free."}
+    {:line 530 :verb :for-free :text "machine gets Table 25 auto-tagging and evidence emission for free."}
+    {:line 722 :verb :for-free :text "Table 25 auto-tagging and gate enforcement for free,"}
+   ]}
+  {:file "futon3c/holes/missions/E-g-incorporates-deltaT.md" :n 2
+   :hits [
+    {:line 18 :verb :subsumption :text "- Article 3.8.1's claim (\"the WM on the next tick sees a richer manifold and ranks more accurately\") is true *of the visible ranking* but false *of G itself*. T"}
+    {:line 20 :verb :subsumes :text "This excursion ships **v1**: pull the structural-pressure signal **into** the EFE decomposition as a new named term. After v1, G itself discriminates per-target"}
+   ]}
+  {:file "futon3c/holes/missions/M-apm-solutions.md" :n 2
+   :hits [
+    {:line 1446 :verb :for-free :text "colours, BECAUSE this gives us semantic colouring for free on all"}
+    {:line 1479 :verb :for-free :text "ratchet tests. Get semantic colours for free."}
+   ]}
+  {:file "futon4/holes/missions/M-futon-enrichment.md" :n 2
+   :hits [
+    {:line 72 :verb :subsumes :text "The futon enrichment approach subsumes and extends this:"}
+    {:line 209 :verb :as-a-bonus :text "give us Tornhill-style hotspots as a free bonus."}
+   ]}
+  {:file "futon5/holes/missions/M-differentiable-code.md" :n 2
+   :hits [
+    {:line 196 :verb :falls-out-of :text "falls out of wiring-claims → DERIVE has to manufacture the loss before any JAX"}
+    {:line 358 :verb :for-free :text "edge/file sets). The mission is NOT killed, but the \"claims → bands for free\""}
+   ]}
+  {:file "futon0/holes/missions/M-stack-hud-refactor.md" :n 1
+   :hits [
+    {:line 70 :verb :subsumes :text "physical rename happens once stack-hud-2 has subsumed enough material."}
+   ]}
+  {:file "futon0/holes/missions/M-the-futon-stack-Q6-r12-design-choices.md" :n 1
+   :hits [
+    {:line 424 :verb :subsumes :text "2026-05-21 call: per-class window-W (§11.c, §16 below) may subsume the"}
+   ]}
+  {:file "futon3/holes/excursions/E-math-prototype-pilot.md" :n 1
+   :hits [
+    {:line 373 :verb :subsumes :text "(could subsume into classification with k=2)"}
+   ]}
+  {:file "futon3/holes/missions/M-f6-arxiv.md" :n 1
+   :hits [
+    {:line 27 :verb :byproduct :text "- Citation network analysis as a primary goal (useful byproduct, not the mission)"}
+   ]}
+  {:file "futon3/holes/missions/M-f6-recursive.md" :n 1
+   :hits [
+    {:line 75 :verb :for-free :text "named entities for free). The interesting NER is on the *informal* layer:"}
+   ]}
+  {:file "futon3/holes/missions/M-pattern-retrieval-calibration.md" :n 1
+   :hits [
+    {:line 913 :verb :subsumes :text "`:name`. Slugs become URL/id fragments. This subsumes both"}
+   ]}
+  {:file "futon3c/holes/missions/E-substrate-2-sorry-typing.md" :n 1
+   :hits [
+    {:line 395 :verb :falls-out-of :text "**BECAUSE** the excursion is solving a live-graph visibility problem, not merely a one-time migration problem. If the registry changes but the graph does not up"}
+   ]}
+  {:file "futon3c/holes/missions/E-support-coverage.md" :n 1
+   :hits [
+    {:line 111 :verb :falls-out-of :text "- **Multi-channel R3d sign-aggregation refinement** beyond what naturally falls out of adding two new channels.  `:sorry/r3d-per-entity-attribution` is its own "}
+   ]}
+  {:file "futon3c/holes/missions/M-action-cost-modelling.md" :n 1
+   :hits [
+    {:line 775 :verb :subsumption :text "- Feature scale → `[[feedback_subsumption_claim_discipline]]`"}
+   ]}
+  {:file "futon3c/holes/missions/M-codex-agent-behaviour.md" :n 1
+   :hits [
+    {:line 145 :verb :for-free :text "- Pro: No duplication, enforcement \"for free\""}
+   ]}
+  {:file "futon3c/holes/missions/M-diagramprover.md" :n 1
+   :hits [
+    {:line 396 :verb :byproduct :text "understanding to make the next theorem easier. The proofs are a byproduct"}
+   ]}
+  {:file "futon3c/holes/missions/M-war-machine-first-outing.md" :n 1
+   :hits [
+    {:line 133 :verb :subsumption :text "operation. **Subsumption discipline:** none of these are claimed \"free given the"}
+   ]}
+  {:file "futon3c/holes/missions/M-war-machine-pilot.md" :n 1
+   :hits [
+    {:line 282 :verb :subsumes :text "the surface the pilot inherits; not subsumed"}
+   ]}
+  {:file "futon4/holes/missions/M-essays-edit-cycle.md" :n 1
+   :hits [
+    {:line 364 :verb :for-free :text "hyperedge versioning gives for free)."}
+   ]}
+  {:file "futon4/holes/missions/M-interest-network-coupling.aif-wiring.md" :n 1
+   :hits [
+    {:line 117 :verb :subsumption :text "coupling is unfounded** (a subsumption-claim trap). It must be designed before the build."}
+   ]}
+  {:file "futon4/holes/missions/M-peeragogy-rewrite.md" :n 1
+   :hits [
+    {:line 75 :verb :falls-out-of :text "8. **At least one carrier instance produced end-to-end** as proof-of-pipeline. Whichever falls out of the carrier-shape decision: one zine, one rewritten chapte"}
+   ]}
+  {:file "futon4/holes/missions/M-three-column-stack.md" :n 1
+   :hits [
+    {:line 1262 :verb :subsumes :text "mission. This mission subsumes its unfinished work and generalizes it."}
+   ]}
+  {:file "futon5/holes/missions/M-categorical-code.md" :n 1
+   :hits [
+    {:line 455 :verb :subsumes :text "(Coupling *correlates* with rework — coupled files churn more — but churn-history already subsumes it.)"}
+   ]}
+  {:file "futon5a/holes/excursions/E-aif-stack.md" :n 1
+   :hits [
+    {:line 126 :verb :for-free :text "since last step\" — drift detection comes for free as a side-product of"}
+   ]}
+  {:file "futon5a/holes/excursions/E-jax-demonstrators.md" :n 1
+   :hits [
+    {:line 18 :verb :for-free :text "- **The baselines ship with it.** OGB/link-prediction benchmarks come with **common-neighbours / preferential-attachment / Adamic-Adar** — *precisely* our pre-r"}
+   ]}
+  {:file "futon5a/holes/excursions/E-the-dark-tower-2.md" :n 1
+   :hits [
+    {:line 236 :verb :for-free :text "relocates to the dynamics layer** (RDC/lens for learning, Smithe for free-energy-on-Poly); and the"}
+   ]}
+  {:file "futon5a/holes/missions/M-explore-aiqa.md" :n 1
+   :hits [
+    {:line 94 :verb :falls-out-of :text "This *is* the compare-and-contrast axis the exit criterion (T2) asked for, with GLAIVE as the named far pole — triangulation falls out of timeline position. (If"}
+   ]}
+  {:file "futon5a/holes/missions/M-recommendation-bindings.md" :n 1
+   :hits [
+    {:line 1297 :verb :for-free :text "(AIF+ EDN), gets all the WebArxana/Arxana surfaces for free, uses"}
+   ]}
+  {:file "futon6/holes/excursions/E-scopes-math-to-code.md" :n 1
+   :hits [
+    {:line 18 :verb :falls-out-of :text "Avoid a heavy code refactor by building an **overlay** instead of restructuring code. Inspiration: spec-as-data (malli for Clojure; an Emacs analogue) — a spec "}
+   ]}
+  {:file "futon6/holes/missions/M-symbol-grounding.md" :n 1
+   :hits [
+    {:line 108 :verb :subsumes :text "on a sample of papers; the AST should subsume the regex layer with"}
+   ]}
+ ]
+ :audit/next "per-candidate live-check (is X & Y live?) => the perfect-crime register (sorrys-on-authoring, distinct from sorrys.edn); + graduate [[feedback_subsumption_claim_discipline]] to a library/ pattern. Carries the Baudrillard caveat: the detective must not become another instrument that substitutes for the real."}

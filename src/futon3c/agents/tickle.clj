@@ -5,6 +5,7 @@
    timestamps instead of reading private agent internals."
   (:require [clojure.string :as str]
             [futon3c.agency.registry :as reg]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.social.bells :as bells])
   (:import [java.time Duration Instant]))
@@ -152,7 +153,7 @@
 (defn- emit-scan-evidence!
   [evidence-store activity-map cycle-result threshold-seconds]
   (when evidence-store
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :session
                                :ref/id "tickle/watchdog"}
                      :type :coordination
@@ -169,7 +170,7 @@
 (defn- emit-page-evidence!
   [evidence-store {:keys [paged? agent-id method]}]
   (when (and evidence-store paged? agent-id)
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :agent
                                :ref/id agent-id}
                      :type :coordination
@@ -185,7 +186,7 @@
 (defn- emit-escalation-evidence!
   [evidence-store {:keys [escalated? agent-id]}]
   (when (and evidence-store escalated? agent-id)
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :agent
                                :ref/id agent-id}
                      :type :coordination
@@ -230,7 +231,7 @@
 (defn- emit-availability-evidence!
   [evidence-store {:keys [agent-id message availability invoke-status session-id trace-id]}]
   (when (and evidence-store agent-id)
-    (estore/append* evidence-store
+    (boundary/append! evidence-store
                     {:subject {:ref/type :agent :ref/id agent-id}
                      :type :coordination
                      :claim-type :observation

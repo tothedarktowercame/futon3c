@@ -1,7 +1,8 @@
 # Mission: REPL Wins Over CLI
+Status: parked
 
 **Date:** 2026-03-29
-**Status:** :active
+**Status:** :testing
 **Owner:** Claude (claude-repl.el, agent-chat.el, dev.clj), Joe (testing, direction)
 **Cross-ref:** M-apm-solutions (first consumer), M-walkie-talkie (ArSE endpoints), M-structural-law (invariants), M-peripheral-gauntlet (peripheral contract)
 **Repos:** futon3c (emacs/, dev/, src/transport/http.clj)
@@ -92,6 +93,171 @@ interaction. Concretely:
 |--------|--------|
 | `agent-chat-agency-base-url` set to port 47070 | Done |
 
+## Checkpoint 2 — 2026-04-09 (Entry ceremony + evidence landscape)
+
+**What was done:**
+
+- `cr`/`cx` auto-start Agency via Emacs `*server*` shell buffer if not running
+- `cr new`/`cx new` shorthand accepted (bare `new` alongside `--new`)
+- Fixed heredoc quoting (`\"` → bare `"`) — eval was always broken, hidden by `-t`
+- Inside-Emacs path: no more `emacsclient -t` hang; uses `-n --eval` + `exit 0`
+- `add-to-list 'load-path` in eval — works on fresh daemon without futon config
+- Ghost reclamation: `/agents/auto` reuses idle no-session agent nicks
+- Stale session file cleanup on ghost reclamation
+- Failed invokes no longer corrupt session files (gated on `ok?`)
+- cwd passed from `cr` to invoke-fn; ProcessBuilder `.directory()` set — fixes
+  "No conversation found with session ID" on resume
+- Inhabitation turn: `cr new` fires async bell with surface contract, establishing
+  real session from first breath
+- `*agents*` display shows session IDs; "no session" flags ghosts
+- `*processes*` routed to HUD frame; `project-processes!` respects `external-hud-enabled?`
+- `*invoke:*` side-window suppressed via `display-buffer-in-side-window` advice
+  when external HUD mode is on
+- Repl-parity ratchet claims doc: `docs/repl-parity-claims.edn` (12 claims, 4 verified)
+- Context retrieval: futon3a semantic search (MiniLM embeddings) on A→B protopattern,
+  results logged as evidence + desktop notification with turn certificate
+- Session resumed from CLI to REPL mid-conversation (`:session/resume-from-cli` verified)
+- Excursion E-evidence-explorer logged for the read-side query function
+
+**Files changed:**
+- `bin/cr`, `bin/cx` (entry ceremony, cwd, inhabitation, load-path)
+- `src/futon3c/agency/registry.clj` (`find-reclaimable-agent`)
+- `src/futon3c/transport/http.clj` (ghost reclaim, cwd passthrough, session file cleanup)
+- `src/futon3c/blackboard.clj` (`project-processes!` no-display, session ID in agents display)
+- `emacs/futon3c-blackboard.el` (HUD layout with `*processes*`, side-window advice)
+- `dev/futon3c/dev.clj` (cwd on ProcessBuilder, no-display invoke start, session persist
+  gated on ok?, context retrieval + notification + evidence)
+- `docs/repl-parity-claims.edn` (new file)
+
+**Test state:** Manual testing throughout. Entry ceremony verified on GUI Emacs
+and terminal. Session resume verified. Context retrieval + notification verified.
+
+**Status:** :testing — entry ceremony solid, evidence pipeline live, Phase 2 UX
+gaps (cursor-sensor, scroll stability, frame inspector) remain open.
+
+**Next:** E-evidence-explorer (query function for evidence chain), Phase 2 UX ratchet.
+
+## Checkpoint 3 — 2026-04-25 (Evidence pipeline was a Potemkin village; invariant landed)
+
+**What was done:**
+
+- Forensic audit on 2026-04-24 found that on `:laptop` role, `make-evidence-store`
+  fell through to a volatile in-memory atom because `dev/futon3c/dev/config.clj`
+  was missing `:direct-xtdb?` from the `:laptop` role-defaults entry. Result: every
+  REPL turn was logging "evidence" that died with each JVM restart. The viewer
+  showed today's data because the JVM had been up that long, not because anything
+  was persistent. M-aif-head's prior closure on 2026-03-15 had documented an
+  `estore` integration that did exist (`futon3c.evidence.store`, XTDB-backed via
+  futon1a) but pointed at a path that had never been wired on laptop.
+- Defined and committed `I-evidence-per-turn` (commit `c6f2c32`):
+  `src/futon3c/evidence/invariant.clj` exposes `check-store-backing` (passes only
+  for `XtdbBackend`) and `verify-persisted` (read-back through the same backend
+  after append). `test/futon3c/evidence/invariant_test.clj` covers all four store
+  shapes against a real in-memory XTDB node — 8 tests, 25 assertions, 0 failures.
+- Working-tree edits (not yet committed pending unrelated in-flight work in those
+  files) wire the invariant at three sites: `dev/bootstrap.clj` runs
+  `check-store-backing` after `reset! !evidence-store` and prints a red banner if
+  the store is not XTDB-backed; `dev/futon3c/dev/invoke.clj:emit-invoke-evidence!`
+  and `src/futon3c/transport/http.clj:emit-invoke-evidence!` are now synchronous,
+  call `verify-persisted` after each append, and log a `VIOLATION` line with the
+  evidence-id on failure (no more silent `(catch Throwable _ nil)` drops). Plus
+  the `:laptop` role gets `:direct-xtdb? true`.
+- Sister fix in `futon4/dev/arxana-browser-evidence.el` and `arxana-browser-lab.el`:
+  fallback port `:8080` → `:7071`. Joe's `futon-config.el` now sets the live
+  values explicitly so Emacs doesn't depend on the defcustom default.
+- End-to-end verified: a chat turn before JVM restart was readable via the
+  evidence-viewer at `:7071/evidence-viewer/#/timeline` after restart. First time
+  the pipe has been observably end-to-end.
+
+**Files changed (committed):**
+- `src/futon3c/evidence/invariant.clj` (new, 106 lines)
+- `test/futon3c/evidence/invariant_test.clj` (new, 123 lines)
+
+**Files changed (working tree, pending unrelated cleanup):**
+- `dev/futon3c/dev/config.clj` (one line — `:direct-xtdb? true` on `:laptop`)
+- `dev/futon3c/dev/bootstrap.clj` (boot-time invariant check)
+- `dev/futon3c/dev/invoke.clj` (sync + verify-persisted)
+- `src/futon3c/transport/http.clj` (sync + verify-persisted)
+- `futon4/dev/arxana-browser-evidence.el`, `arxana-browser-lab.el` (port default)
+
+**Test state:** Unit tests pass for the new namespace (8/8). Full
+`futon3c.transport.http-test` and `futon3c.evidence.*` suites pass with no
+regressions (140 tests, 494 assertions across those packages). Live test
+of evidence persistence across JVM restart confirmed by inspecting
+`:7071/evidence-viewer/#/timeline` after `make dev-laptop` was restarted.
+
+**Status:** :testing — invariant active in committed library code, wiring active
+in working tree pending repo cleanup. Three threads opened off this checkpoint
+(see Excursions below).
+
+**Next:** Vitality-scan evidence-accumulation probe (active thread); excursions
+on invariants audit and evidence-viewer deep-dive logged for follow-up.
+
+### Excursions logged off Checkpoint 3
+
+- **E-candidate-invariants-audit:** Across the futon* repo family there is a
+  body of "Candidate Invariants" — claims that the system enforces some
+  property — and as of 2026-04-25 there is no clarity about which are
+  enumerable, which are checked at runtime, which are tested against both
+  pass and fail inputs, and which are firing in production. The
+  `I-evidence-per-turn` work is the proposed template: canonical def-string,
+  two check functions, real-backend test, named enforcement sites that
+  `rg <invariant-name>` finds. Excursion goal: enumerate all candidate
+  invariants in the codebase (likely sources include `holes/missions/`,
+  `src/**/invariant*.clj`, doc sections marked "Candidate Invariants"),
+  classify each as design-only / check-exists / check-tested /
+  check-firing-in-prod, and produce a punch list with file:line citations.
+  Closes when every invariant is one of (a) enforced and tested, (b)
+  explicitly downgraded to design-only with a known reason, or (c) deleted.
+
+- **E-stack-hud-cleanup (port manifest):** see
+  `futon0/analysis/excursions/E-stack-hud-cleanup.md` §6 for the
+  ranked list of stack-hud-1 → stack-hud-2 port candidates as of
+  2026-04-25 (voice, hot-reload, services, git, vitality, reminders,
+  liveness keep; focus needs verify; affect deferred to per-agent;
+  boundary/musn/pattern-sync drop).
+
+- **E-stack-hud-cleanup:** The Vitality-scan evidence-accumulation probe
+  (active thread, Layer 1) lands a probe in
+  `futon0/scripts/futon0/vitality/scanner.clj` and a render in
+  `futon0/contrib/stack-hud.el`. The follow-on (Layer 2) is a reazon-based
+  surface check that fires when the hud's *visible* evidence delta is zero
+  during an active turn window — i.e. an alarm that audits what the hud
+  surfaces, not what the JVM holds, so a silent projection failure (cache,
+  filter, stale read) is caught. Reazon plumbing already exists in
+  `futon3c/emacs/agent-chat-invariants.el:171-199`. This excursion also
+  carries a process commitment: futon0 is by design a cross-futon interface
+  layer, so stack-hud may legitimately depend on any futon — but *which*
+  futons it depends on for *which* surfaces should be made explicit. A
+  wiring diagram (cross-futon dependency map: scanner → futon1a HTTP, hud →
+  scanner snapshot, hud → futon3a/futon3c/etc.) is part of the deliverable
+  for this excursion. Closes when (a) Layer 2 reazon check is registered and
+  fires on the synthetic test-case "turns happened, hud evidence delta = 0",
+  (b) the wiring diagram is committed alongside the cleanup, and (c) the
+  cleanup pass has no half-rendered or unused sections in the hud.
+
+- **E-evidence-viewer-deep-dive:** The evidence-viewer at
+  `:7071/evidence-viewer/` and the Arxana Browse Evidence/Sessions views have
+  three live issues that deserve concentrated attention rather than ad-hoc
+  fixes. (i) Per-turn pattern annotations from futon3a semantic search land as
+  one composite `:coordination` entry per turn with patterns inside
+  `:evidence/body "results"` — they are not first-class annotations linked by
+  `:evidence/in-reply-to` to the turn's forum-post entry, so queries like
+  "show me annotations on this turn" miss. Proposed fix α: rewrite
+  `dev/futon3c/dev.clj:emit-context-evidence!` to emit one entry per retrieved
+  pattern, each with `:evidence/in-reply-to` on the turn id, typed as a pattern
+  annotation. (ii) `emit-context-evidence!` still has a silent
+  `(catch Throwable _ nil)` at line 735. Proposed fix β: bring it under
+  `I-evidence-per-turn` — synchronous, verify-persisted after append, log
+  VIOLATION on failure. (iii) `futon4/dev/arxana-browser-evidence.el:106,
+  813-830` keeps an open-session row cache (`row-v3`) that returns cached
+  rows for the lifetime of Emacs without a freshness threshold; on 2026-04-24
+  this lied with a 9-day-old row claiming 83 turns when the underlying store
+  had been wiped by JVM restarts. Proposed fix: 30s TTL on cache hits, or
+  invalidate when the buffer's `--last-evidence-id` advances past the
+  cached value. Closes when (α) and (β) ship and (iii) is either fixed or
+  explicitly downgraded with a documented reason.
+
 ## What Remains
 
 ### Phase 2: Close the UX gaps
@@ -142,3 +308,115 @@ is the surface that enforces this; the CLI is the surface that violates it.
 
 The mission succeeds when the evidence debt from CLI usage drops to zero
 because the REPL is simply better to use.
+
+## 2026-05-25: Cursor-Control Latency Fix (claude-repl path)
+
+A long-standing felt symptom — "1-2-3-crocodile" delays before the cursor
+takes control in `*claude-repl:claude-N*` buffers, occasionally manifesting
+as full 8+ second Emacs blackouts — was instrumented, attributed, and
+patched. The Codex-REPL side likely has analogous problems but is being
+held off because Codex is currently self-improving its REPL surface;
+return here once that work settles.
+
+### Diagnostic chain
+
+1. **`emacs/joe-input-trace.el`** (new) — command-loop tracer with three
+   wrap layers: `pre/post-command-hook`, `timer-event-handler` via
+   `advice-add :around`, and around-advice on specific process-filter
+   symbols (`eat--filter`, `url-http-generic-filter`, `jsonrpc--process-filter`,
+   `comint-output-filter`, `internal-default-process-filter`,
+   `url-retrieve-synchronously`). Records to `*joe-input-trace*` buffer
+   with no per-event disk I/O. M-x `joe-input-trace-{enable,disable,dump,clear}`.
+2. **First live trace** showed three stalls of 1.6-2 s where keys queued
+   (`input-pending=t`) but neither commands nor timers fired during the
+   gap. With the timer + filter tracer enabled, the next trace caught an
+   8.5 s blackout with **zero elisp activity inside it** — no timer firings,
+   no filter firings, no commands. The Emacs main loop itself was blocked
+   at the C level.
+3. **Static diff** between the stalled buffer (`*claude-repl:claude-10*`,
+   `claude-repl-mode`) and the responsive one (`*codex-repl:codex-8*`,
+   `codex-repl-mode`) revealed `cursor-sensor-mode` on in claude-10 with
+   **652 text-property regions** carrying `claude-repl--tool-overlay-sensor`,
+   vs zero such regions in codex-8. That's the "buffer where control was
+   established vs not yet established" distinction Joe felt — really two
+   different mode setups.
+4. **Automated bench** — `joe-input-trace-bench-sensor-cycle` jumps point
+   through tool-overlay regions, forces synchronous `(redisplay t)`,
+   measures wall-clock per phase. Reproducible without live typing, so
+   any fix can be verified by re-running one command. With sensor mode
+   on: **~130 ms per cycle**. With sensor mode off: 6-7 ms. 20× slowdown
+   attributable to the mode.
+5. **CPU profile of the bench** named the actual hotspots in
+   `agent-chat.el`:
+   - `(require 'posframe nil t)` called on every popup-show AND every
+     popup-hide; posframe isn't installed, but `require` still does a
+     load-path scan each call. **39 % of CPU.**
+   - `(special-mode)` re-invoked on the popup buffer every show,
+     re-firing `global-corfu-mode-enable-in-buffer` and the rest of the
+     global mode-enable hooks. **10 % of CPU.**
+
+### Fix
+
+Two-line cache in `emacs/agent-chat.el`:
+
+- `agent-chat--posframe-available` defvar set once at load time; show/hide
+  consult the cache instead of re-`require`-ing.
+- `(unless (derived-mode-p 'special-mode) (special-mode))` so mode setup
+  only runs on first popup creation.
+
+Sympathetic patch in `emacs/claude-repl.el`: debounced
+`claude-repl--tool-overlay-sensor` via `run-with-idle-timer` so popup-show
+schedules on a 0.15 s idle rather than firing every redisplay tick.
+Smaller win once `agent-chat.el` was fixed, but still prevents popup
+flashing during fast cursor traversal across many regions.
+
+### Result
+
+| Bench (claude-7, 1763 sensor regions, 389 KB) | Before | After |
+|---|---|---|
+| Steady-state per sensor cycle | ~130 ms | **0 ms** |
+| First-iter baseline (big-jump redisplay) | ~1900 ms | ~1900 ms (unrelated) |
+| Popup content correctness | rendered | rendered (verified) |
+
+Reload protocol: `emacsclient --eval '(load-file "/home/joe/code/futon3c/emacs/agent-chat.el")'`
+then same for `claude-repl.el`. No JVM restart; smart-cursor instance
+state preserved.
+
+### Hypothesis for Codex-REPL (return here later)
+
+`codex-repl-mode` doesn't install `cursor-sensor-functions` text properties,
+so the *specific* cursor-sensor stall mechanism doesn't apply. But:
+
+- Codex-REPL surfaces have their own popup paths via the same
+  `agent-chat.el` infrastructure (`agent-chat-popup-show / -hide`,
+  `agent-chat-update-progress`) — so the `(require 'posframe nil t)`
+  load-path scan cost was hitting them too. The agent-chat.el patch
+  *already* benefits codex-repl indirectly; no separate change needed
+  for that hotspot.
+- The recurring `codex-repl--refresh-invoke-dashboard` timer (~500 ms
+  cadence; visible in the live trace as the `chat-buffer` anonymous
+  timer firing into `*codex-repl:codex-8*`) calls `agent-chat-update-progress`
+  on each tick. If that path does any synchronous redisplay or
+  window-fitting work, it would manifest as periodic stutter (different
+  signature from the claude-repl burst, but same family).
+- The blackboard-backpressure pattern (futon3c hot paths blocking on
+  emacsclient round-trips) could also surface here, but is mostly out
+  of scope for REPL-side fixes.
+
+When Codex's own self-improvement work settles, the procedure is:
+
+1. Run `joe-input-trace-enable`, drive Codex-REPL through its typical
+   load (long agent reply with many tool calls, plus user typing
+   alongside), dump.
+2. Look for `input-pending=t` gaps and per-timer elapsed-ms outliers,
+   especially `codex-repl--refresh-invoke-dashboard` and any anonymous
+   chat-buffer timers.
+3. If a hotspot surfaces, CPU profile the suspect path with `(profiler-start
+   'cpu)` and search the calltree for `(require ...)` and any `run-mode-hooks`
+   re-invocation.
+4. Verify with the bench harness — `joe-input-trace-bench` (simple insert)
+   or a Codex-specific cycle bench built on the same primitives.
+
+The bench harness itself is the durable artifact. Any future
+perceived-latency regression in any agent-chat-backed REPL buffer can be
+caught by re-running it.

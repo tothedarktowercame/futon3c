@@ -9,6 +9,17 @@ proof trees), and the bridges that connect agents to each other in real time.
 This is the "social" AIF loop — the fastest timescale in the futon system,
 where agents coordinate, hand off work, and maintain shared awareness.
 
+## Inhabiting the War Machine Pilot
+
+**If you are taking on the pilot role — driving the War Machine as a REPL —
+read `README-pilot.md` first.** It is the map for inhabitants: the spec
+(`holes/specs/repl.spec.edn`), the loop apparatus (`war_machine_pilot.clj`,
+`repl_trace.clj`, `loop_learning.clj`, `repl_spec_verify.clj`), how to run a
+cycle, and the hard disciplines (never restart the JVM; `request-tick!` not
+`tick!`; consent-gate / gate-at-merge; earned closure; the E-cheesemonger
+hole-budget). The pilot REPL is the differential operator `v·∇` over the WM
+field; the LOOP turn keeps the substrate AND the VSATARCS documentation current.
+
 ## Canonical Wiring Contract
 
 Before implementing architecture changes, read:
@@ -79,6 +90,33 @@ interoperate but have distinct concerns and timescales.
 These are hard constraints. Violating any of them is a design error, not a
 tradeoff. If you find yourself reaching for a pattern that conflicts with
 these invariants, stop and rethink.
+
+### I-0: One JVM Is Plenty
+
+**There is exactly one serving JVM on this machine: the futon3c JVM.** It
+hosts the futon3c API (port 7070), the futon1a / substrate-2 hyperedge
+store (7071), the WebArxana app (3100), the War Machine API endpoints
+(`/api/alpha/war-machine`, `/api/alpha/aif-stack/live`, etc., all on 7070),
+and the Drawbridge nREPL-over-HTTP (6768). Everything serves out of this
+one process.
+
+Do **NOT** start a second runtime JVM for any of the apps that have already
+been folded in (WebArxana, War Machine, etc.) — their backends live here.
+A second JVM is only acceptable for short-lived dev tooling like a CLJS
+shadow-cljs watcher when actively editing ClojureScript source; that tool
+exits when you stop editing CLJS, and it serves nothing in the request
+path (futon3c serves the pre-compiled JS as static files).
+
+**Test:** `pgrep java` should return one PID at rest. If you see more
+than one, the second one is either a stale shadow-cljs watcher (kill it)
+or a regression that needs to be folded back in. Historical context:
+this consolidation was completed 2026-05-23 (M-weird-modernism's ARGUE
+round). Before then, three JVMs were running (futon3c, WebArxana
+shadow-cljs, War Machine shadow-cljs); shadow-cljs processes for those
+apps are dev-tooling-only and should not be left running.
+
+**For code reloads inside the futon3c JVM, use Drawbridge nREPL** (per
+`README-drawbridge.md`); do not kill and restart the serving JVM.
 
 ### I-1: Agent Identity Is Singular
 
@@ -165,6 +203,27 @@ capable agents that know where they are.
 **Reference commit**: `f5c3e25` — "Enforce explicit surface contracts for Codex
 replies" — `irc-invoke-prompt` in dev.clj and `codex-repl--surface-contract` in
 codex-repl.el.
+
+### Typed Bell Contract
+
+When `FUTON3C_TYPED_BELLS` is enabled, a bell may declare its illocutionary
+type with `type` and an optional referent with `ref`. Valid types are `query`,
+`answer`, `assert`, `challenge`, `agree`, `define`, `retract`, `suggest`, and
+`request`. Untyped bells remain ordinary requests; unknown types are rejected.
+
+Use `type=query` when you are asking another agent to help resolve a question.
+If no `ref` is supplied, the server creates an ArSE thread and stamps the thread
+id into the job's `ref`. Use `type=answer --ref <ask-id>` when answering that
+thread; answers without a `ref` are malformed.
+
+Shell example:
+
+```bash
+python3 futon3c/scripts/agency_send.py --to codex-1 --from claude-6 \
+  --kind bell --type query <<'EOF'
+Is the S3 ArSE bridge active in this JVM?
+EOF
+```
 
 ## Development Protocol
 

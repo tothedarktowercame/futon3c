@@ -50,7 +50,17 @@
 (def agent-type "claude")
 
 (def claude-bin (env "CLAUDE_BIN" "claude"))
-(def claude-cwd (env "CLAUDE_CWD" (System/getProperty "user.dir")))
+(defn- expand-cwd
+  "Expand a leading ~ to the user's home (ProcessBuilder/sh don't shell-expand ~,
+   so a literal \"~/\" working dir fails to launch). Blank → the JVM's own cwd."
+  [s]
+  (let [s (when s (.trim (str s)))]
+    (cond
+      (or (nil? s) (= s "")) (System/getProperty "user.dir")
+      (= s "~") (System/getProperty "user.home")
+      (.startsWith s "~/") (str (System/getProperty "user.home") (subs s 1))
+      :else s)))
+(def claude-cwd (expand-cwd (env "CLAUDE_CWD" (System/getProperty "user.dir"))))
 (def claude-permission (env "CLAUDE_PERMISSION" "bypassPermissions"))
 (def session-file (env "CLAUDE_SESSION_FILE" "/tmp/futon-session-id"))
 (def startup-session-id (System/getenv "CLAUDE_SESSION_ID"))
@@ -114,6 +124,7 @@
           proc (.start pb)
           ;; Accumulate text and session-id from the stream
           text-acc (StringBuilder.)
+          tools-acc (atom [])   ;; tool names this turn — for legible no-text turns
           result-sid (atom nil)
           result-ok (atom true)
           ;; Read stream-json lines as they arrive
@@ -127,8 +138,14 @@
                                    (case (:type parsed)
                                      ;; Text from Claude — extract and callback immediately
                                      "assistant"
-                                     (when-let [text (extract-text-from-assistant-message parsed)]
-                                       (when-not (str/blank? text)
+                                     (let [content (get-in parsed [:message :content])
+                                           tools (when (sequential? content)
+                                                   (->> content
+                                                        (filter #(= "tool_use" (:type %)))
+                                                        (keep :name)))
+                                           text (extract-text-from-assistant-message parsed)]
+                                       (when (seq tools) (swap! tools-acc into tools))
+                                       (when (and text (not (str/blank? text)))
                                          (.append text-acc text)
                                          (when on-text (on-text text))))
 
@@ -172,7 +189,11 @@
         (if (and (zero? exit) @result-ok)
           {:ok true
            :result (if (str/blank? text)
-                     "[Claude used tools but produced no text response]"
+                     ;; tool-last / no-text turn: surface what was called.
+                     (let [names (->> @tools-acc (remove nil?) distinct vec)]
+                       (if (seq names)
+                         (str "[no text — called: " (str/join ", " names) "]")
+                         "[no text or tool calls in this turn]"))
                      text)
            :session-id final-sid}
           {:ok false
@@ -219,9 +240,6 @@
 (def ^:private evidence-url
   (str (str/replace agency-http-base #"/$" "") "/api/alpha/evidence"))
 
-(def ^:private heartbeat-interval-ms
-  (parse-int (env "HEARTBEAT_INTERVAL_MS" "30000") 30000))
-
 (defn- emit-evidence!
   "POST an evidence entry to the Agency evidence store. Fire-and-forget."
   [event-type body-map & {:keys [session-id tags]}]
@@ -249,33 +267,6 @@
         (println "[bridge] evidence emit failed:" (.getMessage e))
         (flush)))))
 
-(defn- start-heartbeat!
-  "Start a background thread that emits heartbeat evidence every N seconds.
-   Returns a stop function."
-  [invoke-id prompt-preview session-id]
-  (let [running (atom true)
-        start-ms (System/currentTimeMillis)
-        thread (Thread.
-                (fn []
-                  (while @running
-                    (try
-                      (Thread/sleep heartbeat-interval-ms)
-                      (when @running
-                        (let [elapsed-s (quot (- (System/currentTimeMillis) start-ms) 1000)]
-                          (emit-evidence! "invoke-heartbeat"
-                                          {"invoke-id" invoke-id
-                                           "elapsed-seconds" elapsed-s
-                                           "prompt-preview" prompt-preview}
-                                          :session-id session-id
-                                          :tags ["heartbeat"])))
-                      (catch InterruptedException _
-                        (reset! running false))
-                      (catch Exception _))))
-                (str "heartbeat-" invoke-id))]
-    (.setDaemon thread true)
-    (.start thread)
-    (fn [] (reset! running false) (.interrupt thread))))
-
 ;; =============================================================================
 ;; WS invoke handler
 ;; =============================================================================
@@ -298,20 +289,15 @@
                            "prompt-preview" prompt-preview}
                           :session-id incoming-session
                           :tags ["invoke-start"])
-          ;; Start heartbeat
-          (let [stop-heartbeat! (start-heartbeat! invoke-id prompt-preview incoming-session)
-                outcome (try
-                          (invoke-claude! prompt-str incoming-session sid*
-                                          :on-text (fn [text]
-                                                     (try
-                                                       (send-json! ws {"type" "invoke_text"
-                                                                       "invoke_id" invoke-id
-                                                                       "text" text})
-                                                       (catch Exception e
-                                                         (println "[bridge] send invoke_text failed:" (.getMessage e))
-                                                         (flush)))))
-                          (finally
-                            (stop-heartbeat!)))
+          (let [outcome (invoke-claude! prompt-str incoming-session sid*
+                                        :on-text (fn [text]
+                                                   (try
+                                                     (send-json! ws {"type" "invoke_text"
+                                                                     "invoke_id" invoke-id
+                                                                     "text" text})
+                                                     (catch Exception e
+                                                       (println "[bridge] send invoke_text failed:" (.getMessage e))
+                                                       (flush)))))
                 payload (cond-> {"type" "invoke_result"
                                  "invoke_id" invoke-id}
                           (:session-id outcome) (assoc "session_id" (:session-id outcome))
@@ -406,7 +392,6 @@
   (println "  permission:" claude-permission)
   (println "  session-file:" session-file)
   (println "  session:" (or @sid* "(new session on first invoke)"))
-  (println "  heartbeat-interval-ms:" heartbeat-interval-ms)
   (println)
   (flush)
   (ensure-registered!)

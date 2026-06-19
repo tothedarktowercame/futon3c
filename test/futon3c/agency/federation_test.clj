@@ -213,6 +213,34 @@
         (is (= true (get-in tickle [:agent/metadata :remote?])))
         (is (= "http://peer:7070" (get-in tickle [:agent/metadata :origin-url])))))))
 
+(deftest sync-peer-does-not-import-protected-local-agent-id
+  (testing "sync-peer! leaves protected local continuity ids unbound when only a remote proxy is available"
+    (with-redefs [http/get (fn [_url _opts]
+                             (doto (promise)
+                               (deliver {:status 200
+                                         :body "{\"ok\":true,\"agents\":{\"claude-1\":{\"type\":\"claude\",\"capabilities\":[\"explore\"]}}}"})))]
+      (let [result (fed/sync-peer! "http://peer:7070")]
+        (is (:ok result))
+        (is (= :skipped-protected-id (get-in result [:results 0 :action])))
+        (is (nil? (reg/get-agent "claude-1")))))))
+
+(deftest sync-peer-evicts-existing-protected-proxy
+  (testing "sync-peer! removes an already-imported proxy that squats on a protected local continuity id"
+    (reg/register-agent!
+     {:agent-id {:id/value "claude-1" :id/type :continuity}
+      :type :claude
+      :invoke-fn (fn [_ _] {:result "proxy"})
+      :capabilities [:explore]
+      :metadata {:proxy? true :remote? true :origin-url "http://old-peer:7070"}})
+    (with-redefs [http/get (fn [_url _opts]
+                             (doto (promise)
+                               (deliver {:status 200
+                                         :body "{\"ok\":true,\"agents\":{\"claude-1\":{\"type\":\"claude\",\"capabilities\":[\"explore\"]}}}"})))]
+      (let [result (fed/sync-peer! "http://peer:7070")]
+        (is (:ok result))
+        (is (= :skipped-protected-id (get-in result [:results 0 :action])))
+        (is (nil? (reg/get-agent "claude-1")))))))
+
 (deftest sync-peer-does-not-overwrite-local-agent
   (testing "sync-peer! leaves real local agents untouched when peer reports the same id"
     (reg/register-agent!

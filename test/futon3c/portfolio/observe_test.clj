@@ -45,12 +45,15 @@
    :stalled 2
    :spinoff-candidates 1
    :pattern-reuse-ratio 0.3
-   :days-since-review 7.0})
+   :days-since-review 7.0
+   :turns-per-day 10.0
+   :turn-count-last-window 140
+   :turn-window-days 14})
 
-(deftest observe-produces-15-channels
+(deftest observe-produces-16-channels
   (let [o (obs/observe sample-mc-state)]
-    (testing "all 15 channels present (12 mc + 3 heartbeat)"
-      (is (= 15 (count o)))
+    (testing "all 16 channels present (13 mc + 3 heartbeat)"
+      (is (= 16 (count o)))
       (doseq [k obs/channel-keys]
         (is (contains? o k) (str "missing channel: " k))))
     (testing "all values in [0,1]"
@@ -71,6 +74,8 @@
       (is (== 0.15 (:blocked-ratio o))))
     (testing "evidence-velocity = 8/20 = 0.4"
       (is (== 0.4 (:evidence-velocity o))))
+    (testing "turn-velocity = 10/40 = 0.25"
+      (is (== 0.25 (:turn-velocity o))))
     (testing "dependency-depth = 2/10 = 0.2"
       (is (== 0.2 (:dependency-depth o))))
     (testing "gap-count = 4/120 ≈ 0.033"
@@ -107,8 +112,8 @@
 (deftest obs->vector-test
   (let [o (obs/observe sample-mc-state)
         v (obs/obs->vector o)]
-    (testing "vector has 15 elements"
-      (is (= 15 (count v))))
+    (testing "vector has 16 elements"
+      (is (= 16 (count v))))
     (testing "vector order matches channel-keys"
       (is (= (mapv #(get o %) obs/channel-keys) v)))))
 
@@ -158,8 +163,10 @@
                               :max-chain-cap 20.0
                               :gap-cap 200.0
                               :spinoff-cap 60.0
-                              :review-age-cap 30.0})
+                              :review-age-cap 30.0
+                              :turns-per-day-cap 80.0})
           tight (obs/observe sample-mc-state obs/default-priors)]
       ;; With looser caps, values should be smaller (less surprising)
       (is (< (:evidence-velocity loose) (:evidence-velocity tight)))
-      (is (< (:gap-count loose) (:gap-count tight))))))
+      (is (< (:gap-count loose) (:gap-count tight)))
+      (is (< (:turn-velocity loose) (:turn-velocity tight))))))

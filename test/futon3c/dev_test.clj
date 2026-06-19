@@ -4,10 +4,15 @@
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]
             [futon3c.agency.registry]
+            [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.clock-store :as clock-store]
             [futon3c.agents.mfuton-invoke-override]
             [futon3c.agents.tickle-work-queue]
+            [futon3c.agency.turn-queue :as turn-queue]
+            [futon3c.blackboard]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.evidence.store]
+            [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.apm-conductor-v2 :as apm-v2]
             [futon3c.dev :as dev]))
 
@@ -44,23 +49,127 @@
       (is (= {:ok? true :action :kept-existing}
              (#'dev/classify-codex-ws-bridge-registration
               "codex-1" 409 "{\"ok\":false}" 200 existing-body)))))
-  (testing "duplicate registration fails loudly on incompatible existing state"
-    (let [existing-body (json/generate-string
+  (testing "duplicate registration fails loudly on incompatible, fresh existing state"
+    (let [recent (str (java.time.Instant/now))
+          existing-body (json/generate-string
                          {:ok true
                           :agent-id "codex-1"
                           :agent {:id {:id/value "codex-1" :id/type "continuity"}
                                   :type "codex"
+                                  :last-active recent
                                   :metadata {:proxy? true}}})
           result (#'dev/classify-codex-ws-bridge-registration
-                  "codex-1" 409 "{\"ok\":false}" 200 existing-body)]
+                  "codex-1" 409 "{\"ok\":false}" 200 existing-body
+                  :stale-threshold-ms 600000)]
       (is (false? (:ok? result)))
-      (is (= :conflict (:action result))))))
+      (is (= :conflict (:action result)))))
+  (testing "duplicate registration signals stale-reclaim when the existing record is abandoned"
+    (let [old (str (java.time.Instant/ofEpochMilli
+                    (- (System/currentTimeMillis) (* 2 60 60 1000))))
+          existing-body (json/generate-string
+                         {:ok true
+                          :agent-id "codex-1"
+                          :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                                  :type "codex"
+                                  :last-active old
+                                  :metadata {:proxy? true}}})
+          result (#'dev/classify-codex-ws-bridge-registration
+                  "codex-1" 409 "{\"ok\":false}" 200 existing-body
+                  :stale-threshold-ms 600000)]
+      (is (false? (:ok? result)))
+      (is (= :stale-reclaim (:action result)))
+      (is (string? (:message result))))))
+
+(deftest context-result-map-emits-compact-structural-packet
+  (let [results [{:id "coordination/capability-gate"
+                  :title "Capability Gate"
+                  :score 0.875
+                  :path "/home/joe/code/futon3/library/coordination/capability-gate.flexiarg"
+                  :rationale "hotword overlap on capability + gate"
+                  :hotwords #{"capability" "gate"}
+                  :tokipona "open the gate"
+                  :sigil "⚖/衡"
+                  :sigils "⚖/衡 🧭/引"
+                  :energy :medium
+                  :if "A capability boundary is implicit"
+                  :however "Implicit boundaries create fake actionability"
+                  :then "Make the capability boundary explicit"
+                  :because "Honest action selection requires real substrate"
+                  :next-steps ["enumerate targets" "record receipts"]}]
+        packet (#'dev/context-result-map results)
+        first-result (first packet)]
+    (is (= 1 (count packet)))
+    (is (= "coordination/capability-gate" (:id first-result)))
+    (is (= 1 (:rank first-result)))
+    (is (= "futon3a" (:retrieval-source first-result)))
+    (is (= "embeddings" (:retrieval-method first-result)))
+    (is (= ["capability" "gate"] (:hotwords first-result)))
+    (is (= ["⚖/衡" "🧭/引"] (:sigils first-result)))
+    (is (= "medium" (:energy first-result)))
+    (is (= "Make the capability boundary explicit" (:then first-result)))
+    (is (= ["enumerate targets" "record receipts"] (:next-steps first-result)))))
+
+(deftest codex-record-reclaimable-as-stale-only-for-old-codex-same-id
+  (testing "refuses reclaim when id does not match"
+    (let [recent (str (java.time.Instant/ofEpochMilli
+                       (- (System/currentTimeMillis) (* 24 60 60 1000))))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-2"
+                 :agent {:id {:id/value "codex-2" :id/type "continuity"}
+                         :type "codex"
+                         :last-active recent}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "refuses reclaim when type is not :codex"
+    (let [old (str (java.time.Instant/ofEpochMilli
+                    (- (System/currentTimeMillis) (* 24 60 60 1000))))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "claude"
+                         :last-active old}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "refuses reclaim when last-active is missing"
+    (let [body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "codex"}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "refuses reclaim when last-active is within threshold"
+    (let [recent (str (java.time.Instant/now))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "codex"
+                         :last-active recent}})]
+      (is (false? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000)))))
+  (testing "allows reclaim for matching old codex record"
+    (let [old (str (java.time.Instant/ofEpochMilli
+                    (- (System/currentTimeMillis) (* 24 60 60 1000))))
+          body (json/generate-string
+                {:ok true
+                 :agent-id "codex-1"
+                 :agent {:id {:id/value "codex-1" :id/type "continuity"}
+                         :type "codex"
+                         :last-active old}})]
+      (is (true? (#'dev/codex-record-reclaimable-as-stale? "codex-1" body 600000))))))
 
 (deftest codex-ws-bridge-exception-summary
   (testing "blank top-level exception messages fall back to the root cause"
     (let [e (RuntimeException. nil (IllegalStateException. "connection refused"))]
       (is (= "IllegalStateException: connection refused"
              (#'dev/exception-summary e))))))
+
+(deftest codex-ws-bridge-unreachable-network-detection
+  (testing "nested connect failures are treated as unreachable"
+    (let [e (RuntimeException. "wrap" (java.net.ConnectException. "timed out"))]
+      (is (true? (#'dev/unreachable-network-exception? e)))))
+  (testing "non-network failures do not pause the bridge"
+    (is (false? (#'dev/unreachable-network-exception?
+                 (IllegalStateException. "bad payload"))))))
 
 (deftest codex-ws-bridge-repeated-failure-tracking
   (testing "identical failures emit once immediately and then on the throttle interval"
@@ -266,6 +375,172 @@
         (is (= "claude-1" (:agent-id @called)))
         (is (= "workspace-write" (:sandbox @called)))
         (is (= "untrusted" (:approval-policy @called)))))))
+
+(deftest make-claude-invoke-fn-prefers-session-file-over-incoming-session-id
+  (testing "Claude invoke continuity matches Codex when a session file is configured"
+    (let [session-file (doto (java.io.File/createTempFile "futon3c-claude-session-" ".sid")
+                         (.deleteOnExit))
+          argv-file (doto (java.io.File/createTempFile "futon3c-claude-argv-" ".txt")
+                      (.deleteOnExit))
+          claude-bin (doto (java.io.File/createTempFile "futon3c-claude-bin-" ".sh")
+                       (.deleteOnExit))
+          _ (spit session-file "file-sid")
+          _ (spit claude-bin
+                  (str "#!/usr/bin/env bash\n"
+                       "printf '%s\\n' \"$*\" > \"" (.getPath argv-file) "\"\n"
+                       "printf '{\"type\":\"result\",\"session_id\":\"file-sid\",\"is_error\":false}\\n'\n"))
+          _ (.setExecutable claude-bin true)
+          invoke-fn (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                                  (constantly nil)
+                                  dev/start-invoke-ticker!
+                                  (fn [& _] (fn [] nil))
+                                  dev/emit-invoke-evidence!
+                                  (fn [& _] nil)
+                                  dev/context-retrieval!
+                                  (fn [& _] nil)
+                                  dev/register-invoke-control!
+                                  (fn [& _] nil)
+                                  agent-pouch/enabled?
+                                  (constantly false)
+                                  agent-pouch/feed-turn!
+                                  (fn [& _] (throw (ex-info "pouch path should be dark when flag is off" {})))
+                                  turn-queue/enabled?
+                                  (constantly false)
+                                  turn-queue/accept-and-drain!
+                                  (fn [& _] (throw (ex-info "queue path should be dark when flag is off" {})))
+                                  futon3c.blackboard/blackboard!
+                                  (fn [& _] nil)]
+                      (dev/make-claude-invoke-fn
+                       {:claude-bin (.getPath claude-bin)
+                        :agent-id "claude-2"
+                        :session-file (.getPath session-file)
+                        :session-id-atom (atom "atom-sid")
+                        :timeout-ms 5000}))
+          result (invoke-fn "hello from test" "incoming-stale")
+          argv (slurp argv-file)]
+      (is (= "file-sid" (:session-id result)))
+      (is (re-find #"--resume file-sid\b" argv))
+      (is (not (re-find #"incoming-stale" argv)))
+      (is (not (re-find #"atom-sid" argv))))))
+
+(deftest make-claude-invoke-fn-uses-turn-queue-when-flag-on
+  (testing "Car-3 queue path is load-dark but wired when the flag is enabled"
+    (let [queued (atom nil)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly true)
+                    turn-queue/accept-and-drain!
+                    (fn [entry process-fn]
+                      (reset! queued entry)
+                      (is (fn? process-fn))
+                      {:result "queued"})
+                    dev/start-invoke-ticker!
+                    (fn [& _] (fn [] nil))
+                    dev/emit-invoke-evidence!
+                    (fn [& _] nil)
+                    dev/context-retrieval!
+                    (fn [& _] nil)
+                    dev/register-invoke-control!
+                    (fn [& _] nil)]
+        (let [invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-queue"})
+              ;; The local process path is not exercised: the stubbed
+              ;; accept-and-drain! returns before calling process-fn.
+              result (invoke-fn {:prompt "outer"
+                                 :from "joe"
+                                 :surface "bell"
+                                 :msg-id "msg-1"}
+                                "sid")]
+          (is (= {:result "queued"} result))
+          (is (= "claude-queue" (:to @queued)))
+          (is (= "joe" (:from @queued)))
+          (is (= "bell" (:surface @queued)))
+          (is (= "msg-1" (:msg-id @queued))))))))
+
+(deftest emit-invoke-evidence-carries-agent-session-clock
+  (testing "invoke evidence body is enriched with the current agent clock"
+    (let [store-atom (var-get #'dev/!evidence-store)
+          old-store @store-atom
+          emitted (atom nil)]
+      (try
+        (clock-store/reset-store!)
+        (clock-store/set-dispatch-mission! "claude-clock" "sid" "M-agent-work")
+        (reset! store-atom :test-store)
+        (with-redefs [dev-invoke/emit-invoke-evidence!
+                      (fn [store agent-id event-type body-map & opts]
+                        (reset! emitted {:store store
+                                         :agent-id agent-id
+                                         :event-type event-type
+                                         :body body-map
+                                         :opts opts}))]
+          (#'dev/emit-invoke-evidence! "claude-clock" "invoke-complete"
+                                       {"ok" true}
+                                       :session-id "sid"
+                                       :tags ["invoke-complete"]))
+        (is (= :test-store (:store @emitted)))
+        (is (= "M-agent-work" (get-in @emitted [:body "mission-id"])))
+        (is (= "M-agent-work" (get-in @emitted [:body "clocked-mission"])))
+        (is (= "dispatch-mission-id"
+               (get-in @emitted [:body "auto-clock-witness" :rule])))
+        (finally
+          (reset! store-atom old-store)
+          (clock-store/reset-store!))))))
+
+(deftest make-claude-invoke-fn-uses-pouch-when-kangaroo-on
+  (testing "Kangaroo warm path is wired behind its own flag"
+    (let [fed (atom nil)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly false)
+                    agent-pouch/enabled?
+                    (constantly true)
+                    agent-pouch/feed-turn!
+                    (fn [agent-id prompt opts]
+                      (reset! fed {:agent-id agent-id :prompt prompt :opts opts})
+                      {:result "warm" :session-id "warm-sid"})]
+        (let [invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-warm"
+                                                    :claude-bin "unused"
+                                                    :session-id-atom (atom "atom-sid")})
+              result (invoke-fn "hello warm" "incoming-sid")]
+          (is (= {:result "warm" :session-id "warm-sid"}
+                 (dissoc result :invoke-trace-id)))
+          (is (string? (:invoke-trace-id result)))
+          (is (= "claude-warm" (:agent-id @fed)))
+          (is (= "hello warm" (:prompt @fed)))
+          (is (= "incoming-sid" (get-in @fed [:opts :session-id]))))))))
+
+(deftest make-claude-invoke-fn-falls-back-cold-when-pouch-fails
+  (testing "Kangaroo failure never strands a turn"
+    (let [claude-bin (doto (java.io.File/createTempFile "futon3c-claude-fallback-" ".sh")
+                       (.deleteOnExit))
+          _ (spit claude-bin
+                  "#!/usr/bin/env bash\nprintf '{\"type\":\"result\",\"session_id\":\"cold-sid\",\"is_error\":false}\\n'\n")
+          _ (.setExecutable claude-bin true)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly false)
+                    agent-pouch/enabled?
+                    (constantly true)
+                    agent-pouch/feed-turn!
+                    (fn [& _] (throw (ex-info "simulated pouch failure" {})))
+                    dev/start-invoke-ticker!
+                    (fn [& _] (fn [] nil))
+                    dev/emit-invoke-evidence!
+                    (fn [& _] nil)
+                    dev/context-retrieval!
+                    (fn [& _] nil)
+                    dev/register-invoke-control!
+                    (fn [& _] nil)
+                    futon3c.blackboard/blackboard!
+                    (fn [& _] nil)]
+        (let [invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-fallback"
+                                                    :claude-bin (.getPath claude-bin)
+                                                    :timeout-ms 5000})
+              result (invoke-fn "hello fallback" nil)]
+          (is (= "cold-sid" (:session-id result)))
+          (is (= "[no text or tool calls in this turn]" (:result result))))))))
 
 (deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
   (testing "mfuton mode injects the n=3-only local contract on #math"

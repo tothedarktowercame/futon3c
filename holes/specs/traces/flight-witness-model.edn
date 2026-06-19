@@ -1,0 +1,101 @@
+{:flight/id "model-witness-f1f9",
+ :flight/derivation :full,
+ :flight/links [{:type :applies-lesson-of, :to "live-T8"}],
+ :organs
+ {:field-read
+  {:judgment
+   {:gauge {:ref "scan/2026-06-12T09:00:11Z", :count 120},
+    :neighbourhood
+    {:chosen {:type :advance-mission, :target "M-daily-scan"},
+     :rejected
+     [{:action
+       {:type :address-sorry,
+        :target "sorry/pattern-measure-never-target"},
+       :reason :no-measurable-pair}
+      {:action {:type :advance-mission, :target "M-chipwitz-corps"},
+       :reason :capped}],
+     :band {:size 22, :why :tied-at-cap}},
+    :cascades
+    [{:psi "day counter shows binary flag instead of real day number",
+      :patterns
+      [{:ref "scan-coherence/mission-anchored-scan", :rel 0.369}],
+      :C 0.369,
+      :sampler :scan-lane-v1}]},
+   :ground {:scan-as-of "2026-06-12T09:00:11Z", :window-id "w-42"}},
+  :prediction
+  {:judgment
+   {:scaled {:g -4.1233, :g-grain :one-step-action},
+    :constant {:g -4.0836, :g-grain :one-step-action},
+    :policy {:sorry {:kind :not-yet, :blocked-by :rollout-engine}}},
+   :ground {:model "target-sensitive-v2", :field-entry 1}},
+  :counterfactual
+  {:judgment {:constant-error 0.0011},
+   :ground
+   "derived: |realised - predicted-constant|, re-derivable by any reader"},
+  :verification
+  {:judgment
+   {:holes
+    [{:hole "item-368",
+      :class :bounded-doable,
+      :evidence "brief Day counter shows 1 / 2+"}
+     {:hole "item-367",
+      :class :operator-gated,
+      :evidence "scan-intent is Joe's call"}],
+    :chosen-hole "item-368"},
+   :ground "grep + read at select-time"},
+  :act
+  {:judgment
+   {:state :executed,
+    :witness
+    {:ref "futon7 701522d",
+     :verified-by "claude-3",
+     :verification
+     "kondo 0/0 + ns loads, re-run before accepting the sha"}},
+   :ground "commit + re-run gates"},
+  :self-record
+  {:judgment {:gamma-ref "γ/model-witness-f1f9", :turn-records 1},
+   :ground "repl-trace artifact"},
+  :measurement
+  {:judgment
+   {:predicted {:g -4.1233, :g-grain :one-step-action},
+    :predicted-constant {:g -4.0836, :g-grain :one-step-action},
+    :realised {:g -4.0847, :g-grain :one-step-action},
+    :error 0.0386,
+    :class :clean,
+    :window
+    {:begin "2026-06-12T12:01:42Z",
+     :commit "2026-06-12T12:08:15Z",
+     :threshold "2026-06-12T12:09:40Z",
+     :scans
+     [{:as-of "2026-06-12T12:14:09Z",
+       :g {:g -4.0846, :g-grain :one-step-action}}
+      {:as-of "2026-06-12T12:21:33Z",
+       :g {:g -4.0847, :g-grain :one-step-action}}],
+     :epsilon 0.005,
+     :agreement 1.0E-4}},
+   :ground :window},
+  :out-of-band
+  {:judgment [{:type :operator-merge, :at "2026-06-12T12:29:19Z"}],
+   :ground "discipline-events.edn"},
+  :begin-state
+  {:judgment
+   {:begin-at "2026-06-12T12:01:42Z",
+    :target-g {:g -4.1233, :g-grain :one-step-action},
+    :scan-as-of "2026-06-12T12:01:30Z"},
+   :ground "model-witness-f1f9.begin.edn"},
+  :attribution
+  {:judgment :pilot-autonomous,
+   :ground "no operator events before close"},
+  :warrant
+  {:judgment
+   {:determined? true,
+    :determined-by
+    {:kind :standing-contract,
+     :ref "PILOT-ARC-2-QUEUE.md#prefer-measured-pairs"}},
+   :ground "ref findable at the named anchor"},
+  :velocity
+  {:judgment
+   {:action {:type :advance-mission, :target "M-daily-scan"},
+    :plan-sketch
+    ["fix item 368" "commit" "force scan" "settle" "close"]},
+   :ground :warrant}}}

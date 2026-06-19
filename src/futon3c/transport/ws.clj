@@ -28,7 +28,8 @@
             [futon3c.peripheral.registry :as preg]
             [futon3c.peripheral.runner :as runner]
             [futon3c.transport.ws.invoke :as ws-invoke]
-            [futon3c.evidence.store :as estore]
+            [futon3c.transport.peripheral-events :as peripheral-events]
+            [futon3c.evidence.boundary :as boundary]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -41,6 +42,13 @@
 
 (defn- error? [x]
   (and (map? x) (contains? x :error/code)))
+
+(defn send-peripheral-event!
+  "Send a best-effort server-emitted peripheral_event frame to AGENT-ID over
+   the existing authenticated WS sender registry. Returns true when the frame
+   was accepted by the registered WS sender, false when no sender exists."
+  [agent-id peripheral-id event payload]
+  (peripheral-events/send-peripheral-event! agent-id peripheral-id event payload))
 
 (defn- transport-error
   "Create a SocialError from the WebSocket transport layer."
@@ -392,7 +400,7 @@
                                                (fn [tags] (vec (conj (or tags []) :replicated))))
                                        (assoc :evidence/replicated-by agent-id
                                               :evidence/replicated-at (now-str)))
-                             result (estore/append* evidence-store entry)]
+                             result (boundary/append! evidence-store entry)]
                          (if (contains? result :error/code)
                            (send-fn ch (proto/render-ws-frame result))
                            (send-fn ch (proto/render-evidence-ack

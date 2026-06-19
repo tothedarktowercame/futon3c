@@ -17,6 +17,31 @@ durable, queryable artifacts linked into the evidence graph.
 ArSE is accessible from three surfaces — all hitting the same HTTP endpoints
 and producing the same evidence entries.
 
+### Typed bells
+
+When `FUTON3C_TYPED_BELLS` is enabled, Agency bells can populate ArSE at
+send-time:
+
+- `type=query` with no `ref` creates a new ArSE question and stamps the new
+  thread id into the invoke job's `ref`.
+- `type=query` with `ref` routes an existing ArSE thread to another agent
+  without creating a duplicate question.
+- `type=answer` requires `ref` and writes the answer to that ArSE thread.
+
+Use the canonical shell client:
+
+```bash
+python3 futon3c/scripts/agency_send.py --to claude-6 --from codex-1 \
+  --kind bell --type query <<'EOF'
+What invariant proves this handoff is replay-safe?
+EOF
+
+python3 futon3c/scripts/agency_send.py --to codex-1 --from claude-6 \
+  --kind bell --type answer --ref ask-1772986500-3 <<'EOF'
+TB-7: replaying the same typed query job id reuses the stamped ref.
+EOF
+```
+
 ### IRC (`!` commands)
 
 ```

@@ -1,15 +1,26 @@
 (ns futon3c.dev.bootstrap
   "Bootstrap helpers and top-level startup orchestration for futon3c.dev."
-  (:require [futon1a.system :as f1]
+  (:require [cheshire.core :as json]
+            [futon1a.system :as f1]
             [futon3c.agency.federation :as federation]
+            [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.roster-store :as roster-store]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
+            [futon3c.evidence.invariant :as evidence-invariant]
+            [futon3c.logic.archaeology :as archaeology]
+            [futon3c.logic.locus :as locus]
+            [futon3c.logic.ratchet :as ratchet]
+            [futon3c.logic.snapshot :as snapshot]
+            [futon3c.logic.tracer :as tracer]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
+            [futon3c.watcher.multi :as multi-watcher]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [org.httpkit.server :as hk]
@@ -61,6 +72,20 @@
           (println "[dev] futon5 heartbeat API disabled: nonstarter.api not on classpath")
           nil)))))
 
+
+(defn- restore-agent-via-handler!
+  [http-handler payload]
+  (let [body (json/generate-string payload)
+        response (http-handler {:request-method :post
+                                :uri "/api/alpha/agents/restore"
+                                :headers {"content-type" "application/json"}
+                                :body (java.io.ByteArrayInputStream. (.getBytes body "UTF-8"))})
+        parsed (try
+                 (json/parse-string (str (:body response)) true)
+                 (catch Throwable _
+                   {:ok false :err "invalid-restore-response"}))]
+    (assoc parsed :http/status (:status response))))
+
 (defn start-futon3c!
   "Start futon3c transport HTTP+WS. Returns system map or nil when disabled."
   [{:keys [xtdb-node evidence-store irc-interceptor irc-send-fn irc-send-base make-http-handler make-ws-handler]}]
@@ -82,10 +107,32 @@
                   (if (:websocket? request)
                     (handler request)
                     (http-handler request)))
-            result (http/start-server! app port)]
+            result (http/start-server! app port)
+            restore-report (roster-store/restore-on-boot!
+                            #(restore-agent-via-handler! http-handler %))]
+        ;; Install continuous roster persistence ONLY now — AFTER restore-on-boot!
+        ;; has consumed the saved roster. Installing at registry ns-load fired the
+        ;; watch's initial persist against the empty boot registry and clobbered
+        ;; the saved roster before restore could read it. The initial persist here
+        ;; captures the just-restored agents going forward.
+        (roster-store/install-registry-watch! reg/!registry)
+        ;; Restored turns sit in per-agent queues, but no bell arrives to trigger the
+        ;; lazy drainer spawn — so spawn drainers for restored agents NOW, or their
+        ;; queued turns (and the agents) stay stuck/un-drainable after a restart.
+        ;; Pairs with turn-queue/load-state clearing the stale :draining lock.
+        (turn-queue/resume-pending-drainers!)
+        ;; A3 boot integrity gate: the durable-queue trio should be active whenever
+        ;; Agency serves.  Do not refuse boot; make degradation unmistakable.
+        (agency-invariants/warn-queue-hardening!)
         (println (str "[dev] futon3c: http://localhost:" (:port result)
                       " (patterns: " (if (seq pattern-ids) pattern-ids "none") ")"))
-        (assoc result :ws-connections connections)))))
+        (when (:enabled? restore-report)
+          (println (str "[dev] agent roster restore: restored="
+                        (:restored restore-report)
+                        " attempted=" (:attempted restore-report))))
+        (assoc result
+               :ws-connections connections
+               :agent-restore restore-report)))))
 
 (defn start-irc!
   "Start IRC server + WS relay bridge. Returns system map or nil when disabled."
@@ -159,6 +206,50 @@
          :port port
          :bind bind}))))
 
+(defn start-webarxana!
+  "Start WebArxana inside the futon3c JVM. Returns system map or nil when disabled."
+  []
+  (when (config/env-bool "FUTON3C_WEBARXANA_SERVER_AUTOSTART" true)
+    (let [port (config/env-int "FUTON3C_WEBARXANA_PORT" 3100)
+          futon1a-port (config/env-int "FUTON1A_PORT" 7071)
+          futon1a-url (config/env "FUTON4_BASE_URL"
+                                  (str "http://127.0.0.1:" futon1a-port))
+          futon1a-url (str/replace futon1a-url #"/api/alpha/?$" "")
+          emacs-socket (config/env "FUTON3C_EMACS_SOCKET" "server")
+          start! (requiring-resolve 'webarxana.server.core/start!)
+          status (requiring-resolve 'webarxana.server.core/status)
+          stop! (requiring-resolve 'webarxana.server.core/stop!)
+          system (start! {:port port
+                          :futon1a-url futon1a-url
+                          :emacs-socket emacs-socket})]
+      (assoc system
+             :state-fn #(status)
+             :stop-fn #(stop!)))))
+
+(defn start-shadow!
+  "Start embedded shadow-cljs CLJS watches inside the futon3c JVM.
+   Gated by FUTON3C_SHADOW_AUTOSTART (default false). Build ids come from
+   FUTON3C_SHADOW_BUILDS (comma-separated, default \"war-machine,webarxana\").
+   See dev/futon3c/dev/shadow.clj. CLAUDE.md I-0: lets pgrep java stay at
+   one PID even while CLJS watches are active."
+  []
+  (when (config/env-bool "FUTON3C_SHADOW_AUTOSTART" false)
+    (let [start!  (requiring-resolve 'futon3c.dev.shadow/start!)
+          stop!   (requiring-resolve 'futon3c.dev.shadow/stop!)
+          status  (requiring-resolve 'futon3c.dev.shadow/status)
+          builds  (->> (str/split (str (config/env "FUTON3C_SHADOW_BUILDS"
+                                                   "war-machine,webarxana"))
+                                  #",")
+                       (map str/trim)
+                       (remove str/blank?)
+                       (map keyword)
+                       vec)
+          result  (apply start! builds)]
+      {:builds builds
+       :result result
+       :state-fn #(status)
+       :stop-fn  #(stop!)})))
+
 (defn- agent-availability-summary
   [registry-status]
   (let [route-counts (frequencies (map :invoke-route (vals (:agents registry-status))))
@@ -175,7 +266,7 @@
   [{:keys [!f1-sys !evidence-store !irc-sys
            direct-xtdb-enabled? make-evidence-store
            start-futon1a! start-futon5! start-irc! start-agents!
-           start-tickle! start-fm-conductor! start-drawbridge!
+           start-tickle! start-process-watchdog! start-fm-conductor! start-drawbridge!
            start-agents-blackboard-ticker! nonstarter-fn stop-agents!
            on-agent-invoke-complete!]
     :as _deps}]
@@ -194,6 +285,134 @@
         evidence-store (make-evidence-store f1-sys direct-xtdb?)
         _ (reset! !f1-sys f1-sys)
         _ (reset! !evidence-store evidence-store)
+        ;; I-evidence-per-turn boot-time check: refuse to proceed silently
+        ;; with a non-durable evidence store. On failure we print loudly
+        ;; and keep going — but the turn-level check will fail every turn
+        ;; so the violation is impossible to miss.
+        boot-check (evidence-invariant/check-store-backing evidence-store)
+        _ (if (:ok boot-check)
+            (println (str "[dev] I-evidence-per-turn boot check: OK ("
+                          (name (:kind boot-check)) ")"))
+            (do
+              (println "================================================================")
+              (println "[dev] I-evidence-per-turn BOOT CHECK FAILED")
+              (println (str "      kind:   " (name (:kind boot-check))))
+              (println (str "      reason: " (:reason boot-check)))
+              (println (str "      invariant: " (:invariant boot-check)))
+              (println "      Evidence writes will not persist. Fix and restart.")
+              (println "================================================================")))
+        ;; I-coverage-ratchet load-time check: compare working-tree inventory
+        ;; against git HEAD; emit a :family-fired :coverage-ratchet entry
+        ;; recording the outcome. Boot continues either way — the violation,
+        ;; if any, is durably evidenced and visible in the operational-families
+        ;; view. (Mission: M-invariant-queue-extend Track 4.1.)
+        _ (try (ratchet/check-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] I-coverage-ratchet load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)
+                               " — boot continues."))))
+        _ (try (archaeology/check-autostash-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/autostash load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-deferred-stub-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/deferred-stub load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-pipeline-tracer-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/pipeline-tracer load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-stash-disposition-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/stash-disposition load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-branch-disposition-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/branch-disposition load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (archaeology/check-mission-doc-disposition-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] archaeology/mission-doc-disposition load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; metabolic-balance/working-tree (10th cognitive-faculty shape;
+        ;; M-bounded-in-flight-state INSTANTIATE D-02). Lives behind
+        ;; requiring-resolve so this site adds no namespace-level
+        ;; require coupling to operator WIP in this file.
+        _ (try ((requiring-resolve
+                 'futon3c.logic.metabolic-balance/check-working-tree-pressure-on-load!)
+                evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] metabolic-balance/check-working-tree-pressure-on-load! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/check-mission-home-locus-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] locus/mission-home load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; Auto-register the family-check-fns at boot so the probe-loop
+        ;; has a populated registry without operator-driven activation.
+        ;; Mutating an in-memory atom across restarts was diagnosed as
+        ;; an anti-pattern (Joe 2026-05-01); deterministic registration
+        ;; from on-disk inventory + source code is the durable fix.
+        _ (try (archaeology/register-archaeology-control-taps!)
+               (println "[dev] registered archaeology-control probe-taps (6 family-ids)")
+               (catch Throwable t
+                 (println (str "[dev] register-archaeology-control-taps! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/register-locus-taps!)
+               (println "[dev] registered single-locus probe-taps (3 family-ids)")
+               (catch Throwable t
+                 (println (str "[dev] register-locus-taps! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try ((requiring-resolve
+                 'futon3c.logic.metabolic-balance/register-metabolic-balance-taps!))
+               (println "[dev] registered metabolic-balance probe-taps (1 family-id)")
+               (catch Throwable t
+                 (println (str "[dev] register-metabolic-balance-taps! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; Ensure pipeline-tracer items exist in the durable store.
+        ;; Idempotent: re-emits only those track-ids missing from the
+        ;; persisted set. Reachable-from-boot discipline — tracer state
+        ;; is reconstructible from `tracer/default-tracers` (on-disk
+        ;; source) at every boot. M-reachable-from-boot 2026-05-01.
+        _ (try (let [r (tracer/ensure-default-tracers! evidence-store)]
+                 (println (str "[dev] tracer/ensure-default-tracers!: "
+                               "present=" (:already-present r)
+                               " emitted=" (:emitted r)
+                               " attempted=" (:attempted r))))
+               (catch Throwable t
+                 (println (str "[dev] tracer/ensure-default-tracers! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; State-snapshot-witness/inventory: emit one :inventory-snapshot
+        ;; evidence entry per JVM boot, projecting the structural-law
+        ;; inventory to a flat snapshot record. Mission:
+        ;; M-state-snapshot-witness 2026-05-01.
+        _ (try (snapshot/snapshot-inventory-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] snapshot/snapshot-inventory-on-load! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (snapshot/snapshot-registry-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] snapshot/snapshot-registry-on-load! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (snapshot/snapshot-repo-refs-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] snapshot/snapshot-repo-refs-on-load! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (snapshot/snapshot-hud-render-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] snapshot/snapshot-hud-render-on-load! threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/check-agent-routing-locus-on-load!
+                evidence-store
+                {:state-source reg/!registry})
+               (catch Throwable t
+                 (println (str "[dev] locus/agent-routing load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
+        _ (try (locus/check-artifact-live-copy-locus-on-load! evidence-store)
+               (catch Throwable t
+                 (println (str "[dev] locus/artifact-live-copy load-time check threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
         _ (mcs/configure! {:evidence-store evidence-store
                            :repos mcb/default-repo-roots})
         _ (cyder/register!
@@ -203,6 +422,52 @@
             :state-fn #(let [s @!f1-sys]
                          {:port (:http/port s)
                           :direct-xtdb? direct-xtdb?})})
+        ;; Multi-repo watcher (E-live-means-live Path B): in-JVM
+        ;; replacement for the separate bb watcher process. Polls
+        ;; the watched roots, dispatches per-file ingest into
+        ;; substrate-2. Commit-vertex catch-up is currently disabled on
+        ;; this path because the live futon1a hyperedge query can wedge
+        ;; the entire watcher thread; keep file-event ingestion live and
+        ;; treat commit catch-up as a separate lane until that query is
+        ;; bounded.
+        ;; Defaults to --no-cold-scan equivalent behaviour
+        ;; (cold-scan? false). Wrapped defensively — boot continues
+        ;; if watcher start throws.
+        _ (try
+            (let [roots [{:path "/home/joe/code/futon0"  :label "futon0-d"}
+                         {:path "/home/joe/code/futon1"  :label "futon1-d"}
+                         {:path "/home/joe/code/futon1a" :label "futon1a-d"}
+                         {:path "/home/joe/code/futon2"  :label "futon2-d"}
+                         {:path "/home/joe/code/futon3"  :label "futon3-d"}
+                         {:path "/home/joe/code/futon3a" :label "futon3a-d"}
+                         {:path "/home/joe/code/futon3b" :label "futon3b-d"}
+                         {:path "/home/joe/code/futon3c" :label "futon3c-d"}
+                         {:path "/home/joe/code/futon4"  :label "futon4-elisp-d"}
+                         {:path "/home/joe/code/futon5"  :label "futon5-d2"}
+                         {:path "/home/joe/code/futon5a" :label "futon5a-d"}
+                         {:path "/home/joe/code/futon6"  :label "futon6-py-d"}
+                         {:path "/home/joe/code/futon7"  :label "futon7-d"}
+                         {:path "/home/joe/code/futon7a" :label "futon7a-d"}]
+                  interval-ms (config/env-int "FUTON3C_MULTI_WATCHER_INTERVAL_MS" 5000)
+                  commit-ingest? (config/env-bool "FUTON3C_MULTI_WATCHER_COMMIT_INGEST" false)]
+              (multi-watcher/start! {:roots roots
+                                     :interval-ms interval-ms
+                                     :cold-scan? false
+                                     :commit-ingest? commit-ingest?})
+              (cyder/register!
+               {:id "multi-watcher"
+                :type :daemon
+                :stop-fn multi-watcher/stop!
+                :state-fn #(or (multi-watcher/status nil) {:running? false})
+                :metadata {:health/heartbeat? true
+                           :cross-refs ["M-live-geometric-stack"
+                                        "M-self-documenting-stack"]}})
+              (println (str "[dev] multi-watcher started in-JVM (interval-ms="
+                            interval-ms ", roots=" (count roots) ")")))
+            (catch Throwable t
+              (println (str "[dev] multi-watcher start threw: "
+                            (.getName (class t)) ": " (.getMessage t)
+                            " — boot continues."))))
         f5-sys (start-futon5!)
         _ (when f5-sys
             (cyder/register!
@@ -223,6 +488,38 @@
                             :relay-bridge? (boolean (:relay-bridge s))})}))
         _ (reg/set-on-invoke-complete! on-agent-invoke-complete!)
         _ (start-agents!)
+        webarxana-sys (try
+                        (start-webarxana!)
+                        (catch Throwable t
+                          (println (str "[dev] webarxana start threw: "
+                                        (.getName (class t)) ": " (.getMessage t)
+                                        " — boot continues."))
+                          nil))
+        _ (when webarxana-sys
+            (cyder/register!
+             {:id "webarxana"
+              :type :server
+              :stop-fn (:stop-fn webarxana-sys)
+              :state-fn (:state-fn webarxana-sys)
+              :metadata {:cross-refs ["VSATARCS" "M-interest-network-coupling"]}}))
+        shadow-sys (try
+                     (start-shadow!)
+                     (catch Throwable t
+                       (println (str "[dev] shadow start threw: "
+                                     (.getName (class t)) ": " (.getMessage t)
+                                     " — boot continues."))
+                       nil))
+        _ (when shadow-sys
+            (println (str "[dev] embedded shadow-cljs started: "
+                          (:builds shadow-sys) " → " (:result shadow-sys)))
+            (cyder/register!
+             {:id "shadow-cljs"
+              :type :daemon
+              :stop-fn (:stop-fn shadow-sys)
+              :state-fn (:state-fn shadow-sys)
+              :metadata {:cross-refs ["M-repl-wins-over-cli" "CLAUDE.md:I-0"]}}))
+        _ (when (config/env-bool "FUTON3C_PROCESS_WATCHDOG_AUTOSTART" true)
+            (start-process-watchdog!))
         _ (when (config/env-bool "FUTON3C_TICKLE_AUTOSTART" false)
             (start-tickle! {:auto-restart? true}))
         _ (when (config/env-bool "FUTON3C_FM_CONDUCTOR_AUTOSTART" false)
@@ -320,6 +617,8 @@
     (println "[dev]   (dev/start-tickle!)                    — start watchdog (auto-restart on)")
     (println "[dev]   (dev/start-tickle! {:auto-restart? false}) — watchdog without restart")
     (println "[dev]   (dev/stop-tickle!)                     — stop watchdog")
+    (println "[dev]   (dev/start-process-watchdog!)          — start infra process watchdog")
+    (println "[dev]   (dev/stop-process-watchdog!)           — stop infra process watchdog")
     (println "[dev]   (dev/status)                           — runtime summary")
     (println)
     (println "[dev] CT work queue (PlanetMath wiring extraction):")
@@ -350,6 +649,17 @@
         (println "\n[dev] Shutting down...")
         (remove-watch cyder/!processes :blackboard)
         (reset! cyder/!processes {})
+        (try (multi-watcher/stop!)
+             (catch Throwable _))
+        ;; Drain embedded shadow-cljs FIRST so its runtime-loop sees a
+        ;; clean stop signal while the JVM thread pools are still healthy.
+        ;; Without this, shadow.remote.runtime.clj.local/runtime_loop races
+        ;; JVM-level executor shutdown and throws RejectedExecutionException
+        ;; from async-thread-macro-3 after our shutdown sequence completes.
+        ;; No-op when shadow was never started (requiring-resolve → nil).
+        (try (when-let [stop-shadow (requiring-resolve 'futon3c.dev.shadow/stop!)]
+               (stop-shadow))
+             (catch Throwable _))
         (stop-agents!)
         (when-let [stop (:stop bridge-sys)] (stop))
         (when-let [irc @!irc-sys]

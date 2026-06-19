@@ -14,6 +14,11 @@
   (when session-id
     (subs session-id 0 (min 8 (count session-id)))))
 
+(defn- make-session-reset-fn
+  [session-file sid-atom]
+  (fn []
+    (config/clear-session-state! session-file sid-atom)))
+
 (defn register-mentor-claude-agent!
   [{:keys [agent-id session-file socket metadata make-claude-invoke-fn read-session-id]}]
   (let [initial-sid (read-session-id session-file)
@@ -26,10 +31,12 @@
                     :session-id-atom sid-atom
                     :emacs-socket socket})]
     (rt/register-claude! {:agent-id agent-id
-                          :invoke-fn invoke-fn})
+                          :invoke-fn invoke-fn
+                          :session-reset-fn (make-session-reset-fn session-file sid-atom)})
     (reg/update-agent! agent-id
                        :agent/type :claude
                        :agent/invoke-fn invoke-fn
+                       :agent/session-reset-fn (make-session-reset-fn session-file sid-atom)
                        :agent/metadata metadata
                        :agent/capabilities [:explore :edit :test :coordination/execute])
     (when initial-sid
@@ -58,8 +65,33 @@
                           :type :tickle
                           :invoke-fn invoke-fn
                           :capabilities [:coordination/orchestrate]
+                          :session-reset-fn (make-session-reset-fn session-file sid-atom)
                           :metadata {:role "watchdog"}})
     (println (str "[dev] Tickle agent registered: tickle-1 (claude invoke)"
+                  (when initial-sid
+                    (str " (session: " (short-session initial-sid) ")"))))
+    {:invoke-fn invoke-fn
+     :session-id initial-sid}))
+
+(defn register-scribe-agent!
+  [{:keys [make-claude-invoke-fn read-session-id]}]
+  (let [session-file (io/file "/tmp/futon-scribe-1-session-id")
+        initial-sid (read-session-id session-file)
+        sid-atom (atom initial-sid)
+        invoke-fn (make-claude-invoke-fn
+                   {:claude-bin (config/env "CLAUDE_BIN" "claude")
+                    :permission-mode (config/env "FUTON3C_SCRIBE_PERMISSION" "bypassPermissions")
+                    :agent-id "scribe-1"
+                    :session-file session-file
+                    :session-id-atom sid-atom
+                    :cwd "/home/joe/code"})]
+    (reg/register-agent! {:agent-id "scribe-1"
+                          :type :scribe
+                          :invoke-fn invoke-fn
+                          :capabilities [:write :observe]
+                          :session-reset-fn (make-session-reset-fn session-file sid-atom)
+                          :metadata {:role "interest-network-scribe"}})
+    (println (str "[dev] Scribe agent registered: scribe-1 (claude invoke)"
                   (when initial-sid
                     (str " (session: " (short-session initial-sid) ")"))))
     {:invoke-fn invoke-fn
