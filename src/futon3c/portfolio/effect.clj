@@ -27,6 +27,10 @@
                   :targets (:consolidation-targets portfolio-result)}
     :upvote      {:effect :upvote
                   :target (:upvote-target portfolio-result)}
+    :acquire-patterns {:effect :acquire-patterns
+                       ;; the stalled circumstance to construct a policy (cascade) for
+                       :psi (or (:focus portfolio-result)
+                                (:circumstance portfolio-result))}
     :wait        {:effect :none}
     ;; unknown action — surface it rather than silently dropping
     {:effect :unknown :action action}))
@@ -63,6 +67,38 @@
       :upvote
       {:ok true :applied effect
        :note (str "upvote target: " (:target effect))}
+
+      :acquire-patterns
+      ;; Niche-construction (M-wm-policies Track 3): build a CANDIDATE cascade (a new
+      ;; policy) for the stalled circumstance instead of freezing. PROPOSE-ONLY —
+      ;; cascade-policy-for is read-only / sim-only and never promotes or writes :7071
+      ;; (WM-I4: autonomous proposing is fine; ACTING on a cascade still waits on the
+      ;; consent gate). A constructor failure must not break the loop, but is surfaced
+      ;; in the note (not silently swallowed).
+      (let [psi (or (:psi effect) mission-id "")
+            construct (try (requiring-resolve
+                            'futon2.report.cascade-lane/cascade-policy-for)
+                           (catch Throwable _ nil))
+            psi-text (-> (str psi)
+                         (str/replace #"^M-" "")
+                         (str/replace #"-" " "))
+            cascade (when (and construct (seq (str/trim psi-text)))
+                      (try (construct psi-text)
+                           (catch Throwable e {:error (.getMessage e)})))]
+        (cond
+          (and (map? cascade) (:wholeness cascade))
+          {:ok true :applied effect :proposed-cascade cascade
+           :note (str "proposed cascade for |psi=" psi "> — "
+                      (:size cascade) " patterns, wholeness=" (:wholeness cascade))}
+
+          (and (map? cascade) (:error cascade))
+          {:ok true :applied effect :proposed-cascade nil
+           :note (str "cascade construction errored: " (:error cascade))}
+
+          :else
+          {:ok true :applied effect :proposed-cascade nil
+           :note (str "no cascade for |psi=" psi "> — constructor unavailable or no "
+                      "good-enough patterns for this class (a foothold may be needed)")}))
 
       :none
       {:ok true :applied effect :note "no-op (wait)"}

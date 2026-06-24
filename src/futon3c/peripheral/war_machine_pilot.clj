@@ -405,7 +405,7 @@
    inhabitant supplies the semantic account via :document {:did :found :pur}. Best-effort —
    a log failure must never break a turn. Returns {:turn n :path p} or nil.
      turn-data: {:agent :mode :recommendation {:target :g :rationale}
-                 :cascade {:patterns :C} :measurement {:predicted :realised :top-shift? :pre-top :post-top}
+                 :cascade {:patterns :wholeness} :measurement {:predicted :realised :top-shift? :pre-top :post-top}
                  :document {:did :found :pur}}"
   [{:keys [agent mode recommendation cascade measurement document]}]
   (try
@@ -416,14 +416,14 @@
                  (reduce max 0) inc)
           date (subs (str (java.time.Instant/now)) 0 10)
           {:keys [target g]} recommendation
-          {:keys [patterns C]} cascade
+          {:keys [patterns wholeness]} cascade
           {:keys [predicted realised top-shift? pre-top post-top]} measurement
           {:keys [did found pur]} document
           entry (str "## Turn " n " — " date " (" (or agent "pilot") ", " (name (or mode :supervised)) ")\n\n"
                      "**READ.** WM recommended `" target "`"
                      (when g (format " (G=%.2f)" (double g))) ".\n"
                      (when (seq patterns)
-                       (str "Cascade" (when C (format " (C=%.2f)" (double C))) ": "
+                       (str "Cascade" (when wholeness (format " (wholeness=%.2f)" (double wholeness))) ": "
                             (str/join " · " patterns) ".\n"))
                      "\n**EVAL / DID.** " (or did "_(not recorded — mechanical turn)_") "\n"
                      "\n**PRINT / FOUND.** " (or found "_(not recorded)_")
@@ -542,7 +542,7 @@
           path  ((requiring-resolve 'futon3c.aif.repl-trace/write-frame!) frame+ "data/repl-traces")
           ;; DOCUMENT stage: append the human-readable turn to the Pilot's Log (best-effort)
           cascade (let [c (first (filter #(= pre-top (:mission %)) (:cascade-policies post-j)))]
-                    {:patterns (:shown c) :C (:C c)})
+                    {:patterns (:shown c) :wholeness (:wholeness c)})
           logged (log-pilot-turn!
                   {:agent (:agent b) :mode (:mode b)
                    :recommendation {:target pre-top :g (get-in b [:pre :dT-snapshot 0 :g-total])}
