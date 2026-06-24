@@ -221,16 +221,28 @@
    Per `agent/intent-handshake-is-binding`: the run binds the intent and
    scope via this event; substantive actions thereafter are contracted to
    the bound scope."
-  [{:keys [intent scope constraints success-criteria target-anchor-id]
+  [{:keys [intent scope constraints success-criteria target-anchor-id act-gate]
     :as payload}]
   (let [event-id (str "cg-" (java.util.UUID/randomUUID))
         emitted-at (str (java.time.Instant/now))
+        ;; Car-3 (R16) seam 3: record the act-gate conjunction ΔF∧ΔG in the consent warrant.
+        ;; act-gate = {:delta-F <cascade F-free-energy> :delta-G <rollout G(π)>}. Verdict:
+        ;; :pass = both legs present AND F>0 AND G<0 (Bayesian-Occam accept ∧ EFE-descending);
+        ;; :fail = both present, conjunction fails; :abstain-missing-leg = a leg is nil (e.g. no
+        ;; rollout path) → the gate cannot be evaluated, so acting must NOT proceed.
+        gate-verdict (when act-gate
+                       (let [{:keys [delta-F delta-G]} act-gate]
+                         (cond (or (nil? delta-F) (nil? delta-G)) :abstain-missing-leg
+                               (and (pos? delta-F) (neg? delta-G)) :pass
+                               :else :fail)))
         bell-prompt (str "[pilot/consent-gate-emit] " event-id
                          " intent=" (pr-str intent)
                          " scope=" (pr-str scope)
                          " constraints=" (pr-str constraints)
                          " success-criteria=" (pr-str success-criteria)
-                         (when target-anchor-id (str " target-anchor=" target-anchor-id)))]
+                         (when target-anchor-id (str " target-anchor=" target-anchor-id))
+                         (when act-gate (str " act-gate=" (pr-str act-gate)
+                                             " gate-verdict=" gate-verdict)))]
     (try
       (let [body {:agent-id "claude-10"
                   :prompt bell-prompt
@@ -243,6 +255,8 @@
         {:ok true :result {:consent-gate-event-id event-id
                            :emitted-at emitted-at
                            :status (:status resp)
+                           :act-gate act-gate
+                           :gate-verdict gate-verdict
                            :job-id (try (-> resp :body (json/parse-string true) :job-id)
                                         (catch Throwable _ nil))
                            :payload payload}})
