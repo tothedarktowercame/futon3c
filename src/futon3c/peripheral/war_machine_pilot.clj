@@ -302,7 +302,7 @@
    and had to hold by hand. Pass :guardrails? false for a raw field read."
   ([] (begin-live-cycle! {}))
   ([{:keys [agent v-attribution emit-bell? tick? mode guardrails? guardrails-ctx needs-you-path needs-you-top-k
-            target]
+            target action-type]
      :or {agent "claude-2" v-attribution :pilot-autonomous emit-bell? false
           tick? true mode :supervised-proposal guardrails? true}}]
    (let [run-id (str "live-" (java.util.UUID/randomUUID))
@@ -316,8 +316,12 @@
          ;; to obtain (consent satisfied upstream, not bypassed). The chosen
          ;; target must exist in the live differential — predicted-G must be
          ;; the field's own number, never an invented one.
+         ;; Car-3 seam-a: disambiguate by (:type, :target), not :target alone — else an
+         ;; :apply-cascade collides with a same-:target :advance-mission picked first.
          chosen (when target
-                  (first (filter #(= target (get-in % [:action :target])) dT)))
+                  (first (filter #(and (= target (get-in % [:action :target]))
+                                       (or (nil? action-type)
+                                           (= action-type (get-in % [:action :type])))) dT)))
          _ (when (and target (nil? chosen))
              (throw (ex-info "chosen :target not in the live differential — predicted-G must come from the field"
                              {:target target :n-ranked (count dT)})))
@@ -362,7 +366,10 @@
                                   {:intent (str "REPL EVAL: engage " (pr-str v))
                                    :scope {:action v :mode :supervised-proposal :wm-mode (:mode j)}
                                    :constraints ["supervised-proposal: no mutation; operator merges"]
-                                   :success-criteria ["γ frame emitted" "verifier conforms"]})
+                                   :success-criteria ["γ frame emitted" "verifier conforms"]
+                                   ;; Car-3 seam-b: thread the chosen action's act-gate so the
+                                   ;; gate records ΔF∧ΔG + :gate-verdict (nil for non-apply-cascade v).
+                                   :act-gate (:act-gate v)})
                                  [:result :consent-gate-event-id])
                          (str "cg-" (java.util.UUID/randomUUID)))
              tick-before (:tick-count ((requiring-resolve 'futon3c.wm.scheduler/status)))
@@ -474,7 +481,11 @@
           v          (get-in b [:pre :v])
           predicted  (get-in b [:pre :predicted-discharge])
           target     (:target v)
-          post-entry (first (filter #(= target (get-in % [:action :target])) post-dT))
+          v-type     (:type v)
+          ;; Car-3 seam-a: match the post-entry by (:type, :target) — else realised is
+          ;; mis-measured against a same-:target :advance-mission instead of the chosen v.
+          post-entry (first (filter #(and (= target (get-in % [:action :target]))
+                                          (= v-type (get-in % [:action :type]))) post-dT))
           realised   (if post-entry (:g-total post-entry) predicted)
           ;; A vanished target means the discharge SUCCEEDED but realised-G
           ;; has no measurement — the fallback copies predicted, which would

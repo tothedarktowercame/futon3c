@@ -109,6 +109,55 @@ Part B = the explicit operator-arm step (WM-I4). So the seams make Car-3 *reacha
 Honest edge: actionability is move-set-coverage-bound (the two currently-served missions lack a rollout path →
 abstain), which ties to the R14/R15 frontier (serve a richer reachable set).
 
+## Flight #2 — Ground Control verdict: C3.1 + C3.2 now HIT (claude-2, 2026-06-24)
+
+claude-5 re-flew after the seams landed (run `live-e9809257`). GC-verified from the begin-frame + the minted
+consent gate (artifacts, not self-report):
+- **C3.1 acquire-on-stall — HIT (was not-reached).** `:apply-cascade` actions are now in the READ differential
+  (`dT-snapshot`): `M-canon-fingerprint-store` `{:delta-F 0.005 :delta-G nil :pass? false}`,
+  `M-bayesian-structure-learning` `{:delta-F −0.01 :delta-G nil :pass? false}` — selectable as `v`.
+- **C3.2 act-gate ΔF∧ΔG — HIT (was partial).** The pilot minted `cg-ba4c4702-…` and `consent-gate-emit`
+  recorded `:act-gate {:delta-F :delta-G}` + **`:gate-verdict :abstain-missing-leg`** — the conjunction is
+  computed AND recorded at EVAL. Abstain because ΔG (rollout `G(π)`) is `nil` for both served missions (no
+  rollout path in the v2 move-set) — the gate correctly refuses when a leg is missing.
+- **C3.3 earned action + loop closes — still NOT-REACHED (by design).** Execution held (no `:apply-cascade`
+  executor — Part B); and the gate abstained, so even armed it would not act on these missions.
+- **C3.4 — begin-frame written; held at the gate (no close-cycle act, correctly).**
+
+**Net: the 3 seams are confirmed live — Car-3 is now *reachable to the gate*, and the gate is *auditable*
+(records ΔF∧ΔG + verdict).** Two things remain for a *closed* loop (C3.3): **(a)** a `:pass` case to exercise —
+needs a path-having mission in the open-mission set (the **R14/R15 move-set-coverage** frontier; today's served
+missions all abstain on missing ΔG); **(b)** the `:apply-cascade` **executor + operator arming** (Part B / WM-I4).
+
+## Flight #2 follow-on — the "4th seam": pilot auto-loop wiring (claude-5 found, GC-recorded)
+
+The 3 seams are live at the **judgement + gate-tool** level, but **not yet wired into the pilot auto-loop**
+(`war_machine_pilot/begin-live-cycle!` / `close-live-cycle!`) — claude-5 had to drive apply-cascade via the
+README-sanctioned witness pattern (hand-composed begin-state citing the real `cg-id`). Three bounded gaps:
+- **(a) target-only selection collision.** `begin-live-cycle!`/`close-live-cycle!` match the chosen `v` by
+  `:target` ONLY → an `apply-cascade` (rank ~111) collides with a same-`:target` `advance-mission` (rank ~96)
+  picked first; close-cycle would also mis-measure realised against the advance-mission. **Fix:** disambiguate by
+  `(:type, :target)`, not `:target` alone.
+- **(b) act-gate not threaded.** `begin-live-cycle!` does not pass the chosen action's `:act-gate` into
+  `consent-gate-emit`, so seam-3's verdict only fires when the act-gate is supplied explicitly (claude-5 called
+  the gate tool directly). **Fix:** `begin-live-cycle!` threads `(get-in chosen [:action :act-gate])` into the gate.
+- **(c) V2 attribution mismatch.** `begin-live-cycle!` sets `:v-attribution :operator-directed` when a `:target`
+  is passed, but `repl_spec_verify` V2 accepts only `#{:operator :pilot-autonomous}` → any target-directed
+  flight's frame FAILS V2 (claude-5 used `:operator` to conform). **Fix:** V2 accepts `:operator-directed`, or
+  `begin-live-cycle!` emits `:operator`.
+
+These make Car-3 **auto-flyable** (no hand-workaround) — the completion of "reachable via the pilot loop." Small,
+in-apparatus, no arming. Distinct from Part B (the executor + operator arm), which stays held.
+
+**4th seam — BUILT + verified (claude-2, 2026-06-24).** (a) `begin-live-cycle!`/`close-live-cycle!` now take an
+`:action-type` and match the chosen/post `v` by **(:type, :target)** — verified: selecting
+`M-bayesian-structure-learning` with `:action-type :apply-cascade` returns `selected-type :apply-cascade` (not
+the colliding advance-mission). (b) `begin-live-cycle!` threads `(:act-gate v)` into `consent-gate-emit` — the
+chosen apply-cascade `v` carries `:act-gate` (`has-act-gate true`), so the gate records ΔF∧ΔG + verdict on a real
+auto-flight. (c) `repl_spec_verify` V2 now accepts `:operator-directed` — the flight-#2 frame still CONFORMS.
+clj-kondo 0 errors (2 pre-existing warnings), check-parens OK, reloaded live. **Car-3 is now auto-flyable end to
+end up to the gate; remaining = a `:pass` case (move-set coverage, R14/R15) + Part B (executor + arming).**
+
 ## Bell back to claude-2 (Ground Control)
 
 When done (or stuck): bell `claude-2` with a summary + the **run-id and frame path(s)** + the
