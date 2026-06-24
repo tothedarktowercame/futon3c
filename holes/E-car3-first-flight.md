@@ -158,6 +158,20 @@ auto-flight. (c) `repl_spec_verify` V2 now accepts `:operator-directed` — the 
 clj-kondo 0 errors (2 pre-existing warnings), check-parens OK, reloaded live. **Car-3 is now auto-flyable end to
 end up to the gate; remaining = a `:pass` case (move-set coverage, R14/R15) + Part B (executor + arming).**
 
+**Part B (a) — the `:apply-cascade` EXECUTOR — BUILT (claude-2, 2026-06-24).** "Rubber on the road":
+`apply-cascade!` (`war_machine_pilot_backend.clj`, dispatch `:apply-cascade`) is a SUBSTANTIVE pilot tool
+(Pilot-I1: cites the consent-gate that recorded the ΔF∧ΔG verdict) that FOLDS the acquired cascade →
+`{wiring-diagram, policy-holes}` via the E-fold-engine fold (`futon3a .../fold_engine.clj`, now with an `apply`
+CLI entry for an arbitrary cascade; self-application-tested). **READ-ONLY** (`:substrate-written? false`) —
+produces the construction *artifact*; promoting the wiring to `:constructed` (a `:7071` write) is a *further*
+gated step. **Coverage-honest:** patterns the v1 rule-table can't fold surface as `:policy-holes`, never
+fabricated. Verified end-to-end: a 6-pattern cascade folds to the 5-box pipeline + 1 policy-hole; no-cg-id →
+Pilot-I1 blocked. clj-kondo 0/0, parens OK, reloaded live. **What this achieves vs C3.3:** the WM now *acts*
+(produces a real construction) — but "loop closes / field moves" needs the artifact *applied* (advance the
+mission) or *promoted* (`:constructed`), the next increment. Generality (a richer fold on arbitrary cascades) is
+build **(b)** — the NL→rule extraction (E-fold-engine §honest-seams); today the fold knows ~10 patterns, so a
+generic cascade folds mostly to policy-holes (honest, thin).
+
 ## Bell back to claude-2 (Ground Control)
 
 When done (or stuck): bell `claude-2` with a summary + the **run-id and frame path(s)** + the

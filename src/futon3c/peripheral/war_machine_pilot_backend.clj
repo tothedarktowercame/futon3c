@@ -31,6 +31,10 @@
 
 (def ^:private futon3c-base "http://127.0.0.1:7070")
 
+;; Car-3 Part-B (:apply-cascade) executor: the E-fold-engine fold (futon3a bb script).
+(def ^:private futon3a-dir "/home/joe/code/futon3a")
+(def ^:private fold-engine-rel "holes/labs/M-memes-arrows/fold_engine.clj")
+
 (def ^:private playwright-probe-whitelist
   "Phase 2 INSTANTIATE: pilot can only run named probes from this whitelist
    (per `peripherals/constrained-execution-envelope` — the envelope is the
@@ -524,6 +528,35 @@
               (catch Throwable t
                 {:ok false :error (str "pilot-action failed: " (.getMessage t))})))))))
 
+(defn apply-cascade!
+  "Phase 3 :apply-cascade tool — the Car-3 Part-B executor (v1; M-wm-policies / E-fold-engine).
+   FOLDS an acquired cascade into a wiring diagram + honestly-surfaced policy-holes via the
+   E-fold-engine fold (`futon3a .../fold_engine.clj`, self-application-tested). SUBSTANTIVE —
+   Pilot-I1 enforced (cites the consent-gate that recorded the ΔF∧ΔG act-gate verdict).
+   READ-ONLY: produces the construction ARTIFACT; it does NOT mutate substrate (no :7071
+   write) — promoting the wiring to :constructed is a further gated step. Coverage-honest:
+   patterns the v1 rule-table cannot fold come out as :policy-holes, never fabricated (the
+   E-fold-engine §honest-seams — generality is build (b), the NL→rule extraction)."
+  [{:keys [cascade want-signature consent-gate-event-id mission] :as args}]
+  (or (substantive-arg-check :apply-cascade args)
+      (if-not (sequential? cascade)
+        {:ok false :error ":cascade arg must be a vector of pattern-ids"}
+        (try
+          (let [want-sig (or want-signature "MissionState -> {Wiring, PolicyHoles}")
+                {:keys [exit out err]}
+                (shell/sh "bb" "--classpath" "src" fold-engine-rel
+                          "apply" (json/generate-string (vec cascade)) want-sig
+                          :dir futon3a-dir)]
+            (if (zero? exit)
+              {:ok true :result (assoc (json/parse-string out true)
+                                       :mission mission
+                                       :cg-id consent-gate-event-id
+                                       :substrate-written? false)}
+              {:ok false :error (str "fold_engine failed (exit " exit "): "
+                                     (some-> err (subs 0 (min 400 (count (str err))))))}))
+          (catch Throwable t
+            {:ok false :error (str "apply-cascade! failed: " (.getMessage t))})))))
+
 ;; =============================================================================
 ;; PilotBackend defrecord — Phase 3: substrate-write tools land
 ;; =============================================================================
@@ -550,6 +583,7 @@
       :coherence-row-author (coherence-row-author (arg-map args))
       :pilot-action         (pilot-action (arg-map args))
       :hop-trigger          (hop-trigger (arg-map args))
+      :apply-cascade        (apply-cascade! (arg-map args))
 
       ;; All other tools (cycle-control via mock-backend in v0; delegated
       ;; standard observations :read/:glob/:grep/:bash-readonly when a
