@@ -515,3 +515,30 @@ can ORPHAN the watcher cursor and silently break that repo's ingest. **Follow-on
 diagnose/fix the forward commit-ingest gap (orphaned-cursor robustness: detect since-sha
 not-an-ancestor-of-HEAD → re-base the cursor; and why valid cursors stall). D7a will go
 green once that lands.
+
+### 2026-06-25 — D0.2 DONE: forward-ingest gap fixed (commit `dfb1c4c`)
+
+**Root cause (single, not two):** a futon1a "request timed out" during per-cycle
+*file-ingest* was aborting `run-cycle!` before the commit-ingest step, so commit-ingest
+was starved **every cycle** — all 4 flagged repos' cursors froze for the same reason. The
+"orphaned cursor" (futon3c `aeb6a05`) was a **red herring**: `list-commits aeb6a05..HEAD`
+resolves fine (13 commits, git exit 0); futon3c was just never reached, like the others.
+(Diagnosed by: manual `ingest-new-commits-for-root!` for futon2 advanced its cursor
+392d852→7cfcf619 and wrote the vertex — so the ingest machinery was fine; the cycle wasn't
+reaching it.)
+
+**Fix:** wrap per-root file-ingest + heartbeat in a `try` (multi.clj run-cycle!) so a
+futon1a timeout there can't abort the cycle; **commit-ingest now always runs per root**,
+decoupled from file-ingest failures. **Verified end-to-end:** after Drawbridge reload the
+watcher caught ALL stuck cursors up on its own within seconds; the D7a freshness alarm
+transitioned :violation → **:ok, stale []** (futon3c HEAD now in store; D0 healthy,
+commit-ingest on). Gates green.
+
+**Residual (separate, non-blocking):** the *source* of the futon1a "request timed out"
+during file-ingest (store slow under load / a timeout-prone query in the file-ingest path)
+is now harmless to liveness but still a perf wart worth chasing; and commit-ingest still
+advances its cursor even if a commit POST fails (latent gap) — but D7a's store-presence
+check guards exactly that, so it's covered by the alarm.
+
+**Substrate-2 status:** D0/D0.1/D0.2 (live, cheap, robust) + reader-fix + D2.1 + D3 (bitemporal,
+14-repo) + D7a (freshness alarm, green). D4 awaits M-operational-vocabulary + M-goals-and-holes.
