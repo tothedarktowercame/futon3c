@@ -442,3 +442,51 @@ matches §8). Don't misread futon6's live-accumulation as replay time-travel.
 read code structure as of any past commit. Next open mission deliverable: D4 (the
 argument/proof relation layer — still empty). Follow-ons named in the runbook §8 / design
 note: futon6 python historical structure, valid-time `edits`, per-repo parallelism.
+
+### 2026-06-25 — D7 SCOPE (commit-freshness alarm — the staleness guarantee)
+
+**Why:** the original 5-week freeze went unnoticed because nothing watched
+*freshness* — the cyder heartbeat measures whether the loop *ticks*, not whether
+commits are *current*. D7's alarm is the piece that *guarantees* substrate-2 can't
+silently re-freeze. (D7 splits: **D7a = this alarm** (now); **D7b = auto-generated
+explainer inventory** — deferred.)
+
+**Key reuse (I-4):** `futon3c.logic.invariant-queue-freshness` already implements the
+exact shape — "a DERIVED artifact is STALE relative to its source-of-truth" — built
+after a sibling silent-staleness incident (month-old queue ranks, stop-the-line
+2026-06-01). It exposes the probe-family contract `check [] → {:outcome :ok | :violation
+:detail …}` and a `staleness [src derived] → [{:stale-by-ms …}]`, registered into the
+**probe family registry** (`futon3c.logic.probe`) which walks families, records
+`:family-fired` evidence, and surfaces `last-fire-at` / `last-violation-at` /
+`inactive-since` in the arxana operational-families dashboard. **D7a is an INSTANCE of
+this family, not a bespoke alarm.**
+
+**Design:**
+- New ns `futon3c.logic.substrate2-freshness` (sibling of invariant-queue-freshness).
+  - **source-of-truth** = each watched repo's git HEAD (the *last non-merge* commit, per
+    the sweep-runbook §7 lesson).
+  - **derived artifact** = the watcher's `last-indexed-commit-sha` per repo (in-memory
+    pointer; cheap) — i.e. what substrate-2 has actually ingested.
+  - **`check`** → `:violation` when (a) `commit-ingest?` is **false** (the exact original
+    cause — short-circuit, immediate), OR (b) any repo's HEAD-non-merge is not ingested
+    AND its commit-age exceeds threshold **T** (~15–30 min, tuned to clear normal ingest
+    lag); `:ok` otherwise. Distinguishes "no new commits" (healthy) from "new commits not
+    ingested" (stale) by comparing last-indexed to HEAD, ancestor-aware.
+- **Register** it in the probe family registry → automatic dashboard + stop-the-line +
+  evidence, consistent with the stack's freshness discipline.
+- **Notify on transition** (healthy→stale and recovery) via the existing `notify-send`
+  pattern (used for mission-scope failures), so a violation is loud, not just dashboard-
+  visible; also surface `:freshness` in the watcher status (cyder `state-fn` → /status).
+- Transition-based (no per-cycle spam while stale).
+
+**Reuses:** watcher `current-head-sha` + `last-indexed-commit-sha` (commit_ingest);
+`substrate2_liveness_probe.sh` (the manual HEAD-in-store sibling); invariant-queue-freshness
+shape; probe registry; notify-send.
+
+**Acceptance:** simulate the freeze (flip `commit-ingest?` false, or block ingest) → the
+family's `check` returns `:violation` within one probe cycle and notify fires; restore →
+`:ok` + recovery notify. The historical 5-week freeze would have fired on probe cycle 1.
+Gates: clj-kondo 0, check-parens, a unit test for `staleness`/`check`. Reload via Drawbridge.
+
+**Scope OUT:** D7b auto-inventory; the forward-edge-valid-time drift (a separate slice-3 /
+periodic incremental replay). **Size:** small — one ns + a registry entry + a notify hook.
