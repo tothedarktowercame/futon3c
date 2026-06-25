@@ -910,42 +910,51 @@
             dispatch-paths (if (and first-cycle? (not cold-scan?))
                              []
                              ingest-paths)]
-        (when-not first-cycle?
-          (doseq [p dispatch-paths]
-            (enqueue-mission-maintenance! p)))
-        (when (seq dispatch-paths)
-          (mark-subtask! {:phase :file-ingest-batch :repo label :count (count dispatch-paths)})
-          (println (format "[cycle %d] %s: %d/%d files changed"
-                           n label (count dispatch-paths) (count snapshot)))
-          (doseq [p dispatch-paths]
-            (mark-subtask! {:phase :file-ingest :repo label :path p})
+        ;; D0.2 (2026-06-25): isolate per-root file-ingest + heartbeat in a try
+        ;; so a futon1a "request timed out" here can't abort the cycle BEFORE
+        ;; commit-ingest — which had silently starved commit-ingest (cursors
+        ;; froze; D7a caught it). commit-ingest now ALWAYS runs per root.
+        (try
+          (when-not first-cycle?
+            (doseq [p dispatch-paths]
+              (enqueue-mission-maintenance! p)))
+          (when (seq dispatch-paths)
+            (mark-subtask! {:phase :file-ingest-batch :repo label :count (count dispatch-paths)})
+            (println (format "[cycle %d] %s: %d/%d files changed"
+                             n label (count dispatch-paths) (count snapshot)))
+            (doseq [p dispatch-paths]
+              (mark-subtask! {:phase :file-ingest :repo label :path p})
+              (let [ev-n (swap! event-n inc)]
+                (ingest-event! {:path p :root root :label label
+                                :run-id run-id :event-n ev-n
+                                :source (if (and first-cycle? cold-scan?)
+                                          "cold-scan"
+                                          "fs-watch")}))))
+          (doseq [p deleted]
+            (mark-subtask! {:phase :deletion :repo label :path p})
             (let [ev-n (swap! event-n inc)]
-              (ingest-event! {:path p :root root :label label
-                              :run-id run-id :event-n ev-n
-                              :source (if (and first-cycle? cold-scan?)
-                                        "cold-scan"
-                                        "fs-watch")}))))
-        (doseq [p deleted]
-          (mark-subtask! {:phase :deletion :repo label :path p})
-          (let [ev-n (swap! event-n inc)]
-            (handle-deletion! {:path p :root root :label label
-                               :run-id run-id :event-n ev-n
-                               :hash (get-in cache [p :hash])})))
-        (doseq [{:keys [from to hash]} renamed]
-          (mark-subtask! {:phase :rename :repo label :from from :to to})
-          (let [ev-n (swap! event-n inc)]
-            (handle-rename! {:from from :to to :hash hash
-                             :root root :label label
-                             :run-id run-id :event-n ev-n})))
-        (when-not (stop-requested?)
-          (heartbeat! {:root root :label label :run-id run-id
-                       :cycle-n n
-                       :files-seen (count snapshot)
-                       :files-changed (count ingest-paths)
-                       :n-deleted (count deleted)
-                       :n-renamed (count renamed)
-                       :n-added (count added)
-                       :n-cross-root-moves cross-root-count}))
+              (handle-deletion! {:path p :root root :label label
+                                 :run-id run-id :event-n ev-n
+                                 :hash (get-in cache [p :hash])})))
+          (doseq [{:keys [from to hash]} renamed]
+            (mark-subtask! {:phase :rename :repo label :from from :to to})
+            (let [ev-n (swap! event-n inc)]
+              (handle-rename! {:from from :to to :hash hash
+                               :root root :label label
+                               :run-id run-id :event-n ev-n})))
+          (when-not (stop-requested?)
+            (heartbeat! {:root root :label label :run-id run-id
+                         :cycle-n n
+                         :files-seen (count snapshot)
+                         :files-changed (count ingest-paths)
+                         :n-deleted (count deleted)
+                         :n-renamed (count renamed)
+                         :n-added (count added)
+                         :n-cross-root-moves cross-root-count}))
+          (catch Throwable t
+            (binding [*out* *err*]
+              (println (format "[cycle %d] %s: file-ingest/heartbeat error (commit-ingest still runs): %s"
+                               n label (.getMessage t))))))
         (when (and commit-ingest? (not (stop-requested?)))
           (ingest-new-commits-for-root!
            {:root root :label label :cycle-n n}))
