@@ -54,7 +54,7 @@
                 :n-mana-credited 0}
                (sut/ingest-new-commits! {:repo-root "/tmp/repo"
                                          :repo-label "demo"
-                                         :file->vars (constantly nil)})))
+                                         :file->structure (constantly nil)})))
         (is (= ["demo" "merge-head"] @recorded))))))
 
 (deftest ingest-new-commits-falls-back-to-latest-commit-when-head-missing
@@ -72,7 +72,7 @@
                                                 (reset! recorded [repo-label sha]))]
         (sut/ingest-new-commits! {:repo-root "/tmp/repo"
                                   :repo-label "demo"
-                                  :file->vars (constantly nil)})
+                                  :file->structure (constantly nil)})
         (is (= ["demo" "only-new"] @recorded))))))
 
 (deftest parses-mission-trailer-from-real-commit

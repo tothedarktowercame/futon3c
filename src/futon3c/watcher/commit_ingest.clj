@@ -44,6 +44,15 @@
   #{"code/v05/authored" "code/v05/precedes" "code/v05/edits"
     "code/v05/block-trailer" "code/v05/commit→mission"})
 
+(def ^:dynamic *valid-time-ms*
+  "When bound to an epoch-millis value, every `post-hyperedge!` in dynamic
+   scope stamps its put with that XTDB valid-time (M-populate-substrate-2
+   D3). `ingest-commits-batch!` binds this to each commit's timestamp so the
+   commit spine and per-commit structure time-travel under `db-as-of`. nil
+   (the default) writes at current time, preserving prior behaviour for any
+   caller that does not opt in."
+  nil)
+
 (defn directed-endpoints [hx-type endpoints]
   (if (and (directed-types hx-type) (= 2 (count endpoints)))
     (conj (vec endpoints) (str "dir:" (first endpoints) "→" (second endpoints)))
@@ -54,7 +63,8 @@
   (let [endpoints (directed-endpoints hx-type endpoints)
         payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
                   (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props))
+                  props (assoc "hx/props" props)
+                  *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*))
         resp (try
                (http/post (str FUTON1A "/api/alpha/hyperedge")
                           {:headers {"Content-Type" "application/json"
@@ -452,6 +462,46 @@
            v vs]
        (post-hyperedge! "code/v05/edits" [(:sha commit) (pf v)] labels base-props)))))
 
+(defn commit-vt-ms
+  "Epoch-millis valid-time for a commit (git %at is unix seconds), or nil."
+  [{:keys [ts]}]
+  (when ts (* 1000 (long ts))))
+
+(defn ingest-structure-for-commit!
+  "Emit `code/v05/var` vertices for the defs in a commit's changed files,
+   stamped (via `*valid-time-ms*`, bound by the caller) at the commit's
+   valid-time — so `db-as-of(<commit-ts>)` recovers the def structure as it
+   stood at that commit (M-populate-substrate-2 D3, slice 1).
+
+   `file->structure` is `(file->structure rel-path) => {:ns .. :vars [..]}`
+   (the futon3c.watcher.file-ingest/collect-file shape), or nil. Var qnames
+   are per-repo prefixed `<label>/<qname>` so the vertex shares its stable
+   hx/id with the file-ingest-written vertex — the time-travel is over the
+   SAME entity, not a duplicate.
+
+   Scope note (slice 1): emits var VERTICES only. The structural EDGES
+   (contains/calls/coverage) are directed (carry a synthetic `dir:`
+   endpoint in file-ingest) and need that endpoint convention plus
+   cross-file symbol resolution to share ids; versioning them is the
+   historical-replay slice (D3 slice 2). A var vertex is single-endpoint,
+   so it time-travels cleanly here with zero id-convention risk."
+  [labels base-props repo-label commit file->structure repo-root]
+  (let [pf (fn [q] (str repo-label "/" q))
+        files (files-changed repo-root (:sha commit))]
+    (vec
+     (for [path files
+           :let [{:keys [vars]} (when file->structure (file->structure path))]
+           v vars
+           :when (:var/qname v)]
+       (post-hyperedge! "code/v05/var"
+                        [(pf (:var/qname v))]
+                        labels
+                        (merge base-props
+                               {"var/ns" (:var/ns v)
+                                "var/qname" (:var/qname v)
+                                "var/kind" (:var/kind v)
+                                "var/has-doc" (:var/has-doc v)}))))))
+
 ;; ---------- high-level ingestion ----------
 
 (defn ingest-commits-batch!
@@ -461,12 +511,26 @@
    edits, and — for Block-footered commits — a +1 mana credit to the
    resolved session.
 
-   Args map: {:commits :repo-root :repo-label :file->vars :prev-sha :verbose?}
+   Args map: {:commits :repo-root :repo-label :file->structure :prev-sha :verbose?}
+   `file->structure` is `(file->structure rel-path) => {:ns .. :vars [..]}`
+   (collect-file shape) or nil; `:edits` var-resolution derives from it.
+
+   Each commit's writes (commit/authored/precedes/edits/structure) are
+   stamped at that commit's valid-time so `db-as-of` time-travels the spine
+   and the def structure (M-populate-substrate-2 D3 slice 1). Author
+   vertices and commit→mission edges stay at current time — they are
+   identity/attribution vertices, not per-commit structural state.
+
    Returns: {:n-ingested <int> :latest-sha <string-or-nil> :n-failed <int>
              :n-blocks <int> :n-mana-credited <int>}"
-  [{:keys [commits repo-root repo-label file->vars prev-sha verbose?]}]
+  [{:keys [commits repo-root repo-label file->structure prev-sha verbose?]}]
   (let [labels ["v05" "phase-3" repo-label]
         base-props {"repo" repo-label "phase" 3}
+        ;; :edits resolves a changed file's vars from the parsed structure.
+        file->vars (fn [path]
+                     (some->> (when file->structure (file->structure path))
+                              :vars (keep :var/qname) seq))
+        ts-by-sha (into {} (for [c commits] [(:sha c) (commit-vt-ms c)]))
         seen-authors (atom #{})
         n-failed (atom 0)
         n-blocks (atom 0)
@@ -482,23 +546,35 @@
 
       (when verbose?
         (println "[L4→L0] writing" (count commits) "commit vertices + authored edges"))
-      (doseq [c commits
-              r (ingest-commit-and-authored! labels base-props c)]
-        (check! r))
+      (doseq [c commits]
+        (binding [*valid-time-ms* (commit-vt-ms c)]
+          (doseq [r (ingest-commit-and-authored! labels base-props c)]
+            (check! r))))
 
       (when verbose?
         (println "[L4→L0] writing precedes edges (linear chain)"))
       (let [chain (cond->> (map :sha commits)
                     prev-sha (cons prev-sha))]
         (doseq [[a b] (partition 2 1 chain)]
-          (check! (ingest-precedes! labels base-props a b))))
+          ;; precedes a→b becomes true when b lands → stamp at b's valid-time.
+          (binding [*valid-time-ms* (get ts-by-sha b)]
+            (check! (ingest-precedes! labels base-props a b)))))
 
       (when verbose?
         (println "[L4→L0] writing edits edges (per-repo prefixed)"))
-      (doseq [c commits
-              r (ingest-edits-for-commit! labels base-props repo-label
-                                          c file->vars repo-root)]
-        (check! r))
+      (doseq [c commits]
+        (binding [*valid-time-ms* (commit-vt-ms c)]
+          (doseq [r (ingest-edits-for-commit! labels base-props repo-label
+                                              c file->vars repo-root)]
+            (check! r))))
+
+      (when verbose?
+        (println "[L4→L0] writing var structure (valid-time = commit ts)"))
+      (doseq [c commits]
+        (binding [*valid-time-ms* (commit-vt-ms c)]
+          (doseq [r (ingest-structure-for-commit! labels base-props repo-label
+                                                   c file->structure repo-root)]
+            (check! r))))
 
       (when (commit-mission-edges-enabled?)
         (when verbose?
@@ -524,15 +600,15 @@
 
 (defn ingest-all-commits!
   "Backfill mode. Walks ALL commits in the repo. Idempotent.
-   Args map: {:repo-root :repo-label :file->vars}.
+   Args map: {:repo-root :repo-label :file->structure}.
    Returns: {:n-ingested :latest-sha :n-failed :n-blocks :n-mana-credited}."
-  [{:keys [repo-root repo-label file->vars]}]
+  [{:keys [repo-root repo-label file->structure]}]
   (let [commits (list-commits repo-root nil)
         result (ingest-commits-batch!
                 {:commits commits
                  :repo-root repo-root
                  :repo-label repo-label
-                 :file->vars file->vars
+                 :file->structure file->structure
                  :prev-sha nil
                  :verbose? true})]
     (when-let [latest (:latest-sha result)]
@@ -544,9 +620,9 @@
    then ingests new commits since that point. Used by
    futon3c.watcher.multi per cycle.
 
-   Args map: {:repo-root :repo-label :file->vars}.
+   Args map: {:repo-root :repo-label :file->structure}.
    Returns: {:n-ingested :latest-sha :n-failed :n-blocks :n-mana-credited}."
-  [{:keys [repo-root repo-label file->vars]}]
+  [{:keys [repo-root repo-label file->structure]}]
   (let [since-sha (last-indexed-commit-sha repo-label)
         commits (list-commits repo-root since-sha)
         head-sha (current-head-sha repo-root)
@@ -554,7 +630,7 @@
                 {:commits commits
                  :repo-root repo-root
                  :repo-label repo-label
-                 :file->vars file->vars
+                 :file->structure file->structure
                  :prev-sha since-sha
                  :verbose? false})]
     (when-let [cursor (or head-sha (:latest-sha result))]

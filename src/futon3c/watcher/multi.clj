@@ -859,18 +859,19 @@
     ;; content; historical accuracy for old commits is the separate D3
     ;; (valid-time versioning) concern. This subsumes D0.1's reason to exist —
     ;; there is no longer a per-cycle substrate-2 fetch to defer.
-    (let [file->vars (fn [rel-path]
-                       (let [abs (str root "/" rel-path)]
-                         (when (.exists (io/file abs))
-                           (try (some->> (file-ingest/collect-file abs)
-                                         :vars
-                                         (keep :var/qname)
-                                         seq)
-                                (catch Throwable _ nil)))))
+    ;; D3 slice 1 (2026-06-25): pass the FULL parsed structure (collect-file
+    ;; shape {:ns :vars}), not just var qnames — commit-ingest derives :edits
+    ;; var-resolution from it AND emits var vertices at the commit's valid-time
+    ;; for db-as-of time-travel. One parse per changed file.
+    (let [file->structure (fn [rel-path]
+                            (let [abs (str root "/" rel-path)]
+                              (when (.exists (io/file abs))
+                                (try (file-ingest/collect-file abs)
+                                     (catch Throwable _ nil)))))
           report (commit-ingest/ingest-new-commits!
                   {:repo-root root
                    :repo-label label
-                   :file->vars file->vars})]
+                   :file->structure file->structure})]
       (when (pos? (:n-ingested report))
         (println (format "[cycle %d] %s: ingested %d new commit(s); latest=%s%s"
                          cycle-n label
