@@ -110,6 +110,15 @@ Populate `code/v05/edits` (commit → def) joining the temporal commit spine to 
 Write contains/calls/coverage/edits with XTDB **valid-time = commit timestamp**; **file-level projection first** (the cheaper v1 E-timetravel recommends). **Historical re-ingest IS in scope (Joe, 2026-06-25)** — not forward-only; recover April→now so `db-as-of` works across the existing history, not just going forward. Un-gates `db-as-of` code queries, κ time-travel, T(v,c), drift.
 
 **D4 — The argument/proof relation layer (the connective tissue).**
+> **DEPENDS ON (Joe, 2026-06-25): `M-operational-vocabulary` + `M-goals-and-holes`** — do
+> not charge into D4 prematurely. D4's content is *their output*: M-operational-vocabulary
+> (futon2/holes/, INSTANTIATE; GPU box run pending) mines the **forward** arrows
+> (memes=`constructs`, pattern_apps=PSR, cascades) and explicitly names this mission as the
+> **promotion path overlay→store** (its §3c); M-goals-and-holes (futon2/holes/, IDENTIFY)
+> models the **backward** goal/hole family (the C-vector / setpoints) that `depends-on-sorry`
+> / `closes` connect. The forward↔backward **join** *is* the PROOF layer. So D4's real
+> deliverable narrows to **the promotion path** (overlay→store) for what those two produce —
+> not inventing relation content. Sequence D4 after (or alongside) they land their content.
 Populate `constructs` / `closes` / `depends-on-sorry` / `uses-definition` / `would-refute` / `supported-by` / `attacks-claim` from *named sources*, each passing the E-sorry-typing **T-A4 gate** (canonical source field + normalized target + named consumer). Three feeders: (a) the sorry-typing deferred edge families; (b) a **promotion path** from the mission-miner's overlay arrows into the store (the 🚧 gap — borrowed-prior moves stay tagged `:mined-structural`, never laundered as proofs); (c) BHK arrows from claude-4's `:constructed`/`:open` arrow store. This is the layer that turns lookup into propagation.
 
 **D5 — Claims/propositions + discharge the sorry-island.**
