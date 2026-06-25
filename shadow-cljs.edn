@@ -17,6 +17,11 @@
                 [cljs-http/cljs-http   "0.1.46"]
                 [datascript/datascript "1.7.3"]]
 
+ ;; no.en.core intentionally defines parse-long/parse-double for older CLJS
+ ;; compatibility; current cljs.core also provides them, so shadow reports
+ ;; dependency-level :redef warnings during every dev boot.
+ :compiler-options {:warnings {:redef false}}
+
  :dev-http {8710 {:root "../futon2/web/war-machine/resources/public"
                   :proxy-url "http://localhost:7070"}
             9631 {:root "../futon4/dev/web/webarxana/resources/public"}}
@@ -35,9 +40,14 @@
                 :after-load  war-machine.client.core/reload}}
 
   :webarxana
+  ;; Dev (watch) bundle lives under the /wa asset-root so futon3c's
+  ;; data-asset-response serves it at /wa/dev/* — a path distinct from
+  ;; war-machine's /js (both builds emit module :main, so they would otherwise
+  ;; collide at /js/main.js and war-machine wins). wa.html's bundle picker
+  ;; loads /wa/dev/main.js for #/dev/... routes.
   {:target     :browser
-   :output-dir "../futon4/dev/web/webarxana/resources/public/js"
-   :asset-path "/js"
+   :output-dir "../futon4/data/webarxana/public/wa/dev"
+   :asset-path "/wa/dev"
    :modules    {:main {:init-fn webarxana.client.core/init}}
    :js-options {:js-package-dirs ["../futon4/dev/web/webarxana/node_modules"]}
    :devtools   {:repl-pprint true
