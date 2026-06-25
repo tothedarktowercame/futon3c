@@ -66,12 +66,26 @@
     (conj (vec endpoints) (str "dir:" (first endpoints) "→" (second endpoints)))
     endpoints))
 
-(defn post-hyperedge!
-  [hx-type endpoints labels & [props]]
-  (let [endpoints (directed-endpoints hx-type endpoints)
-        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
+(def ^:dynamic *valid-time-ms*
+  "When bound to an epoch-millis value, every hyperedge write in dynamic scope
+   stamps its put/retract with that XTDB valid-time (M-populate-substrate-2 D3).
+   The historical replay (futon3c.watcher.replay) binds this to each commit's
+   timestamp so structure time-travels under db-as-of. nil (default) writes at
+   current time — preserving the live forward path's behaviour. Mirrors the
+   reviewed slice-1 pattern in futon3c.watcher.commit-ingest."
+  nil)
+
+(defn- post-hx*
+  "Shared hyperedge write. ENDPOINTS are final (directed transform already
+   applied). Honours *valid-time-ms* and an optional `op` (\"retract\" →
+   end-valid-time delete). Returns {:ok?}."
+  [{:keys [id hx-type endpoints labels props op]}]
+  (let [payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
+                  id (assoc "hx/id" id)
                   (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props))
+                  props (assoc "hx/props" props)
+                  *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*)
+                  op (assoc "hx/op" op))
         resp (try
                (http/post (str FUTON1A "/api/alpha/hyperedge")
                           {:headers {"Content-Type" "application/json"
@@ -85,25 +99,27 @@
     {:ok? (and (= 200 (:status resp))
                (or (:hyperedge body) (:hx/id body)))}))
 
+(defn post-hyperedge!
+  [hx-type endpoints labels & [props]]
+  (post-hx* {:hx-type hx-type
+             :endpoints (directed-endpoints hx-type endpoints)
+             :labels labels :props props}))
+
 (defn post-hyperedge-doc!
   [{:keys [id hx-type endpoints labels props]}]
-  (let [endpoints (directed-endpoints hx-type endpoints)
-        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
-                  id (assoc "hx/id" id)
-                  (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props))
-        resp (try
-               (http/post (str FUTON1A "/api/alpha/hyperedge")
-                          {:headers {"Content-Type" "application/json"
-                                     "X-Penholder" PENHOLDER}
-                           :body (json/generate-string payload)
-                           :throw false})
-               (catch Exception e {:status -1 :body (.getMessage e)}))
-        body (when (string? (:body resp))
-               (try (json/parse-string (:body resp) true)
-                    (catch Exception _ (:body resp))))]
-    {:ok? (and (= 200 (:status resp))
-               (or (:hyperedge body) (:hx/id body)))}))
+  (post-hx* {:id id :hx-type hx-type
+             :endpoints (directed-endpoints hx-type endpoints)
+             :labels labels :props props}))
+
+(defn retract-hyperedge!
+  "End-valid-time retract of a hyperedge (D3 slice 2 removal-accuracy). Uses
+   the SAME type+endpoints (hence the same hx/id) as the put that created it,
+   so XTDB ends exactly that entity's validity at *valid-time-ms*. Removal is
+   HELD behind the replay's :emit-removals? flag pending Joe's greenlight."
+  [hx-type endpoints labels]
+  (post-hx* {:hx-type hx-type
+             :endpoints (directed-endpoints hx-type endpoints)
+             :labels labels :op "retract"}))
 
 ;; ---------- mission cross-ref edge emission (T-9d) ----------
 
@@ -228,13 +244,21 @@
 (def src-exts #{"clj" "cljs" "cljc"})
 (def def-forms #{'defn 'defn- 'def 'defmulti 'defmethod 'defprotocol 'defrecord 'deftype})
 
-(defn read-forms [^java.io.File f]
-  (with-open [pbr (java.io.PushbackReader. (io/reader f))]
+(defn read-forms-from-reader [^java.io.Reader rdr]
+  (with-open [pbr (java.io.PushbackReader. rdr)]
     (binding [*default-data-reader-fn* (fn [_t v] v)]
       (loop [acc []]
         (let [form (try (read {:read-cond :allow :features #{:clj :cljs} :eof ::eof} pbr)
                         (catch Exception _ ::eof))]
           (if (= form ::eof) acc (recur (conj acc form))))))))
+
+(defn read-forms [^java.io.File f]
+  (read-forms-from-reader (io/reader f)))
+
+(defn read-forms-from-string
+  "Read clj forms from a content STRING (D3 slice 2 blob-accurate parse)."
+  [^String content]
+  (read-forms-from-reader (java.io.StringReader. content)))
 
 (defn ns-form [forms] (some #(when (and (seq? %) (= 'ns (first %))) %) forms))
 
@@ -263,9 +287,11 @@
       (str/ends-with? path "_test.cljs")
       (str/ends-with? path "_test.cljc")))
 
-(defn collect-clj-file [path]
-  (let [forms (read-forms (io/file path))
-        nf (ns-form forms)
+(defn collect-clj-forms
+  "Shared clj structure extraction from already-read FORMS. PATH is used only
+   for the test-file? heuristic. Returns {:ns :aliases :vars :tests} or nil."
+  [forms path]
+  (let [nf (ns-form forms)
         nsym (when nf (second nf))]
     (when nsym
       (let [aliases (parse-requires nf)
@@ -295,6 +321,14 @@
          :vars (if test? [] @vars)
          :tests (if test? @tests [])}))))
 
+(defn collect-clj-file [path]
+  (collect-clj-forms (read-forms (io/file path)) path))
+
+(defn collect-clj-from-string
+  "Blob-accurate clj collect from a content STRING (D3 slice 2)."
+  [content path]
+  (collect-clj-forms (read-forms-from-string content) path))
+
 ;; ---------- collect-file dispatch ----------
 
 (def ^:private excluded-dir-re
@@ -313,6 +347,20 @@
         ((:src-exts (meta #'python/src-exts) python/src-exts) ext) (python/collect-file path)
         ((:src-exts (meta #'flexiarg/src-exts) flexiarg/src-exts) ext) (flexiarg/collect-file path)
         :else nil))))
+
+(defn collect-from-string
+  "Blob-accurate parse from a content STRING (e.g. `git show <sha>:<path>`),
+   dispatched by PATH's extension. D3 slice 2 covers the clj family only —
+   that is the entire var/contains/calls/coverage structural graph. Non-clj
+   (elisp/python/flexiarg) returns nil: python's collector shells to a
+   file-based AST helper, so blob-accurate historical structure for those is
+   a named follow-on. Callers should COUNT/LOG these skips, not read nil as
+   'this file has no structure'."
+  [content path]
+  (when-not (re-find excluded-dir-re (str path))
+    (let [ext (file-ext path)]
+      (when (src-exts ext)
+        (collect-clj-from-string content path)))))
 
 (defn essay-home-path?
   [path]
@@ -1034,49 +1082,79 @@
                   "pattern/qname" (:var/qname v)}
                  (slot->props slot))})
 
-(defn ingest-one-file!
-  "Parse `path`, POST its vertices and edges to futon1a. Returns stats.
-   B-2 v0: per-repo prefix applied to per-repo qname endpoints."
-  [{:keys [path label root-ctx]}]
-  (let [{:keys [ns vars tests aliases]} (or (collect-file path) {})
-        labels ["v05" "phase-4.5" label "per-file"]
-        base-props {"repo" label "phase" 4.5 "source-file" path}
+(defn emit-structure!
+  "Shared structural emitter (D3). Writes namespace/var(+pattern-slots)/test/
+   calls/coverage/contains for one file's parsed STRUCTURE (the collect-file
+   shape {:ns :vars :tests :aliases}) via the valid-time-aware write path
+   (honours *valid-time-ms*). Used by BOTH the live forward path
+   (ingest-one-file!, current time) and the historical replay (commit valid-time)
+   so there is exactly one structural-edge id convention — no drift.
+
+   Returns {:stats {:vertices :edges :failed :retracted} :manifest <set>} where
+   manifest is the set of structural-edge keys [hx-type raw-endpoints] emitted
+   (var/test/calls/coverage/contains — the things that can disappear; the shared
+   namespace vertex and flexiarg pattern-slots are not tracked). The replay
+   carries the manifest forward and, when :emit-removals? is true, retracts the
+   keys present in :prior-manifest but absent now (prior − new) at *valid-time-ms*
+   — removal-accurate time-travel. Removal is HELD off by default."
+  [{:keys [structure label base-props root-ctx labels prior-manifest emit-removals?]}]
+  (let [{:keys [ns vars tests aliases]} (or structure {})
+        labels (or labels ["v05" "phase-4.5" label "per-file"])
         pf (fn [q] (str label "/" q))
+        stats (atom {:vertices 0 :edges 0 :failed 0 :retracted 0})
+        manifest (atom #{})
         post! (fn [t eps & [extra-props]]
                 (post-hyperedge! t eps labels (merge base-props extra-props)))
-        stats (atom {:vertices 0 :edges 0 :failed 0})]
+        ;; emit + record the [type raw-endpoints] key so removal can diff exactly.
+        track! (fn [bucket t eps & [extra-props]]
+                 (swap! manifest conj [t (vec eps)])
+                 (let [r (post! t eps extra-props)]
+                   (swap! stats update (if (:ok? r) bucket :failed) inc)
+                   r))]
     (when ns
-      (post! "code/v05/namespace" [(pf ns)] {"namespace" ns})
-      (swap! stats update :vertices inc)
+      ;; namespace vertex — shared across the file's vars; not removal-tracked.
+      (let [r (post! "code/v05/namespace" [(pf ns)] {"namespace" ns})]
+        (swap! stats update (if (:ok? r) :vertices :failed) inc))
       (doseq [v vars]
-        (let [r (post! "code/v05/var" [(pf (:var/qname v))]
-                       (flexiarg-var-props v))]
-          (swap! stats update (if (:ok? r) :vertices :failed) inc)
-          (doseq [slot (:pattern/slots v)]
-            (let [slot-r (post-hyperedge-doc!
-                          (pattern-slot-edge-doc pf labels base-props v slot))]
-              (swap! stats update (if (:ok? slot-r) :edges :failed) inc)))))
+        (track! :vertices "code/v05/var" [(pf (:var/qname v))] (flexiarg-var-props v))
+        (doseq [slot (:pattern/slots v)]
+          (let [slot-r (post-hyperedge-doc!
+                        (pattern-slot-edge-doc pf labels base-props v slot))]
+            (swap! stats update (if (:ok? slot-r) :edges :failed) inc))))
       (doseq [t tests]
-        (let [r (post! "code/v05/test" [(pf (:test/qname t))]
-                       {"test/ns" (:test/ns t) "test/qname" (:test/qname t)})]
-          (swap! stats update (if (:ok? r) :vertices :failed) inc)))
+        (track! :vertices "code/v05/test" [(pf (:test/qname t))]
+                {"test/ns" (:test/ns t) "test/qname" (:test/qname t)}))
       (let [{:keys [by-ns]} root-ctx]
         (doseq [v vars
                 s (:var/syms v)
                 :let [qn (resolve-symbol s ns aliases by-ns)]
                 :when (and qn (not= qn (:var/qname v)))]
-          (let [r (post! "code/v05/calls" [(pf (:var/qname v)) (pf qn)])]
-            (swap! stats update (if (:ok? r) :edges :failed) inc)))
+          (track! :edges "code/v05/calls" [(pf (:var/qname v)) (pf qn)]))
         (doseq [t tests
                 s (:test/syms t)
                 :let [qn (resolve-symbol s ns aliases by-ns)]
                 :when (and qn (not= qn (:test/qname t)))]
-          (let [r (post! "code/v05/coverage" [(pf (:test/qname t)) (pf qn)])]
-            (swap! stats update (if (:ok? r) :edges :failed) inc)))
+          (track! :edges "code/v05/coverage" [(pf (:test/qname t)) (pf qn)]))
         (doseq [v vars]
-          (let [r (post! "code/v05/contains" [(pf ns) (pf (:var/qname v))])]
-            (swap! stats update (if (:ok? r) :edges :failed) inc)))))
-    @stats))
+          (track! :edges "code/v05/contains" [(pf ns) (pf (:var/qname v))]))))
+    ;; Removal-accurate retracts — HELD behind emit-removals? (Joe's call).
+    (let [new-manifest @manifest]
+      (when (and emit-removals? (seq prior-manifest))
+        (doseq [[t eps] (remove new-manifest prior-manifest)]
+          (let [r (retract-hyperedge! t eps labels)]
+            (swap! stats update (if (:ok? r) :retracted :failed) inc)))))
+    {:stats @stats :manifest @manifest}))
+
+(defn ingest-one-file!
+  "Parse `path`, POST its vertices and edges to futon1a. Returns stats.
+   B-2 v0: per-repo prefix applied to per-repo qname endpoints. Thin wrapper
+   over emit-structure! (current valid-time, no removals) — the shared emitter."
+  [{:keys [path label root-ctx]}]
+  (:stats (emit-structure! {:structure (collect-file path)
+                            :label label
+                            :base-props {"repo" label "phase" 4.5 "source-file" path}
+                            :root-ctx root-ctx
+                            :labels ["v05" "phase-4.5" label "per-file"]})))
 
 (defn dispatch!
   "Top-level entry point used by the watcher's per-cycle loop. Takes
