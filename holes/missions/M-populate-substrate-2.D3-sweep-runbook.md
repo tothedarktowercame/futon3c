@@ -1,5 +1,10 @@
 # D3 full historical re-ingest — 14-repo sweep RUNBOOK
 
+**STATUS: ✅ COMPLETED 2026-06-25** — all 13 remaining repos replayed & verified
+(14/14 cursors match last-non-merge HEAD); D0 stayed healthy throughout; serving
+JVM never restarted. See **§9 CHECKPOINT: Run complete** at the bottom for the
+per-repo table, what was checked, and three findings.
+
 **For:** a standalone CLI claude (NOT in the agency mesh). Driven by a human (Joe).
 **Date:** 2026-06-25 · **Author:** claude-2 (supervisor of the D3 build).
 **Mission:** `futon3c/holes/missions/M-populate-substrate-2.md` (read its Checkpoint log
@@ -179,8 +184,13 @@ EVAL <<'CLJ'
       [lbl (futon3c.watcher.replay/read-cursor-sha lbl)])))
 CLJ
 ```
-Every label should return a non-nil cursor sha == that repo's `git rev-parse HEAD`. Then
-D0 final check (§3) — `commit-ingest? true`, `last-error nil`.
+Every label should return a non-nil cursor sha. Cross-check each against the repo's
+**last non-merge commit**: `git -C <path> rev-list --no-merges -1 HEAD` — NOT
+`git rev-parse HEAD` (the replay walks non-merge commits, so on a merge-headed repo the
+cursor correctly differs from HEAD). Also expect the cursor to **lag HEAD by any commits
+landed after the sweep** (the live watcher carries those forward) — confirm the cursor is
+an *ancestor* of HEAD (`git merge-base --is-ancestor <cursor> HEAD`), not that it equals
+it. Then D0 final check (§3) — `commit-ingest? true`, `last-error nil`.
 
 ## 8. Report back
 
@@ -195,3 +205,78 @@ errored. Deferred-by-design (don't worry if you see them): futon6 python structu
 `0afb9c2`. Reviewed/verified by claude-2. The mechanism in §5 (background future +
 result atom + EDN cursor read) was tested against the live JVM before this runbook was
 written.
+
+---
+
+## 9. CHECKPOINT: Run complete (2026-06-25)
+
+Executed by the standalone CLI claude, driven by Joe. All 13 remaining repos
+swept; the store stayed healthy; the serving JVM (PID 57253) was never
+restarted. `db-as-of(t)` now reconstructs Clojure/Elisp code structure as it
+stood at commit *t* across all 13 repos (~5,400 commits).
+
+**Per-repo results** (commits / files / skipped-nonclj / retracted / cursor==HEAD / time-travel vars early→now):
+
+| label | commits | files | skip | retract | cursor==HEAD | vars early→now |
+|---|---|---|---|---|---|---|
+| futon3a-d | 74 | 79 | 223 | 37 | ✓ | 0→859 |
+| futon1a-d | 95 | 285 | 86 | 195 | ✓ | 0→409 |
+| futon5a-d | 132 | 32 | 887 | 3 | ✓ | 0→866 |
+| futon7-d | 143 | 19 | 254 | 6 | ✓ | 0→118 |
+| futon1-d | 158 | 786 | 738 | 2577 | ✓¹ | 0→1937 |
+| futon0-d | 220 | 53 | 416 | 443 | ✓¹ | 0→760 |
+| futon2-d | 237 | 266 | 234 | 138 | ✓¹ | 0→1285 |
+| futon5-d2 | 291 | 539 | 2173 | 515 | ✓¹ | 0→3426 |
+| futon7a-d | 367 | 0 | 521 | 0 | ✓² | 0→0 |
+| futon4-elisp-d | 455 | 128 | 1966 | 90 | ✓¹ | 0→2025 |
+| futon3-d | 919 | 697 | 4426 | 1048 | ✓ | 0→4135 |
+| futon6-py-d | 1133 | 4 | 4352 | 0 | ✓ | see ³ |
+| futon3c-d | 1174 | 1613 | 1557 | 1857 | ✓ | 0→6254 |
+
+(futon3b-d was already done before this runbook; its cursor `ad7c824…` is
+present and matches HEAD — so the §7 table is 14/14.)
+
+**What was checked (auditable):**
+- **§3 preconditions:** `replay-loaded true`, `resume-works true`, D0
+  `commit-ingest? true`. No reload needed — the live JVM already had the
+  EDN-fix `replay.clj`.
+- **Each repo:** kicked as a background `future` (never synchronous), polled to
+  completion, then verified `through-sha == git rev-list --no-merges -1 HEAD`
+  and `vars-as-of-EARLY < vars-now`.
+- **§7 final table:** all 14 cursors non-nil and each cross-checked against its
+  repo's actual last-non-merge HEAD — **14/14 OK**.
+- **D0 liveness:** monitored every poll; `cycle-n` advanced monotonically
+  856 → 1007 across the whole sweep, `commit-ingest?` stayed `true`. The
+  recurring `last-error "request timed out"` flickers per-cycle and self-clears
+  (live-watcher transient, not degradation — it alternates with `nil` while the
+  cycle keeps advancing). The JVM was never restarted/killed.
+- **Cleanup:** the only JVM artifact created was the `sweep-results` atom
+  (in-memory result maps; no XTDB probe entities to evict).
+
+**Findings:**
+
+1. **¹ Merge-headed repos** (futon1, futon0, futon2, futon5, futon4): their
+   `git HEAD` is a merge commit, so the cursor correctly equals the **last
+   non-merge commit** (the replay walks non-merge commits). §7's literal
+   "cursor == `git rev-parse HEAD`" check therefore needs
+   `git rev-list --no-merges -1 HEAD` for these repos — not a bug, but the §7
+   check as written gives a false mismatch on merge-headed repos and should be
+   amended.
+2. **² futon7a** is a docs/assets repo (html/png/edn/pdf — zero `.clj`):
+   `n-files 0`, vars 0→0. Correct; structurally empty for code.
+3. **³ futon6 — Python is present but NOT time-travelable.** The replay did
+   exactly what §4 said: it **skipped Python**, processing only the 4 `.clj`
+   test files historically. A prefix query on `futon6-py-d/` nonetheless shows
+   **2374 Python vars** (`futon6.grounding/detect_grounded_symbols`, …). Their
+   valid-time `== tx-time` at every revision (May–Jun 2026 wall-clock), i.e.
+   they were written by the **live D0 commit-ingest watcher at present-time, not
+   by the historical replay**. So futon6's Python structure lives in substrate-2
+   but `db-as-of(commit-t)` will **not** reconstruct it as it stood at past
+   commits (`as-of 2026-03-01 → 0`). This matches the "deferred-by-design"
+   note in §8. (Caution for future verifiers: the §5-step-D query's `0→N` for
+   futon6 reflects live-watcher accumulation over wall-clock, not historical
+   time-travel — don't read it as proof of Python time-travel.)
+
+**Operational note:** one unrelated transient `java` process (a ~30-second
+`tools.analyzer` tool, not started by this sweep) briefly appeared mid-run and
+self-exited; `pgrep java` returned to the single serving JVM (57253) on its own.

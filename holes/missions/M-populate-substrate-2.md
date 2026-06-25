@@ -408,3 +408,28 @@ broke `:resume?` (silently re-did whole repos). Caught while building the sweep 
 doc for a standalone CLI claude to drive the remaining 13 repos via Drawbridge (background
 futures + result atom + cursor poll + per-repo db-as-of verify; smallest-first; resumable;
 non-destructive). The driving mechanism was tested against the live JVM before writing.
+
+### 2026-06-25 — D3 14-REPO SWEEP: COMPLETE + verified
+
+Sweep run by Joe's standalone CLI claude via the runbook; notes appended to the runbook.
+**claude-2 independently verified** (not rubber-stamped): all 14 `code/v05/replay-cursor`
+markers present; **12/14 cursors == git HEAD exactly**; futon1 cursor = its last-non-merge
+(HEAD is a merge — correct); futon4 cursor lags HEAD by exactly one *post-sweep* commit
+(`3739053`, an ancestor — benign, the live watcher carries it forward). Spot-checked the
+biggest repo, **futon3c-d (1170 commits): var count via `db-as-of` accretes 1584
+(2026-03-01) → 2925 (2026-05-01) → 6254 now** — historical structure genuinely
+time-travels on the largest, most-active repo. D0 liveness healthy throughout (cycle-n
+856→1007 during sweep, now 1047; commit-ingest on; transient per-cycle "request timed
+out" self-clears, not degradation).
+
+CLI agent's honest caveats (all correct): futon7a is a docs/assets repo (0 clj → 0 vars);
+**futon6 Python is NOT historically time-travelable** — the replay skipped it (clj-only),
+and the ~2374 futon6 python vars in the store were written by the LIVE watcher at
+present-time (tx-time), so `db-as-of(past)` won't reconstruct them (deferred-by-design,
+matches §8). Don't misread futon6's live-accumulation as replay time-travel.
+
+**D3 is now COMPLETE end-to-end:** forward valid-time + historical re-ingest across all
+14 repos, removal-accurate, verified. Substrate-2's code graph is bitemporal — you can
+read code structure as of any past commit. Next open mission deliverable: D4 (the
+argument/proof relation layer — still empty). Follow-ons named in the runbook §8 / design
+note: futon6 python historical structure, valid-time `edits`, per-repo parallelism.
