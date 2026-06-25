@@ -52,14 +52,23 @@ A reply is `{:ok true, :value …}` or `{:ok false, :error …}`. (Note: the liv
 
 ```bash
 EVAL <<'CLJ'
-(let [s @futon3c.watcher.multi/!state]
-  {:replay-loaded (some? (resolve 'futon3c.watcher.replay/replay-repo!))
-   :d0 {:commit-ingest? (:commit-ingest? s) :last-error (:last-error s)
-        :cycle (some-> (:cycle-n s) deref)}})
+(do (require '(futon3c.watcher.replay))
+    (let [s @futon3c.watcher.multi/!state]
+      {:replay-loaded (some? (resolve 'futon3c.watcher.replay/replay-repo!))
+       ;; resume-works: read-cursor-sha must return the futon3b HEAD sha (string).
+       ;; If it's nil/throws, the LIVE JVM is on a pre-EDN-fix replay.clj — reload
+       ;; the committed version (next line) so :resume? doesn't silently re-do repos.
+       :resume-works (string? (futon3c.watcher.replay/read-cursor-sha "futon3b-d"))
+       :d0 {:commit-ingest? (:commit-ingest? s) :last-error (:last-error s)
+            :cycle (some-> (:cycle-n s) deref)}}))
 CLJ
 ```
-Expect `:replay-loaded true` and `:d0 {:commit-ingest? true :last-error nil …}`. If
-`replay-loaded` is false, load it (no restart): `EVAL <<<'(load-file "/home/joe/code/futon3c/src/futon3c/watcher/replay.clj")'`.
+Expect `:replay-loaded true`, **`:resume-works true`**, and `:d0 {:commit-ingest? true
+:last-error nil …}`. If `replay-loaded` is false OR `resume-works` is false, load the
+committed (EDN-fix `0afb9c2`+) version into the live JVM (no restart), then re-check:
+```bash
+EVAL <<<'(load-file "/home/joe/code/futon3c/src/futon3c/watcher/replay.clj")'
+```
 
 ## 4. The repos (do them in THIS order — smallest first to de-risk)
 
