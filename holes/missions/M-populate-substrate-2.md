@@ -490,3 +490,28 @@ Gates: clj-kondo 0, check-parens, a unit test for `staleness`/`check`. Reload vi
 
 **Scope OUT:** D7b auto-inventory; the forward-edge-valid-time drift (a separate slice-3 /
 periodic incremental replay). **Size:** small — one ns + a registry entry + a notify hook.
+
+### 2026-06-25 — D7a BUILT & verified — and it caught a real freeze on first run
+
+Built `futon3c.watcher.freshness` (commit `053282a`): probe-family-shaped `check`
+(:violation if commit-ingest OFF or any repo's last-non-merge HEAD is absent from the
+store + older than the grace threshold), `check+notify!` (debounced desktop notify on
+transition), driven by the watcher cycle every ~60 cycles + registered in the probe
+registry from bootstrap. Store-presence is the signal (truth, like the probe script), NOT
+the watcher cursor; last-non-merge is the checked sha (merges are never ingested →
+rev-parse HEAD would false-alarm merge-headed repos — caught + fixed in verification).
+Gates green (clj-kondo 0/0, check-parens, reachable-from-boot, 3-test unit suite).
+
+**It worked — caught a genuine FORWARD-INGEST gap immediately.** On first live run,
+freeze-sim (commit-ingest false) → :violation ✓; and the live check flagged **4 repos
+whose recent commits are genuinely NOT in substrate-2**: futon3c-d (cursor `aeb6a05` —
+**orphaned**: the D2.1 scratch commit I `git reset`'d poisoned `since-sha..HEAD`), and
+futon1a-d / futon2-d / futon4-elisp-d (valid-but-**stuck** cursors — the live per-cycle
+commit-ingest isn't advancing them despite normal commits). So "D0 liveness" has a
+forward gap that was invisible until D7a surfaced it.
+
+**Lesson:** the throwaway-commit-then-`reset --soft` verification pattern (mine + claude-4's)
+can ORPHAN the watcher cursor and silently break that repo's ingest. **Follow-on (D0.2):**
+diagnose/fix the forward commit-ingest gap (orphaned-cursor robustness: detect since-sha
+not-an-ancestor-of-HEAD → re-base the cursor; and why valid cursors stall). D7a will go
+green once that lands.
