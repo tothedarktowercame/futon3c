@@ -318,3 +318,93 @@ projection scope; how to drive the historical re-ingest (replay all commits per
 repo, emitting structure at each commit's valid-time — large); idempotency on
 re-run; the materialization-check interaction. D3 is mission-scale — likely its
 own focused session.
+
+### 2026-06-25 — sorry-entity audit (claude-1) + data-quality finding
+
+claude-1 pulled all 293 `:sorry` entities (via `entities/latest?type=sorry`). Status
+breakdown: **open 143 · in-progress 89 · closed 51 · deferred 10**; all carry
+if/however/next-steps. **Quality finding:** of the 143 open, **~33 are templated
+boilerplate** — auto-minted from *any* mission with an open phase (IF "Work requires a
+structured plan with phases"), near-zero signal (mostly the `sorry|mission|...` name-type).
+The other **110 are clean real holes** (devmap 50, structural-law 22, excursion 17,
+technote 6, scene 5); 50 have concrete next-steps. High-trust filter:
+`status=open AND IF != "Work requires a structured plan"` -> 110 (or the 50 with
+next-steps). **Ticket (D1/mining):** suppress or flag the mission-phase boilerplate at
+mint time so the open-sorry count isn't inflated by ~33 low-signal entries. Context: Joe +
+claude-1 are designing sorries as the backward/goal dual of forward meme/pattern mining
+(M-operational-vocabulary).
+
+### 2026-06-25 — D3 SLICE 1 (valid-time plumbing, forward): DONE & verified
+
+End-to-end valid-time on the hyperedge write path (futon1a `a525adb`) + per-commit
+valid-time emit incl. var structure (futon3c `e916975`). `db-as-of` recovers def
+structure AND the commit spine at past commit ts (claude-4 live watcher demo,
+futon0, sequenced 2-commit example). D2.1 edits preserved. `verify-materialized!`
+needs no change (past valid-time visible at now). Authored by **claude-4** (fresh
+session, supervised handoff from claude-2).
+
+**Reviewed by claude-2 — PASS (author ≠ reviewer).** Independently verified, not
+rubber-stamped: read the diffs (routes.clj coerce-valid-time + 3rd-element put;
+commit_ingest `*valid-time-ms*` per-commit binding + `ingest-structure-for-commit!`;
+multi.clj file->structure); re-ran gates (clj-kondo 0 errors, check-parens clean);
+re-ran both test suites (commit-ingest 7t/24a, routes 7t/30a, 0 failures); **re-did
+the db-as-of keystone myself** via fresh HTTP POSTs at two past valid-times →
+mar nil / apr "def" / may "defn" / now "defn", and confirmed `hx/valid-time` is
+stripped from the stored doc; verified futon0 clean at 4bec7f9 + cursor restored +
+demo/throwaway artifacts evicted + watcher healthy (commit-ingest on, no error).
+
+**Slice 2 (historical re-ingest) approved to DESIGN** — claude-4 to draft a design
+note for sign-off before coding. claude-2's answers to the 5 open Qs: (1) blob-accurate
+replay via `git show <sha>:<path>`, NOT working tree — refactor collect-file to parse
+from a content string; (2) removal/end-valid-time: bias toward removal-accurate (the
+per-commit diff already has A/M; add D → delete-at-valid-time) since Joe wants accurate
+history — fall back to monotone+loud-flag only if it balloons (Joe may weigh in);
+(3) YES factor a shared structural-emitter (var+contains+calls+coverage) used by both
+file-ingest and the replay, parameterized by valid-time — avoids two id conventions;
+(4) idempotency-by-result is fine for a one-time replay; make it cursor-resumable, don't
+over-engineer a dedup-guard; (5) backfill = the replay, same blob-accurate rule as (1).
+
+### 2026-06-25 — D3 SLICE 2 BUILD + small-scope verify: DONE, reviewed PASS
+
+Authored by **claude-4**. futon1a `6279703` (hx/op "retract" = end-valid-time delete on
+compat-upsert-hyperedge) + futon3c `50866d6` (blob-accurate `collect-from-string`,
+shared `emit-structure!` with manifest-diff removals, new `futon3c.watcher.replay` ns,
+resumable `code/v05/replay-cursor`). Removal emission HELD behind `:emit-removals?`
+(default false) pending Joe. Design deviation from §3b (valid-time in file_ingest, not a
+new hx-write ns) — accepted (drift-avoidance comes from the shared emitter, less blast
+radius).
+
+**Reviewed by claude-2 — PASS (author ≠ reviewer).** Independently verified: read all 3
+diffs (retract directive; file_ingest refactor — post-hx* core, reader/form extraction,
+emit-structure! manifest-diff, ingest-one-file! thin wrapper; replay snapshot/manifest
+threading — correct); re-ran gates (clj-kondo 0 err, check-parens clean); re-ran tests
+(futon3c watcher 23 tests/84 assertions, futon1a routes 7/30, 0 failures); **re-did the
+retract keystone myself** via fresh HTTP (put@apr20 → retract@apr21 → db-as-of apr20
+"def" / apr21 nil / now nil, `retracted?:true`, no 500 — counter-ratchet de-risk holds);
+D0 liveness intact (commit-ingest on, no error, cycling). Minor non-blocking notes to
+claude-4: `derive-by-ns` rebuilds whole by-ns per commit (O(repo) in-memory vs the note's
+"incremental" — writes dominate, but correct the claim or make incremental); no unit test
+for the retract directive (live-verified only — add one); two `*valid-time-ms*` vars now
+(documented; consolidate later).
+
+**HELD for Joe:** (c) flip `:emit-removals?` true (removal-accurate) — claude-2 recommends
+yes (verified working, free, ratchet-de-risked); (e) production-run timing — claude-4
+proposes a monitored small run (futon3b, 33 commits) before the full 14-repo sweep.
+
+**Joe decided (2026-06-25):** (c) removal-accurate = YES (`:emit-removals?` true); (e)
+run futon3b first (monitored production run, persists). Relayed to claude-4; claude-2 to
+review the futon3b result before the full 14-repo sweep (sweep window still Joe's call).
+
+**futon3b run DONE + verified (claude-2 spot-check, 2026-06-25):** cursor advanced through
+all 33 commits to HEAD; futon3b var count via `db-as-of` accretes 64 (2026-02-09) → 110
+(2026-03-22) → 110 now — historical structure recovers correctly. D0 liveness intact.
+
+**Resume bug found + fixed (claude-2, futon3c `0afb9c2`):** `replay/read-cursor-sha`
+parsed the cursor response as JSON, but futon1a `/hyperedge/:id` returns EDN → threw and
+broke `:resume?` (silently re-did whole repos). Caught while building the sweep runbook
+(futon3b's first run worked only because no resume was needed). Now parses EDN; verified.
+
+**14-repo sweep runbook:** `M-populate-substrate-2.D3-sweep-runbook.md` — a self-contained
+doc for a standalone CLI claude to drive the remaining 13 repos via Drawbridge (background
+futures + result atom + cursor poll + per-repo db-as-of verify; smallest-first; resumable;
+non-destructive). The driving mechanism was tested against the live JVM before writing.
