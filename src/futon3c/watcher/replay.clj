@@ -29,9 +29,9 @@
    review and (b) Joe's timing greenlight; it is a 30min–few-hour run that
    shares the live serving JVM. Verify on a small scope first."
   (:require [clojure.string :as str]
+            [clojure.edn :as edn]
             [clojure.java.shell :as sh]
             [babashka.http-client :as http]
-            [cheshire.core :as json]
             [futon3c.watcher.file-ingest :as fi]
             [futon3c.watcher.commit-ingest :as ci]))
 
@@ -87,8 +87,12 @@
   (let [resp (try (http/get (str FUTON1A "/api/alpha/hyperedge/hx:" cursor-type ":" label)
                             {:throw false :timeout 5000})
                   (catch Exception _ nil))]
+    ;; futon1a's /hyperedge/:id returns EDN (not JSON) — parse accordingly.
+    ;; (Was json/parse-string, which threw JsonParseException on the EDN body
+    ;; and broke :resume?; caught 2026-06-25 in claude-2's sweep-runbook test.)
     (when (= 200 (:status resp))
-      (some-> (:body resp) (json/parse-string true) :hx/props :sha))))
+      (try (some-> (:body resp) edn/read-string :hx/props :sha)
+           (catch Exception _ nil)))))
 
 (defn write-cursor!
   "Advance the resume cursor (current valid-time — a control record, never
@@ -149,11 +153,12 @@
              (binding [fi/*valid-time-ms* vt]
                ;; emit changed-file structure at the commit's valid-time;
                ;; capture each file's manifest for future removal diffs
-               (let [snapshot''
+               (let [in-file-retracts (atom 0)
+                     snapshot''
                      (reduce
                       (fn [m [st path]]
                         (if (and (#{"A" "M"} st) (contains? parsed path))
-                          (let [{:keys [manifest]}
+                          (let [{:keys [manifest stats]}
                                 (fi/emit-structure!
                                  {:structure (get parsed path)
                                   :label label
@@ -162,16 +167,23 @@
                                   :labels labels
                                   :prior-manifest (get-in snapshot [path :manifest])
                                   :emit-removals? emit-removals?})]
+                            (swap! in-file-retracts + (long (:retracted stats 0)))
                             (assoc-in m [path :manifest] manifest))
                           m))
-                      snapshot' changes)]
-                 ;; D files: retract their whole prior manifest (HELD)
-                 (when emit-removals?
-                   (doseq [[st path] changes
-                           :when (= "D" st)
-                           :let [pm (get-in snapshot [path :manifest])]
-                           [t eps] (or pm [])]
-                     (fi/retract-hyperedge! t eps labels)))
+                      snapshot' changes)
+                     ;; D files: retract their whole prior manifest (HELD)
+                     deleted-retracts
+                     (if emit-removals?
+                       (reduce
+                        (fn [n [st path]]
+                          (if (= "D" st)
+                            (reduce (fn [k [t eps]]
+                                      (fi/retract-hyperedge! t eps labels)
+                                      (inc k))
+                                    n (or (get-in snapshot [path :manifest]) []))
+                            n))
+                        0 changes)
+                       0)]
                  (when (and verbose? (or (seq parsed) (pos? n-nonclj)))
                    (println (format "[replay %s] %s  files=%d skipped-nonclj=%d  vt=%s"
                                     label (subs (:sha c) 0 7) (count parsed) n-nonclj vt)))
@@ -179,8 +191,9 @@
                      (assoc :snapshot snapshot'')
                      (update :n-commits inc)
                      (update :n-files + (count parsed))
-                     (update :n-skipped-nonclj + n-nonclj))))))
-         {:snapshot {} :n-commits 0 :n-files 0 :n-skipped-nonclj 0}
+                     (update :n-skipped-nonclj + n-nonclj)
+                     (update :n-retracted + @in-file-retracts deleted-retracts))))))
+         {:snapshot {} :n-commits 0 :n-files 0 :n-skipped-nonclj 0 :n-retracted 0}
          commits)
         through (some-> commits last :sha)]
     (when through
@@ -189,6 +202,7 @@
      :n-commits (:n-commits result)
      :n-files (:n-files result)
      :n-skipped-nonclj (:n-skipped-nonclj result)
+     :n-retracted (:n-retracted result)
      :through-sha through}))
 
 (defn replay-all!
