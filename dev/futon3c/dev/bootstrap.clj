@@ -319,7 +319,12 @@
                (catch Throwable t
                  (println (str "[dev] archaeology/deferred-stub load-time check threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        _ (try (archaeology/check-pipeline-tracer-on-load! evidence-store)
+        ;; Pipeline-tracer is PIPE-CLEANED / ROADMAP-DEFERRED: its watched set is
+        ;; frozen historical sediment pending a live-projection redesign (see
+        ;; holes/excursions/E-pipeline-pipecleaner.md "Current Resolution").
+        ;; Keep recording the evidence, but silence the boot WARNING banner until
+        ;; a live pipe exists -- re-enable by dropping {:print? false}.
+        _ (try (archaeology/check-pipeline-tracer-on-load! evidence-store {:print? false})
                (catch Throwable t
                  (println (str "[dev] archaeology/pipeline-tracer load-time check threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
@@ -370,11 +375,10 @@
                (catch Throwable t
                  (println (str "[dev] register-metabolic-balance-taps! threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        ;; Ensure pipeline-tracer items exist in the durable store.
-        ;; Idempotent: re-emits only those track-ids missing from the
-        ;; persisted set. Reachable-from-boot discipline — tracer state
-        ;; is reconstructible from `tracer/default-tracers` (on-disk
-        ;; source) at every boot. M-reachable-from-boot 2026-05-01.
+        ;; Keep the pipeline-tracer projection hook boot-safe. The old
+        ;; static prototype data is intentionally unhooked from boot and
+        ;; retained in holes/excursions/pipeline-prototype.edn; this emits
+        ;; only if a future runtime projection supplies explicit defaults.
         _ (try (let [r (tracer/ensure-default-tracers! evidence-store)]
                  (println (str "[dev] tracer/ensure-default-tracers!: "
                                "present=" (:already-present r)
@@ -449,7 +453,13 @@
                          {:path "/home/joe/code/futon7"  :label "futon7-d"}
                          {:path "/home/joe/code/futon7a" :label "futon7a-d"}]
                   interval-ms (config/env-int "FUTON3C_MULTI_WATCHER_INTERVAL_MS" 5000)
-                  commit-ingest? (config/env-bool "FUTON3C_MULTI_WATCHER_COMMIT_INGEST" false)]
+                  ;; Default ON as of 2026-06-25 (M-populate-substrate-2 D0):
+                  ;; the prior default-false silently froze substrate-2's
+                  ;; commit/code-history layer at 2026-05-21. substrate-2 is
+                  ;; meant to be a LIVE model, so commit-ingest must run by
+                  ;; default. Set FUTON3C_MULTI_WATCHER_COMMIT_INGEST=false to
+                  ;; opt out if the commit sidecar reintroduces backpressure.
+                  commit-ingest? (config/env-bool "FUTON3C_MULTI_WATCHER_COMMIT_INGEST" true)]
               (multi-watcher/start! {:roots roots
                                      :interval-ms interval-ms
                                      :cold-scan? false
@@ -591,10 +601,14 @@
       (println "[dev]   Agents auto-join #futon on WS connect")
       (println))
     (if (seq fed-peers)
-      (do (println (str "[dev] Federation: self=" fed-self " peers=" fed-peers))
+      (do (println (str "[dev] Federation: self="
+                        (or fed-self "(unset; announcements disabled)")
+                        " peers=" fed-peers))
           (when (seq fed-sync-results)
             (println (str "[dev]   Peer sync results: " fed-sync-results)))
-          (println "[dev]   Agents registered locally will be announced to peers."))
+          (println (if fed-self
+                     "[dev]   Agents registered locally will be announced to peers."
+                     "[dev]   Set FUTON3C_SELF_URL to announce locally registered agents to peers.")))
       (println "[dev] Federation: no peers configured (set FUTON3C_PEERS, FUTON3C_SELF_URL)"))
     (println)
     (when-let [port (config/env-int "FUTON3C_PORT" 7070)]

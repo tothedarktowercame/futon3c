@@ -848,8 +848,25 @@
   [{:keys [root label cycle-n]}]
   (mark-subtask! {:phase :commit-ingest :repo label :root root :cycle-n cycle-n})
   (try
-    (let [vars-by-file (query-repo-vars-by-file label)
-          file->vars (fn [path] (get vars-by-file path))
+    ;; D2.1 (2026-06-25): resolve a changed file's vars by PARSING the file
+    ;; locally (collect-file at repo-root), not by querying substrate-2. The old
+    ;; substrate-2 query (query-repo-vars-by-file) was doubly broken: it timed
+    ;; out on large types and returned {} (so new commits got no :edits), AND it
+    ;; keyed the map by absolute :source-file while `files-changed` yields
+    ;; repo-relative paths (so lookups never matched anyway). Local parse returns
+    ;; unprefixed var qnames, which ingest-edits-for-commit! then per-repo
+    ;; prefixes. For a just-committed file the working-tree content == the commit
+    ;; content; historical accuracy for old commits is the separate D3
+    ;; (valid-time versioning) concern. This subsumes D0.1's reason to exist —
+    ;; there is no longer a per-cycle substrate-2 fetch to defer.
+    (let [file->vars (fn [rel-path]
+                       (let [abs (str root "/" rel-path)]
+                         (when (.exists (io/file abs))
+                           (try (some->> (file-ingest/collect-file abs)
+                                         :vars
+                                         (keep :var/qname)
+                                         seq)
+                                (catch Throwable _ nil)))))
           report (commit-ingest/ingest-new-commits!
                   {:repo-root root
                    :repo-label label

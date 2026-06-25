@@ -1289,17 +1289,40 @@ excursion target; nil means no mission."
     (message "claude-repl: session reset (server=%s, was %s)"
              (if ok "yes" "no") (or old-sid "nil"))))
 
+(defun claude-repl--agency-session-id (&optional agent-id)
+  "Return the session-id the live agency holds for AGENT-ID, or nil.
+Defaults to this buffer's `claude-repl-agent-id'.  Lets a freshly drawn
+header recover a session that was established out-of-band (e.g. a
+server-side invocation wrote the agent's session file after the buffer
+had already drawn its \"awaiting session\" header)."
+  (let ((agent-id (or agent-id claude-repl-agent-id)))
+    (when (and (stringp agent-id) (not (string-empty-p agent-id)))
+      ;; `claude-repl--live-agents-response' parses with :object-type 'plist,
+      ;; so the registry is a plist keyed by :<agent-id> keywords.
+      (when-let* ((parsed (claude-repl--live-agents-response))
+                  (agents (plist-get parsed :agents))
+                  (agent (plist-get agents (intern (concat ":" agent-id))))
+                  (sid (plist-get agent :session-id)))
+        (and (stringp sid) (not (string-empty-p sid)) sid)))))
+
+(defun claude-repl--resolve-session-id ()
+  "Resolve this buffer's effective session-id, reconciling stale stores.
+Prefer the on-disk session file; if it is absent, fall back to the live
+agency registry and persist the recovered id back to the file so the
+file-based machinery stays consistent.  Returns nil when no session
+exists anywhere yet."
+  (or (claude-repl--read-session-id-file claude-repl-session-file)
+      (when-let ((sid (claude-repl--agency-session-id)))
+        (when claude-repl-session-file
+          (when-let ((dir (file-name-directory claude-repl-session-file)))
+            (make-directory dir t))
+          (write-region sid nil claude-repl-session-file nil 'silent))
+        sid)))
+
 (defun claude-repl--init-display ()
   "Draw the buffer header and prompt. Does NOT register or change identity.
 Used by `claude-repl-clear' to redraw without losing the agent binding."
-  (let* ((sf claude-repl-session-file)
-         (existing-sid
-          (when (and sf (file-exists-p sf))
-            (let ((s (string-trim
-                      (with-temp-buffer
-                        (insert-file-contents-literally sf)
-                        (buffer-string)))))
-              (unless (string-empty-p s) s))))
+  (let* ((existing-sid (claude-repl--resolve-session-id))
          (title (if (claude-repl--workspace)
                     (format "claude repl [%s]" (claude-repl--workspace))
                   "claude repl")))
