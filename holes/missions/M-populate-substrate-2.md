@@ -107,7 +107,7 @@ Decide which ingests are canonical; unify the label regimes (`-d`, `-d2`, `phase
 Populate `code/v05/edits` (commit → def) joining the temporal commit spine to the structural graph. Reuse the elisp/clojure projectors from E-substrate-2-elisp-projection. **Blocker (found 2026-06-25):** the live `:edits` resolver reads `code/v05/var` to map changed files → defs (`multi.clj:842`, `commit_ingest.clj:450`), but `var` is empty — so the var-vertex layer must be (re)populated and label-matched first, or `:edits` resolution returns nothing. Precondition for any temporal code query.
 
 **D3 — Versioned / time-travelable code (E-timetravel's chartered fix).**
-Write contains/coverage/edits with XTDB **valid-time = commit timestamp** (reuse the `:evidence/at` mechanism in `xtdb_backend.clj`); **file-level projection first** (the cheaper v1 E-timetravel recommends). Decide re-ingest-history vs forward-only. Un-gates `db-as-of` code queries, κ time-travel, T(v,c), drift.
+Write contains/calls/coverage/edits with XTDB **valid-time = commit timestamp**; **file-level projection first** (the cheaper v1 E-timetravel recommends). **Historical re-ingest IS in scope (Joe, 2026-06-25)** — not forward-only; recover April→now so `db-as-of` works across the existing history, not just going forward. Un-gates `db-as-of` code queries, κ time-travel, T(v,c), drift.
 
 **D4 — The argument/proof relation layer (the connective tissue).**
 Populate `constructs` / `closes` / `depends-on-sorry` / `uses-definition` / `would-refute` / `supported-by` / `attacks-claim` from *named sources*, each passing the E-sorry-typing **T-A4 gate** (canonical source field + normalized target + named consumer). Three feeders: (a) the sorry-typing deferred edge families; (b) a **promotion path** from the mission-miner's overlay arrows into the store (the 🚧 gap — borrowed-prior moves stay tagged `:mined-structural`, never laundered as proofs); (c) BHK arrows from claude-4's `:constructed`/`:open` arrow store. This is the layer that turns lookup into propagation.
@@ -295,3 +295,26 @@ to the defs they change. Remaining for substrate-2 completeness:
   the content at that commit) remains the **D3** valid-time-versioning concern.
 - Two junk vertices from probing (`probe.test/xyz`, `scratch-d21-probe/*`) +
   the test commit's edges persist as orphaned bitemporal records.
+
+### 2026-06-25 — D3 scoping (feasibility) + decision
+
+**Feasibility: green — it's a threading job, no architectural blocker.** XTDB v1
+supports valid-time on writes: `[:xtdb.api/put doc valid-time]` (3rd element).
+The stack currently emits 2-element puts everywhere (e.g. `pipeline.clj:123`),
+and `run-write!` passes a write-fn's tx-ops straight to `submit-tx!` — so a
+write-fn CAN emit valid-time'd puts. Threading needed across layers:
+1. futon3c commit-ingest (has commit ts + changed files) → pass valid-time.
+2. post-hyperedge HTTP path (futon3c → futon1a) → carry a valid-time param.
+3. futon1a route → write-fn → pipeline → the put op's 3rd element.
+4. **Wrinkle:** `verify-materialized!` checks the tx at *current* time; a
+   past-valid-time doc may not verify the same way — needs handling.
+
+**Decision (Joe, 2026-06-25):** **historical re-ingest is required** — D3 is not
+forward-only. Recover April→now so `db-as-of` answers across existing history.
+Also: commit-ingest currently writes only `edits`; versioning the *structural*
+graph (contains/calls — what's HEAD-frozen) means commit-ingest must also emit
+those at the commit's valid-time. Open sub-questions for the build: file-level
+projection scope; how to drive the historical re-ingest (replay all commits per
+repo, emitting structure at each commit's valid-time — large); idempotency on
+re-run; the materialization-check interaction. D3 is mission-scale — likely its
+own focused session.
