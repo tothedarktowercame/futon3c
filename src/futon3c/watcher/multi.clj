@@ -28,7 +28,8 @@
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.watcher.commit-ingest :as commit-ingest]
-            [futon3c.watcher.file-ingest :as file-ingest])
+            [futon3c.watcher.file-ingest :as file-ingest]
+            [futon3c.watcher.freshness :as freshness])
   (:import [java.time Instant]
            [java.util.concurrent
             Executors ScheduledExecutorService TimeUnit]))
@@ -960,6 +961,17 @@
                                   :from-root from-root :to-root to-root
                                   :from-label from-label :to-label to-label
                                   :run-id run-id :event-n ev-n :hash hash})))
+    ;; D7a substrate-2 freshness alarm — every ~60 cycles (~5 min @ 5s): check
+    ;; substrate-2's currency vs each repo's git HEAD + the commit-ingest? flag,
+    ;; with a loud desktop notify on a healthy↔stale transition. Wrapped so a
+    ;; freshness probe error never breaks the ingest loop.
+    (when (and (pos? n) (zero? (mod n 60)) (not (stop-requested?)))
+      (try
+        (let [o (freshness/check+notify! roots commit-ingest?)]
+          (swap! !state (fn [s] (if (map? s) (assoc s :freshness o) s))))
+        (catch Throwable t
+          (binding [*out* *err*]
+            (println "[multi.freshness] check threw:" (.getMessage t))))))
     (mark-subtask! {:phase :idle :cycle-n n})))
 
 ;; ---------- service ----------

@@ -375,6 +375,23 @@
                (catch Throwable t
                  (println (str "[dev] register-metabolic-balance-taps! threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
+        ;; D7a (M-populate-substrate-2): register substrate-2 commit-freshness as
+        ;; a probe family so the operational-families dashboard / probe sweep can
+        ;; surface a freeze. The LIVE alarm is driven by the watcher cycle
+        ;; (futon3c.watcher.multi run-cycle! → freshness/check+notify!); this
+        ;; registration adds the dashboard/stop-the-line view. The check reads
+        ;; the live watcher state (roots + commit-ingest? flag).
+        _ (try ((requiring-resolve 'futon3c.logic.probe/register-family-check!)
+                :substrate-2-commit-freshness
+                (fn []
+                  (let [s (some-> (requiring-resolve 'futon3c.watcher.multi/!state)
+                                  deref deref)]
+                    ((requiring-resolve 'futon3c.watcher.freshness/check)
+                     (:roots s) (boolean (:commit-ingest? s))))))
+               (println "[dev] registered substrate-2-commit-freshness probe family")
+               (catch Throwable t
+                 (println (str "[dev] register substrate-2-commit-freshness threw: "
+                               (.getName (class t)) ": " (.getMessage t)))))
         ;; Keep the pipeline-tracer projection hook boot-safe. The old
         ;; static prototype data is intentionally unhooked from boot and
         ;; retained in holes/excursions/pipeline-prototype.edn; this emits
