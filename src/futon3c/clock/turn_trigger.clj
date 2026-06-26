@@ -117,25 +117,26 @@
 (defn start!
   "Start the polling loop (every `:interval-ms`, default 60s) and register the
    trigger in cyder so it appears on the Arxana Clock. Idempotent. Optional
-   `:threshold`. The belly rider is added unless `:riders?` is false."
-  [& {:keys [interval-ms threshold riders?] :or {interval-ms 60000 riders? true}}]
+   `:threshold`."
+  [& {:keys [threshold]}]
+  ;; RETIRED (post-incident 2026-06-26): start! NO LONGER spawns a background
+  ;; poll loop and adds NO belly rider. A perpetual `(future (while …))` in the
+  ;; shared serving JVM, polling every cycle, was implicated in freezing the
+  ;; futon3c evidence store (see E-arxana-clock "Incident & fix"). The belly is
+  ;; now kept fresh by `futon2.aif.c-vector/ensure-belly-fresh!` — demand-driven
+  ;; + debounced, at score time, reusing the established wm.scheduler tick — NOT
+  ;; by this trigger. `check!` survives only as a passive, manually/event-callable
+  ;; counter (no thread). It registers on the clock so it stays visible, marked
+  ;; passive.
   (when threshold (swap! !state assoc :threshold threshold))
-  (when riders? (add-rider! :belly-refresh belly-refresh-rider))
-  (when-not (:loop-running? @!state)
-    (swap! !state assoc :loop-running? true)
-    (check!) ; set baseline
-    (future
-      (while (:loop-running? @!state)
-        (try (Thread/sleep (long interval-ms)) (check!)
-             (catch Throwable _ nil))))
-    (cyder/register!
-     {:id cyder-id :type :daemon :layer :repl
-      :stop-fn (fn [] (swap! !state assoc :loop-running? false))
-      :state-fn state-snapshot
-      :step-fn check!
-      :metadata {:cadence (str "every " (:threshold @!state) " clicks")
-                 :source "invoke-jobs ledger"
-                 :driver :click}}))
+  (check!) ; set baseline (one read, no loop)
+  (cyder/register!
+   {:id cyder-id :type :daemon :layer :repl
+    :stop-fn (fn [] (swap! !state assoc :loop-running? false))
+    :state-fn state-snapshot
+    :step-fn check!
+    :metadata {:cadence (str "every " (:threshold @!state) " clicks (passive — no loop, no rider)")
+               :source "invoke-jobs ledger" :driver :click :passive? true}})
   (state-snapshot))
 
 (defn stop! []

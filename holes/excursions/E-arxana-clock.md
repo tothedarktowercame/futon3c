@@ -75,6 +75,7 @@ Three mechanisms, each with its own truth and none aware of the others; nobody c
 1. **✅ Read-only aggregator** — `futon3c/scripts/arxana_clock.bb` (committed `dddb65b`). 21 drivers / 3 mechanisms / 19 futon-relevant; writes `arxana-clock-snapshot.edn`.
 2. **✅ The display** — `futon4/dev/arxana-vsatarcs-clock.el` (branch `e-arxana-clock`, commit `c3c8490`). Regular Emacs Arxana (NO WebArxana, per Joe), sibling to `arxana-vsatarcs-ledger.el`; reads the snapshot via the shared EDN reader; grouped by mechanism with cadence·next·last; `g`=refresh (re-runs aggregator), `f`=toggle non-futon. Headless-render verified (19 drivers). `M-x arxana-clock-browse`.
 3. **✅ The turn-trigger + belly-refresh rider** — `futon3c/src/futon3c/clock/turn_trigger.clj`. A click-counted driver (README `:turn` subclass): polls the invoke-jobs ledger and fires its riders every N clicks (default 100); registered in cyder so it shows on the clock **with a real cadence** ("every 100 clicks" — the first in-JVM process not "—"). Rider #1 = the serving-JVM belly refresh (`futon2.aif.c-vector/maybe-refresh!` via requiring-resolve, no compile-time dep). Live-proven: forcing the threshold fired the rider and the **belly went 0 → 139**; started for real (threshold 100, 2-min poll, baseline at 41 clicks) and shown on the clock via emacsclient. Tests 4/19, clj-kondo 0, check-parens OK.
+   **⚠ Loop RETIRED 2026-06-26 (see §8).** The perpetual poll loop froze the evidence store; `start!` no longer spawns a loop/rider. The serving-JVM belly is now kept fresh by `c-vector/ensure-belly-fresh!` (demand-driven + debounced) hooked into the existing `wm.scheduler/tick!` — not by this trigger.
    **Remaining (named):** broaden cyder `:cadence`/next-fire enrichment to the OTHER periodic processes (watchers — still "—"); add a **stale-driver alarm** (overdue next-fire / a driver that should've fired but didn't — the 5-week-freeze lesson).
 4. **✅ Scan-primary completeness** (Joe: "a registry can be skipped; a scan is better — list the sources"). The clock was registry-incomplete — proven: live JVM tickers (`invoke-ticker`, `FileSystemWatchService`) registered nothing, so they were invisible; the cron/systemd scans were user-only. Reframed the aggregator to **scan ground truth + reconcile + manifest**:
    - cron: ALL locations (user + `/etc/crontab` + `/etc/cron.d/*` + `/etc/cron.{hourly,daily,weekly,monthly}`) — 3 → **46**;
@@ -86,3 +87,48 @@ Three mechanisms, each with its own truth and none aware of the others; nobody c
 ## 7. Scope-out (named)
 
 The full perceived-time R7 convolution (clicks-and-ticks → precision) stays with futon2's R7 roadmap; making the WM an inhabitable peripheral (README §"WM as peripheral") is separate; this excursion is only the **clock surface + the turn-trigger that feeds it**.
+
+## 8. Incident & fix — the turn-trigger loop (2026-06-26)
+
+**What happened.** Car 3 (`turn_trigger/start!`) spawned a **perpetual poll loop**
+in the one shared serving JVM — `(future (while … (Thread/sleep 120000) (check!)))`
+— polling the invoke-jobs ledger every 2 min with a belly-refresh rider. At
+~17:40 the futon3c **evidence store stopped persisting** (`context-retrieval` /
+`invoke-complete`) for *all* agents. Joe caught it (loop-running? true,
+fire-count 0).
+
+**Response.** Captured the rider state then `stop!`'d the loop (loop-running?
+false, deregistered from cyder); confirmed **no wedged thread** survived; the
+invoke-jobs file resumed writing.
+
+**Mechanism — honest uncertainty.** `fire-count 0` ⇒ the rider **never fired**
+(`maybe-refresh!` never ran via the trigger), and the poll is a **cheap
+read-only deref** of the ledger atom (≤41 entries; it does not spit/write). So I
+could **not substantiate a direct mechanism** by which the poll froze the
+evidence store. The likeliest culprit is the *perpetual `future` itself* (a
+long-lived task on the shared `agent-send-off` pool, or contention I couldn't
+pin). The correlation + recovery-on-`stop!` are the evidence; the exact path is
+unconfirmed — so the fix targets the **hazard class**, not a guessed line.
+
+**Fix (a + b, ratified by Joe).**
+- **Retired the loop.** `start!` no longer spawns a `future` or adds a rider; it
+  registers only a *passive* counter (no thread). `check!` survives as a
+  manually/event-callable counter.
+- **Demand-driven, debounced replacement.** `futon2.aif.c-vector/ensure-belly-fresh!`
+  — refreshes the belly at most once per 5 min, **only when called**,
+  concurrency-safe (compare-and-set!), **no background thread**, reads
+  substrate-2 (never the evidence/invoke path).
+- **Reused safe infra.** Hooked at score time into the **existing**
+  `futon3c.wm.scheduler/tick!` (the established WM scheduler), not a new loop.
+- Verified live: loop off + deregistered; `ensure-belly-fresh!` live (belly 453);
+  debounce-skip path makes no HTTP call.
+
+**Lesson (durable).** Never run an **unproven perpetual loop in the one shared
+serving JVM** (I-0). Background work must either **reuse an existing vetted
+scheduler** or be **demand-driven + debounced** — never a fresh poll loop
+competing with the live request path. This is the operational sibling of the
+"no synchronous heavy Drawbridge calls" discipline.
+
+**Residual.** If the evidence store is *still* frozen after `stop!`, the cause is
+elsewhere and needs separate diagnosis — retiring the loop removes my hazard
+regardless.

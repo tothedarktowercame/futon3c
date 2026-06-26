@@ -178,6 +178,11 @@
       (swap! !state assoc :last-tick-at now)
       (try
         (let [generate (requiring-resolve 'futon2.report.war-machine/generate-war-machine)
+              ;; demand-driven, debounced belly refresh at score time — reuses
+              ;; THIS established tick (no separate poll loop; the retired
+              ;; turn-trigger loop froze the evidence store, 2026-06-26).
+              _ (when-let [ebf (requiring-resolve 'futon2.aif.c-vector/ensure-belly-fresh!)]
+                  (try (ebf) (catch Throwable _ nil)))
               days-windows (:days-windows @!state)
               refreshed (mapv #(refresh-one-window! generate %) days-windows)]
           (swap! !state
