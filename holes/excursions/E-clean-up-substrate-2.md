@@ -119,6 +119,38 @@ The two "populated" numbers differ because **109** counts populated *declared* t
 - **Don't bulk-fill the semantic families (B/C/D)** — they are other missions' deliverables; this excursion *maps* them and hands them back, it does not mine them.
 - **E is the one campaign this excursion could legitimately spawn** — clean sources, no upstream dependency.
 
+## 5b. INSTANTIATE — part A done (claude-10, 2026-06-26; Joe: "do A first, come to B")
+
+Part **A ratified and executed** (Q-den hygiene, zero registry writes). Part **B deferred** (Joe: "come to B").
+
+**Tool-verified live census (2026-06-26, via `catalog_census.bb` — supersedes the morning hand-count):** the registry **drifted 208→216 docs** in hours (it's an append-only `run-write!` byproduct) — proving exit-2's point that the denominator must be a *tool*, not a frozen number. Current: **216 docs → 196 distinct ids → 186 real declared types** (10 globs dropped) · **101 populated (≈54%)** · 85 empty · off-catalog heavies `code/v05/edits` 185,340 / `code/v05/var` 125,306. (101 vs the morning's 109: re-counted with the correct per-kind attribute — verified **0 kind-mislabels, 0 both-positive**, so 101 is exact.)
+
+**Delivered:**
+- **exit-2** — `futon3c/scripts/catalog_census.bb`: one Drawbridge count-pushdown pass → honest denominator + glob/dup classification + per-type populations + off-catalog; writes a durable snapshot (`holes/excursions/substrate-2-catalog-census.edn`). Re-runnable.
+- **exit-1** — honest denominator (as *method + current numbers + tool ref*, not a frozen figure) now in `substrate-2-explainer.html` header, `futon1a/README-census.md` (TL;DR + footgun #4), and `M-populate-substrate-2.md` (pointer note + HEAD body). Stale "~35/203" survive only as debunked history.
+- **exit-4** — the §2.3 six-family negative-space map rendered on the explainer (`.negspace` section): 85 empty types in 6 families, each colour-coded + labelled by owning mission (A hygiene · B/C/D other-missions · E standalone · F partly-free). Playwright-verified: 0 JS errors, diagram intact.
+- **exit-5** — audit found + **corrected a contradicted claim**: the explainer's PATTERN node said "0 instances / lives elsewhere", but the census shows pattern STRUCTURE heavily populated (`:pattern/component` 12,179 · `:pattern/clause` 6,299 · `:pattern/library` 4,635 · `:pattern/language` 44); only the pattern-*language* decomposition (`:pattern/has-{if,then,…}`, `:pattern/tensions`, sigil bindings — all count-verified 0) is empty. Node rewritten to `st:"partial"`. All proof/argument relations re-confirmed 0 by count-pushdown.
+
+**Exit-3 (B): the delete path is BUILT — see §5c.** (Joe overrode flag-not-delete: a real delete path is the future-proof bet — GDPR right-to-erasure needs actual erasure, not a flag.)
+
+## 5c. INSTANTIATE — part B: the GDPR erasure path (claude-10, 2026-06-26; Joe: "create the delete path … GDPR … gate behind joe … CLI")
+
+**Decision:** flag-not-delete → **build a real, first-class, gated delete path** (Joe: future-proof for GDPR right-to-erasure). Erasure uses XTDB **`evict`** (removes a doc AND its entire bitemporal history — a `:delete` only tombstones, so `db-as-of` still recovers the data; that fails GDPR). It rides the gated pipeline, not a raw evict.
+
+**Delivered (all futon1a):**
+- `core/pipeline.clj` — **`run-erase!`**: L4 validate (non-empty eids + reason) → L3 authz (gated to penholder **"joe"**, `erase-allowed-penholders`) → L0 durable evict, with the counter-ratchet permitting the deliberate drop. Emits a **non-revealing `:erasure-event` audit** (actor·reason·count·**sha256** of the eids·time — no content). Plus **`retract-type!`** (sugar over run-erase! for type-docs, via the new resolver).
+- `core/invariants.clj` — taught the counter-ratchet to **see `:xtdb.api/evict`** (op-id + apply-op), so erasure is counted as a drop and must be explicitly permitted (no silent bypass of the count guard).
+- `model/type_registry.clj` — `type-xt-ids-present` (resolves a type-id to all present kind/encoding variants).
+- `scripts/erase.bb` — the **CLI** (no API surface): drives the running node via Drawbridge as penholder "joe"; **default dry-run** (shows each target's population as a safety guard); `--execute` requires `--reason`.
+- `test/futon1a/core/erase_test.clj` — 5 tests / 23 assertions (L4 gating, joe-only L3 gate, the evict+audit tx shape with no raw-eid leak, ratchet-sees-evict). `clojure -X:test` green; clj-kondo 0 errors; check-parens OK.
+
+**Live-proven** (loaded into the JVM via Drawbridge `load-file`; round-trip on a throwaway doc): non-joe → refused; evict → doc gone **and `entity-history` = 0** (true erasure, not a tombstone); audit-event persisted with sha256 + no raw eids. CLI dry-run shows the ⚠️ population guard firing on a populated type.
+
+**Catalog-cleanup finding (the actual erasure is Joe's gated call):** "the 22 noise docs" is really **per-doc, not per-type-id**, and **the `*`-globs are load-bearing abstract parents** (14 type-docs — several *populated*, e.g. `:pattern/library`→`:pattern/*` — set a glob as `:type/parent`). So globs must **not** be erased without re-parenting. The clearly-safe first cut is the **8 no-colon encoding relics** (retired-writer artifacts) for which the colon-canonical doc survives — zero type lost, zero parent orphaned, zero data touched:
+`type|entity|{arxana/media-track, model/descriptor, pattern, pattern/component, pattern/library, person}` · `type|relation|{pattern/has-sigil, pattern/includes}`.
+
+**Named follow-ons:** (a) glob removal via a re-parenting migration (children → namespace parent) — globs are *kept* for now; (b) the empty cross-kind dups (a per-type canonical-vs-relic curation); (c) GDPR generalisation — subject-erasure across entity/relation/hyperedge + a re-ingestion suppression list (eviction alone doesn't hold for *live* data the watcher would re-derive).
+
 ## 6. Exit conditions (testable; provisional until ARGUE)
 
 1. The explainer header + `README-census.md` + the mission HEAD state the **honest denominator** (186 real declared types; 109 populated ≈ 59%; ~130 store-side populated incl. off-catalog) — replacing every stale "~35 of 200". *(A — cheap.)*

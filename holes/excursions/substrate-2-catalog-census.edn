@@ -1,0 +1,230 @@
+{:populated
+ [{:id ":pattern/component", :kind "", :n 12179}
+  {:id ":pattern/clause", :kind ":entity", :n 6299}
+  {:id ":scope/loose-section", :kind ":entity", :n 4942}
+  {:id ":pattern/library", :kind "", :n 4635}
+  {:id ":scope/source-material", :kind ":entity", :n 1423}
+  {:id ":bounded-item", :kind ":entity", :n 1044}
+  {:id ":source/file", :kind ":entity", :n 933}
+  {:id ":scope/map-item", :kind ":entity", :n 700}
+  {:id ":map-item", :kind ":entity", :n 654}
+  {:id ":scope/mission-scope-in", :kind ":entity", :n 651}
+  {:id ":scope/pattern", :kind ":entity", :n 619}
+  {:id ":mission/doc", :kind ":entity", :n 564}
+  {:id ":scope/capability-scope", :kind ":entity", :n 535}
+  {:id ":sigil", :kind ":entity", :n 533}
+  {:id ":scope/mission-scope-out", :kind ":entity", :n 527}
+  {:id ":scope/eightfold-phase", :kind ":entity", :n 408}
+  {:id ":pattern/sigil", :kind ":entity", :n 405}
+  {:id ":sorry", :kind ":entity", :n 293}
+  {:id ":scope/relates-to", :kind ":entity", :n 244}
+  {:id ":concept", :kind ":entity", :n 184}
+  {:id ":arxana/essay-section", :kind ":entity", :n 135}
+  {:id ":interest/semantic-arc", :kind ":relation", :n 135}
+  {:id ":excursion/doc", :kind ":entity", :n 128}
+  {:id ":mission-geom", :kind ":entity", :n 110}
+  {:id ":arxana/media-track", :kind "", :n 87}
+  {:id ":scope/verify-gate", :kind ":entity", :n 81}
+  {:id ":devmap/prototype", :kind ":entity", :n 73}
+  {:id ":article", :kind ":entity", :n 65}
+  {:id ":interest/coalesces-into", :kind ":relation", :n 56}
+  {:id ":source/commit", :kind ":entity", :n 52}
+  {:id ":arxana/interest-star", :kind ":entity", :n 51}
+  {:id ":learning-update", :kind ":entity", :n 47}
+  {:id ":cluster-leaf", :kind ":entity", :n 46}
+  {:id ":pattern/language", :kind "", :n 44}
+  {:id ":source/api", :kind ":entity", :n 44}
+  {:id ":scope/plain-argument", :kind ":entity", :n 39}
+  {:id ":arxana/constellation-star", :kind ":entity", :n 35}
+  {:id ":capability", :kind ":entity", :n 31}
+  {:id ":arxana/media-lyrics", :kind "", :n 31}
+  {:id ":arxana/proforma-criterion", :kind ":entity", :n 30}
+  {:id ":proposition", :kind ":entity", :n 27}
+  {:id ":demo", :kind ":entity", :n 27}
+  {:id ":interest-territory", :kind ":entity", :n 25}
+  {:id ":arxana/figure", :kind ":entity", :n 22}
+  {:id ":arxana/song", :kind ":entity", :n 19}
+  {:id ":arxana/essay", :kind ":entity", :n 17}
+  {:id ":evidence", :kind ":entity", :n 16}
+  {:id ":arxana/proforma-coverage", :kind ":relation", :n 16}
+  {:id ":geom-cluster", :kind ":entity", :n 16}
+  {:id ":agent-view", :kind ":entity", :n 14}
+  {:id ":hinge-entry", :kind ":entity", :n 14}
+  {:id ":scope/capability", :kind ":entity", :n 13}
+  {:id ":repo", :kind ":entity", :n 13}
+  {:id ":anthology-leaf", :kind ":entity", :n 13}
+  {:id ":model/entity-type", :kind ":entity", :n 13}
+  {:id ":model/descriptor", :kind "", :n 12}
+  {:id ":arxana/raw-interest", :kind ":entity", :n 12}
+  {:id ":scope/psr", :kind ":entity", :n 9}
+  {:id ":source/url", :kind ":entity", :n 9}
+  {:id ":operator-turn", :kind ":entity", :n 8}
+  {:id ":mission", :kind ":entity", :n 8}
+  {:id ":arxana/identity-proposal", :kind ":entity", :n 8}
+  {:id ":arxana/stack-node", :kind ":entity", :n 7}
+  {:id ":apm/phase", :kind ":entity", :n 6}
+  {:id ":question", :kind ":entity", :n 6}
+  {:id ":model/penholder", :kind ":entity", :n 6}
+  {:id ":apm/pm-term", :kind ":entity", :n 6}
+  {:id ":model/invariant", :kind ":entity", :n 6}
+  {:id ":scope/certificate", :kind ":entity", :n 6}
+  {:id ":interest-event", :kind ":entity", :n 5}
+  {:id ":scope/pur", :kind ":entity", :n 5}
+  {:id ":apm/arse-question", :kind ":entity", :n 5}
+  {:id ":thing", :kind ":entity", :n 5}
+  {:id ":arxana/proforma-gap", :kind ":entity", :n 4}
+  {:id ":arxana/proforma-uncovered", :kind ":relation", :n 4}
+  {:id ":person", :kind ":entity", :n 3}
+  {:id ":candidate-invariant", :kind ":entity", :n 3}
+  {:id ":hinge-bridge/probe", :kind ":entity", :n 2}
+  {:id ":pattern/language-status", :kind ":entity", :n 2}
+  {:id ":pattern/language-source", :kind ":entity", :n 2}
+  {:id ":arxana/metaphor", :kind ":entity", :n 1}
+  {:id ":arxana/proforma-coverage-cluster", :kind ":entity", :n 1}
+  {:id ":apm/problem", :kind ":entity", :n 1}
+  {:id ":pattern/language-catalog", :kind ":entity", :n 1}
+  {:id ":apm/failed-route", :kind ":entity", :n 1}
+  {:id ":arxana/eoi-editorial-layer", :kind ":entity", :n 1}
+  {:id ":arxana/venue", :kind ":entity", :n 1}
+  {:id ":arxana/design-pattern", :kind ":entity", :n 1}
+  {:id ":source", :kind ":entity", :n 1}
+  {:id ":pattern/test", :kind ":entity", :n 1}
+  {:id ":arxana/proforma-gap-cluster", :kind ":entity", :n 1}
+  {:id ":arxana/link-strategy", :kind ":entity", :n 1}
+  {:id ":apm/proof-step", :kind ":entity", :n 1}
+  {:id ":arxana/debug", :kind ":entity", :n 1}
+  {:id ":arxana/proforma", :kind ":entity", :n 1}
+  {:id ":arxana/checkpoint", :kind ":entity", :n 1}
+  {:id ":arxana/tension", :kind ":entity", :n 1}
+  {:id ":arxana/chorus", :kind ":entity", :n 1}
+  {:id ":test", :kind ":entity", :n 1}
+  {:id ":test/type", :kind ":entity", :n 1}
+  {:id ":claim", :kind ":entity", :n 1}],
+ :distinct-ids 196,
+ :offcat-entity-types [":lab/session"],
+ :n-empty 85,
+ :heavies
+ {":code/v05/var" 125306,
+  ":code/v05/edits" 185340,
+  ":mission-scope/eightfold-phase" 408},
+ :method "per-type count-pushdown via Drawbridge :6768",
+ :n-dup-ids 15,
+ :source "futon3c/scripts/catalog_census.bb",
+ :empty
+ [{:id ":answered-by", :kind ":relation"}
+  {:id ":apm", :kind ":entity"}
+  {:id ":arxana", :kind ":entity"}
+  {:id ":arxana/interest-constellation-star", :kind ":entity"}
+  {:id ":arxana/metaphor-theme", :kind ":relation"}
+  {:id ":arxana/scholium", :kind ":relation"}
+  {:id ":arxana/tension-edge", :kind ":relation"}
+  {:id ":arxana/tension-preserved", :kind ":relation"}
+  {:id ":arxana/theme", :kind ":entity"}
+  {:id ":arxana/theme-covers", :kind ":relation"}
+  {:id ":arxana/theme-metaphor", :kind ":relation"}
+  {:id ":attacks-claim", :kind ":relation"}
+  {:id ":belongs-to", :kind ":relation"}
+  {:id ":closes", :kind ":relation"}
+  {:id ":constructs", :kind ":relation"}
+  {:id ":covers-repo", :kind ":relation"}
+  {:id ":defines", :kind ":relation"}
+  {:id ":depends-on-sorry", :kind ":relation"}
+  {:id ":diagram", :kind ":relation"}
+  {:id ":diagram/core", :kind ":relation"}
+  {:id ":diagram/includes", :kind ":relation"}
+  {:id ":docbook/entry", :kind ""}
+  {:id ":docbook/heading", :kind ""}
+  {:id ":docbook/toc", :kind ""}
+  {:id ":evolved-into", :kind ":relation"}
+  {:id ":example", :kind ":relation"}
+  {:id ":excursion", :kind ":entity"}
+  {:id ":figure", :kind ":relation"}
+  {:id ":figure/tags", :kind ":relation"}
+  {:id ":generates-question", :kind ":relation"}
+  {:id ":has-agent-view", :kind ":relation"}
+  {:id ":has-failed-route", :kind ":relation"}
+  {:id ":has-operator-turn", :kind ":relation"}
+  {:id ":has-phase", :kind ":relation"}
+  {:id ":hinge-bridge", :kind ":entity"}
+  {:id ":i", :kind ":entity"}
+  {:id ":implemented-by", :kind ":relation"}
+  {:id ":in-cluster-full", :kind ":relation"}
+  {:id ":in-cluster-identify", :kind ":relation"}
+  {:id ":in-leaf-full", :kind ":relation"}
+  {:id ":in-leaf-identify", :kind ":relation"}
+  {:id ":inspired-by", :kind ":relation"}
+  {:id ":interest", :kind ":relation"}
+  {:id ":interest/coalesces-from", :kind ":relation"}
+  {:id ":interest/grounded-in", :kind ":relation"}
+  {:id ":interest/holds", :kind ":relation"}
+  {:id ":interest/tagged", :kind ":relation"}
+  {:id ":interest/witnessed-in", :kind ":relation"}
+  {:id ":leaf-parent", :kind ":relation"}
+  {:id ":lives-in-repo", :kind ":relation"}
+  {:id ":me", :kind ":entity"}
+  {:id ":media", :kind ":relation"}
+  {:id ":media/lyrics", :kind ":relation"}
+  {:id ":minted-from", :kind ":relation"}
+  {:id ":model", :kind ":relation"}
+  {:id ":model/has-entity-type", :kind ":relation"}
+  {:id ":model/has-invariant", :kind ":relation"}
+  {:id ":next-phase", :kind ":relation"}
+  {:id ":open-world/entity", :kind ""}
+  {:id ":open-world/relation", :kind ""}
+  {:id ":pattern", :kind ":entity"}
+  {:id ":pattern/component-parent", :kind ":relation"}
+  {:id ":pattern/has-because", :kind ":relation"}
+  {:id ":pattern/has-conclusion", :kind ":relation"}
+  {:id ":pattern/has-context", :kind ":relation"}
+  {:id ":pattern/has-however", :kind ":relation"}
+  {:id ":pattern/has-if", :kind ":relation"}
+  {:id ":pattern/has-next-steps", :kind ":relation"}
+  {:id ":pattern/has-sigil", :kind ":relation"}
+  {:id ":pattern/has-then", :kind ":relation"}
+  {:id ":pattern/includes", :kind ":relation"}
+  {:id ":pattern/tensions", :kind ":relation"}
+  {:id ":plucks", :kind ":relation"}
+  {:id ":produces", :kind ":relation"}
+  {:id ":prototype/has-sigil", :kind ":relation"}
+  {:id ":references", :kind ":relation"}
+  {:id ":responds-to", :kind ":relation"}
+  {:id ":roll-up-of", :kind ":relation"}
+  {:id ":scope", :kind ":entity"}
+  {:id ":sigil/sigil", :kind ""}
+  {:id ":supported-by", :kind ":relation"}
+  {:id ":surface", :kind ":relation"}
+  {:id ":test/probe", :kind ":entity"}
+  {:id ":uses-definition", :kind ":relation"}
+  {:id ":would-refute", :kind ":relation"}],
+ :total-docs 216,
+ :n-populated 101,
+ :pct 54,
+ :honest-denom 186,
+ :globs
+ ["::pattern/*"
+  ":arxana/*"
+  ":devmap/*"
+  ":i/*"
+  ":me/*"
+  ":model/*"
+  ":pattern/*"
+  ":person/*"
+  ":prototype/*"
+  ":sigil/*"],
+ :dup-ids
+ [":arxana"
+  ":diagram"
+  ":model"
+  ":pattern"
+  ":person"
+  ":arxana/media-lyrics"
+  ":arxana/media-track"
+  ":model/descriptor"
+  ":model/penholder"
+  ":pattern/*"
+  ":pattern/component"
+  ":pattern/has-sigil"
+  ":pattern/includes"
+  ":pattern/language"
+  ":pattern/library"],
+ :n-globs 10}
