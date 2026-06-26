@@ -72,9 +72,9 @@ Three mechanisms, each with its own truth and none aware of the others; nobody c
 
 ## 6. Cars (sequence)
 
-1. **Read-only aggregator** (CLI/endpoint) — this excursion's first build.
-2. **The display** (Arxana/WebArxana panel).
-3. **The turn-trigger + belly-refresh rider** + cyder cadence enrichment.
+1. **✅ Read-only aggregator** — `futon3c/scripts/arxana_clock.bb` (committed `dddb65b`). 21 drivers / 3 mechanisms / 19 futon-relevant; writes `arxana-clock-snapshot.edn`.
+2. **✅ The display** — `futon4/dev/arxana-vsatarcs-clock.el` (branch `e-arxana-clock`, commit `c3c8490`). Regular Emacs Arxana (NO WebArxana, per Joe), sibling to `arxana-vsatarcs-ledger.el`; reads the snapshot via the shared EDN reader; grouped by mechanism with cadence·next·last; `g`=refresh (re-runs aggregator), `f`=toggle non-futon. Headless-render verified (19 drivers). `M-x arxana-clock-browse`.
+3. **The turn-trigger + belly-refresh rider** + cyder cadence enrichment — the click-counter driver (every ≈N turns), registered in cyder so it shows on the clock; the serving-JVM belly refresh is its first rider. **Next.** Also: cyder records carry no `:cadence`/next-fire today (all "—") — enrich the periodic ones + add a stale-driver alarm (the 5-week-freeze lesson).
 
 ## 7. Scope-out (named)
 
