@@ -4,6 +4,7 @@
 **Status:** HEAD + IDENTIFY drafted; MAP grounded in live census (port 7071) + prior art; awaiting Joe ratification of the deliverable set and phase. Mission-close and phase transitions are Joe's call.
 **Owner:** claude-2 (drafting), pending assignment.
 **Relates to:** Campaign `futon3c/holes/campaigns/C-substrate-completion.md` (this mission populates the nodes/edges that campaign's metric contract reads).
+**Excursions:** `futon3c/holes/excursions/E-substrate-2-timetravel.md` (the D3 bitemporal layer) · `futon3c/holes/excursions/E-clean-up-substrate-2.md` — **the negative-space map + registry-hygiene blocker** (honest census 2026-06-26: 208 declared / 186 real / 109 populated ≈ 59% / ~130 store-side incl. off-catalog; the 6 families of empty types and their owning missions; why "clean the registry" needs gated code, not a cheap pass). **Supersedes the "203 declared / ~35 populated" figures in HEAD below** — those were a timeout-sniff undercount.
 **Living map:** `futon2/holes/substrate-2-explainer.html` — the kitchen inventory; doubles as this mission's progress display (boxes go green as deliverables land).
 
 ---
