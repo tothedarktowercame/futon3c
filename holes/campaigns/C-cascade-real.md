@@ -155,7 +155,71 @@ the existing constructor + feed it the (have→want) meme"; the **(have→want) 
 (= substrate-2 D4)** is promoted to a critical blocking dependency; claude-11 + the
 arrow store join the stakeholder set. Re-ratify D1–D6 once claude-1/claude-8 land.
 
-## Candidate deliverables (the "several other things") — provisional, pending RALLY
+## CHARTER — what "make pipeline-pattern-cascade real" means
+
+*(Phase after RALLY. Awaiting Joe + stakeholder ratification.)*
+
+### Joint goal / gap
+
+`pipeline-pattern-cascade.html` is today a **hand-drawn picture** of the stack's
+operational self-model (mission clusters → patterns → capabilities → forward-model),
+populated from hand-maintained edn. **"Real" = the cascade becomes a live PROJECTION
+of the running stack, not a drawing of it.** The gap is not a missing renderer (the
+generator exists) — it is the durable, queryable, composed *substrate* the renderer
+should read.
+
+### The shared standard — the cascade is "real" when ALL five hold
+
+1. **Generated, not authored.** Every node/edge is produced by a query/constructor over
+   live data (the existing `cascade_construct`/`cascade_serve` + the durable substrate)
+   — **zero hand-typed edn rows**; regenerating is one command.
+2. **Grounded.** Each node traces to live evidence — a mission (substrate-2 mission-doc),
+   a scope, a cited pattern (library / meme.arrow), a capability/scan (devmap / invariant
+   / evidence), an **agent↔session↔mission clock** (the durable lineage), a **held item**
+   (the deferral ledger), a forward-model projection (the runners). No node is folklore.
+3. **Durable, queryable, reconstitutable.** The operational layer (who is on which
+   mission, what is held, what is in flight) **survives a teardown** and answers operator
+   queries — *"the N most recent missions, who/which sessions are on each, and what held
+   work is pending"* (the **no-sheet-of-paper** test).
+4. **Honest (Moran's lesson).** A hole in the cascade is a *genuinely missing pattern/scan
+   computed from the data* (a coverage gap), not a hand-placed `?`. Holes are where the
+   adviser asks for new work.
+5. **Composed.** The fold (cascade→wiring, claude-10), the sessions render (claude-1), the
+   forward-model (claude-1/claude-8), and the lineage (claude-4) read/write **one shared
+   ontology** — upward + downward + operational are one object, not four pictures.
+
+### Joint completion criterion (the campaign is done when)
+
+- The cascade **regenerates from live queries with zero hand-typed rows** (standard 1).
+- Every rendered node **resolves to live evidence** on inspection (standard 2) — spot-check
+  passes for missions, patterns, capabilities, agent-clocks, held items.
+- The **reconstitution query** works across a teardown (standard 3).
+- At least one **honest hole** is shown to be a real, queryable coverage gap (standard 4).
+- The four facet-owners' outputs **interoperate through the shared ontology** (standard 5).
+
+### Membership (from the RALLY)
+
+claude-1 (sessions surface + canonical mine + fwd-runner) · claude-10 (the fold) · claude-8
+(fwd cost/ROI) · claude-11 (R14 γ seam) · **claude-4 (keystone-adjacent: D1 lineage owner +
+arrow store)**. Held dependency owner **claude-2** (substrate-2 D4) — re-add when D4 is a member.
+
+### Escrow preview (the held dependency everything waits on)
+
+The **(have→want) corpus = substrate-2's empty PROOF join = M-populate-substrate-2 D4**.
+The generator, the fold, and any historical view all block on it. To be formalised in an
+ESCROW phase (cf. C-substrate-completion).
+
+### Why a campaign, not a mission
+
+Many stakeholders already own facets across repos (futon1a/2/3a/3c/7); the generator and
+the data exist but are **disconnected**; the open spec (the shared ontology in standard 5)
+must be settled jointly, not by one mission.
+
+**CHARTER exit criterion:** Joe (+ the five stakeholders) ratify that the five standards
+are the right definition of "real" and the completion criterion is the right done-ness test.
+*→ pending.*
+
+## Candidate deliverables (the "several other things") — the CHARTER's decomposition (RALLY-refined)
 
 Ordered so each rests on the previous; member-mission boundaries to be ratified.
 
