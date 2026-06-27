@@ -117,7 +117,7 @@ historical/aggregate cascade view. **⚠️ Says "M-autoclock-in is owned by cla
 | **R14 γ** (consumes fold ΔG) | **claude-11** | E-precision-over-policies | live seam w/ claude-10 |
 | **Arrow store** (fold solution-side) | **claude-4 (me)** | `:constructed`/`:open` arrows | — |
 | **(have→want) corpus = PROOF join** | *unowned BLOCKER* | substrate-2 **D4** + M-operational-vocabulary | empty (the universal gap) |
-| **Autoclock / mission-clock lineage** (D1 pillar) | **⚠️ DISPUTED** | M-autoclock-in / E-arxana-clock | claude-1 says claude-10; survey + claude-1's own 419 autoclock hits suggest claude-1; claude-10 did not claim it |
+| **Autoclock / mission-clock lineage** (D1 pillar) | **claude-4** (resolved, Joe 2026-06-27) | M-autoclock-in | passed to claude-4 — it owns the bg-process process-tree node-type; D1 = the durable agent↔session↔mission lineage |
 
 **What the rally changed vs my provisional guess:**
 - The "sessions" render and the generator **already substantially exist** (claude-1's
@@ -125,11 +125,20 @@ historical/aggregate cascade view. **⚠️ Says "M-autoclock-in is owned by cla
   feeding the right meme**, not greenfield build.
 - The **one universal blocker is the (have→want) corpus = substrate-2 D4** — the fold
   (claude-10), the magnet, and any historical view (claude-1) all wait on it.
-- **Two open conflicts the campaign must resolve (and exemplify):**
-  1. **Autoclock ownership is genuinely ambiguous** — the live proof that the lineage
-     isn't queryable. Resolve with Joe (or a targeted bell to claude-10).
-  2. claude-1 spans 3 facets (sessions + mine + forward-model runner) — needs explicit
-     ownership boundaries, not folklore.
+- **Conflicts (resolved + open):**
+  1. **Autoclock ownership** — RESOLVED (Joe 2026-06-27): passed to **claude-4** (D1).
+     The ambiguity itself was the live proof that the lineage isn't queryable.
+  2. claude-1 spans 3 facets (sessions + mine + forward-model runner) — still needs
+     explicit ownership boundaries, not folklore.
+
+## Campaign roster (Joe 2026-06-27)
+
+Retired all agents not joined to the campaign — deregistered + pouch-evicted
+**claude-2, claude-3, claude-5, claude-6, claude-7, claude-9, codex-1, lon-claude-1**
+(Agency-side; their session `.jsonl` persist + are re-registerable; Emacs repl buffers
+left for Joe). **Active roster = the 5 stakeholders: claude-1, claude-4, claude-8,
+claude-10, claude-11.** (Flag: **claude-2** holds the substrate-2 knowledge for the D4
+blocker — re-add it if/when D4 gets a member-mission owner.)
 
 **Reshaped first-car candidates (for Joe to pick):**
 - **(A) The shared substrate** — (have→want) corpus = substrate-2 **D4** + claude-1's

@@ -1,7 +1,7 @@
 # Mission: M-autoclock-in
 
 **Status:** INSTANTIATE-1 (first implementation, 2026-06-03) — explicit resolved target auto-promotion is implemented in `agent-chat.el`; broader confirmation/XTDB witnesses remain future work.
-**Owner:** codex-2 for first implementation; Joe/agents for review and follow-up.
+**Owner:** **claude-4** (going-forward, 2026-06-27 — Joe passed it here; it is D1 of campaign C-cascade-real: the durable agent↔session↔mission lineage, building on the bg-process process-tree node-type). codex-2 did the INSTANTIATE-1 first implementation; Joe/agents review.
 **Repo:** futon3c (clock-in lives in the agent-chat/REPL surface).
 
 ## HEAD (Joe, 2026-06-02, verbatim sense)
@@ -27,6 +27,7 @@ Auto-promote a mission/campaign/excursion target identified in a turn **iff**:
 - The repl **clock-in hydra** (🍒) — the manual pivot UI; auto-clock is its inferred counterpart (the hydra is the override surface).
 - `:mission/mentions-file` / the mention map — a turn mentioning a mission is the candidate signal; resolution must be explicit (principle #8: no fuzzy text matching as truth).
 - `E-the-dark-tower-2` — turns-as-typed-processes; auto-clock is *inferring* a turn's type rather than asserting it, so the inference must be evidence-bound.
+- [[M-operational-vocabulary]] (futon2) — a downstream **consumer** of this `turn→mission` link: it mines memes/sorries from turns and needs them attributed to the right mission. Until auto-clock is hardened it routes around via **turn→pattern→mission**. (NB: that mission was spun up after a long move-mining session was mis-clocked *here* — a live instance of the gap this mission exists to close.)
 
 ## IDENTIFY exit (when picked up)
 
