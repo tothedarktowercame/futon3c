@@ -225,6 +225,37 @@ Is the S3 ArSE bridge active in this JVM?
 EOF
 ```
 
+## Durable background work (REPL-inhabiting agents)
+
+**If you are a warm-pouch / REPL-inhabiting agent (claude-N), do NOT rely on
+`Bash` `run_in_background`, `&`, `nohup`, or `setsid` for work that must outlive
+the current turn.** Your turn runs on an ephemeral `claude --print` pouch
+(M-kangaroo) that is LRU-evicted (`FUTON3C_KANGAROO_MAX_WARM`, RAM-bound) or
+idle-reaped between turns. Tearing the pouch down SIGTERM/SIGKILLs your claude
+process, whose shutdown reaps its background shells — **even setsid-detached
+ones** ("the watcher got reaped on teardown again", 2026-06-27). The legacy
+interactive CLI gets away with backgrounding because its claude process is
+long-lived; yours is not.
+
+**Instead, launch durable work as a child of the one long-lived parent that is
+never torn down between turns: the futon3c JVM (I-0).** Use
+`futon3c.agency.bg-process` (over Drawbridge) or the `scripts/bg.py` wrapper:
+
+```bash
+scripts/bg.py launch "<shell command>" --agent claude-N --label my-job   # -> {:id "bg-…"}
+scripts/bg.py status bg-…        # :running | :exited (+ :exit) | :killed
+scripts/bg.py tail   bg-… 40     # captured stdout+stderr (survives turns)
+scripts/bg.py kill   bg-…
+```
+
+The process is re-parented to the JVM (verified: PPID == the serving JVM), so it
+survives pouch eviction at **zero extra RAM** (it's the same process you'd have
+spawned). Output is captured to `/tmp/futon3c-bg/<id>.log` and is tailable across
+turns. This is for **helper work only** (backlog runners, reingest, builds,
+watchers) — never to spawn agent/claude clones (I-1/I-2/I-3). For recurring
+in-JVM services proper, prefer a `ScheduledExecutorService` daemon like
+`watcher/multi` or `watcher/scope_reingest`.
+
 ## Development Protocol
 
 Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):
