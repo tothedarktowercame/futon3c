@@ -27,7 +27,8 @@
             [futon3c.watcher.projections.elisp :as elisp]
             [futon3c.watcher.projections.python :as python]
             [futon3c.watcher.projections.flexiarg :as flexiarg]
-            [futon3c.watcher.projections.essay :as essay]))
+            [futon3c.watcher.projections.essay :as essay]
+            [futon3c.watcher.scope-reingest :as scope-reingest]))
 
 (def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
@@ -39,6 +40,9 @@
 
 (def ^:private excursion-doc-pattern
   #"/holes/(?:missions/|excursions/)?E-[^/]+\.md$")
+
+(def ^:private campaign-doc-pattern
+  #"/holes/(?:campaigns/)?C-[^/]+\.md$")
 
 (def ^:private sorry-registry-pattern
   ;; R-A.1 (M-war-machine-first-outing): sorrys.edn relocated data/ → resources/
@@ -377,6 +381,12 @@
   [path]
   (boolean
    (re-find excursion-doc-pattern
+            (str/replace (str path) "\\" "/"))))
+
+(defn campaign-doc-path?
+  [path]
+  (boolean
+   (re-find campaign-doc-pattern
             (str/replace (str path) "\\" "/"))))
 
 (defn sorry-registry-path? [path]
@@ -1167,9 +1177,10 @@
   (let [ext (file-ext path)
         mission-doc? (mission-doc-path? path)
         excursion-doc? (excursion-doc-path? path)
+        campaign-doc? (campaign-doc-path? path)
         sorry-registry? (sorry-registry-path? path)
         essay-home? (essay-home-path? path)
-        handled? (or mission-doc? excursion-doc? sorry-registry? essay-home? (supported-ext? ext))]
+        handled? (or mission-doc? excursion-doc? campaign-doc? sorry-registry? essay-home? (supported-ext? ext))]
     (cond
       (not handled?) {:status :unhandled :path path :ext ext}
 
@@ -1177,13 +1188,22 @@
       (let [t-start (System/currentTimeMillis)
             stats (ingest-mission-doc! {:path path :label label :root root})
             dur (- (System/currentTimeMillis) t-start)]
+        ;; keep the scope-surface current too (debounced + async — never blocks here)
+        (scope-reingest/schedule! path)
         (assoc stats :status :mission-doc :duration-ms dur :path path))
 
       excursion-doc?
       (let [t-start (System/currentTimeMillis)
             stats (ingest-excursion-doc! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
+        (scope-reingest/schedule! path)
         (assoc stats :status :excursion-doc :duration-ms dur :path path))
+
+      ;; Campaigns: no doc-entity parser yet (Phase 2b), but the scope pipeline
+      ;; is doc-type-agnostic — keep their scope-surface current the same way.
+      campaign-doc?
+      (do (scope-reingest/schedule! path)
+          {:status :campaign-doc-scopes :path path})
 
       sorry-registry?
       (let [t-start (System/currentTimeMillis)
