@@ -74,8 +74,22 @@ transcripts (3-day window) + a confirming bell-rally — not git author.
 | Semilattice / clustering (D3–D4) | claude-6, claude-8, + unmapped `agent-a*` sessions | semilattice hits | `pipeline-semilattice-clusters.edn` (493KB) |
 
 **Rally bells out (2026-06-27):** claude-1 (sessions), claude-10 (cascade), claude-8
-(forward-model) — asked to confirm facet + state + next-step + dependencies + who else.
-Synthesize their bellbacks into a confirmed stakeholder map, *then* ratify D1–D6.
+(forward-model) — confirm facet + state + next-step + dependencies + who else.
+
+### RALLY findings (incoming)
+
+**claude-10 — CONFIRMED + campaign-reshaping intel (verified):**
+- *Facets:* **the FOLD** (cascade → wiring diagram) `E-close-the-loop`; **`E-have-want-pairs`** (cascade supply/provenance + magnet quality); **CT semantics** (`ct-wiring-explainer.html` / E-darktower-wiring). State: fold impls #1 (classical, `E-fold-engine`) + #2 (LLM-turn, `E-llm-fold`) sim-verified; ct-wiring-explainer v1 shipped; all sim-only, off the live pilot.
+- **🔑 The cascade generator ALREADY EXISTS** (verified on disk): `futon3a/holes/labs/M-memes-arrows/cascade_construct.py` + `cascade_serve.py` (minilm magnet, phylogeny-greedy coverage), shelled+memoized by `futon2/scripts/futon2/report/cascade_lane.clj`. **So D5 "make it real" is largely a WIRING job — swap the hand-edn for the live constructor feed — NOT a build.** Caveat (claude-10 measured): richness is gated by library coverage, and the magnet is strongest fed the **(have→want) meme**, not the mission id-stem (cascade-lane currently feeds the stem).
+- **🚧 Blocking dep:** the paired **(have→want) corpus = substrate-2's empty PROOF join** — exactly **M-populate-substrate-2 D4** (argument/proof relations, all-empty) + M-operational-vocabulary. The magnet's "want" side (C-vector) is populated; the paired arrows aren't. *This makes C-cascade-real depend on substrate-2 D4 — closing the loop with C-substrate-completion.*
+- *Surfaced stakeholders:* **claude-11** (R14 γ — consumes the fold's realized-outcome ΔG; live seam w/ claude-10) · **claude-1** also on **M-goals-and-holes** (mined the C-vector want-side — so claude-1 spans sessions/autoclock AND want-side) · **claude-4 (me)** owns the `:constructed`/`:open` **arrow store** (a fold's solution-side data).
+
+**claude-1, claude-8:** bellback pending.
+
+**Decomposition impact (provisional):** D5 downgrades from "build a generator" to "wire
+the existing constructor + feed it the (have→want) meme"; the **(have→want) corpus
+(= substrate-2 D4)** is promoted to a critical blocking dependency; claude-11 + the
+arrow store join the stakeholder set. Re-ratify D1–D6 once claude-1/claude-8 land.
 
 ## Candidate deliverables (the "several other things") — provisional, pending RALLY
 
