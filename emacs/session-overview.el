@@ -598,9 +598,9 @@ reflow.py is ~10-12s (only the comb embeds)."
                   :name (format "wa-orbit-%s" (substring sid 0 8))
                   :buffer (get-buffer-create "*session-overview-log*")
                   :noquery t
+                  ;; per-target served file (reflow.py default = thread-orbits-<mission>.json)
                   :command (list "/home/joe/code/futon6/.venv/bin/python" "scripts/reflow.py"
-                                 sid mission "--wa"
-                                 "/home/joe/code/futon4/data/webarxana/public/wa/thread-orbits.json")
+                                 sid mission)
                   :sentinel (lambda (p _e)
                               (when (memq (process-status p) '(exit signal))
                                 (remhash sid session-overview--orbit-inflight))))
