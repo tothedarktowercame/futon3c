@@ -463,6 +463,19 @@
   [caller]
   (boolean (reg/get-agent (str caller))))
 
+(defn- reply-auto-routes?
+  "True when RECIPIENT-AGENT-ID's response this turn will be auto-delivered back to
+   CALLER as a completion bell — so the agent must NOT also manually bell/whistle CALLER
+   to answer (that double-delivers; the 2026-06-26 claude-11 bifurcation). Mirrors
+   should-auto-bellback?'s eligibility minus the terminal-state check (which is always
+   true once the turn finishes)."
+  [recipient-agent-id caller]
+  (boolean
+   (and (auto-bellback-enabled?)
+        (auto-bellback-recipient-type recipient-agent-id)
+        (valid-auto-bellback-caller? caller recipient-agent-id
+                                     (auto-bellback-caller-registered? caller)))))
+
 (defn- auto-bellback-prompt
   [{:keys [job-id agent-id state result-summary terminal-message]}]
   (let [summary (or (some-> result-summary str str/trim not-empty)
@@ -2354,17 +2367,36 @@
    (if (and surface (not (str/blank? (str surface))))
      (let [backpack (when agent-id
                       (some-> (get @reg/!registry (str agent-id))
-                              :agent/metadata :backpack seq))]
+                              :agent/metadata :backpack seq))
+           ;; Will this turn's response be auto-delivered back to the caller? If so,
+           ;; the agent must NOT also manually bell the caller (double-delivery — the
+           ;; 2026-06-26 claude-11 dup). Drives the reply contract below.
+           auto-routes? (and (:bell-id thread)
+                             (reply-auto-routes? agent-id caller))]
        (str "--- CURRENT TURN ---\n"
             "Surface: " surface "\n"
             (when (and caller (not (str/blank? (str caller))))
               (str "Caller: " caller "\n"))
+            ;; Reply-delivery contract: when the response auto-routes, say so EXPLICITLY
+            ;; and forbid a manual re-send — independent of bell-router, since the dup
+            ;; happened with bell-router off (the agent re-sent defensively).
+            (when auto-routes?
+              (str "Reply delivery: your response this turn is delivered back to " caller
+                   " automatically as a completion bell. Just respond — do NOT also "
+                   "bell/whistle " caller " to deliver the same answer (that double-delivers; "
+                   "bell " caller " yourself only to open a genuinely NEW thread).\n"))
             ;; bell-router: thread context so the recipient can thread the bell and
-            ;; reply IN-THREAD (no crossing). NEW request shows the id to reply-to.
+            ;; reply IN-THREAD (no crossing). NEW request shows the id to reply-to —
+            ;; but only instructs a MANUAL reply-bell when the response won't auto-route.
             (when (and (bell-router-enabled?) (:bell-id thread))
-              (if (:in-reply-to thread)
+              (cond
+                (:in-reply-to thread)
                 (str "Thread: bell `" (:bell-id thread) "` — REPLY to bell `"
                      (:in-reply-to thread) "`\n")
+                auto-routes?
+                (str "Thread: bell `" (:bell-id thread) "` — NEW request from " caller
+                     ". Just respond to answer in-thread (auto-routes back).\n")
+                :else
                 (str "Thread: bell `" (:bell-id thread) "` — NEW request. To answer "
                      "in-thread, bell/whistle " caller " with in-reply-to=`"
                      (:bell-id thread) "`.\n")))

@@ -297,6 +297,49 @@
             "Thread:"))
       "off path adds no thread header (byte-for-byte)"))
 
+;; --- Reply-delivery dedup (incident 2026-06-26): don't manually re-bell when the
+;;     response auto-routes back to the caller (the double-delivery that bifurcated
+;;     claude-11). ---
+
+(deftest reply-auto-routes-contract-forbids-manual-rebell
+  (System/setProperty "FUTON3C_BELL_ROUTER" "true")
+  (try
+    (register-agent! "claude-10" :claude)   ;; recipient — eligible type
+    (register-agent! "claude-11" :claude)   ;; caller — registered
+    (let [hdr (#'http/wrap-surface-header "do the thing" "bell" "claude-11" "claude-10"
+                                          {:bell-id "J42"})]
+      (is (str/includes? hdr "Reply delivery:") "explicit auto-route contract is shown")
+      (is (str/includes? hdr "delivered back to claude-11 automatically"))
+      (is (str/includes? hdr "do NOT also bell"))
+      (is (str/includes? hdr "Just respond to answer in-thread")
+          "NEW-request thread line says respond, not manually bell")
+      (is (not (str/includes? hdr "with in-reply-to=`J42`"))
+          "the manual reply-bell instruction is suppressed when the reply auto-routes"))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
+(deftest reply-delivery-contract-shows-even-with-bell-router-off
+  ;; The dup happened with bell-router OFF, so the auto-route contract must NOT be
+  ;; gated behind it.
+  (System/clearProperty "FUTON3C_BELL_ROUTER")
+  (register-agent! "claude-10" :claude)
+  (register-agent! "claude-11" :claude)
+  (let [hdr (#'http/wrap-surface-header "x" "bell" "claude-11" "claude-10" {:bell-id "J50"})]
+    (is (str/includes? hdr "Reply delivery:"))
+    (is (str/includes? hdr "do NOT also bell"))))
+
+(deftest no-auto-route-keeps-manual-reply-instruction
+  ;; When the response will NOT auto-route (caller unregistered), keep the manual
+  ;; reply-bell instruction so the answer still reaches the caller.
+  (System/setProperty "FUTON3C_BELL_ROUTER" "true")
+  (try
+    (register-agent! "claude-10" :claude)
+    (let [hdr (#'http/wrap-surface-header "x" "bell" "ghost-caller" "claude-10"
+                                          {:bell-id "J43"})]
+      (is (not (str/includes? hdr "Reply delivery:")) "no auto-route ⇒ no auto-route contract")
+      (is (str/includes? hdr "bell/whistle ghost-caller with in-reply-to=`J43`")
+          "manual reply-bell instruction retained when there is no auto-route"))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
+
 ;; --- Typed bells (M-typed-bells): type/ref on the wire + ArSE bridge ---
 
 (deftest typed-bells-default-off
