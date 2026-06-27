@@ -382,13 +382,16 @@
   "Bell-router slice (E-crossed-bells): make a bellback an EXPLICIT, self-describing
    reply — carry `:bellback-of <original-job>` for the conversation graph, and frame
    the prompt as 'RE: your bell …' so the receiving agent can thread it instead of
-   mis-reading a context-free 'auto-bellback'. Default OFF; load-dark."
+   mis-reading a context-free 'auto-bellback'. **Default ON 2026-06-27 (Joe)** — proven
+   + composes with the reply-auto-routes dedup (the NEW-request thread line then says
+   'just respond' rather than instructing a manual reply-bell). Explicit
+   `FUTON3C_BELL_ROUTER=0/false/no/off` (system property or env) still disables it."
   []
   (let [prop (System/getProperty "FUTON3C_BELL_ROUTER")]
     (if (some? prop)
       (not (#{"0" "false" "no" "off"} (str/lower-case (str/trim prop))))
       (let [raw (some-> (System/getenv "FUTON3C_BELL_ROUTER") str/trim str/lower-case)]
-        (boolean (and raw (not (#{"0" "false" "no" "off" ""} raw))))))))
+        (not (#{"0" "false" "no" "off"} raw))))))
 
 (def ^:private allowed-bell-types
   #{:query :answer :assert :challenge :agree :define :retract :suggest :request})

@@ -78,8 +78,12 @@
     (is (= 1 (count @enqueued)))
     (is (= "claude-6" (:caller (first @enqueued))))
     (is (= "auto-bellback-job-1" (:bell-job-id (first @enqueued))))
-    (is (str/includes? (:prompt (first @enqueued)) "codex-1 finished job `job-1`"))
-    (is (str/includes? (:prompt (first @enqueued)) "state: `done`"))
+    ;; Format-agnostic: bell-router default flipped ON 2026-06-27, so the prompt is
+    ;; "RE: your bell — job `job-1` to codex-1 finished (state `done`)" rather than the
+    ;; legacy "codex-1 finished job `job-1` (state: `done`)". Both name the job + state.
+    (is (str/includes? (:prompt (first @enqueued)) "job `job-1`"))
+    (is (str/includes? (:prompt (first @enqueued)) "codex-1"))
+    (is (str/includes? (:prompt (first @enqueued)) "`done`"))
     (is (= {:sent? true
             :bell-job-id "auto-bellback-job-1"}
            (select-keys (:auto-bellback (job "job-1")) [:sent? :bell-job-id])))))
@@ -237,9 +241,14 @@
     (isTerminated [] false) (awaitTermination [_ _] true)
     (execute [r] (.run r))))
 
-(deftest bell-router-default-off
+(deftest bell-router-default-on
+  ;; Default flipped ON 2026-06-27 (Joe). Explicit off still disables.
   (System/clearProperty "FUTON3C_BELL_ROUTER")
-  (is (false? (#'http/bell-router-enabled?))))
+  (try
+    (is (true? (#'http/bell-router-enabled?)) "unset ⇒ ON by default")
+    (System/setProperty "FUTON3C_BELL_ROUTER" "false")
+    (is (false? (#'http/bell-router-enabled?)) "explicit off still disables")
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 (deftest bell-router-on-makes-bellback-an-explicit-reply
   (System/setProperty "FUTON3C_BELL_ROUTER" "true")
@@ -271,13 +280,18 @@
     (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 (deftest bell-router-off-omits-bellback-of
-  (System/clearProperty "FUTON3C_BELL_ROUTER")
-  (register-agent! "claude-6" :claude)
-  (with-redefs [http/invoke-executor (direct-executor)]
-    (let [job-id (#'http/enqueue-auto-bellback!
-                  {:caller "claude-6" :bell-job-id "auto-bellback-br3"
-                   :prompt "x" :reply-to "job-br3"})]
-      (is (nil? (:bellback-of (job job-id))) "off path records no correlation"))))
+  (System/setProperty "FUTON3C_BELL_ROUTER" "false")   ;; explicit off (default is now on)
+  (System/setProperty "FUTON3C_DRAINER_V2" "false")    ;; legacy lane so invoke-executor redef applies
+  (try
+    (register-agent! "claude-6" :claude)
+    (with-redefs [http/invoke-executor (direct-executor)]
+      (let [job-id (#'http/enqueue-auto-bellback!
+                    {:caller "claude-6" :bell-job-id "auto-bellback-br3"
+                     :prompt "x" :reply-to "job-br3"})]
+        (is (nil? (:bellback-of (job job-id))) "off path records no correlation")))
+    (finally
+      (System/clearProperty "FUTON3C_BELL_ROUTER")
+      (System/clearProperty "FUTON3C_DRAINER_V2"))))
 
 (deftest bell-router-surface-header-shows-thread
   (System/setProperty "FUTON3C_BELL_ROUTER" "true")
@@ -291,11 +305,13 @@
     (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 (deftest bell-router-off-omits-thread-line
-  (System/clearProperty "FUTON3C_BELL_ROUTER")
-  (is (not (str/includes?
-            (#'http/wrap-surface-header "body" "bell" "claude-3" nil {:bell-id "J9"})
-            "Thread:"))
-      "off path adds no thread header (byte-for-byte)"))
+  (System/setProperty "FUTON3C_BELL_ROUTER" "false")   ;; explicit off (default is now on)
+  (try
+    (is (not (str/includes?
+              (#'http/wrap-surface-header "body" "bell" "claude-3" nil {:bell-id "J9"})
+              "Thread:"))
+        "off path adds no thread header (byte-for-byte)")
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 ;; --- Reply-delivery dedup (incident 2026-06-26): don't manually re-bell when the
 ;;     response auto-routes back to the caller (the double-delivery that bifurcated
@@ -319,13 +335,15 @@
 
 (deftest reply-delivery-contract-shows-even-with-bell-router-off
   ;; The dup happened with bell-router OFF, so the auto-route contract must NOT be
-  ;; gated behind it.
-  (System/clearProperty "FUTON3C_BELL_ROUTER")
-  (register-agent! "claude-10" :claude)
-  (register-agent! "claude-11" :claude)
-  (let [hdr (#'http/wrap-surface-header "x" "bell" "claude-11" "claude-10" {:bell-id "J50"})]
-    (is (str/includes? hdr "Reply delivery:"))
-    (is (str/includes? hdr "do NOT also bell"))))
+  ;; gated behind it. (Default is now ON, so set it explicitly off here.)
+  (System/setProperty "FUTON3C_BELL_ROUTER" "false")
+  (try
+    (register-agent! "claude-10" :claude)
+    (register-agent! "claude-11" :claude)
+    (let [hdr (#'http/wrap-surface-header "x" "bell" "claude-11" "claude-10" {:bell-id "J50"})]
+      (is (str/includes? hdr "Reply delivery:"))
+      (is (str/includes? hdr "do NOT also bell")))
+    (finally (System/clearProperty "FUTON3C_BELL_ROUTER"))))
 
 (deftest no-auto-route-keeps-manual-reply-instruction
   ;; When the response will NOT auto-route (caller unregistered), keep the manual
