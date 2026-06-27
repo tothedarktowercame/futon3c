@@ -567,5 +567,49 @@ it lands, so the operator never waits around."
 (when (fboundp 'agent-chat-finish-turn!)
   (advice-add 'agent-chat-finish-turn! :after #'session-overview--auto-refresh))
 
+;; --- §5.1: keep the served WebArxana orbit LIVE for a chosen target ---
+
+(defcustom session-overview-live-orbit nil
+  "When set to (SESSION-ID . MISSION), keep the served WebArxana orbit
+\(/wa/thread-orbits.json) LIVE for that one session × target: regenerate it
+\(async, debounced) on each of THAT session's turn-ends, so the orbit winds as
+it works.  Single served file → bound to ONE (session . mission) so concurrent
+mesh agents don't fight over it.  The WebArxana client polls, so it follows live."
+  :type '(choice (const :tag "off" nil)
+                 (cons (string :tag "session-id") (string :tag "mission/excursion id")))
+  :group 'session-overview)
+
+(defvar session-overview--orbit-inflight (make-hash-table :test 'equal)
+  "session-id -> the reflow process producing its served orbit (debounce/dedup).")
+
+(defun session-overview--orbit-producer (&rest _)
+  "Advice on `agent-chat-finish-turn!': for the ONE session in `session-overview-live-orbit',
+regenerate the served WebArxana orbit — async + debounced — so the live map winds as it works.
+reflow.py is ~10-12s (only the comb embeds)."
+  (let* ((cfg session-overview-live-orbit)
+         (want (car-safe cfg)) (mission (cdr-safe cfg))
+         (sid (and (boundp 'agent-chat--session-id) (stringp agent-chat--session-id)
+                   (not (string-empty-p agent-chat--session-id)) agent-chat--session-id)))
+    (when (and (consp cfg) sid mission (equal sid want)
+               (not (gethash sid session-overview--orbit-inflight)))
+      (let ((default-directory "/home/joe/code/futon6/"))
+        (puthash sid
+                 (make-process
+                  :name (format "wa-orbit-%s" (substring sid 0 8))
+                  :buffer (get-buffer-create "*session-overview-log*")
+                  :noquery t
+                  :command (list "/home/joe/code/futon6/.venv/bin/python" "scripts/reflow.py"
+                                 sid mission "--wa"
+                                 "/home/joe/code/futon4/data/webarxana/public/wa/thread-orbits.json")
+                  :sentinel (lambda (p _e)
+                              (when (memq (process-status p) '(exit signal))
+                                (remhash sid session-overview--orbit-inflight))))
+                 session-overview--orbit-inflight)))))
+
+(with-eval-after-load 'agent-chat
+  (advice-add 'agent-chat-finish-turn! :after #'session-overview--orbit-producer))
+(when (fboundp 'agent-chat-finish-turn!)
+  (advice-add 'agent-chat-finish-turn! :after #'session-overview--orbit-producer))
+
 (provide 'session-overview)
 ;;; session-overview.el ends here
