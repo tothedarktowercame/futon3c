@@ -48,10 +48,16 @@
   #"/holes/(?:missions/)?M-[^/]+\.md$")
 
 (def ^:private mission-doc-stem-pattern
-  #"(?:^|/)holes/(?:missions/)?((?:M|E)-[^/]+)\.md$")
+  ;; Scope-lane stem extraction — missions (M-), excursions (E-) AND campaigns (C-),
+  ;; under holes/ optionally nested in missions//excursions//campaigns/.  Campaigns were
+  ;; absent, so their scope-surface drifted (never enqueued for reingest on doc-land).
+  #"(?:^|/)holes/(?:missions/|excursions/|campaigns/)?((?:M|E|C)-[^/]+)\.md$")
 
 (def ^:private excursion-doc-pattern
   #"/holes/(?:missions/|excursions/)?E-[^/]+\.md$")
+
+(def ^:private campaign-doc-pattern
+  #"/holes/(?:campaigns/)?C-[^/]+\.md$")
 
 (declare !state)
 
@@ -516,13 +522,15 @@
         ext (file-ext (str path))
         mission-doc? (boolean (re-find mission-doc-pattern norm))
         excursion-doc? (boolean (re-find excursion-doc-pattern norm))
+        campaign-doc? (boolean (re-find campaign-doc-pattern norm))
         sorry-registry? (file-ingest/sorry-registry-path? norm)]
     (and (or (and ext (WATCHED-EXTS ext)) sorry-registry?)
          (not (re-find NOISE-PATTERN norm))
          (or sorry-registry?
              (not= ext "md")
              mission-doc?
-             excursion-doc?))))
+             excursion-doc?
+             campaign-doc?))))
 
 (defn- mark-subtask!
   [subtask]
