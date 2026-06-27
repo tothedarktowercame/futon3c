@@ -1,0 +1,107 @@
+# Campaign: C-cascade-real — make the pipeline-pattern-cascade live
+
+**Date:** 2026-06-27 · **Status:** IDENTIFY + MAP (scoping pass; deliverable set, campaign-vs-mission framing, and first phase await Joe's ratification). **Drafted by:** claude-4.
+**Keystone artifact:** `futon3c/holes/excursions/pipeline-pattern-cascade.html` — currently a hand-built control sketch.
+**Relates to:** M-autoclock-in (member), C-substrate-completion / M-populate-substrate-2 (data substrate), M-futon-forward-model (futon7, downward layer), M-live-geometric-stack / M-stack-geometry-anthology / VSATARCS (rendering prior art).
+
+---
+
+## HEAD — operator shape
+
+`pipeline-pattern-cascade.html` is a Moran-style **control sketch** of the stack: mission clusters → cited patterns → a capability semilattice (built features above, scans/holes below), with a downward forward-model (backlog → basin → valuable path → ROI → pipeline). Its own footer states the intent — *"promote the built capability cards into **generated** EDN rows, then attach devmap, invariant, mission, and VSATARCS evidence"* — and its closing schema names the deeper need: parked obligations should *"stop living as folklore in mission prose or chat history"* and become a **durable, queryable ledger** with wake-triggers and re-entry paths.
+
+Today it is **hand-built from edn seeds** (`pipeline-pattern-map.edn`, `pipeline-semilattice-clusters.edn`). "Make it real" = back it with **live, durable, queryable** data so it regenerates from the running stack instead of being re-drawn by hand. The same gap shows up at the operator desk: right now, to teardown and restart fresh "on the 3 most recent missions, with these agents," Joe needs *a sheet of paper* — because that state isn't recorded anywhere queryable.
+
+### The question (open spec → why a campaign, not a task)
+
+**What does it take to turn the cascade from a hand-built sketch into a live, query-backed view of the stack's operational self-model — and in what order — given the data already lives, scattered and partly non-durable, across substrate-2, the agency registry, the edn seeds, futon7's forward-model, and the pattern library?**
+
+The *gaps* are findable facts (below). The *composition* — how the durable spine, the data integration, and the rendering compose, and what the live cascade's node/edge ontology is — is the unknown the campaign exists to settle.
+
+---
+
+## IDENTIFY — the tension
+
+The stack's operational self-model exists only as **folklore + hand-built artifacts**; the durable, queryable substrate underneath does not exist. Evidence (2026-06-27, live):
+
+- **Agent↔mission lineage is non-durable and wrong.** The registry has a per-agent `mission-id`, but it is in-memory — a JVM restart left **all 13 agents at `mission=None`**. The fact that "claude-1 is on M-operational-vocabulary" lives only in claude-1's transcript. M-autoclock-in's own doc records this exact failure: M-operational-vocabulary *"was spun up after a long move-mining session was mis-clocked here — a live instance of the gap this mission exists to close."*
+- **The cascade is static.** Its 12 clusters / cited patterns / capability cards are hand-maintained edn, drifting from the live missions.
+- **Held/deferred work is prose-only.** No ledger; no wake-triggers; "what should wake up now?" needs manual archaeology.
+- **The data is mostly already there, just not composed.** substrate-2 holds **271** mission-docs, ~**15k** mission-scopes, the code graph (var **125k**, commit **5510**) — and as of M-populate-substrate-2 D3 it is **time-travelable** (`db-as-of`). The forward-model has a working runner in futon7. The rendering pattern (stereolithograph / piano-roll / VSATARCS / WebArxana) is established. None of it is wired into one queryable operational view.
+
+So: the pieces exist as sediment; the **connective spine (durable lineage + a generator)** is the wound — the same shape as M-populate-substrate-2's "palimpsest," one level up (operational state rather than code).
+
+---
+
+## MAP — inventory (2026-06-27)
+
+Legend: ✅ exists & usable · ⚠️ exists but stale/non-durable/partial · ⛔ missing.
+
+| Piece | State | Where |
+|---|---|---|
+| Mission docs / scopes | ✅ 271 mission-docs, ~15k mission-scopes, queryable | substrate-2 (futon1a) + filesystem `M-*.md` |
+| Code graph / commits, **time-travelable** | ✅ var 125k, commit 5510, `db-as-of` | substrate-2 (D3, M-populate-substrate-2) |
+| Cited patterns / pattern library | ⚠️ in seeds + futon3/library + futon3a meme.arrow; not unified/live | `pipeline-pattern-map.edn`, library, meme.arrow |
+| Mission clustering (12 basins) | ⚠️ hand/script-built, 493KB edn, drift-prone | `pipeline-semilattice-clusters.edn` |
+| **Agent↔session↔mission lineage** | ⛔ in-memory only, non-durable, mis-clocks | registry `mission-id` → **M-autoclock-in** |
+| Process-tree lineage (agent ⊃ bg-tasks) | ✅ first node-type just built | `futon3c.agency.bg-process` (`e36c400`) |
+| Held / deferred-work ledger | ⛔ prose-only folklore | cascade prose names the schema |
+| Capability semilattice / scan-classes / holes | ⚠️ hand-built cards | cascade SVG + devmap/invariants/evidence sources |
+| Forward-model (downward layer) | ✅ separate runner | futon7 `M-futon-forward-model.*` |
+| Rendering substrate | ✅ prior art, not joined here | VSATARCS, piano-roll, WebArxana, M-live-geometric-stack |
+
+---
+
+## Phase 0 — RALLY (stakeholder discovery) — Joe, 2026-06-27
+
+This campaign has **many in-flight stakeholders already** — facets of the `.html`
+sketch exist as WIP across agents and repos. So the first act is a **RALLY**: map
+who owns which facet before fixing the decomposition (D1–D6 below are *provisional*
+until the rally lands). Fittingly, the rally must be done **by hand** because the
+agent↔work lineage isn't queryable yet — the campaign's own gap, demonstrated.
+
+**Attribution note:** agents commit as "Joe", so facet→agent mapping comes from
+transcripts (3-day window) + a confirming bell-rally — not git author.
+
+**Provisional stakeholder map (artifact + transcript survey, 2026-06-27; confirming via bells):**
+
+| Facet | Provisional owner(s) | Signal | Artifacts |
+|---|---|---|---|
+| Sessions / autoclock lineage (D1) | **claude-1** | 419 autoclock / 98 clock-in / 525 mission-scope hits | `futon3c` 219df66 "multi-session session-overview"; M-autoclock-in |
+| Cascade core / fold / rendering (D5) | **claude-10** | clock-in + `:apply-cascade` commits | M-wm-policies Car-3 (`:apply-cascade`, futon2/3c); futon3a E-fold-engine, E-llm-fold, cascade-scorer |
+| Mining → ingest (data) | **claude-2** (?) | "completed mining data to ingest" (Joe) | `futon2` M-post-mining-ingest c310ef6 (IDENTIFY+MAP); + my M-populate-substrate-2 D3 |
+| Forward-model (D6) | **claude-8** | 112 forward-model hits | futon7 M-futon-forward-model runner |
+| Semilattice / clustering (D3–D4) | claude-6, claude-8, + unmapped `agent-a*` sessions | semilattice hits | `pipeline-semilattice-clusters.edn` (493KB) |
+
+**Rally bells out (2026-06-27):** claude-1 (sessions), claude-10 (cascade), claude-8
+(forward-model) — asked to confirm facet + state + next-step + dependencies + who else.
+Synthesize their bellbacks into a confirmed stakeholder map, *then* ratify D1–D6.
+
+## Candidate deliverables (the "several other things") — provisional, pending RALLY
+
+Ordered so each rests on the previous; member-mission boundaries to be ratified.
+
+- **D1 — Durable agent↔session↔mission lineage (solve M-autoclock-in properly).** The pillar Joe named. A witnessed, single-active, operator-overridable clock-in that **persists** (survives restart) and is **queryable**: `agent · session · mission (+since) · last-active · bg-tasks`. bg-process already supplies the `agent ⊃ bg-tasks` node-type. Output: the "reconstitution sheet" query — *"3 most recent missions + who's on them"* — without paper. *First car.*
+- **D2 — Held / deferred-work ledger.** Parked obligations as durable typed objects: reason, owner, evidence-condition, wake-trigger, expiry/review, re-entry path (the cascade's closing schema + its three candidate patterns: `held-item-wake-trigger`, `deferral-ledger-as-operator-memory`, `deferred-work-reentry-protocol`). Answers "what should wake up now?".
+- **D3 — Live mission→pattern citations + clustering.** Replace the hand seeds: extract citations and recompute the 12 basins from substrate-2 + the pattern library, idempotently. The cascade's *upward* layer becomes generated.
+- **D4 — Capability semilattice + scan-classes + holes, from evidence.** Generate the capability cards / scans / hollow nodes from devmap + invariants + mission/VSATARCS evidence (the footer's "next useful step").
+- **D5 — The generator (keystone).** Render the cascade (and the operator reconstitution view) from D1–D4 queries — zero hand-typed rows. Reuses VSATARCS / stereolithograph / WebArxana rendering; the cascade HTML becomes an output, not a source.
+- **D6 — Forward-model integration.** Join futon7's M-futon-forward-model downward layer (backlog→basin→ROI→pipeline) to the live upward structure.
+
+## Exit / keystone (draft — for Joe to ratify)
+
+1. The cascade regenerates from live queries with **zero hand-typed rows** (D3–D5).
+2. The operator can query **"the N most recent missions, who/which sessions are on each, and what held work is pending"** and reconstitute it after a teardown (D1–D2).
+3. A clock-in is durable, witnessed, single-active, and never silently mis-clocks (D1) — the claude-1 failure cannot recur.
+
+---
+
+## First car + open ratifications
+
+**Proposed first car: D1 — durable lineage (M-autoclock-in done properly).** It is the pillar Joe named, the smallest self-contained durable-substrate win ("no sheet of paper"), it builds directly on the bg-process process-tree node-type just shipped, and everything downstream (D2–D6) reads the lineage it establishes.
+
+**For Joe to ratify before build:**
+1. **Campaign vs single mission?** This reads as a campaign coordinating M-autoclock-in (D1) + new members (D2 ledger, D3–D5 generator, D6 forward-model). Confirm the framing + the name (`C-cascade-real`?).
+2. **Deliverable set + ordering** — is D1-first right, or do you want the durable lineage + the generator (D1+D5) as a vertical slice to see the live cascade sooner?
+3. **Substrate home** — does the durable lineage live in **substrate-2** (futon1a hypergraph — natural, already holds missions/code/scopes, time-travelable) or a dedicated agency ledger (like invoke-jobs)? Leaning substrate-2 so the cascade is one query surface.
+4. **Scope of "real"** — full cascade (upward + capability + forward-model) or upward-only first?
