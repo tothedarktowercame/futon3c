@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.transport.http :as http]))
 
 (def ^:dynamic *ledger-file* nil)
@@ -131,23 +132,79 @@
     (is (empty? @enqueued))))
 
 (deftest auto-bellback-job-records-delivery
-  (register-agent! "claude-6" :claude)
-  (let [direct-executor (proxy [java.util.concurrent.AbstractExecutorService] []
-                          (shutdown [] nil)
-                          (shutdownNow [] [])
-                          (isShutdown [] false)
-                          (isTerminated [] false)
-                          (awaitTermination [_ _] true)
-                          (execute [r] (.run r)))]
-    (with-redefs [http/invoke-executor direct-executor]
-      (let [job-id (#'http/enqueue-auto-bellback!
-                    {:caller "claude-6"
-                     :bell-job-id "auto-bellback-delivery-1"
-                     :prompt "bell back from test"})
-            delivery (:delivery (job job-id))]
-        (is (= "delivered" (:status delivery)))
-        (is (= "auto-bellback" (:surface delivery)))
-        (is (= "auto-bellback-ready" (:note delivery)))))))
+  ;; Covers the LEGACY (flag-off) lane's synchronous delivery recording; the
+  ;; drainer-v2 lane's delivery runs on the drainer thread (finalize-fn) and is
+  ;; covered by auto-bellback-routes-through-per-agent-drainer-when-v2-on.
+  (System/setProperty "FUTON3C_DRAINER_V2" "false")
+  (try
+    (register-agent! "claude-6" :claude)
+    (let [direct-executor (proxy [java.util.concurrent.AbstractExecutorService] []
+                            (shutdown [] nil)
+                            (shutdownNow [] [])
+                            (isShutdown [] false)
+                            (isTerminated [] false)
+                            (awaitTermination [_ _] true)
+                            (execute [r] (.run r)))]
+      (with-redefs [http/invoke-executor direct-executor]
+        (let [job-id (#'http/enqueue-auto-bellback!
+                      {:caller "claude-6"
+                       :bell-job-id "auto-bellback-delivery-1"
+                       :prompt "bell back from test"})
+              delivery (:delivery (job job-id))]
+          (is (= "delivered" (:status delivery)))
+          (is (= "auto-bellback" (:surface delivery)))
+          (is (= "auto-bellback-ready" (:note delivery))))))
+    (finally (System/clearProperty "FUTON3C_DRAINER_V2"))))
+
+(deftest auto-bellback-routes-through-per-agent-drainer-when-v2-on
+  ;; I-1 — "single identity is sequential execution" (incident 2026-06-26).
+  ;; With drainer-v2 ON (production default), an auto-bellback must enqueue on the
+  ;; RECIPIENT's per-agent drainer (single-flight, serialized with its other turns)
+  ;; instead of racing on the shared invoke-executor pool. Two concurrent dispatches
+  ;; for one agent were the defect that bifurcated claude-11.
+  (System/setProperty "FUTON3C_DRAINER_V2" "true")
+  (try
+    (register-agent! "claude-6" :claude)
+    (let [accepted (atom [])
+          executor-used (atom false)]
+      (with-redefs-fn {#'turn-queue/accept-async!
+                       (fn [entry] (swap! accepted conj entry) {:status :accepted})
+                       #'http/run-invoke-job! (fn [_] {:ok true})
+                       #'http/invoke-executor
+                       (proxy [java.util.concurrent.AbstractExecutorService] []
+                         (shutdown [] nil) (shutdownNow [] []) (isShutdown [] false)
+                         (isTerminated [] false) (awaitTermination [_ _] true)
+                         (execute [r] (reset! executor-used true) (.run r)))}
+        (fn []
+          (#'http/enqueue-auto-bellback!
+           {:caller "claude-6" :bell-job-id "ab-route-1" :prompt "bell back"})))
+      (is (= 1 (count @accepted)) "routed through the per-agent drainer (accept-async!)")
+      (is (= "claude-6" (:to (first @accepted))) "enqueued to the recipient agent's drainer")
+      (is (= "auto-bellback" (:from (first @accepted))))
+      (is (false? @executor-used) "did NOT use the shared invoke-executor lane"))
+    (finally (System/clearProperty "FUTON3C_DRAINER_V2"))))
+
+(deftest auto-bellback-uses-legacy-lane-when-v2-off
+  ;; Flag-off fallback stays byte-for-byte: the shared invoke-executor lane.
+  (System/setProperty "FUTON3C_DRAINER_V2" "false")
+  (try
+    (register-agent! "claude-6" :claude)
+    (let [accepted (atom [])
+          executor-used (atom false)]
+      (with-redefs-fn {#'turn-queue/accept-async!
+                       (fn [entry] (swap! accepted conj entry) {:status :accepted})
+                       #'http/run-invoke-job! (fn [_] {:ok true})
+                       #'http/invoke-executor
+                       (proxy [java.util.concurrent.AbstractExecutorService] []
+                         (shutdown [] nil) (shutdownNow [] []) (isShutdown [] false)
+                         (isTerminated [] false) (awaitTermination [_ _] true)
+                         (execute [r] (reset! executor-used true) (.run r)))}
+        (fn []
+          (#'http/enqueue-auto-bellback!
+           {:caller "claude-6" :bell-job-id "ab-legacy-1" :prompt "bell back"})))
+      (is (true? @executor-used) "flag-off path uses the shared invoke-executor lane")
+      (is (empty? @accepted) "flag-off path does NOT route through accept-async!"))
+    (finally (System/clearProperty "FUTON3C_DRAINER_V2"))))
 
 (deftest feature-flag-off-disables-auto-bellback
   (register-agent! "codex-1" :codex)

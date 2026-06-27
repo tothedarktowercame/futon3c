@@ -39,6 +39,29 @@
         (is (= [1 2 3] @seen) "single dedicated drainer preserves FIFO")
         (is (= #{"r1" "r2" "r3"} (set @results)) "every turn finalized exactly once with its result")))))
 
+(deftest per-agent-drainer-serializes-concurrent-turns-no-overlap
+  ;; I-1 — "single identity is sequential execution" (incident 2026-06-26). Even when
+  ;; several turns for ONE agent are accepted back-to-back, at most one is ever
+  ;; in-flight: the dedicated drainer runs them one at a time, never overlapping.
+  (with-temp-v2
+    (fn []
+      (let [in-flight (atom 0)
+            max-in-flight (atom 0)
+            done (CountDownLatch. 4)
+            mk (fn [n]
+                 {:to "solo-agent" :from "joe" :surface "bell" :msg-id (str "s" n)
+                  :process-fn (fn [_]
+                                (let [c (swap! in-flight inc)]
+                                  (swap! max-in-flight max c)
+                                  (Thread/sleep 40)
+                                  (swap! in-flight dec)
+                                  {:result n}))
+                  :finalize-fn (fn [_] (.countDown done))})]
+        (doseq [n [1 2 3 4]] (turn-queue/accept-async! (mk n)))
+        (is (.await done 5 TimeUnit/SECONDS) "all four turns drained")
+        (is (= 1 @max-in-flight)
+            "one identity ⇒ at most one in-flight turn at a time (sequential execution)")))))
+
 (deftest accept-async-returns-without-blocking
   (with-temp-v2
     (fn []

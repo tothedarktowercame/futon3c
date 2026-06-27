@@ -506,21 +506,44 @@
                                     ;; the reframed prompt (bell-router).
                                     :caller auto-bellback-caller
                                     :surface auto-bellback-caller
-                                    :bellback-of (when (bell-router-enabled?) reply-to)})]
-    (.submit invoke-executor
-             ^Runnable
-             (fn []
-               (let [result (run-invoke-job! {:job-id job-id
-                                               :agent-id caller
-                                               :prompt prompt
-                                               :caller auto-bellback-caller
-                                               :surface auto-bellback-caller})]
-                 (record-invoke-job-delivery-by-job-id!
-                  job-id
-                  {:surface auto-bellback-caller
-                   :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
-                   :delivered? true
-                   :note (if (:ok result) "auto-bellback-ready" "auto-bellback-error")}))))
+                                    :bellback-of (when (bell-router-enabled?) reply-to)})
+        run-job (fn []
+                  (run-invoke-job! {:job-id job-id
+                                    :agent-id caller
+                                    :prompt prompt
+                                    :caller auto-bellback-caller
+                                    :surface auto-bellback-caller}))
+        deliver-result (fn [result]
+                         (record-invoke-job-delivery-by-job-id!
+                          job-id
+                          {:surface auto-bellback-caller
+                           :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
+                           :delivered? true
+                           :note (if (:ok result) "auto-bellback-ready" "auto-bellback-error")}))]
+    ;; I-1 — "single identity is sequential execution." Route the bellback through the
+    ;; RECIPIENT agent's dedicated per-agent drainer so it serializes with that agent's
+    ;; other turns (bells / repl) on ONE single-flight lane, instead of racing them on
+    ;; the shared invoke-executor pool. Mirrors the proven bell-dispatch path above.
+    ;;
+    ;; Incident 2026-06-26: an auto-bellback to claude-11 ran on invoke-worker-2 while a
+    ;; turn-drainer-claude-11 bell ran concurrently — two invoke pipelines for one
+    ;; identity. The warm-pouch lock (agent-pouch/feed-turn!) kept the session intact
+    ;; downstream (the "transaction"), but two concurrent dispatches for one agent is the
+    ;; upstream defect this closes. Gated on drainer-v2 (default on) like the bell path;
+    ;; the legacy lane stays as the flag-off fallback.
+    (if (turn-queue/drainer-v2-enabled?)
+      (let [r (turn-queue/accept-async!
+               {:to caller :from auto-bellback-caller :surface auto-bellback-caller
+                :prompt prompt
+                :process-fn (fn [_entry]
+                              (binding [turn-queue/*drained-by-outer* true]
+                                (run-job)))
+                :finalize-fn deliver-result})]
+        (when (= :deduped (:status r))
+          (deliver-result {:ok true :deduped true})))
+      (.submit invoke-executor
+               ^Runnable
+               (fn [] (deliver-result (run-job)))))
     job-id))
 
 (def ^:dynamic *enqueue-auto-bellback!* enqueue-auto-bellback!)
