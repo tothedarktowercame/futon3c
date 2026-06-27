@@ -168,6 +168,11 @@ of the running stack, not a drawing of it.** The gap is not a missing renderer (
 generator exists) — it is the durable, queryable, composed *substrate* the renderer
 should read.
 
+**This is a *data* campaign** (see Non-criteria): the work is making the operational
+self-model's data live/grounded/composed — *not* building inference or action on top of
+it. That data-centricity is exactly why the cascade is relevant to so many
+missions-in-progress at once.
+
 ### The shared standard — the cascade is "real" when ALL five hold
 
 1. **Generated, not authored.** Every node/edge is produced by a query/constructor over
@@ -196,6 +201,33 @@ should read.
 - The **reconstitution query** works across a teardown (standard 3).
 - At least one **honest hole** is shown to be a real, queryable coverage gap (standard 4).
 - The four facet-owners' outputs **interoperate through the shared ontology** (standard 5).
+
+### Non-criteria — what "real" does NOT require
+
+`pipeline-pattern-cascade` is fundamentally about **DATA** — making the stack's
+operational self-model live, grounded, queryable, and composed. That is *why* it touches
+so many missions-in-progress: they all read/write that data. What consumers *do* with the
+data is out of scope. We explicitly do **NOT** require:
+
+- **A working AIF / inference system** (Joe). Beliefs need not propagate, free-energy need
+  not be minimized, no reasoning need run over the cascade. Live data ≠ a mind acting on it.
+- **Autonomous action / a live pilot.** The cascade is a *projection*, not an actuator. The
+  fold's `:apply-cascade` executor staying sim-only (off the live pilot) is fine — "real"
+  does not mean the cascade *drives* work.
+- **Correct / optimized forward-model economics.** Wiring the cost/ROI/backlog *data* into
+  the cascade (D6) is in scope; the projections being *accurate* or *acted on* is not.
+- **Complete coverage.** Not every mission perfectly clustered, not every capability card
+  filled. Honest-and-partial (with real holes) beats complete-and-hand-maintained — the
+  holes are the point (standard 4).
+- **The full substrate-2 proof/inference layer.** The (have→want) corpus need only be
+  *populated* enough to feed the magnet (the D4 **data** join); the argument/proof
+  *inference* horizon (propagation, posteriors) is M-populate-substrate-2's, not this campaign's.
+- **A new viz framework / pixel-perfect re-render / real-time dashboard.** Reuse the existing
+  generator + VSATARCS/WebArxana; regenerable-on-command is enough — "real" is about the data
+  behind the view, not the view.
+
+**Boundary in one line:** the data is *live, grounded, and composed* — **not** that the
+system *reasons or acts* on it.
 
 ### Membership (from the RALLY)
 
