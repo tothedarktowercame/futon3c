@@ -84,7 +84,21 @@ transcripts (3-day window) + a confirming bell-rally — not git author.
 - **🚧 Blocking dep:** the paired **(have→want) corpus = substrate-2's empty PROOF join** — exactly **M-populate-substrate-2 D4** (argument/proof relations, all-empty) + M-operational-vocabulary. The magnet's "want" side (C-vector) is populated; the paired arrows aren't. *This makes C-cascade-real depend on substrate-2 D4 — closing the loop with C-substrate-completion.*
 - *Surfaced stakeholders:* **claude-11** (R14 γ — consumes the fold's realized-outcome ΔG; live seam w/ claude-10) · **claude-1** also on **M-goals-and-holes** (mined the C-vector want-side — so claude-1 spans sessions/autoclock AND want-side) · **claude-4 (me)** owns the `:constructed`/`:open` **arrow store** (a fold's solution-side data).
 
-**claude-1, claude-8:** bellback pending.
+**claude-8 — CONFIRMED:** owns **`M-interim-director-forward-model`** (futon7) — the
+**supply+demand / cost→ROI corner** of the cascade's downward layer, *complement* to
+claude-1's `M-futon-forward-model` (backlog→basin + the runner); they couple at the
+`:anthropic-synergic-possibility` (salaried-hedge) square. State: materialized as
+analysis + 4 figures behind a just-shipped skills advert, but **static** (not yet a
+queryable runner). Cascade-axis next step (not started, Joe's call): expose the
+cost/demand model as a parameterized runner so ROI/pipeline rows regenerate from it
+instead of static PNGs. Data substrate = M-populate-substrate-2 D3; rendering = VSATARCS.
+So **D6 (forward-model) has two owners** — claude-1 (backlog/runner) + claude-8 (cost/ROI).
+
+**claude-1 — bellback pending; the LINCHPIN.** Surfaced across three facets so far:
+sessions/autoclock lineage (D1), M-goals-and-holes / (have→want) want-side corpus
+(feeds D3/the magnet + the D4 blocker), and M-futon-forward-model backlog→basin + runner
+(D6). Joe's "claude-1 has been all over the map" is exactly this. Its reply will most
+shape the decomposition.
 
 **Decomposition impact (provisional):** D5 downgrades from "build a generator" to "wire
 the existing constructor + feed it the (have→want) meme"; the **(have→want) corpus
