@@ -94,11 +94,52 @@ cost/demand model as a parameterized runner so ROI/pipeline rows regenerate from
 instead of static PNGs. Data substrate = M-populate-substrate-2 D3; rendering = VSATARCS.
 So **D6 (forward-model) has two owners** — claude-1 (backlog/runner) + claude-8 (cost/ROI).
 
-**claude-1 — bellback pending; the LINCHPIN.** Surfaced across three facets so far:
-sessions/autoclock lineage (D1), M-goals-and-holes / (have→want) want-side corpus
-(feeds D3/the magnet + the D4 blocker), and M-futon-forward-model backlog→basin + runner
-(D6). Joe's "claude-1 has been all over the map" is exactly this. Its reply will most
-shape the decomposition.
+**claude-1 — CONFIRMED (the linchpin):** owns **`M-points-de-fuite`** (futon2) — the
+**live sessions surface**: per-turn sigils (`session-mode.el`) + per-session live
+overview (`session-overview.el` — comb/threads/moves/scopes, auto-updating) + the
+**WebArxana orbit/scope-surface** (live-polling + hover-to-explain, live today). State:
+INSTANTIATE, built + verified on a fresh different-author session (claude-11). Also just
+spawned **`M-post-mining-ingest`** (the canonical mine — "the durable, queryable substrate
+a cascade self-model needs"; DERIVE next). Depends on the canonical mine for any
+historical/aggregate cascade view. **⚠️ Says "M-autoclock-in is owned by claude-10"
+(E-arxana-clock).**
+
+### RALLY synthesis — consolidated stakeholder map (2026-06-27, all 3 replied)
+
+| Facet of the cascade | Owner | Mission/excursion | State |
+|---|---|---|---|
+| **Live sessions surface** (the "sessions" render) | **claude-1** | M-points-de-fuite | INSTANTIATE — session-overview + WebArxana orbit live today |
+| **Canonical mine / ingest** (data substrate) | **claude-1** | M-post-mining-ingest | just spawned; DERIVE next |
+| **The FOLD** (cascade → wiring diagram) | **claude-10** | E-close-the-loop, E-have-want-pairs, CT semantics | fold impls #1/#2 sim-verified |
+| **The cascade generator** | *already exists* | `cascade_construct.py`/`cascade_serve.py` + `cascade_lane.clj` | works on-demand (minilm magnet) |
+| **Forward-model: backlog→basin + runner** | **claude-1** (per claude-8) | M-futon-forward-model (futon7) | runner exists |
+| **Forward-model: cost/demand/ROI** | **claude-8** | M-interim-director-forward-model (futon7) | materialized but static (4 figures) |
+| **R14 γ** (consumes fold ΔG) | **claude-11** | E-precision-over-policies | live seam w/ claude-10 |
+| **Arrow store** (fold solution-side) | **claude-4 (me)** | `:constructed`/`:open` arrows | — |
+| **(have→want) corpus = PROOF join** | *unowned BLOCKER* | substrate-2 **D4** + M-operational-vocabulary | empty (the universal gap) |
+| **Autoclock / mission-clock lineage** (D1 pillar) | **⚠️ DISPUTED** | M-autoclock-in / E-arxana-clock | claude-1 says claude-10; survey + claude-1's own 419 autoclock hits suggest claude-1; claude-10 did not claim it |
+
+**What the rally changed vs my provisional guess:**
+- The "sessions" render and the generator **already substantially exist** (claude-1's
+  session-overview/orbit; cascade_construct/serve). Much of "make it real" is **wiring +
+  feeding the right meme**, not greenfield build.
+- The **one universal blocker is the (have→want) corpus = substrate-2 D4** — the fold
+  (claude-10), the magnet, and any historical view (claude-1) all wait on it.
+- **Two open conflicts the campaign must resolve (and exemplify):**
+  1. **Autoclock ownership is genuinely ambiguous** — the live proof that the lineage
+     isn't queryable. Resolve with Joe (or a targeted bell to claude-10).
+  2. claude-1 spans 3 facets (sessions + mine + forward-model runner) — needs explicit
+     ownership boundaries, not folklore.
+
+**Reshaped first-car candidates (for Joe to pick):**
+- **(A) The shared substrate** — (have→want) corpus = substrate-2 **D4** + claude-1's
+  **M-post-mining-ingest** canonical mine. Unblocks the generator + fold + historical view
+  at once. *Highest-leverage; the universal dependency.*
+- **(B) The durable lineage / "no sheet of paper"** (D1) — resolve the autoclock-owner
+  conflict + persist agent↔session↔mission so a teardown is reconstitutable. *Orthogonal,
+  smaller, the operator-desk win.*
+- **(C) Wire the existing generator** to the live constructor feed (swap hand-edn) — fast
+  visible "it's live," but richness-limited until (A).
 
 **Decomposition impact (provisional):** D5 downgrades from "build a generator" to "wire
 the existing constructor + feed it the (have→want) meme"; the **(have→want) corpus
