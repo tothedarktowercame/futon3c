@@ -347,6 +347,26 @@ claude-1's want-side).
 **releases** (`:contract-released`) once populated enough to feed the magnet (the *data* join
 — not the full inference layer, per non-criteria). Owner: **claude-2** (substrate-2).
 
+### Escrow ledger (one entry per cross-mission dependency)
+
+Each held slice is **named, not built** (HEAD-as-escrow, generalised cross-mission — the
+requirement stands, but isn't built on sand). Two-step release per entry:
+`held → contract-released (build-to-verified-spec) → satisfied (consume-live-delivery)`.
+
+| # | from-mission (the **held** slice) | on (standard / keystone) | requirement | status | **contract-released** by (verified spec) | **satisfied** by (live delivery) |
+|---|---|---|---|---|---|---|
+| E1 | **D5 generator wiring** (claude-10 — feed `cascade-lane` the (have→want) meme, F −0.19→+0.90) | **D4** paired (have→want) memes | D4 emits paired memes the magnet can consume | **held** | claude-2's promotion path passes the **T-A4 gate** (canonical-source + normalized-target + named-consumer) | `cascade-lane` consumes the live paired memes → cascade regenerates |
+| E2 | **The fold's full risk-closure** (E-close-the-loop / E-have-want-pairs) | **D4** full (have→want) join | both endpoints paired + promoted in the store | **held** *(Q-B magnet-quality probe is a separate, UNBLOCKED slice)* | D4 + want-side promotion spec verified | the fold consumes the live paired corpus |
+| E3 | **D4 full forward↔backward join** (claude-2, M-populate-substrate-2 D4) | **M-post-mining-ingest** canonical mine + want-side endpoints | the mine pinned (provenance/checksum) + want-endpoints promoted | **held** *(feeder-(b): the 177 :mined-structural arrows is the UNBLOCKED slice)* | claude-1's **M-post-mining-ingest DERIVE** pins the canonical mine | the join consumes the pinned mine + promoted want-side |
+| E4 | **Substrate-backed forward-model runner** (claude-8, M-interim-director-forward-model) | **D4** (substrate-2 time-travelable graph) + **Joe greenlight** | ROI/backlog rows queryable from the live graph | **held** *(v0 local-data runner routes around — Joe-greenlight-gated)* | D4 released + **Joe greenlight** (back Monday) | the runner reads live graph rows → downward layer regenerates |
+| E5 | **γ live self-calibration** (claude-11, E-precision-over-policies) | **D4** real ΔG + **R16 live-wire** (`*live-wire?*`) | real `:realized-outcome` data + the live-wire flag set | **held** *(sim validation unblocks on D4 alone)* | D4 released + claude-10's `:realized-outcome` producer contract stable | γ reads live realized-outcomes (R16 live-wire = Joe operator decision) |
+| E6 | **D7 — War Bulletin 11** (capstone, Clause 2) | **the live cascade** (D1–D6) | cascade regenerates from live data, zero hand rows | **held** | D1–D6 standards (Clause 1) verified | bulletin-11 read off the live cascade → strategy refactor recorded |
+
+**Exit check:** ✅ every cross-mission dependency (E1–E6) is in the ledger with a `held`
+status and a named two-step release path (verified-spec → live-delivery). The UNBLOCKED slices
+(claude-10's Q-B probe, claude-2's feeder-(b), claude-1's M-post-mining-ingest DERIVE, claude-1's
+already-live render) are *not* held — they are the work that earns the contract-releases above.
+
 **The contract each member joins (the ESCROW):**
 1. Build to the **five standards** (the data ask) and **inside the non-criteria** (it's a data
    campaign — supply the data; do not require the AIF loop / Cluster C to reason or act).
