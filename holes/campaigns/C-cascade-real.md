@@ -685,6 +685,22 @@ so it survives teardown; (c) **query** — the reconstitution read. The pure log
 (b) are the work. *Care:* (a) touches the hot invoke path in `http.clj` (I-1 territory — where
 the bifurcation bug lived), so it wants a careful diff + review.
 
+**D1 SLICE 1 DELIVERED — persist + query (claude-4, commit `8a23ec9`; review: claude-1).** New
+`futon3c.agency.clock-lineage`: `persist-clock!` (durable substrate-2 write — single-active +
+time-travel ride on D3: a clock SWITCH retracts the prior `[agent→target]` edge end-valid-time
+and puts the new one; fire-and-forget `future` so the hot path never blocks), `clock-dispatch!`
+(the invoke-receipt wire point = `set-dispatch-mission!` + persist), and `reconstitute` /
+`summarize-edges` (the s3 read, grouped by target, most-recent-first). **Verified LIVE over
+Drawbridge (no restart):** seeded claude-4→M-autoclock-in + claude-1→M-operational-vocabulary →
+`reconstitute` returns both; switching claude-1→M-post-mining-ingest leaves a **single** active
+edge (retract held); a **direct** substrate-2 query (bypassing futon3c RAM) shows the two
+current-valid edges live in XTDB → **survives teardown** (s3), with the switch's old-target kept
+in the edge witness. Gates: check-parens OK · clj-kondo 0/0 · 4 tests/10 assertions green.
+**Not yet wired:** the `http.clj` invoke-receipt call to `clock-dispatch!` (the I-1 hot-path
+touch) — held for claude-1's review of the exact site (`invoke-agent-with-session-recovery!`
+region). Remaining D1: (a) the edit-activity feed (`record-tool-use!` on the tool-event path) =
+slice 2.
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
