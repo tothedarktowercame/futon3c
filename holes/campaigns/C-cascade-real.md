@@ -526,6 +526,26 @@ deliver the data) and (b) be **actually verified** — two levels:
   hallucinated wirings, **not** "the cascade is correct." Minimal first slice: one real cascade
   (`cascade_serve.py`, e.g. M-value-creation-loop F=+0.90) → fold via impl #2 → CLean →
   `clean_to_lean` render → 0-sorry check vs the reference. *No D4 needed.*
+  - **RUNG 1 BUILT ✅ (claude-10, commit `edad60a`; claude-4 reviewed PASS).** One command —
+    `bash futon2/scripts/l2-darktower-verify.sh` — folds M-value-creation-loop's cascade
+    (F=+0.90) via **real impl #2** → `fold-clean` adapter → `.clean.edn` →
+    `clean_to_lean.py --mode standalone` → `lean` 0-sorry (standalone shim: no mathlib rebuild,
+    no JVM touched). New code: `futon2/src/futon2/aif/fold_clean.clj` + the runner +
+    `scripts/futon2/aif/l2_verify.clj`. **Verdicts (reproduced by claude-4):** GREEN ✅ renders
+    0-sorry; RED-TYPE ✅ Lean rejects a bad satiety grade (13 type errors — gate bites);
+    RED-COMPOSE ✅ caught by pre-flight. **Honest finding — the gate is TWO-LAYER** (a red built
+    for each, since one red would have hidden it): (1) **pre-flight** (`carries-resolvable?`) =
+    comb **composition** (every `:consumes` wires to an upstream `:produces`); (2) **Lean 0-sorry
+    render** = typed-hole **type-correctness** (satiety grade, discharge polarity, BV spine
+    reassoc, copar coherence). The standalone render emits comb edges as *data*, so it does NOT
+    catch composition breaks — that's the pre-flight's job; neither layer alone is the gate,
+    together they are. Acceptance bar held: certifies **structure** (a well-typed typed-hole
+    comb), **not** semantic correctness — kept crisp in docstring/banner/commit. Gates: clj-kondo
+    0/0, check-parens OK, bash -n OK. *claude-4 review:* ran the verifier (exit 0, all three
+    verdicts reproduce), read the adapter (structural scope enforced in code + the two-layer
+    boundary documented, not papered). **Waits on D4:** running the *same* check over a real
+    data-backed cascade (the check itself needs no D4); natural next slice = bulk-fold the corpus
+    → per-wiring 0-sorry pass-rate (E-wiring-diagram-corpus tie-in).
   - **L2 scope extension — the cascade-of-cascades (Joe 2026-06-28).** The minimal slice proves
     *a* cascade is a well-typed comb. But the pipeline cascade is **all** the cascades, and in a
     real sense a **cascade-of-cascades** — so the formally interesting facts are about
@@ -569,6 +589,15 @@ proofs. Be explicit about the trade (not a silent slip):
 - **Net:** the design is verified (L1); the *data* is verified at RUN/DELIVER (same model, live
   rows); the *formal-CT* layer is a deferred enrichment. Escrow `held → contract-released` moves
   on this L1 pass; `→ satisfied` still waits on the cars (RUN/DELIVER).
+
+**STRONGER THAN L1-ALONE (2026-06-28): L2 rung-1 also LANDED green.** After the revised exit was
+drafted, claude-10 *built* the L2 minimal slice (`edad60a`, claude-4-reviewed PASS — verifier
+re-run, verdicts reproduced): a runnable two-layer gate that machine-checks a generated cascade's
+wiring against the DarkTower Lean theory (GREEN 0-sorry; RED-TYPE 13 Lean errors; RED-COMPOSE
+pre-flight bite). So the close basis is **L1 (design gate) + L2 rung-1 (formal-CT capstone) both
+landed + verified** — only L2 rungs 2–3 (cascade-of-cascades closure) stay deferred enrichment.
+The relaxation above still holds (rungs 2–3 are not a blocker), but the realised verification is
+**better** than the L1-only floor it was written against.
 
 ### Strategic implication + governance
 
