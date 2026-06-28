@@ -300,6 +300,55 @@ Ordered so each rests on the previous; member-mission boundaries to be ratified.
 - **D6 — Forward-model integration.** Join futon7's M-futon-forward-model downward layer (backlog→basin→ROI→pipeline) to the live upward structure.
 - **D7 — War Bulletin 11 (capstone, Clause 2).** Read the now-live cascade and write the next bulletin: what the refreshed strategic self-portrait shows and what it *refactors* about the strategy. The cascade's first real use — and the proof D1–D6 bought something. (D1–D6 = the data; D7 = understanding what it implies.)
 
+## CONSTITUTION — dependent-mission survey (≈ MAP, 2026-06-28)
+
+*Method: read (not guessed) across the 5 stakeholders' mission/excursion docs (Explore
+fan-out, cited). Recursion worth noting: this survey is itself a query the live cascade
+should answer (substrate-2 mission-cross-ref / scope edges) — for now read by hand.*
+
+### The web — four clusters the stakeholder-missions touch
+
+- **Cluster A — Weaving + Mining (the in-flow data):** M-points-de-fuite ↔
+  M-operational-vocabulary (forward methods) + M-goals-and-holes (backward goals / C-vector)
+  + M-post-mining-ingest (governs the mine). The "concentration field" these produce **IS the
+  cascade's observable.** → the campaign's canonical mine (D3, forward+backward).
+- **Cluster B — The Fold (cascade→wiring):** E-close-the-loop (interface) + E-have-want-pairs
+  (magnet quality) + E-darktower-wiring (CT types) + E-library-coverage. → the generator (D5)
+  data path.
+- **Cluster C — The AIF loop** (M-aif-wiring R16/R14/R19; E-precision-over-policies;
+  E-C-vector-live): the cascade *runs inside* this and feeds it ΔG. **Per the CHARTER
+  non-criteria this is the downstream CONSUMER — OUT of the campaign's completion scope.**
+  We supply the data; whether the AIF loop reasons/acts on it is not our done-ness. (The
+  survey's strongest service: it draws this boundary precisely.)
+- **Cluster D — Lineage + Substrate (ground truth):** M-autoclock-in (D1) +
+  M-populate-substrate-2 (D4) + M-mission-scopes-into-substrate-2 (live scope graph) +
+  M-substrate-metric. → the D1 + D4 data infrastructure.
+
+### The shared prerequisite (critical path): substrate-2 **D4** — the (have→want) PROOF join
+
+Confirmed independently by the survey **and** claude-10's rally: **M-populate-substrate-2 D4
+(the proof/argument-relation join) is the node the most clusters depend on** — it gates the
+fold's risk-closure (B), the goals' discharge (A), and the cascade's grounding (D). It is the
+campaign's escrowed dependency and the likely first car. *Unowned among the 5; claude-2
+(substrate-2) is the natural owner — re-add per the roster note.*
+
+### Hidden prerequisites surfaced (not on the stakeholder list — confirm with owners)
+
+Named in E-have-want-pairs §3 (claude-10's territory): **E-proof-join-population** (= the D4
+work), **E-wiring-diagram-corpus** (mint (cascade→wiring) pairs; the fold's corpus; gated on
+magnet-quality), and **M-goals-and-holes DERIVE** (the backward C-vector is unassembled —
+claude-1's want-side).
+
+### Strategic implication + governance
+
+The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
+the CHARTER excludes** — a clean confirmation the campaign stays a *data* campaign. The
+critical path is **D4**, where the fold, the goals, and the grounding all wait — so first-car
+**(A) the D4 corpus** is corroborated as highest-leverage by the dependency structure, not
+just by one stakeholder's say-so. Roles: claude-1 = Cluster A mine + sessions/D1-render;
+claude-10 = Cluster B fold; claude-8 (+claude-1) = forward-model (downward); claude-4 = D1
+lineage + arrow store; **claude-2 (re-add) = D4 substrate**. Coordination = swarm around D4.
+
 ## Exit / keystone (draft — for Joe to ratify)
 
 1. The cascade regenerates from live queries with **zero hand-typed rows** (D3–D5).
