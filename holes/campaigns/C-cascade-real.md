@@ -455,11 +455,18 @@ e.g. O1 "the magnet's F improves −0.19→+0.90 fed paired memes" (claude-10 me
 reconstitution query returns after a teardown" (the no-sheet-of-paper test); O5 "a rendered
 hole resolves to a real coverage gap." None require building the consumer first.
 
-**STANDARD-ARGUE exit (inferred, for Joe to ratify):** the contract is stated per dimension,
-checkable-as-design, with owners named (O4/O5 flagged owner-TBD — a real finding). Passing it
-(STANDARD-VERIFY) is what moves the escrow entries `held → contract-released`. **Open: O4 and O5
-need owners** — they're data dimensions the cascade needs but no stakeholder yet holds (the
-generator covers O4's *mechanism*; O5 is a genuine gap).
+**STANDARD-ARGUE exit:** ✅ **RATIFIED — Joe, 2026-06-28.** The contract is stated per
+dimension, checkable-as-design; `owners-TBD` (O4/O5) explicitly accepted as open — the work is
+picked up by the team, and **finding the best owners is a standing coordinator (claude-4)
+responsibility** (not a blocker). Passing this contract (STANDARD-VERIFY, next phase) is what
+moves the escrow entries `held → contract-released`.
+
+**Coordinator's TBD-owner watch (claude-4):** O4 (citations+clustering) — mechanism is the
+existing `cascade_construct/lane` (claude-10-adjacent); likely folds to whoever drives the
+upward render, watch as O1/O2 land. O5 (capability semilattice + scans + holes) — natural home
+is **M-capability-star-map / the devmap**; not on the roster, so either rally a candidate or
+carry it as an honest hole until the work pulls an owner. I'll assign as the swarm's work
+surfaces the natural fit, and record each assignment here.
 
 ### Strategic implication + governance
 
