@@ -670,8 +670,12 @@ That observation sets D1's delivery scope. (Recorded below as it runs.)
   INSTANTIATE-4 — the witness-based edit-activity rule (repeated Edit/Write on a `C-/M-/E-.md`
   doc → switch the session clock), single-active, anti-thrash (threshold+dominance), plus
   `set-dispatch-mission!` (explicit dispatch → immediate clock). Good design, committed.
-- **Not fed:** **zero** callers of `record-tool-use!` / `record-edit!` / `set-dispatch-mission!`
-  in the live invoke/tool path. The clock is never driven.
+- **Not fed:** ~~**zero** callers of `record-tool-use!` / `record-edit!` / `set-dispatch-mission!`
+  in the live invoke/tool path. The clock is never driven.~~ **CORRECTION (2026-06-28):** this was
+  a **grep-src-only error** — the callers live in `dev/futon3c/dev.clj` (outside `src/`):
+  `record-dispatch-clock!` (→ `set-dispatch-mission!`) and `record-agent-tool-use!` (→
+  `record-tool-use!`), both wired into the live warm-pouch path. The clock-store **is** driven by
+  real agent activity. The genuine gap was **durability** (next bullet), not the feed.
 - **Not durable:** backed by `(defonce !sessions (atom {}))` — in-memory only; no `xt/put` /
   hyperedge / spit anywhere. Dies on teardown.
 - **Registry `mission=None` is a red herring:** that field is the invoke `payload`'s
@@ -711,6 +715,25 @@ force-prepends `M-`, so this path records **mission** targets only (an `E-`/`C-`
 reuses it. **O3/D1 slice 1 (persist + query + live wire) DELIVERED.** Remaining D1: (a) the
 edit-activity feed (`record-tool-use!` on the tool-event path) so editing a `C-/M-/E-.md` doc
 auto-clocks too = **slice 2** (this is also where the `E-`/`C-` targets get first-class handling).
+
+**D1 SLICE 2 DELIVERED — durable edit-activity auto-clock (claude-4, commit `6c70742`).** The
+edit feed already existed in the warm path (see the corrected observation above); slice 2 added
+its **durability**. New `clock-lineage/clock-edit!` (= `record-tool-use!` + persist on an
+edit-activity SWITCH, reading old-clock before the mutation so the retract is correct; resolves
+`C-/M-/E-` so a campaign doc clocks onto `campaign:<id>`); `dev.clj`'s `record-agent-tool-use!`
+routed through it. **Closes claude-1's `M-`-only limit** — the edit path handles campaign /
+excursion targets. **PROOF (live, the exact ask):** a fresh agent seeded on **M-kangaroo**, after
+3 `Edit` tool-uses on `C-cascade-real.md` driven through the **real warm-pouch sink**
+(`record-agent-tool-details!`), durably reclocked **off M-kangaroo and onto
+`campaign:C-cascade-real`** — M-kangaroo retracted (single-active), confirmed by a direct XTDB
+query bypassing futon3c RAM. Gates: check-parens OK (both) · clj-kondo 0/0. **O3/D1 DELIVERED**
+(persist + query + dispatch wire + edit-activity feed, all durable).
+- **Slice-1 follow-up surfaced (not fixed):** the *dispatch* durable feed now has **two loci** —
+  slice-1's `http.clj` `clock-dispatch!` and the pre-existing `dev.clj` `record-dispatch-clock!`
+  (RAM-only). They read `mission-id` from different sources (payload vs prompt), so they didn't
+  collide in the co-verify; but if both fire, the `http.clj` wire can read an already-mutated
+  old-clock and **skip the retract**. Clean fix: consolidate both dispatch feeds through the
+  persist wrapper (mirroring the edit path's single locus). Flagged for a hardening pass.
 
 ### Strategic implication + governance
 
