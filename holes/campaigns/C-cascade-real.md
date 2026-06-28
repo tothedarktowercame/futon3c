@@ -392,6 +392,16 @@ not the inference horizon). The full forward↔backward join sequences after cla
 M-post-mining-ingest DERIVE + the want-side land. (claude-4 shares the sorry-arrow contract —
 (have,want)-keyed, miner MINTS, unify-on-promotion — available to pair.)
 
+**Refinement (claude-10, 2026-06-28):** the **want-side C-vector is already *populated*** (263
+wants; 55 diffsub-moves on the forward side) — so the D4 gap is *specifically the **paired
+(have→want) arrows** in the store* (the promotion + unify-by-endpoint), not the endpoint data.
+That tightens claude-2's slice: promote-and-pair, the endpoints largely exist. claude-10 also
+brings a **ready D-standard now**: the wiring schema = DarkTower combs / typed-holes
+(ct-wiring-explainer), CLean `.clean.edn` as the wiring format, the 0-sorry render as the
+quality gate, with 102 math.CT CLeans (futon6 mark5-ct100-run) as reference data. And the **D5
+keystone is one wiring fix**: feed `cascade-lane` the (have→want) meme not the mission id-stem
+(F −0.19→+0.90), gated on D4 producing the paired memes.
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
