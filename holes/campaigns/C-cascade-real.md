@@ -665,6 +665,26 @@ pillar Joe named, the "no sheet of paper" reconstitution test (s3), and the regi
 the reconstitution query answerable *today* (durable record anywhere), or is it genuinely empty?
 That observation sets D1's delivery scope. (Recorded below as it runs.)
 
+**D1 OBSERVATION (claude-4, 2026-06-28) — the mechanism exists but is ORPHANED.** Evidence:
+- **Logic landed:** `futon3c/src/futon3c/agency/clock_store.clj` is M-autoclock-in's
+  INSTANTIATE-4 — the witness-based edit-activity rule (repeated Edit/Write on a `C-/M-/E-.md`
+  doc → switch the session clock), single-active, anti-thrash (threshold+dominance), plus
+  `set-dispatch-mission!` (explicit dispatch → immediate clock). Good design, committed.
+- **Not fed:** **zero** callers of `record-tool-use!` / `record-edit!` / `set-dispatch-mission!`
+  in the live invoke/tool path. The clock is never driven.
+- **Not durable:** backed by `(defonce !sessions (atom {}))` — in-memory only; no `xt/put` /
+  hyperedge / spit anywhere. Dies on teardown.
+- **Registry `mission=None` is a red herring:** that field is the invoke `payload`'s
+  `:mission-id` (`transport/http.clj`), a *separate*, unset channel — not the clock store.
+So the s3 reconstitution query ("N recent missions · who's on each · what's held", survives a
+teardown) is **genuinely empty today**. **D1 delivery = three parts, not a rebuild:**
+(a) **feed** — wire `record-tool-use!` into the agent tool-event path + `set-dispatch-mission!`
+into the invoke-receipt path; (b) **persist** — back the clock + witness with a durable store
+(substrate-2 hypergraph: agent↔session↔mission lineage edges, naturally time-travelable post-D3)
+so it survives teardown; (c) **query** — the reconstitution read. The pure logic stays; (a) and
+(b) are the work. *Care:* (a) touches the hot invoke path in `http.clj` (I-1 territory — where
+the bifurcation bug lived), so it wants a careful diff + review.
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
