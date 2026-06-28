@@ -696,10 +696,21 @@ Drawbridge (no restart):** seeded claude-4→M-autoclock-in + claude-1→M-opera
 edge (retract held); a **direct** substrate-2 query (bypassing futon3c RAM) shows the two
 current-valid edges live in XTDB → **survives teardown** (s3), with the switch's old-target kept
 in the edge witness. Gates: check-parens OK · clj-kondo 0/0 · 4 tests/10 assertions green.
-**Not yet wired:** the `http.clj` invoke-receipt call to `clock-dispatch!` (the I-1 hot-path
-touch) — held for claude-1's review of the exact site (`invoke-agent-with-session-recovery!`
-region). Remaining D1: (a) the edit-activity feed (`record-tool-use!` on the tool-event path) =
-slice 2.
+**WIRE APPLIED + CO-VERIFIED LIVE (commit `23dc521`; claude-1 review PASS).** claude-1's review
+caught the key subtlety — `sid` only exists *after* the invoke returns it in `result`, not at the
+mission-id parse — so the call sits at the body start of BOTH dispatch paths
+(`build-invoke-response` sync, `run-invoke-job!` async bell worker), after `sid` binds, gated on
+`(:ok result)`: `(when (and mission-id sid (:ok result)) (clock-lineage/clock-dispatch! (str
+agent-id) sid mission-id))`. **Co-verified through the REAL path** (not a manual call): a bell
+carrying `mission-id M-autoclock-in` to claude-1 reclocked it M-post-mining-ingest→M-autoclock-in
+on job completion via `run-invoke-job!`; single-active retract held; a direct substrate-2 query
+shows the two current-valid edges in XTDB. Gates: check-parens OK · clj-kondo 0/0 · Drawbridge
+reload (no restart). **Known limit (claude-1, we-do-discipline):** `set-dispatch-mission!`
+force-prepends `M-`, so this path records **mission** targets only (an `E-`/`C-` arg mangles to
+`M-E-…`) — fine for the mission-focused first car, flagged before campaign/excursion dispatch
+reuses it. **O3/D1 slice 1 (persist + query + live wire) DELIVERED.** Remaining D1: (a) the
+edit-activity feed (`record-tool-use!` on the tool-event path) so editing a `C-/M-/E-.md` doc
+auto-clocks too = **slice 2** (this is also where the `E-`/`C-` targets get first-class handling).
 
 ### Strategic implication + governance
 
