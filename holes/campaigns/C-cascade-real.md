@@ -422,6 +422,45 @@ quality gate, with 102 math.CT CLeans (futon6 mark5-ct100-run) as reference data
 keystone is one wiring fix**: feed `cascade-lane` the (have→want) meme not the mission id-stem
 (F −0.19→+0.90), gated on D4 producing the paired memes.
 
+## STANDARD-ARGUE — the cascade-real data contract (2026-06-28)
+
+*Criteria (Joe-approved): (1) state the standard as a contract of obligations — what the
+data must deliver, per consumer, not the implementation; (2) argue each obligation
+**empirically / falsifiably** (checkable as a design now); (3) **cross-dimension adequacy** —
+certify each consumer's fit independently (one being satisfied does not imply another's).*
+
+**Correction (Joe, 2026-06-28): D4 is the *keystone* dimension, but "cascade-real" spans
+several DATA DIMENSIONS — the property is not reducible to D4.** The contract below states the
+obligation for *each* dimension the cascade renders over. Each instantiates the five CHARTER
+standards (generated · grounded · queryable · honest · composed) for its own data + consumers.
+
+| # | Data dimension | Owner | Obligation (contract — checkable as a *design*) | Fit-for (consumer) |
+|---|---|---|---|---|
+| **O1 (keystone)** | (have→want) **PROOF corpus** = D4 | claude-2 | paired arrows in the store, **(have,want)-keyed**, T-A4-gated, kept `:mined-structural` (data-join, **not** laundered as proofs), unify-on-promotion | the magnet/D5 (E1), the fold (E2) |
+| **O2** | **canonical mine** (memes/moves/C-vector) | claude-1 | **pinned**: provenance + checksum + version + a named consumer contract (ONE canonical source) | every consumer reads a stable mine |
+| **O3** | **sessions / lineage** (D1) | claude-4 (+claude-1) | durable agent↔session↔mission lineage, queryable, **survives teardown** (the reconstitution query) | the operational layer / "who's on what" |
+| **O4** | mission→pattern **citations + clustering** (upward) | *(cascade_construct/lane — owner TBD)* | generated from live data (substrate-2 + library), **zero hand rows**; clusters reproducible | the upward cascade |
+| **O5** | **capability semilattice + scan-classes + holes** | *TBD (hidden gap)* | capabilities + **honest holes** computed from devmap/invariants/evidence; a hole = a real coverage gap, not a hand `?` | the built-features / scans view |
+| **O6** | **forward-model** data (cost/ROI/backlog) | claude-8 | cascade-consumable **EDN rows** from a parameterized runner (data, not static figures) | the downward cascade |
+| **O7** | **wiring / CT** data | claude-10 | wiring schema: DarkTower combs/typed-holes + CLean `.clean.edn` + the **0-sorry render gate** (102 math.CT CLeans as reference) | the fold's output typing |
+
+**Cross-dimension adequacy (criterion 3):** the join is **standard 5 — one shared ontology**:
+every dimension's data must use one node/edge identity so O1–O7 compose into *one* cascade,
+not seven pictures. Each obligation is certified **independently** (O1 satisfied ≠ O4
+satisfied). D4 is the *keystone* because the most escrow entries (E1/E2/E3/E5) hold on it — but
+**cascade-real = all of O1–O7 met**, not D4 alone.
+
+**Empirical-argument note (criterion 2):** each obligation is a *design* check available now —
+e.g. O1 "the magnet's F improves −0.19→+0.90 fed paired memes" (claude-10 measured); O3 "the
+reconstitution query returns after a teardown" (the no-sheet-of-paper test); O5 "a rendered
+hole resolves to a real coverage gap." None require building the consumer first.
+
+**STANDARD-ARGUE exit (inferred, for Joe to ratify):** the contract is stated per dimension,
+checkable-as-design, with owners named (O4/O5 flagged owner-TBD — a real finding). Passing it
+(STANDARD-VERIFY) is what moves the escrow entries `held → contract-released`. **Open: O4 and O5
+need owners** — they're data dimensions the cascade needs but no stakeholder yet holds (the
+generator covers O4's *mechanism*; O5 is a genuine gap).
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
