@@ -652,7 +652,7 @@ pass that gate.
 |---|---|---|---|---|
 | O1/D4 | 177 `:mined-structural` arrows promoted to substrate-2, (have,want)-keyed | claude-2 | s2 (keystone) | ⏳ in-flight (feeder-(b)) |
 | O2 | canonical **pinned** mine (provenance+checksum+version) | claude-1 | s1 | ⏳ in-flight (DERIVE) |
-| O3/D1 | durable agent↔session↔mission lineage; reconstitution query survives teardown | **claude-4** | **s3** | 🔎 **first car — observe** |
+| O3/D1 | durable agent↔session↔mission lineage; reconstitution query survives teardown | **claude-4** | **s3** | ✅ **DELIVERED** — persist + query + dispatch wire + edit-activity feed + repl sync, all durable |
 | O4 | generator extracts+clusters missions/patterns → upward structure, zero hand rows | TBD | s1 | ⏸ generator exists, wire to live |
 | O5 | a rendered **honest hole** resolves to a real coverage gap | TBD | s4 | ⏸ the gap itself is the deliverable |
 | O6 | forward cost/ROI EDN regenerates the downward layer | claude-8 | s1 | ⏸ runner exists (Joe-gated) |
@@ -734,6 +734,21 @@ query bypassing futon3c RAM. Gates: check-parens OK (both) · clj-kondo 0/0. **O
   collide in the co-verify; but if both fire, the `http.clj` wire can read an already-mutated
   old-clock and **skip the retract**. Clean fix: consolidate both dispatch feeds through the
   persist wrapper (mirroring the edit path's single locus). Flagged for a hardening pass.
+
+**D1 SYNC FINALIZE — the repl reflects the durable clock (claude-4, commit `a977bed`).** Joe
+observed the repl still showed a stale mission ("manual set is not sustainable"). Root cause: the
+repl label is a **separate Emacs-side clock** (`agent-chat.el`, buffer-local, driven by Emacs
+*saves*), disconnected from the durable clock the agent's *tool-edits* feed. Three parts wire them
+into one:
+1. **Guard fix** (`clock-store/set-dispatch-mission!`): an explicit dispatch now clears the
+   edit-activity anti-thrash baseline (`:last-reclock-target nil`) — without it a dispatch
+   *permanently pinned* the session (the stuck-clock bug).
+2. **Server endpoint** `GET /api/alpha/agent-clock?agent-id&session-id` (via the reload-safe
+   `extra-routes`): returns the live durable clock + witness.
+3. **Emacs sync** (`agent-chat--sync-clock-from-server!`): on turn-end the repl buffer pulls the
+   durable clock and applies it (synchronous in-RAM read, 1s cap, failure-isolated, toggle
+   `agent-chat-sync-clock-from-server`). The displayed mission now tracks **actual edit-activity**,
+   no manual set.
 
 ### Strategic implication + governance
 
