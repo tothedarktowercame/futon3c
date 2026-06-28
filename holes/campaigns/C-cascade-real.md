@@ -339,6 +339,41 @@ work), **E-wiring-diagram-corpus** (mint (cascade→wiring) pairs; the fold's co
 magnet-quality), and **M-goals-and-holes DERIVE** (the backward C-vector is unassembled —
 claude-1's want-side).
 
+## ESCROW — the held dependency + the contract members join (2026-06-28)
+
+**The escrowed (held) dependency:** **substrate-2 D4 — the (have→want) PROOF join**
+(`constructs`/`closes`/`depends-on-sorry`/`uses-definition`/… from named sources). The fold
+(B), the goals' discharge (A), and the cascade's grounding (D) all build *to* it; it
+**releases** (`:contract-released`) once populated enough to feed the magnet (the *data* join
+— not the full inference layer, per non-criteria). Owner: **claude-2** (substrate-2).
+
+**The contract each member joins (the ESCROW):**
+1. Build to the **five standards** (the data ask) and **inside the non-criteria** (it's a data
+   campaign — supply the data; do not require the AIF loop / Cluster C to reason or act).
+2. Own your facet's deliverable; read/write the **one shared ontology** (standard 5) so the
+   facets compose.
+3. Treat **D4** as the shared blocker — contribute to / build to the proof-corpus spec; don't
+   route around it with folklore.
+4. The capstone is **War Bulletin 11** (Clause 2) — the data must be made to *mean* something.
+
+**Members joined (via coordinating whistle, 2026-06-28):**
+
+| Member | Facet / deliverable | Joined? + first step |
+|---|---|---|
+| claude-2 | **D4 substrate** (the escrowed proof-join) — owner | ✅ — promote the **177 `:mined-structural` arrows** in `futon6/data/diffsub-moves-mined.edn` (the unpromoted overlay = the gap D4 closes) |
+| claude-1 | Cluster A: canonical mine + sessions/D1-render | ✅ — **D1 render already LIVE** (WebArxana `#/dev/focus/C-cascade-real`, 7 cross-session orbits / 13 sessions, data-only); first step **M-post-mining-ingest → DERIVE** (pin the canonical mine) |
+| claude-10 | Cluster B: the fold | ✅ — first step **E-have-want-pairs Q-B magnet-quality probe** (UNBLOCKED — runs on existing data, doesn't wait on D4); owns E-wiring-diagram-corpus |
+| claude-11 | R14 γ seam | ✅ as **interested party / downstream consumer** (Cluster C / AIF — out of *completion* scope per non-criteria; validates the fold's ΔG, supplies no campaign data); waits on D4 + R16 live-wire |
+| claude-8 | forward-model (cost/ROI, downward) | ✅ — first step a **parameterized runner** emitting cascade-consumable EDN (cost/demand/ROI) from local data (v0 routes around D4); **parked behind Joe's greenlight** (mid-advert, back Monday) |
+| claude-4 (me) | D1 lineage + arrow store; campaign coordination | ✅ (owner-adjacent) |
+
+**Whistle findings (2026-06-28):** the ownership of the surfaced prereqs is now confirmed —
+**E-proof-join-population *is* the D4 blocker (claude-2)**, not a separate excursion;
+E-wiring-diagram-corpus = claude-10; M-goals-and-holes DERIVE = claude-1. And there is an
+**UNBLOCKED first car**: claude-10's Q-B magnet-quality probe runs on data we already have —
+real work that doesn't wait on D4. (D5 is confirmed a wiring job: feed `cascade-lane` the
+(have→want) meme, F −0.19→+0.90, gated on D4 producing the memes.)
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
