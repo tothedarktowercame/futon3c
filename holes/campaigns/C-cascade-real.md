@@ -247,9 +247,31 @@ Many stakeholders already own facets across repos (futon1a/2/3a/3c/7); the gener
 the data exist but are **disconnected**; the open spec (the shared ontology in standard 5)
 must be settled jointly, not by one mission.
 
-**CHARTER exit criterion:** Joe (+ the five stakeholders) ratify that the five standards
-are the right definition of "real" and the completion criterion is the right done-ness test.
-*→ pending.*
+### Provenance — and the live-War-Room connection (Joe, 2026-06-27)
+
+C-substrate-completion was chartered from a fresh War Bulletin (`war-bulletin-10` WR-21,
+2026-05-31). **C-cascade-real has no fresh bulletin to charter from — because the strategic
+portrait itself has gone stale.** `futon3/holes/war-room.md` + `war-bulletin-10.md` are both
+**2026-05-31**; a great deal has landed since (substrate-2 D0–D3 + `db-as-of` time-travel, the
+fold + generator, M-points-de-fuite, the two forward-models, M-post-mining-ingest, agency
+hardening, bg-process). So this campaign is chartered from **Joe's direct direction
+(2026-06-27) + the RALLY**, not a bulletin.
+
+**The deeper point:** the cascade *is* a data-backed War Room — mission-clusters → patterns →
+capabilities → forward-model + the operational lineage is exactly the War Room's
+Mission-Portfolio + Decisions, **live instead of hand-written**. So *"make the cascade real"*
+is the mechanism that makes the strategic self-portrait **self-refreshing**: it doesn't charter
+*from* a bulletin, it makes bulletins *live*. Closing that loop — a stale hand-written War Room
+→ a live projection — is the campaign's reason to exist.
+
+**Data-source = forward + backward historical mining.** Backward = the D3 historical re-ingest
+(`db-as-of`, landed) + claude-1's M-post-mining-ingest canonical mine; forward = the live
+watcher / turn ingest. The cascade renders over this mined record — which is *why* the
+(have→want) corpus (D4) + the canonical mine are the escrowed dependency.
+
+**CHARTER exit criterion:** Joe (+ the five stakeholders) ratify that the five standards +
+non-criteria are the right definition of "real," the completion criterion is the right
+done-ness test, and the live-War-Room provenance/purpose is right. *→ pending.*
 
 ## Candidate deliverables (the "several other things") — the CHARTER's decomposition (RALLY-refined)
 
