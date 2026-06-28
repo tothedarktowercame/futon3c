@@ -55,6 +55,7 @@
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
@@ -1080,7 +1081,10 @@
 (defn- record-agent-tool-use!
   [agent-id session-id tool-detail]
   (try
-    (clock-store/record-tool-use! agent-id session-id tool-detail)
+    ;; clock-edit! = record-tool-use! + DURABLE persist on an edit-activity switch
+    ;; (C-cascade-real D1/O3 slice 2). Resolves C-/M-/E- targets, so editing a
+    ;; campaign doc clocks onto campaign:<id>, survives teardown.
+    (clock-lineage/clock-edit! agent-id session-id tool-detail)
     (catch Throwable t
       (println (str "[auto-clock] agent tool-use reclock failed for "
                     agent-id ": " (.getMessage t)))

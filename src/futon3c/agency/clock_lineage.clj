@@ -99,6 +99,25 @@
                        :witness (:last-auto-clock-witness state)})
       state)))
 
+(defn clock-edit!
+  "Edit-activity wire point (the warm-pouch per-tool feed, `dev.clj`'s
+   `record-agent-tool-use!`): record a tool-use against clock-store and, if it
+   SWITCHED the clock (the edit-activity threshold over a `C-/M-/E-.md` doc), make
+   that transition DURABLE. Reads old-clock BEFORE `record-tool-use!` mutates, so
+   the retract targets the true prior edge. Unlike the dispatch path, this resolves
+   campaign / mission / excursion targets (via `resolve-clock-target-file`), so
+   editing `C-cascade-real.md` clocks onto `campaign:C-cascade-real`. Returns
+   clock-store's result (nil when the file is not a witnessed doc)."
+  [agent-id session-id tool-detail]
+  (let [old-clock (clock-store/current-clock agent-id session-id)
+        result    (clock-store/record-tool-use! agent-id session-id tool-detail)
+        new-clock (get-in result [:state :clock])]
+    (when (and new-clock (not= old-clock new-clock))
+      (persist-clock! {:agent-id agent-id :session-id session-id
+                       :old-clock old-clock :new-clock new-clock
+                       :witness (get-in result [:state :last-auto-clock-witness])}))
+    result))
+
 ;; ---------------------------------------------------------------------------
 ;; reconstitute — the s3 read (survives teardown; from the durable store)
 ;; ---------------------------------------------------------------------------
