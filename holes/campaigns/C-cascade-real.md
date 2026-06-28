@@ -513,7 +513,19 @@ deliver the data) and (b) be **actually verified** — two levels:
   **0-sorry-check** them against the real Lean theory (`mathlib4/DarkTower/Fill.lean` /
   `Discharge.lean` / `CLeanProofs.lean`; 102 math.CT CLeans as reference). This certifies the
   cascade's *structure* against formal CT — not just operational consistency. *(Owner:
-  claude-10 / O7; the CT/Lean territory.)*
+  claude-10 / O7; the CT/Lean territory.)* — **SCOPED 2026-06-28 (claude-10): FEASIBLE, a real
+  near-term slice, and D4-INDEPENDENT** (prototypable *now*, ahead of the blocker — renderer
+  `clean_to_lean.py`, the DarkTower theory, the 0-sorry gate, and fold impl #2 all exist; only a
+  thin adapter is new). **What L2 certifies (we-do-discipline — record exactly):** ✅ the wiring
+  is a **structurally well-formed CT construction** (boxes compose — every `:consumes` wires to
+  an upstream `:produces` or a declared open hole — valid `BV.seq` spine, coherent `copar`,
+  valid discharge polarities); 0-sorry = "well-typed in the DarkTower theory." ❌ **NOT** semantic
+  adequacy (it does *not* certify the fold made the *right* construction, the math, ΔG, or
+  cascade relevance). Honest claim: *"the generated wiring is a machine-checked, structurally
+  sound CT construction"* — a **soundness floor** that rules out the LLM-fold's malformed /
+  hallucinated wirings, **not** "the cascade is correct." Minimal first slice: one real cascade
+  (`cascade_serve.py`, e.g. M-value-creation-loop F=+0.90) → fold via impl #2 → CLean →
+  `clean_to_lean` render → 0-sorry check vs the reference. *No D4 needed.*
 
 **STANDARD-VERIFY exit (raised):** O1–O7 **landed** + **core.logic-consistent** (Level 1), with
 the **DarkTower-against-Lean-CT** check (Level 2) as the formal push that turns "design-adequate"
