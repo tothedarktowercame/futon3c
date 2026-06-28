@@ -492,15 +492,28 @@ first cars** (the design-evidence is real, not hypothetical).
 arrow endpoint) is the *same* identity O4 cites and O3 attributes. Verified via the
 (have,want)-keying + the mission-scope identity, *as a design*, without building the consumers.
 
-**Why this is PASS-on-design (not "build it first"):** every row's design-check is demonstrable
-*now* (the column), and two are already live/in-flight — so the contract is shown
-**populatable**, which is the STANDARD-VERIFY bar. The logic model is the *wiring diagram of the
-population pipeline*; the code fills it in.
+**The bar is RAISED (Joe, 2026-06-28): in-flight ≠ passed — it must LAND, and be VERIFIED.**
+Unlike C-substrate-completion's PASS-on-design, this campaign's STANDARD-VERIFY does **not**
+pass on promissory in-flight work. The population logic-models must (a) **land** (the cars
+deliver the data) and (b) be **actually verified** — two levels:
 
-**STANDARD-VERIFY exit (for Joe to ratify):** O1–O7's population logic-models are
-cross-mission-adequate **as a design** (PASS-on-design). Ratifying it moves the escrow entries
-`held → contract-released` (consumers build to the verified spec), and the in-flight cars
-(claude-2, claude-1) become the first **RUN/DELIVER** evidence (`contract-released → satisfied`).
+- **Level 1 — verify in `core.logic`** (already a stack tool: `futon3c.logic.*`). Encode the
+  population logic-model — O1–O7's `source→process→cascade-ready` relations + the
+  **cross-dimension composition** (one shared identity: an O1 arrow endpoint = the O4-cited =
+  the O3-attributed node) — as `core.logic` relations, and run **consistency / satisfiability**.
+  The logic model becomes *executable*, not asserted. *(Owner: claude-4.)*
+- **Level 2 — the push (Joe): verify via the DarkTower model against the Lean CT theory.** Type
+  the cascade's wiring (the fold's combs / typed-holes, O7) as **DarkTower** objects and
+  **0-sorry-check** them against the real Lean theory (`mathlib4/DarkTower/Fill.lean` /
+  `Discharge.lean` / `CLeanProofs.lean`; 102 math.CT CLeans as reference). This certifies the
+  cascade's *structure* against formal CT — not just operational consistency. *(Owner:
+  claude-10 / O7; the CT/Lean territory.)*
+
+**STANDARD-VERIFY exit (raised):** O1–O7 **landed** + **core.logic-consistent** (Level 1), with
+the **DarkTower-against-Lean-CT** check (Level 2) as the formal push that turns "design-adequate"
+into "formally verified." Passing this moves the escrow entries `held → contract-released`; the
+landed cars are then the **RUN/DELIVER** evidence (`→ satisfied`). The in-flight work
+(claude-2's promote, claude-1's DERIVE, claude-10's Q-B) is the *path to* the bar, not the bar.
 
 ### Strategic implication + governance
 
