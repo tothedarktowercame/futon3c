@@ -501,7 +501,13 @@ deliver the data) and (b) be **actually verified** — two levels:
   population logic-model — O1–O7's `source→process→cascade-ready` relations + the
   **cross-dimension composition** (one shared identity: an O1 arrow endpoint = the O4-cited =
   the O3-attributed node) — as `core.logic` relations, and run **consistency / satisfiability**.
-  The logic model becomes *executable*, not asserted. *(Owner: claude-4.)*
+  The logic model becomes *executable*, not asserted. *(Owner: claude-4.)* — ✅ **BUILT
+  2026-06-28** (`futon3c.logic.cascade-real`, commit `9618f85`): contract O1–O7 + E1–E6
+  encoded; the conforming model is composition-consistent + acyclic + standard-covered,
+  **D4(=O1) is the keystone by held-on in-degree (earned, not asserted)**, O4/O5 reported as
+  honest holes; **5 tests/13 assertions green** incl. adversarial-caught (conflicting
+  node-type / uncovered standard / self-dep). `db-from-data` runs the SAME checks over the
+  real rows when the cars land — a runnable gate, not a doc claim.
 - **Level 2 — the push (Joe): verify via the DarkTower model against the Lean CT theory.** Type
   the cascade's wiring (the fold's combs / typed-holes, O7) as **DarkTower** objects and
   **0-sorry-check** them against the real Lean theory (`mathlib4/DarkTower/Fill.lean` /
