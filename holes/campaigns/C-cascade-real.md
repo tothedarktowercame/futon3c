@@ -468,6 +468,40 @@ is **M-capability-star-map / the devmap**; not on the roster, so either rally a 
 carry it as an honest hole until the work pulls an owner. I'll assign as the swarm's work
 surfaces the natural fit, and record each assignment here.
 
+## STANDARD-VERIFY — logic-model-before-code at Campaign tier (2026-06-28)
+
+STANDARD-VERIFY ratifies the O1–O7 contract as **cross-mission-adequate *as a design*
+(PASS-on-design)** — applying **`logic-model-before-code` at the campaign tier**: it moves
+from the *data shape* (STANDARD-ARGUE: what each dimension's data must be) to **how it gets
+populated** — the population logic, shown as a design-checkable model *before* the code. The
+elegant part: several population logic-models are **already being demonstrated by the in-flight
+first cars** (the design-evidence is real, not hypothetical).
+
+| O | population logic — **source → process → cascade-ready data** | design-check (verifiable as a design *now*, no consumer built) | demonstrated by |
+|---|---|---|---|
+| O1 | 177 `:mined-structural` overlay (futon6/diffsub-moves) **→ T-A4 gate → substrate-2 promote**, (have,want)-keyed, unify-on-promotion | the magnet's **F −0.19→+0.90** when fed paired memes (claude-10 measured) | **claude-2 feeder-(b) — IN FLIGHT** |
+| O2 | mined memes/moves/C-vector **→ pin (provenance+checksum+version) + consumer contract** → canonical mine | one consumer reads a stable, versioned mine | **claude-1 M-post-mining-ingest DERIVE — IN FLIGHT** |
+| O3 | agent turns (watcher/clock) **→ durable agent↔session↔mission record** → queryable lineage | the **reconstitution query returns after a teardown** (no-sheet-of-paper) | **claude-1 render LIVE** + claude-4 D1 / bg-process node-type |
+| O4 | missions+patterns (substrate-2/library) **→ `cascade_construct/lane` extract+cluster** → upward structure | regenerates with **zero hand rows**; clusters reproducible | generator exists (wire to live) |
+| O5 | devmap/invariants/evidence **→ compute capabilities+scans+holes** → built/scans/holes view | a **rendered hole resolves to a real coverage gap** | *TBD (the gap)* |
+| O6 | local cost/ROI data **→ parameterized runner** → cascade-consumable EDN | EDN rows regenerate the downward layer | claude-8 runner (Joe-gated) |
+| O7 | cascades+fold **→ emit wiring (DarkTower/CLean), 0-sorry gate** → wiring data | a wiring renders **0-sorry** vs the 102 math.CT reference | claude-10 fold sim-verified |
+
+**Cross-dimension composition (the join is checkable as a design):** the shared ontology
+(standard 5) means the population pipelines write to **one identity** — a node minted in O1 (an
+arrow endpoint) is the *same* identity O4 cites and O3 attributes. Verified via the
+(have,want)-keying + the mission-scope identity, *as a design*, without building the consumers.
+
+**Why this is PASS-on-design (not "build it first"):** every row's design-check is demonstrable
+*now* (the column), and two are already live/in-flight — so the contract is shown
+**populatable**, which is the STANDARD-VERIFY bar. The logic model is the *wiring diagram of the
+population pipeline*; the code fills it in.
+
+**STANDARD-VERIFY exit (for Joe to ratify):** O1–O7's population logic-models are
+cross-mission-adequate **as a design** (PASS-on-design). Ratifying it moves the escrow entries
+`held → contract-released` (consumers build to the verified spec), and the in-flight cars
+(claude-2, claude-1) become the first **RUN/DELIVER** evidence (`contract-released → satisfied`).
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
