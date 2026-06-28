@@ -526,6 +526,22 @@ deliver the data) and (b) be **actually verified** — two levels:
   hallucinated wirings, **not** "the cascade is correct." Minimal first slice: one real cascade
   (`cascade_serve.py`, e.g. M-value-creation-loop F=+0.90) → fold via impl #2 → CLean →
   `clean_to_lean` render → 0-sorry check vs the reference. *No D4 needed.*
+  - **L2 scope extension — the cascade-of-cascades (Joe 2026-06-28).** The minimal slice proves
+    *a* cascade is a well-typed comb. But the pipeline cascade is **all** the cascades, and in a
+    real sense a **cascade-of-cascades** — so the formally interesting facts are about
+    *composition*, and the DarkTower theory already has the leverage. Beyond rung 1, **one or two
+    more proofs show the pipeline itself is well-formed**:
+    - **Rung 2 — closure under composition.** If cascades C1, C2 are well-typed combs and
+      composable (C1's `:produces` type-match C2's open holes), their `BV.seq` composite is a
+      well-typed comb — i.e. the comb algebra is *closed* (the spine stays valid, discharge
+      polarities compose). A machine-checked DarkTower lemma, not a per-cascade render.
+    - **Rung 3 — pipeline-as-cascade (self-similarity).** The whole pipeline — the composite of
+      all cascades under the cascade-wiring — is itself an object of the **same** cascade type:
+      *cascade-of-cascades is a cascade*. The fixed-point / fractal reading, via induction on the
+      pipeline DAG (the operad-multiplication structure of combs-of-combs).
+    Rungs 2–3 stay **structural** (well-formedness lifted from one cascade to the composition and
+    the whole) — the same honest scope as rung 1, **not** semantic correctness. Rung 1 is built
+    so it extends toward these; claude-10 scopes how far rungs 2–3 go now vs later.
 
 **STANDARD-VERIFY exit (raised):** O1–O7 **landed** + **core.logic-consistent** (Level 1), with
 the **DarkTower-against-Lean-CT** check (Level 2) as the formal push that turns "design-adequate"
