@@ -59,6 +59,7 @@
             [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.bell-router :as bell-router]
+            [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -678,6 +679,14 @@
                  (assoc :next-seq next-seq)
                  (update :job-order (fnil conj []) job-id)
                  (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
+    ;; First-class durable coordination edge (E-patch-agent-evidence-leaks): record the
+    ;; (from→to) edge keyed by job-id so the in-band `Edge:` join-key resolves to a stored
+    ;; edge for EVERY job (not just wrapped social-dispatch invokes). Never break the hot path.
+    (try
+      (coordination-ledger/record-invoke-edge!
+       {:from (or caller "http-caller") :to (str agent-id)
+        :surface (or surface "http") :kind :invoke :edge-id @created-id})
+      (catch Throwable _))
     (bb/project-agents! (reg/registry-status))
     @created-id))
 
@@ -1135,13 +1144,12 @@
                                         :invoke-ready? (:invoke-ready? info)}]))
                             (:agents live-status))
         evidence-store (evidence-store-for-config config)
-        ;; Best-effort count: a full unbounded evidence scan can time out as the
-        ;; store grows and would otherwise make /health throw on every poll.
-        ;; Run it off-thread with a short deadline; report -1 if slow/erroring so
-        ;; /health stays fast and quiet rather than spamming TimeoutException.
-        evidence-count (let [f (future (try (count (estore/query* evidence-store {}))
-                                            (catch Throwable _ -1)))]
-                         (deref f 800 -1))
+        ;; Backend-level count keeps /health from kicking off a full evidence
+        ;; materialization. That old future-based path returned quickly but kept
+        ;; running in the background and produced XTDB timeout warnings later.
+        evidence-count (try
+                         (estore/count* evidence-store {})
+                         (catch Throwable _ -1))
         irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
         irc-relay-configured? (fn? (:irc-send-fn config))
         queue-hardening (agency-invariants/queue-hardening-status)
@@ -1190,7 +1198,7 @@
   "GET /api/alpha/evidence — query evidence entries."
   [request config]
   (let [params (parse-query-params request)
-        limit (parse-int (get params "limit"))
+        limit (or (parse-int (get params "limit")) 100)
         subject (parse-subject params)
         evidence-type (parse-keyword (get params "type"))
         claim-type (parse-keyword (get params "claim-type"))
@@ -1203,12 +1211,19 @@
                 subject (assoc :query/subject subject)
                 evidence-type (assoc :query/type evidence-type)
                 claim-type (assoc :query/claim-type claim-type)
+                author (assoc :query/author author)
                 (get params "since") (assoc :query/since (get params "since"))
                 (some? include-ephemeral?)
                 (assoc :query/include-ephemeral? include-ephemeral?)
                 (seq tags) (assoc :query/tags tags))
+        backend-query (cond-> query
+                        (and (nil? session-id)
+                             (nil? pattern-id)
+                             (int? limit)
+                             (pos? limit))
+                        (assoc :query/limit limit))
         evidence-store (evidence-store-for-config config)
-        entries (cond->> (estore/query* evidence-store query)
+        entries (cond->> (estore/query* evidence-store backend-query)
                   true
                   (filter (fn [entry]
                             (and
@@ -1242,21 +1257,24 @@
                 subject (assoc :query/subject subject)
                 evidence-type (assoc :query/type evidence-type)
                 claim-type (assoc :query/claim-type claim-type)
+                author (assoc :query/author author)
                 (get params "since") (assoc :query/since (get params "since"))
                 (some? include-ephemeral?)
                 (assoc :query/include-ephemeral? include-ephemeral?)
                 (seq tags) (assoc :query/tags tags))
         evidence-store (evidence-store-for-config config)
-        count* (->> (estore/query* evidence-store query)
-                    (filter (fn [entry]
-                              (and
-                               (or (nil? author)
-                                   (= author (:evidence/author entry)))
-                               (or (nil? session-id)
-                                   (= session-id (:evidence/session-id entry)))
-                               (or (nil? pattern-id)
-                                   (= pattern-id (:evidence/pattern-id entry))))))
-                    count)]
+        count* (if (or session-id pattern-id)
+                 (->> (estore/query* evidence-store query)
+                      (filter (fn [entry]
+                                (and
+                                 (or (nil? author)
+                                     (= author (:evidence/author entry)))
+                                 (or (nil? session-id)
+                                     (= session-id (:evidence/session-id entry)))
+                                 (or (nil? pattern-id)
+                                     (= pattern-id (:evidence/pattern-id entry))))))
+                      clojure.core/count)
+                 (estore/count* evidence-store query))]
     (json-response 200 {:ok true
                         :count count*})))
 
@@ -2357,6 +2375,28 @@
         (catch Exception e
           (println (str "[review] snapshot emit warning: " (.getMessage e))))))))
 
+;; --- Provenance edge (E-patch-agent-evidence-leaks) ---------------------------
+;; Every mesh-injected turn is born carrying its coordination edge so no downstream
+;; consumer can mistake a non-operator turn for an operator one. From/To/Origin are
+;; TOTAL (always stamped); the keep/drop rule is the single predicate
+;; "operator ∈ {From,To}". Origin resolves the role of From and never returns nil.
+(def ^:private harness-callers
+  #{"auto-bellback" "auto" "system" "cron" "heartbeat" "apm-harvest" "claude-loop"})
+
+(defn- resolve-origin
+  "Resolve the provenance role of a turn's author (the From endpoint):
+   \"operator\" (Joe) | \"harness\" (automated agency/harness senders) | \"agent\"
+   (a named agent, or any other programmatic caller — the safe non-operator default).
+   Total: always returns one of the three."
+  [caller surface]
+  (let [c (some-> caller str str/trim str/lower-case)
+        s (some-> surface str str/trim str/lower-case)]
+    (cond
+      (or (= c "joe") (= c "joe-repl"))                 "operator"
+      (or (contains? harness-callers c)
+          (= s "auto-bellback"))                        "harness"
+      :else                                             "agent")))
+
 (defn- wrap-surface-header
   "Prepend an authoritative surface header to PROMPT when SURFACE is non-nil.
    This ensures the agent sees a consistent, unambiguous surface declaration
@@ -2378,6 +2418,17 @@
                              (reply-auto-routes? agent-id caller))]
        (str "--- CURRENT TURN ---\n"
             "Surface: " surface "\n"
+            ;; Provenance edge (E-patch-agent-evidence-leaks): From/To/Origin are TOTAL —
+            ;; always stamped, so an unmarked turn can never default to operator. Edge is the
+            ;; join-key into the durable coordination ledger (= job-id; see record-invoke-edge!).
+            "From: " (let [c (some-> caller str str/trim)]
+                       (if (str/blank? c) "unknown-agent" c)) "\n"
+            "To: " (let [t (some-> agent-id str str/trim)]
+                     (if (str/blank? t) "unknown-agent" t)) "\n"
+            "Origin: " (resolve-origin caller surface) "\n"
+            (when-let [edge (:edge thread)]
+              (str "Edge: " edge "\n"))
+            ;; Caller retained as a legacy alias of From for back-compat with existing parsers.
             (when (and caller (not (str/blank? (str caller))))
               (str "Caller: " caller "\n"))
             ;; Reply-delivery contract: when the response auto-routes, say so EXPLICITLY
@@ -2664,6 +2715,10 @@
                               (codex-task-no-execution? agent-id effective-prompt result))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
+        ;; D1/O3 durable lineage: a successful dispatch with a mission-id clocks
+        ;; the agent-session to that mission (in-RAM + async substrate write).
+        (when (and mission-id sid (:ok result))
+          (clock-lineage/clock-dispatch! (str agent-id) sid mission-id))
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                (or ev-opts []))
         (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
@@ -2712,12 +2767,15 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
-      (let [thread (when (= "bell" (some-> surface str str/trim))
-                     (let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])]
-                       {:bell-id job-id
-                        :in-reply-to (:bellback-of job)
-                        :type (:bell-type job)
-                        :ref (:ref job)}))
+      (let [thread (let [bell? (= "bell" (some-> surface str str/trim))
+                         job   (when bell? (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
+                     ;; :edge (= job-id) is the join-key, carried on ALL surfaces; bell-router /
+                     ;; typed-bell fields stay bell-only and flag-gated as before.
+                     (cond-> {:edge job-id}
+                       bell? (assoc :bell-id job-id
+                                    :in-reply-to (:bellback-of job)
+                                    :type (:bell-type job)
+                                    :ref (:ref job))))
             effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id thread)
             raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
             result (maybe-route-surface-writes agent-id raw-result)
@@ -2726,6 +2784,10 @@
                               (codex-task-no-execution? agent-id effective-prompt result))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
+        ;; D1/O3 durable lineage: a successful dispatch with a mission-id clocks
+        ;; the agent-session to that mission (in-RAM + async substrate write).
+        (when (and mission-id sid (:ok result))
+          (clock-lineage/clock-dispatch! (str agent-id) sid mission-id))
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                (or ev-opts []))
         (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
