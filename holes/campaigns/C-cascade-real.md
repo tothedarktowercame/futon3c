@@ -562,6 +562,30 @@ deliver the data) and (b) be **actually verified** — two levels:
     Rungs 2–3 stay **structural** (well-formedness lifted from one cascade to the composition and
     the whole) — the same honest scope as rung 1, **not** semantic correctness. Rung 1 is built
     so it extends toward these; claude-10 scopes how far rungs 2–3 go now vs later.
+    - **SIZED 2026-06-28 (claude-10, file:line-grounded) — the deferred-enrichment ticket.**
+      Checked against the real DarkTower Lean; cost profile *flips* vs rung 1 — rung 1 = a
+      per-cascade standalone render; **rungs 2–3 = one-time mathlib-backed lemmas that then
+      certify *all* composites for free** (DarkTower's `.lake` oleans are built; compile
+      incrementally).
+      - **Rung 2 (closure-under-composition): LARGELY CITABLE → one bounded new lemma (near-term,
+        ~tens of lines).** `Comb` is a *proven category* — `Comb.comp` + `comp_assoc` +
+        `id_comp`/`comp_id` (`Comb.lean:65–100`); the spine stays valid via `BV.Cong`/`seq_congr`
+        + associativity (`BV.lean:62+`); composition is already one of the six **certified**
+        discharge projections (`Coverage.lean:48` `:composes`, comb-composition lemma at `:118`).
+        New code only *assembles* these for CLean-shaped cascades: "C1,C2 well-typed combs,
+        C1.`:produces` type-match C2's open holes ⇒ their `BV.seq` composite is a well-typed comb."
+      - **Rung 3 (pipeline-as-cascade / self-similarity): MECHANISM EXISTS, capstone is new
+        (medium).** The operad multiplication is present — `Fill = PFunctor.comp` (poly
+        substitution, `Fill.lean:31`), carrying object-level unit + associativity equivalences
+        (`Fill.lean:18`). New Lean = the capstone theorem "the whole pipeline is itself a
+        `TypedHole`/`Comb` of the same type," an **induction on the pipeline DAG** over
+        `Fill` + `Comb.comp` — a genuine inductive proof, not a citation.
+      - **Out of scope (flag, claude-10):** the *full* operad coherence (higher associators/units,
+        `sinhp`/`Poly`, `Fill.lean:16`) and the homotopical reading (`StableHomotopyCategory.lean`)
+        — heavier, unnecessary for structural well-formedness; do **not** pull them in.
+      Disposition: **deferred enrichment** (per the revised exit). Rung 2 is cheap enough to be an
+      easy opportunistic win; rung 3 is a real (medium) theorem. Greenlight 2-then-3 is Joe's call;
+      banked as L2-minimal (rung 1) for the close.
 
 **STANDARD-VERIFY exit (raised):** O1–O7 **landed** + **core.logic-consistent** (Level 1), with
 the **DarkTower-against-Lean-CT** check (Level 2) as the formal push that turns "design-adequate"
