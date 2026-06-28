@@ -623,6 +623,48 @@ landed + verified** — only L2 rungs 2–3 (cascade-of-cascades closure) stay d
 The relaxation above still holds (rungs 2–3 are not a blocker), but the realised verification is
 **better** than the L1-only floor it was written against.
 
+**STANDARD-VERIFY exit — ✅ RATIFIED (Joe, 2026-06-28, `*claude-repl:claude-4*`):** Joe directed
+"move to RUN/DELIVER," which ratifies the PASS. Basis: **L1 (design gate) + L2 rung-1 (formal-CT
+capstone) both landed + verified**; L2 rungs 2–3 deferred enrichment (sized). Escrow entries move
+`held → contract-released` (the *design* obligation is discharged); `→ satisfied` now belongs to
+RUN/DELIVER as each car lands its **data** against the L1 gate.
+
+---
+
+## RUN/DELIVER — land the data against the L1 gate (2026-06-28)
+
+The design is verified; RUN/DELIVER makes the cascade *real* by landing the **data** so the two
+chartered completion clauses hold:
+- **Clause 1 (the data ask):** the five standards over LIVE data — regenerates with zero hand
+  rows (s1), every node resolves to live evidence (s2), the reconstitution query survives a
+  teardown (s3), ≥1 honest hole is a real queryable gap (s4), the facet-owners interoperate
+  through the shared ontology (s5).
+- **Clause 2 (strategic):** **War Bulletin 11**, read off the now-live cascade — the cascade's
+  first real use, and the proof Clause 1 bought something.
+
+**The gate:** `futon3c.logic.cascade-real/db-from-data` runs the SAME L1 checks over the real
+rows each car lands (the relocated data-verification). A car is `→ satisfied` only when its rows
+pass that gate.
+
+### Delivery ledger (per dimension — deliverable · owner · standard · state)
+
+| O | the live-data deliverable | owner | standard | state (2026-06-28) |
+|---|---|---|---|---|
+| O1/D4 | 177 `:mined-structural` arrows promoted to substrate-2, (have,want)-keyed | claude-2 | s2 (keystone) | ⏳ in-flight (feeder-(b)) |
+| O2 | canonical **pinned** mine (provenance+checksum+version) | claude-1 | s1 | ⏳ in-flight (DERIVE) |
+| O3/D1 | durable agent↔session↔mission lineage; reconstitution query survives teardown | **claude-4** | **s3** | 🔎 **first car — observe** |
+| O4 | generator extracts+clusters missions/patterns → upward structure, zero hand rows | TBD | s1 | ⏸ generator exists, wire to live |
+| O5 | a rendered **honest hole** resolves to a real coverage gap | TBD | s4 | ⏸ the gap itself is the deliverable |
+| O6 | forward cost/ROI EDN regenerates the downward layer | claude-8 | s1 | ⏸ runner exists (Joe-gated) |
+| O7 | fold emits wiring, 0-sorry gate vs DarkTower | claude-10 | s5 | ✅ **delivered** (L2 rung-1, `edad60a`) |
+
+### First car (car-of-sequence): **O3/D1 — durable lineage**, the one I own
+Per the chartered first-car proposal and the Membership (claude-4 = D1 lineage owner): D1 is the
+pillar Joe named, the "no sheet of paper" reconstitution test (s3), and the registry's
+`mission=None` for every agent is the live symptom of the gap. **Observe before building:** is
+the reconstitution query answerable *today* (durable record anywhere), or is it genuinely empty?
+That observation sets D1's delivery scope. (Recorded below as it runs.)
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
