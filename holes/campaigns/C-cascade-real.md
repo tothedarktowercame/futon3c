@@ -549,6 +549,27 @@ into "formally verified." Passing this moves the escrow entries `held → contra
 landed cars are then the **RUN/DELIVER** evidence (`→ satisfied`). The in-flight work
 (claude-2's promote, claude-1's DERIVE, claude-10's Q-B) is the *path to* the bar, not the bar.
 
+**STANDARD-VERIFY exit — REVISED (Joe, 2026-06-28): PASS on existing work (pending Joe's
+ratification).** The raised bar is **relaxed**: STANDARD-VERIFY closes on **Level 1 alone** —
+landed + core.logic-consistent + adversarial-caught — *without* requiring the Level 2 formal
+proofs. Be explicit about the trade (not a silent slip):
+- **DROPPED from blocking → DEFERRED enrichment:** the L2 DarkTower-vs-Lean-CT push *and* its
+  rungs 2–3 (closure-under-composition, pipeline-as-cascade). Formally interesting, **not a
+  blocker** for the rest of the campaign. claude-10's rung-1 build continues as a *bonus* that
+  lands when it lands; the rung-2/3 sizing it returns informs a future enrichment ticket, not
+  this gate.
+- **STILL STANDS (the pass basis):** L1 `cascade_real.clj` (`9618f85`) — the O1–O7 + ESCROW
+  contract is machine-verified composition-consistent / acyclic / standard-covered, D4 the
+  earned keystone, **and each adversarial model is caught** (5 tests/13 assertions green). A
+  real logic-model-before-code result, not a doc claim.
+- **RELOCATED, not waived:** L1 today verifies the *model* (`contract-facts`), not live rows.
+  `db-from-data` runs the SAME checks over the real data — that verification is the
+  **RUN/DELIVER** gate (it lands when the cars do), so data-verification moves to its proper
+  phase rather than blocking this one.
+- **Net:** the design is verified (L1); the *data* is verified at RUN/DELIVER (same model, live
+  rows); the *formal-CT* layer is a deferred enrichment. Escrow `held → contract-released` moves
+  on this L1 pass; `→ satisfied` still waits on the cars (RUN/DELIVER).
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
