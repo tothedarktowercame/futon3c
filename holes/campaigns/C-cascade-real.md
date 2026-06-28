@@ -193,14 +193,22 @@ missions-in-progress at once.
    forward-model (claude-1/claude-8), and the lineage (claude-4) read/write **one shared
    ontology** — upward + downward + operational are one object, not four pictures.
 
-### Joint completion criterion (the campaign is done when)
+### Joint completion criterion — two clauses
 
+**Clause 1 — the data ask (the shared standard is met):**
 - The cascade **regenerates from live queries with zero hand-typed rows** (standard 1).
 - Every rendered node **resolves to live evidence** on inspection (standard 2) — spot-check
   passes for missions, patterns, capabilities, agent-clocks, held items.
 - The **reconstitution query** works across a teardown (standard 3).
 - At least one **honest hole** is shown to be a real, queryable coverage gap (standard 4).
 - The four facet-owners' outputs **interoperate through the shared ontology** (standard 5).
+
+**Clause 2 — the strategic implications are understood (Joe):** it is not enough that the
+data *exists and is queryable* — we must **understand what it implies**. The capstone outcome
+is **War Bulletin 11**, *read off the now-live cascade*: what the refreshed strategic
+self-portrait shows, and — fittingly for a #11 — **what it refactors about the strategy**.
+The campaign is not done until that reading is developed and recorded. (Bulletin 11 is thus
+the cascade's *first real use*, and the proof that Clause 1 bought something.)
 
 ### Non-criteria — what "real" does NOT require
 
@@ -255,7 +263,12 @@ portrait itself has gone stale.** `futon3/holes/war-room.md` + `war-bulletin-10.
 **2026-05-31**; a great deal has landed since (substrate-2 D0–D3 + `db-as-of` time-travel, the
 fold + generator, M-points-de-fuite, the two forward-models, M-post-mining-ingest, agency
 hardening, bg-process). So this campaign is chartered from **Joe's direct direction
-(2026-06-27) + the RALLY**, not a bulletin.
+(2026-06-27/28) + the RALLY, recorded in this very session — `*claude-repl:claude-4*`** —
+not a bulletin. (A fitting recursion: the chartering record is a *session* — exactly the
+operational data this campaign makes queryable. When the cascade is real, *"how was
+C-cascade-real chartered?"* is a query, not a doc pointer.) And rather than chartering
+*from* a bulletin, this campaign **emits the next one — War Bulletin 11 — as its capstone**
+(see Clause 2).
 
 **The deeper point:** the cascade *is* a data-backed War Room — mission-clusters → patterns →
 capabilities → forward-model + the operational lineage is exactly the War Room's
@@ -269,9 +282,11 @@ is the mechanism that makes the strategic self-portrait **self-refreshing**: it 
 watcher / turn ingest. The cascade renders over this mined record — which is *why* the
 (have→want) corpus (D4) + the canonical mine are the escrowed dependency.
 
-**CHARTER exit criterion:** Joe (+ the five stakeholders) ratify that the five standards +
-non-criteria are the right definition of "real," the completion criterion is the right
-done-ness test, and the live-War-Room provenance/purpose is right. *→ pending.*
+**CHARTER exit criterion:** ✅ **RATIFIED — Joe, 2026-06-28** (`*claude-repl:claude-4*`).
+The five standards + non-criteria are the agreed definition of "real" (a straightforward
+*data* ask); the completion criterion is two-clause (data done-ness + strategic implications →
+**War Bulletin 11**); membership is solved; provenance = this session. → Proceed to
+CONSTITUTION (survey dependents + governance) + ESCROW (the D4 (have→want) corpus) + first car.
 
 ## Candidate deliverables (the "several other things") — the CHARTER's decomposition (RALLY-refined)
 
@@ -283,6 +298,7 @@ Ordered so each rests on the previous; member-mission boundaries to be ratified.
 - **D4 — Capability semilattice + scan-classes + holes, from evidence.** Generate the capability cards / scans / hollow nodes from devmap + invariants + mission/VSATARCS evidence (the footer's "next useful step").
 - **D5 — The generator (keystone).** Render the cascade (and the operator reconstitution view) from D1–D4 queries — zero hand-typed rows. Reuses VSATARCS / stereolithograph / WebArxana rendering; the cascade HTML becomes an output, not a source.
 - **D6 — Forward-model integration.** Join futon7's M-futon-forward-model downward layer (backlog→basin→ROI→pipeline) to the live upward structure.
+- **D7 — War Bulletin 11 (capstone, Clause 2).** Read the now-live cascade and write the next bulletin: what the refreshed strategic self-portrait shows and what it *refactors* about the strategy. The cascade's first real use — and the proof D1–D6 bought something. (D1–D6 = the data; D7 = understanding what it implies.)
 
 ## Exit / keystone (draft — for Joe to ratify)
 
