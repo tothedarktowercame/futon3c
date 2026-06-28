@@ -193,6 +193,12 @@
                       old-clock (:clock state)]
                   (assoc state
                          :clock new-clock
+                         ;; An explicit dispatch is a hard re-clock: clear the
+                         ;; edit-activity anti-thrash baseline so subsequent edits
+                         ;; can reclock back to the dispatched-away target (else a
+                         ;; dispatch permanently pins the session — the stuck-clock
+                         ;; bug behind C-cascade-real D1's repl display).
+                         :last-reclock-target nil
                          :last-auto-clock-witness
                          {:rule "dispatch-mission-id"
                           :source "invoke-receipt"

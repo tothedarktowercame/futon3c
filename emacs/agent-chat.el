@@ -437,6 +437,56 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
             (set-marker agent-chat--separator-start prompt-start))
           (set-marker-insertion-type agent-chat--prompt-marker t))))))
 
+(defcustom agent-chat-sync-clock-from-server t
+  "Non-nil means the repl reflects the agency's durable auto-clock on turn-end.
+The agent's tool-edits feed a durable clock server-side (C-cascade-real D1/O3);
+this pulls it into the buffer so the displayed mission tracks actual work rather
+than a disconnected Emacs-side clock."
+  :type 'boolean
+  :group 'agent-chat)
+
+(defun agent-chat--sync-clock-from-server! ()
+  "Reflect this session's durable agency auto-clock in the buffer (C-cascade-real
+D1/O3): on turn-end the repl shows the clock the agent's tool-edits feed, not a
+disconnected Emacs-side clock.  Synchronous (fast in-RAM server read, 1s cap) and
+failure-isolated; a no-op when disabled or without an agent name."
+  (when (and agent-chat-sync-clock-from-server agent-chat--agent-name)
+    (ignore-errors
+      (let* ((aid (or agent-chat--agent-id agent-chat--agent-name))
+             (sid agent-chat--session-id)
+             (url (format "%s/api/alpha/agent-clock?agent-id=%s%s"
+                          agent-chat-agency-base-url
+                          (url-hexify-string aid)
+                          (if (and sid (stringp sid))
+                              (format "&session-id=%s" (url-hexify-string sid))
+                            "")))
+             (resp-buf (url-retrieve-synchronously url t t 1))
+             (body nil))
+        (when resp-buf
+          (with-current-buffer resp-buf
+            (goto-char (point-min))
+            (when (search-forward "\n\n" nil t)
+              (setq body (buffer-substring-no-properties (point) (point-max)))))
+          (kill-buffer resp-buf))
+        (when body
+          (let* ((data (json-parse-string body :object-type 'alist))
+                 (camp (alist-get 'campaign-id data))
+                 (mis  (alist-get 'mission-id data))
+                 (exc  (alist-get 'excursion-id data))
+                 (camp (and (stringp camp) camp))
+                 (mis  (and (stringp mis) mis))
+                 (exc  (and (stringp exc) exc)))
+            ;; Only apply a non-empty server clock that differs from the buffer's,
+            ;; so an unclocked session (or a server with no record) never clobbers.
+            (when (and (eq t (alist-get 'ok data))
+                       (or camp mis exc)
+                       (not (and (equal camp agent-chat--campaign-id)
+                                 (equal mis agent-chat--mission-id)
+                                 (equal exc agent-chat--excursion-id))))
+              (agent-chat-set-clock!
+               (string-join (delq nil (list camp mis exc)) " > ")
+               nil t))))))))
+
 (defun agent-chat-finish-turn! (&optional elapsed)
   "Run shared turn-end behavior with optional ELAPSED seconds."
   (unless agent-chat--current-turn-id
@@ -458,6 +508,9 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
           (error
            (message "agent-chat turn-end hook error: %s"
                     (error-message-string turn-err)))))
+      ;; Pull the durable auto-clock before rendering the flair, so the label
+      ;; reflects the work the agent's tool-edits fed (C-cascade-real D1/O3).
+      (agent-chat--sync-clock-from-server!)
       (agent-chat--insert-turn-end-flair duration)
       (setq agent-chat--last-flair-turn-id agent-chat--current-turn-id))))
 

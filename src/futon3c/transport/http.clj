@@ -60,6 +60,7 @@
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.bell-router :as bell-router]
             [futon3c.agency.clock-lineage :as clock-lineage]
+            [futon3c.agency.clock-store :as clock-store]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -3743,6 +3744,27 @@
                         :count (:count status)
                         :agents (:agents status)})))
 
+(defn- handle-agent-clock
+  "GET /api/alpha/agent-clock?agent-id=X&session-id=Y — the live auto-clock for
+   that agent session (campaign/mission/excursion + witness). The repl buffer polls
+   this on turn-end so its display reflects the durable clock the agent's tool-edits
+   feed, instead of a disconnected Emacs-side clock (C-cascade-real D1/O3 sync)."
+  [request]
+  (let [params (parse-query-params request)
+        agent-id (get params "agent-id")
+        session-id (get params "session-id")]
+    (if (str/blank? (str agent-id))
+      (json-response 400 {:ok false :error "agent-id required"})
+      (let [state (clock-store/current-state agent-id session-id)
+            clock (:clock state)]
+        (json-response 200 {:ok true
+                            :agent-id agent-id
+                            :session-id session-id
+                            :campaign-id (:campaign-id clock)
+                            :mission-id (:mission-id clock)
+                            :excursion-id (:excursion-id clock)
+                            :witness (:last-auto-clock-witness state)})))))
+
 (defn- handle-agent-get
   "GET /api/alpha/agents/:id — return a single agent's details."
   [_config agent-id]
@@ -5224,6 +5246,10 @@
 
       (and (= :get method) (= "/api/alpha/coordination/threads" uri))
       (handle-coordination-threads request)
+
+      ;; C-cascade-real D1/O3: durable auto-clock for the repl buffer to poll.
+      (and (= :get method) (= "/api/alpha/agent-clock" uri))
+      (handle-agent-clock request)
 
       :else nil)))
 
