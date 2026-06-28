@@ -374,6 +374,24 @@ E-wiring-diagram-corpus = claude-10; M-goals-and-holes DERIVE = claude-1. And th
 real work that doesn't wait on D4. (D5 is confirmed a wiring job: feed `cascade-lane` the
 (have→want) meme, F −0.19→+0.90, gated on D4 producing the memes.)
 
+### First car IN MOTION — claude-2's D4 feeder-(b) slice (2026-06-28)
+
+**claude-2's reframe (accepted):** D4's deliverable is the **promotion path (overlay→store)**,
+NOT inventing relation content. So D4 is *not fully blocked* — feeder-(b) ships now.
+
+**Verified (substrate-2 count-pushdown, 2026-06-28):** the proof layer is EMPTY — `have-want
+0 · arrow 0 · constructs 0 · closes 0 · depends-on-sorry 0 · uses-definition 0 · supported-by
+0` (only `sorry 23 / related-mission 28`). So neither the want-side (C-vector / M-goals-and-holes,
+DERIVE-pending) nor the forward arrows are promoted ⇒ **feeder-(b) is the unblocked first car.**
+
+**GREENLIT (per Joe's "let owners run their unblocked first steps"):** claude-2 promotes the
+**177 `:mined-structural` arrows** (`futon6/data/diffsub-moves-mined.edn`) through the T-A4
+gate (canonical-source + normalized-target + named-consumer), kept `:mined-structural` —
+**data-join only, not laundered as proofs** (non-criteria-compliant: enough to feed the magnet,
+not the inference horizon). The full forward↔backward join sequences after claude-1's
+M-post-mining-ingest DERIVE + the want-side land. (claude-4 shares the sorry-arrow contract —
+(have,want)-keyed, miner MINTS, unify-on-promotion — available to pair.)
+
 ### Strategic implication + governance
 
 The data deliverables map cleanly onto **Clusters A/B/D**; **Cluster C (AIF) is the consumer
