@@ -1076,7 +1076,11 @@
 (defn- record-dispatch-clock!
   [agent-id session-id prompt]
   (when-let [mission-id (prompt-field* prompt :mission-id)]
-    (clock-store/set-dispatch-mission! agent-id session-id mission-id)))
+    ;; clock-dispatch! = set-dispatch-mission! + DURABLE persist (single-active via
+    ;; durable-edge retract). Routing the prompt-sourced dispatch through it makes
+    ;; those dispatches durable too, and shares ONE safe persist path with the
+    ;; http.clj payload-sourced wire — so the two loci no longer race the retract.
+    (clock-lineage/clock-dispatch! agent-id session-id mission-id)))
 
 (defn- record-agent-tool-use!
   [agent-id session-id tool-detail]

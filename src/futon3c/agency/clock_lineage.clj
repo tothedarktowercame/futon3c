@@ -59,17 +59,35 @@
                (catch Exception e {:status -1 :body (.getMessage e)}))]
     {:ok? (= 200 (:status resp)) :status (:status resp)}))
 
+(declare query-by-type)
+
+(defn- agent-current-targets
+  "The agent's currently-valid clock target endpoints in the DURABLE store (0 or 1
+   in steady state; >1 only if a prior multi-feed left duplicates — which this then
+   cleans up). Read from substrate-2, not RAM, so it is the authoritative prior
+   state regardless of how the in-RAM clock was mutated."
+  [agent-ep]
+  (->> (query-by-type)
+       (filter (fn [e] (some #{agent-ep} (:hx/endpoints e))))
+       (mapcat (fn [e] (remove #{agent-ep} (:hx/endpoints e))))
+       distinct
+       vec))
+
 (defn persist-clock!
-  "Durably record a clock transition for AGENT-ID/SESSION-ID. Single-active: when
-   the target changed, retract the agent's prior target edge (end-valid-time),
-   then put the new `[agent → target]` edge at valid-time NOW with session +
-   witness in props. Fire-and-forget — returns a future (deref for {:ok?}); a
-   no-op returning nil when NEW-CLOCK has no target. Never throws into the caller."
-  [{:keys [agent-id session-id old-clock new-clock witness now-ms]}]
+  "Durably record a clock transition for AGENT-ID/SESSION-ID. Single-active by
+   retracting (end-valid-time) the agent's prior DURABLE target edge(s) — read
+   from substrate-2, NOT the passed RAM old-clock — then putting the new
+   `[agent → target]` edge at valid-time NOW with session + witness in props.
+   Reading the retract target from the durable store makes this correct and
+   idempotent no matter how many feed loci mutated the RAM clock or in what order
+   (kills the dispatch double-feed retract hazard). Fire-and-forget — returns a
+   future (deref for {:ok?}); a no-op returning nil when NEW-CLOCK has no target.
+   Never throws into the caller. (OLD-CLOCK is accepted for caller symmetry but no
+   longer drives the retract.)"
+  [{:keys [agent-id session-id new-clock witness now-ms]}]
   (when-let [new-ep (target-endpoint new-clock)]
     (let [now      (long (or now-ms (System/currentTimeMillis)))
           agent-ep (str "agent:" agent-id)
-          old-ep   (target-endpoint old-clock)
           props    (cond-> {"agent-id" (str agent-id) "clocked-at-ms" now}
                      (some-> session-id str not-empty) (assoc "session-id" (str session-id))
                      (:mission-id new-clock)   (assoc "mission-id" (:mission-id new-clock))
@@ -78,8 +96,8 @@
                      witness                   (assoc "witness" witness))]
       (future
         (try
-          (when (and old-ep (not= old-ep new-ep))
-            (post-hx! {:endpoints [agent-ep old-ep] :valid-time-ms now :op "retract"}))
+          (doseq [t (agent-current-targets agent-ep) :when (not= t new-ep)]
+            (post-hx! {:endpoints [agent-ep t] :valid-time-ms now :op "retract"}))
           (post-hx! {:endpoints [agent-ep new-ep] :props props :valid-time-ms now})
           (catch Exception _ {:ok? false}))))))
 
