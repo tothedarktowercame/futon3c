@@ -734,6 +734,13 @@ query bypassing futon3c RAM. Gates: check-parens OK (both) · clj-kondo 0/0. **O
   collide in the co-verify; but if both fire, the `http.clj` wire can read an already-mutated
   old-clock and **skip the retract**. Clean fix: consolidate both dispatch feeds through the
   persist wrapper (mirroring the edit path's single locus). Flagged for a hardening pass.
+  - **RESOLVED 2026-06-28 (commit `84d4d04`).** `persist-clock!` now decides the retract by
+    querying the agent's current **durable** edge (`agent-current-targets`, substrate-2), not the
+    passed RAM old-clock — so the single-active retract is correct + idempotent no matter how many
+    feed loci mutated RAM or in what order. `dev.clj`'s prompt-sourced `record-dispatch-clock!`
+    now also routes through `clock-dispatch!` (durable + same safe path). Verified live: durable=A,
+    then a persist with `old==new==B` (the exact skipped case) correctly leaves **only B** (A
+    retracted).
 
 **D1 SYNC FINALIZE — the repl reflects the durable clock (claude-4, commit `a977bed`).** Joe
 observed the repl still showed a stale mission ("manual set is not sustainable"). Root cause: the
