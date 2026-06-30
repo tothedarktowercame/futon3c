@@ -650,12 +650,13 @@ demonstrated; standard 4 (honest holes) in flight (O5).**
 | 1 — regenerates, zero hand rows | ✅ by design | O4 generator queries live BGE + :7071 canonical (reviewed `895b85f`); O1 = mined arrows; O3 = live clocks. No hand-typed rows. A clean regenerate-run is the formal cap. |
 | 2 — every node resolves to live evidence | ✅ | probe shared node `futon0-d/mission/capability-star-map` resolves to **286 live edges** (arrows, cluster, mission-scope, capability, code) — rich, not thin. |
 | 3 — reconstitution survives a teardown | ✅ | O3 `reconstitute` reads durable substrate-2 (proven: direct-XTDB read bypassing futon3c RAM). |
-| 4 — ≥1 honest hole = a real queryable gap | ⏳ in flight | O4's **35 unresolved missions** are real gaps (in embeddings, no canonical node); **O5 (claude-3)** formalizes them as queryable `cascade/hole` nodes. |
+| 4 — ≥1 honest hole = a real queryable gap | ✅ | **O5 landed** (claude-4): `cascade/hole/capability-layer-not-canonical` — a real, queryable gap (capability layer on the bare-alias scheme, not canonical), **composing** (202 hole-target edges; O5×O1 share 176 mission nodes). The dry-run found the cascade HEALTHY (0 truly-missing nodes) and refused ~237 false holes — honest-holes-are-the-point working. |
 | 5 — facet-owners interoperate via the shared ontology | ✅ **demonstrated at scale** | **O1 (arrows) × O4 (clusters) share 171 canonical mission nodes**, `:consistent? true` — two independent dimensions on one identity, no conflict. |
 
 **Net: the cascade is real** — live, grounded (286-edge nodes), composed (171-node cross-dimension),
-reconstitutable. The one open piece for Clause 1 is **O5** (formalize the honest holes). Then
-**Clause 2 = Bulletin 11**, read off the now-composing cascade.
+reconstitutable. **Clause 1 (the data ask) is MET — 5/5 standards over live data.** The one structural hole O5
+surfaced (the non-canonical capability layer) is the archivist's next canonicalization target.
+Remaining: **Clause 2 = Bulletin 11** (ratify the strategic read) + the archivist hardening.
 
 **STRONGER THAN L1-ALONE (2026-06-28): L2 rung-1 also LANDED green.** After the revised exit was
 drafted, claude-10 *built* the L2 minimal slice (`edad60a`, claude-4-reviewed PASS — verifier
