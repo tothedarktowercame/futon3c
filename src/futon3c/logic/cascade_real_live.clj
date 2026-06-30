@@ -46,15 +46,21 @@
 
 (defn o3-claims-from
   "O3/D1 — the durable agent↔session↔mission lineage (`clock/clocked-on` edges).
-   Attributes to mission/campaign nodes (shared with O4 when it lands) and agent
-   nodes. Pure: EDGES → claims-typeo fact-vectors."
+   Keys on the EDGE ENDPOINTS (the CANONICAL node-ids the lineage now writes,
+   `<repo>-d/mission/<id>`), so O3's mission claim shares its node-id with O1/D4 —
+   that's the cross-dimension composition. Claims the canonical mission node
+   `:mission` (same type O1 claims it → composes cleanly), the agent node `:agent`.
+   Pure: EDGES → claims-typeo fact-vectors."
   [edges]
-  (for [e    edges
-        :let [props (:hx/props e)]
-        [nid type] (keep identity
-                         [(when-let [m (prop props :mission-id)]   [(str "mission:" m) :mission])
-                          (when-let [c (prop props :campaign-id)]  [(str "campaign:" c) :campaign])
-                          (when-let [a (prop props :agent-id)]     [(str "agent:" a) :agent])])]
+  (for [e   edges
+        ep  (:hx/endpoints e)
+        :let [s (str ep)
+              [nid type] (cond
+                           (str/starts-with? s "agent:")    [s :agent]
+                           (re-find #"-d/mission/" s)        [s :mission]
+                           (str/starts-with? s "campaign:")  [s :campaign]
+                           :else                             nil)]
+        :when nid]
     [cr/claims-typeo :O3 nid type]))
 
 (defn- o3-lineage-claims [] (o3-claims-from (fetch-edges "clock/clocked-on")))
@@ -74,13 +80,31 @@
 
 (defn- o2-mine-claims [] (o2-meme-claims-from (fetch-edges "mine/meme")))
 
+(defn o1-mined-move-claims-from
+  "O1/D4 — the mined-move arrows (`code/v05/mined-move` edges, claude-2's feeder-(b)).
+   Each arrow's HAVE endpoint is a canonical mission node `<repo>-d/mission/<id>` —
+   **the shared node with O3** (177/177 direct hits), where cross-dimension
+   composition happens. Claims that mission node `:mission` — the SAME type O3's
+   lineage claims it, so they compose cleanly (non-vacuous, no conflict). Pure:
+   EDGES → claims-typeo. Lights up when feeder-(b) lands; 0 until then."
+  [edges]
+  (for [e    edges
+        :let [have (first (:hx/endpoints e))]
+        :when (and have
+                   (re-find #"-d/mission/" (str have))
+                   (not (re-find #"-head$" (str have))))]
+    [cr/claims-typeo :O1 (str have) :mission]))
+
+(defn- o1-arrow-claims [] (o1-mined-move-claims-from (fetch-edges "code/v05/mined-move")))
+
 (def extractors
   "Registry of LANDED-dimension extractors (dim → 0-arg fn → claims-typeo facts).
    Add an entry as each RUN/DELIVER car lands its substrate-2 rows. O2 is
    pre-wired against `mine/meme`; it lights up automatically when claude-1 lands
    the pinned mine rows."
   {:O3 o3-lineage-claims
-   :O2 o2-mine-claims})
+   :O2 o2-mine-claims
+   :O1 o1-arrow-claims})
 
 ;; ---------------------------------------------------------------------------
 ;; the live gate

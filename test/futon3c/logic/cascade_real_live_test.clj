@@ -7,21 +7,39 @@
             [futon3c.logic.cascade-real-live :as live]))
 
 (def ^:private sample-clock-edges
-  ;; as the substrate-2 query returns them — keyword AND string prop keys
+  ;; as the substrate-2 query returns them — endpoints are now CANONICAL node-ids
   [{:hx/type :clock/clocked-on
-    :hx/endpoints ["agent:claude-4" "mission:M-autoclock-in"]
+    :hx/endpoints ["agent:claude-4" "futon3c-d/mission/autoclock-in"]
     :hx/props {:agent-id "claude-4" :mission-id "M-autoclock-in"}}
    {:hx/type :clock/clocked-on
     :hx/endpoints ["agent:claude-4" "campaign:C-cascade-real"]
     :hx/props {"agent-id" "claude-4" "campaign-id" "C-cascade-real"}}])
 
-(deftest o3-extractor-maps-lineage-to-claims
-  (testing "clock edges → claims-typeo for mission/campaign/agent nodes (kw + str keys)"
+(deftest o3-extractor-keys-on-canonical-endpoints
+  (testing "clock edges → claims-typeo on the CANONICAL node-ids the lineage writes"
     (let [claims (live/o3-claims-from sample-clock-edges)]
-      (is (some #{[cr/claims-typeo :O3 "mission:M-autoclock-in" :mission]} claims))
+      (is (some #{[cr/claims-typeo :O3 "futon3c-d/mission/autoclock-in" :mission]} claims)
+          "the canonical mission node is claimed (shares its id with O1/D4)")
       (is (some #{[cr/claims-typeo :O3 "campaign:C-cascade-real" :campaign]} claims))
       (is (some #{[cr/claims-typeo :O3 "agent:claude-4" :agent]} claims))
       (is (every? #(= cr/claims-typeo (first %)) claims) "only claims-typeo facts"))))
+
+(deftest o1-extractor-maps-mined-moves
+  (testing "mined-move edges → claims-typeo :O1 on the canonical HAVE mission node (:mission)"
+    (let [edges  [{:hx/type :code/v05/mined-move
+                   :hx/endpoints ["futon3c-d/mission/autoclock-in" "futon3c-d/mission/autoclock-in-head"]}]
+          claims (live/o1-mined-move-claims-from edges)]
+      (is (= [[cr/claims-typeo :O1 "futon3c-d/mission/autoclock-in" :mission]] claims)
+          "claims the have (mission) node :mission; the -head want node is skipped"))))
+
+(deftest o1-o3-compose-on-the-shared-mission-node
+  (testing "D4 arrows × O3 lineage both claim the SAME canonical mission node :mission → non-vacuous, clean"
+    (let [o3 (live/o3-claims-from sample-clock-edges)
+          o1 (live/o1-mined-move-claims-from
+              [{:hx/endpoints ["futon3c-d/mission/autoclock-in" "futon3c-d/mission/autoclock-in-head"]}])
+          v  (cr/verify (cr/db-from-data (concat o3 o1)))]
+      (is (= [] (:composition-violations v))
+          "O1 and O3 agree the mission node is :mission — the gate's first real, non-vacuous compose"))))
 
 (deftest gate-bites-cross-dimension-conflict
   (testing "a 2nd dimension's LIVE claim that types a shared real node differently is CAUGHT"
