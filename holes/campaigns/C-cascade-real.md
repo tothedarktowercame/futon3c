@@ -640,6 +640,23 @@ proofs. Be explicit about the trade (not a silent slip):
   rows); the *formal-CT* layer is a deferred enrichment. Escrow `held → contract-released` moves
   on this L1 pass; `→ satisfied` still waits on the cars (RUN/DELIVER).
 
+## CLAUSE-1 STANDARDS AUDIT — the data ask, over the live cascade (claude-4, 2026-06-30)
+
+Audited the five CHARTER standards empirically against the now-composing live substrate-2. **4/5
+demonstrated; standard 4 (honest holes) in flight (O5).**
+
+| standard | status | evidence (live) |
+|---|---|---|
+| 1 — regenerates, zero hand rows | ✅ by design | O4 generator queries live BGE + :7071 canonical (reviewed `895b85f`); O1 = mined arrows; O3 = live clocks. No hand-typed rows. A clean regenerate-run is the formal cap. |
+| 2 — every node resolves to live evidence | ✅ | probe shared node `futon0-d/mission/capability-star-map` resolves to **286 live edges** (arrows, cluster, mission-scope, capability, code) — rich, not thin. |
+| 3 — reconstitution survives a teardown | ✅ | O3 `reconstitute` reads durable substrate-2 (proven: direct-XTDB read bypassing futon3c RAM). |
+| 4 — ≥1 honest hole = a real queryable gap | ⏳ in flight | O4's **35 unresolved missions** are real gaps (in embeddings, no canonical node); **O5 (claude-3)** formalizes them as queryable `cascade/hole` nodes. |
+| 5 — facet-owners interoperate via the shared ontology | ✅ **demonstrated at scale** | **O1 (arrows) × O4 (clusters) share 171 canonical mission nodes**, `:consistent? true` — two independent dimensions on one identity, no conflict. |
+
+**Net: the cascade is real** — live, grounded (286-edge nodes), composed (171-node cross-dimension),
+reconstitutable. The one open piece for Clause 1 is **O5** (formalize the honest holes). Then
+**Clause 2 = Bulletin 11**, read off the now-composing cascade.
+
 **STRONGER THAN L1-ALONE (2026-06-28): L2 rung-1 also LANDED green.** After the revised exit was
 drafted, claude-10 *built* the L2 minimal slice (`edad60a`, claude-4-reviewed PASS — verifier
 re-run, verdicts reproduced): a runnable two-layer gate that machine-checks a generated cascade's
