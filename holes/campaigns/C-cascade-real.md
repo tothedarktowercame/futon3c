@@ -210,6 +210,19 @@ self-portrait shows, and — fittingly for a #11 — **what it refactors about t
 The campaign is not done until that reading is developed and recorded. (Bulletin 11 is thus
 the cascade's *first real use*, and the proof that Clause 1 bought something.)
 
+**Clause 3 — the contents are CANONICAL / unambiguous (Joe, 2026-06-30).** A late but critical
+criterion: *the Pipeline Cascade exists to give a clear understanding of what's in the system —
+and that is impossible with ambiguous contents.* So "real" requires that each entity has **one
+canonical identity** across the cascade — not three id-schemes for the same mission (the live
+finding: canonical bare `M-*` vs O3's `mission:M-*` vs the mine's `mission/M-*`; only 2/15
+mine-missions exist as nodes under any scheme). The cascade can't be a trustworthy self-model
+while the same thing wears three names. The **governing mechanism** is the excursion
+**[[E-futon1a-archivist]]** (substrate-2 write-path governance: a canonical identity/type contract
++ a Charon-style gate so non-canonical writes are rejected/queued, not discovered weeks later).
+The *immediate* instance is the **mission identity contract** (with claude-2) + fixing O3 to it.
+Owner: assignable to another agent (Joe). This clause makes endpoint-canonicality a gate, not
+hygiene — see the Strategic-implication note and the CONSTITUTION's shared-prerequisite.
+
 ### Non-criteria — what "real" does NOT require
 
 `pipeline-pattern-cascade` is fundamentally about **DATA** — making the stack's
