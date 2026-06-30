@@ -54,11 +54,37 @@
        (filter (fn [[from _]] (contains? uuid-ids from)))
        (mapv (fn [[from cname]] {:eid from :superseded-by cname}))))")
 
+;; --non-allowlist: the checkout-drift mission/doc nodes (futon3c-desktop-save-d,
+;; futon5-d2, futon5-health-main-d, …). Eligible = a node under a NON-allow-listed
+;; repo that (a) has an allow-listed twin (same mission-id, data survives) AND (b) is
+;; UNREFERENCED by any hyperedge endpoint (eviction orphans nothing). Referenced
+;; drift nodes are listed separately (re-point or accept — NOT auto-evicted).
+(def NONALLOW-FORM "
+(require '[clojure.string :as str])
+(let [db (xtdb.api/db (:node @futon3c.dev/!f1-sys))
+      allow #{\"futon0-d\" \"futon2-d\" \"futon3-d\" \"futon3a-d\" \"futon3b-d\" \"futon3c-d\"
+              \"futon4-d\" \"futon4-elisp-d\" \"futon5-d\" \"futon5a-d\" \"futon6-d\" \"futon6-py-d\" \"futon7-d\"}
+      repo-of (fn [n] (when (re-find #\"/mission/\" (str n)) (first (str/split n #\"/mission/\" 2))))
+      mission-of (fn [n] (when (re-find #\"/mission/\" (str n)) (second (str/split n #\"/mission/\" 2))))
+      docs (->> (xtdb.api/q db '{:find [(pull e [:xt/id :entity/name])] :where [[e :entity/type :mission/doc]]}) (map first))
+      name-keyed? (fn [d] (= (str (:xt/id d)) (str (:entity/name d))))
+      allow-missions (set (keep #(when (and (name-keyed? %) (contains? allow (repo-of (:entity/name %)))) (mission-of (:entity/name %))) docs))
+      nonallow (filter #(and (name-keyed? %) (re-find #\"/mission/\" (str (:entity/name %))) (not (contains? allow (repo-of (:entity/name %))))) docs)
+      refs (fn [v] (count (xtdb.api/q db {:find ['h] :in ['v] :where [['h :hx/endpoints 'v]]} v)))]
+  (->> nonallow
+       (filter #(contains? allow-missions (mission-of (:entity/name %))))
+       (map (fn [d] {:eid (:entity/name d)
+                     :superseded-by (str \"<allowlisted twin>/mission/\" (mission-of (:entity/name d)))
+                     :refs (refs (:entity/name d))}))
+       (filter #(zero? (:refs %)))
+       vec))")
+
 (defn parse-args [args]
-  (loop [m {:execute? false} [a & more] args]
+  (loop [m {:execute? false :mode :tombstones} [a & more] args]
     (cond (nil? a) m
           (= a "--execute") (recur (assoc m :execute? true) more)
           (= a "--reason")  (recur (assoc m :reason (first more)) (rest more))
+          (= a "--non-allowlist") (recur (assoc m :mode :non-allowlist) more)
           :else (recur m more))))
 
 (defn execute! [eids reason]
@@ -67,10 +93,13 @@
               " :eids " (pr-str (vec eids)) " :reason " (pr-str reason) "})")))
 
 (defn -main [& args]
-  (let [{:keys [execute? reason]} (parse-args args)
-        eligible (eval! ELIGIBLE-FORM)
-        eids (mapv :eid eligible)]
-    (println (format "Eligible UUID tombstones (provably superseded): %d" (count eligible)))
+  (let [{:keys [execute? reason mode]} (parse-args args)
+        eligible (eval! (if (= mode :non-allowlist) NONALLOW-FORM ELIGIBLE-FORM))
+        eids (mapv :eid eligible)
+        label (if (= mode :non-allowlist)
+                "Eligible non-allowlist drift nodes (twin survives + UNREFERENCED)"
+                "Eligible UUID tombstones (provably superseded)")]
+    (println (format "%s: %d" label (count eligible)))
     (doseq [{:keys [eid superseded-by]} (take 12 eligible)]
       (println (format "  %-40s  ->  %s" eid superseded-by)))
     (when (> (count eligible) 12) (println (format "  ... (%d more)" (- (count eligible) 12))))
