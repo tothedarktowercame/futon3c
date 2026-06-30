@@ -117,6 +117,27 @@
 
 (defn- o4-upward-claims [] (o4-cluster-claims-from (fetch-edges "cascade/cluster-member")))
 
+(defn o5-hole-claims-from
+  "O5 — honest holes (`cascade/hole/<slug>` nodes + `cascade/hole-target` edges,
+   owner TBD/codex-1). A hole-target edge connects a hole to the canonical node it
+   marks as a gap; O5 claims that node — a mission → `:mission`, a capability →
+   `:capability` — composing with O1/O3/O4 on the mission spine — and the hole
+   node `:hole` (its own). Pure: EDGES → claims. Lights up when O5 lands; 0 until."
+  [edges]
+  (mapcat
+   (fn [e]
+     (keep (fn [ep]
+             (let [s (str ep)]
+               (cond
+                 (str/starts-with? s "cascade/hole/")     [cr/claims-typeo :O5 s :hole]
+                 (re-find #"-d/mission/" s)                [cr/claims-typeo :O5 s :mission]
+                 (str/starts-with? s "scope/capability/") [cr/claims-typeo :O5 s :capability]
+                 :else nil)))
+           (:hx/endpoints e)))
+   edges))
+
+(defn- o5-holes-claims [] (o5-hole-claims-from (fetch-edges "cascade/hole-target")))
+
 (def extractors
   "Registry of LANDED-dimension extractors (dim → 0-arg fn → claims-typeo facts).
    Add an entry as each RUN/DELIVER car lands its substrate-2 rows. O2 is
@@ -125,7 +146,8 @@
   {:O3 o3-lineage-claims
    :O2 o2-mine-claims
    :O1 o1-arrow-claims
-   :O4 o4-upward-claims})
+   :O4 o4-upward-claims
+   :O5 o5-holes-claims})
 
 ;; ---------------------------------------------------------------------------
 ;; the live gate
