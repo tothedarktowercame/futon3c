@@ -17,6 +17,7 @@
    invoke path never blocks on the substrate (blackboard-backpressure
    discipline). Reads/writes go to futon1a over HTTP, respecting the I-5 boundary."
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [babashka.http-client :as http]
             [cheshire.core :as json]
@@ -27,16 +28,66 @@
 (def ^:private PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 (def clock-type "clock/clocked-on")
 
-(defn target-endpoint
-  "A clock's single-active target as a substrate-2 endpoint id (excursion >
-   mission > campaign — the most specific wins, matching clock-store's label
-   precedence). nil when the clock has no target (\"no mission\")."
+(def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
+(def ^:private kind->prefix {:mission "M" :campaign "C" :excursion "E"})
+(def ^:private kind->subdir {:mission "missions" :campaign "campaigns" :excursion "excursions"})
+
+(defn target-kind+id
+  "The clock's single-active [kind id] (excursion > mission > campaign — most
+   specific wins, matching clock-store's label precedence), or nil for no target."
   [{:keys [campaign-id mission-id excursion-id]}]
   (cond
-    excursion-id (str "excursion:" excursion-id)
-    mission-id   (str "mission:" mission-id)
-    campaign-id  (str "campaign:" campaign-id)
+    excursion-id [:excursion excursion-id]
+    mission-id   [:mission mission-id]
+    campaign-id  [:campaign campaign-id]
     :else        nil))
+
+(defn- doc-repo
+  "The repo dir under code-root that holds the KIND doc for STEM (e.g. mission
+   stem \"autoclock-in\" → \"futon3c\"). Excludes `*-desktop-save` backup checkouts
+   (the drift claude-2 flagged). nil when no doc is found."
+  [kind stem]
+  (let [fname (str (kind->prefix kind) "-" stem ".md")
+        sub   (kind->subdir kind)]
+    (some (fn [^java.io.File d]
+            (when (and (.isDirectory d)
+                       (not (str/includes? (.getName d) "desktop-save"))
+                       (or (.exists (io/file d "holes" sub fname))
+                           (.exists (io/file d "holes" fname))))
+              (.getName d)))
+          (sort (or (seq (.listFiles (io/file code-root))) [])))))
+
+(defn- endpoint-exists?
+  "True when substrate-2 has any current-valid edge on endpoint EP (so we only
+   attach to nodes that really exist). Never throws."
+  [ep]
+  (let [url  (str FUTON1A "/api/alpha/hyperedges?end=" (URLEncoder/encode ep "UTF-8"))
+        resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
+                  (catch Exception _ nil))]
+    (boolean (and resp (= 200 (:status resp)) (string? (:body resp))
+                  (re-find #"hx/id" (:body resp))))))
+
+(defn canonical-endpoint
+  "Resolve a clock target [KIND ID] (e.g. [:mission \"M-autoclock-in\"]) to its
+   CANONICAL substrate-2 node id `<repo>-d/<kind>/<stem>` (claude-2's contract,
+   2026-06-30), VERIFIED to exist — so O3 lineage ATTACHES to the real node and
+   never mints a non-canonical island (C-cascade-real Clause 3). Returns nil when
+   no doc/canonical node is found; the caller then SKIPS the durable write rather
+   than write non-canonical."
+  [kind id]
+  (when-let [prefix (kind->prefix kind)]
+    (let [stem (str/replace (str id) (re-pattern (str "^" prefix "-")) "")]
+      (when (and (seq stem) (not= stem (str id)))      ; require the K- prefix was present
+        (when-let [repo (doc-repo kind stem)]
+          (let [ep (str repo "-d/" (name kind) "/" stem)]
+            (when (endpoint-exists? ep) ep)))))))
+
+(defn canonical-target-endpoint
+  "The clock's CANONICAL substrate-2 endpoint (verified), or nil if no canonical
+   node exists — never an island. Replaces the old non-canonical `target-endpoint`."
+  [clock]
+  (when-let [[kind id] (target-kind+id clock)]
+    (canonical-endpoint kind id)))
 
 ;; ---------------------------------------------------------------------------
 ;; persist — durable write on a clock transition (retract-old + put-new)
@@ -85,7 +136,7 @@
    Never throws into the caller. (OLD-CLOCK is accepted for caller symmetry but no
    longer drives the retract.)"
   [{:keys [agent-id session-id new-clock witness now-ms]}]
-  (when-let [new-ep (target-endpoint new-clock)]
+  (when-let [new-ep (canonical-target-endpoint new-clock)]
     (let [now      (long (or now-ms (System/currentTimeMillis)))
           agent-ep (str "agent:" agent-id)
           props    (cond-> {"agent-id" (str agent-id) "clocked-at-ms" now}

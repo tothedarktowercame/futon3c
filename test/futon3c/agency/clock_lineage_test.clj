@@ -6,13 +6,19 @@
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.agency.clock-lineage :as cl]))
 
-(deftest target-endpoint-precedence
+(deftest target-kind+id-precedence
   (testing "most-specific target wins (excursion > mission > campaign), matching the clock label"
-    (is (= "excursion:E-x" (cl/target-endpoint {:campaign-id "C-c" :mission-id "M-m" :excursion-id "E-x"})))
-    (is (= "mission:M-m"   (cl/target-endpoint {:campaign-id "C-c" :mission-id "M-m"})))
-    (is (= "campaign:C-c"  (cl/target-endpoint {:campaign-id "C-c"})))
-    (is (nil? (cl/target-endpoint {:campaign-id nil :mission-id nil :excursion-id nil}))
+    (is (= [:excursion "E-x"] (cl/target-kind+id {:campaign-id "C-c" :mission-id "M-m" :excursion-id "E-x"})))
+    (is (= [:mission "M-m"]   (cl/target-kind+id {:campaign-id "C-c" :mission-id "M-m"})))
+    (is (= [:campaign "C-c"]  (cl/target-kind+id {:campaign-id "C-c"})))
+    (is (nil? (cl/target-kind+id {:campaign-id nil :mission-id nil :excursion-id nil}))
         "a clock with no target has no endpoint (no-op for persist)")))
+
+(deftest canonical-endpoint-never-mints-an-island
+  (testing "a mission with no doc / no canonical node resolves to nil — Clause 3 (don't write non-canonical)"
+    (is (nil? (cl/canonical-endpoint :mission "M-totally-bogus-nonexistent-zzz")))
+    (is (nil? (cl/canonical-endpoint :mission "no-prefix-so-skip"))
+        "an id without the K- prefix is skipped (not a real clock target)")))
 
 (defn- edge
   "A minimal clock/clocked-on hyperedge as the futon1a query returns it."
