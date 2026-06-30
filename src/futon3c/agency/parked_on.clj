@@ -134,13 +134,15 @@
    {:released [rid ...]}."
   [dep-id result-summary {:keys [resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
-  (let [[_ new] (swap-vals! !parked #(apply-completion % dep-id result-summary now-ms))
-        fired (:just-released new)]
-    (when (seq fired)
-      (swap! !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
-    (persist! @!parked)
-    (doseq [rec fired] (when resume! (resume! rec)))
-    {:released (mapv :id fired)}))
+  (if-not (contains? (:index @!parked) dep-id)
+    {:released []}                ; nothing parked on this dep — cheap no-op, no swap/disk write
+    (let [[_ new] (swap-vals! !parked #(apply-completion % dep-id result-summary now-ms))
+          fired (:just-released new)]
+      (when (seq fired)
+        (swap! !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
+      (persist! @!parked)
+      (doseq [rec fired] (when resume! (resume! rec)))
+      {:released (mapv :id fired)})))
 
 ;; ---------------------------------------------------------------------------
 ;; park! — register a continuation (§3.2) + reconcile-on-park (case 1)

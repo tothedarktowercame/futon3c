@@ -140,12 +140,17 @@ Grounding facts confirmed by reading: `update-invoke-jobs-ledger!` **persists on
 - **Dependency-injected** (`resume!` / `ledger-lookup` / `now-ms`) so the five cases are unit-testable with no live JVM and no :7071.
 - **Gates cleared:** clj-kondo 0/0 · check-parens OK · **7 tests / 18 assertions, 0 fail** — each of VERIFY cases 1–5 is an executable test, plus the core 2-dep join and the degenerate empty-join.
 
-**Car 2 — hot-path wiring (remaining, done carefully via Drawbridge, no JVM restart):**
-1. dep-keyed release hook in **`finalize-invoke-job!`** beside `auto-bellback-request` (§4.1) → calls `parked-on/note-completion!` with the job-id + the already-computed `:result-summary` (§4.2); exposed as a dynamic-var hook mirroring `*enqueue-auto-bellback!*` so the http.clj edit is one line + a require.
-2. real `resume!` = assemble `:payload` + joined `:arrived` summaries → `turn-queue/accept-async!` (self-enqueue, live-confirmed).
-3. `POST /api/alpha/park` thin wrapper over `park!` (§4.3).
-4. boot call to `rehydrate!` (sibling of `recover-inflight-jobs`) + one shared `ScheduledExecutorService` daemon ticking `sweep-deadlines!` (NOT cyder).
-5. live verify: park claude-1 on a real bell → completion fires the resume.
+**Car 2a — the hot-path release hook: LANDED + live-verified (2026-06-30).**
+- `parked-on-notify!` hook in **`finalize-invoke-job!`** beside `auto-bellback-request` (§4.1) → `parked-on/note-completion!` with the job-id + the already-computed `:result-summary` (§4.2); flag-gated **default-OFF** (`FUTON3C_PARKED_ON`) so reloads are inert; async on `invoke-executor` (off the finalize thread).
+- `parked-resume!` = assemble `:payload` + joined `:arrived` summaries → `turn-queue/accept-async!` on the agent's own drainer (mirrors `enqueue-auto-bellback!`'s I-1 routing).
+- `parked-job-lookup` = ledger view for reconcile/rehydrate.
+- Gates: clj-kondo 0/0 · check-parens OK · model-test 7/18 still green · both ns reload clean via Drawbridge (no restart).
+- **Live verify (flag ON, no real turn spawned):** `parked-job-lookup` returned a real terminal job's `{:state "done" :result-summary …}`; a `budget 0` park, on a `note-completion!` driven through the live `parked-on-notify!` hook, **retracted without resuming** — hook→gate→executor→engine path confirmed end-to-end. Flag left OFF; JVM inert.
+
+**Car 2b — remaining (additive):**
+1. `POST /api/alpha/park` thin wrapper over `park!` (§4.3) — the agent affordance.
+2. boot call to `rehydrate!` (sibling of `recover-inflight-jobs`) + one shared `ScheduledExecutorService` daemon ticking `sweep-deadlines!` (NOT cyder).
+3. full live verify: park an agent on a REAL bell → completion fires a REAL resume turn (exercises `parked-resume!`, the one path not yet fired live).
 
 ## Cross-links
 - [[E-crossed-bells]] — sibling; transactional transport + reply-routes (the substrate this rides). Confirms durable queue + drainer-v2 made transport transactional.

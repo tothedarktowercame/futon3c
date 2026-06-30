@@ -61,6 +61,7 @@
             [futon3c.agency.bell-router :as bell-router]
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.parked-on :as parked-on]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -566,6 +567,67 @@
 
 (def ^:dynamic *enqueue-auto-bellback!* enqueue-auto-bellback!)
 
+;; --- E-repl-continuations Car 2: parked-on join release wiring -----------------
+;; A job reaching terminal state folds into any parked-on continuation awaiting it;
+;; when a join completes, ONE resume turn is enqueued for the parked agent. The hook
+;; is flag-gated DEFAULT-OFF (load-dark) so reloading this ns is behaviorally inert
+;; until FUTON3C_PARKED_ON is explicitly enabled.
+(def ^:private parked-resume-caller "parked-resume")
+
+(defn- parked-on-enabled?
+  []
+  (let [prop (or (System/getProperty "FUTON3C_PARKED_ON")
+                 (System/getenv "FUTON3C_PARKED_ON"))]
+    (boolean (#{"1" "true" "on" "yes"} (some-> prop str/trim str/lower-case)))))
+
+(defn- assemble-resume-prompt [rec]
+  (str (:payload rec)
+       "\n\n--- resumed: parked dependencies complete (" (count (:arrived rec)) ") ---\n"
+       (str/join "\n" (for [[dep summ] (:arrived rec)]
+                        (str "• " dep ": " (or summ "(no summary)"))))))
+
+(defn- parked-resume!
+  "Resume a parked agent: enqueue a fresh turn (payload + joined dep summaries) on the
+   agent's OWN drainer lane — mirrors enqueue-auto-bellback!'s I-1 single-flight routing."
+  [rec]
+  (let [agent (:agent rec)
+        prompt (assemble-resume-prompt rec)
+        job-id (create-invoke-job! {:agent-id agent :prompt prompt
+                                    :caller parked-resume-caller :surface parked-resume-caller})
+        run-job (fn [] (run-invoke-job! {:job-id job-id :agent-id agent :prompt prompt
+                                         :caller parked-resume-caller :surface parked-resume-caller}))]
+    (if (turn-queue/drainer-v2-enabled?)
+      (turn-queue/accept-async! {:to agent :from parked-resume-caller :surface parked-resume-caller
+                                 :prompt prompt
+                                 :process-fn (fn [_entry]
+                                               (binding [turn-queue/*drained-by-outer* true]
+                                                 (run-job)))})
+      (.submit invoke-executor ^Runnable (fn [] (run-job))))
+    job-id))
+
+(defn parked-job-lookup
+  "Ledger view for parked-on reconcile/rehydrate: job-id -> {:state :result-summary}."
+  [job-id]
+  (when-let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])]
+    {:state (:state job) :result-summary (:result-summary job)}))
+
+(defn parked-on-notify!
+  "Hot-path hook (flag-gated, async on invoke-executor): job JOB-ID reached terminal
+   state -> fold it into any parked-on join awaiting it. Never throws into finalize."
+  [job-id summary]
+  (when (parked-on-enabled?)
+    (.submit invoke-executor
+             ^Runnable
+             (fn []
+               (try
+                 (parked-on/note-completion! job-id summary
+                                             {:resume! parked-resume!
+                                              :now-ms (System/currentTimeMillis)})
+                 (catch Throwable t
+                   (println (str "[parked-on] notify failed for " job-id ": "
+                                 (.getMessage t)))))))))
+;; --- end parked-on Car 2 wiring -----------------------------------------------
+
 (defn- auto-record-direct-delivery-surface?
   "True when /api/alpha/invoke should auto-record delivery to the caller.
    Direct Emacs callers receive the terminal response in-band over HTTP, while
@@ -781,7 +843,8 @@
         (catch Throwable t
           (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
                         (.getMessage t)))
-          (flush))))))
+          (flush))))
+    (parked-on-notify! job-id summary)))
 
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]
