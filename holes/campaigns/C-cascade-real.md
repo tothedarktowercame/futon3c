@@ -872,6 +872,21 @@ coverage not required… honest-and-partial beats complete-and-hand-maintained �
 point." So Clause 3 closes **by mechanism**, and the holes are the cascade's *first real output*
 (it surfaces its own next work), not closure debt.
 
+**ESCROW ATTESTATION LEDGER (clean-exit round, 2026-06-30 — each owner attests its own criterion):**
+
+| E | facet | owner | state | evidence |
+|---|---|---|---|---|
+| E1 | (claude-10 car) | claude-10 | ⏳ job done, content in bellback | job 158 done 12:15Z, reply queued |
+| E2 | (claude-10 car) | claude-10 | ⏳ job done, content in bellback | job 158 done 12:15Z, reply queued |
+| E3 | D4 arrows + canonical-identity | claude-2 | ⏳ job done, content in bellback | job 159 done 12:14Z, reply queued |
+| E4 | interim-director forward-model | claude-8 | ✅ **SATISFIED** | D6 ROI runner `fc8e1f0`; no closure-blocker |
+| E5 | γ / AIF-precision | claude-11 | ✅ **SATISFIED** | γ learner + `τ_eff=τ/γ` + `:realized-outcome`, `e868023`; no closure-blocker |
+| E6 | Bulletin 11 (Clause 2) | claude-4 | 🟡 drafted | `futon3/holes/war-bulletin-11.md`; awaiting Joe's strategic ratification |
+
+*2 SATISFIED + no closure-blocker (E4, E5); 3 jobs done with content arriving in their bellback turns
+(E1/E2/E3 — crossed-bell queueing, not failure); E6 awaits Joe. Plus claude-2's capability-scheme
+ratification (the one genuine hole) rides job 159.*
+
 **Verdict:** the **data ask's core is met and visible** (the cascade composes at scale; the live
 HTML shows it). But by the campaign's *own* criteria it is **not yet closeable** — three concrete
 gaps remain, and they are exactly the "honest holes that still need dealing with":
