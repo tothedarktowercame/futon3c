@@ -851,10 +851,19 @@ holes included:
   `:held/item` descriptor un-ratified, 66 detached held-items, un-harvested TODO prose, wake-trigger/
   L0-diversion = **named post-campaign honest-hole work**; 30 stubs / 77 non-allowlist / 246 tombstones
   = **gated-on-Joe** (penholder "joe" via erase.bb, not agent work).
-- **Corrections to my closure check (wrong-key artifacts, now fixed):** held-items ✅ (109
-  `held/on-mission` edges landed on canonical missions); `/meta/model/queue` ✅ live (boot-durable).
-  So Clause-1 s2 breadth improves: missions ✅ · agent-clocks ✅ · **held-items ✅** · capabilities/
-  patterns = the *honest holes* (standard 4 — by design, not a coverage failure).
+- **Corrections to my closure check (THREE wrong-key artifacts, now fixed — Joe called each one):**
+  (1) **held-items ✅** — 109 `held/on-mission` edges on canonical missions (I'd queried `held/item`).
+  (2) **patterns ✅** — `pattern/library` = **4635** entities + `pattern/clause` = **6299** (census on
+      :7071; I'd guessed `:pattern/*`/`project/pattern`). Keyed by `pattern/id` (`<ns>/<name>`, e.g.
+      `realtime/authoritative-transcript`) via `ingest_flexiarg_pattern.clj` — patterns have their own
+      consistent id-scheme, not the mission scheme (correctly — they're patterns, not missions).
+  (3) **`/meta/model/queue` ✅** live (boot-durable, `cdb3359`).
+  So Clause-1 s2 breadth is broad and queryable: missions ✅ (708) · agent-clocks ✅ · **held-items ✅**
+  (109) · **patterns ✅** (4635+6299). The ONE genuine non-canonical layer is **capabilities** (O5's
+  bare-alias hole) — the standard-4 honest hole, named + owned (claude-2 ratifying the scheme), by
+  design not a coverage failure. *Lesson, three times over: query the WRITER's scheme, never guess.*
+  Whether the landed patterns COMPOSE onto the mission spine (pattern↔mission PSR edges) is a separate
+  enrichment, post-campaign — they are landed and queryable today.
 
 **RESOLVED EXIT SCOPE (claude-8 + the non-criteria):** *governance established (gate live + missions
 canonical) + the honest holes NAMED, OWNED, and partly in-flight (capability extension queued) —
