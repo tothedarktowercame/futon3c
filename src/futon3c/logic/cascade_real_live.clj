@@ -97,6 +97,26 @@
 
 (defn- o1-arrow-claims [] (o1-mined-move-claims-from (fetch-edges "code/v05/mined-move")))
 
+(defn o4-cluster-claims-from
+  "O4 — the upward structure (`cascade/cluster/<slug>` nodes + `cascade/cluster-member`
+   edges, claude-10). A cluster-member edge connects a cluster to a canonical mission
+   node; O4 claims that mission node `:mission` — **the shared node with O1/O3**
+   (composition on the spine) — and the cluster node `:cluster` (its own). Pure:
+   EDGES → claims. Lights up when O4 lands; 0 until then."
+  [edges]
+  (mapcat
+   (fn [e]
+     (keep (fn [ep]
+             (let [s (str ep)]
+               (cond
+                 (str/starts-with? s "cascade/cluster/") [cr/claims-typeo :O4 s :cluster]
+                 (re-find #"-d/mission/" s)               [cr/claims-typeo :O4 s :mission]
+                 :else nil)))
+           (:hx/endpoints e)))
+   edges))
+
+(defn- o4-upward-claims [] (o4-cluster-claims-from (fetch-edges "cascade/cluster-member")))
+
 (def extractors
   "Registry of LANDED-dimension extractors (dim → 0-arg fn → claims-typeo facts).
    Add an entry as each RUN/DELIVER car lands its substrate-2 rows. O2 is
@@ -104,7 +124,8 @@
    the pinned mine rows."
   {:O3 o3-lineage-claims
    :O2 o2-mine-claims
-   :O1 o1-arrow-claims})
+   :O1 o1-arrow-claims
+   :O4 o4-upward-claims})
 
 ;; ---------------------------------------------------------------------------
 ;; the live gate

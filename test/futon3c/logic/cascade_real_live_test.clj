@@ -32,6 +32,26 @@
       (is (= [[cr/claims-typeo :O1 "futon3c-d/mission/autoclock-in" :mission]] claims)
           "claims the have (mission) node :mission; the -head want node is skipped"))))
 
+(deftest o4-extractor-maps-clusters
+  (testing "cascade/cluster-member edges → O4 claims the mission node :mission + cluster :cluster"
+    (let [edges  [{:hx/type :cascade/cluster-member
+                   :hx/endpoints ["cascade/cluster/operator-loops" "futon3c-d/mission/autoclock-in"]}]
+          claims (live/o4-cluster-claims-from edges)]
+      (is (some #{[cr/claims-typeo :O4 "cascade/cluster/operator-loops" :cluster]} claims))
+      (is (some #{[cr/claims-typeo :O4 "futon3c-d/mission/autoclock-in" :mission]} claims)
+          "claims the canonical mission node :mission (the shared spine with O1/O3)"))))
+
+(deftest o4-o3-o1-compose-on-the-shared-mission-node
+  (testing "O4 cluster, O1 arrow, O3 lineage all claim the SAME mission node :mission → clean compose"
+    (let [o3 (live/o3-claims-from sample-clock-edges)
+          o1 (live/o1-mined-move-claims-from
+              [{:hx/endpoints ["futon3c-d/mission/autoclock-in" "futon3c-d/mission/autoclock-in-head"]}])
+          o4 (live/o4-cluster-claims-from
+              [{:hx/endpoints ["cascade/cluster/x" "futon3c-d/mission/autoclock-in"]}])
+          v  (cr/verify (cr/db-from-data (concat o3 o1 o4)))]
+      (is (= [] (:composition-violations v))
+          "three dimensions agree the mission node is :mission — full-spine compose, no conflict"))))
+
 (deftest o1-o3-compose-on-the-shared-mission-node
   (testing "D4 arrows × O3 lineage both claim the SAME canonical mission node :mission → non-vacuous, clean"
     (let [o3 (live/o3-claims-from sample-clock-edges)
