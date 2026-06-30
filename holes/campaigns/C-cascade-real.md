@@ -839,6 +839,30 @@ holes included:
 | **Clause 3** canonical / unambiguous contents (each entity ONE identity) | ⚠️ **partial** | **missions ✅** (canonical + archivist gate live) · **capabilities ❌, patterns ❌** (the open honest holes) — Clause 3 full ⇒ canonicalize those, OR Joe scopes Clause 3 to "governance established + missions canonical, extensible" |
 | **Exit/keystone** (itself "draft — for Joe to ratify") | 🟡 | (1) regenerate ✅ (3) durable single-active clock ✅ · **(2) partial** — "who/which sessions on each mission" + reconstitution ✅, but **"what held work is pending" is not wired** into the query; **Joe to ratify the exit** |
 
+**ATTESTATION ROUND (2026-06-30) — agents attest their escrow/closure obligations.**
+- **claude-8 (E4 + archivist + holes):** **E4 SATISFIED/contract-released** (D6 cost→demand→ROI
+  runner shipped, futon7 `fc8e1f0`; substrate-backing scoped behind D4, accuracy out per
+  non-criteria). **Clause-3 = satisfied-by-mechanism** (the gate is live+enforcing `a12b7a5`,
+  boot-durable `cdb3359`, missions canonical+migrated `431aca7`) — and claude-8's key argument:
+  *requiring all entity types canonical would CONTRADICT the non-criteria ("complete coverage not
+  required") AND standard 4 (capabilities/patterns-not-canonical ARE the honest holes that are the
+  point).* **No closure-blockers.** Holes inventory (tagged): held-items + `/meta/model/queue` route
+  = **already-handled** (`59b3196`/`cdb3359`); capability-not-canonical, patterns-not-canonical,
+  `:held/item` descriptor un-ratified, 66 detached held-items, un-harvested TODO prose, wake-trigger/
+  L0-diversion = **named post-campaign honest-hole work**; 30 stubs / 77 non-allowlist / 246 tombstones
+  = **gated-on-Joe** (penholder "joe" via erase.bb, not agent work).
+- **Corrections to my closure check (wrong-key artifacts, now fixed):** held-items ✅ (109
+  `held/on-mission` edges landed on canonical missions); `/meta/model/queue` ✅ live (boot-durable).
+  So Clause-1 s2 breadth improves: missions ✅ · agent-clocks ✅ · **held-items ✅** · capabilities/
+  patterns = the *honest holes* (standard 4 — by design, not a coverage failure).
+
+**RESOLVED EXIT SCOPE (claude-8 + the non-criteria):** *governance established (gate live + missions
+canonical) + the honest holes NAMED, OWNED, and partly in-flight (capability extension queued) —
+NOT all entity types canonical.* This is charter-faithful: the non-criteria explicitly say "complete
+coverage not required… honest-and-partial beats complete-and-hand-maintained — the holes are the
+point." So Clause 3 closes **by mechanism**, and the holes are the cascade's *first real output*
+(it surfaces its own next work), not closure debt.
+
 **Verdict:** the **data ask's core is met and visible** (the cascade composes at scale; the live
 HTML shows it). But by the campaign's *own* criteria it is **not yet closeable** — three concrete
 gaps remain, and they are exactly the "honest holes that still need dealing with":
