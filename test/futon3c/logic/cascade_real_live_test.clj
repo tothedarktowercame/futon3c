@@ -42,4 +42,27 @@
 
 (deftest empty-edges-no-claims
   (testing "a dimension with no live rows contributes nothing (honest non-landing)"
-    (is (= [] (vec (live/o3-claims-from []))))))
+    (is (= [] (vec (live/o3-claims-from []))))
+    (is (= [] (vec (live/o2-meme-claims-from []))))))
+
+(deftest o2-extractor-maps-memes
+  (testing "mine/meme edges → claims-typeo :O2 meme:ask-* :meme (only meme: endpoints)"
+    (let [edges  [{:hx/type :mine/meme :hx/endpoints ["meme:ask-abc123"] :hx/props {}}
+                  {:hx/type :mine/meme :hx/endpoints ["meme:ask-def456" "concept:x"] :hx/props {}}]
+          claims (live/o2-meme-claims-from edges)]
+      (is (some #{[cr/claims-typeo :O2 "meme:ask-abc123" :meme]} claims))
+      (is (some #{[cr/claims-typeo :O2 "meme:ask-def456" :meme]} claims))
+      (is (= 2 (count claims)) "concept: endpoint not claimed in the first car"))))
+
+(deftest o2-o3-compose-disjoint
+  (testing "O2 memes + O3 missions are disjoint node-ids → compose cleanly"
+    (let [v (cr/verify (cr/db-from-data [[cr/claims-typeo :O3 "mission:M-x" :mission]
+                                         [cr/claims-typeo :O2 "meme:ask-1" :meme]]))]
+      (is (= [] (:composition-violations v))))))
+
+(deftest concept-index-collision-would-bite
+  (testing "WHY claude-1 defers concept-index: a mission node claimed as :meme by O2 is caught"
+    (let [v (cr/verify (cr/db-from-data [[cr/claims-typeo :O3 "mission:M-x" :mission]
+                                         [cr/claims-typeo :O2 "mission:M-x" :meme]]))]
+      (is (some #{"mission:M-x"} (:composition-violations v)))
+      (is (false? (:consistent? v))))))

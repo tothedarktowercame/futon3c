@@ -18,6 +18,7 @@
    The dimension/owner/held-on/coverage SCAFFOLD stays from the contract (it is the
    campaign's own structure, not landed data); only `claims-typeo` becomes live."
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [babashka.http-client :as http]
             [futon3c.logic.cascade-real :as cr])
   (:import [java.net URLEncoder]))
@@ -58,10 +59,28 @@
 
 (defn- o3-lineage-claims [] (o3-claims-from (fetch-edges "clock/clocked-on")))
 
+(defn o2-meme-claims-from
+  "O2 — the canonical mine (`mine/meme` edges, claude-1). Each meme is a node
+   `meme:ask-<hash>` of TYPE :meme. Pre-written against the stable shape claude-1
+   committed to; contributes 0 claims until the rows land (honest non-landing).
+   The mine's `meme:` nodes are DISJOINT from O3's mission/agent nodes, so O2
+   composes cleanly; the concept-index (`mission/*` keys) is deferred to later
+   *reference* edges — NOT type claims — precisely because it would collide with
+   O3's `mission:` typing (the conflict the gate catches). Pure: EDGES → claims."
+  [edges]
+  (for [e   edges
+        nid (filter #(str/starts-with? (str %) "meme:") (:hx/endpoints e))]
+    [cr/claims-typeo :O2 (str nid) :meme]))
+
+(defn- o2-mine-claims [] (o2-meme-claims-from (fetch-edges "mine/meme")))
+
 (def extractors
   "Registry of LANDED-dimension extractors (dim → 0-arg fn → claims-typeo facts).
-   Add an entry as each RUN/DELIVER car lands its substrate-2 rows."
-  {:O3 o3-lineage-claims})
+   Add an entry as each RUN/DELIVER car lands its substrate-2 rows. O2 is
+   pre-wired against `mine/meme`; it lights up automatically when claude-1 lands
+   the pinned mine rows."
+  {:O3 o3-lineage-claims
+   :O2 o2-mine-claims})
 
 ;; ---------------------------------------------------------------------------
 ;; the live gate
