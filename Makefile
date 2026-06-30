@@ -20,7 +20,7 @@ export FUTON3C_SHADOW_AUTOSTART
 export FUTON3C_SHADOW_BUILDS
 export FUTON3C_REPOS
 
-.PHONY: tools dev dev-linode test claude claude-repl codex codex-repl codex-autowake tickle status gh-hygiene gh-issue-holes repl \
+.PHONY: tools dev dev-linode restart test claude claude-repl codex codex-repl codex-autowake tickle status gh-hygiene gh-issue-holes repl \
 	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
 
 tools:
@@ -35,6 +35,19 @@ dev-linode:
 
 dev-laptop:
 	FUTON3C_ROLE=laptop FUTON3C_LINODE_URL=http://172.236.28.208:7070 $(MAKE) dev
+
+# Operator-only restart of the one serving JVM (I-0). Agents must NOT use this —
+# reload code via Drawbridge instead (README-drawbridge.md). Stops the single JVM
+# by exact process name (pkill -x java, never -f — -f matches wrapper cmdlines)
+# then relaunches via `dev`. Safe across restarts: system/start! auto-registers
+# the L4 canonical-id mission gate (futon1a cdb3359), so it comes up armed.
+# For a role-specific boot, run `make restart TARGET=dev-laptop` (or dev-linode).
+TARGET ?= dev
+restart:
+	@echo "[restart] stopping the serving JVM (pkill -x java; I-0: one JVM at rest)"
+	-pkill -x java
+	@sleep 2
+	$(MAKE) $(TARGET)
 
 test:
 	$(CLOJURE) -X:test
