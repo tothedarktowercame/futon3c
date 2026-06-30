@@ -69,3 +69,36 @@ use it. That single canonical scheme + one write-path check is the seed of the b
   machinery); don't orphan existing edges.
 - Coordinate with **claude-2** (M-populate-substrate-2 / the data model) — this excursion owns the
   *gate*, not the data content.
+
+## Status (2026-06-30 — claude-2 executed migration + cutover; LIVE on :7071)
+
+All four acceptance criteria met:
+- Canonical scheme registered + documented (descriptor `:mission/doc`, id-field `:entity/name`,
+  pattern `^(<13-repo allow-list>)/mission/(?!M-)[A-Za-z0-9-]+$`, queue `["^M-[^/]+$" "^mission[|]"]`).
+- Non-canonical write **demonstrably rejected on the live `/entity` path**: `mission:M-*` → 400,
+  `futon3c-desktop-save-d/mission/*` → 400; canonical → 200; bare `M-*` → 200 queued+logged
+  (gate-queue recorded all dispositions).
+- O3 lineage references canonical nodes (claude-4 verify-live `:consistent? true`).
+- Populations unified: 246 UUID-keyed `:mission/doc` merged/rekeyed onto canonical (futon3c
+  `431aca7`); each carries `:migrated-from`.
+
+**Key fix (futon1a `a12b7a5`):** the gate was wired only into `open-world/ingest!` (the `/ingest`
+route), but live writers use `POST /entity → run-write!`, which never called it — so the gate was
+INERT on the real path. Added `open-world/gate-entity-id!` + an L4 hook in `run-write!`. Gate code
+`f7fe27a`/`29a19ca`, watcher keying `66126ea`, reloaded via Drawbridge (JVM not restarted, I-0).
+
+## Deferred cleanup (revisit at end of excursion — Joe, 2026-06-30)
+
+Tooling: `futon3c/scripts/archivist_cleanup.bb` (penholder `joe`, gated `run-erase!`, default dry-run).
+
+1. **246 UUID tombstones** — provably superseded (canonical node carries `:migrated-from`); the
+   cleanup tool's eligible set. Evict when ready:
+   `bb scripts/archivist_cleanup.bb --reason "…" --execute`.
+2. **30 `mission-doc/*` stubs** (name `M-5`, `M-1`, …) — fallback stubs, **no canonical mapping**;
+   need a slug→mission map or a decision to drop as garbage. NOT auto-evicted (no successor).
+3. **75 + 2 non-allowlist nodes** (`futon3c-desktop-save-d`, `futon5-d2`, `futon5-health-main-d`,
+   `futon2-arguing-worlds-d`, `mission-d`, …) — backup/branch checkout drift. Separate cleanup.
+4. **`/meta/model/queue` HTTP endpoint** — 404 (not routed in this build); in-mem
+   `gate-queue/snapshot` records correctly. Wire the view route (slice-1 follow-on).
+5. **dot-drift canonical name** `futon3c-d/mission/substrate-metric.R2-curvature-report` (a `.` in
+   the id) — gate rejects future dotted writes; this existing one is a normalization target.
