@@ -1,0 +1,664 @@
+{:meta
+ {:facet :held-deferred-work-ledger,
+  :campaign "C-cascade-real",
+  :v 0,
+  :sources (:sorrys :star :pudding)},
+ :count 41,
+ :by-source {:sorrys 5, :star 14, :pudding 22},
+ :governance-gaps
+ {:no-owner 40,
+  :no-wake-trigger 39,
+  :no-re-entry 33,
+  :no-mission-link 36},
+ :items
+ [#:held{:kind :meta,
+         :re-entry
+         "futon2/docs/futon-aif-completeness.md#capability-gap-modeling-as-endogenous-action",
+         :missions
+         ["M-war-machine-aif-completion"
+          "M-stack-essay-code-alignment"
+          "M-live-geometric-stack"],
+         :reason
+         "WM action types need addressable substrate; meta-sorry registers itself as the first sorry",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner "claude-1",
+         :evidence-condition
+         "(str \"After R6 landed (v0.5 of futon2/docs/futon-aif-completeness.md) the WM's \" \"bootstrap-proposer surfaced :learn-action-class actions for every concrete \" \"action class (:address-sorry, :open-mission, :fire-pattern) because \" \"forward-model/can-propose? returned false for all of them: substrate-2 at \" \"localhost:7071 responded with {:hyperedges [], :count 0} to type probes \" \"for :sorry / :mission / :pattern / :evidence / etc., and \" \"futon5a/holes/stack-annotations.edn is a static EDN with rich content but \" \"no programmatic enumerator wired into futon2. \" \"\\n\\n\" \"This sorry registers ITSELF as the first :sorry — closing the bootstrap \" \"loop reflexively: by writing this entry, the WM's can-propose? :address-sorry \" \"becomes true (the sorry-registry adapter ships alongside), and the next \" \"WM call surfaces :address-sorry :target :sorry/wm-aif-substrate-addressability \" \"as a concrete recommendation. The recommendation is to decide which \" \"substrate (substrate-2, stack-annotations.edn, M-INC events post step (b), \" \"or this hand-curated registry permanently) should be canonical for \" \":sorry entities going forward. \" \"\\n\\n\" \"Until that decision is made, this hand-curated registry is the v1 \" \"addressable substrate for sorrys. Honest scope: hand-curated, not \" \"ingested; new sorrys join by operator hand-edit. The interface \" \"(load-sorrys / open-sorrys / can-propose? :address-sorry) is the swap \" \"target for richer substrates when they mature.\")",
+         :status :held,
+         :source
+         {:registry :sorrys,
+          :ref :sorry/wm-aif-substrate-addressability,
+          :doc "futon2/resources/sorrys.edn"},
+         :raised-at "2026-05-17",
+         :id :sorry/wm-aif-substrate-addressability}
+  #:held{:kind :prototyping-forward,
+         :re-entry
+         "~/code/futon3c/src/futon3c/peripheral/war_machine_pilot.clj",
+         :missions ["M-futonzero-generative"],
+         :reason
+         "γ loss stream needs realised-G bound to EXECUTED actions, tagged independent",
+         :review-by nil,
+         :wake-trigger "a refinement pass is run",
+         :owner nil,
+         :evidence-condition
+         "(str \"The pilot γ stream computes realised-discharge by re-reading the next \" \"scan after a PROPOSAL — so predicted≈realised by construction and the \" \"calibration evidence is degenerate (15 paired records, 13 exact-zero \" \"errors; futon3c.aif.calibration verdict :degenerate). G-SIM \" \"(M-futonzero-generative §2) cannot clear on self-referential pairs. \" \"Construction that closes this: close-live-cycle! (or a sibling) binds \" \"realised-G only when an action EXECUTES (operator merge / substantive \" \"mode), and tags such pairs distinguishable (e.g. :independent? true) \" \"so the calibration verdict is computed over independent pairs ONLY — \" \"the gate that diagnoses degeneracy must not be clearable by more \" \"degeneracy (fable-1 G-SIM verdict, 2026-06-10).\")",
+         :status :held,
+         :source
+         {:registry :sorrys,
+          :ref :sorry/wm-realised-on-merge-binding,
+          :doc "futon2/resources/sorrys.edn"},
+         :raised-at "2026-06-10",
+         :id :sorry/wm-realised-on-merge-binding}
+  #:held{:kind :external-dependency,
+         :re-entry
+         "~/code/futon0/holes/missions/M-futonzero-generative.md",
+         :missions ["M-futonzero-generative" "M-pudding-peradams"],
+         :reason
+         "G-REWARD's named open home: bind arrow-witness to the per-turn affect detector",
+         :review-by nil,
+         :wake-trigger "external work lands",
+         :owner nil,
+         :evidence-condition
+         "(str \"M-futonzero-generative §2 G-REWARD names its open home explicitly: \" \"M-pudding-peradams G1 — the arrow-witness stays false until bound to \" \"live affect evidence; until then no reward signal may train the \" \"learner and 'reward' remains a labelled evaluation artifact. \" \"Construction that closes this: the G1 binding of arrow-witness to the \" \"per-turn affect detector on the Pudding Prover channel (three-witness \" \"certificate discipline). External-dependency kind because the arming \" \"conditions are operator-held (Joe-confirm + cert-half + \" \"STANDARD-VERIFY per M-peradam-grounding).\")",
+         :status :held,
+         :source
+         {:registry :sorrys,
+          :ref :sorry/pudding-g1-arrow-witness-binding,
+          :doc "futon2/resources/sorrys.edn"},
+         :raised-at "2026-06-08",
+         :id :sorry/pudding-g1-arrow-witness-binding}
+  #:held{:kind nil,
+         :re-entry
+         "~/code/futon6/holes/missions/E-mission-head.aif.edn",
+         :missions ["M-memes-arrows-patterns-diagrams"],
+         :reason
+         "Mint the A1 discipline as a library pattern (third live instance today)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition
+         "(str \"GAP (meme.db arrow arr-4f917cf2-fc2, cascade/E-mission-head-argue): \" \"amendment A1 (readout never gates, never optimized — Goodhart \" \"discipline) recurs across peradams, health-readouts, attestation — \" \"and now a third live instance: calibration verdicts computed over \" \"independent pairs only (2026-06-10). No library pattern captures it. \" \"Closes by minting the flexiarg with the scope condition \" \"(externally-discharged targetable / self-estimated observation-only) \" \"and promoting the arrow.\")",
+         :status :held,
+         :source
+         {:registry :sorrys,
+          :ref :sorry/pattern-measure-never-target,
+          :doc "futon2/resources/sorrys.edn"},
+         :raised-at "2026-06-10",
+         :id :sorry/pattern-measure-never-target}
+  #:held{:kind nil,
+         :re-entry "~/code/futon6/holes/missions/E-mission-head.md",
+         :missions ["M-memes-arrows-patterns-diagrams"],
+         :reason
+         "Mint the Gantt-ification defense — load-bearing in two missions, not in the library",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition
+         "(str \"GAP (meme.db arrow arr-69f9c0d3-333, cascade/E-mission-head-argue): \" \"the core defense against the Gantt-ification objection — a typed \" \"theme LIBERATES the solo (the ants animate BECAUSE of their sigils; \" \"charting the head is not charting the improvisation) — is \" \"load-bearing in two missions and absent from the library. Closes by \" \"minting the flexiarg and promoting the arrow.\")",
+         :status :held,
+         :source
+         {:registry :sorrys,
+          :ref :sorry/pattern-typed-theme-liberates-the-solo,
+          :doc "futon2/resources/sorrys.edn"},
+         :raised-at "2026-06-10",
+         :id :sorry/pattern-typed-theme-liberates-the-solo}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Pudding-prover outbox — daily-scan → interest-network → EOI → staged outbox; pieces exist, integration held",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h299080380}
+  #:held{:kind nil,
+         :re-entry
+         "scripts/anatomy_v0_sweep.py (per-paper extraction + role resolution + loss census); recognizer-registry PoC (4487 shared-notation macros over 9795 papers); DP loop turn-1 (A/B/C2 false-unknown fixes; 0809.2517 unknowns 130->15, symbol-table-overlap 73->0).",
+         :missions [],
+         :reason
+         "Distributed-Proofreaders: structure-first recognition + QA over the math corpus — the solo-FUTON, CPU-local core of arxiv mining",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition
+         "scripts/anatomy_v0_sweep.py (per-paper extraction + role resolution + loss census); recognizer-registry PoC (4487 shared-notation macros over 9795 papers); DP loop turn-1 (A/B/C2 false-unknown fixes; 0809.2517 unknowns 130->15, symbol-table-overlap 73->0).",
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h677531233}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Cold response converts to a paid engagement — n_conversion remains zero",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h1558969039}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Full ArXiv mining with structure-based representation — held beyond the CT prior substrate",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h1091067236}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Pudding-prover cadence — forward-model posterior to base-case/capability cadence; not wired",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h715127177}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Cold EOI gets sent to a real cold lead — the crux, n=0",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h1517028172}
+  #:held{:kind nil,
+         :re-entry "futon5 CT prototype files; CT-vision not shipped",
+         :missions [],
+         :reason
+         "Symbol-grounding / CT-vision — categorical wiring vocabulary and prototypes; vision remains held",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition
+         "futon5 CT prototype files; CT-vision not shipped",
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h2095458741}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Cold send draws a response — n_outreach remains zero",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h408127148}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Pudding-prover intake — outreach-sent evidence intake; not wired",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h148432255}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "Cold EOI can be authored into the outbox — near frontier, outbox integration not wired",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h554430015}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "EFE does real AIF over the star-map — the WM's pick is an applicable single-cycle leaf (no pilot cherry-pick)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h468436120}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "AI passes UT-Austin prelims — compute-gated held claim above the shipped corpus/tutor substrate",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h1444115527}
+  #:held{:kind nil,
+         :re-entry
+         "M-hypergraph-operator partial-fold ruling: generic operational loop superseded by WM/capability-star-map/pudding-prover; original futon5a pocketwatch not built; JSDQ person-facing operator remains unbuilt",
+         :missions [],
+         :reason
+         "JSDQ hypergraph operator — person-facing 8-sector/39-item capability model over Joe's market-interface topology",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition
+         "M-hypergraph-operator partial-fold ruling: generic operational loop superseded by WM/capability-star-map/pudding-prover; original futon5a pocketwatch not built; JSDQ person-facing operator remains unbuilt",
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h2145932214}
+  #:held{:kind nil,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "The WM runs overnight without supervision — 'I trust the stack to code while I sleep'",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :star,
+          :doc
+          "futon0/holes/missions/M-capability-star-map.graph.edn"},
+         :raised-at nil,
+         :id :star/h98539458}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "FUTON is the AI TUTOR (the Entrepreneur-First vision realized) — a capability OTHERS can follow: be able to run an AI-augmented business with it",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1779702947}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "a cold EOI can be AUTHORED by the engine — drafted into the outbox, ready to send",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h694968}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "a cold EOI gets SENT to a real cold lead (not Eric/Rob) — the next base camp",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h970509224}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "a cold send draws a RESPONSE — reply or logged silence (= n_outreach)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1436415816}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "a cold response CONVERTS to a paid/real engagement (= n_conversion)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1090833511}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "a SPECIALISATION of T2 — an AI tutor for MATHEMATICS (a mathematical-knowledge-management business), not just coding",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h483534919}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "mine the ArXiv with the same structure-based representation — start math.CT, scale to the rest once it works",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h603930960}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "an AI system can PASS mathematics PRELIMS (the UT-Austin set: 489 problems, 4 subjects) — a 2002 vision, feasible now with current capabilities + real compute",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h21578398}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "a COMPLETE Active-Inference model runs on COMMODITY hardware (a Dell laptop, not a superpod/lab), driving self-improvement of the software stack — with governance built in",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1902025133}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "GOVERNANCE of the self-improving system — Ostrom-style commons governance (consent-gates, campaign lifecycle, admissibility)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1743784359}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "THE ANTHROPIC HOOK: if running AI self-improvement loops needs only commodity hardware (not a lab training Claude), that reframes WHO can do RSI — something for the Anthropic Institute to think about",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1458138444}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "code + mathematical reasoning — and ultimately the STACK ITSELF — represented as formal SEMANTIC structures (categorical hypergraphs) we REASON ABOUT, not just embed: more from current LLMs now; a new kind of AI infrastructure ultimately",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h174200263}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "represent code + reasoning as hypergraphs (.edn / Arxana / substrate-2) and get more 'juice' out of current LLMs (cf. Rob's similarity-retrieval, T3.1)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h673692012}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "the deep move: seamless language <-> formal SEMANTIC (Category-Theory) representation — NOT language->sub-symbolic->language (what current LLMs do); the representation IS the reasoning substrate. 'What if the WHOLE STACK were CT-representable and reasoned-about?'",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h706331485}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "XENO-EVALUATION: how this work contributes to the Anthropic Institute's research agenda (their four pillars)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h597668028}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "AI-DRIVEN R&D — an instrumented, GOVERNED AIF self-improvement loop (T4) with telemetry (WM / forward-model): directly their 'visibility + control over self-improving systems' and 'telemetry as RSI early-warning' questions; plus AI-for-mathematics R&D (T3, w/ Rob) on the jagged frontier",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1607001602}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "AI SYSTEMS IN THE WILD — a sustained HUMAN-AI working practice (the cyborg-operator): managing human+AI teams (Agency/WM), interfaces that promote human AGENCY (operator portal; reskilling-not-deskilling), attentive to critical-thinking + group epistemology (peeragogy)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1913418604}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "ECONOMIC DIFFUSION — a living micro-case: a solo operator running an AI-augmented knowledge business on COMMODITY hardware (T2) — 'a 3-person team doing what took 300', accessible/open diffusion; plus the expertise-pipeline question (AI tutor + peeragogy): 'how does AI change what it means to learn and become an expert'",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h576327219}
+  #:held{:kind :proof-state,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "THREATS & RESILIENCE (governance) — concrete small-scale governance of autonomous agents: consent-gates, admissibility, reliable agent identity (Agency), Ostrom-style commons (T4.3) — their 'governing autonomous agents' and 'AI governance of AI' questions",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h1864723219}
+  #:held{:kind :kit,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "cadence hookup: forward-model Beta posterior -> :base-case|:capability (§9.2, not wired)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h853190606}
+  #:held{:kind :kit,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "orb/Pāramī typing of a certified peradam — the virtue-type by which labor/arrow/fruit is typed (§11.1, §4–§5/§7 G1/G4). Specified by M-pudding-peradams §9; built as part of the certify three-witness + orb-typing extension (§8 first-slice INSTANTIATE), not yet landed — :held, not :satisfied (no recogniser typing exists in pudding-prover.bb yet)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h282508995}
+  #:held{:kind :kit,
+         :re-entry nil,
+         :missions [],
+         :reason
+         "G1 arrow-witness binding: bind the per-turn affect-detector trace (the arrow's WITNESS, not the exogenous teacher — §11.1) to the certify event; the arrow-witness stays false until bound to live affect (G-REWARD's named open home). Specified by M-pudding-peradams §9",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :pudding,
+          :doc "futon7/holes/pudding-prover-registry.edn"},
+         :raised-at nil,
+         :id :pudding/h254732891}]}
