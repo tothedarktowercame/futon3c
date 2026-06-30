@@ -18,6 +18,7 @@
    The dimension/owner/held-on/coverage SCAFFOLD stays from the contract (it is the
    campaign's own structure, not landed data); only `claims-typeo` becomes live."
   (:require [clojure.edn :as edn]
+            [clojure.set :as set]
             [clojure.string :as str]
             [babashka.http-client :as http]
             [futon3c.logic.cascade-real :as cr])
@@ -175,3 +176,37 @@
   []
   (assoc (cr/verify (cr/db-from-data (live-facts)))
          :live-dimensions (live-dimensions)))
+
+;; ---------------------------------------------------------------------------
+;; live summary — the JSON the pipeline-pattern-cascade view renders
+;; ---------------------------------------------------------------------------
+
+(defn- mission-nodes [extract]
+  (set (map #(nth % 2) (filter #(= :mission (nth % 3)) (extract)))))
+
+(defn cascade-real-summary
+  "A live snapshot of the COMPOSING cascade for the operator view: per-dimension
+   claim counts, the cross-dimension shared-mission-node overlaps (the composition
+   — non-vacuous overlap means the cascade is one graph, not seven pictures), the
+   honest holes, the canonical spine size, and :consistent?. Computed live from the
+   substrate-2 extractors — this is the 'real data' the pipeline-pattern-cascade
+   sketch is made of."
+  []
+  (let [v   (verify-live)
+        o1  (mission-nodes #(o1-mined-move-claims-from (fetch-edges "code/v05/mined-move")))
+        o3  (mission-nodes #(o3-claims-from (fetch-edges "clock/clocked-on")))
+        o4  (mission-nodes #(o4-cluster-claims-from (fetch-edges "cascade/cluster-member")))
+        o5  (mission-nodes #(o5-hole-claims-from (fetch-edges "cascade/hole-target")))
+        n   (fn [a b] (count (set/intersection a b)))]
+    {:as-of-ms     (System/currentTimeMillis)
+     :consistent?  (:consistent? v)
+     :dimensions   (:live-dimensions v)
+     :spine        {:canonical-mission-nodes (count (set/union o1 o3 o4 o5))
+                    :O1-missions (count o1) :O4-missions (count o4)}
+     :composition  {:O1xO4 (n o1 o4) :O5xO1 (n o5 o1) :O4xO3 (n o4 o3) :O1xO3 (n o1 o3)}
+     :holes        (frequencies (keep #(prop (:hx/props %) :hole-kind)
+                                      (fetch-edges "cascade/hole-target")))
+     :standards    {:s1-regenerates true :s2-evidence true :s3-reconstitution true
+                    :s4-honest-holes (boolean (seq o5)) :s5-composed (pos? (n o1 o4))}
+     :owners       {:O1 "claude-2" :O3 "claude-4" :O4 "claude-10"
+                    :O5 "claude-4" :O7 "claude-10" :O2 "claude-1"}}))

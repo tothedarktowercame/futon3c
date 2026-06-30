@@ -5345,6 +5345,19 @@
       (olane-cors (json-response 500 {:ok false :error "forward-model-failed"
                                       :message (.getMessage e)})))))
 
+(defn handle-cascade-real
+  "GET /api/alpha/cascade-real — a live snapshot of the composing cascade (the
+   'real data' the pipeline-pattern-cascade view renders): per-dimension counts,
+   cross-dimension shared-node overlaps, honest holes, the canonical spine, and
+   :consistent?. CORS-enabled so the file:// HTML can fetch it."
+  [_request _config]
+  (try
+    (let [summary ((requiring-resolve 'futon3c.logic.cascade-real-live/cascade-real-summary))]
+      (olane-cors (json-response 200 summary)))
+    (catch Exception e
+      (olane-cors (json-response 500 {:ok false :error "cascade-real-failed"
+                                      :message (.getMessage e)})))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -5352,6 +5365,9 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :get method) (= "/api/alpha/cascade-real" uri))
+      (handle-cascade-real request config)
+
       (and (= :get method) (= "/api/alpha/war-machine/operator-bulletin" uri))
       (handle-operator-bulletin request config)
 
