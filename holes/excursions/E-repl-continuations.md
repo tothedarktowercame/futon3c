@@ -147,10 +147,12 @@ Grounding facts confirmed by reading: `update-invoke-jobs-ledger!` **persists on
 - Gates: clj-kondo 0/0 · check-parens OK · model-test 7/18 still green · both ns reload clean via Drawbridge (no restart).
 - **Live verify (flag ON, no real turn spawned):** `parked-job-lookup` returned a real terminal job's `{:state "done" :result-summary …}`; a `budget 0` park, on a `note-completion!` driven through the live `parked-on-notify!` hook, **retracted without resuming** — hook→gate→executor→engine path confirmed end-to-end. Flag left OFF; JVM inert.
 
-**Car 2b — remaining (additive):**
-1. `POST /api/alpha/park` thin wrapper over `park!` (§4.3) — the agent affordance.
-2. boot call to `rehydrate!` (sibling of `recover-inflight-jobs`) + one shared `ScheduledExecutorService` daemon ticking `sweep-deadlines!` (NOT cyder).
-3. full live verify: park an agent on a REAL bell → completion fires a REAL resume turn (exercises `parked-resume!`, the one path not yet fired live).
+**Car 2b — endpoint + daemon: LANDED + live-verified (2026-06-30).**
+- `POST /api/alpha/park` (`handle-park`) registered in **`extra-routes`** — the reload-safe extension point (the inner `make-handler` cond is captured by the running server at boot, so route edits there don't take live; `extra-routes` is re-resolved on a plain Drawbridge reload). Flag-gated (503 when off). **Live: a park returned `{:status "parked" :ok true}`.**
+- `start-parked-on!` (idempotent, `defonce`-guarded sweeper so reloads don't orphan the thread; flag-gated) — boot `rehydrate!` (R3) + one shared `ScheduledExecutorService` daemon ticking `sweep-deadlines!` every 30s (R4, NOT cyder). Wired into `start-server!`'s success branch for clean boots; **live: `start-parked-on!` returned `{:rehydrated true :sweeper true}`.**
+- Gates: clj-kondo 0/0 · check-parens OK · reload clean.
+
+**Car 2b — remaining: the capstone real-resume verify** — park an agent on a REAL bell → completion fires a REAL resume turn (exercises `parked-resume!`, the one path not yet fired live; structurally a mirror of the proven `enqueue-auto-bellback!`).
 
 ## Cross-links
 - [[E-crossed-bells]] — sibling; transactional transport + reply-routes (the substrate this rides). Confirms durable queue + drainer-v2 made transport transactional.

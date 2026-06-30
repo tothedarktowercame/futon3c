@@ -626,6 +626,34 @@
                  (catch Throwable t
                    (println (str "[parked-on] notify failed for " job-id ": "
                                  (.getMessage t)))))))))
+(defn- parked-on-sweep-tick []
+  (try
+    (parked-on/sweep-deadlines!
+     {:now-ms (System/currentTimeMillis)
+      :resume! parked-resume!
+      :on-expire (fn [rec] (println (str "[parked-on] deadline expired, retracted: " (:id rec))))})
+    (catch Throwable t (println (str "[parked-on] sweep failed: " (.getMessage t))))))
+
+;; defonce so a Drawbridge reload of this ns never orphans the daemon thread.
+(defonce ^:private parked-on-sweeper (atom nil))
+
+(defn start-parked-on!
+  "Boot the parked-on subsystem: rehydrate persisted records against the recovered
+   ledger (R3), then start ONE daemon ticking sweep-deadlines! (R4 — its own thread,
+   NOT the Arxana Clock). Idempotent + flag-gated: a no-op unless FUTON3C_PARKED_ON."
+  []
+  (when (parked-on-enabled?)
+    (parked-on/rehydrate! {:ledger-lookup parked-job-lookup :resume! parked-resume!
+                           :now-ms (System/currentTimeMillis)})
+    (when (nil? @parked-on-sweeper)
+      (let [exec (java.util.concurrent.Executors/newSingleThreadScheduledExecutor
+                  (reify java.util.concurrent.ThreadFactory
+                    (newThread [_ r] (doto (Thread. ^Runnable r "parked-on-sweeper")
+                                       (.setDaemon true)))))]
+        (.scheduleAtFixedRate exec ^Runnable parked-on-sweep-tick
+                              30 30 java.util.concurrent.TimeUnit/SECONDS)
+        (reset! parked-on-sweeper exec)))
+    {:rehydrated true :sweeper (some? @parked-on-sweeper)}))
 ;; --- end parked-on Car 2 wiring -----------------------------------------------
 
 (defn- auto-record-direct-delivery-surface?
@@ -3029,6 +3057,35 @@
 
     {:ok true :ref ref}))
 
+(defn- handle-park
+  "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):
+   park AGENT's turn on a JOIN of AWAITING dep-ids; resume once all are terminal.
+   Body: {\"agent\":\"claude-1\",\"awaiting\":[\"<bell/job-id>\"...],\"payload\":\"...\",
+          \"deadline-ms\":N,\"timer-due-ms\":N,\"budget\":{...}}. Flag-gated."
+  [request _config]
+  (let [payload (parse-json-map (read-body request))]
+    (cond
+      (not (parked-on-enabled?))
+      (json-response 503 {:ok false :error "parked-on-disabled"
+                          :message "set FUTON3C_PARKED_ON to enable"})
+      (nil? payload)
+      (json-response 400 {:ok false :error "invalid-json"
+                          :message "Request body must be a JSON object"})
+      (str/blank? (str (or (:agent payload) (get payload "agent"))))
+      (json-response 400 {:ok false :error "agent-required"})
+      :else
+      (let [result (parked-on/park!
+                    {:agent (str (or (:agent payload) (get payload "agent")))
+                     :session (or (:session payload) (get payload "session"))
+                     :awaiting (or (:awaiting payload) (get payload "awaiting") [])
+                     :payload (or (:payload payload) (get payload "payload"))
+                     :timer-due-ms (or (:timer-due-ms payload) (get payload "timer-due-ms"))
+                     :deadline-ms (or (:deadline-ms payload) (get payload "deadline-ms"))
+                     :budget (or (:budget payload) (get payload "budget"))}
+                    {:ledger-lookup parked-job-lookup :resume! parked-resume!
+                     :now-ms (System/currentTimeMillis)})]
+        (json-response 200 (assoc result :ok true))))))
+
 (defn- handle-bell
   "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
    Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":1800000}
@@ -5314,6 +5371,10 @@
       (and (= :get method) (= "/api/alpha/agent-clock" uri))
       (handle-agent-clock request)
 
+      ;; E-repl-continuations Car 2b: register a parked-on continuation.
+      (and (= :post method) (= "/api/alpha/park" uri))
+      (handle-park request config)
+
       :else nil)))
 
 (defn make-handler
@@ -5674,7 +5735,10 @@
                        true)
                      (catch Exception _ false))]
     (if listening?
-      {:server stop-fn :port port :started-at (str (Instant/now))}
+      (do
+        (try (start-parked-on!) (catch Throwable t
+                                  (println (str "[parked-on] boot failed: " (.getMessage t)))))
+        {:server stop-fn :port port :started-at (str (Instant/now))})
       (do (stop-fn)
           (throw (ex-info "Server started but port is not listening (L7: verify-after-start)"
                           {:port port}))))))
