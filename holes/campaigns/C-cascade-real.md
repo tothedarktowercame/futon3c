@@ -823,6 +823,34 @@ just by one stakeholder's say-so. Roles: claude-1 = Cluster A mine + sessions/D1
 claude-10 = Cluster B fold; claude-8 (+claude-1) = forward-model (downward); claude-4 = D1
 lineage + arrow store; **claude-2 (re-add) = D4 substrate**. Coordination = swarm around D4.
 
+## CLOSURE CHECK — against the recorded criteria (claude-4, 2026-06-30)
+
+Closure is criteria-driven (Joe). Mapping each recorded criterion to the live state — honestly,
+holes included:
+
+| criterion (recorded) | state | evidence / gap |
+|---|---|---|
+| **Clause 1 · s1** regenerates, zero hand rows | ✅ | O4/O5 generators query live; O1 mined; O3 clocks |
+| **Clause 1 · s2** every rendered node resolves to evidence — *missions, patterns, capabilities, agent-clocks, held items* | ⚠️ **partial** | missions ✅ (286-edge probe) · agent-clocks ✅ (O3) · **patterns ❌ (no canonical nodes)** · **capabilities ❌ (non-canonical — O5's hole)** · **held items ❌ (not wired)** — the failing types ARE the honest holes |
+| **Clause 1 · s3** reconstitution survives teardown | ✅ | O3 `reconstitute`, durable XTDB |
+| **Clause 1 · s4** ≥1 honest hole = real queryable gap | ✅ | O5 `capability-layer-not-canonical`, composing |
+| **Clause 1 · s5** facet-owners interoperate via shared ontology | ✅ | O1×O4 share 171 canonical mission nodes, `:consistent?` |
+| **Clause 2** Bulletin 11 developed + recorded; strategic read ratified | 🟡 | `futon3/holes/war-bulletin-11.md` written ✅; **Joe's ratification of the strategic read PENDING** |
+| **Clause 3** canonical / unambiguous contents (each entity ONE identity) | ⚠️ **partial** | **missions ✅** (canonical + archivist gate live) · **capabilities ❌, patterns ❌** (the open honest holes) — Clause 3 full ⇒ canonicalize those, OR Joe scopes Clause 3 to "governance established + missions canonical, extensible" |
+| **Exit/keystone** (itself "draft — for Joe to ratify") | 🟡 | (1) regenerate ✅ (3) durable single-active clock ✅ · **(2) partial** — "who/which sessions on each mission" + reconstitution ✅, but **"what held work is pending" is not wired** into the query; **Joe to ratify the exit** |
+
+**Verdict:** the **data ask's core is met and visible** (the cascade composes at scale; the live
+HTML shows it). But by the campaign's *own* criteria it is **not yet closeable** — three concrete
+gaps remain, and they are exactly the "honest holes that still need dealing with":
+1. **Clause 3 / s2 breadth** — capabilities + patterns aren't canonical/populated. *Decision for
+   Joe:* require them for closure, or scope Clause 3 to "governance established (the gate), missions
+   canonical" and carry capabilities/patterns as post-campaign honest-hole work.
+2. **The reconstitution query's "held work pending"** (Exit criterion 2) — wire it, or scope it out.
+3. **Ratifications** — Clause 2's strategic read + the Exit/keystone (both recorded as awaiting Joe).
+
+So closure is **a small, named distance away**, not done — and the distance is the honest holes,
+as recorded. Nothing here is a surprise; it's the checklist doing its job.
+
 ## Exit / keystone (draft — for Joe to ratify)
 
 1. The cascade regenerates from live queries with **zero hand-typed rows** (D3–D5).
