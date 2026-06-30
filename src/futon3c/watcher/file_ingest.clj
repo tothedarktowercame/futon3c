@@ -803,9 +803,17 @@
         ;; focus on it and cross-link to the existing hyperedges via
         ;; futon1a's hyperedges-by-end (UUID → name smart-resolve in
         ;; routes.clj). See README-conventions.md §3.
+        ;; E-futon1a-archivist: key :id = vertex-id (the :mission/doc
+        ;; :xt/id == :name invariant, claude-2-ratified), so this rich node
+        ;; lands ON the canonical id capability-ingest already writes instead
+        ;; of a server UUID — unifying the two formerly non-composing
+        ;; populations. post-entity! forwards :id; resolve-end-id (routes.clj)
+        ;; bridges only UUID-shaped ids, so a name-keyed node resolves
+        ;; directly (gate-confirmed with claude-1, the watcher's owner).
         _entity-ok? (when hx-ok?
                       (:ok? (post-entity!
-                             {:name vertex-id
+                             {:id vertex-id
+                              :name vertex-id
                               :type "mission/doc"
                               :source "mission-doc-watcher"
                               :external-id (str "M-" mission-id)
