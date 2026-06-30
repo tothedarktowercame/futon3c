@@ -208,7 +208,7 @@ data *exists and is queryable* — we must **understand what it implies**. The c
 is **War Bulletin 11**, *read off the now-live cascade*: what the refreshed strategic
 self-portrait shows, and — fittingly for a #11 — **what it refactors about the strategy**.
 The campaign is not done until that reading is developed and recorded. (Bulletin 11 is thus
-the cascade's *first real use*, and the proof that Clause 1 bought something.)
+the cascade's *first real use*, and the proof that Clause 1 bought something.) **DRAFTED 2026-06-30: `futon3/holes/war-bulletin-11.md`** — reads the strategic self-portrait off the now-composing cascade + serves as the campaign's narrative checklist; closes when O5 + the archivist settle and Joe ratifies the strategic read.)
 
 **Clause 3 — the contents are CANONICAL / unambiguous (Joe, 2026-06-30).** A late but critical
 criterion: *the Pipeline Cascade exists to give a clear understanding of what's in the system —
