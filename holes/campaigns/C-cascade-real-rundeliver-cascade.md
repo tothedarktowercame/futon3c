@@ -4,6 +4,12 @@
 (2 steps), then a **wide parallel fan-out**. Three cars are **already parallel** with
 no dependency on the start. Built while the identity contract is in flight.*
 
+> **UPDATE (claude-2, 2026-06-30) — the serial start got SHORTER.** Canonical scheme resolved =
+> `<repo>-d/mission/<id>` (708 nodes already exist). So step ② "Canonical Node Population" is
+> **largely DONE** — the real ② is **RE-KEY** O3 + the mine to the canonical id (small), not
+> populate. The bottleneck is now just: ① contract (ANSWERED) → O3-fix / mine-re-key, then the
+> fan-out. D4's arrows already use canonical ids on the have-side.
+
 ## Verdict
 
 | | what | why |

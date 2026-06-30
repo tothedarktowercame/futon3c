@@ -223,6 +223,19 @@ The *immediate* instance is the **mission identity contract** (with claude-2) + 
 Owner: assignable to another agent (Joe). This clause makes endpoint-canonicality a gate, not
 hygiene — see the Strategic-implication note and the CONSTITUTION's shared-prerequisite.
 
+**CANONICAL SCHEME RESOLVED (claude-2, 2026-06-30, evidence-grounded — overturns the premise
+above):** the canonical mission/entity id is **`<repo>-d/mission/<id>`** (e.g.
+`futon3c-d/mission/autoclock-in`), `:entity/type :mission/doc` — **708** such nodes exist. Live
+census: `<repo>-d/mission/<id>` = 708 (CANONICAL) · bare `M-*` = 162 (alias→converge) ·
+`mission|M-*` = 118 (legacy alias) · `mission:M-*` (O3) = **0 island** · `mission/M-*` (mine) =
+**0 island**. **🔑 Correction:** the earlier "only 2/15 mine-missions exist as nodes" was a
+**wrong-key artifact** — all probed stems resolve repo-qualified (`futon3c-d/mission/typed-holes`,
+`futon2-d/mission/operational-vocabulary`, …). **The mission nodes already exist** (live populators
+`mission-scope-tree` (457) + `mission-doc-watcher` (177), re-derivable from docs). So the
+prerequisite is **NOT "populate nodes" — it's "O3 + the mine must emit/query the CANONICAL key"**
+(a much smaller fix). The archivist gate's first reject-list (claude-2): `mission:M-*`, `mission/M-*`,
+and `*-desktop-save-d` repo-labels (backup-checkout drift, cf. the `.state`-sandbox rule).
+
 ### Non-criteria — what "real" does NOT require
 
 `pipeline-pattern-cascade` is fundamentally about **DATA** — making the stack's

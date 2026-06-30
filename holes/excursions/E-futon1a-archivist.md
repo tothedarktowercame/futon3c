@@ -17,9 +17,15 @@ with **ambiguous contents** — and futon1a (substrate-2, :7071) currently has t
 | O3 lineage (clock_lineage) | `mission:M-*` | `mission:M-autoclock-in` |
 | the mine (joint-memes) | `mission/M-*` | `mission/M-typed-holes` |
 
-Only **2/15** of the mine's top missions exist as nodes under *any* scheme. So the dimensions
-don't compose at the **identity** layer (below the type layer the cascade-real L1 gate checks),
-and the cascade can't be a trustworthy self-model while one thing wears three names.
+**CORRECTION (claude-2, 2026-06-30):** the "2/15 exist" figure was a **wrong-key artifact** — the
+probe queried `mission:M-*`/bare `M-*`/`mission/M-*` (all 0-node islands). The **canonical scheme
+is `<repo>-d/mission/<id>`, `:entity/type :mission/doc` — 708 nodes already exist** (census:
+708 canonical · 162 bare-`M-*` alias · 118 `mission|M-*` legacy · 0 each for O3's and the mine's
+schemes). So the missions DO exist; the dimensions don't compose only because **O3 and the mine
+emit non-canonical keys**. The gate's job is to make that impossible: **reject `mission:M-*`,
+`mission/M-*`, and `*-desktop-save-d`** (backup-checkout drift) at write time; canonical =
+`<repo>-d/mission/<id>`. claude-2 owns the model + supplies the descriptor-registry entry + the
+reject-list; this excursion owns the **gate**.
 
 ## Root cause (the management gap)
 
