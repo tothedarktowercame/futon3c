@@ -191,12 +191,12 @@
 ;; reconstitute — the s3 read (survives teardown; from the durable store)
 ;; ---------------------------------------------------------------------------
 
-(defn- query-by-type
-  "GET futon1a for all currently-valid hyperedges of CLOCK-TYPE (db-as-of now —
+(defn- query-edges-of-type
+  "GET futon1a for all currently-valid hyperedges of HX-TYPE (db-as-of now —
    retracted edges are excluded). Returns a seq of hyperedge maps, or []."
-  []
+  [hx-type]
   (let [url  (str FUTON1A "/api/alpha/hyperedges?type="
-                  (URLEncoder/encode clock-type "UTF-8"))
+                  (URLEncoder/encode hx-type "UTF-8"))
         resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
                   (catch Exception _ nil))]
     (or (when (and resp (= 200 (:status resp)) (string? (:body resp)))
@@ -204,42 +204,80 @@
                (catch Exception _ nil)))
         [])))
 
+(defn- query-by-type [] (query-edges-of-type clock-type))
+
 (defn- prop [props k]
   (or (get props k) (get props (name k))))
 
 (defn summarize-edges
   "Pure: a seq of `clock/clocked-on` hyperedge maps → the reconstitution missions
    list, one entry per target (who/which sessions are on each), most-recent-first.
-   Pulled out of `reconstitute` so it is unit-testable without the substrate."
+   Pulled out of `reconstitute` so it is unit-testable without the substrate.
+   Each row also carries `:canonical` — the non-agent endpoint, the canonical
+   `<repo>-d/<kind>/<id>` node — which is the join key onto the held-work ledger
+   (`held/on-mission` edges key the same canonical node)."
   [edges]
   (let [rows (for [e    edges
                    :let [props   (:hx/props e)
                          target  (or (prop props :mission-id)
                                      (prop props :campaign-id)
                                      (prop props :excursion-id))
+                         canon   (first (remove #(str/starts-with? (str %) "agent:")
+                                                (:hx/endpoints e)))
                          agent   (prop props :agent-id)
                          session (prop props :session-id)
                          at      (or (prop props :clocked-at-ms) 0)]
                    :when target]
-               {:target target :agent agent :session session :at at})]
+               {:target target :canonical (some-> canon str) :agent agent
+                :session session :at at})]
     (->> (group-by :target rows)
          (map (fn [[target rs]]
                 {:target        target
+                 :canonical     (->> rs (sort-by :at >) (keep :canonical) first)
                  :agents        (vec (distinct (keep :agent rs)))
                  :sessions      (vec (distinct (keep :session rs)))
                  :last-clock-ms (apply max (map :at rs))}))
          (sort-by :last-clock-ms >)
          vec)))
 
+(defn held-by-mission
+  "Pure: a seq of `held/on-mission` hyperedge maps → {canonical-mission-id →
+   [{:item id :disposition d :reason r} ...]}. The held-work ledger keys its
+   second endpoint on the canonical mission node, so this map joins onto
+   `summarize-edges`' `:canonical` — wiring Exit-criterion-2 ('what held work is
+   pending') onto the reconstitution read without a second registry."
+  [held-edges]
+  (->> (for [e   held-edges
+             :let [eps   (:hx/endpoints e)
+                   item  (first (filter #(str/starts-with? (str %) "held/item/") eps))
+                   miss  (first (remove #(str/starts-with? (str %) "held/item/") eps))
+                   props (:hx/props e)]
+             :when (and item miss)]
+         {:mission (str miss)
+          :item    (str item)
+          :disposition (prop props :held/disposition)
+          :reason  (prop props :held/reason)})
+       (group-by :mission)
+       (into {} (map (fn [[m rs]] [m (mapv #(dissoc % :mission) rs)])))))
+
 (defn reconstitute
   "The s3 reconstitution read, from the DURABLE store (survives a teardown):
    the most-recently-clocked targets, and who/which sessions are on each.
    Returns {:as-of-ms now :count N :missions [{:target :agents [...] :sessions
-   [...] :last-clock-ms ...} ...]} ordered most-recent-first. LIMIT optionally
-   caps the list."
+   [...] :last-clock-ms ... :held-count N :held [...]} ...]} ordered
+   most-recent-first. Each mission is joined against the held-work ledger
+   (`held/on-mission`) on its `:canonical` node, so the read answers Exit
+   criterion 2 — 'N recent missions, who/which sessions on each, AND what held
+   work is pending' — in one durable query. LIMIT optionally caps the list."
   ([] (reconstitute {}))
   ([{:keys [limit]}]
-   (let [missions (summarize-edges (query-by-type))]
-     {:as-of-ms (System/currentTimeMillis)
-      :count    (count missions)
-      :missions (cond-> missions limit (->> (take limit) vec))})))
+   (let [missions (summarize-edges (query-by-type))
+         held     (held-by-mission (query-edges-of-type "held/on-mission"))
+         missions (mapv (fn [m]
+                          (let [hs (get held (:canonical m) [])]
+                            (assoc m :held-count (count hs) :held hs)))
+                        missions)]
+     {:as-of-ms     (System/currentTimeMillis)
+      :count        (count missions)
+      :held-total   (reduce + (map :held-count missions))
+      :missions     (cond-> missions limit (->> (take limit) vec))})))

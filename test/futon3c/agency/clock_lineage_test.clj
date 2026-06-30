@@ -50,3 +50,30 @@
 (deftest summarize-empty
   (testing "no edges → empty missions"
     (is (= [] (cl/summarize-edges [])))))
+
+(deftest summarize-surfaces-canonical-endpoint
+  (testing ":canonical is the non-agent endpoint — the held-work join key"
+    (let [out (cl/summarize-edges [(edge "claude-1" "M-a" "s1" 100)])]
+      (is (= "mission:M-a" (:canonical (first out)))
+          "the canonical node is the endpoint that is not agent:*"))))
+
+(defn- held-edge
+  "A minimal held/on-mission hyperedge as futon1a returns it."
+  [item-id mission disposition reason]
+  {:hx/type :held/on-mission
+   :hx/endpoints [(str "held/item/" item-id) mission]
+   :hx/props {:held/disposition disposition :held/reason reason}})
+
+(deftest held-by-mission-groups-on-canonical
+  (testing "held items group by their canonical mission endpoint (Exit-criterion-2 join)"
+    (let [held (cl/held-by-mission
+                [(held-edge "prose/h1" "futon4-d/mission/writing-ethics" "held" "scope r1")
+                 (held-edge "prose/h2" "futon4-d/mission/writing-ethics" "held" "scope r2")
+                 (held-edge "prose/h3" "futon7-d/mission/self-documenting-stack" "held" "r3")])]
+      (is (= #{"futon4-d/mission/writing-ethics"
+               "futon7-d/mission/self-documenting-stack"} (set (keys held))))
+      (is (= 2 (count (get held "futon4-d/mission/writing-ethics"))) "two items on writing-ethics")
+      (is (= "held/item/prose/h1" (:item (first (get held "futon4-d/mission/writing-ethics"))))
+          "item endpoint preserved")
+      (is (= "scope r1" (:reason (first (get held "futon4-d/mission/writing-ethics"))))))
+    (is (= {} (cl/held-by-mission [])) "no held edges → empty map")))
