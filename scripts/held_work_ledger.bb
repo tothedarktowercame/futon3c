@@ -11,7 +11,8 @@
 (require '[clojure.edn :as edn]
          '[clojure.string :as str]
          '[clojure.walk :as walk]
-         '[clojure.pprint :as pp])
+         '[clojure.pprint :as pp]
+         '[babashka.fs :as fs])
 
 (def root "/home/joe/code")
 (def out (str root "/futon3c/holes/excursions/held-work-ledger.edn"))
@@ -99,11 +100,68 @@
                         :source {:registry registry :doc doc}}))
           @hits)))
 
+;; --- prose adapter: ~445 holes/ docs ---------------------------------------
+;; PRECISION over recall: only clearly-held sections (## Deferred / Follow-on /
+;; Parked / Held) and high-signal inline markers (STILL GATED ON / deferred
+;; behind / follow-on:). Noisier headings (Open / Next steps / TODO / Backlog)
+;; are a deliberate recall follow-on, not harvested here.
+(def held-heading-re #"(?i)^#{2,4}\s*(deferred|follow[- ]?ons?|parked|held(?:[ /-]\w+)*)\b")
+(def any-heading-re  #"^#{1,6}\s")
+(def list-item-re    #"^\s*(?:[-*+]|\d+[.)])\s+(.+)$")
+(def inline-gate-re  #"(?i)(STILL GATED ON|deferred behind|follow-on:)")
+
+(defn doc-mission-id
+  "Best-effort canonical <repo>-d/mission/<lower-stem> from an M-*.md path."
+  [rel]
+  (when-let [m (re-find #"^([^/]+)/holes/(?:[^/]+/)?M-(.+)\.md$" rel)]
+    (str (nth m 1) "-d/mission/" (str/lower-case (nth m 2)))))
+
+(defn doc-date [lines]
+  (some #(second (re-find #"(?i)(?:date|raised|captured)[:*\s]+(\d{4}-\d{2}-\d{2})" %))
+        (take 15 lines)))
+
+(defn cap [s]
+  (let [s (-> (str s) (str/replace #"\*\*|`" "") str/trim)]
+    (if (> (count s) 200) (str (subs s 0 197) "…") s)))
+
+(defn prose-items-for [rel]
+  (let [lines (try (str/split-lines (slurp (str root "/" rel))) (catch Exception _ []))
+        date  (doc-date lines)
+        mid   (doc-mission-id rel)
+        mk    (fn [reason heading]
+                (held-item {:id (keyword "prose" (str "h" (Math/abs (hash (str rel "|" reason)))))
+                            :reason (cap reason)
+                            :owner nil :kind nil :wake-trigger nil :evidence-condition nil
+                            :review-by nil
+                            :re-entry (str rel (when heading (str " #" (str/trim heading))))
+                            :missions (when mid [mid])
+                            :raised-at date
+                            :source {:registry :prose :doc rel}}))
+        items (atom []) in-section (atom nil)]
+    (doseq [line lines]
+      (cond
+        (re-find held-heading-re line) (reset! in-section (str/replace line #"^#+\s*" ""))
+        (re-find any-heading-re line)  (reset! in-section nil)
+        :else
+        (let [li (second (re-find list-item-re line))]
+          (cond
+            (and @in-section li)          (swap! items conj (mk li @in-section))
+            (re-find inline-gate-re line) (swap! items conj (mk (or li line) nil))))))
+    @items))
+
+(defn from-prose []
+  (->> (fs/glob root "futon*/holes/**")
+       (filter #(str/ends-with? (str %) ".md"))
+       (map #(str (fs/relativize root %)))
+       (mapcat prose-items-for)
+       vec))
+
 (def ledger
   (vec (concat
          (from-sorrys)
          (from-registry-scan "futon0/holes/missions/M-capability-star-map.graph.edn" :star)
-         (from-registry-scan "futon7/holes/pudding-prover-registry.edn" :pudding))))
+         (from-registry-scan "futon7/holes/pudding-prover-registry.edn" :pudding)
+         (from-prose))))
 
 ;; --- governance-gap report (the POC's point: ungoverned folklore made visible)
 (defn gap? [k i] (let [v (get i k)] (or (nil? v) (and (coll? v) (empty? v)))))
