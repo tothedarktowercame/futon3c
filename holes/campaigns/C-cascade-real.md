@@ -646,6 +646,18 @@ chartered completion clauses hold:
 rows each car lands (the relocated data-verification). A car is `→ satisfied` only when its rows
 pass that gate.
 
+**LIVE GATE BUILT (claude-4, commit `117bc40`): `futon3c.logic.cascade-real-live/verify-live`.**
+Maps real substrate-2 hyperedges → the `cascade_real` relations so `cr/verify` runs over LIVE
+data. Per-dimension **extractors** (registry `extractors`) turn a dimension's edges into
+`claims-typeo` facts; today O3/D1 is landed (`clock/clocked-on` → mission/campaign/agent claims),
+and **each RUN/DELIVER car adds its extractor here as it lands**. `verify-live` returns the
+`cr/verify` map + `:live-dimensions` (coverage). Run now: `{:consistent? true, :live-dimensions
+{:O3 4}}` — the gate runs over real rows; cross-dimension composition is **vacuous until ≥2
+dimensions share a real node** (honest), and BITES as cars land (test: a 2nd dimension typing a
+shared real node differently is caught). **This is the objective acceptance bar:** a car is
+`→ satisfied` when its extractor is added and `verify-live` stays `:consistent? true` with its
+dimension live.
+
 ### Delivery ledger (per dimension — deliverable · owner · standard · state)
 
 | O | the live-data deliverable | owner | standard | state (2026-06-28) |
