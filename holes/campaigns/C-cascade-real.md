@@ -876,16 +876,28 @@ point." So Clause 3 closes **by mechanism**, and the holes are the cascade's *fi
 
 | E | facet | owner | state | evidence |
 |---|---|---|---|---|
-| E1 | (claude-10 car) | claude-10 | ⏳ job done, content in bellback | job 158 done 12:15Z, reply queued |
-| E2 | (claude-10 car) | claude-10 | ⏳ job done, content in bellback | job 158 done 12:15Z, reply queued |
-| E3 | D4 arrows + canonical-identity | claude-2 | ⏳ job done, content in bellback | job 159 done 12:14Z, reply queued |
+| E1 | D5 generator meme-wiring | claude-10 | 🟢 HELD-on-D4 → **unblocked** | magnet F −0.19→+0.90; generator works; `:O1 176` live. D4 now landed → small remaining SATISFIED-step (cascade-lane meme-wire) |
+| E2 | fold full risk-closure | claude-10 | 🟢 HELD-on-D4 → **unblocked** | L2 DarkTower gate `edad60a`, fold `9f0a5bf`/`ae016ec`/`1e8f465`, producer `f1ec053`. D4 landed → small remaining step (fold live-corpus consume) |
+| E3 | D4 arrows + canonical-identity | claude-2 | ✅ **SATISFIED** | D4 **landed** — 177 `code/v05/mined-move` `18fb63a` (composes on autoclock-in); identity `a12b7a5`+`cdb3359`+`431aca7`. Contract released. THE LINCHPIN. |
 | E4 | interim-director forward-model | claude-8 | ✅ **SATISFIED** | D6 ROI runner `fc8e1f0`; no closure-blocker |
 | E5 | γ / AIF-precision | claude-11 | ✅ **SATISFIED** | γ learner + `τ_eff=τ/γ` + `:realized-outcome`, `e868023`; no closure-blocker |
 | E6 | Bulletin 11 (Clause 2) | claude-4 | 🟡 drafted | `futon3/holes/war-bulletin-11.md`; awaiting Joe's strategic ratification |
 
-*2 SATISFIED + no closure-blocker (E4, E5); 3 jobs done with content arriving in their bellback turns
-(E1/E2/E3 — crossed-bell queueing, not failure); E6 awaits Joe. Plus claude-2's capability-scheme
-ratification (the one genuine hole) rides job 159.*
+*Result: **E3/E4/E5 SATISFIED**; **E1/E2 held-on-D4 but D4 is now landed (E3)** → both unblocked, with
+small named remaining SATISFIED-steps owned by claude-10; **E6 awaits Joe**. No false-satisfied marks,
+no closure-blockers. The whole chain hinged on D4, which claude-2 attests landed.*
+
+**CAPABILITY SCHEME — RATIFIED (claude-2, data-checked):** canonical capability id =
+**`scope/capability/<slug>`** (repo-LESS — my `<repo>-d/capability/<id>` guess was wrong; capabilities
+aren't repo-scoped: live nodes are `:scope/capability-scope` 644 + `:capability` 34 UUID +
+`:scope/capability` 12, zero repo-qualified). Owner **claude-2**; status **census-then-gate** (3
+coexisting types to reconcile, exactly as missions were). This is the one genuine non-canonical hole —
+now NAMED + OWNED + with a ratified target scheme + a concrete next step. (A 4th would-be wrong-key
+caught: I keep mirroring the mission scheme; the data keeps correcting me. Query/measure, don't mirror.)
+
+**TWO OWNED FOLLOW-ONS surfaced in the round (post-campaign, not blockers):** (i) claude-8's
+`from-prose` held-work adapter (scan ~445 `holes/` docs → `:held/*` items, precision-over-recall) —
+accepted, not yet built; (ii) the capability census-then-gate above.
 
 **Verdict:** the **data ask's core is met and visible** (the cascade composes at scale; the live
 HTML shows it). But by the campaign's *own* criteria it is **not yet closeable** — three concrete
