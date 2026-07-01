@@ -1036,6 +1036,25 @@ that already exists, and they, not the per-mission held slices, are the features
 canonicalization) are named, owned, and explicitly *not* on the near-term critical path for either
 client.
 
+### PROGRESS — the 🔨 rows landed (claude-5, 2026-07-01)
+
+The buildable-now rows are now DONE; what remains is deferred (needs impl #3) or operator-gated.
+
+**Checklist B — cascade reconstruction: essentially COMPLETE.**
+- ✅ **Live per-section graph endpoint** — `cascade-real-graph` + `/api/alpha/cascade-real/graph` emit per-section STRUCTURE (nodes/edges), not just counts (`06cfaae`; the `handle-cascade-real-graph` route was already in HEAD).
+- ✅ **From-scratch regenerated view** — `holes/excursions/pipeline-pattern-cascade-live.html` renders the whole cascade from live data (zero hand rows), side-by-side with the hand-built sketch. Upward: **cluster-basins → most-cited patterns** (+ **hole-basins** = cluster-grain induced holes) · **honest holes** · **held-work** · **lineage**. Downward: **O6 forward-model** (ROI/traction/backlog, live `/api/alpha/forward-model`, `022336a`).
+- ✅ **Mission→pattern crosslinks** (the "cited patterns" layer, reconstructed from historical mining — NOT PSR/PUR): **497 `:applied` + 1281 `:candidate`** `cascade/mission-pattern` edges landed via `scripts/mission_pattern_scopes_load.bb` (`06cfaae`); rendered as three grains.
+- ✅ **On-demand refresh** (keep-up-to-date) — `scripts/mission_pattern_refresh.bb` re-runs the live magnet (`cascade_construct`) per mission → `:on-demand` edges (retract-then-put), rendered as the blue ⟳ grain (`53122b1`).
+- ✅ **Exit-criterion-2** (held-work wired into `reconstitute`) — closed (claude-4).
+- ⏸ Deferred by Joe: **virtual patterns** (the referenced-but-unformalized names) land with the **AIF/fold work** for ΔG backing — see [[project-virtual-patterns-land-with-aif]].
+
+**Checklist A — R16 fold interface.**
+- ✅ **Live AIF↔cascade loop render** — `holes/excursions/aif-cascade-loop-live.html` (`1542699`): the loop (magnet→cascade→fold R16→act-gate→apply→`:realized-outcome`→γ R14→re-weight) with live values, the ESCROW↔AIF crosswalk, and the one staged switch (`*live-wire?*`) called out honestly. New `:r14-gamma` folded into `/api/alpha/war-machine`. Cross-referenced from `aif-wiring-explainer.html` (futon2 `c8f2dfe`). No pilot mutation.
+- ⏸ **HELD: fold bake-off** (R16-IMPL-SELECT) — waits on **impl #3 (embedding)**; "maybe close" (Joe). A 3-way comparison is premature with only #1/#2.
+- 🔒 **Joe-gated / claude-10:** live-wiring (flip `*live-wire?*` → the loop learns). Operator decision (R16-ARM).
+
+**Net:** the cascade is now a live, composed, honest projection with both halves (upward + downward) regenerating from substrate-2; the AIF-consumer relationship is inspectable live. The remaining distance is exactly the two named holds — impl #3 (A) and the operator live-wire (A) — plus the deferred virtual patterns (A×B join).
+
 ## Exit / keystone (draft — for Joe to ratify)
 
 1. The cascade regenerates from live queries with **zero hand-typed rows** (D3–D5).
