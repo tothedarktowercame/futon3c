@@ -96,6 +96,12 @@
     <h2>Agent → mission lineage (the durable clock) <span class="muted" id="lineage-count"></span></h2>
     <div id="lineage-body"></div>
   </section>
+
+  <section class="panel" id="forward-panel" style="display:none">
+    <h2>Downward layer — forward-model (ROI / traction) <span class="muted" id="forward-src"></span></h2>
+    <div class="sub" style="margin-bottom:10px">The cascade's <i>downward</i> half: what the upward work is <b>for</b> — backlog → priced sorries → ROI → pipeline, ledger-grounded (M-interim-director-forward-model, E4). Live from <code>/api/alpha/forward-model</code>.</div>
+    <div id="forward-body"></div>
+  </section>
 </main>
 
 <script>
@@ -103,6 +109,7 @@
   var BASE="http://localhost:7070";
   var EP_SUMMARY=BASE+"/api/alpha/cascade-real";
   var EP_GRAPH=BASE+"/api/alpha/cascade-real/graph";
+  var EP_FORWARD=BASE+"/api/alpha/forward-model";
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
     futon3a:"#4a9a7d",futon3b:"#2f9f6f",futon3c:"#12b98f",futon4:"#d05a7a",futon5:"#6d6ad0",
@@ -312,9 +319,34 @@
     el("lineage-panel").style.display="";
   }
 
+  function renderForward(fm){
+    if(!fm||fm.ok===false){el("forward-body").innerHTML="<span class='muted'>forward-model unavailable</span>";el("forward-panel").style.display="";return;}
+    el("forward-src").textContent="· source "+esc(fm.source||"");
+    var tr=fm["traction-metric"]||{}, hz=fm.horizon||{}, ra=fm["ranked-action-list"]||{};
+    // current realized = cash-now (NOT the trajectory's projected end-state, which would read 100%)
+    var realized=fm["cash-now"]; var total=tr["total-known"];
+    var pct=(realized!=null&&total)?Math.round(100*realized/total):null;
+    var priced=fm["priced-sorries"]||[]; var un=fm["unpriced-sorries"]; un=Array.isArray(un)?un.length:(un||0);
+    var chips="<span class='chip'>window <b>"+esc(hz.window||"—")+"</b></span>"+
+      "<span class='chip'>cash-now <b>£"+esc(fm["cash-now"])+"</b></span>"+
+      "<span class='chip'>height <b>"+esc(fm["height-metric"])+"</b></span>"+
+      "<span class='chip'>next <b>"+esc(fm["next-action"])+"</b></span>"+
+      (pct!=null?"<span class='chip'>traction <b>"+pct+"%</b> (£"+realized+"/£"+total+")</span>":"");
+    var now=((ra["actionable-now"]||[]).map(function(x){return "<span class='chip' style='border-color:#3a7f5a;color:#8fe0b6'>▶ "+esc(x)+"</span>";})).join("");
+    var gated=((ra.gated||[]).map(function(g){return "<span class='chip' style='border-color:#a35a3a;color:#e8a07a'>⏸ "+esc(g.sorry)+" ← "+esc((g.awaiting||[]).join(", "))+"</span>";})).join("");
+    var traj=((fm["projected-trajectory"]||[]).map(function(p){return "<span class='chip'>"+esc(p.after)+": £"+esc(p.cash)+"</span>";})).join(" → ");
+    el("forward-body").innerHTML=
+      "<div class='meta-row'>"+chips+"</div>"+
+      "<div style='margin:8px 0'><b>Backlog:</b> <span class='chip'>"+priced.length+" priced sorries</span><span class='chip'>"+un+" unpriced</span></div>"+
+      "<div style='margin:8px 0'><b>Ranked actions:</b> "+(now||gated?now+gated:"<span class='muted'>none</span>")+"</div>"+
+      "<div style='margin:8px 0'><b>Projected trajectory:</b> "+(traj||"<span class='muted'>—</span>")+"</div>";
+    el("forward-panel").style.display="";
+  }
+
   Promise.all([
     fetch(EP_SUMMARY).then(function(r){return r.json();}),
-    fetch(EP_GRAPH).then(function(r){return r.json();})
+    fetch(EP_GRAPH).then(function(r){return r.json();}),
+    fetch(EP_FORWARD).then(function(r){return r.json();}).catch(function(){return null;})
   ]).then(function(res){
     var s=res[0], g=res[1];
     renderHeader(s);
@@ -325,6 +357,7 @@
     renderHoles(g);
     renderHeld(g);
     renderLineage(g);
+    renderForward(res[2]);
   }).catch(function(err){
     el("offline").style.display="block";
     el("offline").innerHTML+="<br><span class='muted'>"+esc(err&&err.message||err)+"</span>";
