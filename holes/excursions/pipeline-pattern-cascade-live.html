@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Pipeline Pattern Cascade — LIVE (regenerated)</title>
+<style>
+  :root{ --bg:#0f1115; --panel:#171a21; --ink:#e6e9ef; --dim:#9aa3b2; --line:#2a2f3a; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:16px 22px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#12151b,#0f1115)}
+  h1{margin:0 0 4px;font-size:19px;letter-spacing:.2px}
+  .sub{color:var(--dim);font-size:12px}
+  .prov{color:#0a8a6f;font-weight:700}
+  main{padding:18px 22px 60px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 16px}
+  .panel h2{margin:0 0 10px;font-size:14px;color:#c8d0dc;font-weight:700}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0}
+  .chip{display:inline-block;padding:3px 9px;border-radius:7px;background:#1e2430;border:1px solid var(--line);font-size:12px}
+  .chip b{color:#fff} .chip i{color:var(--dim);font-style:normal;font-size:11px}
+  .ok{color:#3ddc84;font-weight:800} .bad{color:#ff6b6b;font-weight:800}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:2px;vertical-align:middle}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--dim);font-size:11px;margin-top:8px}
+  .cluster-col{vertical-align:top}
+  .mnode{fill:#1b2029;stroke:#2a2f3a}
+  .clabel{fill:#cdd6e4;font-size:12px;font-weight:700}
+  .csub{fill:#7b8698;font-size:10px}
+  .mlabel{fill:#d6dce6;font-size:10.5px}
+  .badge-held{fill:#e0a63b} .badge-hole{fill:#ff6b6b} .badge-clock{fill:#3ddc84} .badge-pat{fill:#5aa0ff}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  td,th{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  th{color:var(--dim);font-weight:600}
+  .gap{border:1px dashed #a33;background:#1c1416;color:#ffb4b4;border-radius:8px;padding:10px 12px}
+  .muted{color:var(--dim)}
+  code{background:#1e2430;padding:1px 5px;border-radius:4px;color:#b7c3d6}
+  #offline{display:none;color:#ffb4b4;padding:14px;border:1px dashed #a33;border-radius:8px}
+  .scrollx{overflow-x:auto}
+  .basins{display:flex;flex-wrap:wrap;gap:12px}
+  .basin-card{flex:1 1 220px;min-width:220px;max-width:300px;background:#1b2029;border:1px solid var(--line);border-radius:9px;padding:11px 13px}
+  .basin-card.hole{border:1px dashed #a35a3a;background:#20191a}
+  .basin-title{font-weight:700;color:#cdd6e4;font-size:12.5px;margin-bottom:2px}
+  .basin-meta{color:#7b8698;font-size:10.5px;margin-bottom:8px}
+  .pat-line{font-size:11px;padding:2px 0;color:#c3d0e0} .pat-line.primary{font-weight:700;color:#eaf1ff}
+  .pat-line code{background:#141922;font-size:10.5px}
+  .basin-hole{color:#e8a07a;font-size:11px;line-height:1.4}
+  .cand-head{color:#7b8698;font-size:10px;margin-top:7px;border-top:1px solid #232936;padding-top:5px}
+  .cand-line{font-size:10.5px;padding:1px 0;color:#8fa0b6} .cand-line code{background:#141922;font-size:10px;color:#93b0d8}
+</style>
+</head>
+<body>
+<header>
+  <h1>Pipeline Pattern Cascade — <span style="color:#3ddc84">LIVE</span> <span class="sub">(regenerated from real data)</span></h1>
+  <div class="sub">Every node/edge below is <span class="prov">generated from live substrate-2</span> via
+    <code>/api/alpha/cascade-real</code> + <code>/api/alpha/cascade-real/graph</code> — <b>zero hand-typed rows</b>.
+    Compare against the hand-built sketch in <code>pipeline-pattern-cascade.html</code>.
+    <span id="asof" class="muted"></span></div>
+</header>
+<main>
+  <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.</div>
+
+  <section class="panel" id="header-panel" style="display:none">
+    <h2>The composing cascade — header metadata</h2>
+    <div id="dims" class="meta-row"></div>
+    <div id="spine" class="meta-row"></div>
+    <div id="composition" class="meta-row"></div>
+    <div id="standards" class="meta-row"></div>
+  </section>
+
+  <section class="panel" id="basins-panel" style="display:none">
+    <h2>Mission clusters → most-cited patterns (the basins) <span class="muted" id="basins-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">Each basin is a mission cluster warranted by its top cited patterns (aggregated over member missions). A <b style="color:#e8a07a">hole-basin</b> is a cluster the cascade can't yet warrant — <i>where it suggests a missing/virtual pattern to seed</i> (Moran's lesson).</div>
+    <div class="basins" id="basins"></div>
+  </section>
+
+  <section class="panel" id="cascade-panel" style="display:none">
+    <h2>Mission detail — clusters → missions (drill-down) <span class="muted" id="cascade-count"></span></h2>
+    <div class="scrollx"><svg id="cascade" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="panel" id="patterns-panel" style="display:none">
+    <h2>Cited patterns (the O4 back-link layer)</h2>
+    <div class="gap" id="patterns-gap"></div>
+  </section>
+
+  <section class="panel" id="holes-panel" style="display:none">
+    <h2>Honest holes <span class="muted" id="holes-count"></span></h2>
+    <div id="holes-body"></div>
+  </section>
+
+  <section class="panel" id="held-panel" style="display:none">
+    <h2>Held / deferred work <span class="muted" id="held-count"></span></h2>
+    <div id="held-body"></div>
+  </section>
+
+  <section class="panel" id="lineage-panel" style="display:none">
+    <h2>Agent → mission lineage (the durable clock) <span class="muted" id="lineage-count"></span></h2>
+    <div id="lineage-body"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var BASE="http://localhost:7070";
+  var EP_SUMMARY=BASE+"/api/alpha/cascade-real";
+  var EP_GRAPH=BASE+"/api/alpha/cascade-real/graph";
+
+  var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
+    futon3a:"#4a9a7d",futon3b:"#2f9f6f",futon3c:"#12b98f",futon4:"#d05a7a",futon5:"#6d6ad0",
+    futon5a:"#8a7ae0",futon6:"#d0913a",futon7:"#3a7ad0"};
+  function esc(s){return String(s==null?"":s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
+  function repoOf(m){var i=String(m).indexOf("-d/");return i<0?"?":String(m).slice(0,i);}
+  function repoColor(m){return REPO_COLORS[repoOf(m)]||"#6b7686";}
+  function shortMission(m){return String(m).replace(/^[^-]*-d\/(mission|excursion|campaign)\//,"");}
+  function shortCluster(c){return String(c).replace("cascade/cluster/","");}
+  function truncate(s,n){s=String(s);return s.length>n?s.slice(0,n-1)+"…":s;}
+  function el(id){return document.getElementById(id);}
+
+  function renderHeader(s){
+    el("asof").textContent=" · as of "+new Date(s["as-of-ms"]).toLocaleString()+
+      " · "+(s["consistent?"]?"composed ✓ consistent":"INCONSISTENT");
+    var dim=s.dimensions||{}, own=s.owners||{};
+    var order=[["O1","mined-move arrows"],["O2","canonical mine"],["O3","lineage"],
+               ["O4","upward clusters"],["O5","honest holes"]];
+    el("dims").innerHTML=order.map(function(p){var k=p[0];
+      return "<span class='chip'><b>"+k+"</b> "+esc(p[1])+" · <b>"+(dim[k]||0)+"</b> <i>"+esc(own[k]||"")+"</i></span>";}).join("");
+    var sp=s.spine||{};
+    el("spine").innerHTML="<span class='chip'><b>Spine:</b> "+(sp["canonical-mission-nodes"]||0)+
+      " canonical mission nodes</span><span class='chip'>O1-missions "+(sp["O1-missions"]||0)+
+      "</span><span class='chip'>O4-missions "+(sp["O4-missions"]||0)+"</span>";
+    var c=s.composition||{};
+    el("composition").innerHTML="<span class='muted' style='margin-right:8px'>Composition (one graph, not seven pictures):</span>"+
+      Object.keys(c).map(function(k){return "<span class='chip'>"+esc(k)+" <b>"+c[k]+"</b></span>";}).join("");
+    var std=s.standards||{};
+    el("standards").innerHTML="<span class='muted' style='margin-right:8px'>Clause-1 standards:</span>"+
+      Object.keys(std).map(function(k){return "<span class='chip'><span class='dot' style='background:"+
+        (std[k]?"#3ddc84":"#ff6b6b")+"'></span>"+esc(k)+"</span>";}).join("");
+    el("header-panel").style.display="";
+  }
+
+  function buildIndex(g){
+    var ix={held:{},holes:{},arrows:{},clock:{},pat:{},cand:{}};
+    (g.held||[]).forEach(function(e){(ix.held[e.mission]=ix.held[e.mission]||[]).push(e);});
+    (g.holes||[]).forEach(function(e){(ix.holes[e.target]=ix.holes[e.target]||[]).push(e);});
+    (g.arrows||[]).forEach(function(e){ix.arrows[e.have]=(ix.arrows[e.have]||0)+1;});
+    (g.lineage||[]).forEach(function(e){ix.clock[e.target]=e.agent;});
+    (((g.patterns||{}).edges)||[]).forEach(function(e){
+      var b=(e.relation==="candidate")?ix.cand:ix.pat;
+      (b[e.mission]=b[e.mission]||[]).push(e);
+    });
+    return ix;
+  }
+  // aggregate a mission→edge index up to a cluster: pattern → citing-count, sorted desc
+  function clusterPatterns(missions,idx){
+    var c={}; missions.forEach(function(m){(idx[m]||[]).forEach(function(e){c[e.pattern]=(c[e.pattern]||0)+1;});});
+    return Object.keys(c).sort(function(a,b){return c[b]-c[a];}).map(function(p){return {pattern:p,n:c[p]};});
+  }
+
+  function renderBasins(g,ix){
+    var byCluster={};
+    (g.clusters||[]).forEach(function(e){(byCluster[e.cluster]=byCluster[e.cluster]||[]).push(e.mission);});
+    var clusters=Object.keys(byCluster).sort();
+    var holeCount=0;
+    var cards=clusters.map(function(c){
+      var missions=byCluster[c];
+      var applied=clusterPatterns(missions,ix.pat);
+      var cand=clusterPatterns(missions,ix.cand);
+      var citing=missions.filter(function(m){return (ix.pat[m]||[]).length;}).length;
+      var isHole=applied.length===0;
+      if(isHole) holeCount++;
+      var appliedBody=isHole
+        ? "<div class='basin-hole'>induced hole — 0 confirmed pattern warrants across "+missions.length+" missions.</div>"
+        : applied.slice(0,4).map(function(o,i){
+            return "<div class='pat-line"+(i===0?" primary":"")+"'><code>"+esc(o.pattern)+"</code> <span class='muted'>×"+o.n+"</span></div>";}).join("");
+      // candidate suggestions (the magnet's weaker links) — the "cascade suggests" layer, key for hole-basins
+      var candBody = cand.length
+        ? "<div class='cand-head'>"+(isHole?"⤷ cascade suggests (candidates):":"⤷ also suggested:")+"</div>"+
+          cand.slice(0,isHole?4:2).map(function(o){
+            return "<div class='cand-line'><code>"+esc(o.pattern)+"</code> <span class='muted'>×"+o.n+"</span></div>";}).join("")
+        : "";
+      return "<div class='basin-card"+(isHole?" hole":"")+"'>"+
+        "<div class='basin-title'>"+esc(shortCluster(c))+"</div>"+
+        "<div class='basin-meta'>"+applied.length+" cited · "+cand.length+" candidate patterns · "+citing+"/"+missions.length+" citing missions</div>"+
+        appliedBody+candBody+"</div>";
+    });
+    el("basins").innerHTML=cards.join("");
+    el("basins-count").textContent="· "+clusters.length+" clusters · "+(clusters.length-holeCount)+" warranted · "+holeCount+" hole-basins";
+    el("basins-panel").style.display="";
+  }
+
+  function renderCascade(g,ix){
+    // group missions by cluster
+    var byCluster={};
+    (g.clusters||[]).forEach(function(e){(byCluster[e.cluster]=byCluster[e.cluster]||[]).push(e.mission);});
+    var clusters=Object.keys(byCluster).sort();
+    var COLW=150, PAD=14, HEADH=44, ROWH=18, TOP=60;
+    var maxRows=0; clusters.forEach(function(c){maxRows=Math.max(maxRows,byCluster[c].length);});
+    var W=PAD*2+clusters.length*COLW, H=TOP+HEADH+maxRows*ROWH+PAD;
+    var svg=el("cascade"); svg.setAttribute("width",W); svg.setAttribute("height",H);
+    svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    var out=[];
+    out.push("<text x='"+PAD+"' y='24' class='clabel' style='font-size:13px'>"+
+             clusters.length+" clusters · "+(g.counts?g.counts.clusters:0)+" cluster→mission edges (live)</text>");
+    clusters.forEach(function(c,ci){
+      var x=PAD+ci*COLW, missions=byCluster[c].slice().sort();
+      // cluster header
+      out.push("<rect x='"+(x+4)+"' y='"+TOP+"' width='"+(COLW-12)+"' height='"+(HEADH-8)+
+               "' rx='6' class='mnode'/>");
+      out.push("<text x='"+(x+12)+"' y='"+(TOP+16)+"' class='clabel'>"+esc(truncate(shortCluster(c),18))+"</text>");
+      out.push("<text x='"+(x+12)+"' y='"+(TOP+30)+"' class='csub'>"+missions.length+" missions</text>");
+      missions.forEach(function(m,mi){
+        var y=TOP+HEADH+mi*ROWH;
+        var col=repoColor(m);
+        out.push("<rect x='"+(x+6)+"' y='"+(y-2)+"' width='3' height='"+(ROWH-4)+"' fill='"+col+"'/>");
+        var bx=x+14;
+        // badges
+        if(ix.clock[m]){out.push("<circle cx='"+bx+"' cy='"+(y+7)+"' r='3.2' class='badge-clock'><title>clocked: "+esc(ix.clock[m])+"</title></circle>");bx+=9;}
+        if((ix.holes[m]||[]).length){out.push("<circle cx='"+bx+"' cy='"+(y+7)+"' r='3.2' class='badge-hole'><title>"+ix.holes[m].length+" hole(s)</title></circle>");bx+=9;}
+        if((ix.held[m]||[]).length){out.push("<rect x='"+(bx-3)+"' y='"+(y+4)+"' width='6' height='6' class='badge-held'><title>"+ix.held[m].length+" held item(s)</title></rect>");bx+=9;}
+        if((ix.pat[m]||[]).length){out.push("<rect x='"+(bx-3)+"' y='"+(y+4)+"' width='6' height='6' class='badge-pat'><title>"+ix.pat[m].length+" cited pattern(s)</title></rect>");bx+=9;}
+        var tip=esc(m)+" · repo "+esc(repoOf(m))+
+          ((ix.arrows[m]||0)?(" · "+ix.arrows[m]+" arrow(s)"):"")+
+          ((ix.holes[m]||[]).length?(" · "+ix.holes[m].length+" hole(s)"):"")+
+          ((ix.held[m]||[]).length?(" · "+ix.held[m].length+" held"):"")+
+          ((ix.pat[m]||[]).length?(" · "+ix.pat[m].length+" patterns"):"");
+        out.push("<text x='"+bx+"' y='"+(y+10)+"' class='mlabel'>"+esc(truncate(shortMission(m),Math.max(4,16-Math.round((bx-x-14)/6))))+
+          "<title>"+tip+"</title></text>");
+      });
+    });
+    svg.innerHTML=out.join("");
+    el("cascade-count").textContent="· "+ (g.clusters?g.clusters.length:0) +" edges · 172 missions live";
+    // legend
+    var repos={}; (g.clusters||[]).forEach(function(e){repos[repoOf(e.mission)]=1;});
+    el("legend").innerHTML=
+      "<span><span class='dot badge-clock' style='background:#3ddc84'></span>clocked (lineage)</span>"+
+      "<span><span class='dot badge-hole' style='background:#ff6b6b'></span>honest hole target</span>"+
+      "<span><span class='dot' style='background:#e0a63b'></span>held work</span>"+
+      "<span><span class='dot' style='background:#5aa0ff'></span>cited patterns</span>"+
+      "<span style='margin-left:10px' class='muted'>repo colour:</span>"+
+      Object.keys(repos).sort().map(function(r){return "<span><span class='dot' style='background:"+
+        (REPO_COLORS[r]||"#6b7686")+"'></span>"+esc(r)+"</span>";}).join("");
+    el("cascade-panel").style.display="";
+  }
+
+  function renderPatterns(g){
+    var p=g.patterns||{}, edges=p.edges||[];
+    if(!edges.length){
+      el("patterns-gap").innerHTML="<b>Honest hole:</b> "+esc(p.note||p.gap||"");
+      el("patterns-panel").style.display=""; return;
+    }
+    var applied=edges.filter(function(e){return e.relation!=="candidate";});
+    var cand=edges.filter(function(e){return e.relation==="candidate";});
+    var byPat={}, byMis={};
+    applied.forEach(function(e){(byPat[e.pattern]=byPat[e.pattern]||[]).push(e);(byMis[e.mission]=byMis[e.mission]||[]).push(e);});
+    var candMis={}; cand.forEach(function(e){candMis[e.mission]=1;});
+    var pats=Object.keys(byPat).sort(function(a,b){return byPat[b].length-byPat[a].length;});
+    var nsOf=function(p){var i=String(p).indexOf("/");return i<0?"?":String(p).slice(0,i);};
+    var ns={}; pats.forEach(function(pp){ns[nsOf(pp)]=(ns[nsOf(pp)]||0)+1;});
+    var top=pats.slice(0,14).map(function(pp){
+      return "<tr><td><span class='dot' style='background:#5aa0ff'></span><code>"+esc(pp)+"</code></td>"+
+        "<td><b>"+byPat[pp].length+"</b> missions</td><td class='muted'>"+
+        esc(truncate(byPat[pp].map(function(e){return shortMission(e.mission);}).join(", "),120))+"</td></tr>";});
+    el("patterns-gap").outerHTML=
+      "<div style='margin-bottom:10px'><b>"+applied.length+"</b> <code>:applied</code> crosslinks (confirmed warrants) · <b>"+
+        cand.length+"</b> <code>:candidate</code> links (magnet suggestions) · <b>"+
+        Object.keys(byMis).length+"</b> missions cite · <b>"+pats.length+"</b> distinct applied patterns · <b>"+
+        Object.keys(ns).length+"</b> namespaces</div>"+
+      "<table><tr><th>pattern (most-cited, :applied)</th><th>reach</th><th>missions</th></tr>"+top.join("")+"</table>"+
+      "<div class='muted' style='margin-top:8px'>Reconstructed from historical mining (mission-pattern-scopes) — <b>not PSR/PUR</b>. "+
+        "<b>:applied</b> = confirmed warrants; <b>:candidate</b> = the magnet's weaker suggestions (shown per-basin above). "+
+        "Deferred: <b>virtual patterns</b> (the "+"~51 referenced-but-unformalized names) land with the AIF/fold work for theoretical backing — not as bare holes. On-demand refresh via <code>cascade_construct</code>.</div>";
+    el("patterns-panel").style.display="";
+  }
+
+  function renderHoles(g){
+    var holes=g.holes||[]; var byKind={};
+    holes.forEach(function(e){(byKind[e.kind]=byKind[e.kind]||[]).push(e);});
+    el("holes-count").textContent="· "+holes.length+" hole→target edges live";
+    var rows=Object.keys(byKind).sort().map(function(k){
+      var arr=byKind[k];
+      return "<tr><td><span class='dot badge-hole' style='background:#ff6b6b'></span><b>"+esc(k)+"</b></td>"+
+        "<td>"+arr.length+" targets</td><td class='muted'>"+esc(truncate(arr.map(function(e){return shortMission(e.target);}).join(", "),160))+"</td></tr>";});
+    el("holes-body").innerHTML="<table><tr><th>hole kind</th><th>load</th><th>targets (canonical mission/capability nodes)</th></tr>"+rows.join("")+"</table>"+
+      "<div class='muted' style='margin-top:6px'>Moran's lesson: a hole is a real, queryable coverage gap — here the single non-canonical layer (capabilities), owned + scheme-ratified — not a hand-placed <code>?</code>.</div>";
+    el("holes-panel").style.display="";
+  }
+
+  function renderHeld(g){
+    var held=g.held||[]; var byM={};
+    held.forEach(function(e){(byM[e.mission]=byM[e.mission]||[]).push(e);});
+    var missions=Object.keys(byM).sort(function(a,b){return byM[b].length-byM[a].length;});
+    el("held-count").textContent="· "+held.length+" held items across "+missions.length+" missions";
+    var rows=missions.map(function(m){
+      var arr=byM[m], reg={}; arr.forEach(function(e){reg[e.registry]=(reg[e.registry]||0)+1;});
+      var regs=Object.keys(reg).map(function(r){return esc(r)+"×"+reg[r];}).join(", ");
+      return "<tr><td><span class='dot' style='background:"+repoColor(m)+"'></span>"+esc(shortMission(m))+
+        " <span class='muted'>("+esc(repoOf(m))+")</span></td><td><b>"+arr.length+"</b></td>"+
+        "<td class='muted'>"+regs+"</td><td class='muted'>"+esc(truncate((arr[0]&&arr[0].reason)||"",90))+"</td></tr>";});
+    el("held-body").innerHTML="<table><tr><th>mission</th><th>held</th><th>source registries</th><th>sample reason</th></tr>"+rows.join("")+"</table>";
+    el("held-panel").style.display="";
+  }
+
+  function renderLineage(g){
+    var lin=g.lineage||[];
+    el("lineage-count").textContent="· "+lin.length+" currently-clocked (single-active, durable XTDB)";
+    var rows=lin.map(function(e){
+      return "<tr><td><span class='dot badge-clock' style='background:#3ddc84'></span>"+esc(e.agent)+"</td>"+
+        "<td>"+esc(shortMission(e.target))+" <span class='muted'>("+esc(e.target)+")</span></td>"+
+        "<td class='muted'>"+esc((e.session||"").slice(0,8))+"</td>"+
+        "<td class='muted'>"+(e.at?new Date(e.at).toLocaleString():"")+"</td></tr>";});
+    el("lineage-body").innerHTML="<table><tr><th>agent</th><th>target</th><th>session</th><th>clocked-at</th></tr>"+rows.join("")+"</table>"+
+      "<div class='muted' style='margin-top:6px'>Thin by design: single-active per agent, durable across teardown (the reconstitution query).</div>";
+    el("lineage-panel").style.display="";
+  }
+
+  Promise.all([
+    fetch(EP_SUMMARY).then(function(r){return r.json();}),
+    fetch(EP_GRAPH).then(function(r){return r.json();})
+  ]).then(function(res){
+    var s=res[0], g=res[1];
+    renderHeader(s);
+    var ix=buildIndex(g);
+    renderBasins(g,ix);
+    renderCascade(g,ix);
+    renderPatterns(g);
+    renderHoles(g);
+    renderHeld(g);
+    renderLineage(g);
+  }).catch(function(err){
+    el("offline").style.display="block";
+    el("offline").innerHTML+="<br><span class='muted'>"+esc(err&&err.message||err)+"</span>";
+  });
+})();
+</script>
+</body>
+</html>

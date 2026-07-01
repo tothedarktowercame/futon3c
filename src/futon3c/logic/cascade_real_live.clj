@@ -210,3 +210,126 @@
                     :s4-honest-holes (boolean (seq o5)) :s5-composed (pos? (n o1 o4))}
      :owners       {:O1 "claude-2" :O3 "claude-4" :O4 "claude-10"
                     :O5 "claude-4" :O7 "claude-10" :O2 "claude-1"}}))
+
+;; ---------------------------------------------------------------------------
+;; live graph — the per-section STRUCTURE the cascade BODY renders
+;; `cascade-real-summary` gives the header METADATA (counts/overlaps); this gives
+;; the BODY (the real nodes+edges each dimension contributes), so the pipeline-
+;; pattern-cascade SVG regenerates from live data instead of the hand-built sketch
+;; (C-cascade-real §7 DISSOLUTION, Checklist B). Pure section-fns take edges so they
+;; are unit-testable without the substrate; the `cascade-real-graph` aggregator fetches.
+;; ---------------------------------------------------------------------------
+
+(defn- endpoints-of [e] (mapv str (:hx/endpoints e)))
+(defn- mission-ep [eps] (some #(when (re-find #"-d/mission/" %) %) eps))
+
+(defn lineage-section
+  "O3 — agent→target clock edges (who/which session is on each mission/excursion/
+   campaign), most-recent-first. Target = the canonical non-agent endpoint."
+  [edges]
+  (->> (for [e edges
+             :let [eps    (endpoints-of e)
+                   p      (:hx/props e)
+                   agent  (some #(when (str/starts-with? % "agent:") %) eps)
+                   target (some #(when-not (str/starts-with? % "agent:") %) eps)]
+             :when (and agent target)]
+         {:agent agent :target target
+          :session (some-> (prop p :session-id) str)
+          :at (or (prop p :clocked-at-ms) 0)})
+       (sort-by :at >)
+       vec))
+
+(defn cluster-section
+  "O4 — cluster→mission member edges (the upward structure: mission clusters)."
+  [edges]
+  (vec (for [e edges
+             :let [eps     (endpoints-of e)
+                   cluster (some #(when (str/starts-with? % "cascade/cluster/") %) eps)
+                   mission (mission-ep eps)]
+             :when (and cluster mission)]
+         {:cluster cluster :mission mission})))
+
+(defn hole-section
+  "O5 — hole→target edges + hole kind (the honest holes: where the cascade, read
+   from its own data, asks for the next work)."
+  [edges]
+  (vec (for [e edges
+             :let [eps    (endpoints-of e)
+                   hole   (some #(when (str/starts-with? % "cascade/hole/") %) eps)
+                   target (some #(when-not (str/starts-with? % "cascade/hole/") %) eps)]
+             :when (and hole target)]
+         {:hole hole :target target :kind (prop (:hx/props e) :hole-kind)})))
+
+(defn arrow-section
+  "O1 — mined-move have→want arrows on the mission spine (kept `:mined-structural`,
+   NOT laundered as proofs). Carries the move-class + ΔG so the render can show the
+   self-loop / low-ΔG honesty (the Q-B magnet-quality finding is visible in the data)."
+  [edges]
+  (vec (for [e    edges
+             :let [eps  (endpoints-of e)
+                   have (first eps) want (second eps)
+                   p    (:hx/props e)]
+             :when (and have (re-find #"-d/mission/" have) (not (re-find #"-head$" have)))]
+         {:have have :want want
+          :move-class (prop p :move-class) :delta-g (prop p :delta-g)})))
+
+(defn held-section
+  "D2 — held/on-mission edges (parked work per canonical mission — the deferral
+   ledger, the 'what should wake up now' surface). Namespaced props read directly."
+  [edges]
+  (vec (for [e    edges
+             :let [eps     (endpoints-of e)
+                   item    (some #(when (str/starts-with? % "held/item/") %) eps)
+                   mission (mission-ep eps)
+                   p       (:hx/props e)]
+             :when (and item mission)]
+         {:held item :mission mission
+          :registry (get p :held/source-registry)
+          :reason   (get p :held/reason)})))
+
+(defn mission-pattern-section
+  "O4-backlink — mission→pattern crosslinks (`cascade/mission-pattern` edges, the
+   'cited patterns' layer reconstructed from historical mining, NOT PSR/PUR). Each
+   edge connects a canonical mission node to a canonical `<ns>/<name>` pattern node,
+   `:relation` applied|candidate. Both endpoints already resolve on the live spine
+   (mission composes with O1/O3/O4; pattern is its own id-space). Pure: EDGES → rows."
+  [edges]
+  (vec (for [e    edges
+             :let [eps     (endpoints-of e)
+                   mission (mission-ep eps)
+                   pattern (some #(when-not (re-find #"-d/mission/" %) %) eps)
+                   p       (:hx/props e)]
+             :when (and mission pattern)]
+         {:mission mission :pattern pattern
+          :relation (prop p :relation) :cos (prop p :cos)})))
+
+(defn cascade-real-graph
+  "The per-section STRUCTURE (nodes/edges) the pipeline-pattern-cascade BODY renders,
+   from live substrate-2 rows — the reconstruction of the cascade itself, not just the
+   header counts `cascade-real-summary` gives. Each section is one dimension's real data;
+   an unlanded dimension is empty (honest). `:patterns` names the still-open PSR
+   mission→pattern back-link gap rather than fabricating edges: the pattern NODES are
+   landed + queryable (`pattern/library`, `pattern/clause`) but not yet cited into the
+   cascade body (O4 enrichment, post-campaign)."
+  []
+  (let [lineage  (lineage-section (fetch-edges "clock/clocked-on"))
+        clusters (cluster-section (fetch-edges "cascade/cluster-member"))
+        holes    (hole-section    (fetch-edges "cascade/hole-target"))
+        arrows   (arrow-section   (fetch-edges "code/v05/mined-move"))
+        held     (held-section    (fetch-edges "held/on-mission"))
+        patterns (mission-pattern-section (fetch-edges "cascade/mission-pattern"))]
+    {:as-of-ms (System/currentTimeMillis)
+     :lineage  lineage
+     :clusters clusters
+     :holes    holes
+     :arrows   arrows
+     :held     held
+     :patterns {:edges patterns
+                :note (str "mission→pattern crosslinks reconstructed from historical mining "
+                           "(mission-pattern-scopes; :applied citations), NOT PSR/PUR. Both endpoints "
+                           "on live canonical (mission spine × pattern/library <ns>/<name>). Honest "
+                           "holes remain: :try-candidates not yet landed, + newer patterns absent from "
+                           "pattern/library; on-demand refresh = cascade_construct.")}
+     :counts   {:lineage (count lineage) :clusters (count clusters)
+                :holes (count holes) :arrows (count arrows) :held (count held)
+                :patterns (count patterns)}}))

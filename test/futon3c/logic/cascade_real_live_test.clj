@@ -104,3 +104,75 @@
                                          [cr/claims-typeo :O2 "mission:M-x" :meme]]))]
       (is (some #{"mission:M-x"} (:composition-violations v)))
       (is (false? (:consistent? v))))))
+
+;; --- §7 DISSOLUTION Checklist B: the per-section BODY structure -------------
+
+(deftest lineage-section-agent-to-target
+  (testing "clock edges → agent→target rows, most-recent-first, mission OR campaign target"
+    (let [rows (live/lineage-section
+                [{:hx/endpoints ["agent:claude-4" "futon3c-d/mission/autoclock-in"]
+                  :hx/props {:agent-id "claude-4" :session-id "s1" :clocked-at-ms 100}}
+                 {:hx/endpoints ["agent:claude-1" "campaign:C-cascade-real"]
+                  :hx/props {:agent-id "claude-1" :session-id "s2" :clocked-at-ms 200}}])]
+      (is (= {:agent "agent:claude-1" :target "campaign:C-cascade-real" :session "s2" :at 200}
+             (first rows)) "most-recent (at=200) first; target is the non-agent endpoint")
+      (is (= "futon3c-d/mission/autoclock-in" (:target (second rows)))))))
+
+(deftest cluster-section-cluster-to-mission
+  (testing "cluster-member edges → cluster→mission rows"
+    (is (= [{:cluster "cascade/cluster/00-war-machine"
+             :mission "futon3c-d/mission/war-machine-first-outing"}]
+           (live/cluster-section
+            [{:hx/endpoints ["cascade/cluster/00-war-machine"
+                             "futon3c-d/mission/war-machine-first-outing"]}])))))
+
+(deftest hole-section-carries-kind
+  (testing "hole-target edges → hole→target rows with the hole kind (the honest hole)"
+    (is (= [{:hole "cascade/hole/capability-layer-not-canonical"
+             :target "futon0-d/mission/capability-star-map"
+             :kind "capability-not-canonical"}]
+           (live/hole-section
+            [{:hx/endpoints ["cascade/hole/capability-layer-not-canonical"
+                             "futon0-d/mission/capability-star-map"]
+              :hx/props {:hole-kind "capability-not-canonical" :composes true}}])))))
+
+(deftest arrow-section-keeps-move-honesty
+  (testing "mined-move edges → have→want rows carrying move-class + ΔG (self-loop visible)"
+    (let [rows (live/arrow-section
+                [{:hx/endpoints ["futon0-d/mission/capability-star-map"
+                                 "futon0-d/mission/capability-star-map-document"]
+                  :hx/props {:move-class ":close-hole" :delta-g -7.91E-4}}
+                 {:hx/endpoints ["futon3c-d/mission/x-head" "y"] :hx/props {}}])]
+      (is (= 1 (count rows)) "the -head want-side stem is skipped, like the O1 extractor")
+      (is (= ":close-hole" (:move-class (first rows))))
+      (is (= "futon0-d/mission/capability-star-map" (:have (first rows)))))))
+
+(deftest held-section-reads-namespaced-props
+  (testing "held/on-mission edges → held→mission rows with namespaced :held/reason + registry"
+    (is (= [{:held "held/item/prose/h1003283572"
+             :mission "futon7-d/mission/self-documenting-stack"
+             :registry "prose" :reason "scope unification"}]
+           (live/held-section
+            [{:hx/endpoints ["held/item/prose/h1003283572"
+                             "futon7-d/mission/self-documenting-stack"]
+              :hx/props {:held/disposition "held" :held/source-registry "prose"
+                         :held/reason "scope unification"}}])))))
+
+(deftest mission-pattern-section-crosslinks
+  (testing "cascade/mission-pattern edges → mission→pattern rows (the reconstructed cited-pattern layer)"
+    (is (= [{:mission "futon3-d/mission/agency-rebuild"
+             :pattern "agency/single-routing-authority"
+             :relation "applied" :cos nil}]
+           (live/mission-pattern-section
+            [{:hx/endpoints ["futon3-d/mission/agency-rebuild" "agency/single-routing-authority"]
+              :hx/props {:relation "applied" :source "mission-pattern-scopes"}}])))
+    (testing "candidate edges keep the cosine score"
+      (is (= 0.31 (:cos (first (live/mission-pattern-section
+                                [{:hx/endpoints ["futon2-d/mission/x" "realtime/y"]
+                                  :hx/props {:relation "candidate" :cos 0.31}}]))))))))
+
+(deftest sections-empty-on-no-rows
+  (testing "every section degrades to [] with no live rows (honest non-landing)"
+    (is (= [] (live/lineage-section []) (live/cluster-section [])
+           (live/hole-section []) (live/arrow-section []) (live/held-section [])
+           (live/mission-pattern-section [])))))
