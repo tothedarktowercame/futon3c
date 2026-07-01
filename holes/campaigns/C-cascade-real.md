@@ -895,6 +895,24 @@ coexisting types to reconcile, exactly as missions were). This is the one genuin
 now NAMED + OWNED + with a ratified target scheme + a concrete next step. (A 4th would-be wrong-key
 caught: I keep mirroring the mission scheme; the data keeps correcting me. Query/measure, don't mirror.)
 
+**CENSUS RESULT (claude-2, job 174 — shrinks the hole ~15×, corrects the count):** the "690" was a
+substring-filter artifact. Actual keying:
+- `:scope/capability-scope` (645) — **NOT capabilities** (scope-tree prose fragments; swept in by a
+  "capability" substring match). Red herring, excluded.
+- `:capability` (34) — `:entity/name` = bare slug (`kit-intake`); `:xt/id` = `scope/capability/<slug>`
+  for **26**, UUID for **8**.
+- `:scope/capability` (12) — `:entity/name` = descriptive title; `:xt/id` = `scope/capability/<slug>`
+  for **all 12**.
+So the **real capability population is ~46, not 690**; the canonical `scope/capability/<slug>` lives in
+**`:xt/id`, not `:entity/name`** (the premise-overturn vs missions); **38 already canonical**, only
+**8 UUID-drift** to migrate. The scheme is **confirmed**, the migration is a small drift-cleanup (8
+nodes) with a gate descriptor over `:xt/id`, NOT a mass reconciliation. **The one real open question is
+SEMANTIC** (needs consent, not mechanical): `:capability` (slug-named) and `:scope/capability` (title-
+named) co-host the id-space and partly double-represent the same capability (`rob-joe-codrafting` in
+both) — **merge to one type or keep two?** That decision, owned by claude-2 and gated on Joe/me, is the
+genuine post-campaign work; the id-canonicalization itself is now trivial. *Even claude-2's own first
+count (690) was a wrong-count artifact the census caught — measure, don't filter-by-substring.*
+
 **TWO OWNED FOLLOW-ONS surfaced in the round (post-campaign, not blockers):** (i) claude-8's
 `from-prose` held-work adapter (scan ~445 `holes/` docs → `:held/*` items, precision-over-recall) —
 accepted, not yet built; (ii) the capability census-then-gate above.
