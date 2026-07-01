@@ -145,13 +145,13 @@
   }
 
   function buildIndex(g){
-    var ix={held:{},holes:{},arrows:{},clock:{},pat:{},cand:{}};
+    var ix={held:{},holes:{},arrows:{},clock:{},pat:{},cand:{},od:{}};
     (g.held||[]).forEach(function(e){(ix.held[e.mission]=ix.held[e.mission]||[]).push(e);});
     (g.holes||[]).forEach(function(e){(ix.holes[e.target]=ix.holes[e.target]||[]).push(e);});
     (g.arrows||[]).forEach(function(e){ix.arrows[e.have]=(ix.arrows[e.have]||0)+1;});
     (g.lineage||[]).forEach(function(e){ix.clock[e.target]=e.agent;});
     (((g.patterns||{}).edges)||[]).forEach(function(e){
-      var b=(e.relation==="candidate")?ix.cand:ix.pat;
+      var b=(e.relation==="candidate")?ix.cand:((e.relation==="on-demand")?ix.od:ix.pat);
       (b[e.mission]=b[e.mission]||[]).push(e);
     });
     return ix;
@@ -171,6 +171,7 @@
       var missions=byCluster[c];
       var applied=clusterPatterns(missions,ix.pat);
       var cand=clusterPatterns(missions,ix.cand);
+      var od=clusterPatterns(missions,ix.od);
       var citing=missions.filter(function(m){return (ix.pat[m]||[]).length;}).length;
       var isHole=applied.length===0;
       if(isHole) holeCount++;
@@ -184,10 +185,15 @@
           cand.slice(0,isHole?4:2).map(function(o){
             return "<div class='cand-line'><code>"+esc(o.pattern)+"</code> <span class='muted'>×"+o.n+"</span></div>";}).join("")
         : "";
+      var odBody = od.length
+        ? "<div class='cand-head' style='color:#5aa0ff'>⟳ on-demand (live magnet):</div>"+
+          od.slice(0,3).map(function(o){
+            return "<div class='cand-line' style='color:#93b0d8'><code>"+esc(o.pattern)+"</code> <span class='muted'>×"+o.n+"</span></div>";}).join("")
+        : "";
       return "<div class='basin-card"+(isHole?" hole":"")+"'>"+
         "<div class='basin-title'>"+esc(shortCluster(c))+"</div>"+
-        "<div class='basin-meta'>"+applied.length+" cited · "+cand.length+" candidate patterns · "+citing+"/"+missions.length+" citing missions</div>"+
-        appliedBody+candBody+"</div>";
+        "<div class='basin-meta'>"+applied.length+" cited · "+cand.length+" candidate"+(od.length?" · "+od.length+" on-demand":"")+" patterns · "+citing+"/"+missions.length+" citing missions</div>"+
+        appliedBody+candBody+odBody+"</div>";
     });
     el("basins").innerHTML=cards.join("");
     el("basins-count").textContent="· "+clusters.length+" clusters · "+(clusters.length-holeCount)+" warranted · "+holeCount+" hole-basins";
@@ -254,8 +260,9 @@
       el("patterns-gap").innerHTML="<b>Honest hole:</b> "+esc(p.note||p.gap||"");
       el("patterns-panel").style.display=""; return;
     }
-    var applied=edges.filter(function(e){return e.relation!=="candidate";});
+    var applied=edges.filter(function(e){return e.relation!=="candidate"&&e.relation!=="on-demand";});
     var cand=edges.filter(function(e){return e.relation==="candidate";});
+    var odE=edges.filter(function(e){return e.relation==="on-demand";});
     var byPat={}, byMis={};
     applied.forEach(function(e){(byPat[e.pattern]=byPat[e.pattern]||[]).push(e);(byMis[e.mission]=byMis[e.mission]||[]).push(e);});
     var candMis={}; cand.forEach(function(e){candMis[e.mission]=1;});
@@ -268,13 +275,15 @@
         esc(truncate(byPat[pp].map(function(e){return shortMission(e.mission);}).join(", "),120))+"</td></tr>";});
     el("patterns-gap").outerHTML=
       "<div style='margin-bottom:10px'><b>"+applied.length+"</b> <code>:applied</code> crosslinks (confirmed warrants) · <b>"+
-        cand.length+"</b> <code>:candidate</code> links (magnet suggestions) · <b>"+
+        cand.length+"</b> <code>:candidate</code> links (magnet suggestions) · <b style='color:#5aa0ff'>"+
+        odE.length+"</b> <code>:on-demand</code> (live magnet refresh) · <b>"+
         Object.keys(byMis).length+"</b> missions cite · <b>"+pats.length+"</b> distinct applied patterns · <b>"+
         Object.keys(ns).length+"</b> namespaces</div>"+
       "<table><tr><th>pattern (most-cited, :applied)</th><th>reach</th><th>missions</th></tr>"+top.join("")+"</table>"+
       "<div class='muted' style='margin-top:8px'>Reconstructed from historical mining (mission-pattern-scopes) — <b>not PSR/PUR</b>. "+
-        "<b>:applied</b> = confirmed warrants; <b>:candidate</b> = the magnet's weaker suggestions (shown per-basin above). "+
-        "Deferred: <b>virtual patterns</b> (the "+"~51 referenced-but-unformalized names) land with the AIF/fold work for theoretical backing — not as bare holes. On-demand refresh via <code>cascade_construct</code>.</div>";
+        "<b>:applied</b> = confirmed warrants; <b>:candidate</b> = the magnet's weaker suggestions; "+
+        "<b style='color:#5aa0ff'>:on-demand</b> = re-run of the live magnet (<code>cascade_construct</code>) to keep crosslinks current (retract-then-put per mission). "+
+        "Deferred: <b>virtual patterns</b> (referenced-but-unformalized names) land with the AIF/fold work for theoretical backing — not as bare holes.</div>";
     el("patterns-panel").style.display="";
   }
 
