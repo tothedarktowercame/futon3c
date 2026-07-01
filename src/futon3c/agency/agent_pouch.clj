@@ -127,6 +127,66 @@
       (flush))
     bytes))
 
+;; -- E-monster-to-joey: compact a monster's COLD transcript so it can warm -----
+;; Flag-gated (default OFF). Compaction rewrites the transcript IN PLACE under the
+;; same session-id (agent clock/evidence/pouch key untouched), backing up the
+;; original; safe because this fires only at the monster-cold decision, where the
+;; session has no warm writer. See scripts/compact_session.py.
+
+(def ^:private default-compact-script
+  "/home/joe/code/futon3c/scripts/compact_session.py")
+
+(defn compact-monsters-enabled?
+  "Flag (default OFF, FUTON3C_KANGAROO_COMPACT_MONSTERS): compact a monster's cold
+   transcript so it becomes a warm-able joey instead of staying cold."
+  []
+  (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" false))
+
+(defn- compact-script []
+  (or (some-> (System/getProperty "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
+      (some-> (config/env "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
+      default-compact-script))
+
+(defn- compact-target-mib []
+  (or (some-> (or (System/getProperty "FUTON3C_KANGAROO_COMPACT_TARGET_MIB")
+                  (config/env "FUTON3C_KANGAROO_COMPACT_TARGET_MIB"))
+              str/trim not-empty)
+      "1.7"))
+
+(defn compact-session!
+  "Run the recency-shell compactor on SESSION-ID's cold transcript, in place
+   (backup kept). Returns true on success. Loud-failure: logs and returns false on
+   any error. Only meaningful on a COLD session (no warm writer)."
+  [session-id]
+  (let [sid    (some-> session-id str str/trim not-empty)
+        script (compact-script)]
+    (when (and sid (.isFile (io/file script)))
+      (try
+        (let [sh (requiring-resolve 'clojure.java.shell/sh)
+              {:keys [exit out err]} (sh "python3" script sid
+                                         "--target-mib" (compact-target-mib))]
+          (println (format "[kangaroo] compact %s: exit=%s %s" sid (str exit)
+                           (str/trim (str (or out "")
+                                          (when (seq err) (str " ERR:" err))))))
+          (flush)
+          (zero? (long exit)))
+        (catch Throwable t
+          (println (str "[kangaroo] compact failed for " sid ": " (.getMessage t)))
+          (flush)
+          false)))))
+
+(defn joey-eligible-or-compact?
+  "Like `joey-eligible?`, but when a monster is found and compaction is enabled
+   (FUTON3C_KANGAROO_COMPACT_MONSTERS), compact the cold transcript in place and
+   re-check the gate — so a shrunk monster warms instead of staying cold.
+   SIDE EFFECT (only on a monster + flag on): rewrites the transcript."
+  [agent-id session-id]
+  (or (joey-eligible? agent-id session-id)
+      (and (compact-monsters-enabled?)
+           (some? (some-> session-id str str/trim not-empty))
+           (compact-session! session-id)
+           (joey-eligible? agent-id session-id))))
+
 (defn- now-ms [] (System/currentTimeMillis))
 (defn- now [] (str (Instant/now)))
 
