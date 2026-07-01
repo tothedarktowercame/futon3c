@@ -94,7 +94,7 @@
       {ref:"DarkTower / CT",t:"Wiring",val:"typed-hole comb · L2 rung-1 0-sorry",st:"<span class='warn'>◑ sim</span>"},
       {ref:"expected-G · E3/E4",t:"Act-gate",val:arrows.length+" arrows carry ΔG (mean "+num(dgMean)+", all :close-hole, all <0)",st:"served-mission ΔG nil ⇒ <span class='warn'>:abstain</span> today"},
       {ref:"enactment · R16-ARM",t:"Apply → :realized-outcome",val:"apply-cascade! writes the realized ΔG",st:(liveWire?"<span class='ok'>✓ live-wired</span>":"<span class='bad'>⏸ STAGED — *live-wire?* off</span>"),staged:!liveWire},
-      {ref:"R14 · E5",t:"γ (precision)",val:"γ = "+num(g.gamma,2)+" "+(g["held-at-prior?"]?"(held at prior)":"")+" · "+(g["independent-realized"]||0)+"/"+(g["paired-samples"]||0)+" indep · verdict "+esc(g["calibration-verdict"]),st:(g["live-wire?"]?"<span class='ok'>learning</span>":"<span class='warn'>held — feed staged</span>"),held:true},
+      {ref:"R14 · E5",t:"γ (precision)",val:"γ = "+num(g.gamma,2)+" "+(g["held-at-prior?"]?"(held at prior)":"")+" · "+(g["policy-outcome-samples"]||0)+" policy samples (R16 feed staged) · calib "+((g["calibration-signal"]||{}).independent||0)+"/"+((g["calibration-signal"]||{}).paired||0)+" discharge (distinct)",st:(g["live-wire?"]?"<span class='ok'>learning</span>":"<span class='warn'>held — feed staged</span>"),held:true},
       {ref:"τ_eff = τ / γ",t:"Re-weight",val:"selection temperature ÷ γ = "+(g.gamma===1?"τ (γ=1, no change yet)":"sharpened"),st:"closes → magnet"}
     ];
     var html=[];
@@ -116,8 +116,8 @@
     el("switch").innerHTML="<b>"+(g["live-wire?"]?"CLOSED":"OPEN at one point")+"</b> — the enactment seam "+
       "(<code>apply-cascade!</code> → <code>:realized-outcome</code>) is <b>built + round-trip tested (E5 satisfied)</b> "+
       "but staged behind <code>*live-wire?*</code> = <b>"+(g["live-wire?"]?"true":"false")+"</b>. "+
-      "γ is holding at "+num(g.gamma,2)+" with "+(g["independent-realized"]||0)+" independent realized samples "+
-      "(burn-in "+(g["burn-in-met?"]?"met":"not met")+"). Flipping the switch — the operator-governed "+
+      "γ is holding at "+num(g.gamma,2)+" with "+(g["policy-outcome-samples"]||0)+" policy-outcome samples "+
+      "(its R16 :realized-outcome feed is staged — 0 while *live-wire?* is off). Flipping the switch — the operator-governed "+
       "<b>R16-ARM / WM-I4</b> decision — lets R14-FEED flow from live cascade enactment, and the loop learns. "+
       "<div class='muted' style='margin-top:6px'>"+esc(g.status||"")+"</div>";
     el("switch-panel").style.display="";
