@@ -872,6 +872,15 @@ coverage not required… honest-and-partial beats complete-and-hand-maintained �
 point." So Clause 3 closes **by mechanism**, and the holes are the cascade's *first real output*
 (it surfaces its own next work), not closure debt.
 
+**CLOSE STATUS (2026-07 — corrected after Joe's challenge):** C-cascade-real does **NOT** close yet.
+"Defer Q-B and close" was a contradiction (Joe): Q-B *is* the "is the generative signal mechanically
+real or hand-curated?" test — the campaign's own thesis pointed at its generative dimension. Closing
+while deferring that = declaring the cascade real while shelving the test of whether it is. So the
+campaign stays **OPEN through Q-B**. Q-B is now running as a fresh-context probe (**claude-6**, job 181,
+full briefing) per Joe's steer; E1/E2 stay held-on-Q-B; close is reassessed when the magnet-quality
+scorecard lands. Everything else (E3/E4/E5 satisfied, held-items/patterns landed, capability hole
+scoped, Clause 1 met, Clause 3 by-mechanism) stands — the single open gate is generative-realness.
+
 **ESCROW ATTESTATION LEDGER (clean-exit round, 2026-06-30 — each owner attests its own criterion):**
 
 | E | facet | owner | state | evidence |
@@ -933,6 +942,83 @@ gaps remain, and they are exactly the "honest holes that still need dealing with
 
 So closure is **a small, named distance away**, not done — and the distance is the honest holes,
 as recorded. Nothing here is a surprise; it's the checklist doing its job.
+
+## 7. DISSOLUTION — the escrow was per-mission; the checklist extensions are the real features (claude-5 + Joe, 2026-07-01)
+
+**The reframe (Joe).** ESCROW (E1–E6) organised the work as *held cross-mission dependencies* —
+each slice framed from a contributing mission's point of view (D4's arrows, the fold's
+risk-closure, the forward-model runner, γ's feed…). That framing was right for coordinating
+disparate owners, but it obscures what the work actually *is*: the two client artifacts each carry
+a concrete **feature checklist**, and the checklist extensions — not the mission-shaped escrow
+entries — are the real deliverables. DISSOLUTION dissolves the per-mission escrow into those two
+feature checklists, read **from the client side**, classifying each row: **✅ done · 🔨 buildable
+now from existing data · ⛔ held-on-WIP (which) · 🗓 deferred/governance.**
+
+**Headline (both checklists): the in-flight escrow work covers only a thin slice — the
+magnet-quality research (Q-B) + the capability canonicalization. Most of each checklist is
+buildable now from data that already exists** (patterns landed 4635+6299; held-items 109 edges;
+O3 lineage delivered; O6 runner shipped; O5 holes computed). The escrow ledger reads as "blocked";
+the feature checklists read as "mostly ready" — because the features do not, in fact, wait on the
+per-mission held slices.
+
+### Checklist A — the R16 fold interface (`futon2/holes/aif-wiring-explainer.html`)
+
+Client: **R16 (close-the-loop)**. The Fold-Enablers rollup board *is* the latent checklist;
+reclassified by buildability (evidence = the card `ev:`/`n:` fields):
+
+| Feature | State | Note |
+|---|---|---|
+| R14-GAMMA (γ) · FOLD-MINILM (magnet) · FOLD-DIFFSUB (move-set) | ✅ | built+reviewed |
+| **R16-ROLLOUT** — wire impl #1 (classical) into the **live** act-gate | 🔨 | sim-verified (ΔG=−1.0 ⇒ `:pass`); "reuse the scheduler tick, no loop." No corpus needed |
+| **R16-GATE** — gate stops abstaining once a fold path is live | 🔨 | follows R16-ROLLOUT; today `:abstain-missing-leg` because ΔG is nil |
+| **Enactment seam** — `apply-cascade!` → `:realized-outcome`, flip `*live-wire?*` | 🔨 | the R16→R14 seam is **built + round-trip tested (E5 satisfied)**, staged behind `*live-wire?*`; flipping it makes **R14-FEED** (γ) flow — this is "close it LIVE (a)" |
+| **R16-IMPL-SELECT** — the fold **bake-off** (#1 vs #2) | 🔨 | pin explicit requirements (determinism / cost / soundness / honesty of policy-holes / latency) and score on **today's** cascades; both #1 and #2 are sim-built |
+| R16-ARM — arming / autopen switch (WM-I4) | 🗓 | operator governance, not a build |
+| impl #3-embedding: FOLD-GAE · FOLD-GFLOWNET · FOLD-JAXREFINE · FOLD-EXOTYPE | 🗓/⛔ | the **deferred ansatz** (FOLD-ANSATZ: #2 already realizes the interface; #3 is a bet on efficiency). Needs the (cascade→wiring) corpus; FOLD-GAE's one test *failed* (lift −0.058, stale). **Not near-term** |
+
+**The distinction that reframes the escrow:** the loop can be *closed live* — enactment seam +
+act-gate + the impl bake-off — on **today's** cascades. The (have→want) corpus (E1/E2) governs
+cascade *relevance/richness*, not whether the loop closes; and the corpus-blocked embedding fold
+is an explicitly deferred ansatz. So R16's near-term features (≈4 CPU items) **do not wait on the
+held escrow slices.**
+
+### Checklist B — the pipeline cascade reconstruction (`futon3c/holes/excursions/pipeline-pattern-cascade.html`)
+
+Today **only the top panel is live** (`/api/alpha/cascade-real` returns aggregate *counts* —
+dimension totals, composition overlaps, standard dots). The cascade **body** (the SVG: upward
+clusters→patterns, capability layer, downward forward-model, held schema) is still the **static
+hand-built sketch** — the file's own comment: *"the diagram below is the design; this panel is the
+live data."* So "real" = the **body** regenerates from the endpoint, not just the header metadata.
+
+| Section | Data state | Reconstruction |
+|---|---|---|
+| Agent↔session↔mission **lineage** (O3) | ✅ delivered (`clock-lineage`/`reconstitute`, durable XTDB) | 🔨 render the real lineage into the body |
+| **Held/deferred** schema (D2) | ✅ landed (176 `:held/*` items · 109 `held/on-mission` edges, `59b3196`) | 🔨 render real held-work — replaces the static "story" section |
+| **Patterns** (O4) | ✅ landed (`pattern/library` 4635 + `pattern/clause` 6299, keyed `<ns>/<name>` — the magnet's own id-space) | 🔨 render pattern nodes; ⛔ mission→pattern **PSR back-links** (the "?" placeholders) not yet composed |
+| Upward **clusters** (O4) | generator exists (`cascade_construct.py`, minilm magnet) | 🔨 render clusters; ⛔ per-mission **condensation quality** held on **Q-B** (E1/E2 — D4 arrows are self-loops that regress F; the +0.90 was hand-curated) |
+| **Honest holes** (O5) | computed (`o5-honest-holes` dryrun) | 🔨 render computed holes; the one non-canonical layer = **capabilities** (scheme ratified `scope/capability/<slug>`, ~46 real, 8 UUID-drift to migrate) |
+| **Forward-model** downward (O6) | ✅ runner shipped (futon7 `fc8e1f0`; substrate-backing behind D4) | 🔨 render ROI/backlog/pipeline cards from the runner's EDN — replaces the static PNGs |
+| **The plumbing** — extend `/api/alpha/cascade-real` to emit per-section **structure** (nodes/edges), + rewrite the SVG body to render it | — | 🔨 **this is the reconstruction proper** — a build over data that largely exists |
+
+**So the reconstruction is mostly a richer-endpoint + render-the-body build over existing data.**
+Only O4-pattern-PSR-edges and O5-capability-canonicalization are genuinely WIP-gated, and cascade
+*condensation quality* is held on Q-B (E1/E2).
+
+### Escrow → checklist crosswalk (the dissolution)
+
+| escrow entry (per-mission framing) | its real feature (checklist row) | status |
+|---|---|---|
+| E1 · E2 (fold risk-closure / D5 meme-wiring) | B: upward **condensation quality** — held on **Q-B** magnet research | ⛔ research, not a wire |
+| E3 (D4 arrows + identity) | ✅ landed — the linchpin (`18fb63a`/`a12b7a5`) | done |
+| E4 (interim-director forward-model) | B: O6 downward cards | ✅ runner shipped |
+| E5 (γ / AIF-precision) | A: **enactment seam / R14-FEED** — flips when `*live-wire?*` is set | 🔨 staged, ready |
+| E6 (Bulletin 11) | Clause 2 strategic read | 🟡 awaiting Joe |
+
+**The real next round is the 🔨 rows** — not the escrow ledger. They are buildable now from data
+that already exists, and they, not the per-mission held slices, are the features that make R16
+*meaningful* and the cascade *real*. The two genuinely-held slices (Q-B magnet quality; capability
+canonicalization) are named, owned, and explicitly *not* on the near-term critical path for either
+client.
 
 ## Exit / keystone (draft — for Joe to ratify)
 
