@@ -137,10 +137,12 @@
   "/home/joe/code/futon3c/scripts/compact_session.py")
 
 (defn compact-monsters-enabled?
-  "Flag (default OFF, FUTON3C_KANGAROO_COMPACT_MONSTERS): compact a monster's cold
-   transcript so it becomes a warm-able joey instead of staying cold."
+  "Flag (default ON as of 2026-07-01, FUTON3C_KANGAROO_COMPACT_MONSTERS): compact a
+   monster's cold transcript so it becomes a warm-able joey instead of cold-spawning
+   every turn. Verified live on real agents (E-monster-to-joey). Set the flag to
+   false to disable."
   []
-  (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" false))
+  (bool-prop-or-env "FUTON3C_KANGAROO_COMPACT_MONSTERS" true))
 
 (defn- compact-script []
   (or (some-> (System/getProperty "FUTON3C_KANGAROO_COMPACT_SCRIPT") str/trim not-empty)
