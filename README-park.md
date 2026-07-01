@@ -87,15 +87,31 @@ curl -X POST localhost:7070/api/alpha/park -d '{
 The boot hook (`start-parked-on!`) runs `rehydrate!` + a 30s `sweep-deadlines!` daemon (NOT the
 Arxana Clock). The Emacs side auto-enables on load of `claude-repl-park.el`.
 
+## Finalize-once (defer the parked segment)
+
+A unified turn finalizes **exactly once**. When a segment parks, its turn-end
+finalization is **deferred**: no flair, no clock read, no turn-evidence emit — it only
+banks its elapsed (`agent-chat--accum-elapsed`) and output (`agent-chat--accum-text`).
+The continuation is the final segment and finalizes once: one totaled flair + one
+unified-output evidence record.
+
+- **Detection is race-free even for a fast dep:** `GET /api/alpha/parked` returns
+  `:more-pending = (outstanding park OR a ready resume already in the inbox)`, so the whole
+  window from `park!` through poller-delivery reads "more coming". `agent-chat-finish-turn!`
+  takes a `continued` flag; the streaming done-handler decides it once and both defers the
+  evidence emit and passes it to `finish-turn!`.
+- **Flair placement:** the turn-end clock sync is kept *synchronous* on purpose — its bounded
+  in-RAM read spins the event loop just enough to settle the buffer so the flair lands after
+  the response. (Async'ing it drifted the flair above the response; the real multi-second
+  freeze was the *poller*, which is async.)
+
 ## Status / remaining
 
-- ✅ Engine + 5-case tests; hot-path hook; endpoints; buffer poller + resume-in-place; `continuation:`
-  attribution; unified flair (totaled time, single divider); async (non-blocking) poller + async
-  turn-end clock sync.
-- ✅ **Unified-output embedding** — the final segment's turn-evidence carries the *concatenated*
-  output of the whole unified turn (`agent-chat--accum-text` carried forward by the continuation),
-  so the per-turn context-retrieval pattern tag is built over the whole turn, not just the first
-  segment. *(Residual: the parked segment still emits its own partial assistant-evidence; the
-  complete unified record supersedes it as the turn's final text. Eliminating the partial would
-  need a server-side supersede marker — a follow-up.)*
-- ◻︎ WS fast-path activation (blocked on the `/agency/ws` cutover).
+- ✅ Engine + 5-case tests; hot-path hook; endpoints; buffer poller + resume-in-place;
+  `continuation:` attribution.
+- ✅ Unified turn: single totaled flair (finalize-once), unified-output embedding (the final
+  turn-evidence covers the whole turn — no partial-segment residual, since the parked segment
+  defers its emit).
+- ✅ Non-blocking: async poller; synchronous clock read doubles as the flair settle-point.
+- ◻︎ WS fast-path activation (a `park-ready` broadcast is wired; blocked on the `/agency/ws`
+  connector being live).
