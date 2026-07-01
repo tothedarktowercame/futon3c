@@ -712,8 +712,13 @@ session isolation between buffers."
     (agent-chat-stage-pending-user-turn text)))
 
 (defun claude-repl--emit-assistant-turn-evidence! (text)
-  "Emit evidence for assistant TEXT."
-  (claude-repl--emit-turn-evidence! "assistant" text))
+  "Emit evidence for assistant TEXT.  For a unified (parked-then-resumed) turn,
+prepend any output carried forward from earlier segments so the per-turn embedding
+covers the WHOLE turn, not just the first segment (E-repl-continuations)."
+  (let ((full (concat (or agent-chat--accum-text "") (or text ""))))
+    (claude-repl--emit-turn-evidence! "assistant" full)
+    (setq agent-chat--last-assistant-text full)
+    (setq agent-chat--accum-text "")))
 
 (defun claude-repl--emit-turn-commits-evidence! ()
   "Emit evidence for commits made during the current Claude turn."

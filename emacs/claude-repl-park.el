@@ -51,6 +51,17 @@ pops each ready item exactly once, so a resume is delivered once."
                      0)))
         (when (boundp 'agent-chat--last-flair-elapsed)
           (setq agent-chat--last-flair-elapsed 0)))
+      ;; Carry the parked segment's OUTPUT text forward too, so the final segment's
+      ;; turn-evidence embeds the unified output — the per-turn pattern tag is built
+      ;; over the whole turn, not just the first segment.
+      (when (boundp 'agent-chat--accum-text)
+        (setq agent-chat--accum-text
+              (concat (or agent-chat--accum-text "")
+                      (or (and (boundp 'agent-chat--last-assistant-text)
+                               agent-chat--last-assistant-text)
+                          "")))
+        (when (boundp 'agent-chat--last-assistant-text)
+          (setq agent-chat--last-assistant-text "")))
       (when (fboundp 'agent-chat--delete-existing-turn-flair-before-prompt)
         (agent-chat--delete-existing-turn-flair-before-prompt))
       ;; Insert at the MANAGED input position, re-derived after the flair removal,

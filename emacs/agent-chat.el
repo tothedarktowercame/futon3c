@@ -162,6 +162,16 @@ that segment's time lands here so the FINAL segment renders one totaled flair.")
   "Total elapsed rendered by the most recent turn-end flair.  A continuation reads
 this when it absorbs that flair, so the unified turn's time keeps accumulating.")
 
+(defvar-local agent-chat--accum-text ""
+  "Assistant output carried forward into a unified turn: a park-continuation prepends
+the previous segment's text here, so the FINAL segment's turn-evidence embeds the
+WHOLE output (E-repl-continuations within-turn model) — the per-turn pattern tag is
+built over the unified text, not just the first segment.")
+
+(defvar-local agent-chat--last-assistant-text ""
+  "The complete assistant text of the most recent emitted turn-evidence, for a
+continuation to carry forward when it absorbs that segment.")
+
 (defvar-local agent-chat--insert-message-hook nil
   "Hook called with (NAME TEXT) before inserting a message.
 Functions on this hook may modify TEXT by returning a replacement string.

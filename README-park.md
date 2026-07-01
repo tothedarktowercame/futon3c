@@ -90,8 +90,12 @@ Arxana Clock). The Emacs side auto-enables on load of `claude-repl-park.el`.
 ## Status / remaining
 
 - ✅ Engine + 5-case tests; hot-path hook; endpoints; buffer poller + resume-in-place; `continuation:`
-  attribution; unified flair (totaled time, single divider); async (non-blocking) poller.
-- ◻︎ **Unified-output embedding** — the per-turn context-retrieval evidence should embed the
-  *concatenated* output of a unified turn (same accumulate-and-finalize mechanism applied to
-  `emit-assistant-turn-evidence!`). Designed, not yet wired.
+  attribution; unified flair (totaled time, single divider); async (non-blocking) poller + async
+  turn-end clock sync.
+- ✅ **Unified-output embedding** — the final segment's turn-evidence carries the *concatenated*
+  output of the whole unified turn (`agent-chat--accum-text` carried forward by the continuation),
+  so the per-turn context-retrieval pattern tag is built over the whole turn, not just the first
+  segment. *(Residual: the parked segment still emits its own partial assistant-evidence; the
+  complete unified record supersedes it as the turn's final text. Eliminating the partial would
+  need a server-side supersede marker — a follow-up.)*
 - ◻︎ WS fast-path activation (blocked on the `/agency/ws` cutover).
