@@ -872,6 +872,22 @@ coverage not required… honest-and-partial beats complete-and-hand-maintained �
 point." So Clause 3 closes **by mechanism**, and the holes are the cascade's *first real output*
 (it surfaces its own next work), not closure debt.
 
+**Q-B RESULT (claude-6, fresh-context probe — the generative-realness test RAN, 2026-07):** scorecard
+`futon2/holes/E-have-want-pairs.Q-B-scorecard.md` (futon2 `4d46ea4`; probe futon6 `4bb5160`; 319-row JSON
+`futon6/data/c-vector/magnet-quality-scorecard.json`). **VERDICT: the generative signal is PARTIALLY
+mechanical — not hand-curation-dependent, not yet universally good.** A mechanically-derivable magnet
+(want-side stored NL text — sorry `:title`; weaker: mission phase-state) lifts F vs the bare id-stem:
+mean ΔF +0.093, 58.9% of items improve, 48/319 cross F≤0→F>0, and hand-verified on-topic where want-text
+is rich (`f0-f2-interface-agent-perception` +0.02→+2.48). BUT only ~29.5% clear F>0 (median stays
+negative); the lift is **conditional on stored want-text existing** (`stated-sorry` ΔF +0.171 vs
+`stated-capability` ΔF 0.000 — bare slug, nothing to add; `mess` dead); the ΔG-correlation test is VOID
+(all 55 moves' `:delta-g` in a 0.001 band); and eyeballing caught F-gaming (semi-circular generic pulls
+at F=+1.08 → **F alone ≠ good cascade, the manual check is load-bearing**). **Read for E1/E2:
+held-with-a-named-MECHANICAL reason** (not SATISFIED — only ~30% clear F>0), with a measured path
+(want-side text as magnet; the follow-on is want-text COVERAGE, not the mechanism). *Crucially: the
+test is DONE, not deferred — so closing now REPORTS a measured result, it does not shelve the question.
+That is the difference from the defer-and-close contradiction Joe caught.*
+
 **CLOSE STATUS (2026-07 — corrected after Joe's challenge):** C-cascade-real does **NOT** close yet.
 "Defer Q-B and close" was a contradiction (Joe): Q-B *is* the "is the generative signal mechanically
 real or hand-curated?" test — the campaign's own thesis pointed at its generative dimension. Closing
