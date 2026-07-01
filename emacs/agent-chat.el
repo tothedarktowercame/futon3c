@@ -806,37 +806,78 @@ no-target floor; the creation-clock rule is explicit creation intent."
       (setq agent-chat--creation-clock-watch-timer timer)
       mission-id)))
 
+(defun agent-chat--explicit-switch-token (text)
+  "Return the single →-decorated, resolved C-/M-/E- token in TEXT, or nil.
+The → arrow is M-points-de-fuite §1's explicit-override primitive (`→ M-typed-holes`
+= switch mission): unlike a bare mention (recognized first-mention, floor-fill
+only), → SWITCHES the clock even when one is already active — the thin escape
+hatch over the recognition layer.  Requires exactly one →-decorated token, and
+it must resolve to an existing target (explicit-not-fuzzy)."
+  (let ((start 0) tokens)
+    (while (string-match "→[[:space:]]*\\([CME]-[[:alnum:]_-]+\\)" text start)
+      (push (match-string 1 text) tokens)
+      (setq start (match-end 1)))
+    (setq tokens (delete-dups (nreverse tokens)))
+    (when (= (length tokens) 1)
+      (let ((tok (car tokens)))
+        (when (agent-chat--resolve-auto-clock-token tok) tok)))))
+
 (defun agent-chat--maybe-auto-clock-from-turn (text)
-  "Auto-clock from explicit resolved target mentions in TEXT.
-Only fires when the buffer is at the no-target floor (no campaign, mission, or
-excursion clocked): auto-clock fills the floor, it never switches or overrides
-an active clocking.  A mention made while already clocked is left for
-turn-level mention capture (NNexus-style), not promotion.
+  "Auto-clock from explicit resolved target signals in TEXT (M-points-de-fuite §1).
+Two recognition tiers:
+- A →-decorated token (`→ E-foo`) is the explicit OVERRIDE: it SWITCHES the clock
+  even when one is already active (§1's escape hatch).
+- A bare mention only fills the no-target FLOOR (first-mention clock-in); it never
+  switches an active clock — a bare mention while clocked is left for turn-level
+  mention capture, not promotion.
+Switch-on-EDIT (sustained edits to a doc) is handled server-side by the
+edit-activity clock (clock-store/clock-lineage); this covers only text signals.
 Returns the promotion witness plist, or nil when no promotion happened."
-  (when (and agent-chat-auto-clock-enabled
-             (null agent-chat--campaign-id)
-             (null agent-chat--mission-id)
-             (null agent-chat--excursion-id))
-    (when-let ((target (agent-chat--auto-clock-target-from-text text)))
-      (unless (agent-chat--clock-target-equal-p target)
+  (when agent-chat-auto-clock-enabled
+    (let ((switch-tok (agent-chat--explicit-switch-token text)))
+      (cond
+       ;; Explicit → override: switch even when already clocked.
+       ((and switch-tok
+             (not (member switch-tok (list agent-chat--campaign-id
+                                           agent-chat--mission-id
+                                           agent-chat--excursion-id))))
         (let ((old-target (agent-chat-mission-label)))
-          (agent-chat-set-clock! (list :campaign-id (plist-get target :campaign-id)
-                                       :mission-id (plist-get target :mission-id)
-                                       :excursion-id (plist-get target :excursion-id))
-                                 nil t)
+          (agent-chat-set-clock! switch-tok t t)  ; inherit-current, suppress-callback
           (setq agent-chat--last-auto-clock-witness
-                `((rule . ,(plist-get target :rule))
-                  (source . "user-turn-explicit-token")
-                  (tokens . ,(apply #'vector (plist-get target :tokens)))
+                `((rule . "explicit-switch-arrow")
+                  (source . "user-turn-arrow-override")
+                  (tokens . [,switch-tok])
                   (old-target . ,old-target)
                   (new-target . ,(agent-chat-mission-label))))
           (agent-chat-insert-message
            "system"
-           (format "[auto-clock: %s -> %s via %s]"
-                   old-target
-                   (agent-chat-mission-label)
-                   (string-join (plist-get target :tokens) ", ")))
-          agent-chat--last-auto-clock-witness)))))
+           (format "[auto-clock switch: %s → %s via →%s]"
+                   old-target (agent-chat-mission-label) switch-tok))
+          agent-chat--last-auto-clock-witness))
+       ;; Bare mention: fill the floor only (never switch an active clock).
+       ((and (null agent-chat--campaign-id)
+             (null agent-chat--mission-id)
+             (null agent-chat--excursion-id))
+        (when-let ((target (agent-chat--auto-clock-target-from-text text)))
+          (unless (agent-chat--clock-target-equal-p target)
+            (let ((old-target (agent-chat-mission-label)))
+              (agent-chat-set-clock! (list :campaign-id (plist-get target :campaign-id)
+                                           :mission-id (plist-get target :mission-id)
+                                           :excursion-id (plist-get target :excursion-id))
+                                     nil t)
+              (setq agent-chat--last-auto-clock-witness
+                    `((rule . ,(plist-get target :rule))
+                      (source . "user-turn-explicit-token")
+                      (tokens . ,(apply #'vector (plist-get target :tokens)))
+                      (old-target . ,old-target)
+                      (new-target . ,(agent-chat-mission-label))))
+              (agent-chat-insert-message
+               "system"
+               (format "[auto-clock: %s -> %s via %s]"
+                       old-target
+                       (agent-chat-mission-label)
+                       (string-join (plist-get target :tokens) ", ")))
+              agent-chat--last-auto-clock-witness))))))))
 
 (defun agent-chat--edit-activity-file-target (file)
   "Return an exact clock target plist witnessed by saved mission doc FILE.
