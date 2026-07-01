@@ -876,16 +876,21 @@ point." So Clause 3 closes **by mechanism**, and the holes are the cascade's *fi
 
 | E | facet | owner | state | evidence |
 |---|---|---|---|---|
-| E1 | D5 generator meme-wiring | claude-10 | 🟢 HELD-on-D4 → **unblocked** | magnet F −0.19→+0.90; generator works; `:O1 176` live. D4 now landed → small remaining SATISFIED-step (cascade-lane meme-wire) |
-| E2 | fold full risk-closure | claude-10 | 🟢 HELD-on-D4 → **unblocked** | L2 DarkTower gate `edad60a`, fold `9f0a5bf`/`ae016ec`/`1e8f465`, producer `f1ec053`. D4 landed → small remaining step (fold live-corpus consume) |
+| E1 | D5 generator meme-wiring | claude-10 | 🟠 **HELD-on-Q-B** (not a wire) | D4 arrows are mission→`<mission>/head` **self-loops** — wiring them *regresses* the cascade (F −0.028 → −0.948). The F=+0.90 was **hand-curated `@keywords`, not mechanically derivable from D4**. No honest 1-line wire exists → blocked on magnet-quality research (Q-B), not on D4 |
+| E2 | fold full risk-closure | claude-10 | 🟠 **HELD-on-Q-B** | entangled on the same magnet-quality issue — the fold needs a good cascade the live corpus doesn't mechanically produce. `edad60a`/`9f0a5bf`/`ae016ec`/`1e8f465`/`f1ec053` all stand; closure waits on Q-B |
 | E3 | D4 arrows + canonical-identity | claude-2 | ✅ **SATISFIED** | D4 **landed** — 177 `code/v05/mined-move` `18fb63a` (composes on autoclock-in); identity `a12b7a5`+`cdb3359`+`431aca7`. Contract released. THE LINCHPIN. |
 | E4 | interim-director forward-model | claude-8 | ✅ **SATISFIED** | D6 ROI runner `fc8e1f0`; no closure-blocker |
 | E5 | γ / AIF-precision | claude-11 | ✅ **SATISFIED** | γ learner + `τ_eff=τ/γ` + `:realized-outcome`, `e868023`; no closure-blocker |
 | E6 | Bulletin 11 (Clause 2) | claude-4 | 🟡 drafted | `futon3/holes/war-bulletin-11.md`; awaiting Joe's strategic ratification |
 
-*Result: **E3/E4/E5 SATISFIED**; **E1/E2 held-on-D4 but D4 is now landed (E3)** → both unblocked, with
-small named remaining SATISFIED-steps owned by claude-10; **E6 awaits Joe**. No false-satisfied marks,
-no closure-blockers. The whole chain hinged on D4, which claude-2 attests landed.*
+*Result: **E3/E4/E5 SATISFIED**; **E1/E2 HELD-on-Q-B** (magnet-quality research) — NOT closeable by a
+wire, as first assumed. When D4 landed, claude-10 tested-before-shipping and found the arrows are
+self-loops that regress the cascade; the F=+0.90 that made E1/E2 look "small" was a hand-curated
+number, not mechanically derivable. claude-10 refused to ship a regression to fake SATISFIED
+(we-do-discipline). So E1/E2 are honestly held on the Q-B magnet-quality slice (research, owned
+claude-10), **E6 awaits Joe**. No false-satisfied marks, no closure-blockers — the honesty gate did its
+job. Coordinator correction: I'd earlier called E1/E2 "small unblocked steps"; the measurement refuted
+it — another hand-curated number caught, this time by claude-10's pre-ship test.*
 
 **CAPABILITY SCHEME — RATIFIED (claude-2, data-checked):** canonical capability id =
 **`scope/capability/<slug>`** (repo-LESS — my `<repo>-d/capability/<id>` guess was wrong; capabilities
