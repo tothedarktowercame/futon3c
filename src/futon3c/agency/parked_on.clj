@@ -154,13 +154,14 @@
    deps via LEDGER-LOOKUP at park time (closes the lost-wakeup race). With no deps:
    resumes immediately unless a :timer-due-ms is set (then it waits for the sweep).
    Returns {:id rid :status :parked|:released|:released-immediately}."
-  [{:keys [agent session awaiting payload timer-due-ms deadline-ms budget]}
+  [{:keys [agent session surface awaiting payload timer-due-ms deadline-ms budget]}
    {:keys [ledger-lookup resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
   (let [rid (str "park-" (UUID/randomUUID))
         awaiting (set awaiting)
         budget (merge {:resumes-left 1 :max-depth 8} budget)
-        rec {:id rid :agent agent :session session :awaiting awaiting :arrived {}
+        rec {:id rid :agent agent :session session :surface surface
+             :awaiting awaiting :arrived {}
              :payload payload :timer-due-ms timer-due-ms :deadline-ms deadline-ms
              :budget budget :parked-at-ms now-ms :released? false}]
     (cond

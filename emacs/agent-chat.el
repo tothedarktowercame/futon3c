@@ -153,6 +153,15 @@ Distinct from agent-name which is the display name.")
   "Function called with elapsed seconds (float) after each turn completes.
 Set by agent-chat-invariants or other modules.")
 
+(defvar-local agent-chat--accum-elapsed 0
+  "Elapsed seconds carried forward into a unified turn (E-repl-continuations
+within-turn model): when a park-continuation absorbs the previous segment's flair,
+that segment's time lands here so the FINAL segment renders one totaled flair.")
+
+(defvar-local agent-chat--last-flair-elapsed 0
+  "Total elapsed rendered by the most recent turn-end flair.  A continuation reads
+this when it absorbs that flair, so the unified turn's time keeps accumulating.")
+
 (defvar-local agent-chat--insert-message-hook nil
   "Hook called with (NAME TEXT) before inserting a message.
 Functions on this hook may modify TEXT by returning a replacement string.
@@ -511,7 +520,13 @@ failure-isolated; a no-op when disabled or without an agent name."
       ;; Pull the durable auto-clock before rendering the flair, so the label
       ;; reflects the work the agent's tool-edits fed (C-cascade-real D1/O3).
       (agent-chat--sync-clock-from-server!)
-      (agent-chat--insert-turn-end-flair duration)
+      ;; Emit the flair with any time carried forward from an earlier parked
+      ;; segment of this unified turn (E-repl-continuations within-turn model); a
+      ;; continuation that later absorbs THIS flair reads `--last-flair-elapsed'.
+      (let ((total (+ (or agent-chat--accum-elapsed 0) duration)))
+        (agent-chat--insert-turn-end-flair total)
+        (setq agent-chat--last-flair-elapsed total)
+        (setq agent-chat--accum-elapsed 0))
       (setq agent-chat--last-flair-turn-id agent-chat--current-turn-id))))
 
 (defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)
@@ -1676,6 +1691,11 @@ to assess the outcome, and posts the result as evidence."
 
 ;;; Send
 
+(defvar agent-chat-user-speaker "joe"
+  "Display name attributed to injected input in `agent-chat-send-input'.
+Bind to e.g. \"continuation\" when an auto-resume is injected, so the turn is
+not mis-attributed to the human operator.")
+
 (defun agent-chat-send-input (call-async-fn agent-name &optional hooks)
   "Generic send: extract input, display it, call CALL-ASYNC-FN.
 CALL-ASYNC-FN: (text callback) -> process.
@@ -1702,7 +1722,7 @@ additionally posted to the evidence HTTP endpoint."
              (on-response (plist-get hooks :on-response))
              (on-launch-error (plist-get hooks :on-launch-error)))
         (delete-region (marker-position agent-chat--input-start) (point-max))
-        (agent-chat-insert-message "joe" trimmed)
+        (agent-chat-insert-message agent-chat-user-speaker trimmed)
         (agent-chat--maybe-auto-clock-from-turn trimmed)
         (when (functionp before-send)
           (funcall before-send trimmed))

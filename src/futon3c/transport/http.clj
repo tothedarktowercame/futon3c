@@ -580,30 +580,68 @@
                  (System/getenv "FUTON3C_PARKED_ON"))]
     (boolean (#{"1" "true" "on" "yes"} (some-> prop str/trim str/lower-case)))))
 
+;; Ready-inbox: a buffer-surfaced park whose join completed parks its assembled
+;; resume prompt here for the repl buffer to POLL (GET /api/alpha/parked/ready),
+;; alongside the WS push. Keyed [agent session]; pop-on-read so each fires once.
+(defonce ^:private !parked-ready-inbox (atom {}))
+
+(defn- parked-ready-push! [agent session park-id prompt]
+  (swap! !parked-ready-inbox update [(str agent) (str session)]
+         (fnil conj []) {:park-id park-id :prompt prompt}))
+
+(defn parked-ready-pop!
+  "Return AND clear the ready resumes for AGENT/SESSION (poll-and-consume)."
+  [agent session]
+  (let [k [(str agent) (str session)]
+        items (get @!parked-ready-inbox k [])]
+    (when (seq items) (swap! !parked-ready-inbox dissoc k))
+    items))
+
 (defn- assemble-resume-prompt [rec]
   (str (:payload rec)
        "\n\n--- resumed: parked dependencies complete (" (count (:arrived rec)) ") ---\n"
        (str/join "\n" (for [[dep summ] (:arrived rec)]
                         (str "• " dep ": " (or summ "(no summary)"))))))
 
+(defn- buffer-surface?
+  "A surface whose resume should be RUN BY the agent's repl buffer (streamed in place),
+   not server-side — i.e. an Emacs repl surface (emacs-repl / emacs-codex-repl)."
+  [surface]
+  (and surface (str/starts-with? (str surface) "emacs")))
+
 (defn- parked-resume!
-  "Resume a parked agent: enqueue a fresh turn (payload + joined dep summaries) on the
-   agent's OWN drainer lane — mirrors enqueue-auto-bellback!'s I-1 single-flight routing."
+  "Resume a parked agent. For a BUFFER-surfaced park, broadcast `park-ready` over the
+   agency WS (the repl buffer reruns it natively, streamed in place — E-repl-continuations
+   model B). For a headless/bell-surfaced park, enqueue a fresh turn on the agent's OWN
+   drainer lane (mirrors enqueue-auto-bellback!'s I-1 single-flight routing)."
   [rec]
   (let [agent (:agent rec)
-        prompt (assemble-resume-prompt rec)
-        job-id (create-invoke-job! {:agent-id agent :prompt prompt
-                                    :caller parked-resume-caller :surface parked-resume-caller})
-        run-job (fn [] (run-invoke-job! {:job-id job-id :agent-id agent :prompt prompt
-                                         :caller parked-resume-caller :surface parked-resume-caller}))]
-    (if (turn-queue/drainer-v2-enabled?)
-      (turn-queue/accept-async! {:to agent :from parked-resume-caller :surface parked-resume-caller
-                                 :prompt prompt
-                                 :process-fn (fn [_entry]
-                                               (binding [turn-queue/*drained-by-outer* true]
-                                                 (run-job)))})
-      (.submit invoke-executor ^Runnable (fn [] (run-job))))
-    job-id))
+        prompt (assemble-resume-prompt rec)]
+    (if (buffer-surface? (:surface rec))
+      (do
+        ;; Two delivery paths to the repl buffer: a WS push (instant, when the
+        ;; agency WS is connected) AND a ready-inbox the buffer can POLL (works
+        ;; today without the WS). Whichever the buffer consumes first fires once.
+        (ws-invoke/broadcast-frame! {:type "park-ready"
+                                     :agent (str agent)
+                                     :session (str (:session rec))
+                                     :park-id (:id rec)
+                                     :surface (str (:surface rec))
+                                     :prompt prompt})
+        (parked-ready-push! agent (:session rec) (:id rec) prompt)
+        (str "park-ready:" (:id rec)))
+      (let [job-id (create-invoke-job! {:agent-id agent :prompt prompt
+                                        :caller parked-resume-caller :surface parked-resume-caller})
+            run-job (fn [] (run-invoke-job! {:job-id job-id :agent-id agent :prompt prompt
+                                             :caller parked-resume-caller :surface parked-resume-caller}))]
+        (if (turn-queue/drainer-v2-enabled?)
+          (turn-queue/accept-async! {:to agent :from parked-resume-caller :surface parked-resume-caller
+                                     :prompt prompt
+                                     :process-fn (fn [_entry]
+                                                   (binding [turn-queue/*drained-by-outer* true]
+                                                     (run-job)))})
+          (.submit invoke-executor ^Runnable (fn [] (run-job))))
+        job-id))))
 
 (defn parked-job-lookup
   "Ledger view for parked-on reconcile/rehydrate: job-id -> {:state :result-summary}."
@@ -3057,6 +3095,39 @@
 
     {:ok true :ref ref}))
 
+(defn- req-query-param [request k]
+  (when-let [qs (:query-string request)]
+    (some-> (re-find (re-pattern (str "(?:^|&)" (java.util.regex.Pattern/quote k) "=([^&]*)")) qs)
+            second
+            (java.net.URLDecoder/decode "UTF-8"))))
+
+(defn- handle-parked-ready
+  "GET /api/alpha/parked/ready?agent=&session= — poll-and-consume the ready resume
+   prompts for a repl buffer (E-repl-continuations Car 2b, polling path)."
+  [request _config]
+  (let [agent (req-query-param request "agent")
+        session (req-query-param request "session")
+        ready (if (and (parked-on-enabled?) agent)
+                (parked-ready-pop! agent (or session ""))
+                [])]
+    (json-response 200 {:ok true :ready (vec ready)})))
+
+(defn- handle-parked
+  "GET /api/alpha/parked?agent=&session= — outstanding (unreleased) parks for a repl
+   buffer, so a turn can tell it parked (E-repl-continuations within-turn model)."
+  [request _config]
+  (let [agent (req-query-param request "agent")
+        session (req-query-param request "session")
+        recs (when (and (parked-on-enabled?) agent)
+               (->> (vals (:records (parked-on/snapshot)))
+                    (filter (fn [r] (and (= (str (:agent r)) (str agent))
+                                         (or (str/blank? (str session))
+                                             (= (str (:session r)) (str session)))
+                                         (not (:released? r)))))
+                    (mapv (fn [r] {:id (:id r) :awaiting (vec (:awaiting r))
+                                   :deadline-ms (:deadline-ms r)}))))]
+    (json-response 200 {:ok true :parked (vec (or recs []))})))
+
 (defn- handle-park
   "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):
    park AGENT's turn on a JOIN of AWAITING dep-ids; resume once all are terminal.
@@ -3077,6 +3148,7 @@
       (let [result (parked-on/park!
                     {:agent (str (or (:agent payload) (get payload "agent")))
                      :session (or (:session payload) (get payload "session"))
+                     :surface (or (:surface payload) (get payload "surface"))
                      :awaiting (or (:awaiting payload) (get payload "awaiting") [])
                      :payload (or (:payload payload) (get payload "payload"))
                      :timer-due-ms (or (:timer-due-ms payload) (get payload "timer-due-ms"))
@@ -5358,6 +5430,20 @@
       (olane-cors (json-response 500 {:ok false :error "cascade-real-failed"
                                       :message (.getMessage e)})))))
 
+(defn handle-cascade-real-graph
+  "GET /api/alpha/cascade-real/graph — the per-section STRUCTURE (nodes+edges) the
+   pipeline-pattern-cascade BODY renders (lineage / clusters / holes / arrows / held +
+   the honest patterns gap), so the cascade regenerates from live data instead of the
+   hand-built sketch (C-cascade-real §7 DISSOLUTION, Checklist B). CORS-enabled for the
+   file:// HTML fetch. Complements /cascade-real (which gives the header metadata)."
+  [_request _config]
+  (try
+    (let [graph ((requiring-resolve 'futon3c.logic.cascade-real-live/cascade-real-graph))]
+      (olane-cors (json-response 200 graph)))
+    (catch Exception e
+      (olane-cors (json-response 500 {:ok false :error "cascade-real-graph-failed"
+                                      :message (.getMessage e)})))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -5365,6 +5451,9 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
+      (handle-cascade-real-graph request config)
+
       (and (= :get method) (= "/api/alpha/cascade-real" uri))
       (handle-cascade-real request config)
 
@@ -5390,6 +5479,14 @@
       ;; E-repl-continuations Car 2b: register a parked-on continuation.
       (and (= :post method) (= "/api/alpha/park" uri))
       (handle-park request config)
+
+      ;; E-repl-continuations Car 2b: repl buffer polls for ready resumes.
+      (and (= :get method) (= "/api/alpha/parked/ready" uri))
+      (handle-parked-ready request config)
+
+      ;; E-repl-continuations: outstanding parks (within-turn unification).
+      (and (= :get method) (= "/api/alpha/parked" uri))
+      (handle-parked request config)
 
       :else nil)))
 
