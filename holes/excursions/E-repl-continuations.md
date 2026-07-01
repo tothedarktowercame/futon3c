@@ -152,9 +152,20 @@ Grounding facts confirmed by reading: `update-invoke-jobs-ledger!` **persists on
 - `start-parked-on!` (idempotent, `defonce`-guarded sweeper so reloads don't orphan the thread; flag-gated) — boot `rehydrate!` (R3) + one shared `ScheduledExecutorService` daemon ticking `sweep-deadlines!` every 30s (R4, NOT cyder). Wired into `start-server!`'s success branch for clean boots; **live: `start-parked-on!` returned `{:rehydrated true :sweeper true}`.**
 - Gates: clj-kondo 0/0 · check-parens OK · reload clean.
 
-**Car 2b — remaining: the capstone real-resume verify** — park an agent on a REAL bell → completion fires a REAL resume turn (exercises `parked-resume!`, the one path not yet fired live; structurally a mirror of the proven `enqueue-auto-bellback!`).
+**Car 2b — capstone real-resume verify: DONE** — a real dep completed → `parked-resume!` fired a real resume turn (server-side), live-confirmed.
+
+## 7. Car 3 — the Emacs-side buffer-continuation: LANDED + live-verified (2026-06-30)
+
+This is the piece that makes the continuation *visible where Joe works* — the resume lands **in the `*claude-repl:*` buffer**, in place, so "I'll get back to you when X" no longer goes silent. Full write-up + usage in **`README-park.md`**.
+
+- **Delivery = polling (async, non-blocking).** `parked-resume!` for a buffer surface (`emacs-repl`) pushes the assembled resume prompt to a **ready-inbox** (`GET /api/alpha/parked/ready`, poll-and-consume) *and* broadcasts `park-ready` over the agency WS. `claude-repl-park.el` polls via `url-retrieve` (a synchronous poll was what forced `C-g`; now nothing blocks) and re-runs the agent in place through the normal turn machinery — streamed, attributed **`continuation:`**.
+- **One unified turn.** A parked segment **defers** its whole finalization (no flair, no clock read, no evidence emit — banks elapsed + output); the continuation finalizes **once**: a single **totaled** flair above the input, and one **unified-output** turn-evidence (so the per-turn pattern tag embeds the whole turn). Defer-detection is race-free even for a fast dep via `GET /api/alpha/parked` → `:more-pending` (outstanding park OR a ready resume in the inbox).
+- **Within-turn model:** the agent parks *within* its turn (POSTs `/park` as its last action); the buffer sees `more-pending` and defers. Verified live by Joe across the flair placement, the `continuation:` attribution, finalize-once, and responsiveness.
+- Commits: `f3f4c77` (poller + surface-routing) · `f9b7fd4` (unified embedding) · `e927636` (finalize-once + async-clock revert). Files: `agency/parked_on.clj`, `transport/http.clj`, `emacs/claude-repl-park.el`, `emacs/agent-chat.el`, `emacs/claude-repl.el`.
+- **Follow-on: [[E-agency-ws-cutover]]** — the `park-ready` WS broadcast is wired but currently reaches nobody (`/agency/ws` doesn't route to the registering agents handler); completing that cutover makes delivery *instant* and demotes the poll to a fallback.
 
 ## Cross-links
+- [[E-agency-ws-cutover]] — the WS fast-path follow-on (finish the `/agency/ws` observer cutover so `park-ready` lands live).
 - [[E-crossed-bells]] — sibling; transactional transport + reply-routes (the substrate this rides). Confirms durable queue + drainer-v2 made transport transactional.
 - [[M-points-de-fuite]] — the live-session render; an autonomously-resuming agent is a cleaner phase-portrait source.
 - **C-cascade-real** — the motivating consumer: cascade DAG flows autonomously if agents park-until-deps-ready.
