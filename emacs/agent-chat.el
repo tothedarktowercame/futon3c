@@ -153,10 +153,15 @@ Distinct from agent-name which is the display name.")
   "Function called with elapsed seconds (float) after each turn completes.
 Set by agent-chat-invariants or other modules.")
 
+(defvar-local agent-chat-turn-continued-fn nil
+  "Function of no args; non-nil return means the just-finished segment PARKED, so
+its finalization (flair + clock + evidence) is DEFERRED and it accumulates into the
+unified turn.  The continuation finalizes ONCE (E-repl-continuations within-turn).")
+
 (defvar-local agent-chat--accum-elapsed 0
   "Elapsed seconds carried forward into a unified turn (E-repl-continuations
-within-turn model): when a park-continuation absorbs the previous segment's flair,
-that segment's time lands here so the FINAL segment renders one totaled flair.")
+within-turn model): a deferred parked segment banks its time here so the FINAL
+segment renders one totaled flair.")
 
 (defvar-local agent-chat--last-flair-elapsed 0
   "Total elapsed rendered by the most recent turn-end flair.  A continuation reads
@@ -466,55 +471,53 @@ than a disconnected Emacs-side clock."
 
 (defun agent-chat--sync-clock-from-server! ()
   "Reflect this session's durable agency auto-clock in the buffer (C-cascade-real
-D1/O3), ASYNC and failure-isolated so it NEVER blocks turn-end (the old synchronous
-1s read is what hitched finalization).  The updated clock lands via `url-retrieve'
-and applies to the NEXT flair — a mission *change* lags one turn.  A no-op when
-disabled or without an agent name."
+D1/O3): on turn-end the repl shows the clock the agent's tool-edits feed, not a
+disconnected Emacs-side clock.  Synchronous (fast in-RAM server read, 1s cap) and
+failure-isolated; a no-op when disabled or without an agent name.  NOTE: kept
+synchronous on purpose — its bounded event-loop spin settles the buffer so the
+turn-end flair lands after the response (async'ing it drifted the flair).  The
+real freeze was the poller, now async."
   (when (and agent-chat-sync-clock-from-server agent-chat--agent-name)
-    (let* ((chat-buf (current-buffer))
-           (aid (or agent-chat--agent-id agent-chat--agent-name))
-           (sid agent-chat--session-id)
-           (url (format "%s/api/alpha/agent-clock?agent-id=%s%s"
-                        agent-chat-agency-base-url
-                        (url-hexify-string aid)
-                        (if (and sid (stringp sid))
-                            (format "&session-id=%s" (url-hexify-string sid))
-                          "")))
-           (url-request-method "GET"))
-      (ignore-errors
-        (url-retrieve
-         url
-         (lambda (status)
-           (let ((resp-buf (current-buffer)))
-             (unwind-protect
-                 (when (and (not (plist-get status :error)) (buffer-live-p chat-buf))
-                   (goto-char (point-min))
-                   (when (search-forward "\n\n" nil t)
-                     (let ((body (buffer-substring-no-properties (point) (point-max))))
-                       (with-current-buffer chat-buf
-                         (ignore-errors
-                           (let* ((data (json-parse-string body :object-type 'alist))
-                                  (camp (alist-get 'campaign-id data))
-                                  (mis  (alist-get 'mission-id data))
-                                  (exc  (alist-get 'excursion-id data))
-                                  (camp (and (stringp camp) camp))
-                                  (mis  (and (stringp mis) mis))
-                                  (exc  (and (stringp exc) exc)))
-                             ;; Only apply a non-empty server clock that differs from
-                             ;; the buffer's, so an unclocked session never clobbers.
-                             (when (and (eq t (alist-get 'ok data))
-                                        (or camp mis exc)
-                                        (not (and (equal camp agent-chat--campaign-id)
-                                                  (equal mis agent-chat--mission-id)
-                                                  (equal exc agent-chat--excursion-id))))
-                               (agent-chat-set-clock!
-                                (string-join (delq nil (list camp mis exc)) " > ")
-                                nil t))))))))
-               (when (buffer-live-p resp-buf) (kill-buffer resp-buf)))))
-         nil t t)))))
+    (ignore-errors
+      (let* ((aid (or agent-chat--agent-id agent-chat--agent-name))
+             (sid agent-chat--session-id)
+             (url (format "%s/api/alpha/agent-clock?agent-id=%s%s"
+                          agent-chat-agency-base-url
+                          (url-hexify-string aid)
+                          (if (and sid (stringp sid))
+                              (format "&session-id=%s" (url-hexify-string sid))
+                            "")))
+             (resp-buf (url-retrieve-synchronously url t t 1))
+             (body nil))
+        (when resp-buf
+          (with-current-buffer resp-buf
+            (goto-char (point-min))
+            (when (search-forward "\n\n" nil t)
+              (setq body (buffer-substring-no-properties (point) (point-max)))))
+          (kill-buffer resp-buf))
+        (when body
+          (let* ((data (json-parse-string body :object-type 'alist))
+                 (camp (alist-get 'campaign-id data))
+                 (mis  (alist-get 'mission-id data))
+                 (exc  (alist-get 'excursion-id data))
+                 (camp (and (stringp camp) camp))
+                 (mis  (and (stringp mis) mis))
+                 (exc  (and (stringp exc) exc)))
+            ;; Only apply a non-empty server clock that differs from the buffer's,
+            ;; so an unclocked session (or a server with no record) never clobbers.
+            (when (and (eq t (alist-get 'ok data))
+                       (or camp mis exc)
+                       (not (and (equal camp agent-chat--campaign-id)
+                                 (equal mis agent-chat--mission-id)
+                                 (equal exc agent-chat--excursion-id))))
+              (agent-chat-set-clock!
+               (string-join (delq nil (list camp mis exc)) " > ")
+               nil t))))))))
 
-(defun agent-chat-finish-turn! (&optional elapsed)
-  "Run shared turn-end behavior with optional ELAPSED seconds."
+(defun agent-chat-finish-turn! (&optional elapsed continued)
+  "Run shared turn-end behavior with optional ELAPSED seconds.
+When CONTINUED is non-nil the segment PARKED: DEFER the flair + clock and just bank
+the elapsed, so the whole unified turn finalizes ONCE (E-repl-continuations)."
   (unless agent-chat--current-turn-id
     (setq agent-chat--current-turn-id
           (format "%s-turn-%d-%s"
@@ -534,16 +537,18 @@ disabled or without an agent name."
           (error
            (message "agent-chat turn-end hook error: %s"
                     (error-message-string turn-err)))))
-      ;; Kick an ASYNC durable-clock sync (never blocks turn-end); it updates the
-      ;; label for the NEXT flair — a mission change lags one turn (D1/O3).
-      (agent-chat--sync-clock-from-server!)
-      ;; Emit the flair with any time carried forward from an earlier parked
-      ;; segment of this unified turn (E-repl-continuations within-turn model); a
-      ;; continuation that later absorbs THIS flair reads `--last-flair-elapsed'.
-      (let ((total (+ (or agent-chat--accum-elapsed 0) duration)))
-        (agent-chat--insert-turn-end-flair total)
-        (setq agent-chat--last-flair-elapsed total)
-        (setq agent-chat--accum-elapsed 0))
+      (if continued
+          ;; Parked segment of a unified turn: DEFER finalization — no flair, no
+          ;; clock read; just bank the elapsed.  The continuation finalizes once.
+          (setq agent-chat--accum-elapsed (+ (or agent-chat--accum-elapsed 0) duration))
+        ;; Final segment: pull the durable auto-clock (bounded synchronous read whose
+        ;; event-loop spin also settles the buffer so the flair lands after the
+        ;; response), then render ONE flair with the whole turn's total (D1/O3).
+        (agent-chat--sync-clock-from-server!)
+        (let ((total (+ (or agent-chat--accum-elapsed 0) duration)))
+          (agent-chat--insert-turn-end-flair total)
+          (setq agent-chat--last-flair-elapsed total)
+          (setq agent-chat--accum-elapsed 0)))
       (setq agent-chat--last-flair-turn-id agent-chat--current-turn-id))))
 
 (defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)

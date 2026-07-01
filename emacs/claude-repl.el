@@ -1054,14 +1054,25 @@ CALLBACK is called with the final response text on completion."
                                    (write-region sid nil claude-repl-session-file nil 'silent))
                                  (claude-repl--emit-session-start-evidence! sid))
                                (if agent-chat--streaming-started
-                                   (progn
-                                     ;; Text already displayed — just finalize
+                                   ;; Decide ONCE whether this segment parked (a
+                                   ;; unified turn finalizes once, on the continuation).
+                                   (let ((continued
+                                          (and (functionp agent-chat-turn-continued-fn)
+                                               (ignore-errors
+                                                 (funcall agent-chat-turn-continued-fn)))))
                                      (agent-chat-end-streaming-message)
-                                     ;; Emit evidence directly (skip callback to avoid re-insert)
-                                     (claude-repl--emit-assistant-turn-evidence! result)
-                                     (claude-repl--emit-turn-commits-evidence!)
+                                     (if continued
+                                         ;; Parked segment: DEFER — bank the output for
+                                         ;; the unified evidence; no per-segment emit.
+                                         (setq agent-chat--accum-text
+                                               (concat (or agent-chat--accum-text "")
+                                                       (or result "")))
+                                       ;; Final segment: emit ONE evidence over the whole
+                                       ;; unified output (emit- prepends the banked text).
+                                       (claude-repl--emit-assistant-turn-evidence! result)
+                                       (claude-repl--emit-turn-commits-evidence!))
                                      (claude-repl--close-frame "done")
-                                     (agent-chat-finish-turn!)
+                                     (agent-chat-finish-turn! nil continued)
                                      (goto-char (point-max))
                                      (agent-chat-scroll-to-bottom))
                                  ;; No streaming happened — use callback for full insert

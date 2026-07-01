@@ -39,29 +39,10 @@ pops each ready item exactly once, so a resume is delivered once."
       (setq claude-repl-park--last (list :park-id park-id :buffer (buffer-name buf)))
       (when (fboundp 'agent-chat--ensure-prompt-markers!)
         (agent-chat--ensure-prompt-markers!))
-      ;; Within-turn unification (race-free): the parked segment already rendered
-      ;; its turn-end flair above the input.  Absorb it into THIS unified turn —
-      ;; carry its elapsed forward and delete the divider — so the final segment
-      ;; renders a single totaled flair, and the park/resume is invisible to Joe.
-      (when (boundp 'agent-chat--accum-elapsed)
-        (setq agent-chat--accum-elapsed
-              (+ (or agent-chat--accum-elapsed 0)
-                 (or (and (boundp 'agent-chat--last-flair-elapsed)
-                          agent-chat--last-flair-elapsed)
-                     0)))
-        (when (boundp 'agent-chat--last-flair-elapsed)
-          (setq agent-chat--last-flair-elapsed 0)))
-      ;; Carry the parked segment's OUTPUT text forward too, so the final segment's
-      ;; turn-evidence embeds the unified output — the per-turn pattern tag is built
-      ;; over the whole turn, not just the first segment.
-      (when (boundp 'agent-chat--accum-text)
-        (setq agent-chat--accum-text
-              (concat (or agent-chat--accum-text "")
-                      (or (and (boundp 'agent-chat--last-assistant-text)
-                               agent-chat--last-assistant-text)
-                          "")))
-        (when (boundp 'agent-chat--last-assistant-text)
-          (setq agent-chat--last-assistant-text "")))
+      ;; The parked segment DEFERRED its finalization (no flair/evidence emitted;
+      ;; its elapsed + output were banked in finish-turn / the done-handler), so
+      ;; there is nothing to absorb here.  Safety: clear any flair that a raced
+      ;; segment might nonetheless have rendered, before injecting the continuation.
       (when (fboundp 'agent-chat--delete-existing-turn-flair-before-prompt)
         (agent-chat--delete-existing-turn-flair-before-prompt))
       ;; Insert at the MANAGED input position, re-derived after the flair removal,
@@ -154,6 +135,25 @@ synchronous GET is what made you reach for C-g)."
 
 ;;;; Enable / disable ---------------------------------------------------------
 
+;;;; Within-turn unification: DEFER a parked segment's finalization -----------
+
+(defun claude-repl-park--turn-parked-p ()
+  "Non-nil when this buffer's agent/session has more of a unified turn coming — an
+outstanding park OR a ready resume already in the inbox (`more-pending', race-free
+even for a fast dep).  `agent-chat-finish-turn!' uses this to DEFER a parked
+segment's finalization so the unified turn finalizes exactly once."
+  (ignore-errors
+    (let* ((url (format "%s/api/alpha/parked?agent=%s&session=%s"
+                        (string-remove-suffix "/" claude-repl-api-url)
+                        (url-hexify-string (or claude-repl-agent-id ""))
+                        (url-hexify-string (or agent-chat--session-id ""))))
+           (resp (agent-chat-evidence-request-json "GET" url 5 nil)))
+      (eq t (plist-get (plist-get resp :json) :more-pending)))))
+
+(defun claude-repl-park--install-continued-fn ()
+  "Wire the within-turn defer-detector into the current buffer."
+  (setq-local agent-chat-turn-continued-fn #'claude-repl-park--turn-parked-p))
+
 (defvar claude-repl-park--subscribed nil)
 
 (defun claude-repl-park-enable ()
@@ -167,7 +167,15 @@ synchronous GET is what made you reach for C-g)."
           (run-with-timer claude-repl-park-poll-interval
                           claude-repl-park-poll-interval
                           #'claude-repl-park--poll-once)))
-  (message "[park] enabled (poll %ss + WS park-ready + within-turn flair)"
+  ;; Within-turn unification: install the defer-detector in every repl buffer
+  ;; (existing + future), so a parked segment finalizes once (on the continuation).
+  (add-hook 'claude-repl-mode-hook #'claude-repl-park--install-continued-fn)
+  (dolist (buf (buffer-list))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (when (eq major-mode 'claude-repl-mode)
+          (claude-repl-park--install-continued-fn)))))
+  (message "[park] enabled (poll %ss + WS park-ready + within-turn defer)"
            claude-repl-park-poll-interval))
 
 (defun claude-repl-park-disable ()

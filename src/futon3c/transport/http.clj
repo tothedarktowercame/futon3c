@@ -3125,8 +3125,14 @@
                                              (= (str (:session r)) (str session)))
                                          (not (:released? r)))))
                     (mapv (fn [r] {:id (:id r) :awaiting (vec (:awaiting r))
-                                   :deadline-ms (:deadline-ms r)}))))]
-    (json-response 200 {:ok true :parked (vec (or recs []))})))
+                                   :deadline-ms (:deadline-ms r)}))))
+        ;; A ready resume already in the inbox (dep completed, poller not yet fired)
+        ;; also means "more is coming" — so the check is race-free even for a fast dep.
+        inbox-pending (and (parked-on-enabled?) agent
+                           (boolean (seq (get @!parked-ready-inbox
+                                              [(str agent) (str (or session ""))]))))]
+    (json-response 200 {:ok true :parked (vec (or recs []))
+                        :more-pending (boolean (or (seq recs) inbox-pending))})))
 
 (defn- handle-park
   "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):
@@ -5196,32 +5202,38 @@
 
 (defn- r14-gamma-summary
   "R14 γ (policy-precision) live state, folded into the war-machine payload for the
-   AIF↔cascade loop render (C-cascade-real). γ modulates the selection temperature
-   `τ_eff = τ/γ`; it LEARNS from realized-vs-expected outcomes, but only from
-   :independent? MEASURED pairs (the enactment feed). Today enactment is NOT
-   live-wired (`fold-realized/*live-wire?*` off, operator-governed R16-ARM), so γ
-   holds at its reduction-safe prior 1.0. Reads the calibration report over
-   repl-traces; degrades to the prior on any read failure (never throws)."
+   AIF↔cascade loop render (C-cascade-real).
+
+   γ modulates the selection temperature `τ_eff = τ/γ` and LEARNS from the chosen
+   policy's realized-vs-expected outcome — the R16→R14 `:realized-outcome` trace
+   contract (futon2.aif.policy-precision). That feed is STAGED behind
+   `fold-realized/*live-wire?*` (off; operator-governed R16-ARM): enactment isn't
+   live-wired, so there are **0 policy-outcome samples** and γ holds at its
+   reduction-safe prior 1.0 (policy_precision.clj: 'absent today ⇒ no sample ⇒ γ
+   holds at 1.0').
+
+   HONESTY NOTE: the calibration report over repl-traces (predicted-vs-realised
+   DISCHARGE) is a RELATED but DISTINCT signal — NOT γ's policy-outcome feed. It is
+   surfaced under `:calibration-signal` for context, never as γ's sample count."
   []
-  (try
-    (let [report ((requiring-resolve 'futon3c.aif.calibration/calibration-report)
-                  ((requiring-resolve 'futon3c.aif.calibration/load-evidence)))
-          indep  (or (:independent-paired-count report) 0)]
-      {:gamma 1.0
-       :held-at-prior? true
-       :bounds [0.5 2.0]
-       :paired-samples (:paired-count report)
-       :independent-realized indep
-       :burn-in-threshold 5
-       :burn-in-met? (>= indep 5)
-       :calibration-verdict (:verdict report)
-       :live-wire? false
-       :status (str "γ held at prior 1.0 — enactment not live-wired (*live-wire?* off, "
-                    "operator-governed R16-ARM); " indep " independent realized sample(s), "
-                    "burn-in needs 5. Flipping *live-wire?* lets R14-FEED flow from live "
-                    "cascade enactment.")})
-    (catch Throwable t {:gamma 1.0 :held-at-prior? true :live-wire? false
-                        :error (str "calibration read failed: " (.getMessage t))})))
+  (let [base {:gamma 1.0 :held-at-prior? true :bounds [0.5 2.0]
+              :policy-outcome-samples 0   ; γ's R16 :realized-outcome feed — 0 while staged
+              :burn-in-threshold 5 :burn-in-met? false
+              :live-wire? false
+              :status (str "γ held at prior 1.0 — its R16 :realized-outcome feed is STAGED "
+                           "(*live-wire?* off, operator-governed R16-ARM) ⇒ 0 policy-outcome "
+                           "samples ⇒ γ holds. Flipping *live-wire?* lets the realized outcomes "
+                           "flow and γ moves off 1.0. (The calibration discharge signal below is "
+                           "a related but DISTINCT readout, not γ's learning feed.)")}]
+    (try
+      (let [report ((requiring-resolve 'futon3c.aif.calibration/calibration-report)
+                    ((requiring-resolve 'futon3c.aif.calibration/load-evidence)))]
+        (assoc base :calibration-signal
+               {:paired (:paired-count report)
+                :independent (or (:independent-paired-count report) 0)
+                :verdict (:verdict report)
+                :note "predicted-vs-realised DISCHARGE over repl-traces — distinct from γ's policy feed"}))
+      (catch Throwable t (assoc base :calibration-signal {:error (.getMessage t)})))))
 
 (defn- handle-war-machine
   "GET /api/alpha/war-machine[?days=N] — return cached WM JSON snapshot.
@@ -5254,8 +5266,13 @@
           snapshot (wm-scheduler-snapshot-for-days days)]
       (if snapshot
         (let [scheduler (wm-scheduler-status-snapshot)
-              body (assoc (wm-prebuilt-response-body snapshot scheduler)
-                          :r14-gamma (r14-gamma-summary))]
+              ;; wm-prebuilt-response-body returns a pre-rendered JSON STRING (to avoid
+              ;; re-encoding the 10MB+ payload) — so splice :r14-gamma into it as the
+              ;; first key rather than assoc'ing onto a map.
+              s    (wm-prebuilt-response-body snapshot scheduler)
+              body (if (and (string? s) (str/starts-with? s "{"))
+                     (str "{\"r14-gamma\":" (json/generate-string (r14-gamma-summary)) "," (subs s 1))
+                     s)]
           (-> (json-response 200 body)
               (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
         (do
