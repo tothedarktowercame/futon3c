@@ -244,12 +244,17 @@
 
           (= "ready" (str frame-type))
           (let [agent-id (or (:agent_id parsed) (:agent-id parsed))
-                session-id (or (:session_id parsed) (:session-id parsed))]
+                session-id (or (:session_id parsed) (:session-id parsed))
+                ;; Observers (e.g. the emacs-hud connector) receive broadcasts
+                ;; and answer nothing — they are intentionally NOT registered
+                ;; agents, so the :ready handler bypasses S-presence for them.
+                observer? (boolean (or (:observer parsed) (:observer? parsed)))]
             (if (or (nil? agent-id) (not (string? agent-id)))
               (transport-error :invalid-frame "Ready frame missing agent_id")
               {:ws/type :ready
                :agent-id agent-id
-               :session-id session-id}))
+               :session-id session-id
+               :observer? observer?}))
 
           (= "message" (str frame-type))
           (let [msg-id (or (:msg_id parsed) (:msg-id parsed))

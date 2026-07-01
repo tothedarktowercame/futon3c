@@ -131,10 +131,14 @@ A handler error never kills the socket loop."
     (websocket-send-text futon-agency-ws--ws (json-encode payload))))
 
 (defun futon-agency-ws--on-open (_ws)
+  ;; Declare observer: broadcast-only, answers nothing.  The server bypasses
+  ;; S-presence for observers (we are intentionally NOT a registered agent) and
+  ;; joins us to the broadcast set without making us an invoke target.
   (futon-agency-ws--send-json
    `((type . "ready")
      (agent_id . ,futon-agency-ws-observer-id)
-     (session_id . ,futon-agency-ws--session-id))))
+     (session_id . ,futon-agency-ws--session-id)
+     (observer . t))))
 
 (defun futon-agency-ws--schedule-reconnect ()
   (when (and futon-agency-ws-reconnect

@@ -197,30 +197,50 @@
                  (let [agent-id (:agent-id parsed)
                        session-id (or (:session-id parsed)
                                       (str "sess-" (UUID/randomUUID)))
-                       ;; Build AgentConnection for S-presence verification
-                       conn-event {:conn/id (str "ws-" (UUID/randomUUID))
-                                   :conn/transport :websocket
-                                   :conn/agent-id {:id/value agent-id
-                                                   :id/type :continuity}
-                                   :conn/at (now-str)
-                                   :conn/metadata {:ready true}}
-                       result (presence/verify conn-event (registry-view))]
-                   (if (error? result)
-                     ;; Handshake failed — send error, close connection
-                     (do
-                       (send-fn ch (proto/render-ws-frame result))
-                       (close-fn ch))
-                     ;; Handshake succeeded — mark :connected, send ack
+                       observer? (:observer? parsed)]
+                   (if observer?
+                     ;; Observer (e.g. emacs-hud): broadcast-only, never an
+                     ;; invocable agent (I-1). Observers are intentionally not
+                     ;; registered agents, so S-presence would reject them
+                     ;; (:agent-not-found) — bypass it and join the broadcast
+                     ;; set with an :observer? marker so broadcast-frame!
+                     ;; reaches them while invoke! never targets them.
                      (do
                        (swap! !connections assoc ch
                               (assoc conn
                                      :agent-id agent-id
                                      :session-id session-id
-                                     :connected? true))
-                       (ws-invoke/register! agent-id #(send-fn ch %))
+                                     :connected? true
+                                     :observer? true))
+                       (ws-invoke/register! agent-id #(send-fn ch %) {:observer? true})
                        (send-fn ch (proto/render-ready-ack))
                        (when on-connect-hook
-                         (on-connect-hook agent-id)))))
+                         (on-connect-hook agent-id)))
+                     ;; Real agent: S-presence handshake (R7).
+                     (let [;; Build AgentConnection for S-presence verification
+                           conn-event {:conn/id (str "ws-" (UUID/randomUUID))
+                                       :conn/transport :websocket
+                                       :conn/agent-id {:id/value agent-id
+                                                       :id/type :continuity}
+                                       :conn/at (now-str)
+                                       :conn/metadata {:ready true}}
+                           result (presence/verify conn-event (registry-view))]
+                       (if (error? result)
+                         ;; Handshake failed — send error, close connection
+                         (do
+                           (send-fn ch (proto/render-ws-frame result))
+                           (close-fn ch))
+                         ;; Handshake succeeded — mark :connected, send ack
+                         (do
+                           (swap! !connections assoc ch
+                                  (assoc conn
+                                         :agent-id agent-id
+                                         :session-id session-id
+                                         :connected? true))
+                           (ws-invoke/register! agent-id #(send-fn ch %))
+                           (send-fn ch (proto/render-ready-ack))
+                           (when on-connect-hook
+                             (on-connect-hook agent-id)))))))
 
                  ;; --- Message dispatch ---
                  :message

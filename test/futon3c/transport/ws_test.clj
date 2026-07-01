@@ -70,10 +70,11 @@
   (when-let [entry (last @sent-atom)]
     (json/parse-string (:data entry) true)))
 
-(defn- ready-frame [agent-id & {:keys [session-id]}]
+(defn- ready-frame [agent-id & {:keys [session-id observer?]}]
   (json/generate-string
    (cond-> {"type" "ready" "agent_id" agent-id}
-     session-id (assoc "session_id" session-id))))
+     session-id (assoc "session_id" session-id)
+     observer? (assoc "observer" true))))
 
 (defn- message-frame [msg-id payload to]
   (json/generate-string
@@ -148,6 +149,28 @@
         (is (= "error" (:type frame))))
       (is (contains? (set @closed) ch)
           "Connection should be closed after failed handshake"))))
+
+(deftest ws-ready-handshake-observer-bypasses-presence
+  (testing "observer ready frame → ready_ack + :connected, NOT closed, though id is not a registered agent"
+    (let [{:keys [on-open on-receive connections sent closed]} (make-test-ws)
+          ch :test-ch-observer
+          obs-id "emacs-hud-test"
+          request (mock-request)]
+      (on-open ch request)
+      ;; obs-id is deliberately NOT in the registry — a real agent frame here
+      ;; would be rejected (see ws-ready-handshake-unknown-agent).
+      (on-receive ch (ready-frame obs-id :observer? true))
+      (let [frame (last-sent sent)
+            conn (get @connections ch)]
+        (is (= "ready_ack" (:type frame)) "observer gets ack, not error")
+        (is (not (contains? (set @closed) ch)) "observer connection stays open")
+        (is (true? (:connected? conn)))
+        (is (true? (:observer? conn)))
+        ;; registered broadcast-only: reachable by broadcast, not by invoke
+        (is (contains? (set (ws-invoke/connected-observer-ids)) obs-id))
+        (is (not (contains? (set (ws-invoke/connected-agent-ids)) obs-id)))
+        (is (false? (ws-invoke/available? obs-id))))
+      (ws-invoke/unregister! obs-id))))
 
 (deftest ws-ready-handshake-generates-session-id
   (testing "ready frame without session_id → server generates one"

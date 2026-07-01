@@ -131,7 +131,15 @@
           result (proto/parse-ws-message input)]
       (is (= :ready (:ws/type result)))
       (is (= "claude-1" (:agent-id result)))
-      (is (= "sess-123" (:session-id result))))))
+      (is (= "sess-123" (:session-id result)))
+      (is (false? (:observer? result)) "defaults to non-observer")))
+  (testing "ready frame with observer flag threads :observer? true"
+    (let [result (proto/parse-ws-message
+                  (json/generate-string {"type" "ready"
+                                         "agent_id" "emacs-hud"
+                                         "observer" true}))]
+      (is (= :ready (:ws/type result)))
+      (is (true? (:observer? result))))))
 
 (deftest parse-ws-message-ready-missing-agent
   (testing "ready frame without agent_id returns error"

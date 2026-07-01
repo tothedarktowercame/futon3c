@@ -24,6 +24,28 @@
            (ws-invoke/invoke! "agent-2" "slow" nil 10)))
     (ws-invoke/unregister! "agent-2")))
 
+(deftest ws-observer-broadcast-only
+  (testing "observers receive broadcasts but are never invoke targets (I-1)"
+    (let [obs-sent (atom [])
+          agent-sent (atom [])]
+      (ws-invoke/register! "emacs-hud" #(swap! obs-sent conj %) {:observer? true})
+      (ws-invoke/register! "agent-4" #(swap! agent-sent conj %))
+      ;; not invocable
+      (is (false? (ws-invoke/available? "emacs-hud")))
+      (is (true? (ws-invoke/available? "agent-4")))
+      (is (= {:error :ws-observer-not-invocable}
+             (ws-invoke/invoke! "emacs-hud" "hi" nil 1000)))
+      ;; excluded from invocable set, present in observer set
+      (is (not (contains? (set (ws-invoke/connected-agent-ids)) "emacs-hud")))
+      (is (contains? (set (ws-invoke/connected-agent-ids)) "agent-4"))
+      (is (contains? (set (ws-invoke/connected-observer-ids)) "emacs-hud"))
+      ;; but broadcast-frame! DOES reach the observer
+      (ws-invoke/broadcast-frame! {"type" "agents_status"})
+      (is (= [(json/generate-string {"type" "agents_status"})] @obs-sent))
+      (is (= [(json/generate-string {"type" "agents_status"})] @agent-sent))
+      (ws-invoke/unregister! "emacs-hud")
+      (ws-invoke/unregister! "agent-4"))))
+
 (deftest ws-send-frame-best-effort
   (testing "send-frame! serializes JSON over an active WS sender"
     (let [sent (atom nil)]

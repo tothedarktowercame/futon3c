@@ -14,11 +14,17 @@
   (atom {}))
 
 (defn register!
-  "Register a WS connection for AGENT-ID with SEND-FN (string -> nil)."
-  [agent-id send-fn]
-  (when (and (string? agent-id) (not (str/blank? agent-id)))
-    (swap! !agents assoc agent-id {:send send-fn
-                                   :pending (atom {})})))
+  "Register a WS connection for AGENT-ID with SEND-FN (string -> nil).
+
+   OPTS may set {:observer? true} for broadcast-only participants (e.g. the
+   emacs-hud connector): they receive broadcast-frame! but are never invoke
+   targets (see invoke!/available?/connected-agent-ids)."
+  ([agent-id send-fn] (register! agent-id send-fn nil))
+  ([agent-id send-fn opts]
+   (when (and (string? agent-id) (not (str/blank? agent-id)))
+     (swap! !agents assoc agent-id (cond-> {:send send-fn
+                                            :pending (atom {})}
+                                     (:observer? opts) (assoc :observer? true))))))
 
 (defn unregister!
   "Unregister AGENT-ID from the WS invoke registry."
@@ -26,14 +32,29 @@
   (swap! !agents dissoc agent-id))
 
 (defn available?
-  "True when AGENT-ID has an active WS bridge."
+  "True when AGENT-ID has an active, INVOCABLE WS bridge.
+   Observers (broadcast-only) are not invocable, so return false for them."
   [agent-id]
-  (contains? @!agents agent-id))
+  (let [{:keys [observer?] :as entry} (get @!agents agent-id)]
+    (and (some? entry) (not observer?))))
 
 (defn connected-agent-ids
-  "Return a sorted vector of agent-ids with active WS invoke bridges."
+  "Return a sorted vector of agent-ids with active, INVOCABLE WS bridges.
+   Observers are excluded (see connected-observer-ids)."
   []
-  (->> (keys @!agents)
+  (->> @!agents
+       (remove (fn [[_ entry]] (:observer? entry)))
+       (map key)
+       (filter string?)
+       sort
+       vec))
+
+(defn connected-observer-ids
+  "Return a sorted vector of broadcast-only observer ids (e.g. emacs-hud)."
+  []
+  (->> @!agents
+       (filter (fn [[_ entry]] (:observer? entry)))
+       (map key)
        (filter string?)
        sort
        vec))
@@ -68,24 +89,27 @@
   "Send PROMPT to AGENT-ID over WS and block for a result map.
    Optional SESSION-ID is forwarded; override timeout via TIMEOUT-MS."
   [agent-id prompt session-id timeout-ms]
-  (if-let [{:keys [send pending]} (get @!agents agent-id)]
-    (let [invoke-id (str "invoke-" (UUID/randomUUID))
-          promise (promise)
-          timeout (long (max 1 (or timeout-ms default-timeout-ms)))
-          payload (cond-> {"type" "invoke"
-                           "invoke_id" invoke-id
-                           "prompt" prompt}
-                    session-id (assoc "session_id" session-id))]
-      (swap! pending assoc invoke-id promise)
-      (try
-        (send (json/generate-string payload))
-        (catch Exception e
-          (swap! pending dissoc invoke-id)
-          (throw e)))
-      (let [result (deref promise timeout timeout-sentinel)]
-        (when (= result timeout-sentinel)
-          (deliver-timeout! pending invoke-id))
-        result))
+  (if-let [{:keys [send pending observer?]} (get @!agents agent-id)]
+    (if observer?
+      ;; Observers are broadcast-only, never invoke targets (I-1).
+      {:error :ws-observer-not-invocable}
+      (let [invoke-id (str "invoke-" (UUID/randomUUID))
+            promise (promise)
+            timeout (long (max 1 (or timeout-ms default-timeout-ms)))
+            payload (cond-> {"type" "invoke"
+                             "invoke_id" invoke-id
+                             "prompt" prompt}
+                      session-id (assoc "session_id" session-id))]
+        (swap! pending assoc invoke-id promise)
+        (try
+          (send (json/generate-string payload))
+          (catch Exception e
+            (swap! pending dissoc invoke-id)
+            (throw e)))
+        (let [result (deref promise timeout timeout-sentinel)]
+          (when (= result timeout-sentinel)
+            (deliver-timeout! pending invoke-id))
+          result)))
     {:error :ws-not-connected}))
 
 (defn resolve!
