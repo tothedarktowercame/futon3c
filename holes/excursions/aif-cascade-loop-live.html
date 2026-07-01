@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>AIF ↔ Cascade Loop — LIVE</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--ink:#e6e9ef;--dim:#9aa3b2;--line:#2a2f3a;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:16px 22px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#12151b,#0f1115)}
+  h1{margin:0 0 4px;font-size:19px}
+  .sub{color:var(--dim);font-size:12px}
+  .prov{color:#0a8a6f;font-weight:700}
+  main{padding:18px 22px 60px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 16px}
+  .panel h2{margin:0 0 10px;font-size:14px;color:#c8d0dc}
+  .loop{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px}
+  .node{flex:1 1 150px;min-width:150px;background:#1b2029;border:1px solid var(--line);border-radius:9px;padding:9px 11px;position:relative}
+  .node.staged{border:1px dashed #c9973a;background:#20191a}
+  .node.held{border-left:3px solid #c9973a}
+  .node .ref{font-size:10px;color:#5aa0ff;font-weight:700}
+  .node .nt{font-weight:700;font-size:12.5px;margin:1px 0 4px}
+  .node .val{font-size:11px;color:#cdd6e4}
+  .node .st{font-size:10px;margin-top:5px}
+  .arrow{align-self:center;color:#5b657a;font-size:16px;font-weight:700;padding:0 1px}
+  .ok{color:#3ddc84}.warn{color:#e0a63b}.bad{color:#ff6b6b}
+  .ret{margin:8px 0 0;padding:8px 12px;border:1px dashed #3a5a8a;border-radius:8px;color:#9fc0ea;font-size:12px;background:#141a24}
+  .switch{border:1px solid #c9973a;background:#20191a;border-radius:9px;padding:12px 14px;color:#f0c98a}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  td,th{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  th{color:var(--dim);font-weight:600}
+  code{background:#1e2430;padding:1px 5px;border-radius:4px;color:#b7c3d6}
+  .muted{color:var(--dim)} .chip{display:inline-block;padding:2px 7px;border-radius:6px;background:#1e2430;border:1px solid var(--line);font-size:11px;margin:2px 4px 2px 0}
+  #offline{display:none;color:#ffb4b4;padding:14px;border:1px dashed #a33;border-radius:8px}
+  a{color:#5aa0ff}
+</style>
+</head>
+<body>
+<header>
+  <h1>AIF ↔ Cascade Loop — <span style="color:#3ddc84">LIVE</span></h1>
+  <div class="sub"><span class="prov">Generated from live substrate-2 + the AIF apparatus</span> via
+    <code>/api/alpha/war-machine</code> (γ), <code>/api/alpha/aif-stack/live</code>,
+    <code>/api/alpha/cascade-real{,/graph}</code>. The cascade sits at <b>both ends</b> of the AIF loop —
+    its generative input <b>and</b> what precision/enactment shapes. <b>R16 and R14 are the same shape.</b>
+    <span id="asof" class="muted"></span></div>
+</header>
+<main>
+  <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070).</div>
+
+  <section class="panel" id="loop-panel" style="display:none">
+    <h2>The loop — magnet → cascade → fold (R16) → act-gate → apply → :realized-outcome → γ (R14) → re-weight</h2>
+    <div class="loop" id="loop"></div>
+    <div class="ret" id="return"></div>
+  </section>
+
+  <section class="panel" id="switch-panel" style="display:none">
+    <h2>The one staged switch — <code>*live-wire?*</code></h2>
+    <div class="switch" id="switch"></div>
+  </section>
+
+  <section class="panel" id="escrow-panel" style="display:none">
+    <h2>ESCROW ↔ AIF crosswalk — four of five substantive entries are AIF touchpoints</h2>
+    <div id="escrow"></div>
+  </section>
+
+  <section class="panel" id="reading-panel" style="display:none">
+    <h2>AIF stack reading (live)</h2>
+    <div id="reading"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var BASE="http://localhost:7070";
+  function esc(s){return String(s==null?"":s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
+  function el(id){return document.getElementById(id);}
+  function j(u){return fetch(BASE+u).then(function(r){return r.json();}).catch(function(){return null;});}
+
+  function num(x,d){return (typeof x==="number")?x.toFixed(d==null?4:d):"—";}
+
+  function renderLoop(wm,aif,cas,graph){
+    var g=(wm&&wm["r14-gamma"])||{};
+    var counts=(graph&&graph.counts)||{};
+    var xlinks=((graph&&graph.patterns&&graph.patterns.edges)||[]).length;
+    var arrows=(graph&&graph.arrows)||[];
+    var dgs=arrows.map(function(a){return a["delta-g"];}).filter(function(v){return typeof v==="number";});
+    var dgMean=dgs.length?dgs.reduce(function(a,b){return a+b;},0)/dgs.length:null;
+    var std=(cas&&cas.standards)||{};
+    var liveWire=!!g["live-wire?"];
+    var nodes=[
+      {ref:"input · FOLD-MINILM",t:"Magnet",val:"MiniLM (have→want) condenses a cascade on demand",st:"<span class='ok'>✓ live</span>"},
+      {ref:"generative input · E1/E2",t:"Cascade",val:(counts.clusters||0)+" clusters · "+xlinks+" mission→pattern links · "+(counts.holes||0)+" holes",st:"<span class='ok'>✓ live</span> · <a href='pipeline-pattern-cascade-live.html'>cascade view ↗</a>"},
+      {ref:"R16 · fold · E1/E2",t:"Fold",val:"cascade → wiring · impl #1 + #2",st:"<span class='warn'>◑ sim-verified · held-on-Q-B</span>",held:true},
+      {ref:"DarkTower / CT",t:"Wiring",val:"typed-hole comb · L2 rung-1 0-sorry",st:"<span class='warn'>◑ sim</span>"},
+      {ref:"expected-G · E3/E4",t:"Act-gate",val:arrows.length+" arrows carry ΔG (mean "+num(dgMean)+", all :close-hole, all <0)",st:"served-mission ΔG nil ⇒ <span class='warn'>:abstain</span> today"},
+      {ref:"enactment · R16-ARM",t:"Apply → :realized-outcome",val:"apply-cascade! writes the realized ΔG",st:(liveWire?"<span class='ok'>✓ live-wired</span>":"<span class='bad'>⏸ STAGED — *live-wire?* off</span>"),staged:!liveWire},
+      {ref:"R14 · E5",t:"γ (precision)",val:"γ = "+num(g.gamma,2)+" "+(g["held-at-prior?"]?"(held at prior)":"")+" · "+(g["independent-realized"]||0)+"/"+(g["paired-samples"]||0)+" indep · verdict "+esc(g["calibration-verdict"]),st:(g["live-wire?"]?"<span class='ok'>learning</span>":"<span class='warn'>held — feed staged</span>"),held:true},
+      {ref:"τ_eff = τ / γ",t:"Re-weight",val:"selection temperature ÷ γ = "+(g.gamma===1?"τ (γ=1, no change yet)":"sharpened"),st:"closes → magnet"}
+    ];
+    var html=[];
+    nodes.forEach(function(n,i){
+      html.push("<div class='node"+(n.staged?" staged":"")+(n.held?" held":"")+"'>"+
+        "<div class='ref'>"+esc(n.ref)+"</div><div class='nt'>"+esc(n.t)+"</div>"+
+        "<div class='val'>"+n.val+"</div><div class='st'>"+n.st+"</div></div>");
+      if(i<nodes.length-1) html.push("<div class='arrow'>→</div>");
+    });
+    el("loop").innerHTML=html.join("");
+    el("return").innerHTML="↩ <b>the return leg</b>: γ (R14) re-weights the next cascade via <code>τ_eff = τ/γ</code> — "+
+      "so the model's precision <i>shapes</i> the cascade it was <i>fed by</i>. Standards live: "+
+      Object.keys(std).map(function(k){return "<span class='chip'>"+(std[k]?"✓":"✗")+" "+esc(k)+"</span>";}).join("");
+    el("loop-panel").style.display="";
+  }
+
+  function renderSwitch(wm){
+    var g=(wm&&wm["r14-gamma"])||{};
+    el("switch").innerHTML="<b>"+(g["live-wire?"]?"CLOSED":"OPEN at one point")+"</b> — the enactment seam "+
+      "(<code>apply-cascade!</code> → <code>:realized-outcome</code>) is <b>built + round-trip tested (E5 satisfied)</b> "+
+      "but staged behind <code>*live-wire?*</code> = <b>"+(g["live-wire?"]?"true":"false")+"</b>. "+
+      "γ is holding at "+num(g.gamma,2)+" with "+(g["independent-realized"]||0)+" independent realized samples "+
+      "(burn-in "+(g["burn-in-met?"]?"met":"not met")+"). Flipping the switch — the operator-governed "+
+      "<b>R16-ARM / WM-I4</b> decision — lets R14-FEED flow from live cascade enactment, and the loop learns. "+
+      "<div class='muted' style='margin-top:6px'>"+esc(g.status||"")+"</div>";
+    el("switch-panel").style.display="";
+  }
+
+  function renderEscrow(){
+    var rows=[
+      ["E5","γ / precision","R14 — τ_eff=τ/γ, learned selection temperature + the enactment seam (R14-FEED)","futon2 e868023"],
+      ["E4","forward-model","the EFE / expected-G computation (O6 downward)","futon7 fc8e1f0"],
+      ["E1/E2","fold + meme-wire","the cascade→fold→act-gate path — cascade IS the generative input","held-on-Q-B"],
+      ["E3","D4 arrows","the arrows carry :delta-g = the expected-G the act-gate reads","18fb63a"]
+    ];
+    el("escrow").innerHTML="<table><tr><th>ESCROW</th><th>AIF role</th><th>what it is</th><th>evidence</th></tr>"+
+      rows.map(function(r){return "<tr><td><b>"+esc(r[0])+"</b></td><td>"+esc(r[1])+"</td><td class='muted'>"+esc(r[2])+"</td><td><code>"+esc(r[3])+"</code></td></tr>";}).join("")+"</table>";
+    el("escrow-panel").style.display="";
+  }
+
+  function renderReading(aif){
+    if(!aif){el("reading").innerHTML="<span class='muted'>aif-stack/live unavailable</span>";el("reading-panel").style.display="";return;}
+    var rd=aif.reading||{}, nm=rd["next-move"]||{}, sch=aif.scheduler||{};
+    el("reading").innerHTML=
+      "<div class='meta'><span class='chip'>live-mission-count <b>"+(aif["live-mission-count"]||0)+"</b></span>"+
+      "<span class='chip'>stack-frames "+((aif["stack-frames"]||[]).map(function(f){return f.id;}).join(", "))+"</span>"+
+      "<span class='chip'>scheduler tick <b>"+(sch["tick-count"]!=null?sch["tick-count"]:"—")+"</b> · running "+(sch["running?"]?"yes":"no")+"</span></div>"+
+      "<div style='margin-top:8px'><b>Next move (the model's own reading):</b> "+
+        "close <code>"+esc(nm.close||"—")+"</code> — "+esc(nm.specifically||"")+
+        "<div class='muted' style='margin-top:3px'>"+esc(nm.rationale||"")+"</div></div>";
+    el("reading-panel").style.display="";
+  }
+
+  Promise.all([j("/api/alpha/war-machine"),j("/api/alpha/aif-stack/live"),
+               j("/api/alpha/cascade-real"),j("/api/alpha/cascade-real/graph")])
+  .then(function(r){
+    var wm=r[0],aif=r[1],cas=r[2],graph=r[3];
+    if(!wm&&!aif){el("offline").style.display="block";return;}
+    el("asof").textContent=" · as of "+new Date().toLocaleString();
+    renderLoop(wm,aif,cas,graph);
+    renderSwitch(wm);
+    renderEscrow();
+    renderReading(aif);
+  });
+})();
+</script>
+</body>
+</html>

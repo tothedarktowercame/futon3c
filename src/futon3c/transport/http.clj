@@ -5194,6 +5194,35 @@
       (f days))
     (catch Throwable _ nil)))
 
+(defn- r14-gamma-summary
+  "R14 γ (policy-precision) live state, folded into the war-machine payload for the
+   AIF↔cascade loop render (C-cascade-real). γ modulates the selection temperature
+   `τ_eff = τ/γ`; it LEARNS from realized-vs-expected outcomes, but only from
+   :independent? MEASURED pairs (the enactment feed). Today enactment is NOT
+   live-wired (`fold-realized/*live-wire?*` off, operator-governed R16-ARM), so γ
+   holds at its reduction-safe prior 1.0. Reads the calibration report over
+   repl-traces; degrades to the prior on any read failure (never throws)."
+  []
+  (try
+    (let [report ((requiring-resolve 'futon3c.aif.calibration/calibration-report)
+                  ((requiring-resolve 'futon3c.aif.calibration/load-evidence)))
+          indep  (or (:independent-paired-count report) 0)]
+      {:gamma 1.0
+       :held-at-prior? true
+       :bounds [0.5 2.0]
+       :paired-samples (:paired-count report)
+       :independent-realized indep
+       :burn-in-threshold 5
+       :burn-in-met? (>= indep 5)
+       :calibration-verdict (:verdict report)
+       :live-wire? false
+       :status (str "γ held at prior 1.0 — enactment not live-wired (*live-wire?* off, "
+                    "operator-governed R16-ARM); " indep " independent realized sample(s), "
+                    "burn-in needs 5. Flipping *live-wire?* lets R14-FEED flow from live "
+                    "cascade enactment.")})
+    (catch Throwable t {:gamma 1.0 :held-at-prior? true :live-wire? false
+                        :error (str "calibration read failed: " (.getMessage t))})))
+
 (defn- handle-war-machine
   "GET /api/alpha/war-machine[?days=N] — return cached WM JSON snapshot.
 
@@ -5225,7 +5254,8 @@
           snapshot (wm-scheduler-snapshot-for-days days)]
       (if snapshot
         (let [scheduler (wm-scheduler-status-snapshot)
-              body (wm-prebuilt-response-body snapshot scheduler)]
+              body (assoc (wm-prebuilt-response-body snapshot scheduler)
+                          :r14-gamma (r14-gamma-summary))]
           (-> (json-response 200 body)
               (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
         (do
@@ -5236,6 +5266,7 @@
                               :days days
                               :retry-after-seconds 60
                               :scheduler (wm-scheduler-status-snapshot)
+                              :r14-gamma (r14-gamma-summary)
                               :message "war-machine snapshot not ready yet; background warmup started"})
               (assoc-in [:headers "Access-Control-Allow-Origin"] "*")
               (assoc-in [:headers "Retry-After"] "60")))))
