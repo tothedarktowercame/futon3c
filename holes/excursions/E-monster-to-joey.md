@@ -1,7 +1,16 @@
 # Excursion: E-monster-to-joey — compact oversized agent sessions so they fit the warm pouch (limit WIP memory + token cost)
 
 **Date:** 2026-07-01
-**Status:** IDENTIFY (chartered; not built). Owner: claude-3.
+**Status:** **CLOSED 2026-07-02.** v0 recency-shell compactor built, resume-verified,
+pouch-integrated (compact-then-warm at the monster-cold gate), ON by default, proven end-to-end on
+real agents (claude-1/2/5/10 monster→joey, warm-resumed coherently). Commits `d72253e` (compactor),
+`11406b2` (pouch integration), `4c2334d` (default-on), `180d76a` (doc). A real memory win (kills
+per-turn cold-spawn RAM spikes). **NB:** the Emacs finalisation *lag* that partly motivated this had a
+**separate** root — `arxana-ui-refresh`'s Reazon validation on every window change, not memory (see
+[[project_loop_lag_emacs_stalls]]) — so this stands on its own memory merits. **Deferred follow-ons:**
+the semantic selector (M-points-de-fuite, anchored by the clock — the "keep what matters not what's
+last" ideal, swaps into the same shell); prune the per-compaction `.pre-compact-<ts>` backups; and
+gate joey-max on *context* bytes (MAP finding #1). Owner: claude-3.
 **Repo:** futon3c — `src/futon3c/agency/agent_pouch.clj` (the kangaroo pouch + joey
 gate), agent session JSONL under `~/.claude/projects/<enc>/<session>.jsonl`.
 Sibling of **M-kangaroo** (warm-pouch-per-agent). Driver:
