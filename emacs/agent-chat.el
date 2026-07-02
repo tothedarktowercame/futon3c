@@ -1205,22 +1205,25 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
         (let ((name-end (point)))
           (insert (format "%s\n\n" transformed))
           (let ((text-end (point)))
-            (overlay-put (make-overlay name-start name-end) 'face face)
-            (overlay-put (make-overlay name-end text-end) 'face 'agent-chat-text-face)
+            ;; Faces as TEXT-PROPERTIES, not overlays: overlays make redisplay
+            ;; O(overlay-count) and accumulate into thousands over a session,
+            ;; freezing the buffer for seconds per turn.  Text-props render
+            ;; identically at near-zero redisplay cost (E-repl-redisplay, 2026-07-01).
+            (put-text-property name-start name-end 'face face)
+            (put-text-property name-end text-end 'face 'agent-chat-text-face)
             (agent-chat--decorate-markdown-links name-end text-end)
             ;; Highlight tool-use lines in orange.
             ;; Matches: [Read], [Edit], [Bash], [Glob], [Grep], [Write],
             ;; [Agent], [WebFetch], and also "Using Bash", "Reading Files", etc.
+            ;; Applied AFTER text-face so it overrides on those lines (what the
+            ;; old overlay `priority 10` achieved).
             (save-excursion
               (goto-char name-end)
               (while (re-search-forward
                       "^\\(?:\\[[A-Z][A-Za-z]*\\]\\|\\(?:Using\\|Reading\\|Editing\\|Searching\\|Inspecting\\) [A-Z][A-Za-z]*\\)"
                       text-end t)
-                (let* ((bol (line-beginning-position))
-                       (eol (line-end-position))
-                       (ov (make-overlay bol eol)))
-                  (overlay-put ov 'face 'agent-chat-tool-line-face)
-                  (overlay-put ov 'priority 10))))))))
+                (put-text-property (line-beginning-position) (line-end-position)
+                                   'face 'agent-chat-tool-line-face)))))))
     (when at-end
       (agent-chat-scroll-to-bottom))))
 
@@ -1306,7 +1309,7 @@ Optional FACE overrides `agent-chat-thinking-face'."
       (let ((name-start (point)))
         (insert (format "%s: " name))
         (let ((name-end (point)))
-          (overlay-put (make-overlay name-start name-end) 'face name-face)
+          (put-text-property name-start name-end 'face name-face)
           (setq agent-chat--streaming-marker (copy-marker (point)))
           (setq agent-chat--streaming-started t))))))
 
@@ -1321,8 +1324,8 @@ Optional FACE overrides `agent-chat-thinking-face'."
         (goto-char (marker-position agent-chat--streaming-marker))
         (let ((start (point)))
           (insert text)
-          (overlay-put (make-overlay start (point))
-                       'face (or face 'agent-chat-text-face))
+          (put-text-property start (point)
+                             'face (or face 'agent-chat-text-face))
           (set-marker agent-chat--streaming-marker (point))))
       (agent-chat-scroll-to-bottom))))
 
