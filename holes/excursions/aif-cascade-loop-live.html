@@ -107,6 +107,16 @@
     <div id="flight"></div>
   </section>
 
+  <section class="panel" id="frontier-panel" style="display:none">
+    <h2>Downward growth — the frontier, empirically (more than a backlog)</h2>
+    <p class="note">The parent sketch's downward panels said: <i>"holes mark where the cascade needs an
+      adviser, not a static roadmap."</i> A backlog counts absences; this panel measures the
+      <b>adviser-pressure</b> on them — how much mined (have→want) energy actually points into each hole,
+      what the loop is silently carrying, and what the stack's own reading says to do next. Where pressure
+      is ~zero the hollow is REAL: the model must grow (R17), not just execute.</p>
+    <div id="frontier"></div>
+  </section>
+
   <section class="panel" id="gamma-panel" style="display:none">
     <h2>γ — confidence that is earned, not hand-set</h2>
     <div id="gamma"></div>
@@ -339,15 +349,59 @@
     el("prior-panel").style.display="";
   }
 
-  Promise.all([j("/api/alpha/war-machine"),j("/api/alpha/cascade-real"),j("/api/alpha/cascade-real/graph")])
+  function renderFrontier(graph,aif){
+    if(!graph){return;}
+    var holes=graph.holes||[],arrows=graph.arrows||[],held=graph.held||[];
+    var m2c={};(graph.clusters||[]).forEach(function(c){m2c[c.mission]=c.cluster;});
+    var kinds={};holes.forEach(function(h){kinds[h.kind]=(kinds[h.kind]||0)+1;});
+    var kindNames=Object.keys(kinds).sort(function(a,b){return kinds[b]-kinds[a];});
+    // adviser pressure: mined arrows whose WANT is a holed mission
+    var holedBy={};holes.forEach(function(h){holedBy[h.target]=(holedBy[h.target]||0)+1;});
+    var inbound={};arrows.forEach(function(a){
+      if(holedBy[a.want]){(inbound[a.want]=inbound[a.want]||[]).push(a["delta-g"]);}});
+    var nIn=Object.keys(inbound).reduce(function(s,k){return s+inbound[k].length;},0);
+    var tops=Object.keys(holedBy).map(function(m){return {m:m,n:holedBy[m],arr:(inbound[m]||[]).length,
+        best:(inbound[m]&&inbound[m].length)?Math.min.apply(null,inbound[m]):null};})
+      .sort(function(a,b){return b.n-a.n;}).slice(0,8);
+    var heldBy={};held.forEach(function(h){var cl=m2c[h.mission]||"(unclustered)";heldBy[cl]=(heldBy[cl]||0)+1;});
+    var heldTop=Object.keys(heldBy).sort(function(a,b){return heldBy[b]-heldBy[a];}).slice(0,5);
+    var reg={};held.forEach(function(h){reg[h.registry]=(reg[h.registry]||0)+1;});
+    var nm=((aif||{}).reading||{})["next-move"]||{};
+    el("frontier").innerHTML=
+      "<div style='font:13px ui-sans-serif,system-ui;margin-bottom:8px'>"+
+      "<span class='chip c-debt'>"+holes.length+" typed holes · "+kindNames.length+" kind"+(kindNames.length>1?"s":"")+
+        " ("+kindNames.map(function(k){return esc(k)+" ×"+kinds[k];}).join(", ")+")</span>"+
+      "<span class='chip "+(nIn>20?"c-live":"c-hold")+"'>adviser pressure: "+nIn+" of "+arrows.length+
+        " mined arrows point at ANY holed mission</span>"+
+      "<span class='chip'>"+held.length+" held items ("+Object.keys(reg).map(function(k){return esc(k)+" ×"+reg[k];}).join(", ")+")</span></div>"+
+      "<table><tr><th>most-holed mission</th><th>holes</th><th>inbound mined arrows</th><th>best ΔG</th><th>reading</th></tr>"+
+      tops.map(function(t){
+        var starved=t.arr===0;
+        return "<tr><td><code>"+esc(t.m.split("/").pop())+"</code> <span class='muted'>"+esc((m2c[t.m]||"").split("/").pop()||"")+"</span></td>"+
+        "<td>"+t.n+"</td><td>"+(starved?"<span class='chip c-debt'>0 — truly hollow</span>":t.arr)+"</td>"+
+        "<td>"+(t.best==null?"—":num(t.best,4))+"</td>"+
+        "<td class='muted'>"+(starved?"needs GROWTH (R17) — no mined move reaches it":"dischargeable — mined energy exists, ΔG "+(t.best>-0.01?"weak":"real"))+"</td></tr>";}).join("")+"</table>"+
+      "<p class='note' style='margin:10px 0 0'><b>The measured statement a backlog can't make:</b> "+
+      nIn+"/"+arrows.length+" mined arrows reach any holed mission"+
+      (nIn<arrows.length/5?" — the frontier is UNDER-ADVISED: most mined energy points elsewhere, and the holes need model growth (new patterns / new scans — R17, E-library-coverage), not scheduling":"")+
+      ". Held work concentrates in "+heldTop.map(function(k){return esc(k.split("/").pop())+" ("+heldBy[k]+")";}).join(", ")+
+      ".</p>"+
+      (nm.close?("<p style='font:12.5px ui-sans-serif,system-ui;margin:8px 0 0'><b>The stack's own reading of the next move:</b> close <code>"+
+        esc(nm.close)+"</code> — "+esc(nm.specifically||"")+
+        " <span class='muted'>("+esc(nm.rationale||"")+")</span></p>"):"");
+    el("frontier-panel").style.display="";
+  }
+
+  Promise.all([j("/api/alpha/war-machine"),j("/api/alpha/cascade-real"),j("/api/alpha/cascade-real/graph"),j("/api/alpha/aif-stack/live")])
   .then(function(r){
-    var wm=r[0],cas=r[1],graph=r[2];
+    var wm=r[0],cas=r[1],graph=r[2],aif=r[3];
     if(!wm){el("offline").style.display="block";return;}
     el("asof").textContent=" · as of "+new Date().toLocaleString();
     var d=stationData(wm,cas);
     renderLoop(d);
     renderPrior(graph);
     renderFlight(d);
+    renderFrontier(graph,aif);
     renderGamma(d);
     renderStrip(d);
   });
