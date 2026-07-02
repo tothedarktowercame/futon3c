@@ -5216,15 +5216,43 @@
    DISCHARGE) is a RELATED but DISTINCT signal — NOT γ's policy-outcome feed. It is
    surfaced under `:calibration-signal` for context, never as γ's sample count."
   []
-  (let [base {:gamma 1.0 :held-at-prior? true :bounds [0.5 2.0]
-              :policy-outcome-samples 0   ; γ's R16 :realized-outcome feed — 0 while staged
-              :burn-in-threshold 5 :burn-in-met? false
-              :live-wire? false
-              :status (str "γ held at prior 1.0 — its R16 :realized-outcome feed is STAGED "
-                           "(*live-wire?* off, operator-governed R16-ARM) ⇒ 0 policy-outcome "
-                           "samples ⇒ γ holds. Flipping *live-wire?* lets the realized outcomes "
-                           "flow and γ moves off 1.0. (The calibration discharge signal below is "
-                           "a related but DISTINCT readout, not γ's learning feed.)")}]
+  (let [base (try
+               ;; LIVE-WIRED 2026-07-02 (Joe-ratified): read the REAL γ-state from
+               ;; the latest WM trace record — the same state `judge` threads
+               ;; tick-to-tick. The scheduled runner (futon2.aif.enact) now
+               ;; computes act-gates per tick and enacts the first :pass
+               ;; (artifact-only; WM-I4 firing stays operator-gated), so
+               ;; :realized-outcome records flow and γ accrues through burn-in.
+               ;; coerce-state guards the retired v0 :error-history schema (the
+               ;; 8 junk samples that pinned γ to 0.5 for days; found 2026-07-02).
+               (let [rec ((requiring-resolve 'futon2.aif.trace/latest-trace-record))
+                     coerce (requiring-resolve 'futon2.aif.policy-precision/coerce-state)
+                     st (coerce (:policy-precision rec))
+                     gamma (double (:policy-precision st 1.0))
+                     samples (long (:samples st 0))]
+                 {:gamma gamma
+                  :held-at-prior? (= gamma 1.0)
+                  :bounds [0.5 2.0]
+                  :policy-outcome-samples samples
+                  :burn-in-threshold 5
+                  :burn-in-met? (>= samples 5)
+                  :mean-perf (:mean-perf st)
+                  :live-wire? true
+                  :last-realized-outcome (:realized-outcome rec)
+                  :last-enactment (:enactment rec)
+                  :act-gate-verdicts (:act-gate-verdicts rec)
+                  :status (str "R16 enactment LIVE-WIRED (2026-07-02; scheduled-runner enactor, "
+                               "artifact-only — WM-I4 firing stays operator-gated). γ=" gamma
+                               " from " samples " realized policy-outcome sample(s); 5-sample "
+                               "burn-in, then γ moves. Retired-schema guard active (the γ=0.5 "
+                               "pin on 8 junk 2026-06-27 samples is fixed). (The calibration "
+                               "discharge signal below is a related but DISTINCT readout, not "
+                               "γ's learning feed.)")})
+               (catch Throwable t
+                 {:gamma 1.0 :held-at-prior? true :bounds [0.5 2.0]
+                  :policy-outcome-samples 0 :burn-in-threshold 5 :burn-in-met? false
+                  :live-wire? true
+                  :status (str "R16 live-wired but trace read failed: " (.getMessage t))}))]
     (try
       (let [report ((requiring-resolve 'futon3c.aif.calibration/calibration-report)
                     ((requiring-resolve 'futon3c.aif.calibration/load-evidence)))]
