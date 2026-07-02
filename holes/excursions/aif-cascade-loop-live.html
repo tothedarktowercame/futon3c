@@ -48,6 +48,17 @@
   .strip .step strong{display:block;font-size:12px;margin-bottom:3px}
   .strip .step span{color:var(--mut);font-size:11.5px;display:block}
   .strip .arrow{align-self:center;color:#9a8f7a;font-weight:700}
+  /* the prior — basin grid, predecessor style */
+  .basin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;font-family:ui-sans-serif,system-ui}
+  .basin{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px}
+  .basin .dots{margin:0 0 7px;line-height:2}
+  .pdot{display:inline-block;min-width:26px;text-align:center;padding:2px 5px;border-radius:10px;
+        background:#2f3b52;color:#fff;font:700 9.5px ui-sans-serif,system-ui;margin:0 3px 3px 0;cursor:default}
+  .pdot.minor{background:#aab4c6}
+  .basin .bt{font-weight:700;font-size:12.5px}
+  .basin .bm{color:var(--mut);font-size:11.5px;margin:2px 0}
+  .basin .bh{font-size:11px;color:var(--debt)}
+  .comm{margin-top:12px;font:12.5px ui-sans-serif,system-ui}
   .foot{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
   .foot .panel{margin:0}
   #offline{display:none;color:var(--bad);padding:14px;border:1px dashed var(--bad);border-radius:8px;background:#fff}
@@ -78,6 +89,13 @@
       satellites are the named debts/frontiers: hollow on purpose, each with an owner — the by-hand
       sketch's "hollow regions" discipline, kept.</p>
     <svg id="loopsvg" viewBox="0 0 1120 560" role="img" aria-label="The AIF cascade loop, live"></svg>
+  </section>
+
+  <section class="panel" id="prior-panel" style="display:none">
+    <h2>The prior — the semilattice the loop walks on, empirically</h2>
+    <p class="note" id="prior-note"></p>
+    <div class="basin-grid" id="basins"></div>
+    <div class="comm" id="commissures"></div>
   </section>
 
   <section class="panel" id="flight-panel" style="display:none">
@@ -266,13 +284,69 @@
     el("learn-panel").style.display="";
   }
 
-  Promise.all([j("/api/alpha/war-machine"),j("/api/alpha/cascade-real")])
+  function initials(pid){
+    var tail=pid.split("/").pop();
+    return tail.split(/[-_]/).map(function(w){return (w[0]||"").toUpperCase();}).join("").slice(0,3);
+  }
+  function renderPrior(graph){
+    if(!graph||!graph.clusters||!graph.patterns){return;}
+    var edges=graph.patterns.edges||[];
+    var m2c={};(graph.clusters||[]).forEach(function(c){m2c[c.mission]=c.cluster;});
+    var holesBy={};(graph.holes||[]).forEach(function(h){var cl=m2c[h.target];if(cl)holesBy[cl]=(holesBy[cl]||0)+1;});
+    // per-cluster pattern tallies: applied edges weigh 1, candidates weigh their cosine
+    var basins={},missionsBy={},patSpread={};
+    edges.forEach(function(e){
+      var cl=m2c[e.mission];if(!cl)return;
+      basins[cl]=basins[cl]||{};missionsBy[cl]=missionsBy[cl]||{};
+      missionsBy[cl][e.mission]=true;
+      var w=(e.relation==="applied")?1.0:(e.cos||0.3)*0.5;
+      var b=basins[cl][e.pattern]=basins[cl][e.pattern]||{w:0,applied:0};
+      b.w+=w; if(e.relation==="applied")b.applied++;
+      (patSpread[e.pattern]=patSpread[e.pattern]||{}) [cl]=true;
+    });
+    var names=Object.keys(basins).sort(function(a,b){
+      return Object.keys(missionsBy[b]).length-Object.keys(missionsBy[a]).length;});
+    var nApplied=edges.filter(function(e){return e.relation==="applied";}).length;
+    var nMiss=Object.keys(edges.reduce(function(a,e){a[e.mission]=1;return a;},{})).length;
+    var nPat=Object.keys(patSpread).length;
+    el("prior-note").innerHTML="The parent sketch hand-drew mission basins with their cited patterns above. "+
+      "This is the same drawing READ from substrate-2's cascade-real graph: <b>"+names.length+" clusters · "+
+      nMiss+" missions · "+nPat+" patterns · "+edges.length+" mission→pattern links ("+nApplied+" applied · "+
+      (edges.length-nApplied)+" candidate)</b> — reconstructed from historical mining, honestly NOT PSR/PUR "+
+      "(the graph's own note). In AIF terms this IS the prior: the magnet condenses each fresh cascade from "+
+      "this accumulated human+agent structure, and every flight row below is a posterior step taken on it. "+
+      "<b>Solid dots</b> = applied citations · <span style='color:#aab4c6;font-weight:700'>faded</span> = "+
+      "embedding candidates · purple = holes carried by the basin (hollow, per the parent's discipline).";
+    el("basins").innerHTML=names.map(function(cl){
+      var pats=Object.keys(basins[cl]).map(function(p){return {p:p,w:basins[cl][p].w,a:basins[cl][p].applied};})
+        .sort(function(x,y){return y.w-x.w;}).slice(0,6);
+      var nm=Object.keys(missionsBy[cl]).length;
+      var ex=Object.keys(missionsBy[cl]).slice(0,3).map(function(m){return m.split("/").pop();}).join(", ");
+      return "<section class='basin'>"+
+        "<div class='dots'>"+pats.map(function(x){
+          return "<span class='pdot"+(x.a>0?"":" minor")+"' title='"+esc(x.p)+" · weight "+x.w.toFixed(1)+
+                 (x.a?" · "+x.a+" applied":" · candidate-only")+"'>"+esc(initials(x.p))+"</span>";}).join("")+"</div>"+
+        "<div class='bt'>"+esc(cl.split("/").pop())+"</div>"+
+        "<div class='bm'>"+nm+" missions · "+Object.keys(basins[cl]).length+" patterns in reach</div>"+
+        "<div class='bm'>e.g. "+esc(ex)+"</div>"+
+        (holesBy[cl]?"<div class='bh'>◌ "+holesBy[cl]+" holes carried</div>":"")+
+        "</section>";}).join("");
+    var comm=Object.keys(patSpread).map(function(p){return {p:p,n:Object.keys(patSpread[p]).length};})
+      .filter(function(x){return x.n>=4;}).sort(function(a,b){return b.n-a.n;}).slice(0,8);
+    el("commissures").innerHTML="<b>Commissures</b> — patterns spanning ≥4 basins (the OVERLAP that makes this a "+
+      "semilattice, not a tree — Alexander's point, now measurable): "+
+      comm.map(function(x){return "<span class='chip'>"+esc(x.p)+" · "+x.n+" basins</span>";}).join("");
+    el("prior-panel").style.display="";
+  }
+
+  Promise.all([j("/api/alpha/war-machine"),j("/api/alpha/cascade-real"),j("/api/alpha/cascade-real/graph")])
   .then(function(r){
-    var wm=r[0],cas=r[1];
+    var wm=r[0],cas=r[1],graph=r[2];
     if(!wm){el("offline").style.display="block";return;}
     el("asof").textContent=" · as of "+new Date().toLocaleString();
     var d=stationData(wm,cas);
     renderLoop(d);
+    renderPrior(graph);
     renderFlight(d);
     renderGamma(d);
     renderStrip(d);
