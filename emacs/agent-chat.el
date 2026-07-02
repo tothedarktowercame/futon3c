@@ -1942,7 +1942,13 @@ CONFIG keys:
     (insert (propertize (make-string 72 ?─) 'face 'font-lock-comment-face) "\n")
     (let ((prompt-start (point)))
       (insert "> ")
-      (overlay-put (make-overlay prompt-start (point)) 'face prompt-face))
+      ;; Face as a TEXT-PROPERTY, not an overlay.  As an overlay it ballooned to
+      ;; span the whole buffer once the text-face overlays were removed (inserted
+      ;; message text got absorbed into the prompt overlay), painting everything
+      ;; prompt-face orange (2026-07-02).  Text-props can't grow on insertion;
+      ;; rear-nonsticky keeps typed input from inheriting the face.
+      (put-text-property prompt-start (point) 'face prompt-face)
+      (put-text-property prompt-start (point) 'rear-nonsticky '(face)))
     (setq agent-chat--input-start (point-marker))
     (set-marker-insertion-type agent-chat--input-start nil)
     ;; Marker advances when messages are inserted
