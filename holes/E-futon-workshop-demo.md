@@ -33,6 +33,8 @@ beyond re-pointing a bridge nick, Agency feature work unrelated to the demo.
 | Load test (5 concurrent clients) | **TODO** | scripted probe exists (this excursion); run after lucy claude auth is fixed |
 | Cards | **GREEN (print-ready)** | A4 sheet, 8 cards: https://claude.ai/code/artifact/97a3794e-7372-4e2d-94c3-89314311e5d2 — print 100% scale, cut on dashed lines. Content = Joe's plan verbatim + `irc.paragogy.net`. |
 | Projector curl/jq | **TODO** | rewrite for `{ok,count,entries}` shape + `since` param; pre-test after fast-path lands |
+| Web chat portal (zero-setup attendees) | **AMBER — one sudo script from GREEN** | The Lounge v4.4.3 on lucy (node 20 via nvm, user-space), PUBLIC mode: locked network → localhost ngircd, password preset server-side, auto-join `#futon`, nick-only prompt. systemd user unit `thelounge` active, :9000 answers 200 locally. DNS `chat.paragogy.net` → lucy live (record 44951703). Remaining: `ssh -t lucy-joe sudo bash ~/portal-setup.sh` (cert + websocket nginx vhost). Then phone clients become optional entirely. |
+| lucy disk headroom | **AMBER** | 97% full, 2.9G free — ENOSPC mid-workshop is a real risk. Quick wins in Joe's homedir: two duplicate docker-desktop .debs (~0.9G) + physics.stackexchange.7z (113M). `/home/joe/code` = 39G (futon6 14G). Joe to prune before demo day. |
 
 ## Decisions — TAKEN (Joe, 2026-07-04)
 
@@ -65,4 +67,6 @@ externally by hostname.
 - [x] Decisions 1–3 — taken 2026-07-04.
 - [ ] `ssh -t lucy-joe sudo bash ~/workshop-setup.sh` (MaxConnectionsIP + cert + SSL swap, run-once).
 - [ ] Codex on metameso: renew sub, install CLI, `codex login` (post-lake; then claude-14 does R2 steps 2–3).
+- [ ] `ssh -t lucy-joe sudo bash ~/portal-setup.sh` → https://chat.paragogy.net (then claude-14 verifies end-to-end + updates cards to lead with the URL).
+- [ ] Disk: `rm ~/docker-desktop-amd64.deb*` on lucy (~0.9G) + consider pruning futon6 (14G) — 97% full.
 - [ ] Venue wifi check + 4G hotspot (from the original checklist).
