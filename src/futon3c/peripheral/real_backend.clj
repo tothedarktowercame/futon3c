@@ -77,9 +77,22 @@
             (swap! results conj (.getPath ^File f))))))
     {:ok true :result @results}))
 
+(def ^:private grep-skip-dirs
+  "Directory names never descended into by tool-grep (unless explicitly the
+   search base). Found live 2026-07-04: a whole-workspace search slurped a
+   279 MB CUDA .so from .venv and RocksDB .sst store files for ~50 minutes,
+   wedging the agent's turn drainer."
+  #{"node_modules" "storage" "target" "out" "dist" ".venv"})
+
+(def ^:private grep-max-file-bytes (* 2 1024 1024))
+(def ^:private grep-time-budget-ms 30000)
+
 (defn- tool-grep
   "Search file contents by regex. Args: [pattern] or [pattern path] or [pattern path opts].
-   opts: {:case-insensitive bool, :max-matches N}."
+   opts: {:case-insensitive bool, :max-matches N}.
+   Bounded: prunes dot/vendor/store directories, skips files > 2 MB, and
+   stops at a 30 s budget — truncation is reported as a sentinel match, not
+   silently."
   [cwd args]
   (let [pattern-str (first args)
         search-path (or (second args) (str cwd))
@@ -90,21 +103,39 @@
         re (java.util.regex.Pattern/compile pattern-str flags)
         max-matches (or (:max-matches opts) 500)
         base (resolve-path cwd search-path)
+        deadline (+ (System/currentTimeMillis) grep-time-budget-ms)
+        skip-dir? (fn [^File d]
+                    (let [n (.getName d)]
+                      (or (str/starts-with? n ".")
+                          (contains? grep-skip-dirs n))))
         results (atom [])
-        done? (atom false)]
+        done? (atom false)
+        timed-out? (atom false)
+        over? (fn []
+                (or @done?
+                    (.isInterrupted (Thread/currentThread))
+                    (when (> (System/currentTimeMillis) deadline)
+                      (reset! timed-out? true)
+                      true)))]
     (when (.exists base)
       (let [files (if (.isFile base)
                     [base]
-                    (->> (file-seq base)
+                    (->> (tree-seq
+                          (fn [^File f]
+                            (and (.isDirectory f)
+                                 (or (= f base) (not (skip-dir? f)))))
+                          (fn [^File f] (seq (.listFiles f)))
+                          base)
                          (filter #(.isFile ^File %))
-                         (remove #(str/starts-with? (.getName ^File %) "."))))]
+                         (remove #(str/starts-with? (.getName ^File %) "."))
+                         (remove #(> (.length ^File %) grep-max-file-bytes))))]
         (doseq [^File f files
-                :while (not @done?)]
+                :while (not (over?))]
           (try
             (let [content (slurp f)
                   lines (str/split-lines content)]
               (doseq [[idx line] (map-indexed vector lines)
-                      :while (not @done?)]
+                      :while (not (over?))]
                 (when (.find (.matcher re line))
                   (swap! results conj {:file (.getPath f)
                                        :line (inc idx)
@@ -112,7 +143,14 @@
                   (when (>= (count @results) max-matches)
                     (reset! done? true)))))
             (catch Exception _)))))
-    {:ok true :result @results}))
+    {:ok true
+     :result (if @timed-out?
+               (conj @results
+                     {:file "[search-truncated]" :line 0
+                      :content (str "search stopped at the " (/ grep-time-budget-ms 1000)
+                                    "s budget — results may be incomplete; "
+                                    "narrow the path or pattern")})
+               @results)}))
 
 (defn- tool-edit
   "Edit file contents (find/replace). Args: [file-path old-string new-string]."
@@ -172,8 +210,18 @@
             err @err-future]
         {:exit exit :out out :err err})
       (do
+        ;; Kill the WHOLE process tree, descendants first. destroyForcibly
+        ;; on the bash child alone orphans grandchildren — found live
+        ;; 2026-07-04: timed-out `clojure -M:node` runs left full XTDB/Arrow
+        ;; JVMs running invisibly (default heap = 1/4 RAM each), building
+        ;; the memory pressure implicated in both serving-JVM deaths.
+        (doseq [h (iterator-seq (.iterator (.descendants (.toHandle proc))))]
+          (try (.destroyForcibly ^java.lang.ProcessHandle h)
+               (catch Throwable _)))
         (.destroyForcibly proc)
-        {:exit -1 :out "" :err (str "Command timed out after " timeout-ms "ms")}))))
+        {:exit -1 :out ""
+         :err (str "Command timed out after " timeout-ms "ms"
+                   " (process tree killed; pass {\"timeout_ms\": N} for long runs)")}))))
 
 (defn- tool-bash
   "Execute a bash command. Args: [command] or [command {:timeout-ms N}].
@@ -399,21 +447,35 @@
                 :proof-path/file (:file persisted)}]
     ;; Bridge: append synthetic evidence entry to the evidence landscape
     (when evidence-store
-      (let [entry {:evidence/id (str "e-pp-" (:path/id proof-path))
-                   :evidence/subject {:ref/type :proof-path
-                                      :ref/id (:path/id proof-path)}
-                   :evidence/type :coordination
-                   :evidence/claim-type :observation
-                   :evidence/author "gate-pipeline"
-                   :evidence/at (str (Instant/now))
-                   :evidence/body {:event :proof-path-persisted
-                                   :path/id (:path/id proof-path)
-                                   :path/file (:file persisted)
-                                   :gate-events (mapv :gate/id events)}
-                   :evidence/tags [:proof-path :gate-traversal]}]
-        (let [append-result (boundary/append! evidence-store entry)]
-          (when (and (map? append-result) (contains? append-result :error/code))
-            (println "[WARN] proof-path evidence append failed:" (:error/message append-result))))))
+      ;; Punctuator identity (M-custom-harness §13.5c): the bridged body
+      ;; strips gate records to ids, which made agents unable to recognize
+      ;; their own PARs in the shared record. Carry the session-ref and the
+      ;; discipline kind explicitly.
+      (let [session-ref (or (get-in evidence [:par :par/session-ref])
+                            (get-in evidence [:psr :psr/session-ref]))
+            kind (cond
+                   (:par evidence) :par
+                   (:pur evidence) :pur
+                   (:psr evidence) :psr
+                   :else :proof-path)
+            entry (cond-> {:evidence/id (str "e-pp-" (:path/id proof-path))
+                           :evidence/subject {:ref/type :proof-path
+                                              :ref/id (:path/id proof-path)}
+                           :evidence/type :coordination
+                           :evidence/claim-type :observation
+                           :evidence/author "gate-pipeline"
+                           :evidence/at (str (Instant/now))
+                           :evidence/body (cond-> {:event :proof-path-persisted
+                                                   :path/id (:path/id proof-path)
+                                                   :path/file (:file persisted)
+                                                   :gate-events (mapv :gate/id events)
+                                                   :discipline-kind kind}
+                                            session-ref (assoc :session-ref session-ref))
+                           :evidence/tags [:proof-path :gate-traversal]}
+                    session-ref (assoc :evidence/session-id session-ref))
+            append-result (boundary/append! evidence-store entry)]
+        (when (and (map? append-result) (contains? append-result :error/code))
+          (println "[WARN] proof-path evidence append failed:" (:error/message append-result)))))
     result))
 
 (defn- tool-psr-search
