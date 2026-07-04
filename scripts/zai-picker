@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+EMACSCLIENT_BIN="${EMACSCLIENT_BIN:-emacsclient}"
+EMACSCLIENT_SOCKET="${EMACSCLIENT_SOCKET:-}"
+
+elisp_escape() {
+  python3 - "$1" <<'PY'
+import json, sys
+print(json.dumps(sys.argv[1])[1:-1])
+PY
+}
+
+if ! command -v "${EMACSCLIENT_BIN}" >/dev/null 2>&1; then
+  echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
+  exit 1
+fi
+
+socket_args=()
+if [[ -n "${EMACSCLIENT_SOCKET}" ]]; then
+  socket_args=(-s "${EMACSCLIENT_SOCKET}")
+fi
+
+agent_chat="$(elisp_escape "${ROOT}/emacs/agent-chat.el")"
+zai_repl="$(elisp_escape "${ROOT}/emacs/zai-repl.el")"
+
+"${EMACSCLIENT_BIN}" "${socket_args[@]}" -e "(progn
+  (load \"${agent_chat}\")
+  (load \"${zai_repl}\")
+  (zai-repl))" >/dev/null

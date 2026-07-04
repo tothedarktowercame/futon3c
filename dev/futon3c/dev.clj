@@ -51,6 +51,7 @@
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agents.tickle :as tickle]
+            [futon3c.agents.zai-api :as zai-api]
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.agency.agent-pouch :as agent-pouch]
@@ -95,6 +96,7 @@
 
 (declare make-claude-invoke-fn)
 (declare make-codex-invoke-fn)
+(declare make-zai-invoke-fn)
 (declare record-invoke-delivery!)
 (declare make-bridge-irc-send-fn)
 (declare mirror-apm-conductor-v2-to-codex-repl!)
@@ -3941,6 +3943,27 @@ RESPOND WITH ONLY:
             :else
             (locking !lock
               (invoke-warm-or-cold prompt session-id))))))))
+
+(defn make-zai-invoke-fn
+  "Create an invoke-fn backed by Z.AI chat completions plus local Futon tools."
+  [{:keys [agent-id session-file session-id-atom initial-session-id timeout-ms model cwd evidence-store]
+    :or {agent-id "zai" timeout-ms 300000}}]
+  (let [irc-send-fn (or (some-> @!irc-sys :server :send-to-channel!)
+                        (try
+                          (make-bridge-irc-send-fn)
+                          (catch Throwable _ nil)))
+        irc-recent-fn (fn [n] (irc-recent (or n 30)))]
+    (zai-api/make-invoke-fn
+     (cond-> {:agent-id agent-id
+              :session-file session-file
+              :session-id-atom session-id-atom
+              :initial-session-id initial-session-id
+              :timeout-ms timeout-ms
+              :cwd (or cwd (System/getProperty "user.dir"))
+              :evidence-store evidence-store
+              :irc-recent-fn irc-recent-fn}
+       model (assoc :model model)
+       irc-send-fn (assoc :irc-send-fn irc-send-fn)))))
 
 (def ^:private codex-work-claim-re
   #"(?i)\b(i['’]?ll|i will|we['’]?ll|we will|claiming|i claim|taking|i(?:'m| am) taking|proceeding|starting|kicking off|working on|i(?:'m| am) on it)\b")

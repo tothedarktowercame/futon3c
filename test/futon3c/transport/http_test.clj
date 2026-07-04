@@ -511,6 +511,37 @@
             (when (.exists session-file)
               (.delete session-file))))))))
 
+(deftest zai-auto-register-seeds-session-id
+  (testing "POST /api/alpha/agents/auto creates a fresh zai lane with its own session file"
+    (let [handler (make-handler)
+          session-file (io/file "/tmp/futon-zai-session-id-zai-1")
+          backup (when (.exists session-file) (slurp session-file))
+          sid "sess-auto-zai-register"
+          cwd "/home/joe/code"
+          body (json/generate-string {"type" "zai"
+                                      "session-id" sid
+                                      "cwd" cwd})]
+      (try
+        (when (.exists session-file)
+          (.delete session-file))
+        (let [response (post handler "/api/alpha/agents/auto" body)
+              parsed (parse-body response)
+              agent (reg/get-agent "zai-1")]
+          (is (= 201 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "zai-1" (:agent-id parsed)))
+          (is (= sid (:session-id parsed)))
+          (is (= (.getPath session-file) (:session-file parsed)))
+          (is (= cwd (:cwd parsed)))
+          (is (= :zai (:agent/type agent)))
+          (is (= sid (:agent/session-id agent)))
+          (is (= sid (some-> session-file slurp str/trim))))
+        (finally
+          (if (some? backup)
+            (spit session-file backup)
+            (when (.exists session-file)
+              (.delete session-file))))))))
+
 (deftest agent-restore-registers-codex-exact-identity
   (testing "POST /api/alpha/agents/restore recreates an exact codex identity"
     (let [handler (make-handler)

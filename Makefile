@@ -20,7 +20,7 @@ export FUTON3C_SHADOW_AUTOSTART
 export FUTON3C_SHADOW_BUILDS
 export FUTON3C_REPOS
 
-.PHONY: tools dev dev-linode restart test claude claude-repl codex codex-repl codex-autowake tickle status gh-hygiene gh-issue-holes repl \
+.PHONY: tools dev dev-linode restart test claude claude-repl codex codex-repl zai-repl codex-autowake tickle status gh-hygiene gh-issue-holes repl \
 	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
 
 tools:
@@ -58,6 +58,9 @@ codex:
 
 codex-repl:
 	./scripts/codex-picker --repl $(ARGS)
+
+zai-repl:
+	./scripts/zai-picker $(ARGS)
 
 codex-autowake:
 	./scripts/codex-autowake $(ARGS)

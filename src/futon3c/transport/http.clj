@@ -1990,6 +1990,7 @@
 (def ^:private default-capabilities
   {:claude [:explore :edit :test :coordination/execute]
    :codex  [:edit :test :coordination/execute]
+   :zai    [:explore :edit :test :coordination/execute]
    :tickle [:mission-control :discipline :coordination/execute]})
 
 (defn- claude-session-cwd
@@ -2027,6 +2028,7 @@
   (case agent-type
     :claude (format "/tmp/futon-session-id-%s" agent-id)
     :codex (format "/tmp/futon-codex-session-id-%s" agent-id)
+    :zai (format "/tmp/futon-zai-session-id-%s" agent-id)
     nil))
 
 (defn- make-session-id-atom
@@ -2082,6 +2084,18 @@
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
+      :zai
+      (try
+        (require 'futon3c.dev)
+        (when-let [make-fn (resolve 'futon3c.dev/make-zai-invoke-fn)]
+          (@make-fn (cond-> {:agent-id agent-id
+                             :session-file session-file
+                             :session-id-atom sid-atom
+                             :initial-session-id initial-session-id}
+                      model (assoc :model model)
+                      requested-cwd (assoc :cwd requested-cwd))))
+        (catch Throwable _ nil))
+
       nil)))
 
 (defn- handle-agents-register
@@ -2117,7 +2131,7 @@
 
           (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
-                              :message "type is required (claude, codex, tickle, mock)"})
+                              :message "type is required (claude, codex, zai, tickle, mock)"})
 
           :else
           (let [invoke-fn (cond
@@ -2180,6 +2194,7 @@
                              (let [stale-sf (case agent-type
                                              :claude (format "/tmp/futon-session-id-%s" ghost)
                                              :codex (format "/tmp/futon-codex-session-id-%s" ghost)
+                                             :zai (format "/tmp/futon-zai-session-id-%s" ghost)
                                              nil)]
                                (when (and stale-sf (.exists (java.io.File. stale-sf)))
                                  (.delete (java.io.File. stale-sf))))
@@ -2251,8 +2266,9 @@
                                      mission-id (assoc :mission-id mission-id)
                                      excursion-id (assoc :excursion-id excursion-id)
                                      emacs-socket (assoc :emacs-socket emacs-socket))})]
-            (when (and invoke-fn (map? result) (:agent/id result))
-              (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
+            (when (and (map? result) (:agent/id result))
+              (when invoke-fn
+                (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
               (when initial-session-id
                 (when session-file
                   (spit session-file initial-session-id))
@@ -2353,7 +2369,7 @@
                            (seq raw-contracts) (assoc :agency/contracts raw-contracts)
                            restored-detached? (assoc :restore/state :restored/detached
                                                      :restore/restored-at (str (java.time.Instant/now))))]
-            (if (nil? invoke-fn)
+            (if (and (nil? invoke-fn) (not= :zai agent-type))
               (json-response 500 {:ok false
                                   :err "restore-failed"
                                   :message (str "Could not build invoke-fn for " agent-id)})
