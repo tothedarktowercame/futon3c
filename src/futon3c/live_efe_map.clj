@@ -306,6 +306,31 @@
      :target {:mission-id target
               :placement (placement target positions doc-index)}}))
 
+(defn- ship-position
+  "Joe's rocket (operator decision 2026-07-04, resolving T3/C2): not a cursor
+   stream — the unweighted centroid of ACTIVE sessions' map positions. Active =
+   status invoking/idle (alive this server epoch, not merely restored) with an
+   :embedded or :approximate placement; frontier-shelf coordinates are synthetic
+   and excluded. No live contributors -> nil (the rocket is honestly absent)."
+  [agents]
+  (let [contributing (->> agents
+                          (filter #(contains? #{"invoking" "idle" :invoking :idle}
+                                              (:status %)))
+                          (filter #(contains? #{:embedded :approximate}
+                                              (get-in % [:placement :placement]))))]
+    (when (seq contributing)
+      (let [n (count contributing)
+            x (/ (reduce + (map #(double (get-in % [:placement :x])) contributing)) n)
+            y (/ (reduce + (map #(double (get-in % [:placement :y])) contributing)) n)]
+        {:x x
+         :y y
+         :method :active-session-centroid
+         :contributing (mapv (fn [a] {:agent-id (:agent-id a)
+                                      :mission-id (:mission-id a)})
+                             contributing)
+         :session-count n
+         :as-of (now-ms)}))))
+
 (defn build-response
   [{:keys [registry invoke-jobs evidence-store wm-limit]
     :or {wm-limit 25}}]
@@ -343,5 +368,6 @@
               :items agents}
      :war-machine {:count (count wm)
                    :items wm}
+     :ship (ship-position agents)
      :frontier {:count (count frontier)
                 :items frontier}}))
