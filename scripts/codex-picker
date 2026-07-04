@@ -306,11 +306,13 @@ launch_repl() {
     new_form="nil"
   fi
 
-  if command -v timeout >/dev/null 2>&1; then
-    emacsclient_cmd=(timeout --kill-after=2 "${emacsclient_timeout}s" "${emacsclient_bin}")
-  else
-    emacsclient_cmd=("${emacsclient_bin}")
-  fi
+  # This launch path always uses emacsclient --no-wait.  Do not wrap it in
+  # GNU timeout: killing an emacsclient while Emacs is still processing the
+  # server handshake can leave a dead process in server-clients, which then
+  # surfaces as server-send-string "connection broken by remote peer" errors
+  # during the next request.  emacsclient's own --timeout handles unavailable
+  # sockets without severing an accepted client.
+  emacsclient_cmd=("${emacsclient_bin}")
   socket_name="$(futon_preferred_emacs_socket || true)"
   if [[ -n "${socket_name}" ]]; then
     emacsclient_cmd+=(--socket-name "${socket_name}")
