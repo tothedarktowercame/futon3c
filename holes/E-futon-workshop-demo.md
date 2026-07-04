@@ -28,17 +28,33 @@ beyond re-pointing a bridge nick, Agency feature work unrelated to the demo.
 | Evidence mirror query | **RED — parcel in flight** | `GET /api/alpha/evidence?limit=3`: 15s on laptop (near-empty store), >30s timeout on lucy. Fast-path build belled to claude-11 (2026-07-04, job `invoke-…-53de8c1c`); deploy needs a lucy restart window. NOTE: response shape is `{ok,count,entries}` — the plan's jq needs `.entries[]`, not `.[]`. |
 | Venue NAT headroom | **AMBER — one sudo line** | `MaxConnectionsIP = 10` in ngircd.conf would bounce half a 20-person room behind one NAT. Needs (Joe, has sudo): `sudo sed -i 's/MaxConnectionsIP = 10/MaxConnectionsIP = 40/' /etc/ngircd/ngircd.conf && sudo pkill -HUP -x ngircd` (backup first). |
 | DNS `irc.futonproject.org` | **RED — decision needed** | NXDOMAIN. Card hostname doesn't exist; TLS cert only matches the linodeusercontent name. See Decisions. |
-| Mesh across two Linodes | **AMBER** | metameso up (238d), JVM running, roster `chi-claude-1` + mirrored `lon-claude-1`. But lucy does NOT see `chi-claude-1` back — federation reconciles at boot only (known gap, no periodic re-sync). One `sync-peers!` on lucy fixes it for the demo; periodic re-sync remains the tracked follow-up. |
+| Mesh across two Linodes | **GREEN (fixed today)** | Root cause of the one-way view: lucy's JVM has NO `FUTON3C_PEERS` configured (hub never pulls workers). Fixed live via Drawbridge `(federation/sync-peer! "http://172.236.108.82:7070")` → `chi-claude-1 :registered`, `lon-claude-1 :skipped-local`. **Cross-node invoke PROVEN**: bell via lucy's API → proxy → metameso CLI → "ok" in <10s (job `invoke-…-9e9b6dc9`). Durability: add `FUTON3C_PEERS=http://172.236.108.82:7070` to lucy's env for the next restart; re-run `sync-peer!` after any metameso (re)boot until periodic re-sync lands. |
 | lucy JVM | **GREEN** | up since 2026-06-16 (17.7d), queue-hardening gates all true, 3 agents registered |
 | Load test (5 concurrent clients) | **TODO** | scripted probe exists (this excursion); run after lucy claude auth is fixed |
 | Cards | **TODO** | blocked on the hostname decision; printable sheet is a quick artifact once decided |
 | Projector curl/jq | **TODO** | rewrite for `{ok,count,entries}` shape + `since` param; pre-test after fast-path lands |
 
-## Decisions (Joe)
+## Decisions — TAKEN (Joe, 2026-07-04)
 
-1. **Card hostname/TLS** — options: (a) print `172-236-28-208.ip.linodeusercontent.com:6697` (works today, ugly); (b) point a domain Joe controls (e.g. `irc.hyperreal.enterprises`?) at lucy + certbot a matching cert (nicest, ~half a day incl. DNS propagation); (c) IP + port 6667 plaintext on the card (no TLS story).
-2. **The second agent seat (@codex)** — options: (a) renew Codex before the demo + keep laptop WS bridge running at the venue (two fragilities); (b) re-point the `codex` nick at `claude-2` on lucy (zero new infra, honest-label question); (c) integrate z.ai GLM behind the codex seat (new integration + new subscription in demo week = risk; better as a post-workshop experiment).
-3. **Matrix** — recommendation: NOT this week. Rob's agents already federate via the #zabuton WS bridge; Rob-as-human can join by IRC like everyone else (or Element→his own homeserver, unrelated to our stack). Matrix bridge remains parked (`holes/tickets/T-matrix-federation-proof.md`).
+1. **Card hostname/TLS: real domain + fresh cert.** `hyperreal.enterprises` DNS is served from Joe's own box (`ns1/ns2.box.hyperreal.enterprises`) — one A record away. Runbook below. Final hostname to be confirmed before cards print (working assumption: `irc.hyperreal.enterprises`).
+2. **@codex seat: run Codex from linode-chicago (metameso).** Joe's own words: "plan to run Codex but from linode-chicago — if I get eager I will *also* add glm". Cross-node invoke path proven today (see mesh row). Runbook below. GLM = optional extra, Joe-driven.
+3. **Matrix: SKIP for the workshop.** Rob's agents already federate via #zabuton WS; `T-matrix-federation-proof` stays parked as the post-workshop follow-up (possibly hosted from lucy — different IP may clear the Cloudflare block).
+
+## Runbooks
+
+**R1 — DNS + cert (Joe: DNS panel + sudo on lucy):**
+1. Add `A irc.hyperreal.enterprises → 172.236.28.208` on the box DNS.
+2. On lucy (nginx is present — use its plugin or webroot, NOT standalone):
+   `sudo certbot certonly --nginx -d irc.hyperreal.enterprises`
+3. Point ngircd `[SSL] CertFile/KeyFile` at the new lineage, `sudo pkill -HUP -x ngircd`.
+4. Verify: `openssl s_client -connect irc.hyperreal.enterprises:6697` → CN matches, then tell claude-14 to regenerate/print-check the cards.
+
+**R2 — Codex on metameso (Joe: install + auth; claude-14: register + rewire + test):**
+1. (Joe) Renew the Codex subscription; on metameso: install codex CLI (`npm i -g @openai/codex`; check node first — not verified present) and `codex login`.
+2. (claude-14) Register the agent on metameso with an EXPLICIT id `chi-codex-1` via `POST /api/alpha/agents` — do NOT auto-register: the site-prefix rollout covered local claude only, so auto would mint unprefixed `codex-1`, which is a PROTECTED id and gets refused on mirror to lucy.
+3. (claude-14) `sync-peer!` on lucy → `chi-codex-1` proxied; bridge env `NICK_AGENT_MAP codex:chi-codex-1`; restart `ngircd-bridge@futon`; IRC probe `@codex ping` end-to-end.
+
+**R3 — before-demo ops on lucy (Joe, sudo/auth):** claude auth fix · `MaxConnectionsIP` 10→40 + HUP · `FUTON3C_PEERS` env for next restart. Then (claude-14): load test with 5+ scripted IRC clients, mirror-phase curl/jq rewrite (`.entries[]`, `since` param) and rehearsal, evidence fast-path deploy at a Joe-blessed restart window.
 
 ## Fixes landed this excursion
 
