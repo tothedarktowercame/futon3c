@@ -1276,7 +1276,7 @@
 (defn- handle-get-session
   "GET /session/:id — retrieve session by ID from persist store.
    Returns 200 + SessionRecord JSON or 404."
-  [request config]
+  [request _config]
   (let [uri (:uri request)
         session-id (when (str/starts-with? (str uri) "/session/")
                      (subs uri (count "/session/")))]
@@ -2214,7 +2214,7 @@
    Local registration (no origin-url): default no-op invoke-fn.
    Set ws-bridge=true to register with no local invoke-fn and use WS fallback.
    Proxy registration (with origin-url): invoke-fn forwards to origin Agency."
-  [request config]
+  [request _config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"
@@ -5700,6 +5700,17 @@
       ;; C-cascade-real D1/O3: durable auto-clock for the repl buffer to poll.
       (and (= :get method) (= "/api/alpha/agent-clock" uri))
       (handle-agent-clock request)
+
+      ;; M-live-efe-map VERIFY: read-only live join over agents, WM ticks,
+      ;; clocks, invoke jobs, and the frozen EFE coordinate set.
+      (and (= :get method) (= "/api/alpha/live-efe-map" uri))
+      (let [f (requiring-resolve 'futon3c.live-efe-map/build-response)]
+        (-> (json-response 200
+                           (f {:registry (reg/registry-status)
+                               :invoke-jobs (recent-invoke-jobs 200)
+                               :evidence-store (evidence-store-for-config config)
+                               :wm-limit 25}))
+            (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))
 
       ;; E-repl-continuations Car 2b: register a parked-on continuation.
       (and (= :post method) (= "/api/alpha/park" uri))
