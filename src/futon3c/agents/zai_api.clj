@@ -602,7 +602,23 @@
                   (when-not (str/blank? text)
                     (sink! agent-id {:type "text" :text text}))
                   (if tool-calls
-                    (let [executed (mapv #(execute-tool backend tool-opts %) tool-calls)
+                    ;; A tool exception must NEVER kill the turn: feed the
+                    ;; error back as the tool result so the model can correct
+                    ;; (found live 2026-07-04: a nil :path arg NPE'd through
+                    ;; resolve-path and destroyed a 37-event turn mid-flight).
+                    (let [executed (mapv (fn [tc]
+                                           (try (execute-tool backend tool-opts tc)
+                                                (catch Throwable t
+                                                  (let [d (tool-call-detail tc (parse-arguments (get-in tc [:function :arguments])))]
+                                                    {:detail d
+                                                     :message {:role "tool"
+                                                               :tool_call_id (:id tc)
+                                                               :name (get-in tc [:function :name])
+                                                               :content (str "TOOL ERROR (turn continues): "
+                                                                             (.getName (class t)) ": "
+                                                                             (or (.getMessage t) "no message")
+                                                                             " — check argument names/values and retry")}}))))
+                                         tool-calls)
                           details (mapv :detail executed)
                           results (mapv (fn [{:keys [detail message]}]
                                           {:tool_use_id (:id detail)

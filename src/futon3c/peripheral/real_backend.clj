@@ -35,8 +35,12 @@
 ;; =============================================================================
 
 (defn- resolve-path
-  "Resolve a path relative to cwd. Absolute paths pass through."
+  "Resolve a path relative to cwd. Absolute paths pass through.
+   nil path throws a clear error (io/file nil silently returns nil and the
+   NPE surfaces far away — found live 2026-07-04, a nil :path tool arg)."
   ^File [cwd path]
+  (when (nil? path)
+    (throw (ex-info "path argument required (got nil) — check the tool's argument names" {})))
   (let [f (io/file path)]
     (if (.isAbsolute f)
       f
