@@ -42,12 +42,11 @@ beyond re-pointing a bridge nick, Agency feature work unrelated to the demo.
 
 ## Runbooks
 
-**R1 — DNS + cert (Joe: DNS panel + sudo on lucy):**
-1. Add `A irc.hyperreal.enterprises → 172.236.28.208` on the box DNS.
-2. On lucy (nginx is present — use its plugin or webroot, NOT standalone):
-   `sudo certbot certonly --nginx -d irc.hyperreal.enterprises`
-3. Point ngircd `[SSL] CertFile/KeyFile` at the new lineage, `sudo pkill -HUP -x ngircd`.
-4. Verify: `openssl s_client -connect irc.hyperreal.enterprises:6697` → CN matches, then tell claude-14 to regenerate/print-check the cards.
+**R1 — DNS + cert: DNS DONE (`irc.paragogy.net` live, linode-cli record 44950488).**
+Remaining = one command (Joe): `ssh -t lucy-joe sudo bash ~/workshop-setup.sh`
+(steps: MaxConnectionsIP 40 · certbot for irc.paragogy.net · privkey root:irc 0640 ·
+renewal deploy hook · ngircd [SSL] swap · HUP · TLS verify). Then claude-14 re-probes
+externally by hostname.
 
 **R2 — Codex on metameso (Joe: install + auth; claude-14: register + rewire + test):**
 1. (Joe) Renew the Codex subscription; on metameso: install codex CLI (`npm i -g @openai/codex`; check node first — not verified present) and `codex login`.
@@ -62,7 +61,8 @@ beyond re-pointing a bridge nick, Agency feature work unrelated to the demo.
 
 ## Joe's personal checklist (things only Joe can do)
 
-- [ ] Fix Claude auth on lucy (`claude login` there, or setup-token → env).
-- [ ] `MaxConnectionsIP` sudo one-liner (above).
-- [ ] Decisions 1–3.
+- [x] Fix Claude auth on lucy — DONE 2026-07-04, round-trip verified.
+- [x] Decisions 1–3 — taken 2026-07-04.
+- [ ] `ssh -t lucy-joe sudo bash ~/workshop-setup.sh` (MaxConnectionsIP + cert + SSL swap, run-once).
+- [ ] Codex on metameso: renew sub, install CLI, `codex login` (post-lake; then claude-14 does R2 steps 2–3).
 - [ ] Venue wifi check + 4G hotspot (from the original checklist).
