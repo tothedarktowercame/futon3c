@@ -205,7 +205,7 @@
   [evidence-store]
   (if-not evidence-store
     #{}
-    (let [entries (estore/query* evidence-store {})
+    (let [entries (estore/query* evidence-store {:query/tags [:ct-extraction]}) ;; tag-filter pushed into XTDB (futon1a#5): bounded, not full-scan
           ct-entries (->> entries
                           (filter #(some #{:ct-extraction} (:evidence/tags %)))
                           (filter #(some #{:workflow-complete :kick-complete}

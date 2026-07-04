@@ -76,7 +76,7 @@
   ([evidence-store]
    (tickle-status evidence-store {}))
   ([evidence-store {:keys [now]}]
-   (let [entries (if evidence-store (estore/query* evidence-store {}) [])
+   (let [entries (if evidence-store (estore/query* evidence-store {:query/tags [:orchestrate]}) []) ;; tag-filter into XTDB (futon1a#5)
          orch-entries (->> entries
                            (filter #(some #{:orchestrate} (:evidence/tags %)))
                            (map (fn [entry]
