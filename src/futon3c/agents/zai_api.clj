@@ -531,7 +531,10 @@
                                         "When you finish work another agent belled you about, bell them back with a summary — do not rely on the automatic completion bell alone. "
                                         "Send required bells IMMEDIATELY when the checkpoint is reached — the bell is part of the checkpoint, not an epilogue. "
                                         "Never end a turn with a bell announced but unsent: your turn ends when you stop calling tools, so stated intent does not execute. "
-                                        "'Announced' is not 'sent'.")}])
+                                        "'Announced' is not 'sent'. "
+                                        "Symmetrically: instructions that arrive in the reply/auto-bellback "
+                                        "to YOUR OWN bell are operative dispatches — act on them in that turn; "
+                                        "never park 'holding for a bell' that the reply already was.")}])
         !booted (atom false)
         opts {:base-url (or base-url (getenv "ZAI_BASE_URL") default-base-url)
               :model (or model (getenv "ZAI_MODEL") default-model)
