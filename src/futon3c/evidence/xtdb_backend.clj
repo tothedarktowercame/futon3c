@@ -281,6 +281,21 @@
         (swap! count-cache assoc params {:v v :at now})
         v))))
 
+(defn- calling-frames
+  "First few non-infrastructure stack frames, demunged. Timeout WARNs carry
+   these so the log names its caller — a 15s degraded query is a defect
+   report, and a defect report needs a return address (operator request,
+   2026-07-04: repeated params={} timeouts with no way to find the source)."
+  []
+  (->> (.getStackTrace (Thread/currentThread))
+       (keep (fn [^StackTraceElement el]
+               (let [c (.getClassName el)]
+                 (when-not (re-find #"^(java\.|jdk\.|clojure\.|futon3c\.evidence\.)" c)
+                   (clojure.lang.Compiler/demunge c)))))
+       distinct
+       (take 3)
+       vec))
+
 (defrecord XtdbBackend [node]
   backend/EvidenceBackend
 
@@ -329,7 +344,9 @@
         (binding [*out* *err*]
           (println (str "[evidence] WARN XTDB evidence query timed out after "
                         query-timeout-ms "ms — degraded to empty result. "
-                        "params=" (pr-str params))))
+                        "params=" (pr-str params)
+                        " thread=" (.getName (Thread/currentThread))
+                        " callers=" (pr-str (calling-frames)))))
         [])))
 
   (-count [_ params]
@@ -339,7 +356,9 @@
         (binding [*out* *err*]
           (println (str "[evidence] WARN XTDB evidence count timed out after "
                         query-timeout-ms "ms — degraded to -1. "
-                        "params=" (pr-str params))))
+                        "params=" (pr-str params)
+                        " thread=" (.getName (Thread/currentThread))
+                        " callers=" (pr-str (calling-frames)))))
         -1)))
 
   (-forks-of [_ evidence-id]
