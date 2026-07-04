@@ -146,7 +146,8 @@
    rather than letting the exception propagate and wedge the server."
   [status body]
   {:status status
-   :headers {"Content-Type" "application/json"}
+   :headers {"Content-Type" "application/json"
+             "Access-Control-Allow-Origin" "*"}
    :body (if (string? body)
            body
            (try
@@ -312,6 +313,67 @@
   (let [updated (swap! !invoke-jobs-ledger f)]
     (persist-invoke-jobs-ledger! updated)))
 
+(defn- trim-stream-event
+  "Compact a live invoke event for the durable job ledger. Text is
+   truncated; tool inputs reduce to short previews; tool_result is
+   dropped (the tool_use preview is the observability unit)."
+  [event]
+  (let [etype (str (:type event))]
+    (case etype
+      "text"
+      (let [t (str (or (:text event) ""))]
+        (when-not (str/blank? t)
+          {:event-type "text"
+           :payload {:text (if (> (count t) 2000)
+                             (str (subs t 0 2000) " …[trimmed]")
+                             t)}}))
+      ;; The inbound user/caller prompt, recorded at job start so sessions
+      ;; can rehydrate turns from the ledger (M-custom-harness D-7) — before
+      ;; 2026-07-04 prompts were not persisted anywhere.
+      "prompt"
+      (let [t (str (or (:text event) ""))]
+        (when-not (str/blank? t)
+          {:event-type "prompt"
+           :payload {:text (if (> (count t) 1500)
+                             (str (subs t 0 1500) " …[trimmed]")
+                             t)}}))
+      "tool_use"
+      {:event-type "tool_use"
+       :payload {:tools (mapv str (or (:tools event) []))
+                 :previews (mapv (fn [d]
+                                   (let [input (:input d)
+                                         hint (when (map? input)
+                                                (some input [:path :command :pattern
+                                                             :query :repo :namespace]))
+                                         ;; single display line: collapse
+                                         ;; newlines/whitespace runs (heredoc
+                                         ;; commands break line-based
+                                         ;; fontification downstream)
+                                         hint (some-> hint str
+                                                      (str/replace #"\s+" " "))
+                                         hint (when hint
+                                                (if (> (count hint) 120)
+                                                  (subs hint 0 120)
+                                                  hint))]
+                                     (str (:name d) (when hint (str " " hint)))))
+                                 (or (:tool_details event) []))}}
+      nil)))
+
+(defn- record-job-stream-event!
+  "Append a live text/tool_use event to a job's ledger record so bell-seeded
+   turns are observable via GET /api/alpha/invoke/jobs (agent-follow-mode).
+   Deliberately does NOT persist per-event — finalize persists; this is a
+   live observability feed, acceptable to lose on restart."
+  [job-id event]
+  (when-let [{:keys [event-type payload]} (trim-stream-event event)]
+    (ensure-invoke-jobs-ledger!)
+    (swap! !invoke-jobs-ledger
+           (fn [ledger]
+             (if-let [job (get-in ledger [:jobs job-id])]
+               (assoc-in ledger [:jobs job-id]
+                         (append-job-event job event-type payload))
+               ledger)))))
+
 (defn- next-invoke-job-id
   [ledger]
   (let [next-seq (inc (long (or (:next-seq ledger) 0)))
@@ -446,8 +508,10 @@
    turns complete silently on the warm-pouch path unless THEY remember to
    bell — the completion contract should be structural, not behavioral.
    Loop-safety is unchanged: bellback jobs carry caller \"auto-bellback\"
-   (unregistered + excluded), so a bellback never bellbacks."
-  #{:codex :claude})
+   (unregistered + excluded), so a bellback never bellbacks.
+   Widened to :zai 2026-07-04 (M-custom-harness slice-2 live test: a zai
+   bell completed but no completion bell routed back to the caller)."
+  #{:codex :claude :zai})
 
 (defn should-auto-bellback?
   "Pure auto-bellback decision predicate. Recipient type and caller registration
@@ -1070,6 +1134,13 @@
       {:ref/type subject-type
        :ref/id (str subject-id)})))
 
+(defn- default-evidence-since
+  "Default lower bound for broad evidence pages.
+   Session/pattern-specific views keep exact history; unfiltered latest pages
+   should never force the backing store into a full chronological scan."
+  []
+  (str (.minusSeconds (Instant/now) (* 48 60 60))))
+
 (defn- evidence-store-for-config
   "Resolve configured evidence store from runtime config."
   [config]
@@ -1205,7 +1276,7 @@
 (defn- handle-get-session
   "GET /session/:id — retrieve session by ID from persist store.
    Returns 200 + SessionRecord JSON or 404."
-  [request _config]
+  [request config]
   (let [uri (:uri request)
         session-id (when (str/starts-with? (str uri) "/session/")
                      (subs uri (count "/session/")))]
@@ -1256,10 +1327,11 @@
       {"status" "absent"})))
 
 (defn- handle-health
-  "GET /health — return agent, session, and evidence counts.
-   Reads both live registry and config snapshot, reports the larger count.
+  "GET /health — return agent + session counts, uptime, bridge health.
+   Reads both live registry and config snapshot, reports the larger agent count.
    Live registry reflects HTTP-registered and federated agents;
-   config snapshot reflects agents wired at startup."
+   config snapshot reflects agents wired at startup.
+   (Evidence total-count removed 2026-07-04 — unbounded XTDB scan, futon1a#5.)"
   [config started-at]
   (let [now (Instant/now)
         uptime-seconds (max 0 (.getSeconds (java.time.Duration/between started-at now)))
@@ -1274,13 +1346,14 @@
                                         :invoke-route (:invoke-route info)
                                         :invoke-ready? (:invoke-ready? info)}]))
                             (:agents live-status))
-        evidence-store (evidence-store-for-config config)
-        ;; Backend-level count keeps /health from kicking off a full evidence
-        ;; materialization. That old future-based path returned quickly but kept
-        ;; running in the background and produced XTDB timeout warnings later.
-        evidence-count (try
-                         (estore/count* evidence-store {})
-                         (catch Throwable _ -1))
+        ;; NOTE (futon1a#5, 2026-07-04): /health no longer reports a total evidence
+        ;; count. `count* {}` is an UNBOUNDED full-store XTDB count (O(store)); on the
+        ;; grown store it blew the 15s query-timeout, and /health is polled often
+        ;; (liveness), so it flooded WARNs and blocked agent attach. The stat had NO
+        ;; consumer and always degraded to -1 anyway. If store-size observability is
+        ;; wanted later, add a cheap maintained/estimated counter as its own signal —
+        ;; do NOT full-scan on a hot health poll. (Prior comment here noted the same
+        ;; class of bug for the earlier future-based path; count* didn't go far enough.)
         irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
         irc-relay-configured? (fn? (:irc-send-fn config))
         queue-hardening (agency-invariants/queue-hardening-status)
@@ -1291,7 +1364,6 @@
                          "agent-summary" agent-summary
                          "irc-relay-configured" irc-relay-configured?
                          "irc-send-base" irc-send-base
-                         "evidence" evidence-count
                          "queue-hardening" queue-hardening
                          "started-at" (str started-at)
                          "uptime-seconds" uptime-seconds
@@ -1338,12 +1410,21 @@
         tags (parse-tags (get params "tag"))
         author (non-blank-string (get params "author"))
         session-id (non-blank-string (get params "session-id"))
+        explicit-since (get params "since")
+        explicit-before (get params "before")
+        broad-page? (and (nil? explicit-since)
+                         (nil? explicit-before)
+                         (nil? session-id)
+                         (nil? pattern-id))
         query (cond-> {}
                 subject (assoc :query/subject subject)
                 evidence-type (assoc :query/type evidence-type)
                 claim-type (assoc :query/claim-type claim-type)
                 author (assoc :query/author author)
-                (get params "since") (assoc :query/since (get params "since"))
+                (or explicit-since broad-page?)
+                (assoc :query/since (or explicit-since (default-evidence-since)))
+                explicit-before
+                (assoc :query/before explicit-before)
                 (some? include-ephemeral?)
                 (assoc :query/include-ephemeral? include-ephemeral?)
                 (seq tags) (assoc :query/tags tags))
@@ -1994,10 +2075,22 @@
    :zai    [:explore :edit :test :coordination/execute]
    :tickle [:mission-control :discipline :coordination/execute]})
 
+(defn- project-dir-slug
+  "Claude Code project-directory slug for an absolute path (/ and . become -)."
+  [path]
+  (str/replace (str path) #"[/.]" "-"))
+
 (defn- claude-session-cwd
-  "Return Claude's recorded cwd for SESSION-ID, if the local Claude transcript
-   store has it. Claude resume lookup is project-directory scoped, so restoring
-   a session with the wrong cwd makes an existing transcript appear missing."
+  "Return the cwd Claude resume needs for SESSION-ID, if the local transcript
+   store has it. Claude resume lookup is project-directory scoped, so the
+   returned cwd must be the one whose project slug matches the directory the
+   transcript file LIVES IN — not necessarily the :cwd recorded inside the
+   transcript: sessions that cd mid-conversation record child dirs there, and
+   resuming from those looks in the wrong project directory and finds nothing
+   (found live 2026-07-04: claude-10 post-crash-restore returned empty turns).
+   Algorithm: walk the internal cwd's ancestors (self first) and return the
+   first whose slug equals the transcript's parent directory name; fall back
+   to the internal cwd when nothing matches (pre-fix behavior)."
   ([session-id]
    (claude-session-cwd
     (io/file (System/getProperty "user.home") ".claude" "projects")
@@ -2010,17 +2103,26 @@
        (some
         (fn [^java.io.File f]
           (when (and (.isFile f) (= filename (.getName f)))
-            (with-open [r (io/reader f)]
-              (some (fn [line]
-                      (try
-                        (let [parsed (json/parse-string line true)
-                              cwd (:cwd parsed)]
-                          (when (and (string? cwd)
-                                     (not (str/blank? cwd))
-                                     (.isDirectory (io/file cwd)))
-                            cwd))
-                        (catch Exception _ nil)))
-                    (line-seq r)))))
+            (let [slug (.getName (.getParentFile f))
+                  internal-cwd
+                  (with-open [r (io/reader f)]
+                    (some (fn [line]
+                            (try
+                              (let [parsed (json/parse-string line true)
+                                    cwd (:cwd parsed)]
+                                (when (and (string? cwd)
+                                           (not (str/blank? cwd))
+                                           (.isDirectory (io/file cwd)))
+                                  cwd))
+                              (catch Exception _ nil)))
+                          (line-seq r)))]
+              (when internal-cwd
+                (or (loop [d (io/file internal-cwd)]
+                      (when d
+                        (if (= slug (project-dir-slug (.getPath d)))
+                          (.getPath d)
+                          (recur (.getParentFile d)))))
+                    internal-cwd)))))
         (file-seq ^java.io.File projects-root))))))
 
 (defn- default-session-file-for-agent
@@ -2112,7 +2214,7 @@
    Local registration (no origin-url): default no-op invoke-fn.
    Set ws-bridge=true to register with no local invoke-fn and use WS fallback.
    Proxy registration (with origin-url): invoke-fn forwards to origin Agency."
-  [request _config]
+  [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"
@@ -2933,7 +3035,28 @@
                                     :type (:bell-type job)
                                     :ref (:ref job))))
             effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id thread)
-            raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
+            ;; Install a ledger-appending event sink for the duration of the
+            ;; invoke so bell-seeded turns record text/tool_use events (the
+            ;; invoke-stream path installs its own sink; bells had none, so
+            ;; they ran unobservably). Composes with and restores any
+            ;; existing sink rather than clobbering it.
+            aid (str agent-id)
+            prev-sink (reg/get-invoke-event-sink aid)
+            _ (reg/set-invoke-event-sink!
+               aid
+               (fn [event]
+                 (try (record-job-stream-event! job-id event) (catch Throwable _))
+                 (when prev-sink (try (prev-sink event) (catch Throwable _)))))
+            ;; Persist the raw caller prompt (not the surface-wrapped one)
+            ;; into the job record for D-7 session rehydration.
+            _ (try (record-job-stream-event! job-id {:type "prompt" :text prompt})
+                   (catch Throwable _))
+            raw-result (try
+                         (invoke-agent-with-session-recovery! aid effective-prompt timeout-ms)
+                         (finally
+                           (if prev-sink
+                             (reg/set-invoke-event-sink! aid prev-sink)
+                             (reg/clear-invoke-event-sink! aid))))
             result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
