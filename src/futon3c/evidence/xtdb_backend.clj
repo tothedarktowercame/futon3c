@@ -173,6 +173,50 @@
         ids (map first (apply xtdb/q (db node) query args))]
     (keep #(entity node %) ids)))
 
+(def ^:private recency-window-hours
+  "Widening lookback ladder (hours) for the limit-without-since fast path:
+   1h, 6h, 1d, 4d, 16d, 64d, ~2y. Each rung is an indexed :evidence/at
+   range-seek (~10ms on the 85k live store); the first rung that yields a
+   full page wins. Only if no rung fills does -query fall back to the
+   unbounded scan (which XTDB's :order-by fully realizes — 15-20s live)."
+  [1 6 24 96 384 1536 17520])
+
+(defn- query-recent
+  "Fast path for a limit query with NO :query/since: probe widening
+   recency windows instead of realizing the whole store.
+
+   Correctness: a window is accepted only when it yields a FULL page
+   after `backend/filter-and-sort-entries` (ephemeral exclusion and all
+   app-level filters applied). Entries outside the window are strictly
+   older than everything in it, so a full page from a window IS the
+   global newest-`limit` result. An under-full window widens; if the
+   ladder never fills, returns nil and the caller runs the existing
+   unbounded query (semantics preserved exactly).
+
+   The probe intentionally does NOT push :query/limit into datalog:
+   the window bounds the row count, and a datalog limit applied before
+   the app-side ephemeral filter could under-fill a window that
+   actually has a full page (forcing a needless widen).
+
+   The returned vector carries {:evidence/fast-path :recency-window
+   :evidence/window-hours h} metadata — response-invisible, used by the
+   witness test."
+  [node params]
+  (let [limit (:query/limit params)
+        now (Instant/now)]
+    (some (fn [hours]
+            (let [since (.toString (.minus now (Duration/ofHours hours)))
+                  probe (-> params
+                            (dissoc :query/limit)
+                            (assoc :query/since since))
+                  rows (query-entries node probe)
+                  entries (backend/filter-and-sort-entries
+                           rows (assoc params :query/since since))]
+              (when (= limit (count entries))
+                (with-meta entries {:evidence/fast-path :recency-window
+                                    :evidence/window-hours hours}))))
+          recency-window-hours)))
+
 (defrecord XtdbBackend [node]
   backend/EvidenceBackend
 
@@ -209,10 +253,14 @@
 
   (-query [_ params]
     (try
-      (let [entries (query-entries node params)]
-        ;; Final pass preserves shared AtomBackend semantics for app-level
-        ;; filters such as :query/since and malformed timestamp fallback.
-        (backend/filter-and-sort-entries entries params))
+      (or (when (and (int? (:query/limit params))
+                     (pos? (:query/limit params))
+                     (nil? (:query/since params)))
+            (query-recent node params))
+          (let [entries (query-entries node params)]
+            ;; Final pass preserves shared AtomBackend semantics for app-level
+            ;; filters such as :query/since and malformed timestamp fallback.
+            (backend/filter-and-sort-entries entries params)))
       (catch java.util.concurrent.TimeoutException _
         (binding [*out* *err*]
           (println (str "[evidence] WARN XTDB evidence query timed out after "

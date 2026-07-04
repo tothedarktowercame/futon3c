@@ -6,7 +6,7 @@
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix])
-  (:import [java.time Instant]))
+  (:import [java.time Duration Instant]))
 
 (def ^:dynamic *node* nil)
 (def ^:dynamic *backend* nil)
@@ -209,6 +209,95 @@
     (let [all (backend/-all *backend*)]
       (is (= 2 (count all)))
       (is (= #{"e1" "e2"} (set (map :evidence/id all)))))))
+
+;; ---------------------------------------------------------------------------
+;; Recency-window fast path (limit without since)
+;;
+;; XTDB 1.x :order-by realizes ALL matching rows before sorting, so a bare
+;; :query/limit full-scans the store (measured 15-20s against the live 85k
+;; store). -query now probes a widening ladder of :evidence/at windows and
+;; answers from the first window that yields a full page. These tests pin
+;; the witness metadata, the widening/fallback semantics, and lucy-like
+;; scale timing.
+;; ---------------------------------------------------------------------------
+
+(defn- hours-ago [h]
+  (str (.minus (Instant/now) (Duration/ofMillis (long (* h 3600000))))))
+
+(deftest recency-fast-path-witness-and-ephemeral-boundary
+  (testing "bare limit query answers from the 1h window, ephemeral excluded"
+    (append! (fix/make-evidence-entry {:evidence/id "r1" :evidence/at (hours-ago 0.1)}))
+    (append! (fix/make-evidence-entry {:evidence/id "r-eph" :evidence/at (hours-ago 0.2)
+                                       :evidence/ephemeral? true}))
+    (append! (fix/make-evidence-entry {:evidence/id "r3" :evidence/at (hours-ago 0.3)}))
+    (append! (fix/make-evidence-entry {:evidence/id "old" :evidence/at (hours-ago 50)}))
+    (let [xs (backend/-query *backend* {:query/limit 2})]
+      (is (= ["r1" "r3"] (mapv :evidence/id xs))
+        "newest-first, ephemeral skipped WITHOUT under-filling the window")
+      (is (= :recency-window (:evidence/fast-path (meta xs)))
+          "witness: the fast path answered this query")
+      (is (= 1 (:evidence/window-hours (meta xs)))))))
+
+(deftest recency-fast-path-widens-until-page-fills
+  (testing "an under-full window widens to the next rung"
+    (append! (fix/make-evidence-entry {:evidence/id "a" :evidence/at (hours-ago 0.5)}))
+    (append! (fix/make-evidence-entry {:evidence/id "b" :evidence/at (hours-ago 30)}))
+    (append! (fix/make-evidence-entry {:evidence/id "c" :evidence/at (hours-ago 31)}))
+    (let [xs (backend/-query *backend* {:query/limit 3})]
+      (is (= ["a" "b" "c"] (mapv :evidence/id xs)))
+      (is (= :recency-window (:evidence/fast-path (meta xs))))
+      (is (= 96 (:evidence/window-hours (meta xs)))
+          "1h/6h/24h rungs under-fill; the 96h rung holds all three"))))
+
+(deftest recency-fast-path-falls-back-when-ladder-never-fills
+  (testing "a store with fewer entries than limit returns them via the old path"
+    (append! (fix/make-evidence-entry {:evidence/id "only-1" :evidence/at (hours-ago 1)}))
+    (append! (fix/make-evidence-entry {:evidence/id "only-2" :evidence/at (hours-ago 2)}))
+    (let [xs (backend/-query *backend* {:query/limit 5})]
+      (is (= ["only-1" "only-2"] (mapv :evidence/id xs))
+          "fallback preserves exact unbounded-query semantics")
+      (is (nil? (:evidence/fast-path (meta xs)))))))
+
+(defn- bulk-load!
+  "Batch-put minimal evidence docs straight into the node (bypassing
+   put-and-sync's per-doc await) — fixture loader for scale tests."
+  [node docs]
+  (let [tx (last (for [batch (partition-all 1000 docs)]
+                   (xtdb/submit-tx node (mapv (fn [d] [::xtdb/put d]) batch))))]
+    (xtdb/await-tx node tx)))
+
+(deftest recency-fast-path-at-lucy-like-scale
+  (testing "limit-without-since and the workshop mirror query stay fast at 20k entries"
+    ;; 20k entries spread over 97 days + a dense 300-entry last-hour cluster
+    ;; (the workshop 'mirror phase' projects limit=200&since=<1h ago>).
+    (let [spread (for [i (range 20000)]
+                   (let [id (str "bulk-" i)]
+                     {:xt/id id :evidence/id id :evidence/author "bulk"
+                      :evidence/type :reflection :evidence/claim-type :observation
+                      :evidence/subject {:ref/type :mission :ref/id "SCALE"}
+                      :evidence/body {:text "x"} :evidence/tags [:test]
+                      :evidence/at (hours-ago (+ 1.5 (* i 0.1164)))}))
+          recent (for [i (range 300)]
+                   (let [id (str "recent-" i)]
+                     {:xt/id id :evidence/id id :evidence/author "bulk"
+                      :evidence/type :reflection :evidence/claim-type :observation
+                      :evidence/subject {:ref/type :mission :ref/id "SCALE"}
+                      :evidence/body {:text "x"} :evidence/tags [:test]
+                      :evidence/at (hours-ago (* i 0.003))}))]
+      (bulk-load! *node* (concat spread recent))
+      (let [t0 (System/nanoTime)
+            top3 (backend/-query *backend* {:query/limit 3})
+            ms3 (/ (- (System/nanoTime) t0) 1e6)]
+        (is (= ["recent-0" "recent-1" "recent-2"] (mapv :evidence/id top3)))
+        (is (= :recency-window (:evidence/fast-path (meta top3)))
+            "witness: bare limit=3 answered by a window probe, not a full scan")
+        (is (< ms3 2000) (str "limit=3 took " ms3 "ms")))
+      (let [t0 (System/nanoTime)
+            mirror (backend/-query *backend* {:query/limit 200
+                                              :query/since (hours-ago 1)})
+            ms200 (/ (- (System/nanoTime) t0) 1e6)]
+        (is (= 200 (count mirror)))
+        (is (< ms200 2000) (str "limit=200&since=1h took " ms200 "ms"))))))
 
 (deftest make-xtdb-backend-accepts-xtdb-store
   (testing "make-xtdb-backend extracts :node from a record with :node field"
