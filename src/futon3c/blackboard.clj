@@ -21,8 +21,7 @@
    endpoint to build. Emacs IS the sliding blackboard."
   (:require [clojure.string :as str]
             [futon3c.evidence.boundary :as boundary]
-            [futon3c.dev.config :as config]
-            [futon3c.evidence.store :as estore])
+            [futon3c.dev.config :as config])
   (:import [java.util UUID]))
 
 (declare emit-blackboard-evidence!)
@@ -161,6 +160,40 @@
         (into (or extra-args []))
         (into ["--eval" elisp]))))
 
+(defn- emacsclient-target-key
+  [socket-override]
+  (or socket-override
+      @!emacs-socket
+      (System/getenv "FUTON3C_EMACS_SOCKET")
+      (System/getenv "EMACS_SOCKET_NAME")
+      ::default))
+
+;; Target sockets with an accepted async emacsclient still alive.
+;;
+;; Blackboard projections are idempotent snapshots. If Emacs is slow, spawning
+;; a new emacsclient every ticker pass creates a FIFO backlog that can starve
+;; interactive requests such as `cr new'. Keep one outstanding snapshot per
+;; target; the next ticker will refresh after that client exits.
+(defonce ^:private !async-emacsclient-inflight (atom #{}))
+
+(defn- claim-async-emacsclient! [target-key]
+  (loop []
+    (let [current @!async-emacsclient-inflight]
+      (cond
+        (contains? current target-key) false
+        (compare-and-set! !async-emacsclient-inflight
+                          current
+                          (conj current target-key)) true
+        :else (recur)))))
+
+(defn- clear-async-emacsclient-inflight! [target-key proc]
+  (future
+    (try
+      (.waitFor proc)
+      (catch Throwable _ nil)
+      (finally
+        (swap! !async-emacsclient-inflight disj target-key)))))
+
 (defn- reap-emacsclient!
   "Finally-guard for emacsclient processes: force-kill if still alive,
    then wait briefly so the child is reaped and the file descriptors close."
@@ -212,14 +245,25 @@
   ([elisp] (run-emacsclient-async! elisp nil))
   ([elisp socket-override]
    (try
-     (let [pb (doto (ProcessBuilder. ^java.util.List
-                                     (build-emacsclient-cmd elisp socket-override ["-n"]))
-              (.redirectErrorStream true))
-           proc (.start pb)
-           finished? (.waitFor proc 1 java.util.concurrent.TimeUnit/SECONDS)]
-       (if finished?
-         {:ok (zero? (.exitValue proc)) :output nil}
-         {:ok false :output "timeout"}))
+     (let [target-key (emacsclient-target-key socket-override)]
+       (if-not (claim-async-emacsclient! target-key)
+         {:ok false :output "inflight"}
+         (try
+           (let [pb (doto (ProcessBuilder. ^java.util.List
+                                           (build-emacsclient-cmd elisp socket-override ["-n"]))
+                      (.redirectErrorStream true))
+                 proc (.start pb)
+                 finished? (.waitFor proc 1 java.util.concurrent.TimeUnit/SECONDS)]
+             (if finished?
+               (do
+                 (swap! !async-emacsclient-inflight disj target-key)
+                 {:ok (zero? (.exitValue proc)) :output nil})
+               (do
+                 (clear-async-emacsclient-inflight! target-key proc)
+                 {:ok false :output "timeout"})))
+           (catch Throwable t
+             (swap! !async-emacsclient-inflight disj target-key)
+             (throw t)))))
      (catch Exception e
        {:ok false :output (or (.getMessage e) (.. e getClass getSimpleName))}))))
 

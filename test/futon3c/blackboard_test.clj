@@ -261,6 +261,25 @@
       (is (= "say \\\"hi\\\"" (escape "say \"hi\"")))
       (is (= "back\\\\slash" (escape "back\\slash"))))))
 
+(deftest async-emacsclient-coalesces-per-target-while-inflight
+  (testing "slow async snapshots do not pile up behind a wedged Emacs socket"
+    (let [script (doto (java.io.File/createTempFile "fake-emacsclient-" ".sh")
+                   (.deleteOnExit))
+          run-async #'futon3c.blackboard/run-emacsclient-async!
+          inflight #'futon3c.blackboard/!async-emacsclient-inflight]
+      (spit script "#!/usr/bin/env bash\nsleep 2\n")
+      (.setExecutable script true)
+      (with-redefs [bb/emacsclient-bin (fn [] (.getAbsolutePath script))]
+        (try
+          (reset! @inflight #{})
+          (let [first-result (run-async "(message \"one\")" "test-socket")
+                second-result (run-async "(message \"two\")" "test-socket")]
+            (is (= {:ok false :output "timeout"} first-result))
+            (is (= {:ok false :output "inflight"} second-result))
+            (is (contains? @@inflight "test-socket")))
+          (finally
+            (reset! @inflight #{})))))))
+
 ;; =============================================================================
 ;; project! — integration of render + blackboard!
 ;; =============================================================================
