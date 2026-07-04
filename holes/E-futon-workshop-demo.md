@@ -63,6 +63,7 @@ externally by hostname.
 - 2026-07-04: The Lounge portal (user-space nvm/node20, public+lockNetwork, systemd user unit) + `irc-pass-shim` for the public-mode password-stripping gotcha; browser-verified via Playwright.
 - 2026-07-04: backups running to LenovoBackup (1.9T, 1.4T free): lucy `futon6/data` (5.4G, capture-before-decommission — lucy's `.venv` 7.8G is rebuildable, delete without backup) + full laptop `~/code` (421G, systemd-run detached). Deletions on lucy AFTER rsync + checksum verify.
 - NOTE 2026-07-04: `chi-codex` observed live in #futon — the metameso codex seat is materializing ahead of R2.
+- 2026-07-04: The Lounge @-mention patch. Stock @-completion inserts the BARE nick (vestige of IRC op-prefix handling), silently defeating @-gated agent mentions. Patched the client bundle so completion inserts `@nick ` (sigil + trailing space; the space matters — first test produced `@claudeping`, which the gate correctly rejected). Browser-verified full loop: popup completion → `@claude ` → send → bridge accept → lon-claude-1 reply. Patch survives upgrades via idempotent `~/bin/patch-thelounge-at-mention.sh` on lucy (stock bundle kept at `bundle.js.orig`); re-run after any thelounge upgrade.
 
 ## Joe's personal checklist (things only Joe can do)
 
