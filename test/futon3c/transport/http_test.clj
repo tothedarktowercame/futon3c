@@ -534,6 +534,7 @@
           (is (= (.getPath session-file) (:session-file parsed)))
           (is (= cwd (:cwd parsed)))
           (is (= :zai (:agent/type agent)))
+          (is (fn? (:agent/invoke-fn agent)))
           (is (= sid (:agent/session-id agent)))
           (is (= sid (some-> session-file slurp str/trim))))
         (finally

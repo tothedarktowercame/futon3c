@@ -71,6 +71,7 @@
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.portfolio.core :as portfolio]
+            [futon3c.agents.zai-api :as zai-api]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
             [futon3c.transport.peripheral-events :as peripheral-events]
@@ -2057,7 +2058,8 @@
 
 (defn- make-local-agent-invoke-fn
   "Best-effort builder for a local invoke-fn for AGENT-TYPE."
-  [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model]}]
+  [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model
+                      evidence-store irc-send-fn]}]
   (let [sid-atom (or session-id-atom
                      (make-session-id-atom initial-session-id session-file))]
     (case agent-type
@@ -2086,15 +2088,19 @@
 
       :zai
       (try
-        (require 'futon3c.dev)
-        (when-let [make-fn (resolve 'futon3c.dev/make-zai-invoke-fn)]
-          (@make-fn (cond-> {:agent-id agent-id
-                             :session-file session-file
-                             :session-id-atom sid-atom
-                             :initial-session-id initial-session-id}
-                      model (assoc :model model)
-                      requested-cwd (assoc :cwd requested-cwd))))
-        (catch Throwable _ nil))
+        (zai-api/make-invoke-fn
+         (cond-> {:agent-id agent-id
+                  :session-file session-file
+                  :session-id-atom sid-atom
+                  :initial-session-id initial-session-id
+                  :evidence-store evidence-store
+                  :irc-send-fn irc-send-fn}
+           model (assoc :model model)
+           requested-cwd (assoc :cwd requested-cwd)))
+        (catch Throwable t
+          (println (str "[zai] failed to build invoke-fn for " agent-id ": " (.getMessage t)))
+          (flush)
+          nil))
 
       nil)))
 
@@ -2175,7 +2181,7 @@
    Finds the next unused ID (e.g. claude-2 if claude-1 exists) and registers it
    with a real invoke-fn (resolved from dev.clj's local factories).
    Each call creates a new, independent agent (I-1: one agent = one identity)."
-  [request _config]
+  [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"})
@@ -2252,7 +2258,9 @@
                             :initial-session-id initial-session-id
                             :session-id-atom sid-atom
                             :requested-cwd requested-cwd
-                            :emacs-socket emacs-socket})
+                            :emacs-socket emacs-socket
+                            :evidence-store (evidence-store-for-config config)
+                            :irc-send-fn (:irc-send-fn config)})
                 result (reg/register-agent!
                         {:agent-id {:id/value agent-id :id/type :continuity}
                          :type agent-type
@@ -2291,7 +2299,7 @@
           \"emacs-socket\": \"server\"}
    If the agent is already live, refresh its invoke-fn/session metadata.
    If it is missing, recreate the exact identity instead of allocating a new one."
-  [request _config]
+  [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"})
@@ -2355,7 +2363,9 @@
                             :session-id-atom sid-atom
                             :requested-cwd effective-cwd
                             :emacs-socket emacs-socket
-                            :model model})
+                            :model model
+                            :evidence-store (evidence-store-for-config config)
+                            :irc-send-fn (:irc-send-fn config)})
                 metadata (cond-> (merge {:auto-registered? true}
                                         (when (map? raw-metadata) raw-metadata))
                            (= agent-type :codex) (assoc :require-execution? true)
