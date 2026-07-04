@@ -103,6 +103,13 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
   "Face for Z.AI responses."
   :group 'zai-repl)
 
+(defface zai-repl-tool-line-face
+  '((t :inverse-video t))
+  "Face for tool-use lines in zai REPLs.
+Inverse video rather than the shared orange, matching Z.AI branding
+(operator choice, 2026-07-04)."
+  :group 'zai-repl)
+
 (defvar-local zai-repl--messages nil
   "Local conversation history as a list of OpenAI-compatible message plists.")
 
@@ -132,15 +139,19 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
           (string-remove-suffix "/" zai-repl-api-base-url)))
 
 (defun zai-repl--read-session-file ()
-  "Return a nonempty session id from `zai-repl-session-file', or nil."
-  (when (and (stringp zai-repl-session-file)
-             (file-exists-p zai-repl-session-file))
-    (let ((sid (string-trim
-                (with-temp-buffer
-                  (let ((coding-system-for-read 'utf-8-unix))
-                    (insert-file-contents zai-repl-session-file))
-                  (buffer-string)))))
-      (and (not (string-empty-p sid)) sid))))
+  "Return a nonempty session id from `zai-repl-session-file', or nil.
+Any read error also yields nil (callers fall back to a fresh local id);
+the id is display-only, so a failed read must never break buffer setup."
+  (condition-case nil
+      (when (and (stringp zai-repl-session-file)
+                 (file-exists-p zai-repl-session-file))
+        (let ((sid (string-trim
+                    (with-temp-buffer
+                      (let ((coding-system-for-read 'utf-8-unix))
+                        (insert-file-contents zai-repl-session-file))
+                      (buffer-string)))))
+          (and (not (string-empty-p sid)) sid)))
+    (error nil)))
 
 (defun zai-repl--new-session-id ()
   "Return a fresh local Z.AI session id."
@@ -307,7 +318,7 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
         (push (cons tid detail) zai-repl--pending-tool-uses)))
     (unless agent-chat--streaming-started
       (agent-chat-begin-streaming-message "zai"))
-    (agent-chat-stream-text tool-text 'agent-chat-tool-line-face)
+    (agent-chat-stream-text tool-text 'zai-repl-tool-line-face)
     (agent-chat-update-progress
      (format "using %s" (if (string-empty-p tool-names) "tools" tool-names))
      'agent-chat-prompt-face)))
@@ -419,13 +430,26 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
 (define-key zai-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key zai-repl-mode-map (kbd "C-c C-o") #'agent-chat-clock-menu)
 
+(defvar zai-repl--font-lock-keywords
+  ;; Tool-use lines from both render paths: the direct-stream preview
+  ;; "[read_file] /path" and the agent-follow ledger preview
+  ;; "[read_file /path]". Highlighting must come FROM font-lock: applying
+  ;; face text-properties at insert time loses to refontification, which
+  ;; strips properties it thinks it owns (diagnosed live 2026-07-04:
+  ;; 52 of 55 tool lines had their faces stripped).
+  '(("^\\[[a-z_].*$" 0 'zai-repl-tool-line-face t)
+    ;; Tool preview on the same line as a follow-mode name prefix
+    ;; ("zai-7⇐claude-16: [run_shell …") — color the bracketed part.
+    ("⇐[^:\n]*: \\(\\[[a-z_].*\\)$" 1 'zai-repl-tool-line-face t)))
+
 (define-derived-mode zai-repl-mode nil "ZAI-REPL"
   "Chat with Z.AI through its OpenAI-compatible API."
   (setq-local truncate-lines nil)
   (setq-local word-wrap t)
   (setq-local line-move-visual nil)
   (setq-local scroll-conservatively 101)
-  (setq-local scroll-margin 0))
+  (setq-local scroll-margin 0)
+  (font-lock-add-keywords nil zai-repl--font-lock-keywords))
 
 (defun zai-repl--build-modeline ()
   "Build Z.AI REPL modeline text."
@@ -496,6 +520,37 @@ With prefix argument, prompt for a clock TARGET."
       (zai-repl--init-display)
       (zai-repl--persist-session-id))
     buf))
+
+(defun zai-repl--roster-zai-ids ()
+  "Registered zai agent ids from the Agency roster, or nil on any failure."
+  (condition-case nil
+      (let* ((url (concat (string-remove-suffix "/" zai-repl-agency-url)
+                          "/api/alpha/agents"))
+             (data (with-temp-buffer
+                     (call-process "curl" nil t nil "-sS" "--max-time" "5" url)
+                     (goto-char (point-min))
+                     (json-parse-buffer :object-type 'alist)))
+             ids)
+        (dolist (pair (alist-get 'agents data) (nreverse ids))
+          (let ((id (symbol-name (car pair))))
+            (when (string-prefix-p "zai" id)
+              (push id ids)))))
+    (error nil)))
+
+;;;###autoload
+(defun zai-repl-for-agent (agent-id)
+  "Open a Z.AI REPL buffer bound to Agency AGENT-ID (e.g. \"zai-8\").
+Completes over the zai agents currently registered with the Agency.
+The buffer is named *zai-repl:AGENT-ID* and shares the agent's server-side
+session file, so it attaches to the same identity the Agency invokes."
+  (interactive
+   (list (completing-read "Agency zai agent: "
+                          (or (zai-repl--roster-zai-ids) '("zai-8"))
+                          nil nil nil nil "zai-8")))
+  (let ((agent-id (string-trim agent-id)))
+    (zai-repl--open-instance (format "*zai-repl:%s*" agent-id)
+                             agent-id
+                             (format "/tmp/futon-zai-session-id-%s" agent-id))))
 
 ;;;###autoload
 (defun zai-repl--open-instance (buffer-name agent-id session-file &optional target session-id)
