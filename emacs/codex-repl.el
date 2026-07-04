@@ -61,6 +61,8 @@ Set to nil to disable and send raw user text."
 
 (defcustom codex-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
+      (when-let ((base (getenv "FUTON3C_EVIDENCE_BASE")))
+        (format "%s/api/alpha/evidence" (string-remove-suffix "/" base)))
       (format "%s/api/alpha/evidence"
               (string-remove-suffix "/" agent-chat-agency-base-url)))
   "Evidence API endpoint used to log codex-repl session starts."

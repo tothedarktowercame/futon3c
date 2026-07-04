@@ -48,6 +48,8 @@
 
 (defcustom claude-repl-evidence-url
   (or (getenv "FUTON3C_EVIDENCE_URL")
+      (when-let ((base (getenv "FUTON3C_EVIDENCE_BASE")))
+        (format "%s/api/alpha/evidence" (string-remove-suffix "/" base)))
       (format "%s/api/alpha/evidence"
               (string-remove-suffix "/" agent-chat-agency-base-url)))
   "Evidence API endpoint for logging chat turns."

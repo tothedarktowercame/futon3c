@@ -16,6 +16,7 @@ set -euo pipefail
 CLAUDE_DIR="${HOME}/.claude/projects"
 PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-bypassPermissions}"
 MAX_SESSIONS="${CLAUDE_PICKER_MAX:-12}"
+agency_base="${FUTON3C_AGENCY_BASE:-http://127.0.0.1:${FUTON3C_PORT:-7070}}"
 evidence_base="${FUTON3C_EVIDENCE_BASE:-http://localhost:7070}"
 session_file="${CLAUDE_SESSION_FILE:-/tmp/futon-session-id}"
 emacsclient_bin="${EMACSCLIENT_BIN:-emacsclient}"
@@ -131,20 +132,28 @@ session_project_root() {
 }
 
 launch_repl() {
-  local sid="${1:-}" escaped_ui escaped_chat
+  local sid="${1:-}" escaped_ui escaped_chat escaped_agency_base escaped_evidence_url
   if ! command -v "${emacsclient_bin}" >/dev/null 2>&1; then
     echo "emacsclient not found. Install Emacs client or set EMACSCLIENT_BIN." >&2
     exit 1
   fi
   escaped_ui="$(elisp_escape "${emacs_dir}/agent-chat.el")"
   escaped_chat="$(elisp_escape "${emacs_dir}/claude-repl.el")"
+  escaped_agency_base="$(elisp_escape "${agency_base%/}")"
+  escaped_evidence_url="$(elisp_escape "${evidence_base%/}/api/alpha/evidence")"
   # Write session-id to file so dev server picks it up on (re)start
   if [[ -n "${sid}" ]]; then
     printf '%s' "${sid}" > "${session_file}"
   fi
   "${emacsclient_bin}" "${emacsclient_sock[@]}" -e "(progn
+    (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\")
+    (setq agent-chat-agency-base-url \"${escaped_agency_base}\")
     (load \"${escaped_ui}\")
     (load \"${escaped_chat}\")
+    (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\"
+          agent-chat-agency-base-url \"${escaped_agency_base}\"
+          claude-repl-api-url \"${escaped_agency_base}\"
+          claude-repl-evidence-url \"${escaped_evidence_url}\")
     (claude-repl))" >/dev/null
 }
 

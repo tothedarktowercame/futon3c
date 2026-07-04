@@ -58,6 +58,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${script_dir}/emacs-socket-lib.sh"
 emacs_dir="${FUTON3C_EMACS_DIR:-${script_dir}/../emacs}"
 agency_agent_id="${AGENCY_AGENT_ID:-codex-1}"
+agency_base="${FUTON3C_AGENCY_BASE:-}"
 
 # --- Agent search/memory backstops (added 2026-06-05) -----------------------
 # A broad agent `rg` from ~/code mmapped tens of GB of data files under
@@ -146,15 +147,23 @@ print(hint, end="")' 2>/dev/null || true)"
   return 1
 }
 
+if [[ -z "${agency_base}" ]]; then
+  if [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
+    agency_base="${FUTON3C_SELF_URL}"
+  else
+    agency_base="$(pick_local_agency_base)"
+  fi
+fi
+
 if [[ -n "${FUTON3C_EVIDENCE_BASE:-}" ]]; then
   evidence_base="${FUTON3C_EVIDENCE_BASE}"
 elif [[ -n "${FUTON3C_SELF_URL:-}" ]]; then
   evidence_base="${FUTON3C_SELF_URL}"
 else
-  evidence_base="$(pick_local_agency_base)"
+  evidence_base="${agency_base}"
 fi
 
-irc_send_base="$(pick_remote_agency_base "${evidence_base%/}" || true)"
+irc_send_base="$(pick_remote_agency_base "${agency_base%/}" || true)"
 
 elisp_escape() {
   sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' <<< "$1"
@@ -188,7 +197,7 @@ EOF
 register_agent() {
   command -v curl >/dev/null 2>&1 || return 0
   local agent_id="${1:-${agency_agent_id}}"
-  local primary_base="${evidence_base%/}"
+  local primary_base="${agency_base%/}"
   local remote_base="${irc_send_base%/}"
   local base status ok_any=0
   local -a bases=()
@@ -229,7 +238,7 @@ resolve_agent_session_id() {
   local agent_id="${1:-${agency_agent_id}}" payload sid
   command -v curl >/dev/null 2>&1 || return 1
   payload="$(curl -sS --max-time 2 \
-    "${evidence_base%/}/api/alpha/agents/${agent_id}" 2>/dev/null || true)"
+    "${agency_base%/}/api/alpha/agents/${agent_id}" 2>/dev/null || true)"
   [[ -n "${payload}" ]] || return 1
   if command -v jq >/dev/null 2>&1; then
     sid="$(printf '%s' "${payload}" \
@@ -285,7 +294,7 @@ launch_repl() {
   escaped_session_file="$(elisp_escape "${session_file}")"
   escaped_ui="$(elisp_escape "${emacs_dir}/agent-chat.el")"
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
-  escaped_agency_base="$(elisp_escape "${evidence_base%/}")"
+  escaped_agency_base="$(elisp_escape "${agency_base%/}")"
   escaped_evidence_url="$(elisp_escape "${evidence_base%/}/api/alpha/evidence")"
   escaped_codex_sandbox="$(elisp_escape "${codex_sandbox}")"
   escaped_codex_approval="$(elisp_escape "${codex_approval_policy}")"

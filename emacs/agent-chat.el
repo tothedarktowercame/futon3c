@@ -23,7 +23,7 @@
   :group 'communication)
 
 (defcustom agent-chat-agency-base-url
-  (or (getenv "FUTON3C_EVIDENCE_BASE")
+  (or (getenv "FUTON3C_AGENCY_BASE")
       (getenv "FUTON3C_SELF_URL")
       (format "http://127.0.0.1:%s" (or (getenv "FUTON3C_PORT") "7070")))
   "Agency base URL used for availability checks in chat headers."
