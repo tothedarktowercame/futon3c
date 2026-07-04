@@ -30,7 +30,8 @@
    :bge-knn 1.0
    :doc-mention 1.0
    :tau 0.45
-   :provenance "arbitrary-starting-values; tune under VERIFY"})
+   :active-terms [:explicit-ref :bge-knn]
+   :provenance "arbitrary-starting-values; tune under VERIFY. v1 computes only :active-terms; scope-edge/clock-or-coordination/doc-mention are declared for the D2 formula but not yet wired."})
 
 (defn- now-ms [] (System/currentTimeMillis))
 
@@ -41,13 +42,29 @@
       (json/parse-string (slurp path) false))
     (catch Exception _ nil)))
 
+;; The coordinate set and BGE embeddings are multi-MB JSON files; parsing them
+;; per request made the endpoint ~2s. Cache on file mtime so a re-embed is
+;; picked up on the next request without a reload.
+(def ^:private file-cache (atom {}))
+
+(defn- read-json-cached
+  [path]
+  (let [f (io/file path)
+        mtime (.lastModified f)
+        cached (get @file-cache path)]
+    (if (and cached (= (:mtime cached) mtime))
+      (:value cached)
+      (let [v (read-json path)]
+        (swap! file-cache assoc path {:mtime mtime :value v})
+        v))))
+
 (defn- coordinate-map
   []
-  (or (read-json coord-path) {}))
+  (or (read-json-cached coord-path) {}))
 
 (defn- bge-records
   []
-  (let [raw (read-json bge-path)]
+  (let [raw (read-json-cached bge-path)]
     (cond
       (vector? raw) raw
       (map? raw) (or (get raw "records") [])
@@ -68,12 +85,22 @@
            (remove #(str/includes? (.getPath ^java.io.File %) "/.git/"))
            vec))))
 
+;; The doc index walks every futon* repo; cache it for 60s — mission docs
+;; appear at human cadence, the map polls at machine cadence.
+(def ^:private doc-index-cache (atom nil))
+
 (defn- mission-doc-index
   []
-  (into {}
-        (map (fn [^java.io.File f]
-               [(str/replace (.getName f) #"\.md$" "") f]))
-        (mission-docs)))
+  (let [{:keys [at value]} @doc-index-cache
+        now (now-ms)]
+    (if (and value (< (- now (long at)) 60000))
+      value
+      (let [v (into {}
+                    (map (fn [^java.io.File f]
+                           [(str/replace (.getName f) #"\.md$" "") f]))
+                    (mission-docs))]
+        (reset! doc-index-cache {:at now :value v})
+        v))))
 
 (defn- mission-refs
   [text]
@@ -222,17 +249,12 @@
           {}
           jobs))
 
-(defn- clock-for-agent
-  [agent-id session-id durable]
-  (let [live (:clock (clock-store/current-state agent-id session-id))]
-    (or (:mission-id live)
-        (:target durable))))
-
 (defn- agent-row
   [positions doc-index jobs-by-agent durable-by-agent [agent-id info]]
   (let [session-id (:session-id info)
         durable (get durable-by-agent agent-id)
-        mission-id (clock-for-agent agent-id session-id durable)
+        live-mission (:mission-id (:clock (clock-store/current-state agent-id session-id)))
+        mission-id (or live-mission (:target durable))
         place (placement mission-id positions doc-index)
         job (get jobs-by-agent agent-id)]
     {:agent-id agent-id
@@ -241,7 +263,7 @@
      :session-id session-id
      :mission-id mission-id
      :clock-source (cond
-                     (:mission-id (:clock (clock-store/current-state agent-id session-id))) :live-clock-store
+                     live-mission :live-clock-store
                      durable :durable-clock-lineage
                      :else nil)
      :last-active (:last-active info)
