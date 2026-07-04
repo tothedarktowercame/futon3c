@@ -504,7 +504,10 @@
                        :messages messages
                        :tools (openai-tools memory-mode)
                        :tool_choice "auto"
-                       :max_tokens (or max-tokens 4096)
+                       ;; 8192: 4096 truncated large tool-call arguments in
+                       ;; transit (zai-10's write_file loop, claude-18's
+                       ;; diagnosis 2026-07-04) — big file writes need headroom.
+                       :max_tokens (or max-tokens 8192)
                        :temperature (or temperature 0.2)
                        :thinking {:type "disabled"}
                        :reasoning_effort "none"}
