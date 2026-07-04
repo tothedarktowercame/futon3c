@@ -253,7 +253,17 @@
     :else (try
             (json/parse-string (str s) true)
             (catch Throwable _
-              {}))))
+              ;; Malformed arguments are almost always the model's tool-call
+              ;; JSON truncated at max_tokens. Mapping this to {} made it look
+              ;; like the model omitted its arguments, and the generic error
+              ;; sent it into an identical-retry loop (zai-10's write_file
+              ;; "I keep forgetting to pass arguments", 2026-07-04). Surface a
+              ;; sentinel so execute-tool can report what actually happened.
+              (let [raw (str s)]
+                {:__unparseable_arguments
+                 (str (count raw) " chars of invalid JSON"
+                      (when (>= (count raw) 40)
+                        (str ", ends: …" (subs raw (- (count raw) 40)))))})))))
 
 (defn- result-string [x]
   (let [s (if (string? x) x (json/generate-string x))]
@@ -272,7 +282,36 @@
         args (parse-arguments (get-in tool-call [:function :arguments]))
         fail (fn [msg] {:ok false :error msg})
         result
-        (case name
+        (cond
+          (:__unparseable_arguments args)
+          (fail (str "TOOL-CALL ARGUMENTS CORRUPTED IN TRANSIT — you did NOT "
+                     "omit them. Received " (:__unparseable_arguments args)
+                     ". This usually means your arguments JSON was cut off at "
+                     "the output-token limit. Do NOT retry the identical call: "
+                     "send a SMALLER call — write_file with a short first chunk "
+                     "of the content, then edit_file to append the rest piece "
+                     "by piece."))
+
+          ;; Empty arguments on a tool that requires them is the same transport
+          ;; artifact (truncation before/at the arguments block), not the model
+          ;; "forgetting" — the generic missing-path error sent zai-10 into an
+          ;; identical-retry loop (2026-07-04).
+          (and (empty? args)
+               (contains? #{"read_file" "list_files" "search" "edit_file"
+                            "write_file" "run_shell" "run_readonly"
+                            "reflect_ns" "reflect_var" "reflect_deps"
+                            "reflect_java_class" "psr_search" "psr_select"
+                            "pur_update" "irc_send"}
+                          name))
+          (fail (str "TOOL-CALL ARGUMENTS ARRIVED EMPTY at the harness for "
+                     name " — a transport/truncation artifact, not you "
+                     "forgetting them. Do NOT retry the identical call. If you "
+                     "were writing a long file, the arguments likely exceeded "
+                     "the output-token limit: write_file a short first chunk, "
+                     "then edit_file to append the rest piece by piece."))
+
+          :else
+          (case name
           "read_file"
           (tools/execute-tool backend :read
                               [(:path args)
@@ -442,7 +481,7 @@
               (catch Throwable t (fail (.getMessage t))))
             (fail "IRC sender is not configured"))
 
-          (fail (str "Unknown tool: " name)))]
+          (fail (str "Unknown tool: " name))))]
     {:detail (tool-call-detail tool-call args)
      :message {:role "tool"
                :tool_call_id (:id tool-call)
