@@ -16,7 +16,6 @@
   (:require [futon3c.blackboard :as bb]
     [futon3c.peripheral.common :as common]
     [futon3c.peripheral.evidence :as evidence]
-    [futon3c.peripheral.issue-holes :as issue-holes]
     [futon3c.peripheral.mission-control-backend :as mcb]
     [futon3c.peripheral.runner :as runner]
     [futon3c.peripheral.tools :as tools]))
@@ -51,17 +50,8 @@
       :mc-review
       {:ok true :result (mcb/build-portfolio-review repos)}
 
-      :mc-issue-holes
-      (let [raw-opts (first args)
-            opts (if (map? raw-opts) raw-opts {})
-            repo-root (or (:repo-root opts)
-                          (:futon3c repos)
-                          (System/getProperty "user.dir"))]
-        (try
-          {:ok true :result (issue-holes/build-issue-hole-export
-                             (assoc opts :repo-root repo-root))}
-          (catch Exception e
-            {:ok false :error (str "mc-issue-holes failed: " (.getMessage e))})))
+      ;; :mc-issue-holes REMOVED 2026-07-04 — the issue_holes GitHub-issue→hole
+      ;; projector was retired (dormant one-off; futon2/holes/aif-wiring-upgrade-note.md).
 
       :mc-bulletin
       (let [text (first args)]
