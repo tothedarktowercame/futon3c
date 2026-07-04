@@ -47,6 +47,14 @@
 (defn max-warm []
   (long-prop-or-env "FUTON3C_KANGAROO_MAX_WARM" default-max-warm))
 
+(defn max-rss-mb
+  "Per-pouch RSS ceiling in MB. Long-lived warm pouches grow without bound
+   (two kernel-OOM box deaths on 2026-07-04: pouch processes at 12 GB and
+   16.4 GB anon RSS); pouches over this ceiling are recycled at the next
+   sweep — the cold-fallback path resumes the session from its transcript."
+  []
+  (long-prop-or-env "FUTON3C_KANGAROO_MAX_RSS_MB" 4096))
+
 ;; =============================================================================
 ;; Joey gate — warm only SMALL sessions; a monster needs an explicit override
 ;; =============================================================================
@@ -278,6 +286,40 @@
          (swap! evicted conj aid)))
      @evicted)))
 
+(defn- pouch-rss-kb
+  "Resident set size of POUCH's process in kB via `ps`, or nil when
+   unreadable (dead process). NB: Java reads of /proc/<pid>/status throw
+   EINVAL in this JVM (verified 2026-07-04), hence the subprocess."
+  [pouch]
+  (try
+    (when-let [p ^Process (:process pouch)]
+      (when (.isAlive p)
+        (let [ps (.start (ProcessBuilder. ["ps" "-o" "rss=" "-p" (str (.pid p))]))
+              out (with-open [r (clojure.java.io/reader (.getInputStream ps))]
+                    (slurp r))]
+          (.waitFor ps 2000 TimeUnit/MILLISECONDS)
+          (some-> (re-find #"\d+" out) parse-long))))
+    (catch Throwable _ nil)))
+
+(defn evict-oversized!
+  "Evict pouches whose RSS exceeds the ceiling. Mid-turn pouches are never
+   killed (same rule as evict-idle!) — a ballooned pouch is recycled at the
+   first sweep after its turn ends. Returns [[agent-id rss-mb] ...]."
+  ([] (evict-oversized! (max-rss-mb)))
+  ([limit-mb]
+   (let [limit-kb (* (long limit-mb) 1024)
+         evicted (atom [])]
+     (doseq [[aid pouch] @!pouches
+             :when (not (:in-flight? pouch))]
+       (when-let [rss-kb (pouch-rss-kb pouch)]
+         (when (> rss-kb limit-kb)
+           (println (str "[kangaroo] " aid " pouch over RSS ceiling ("
+                         (quot rss-kb 1024) "MB > " limit-mb
+                         "MB); recycling — next invoke resumes cold"))
+           (when (evict! aid)
+             (swap! evicted conj [aid (quot rss-kb 1024)])))))
+     @evicted)))
+
 (defn- enforce-cap! []
   (let [limit (max 1 (long (max-warm)))
         pouches (remove (fn [[_ p]] (:in-flight? p)) @!pouches)]
@@ -343,6 +385,7 @@
   (let [aid (str agent-id)]
     (locking !registry-lock
       (evict-idle!)
+      (evict-oversized!)
       (let [existing (get @!pouches aid)]
         (if (and existing (alive? existing) (compatible? existing opts))
           existing
