@@ -3375,7 +3375,7 @@ RESPOND WITH ONLY:
                             (catch Throwable _)))
                         ;; Update invoke buffer
                         ;; Keep invoke output separate from *agents* in side-window slot 1.
-                        (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                        (bb/blackboard! buf-name content (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                         (update-codex-status!
                          agent-id
                          {:lifecycle-status :invoking
@@ -3551,7 +3551,7 @@ RESPOND WITH ONLY:
                                        "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                        (when (> (count prompt-str) 300) "...")
                                        "\n\nStarting...")
-                                  (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                  (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                   (catch Throwable _))
               ;; Start ticker: updates invoke buffer + agents buffer every 5s
               stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000 :bb-opts bb-opts)
@@ -3709,7 +3709,7 @@ RESPOND WITH ONLY:
                                      (when (not (str/blank? err))
                                        (str "\nStderr: " (subs err 0 (min 200 (count err))) "\n"))
                                      (invoke-trace-response-block agent-id final-sid invoke-trace-id text))
-                                (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                 (catch Throwable _))
               (println (str "[invoke] " agent-id " exit=" exit
                             " text-len=" (count (or text ""))
@@ -3785,7 +3785,7 @@ RESPOND WITH ONLY:
                                                    "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                                    (when (> (count prompt-str) 300) "...")
                                                    "\n\nStarting...")
-                                              (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                              (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                               (catch Throwable _))
                             (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str warm-sid 5000 :bb-opts bb-opts)]
                               ;; Interrupting a warm turn = evict the pouch: the
@@ -3865,7 +3865,7 @@ RESPOND WITH ONLY:
                                                   (bb/blackboard! buf-name
                                                                   (str "Invoke: " agent-id " — streaming (warm pouch)\n\n"
                                                                        stream-acc)
-                                                                  (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                                                  (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                                                   (catch Throwable _))))))})
                                       warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
                                       result-text (str (or (:result warm-result) ""))]
@@ -3887,7 +3887,7 @@ RESPOND WITH ONLY:
                                                          "Session: " warm-result-sid "\n"
                                                          "Output: " (count result-text) " chars\n"
                                                          (invoke-trace-response-block agent-id warm-result-sid invoke-trace-id result-text))
-                                                    (merge {:width 80 :slot 1 :no-display true} bb-opts))
+                                                    (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
                                     (catch Throwable _))
                                   (println (str "[invoke] " aid-val " warm-turn done text-len=" (count result-text)))
                                   (flush)
@@ -4373,7 +4373,7 @@ RESPOND WITH ONLY:
                                "Prompt: " (subs prompt-str 0 (min 300 (count prompt-str)))
                                (when (> (count prompt-str) 300) "...")
                                "\n\nStarting...")
-                          {:width 80 :slot 1})
+                          {:width 80 :slot 1 :async? true})
           (catch Throwable _))
         ;; Start ticker with evidence heartbeats + event trace
         (let [stop-ticker! (start-invoke-ticker! buf-name agent-id prompt-str used-sid 5000
@@ -4536,7 +4536,7 @@ RESPOND WITH ONLY:
                                  ", command-events=" command-events "\n"
                                  (runtime-summary-block final-runtime (System/currentTimeMillis) "")
                                  (invoke-trace-response-block agent-id final-sid invoke-trace-id (:result result)))
-                            {:width 80 :slot 1 :no-display true})
+                            {:width 80 :slot 1 :no-display true :async? true})
             (catch Throwable _))
           (update-codex-status!
            agent-id
