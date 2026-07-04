@@ -126,7 +126,7 @@
    kept outside this backend; the HTTP handler already withholds :query/limit
    from the backend and applies its limit after those filters, preventing the
    classic push-limit-before-app-filter under-return."
-  [{:query/keys [subject type claim-type author tags limit since]}]
+  [{:query/keys [subject type claim-type author tags limit since before]}]
   (let [base {;; NB: lead with :evidence/at (not :evidence/id) — the latter forces
               ;; a full ~64k scan that defeats the `since` range-seek below.
               ;; :evidence/at is present on every entry, so e is still fully bound.
@@ -158,6 +158,15 @@
                    (update :in conj 'since-lb)
                    (update :args conj since-lower))
                base)
+        before-upper (when before
+                       (try (.toString ^Instant (backend/parse-instant before))
+                            (catch Exception _ nil)))
+        base (if before-upper
+               (-> base
+                   (update :where conj '[(< t before-ub)])
+                   (update :in conj 'before-ub)
+                   (update :args conj before-upper))
+               base)
         q (cond-> {:find '[e t]
                    :where (:where base)
                    :order-by '[[t :desc]]
@@ -177,21 +186,23 @@
   "Widening lookback ladder (hours) for the limit-without-since fast path:
    1h, 6h, 1d, 4d, 16d, 64d, ~2y. Each rung is an indexed :evidence/at
    range-seek (~10ms on the 85k live store); the first rung that yields a
-   full page wins. Only if no rung fills does -query fall back to the
-   unbounded scan (which XTDB's :order-by fully realizes — 15-20s live)."
+   full page wins. If no rung fills, return the broadest-window result instead
+   of falling back to the unbounded scan (which XTDB's :order-by fully realizes
+   — 15-20s live)."
   [1 6 24 96 384 1536 17520])
 
 (defn- query-recent
   "Fast path for a limit query with NO :query/since: probe widening
    recency windows instead of realizing the whole store.
 
-   Correctness: a window is accepted only when it yields a FULL page
-   after `backend/filter-and-sort-entries` (ephemeral exclusion and all
-   app-level filters applied). Entries outside the window are strictly
-   older than everything in it, so a full page from a window IS the
-   global newest-`limit` result. An under-full window widens; if the
-   ladder never fills, returns nil and the caller runs the existing
-   unbounded query (semantics preserved exactly).
+   Correctness: a window is exact when it yields a FULL page after
+   `backend/filter-and-sort-entries` (ephemeral exclusion and all app-level
+   filters applied). Entries outside the window are strictly older than
+   everything in it, so a full page from a window IS the global newest-`limit`
+   result. An under-full window widens; if the ladder never fills but the
+   broadest window found any entries, return those rather than falling into the
+   pathological unbounded scan. A completely empty broadest window returns nil
+   so ancient fixtures and explicit archival stores keep the old exact path.
 
    The probe intentionally does NOT push :query/limit into datalog:
    the window bounds the row count, and a datalog limit applied before
@@ -204,18 +215,71 @@
   [node params]
   (let [limit (:query/limit params)
         now (Instant/now)]
-    (some (fn [hours]
-            (let [since (.toString (.minus now (Duration/ofHours hours)))
-                  probe (-> params
-                            (dissoc :query/limit)
-                            (assoc :query/since since))
-                  rows (query-entries node probe)
-                  entries (backend/filter-and-sort-entries
-                           rows (assoc params :query/since since))]
-              (when (= limit (count entries))
-                (with-meta entries {:evidence/fast-path :recency-window
-                                    :evidence/window-hours hours}))))
-          recency-window-hours)))
+    (loop [[hours & more] recency-window-hours
+           broadest []]
+      (if hours
+        (let [since (.toString (.minus now (Duration/ofHours hours)))
+              probe (-> params
+                        (dissoc :query/limit)
+                        (assoc :query/since since))
+              rows (query-entries node probe)
+              entries (backend/filter-and-sort-entries
+                       rows (assoc params :query/since since))
+              result (with-meta entries {:evidence/fast-path :recency-window
+                                         :evidence/window-hours hours})]
+          (if (= limit (count entries))
+            result
+            (recur more result)))
+        (when (seq broadest) broadest)))))
+
+(defonce ^:private count-cache
+  ;; Broad counts (params with no selective filter) are O(store) and blow the
+  ;; query-timeout under load — and they RECUR (context-retrieval / self-watch fire
+  ;; them every agent turn/attach, per futon1a#5). Cache by params with a short TTL
+  ;; so at most one scan per TTL happens instead of one per call, and cache the
+  ;; degraded -1 too so a slow store degrades ONCE per TTL rather than hanging every
+  ;; attach for 15s. (claude-10, 2026-07-04.)
+  (atom {}))
+
+(def ^:private count-cache-ttl-ms 30000)
+
+(defn- count-entries*
+  "Uncached count of matching evidence entries (original logic)."
+  [node params]
+  (let [{:keys [query args]} (query-state (dissoc params :query/limit))
+        count-query (cond-> (-> query
+                                (assoc :find '[(count e)])
+                                (dissoc :order-by :limit))
+                      (not (true? (:query/include-ephemeral? params)))
+                      (update :where conj '(not [e :evidence/ephemeral? true])))
+        result (ffirst (apply xtdb/q (db node) count-query args))]
+    (long (or result 0))))
+
+(defn- count-entries
+  "Count matching evidence entries without pulling documents.
+   TTL-cached (count-cache) so repeated broad counts don't each re-scan the store;
+   a query timeout degrades to -1 and is cached, so a slow store hangs once per TTL
+   instead of once per call/attach. Never throws — always returns a long."
+  [node params]
+  (let [now (System/currentTimeMillis)
+        cached (get @count-cache params)]
+    (if (and cached (< (- now (long (:at cached))) count-cache-ttl-ms))
+      (:v cached)
+      (let [v (try
+                (count-entries* node params)
+                (catch java.util.concurrent.TimeoutException _
+                  (binding [*out* *err*]
+                    (println (str "[evidence] WARN XTDB evidence count timed out after "
+                                  query-timeout-ms "ms — degraded to -1, cached "
+                                  count-cache-ttl-ms "ms. params=" (pr-str params))))
+                  -1)
+                (catch Throwable t
+                  (binding [*out* *err*]
+                    (println (str "[evidence] WARN XTDB evidence count failed: "
+                                  (.getMessage t) " — degraded to -1. params=" (pr-str params))))
+                  -1))]
+        (swap! count-cache assoc params {:v v :at now})
+        v))))
 
 (defrecord XtdbBackend [node]
   backend/EvidenceBackend
@@ -267,6 +331,16 @@
                         query-timeout-ms "ms — degraded to empty result. "
                         "params=" (pr-str params))))
         [])))
+
+  (-count [_ params]
+    (try
+      (count-entries node params)
+      (catch java.util.concurrent.TimeoutException _
+        (binding [*out* *err*]
+          (println (str "[evidence] WARN XTDB evidence count timed out after "
+                        query-timeout-ms "ms — degraded to -1. "
+                        "params=" (pr-str params))))
+        -1)))
 
   (-forks-of [_ evidence-id]
     (let [results (->> (xtdb/q (db node)
