@@ -139,6 +139,34 @@
   (vec (concat (systemd-drivers-for ["--user"] "user")
                (systemd-drivers-for [] "system"))))
 
+;; ---- systemd transient/running user services (campaign drivers) ------------
+;; Bounded foreground campaigns started via `systemd-run --user` (e.g. the
+;; wm-clicks regulated click loop, futon2/scripts/wm_click_loop.sh +
+;; README-clicks-and-ticks) are SERVICES, not timers — `list-timers` never
+;; sees them, so an ACTIVE campaign was invisible to the Clock (observed
+;; 2026-07-04, the first campaign's own day; the E-arxana-clock
+;; "completeness is bounded" issue made concrete). Scan running user
+;; services, keep the transient ones.
+(defn- transient-service-drivers []
+  (let [raw (or (sh-out "systemctl" "--user" "list-units" "--type=service"
+                        "--state=running" "--no-legend" "--no-pager" "--plain") "")]
+    (vec
+     (for [line (str/split-lines raw)
+           :let [unit (first (str/split (str/trim line) #"\s+"))]
+           :when (and unit (str/ends-with? unit ".service"))
+           :let [transient* (some-> (sh-out "systemctl" "--user" "show" unit
+                                            "-p" "Transient" "--value") str/trim)]
+           :when (= "yes" transient*)
+           :let [exec (some-> (sh-out "systemctl" "--user" "show" unit
+                                      "-p" "ExecStart" "--value") str/trim)
+                 since (some-> (sh-out "systemctl" "--user" "show" unit
+                                       "-p" "ActiveEnterTimestamp" "--value") str/trim)]]
+       {:name (str/replace unit #"\.service$" "") :mechanism :systemd-transient
+        :what (or (not-empty exec) unit)
+        :source "systemd user transient services (running)"
+        :cadence "campaign" :next-fire nil :last-fired (not-empty since)
+        :futon? (futon? (str unit " " exec)) :status :running}))))
+
 ;; ---- JVM: cyder registry + ground-truth thread scan (one Drawbridge call) ---
 (def ^:private jvm-form "
 (let [names (map #(.getName %) (keys (Thread/getAllStackTraces)))
@@ -188,7 +216,8 @@
         cron     (cron-drivers)
         systemd  (systemd-drivers)
         cyder    (cyder-drivers jvm)
-        drivers  (vec (concat cron systemd cyder))
+        transients (transient-service-drivers)
+        drivers  (vec (concat cron systemd transients cyder))
         residue  (if jvm (unaccounted jvm) [])
         sources  [{:source "user crontab (crontab -l)" :mechanism :cron :count (count (filter #(= "user crontab" (:source %)) cron))}
                   {:source "/etc/crontab + /etc/cron.d/*" :mechanism :cron
@@ -197,6 +226,7 @@
                    :count (count (filter #(re-find #"cron\.(hourly|daily|weekly|monthly)" (str (:source %))) cron))}
                   {:source "systemctl --user list-timers" :mechanism :systemd :count (count (filter #(= "systemd user timers" (:source %)) systemd))}
                   {:source "systemctl list-timers (system)" :mechanism :systemd :count (count (filter #(= "systemd system timers" (:source %)) systemd))}
+                  {:source "systemctl --user list-units --state=running (transient)" :mechanism :systemd-transient :count (count transients)}
                   {:source "cyder/list-processes (registry)" :mechanism :cyder :count (count cyder)}
                   {:source "Thread.getAllStackTraces (JVM scan)" :mechanism :jvm
                    :count (:threads-total jvm 0) :worker-pool (:worker-pool-count jvm 0)
@@ -207,7 +237,7 @@
     (when-not (some #{"--quiet"} args)
       (println (format "=== Arxana Clock — %d accounted drivers (%d futon) · %d UNACCOUNTED ===\n"
                        (count drivers) (count (filter :futon? drivers)) (count residue)))
-      (doseq [[mech label] [[:cron "⏰ cron — wall-clock"] [:systemd "⏱ systemd — timers"] [:cyder "⚙ cyder — in-JVM (registry)"]]]
+      (doseq [[mech label] [[:cron "⏰ cron — wall-clock"] [:systemd "⏱ systemd — timers"] [:systemd-transient "🖲 systemd — transient services (running campaigns)"] [:cyder "⚙ cyder — in-JVM (registry)"]]]
         (let [ds (sort-by #(or (:next-fire %) "zzz") (filter #(= mech (:mechanism %)) drivers))]
           (println (format "── %s (%d) ──" label (count ds)))
           (doseq [d ds]
