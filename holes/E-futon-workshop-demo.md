@@ -33,7 +33,7 @@ beyond re-pointing a bridge nick, Agency feature work unrelated to the demo.
 | Load test (5 concurrent clients) | **TODO** | scripted probe exists (this excursion); run after lucy claude auth is fixed |
 | Cards | **GREEN (print-ready)** | A4 sheet, 8 cards: https://claude.ai/code/artifact/97a3794e-7372-4e2d-94c3-89314311e5d2 — print 100% scale, cut on dashed lines. Content = Joe's plan verbatim + `irc.paragogy.net`. |
 | Projector curl/jq | **TODO** | rewrite for `{ok,count,entries}` shape + `since` param; pre-test after fast-path lands |
-| Web chat portal (zero-setup attendees) | **AMBER — one sudo script from GREEN** | The Lounge v4.4.3 on lucy (node 20 via nvm, user-space), PUBLIC mode: locked network → localhost ngircd, password preset server-side, auto-join `#futon`, nick-only prompt. systemd user unit `thelounge` active, :9000 answers 200 locally. DNS `chat.paragogy.net` → lucy live (record 44951703). Remaining: `ssh -t lucy-joe sudo bash ~/portal-setup.sh` (cert + websocket nginx vhost). Then phone clients become optional entirely. |
+| Web chat portal (zero-setup attendees) | **GREEN — browser-verified end-to-end** | https://chat.paragogy.net live (Joe ran portal-setup.sh; valid TLS). The Lounge v4.4.3 public mode. GOTCHA found+fixed: public mode STRIPS the preset network password client-side → ngircd dropped every portal session. Fix = `irc-pass-shim` (localhost-only 127.0.0.1:6668 → 6667, injects PASS; `~/bin/irc-pass-shim.py`, systemd user unit) — lounge now connects via the shim, direct IRC still requires the card password. Playwright verify: browser → nick → #futon, stable, full user list visible (incl. joe + all bots + chi-codex). Cards updated to lead with the portal URL. |
 | lucy disk headroom | **AMBER** | 97% full, 2.9G free — ENOSPC mid-workshop is a real risk. Quick wins in Joe's homedir: two duplicate docker-desktop .debs (~0.9G) + physics.stackexchange.7z (113M). `/home/joe/code` = 39G (futon6 14G). Joe to prune before demo day. |
 
 ## Decisions — TAKEN (Joe, 2026-07-04)
@@ -60,6 +60,9 @@ externally by hostname.
 ## Fixes landed this excursion
 
 - 2026-07-04: bridge `NICK_AGENT_MAP` claude→`lon-claude-1` (lucy, env backup kept), service restarted, accept path verified live from an external client.
+- 2026-07-04: The Lounge portal (user-space nvm/node20, public+lockNetwork, systemd user unit) + `irc-pass-shim` for the public-mode password-stripping gotcha; browser-verified via Playwright.
+- 2026-07-04: backups running to LenovoBackup (1.9T, 1.4T free): lucy `futon6/data` (5.4G, capture-before-decommission — lucy's `.venv` 7.8G is rebuildable, delete without backup) + full laptop `~/code` (421G, systemd-run detached). Deletions on lucy AFTER rsync + checksum verify.
+- NOTE 2026-07-04: `chi-codex` observed live in #futon — the metameso codex seat is materializing ahead of R2.
 
 ## Joe's personal checklist (things only Joe can do)
 
