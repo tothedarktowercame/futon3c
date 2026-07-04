@@ -6,6 +6,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.peripheral.memory-backend :as memory-backend]
             [futon3c.peripheral.real-backend :as real-backend]
             [futon3c.peripheral.tools :as tools])
   (:import [java.net URI]
@@ -131,15 +132,119 @@
                  {:channel {:type "string"}
                   :from {:type "string"}
                   :text {:type "string"}}
-                 ["text"])}])
+                 ["text"])}
+   {:name "boot_context"
+    :description "Report this agent's current situation: identity, session, cwd, clock target, git branch and dirty files, AGENTS.md presence. Snapshot at call time."
+    :parameters (json-schema {} [])}
+   {:name "repo_contract"
+    :description "Read the repo's AGENTS.md contract verbatim, with path, size, and mtime."
+    :parameters (json-schema
+                 {:repo {:type "string" :description "Optional directory; defaults to the agent cwd."}}
+                 [])}
+   {:name "psr_search"
+    :description "Search the futon pattern library for patterns relevant to a task. Returns scored candidates with pattern ids; cite the ids you rely on."
+    :parameters (json-schema
+                 {:query {:type "string"}
+                  :top_k {:type "integer"}
+                  :include_details {:type "boolean"}}
+                 ["query"])}
+   {:name "psr_select"
+    :description "Record a Pattern Selection Record (PSR) before applying a library pattern. Use a pattern id returned by psr_search."
+    :parameters (json-schema
+                 {:pattern_id {:type "string"}
+                  :rationale {:type "string"}
+                  :task_id {:type "string"}
+                  :candidates {:type "array" :items {:type "string"}}}
+                 ["pattern_id"])}
+   {:name "pur_update"
+    :description "Record a Pattern Use Record (PUR) after applying a selected pattern. Requires a prior psr_select for the same pattern id."
+    :parameters (json-schema
+                 {:pattern_id {:type "string"}
+                  :outcome {:type "string" :description "success | partial | failure"}
+                  :prediction_error {:type "string"}}
+                 ["pattern_id" "outcome"])}
+   {:name "par_punctuate"
+    :description "Punctuate the session with a PAR: what worked, what didn't, prediction errors, suggestions. Lands as a proof path in the evidence store."
+    :parameters (json-schema
+                 {:what_worked {:type "string"}
+                  :what_didnt {:type "string"}
+                  :prediction_errors {:type "array" :items {:type "object"}
+                                      :description "Structured entries, e.g. {\"expected\": ..., \"actual\": ...} or {\"description\": ...}. The PAR shape requires maps, not strings."}
+                  :suggestions {:type "array" :items {:type "string"}}}
+                 ["what_worked"])}
+   {:name "memory_search"
+    :description "Search the evidence store by filters (type, claim-type, author, since, tags). Returns the memory envelope {:frame :query :items}. Read-only."
+    :parameters (json-schema
+                 {:subject {:type "object" :description "ArtifactRef {:ref/type :ref/id} to scope the search to one subject."}
+                  :type {:type "string" :description "EvidenceType keyword, e.g. observation|claim|pattern-outcome."}
+                  :claim_type {:type "string" :description "ClaimType keyword, e.g. goal|conjecture|conclusion."}
+                  :author {:type "string"}
+                  :since {:type "string" :description "ISO-8601 timestamp lower bound (inclusive)."}
+                  :tags {:type "array" :items {:type "string"} :description "Tag keywords to filter by."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}
+                  :include_ephemeral {:type "boolean"}}
+                 [])}
+   {:name "tool_history"
+    :description "Read the clock-store session state for this agent: current clock target, edit activity, last auto-clock witness. Returns the memory envelope. Read-only."
+    :parameters (json-schema {} [])}
+   {:name "evidence_graph"
+    :description "Project evidence into graphs. Modes: thread (needs subject-ref), reply-chain (needs evidence-id), forks (needs evidence-id), neighborhood (needs end-id). Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:mode {:type "string" :description "thread | reply-chain | forks | neighborhood. Default thread."}
+                  :subject_ref {:type "object" :description "{:ref/type :ref/id} ArtifactRef for thread mode."}
+                  :evidence_id {:type "string" :description "EvidenceEntry id for reply-chain/forks modes."}
+                  :end_id {:type "string" :description "Endpoint id (string or UUID) for neighborhood mode."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}}
+                 [])}
+   {:name "pattern_memory"
+    :description "Query the evidence store for pattern-family tags (PSR/PUR/PAR/proof-path). Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:tags {:type "array" :items {:type "string"} :description "Override default tags [:psr :pur :par :proof-path]."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}}
+                 [])}
+   {:name "recent_coordination"
+    :description "Read recent coordination activity: invoke jobs (bells/whistles) and mesh edges. Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:limit {:type "integer" :description "Max items (default 20, max 100)."}
+                  :scope {:type "string" :description "jobs | edges | both. Default both."}}
+                 [])}
+   {:name "mission_context"
+    :description "Compose mission orientation: mission markdown (status banner + last checkpoint), obligations, and related evidence. Defaults to the clocked mission. Returns the memory envelope. Read-only."
+    :parameters (json-schema
+                 {:target {:type "string" :description "Optional mission id, e.g. M-custom-harness. Defaults to the clocked mission."}
+                  :limit {:type "integer" :description "Max items (default 20, max 100)."}}
+                 [])}])
 
-(defn- openai-tools []
-  (mapv (fn [{:keys [name description parameters]}]
-          {:type "function"
-           :function {:name name
-                      :description description
-                      :parameters parameters}})
-        tool-specs))
+(def ^:private memory-family-tool-names
+  "The six memory-read tools plus the two orientation tools; removable per
+   :memory-mode for the M-custom-harness §8.4 comparison conditions."
+  #{"memory_search" "tool_history" "evidence_graph" "pattern_memory"
+    "recent_coordination" "mission_context"})
+
+(def ^:private orientation-tool-names
+  #{"boot_context" "repo_contract"})
+
+(defn- specs-for-mode
+  "Tool specs for a §8.4 condition. :full (default) — everything;
+   :files — no memory family (orientation + files remain: condition b);
+   :none — no memory family, no orientation tools (condition a)."
+  [memory-mode]
+  (case (or memory-mode :full)
+    :none (remove #(or (memory-family-tool-names (:name %))
+                       (orientation-tool-names (:name %)))
+                  tool-specs)
+    :files (remove #(memory-family-tool-names (:name %)) tool-specs)
+    tool-specs))
+
+(defn- openai-tools
+  ([] (openai-tools :full))
+  ([memory-mode]
+   (mapv (fn [{:keys [name description parameters]}]
+           {:type "function"
+            :function {:name name
+                       :description description
+                       :parameters parameters}})
+         (specs-for-mode memory-mode))))
 
 (defn- parse-arguments [s]
   (cond
@@ -162,7 +267,7 @@
    :input args})
 
 (defn- execute-tool
-  [backend {:keys [irc-send-fn irc-recent-fn agent-id]} tool-call]
+  [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom]} tool-call]
   (let [name (get-in tool-call [:function :name])
         args (parse-arguments (get-in tool-call [:function :arguments]))
         fail (fn [msg] {:ok false :error msg})
@@ -234,6 +339,98 @@
                  (catch Throwable t (fail (.getMessage t))))
             (fail "IRC recent-message reader is not configured"))
 
+          "boot_context"
+          (memory-backend/boot-context {:agent-id agent-id
+                                        :session-id (some-> session-id-atom deref)
+                                        :cwd cwd})
+
+          "repo_contract"
+          (memory-backend/repo-contract {:cwd cwd} {:repo (:repo args)})
+
+          "memory_search"
+          (memory-backend/memory-search
+           {:agent-id agent-id :session-id (some-> session-id-atom deref) :cwd cwd}
+           (cond-> {}
+             (:subject args) (assoc :subject (:subject args))
+             (:type args) (assoc :type (:type args))
+             (:claim_type args) (assoc :claim-type (:claim_type args))
+             (:author args) (assoc :author (:author args))
+             (:since args) (assoc :since (:since args))
+             (seq (:tags args)) (assoc :tags (vec (:tags args)))
+             (:limit args) (assoc :limit (:limit args))
+             (:include_ephemeral args) (assoc :include-ephemeral? true)))
+
+          "tool_history"
+          (memory-backend/tool-history
+           {:agent-id agent-id :session-id (some-> session-id-atom deref)}
+           nil)
+
+          "evidence_graph"
+          (memory-backend/evidence-graph
+           {:agent-id agent-id :cwd cwd}
+           (cond-> {}
+             (:mode args) (assoc :mode (:mode args))
+             (:subject_ref args) (assoc :subject-ref (:subject_ref args))
+             (:evidence_id args) (assoc :evidence-id (:evidence_id args))
+             (:end_id args) (assoc :end-id (:end_id args))
+             (:limit args) (assoc :limit (:limit args))))
+
+          "mission_context"
+          (memory-backend/mission-context
+           {:agent-id agent-id
+            :session-id (some-> session-id-atom deref)
+            :cwd cwd}
+           (cond-> {}
+             (:target args) (assoc :target (:target args))
+             (:limit args) (assoc :limit (:limit args))))
+
+          "pattern_memory"
+          (memory-backend/pattern-memory
+           {:agent-id agent-id :cwd cwd}
+           (cond-> {}
+             (seq (:tags args)) (assoc :tags (vec (:tags args)))
+             (:limit args) (assoc :limit (:limit args))))
+
+          "recent_coordination"
+          (memory-backend/recent-coordination
+           {:agent-id agent-id :cwd cwd}
+           (cond-> {}
+             (:limit args) (assoc :limit (:limit args))
+             (:scope args) (assoc :scope (:scope args))))
+
+          "psr_search"
+          (tools/execute-tool backend :psr-search
+                              [(:query args)
+                               (cond-> {}
+                                 (:top_k args) (assoc :top-k (:top_k args))
+                                 (:include_details args) (assoc :include-details true))])
+
+          "psr_select"
+          (tools/execute-tool backend :psr-select
+                              [(:pattern_id args)
+                               (cond-> {}
+                                 (:rationale args) (assoc :rationale (:rationale args))
+                                 (:task_id args) (assoc :task-id (:task_id args))
+                                 (seq (:candidates args)) (assoc :candidates (vec (:candidates args))))])
+
+          "pur_update"
+          (tools/execute-tool backend :pur-update
+                              [(:pattern_id args)
+                               (cond-> {:outcome (:outcome args)}
+                                 (:prediction_error args) (assoc :prediction-error (:prediction_error args)))])
+
+          "par_punctuate"
+          (tools/execute-tool backend :par-punctuate
+                              [(cond-> {:session-ref (some-> session-id-atom deref)}
+                                 (:what_worked args) (assoc :what-worked (:what_worked args))
+                                 (:what_didnt args) (assoc :what-didnt (:what_didnt args))
+                                 ;; PAR shape wants [:vector map?] — coerce stray strings.
+                                 (seq (:prediction_errors args))
+                                 (assoc :prediction-errors
+                                        (mapv #(if (map? %) % {:description (str %)})
+                                              (:prediction_errors args)))
+                                 (seq (:suggestions args)) (assoc :suggestions (vec (:suggestions args))))])
+
           "irc_send"
           (if irc-send-fn
             (try
@@ -262,11 +459,11 @@
       :else "")))
 
 (defn- chat!
-  [client {:keys [api-key base-url model max-tokens temperature timeout-ms]} messages]
+  [client {:keys [api-key base-url model max-tokens temperature timeout-ms memory-mode]} messages]
   (let [body (json/generate-string
               (cond-> {:model (or model default-model)
                        :messages messages
-                       :tools (openai-tools)
+                       :tools (openai-tools memory-mode)
                        :tool_choice "auto"
                        :max_tokens (or max-tokens 4096)
                        :temperature (or temperature 0.2)
@@ -303,12 +500,14 @@
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
-           api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn]
-    :or {agent-id "zai" timeout-ms 300000}}]
+           api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn
+           memory-mode]
+    :or {agent-id "zai" timeout-ms 300000 memory-mode :full}}]
   (let [client (HttpClient/newHttpClient)
         key (or api-key (resolve-api-key))
+        cwd* (or cwd (System/getProperty "user.dir"))
         backend (real-backend/make-real-backend
-                 {:cwd (or cwd (System/getProperty "user.dir"))
+                 {:cwd cwd*
                   :timeout-ms 30000
                   :evidence-store evidence-store})
         sid0 (or initial-session-id
@@ -320,15 +519,31 @@
                           :content (str "You are " agent-id ", an agentic coding assistant running inside Joe's Futon Agency. "
                                         "Use tools to inspect files, edit files, run commands, inspect the JVM, and talk on IRC when asked. "
                                         "Do not claim to have inspected or changed anything unless you used tools or the user supplied the content. "
-                                        "Prefer small, focused tool calls and summarize concrete results.")}])
+                                        "Prefer small, focused tool calls and summarize concrete results. "
+                                        "Your boot context (appended below at first use) is a snapshot from session start; refresh with boot_context when you need current state. "
+                                        "Tool results that quote the record — pattern candidates, PSR/PUR/PAR proofs — are recorded, not necessarily current: when you rely on one, cite its id. "
+                                        "For live state (what is running, what is dirty, who is active) use live tools, never remembered results. "
+                                        "Never present a single remembered entry as a standing operator preference; standing preferences arrive explicitly tagged. "
+                                        "When you adopt a library pattern for non-trivial work, record it: psr_search then psr_select before applying, pur_update after, and par_punctuate when a work session ends. "
+                                        "To message another agent in the Agency, send a bell via run_shell: "
+                                        "python3 /home/joe/code/futon3c/scripts/agency_send.py --from " agent-id " --to <agent> --kind bell "
+                                        "with the message on stdin (a quoted heredoc is safest). Always pass --from " agent-id " so the reply can route back to you. "
+                                        "When you finish work another agent belled you about, bell them back with a summary — do not rely on the automatic completion bell alone. "
+                                        "Send required bells IMMEDIATELY when the checkpoint is reached — the bell is part of the checkpoint, not an epilogue. "
+                                        "Never end a turn with a bell announced but unsent: your turn ends when you stop calling tools, so stated intent does not execute. "
+                                        "'Announced' is not 'sent'.")}])
+        !booted (atom false)
         opts {:base-url (or base-url (getenv "ZAI_BASE_URL") default-base-url)
               :model (or model (getenv "ZAI_MODEL") default-model)
               :max-tokens max-tokens
               :temperature temperature
-              :timeout-ms timeout-ms}
+              :timeout-ms timeout-ms
+              :memory-mode memory-mode}
         tool-opts {:irc-send-fn irc-send-fn
                    :irc-recent-fn irc-recent-fn
-                   :agent-id agent-id}]
+                   :agent-id agent-id
+                   :cwd cwd*
+                   :session-id-atom !session-id}]
     (fn [prompt incoming-session-id]
       (let [key* (or key (resolve-api-key))
             sid (or incoming-session-id @!session-id sid0)]
@@ -339,8 +554,31 @@
           (do
         (reset! !session-id sid)
         (when session-file (spit session-file sid))
+        (when (compare-and-set! !booted false true)
+          ;; §8.4 condition gating: :none skips the boot packet (condition
+          ;; a); :files and :full get it (conditions b, c). Rehydration is
+          ;; ledger memory, so :full only.
+          (when-not (= :none memory-mode)
+            (try
+              (let [packet (memory-backend/boot-packet-string
+                            {:agent-id agent-id :session-id sid :cwd cwd*})]
+                (when-not (str/blank? packet)
+                  (swap! !messages update-in [0 :content] str "\n\n" packet)))
+              (catch Throwable _)))
+          ;; D-7: if this session id has prior turns in the ledger (resumed
+          ;; identity, e.g. post-crash), inject the condensed record.
+          (when (= :full memory-mode)
+            (try
+              (let [rehydration (memory-backend/rehydration-string
+                                 {:agent-id agent-id :session-id sid :limit 10})]
+                (when-not (str/blank? rehydration)
+                  (swap! !messages update-in [0 :content] str "\n\n" rehydration)))
+              (catch Throwable _))))
         (swap! !messages conj {:role "user" :content (str prompt)})
-        (loop [remaining 8
+        ;; 24 rounds: the original 8 demonstrably binds — the first real
+        ;; handoff (M-custom-harness slice 2, 2026-07-04) exhausted all 8 on
+        ;; spec/source reads and was cut off before writing anything.
+        (loop [remaining 24
                final-text ""]
           (if (zero? remaining)
             {:result (if (str/blank? final-text)
