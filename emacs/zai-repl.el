@@ -305,19 +305,22 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
     (dolist (detail details)
       (when-let ((tid (alist-get 'id detail)))
         (push (cons tid detail) zai-repl--pending-tool-uses)))
-    (if agent-chat--streaming-started
-        (agent-chat-stream-text tool-text)
-      (agent-chat-update-progress
-       (format "using %s" (if (string-empty-p tool-names) "tools" tool-names))
-       'agent-chat-prompt-face))))
+    (unless agent-chat--streaming-started
+      (agent-chat-begin-streaming-message "zai"))
+    (agent-chat-stream-text tool-text 'agent-chat-tool-line-face)
+    (agent-chat-update-progress
+     (format "using %s" (if (string-empty-p tool-names) "tools" tool-names))
+     'agent-chat-prompt-face)))
 
-(defun zai-repl--handle-agency-event (json-obj final-text-cell)
+(defun zai-repl--handle-agency-event (json-obj final-text-cell streamed-text-cell)
   "Render one Agency stream JSON-OBJ and update FINAL-TEXT-CELL."
   (let ((type (alist-get 'type json-obj)))
     (cond
      ((equal type "text")
       (let ((txt (or (alist-get 'text json-obj) "")))
         (setcar final-text-cell (concat (car final-text-cell) txt))
+        (unless (string-empty-p txt)
+          (setcar streamed-text-cell t))
         (unless agent-chat--streaming-started
           (agent-chat-begin-streaming-message "zai"))
         (agent-chat-stream-text txt)))
@@ -352,7 +355,8 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
                        :caller ,(or (getenv "USER") user-login-name "joe"))))
          (outbuf (generate-new-buffer " *zai-repl-stream*"))
          (line-buffer "")
-         (final-text-cell (list "")))
+         (final-text-cell (list ""))
+         (streamed-text-cell (list nil)))
     (setq zai-repl--pending-tool-uses nil)
     (make-process
      :name "zai-repl-stream"
@@ -382,7 +386,8 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
                                   :null-object nil
                                   :false-object nil)))
                    (with-current-buffer chat-buffer
-                     (zai-repl--handle-agency-event json-obj final-text-cell)))
+                     (zai-repl--handle-agency-event
+                      json-obj final-text-cell streamed-text-cell)))
                (error nil))))))
      :sentinel
      (lambda (p _event)
@@ -391,7 +396,12 @@ Z.AI accepts values like \"none\", \"minimal\", \"high\", and \"max\"."
            (with-current-buffer chat-buffer
              (when agent-chat--streaming-started
                (agent-chat-end-streaming-message))
-             (funcall callback (car final-text-cell))))
+             (if (car streamed-text-cell)
+                 (progn
+                   (agent-chat-remove-thinking)
+                   (agent-chat-finish-turn!)
+                   (agent-chat-scroll-to-bottom))
+               (funcall callback (car final-text-cell)))))
          (when (buffer-live-p (process-buffer p))
            (kill-buffer (process-buffer p))))))))
 
