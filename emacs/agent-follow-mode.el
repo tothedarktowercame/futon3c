@@ -32,10 +32,51 @@
   "Face for agent-follow job marker lines (⟲ …)."
   :group 'agent-follow)
 
-(defcustom agent-follow-poll-interval 3
-  "Seconds between polls of the Agency invoke-jobs ledger."
+(defcustom agent-follow-poll-interval 10
+  "Seconds between FALLBACK polls of the Agency invoke-jobs ledger.
+With the WS doorbell connected (`futon-agency-ws'), pushes trigger an
+immediate poll, so this only paces gap-repair; 10s is plenty. Without
+the doorbell it is the render latency — lower it if you disable WS."
   :type 'integer
   :group 'agent-follow)
+
+(defvar-local agent-follow--doorbell-pending nil
+  "Non-nil while a doorbell-triggered poll is already scheduled (debounce).")
+
+(defun agent-follow--doorbell (frame)
+  "WS push handler: an invoke event landed for some agent.
+If it is ours, poll now (debounced 0.2s) instead of waiting for the
+fallback interval. Runs in every follow-enabled buffer via the shared
+connector's dispatch — filter by this buffer's agent id."
+  (let ((aid (alist-get 'agent-id frame)))
+    (dolist (buf (buffer-list))
+      (with-current-buffer buf
+        (when (and (bound-and-true-p agent-follow-mode)
+                   agent-follow--agent-id
+                   (equal aid agent-follow--agent-id)
+                   (not agent-follow--doorbell-pending))
+          (setq agent-follow--doorbell-pending t)
+          (let ((buffer (current-buffer)))
+            (run-at-time 0.2 nil
+                         (lambda ()
+                           (when (buffer-live-p buffer)
+                             (with-current-buffer buffer
+                               (setq agent-follow--doorbell-pending nil))
+                             (condition-case nil
+                                 (agent-follow--poll buffer)
+                               (error nil)))))))))))
+
+(defun agent-follow--doorbell-ensure ()
+  "Connect the shared Agency WS and subscribe the doorbell, if available.
+Safe no-op when `futon-agency-ws' or websocket.el is missing — the
+fallback poll carries the mode alone, just slower."
+  (when (require 'futon-agency-ws nil t)
+    (condition-case nil
+        (progn
+          (futon-agency-ws-subscribe "invoke_event" #'agent-follow--doorbell)
+          (unless (and futon-agency-ws--ws (websocket-openp futon-agency-ws--ws))
+            (futon-agency-ws-connect)))
+      (error nil))))
 
 (defcustom agent-follow-jobs-limit 30
   "How many recent jobs to fetch per poll (filtered client-side by agent)."
@@ -47,6 +88,11 @@
 By default those are skipped: the REPL already streams its own turns."
   :type 'boolean
   :group 'agent-follow)
+
+(declare-function futon-agency-ws-subscribe "futon-agency-ws" (type handler))
+(declare-function futon-agency-ws-connect "futon-agency-ws" ())
+(declare-function websocket-openp "websocket" (websocket))
+(defvar futon-agency-ws--ws)
 
 (defvar-local agent-follow--agent-id nil
   "Agent id this buffer follows.")
@@ -323,6 +369,9 @@ in-flight and future turns stream in."
           ;; a race where enable completed with no ticking timer (2026-07-05).
           (agent-follow--mark-history-seen)
           (agent-follow--start-timer)
+          ;; WS doorbell: push-triggered immediate polls; the timer above
+          ;; becomes the gap-repair fallback (see agent-follow-poll-interval).
+          (agent-follow--doorbell-ensure)
           (message "agent-follow-mode: following %s" aid)))
     (agent-follow--stop-timer)))
 

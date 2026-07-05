@@ -372,7 +372,18 @@
              (if-let [job (get-in ledger [:jobs job-id])]
                (assoc-in ledger [:jobs job-id]
                          (append-job-event job event-type payload))
-               ledger)))))
+               ledger)))
+    ;; WS doorbell (2026-07-05): tell connected observers an event landed so
+    ;; follow-mode can poll NOW instead of on its fallback interval. Tiny
+    ;; frame — ids only, no payload; the poll fetches content (and repairs
+    ;; any dropped frames, so this is latency-only, never correctness).
+    (try
+      (when-let [bc (requiring-resolve 'futon3c.transport.ws.invoke/broadcast-frame!)]
+        (bc {"type" "invoke_event"
+             "agent-id" (str (get-in @!invoke-jobs-ledger [:jobs job-id :agent-id]))
+             "job-id" job-id
+             "event-type" event-type}))
+      (catch Throwable _))))
 
 (defn- next-invoke-job-id
   [ledger]
