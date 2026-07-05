@@ -18,13 +18,20 @@
    The dimension/owner/held-on/coverage SCAFFOLD stays from the contract (it is the
    campaign's own structure, not landed data); only `claims-typeo` becomes live."
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str]
             [babashka.http-client :as http]
+            [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.registry :as registry]
             [futon3c.logic.cascade-real :as cr])
   (:import [java.net URLEncoder]))
 
 (def ^:private FUTON1A (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
+
+#_{:clj-kondo/ignore [:unresolved-var]}
+(def ^:private claims-typeo-rel cr/claims-typeo)
 
 (defn fetch-edges
   "GET currently-valid substrate-2 hyperedges of HX-TYPE (db-as-of now). Returns a
@@ -62,7 +69,7 @@
                            (str/starts-with? s "campaign:")  [s :campaign]
                            :else                             nil)]
         :when nid]
-    [cr/claims-typeo :O3 nid type]))
+    [claims-typeo-rel :O3 nid type]))
 
 (defn- o3-lineage-claims [] (o3-claims-from (fetch-edges "clock/clocked-on")))
 
@@ -77,7 +84,7 @@
   [edges]
   (for [e   edges
         nid (filter #(str/starts-with? (str %) "meme:") (:hx/endpoints e))]
-    [cr/claims-typeo :O2 (str nid) :meme]))
+    [claims-typeo-rel :O2 (str nid) :meme]))
 
 (defn- o2-mine-claims [] (o2-meme-claims-from (fetch-edges "mine/meme")))
 
@@ -94,7 +101,7 @@
         :when (and have
                    (re-find #"-d/mission/" (str have))
                    (not (re-find #"-head$" (str have))))]
-    [cr/claims-typeo :O1 (str have) :mission]))
+    [claims-typeo-rel :O1 (str have) :mission]))
 
 (defn- o1-arrow-claims [] (o1-mined-move-claims-from (fetch-edges "code/v05/mined-move")))
 
@@ -110,8 +117,8 @@
      (keep (fn [ep]
              (let [s (str ep)]
                (cond
-                 (str/starts-with? s "cascade/cluster/") [cr/claims-typeo :O4 s :cluster]
-                 (re-find #"-d/mission/" s)               [cr/claims-typeo :O4 s :mission]
+                 (str/starts-with? s "cascade/cluster/") [claims-typeo-rel :O4 s :cluster]
+                 (re-find #"-d/mission/" s)               [claims-typeo-rel :O4 s :mission]
                  :else nil)))
            (:hx/endpoints e)))
    edges))
@@ -130,9 +137,9 @@
      (keep (fn [ep]
              (let [s (str ep)]
                (cond
-                 (str/starts-with? s "cascade/hole/")     [cr/claims-typeo :O5 s :hole]
-                 (re-find #"-d/mission/" s)                [cr/claims-typeo :O5 s :mission]
-                 (str/starts-with? s "scope/capability/") [cr/claims-typeo :O5 s :capability]
+                 (str/starts-with? s "cascade/hole/")     [claims-typeo-rel :O5 s :hole]
+                 (re-find #"-d/mission/" s)                [claims-typeo-rel :O5 s :mission]
+                 (str/starts-with? s "scope/capability/") [claims-typeo-rel :O5 s :capability]
                  :else nil)))
            (:hx/endpoints e)))
    edges))
@@ -160,7 +167,7 @@
    claims (honest — their data isn't there yet)."
   []
   (concat
-   (remove (fn [[rel]] (= rel cr/claims-typeo)) cr/contract-facts)
+   (remove (fn [[rel]] (= rel claims-typeo-rel)) cr/contract-facts)
    (mapcat (fn [extract] (extract)) (vals extractors))))
 
 (defn live-dimensions
@@ -222,6 +229,83 @@
 
 (defn- endpoints-of [e] (mapv str (:hx/endpoints e)))
 (defn- mission-ep [eps] (some #(when (re-find #"-d/mission/" %) %) eps))
+
+(defn- doc-files
+  []
+  (let [root (io/file code-root)]
+    (if-not (.exists root)
+      []
+      (->> (.listFiles root)
+           (filter #(.isDirectory ^java.io.File %))
+           (filter #(str/starts-with? (.getName ^java.io.File %) "futon"))
+           (remove #(= "futon7" (.getName ^java.io.File %)))
+           (mapcat file-seq)
+           (filter #(.isFile ^java.io.File %))
+           (filter #(re-matches #"[ME]-[^/]+\.md" (.getName ^java.io.File %)))
+           (filter #(str/includes? (.getPath ^java.io.File %) "/holes/"))
+           (remove #(str/includes? (.getPath ^java.io.File %) "/.git/"))
+           vec))))
+
+(defn- repo-name
+  [^java.io.File file]
+  (let [root-path (.toPath (.getCanonicalFile (io/file code-root)))
+        path (.toPath (.getCanonicalFile file))]
+    (some-> (.relativize root-path path)
+            (.getName 0)
+            str)))
+
+(defn- doc-row
+  [^java.io.File file]
+  (let [stem (str/replace (.getName file) #"\.md$" "")]
+    {:stem stem
+     :kind (if (str/starts-with? stem "E-") "excursion" "mission")
+     :repo (repo-name file)
+     :path (.getCanonicalPath file)
+     :mtime-ms (.lastModified file)}))
+
+(defn- clock-stem-key
+  [x]
+  (let [tail (some-> x str (str/split #"/") last)]
+    (some-> tail
+            (str/replace #"(?i)^[MEC]-" "")
+            str/lower-case)))
+
+(defn- durable-clocked-stems
+  [edges]
+  (set (keep (fn [e]
+               (some (fn [ep]
+                       (let [s (str ep)]
+                         (when (re-find #"-d/(mission|excursion|campaign)/" s)
+                           (clock-stem-key s))))
+                     (:hx/endpoints e)))
+             edges)))
+
+(defn- live-clocked-stems
+  []
+  (set (keep (fn [[agent-id info]]
+               (let [clock (:clock (clock-store/current-state agent-id (:session-id info)))]
+                 (clock-stem-key (or (:mission-id clock)
+                                     (:excursion-id clock)
+                                     (:campaign-id clock)))))
+             (:agents (registry/registry-status)))))
+
+(defn tickets-section
+  "Recent unclocked mission/excursion docs. Read-only; degrades empty if disk,
+   lineage, or live-clock state hiccups."
+  []
+  (try
+    (let [clocked (set/union (durable-clocked-stems (fetch-edges "clock/clocked-on"))
+                             (live-clocked-stems))
+          items (->> (doc-files)
+                     (map doc-row)
+                     (remove #(contains? clocked (clock-stem-key (:stem %))))
+                     (sort-by :mtime-ms >)
+                     vec)]
+      {:count-total (count items)
+       :items (vec (take 40 items))})
+    (catch Throwable _
+      {:count-total 0
+       :items []})))
 
 (defn lineage-section
   "O3 — agent→target clock edges (who/which session is on each mission/excursion/
@@ -317,13 +401,15 @@
         holes    (hole-section    (fetch-edges "cascade/hole-target"))
         arrows   (arrow-section   (fetch-edges "code/v05/mined-move"))
         held     (held-section    (fetch-edges "held/on-mission"))
-        patterns (mission-pattern-section (fetch-edges "cascade/mission-pattern"))]
+        patterns (mission-pattern-section (fetch-edges "cascade/mission-pattern"))
+        tickets  (tickets-section)]
     {:as-of-ms (System/currentTimeMillis)
      :lineage  lineage
      :clusters clusters
      :holes    holes
      :arrows   arrows
      :held     held
+     :tickets  tickets
      :patterns {:edges patterns
                 :note (str "mission→pattern crosslinks reconstructed from historical mining "
                            "(mission-pattern-scopes; :applied citations), NOT PSR/PUR. Both endpoints "

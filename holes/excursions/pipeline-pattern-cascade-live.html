@@ -102,6 +102,12 @@
     <div class="sub" style="margin-bottom:10px">The cascade's <i>downward</i> half: what the upward work is <b>for</b> — backlog → priced sorries → ROI → pipeline, ledger-grounded (M-interim-director-forward-model, E4). Live from <code>/api/alpha/forward-model</code>.</div>
     <div id="forward-body"></div>
   </section>
+
+  <section class="panel" id="tickets-panel" style="display:none">
+    <h2>Tickets <span class="muted" id="tickets-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">unclocked = no clock lineage, live or durable · claim by clocking (<code>bell --mission &lt;id&gt;</code> or 3 doc-edits &lt;10 min)</div>
+    <div id="tickets-body"></div>
+  </section>
 </main>
 
 <script>
@@ -121,6 +127,31 @@
   function shortCluster(c){return String(c).replace("cascade/cluster/","");}
   function truncate(s,n){s=String(s);return s.length>n?s.slice(0,n-1)+"…":s;}
   function el(id){return document.getElementById(id);}
+  var loading=false;
+
+  function ago(ms){
+    var delta=Math.max(0,Date.now()-Number(ms||0));
+    var mins=Math.floor(delta/60000);
+    if(mins<1) return "now";
+    if(mins<60) return mins+"m ago";
+    var hrs=Math.floor(mins/60);
+    if(hrs<48) return hrs+"h ago";
+    var days=Math.floor(hrs/24);
+    if(days<60) return days+"d ago";
+    var months=Math.floor(days/30);
+    return months+"mo ago";
+  }
+
+  function clearPanels(){
+    ["header-panel","basins-panel","cascade-panel","patterns-panel","holes-panel","held-panel",
+     "lineage-panel","forward-panel","tickets-panel"].forEach(function(id){el(id).style.display="none";});
+    ["dims","spine","composition","standards","basins","legend","patterns-gap","holes-body",
+     "held-body","lineage-body","forward-body","tickets-body"].forEach(function(id){el(id).innerHTML="";});
+    ["basins-count","cascade-count","holes-count","held-count","lineage-count","forward-src","tickets-count"].forEach(function(id){el(id).textContent="";});
+    el("cascade").innerHTML="";
+    el("offline").style.display="none";
+    el("offline").innerHTML="Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.";
+  }
 
   function renderHeader(s){
     el("asof").textContent=" · as of "+new Date(s["as-of-ms"]).toLocaleString()+
@@ -352,25 +383,52 @@
     el("forward-panel").style.display="";
   }
 
-  Promise.all([
-    fetch(EP_SUMMARY).then(function(r){return r.json();}),
-    fetch(EP_GRAPH).then(function(r){return r.json();}),
-    fetch(EP_FORWARD).then(function(r){return r.json();}).catch(function(){return null;})
-  ]).then(function(res){
-    var s=res[0], g=res[1];
-    renderHeader(s);
-    var ix=buildIndex(g);
-    renderBasins(g,ix);
-    renderCascade(g,ix);
-    renderPatterns(g);
-    renderHoles(g);
-    renderHeld(g);
-    renderLineage(g);
-    renderForward(res[2]);
-  }).catch(function(err){
-    el("offline").style.display="block";
-    el("offline").innerHTML+="<br><span class='muted'>"+esc(err&&err.message||err)+"</span>";
-  });
+  function renderTickets(g){
+    var tickets=(g.tickets&&g.tickets.items)||[];
+    var total=(g.tickets&&g.tickets["count-total"])||tickets.length;
+    el("tickets-count").textContent="· "+tickets.length+" of "+total;
+    if(!tickets.length){
+      el("tickets-body").innerHTML="<span class='muted'>no unclocked mission/excursion docs found</span>";
+    }else{
+      var rows=tickets.map(function(t){
+        return "<tr><td><code>"+esc(t.stem)+"</code></td><td>"+esc(t.kind)+"</td><td>"+esc(t.repo)+"</td><td class='muted' title='"+esc(new Date(t["mtime-ms"]).toLocaleString())+"'>"+ago(t["mtime-ms"])+"</td></tr>";
+      });
+      el("tickets-body").innerHTML="<table><tr><th>stem</th><th>kind</th><th>repo</th><th>last-touched</th></tr>"+rows.join("")+"</table>";
+    }
+    el("tickets-panel").style.display="";
+  }
+
+  function loadAll(){
+    if(loading) return;
+    loading=true;
+    Promise.all([
+      fetch(EP_SUMMARY,{cache:"no-store"}).then(function(r){return r.json();}),
+      fetch(EP_GRAPH,{cache:"no-store"}).then(function(r){return r.json();}),
+      fetch(EP_FORWARD,{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return null;})
+    ]).then(function(res){
+      clearPanels();
+      var s=res[0], g=res[1];
+      renderHeader(s);
+      var ix=buildIndex(g);
+      renderBasins(g,ix);
+      renderCascade(g,ix);
+      renderPatterns(g);
+      renderHoles(g);
+      renderHeld(g);
+      renderLineage(g);
+      renderForward(res[2]);
+      renderTickets(g);
+    }).catch(function(err){
+      clearPanels();
+      el("offline").style.display="block";
+      el("offline").innerHTML+="<br><span class='muted'>"+esc(err&&err.message||err)+"</span>";
+    }).finally(function(){
+      loading=false;
+    });
+  }
+
+  loadAll();
+  setInterval(loadAll,60000);
 })();
 </script>
 </body>

@@ -3,8 +3,12 @@
    over Drawbridge; here we pin the pure extractor and prove the cross-dimension
    composition gate bites on REAL-shaped node-ids (so a bad future car is caught)."
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.java.io :as io]
             [futon3c.logic.cascade-real :as cr]
             [futon3c.logic.cascade-real-live :as live]))
+
+#_{:clj-kondo/ignore [:unresolved-var]}
+(def ^:private claims-typeo-rel cr/claims-typeo)
 
 (def ^:private sample-clock-edges
   ;; as the substrate-2 query returns them — endpoints are now CANONICAL node-ids
@@ -18,18 +22,18 @@
 (deftest o3-extractor-keys-on-canonical-endpoints
   (testing "clock edges → claims-typeo on the CANONICAL node-ids the lineage writes"
     (let [claims (live/o3-claims-from sample-clock-edges)]
-      (is (some #{[cr/claims-typeo :O3 "futon3c-d/mission/autoclock-in" :mission]} claims)
+      (is (some #{[claims-typeo-rel :O3 "futon3c-d/mission/autoclock-in" :mission]} claims)
           "the canonical mission node is claimed (shares its id with O1/D4)")
-      (is (some #{[cr/claims-typeo :O3 "campaign:C-cascade-real" :campaign]} claims))
-      (is (some #{[cr/claims-typeo :O3 "agent:claude-4" :agent]} claims))
-      (is (every? #(= cr/claims-typeo (first %)) claims) "only claims-typeo facts"))))
+      (is (some #{[claims-typeo-rel :O3 "campaign:C-cascade-real" :campaign]} claims))
+      (is (some #{[claims-typeo-rel :O3 "agent:claude-4" :agent]} claims))
+      (is (every? #(= claims-typeo-rel (first %)) claims) "only claims-typeo facts"))))
 
 (deftest o1-extractor-maps-mined-moves
   (testing "mined-move edges → claims-typeo :O1 on the canonical HAVE mission node (:mission)"
-    (let [edges  [{:hx/type :code/v05/mined-move
+    (let [edges  [{:hx/type "code/v05/mined-move"
                    :hx/endpoints ["futon3c-d/mission/autoclock-in" "futon3c-d/mission/autoclock-in-head"]}]
           claims (live/o1-mined-move-claims-from edges)]
-      (is (= [[cr/claims-typeo :O1 "futon3c-d/mission/autoclock-in" :mission]] claims)
+      (is (= [[claims-typeo-rel :O1 "futon3c-d/mission/autoclock-in" :mission]] claims)
           "claims the have (mission) node :mission; the -head want node is skipped"))))
 
 (deftest o4-extractor-maps-clusters
@@ -37,8 +41,8 @@
     (let [edges  [{:hx/type :cascade/cluster-member
                    :hx/endpoints ["cascade/cluster/operator-loops" "futon3c-d/mission/autoclock-in"]}]
           claims (live/o4-cluster-claims-from edges)]
-      (is (some #{[cr/claims-typeo :O4 "cascade/cluster/operator-loops" :cluster]} claims))
-      (is (some #{[cr/claims-typeo :O4 "futon3c-d/mission/autoclock-in" :mission]} claims)
+      (is (some #{[claims-typeo-rel :O4 "cascade/cluster/operator-loops" :cluster]} claims))
+      (is (some #{[claims-typeo-rel :O4 "futon3c-d/mission/autoclock-in" :mission]} claims)
           "claims the canonical mission node :mission (the shared spine with O1/O3)"))))
 
 (deftest o4-o3-o1-compose-on-the-shared-mission-node
@@ -64,8 +68,8 @@
 (deftest gate-bites-cross-dimension-conflict
   (testing "a 2nd dimension's LIVE claim that types a shared real node differently is CAUGHT"
     ;; O3 says mission:M-x is :mission; a hypothetical O4 car lands claiming it :pattern
-    (let [o3  [cr/claims-typeo :O3 "mission:M-x" :mission]
-          bad [cr/claims-typeo :O4 "mission:M-x" :pattern]
+    (let [o3  [claims-typeo-rel :O3 "mission:M-x" :mission]
+          bad [claims-typeo-rel :O4 "mission:M-x" :pattern]
           v   (cr/verify (cr/db-from-data [o3 bad]))]
       (is (some #{"mission:M-x"} (:composition-violations v))
           "the shared-node type conflict is detected over real-shaped node-ids")
@@ -73,8 +77,8 @@
 
 (deftest gate-clean-when-consistent
   (testing "two dimensions agreeing on a shared node's type compose cleanly"
-    (let [o3 [cr/claims-typeo :O3 "mission:M-x" :mission]
-          o4 [cr/claims-typeo :O4 "mission:M-x" :mission]
+    (let [o3 [claims-typeo-rel :O3 "mission:M-x" :mission]
+          o4 [claims-typeo-rel :O4 "mission:M-x" :mission]
           v  (cr/verify (cr/db-from-data [o3 o4]))]
       (is (= [] (:composition-violations v))))))
 
@@ -88,20 +92,20 @@
     (let [edges  [{:hx/type :mine/meme :hx/endpoints ["meme:ask-abc123"] :hx/props {}}
                   {:hx/type :mine/meme :hx/endpoints ["meme:ask-def456" "concept:x"] :hx/props {}}]
           claims (live/o2-meme-claims-from edges)]
-      (is (some #{[cr/claims-typeo :O2 "meme:ask-abc123" :meme]} claims))
-      (is (some #{[cr/claims-typeo :O2 "meme:ask-def456" :meme]} claims))
+      (is (some #{[claims-typeo-rel :O2 "meme:ask-abc123" :meme]} claims))
+      (is (some #{[claims-typeo-rel :O2 "meme:ask-def456" :meme]} claims))
       (is (= 2 (count claims)) "concept: endpoint not claimed in the first car"))))
 
 (deftest o2-o3-compose-disjoint
   (testing "O2 memes + O3 missions are disjoint node-ids → compose cleanly"
-    (let [v (cr/verify (cr/db-from-data [[cr/claims-typeo :O3 "mission:M-x" :mission]
-                                         [cr/claims-typeo :O2 "meme:ask-1" :meme]]))]
+    (let [v (cr/verify (cr/db-from-data [[claims-typeo-rel :O3 "mission:M-x" :mission]
+                                         [claims-typeo-rel :O2 "meme:ask-1" :meme]]))]
       (is (= [] (:composition-violations v))))))
 
 (deftest concept-index-collision-would-bite
   (testing "WHY claude-1 defers concept-index: a mission node claimed as :meme by O2 is caught"
-    (let [v (cr/verify (cr/db-from-data [[cr/claims-typeo :O3 "mission:M-x" :mission]
-                                         [cr/claims-typeo :O2 "mission:M-x" :meme]]))]
+    (let [v (cr/verify (cr/db-from-data [[claims-typeo-rel :O3 "mission:M-x" :mission]
+                                         [claims-typeo-rel :O2 "mission:M-x" :meme]]))]
       (is (some #{"mission:M-x"} (:composition-violations v)))
       (is (false? (:consistent? v))))))
 
@@ -176,3 +180,30 @@
     (is (= [] (live/lineage-section []) (live/cluster-section [])
            (live/hole-section []) (live/arrow-section []) (live/held-section [])
            (live/mission-pattern-section [])))))
+
+(deftest tickets-section-sorts-unclocked-docs
+  (testing "tickets are recent mission/excursion docs minus durable and live clocks"
+    (let [root (.toFile (java.nio.file.Files/createTempDirectory "cascade-tickets" (make-array java.nio.file.attribute.FileAttribute 0)))
+          mk (fn [repo rel mtime]
+               (let [f (io/file root repo "holes" rel)]
+                 (.mkdirs (.getParentFile f))
+                 (spit f "# ticket\n")
+                 (.setLastModified f mtime)
+                 f))
+          newer (mk "futon3c" "excursions/E-newer.md" 3000)
+          older (mk "futon6" "missions/M-older.md" 2000)
+          durable (mk "futon6" "missions/M-clocked.md" 4000)
+          live-clock (mk "futon3c" "excursions/E-live.md" 5000)]
+      (with-redefs-fn {#'live/code-root (.getCanonicalPath root)
+                       #'live/doc-files (fn [] [newer older durable live-clock])
+                       #'live/fetch-edges (fn [hx-type]
+                                             (if (= "clock/clocked-on" hx-type)
+                                               [{:hx/endpoints ["agent:claude-1" "futon6-d/mission/clocked"]}]
+                                               []))
+                       #'live/live-clocked-stems (fn [] #{"live"})}
+        (fn []
+          (let [tickets ((var-get #'live/tickets-section))
+                stems (mapv :stem (:items tickets))]
+            (is (= 2 (:count-total tickets)))
+            (is (= ["E-newer" "M-older"] stems))
+            (is (= ["futon3c" "futon6"] (mapv :repo (:items tickets))))))))))
