@@ -46,6 +46,23 @@
       (ws-invoke/unregister! "emacs-hud")
       (ws-invoke/unregister! "agent-4"))))
 
+(deftest broadcast-evicts-throwing-sender
+  (testing "one dead sender is evicted while other broadcast receivers still get the frame"
+    (let [good-sent (atom [])]
+      (ws-invoke/register! "agent-good" #(swap! good-sent conj %))
+      (ws-invoke/register! "agent-dead" (fn [_] (throw (ex-info "closed" {}))))
+      (ws-invoke/broadcast-frame! {"type" "agents_status"})
+      (is (= [(json/generate-string {"type" "agents_status"})] @good-sent))
+      (is (contains? (set (ws-invoke/connected-agent-ids)) "agent-good"))
+      (is (not (contains? (set (ws-invoke/connected-agent-ids)) "agent-dead")))
+      (ws-invoke/unregister! "agent-good"))))
+
+(deftest send-frame-evicts-false-returning-sender
+  (testing "send-frame! evicts senders that explicitly return false"
+    (ws-invoke/register! "agent-false" (constantly false))
+    (is (false? (ws-invoke/send-frame! "agent-false" {"type" "invoke_delivery"})))
+    (is (not (contains? (set (ws-invoke/connected-agent-ids)) "agent-false")))))
+
 (deftest ws-send-frame-best-effort
   (testing "send-frame! serializes JSON over an active WS sender"
     (let [sent (atom nil)]

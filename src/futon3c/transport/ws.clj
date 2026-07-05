@@ -212,7 +212,9 @@
                                      :session-id session-id
                                      :connected? true
                                      :observer? true))
-                       (ws-invoke/register! agent-id #(send-fn ch %) {:observer? true})
+                       (ws-invoke/register! agent-id #(send-fn ch %)
+                                            {:observer? true
+                                             :connection ch})
                        (send-fn ch (proto/render-ready-ack))
                        (when on-connect-hook
                          (on-connect-hook agent-id)))
@@ -237,7 +239,8 @@
                                          :agent-id agent-id
                                          :session-id session-id
                                          :connected? true))
-                           (ws-invoke/register! agent-id #(send-fn ch %))
+                           (ws-invoke/register! agent-id #(send-fn ch %)
+                                                {:connection ch})
                            (send-fn ch (proto/render-ready-ack))
                            (when on-connect-hook
                              (on-connect-hook agent-id)))))))
@@ -446,8 +449,8 @@
          ;; L2: only clean up if truly connected (handshake completed)
          (when (and conn (:connected? conn))
            (when-let [agent-id (:agent-id conn)]
-             (ws-invoke/unregister! agent-id)
-             (when on-disconnect-hook
+             (when (and (ws-invoke/unregister-current! agent-id ch)
+                        on-disconnect-hook)
                (on-disconnect-hook agent-id))))
          ;; Remove from connections regardless of state
          (swap! !connections dissoc ch)))}))

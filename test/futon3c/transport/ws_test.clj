@@ -4,12 +4,11 @@
    Tests use make-ws-callbacks directly with mock send-fn/close-fn,
    avoiding the need for actual http-kit connections. Mock channels are
    plain keywords used as map keys in the connection registry."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [futon3c.transport.ws :as ws]
-            [futon3c.transport.protocol :as proto]
             [futon3c.transport.ws.invoke :as ws-invoke]
-            [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]))
@@ -138,7 +137,7 @@
 
 (deftest ws-ready-handshake-unknown-agent
   (testing "readiness handshake with unknown agent → error sent + connection closed"
-    (let [{:keys [on-open on-receive connections sent closed]} (make-test-ws)
+    (let [{:keys [on-open on-receive sent closed]} (make-test-ws)
           ch :test-ch-5
           request (mock-request)]
       (on-open ch request)
@@ -181,7 +180,7 @@
       (on-receive ch (ready-frame "claude-1"))
       (let [conn (get @connections ch)]
         (is (string? (:session-id conn)))
-        (is (clojure.string/starts-with? (:session-id conn) "sess-"))))))
+        (is (str/starts-with? (:session-id conn) "sess-"))))))
 
 ;; =============================================================================
 ;; Message dispatch tests
@@ -290,6 +289,27 @@
       (on-open ch request)
       (on-receive ch (ready-frame "claude-1"))
       (on-close ch :normal)
+      (is (= ["claude-1"] @disconnected)))))
+
+(deftest ws-stale-close-does-not-evict-newer-invoke-registration
+  (testing "late close from an old socket leaves the replacement sender active"
+    (let [disconnected (atom [])
+          {:keys [on-open on-receive on-close sent]} (make-test-ws
+                                                      :on-disconnect #(swap! disconnected conj %))
+          old-ch :stale-close-old
+          new-ch :stale-close-new
+          request (mock-request)]
+      (on-open old-ch request)
+      (on-receive old-ch (ready-frame "claude-1"))
+      (on-open new-ch request)
+      (on-receive new-ch (ready-frame "claude-1"))
+      (on-close old-ch :late-close)
+      (is (empty? @disconnected)
+          "stale close should not announce disconnect for the replacement")
+      (is (true? (ws-invoke/send-frame! "claude-1" {"type" "probe"})))
+      (is (= new-ch (:ch (last @sent)))
+          "current invoke sender should still target the replacement channel")
+      (on-close new-ch :normal)
       (is (= ["claude-1"] @disconnected)))))
 
 (deftest ws-close-before-handshake-no-cleanup

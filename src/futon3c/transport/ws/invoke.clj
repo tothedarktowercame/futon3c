@@ -10,8 +10,33 @@
 (def ^:const timeout-sentinel ::timeout)
 
 (defonce ^:private !agents
-  ;; {agent-id {:send (fn [json]) :pending (atom {invoke-id promise})}}
+  ;; {agent-id {:send (fn [json]) :pending (atom {invoke-id promise})
+  ;;            :connection <opaque ws channel>}}
   (atom {}))
+
+(defn- warn!
+  [& parts]
+  (binding [*out* *err*]
+    (println (apply str parts))))
+
+(defn- evict!
+  [agent-id reason]
+  (swap! !agents dissoc agent-id)
+  (warn! "[ws-invoke] evicting stale sender agent-id=" agent-id
+         " reason=" reason))
+
+(defn- accepted-send?
+  [agent-id send json-str]
+  (try
+    (let [result (send json-str)]
+      (if (false? result)
+        (do
+          (evict! agent-id "send-returned-false")
+          false)
+        true))
+    (catch Throwable t
+      (evict! agent-id (str "send-threw:" (.getClass t)))
+      false)))
 
 (defn register!
   "Register a WS connection for AGENT-ID with SEND-FN (string -> nil).
@@ -24,12 +49,29 @@
    (when (and (string? agent-id) (not (str/blank? agent-id)))
      (swap! !agents assoc agent-id (cond-> {:send send-fn
                                             :pending (atom {})}
+                                     (contains? opts :connection)
+                                     (assoc :connection (:connection opts))
                                      (:observer? opts) (assoc :observer? true))))))
 
 (defn unregister!
   "Unregister AGENT-ID from the WS invoke registry."
   [agent-id]
   (swap! !agents dissoc agent-id))
+
+(defn unregister-current!
+  "Unregister AGENT-ID only when CONNECTION is still the current WS entry.
+   Late close events from replaced sockets must not evict newer registrations."
+  [agent-id connection]
+  (let [removed? (atom false)]
+    (swap! !agents
+           (fn [agents]
+             (let [entry (get agents agent-id)]
+               (if (identical? (:connection entry) connection)
+                 (do
+                   (reset! removed? true)
+                   (dissoc agents agent-id))
+                 agents))))
+    @removed?))
 
 (defn available?
   "True when AGENT-ID has an active, INVOCABLE WS bridge.
@@ -64,21 +106,15 @@
    Returns true when the frame was accepted by the WS sender."
   [agent-id frame]
   (if-let [{:keys [send]} (get @!agents agent-id)]
-    (try
-      (send (json/generate-string frame))
-      true
-      (catch Throwable _
-        false))
+    (accepted-send? agent-id send (json/generate-string frame))
     false))
 
 (defn broadcast-frame!
   "Send FRAME to all connected WS agents. Best-effort, fire-and-forget."
   [frame]
   (let [json-str (json/generate-string frame)]
-    (doseq [[_aid {:keys [send]}] @!agents]
-      (try
-        (send json-str)
-        (catch Throwable _ nil)))))
+    (doseq [[aid {:keys [send]}] @!agents]
+      (accepted-send? aid send json-str))))
 
 (defn- deliver-timeout! [pending invoke-id]
   (when-let [p (get @pending invoke-id)]
