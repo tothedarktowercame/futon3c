@@ -267,15 +267,25 @@ jobs still in flight plus anything new."
                (agent-follow--start-timer)))))))))
 
 (defun agent-follow--start-timer ()
-  "Start the poll timer for the current buffer."
-  (unless agent-follow--timer
-    (let ((buffer (current-buffer)))
-      (setq agent-follow--timer
-            (run-at-time 0 agent-follow-poll-interval
-                         (lambda ()
+  "Start (or restart) the poll timer for the current buffer.
+Always cancels any existing timer first — a stale timer object must
+never block creation (found live 2026-07-05: a buffer-recreate race
+left a buffer with mode on but no ticking timer). The tick self-cancels
+when its buffer dies."
+  (agent-follow--stop-timer)
+  (let ((buffer (current-buffer)) timer)
+    (setq timer
+          (run-at-time 0 agent-follow-poll-interval
+                       (lambda ()
+                         (if (not (buffer-live-p buffer))
+                             ;; buffer is gone: self-cancel by identity
+                             ;; (the buffer-local var died with the buffer)
+                             (when timer (cancel-timer timer))
                            (condition-case nil
                                (agent-follow--poll buffer)
-                             (error nil))))))))
+                             (error nil))))))
+    (setq agent-follow--timer timer)
+    (add-hook 'kill-buffer-hook #'agent-follow--stop-timer nil t)))
 
 (defun agent-follow--stop-timer ()
   "Cancel this buffer's poll timer."
@@ -307,8 +317,12 @@ in-flight and future turns stream in."
            nil '(("^⟲.*$" 0 'agent-follow-marker-face t)))
           (when font-lock-mode (font-lock-flush))
           (add-hook 'kill-buffer-hook #'agent-follow--stop-timer nil t)
-          ;; Timer starts after history is marked seen.
+          ;; Mark finished history seen (async), but ALSO start the timer
+          ;; synchronously — the sentinel's later start-timer just restarts
+          ;; it (idempotent-fresh). Relying on the async sentinel alone left
+          ;; a race where enable completed with no ticking timer (2026-07-05).
           (agent-follow--mark-history-seen)
+          (agent-follow--start-timer)
           (message "agent-follow-mode: following %s" aid)))
     (agent-follow--stop-timer)))
 
