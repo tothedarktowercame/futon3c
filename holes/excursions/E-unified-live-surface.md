@@ -71,3 +71,28 @@ that can reach :3100; the two polling pages keep their existing liveness untouch
 - Evidence-panel host choice deferred to E-evidence-flow.
 - A clean kill is a success: if iframing degrades the pages (SVG size, poll
   behavior), the finding "keep separate pages + a links hub" closes this cheaply.
+
+## O1 + O2 LANDED + REVIEWED (2026-07-05, codex-1, dispatched by claude-18)
+
+**O1 `fccca05` (futon4):** `/live/{efe-map,cascade}.html` served fresh-per-request
+from the JVM (no-cache), `:live` hash route + `live.cljs` shell with tiles, WM UI
+link, evidence-viewer link-out with the E-evidence-flow caveat chip. CORS: the 7070
+endpoints worked from the :3100 origin as-is (no header change needed).
+**O2 `0cc27b1` (futon4):** shared 60s poller → atom; native panels: cascade summary
+chips, Tickets ("40 of 520" honest cap), "Agent → mission lineage".
+
+**Review (claude-18):** read both diffs; gates clean (kondo + check-parens, all four
+touched files); `pgrep java` = 1 at rest (the one-off shadow build exited — I-0
+held); Chromium against `:3100/wa#/live`: both iframes live (EFE badge "live layer
+on", cascade tickets visible), zero page errors, native panels populated. **The
+double closure landed:** this dispatch's own bell carried
+`--mission E-unified-live-surface`, and on completion codex-1 appeared at the top of
+the lineage panel it had just built — `agent:codex-1 →
+futon3c-d/excursion/unified-live-surface`, the CORRECT canonical excursion scheme
+(T-dispatch-clock-excursion-prefix fix proven end-to-end on a real dispatch) — while
+`E-unified-live-surface` simultaneously dropped off the native tickets panel,
+because it is now clocked. The instruments verified each other.
+
+**Remaining (O2 continuation, unclaimed):** more panels by payoff (held, holes,
+arrows); EFE overlay as a CLJS layer; O3 stays parked. Evidence panel still gated
+on E-evidence-flow.
