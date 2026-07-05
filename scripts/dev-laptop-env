@@ -57,6 +57,14 @@ export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-true}"
 # logic model TB-1..7 PASS. Activated 2026-06-11 for live ArSE-usage monitoring. Set
 # "false" to revert. Watch-item once live: holes/tickets/T-typed-bell-arse-write-async.md.
 export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
+# Parked-on continuations (README-park.md, E-repl-continuations): agents park a
+# REPL turn on dispatched agency job-ids and are resumed in-buffer when the join
+# completes — the only reliable cross-turn wait on the emacs-repl surface (harness
+# background tasks don't survive pouch teardown). Engine is unit-tested (5 VERIFY
+# cases); flag-gated OFF upstream, defaulted ON here 2026-07-05 (Joe, via
+# claude-18 session). Boot runs rehydrate! + the 30s deadline sweeper. Set
+# "false" to revert.
+export FUTON3C_PARKED_ON="${FUTON3C_PARKED_ON:-true}"
 # Invoke-executor lanes: shared pool for agent invocations. Bumped 4 -> 8
 # (2026-06-12) now that drainer-v2 keeps bell turns off these lanes, so a Codex
 # swarm can run in parallel to Claude WIP. Takes effect on JVM restart.
@@ -119,7 +127,7 @@ fi
 export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/alpha}"
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
-export FUTON3C_MULTI_WATCHER_AUTOSTART="${FUTON3C_MULTI_WATCHER_AUTOSTART:-true}"
+export FUTON3C_MULTI_WATCHER_AUTOSTART="${FUTON3C_MULTI_WATCHER_AUTOSTART:-false}"
 export FUTON3C_MULTI_WATCHER_INTERVAL_MS="${FUTON3C_MULTI_WATCHER_INTERVAL_MS:-5000}"
 export FUTON3C_MULTI_WATCHER_DEBOUNCE_MS="${FUTON3C_MULTI_WATCHER_DEBOUNCE_MS:-250}"
 export FUTON3C_MULTI_WATCHER_PIDFILE="${FUTON3C_MULTI_WATCHER_PIDFILE:-/tmp/multi-watcher.pid}"
