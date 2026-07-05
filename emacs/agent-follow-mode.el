@@ -40,14 +40,34 @@ the doorbell it is the render latency — lower it if you disable WS."
   :type 'integer
   :group 'agent-follow)
 
+(defcustom agent-follow-min-poll-gap 2.0
+  "Hard floor (seconds) between polls of one buffer, doorbell included.
+The doorbell must never convert event RATE into poll rate: 726 stacked
+curls (2026-07-05) taught that lesson. Frames arriving inside the gap
+coalesce into ONE trailing poll at the gap boundary."
+  :type 'number
+  :group 'agent-follow)
+
+(defvar-local agent-follow--last-poll-at 0.0
+  "float-time of the most recent poll spawn for this buffer.")
+
 (defvar-local agent-follow--doorbell-pending nil
-  "Non-nil while a doorbell-triggered poll is already scheduled (debounce).")
+  "Non-nil while a trailing doorbell poll is already scheduled.")
+
+(defun agent-follow--doorbell-poll (buffer)
+  "Trailing-edge doorbell poll: runs at the gap boundary."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (setq agent-follow--doorbell-pending nil))
+    (condition-case nil
+        (agent-follow--poll buffer)
+      (error nil))))
 
 (defun agent-follow--doorbell (frame)
   "WS push handler: an invoke event landed for some agent.
-If it is ours, poll now (debounced 0.2s) instead of waiting for the
-fallback interval. Runs in every follow-enabled buffer via the shared
-connector's dispatch — filter by this buffer's agent id."
+If it is ours, poll — but never more often than
+`agent-follow-min-poll-gap' per buffer; bursts coalesce into one
+trailing poll. Filter by this buffer's agent id."
   (let ((aid (alist-get 'agent-id frame)))
     (dolist (buf (buffer-list))
       (with-current-buffer buf
@@ -55,16 +75,11 @@ connector's dispatch — filter by this buffer's agent id."
                    agent-follow--agent-id
                    (equal aid agent-follow--agent-id)
                    (not agent-follow--doorbell-pending))
-          (setq agent-follow--doorbell-pending t)
-          (let ((buffer (current-buffer)))
-            (run-at-time 0.2 nil
-                         (lambda ()
-                           (when (buffer-live-p buffer)
-                             (with-current-buffer buffer
-                               (setq agent-follow--doorbell-pending nil))
-                             (condition-case nil
-                                 (agent-follow--poll buffer)
-                               (error nil)))))))))))
+          (let* ((buffer (current-buffer))
+                 (since (- (float-time) agent-follow--last-poll-at))
+                 (delay (max 0.2 (- agent-follow-min-poll-gap since))))
+            (setq agent-follow--doorbell-pending t)
+            (run-at-time delay nil #'agent-follow--doorbell-poll buffer)))))))
 
 (defun agent-follow--doorbell-ensure ()
   "Connect the shared Agency WS and subscribe the doorbell, if available.
@@ -78,8 +93,10 @@ fallback poll carries the mode alone, just slower."
             (futon-agency-ws-connect)))
       (error nil))))
 
-(defcustom agent-follow-jobs-limit 30
-  "How many recent jobs to fetch per poll (filtered client-side by agent)."
+(defcustom agent-follow-jobs-limit 10
+  "How many recent jobs to fetch per poll (filtered client-side by agent).
+Lowered 30→10 (2026-07-05): job records now carry full events + result
+texts; 30 made each poll heavy enough to convoy the endpoint."
   :type 'integer
   :group 'agent-follow)
 
@@ -250,28 +267,54 @@ Never touches the progress line while the REPL streams its own turn."
             (when jobs (agent-follow--render-jobs jobs)))
         (error nil)))))
 
+(defvar-local agent-follow--inflight nil
+  "Non-nil while a poll's curl is in flight for this buffer.
+SINGLE-FLIGHT: polls are skipped while set (found live 2026-07-05:
+doorbell bursts stacked 726 concurrent curls — 'too many open files').")
+
+(defvar-local agent-follow--queued nil
+  "Non-nil when a poll was requested while one was in flight;
+exactly one follow-up poll runs on completion so no events are missed.")
+
 (defun agent-follow--poll (buffer)
-  "Fetch recent invoke jobs and render new events into BUFFER."
+  "Fetch recent invoke jobs and render new events into BUFFER.
+Single-flight: if a poll is already running, queue ONE follow-up."
   (when (buffer-live-p buffer)
-    (let ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
-                       (with-current-buffer buffer (agent-follow--agency-url))
-                       agent-follow-jobs-limit))
-          (outbuf (generate-new-buffer " *agent-follow*")))
-      (make-process
-       :name "agent-follow"
-       :buffer outbuf
-       :command (list "curl" "-sS" "--max-time" "10" url)
-       :noquery t
-       :sentinel
-       (lambda (p _event)
-         (when (memq (process-status p) '(exit signal))
-           (let ((out (when (buffer-live-p (process-buffer p))
-                        (with-current-buffer (process-buffer p)
-                          (buffer-string)))))
-             (when (buffer-live-p (process-buffer p))
-               (kill-buffer (process-buffer p)))
-             (when out
-               (agent-follow--handle-response buffer out)))))))))
+    (if (buffer-local-value 'agent-follow--inflight buffer)
+        (with-current-buffer buffer (setq agent-follow--queued t))
+      (with-current-buffer buffer
+        (setq agent-follow--inflight t
+              agent-follow--last-poll-at (float-time)))
+      (let ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
+                         (with-current-buffer buffer (agent-follow--agency-url))
+                         agent-follow-jobs-limit))
+            (outbuf (generate-new-buffer " *agent-follow*")))
+        (make-process
+         :name "agent-follow"
+         :buffer outbuf
+         :command (list "curl" "-sS" "--max-time" "10" url)
+         :noquery t
+         :sentinel
+         (lambda (p _event)
+           (when (memq (process-status p) '(exit signal))
+             (let ((out (when (buffer-live-p (process-buffer p))
+                          (with-current-buffer (process-buffer p)
+                            (buffer-string)))))
+               (when (buffer-live-p (process-buffer p))
+                 (kill-buffer (process-buffer p)))
+               ;; Clear inflight and run any queued follow-up REGARDLESS of
+               ;; render errors — a stuck flag would silence the buffer.
+               (unwind-protect
+                   (when out
+                     (condition-case nil
+                         (agent-follow--handle-response buffer out)
+                       (error nil)))
+                 (when (buffer-live-p buffer)
+                   (with-current-buffer buffer
+                     (setq agent-follow--inflight nil)
+                     (when agent-follow--queued
+                       (setq agent-follow--queued nil)
+                       (run-at-time 0.3 nil #'agent-follow--poll buffer)))))))))))))
 
 (defun agent-follow--mark-history-seen ()
   "Mark all finished jobs as fully seen so enabling the mode replays only
