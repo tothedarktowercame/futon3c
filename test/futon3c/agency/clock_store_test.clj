@@ -82,6 +82,24 @@
                                   :new-target "M-dispatched"}}
            (clock-store/evidence-clock-fields "claude-1" "sid")))))
 
+(deftest dispatch-target-id-normalization
+  (testing "typed dispatch ids stay typed; bare ids remain mission shorthand"
+    (clock-store/set-dispatch-mission! "claude-1" "excursion" "E-evidence-flow")
+    (is (= {:campaign-id nil :mission-id nil :excursion-id "E-evidence-flow"}
+           (clock-store/current-clock "claude-1" "excursion")))
+
+    (clock-store/set-dispatch-mission! "claude-1" "campaign" "C-cascade-real")
+    (is (= {:campaign-id "C-cascade-real" :mission-id nil :excursion-id nil}
+           (clock-store/current-clock "claude-1" "campaign")))
+
+    (clock-store/set-dispatch-mission! "claude-1" "bare" "live-efe-map")
+    (is (= {:campaign-id nil :mission-id "M-live-efe-map" :excursion-id nil}
+           (clock-store/current-clock "claude-1" "bare")))
+
+    (clock-store/set-dispatch-mission! "claude-1" "mission" "M-live-efe-map")
+    (is (= {:campaign-id nil :mission-id "M-live-efe-map" :excursion-id nil}
+           (clock-store/current-clock "claude-1" "mission")))))
+
 (deftest tool-use-recording-is-edit-tool-and-file-path-only
   (testing "non-edit tools and missing paths are ignored"
     (let [root (doto (java.io.File/createTempFile "futon3c-clock-" "")

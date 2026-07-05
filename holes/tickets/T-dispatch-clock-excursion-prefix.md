@@ -26,3 +26,36 @@ existing clock-store tests. Touches durable lineage labels, so grep
 `clock-label`/lineage consumers for M- assumptions before shipping.
 
 **Owner: unclaimed.**
+
+## Fixed
+
+Commit: `5dc3f2a`
+
+Implemented typed dispatch routing in `clock-store/set-dispatch-mission!`:
+
+- `M-*` stays in `:mission-id`.
+- `E-*` stays verbatim and routes to `:excursion-id`.
+- `C-*` stays verbatim and routes to `:campaign-id`.
+- bare ids still get the historical mission shorthand, e.g. `live-efe-map` →
+  `M-live-efe-map`.
+
+Chose typed routing rather than putting `E-*`/`C-*` into `:mission-id` because
+`clock-lineage/canonical-target-endpoint` already maps `:excursion-id` to
+`<repo>-d/excursion/<stem>` and `:campaign-id` to campaign endpoints. Keeping
+typed ids in `:mission-id` would preserve display but write the wrong canonical
+scheme. To keep the live EFE map honest, its live-clock read now uses the same
+single-active target precedence as lineage (`excursion` → `mission` →
+`campaign`).
+
+Verified via Drawbridge:
+
+```clojure
+(do
+  (futon3c.agency.clock-store/set-dispatch-mission!
+   "test-ticket-fix" nil "E-evidence-flow")
+  (futon3c.agency.clock-store/current-clock "test-ticket-fix" nil))
+;; => {:campaign-id nil, :mission-id nil, :excursion-id "E-evidence-flow"}
+```
+
+No public per-agent removal API exists; `test-ticket-fix` is a throwaway
+in-memory clock-store entry and was not durably persisted.

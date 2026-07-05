@@ -91,6 +91,16 @@
       (:campaign-id clock)
       "no mission"))
 
+(defn- dispatch-clock
+  [target-id]
+  (let [target-id (if (re-matches #"^[MEC]-.+" target-id)
+                    target-id
+                    (str "M-" target-id))]
+    (case (first target-id)
+      \C {:campaign-id target-id :mission-id nil :excursion-id nil}
+      \E {:campaign-id nil :mission-id nil :excursion-id target-id}
+      {:campaign-id nil :mission-id target-id :excursion-id nil})))
+
 (defn- prune-events
   [events now-ms window-ms]
   (into {}
@@ -180,12 +190,9 @@
   "Secondary signal: an explicit dispatch mission-id clocks this agent session to
    that mission immediately."
   [agent-id session-id mission-id]
-  (when-let [mission (some-> mission-id str str/trim not-empty)]
-    (let [mission (if (str/starts-with? mission "M-")
-                    mission
-                    (str "M-" mission))
-          k (session-key agent-id session-id)
-          new-clock {:campaign-id nil :mission-id mission :excursion-id nil}]
+  (when-let [target-id (some-> mission-id str str/trim not-empty)]
+    (let [k (session-key agent-id session-id)
+          new-clock (dispatch-clock target-id)]
       (get
        (swap! !sessions update k
               (fn [state]

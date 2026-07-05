@@ -290,7 +290,10 @@
   [positions doc-index jobs-by-agent durable-by-agent [agent-id info]]
   (let [session-id (:session-id info)
         durable (get durable-by-agent agent-id)
-        live-mission (:mission-id (:clock (clock-store/current-state agent-id session-id)))
+        live-clock (:clock (clock-store/current-state agent-id session-id))
+        live-mission (or (:excursion-id live-clock)
+                         (:mission-id live-clock)
+                         (:campaign-id live-clock))
         mission-id (or live-mission (:target durable))
         place (placement mission-id positions doc-index)
         job (get jobs-by-agent agent-id)]
