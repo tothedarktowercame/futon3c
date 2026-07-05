@@ -567,11 +567,119 @@
       (when-let [sink (get-sink (str agent-id))]
         (try (sink event) (catch Throwable _))))))
 
+(def ^:private tool-round-budget
+  ;; 24 rounds: the original 8 demonstrably binds - the first real handoff
+  ;; (M-custom-harness slice 2, 2026-07-04) exhausted all 8 on spec/source
+  ;; reads and was cut off before writing anything.
+  24)
+
+(def ^:private default-auto-continue-max 8)
+
+(defn- parse-nonnegative-int
+  [x fallback]
+  (try
+    (let [n (cond
+              (number? x) (long x)
+              (some? x) (Long/parseLong (str/trim (str x)))
+              :else fallback)]
+      (max 0 n))
+    (catch Throwable _
+      fallback)))
+
+(defn- configured-auto-continue-max
+  [x]
+  (parse-nonnegative-int
+   (or x (getenv "FUTON3C_ZAI_AUTO_CONTINUE_MAX"))
+   default-auto-continue-max))
+
+(defn- auto-continue-message
+  [n cap]
+  (str "[harness auto-continue " n "/" cap
+       ": round budget exhausted mid-task. Continue working toward the task set "
+       "at the start of this turn. When the task is actually complete, reply "
+       "with a final summary and make no tool calls.]"))
+
+(defn- max-tool-rounds-result
+  [sid final-text]
+  {:result (if (str/blank? final-text)
+             "[z.ai stopped after maximum tool rounds]"
+             (str final-text "\n[z.ai stopped after maximum tool rounds]"))
+   :session-id sid
+   :error "max-tool-rounds"})
+
+(defn run-tool-rounds!
+  "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
+   update already-registered invoke closures."
+  [{:keys [client opts api-key !messages backend tool-opts agent-id sid
+           !repeats auto-continue-max]}]
+  (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
+    (loop [remaining tool-round-budget
+           final-text ""
+           auto-continues 0
+           mid-work? false]
+      (if (zero? remaining)
+        (if (and mid-work? (< auto-continues auto-continue-max))
+          (let [n (inc auto-continues)
+                text (auto-continue-message n auto-continue-max)]
+            (swap! !messages conj {:role "user" :content text})
+            (sink! agent-id {:type "text" :text (str "[auto-continue " n "/" auto-continue-max "]")})
+            (recur tool-round-budget final-text n false))
+          (max-tool-rounds-result sid final-text))
+        (let [resp (chat! client (assoc opts :api-key api-key) @!messages)
+              err (:error resp)]
+          (if err
+            {:result nil
+             :session-id sid
+             :error (result-string err)}
+            (let [message (get-in resp [:choices 0 :message])
+                  text (assistant-text message)
+                  tool-calls (seq (:tool_calls message))]
+              (swap! !messages conj message)
+              (when-not (str/blank? text)
+                (sink! agent-id {:type "text" :text text}))
+              (if tool-calls
+                ;; A tool exception must NEVER kill the turn: feed the error
+                ;; back as the tool result so the model can correct (found live
+                ;; 2026-07-04: a nil :path arg NPE'd through resolve-path and
+                ;; destroyed a 37-event turn mid-flight).
+                (let [executed (mapv (fn [tc]
+                                       (detect-stuck!
+                                        !repeats tc
+                                        (try (execute-tool backend tool-opts tc)
+                                             (catch Throwable t
+                                               (let [d (tool-call-detail
+                                                        tc
+                                                        (parse-arguments
+                                                         (get-in tc [:function :arguments])))]
+                                                 {:detail d
+                                                  :message {:role "tool"
+                                                            :tool_call_id (:id tc)
+                                                            :name (get-in tc [:function :name])
+                                                            :content (str "TOOL ERROR (turn continues): "
+                                                                          (.getName (class t)) ": "
+                                                                          (or (.getMessage t) "no message")
+                                                                          " - check argument names/values and retry")}})))))
+                                     tool-calls)
+                      details (mapv :detail executed)
+                      results (mapv (fn [{:keys [detail message]}]
+                                      {:tool_use_id (:id detail)
+                                       :content (:content message)})
+                                    executed)]
+                  (sink! agent-id {:type "tool_use"
+                                   :tools (mapv :name details)
+                                   :tool_details details})
+                  (sink! agent-id {:type "tool_result"
+                                   :results results})
+                  (swap! !messages into (mapv :message executed))
+                  (recur (dec remaining) (str final-text text) auto-continues true))
+                {:result (if (str/blank? text) final-text text)
+                 :session-id sid}))))))))
+
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
            api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn
-           memory-mode]
+           memory-mode auto-continue-max]
     :or {agent-id "zai" timeout-ms 300000 memory-mode :full}}]
   (let [client (HttpClient/newHttpClient)
         key (or api-key (resolve-api-key))
@@ -653,60 +761,13 @@
                   (swap! !messages update-in [0 :content] str "\n\n" rehydration)))
               (catch Throwable _))))
         (swap! !messages conj {:role "user" :content (str prompt)})
-        ;; 24 rounds: the original 8 demonstrably binds — the first real
-        ;; handoff (M-custom-harness slice 2, 2026-07-04) exhausted all 8 on
-        ;; spec/source reads and was cut off before writing anything.
-        (loop [remaining 24
-               final-text ""]
-          (if (zero? remaining)
-            {:result (if (str/blank? final-text)
-                       "[z.ai stopped after maximum tool rounds]"
-                       final-text)
-             :session-id sid
-             :error (when (str/blank? final-text) "max-tool-rounds")}
-            (let [resp (chat! client (assoc opts :api-key key*) @!messages)
-                  err (:error resp)]
-              (if err
-                {:result nil
-                 :session-id sid
-                 :error (result-string err)}
-                (let [message (get-in resp [:choices 0 :message])
-                      text (assistant-text message)
-                      tool-calls (seq (:tool_calls message))]
-                  (swap! !messages conj message)
-                  (when-not (str/blank? text)
-                    (sink! agent-id {:type "text" :text text}))
-                  (if tool-calls
-                    ;; A tool exception must NEVER kill the turn: feed the
-                    ;; error back as the tool result so the model can correct
-                    ;; (found live 2026-07-04: a nil :path arg NPE'd through
-                    ;; resolve-path and destroyed a 37-event turn mid-flight).
-                    (let [executed (mapv (fn [tc]
-                                           (detect-stuck!
-                                            !repeats tc
-                                            (try (execute-tool backend tool-opts tc)
-                                                (catch Throwable t
-                                                  (let [d (tool-call-detail tc (parse-arguments (get-in tc [:function :arguments])))]
-                                                    {:detail d
-                                                     :message {:role "tool"
-                                                               :tool_call_id (:id tc)
-                                                               :name (get-in tc [:function :name])
-                                                               :content (str "TOOL ERROR (turn continues): "
-                                                                             (.getName (class t)) ": "
-                                                                             (or (.getMessage t) "no message")
-                                                                             " — check argument names/values and retry")}})))))
-                                         tool-calls)
-                          details (mapv :detail executed)
-                          results (mapv (fn [{:keys [detail message]}]
-                                          {:tool_use_id (:id detail)
-                                           :content (:content message)})
-                                        executed)]
-                      (sink! agent-id {:type "tool_use"
-                                       :tools (mapv :name details)
-                                       :tool_details details})
-                      (sink! agent-id {:type "tool_result"
-                                       :results results})
-                      (swap! !messages into (mapv :message executed))
-                      (recur (dec remaining) (str final-text text)))
-                    {:result (if (str/blank? text) final-text text)
-                     :session-id sid}))))))))))))
+        (run-tool-rounds! {:client client
+                           :opts opts
+                           :api-key key*
+                           :!messages !messages
+                           :backend backend
+                           :tool-opts tool-opts
+                           :agent-id agent-id
+                           :sid sid
+                           :!repeats !repeats
+                           :auto-continue-max auto-continue-max})))))))
