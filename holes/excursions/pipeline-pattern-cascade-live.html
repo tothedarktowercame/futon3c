@@ -143,13 +143,16 @@
   }
 
   function clearPanels(){
+    // Null-tolerant: a render that removes/replaces a node must never let the
+    // NEXT poll's clear blank the page (the disappearing-contents bug, 2026-07-05).
+    var safe=function(id,f){var n=el(id); if(n) f(n);};
     ["header-panel","basins-panel","cascade-panel","patterns-panel","holes-panel","held-panel",
-     "lineage-panel","forward-panel","tickets-panel"].forEach(function(id){el(id).style.display="none";});
+     "lineage-panel","forward-panel","tickets-panel"].forEach(function(id){safe(id,function(n){n.style.display="none";});});
     ["dims","spine","composition","standards","basins","legend","patterns-gap","holes-body",
-     "held-body","lineage-body","forward-body","tickets-body"].forEach(function(id){el(id).innerHTML="";});
-    ["basins-count","cascade-count","holes-count","held-count","lineage-count","forward-src","tickets-count"].forEach(function(id){el(id).textContent="";});
-    el("cascade").innerHTML="";
-    el("offline").style.display="none";
+     "held-body","lineage-body","forward-body","tickets-body"].forEach(function(id){safe(id,function(n){n.innerHTML="";});});
+    ["basins-count","cascade-count","holes-count","held-count","lineage-count","forward-src","tickets-count"].forEach(function(id){safe(id,function(n){n.textContent="";});});
+    safe("cascade",function(n){n.innerHTML="";});
+    safe("offline",function(n){n.style.display="none";});
     el("offline").innerHTML="Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.";
   }
 
@@ -288,7 +291,8 @@
   function renderPatterns(g){
     var p=g.patterns||{}, edges=p.edges||[];
     if(!edges.length){
-      el("patterns-gap").innerHTML="<b>Honest hole:</b> "+esc(p.note||p.gap||"");
+      var pgEmpty=el("patterns-gap"); pgEmpty.className="gap";
+      pgEmpty.innerHTML="<b>Honest hole:</b> "+esc(p.note||p.gap||"");
       el("patterns-panel").style.display=""; return;
     }
     var applied=edges.filter(function(e){return e.relation!=="candidate"&&e.relation!=="on-demand";});
@@ -304,7 +308,11 @@
       return "<tr><td><span class='dot' style='background:#5aa0ff'></span><code>"+esc(pp)+"</code></td>"+
         "<td><b>"+byPat[pp].length+"</b> missions</td><td class='muted'>"+
         esc(truncate(byPat[pp].map(function(e){return shortMission(e.mission);}).join(", "),120))+"</td></tr>";});
-    el("patterns-gap").outerHTML=
+    // innerHTML + class swap, NOT outerHTML: outerHTML destroyed the #patterns-gap
+    // node, so the 60s re-poll's clearPanels() hit null.innerHTML and blanked the
+    // whole page (found live 2026-07-05 — "contents disappear after a while").
+    var pgNode=el("patterns-gap"); pgNode.className="";
+    pgNode.innerHTML=
       "<div style='margin-bottom:10px'><b>"+applied.length+"</b> <code>:applied</code> crosslinks (confirmed warrants) · <b>"+
         cand.length+"</b> <code>:candidate</code> links (magnet suggestions) · <b style='color:#5aa0ff'>"+
         odE.length+"</b> <code>:on-demand</code> (live magnet refresh) · <b>"+
