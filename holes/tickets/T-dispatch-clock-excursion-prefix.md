@@ -29,7 +29,7 @@ existing clock-store tests. Touches durable lineage labels, so grep
 
 ## Fixed
 
-Commit: `5dc3f2a`
+Commit: `926c15e110f275523114af62146aeac848b32544`
 
 Implemented typed dispatch routing in `clock-store/set-dispatch-mission!`:
 
