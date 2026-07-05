@@ -239,10 +239,14 @@
            (filter #(.isDirectory ^java.io.File %))
            (filter #(str/starts-with? (.getName ^java.io.File %) "futon"))
            (remove #(= "futon7" (.getName ^java.io.File %)))
+           ;; Walk only <repo>/holes — every M-/E- doc lives there, and a full
+           ;; repo file-seq costs ~2.2s (traverses .venv/node_modules/data;
+           ;; measured 2026-07-05) on an endpoint the page now polls every 60s.
+           (map #(io/file ^java.io.File % "holes"))
+           (filter #(.exists ^java.io.File %))
            (mapcat file-seq)
            (filter #(.isFile ^java.io.File %))
            (filter #(re-matches #"[ME]-[^/]+\.md" (.getName ^java.io.File %)))
-           (filter #(str/includes? (.getPath ^java.io.File %) "/holes/"))
            (remove #(str/includes? (.getPath ^java.io.File %) "/.git/"))
            vec))))
 
