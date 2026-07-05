@@ -4,8 +4,12 @@
 # Usage:
 #   ./scripts/proof-eval.sh '(require (quote [futon3c.proof.bridge :as pb]))'
 #   ./scripts/proof-eval.sh '(pb/summary "FM-001")'
-#   ./scripts/proof-eval.sh '(pb/mode "FM-001")'
-#   ./scripts/proof-eval.sh '(pb/mode! "FM-001" :FALSIFY)'
+#   ./scripts/proof-eval.sh -f /tmp/form.clj      # read form from a FILE
+#   echo '(+ 1 2)' | ./scripts/proof-eval.sh -    # read form from stdin
+#
+# PREFER -f/stdin for any form containing quotes or apostrophes: write the
+# form with your file tool, then eval the file — no shell quoting at all.
+# (Two agents lost whole turns to single-arg shell quoting; 2026-07-05.)
 #
 # Environment:
 #   FUTON3C_DRAWBRIDGE_PORT  — default 6768
@@ -27,7 +31,13 @@ else
   TOKEN="change-me"
 fi
 
-CODE="$1"
+if [ "${1:-}" = "-f" ]; then
+  CODE="$(cat "$2")"
+elif [ "${1:-}" = "-" ]; then
+  CODE="$(cat)"
+else
+  CODE="$1"
+fi
 
 curl -s \
   -H "x-admin-token: $TOKEN" \
