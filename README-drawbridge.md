@@ -42,6 +42,30 @@ automatically.
 bash scripts/proof-eval.sh '(+ 1 2)'
 ```
 
+For anything with quotes, reader macros, or multiple lines, do not fight shell
+quoting. Put the form in a file or pipe it on stdin:
+
+```bash
+cat >/tmp/proof-form.clj <<'CLJ'
+(do
+  (require '[futon3c.agency.registry :as reg])
+  (reg/registry-status))
+CLJ
+
+bash scripts/proof-eval.sh -f /tmp/proof-form.clj
+bash scripts/proof-eval.sh /tmp/proof-form.clj
+bash scripts/proof-eval.sh /dev/stdin <<'CLJ'
+(do
+  (require '[futon3c.agency.registry :as reg])
+  (reg/registry-status))
+CLJ
+```
+
+Avoid command substitutions such as `CODE=$(cat file)` and avoid passing
+`/dev/stdin` to older copies of the script; current `proof-eval.sh` treats
+readable file arguments as input, but older copies evaluated the literal string
+`/dev/stdin`.
+
 ### Check Registry
 
 ```bash
