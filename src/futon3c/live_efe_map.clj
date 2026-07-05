@@ -10,7 +10,9 @@
             [clojure.string :as str]
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
-            [futon3c.evidence.store :as estore]))
+            [futon3c.evidence.store :as estore]
+            [futon3c.social.coordination-ledger :as coordination-ledger])
+  (:import [java.time Instant]))
 
 (def ^:private code-root
   (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
@@ -34,6 +36,41 @@
    :provenance "arbitrary-starting-values; tune under VERIFY. v1 computes only :active-terms; scope-edge/clock-or-coordination/doc-mention are declared for the D2 formula but not yet wired."})
 
 (defn- now-ms [] (System/currentTimeMillis))
+
+(defn- instant-ms
+  [x]
+  (cond
+    (integer? x) (long x)
+    (number? x) (long x)
+    (instance? Instant x) (.toEpochMilli ^Instant x)
+    (string? x) (try
+                  (.toEpochMilli (Instant/parse x))
+                  (catch Exception _ nil))
+    :else nil))
+
+(defn- coordination-edge-row
+  [now edge]
+  (let [at (or (instant-ms (:at edge)) now)]
+    {:from (:from edge)
+     :to (:to edge)
+     :at at
+     :age-ms (max 0 (- now at))
+     :kind (some-> (:kind edge) name)}))
+
+(defn- recent-coordination
+  []
+  (try
+    (let [now (now-ms)
+          edges (->> (coordination-ledger/recent-mesh-edges 50)
+                     (keep (fn [edge]
+                             (when (and (:from edge) (:to edge))
+                               (coordination-edge-row now edge))))
+                     vec)]
+      {:count (count edges)
+       :items edges})
+    (catch Throwable _
+      {:count 0
+       :items []})))
 
 (defn- read-json
   [path]
@@ -368,6 +405,7 @@
               :items agents}
      :war-machine {:count (count wm)
                    :items wm}
+     :coordination (recent-coordination)
      :ship (ship-position agents)
      :frontier {:count (count frontier)
                 :items frontier}}))
