@@ -28,6 +28,9 @@ ap.add_argument("--type", choices=["query", "answer", "assert", "challenge", "ag
                                    "define", "retract", "suggest", "request"],
                 help="typed-bell performative; server accepts it only when FUTON3C_TYPED_BELLS is on")
 ap.add_argument("--ref", help="typed-bell referent, usually an ArSE thread id")
+ap.add_argument("--mission", help="mission-id this dispatch works on; the server clocks the "
+                "recipient's session to it (durable lineage, http.clj clock-dispatch!) so the "
+                "agent appears on the live EFE map without a manual clock-in")
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
 a = ap.parse_args()
 
@@ -50,6 +53,8 @@ if a.type:
     body["type"] = a.type
 if a.ref:
     body["ref"] = a.ref
+if a.mission:
+    body["mission-id"] = a.mission
 payload = json.dumps(body)
 if a.dry_run:
     print(payload); sys.exit(0)
