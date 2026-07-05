@@ -559,8 +559,13 @@
                                      (auto-bellback-caller-registered? caller)))))
 
 (defn- auto-bellback-prompt
-  [{:keys [job-id agent-id state result-summary terminal-message]}]
-  (let [summary (or (some-> result-summary str str/trim not-empty)
+  [{:keys [job-id agent-id state result-summary result-text terminal-message]}]
+  ;; Prefer the (bounded) FULL result text over the 220-char display summary:
+  ;; bellbacks are OPERATIVE replies — a truncated dispatch inside one cost a
+  ;; driver a whole held turn (zai-2, 2026-07-05). The summary stays for list
+  ;; views; the bellback carries the words.
+  (let [summary (or (some-> result-text str str/trim not-empty)
+                    (some-> result-summary str str/trim not-empty)
                     (some-> terminal-message str str/trim not-empty)
                     "No result summary recorded.")]
     (if (bell-router-enabled?)
@@ -945,6 +950,12 @@
         execution (invoke-execution-evidence result)
         trace-id (extract-trace-id invoke-meta)
         result-text (when (string? (:result result)) (:result result))
+        ;; Bounded full text for the auto-bellback (operative reply channel);
+        ;; whitespace preserved. 8000 chars covers any sane dispatch.
+        bellback-text (when result-text
+                        (if (<= (count result-text) 8000)
+                          result-text
+                          (str (subs result-text 0 7997) "...")))
         summary (when result-text (summarize-result-text result-text))
         artifact-ref (or (first-artifact-ref result-text)
                          (first-artifact-ref summary))
@@ -961,6 +972,7 @@
                                       :session-id sid
                                       :trace-id trace-id
                                       :result-summary summary
+                                      :result-text bellback-text
                                       :artifact-ref artifact-ref
                                       :execution execution)
                                (append-job-event terminal-state
