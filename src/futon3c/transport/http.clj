@@ -2944,6 +2944,19 @@
           first-result))
       first-result)))
 
+(defn- preclock-dispatch!
+  "Make a payload dispatch clock visible during the turn under the fallback
+   [agent-id nil] key. Durable lineage still happens post-turn with the real
+   session id."
+  [agent-id mission-id]
+  (when (some-> mission-id str str/trim not-empty)
+    (try
+      (clock-store/set-dispatch-mission! (str agent-id) nil mission-id)
+      (catch Throwable t
+        (println (str "[invoke] pre-clock failed: " (.getMessage t)))
+        (flush)
+        nil))))
+
 (defn- build-invoke-response
   "Run a direct invoke and convert it to a Ring response map."
   [{:keys [payload agent-id prompt evidence-store]}]
@@ -2965,6 +2978,7 @@
                                     :surface surface})]
     (try
       (mark-invoke-job-running! job-id)
+      (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
             raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
             result (maybe-route-surface-writes agent-id raw-result)
@@ -3025,6 +3039,7 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
+      (preclock-dispatch! agent-id mission-id)
       (let [thread (let [bell? (= "bell" (some-> surface str str/trim))
                          job   (when bell? (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
                      ;; :edge (= job-id) is the join-key, carried on ALL surfaces; bell-router /

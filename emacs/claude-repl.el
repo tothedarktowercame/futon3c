@@ -866,6 +866,12 @@ on every redisplay tick."
         (format "[%s]" name)
       (format "[%s] %s" name preview))))
 
+(defun claude-repl--dispatch-clock-id ()
+  "Return the most specific buffer clock id for Agency invoke payloads."
+  (or (agent-chat-normalize-excursion-id agent-chat--excursion-id)
+      (agent-chat-normalize-mission-id agent-chat--mission-id)
+      (agent-chat-normalize-campaign-id agent-chat--campaign-id)))
+
 ;;; Streaming invoke
 
 (defun claude-repl--call-claude-streaming (text callback)
@@ -883,10 +889,13 @@ CALLBACK is called with the final response text on completion."
          (full-prompt (format "Agent: %s\n\nUser message:\n%s"
                               claude-repl-agent-id text))
          (json-body (json-serialize
-                     `(:agent-id ,claude-repl-agent-id
-                       :prompt ,full-prompt
-                       :surface "emacs-repl"
-                       :caller ,(or (getenv "USER") user-login-name "joe"))))
+                     (append
+                      `(:agent-id ,claude-repl-agent-id
+                        :prompt ,full-prompt
+                        :surface "emacs-repl"
+                        :caller ,(or (getenv "USER") user-login-name "joe"))
+                      (when-let ((clock-id (claude-repl--dispatch-clock-id)))
+                        `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *futon3c-invoke-stream*"))
          (line-buffer ""))
     (let ((proc

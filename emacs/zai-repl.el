@@ -176,6 +176,12 @@ the id is display-only, so a failed read must never break buffer setup."
       (make-directory dir t))
     (write-region zai-repl--session-id nil zai-repl-session-file nil 'silent)))
 
+(defun zai-repl--dispatch-clock-id ()
+  "Return the most specific buffer clock id for Agency invoke payloads."
+  (or (agent-chat-normalize-excursion-id agent-chat--excursion-id)
+      (agent-chat-normalize-mission-id agent-chat--mission-id)
+      (agent-chat-normalize-campaign-id agent-chat--campaign-id)))
+
 (defun zai-repl--message-vector ()
   "Return the full outbound message vector for the current request."
   (vconcat
@@ -360,10 +366,13 @@ the id is display-only, so a failed read must never break buffer setup."
          (url (concat (string-remove-suffix "/" zai-repl-agency-url)
                       "/api/alpha/invoke-stream"))
          (json-body (json-serialize
-                     `(:agent-id ,zai-repl-agent-id
-                       :prompt ,text
-                       :surface "emacs-repl"
-                       :caller ,(or (getenv "USER") user-login-name "joe"))))
+                     (append
+                      `(:agent-id ,zai-repl-agent-id
+                        :prompt ,text
+                        :surface "emacs-repl"
+                        :caller ,(or (getenv "USER") user-login-name "joe"))
+                      (when-let ((clock-id (zai-repl--dispatch-clock-id)))
+                        `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *zai-repl-stream*"))
          (line-buffer "")
          (final-text-cell (list ""))

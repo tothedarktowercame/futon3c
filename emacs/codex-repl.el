@@ -3847,6 +3847,12 @@ When FORCE is non-nil, refresh immediately."
                  :report report)))
         report))))
 
+(defun codex-repl--dispatch-clock-id ()
+  "Return the most specific buffer clock id for Agency invoke payloads."
+  (or (agent-chat-normalize-excursion-id agent-chat--excursion-id)
+      (agent-chat-normalize-mission-id agent-chat--mission-id)
+      (agent-chat-normalize-campaign-id agent-chat--campaign-id)))
+
 (defun codex-repl--call-codex-async (text callback &optional retry-attempt)
   "Invoke server-managed Codex asynchronously for TEXT.
 CALLBACK receives the final response text."
@@ -3856,10 +3862,13 @@ CALLBACK receives the final response text."
          (url (concat api-base
                       "/api/alpha/invoke-stream"))
          (json-body (json-serialize
-                     `(:agent-id ,codex-repl-agency-agent-id
-                       :prompt ,text
-                       :surface "emacs-repl"
-                       :caller ,(or (getenv "USER") user-login-name "joe"))))
+                     (append
+                      `(:agent-id ,codex-repl-agency-agent-id
+                        :prompt ,text
+                        :surface "emacs-repl"
+                        :caller ,(or (getenv "USER") user-login-name "joe"))
+                      (when-let ((clock-id (codex-repl--dispatch-clock-id)))
+                        `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *codex-repl-stream*"))
          (line-buffer ""))
     (setq codex-repl--invoke-turn-id (1+ codex-repl--invoke-turn-id))

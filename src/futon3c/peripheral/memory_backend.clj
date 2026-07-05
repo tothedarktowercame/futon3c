@@ -444,10 +444,11 @@
 ;; --- Slice 3a: mission_context -------------------------------------------
 
 (defn- find-mission-file
-  "Locate M-<target>.md via shell glob. Tries nested and flat holes layouts."
+  "Locate a C-/M-/E- target doc via shell glob. Bare targets default to M-*.
+   Tries nested and flat holes layouts."
   [target]
   (let [target (str target)
-        stem (if (str/starts-with? target "M-") target (str "M-" target))
+        stem (if (re-find #"^[MEC]-" target) target (str "M-" target))
         globs [(str "/home/joe/code/*/holes/**/" stem ".md")
                (str "/home/joe/code/*/holes/" stem ".md")
                (str "/home/joe/code/**/" stem ".md")]]
@@ -512,19 +513,21 @@
   "Compose mission orientation: markdown (status banner + last checkpoint),
    obligations, and related evidence. ctx: {:agent-id :session-id :cwd};
    args: {:target optional mission id, :limit}. Target may arrive with or
-   without the M- prefix; defaults to the clocked :mission-id.
+   without the M-/E-/C- prefix; defaults to the clocked target.
    Returns the §12.3 envelope."
   [{:keys [agent-id session-id cwd]} {:keys [target limit]}]
   (let [limit (clamp-limit limit)
         cwd (or cwd (System/getProperty "user.dir"))
         target (or target
                    (when agent-id
-                     (:mission-id
-                      (safe-call 'futon3c.agency.clock-store/current-clock
-                                 agent-id session-id))))
+                     (let [clock (safe-call 'futon3c.agency.clock-store/current-clock
+                                            agent-id session-id)]
+                       (or (:mission-id clock)
+                           (:excursion-id clock)
+                           (:campaign-id clock)))))
         target (when target
                  (let [t (str/trim (str target))]
-                   (if (str/starts-with? t "M-") t (str "M-" t))))]
+                   (if (re-find #"^[MEC]-" t) t (str "M-" t))))]
     (if-not target
       {:ok false :error "no mission target"}
       (let [file (find-mission-file target)
