@@ -271,6 +271,34 @@
       (str (subs s 0 12000) "\n...[truncated " (- (count s) 12000) " chars]")
       s)))
 
+(defn- detect-stuck!
+  "stuck-means-signal, mechanical (mistakes-ledger §11): track consecutive
+   identical (tool, args, result) triples in !state {:s sig :n count}.
+   At 3 repeats inject a change-approach warning into the tool result; at
+   5+ inject a stop-and-bell-your-reviewer instruction. Returns the
+   (possibly annotated) executed map unchanged otherwise."
+  [!state tc executed]
+  (let [sig [(get-in tc [:function :name])
+             (str (get-in tc [:function :arguments]))
+             (str (get-in executed [:message :content]))]
+        {:keys [n]} (swap! !state
+                           (fn [{:keys [s n]}]
+                             (if (= s sig)
+                               {:s s :n (inc (long (or n 0)))}
+                               {:s sig :n 1})))]
+    (if (>= (long n) 3)
+      (update-in executed [:message :content] str
+                 "\n[STUCK-DETECTOR] identical call + identical result, x" n
+                 " (process-coherence/stuck-means-signal). "
+                 (if (>= (long n) 5)
+                   (str "STOP repeating NOW. State what you were trying and "
+                        "what stayed unchanged, then bell your reviewer for "
+                        "help (run_shell: python3 /home/joe/code/futon3c/"
+                        "scripts/agency_send.py --from <your-id> --to "
+                        "<reviewer> --kind bell). Do not issue this call again.")
+                   "Change approach: different arguments, different tool, or chunk the operation."))
+      executed)))
+
 (defn- tool-call-detail [tool-call args]
   {:id (:id tool-call)
    :name (get-in tool-call [:function :name])
@@ -591,7 +619,12 @@
                    :session-id-atom !session-id}]
     (fn [prompt incoming-session-id]
       (let [key* (or key (resolve-api-key))
-            sid (or incoming-session-id @!session-id sid0)]
+            sid (or incoming-session-id @!session-id sid0)
+            ;; stuck-means-signal detector (mistakes-ledger §11): consecutive
+            ;; identical tool calls with identical results get a warning
+            ;; injected at 3 and a stop-and-bell instruction at 5. Fresh per
+            ;; turn — repetition across turns is the reviewer's watch.
+            !repeats (atom {:s nil :n 0})]
         (if-not key*
           {:result nil
            :session-id sid
@@ -649,7 +682,9 @@
                     ;; (found live 2026-07-04: a nil :path arg NPE'd through
                     ;; resolve-path and destroyed a 37-event turn mid-flight).
                     (let [executed (mapv (fn [tc]
-                                           (try (execute-tool backend tool-opts tc)
+                                           (detect-stuck!
+                                            !repeats tc
+                                            (try (execute-tool backend tool-opts tc)
                                                 (catch Throwable t
                                                   (let [d (tool-call-detail tc (parse-arguments (get-in tc [:function :arguments])))]
                                                     {:detail d
@@ -659,7 +694,7 @@
                                                                :content (str "TOOL ERROR (turn continues): "
                                                                              (.getName (class t)) ": "
                                                                              (or (.getMessage t) "no message")
-                                                                             " — check argument names/values and retry")}}))))
+                                                                             " — check argument names/values and retry")}})))))
                                          tool-calls)
                           details (mapv :detail executed)
                           results (mapv (fn [{:keys [detail message]}]
