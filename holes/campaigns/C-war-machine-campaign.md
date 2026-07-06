@@ -7,6 +7,32 @@
 
 ---
 
+## HEAD (minimum obligations)
+
+Source of record: `flight-pipeline-cards-ii.html` KNOWN GAPS box, coauthored Joe + Fable, 2026-07-06. These six gaps are the campaign's minimum tension. Each must map to at least one surviving mission or named workstream before RUN.
+
+| Gap | Source text | Campaign mapping |
+|---|---|---|
+| 1. THE dF LAST INCH | THE dF LAST INCH — first-flights' best lane psi draws F -0.024, 0.024 short of the gate. Named fix: card 3's injection (seat-by-state) + per-clause multi-vector retrieval — a CONSTRUCTOR change, chartered, not built. No library or deposit work closes it. | New workstream `W-constructor-df-last-inch`; member dependencies `M-first-flights`, `E-live-loop-3`, `M-fold-ansatz`, `E-fold-embed-pipeline`. |
+| 2. GAMMA UNFED | GAMMA UNFED — the learning feed is live and tested but has never eaten: needs one gated mission with a replayable deposit AND dF > 0 to enact. Blocked by gap 1 or by any mission crossing its gate first. | New workstream `W-gamma-first-meal`; member dependencies `E-live-loop-3`, `M-first-flights`, `M-fold-self-play`. |
+| 3. CO-APP FROM USAGE | CO-APP FROM USAGE — the phylogeny miner doesn't scan live cascade usage; authored clusters get day-one edges, used patterns accrue nothing. The pipeline wiring's single remaining known-pending edge. | New workstream `W-coapp-live-usage-miner`; member dependencies `E-mine-mission-transitions`, `M-operational-vocabulary`, `M-G-over-cascades`. |
+| 4. CANDIDATES DRIFT | CANDIDATES DRIFT — 101->108 vs the ~93 prediction; worktree/directory-copy re-pollution is the named smell. Needs a scan-root fence or per-drift explanations. | New workstream `W-candidate-drift-fence`; member dependencies `M-bounded-in-flight-state`, `M-autoclock-in`, `M-aif-faithfulness`. |
+| 5. THE PROPOSER GAP | THE PROPOSER GAP — the candidate generator proposes only advance moves; close/survey/apply-cascade never exist to price, so portfolio-shaped operator value stays invisible (M-action-vocabulary's kill finding). Routed to M-aif2 slice 1, untouched. | New workstream `W-proposer-portfolio-actions`; context dependencies `M-action-vocabulary`, `M-aif2`; member dependencies `M-evaluate-policies`, `M-G-over-cascades`, `E-rollout-kill-test`. |
+| 6. THE DOGFOOD QUESTION | THE DOGFOOD QUESTION — your own census answered the survey half (19/20 self-referential); the campaign's remaining obligation is the RE-SEQUENCING: which members are worked directly by the zai team under GROUND-CONTROL discipline vs through WM enactment, so the machine stops eating itself. | New workstream `W-dogfood-resequence`; campaign standard; all dogfood-risk members. |
+
+### Minimum-obligation workstreams
+
+| Workstream | Why it exists | Acceptance bar | Initial execution mode |
+|---|---|---|---|
+| `W-constructor-df-last-inch` | No current member owns card 3's seat-by-state injection plus per-clause multi-vector retrieval as a constructor build. | A constructor change is specified, built, and shown to move at least one replayable first-flights lane across the dF gate without library/deposit hand edits. | `:ground-control-direct` |
+| `W-gamma-first-meal` | The gamma feed cannot prove learning until one gated mission with replayable deposit and dF > 0 enacts. | First gamma ingestion record from a qualifying mission, with replayable deposit and positive dF witness. | `:ground-control-direct` until one qualifying mission exists, then `:wm-read-only` review [OPERATOR?] |
+| `W-coapp-live-usage-miner` | Existing phylogeny mining gives authored clusters day-one edges but does not accrue edges from live usage. | Live cascade usage contributes co-app edges with provenance, and the known-pending pipeline edge is closed. | `:ground-control-direct` |
+| `W-candidate-drift-fence` | The 101->108 vs ~93 drift smell is not a mission feature; it is scan-root/directory hygiene. | Candidate count drift is either fenced by scan roots or every drift has a per-path explanation. | `:ground-control-direct` |
+| `W-proposer-portfolio-actions` | Closed `M-action-vocabulary` found a proposer shape gap; no live member yet makes close/survey/apply-cascade candidates priceable. | Candidate generator emits and prices advance, close, survey, and apply-cascade action families against operator value. | `:ground-control-direct`; WM may observe only |
+| `W-dogfood-resequence` | The census answered scale, not execution order. The campaign must decide direct-zai vs WM enactment per member. | Every campaign item has an execution mode and release dependency before dispatch; no self-referential item routes through WM enactment before release. | `:ground-control-direct` |
+
+---
+
 ## 0. RALLY
 
 ### Muster
@@ -35,10 +61,11 @@ The campaign runs on `GROUND-CONTROL.md` plus the campaign lifecycle:
 ### Operator checkpoints
 
 1. **Membership ratification:** is the surviving-member set in section 2 right?
-2. **Dogfood quarantine:** does Joe agree self-referential members are worked directly by the zai team under ground-control discipline, not by WM self-enactment?
-3. **Keystone choice:** is the keystone standard the campaign-level execution/sequence contract below, or should a narrower keystone mission own it? [OPERATOR?]
-4. **Lane owners:** assign named reviewers before any RUN/DISPATCH.
-5. **Stop/head-banging threshold:** ratify section 6 kill criteria before execution.
+2. **HEAD ratification:** do the six minimum obligations above match the current operator/Fable HEAD?
+3. **Dogfood quarantine:** does Joe agree self-referential members are worked directly by the zai team under ground-control discipline, not by WM self-enactment?
+4. **Keystone choice:** is the keystone standard the campaign-level execution/sequence contract below, or should a narrower keystone mission own it? [OPERATOR?]
+5. **Lane owners:** assign named reviewers before any RUN/DISPATCH.
+6. **Stop/head-banging threshold:** ratify section 6 kill criteria before execution.
 
 **RALLY exit:** operator ratifies membership, lane owners, dogfood quarantine, and stop criteria.
 
@@ -49,6 +76,8 @@ The campaign runs on `GROUND-CONTROL.md` plus the campaign lifecycle:
 ### Joint goal / gap
 
 War-Machine-related work is scattered across missions and excursions that often concern the machinery used to select, score, fold, enact, or observe the work itself. Running those missions one by one through the partially-built WM creates a self-reference trap: the system under repair becomes the judge, proposer, or execution substrate for its own repairs. The observed symptom is repeated head-banging: correct local work, but recurring confusion around scoring, provenance, pins, gates, and whether a tick can be trusted.
+
+The 2026-07-06 HEAD makes that tension concrete: the campaign must close or route the dF last inch, the unfed gamma learning feed, live usage co-app accrual, candidate drift, the proposer portfolio gap, and the dogfood resequencing question. Those are minimum obligations, not optional nice-to-haves.
 
 The joint goal is to finish the surviving War-Machine stack work under a single Campaign that:
 
@@ -83,7 +112,7 @@ The campaign can dissolve when:
 
 ### Membership
 
-Surviving member count in this draft: **20**. Dogfood-risk count: **19**. External-facing count: **1** (`M-demonstration-foundry`). Several checked items are complete/context and are listed after the member table.
+Surviving mission-member count in this draft: **20**. Minimum-obligation workstreams: **6**. Total campaign work items: **26**. Dogfood-risk work items: **25**. External-facing work items: **1** (`M-demonstration-foundry`). Several checked items are complete/context and are listed after the member table.
 
 **Keystone:** the campaign standard itself, with `M-aif-faithfulness`, `M-evaluate-policies`, `M-G-over-cascades`, `E-live-loop-3`, and `M-fold-self-play` as the central dependent cluster. This is a campaign-level standard rather than a single mission deliverable [OPERATOR?].
 
@@ -140,10 +169,13 @@ Surviving member count in this draft: **20**. Dogfood-risk count: **19**. Extern
 
 ### Self-reference census
 
-- Surviving members: **20**
-- Dogfood-risk / self-referential: **19**
-- External-facing: **1**
+- Surviving mission members: **20**
+- Minimum-obligation workstreams: **6**
+- Total campaign work items: **26**
+- Dogfood-risk / self-referential work items: **25**
+- External-facing work items: **1**
 - Strongly self-referential core (do not route through WM enactment until released): `M-aif-faithfulness`, `M-evaluate-policies`, `M-G-over-cascades`, `M-fold-self-play`, `M-fold-ansatz`, `E-fold-embed-pipeline`, `E-close-the-loop`, `E-live-loop-3`, `M-first-flights`, `M-war-machine-wiring`, `M-live-efe-map`.
+- Minimum-obligation workstreams requiring direct Ground Control before release: `W-constructor-df-last-inch`, `W-gamma-first-meal`, `W-coapp-live-usage-miner`, `W-candidate-drift-fence`, `W-proposer-portfolio-actions`, `W-dogfood-resequence`.
 
 ### Ready vs missing
 
@@ -152,10 +184,12 @@ Surviving member count in this draft: **20**. Dogfood-risk count: **19**. Extern
 | PIN-1B deposit loader and 2f gate; ground-control manual validated by 5-agent test; three new valid deposits | campaign-level work board and agent roster |
 | R5/R6/R7/R14/R16/R19 audit material and many dark/live flips | one canonical dogfood-release rule |
 | A-next gold corpus and fold-turn examples | larger fold curriculum and scoring loop |
-| cascade constructor and cascade-lane path | richer/correct psi/corpus inputs and constructor dilution fixes |
+| cascade constructor and cascade-lane path | card 3 seat-by-state injection and per-clause multi-vector retrieval |
 | mission registry and held-work ledger | registry/top-level mission split resolved |
 | mana/peradam certificate refusal machinery | operator rulings for real certificate issuance |
 | live EFE map and WM trace corpus | post-INSTANTIATE decisions and click/achievement follow-through |
+| gamma feed live/tested | first positive-dF gated meal |
+| candidate generator and phylogeny miner | portfolio action families; live usage co-app; scan-root drift fence |
 
 **CONSTITUTION exit:** operator accepts the member survey, self-reference classification, and governance roles.
 
@@ -200,6 +234,36 @@ Surviving member count in this draft: **20**. Dogfood-risk count: **19**. Extern
  :on "external-facing consent/peradam/outbox standard"
  :requirement "outward fixes run only through operator-selected, proof-of-work, consent-gated PR path"
  :status :held}
+
+{:from-workstream "W-constructor-df-last-inch"
+ :on "card-3 injection + per-clause multi-vector retrieval"
+ :requirement "the dF last inch must be closed by constructor change, not by library/deposit edits"
+ :status :held}
+
+{:from-workstream "W-gamma-first-meal"
+ :on "positive-dF replayable gated mission"
+ :requirement "gamma feed must ingest one qualifying mission before learning claims count"
+ :status :held}
+
+{:from-workstream "W-coapp-live-usage-miner"
+ :on "live cascade usage edges"
+ :requirement "used patterns accrue co-app edges, not only authored clusters"
+ :status :held}
+
+{:from-workstream "W-candidate-drift-fence"
+ :on "scan-root fence or per-drift explanations"
+ :requirement "101->108 drift cannot remain unexplained worktree/directory-copy smell"
+ :status :held}
+
+{:from-workstream "W-proposer-portfolio-actions"
+ :on "M-aif2 slice 1 / action vocabulary successor"
+ :requirement "advance, close, survey, and apply-cascade candidates must all be priceable"
+ :status :held}
+
+{:from-workstream "W-dogfood-resequence"
+ :on "campaign execution-mode table"
+ :requirement "each dogfood-risk member names direct-zai vs WM mode before dispatch"
+ :status :held}
 ```
 
 ### Two-step release plan
@@ -228,6 +292,8 @@ The campaign standard is not "do not dogfood ever." It is: dogfood only when the
 |---|---|
 | Scoring/faithfulness | Prevents an unverified score from judging its own repair |
 | Fold/deposit/self-play | Keeps deposit validity and blind scoring ahead of curriculum learning |
+| dF/gamma constructor path | Forces the dF last inch and gamma first meal through replayable gates rather than hand-edited deposits |
+| Usage/proposer/drift path | Makes live usage, portfolio actions, and candidate hygiene first-class work instead of ambient smells |
 | Live loop/ticks | Keeps scheduled reads grounded in replayable artifacts |
 | WM pilot/wiring/live map | Keeps operator-facing surfaces from becoming action authority before their contracts are verified |
 | Peradam/mana | Names fruit/no-fruit accounting and consent before certification |
@@ -270,31 +336,37 @@ Adversarial traces to check before RUN:
 
 1. `M-bounded-in-flight-state`: ensure ground-control work remains transactionally bounded.
 2. `M-autoclock-in`: finish confirmation/XTDB witnesses needed for reliable agent/session/mission lineage.
-3. Campaign board: create a per-member board with owner/reviewer/gates [OPERATOR?].
+3. `W-candidate-drift-fence`: install scan-root fence or per-drift explanations before candidate counts are trusted.
+4. `W-dogfood-resequence`: create the execution-mode table; every mission/workstream gets direct-zai vs WM mode before dispatch.
+5. Campaign board: create a per-member/per-workstream board with owner/reviewer/gates [OPERATOR?].
 
 **Rung 1 - lock the read/evidence path.**
 
-4. `E-live-loop-3`: keep PIN-1B/2f/reference-regression path green; resolve constructor dilution/card-3 issues.
-5. `M-aif-faithfulness`: finish visibility and badge debt that affects tick interpretation.
-6. `M-evaluate-policies` + `M-G-over-cascades`: close C10/E7 boundary by defining cascade valuation enough for the campaign.
+6. `E-live-loop-3`: keep PIN-1B/2f/reference-regression path green; resolve constructor dilution/card-3 issues.
+7. `W-constructor-df-last-inch`: build card 3 seat-by-state injection plus per-clause multi-vector retrieval.
+8. `W-gamma-first-meal`: enact only after a replayable positive-dF gated mission exists.
+9. `M-aif-faithfulness`: finish visibility and badge debt that affects tick interpretation.
+10. `M-evaluate-policies` + `M-G-over-cascades`: close C10/E7 boundary by defining cascade valuation enough for the campaign.
 
 **Rung 2 - fold/cascade curriculum.**
 
-7. `M-fold-ansatz` + `E-fold-embed-pipeline` + `E-cascade-sampler-sampler`: decide the embedding/GFlowNet frontier from A-next gold evidence.
-8. `E-close-the-loop` + `M-fold-self-play`: only after deposit scoring and corpus are stable.
-9. `M-first-flights` Phase B: release once policy-grade G is available.
+11. `M-fold-ansatz` + `E-fold-embed-pipeline` + `E-cascade-sampler-sampler`: decide the embedding/GFlowNet frontier from A-next gold evidence.
+12. `W-coapp-live-usage-miner`: add live cascade usage to co-app edge accrual.
+13. `E-close-the-loop` + `M-fold-self-play`: only after deposit scoring and corpus are stable.
+14. `M-first-flights` Phase B: release once policy-grade G is available.
 
 **Rung 3 - WM surfaces and wiring.**
 
-10. `M-war-machine-wiring`: verify head/manifold contracts.
-11. `M-live-efe-map`: post-INSTANTIATE decisions and overlays.
-12. `M-war-machine-pilot`: formal close/reopen v1 under the new dogfood-release rule.
+15. `W-proposer-portfolio-actions`: make close/survey/apply-cascade candidates exist and priceable.
+16. `M-war-machine-wiring`: verify head/manifold contracts.
+17. `M-live-efe-map`: post-INSTANTIATE decisions and overlays.
+18. `M-war-machine-pilot`: formal close/reopen v1 under the new dogfood-release rule.
 
 **Rung 4 - fruit and outward proof.**
 
-13. `M-peradam-mechanization`: operator rulings + first legitimate certificate issuance.
-14. `M-operational-vocabulary` / `E-mine-mission-transitions`: box run/promotion path after scoring/read path is stable.
-15. `M-demonstration-foundry`: external-facing proof-of-work path; this is the cleanest place to test WM methods against non-self material.
+19. `M-peradam-mechanization`: operator rulings + first legitimate certificate issuance.
+20. `M-operational-vocabulary` / `E-mine-mission-transitions`: box run/promotion path after scoring/read path is stable.
+21. `M-demonstration-foundry`: external-facing proof-of-work path; this is the cleanest place to test WM methods against non-self material.
 
 ### Zai-team commissioning plan
 
@@ -335,6 +407,7 @@ At dissolution:
 ## 8. Draft inspection notes
 
 - [OPERATOR?] Membership is intentionally broad. A narrower campaign could split external-facing `M-demonstration-foundry` into a sibling Campaign; I kept it because the operator named it and because it tests WM methods on non-self material.
+- HEAD gaps forced six named workstreams because no current surviving mission cleanly owned them end to end: gap 1 -> `W-constructor-df-last-inch`; gap 2 -> `W-gamma-first-meal`; gap 3 -> `W-coapp-live-usage-miner`; gap 4 -> `W-candidate-drift-fence`; gap 5 -> `W-proposer-portfolio-actions`; gap 6 -> `W-dogfood-resequence`.
 - [OPERATOR?] `M-war-machine-tuning` is treated as context rather than surviving member; reopen it if its operator-surface criteria are not fully absorbed by `M-live-efe-map` / `M-aif-faithfulness`.
 - [OPERATOR?] `M-capability-star-map` is closed, but the caveat excursions may need their own member rows if Joe wants the star-map lane active inside this campaign.
 - [OPERATOR?] The keystone is campaign-level governance, not a mission. If the operator wants a concrete keystone mission, candidate name: `M-war-machine-dogfood-release-standard`.
