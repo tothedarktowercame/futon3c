@@ -100,6 +100,41 @@ Execution modes:
 - `:wm-dogfood-released` - WM may work the class after campaign STANDARD-VERIFY + RUN/DELIVER releases it.
 - `:external-facing` - work concerns outward value/fruit rather than WM internals; WM may be a tool only if consent and evidence gates hold.
 
+### Execution-mode table
+
+This table is the dogfood-question answer at draft level: no self-referential item begins in WM enactment. WM can observe or recommend only where the release dependency says its input is evidence rather than authority.
+
+| Item | Initial mode | Release dependency | Why |
+|---|---|---|---|
+| `W-candidate-drift-fence` | `:ground-control-direct` | drift fence/explanations committed and candidate census reproducible | candidate hygiene is precondition to trusting WM ranking |
+| `W-dogfood-resequence` | `:ground-control-direct` | this table ratified by operator | this is the anti-self-eating rule itself |
+| `M-bounded-in-flight-state` | `:ground-control-direct` | transactional filesystem discipline verified | execution substrate cannot be repaired by an unbounded executor |
+| `M-autoclock-in` | `:ground-control-direct` | creation/after-save clock witnesses verified | session lineage underwrites every later trace |
+| `E-live-loop-3` | `:ground-control-direct` | PIN-1B/2f/reference regression green on current deposit set | scheduled ticks consume replayable artifacts |
+| `W-constructor-df-last-inch` | `:ground-control-direct` | first-flights or equivalent lane crosses dF gate by constructor change | the constructor cannot self-credit a gate it does not yet cross |
+| `W-gamma-first-meal` | `:ground-control-direct` | one replayable positive-dF gated mission feeds gamma offline, then live at operator word | gamma learning needs cargo before it can judge |
+| `M-aif-faithfulness` | `:ground-control-direct` | tick provenance/badge debt complete enough for honest readback | faithfulness repairs judge WM claims |
+| `M-evaluate-policies` | `:ground-control-direct` | C10/E7 close and cascade valuation boundary settled | policy evaluator must not price its own missing action space |
+| `M-G-over-cascades` | `:ground-control-direct` | cascade valuation standard passes focused evidence | G-over-cascades is the pricing substrate |
+| `M-fold-ansatz` | `:ground-control-direct` | Joe ARGUE steer and A-next evidence disposition recorded | fold substrate is still under construction |
+| `E-fold-embed-pipeline` | `:ground-control-direct` | gold-corpus probe verdict accepted | embedding fold remains experimental |
+| `E-cascade-sampler-sampler` | `:ground-control-direct` | reward/training verdict accepted against honest data | sampler learning is too close to the scoring mechanism |
+| `W-coapp-live-usage-miner` | `:ground-control-direct` | live usage co-app dry-run/test proves provenance | miner changes the next cascade prior |
+| `E-close-the-loop` | `:ground-control-direct` | fold interface socket verified without live firing | loop closure is consent-gated |
+| `M-fold-self-play` | `:ground-control-direct` | valid deposit corpus + blind scoring standard stable | self-play must not train on unverified scoring |
+| `M-first-flights` | `:ground-control-direct` | policy-grade `G(s,pi)` and dF gate available | first-flights is the main dogfood test lane |
+| `W-proposer-portfolio-actions` | `:ground-control-direct` | advance/close/survey/apply-cascade candidates generated and priced in dry-run | proposer action space is the missing portfolio shape |
+| `E-rollout-kill-test` | `:ground-control-direct` | proposer/action portfolio and rollout traces available | rollout keep/kill decision prices WM action choices |
+| `M-war-machine-wiring` | `:ground-control-direct` | head/manifold read-write contracts verified | WM navigation wiring is self-referential |
+| `M-live-efe-map` | `:wm-read-only` | post-INSTANTIATE overlays reviewed by operator | read-only surface can display evidence before it controls work [OPERATOR?] |
+| `M-war-machine-pilot` | `:ground-control-direct` | v0 close/reopen decision under this standard | pilot-as-agent must wait for release |
+| `M-peradam-mechanization` | `:ground-control-direct` | operator rulings for 001 issuance and structured witnesses | certification cannot self-certify |
+| `M-operational-vocabulary` | `:ground-control-direct` | proposer/action vocabulary and mined-transition evidence stable | action vocabulary affects what WM can ask to do |
+| `E-mine-mission-transitions` | `:ground-control-direct` | mined overlay provenance accepted | mined transitions feed candidate/proposer machinery |
+| `M-demonstration-foundry` | `:external-facing` | operator-selected issue, consent path, proof-of-work gate | outward value test is not WM self-repair |
+
+First possible future dogfood lane: after all Rung 0-2 blockers close or are explicitly held, `M-war-machine-pilot` may move to `:wm-assisted` for v1+ under operator review [OPERATOR?].
+
 ### Joint completion criterion
 
 The campaign can dissolve when:
