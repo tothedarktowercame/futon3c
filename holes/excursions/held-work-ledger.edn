@@ -3,13 +3,13 @@
   :campaign "C-cascade-real",
   :v 0,
   :sources (:sorrys :star :pudding :prose)},
- :count 176,
- :by-source {:sorrys 5, :star 14, :pudding 22, :prose 135},
+ :count 216,
+ :by-source {:sorrys 6, :star 14, :pudding 20, :prose 176},
  :governance-gaps
- {:no-owner 175,
-  :no-wake-trigger 174,
-  :no-re-entry 33,
-  :no-mission-link 61},
+ {:no-owner 215,
+  :no-wake-trigger 213,
+  :no-re-entry 31,
+  :no-mission-link 74},
  :items
  [#:held{:kind :meta,
          :re-entry
@@ -103,6 +103,23 @@
           :doc "futon2/resources/sorrys.edn"},
          :raised-at "2026-06-10",
          :id :sorry/pattern-typed-theme-liberates-the-solo}
+  #:held{:kind :prototyping-forward,
+         :re-entry "futon3c/holes/missions/M-first-flights.md",
+         :missions ["M-first-flights"],
+         :reason
+         "Phase B policy-grade G(s, π): flight records must carry derivations, ghosts, and warrants",
+         :review-by nil,
+         :wake-trigger "a refinement pass is run",
+         :owner nil,
+         :evidence-condition
+         "(str \"M-first-flights Phase A is complete (checkpoint 20, operator verdict \" \"PASS). Phase B is the standing obligation: flight records as discharge \" \"judgments carrying their derivations (predicted, realised, witness, \" \"error-with-interpretation), ghosts as typed sorries distinguishing \" \"proposal-mode/not-yet/excluded-confound, and the warrant for each \" \"velocity recorded so the cycle-5 escalation dispute is checkable. \" \"Currently flight records are lists of numbers and nulls — judgments \" \"without derivations (prediction -4.9225 / realised -4.9225 / error \" \"0.0000 taught the model nothing because the error has no structure \" \"to propagate). Armed when the rollout engine lands; the prediction \" \"organ holds the typed ghost.\")",
+         :status :held,
+         :source
+         {:registry :sorrys,
+          :ref :sorry/first-flights-phase-b-policy-grade-G,
+          :doc "futon2/resources/sorrys.edn"},
+         :raised-at "2026-06-11",
+         :id :sorry/first-flights-phase-b-policy-grade-G}
   #:held{:kind nil,
          :re-entry nil,
          :missions [],
@@ -347,36 +364,6 @@
           :doc "futon7/holes/pudding-prover-registry.edn"},
          :raised-at nil,
          :id :pudding/h1779702947}
-  #:held{:kind :proof-state,
-         :re-entry nil,
-         :missions [],
-         :reason
-         "a cold EOI can be AUTHORED by the engine — drafted into the outbox, ready to send",
-         :review-by nil,
-         :wake-trigger nil,
-         :owner nil,
-         :evidence-condition nil,
-         :status :held,
-         :source
-         {:registry :pudding,
-          :doc "futon7/holes/pudding-prover-registry.edn"},
-         :raised-at nil,
-         :id :pudding/h694968}
-  #:held{:kind :proof-state,
-         :re-entry nil,
-         :missions [],
-         :reason
-         "a cold EOI gets SENT to a real cold lead (not Eric/Rob) — the next base camp",
-         :review-by nil,
-         :wake-trigger nil,
-         :owner nil,
-         :evidence-condition nil,
-         :status :held,
-         :source
-         {:registry :pudding,
-          :doc "futon7/holes/pudding-prover-registry.edn"},
-         :raised-at nil,
-         :id :pudding/h970509224}
   #:held{:kind :proof-state,
          :re-entry nil,
          :missions [],
@@ -1149,6 +1136,20 @@
           :doc "futon7/holes/M-self-documenting-stack.md"},
          :raised-at nil,
          :id :prose/h744645964}
+  #:held{:kind nil,
+         :re-entry "futon7/holes/M-demonstration-foundry.md #Held",
+         :missions ["futon7-d/mission/demonstration-foundry"],
+         :reason "owner/repo#456 — useful but maintainer inactive",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc "futon7/holes/M-demonstration-foundry.md"},
+         :raised-at nil,
+         :id :prose/h1012661903}
   #:held{:kind nil,
          :re-entry "futon3/holes/war-bulletin-9.md",
          :missions [],
@@ -2087,6 +2088,21 @@
          :raised-at "2026-06-10",
          :id :prose/h1192619157}
   #:held{:kind nil,
+         :re-entry "futon6/holes/missions/M-live-efe-map.md",
+         :missions ["futon6-d/mission/live-efe-map"],
+         :reason
+         "T1 chartered as follow-on: M-pheromone-field.md (same directory) — deposit /",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc "futon6/holes/missions/M-live-efe-map.md"},
+         :raised-at nil,
+         :id :prose/h1221015463}
+  #:held{:kind nil,
          :re-entry
          "futon6/holes/missions/M-P3-rational-reconstruction.md #Deferred items",
          :missions ["futon6-d/mission/p3-rational-reconstruction"],
@@ -2342,6 +2358,21 @@
           :doc "futon3c/holes/excursions/E-held-work-ledger.md"},
          :raised-at nil,
          :id :prose/h1381365345}
+  #:held{:kind nil,
+         :re-entry "futon3c/holes/excursions/E-repl-continuations.md",
+         :missions [],
+         :reason
+         "Follow-on: [[E-agency-ws-cutover]] — the park-ready WS broadcast is wired but currently reaches nobody (/agency/ws doesn't route to the registering agents handler); completing that cutover makes de…",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc "futon3c/holes/excursions/E-repl-continuations.md"},
+         :raised-at "2026-06-30",
+         :id :prose/h264528921}
   #:held{:kind nil,
          :re-entry
          "futon3c/holes/missions/M-war-machine-first-outing.md",
@@ -2710,6 +2741,628 @@
          :raised-at "2026-05-27",
          :id :prose/h587018694}
   #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-futon1a-archivist.md #Deferred cleanup (revisit at end of excursion — Joe, 2026-06-30)",
+         :missions [],
+         :reason
+         "246 UUID tombstones — provably superseded (canonical node carries :migrated-from); the",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-futon1a-archivist.md"},
+         :raised-at nil,
+         :id :prose/h2142112601}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-futon1a-archivist.md #Deferred cleanup (revisit at end of excursion — Joe, 2026-06-30)",
+         :missions [],
+         :reason
+         "30 mission-doc/* stubs (name M-5, M-1, …) — fallback stubs, no canonical mapping;",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-futon1a-archivist.md"},
+         :raised-at nil,
+         :id :prose/h309575194}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-futon1a-archivist.md #Deferred cleanup (revisit at end of excursion — Joe, 2026-06-30)",
+         :missions [],
+         :reason
+         "75 + 2 non-allowlist nodes (futon3c-desktop-save-d, futon5-d2, futon5-health-main-d,",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-futon1a-archivist.md"},
+         :raised-at nil,
+         :id :prose/h740127838}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-futon1a-archivist.md #Deferred cleanup (revisit at end of excursion — Joe, 2026-06-30)",
+         :missions [],
+         :reason
+         "/meta/model/queue HTTP endpoint — 404 (not routed in this build); in-mem",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-futon1a-archivist.md"},
+         :raised-at nil,
+         :id :prose/h412700389}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-futon1a-archivist.md #Deferred cleanup (revisit at end of excursion — Joe, 2026-06-30)",
+         :missions [],
+         :reason
+         "dot-drift canonical name futon3c-d/mission/substrate-metric.R2-curvature-report (a . in",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-futon1a-archivist.md"},
+         :raised-at nil,
+         :id :prose/h130501519}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-held-work-ledger.md",
+         :missions [],
+         :reason
+         "(\"Deferred\", \"follow-on\", \"STILL GATED ON\", \"parked\") plus a handful of",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-held-work-ledger.md"},
+         :raised-at nil,
+         :id :prose/h1006537766}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-held-work-ledger.md #Follow-on (named, not silently skipped)",
+         :missions [],
+         :reason
+         "Prose harvest — the ~445 holes/ \"Deferred/follow-on/gated-on\" sections.",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-held-work-ledger.md"},
+         :raised-at nil,
+         :id :prose/h1099213280}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-held-work-ledger.md #Follow-on (named, not silently skipped)",
+         :missions [],
+         :reason "Gate-queue adapter — the live archivist worklist.",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-held-work-ledger.md"},
+         :raised-at nil,
+         :id :prose/h781479686}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-held-work-ledger.md #Follow-on (named, not silently skipped)",
+         :missions [],
+         :reason
+         "substrate-2 landing — held-items as entities edged to the now-canonical",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-held-work-ledger.md"},
+         :raised-at nil,
+         :id :prose/h1303052451}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-held-work-ledger.md #Follow-on (named, not silently skipped)",
+         :missions [],
+         :reason
+         "Real wake-trigger evaluator — \"what wakes now?\" governed by evidence/dates/",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-held-work-ledger.md"},
+         :raised-at nil,
+         :id :prose/h1223758856}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/excursions/E-repl-continuations.md",
+         :missions [],
+         :reason
+         "Follow-on: [[E-agency-ws-cutover]] — the park-ready WS broadcast is wired but currently reaches nobody (/agency/ws doesn't route to the registering agents handler); completing that cutover makes de…",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/excursions/E-repl-continuations.md"},
+         :raised-at "2026-06-30",
+         :id :prose/h581313676}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-war-machine-first-outing.md",
+         :missions
+         ["futon3c-index-check-d/mission/war-machine-first-outing"],
+         :reason
+         "Foreword was written → follow-on: fold it into the Foreword (VSATARCS §0).",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-war-machine-first-outing.md"},
+         :raised-at "2026-05-30",
+         :id :prose/h380442429}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-war-machine-first-outing.md",
+         :missions
+         ["futon3c-index-check-d/mission/war-machine-first-outing"],
+         :reason
+         "single session — path-limited commits suffice). R-C follow-on: a small spike",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-war-machine-first-outing.md"},
+         :raised-at "2026-05-30",
+         :id :prose/h1159826543}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-war-machine-first-outing.md",
+         :missions
+         ["futon3c-index-check-d/mission/war-machine-first-outing"],
+         :reason
+         "stack-annotations) carry currency until the post-grind regen. Follow-on: the",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-war-machine-first-outing.md"},
+         :raised-at "2026-05-30",
+         :id :prose/h258775928}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/E-pilot-contract-compliance.md #Deferred (handle separately)",
+         :missions [],
+         :reason
+         "Cron questions — schedule, frequency, which repos, commit-only vs also-push (the E-street-sweeper",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/E-pilot-contract-compliance.md"},
+         :raised-at "2026-06-15",
+         :id :prose/h1390231092}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/E-pilot-contract-compliance.md #Deferred (handle separately)",
+         :missions [],
+         :reason
+         "Closing C3/C7 (the end-to-end hop round-trip verification) — owned by E-pilot-hop-trigger-wiring.",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/E-pilot-contract-compliance.md"},
+         :raised-at "2026-06-15",
+         :id :prose/h1837909634}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-apm-solutions.md #Deferred Items",
+         :missions ["futon3c-index-check-d/mission/apm-solutions"],
+         :reason
+         "M-x apm-browse EDN response fix (Emacs store module)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-apm-solutions.md"},
+         :raised-at "2026-03-28",
+         :id :prose/h909616552}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-apm-solutions.md #Deferred Items",
+         :missions ["futon3c-index-check-d/mission/apm-solutions"],
+         :reason ".sty semantic colours (fontspec compatibility)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-apm-solutions.md"},
+         :raised-at "2026-03-28",
+         :id :prose/h1193815268}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-apm-solutions.md #Deferred Items",
+         :missions ["futon3c-index-check-d/mission/apm-solutions"],
+         :reason "C2/C3 notes re-run with LaTeX math",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-apm-solutions.md"},
+         :raised-at "2026-03-28",
+         :id :prose/h1668288449}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-apm-solutions.md #Deferred Items",
+         :missions ["futon3c-index-check-d/mission/apm-solutions"],
+         :reason
+         "Stage 9b R-GCN training with harder negative sampling",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-apm-solutions.md"},
+         :raised-at "2026-03-28",
+         :id :prose/h776945040}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-apm-solutions.md #Deferred Items",
+         :missions ["futon3c-index-check-d/mission/apm-solutions"],
+         :reason "Scale to all 489 APM problems",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-apm-solutions.md"},
+         :raised-at "2026-03-28",
+         :id :prose/h1958749027}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-agency-hardening-datapoints.md",
+         :missions
+         ["futon3c-index-check-d/mission/agency-hardening-datapoints"],
+         :reason
+         "Deferred behind the drainer fix. Evidence above is the spec for the build.",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-agency-hardening-datapoints.md"},
+         :raised-at nil,
+         :id :prose/h1880402930}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-typed-bells.md #Deferred-item ticket (carried from the review watch-item)",
+         :missions ["futon3c-index-check-d/mission/typed-bells"],
+         :reason
+         "holes/tickets/T-typed-bell-arse-write-async.md (WATCH) — the synchronous",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc "futon3c-index-check/holes/missions/M-typed-bells.md"},
+         :raised-at "2026-06-11",
+         :id :prose/h2025210928}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-diagramprover.md #Deferred Until",
+         :missions ["futon3c-index-check-d/mission/diagramprover"],
+         :reason
+         "Phase 0 can start now with existing data (39 partials, 12 patterns)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-diagramprover.md"},
+         :raised-at "2026-04-01",
+         :id :prose/h1145961514}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-diagramprover.md #Deferred Until",
+         :missions ["futon3c-index-check-d/mission/diagramprover"],
+         :reason
+         "Phase 1 requires Pass 1 ≥200 problems (currently ~76)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-diagramprover.md"},
+         :raised-at "2026-04-01",
+         :id :prose/h1405679554}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-diagramprover.md #Deferred Until",
+         :missions ["futon3c-index-check-d/mission/diagramprover"],
+         :reason
+         "Phase 2 requires ~50+ sorry boundary observations for model A",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-diagramprover.md"},
+         :raised-at "2026-04-01",
+         :id :prose/h734665962}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-diagramprover.md #Deferred Until",
+         :missions ["futon3c-index-check-d/mission/diagramprover"],
+         :reason
+         "Phase 3a requires LeanDojo-v2 installation (check with Rob)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-diagramprover.md"},
+         :raised-at "2026-04-01",
+         :id :prose/h1912113479}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-diagramprover.md #Deferred Until",
+         :missions ["futon3c-index-check-d/mission/diagramprover"],
+         :reason
+         "Phase 3b requires futon5 TPG + Pantograph integration",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-diagramprover.md"},
+         :raised-at "2026-04-01",
+         :id :prose/h1057746759}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-diagramprover.md #Deferred Until",
+         :missions ["futon3c-index-check-d/mission/diagramprover"],
+         :reason "Phase 4 requires superpod GPU access (non-blocking)",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-diagramprover.md"},
+         :raised-at "2026-04-01",
+         :id :prose/h1810744628}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-codex-agent-behaviour.md #Deferred items",
+         :missions
+         ["futon3c-index-check-d/mission/codex-agent-behaviour"],
+         :reason
+         "Option C consolidation: Move detection predicates and enforcement",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-codex-agent-behaviour.md"},
+         :raised-at nil,
+         :id :prose/h421113493}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-codex-agent-behaviour.md #Deferred items",
+         :missions
+         ["futon3c-index-check-d/mission/codex-agent-behaviour"],
+         :reason
+         "Full IRC end-to-end: Run the modified bridge against Linode Agency",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-codex-agent-behaviour.md"},
+         :raised-at nil,
+         :id :prose/h2127035456}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-codex-agent-behaviour.md #Deferred items",
+         :missions
+         ["futon3c-index-check-d/mission/codex-agent-behaviour"],
+         :reason
+         "Enforcement metrics: Track enforcement trigger rate over time to",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-codex-agent-behaviour.md"},
+         :raised-at nil,
+         :id :prose/h2036715149}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/M-federated-agency-hardening.md",
+         :missions
+         ["futon3c-index-check-d/mission/federated-agency-hardening"],
+         :reason
+         "limitation of both paths. Candidate follow-on: thread incremental assistant",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/M-federated-agency-hardening.md"},
+         :raised-at "2026-06-15",
+         :id :prose/h801564647}
+  #:held{:kind nil,
+         :re-entry
+         "futon3c-index-check/holes/missions/E-g-incorporates-deltaT.md",
+         :missions [],
+         :reason
+         "Companion follow-on: M-action-cost-modelling §7.5 names library/futon-theory/five-substrate-cycle.flexiarg and the R11 entry rewrite as sibling work",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose,
+          :doc
+          "futon3c-index-check/holes/missions/E-g-incorporates-deltaT.md"},
+         :raised-at "2026-05-27",
+         :id :prose/h957985229}
+  #:held{:kind nil,
+         :re-entry "futon2/holes/M-aif-faithfulness.md",
+         :missions ["futon2-d/mission/aif-faithfulness"],
+         :reason
+         "| claude-5 | B-2a+B-2b DONE ac60874, reviewed-PASS claude-12 2026-07-04. :G-core + named :augmentation-terms/:G-augmentation (signs as-they-enter); graph mask/value split additive, :G-total express…",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose, :doc "futon2/holes/M-aif-faithfulness.md"},
+         :raised-at "2026-07-03",
+         :id :prose/h1413729868}
+  #:held{:kind nil,
+         :re-entry "futon2/holes/M-aif-faithfulness.md",
+         :missions ["futon2-d/mission/aif-faithfulness"],
+         :reason
+         "(calendar days) strengthens or revisits. Still gated on more burn-in:",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose, :doc "futon2/holes/M-aif-faithfulness.md"},
+         :raised-at "2026-07-03",
+         :id :prose/h156905956}
+  #:held{:kind nil,
+         :re-entry "futon2/holes/M-futon1b-port.md",
+         :missions ["futon2-d/mission/futon1b-port"],
+         :reason
+         "2026-07-04). Follow-on: E-futon1a-to-futon1b-migration-pipeline.",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose, :doc "futon2/holes/M-futon1b-port.md"},
+         :raised-at nil,
+         :id :prose/h1222726760}
+  #:held{:kind nil,
          :re-entry "futon2/holes/M-G-over-cascades.md",
          :missions ["futon2-d/mission/g-over-cascades"],
          :reason
@@ -2788,4 +3441,18 @@
          :source
          {:registry :prose, :doc "futon2/holes/M-points-de-fuite.md"},
          :raised-at nil,
-         :id :prose/h395680196}]}
+         :id :prose/h395680196}
+  #:held{:kind nil,
+         :re-entry "futon2/holes/M-custom-harness.md",
+         :missions ["futon2-d/mission/custom-harness"],
+         :reason
+         "follow-on: Zai itself as a candidate co-builder of its own successor",
+         :review-by nil,
+         :wake-trigger nil,
+         :owner nil,
+         :evidence-condition nil,
+         :status :held,
+         :source
+         {:registry :prose, :doc "futon2/holes/M-custom-harness.md"},
+         :raised-at nil,
+         :id :prose/h802181294}]}
