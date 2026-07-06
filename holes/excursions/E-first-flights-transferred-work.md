@@ -41,6 +41,9 @@ Current evidence:
 Ground-control task: independently re-check the proof and, if valid, record this
 workstream as CLOSED in this Excursion.
 
+Dispatch: `zai-5`, job `invoke-1783341988882-673-0d5a0f7c`, requested
+2026-07-06 by `codex-1`.
+
 ### W2 — typed-grounds / return-channel tail
 
 Question: does the remaining `arr-7535a5b6-e59` / typed-grounds tail close from
@@ -56,6 +59,9 @@ Current evidence:
 Ground-control task: independently census the typed-grounds tail, identify the
 source of record for `arr-7535a5b6-e59`, and record CLOSED or HOLD here with
 named evidence.
+
+Dispatch: `zai-6`, job `invoke-1783342003563-674-0ed65444`, requested
+2026-07-06 by `codex-1`.
 
 ## Related work, not a dependency
 
