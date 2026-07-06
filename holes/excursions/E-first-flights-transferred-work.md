@@ -1,7 +1,7 @@
 # E-first-flights-transferred-work — close the residual first-flights obligations outside the mission
 
 Date: 2026-07-06
-Status: OPEN — W1 closed; W2 held
+Status: CLOSED — W1 closed; W2 closed
 
 ## HEAD
 
@@ -66,7 +66,7 @@ Current evidence:
 Dispatch: `zai-6`, job `invoke-1783342003563-674-0ed65444`, requested
 2026-07-06 by `codex-1`.
 
-Verdict: **HOLD**, independently verified by `zai-6`.
+Initial verdict: **HOLD**, independently verified by `zai-6`.
 
 Evidence note: `futon3c/holes/excursions/E-first-flights-typed-grounds-tail-closure.md`,
 commit `7b37d67`.
@@ -82,6 +82,24 @@ from `M-action-vocabulary`, not as a fold/deposit/gamma blocker. The missing
 work is vocabulary/design for how prose grounds become typed, queryable action
 trace fields. It belongs at the trace/learning vocabulary boundary, not in
 `M-fold-ansatz`.
+
+Interactive closure (codex-1 + Joe, 2026-07-06): **CLOSED** at the producer /
+spec / witness grain.
+
+What changed:
+
+- `futon3c.aif.flight-record` now emits typed maps for every ground the producer
+  derives. Each map carries `:ground/kind` plus kind-specific witness fields.
+- `holes/specs/flight.spec.edn` documents the ground vocabulary.
+- `holes/specs/traces/flight-typed-ground-witness.edn` is a generated conforming
+  witness record with typed grounds.
+- `holes/flights/first-flights-wiring.edn` flips `:typed-grounds` from
+  `{:hungry-for :design}` to `:full`.
+
+Compatibility boundary: historical records and pre-wrapped pilot-supplied cells
+may still carry legacy prose grounds. The closed obligation is the producer-side
+typed-grounds design and construction for new records, not retroactive rewriting
+of old traces.
 
 ## Related work, not a dependency
 
