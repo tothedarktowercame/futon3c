@@ -1,7 +1,7 @@
 # E-first-flights-transferred-work — close the residual first-flights obligations outside the mission
 
 Date: 2026-07-06
-Status: OPEN — W1 closed; W2 pending
+Status: OPEN — W1 closed; W2 held
 
 ## HEAD
 
@@ -63,12 +63,19 @@ Current evidence:
 - The closure demo did not prove this tail closed; it only proved the mission
   should stop being the live target for it.
 
-Ground-control task: independently census the typed-grounds tail, identify the
-source of record for `arr-7535a5b6-e59`, and record CLOSED or HOLD here with
-named evidence.
-
 Dispatch: `zai-6`, job `invoke-1783342003563-674-0ed65444`, requested
 2026-07-06 by `codex-1`.
+
+Verdict: **HOLD**, independently verified by `zai-6`.
+
+Evidence note: `futon3c/holes/excursions/E-first-flights-typed-grounds-tail-closure.md`,
+commit `7b37d67`.
+
+Summary: `arr-7535a5b6-e59` remains open because the `:typed-grounds` node in
+`futon3c/holes/flights/first-flights-wiring.edn` is still
+`:satiety {:hungry-for :design}`. Checkpoint 22 discharged the rendering half
+only; the typed-grounds migration has no design, plan, or construction yet.
+This hold lives here and does not block `M-fold-ansatz`.
 
 ## Related work, not a dependency
 
