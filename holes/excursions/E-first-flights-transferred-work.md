@@ -77,6 +77,12 @@ Summary: `arr-7535a5b6-e59` remains open because the `:typed-grounds` node in
 only; the typed-grounds migration has no design, plan, or construction yet.
 This hold lives here and does not block `M-fold-ansatz`.
 
+Routing note (Joe, 2026-07-06): W2 is best understood as a follow-on action
+from `M-action-vocabulary`, not as a fold/deposit/gamma blocker. The missing
+work is vocabulary/design for how prose grounds become typed, queryable action
+trace fields. It belongs at the trace/learning vocabulary boundary, not in
+`M-fold-ansatz`.
+
 ## Related work, not a dependency
 
 `M-fold-ansatz` may benefit from the fold-realized / gamma evidence and any
