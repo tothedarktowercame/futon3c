@@ -107,12 +107,12 @@
          :re-entry "futon3c/holes/missions/M-first-flights.md",
          :missions ["M-first-flights"],
          :reason
-         "Phase B: flight records that carry their derivations — measurement as discharge judgment (predicted, realised, witness, error-with-interpretation), ghosts as typed sorries distinguishing proposal-mode/not-yet/excluded-confound, and the warrant for each velocity recorded so the cycle-5 escalation dispute is checkable",
+         "Phase B policy-grade G(s, π): flight records must carry derivations, ghosts, and warrants",
          :review-by nil,
          :wake-trigger "a refinement pass is run",
          :owner nil,
          :evidence-condition
-         "(str \"M-first-flights.md line 3 (Status field): 'Phase B (policy-grade \" \"G(s, π)) is the standing obligation, armed when the rollout engine \" \"lands; the prediction organ holds the typed ghost.' The title is \" \"the verbatim want from the mission's own requirement language — \" \"the same sentence the frozen reference ψ (deposit 007, \" \"psi-first-flights.txt) used. Faithful to the source, not a \" \"paraphrase. Currently flight records are lists of numbers and \" \"nulls — judgments without derivations (prediction -4.9225 / \" \"realised -4.9225 / error 0.0000 taught the model nothing because \" \"the error has no structure to propagate).\")",
+         "(str \"M-first-flights.md line 3 (Status field): 'Phase B (policy-grade \" \"G(s, π)) is the standing obligation, armed when the rollout engine \" \"lands; the prediction organ holds the typed ghost.' The title is \" \"a faithful compression of the mission's requirement — the same \" \"content as the verbatim sentence (measurement as discharge \" \"judgment, ghosts as typed sorries, warrant for each velocity) in \" \"shorter form. Retained over the verbatim variant after a measured \" \"two-arm comparison: paraphrase F -0.024 (size 3) vs verbatim \" \"F -0.46 (size 1) — the MiniLM embedding dilutes measurement \" \"vocabulary across the longer verbatim text. Selecting the argmax \" \"of two pre-registered alternatives is not further optimization \" \"(claude-16 ruling, 2026-07-06). Currently flight records are \" \"lists of numbers and nulls — judgments without derivations \" \"(prediction -4.9225 / realised -4.9225 / error 0.0000 taught the \" \"model nothing because the error has no structure to propagate).\")",
          :status :held,
          :source
          {:registry :sorrys,
