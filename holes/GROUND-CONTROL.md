@@ -48,6 +48,10 @@ curl -s -X POST http://localhost:7070/api/alpha/agents/auto \
 ```
 NOTE: auto-register MINTS ITS OWN agent-id (lowest free slot, e.g.
 zai-3) — read it from the response; do not assume the id you wanted.
+For multiple fresh agents, spawn **and immediately dispatch** each one
+before spawning the next. The endpoint deliberately reclaims idle,
+session-less auto ghosts; repeated spawn calls without an intervening
+invoke can return the same id.
 Deregister a mistake: `DELETE /api/alpha/agents/<id>`.
 
 **Follow mode** (operator watches the agent's buffer live; only useful
@@ -153,8 +157,14 @@ are `ft-autoclock-in-001.edn` (golden, v1+v2) and
    `[{:id :bN :discharges :want-signature}]` — one terminal per WANT
    clause (v2.2). If every edge comes back `:seq`, record that as a
    finding, don't fake variety.
-5. **ΔG**: `-(boxes/(boxes+holes))`, hand-derived AND shown. Zero holes
-   on a thin cascade is overconfidence, not coverage.
+5. **ΔG**: compute the stored `:eval :delta-g` via the real fold-eval
+   path, not by hand:
+   `(futon2.aif.fold-eval/coverage-delta-g
+     (futon2.aif.fold-llm/construction->wiring answer))`.
+   Also record your hand coverage derivation as evidence, but do not use
+   it as the stored value if it disagrees with the loader/replay
+   function. Zero holes on a thin cascade is overconfidence, not
+   coverage.
 6. **PINS — compute via the REAL functions, never by hand** (write to
    /tmp/pin.clj, run `clojure -M -e '(load-file "/tmp/pin.clj")'` in
    futon2):
