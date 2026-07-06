@@ -110,7 +110,10 @@ outcomes). Cards I = the v1 record with real examples. Stage tools:
   do not accept it — AUTHOR the missing patterns as a mutually-citing
   cluster from real practice (process-coherence/author-the-missing-pattern;
   the diagramprover remedy −0.443→+0.144 is the precedent), ingest via the
-  seeds pipeline, re-measure.
+  seeds pipeline, re-measure. **Ingestion includes intra-cluster descent
+  edges matching the flexiargs' [[kin]] cites — stems alone do not fire
+  cluster-at-birth (first-flights remedy, 2026-07-06: nodes-only ingestion
+  left F flat; the edges crossed it, −0.446→+0.423 same session).**
 - **Deposits (fold-turns)**: see §3 — the exact authoring contract.
 - **Gates**: `cd /home/joe/code/futon2 && bb scripts/live_loop_step.bb
   gate <ID>` (loop-2 board default; loop-3 via
