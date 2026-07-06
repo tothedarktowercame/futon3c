@@ -316,3 +316,18 @@ are `ft-autoclock-in-001.edn` (golden, v1+v2) and
   pin checks validity, not relevance — every dispatch names its
   mission explicitly, and review checks the deposit's :mission against
   the dispatch before counting it as the assignment's fruit.
+- A RECLAIMED agent id is NOT a fresh lane: queued bells bind to the
+  agent-ID and survive deregistration (there is no job-cancel
+  endpoint), so respawning into a freed slot inherits orphaned
+  dispatches. `/agents/auto` deliberately reuses low slots (ghost
+  reclamation). For a genuinely fresh lane use
+  `POST /api/alpha/agents/restore` with an explicit NEVER-USED id
+  (`{"agent-id":"zai-13","type":"zai","cwd":...}`) — it recreates
+  exact identities with a real invoke-fn (witnessed: the zai-12
+  crossed-dispatch foul, 2026-07-06).
+- TWO GROUND CONTROLLERS, ONE AGENT: nothing prevents a second
+  controller dispatching to your fresh spawn. Convention: the
+  spawner's dispatch must be the FIRST invoke; any controller finding
+  an agent whose session is non-empty treats it as NOT FRESH; when
+  dispatches cross anyway, WHISTLE the other controller to reconcile
+  (crossing-immune) — do not race bells against bells.
