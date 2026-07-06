@@ -107,12 +107,12 @@
          :re-entry "futon3c/holes/missions/M-first-flights.md",
          :missions ["M-first-flights"],
          :reason
-         "Phase B policy-grade G(s, π): flight records must carry derivations, ghosts, and warrants",
+         "Phase B: flight records that carry their derivations — measurement as discharge judgment (predicted, realised, witness, error-with-interpretation), ghosts as typed sorries distinguishing proposal-mode/not-yet/excluded-confound, and the warrant for each velocity recorded so the cycle-5 escalation dispute is checkable",
          :review-by nil,
          :wake-trigger "a refinement pass is run",
          :owner nil,
          :evidence-condition
-         "(str \"M-first-flights Phase A is complete (checkpoint 20, operator verdict \" \"PASS). Phase B is the standing obligation: flight records as discharge \" \"judgments carrying their derivations (predicted, realised, witness, \" \"error-with-interpretation), ghosts as typed sorries distinguishing \" \"proposal-mode/not-yet/excluded-confound, and the warrant for each \" \"velocity recorded so the cycle-5 escalation dispute is checkable. \" \"Currently flight records are lists of numbers and nulls — judgments \" \"without derivations (prediction -4.9225 / realised -4.9225 / error \" \"0.0000 taught the model nothing because the error has no structure \" \"to propagate). Armed when the rollout engine lands; the prediction \" \"organ holds the typed ghost.\")",
+         "(str \"M-first-flights.md line 3 (Status field): 'Phase B (policy-grade \" \"G(s, π)) is the standing obligation, armed when the rollout engine \" \"lands; the prediction organ holds the typed ghost.' The title is \" \"the verbatim want from the mission's own requirement language — \" \"the same sentence the frozen reference ψ (deposit 007, \" \"psi-first-flights.txt) used. Faithful to the source, not a \" \"paraphrase. Currently flight records are lists of numbers and \" \"nulls — judgments without derivations (prediction -4.9225 / \" \"realised -4.9225 / error 0.0000 taught the model nothing because \" \"the error has no structure to propagate).\")",
          :status :held,
          :source
          {:registry :sorrys,
