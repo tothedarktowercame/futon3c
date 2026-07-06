@@ -1,7 +1,7 @@
 # E-first-flights-transferred-work — close the residual first-flights obligations outside the mission
 
 Date: 2026-07-06
-Status: OPEN — commissioned closure tasks running
+Status: OPEN — W1 closed; W2 pending
 
 ## HEAD
 
@@ -38,11 +38,18 @@ Current evidence:
   with typed holes and recomputable coverage-to-delta-G.
 - `futon2/test/fold_realized_zero_coverage_test.clj` passed in that proof.
 
-Ground-control task: independently re-check the proof and, if valid, record this
-workstream as CLOSED in this Excursion.
-
 Dispatch: `zai-5`, job `invoke-1783341988882-673-0d5a0f7c`, requested
 2026-07-06 by `codex-1`.
+
+Verdict: **CLOSED**, independently verified by `zai-5`.
+
+Evidence note: `futon3c/holes/excursions/E-first-flights-policy-grade-G-closure.md`,
+commit `b88a81f`.
+
+Summary: `clojure -M test/fold_realized_zero_coverage_test.clj` passed 18/18
+assertions; the scale-match invariant was independently checked; the
+`:sorry/first-flights-phase-b-policy-grade-G` `:addressed` edit remains
+justified.
 
 ### W2 — typed-grounds / return-channel tail
 
