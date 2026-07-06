@@ -1,14 +1,25 @@
 # GROUND CONTROL — running the agent mesh and the flight pipeline
 
 **What this is:** the operational handover for commissioning agents,
-putting them in follow mode, flying missions through the pipeline
-(flight-pipeline-cards-ii.html), and reviewing the results — everything a
-ground-control agent needs to continue the process without the person or
-frontier agent who built it. Written 2026-07-06 by claude-16 from two days
-of live practice (E-live-loop-1/2/3; the M-action-vocabulary and
-M-peradam-mechanization flights). If you find a gap while following it,
-FIX THE DOC in the same commit as your workaround — this file is
-load-bearing.
+putting them in follow mode, flying missions through the pipeline, and
+reviewing the results — everything a ground-control agent needs to
+continue the process without the person or frontier agent who built it.
+Written 2026-07-06 by claude-16 from live practice (E-live-loop-1/2/3;
+the M-action-vocabulary and M-peradam-mechanization flights); updated
+2026-07-06 evening to the cards-IV ready-state after the War Machine
+Campaign run. **The current pipeline description is
+`futon2/holes/flight-pipeline-cards-iv.html`** (ready-state ledger);
+cards-II is the frozen pre-registration, cards-III the campaign-run
+resolution ledger, cards-I the v1 record. If you find a gap while
+following this doc, FIX THE DOC in the same commit as your workaround —
+this file is load-bearing.
+
+**Execution-mode doctrine (campaign standard, `aa9b7cb`):**
+self-referential work — anything whose subject is the WM machinery
+itself (19 of 20 campaign members; the census is in
+`C-war-machine-campaign.md`) — is worked DIRECTLY by commissioned agents
+under this manual, NOT through WM enactment. The machine does not eat
+itself. WM enactment is for the live series and external-facing targets.
 
 ## 0. Ground rules (read first, they are all load-bearing)
 
@@ -91,17 +102,33 @@ the checkpoint") · stuck-means-signal reminder.
 
 ## 2. The flight pipeline — stages, tools, stage-names
 
-The model is `futon2/holes/flight-pipeline-cards-ii.html` (pre-registered
-expectations; do not edit after a series starts except to record
-outcomes). Cards I = the v1 record with real examples. Stage tools:
+The model is `futon2/holes/flight-pipeline-cards-iv.html` (the
+ready-state ledger — all six cards-II campaign gaps RESOLVED at named
+grains; remaining items are live-series observations, not blockers).
+Series pages freeze at tick 1: do not edit a running series' page except
+to record outcomes. Stage tools:
 
 - **Ticks**: cron hourly, `wm_scheduled_run` one-shot; log
   `futon2/logs/wm-scheduled.log`; traces `futon2/data/wm-trace/`.
   A manual tick (`cd futon2 && clojure -M:wm-scheduled`) is the same code
   path but SAY it was manual in any record.
+- **Scan census**: `scripts/mission_scan_census.bb` (futon2) explains
+  the candidate count per source (raw files / non-primary excluded /
+  primary / unique / live — 307/99/208/198/93 at the fence's landing).
+  Any candidates-count drift gets a per-source explanation from this,
+  never a shrug.
 - **ψ**: `futon2.report.cascade-lane/mission->psi` (sorry-grain from
-  `futon3c/holes/excursions/held-work-ledger.edn`, banner fallback,
-  ψ-v3 STUCK line). Caches invalidatable: `clear-all-caches!`.
+  `futon3c/holes/excursions/held-work-ledger.edn`, banner fallback —
+  parses both `**Status:**` and bare `Status:` — ψ-v3 STUCK line).
+  Held items are added at the SOURCE OF RECORD (`futon2/resources/
+  sorrys.edn`), never by editing the ledger snapshot. SEAT-BY-STATE
+  INJECTION is BUILT (`6871587`): at futility ≥ threshold a
+  process-coherence pattern is injected as the cascade's opening
+  element, tagged `:seat-injection`. Caches: `clear-all-caches!`.
+- **Gate composition ("gate what you decide", operator-ruled)**: lane
+  entry #1 is the judge's rank-1 decision target regardless of action
+  type (`*gate-decision-target?*`, default on), then the top
+  open-mission entries, deduped. The gate evaluates the decision.
 - **Cascade**: `cd /home/joe/code/futon3a && .venv/bin/python
   holes/labs/M-memes-arrows/cascade_serve.py "<psi>"` — budget 20.
   JSON key for F is `F-free-energy` (NOT `F` — a get-with-default here
@@ -121,6 +148,25 @@ outcomes). Cards I = the v1 record with real examples. Stage tools:
 - **Regression**: `clojure -M scripts/reference_regression.clj` in
   futon2 — 8 named checks with frozen references; run it after ANY
   change near the escrow/constructor/mana machinery; drift is loud.
+  KNOWN: the peradam refusal-census check is deposit-count-sensitive —
+  when deposits are added DELIBERATELY, re-freeze that reference with a
+  dated annotation naming the new count; any other drift is a finding.
+- **Realized ΔG semantics** (`2d13ef2`, `fold_realized.clj`): an
+  executor that constructs 0 boxes against a plan with N obligations
+  records realized ΔG **0.0 — a real sample, not nil**. NEVER use
+  escrow-expected as realized (zero-error fake calibration); NEVER
+  extend the fold engine's RULES with specific deposits in view
+  (realized-measurement machinery must predate the deposits it
+  measures). γ eating "promised much, delivered nothing" is R14
+  working, not a bug.
+- **Co-app from usage**: `scripts/coapp_live_usage_miner.py` (futon6)
+  mines replayable deposits into co-app edges with deposit-level
+  provenance; recomputes byte-identically. The pipeline wiring checker
+  reports pending: 0.
+- **Portfolio proposer** (`39492fa`): close/survey/apply-cascade action
+  families exist DARK by default (`portfolio_action_proposer.clj`).
+  Live composition is an operator release (M-aif2 slice-1 follow-up).
+  NEVER flip it mid-series.
 - **Pipeline wiring**: `futon2/holes/wm-pipeline-wiring.edn` +
   `bb scripts/check_pipeline_wiring.bb` — after ANY ruling that retires a
   component, update the wiring in the same commit (ledger §15: remedies
@@ -215,10 +261,29 @@ are `ft-autoclock-in-001.edn` (golden, v1+v2) and
    threshold + falsifier + deferral rule for underpowered windows).
    Beware falsifiers that fire on underpowering (the cards-7×10 trap)
    and sub-tests that pass by construction (demand a PASS-TRIVIAL grade).
-6. Natural ticks confirm; manual runs of the same path are fine but
+6. **T-0 PREFLIGHT (immediately before tick 1 of any live series;
+   the 2026-07-06 bundle is the template, all four verified then):**
+   (i) instrument check — `df -h` + write/remove probes on `wm-trace/`,
+   `futon6/data/` (fold-turns, mana-gate), and the evidence store;
+   (ii) γ sample tail — confirm enactment records a COMPLETE sample
+   (expected + realized, realized 0.0 legal); (iii) escrow mechanical
+   standing — `load-deposits` + gate 2f green over the ACTUAL dir
+   contents; (iv) baseline bundle — run gate 2f AND the reference
+   regression suite, record outputs + then-current commit shas in the
+   series log. Every mid-series surprise diffs against this baseline.
+7. **MID-SERIES STOP-THE-LINE (never route around, including for the
+   operator asking casually):** the series page freezes except
+   outcomes; NO flag flips (`*gate-decision-target?*`, γ feed,
+   proposer) without the operator's word recorded in the series log
+   with a timestamp; a loader rejection mid-series is a DATA POINT —
+   fix causes between ticks with annotation, never hotfix during one;
+   mana before authoring, always — a refusal is a stop; enactment
+   stays artifact-only; claims in the series log name their verified
+   stage.
+8. Natural ticks confirm; manual runs of the same path are fine but
    labeled. Do not retry-loop a surprising tick — diagnose (the 11:00
    race: a tick 5 minutes before a commit ran old code).
-7. Close: verdicts vs pre-registrations, ledger entries, PAR, board all
+9. Close: verdicts vs pre-registrations, ledger entries, PAR, board all
    green (or honestly red with the reason named), commit, push.
 
 ## 6. Known traps (each cost a real hour once)
@@ -235,6 +300,19 @@ are `ft-autoclock-in-001.edn` (golden, v1+v2) and
 - pkill -f matches your own wrapper.
 - Long jobs (>30min): systemd-run, not bg shells (they die with the
   session).
-- The mission scan counts M-*.md in ALL of ~/code including directory
-  copies — dedupe exists but new copies re-pollute; candidates count
-  drifting up is the smell.
+- The mission scan is fenced (non-primary checkouts excluded,
+  `24a4c8c`) — but new copy PATTERNS can still leak past the fence;
+  candidates count drifting up is the smell, and
+  `mission_scan_census.bb` is the diagnosis (per-source counts, never
+  a shrug).
+- Restarting an agent REPL via the picker can MINT A NEW AGENT and
+  OVERWRITE the old agent's session file (`/tmp/futon-<type>-session-
+  id-<id>`) while the registry still holds the right session. Repair:
+  read the true session-id from the registry (`GET /agents`), restore
+  the file, deregister the accidental mint, reopen the REPL with the
+  vars bound explicitly (witnessed: codex-1/codex-3, 2026-07-06).
+- Misrouted dispatches produce OFF-TASK deposits that pass every
+  mechanical gate (two exist in the escrow, noted in cards-IV). The
+  pin checks validity, not relevance — every dispatch names its
+  mission explicitly, and review checks the deposit's :mission against
+  the dispatch before counting it as the assignment's fruit.
