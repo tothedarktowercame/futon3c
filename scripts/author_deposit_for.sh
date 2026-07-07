@@ -85,6 +85,19 @@ STEP 3 — author the fold-turn deposit, full contract (exemplars: ft-autoclock-
 - psi: sorry-grain from the mission via the L2 recipe (held-work items if any; else the mission doc's actual tension). No seal exists -> record no-blind-scoring honestly.
 - cascade: cd /home/joe/code/futon3a && .venv/bin/python holes/labs/M-memes-arrows/cascade_serve.py "<your psi>" (budget 20 default; the F key in the JSON is F-free-energy).
 - fold: honest boxes (fits-pattern + addresses-however against real pattern prose from futon3/library/<id>.flexiarg), surfaced holes (honest hole beats decorative box), v2 wires with :connective, terminal :discharges the want-signature, dG = -(boxes/(boxes+holes)) hand-shown.
+- CLean: embed a top-level :clean block in the deposit. READ the exemplars first:
+  /home/joe/code/futon6/holes/clean/autoclock-in.clean.edn
+  /home/joe/code/futon6/holes/clean/M-learning-loop.clean.edn
+  Box-type every box with :id :method :text :produces and, for non-source boxes, :consumes.
+  Write :clean/wires as {:from :to :carries}; :carries MUST equal the upstream box's
+  :produces and appear in the downstream box's :consumes. Typed holes use
+  :satiety in #{:parse :payoff :canon :bundling :role} and :discharge in
+  #{:sorryProof :queryAnswer :ungroundedBinder}. Include :clean/seq as the box
+  methods in order, :clean/copar, and :clean/shape {:macro :holes-at :discharges-at :note}.
+  The fold is NOT done until this passes:
+    cd /home/joe/code/futon6 && bb scripts/clean_argcheck.bb /tmp/<your-clean>.clean.edn
+  The exact checked CLean must be embedded under :clean in the final deposit, not left
+  as a separate artifact.
 - pins: prompt-sha via the real fold-prompt fn (proof-eval -f, the 005/006 practice); prose shas; :arming cites the MANA SPEND from step 1 (gate fold-authoring, your consume result), NOT any blanket grant.
 - deposit ft-<mission-stem>-0NN.edn (next free number) to /home/joe/code/futon6/data/fold-turns/; prove loader acceptance AND one tampered-copy rejection (in /tmp, never the real dir).
 
