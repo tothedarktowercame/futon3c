@@ -93,6 +93,19 @@
       (instance? java.io.InputStream body) (slurp body)
       :else (str body))))
 
+(defonce ^{:doc "Sandbox ns for /eval. `load-string` evaluates with *ns* = its
+   root binding (clojure.core) when *ns* is unbound on a Jetty worker thread, so
+   a bare top-level `(def foo ...)` in an eval payload would clobber
+   clojure.core/foo JVM-wide. This bit us 2026-07-05: a lab eval did
+   `(def int (:intensity mm))`, so clojure.core/int returned nil for ~3 days and
+   crashed the WM snapshot. Binding *ns* to this scratch ns confines agent defs
+   here instead of clojure.core (refer-clojure so unqualified core fns still
+   resolve; persistent so cross-eval defs/aliases still carry)."}
+  eval-sandbox-ns
+  (let [n (create-ns 'repl.eval-sandbox)]
+    (binding [*ns* n] (clojure.core/refer-clojure))
+    n))
+
 (defn- eval-handler
   "Ring handler for /eval. Accepts POST with Clojure code as body.
    Returns EDN-encoded result. Timeout after eval-timeout-ms.
@@ -113,7 +126,8 @@
           (try
             (let [f (future
                       (try
-                        {:ok true :value (load-string code)}
+                        {:ok true :value (binding [*ns* eval-sandbox-ns]
+                                           (load-string code))}
                         (catch Throwable t
                           {:ok false
                            :error (.getMessage t)
