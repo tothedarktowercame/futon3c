@@ -127,9 +127,19 @@
 (defn emit-mission-clean!
   "Fetch the mission's structural-hole-report via the :3100 ego proxy, build its
    CLean, and write it to `out-path`. Returns {:clean … :path … :report …}. This is
-   the 'upon entry' hook for the outer loop (dispatch_pilot_flight STEP 1)."
+   the 'upon entry' hook for the outer loop (dispatch_pilot_flight STEP 1b).
+
+   opts:
+     :refresh? true + :doc-path <path> — the LOOP-turn callback: SYNCHRONOUSLY
+       reingest the (just-edited) mission doc and bust the 30s structural-cache
+       BEFORE reading, so a phase discharge is observable immediately after the
+       edit instead of waiting out the async watcher + cache TTL (STEP 4)."
   ([mission-id out-path] (emit-mission-clean! mission-id out-path {}))
   ([mission-id out-path opts]
+   (when (:refresh? opts)
+     (when-let [doc (:doc-path opts)]
+       ((requiring-resolve 'futon3c.watcher.scope-reingest/reingest-now!) doc))
+     (ext/invalidate-structural-cache! mission-id))
    (let [report (ext/structural-hole-report mission-id opts)
          clean  (build-mission-clean mission-id report)]
      (io/make-parents out-path)

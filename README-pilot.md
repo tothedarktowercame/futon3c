@@ -20,6 +20,14 @@ over them.
 - **`futon3c/holes/missions/M-pilot-appearance.md`** — what the pilot's
   appearance IS (the contract / four-card cycle); §8.4.2 is the plain-language
   thesis you are enacting (AI-as-reskilling, not deskilling).
+- **`futon3c/README-missions.md`** — the Mission Doc **format**: how a section
+  header becomes an eightfold-phase frame (so your PRINT-turn edit actually
+  discharges the phase hole), and how to observe the change immediately. READ
+  THIS before you edit a mission doc — it is the format zai-1 had to
+  reverse-engineer mid-flight.
+- **`futon3c/README-drawbridge.md`** — how to evaluate in the live JVM
+  (`scripts/proof-eval.sh`); the `emit_mission_clean.sh` tracker + its
+  `--refresh` callback both go through Drawbridge.
 
 ## The apparatus (what each file does)
 

@@ -114,6 +114,18 @@
         (swap! structural-cache assoc cache-key {:at now :frames frames})
         frames))))
 
+(defn invalidate-structural-cache!
+  "Drop cached ego scope-frames so the next `structural-hole-report` re-fetches
+   from the :3100 proxy instead of serving up to `structural-cache-ttl-ms` (30s)
+   of stale frames. Call this right after a mission-doc edit + reingest so the
+   change is observable immediately (the pilot LOOP turn, via emit-mission-clean!
+   :refresh?). No arg resets all; refetch is on-demand so the cost is one lazy
+   re-fetch per live mission."
+  ([] (reset! structural-cache {}))
+  ([mission-id]
+   (swap! structural-cache
+          (fn [m] (into {} (remove (fn [[[_ mid] _]] (= mid mission-id)) m))))))
+
 (defn- frame-props [frame] (or (:props frame) {}))
 
 (defn- frame-binder [frame]
