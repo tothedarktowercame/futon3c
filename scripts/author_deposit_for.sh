@@ -78,8 +78,11 @@ and run:
   cd /home/joe/code/futon2 && clojure -M -e '(println (load-file "/tmp/${AUTHOR}-mana.clj"))'
 If the result is NOT {:ok true ...}: append one line "REFUSED - budget exhausted, run aborted for ${MISSION}" to /home/joe/code/futon2/holes/selection-authoring-flights-2026-07-07.md and END YOUR TURN. The refusal is the consent system working.
 
-STEP 2 — mission is fixed:
-Author for ${MISSION}. Do not pick from wm-scheduled.log. Cross-check /home/joe/code/futon6/data/fold-turns/ before writing; if a deposit for ${MISSION} already exists, STOP and report skipped-has-deposit.
+STEP 2 — mission is fixed; the question is "is the WORK done," NOT "does a deposit exist":
+Author for ${MISSION}. Do not pick from wm-scheduled.log. Cross-check /home/joe/code/futon6/data/fold-turns/ before writing. If a deposit for ${MISSION} already exists, ASSESS it rather than stopping blindly:
+- Is the work DONE? — its fold's terminal :discharges the want-signature AND no open :policy-holes remain AND :eval has a realized leg. If DONE: STOP and report skipped-work-done.
+- Is the deposit PARTIAL? — open :policy-holes remain, or the terminal does not discharge, or :eval has no realized leg. Then do NOT author a duplicate; report partial-needs-advancement, naming exactly which holes/legs are still open, so ${REVIEWER:-the dispatcher} can route it to a PILOT flight (advance the holes) instead of re-authoring.
+Only author a fresh deposit if NONE exists at all.
 
 STEP 3 — author the fold-turn deposit, full contract (exemplars: ft-autoclock-in-001 = golden v1/v2 bar; ft-peradam-mechanization-006 = v2 shape; READ both first):
 - psi: sorry-grain from the mission via the L2 recipe (held-work items if any; else the mission doc's actual tension). No seal exists -> record no-blind-scoring honestly.
