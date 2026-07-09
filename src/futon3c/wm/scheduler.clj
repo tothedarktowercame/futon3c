@@ -7,6 +7,7 @@
   (:require [cheshire.core :as json]
             [clojure.string :as str]
             [futon3c.cyder :as cyder]
+            [futon3c.logic.capability-star-map-extractor :as star-extractor]
             [futon3c.transport.http :as http])
   (:import [java.time Instant]
            [java.util.concurrent Executors ScheduledExecutorService
@@ -105,6 +106,37 @@
 (defn snapshot-for-days [days]
   (get-in @!wm-snapshot [:by-days days]))
 
+(defn- mission-target
+  [ranked-action]
+  (or (get-in ranked-action [:action :target])
+      (:target ranked-action)))
+
+(defn- mission-ranked-action?
+  [ranked-action]
+  (and (string? (mission-target ranked-action))
+       (str/starts-with? (mission-target ranked-action) "M-")
+       (or (contains? ranked-action :open-hole-count)
+           (contains? (:action ranked-action) :open-hole-count))))
+
+(defn- structural-hole-count-for-ranked-action
+  [ranked-action]
+  (when (mission-ranked-action? ranked-action)
+    (try
+      (:structural-hole-count
+       (star-extractor/structural-hole-report (mission-target ranked-action)))
+      (catch Throwable _
+        nil))))
+
+(defn- assoc-structural-hole-count
+  [ranked-action n]
+  (let [n (long n)]
+    (cond-> ranked-action
+      (contains? ranked-action :open-hole-count)
+      (assoc :structural-hole-count n)
+
+      (contains? (:action ranked-action) :open-hole-count)
+      (assoc-in [:action :structural-hole-count] n))))
+
 (defn- trim-action-predictions
   "Drop the heavy per-action :prediction/:next-belief (a full belief map ~115KB each × ~121
    actions ≈ 14MB, ~96% of the whole WM payload) from the judgement before serialization.
@@ -117,14 +149,17 @@
     (update judgement :ranked-actions
             (fn [acts]
               (mapv (fn [a]
-                      (if (get-in a [:prediction :next-belief])
-                        (update a :prediction dissoc :next-belief)
-                        a))
+                      (let [a (if (get-in a [:prediction :next-belief])
+                                (update a :prediction dissoc :next-belief)
+                                a)]
+                        (if-let [n (structural-hole-count-for-ranked-action a)]
+                          (assoc-structural-hole-count a n)
+                          a)))
                     acts)))
     judgement))
 
 (defn- render-payload-json
-  [{:keys [data judgement] :as bundle}]
+  [bundle]
   (let [{:keys [data judgement]} (http/wm-response-payload bundle)
         payload (http/stringify-wm-response
                  (-> data

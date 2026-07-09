@@ -10,8 +10,13 @@
             [clojure.pprint :as pprint]
             [clojure.set :as set]
             [clojure.string :as str]
+            [cheshire.core :as json]
             [futon2.aif.mission-registry :as mission-registry]
-            [futon3c.logic.capability-star-map-invariants :as inv]))
+            [futon3c.logic.capability-star-map-invariants :as inv])
+  (:import (java.net URI URLEncoder)
+           (java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers)
+           (java.nio.charset StandardCharsets)
+           (java.time Duration)))
 
 (def default-ensemble-path
   "/home/joe/code/futon0/holes/missions/M-capability-star-map.ensemble.edn")
@@ -49,6 +54,128 @@
    {:id "builder/wm-gate-runner"
     :builder "gate-runner"
     :built-under "WM-GUARDRAILS-SPEC"}})
+
+(def ^:private ego-proxy-base "http://localhost:3100")
+
+(def ^:private structural-cache-ttl-ms 30000)
+
+(def ^:private structural-query-timeout-ms 5000)
+
+(def ^:private eightfold-phases
+  ["head" "identify" "map" "derive" "argue" "verify" "instantiate" "document"])
+
+(defonce ^:private structural-cache (atom {}))
+
+(defn- now-ms [] (System/currentTimeMillis))
+
+(defn- urlencode [s]
+  (URLEncoder/encode (str s) StandardCharsets/UTF_8))
+
+(defn- ego-url
+  [base mission-id]
+  (str (or base ego-proxy-base)
+       "/api/futon/ego/"
+       (urlencode mission-id)
+       "?fold=1&depth=3"))
+
+(defn- fetch-ego-json
+  "Bounded :3100 ego-proxy read. Returns nil on any failure; the WM scan must
+   degrade, never crash, when substrate scope data is unavailable."
+  [mission-id {:keys [ego-base timeout-ms client]
+               :or {ego-base ego-proxy-base
+                    timeout-ms structural-query-timeout-ms}}]
+  (try
+    (let [client (or client (HttpClient/newHttpClient))
+          req (-> (HttpRequest/newBuilder (URI/create (ego-url ego-base mission-id)))
+                  (.timeout (Duration/ofMillis (long timeout-ms)))
+                  (.GET)
+                  (.build))
+          resp (.send client req (HttpResponse$BodyHandlers/ofString))]
+      (when (<= 200 (.statusCode resp) 299)
+        (json/parse-string (.body resp) true)))
+    (catch Throwable _
+      nil)))
+
+(defn- scope-frames-from-ego
+  [ego-json]
+  (->> (get-in ego-json [:ego :outgoing])
+       (keep :entity)
+       (filter #(= "scope/frame" (:type %)))
+       vec))
+
+(defn- cached-scope-frames
+  [mission-id opts]
+  (let [cache-key [(or (:ego-base opts) ego-proxy-base) mission-id]
+        now (now-ms)
+        cached (get @structural-cache cache-key)]
+    (if (and cached (< (- now (long (:at cached))) structural-cache-ttl-ms))
+      (:frames cached)
+      (let [frames (some-> (fetch-ego-json mission-id opts) scope-frames-from-ego)]
+        (swap! structural-cache assoc cache-key {:at now :frames frames})
+        frames))))
+
+(defn- frame-props [frame] (or (:props frame) {}))
+
+(defn- frame-binder [frame]
+  (let [props (frame-props frame)]
+    (or (:scope/binder props)
+        (:scope/binder-type props))))
+
+(defn- frame-scope-id [frame]
+  (or (get-in frame [:props :scope/id])
+      (:id frame)))
+
+(defn- scope-leaf [frame]
+  (some-> (frame-scope-id frame)
+          (str/split #"/")
+          last
+          (str/replace #"--[0-9a-f]{8}$" "")))
+
+(defn- substantive-frame? [frame]
+  (let [props (frame-props frame)]
+    (or (pos? (long (or (:fold/sub-count props) 0)))
+        (pos? (long (or (:fold/child-count props) 0)))
+        (and (:anchor/state props)
+             (not= :detached (:anchor/state props))))))
+
+(defn structural-hole-report-from-frames
+  "Pure structural counter. Missing eightfold phases are ghost holes; present
+   phases with no substance are vacuous holes; an Open Questions loose-section
+   with content is one held-question hole."
+  [frames]
+  (let [phase-frames (->> frames
+                          (filter #(= "eightfold-phase" (frame-binder %)))
+                          (group-by scope-leaf))
+        phase-status (into {}
+                           (for [phase eightfold-phases
+                                 :let [fs (get phase-frames phase)]]
+                             [phase (cond
+                                      (empty? fs) :ghost
+                                      (some substantive-frame? fs) :written
+                                      :else :vacuous)]))
+        loose-open (->> frames
+                        (filter #(= "loose-section" (frame-binder %)))
+                        (filter #(re-find #"(?i)^open-questions?$" (or (scope-leaf %) "")))
+                        (filter substantive-frame?)
+                        vec)
+        ghost (->> phase-status (filter (comp #{:ghost} val)) (map key) vec)
+        vacuous (->> phase-status (filter (comp #{:vacuous} val)) (map key) vec)
+        written (->> phase-status (filter (comp #{:written} val)) (map key) vec)
+        open-question-count (count loose-open)]
+    {:structural-hole-count (+ (count ghost) (count vacuous) open-question-count)
+     :phase/written written
+     :phase/ghost ghost
+     :phase/vacuous vacuous
+     :loose/open-question-count open-question-count
+     :loose/open-question-scopes (mapv frame-scope-id loose-open)}))
+
+(defn structural-hole-report
+  "Fetch and summarize substrate-2 mission structure via the :3100 ego proxy.
+   Returns nil when the proxy is unavailable or the mission has no scope frames."
+  ([mission-id] (structural-hole-report mission-id {}))
+  ([mission-id opts]
+   (when-let [frames (seq (cached-scope-frames mission-id opts))]
+     (structural-hole-report-from-frames frames))))
 
 (defn contaminated-path?
   "True for sources that must not enter the canonical landscape prior."
@@ -136,11 +263,15 @@
                              non-mission-builders)]
       (assoc builder :real-mission? false))))
 
-(defn- mission-node [mission-index cap-id cap mission-id]
+(defn- mission-node [mission-index cap-id cap mission-id structural-hole-fn]
   (let [{:keys [real-mission? registry] :as ref} (mission-ref-details mission-index mission-id)
         _ (when-not ref
             (throw (ex-info "resolved minted-by id has no registry mission or known builder"
-                            {:mission-id mission-id :capability cap-id})))]
+                            {:mission-id mission-id :capability cap-id})))
+        structural-report (when (and real-mission? structural-hole-fn)
+                            (try
+                              (structural-hole-fn mission-id)
+                              (catch Throwable _ nil)))]
     [mission-id
      (cond-> {:scope (vec (:scope cap))
               :produces [cap-id]
@@ -152,6 +283,10 @@
               :status (:status-class registry)
               :path (:path registry))
 
+       (and real-mission?
+            (some? (:structural-hole-count structural-report)))
+       (assoc :structural-hole-count (long (:structural-hole-count structural-report)))
+
        (not real-mission?)
        (assoc :open-hole-count 0
               :phase :builder
@@ -160,12 +295,13 @@
               :built-under (:built-under ref)))]))
 
 (defn mission-nodes
-  [missions capabilities]
+  ([missions capabilities] (mission-nodes missions capabilities structural-hole-report))
+  ([missions capabilities structural-hole-fn]
   (let [mission-index (into {} (map (juxt :id identity) (clean-missions missions)))]
     (into (sorted-map)
           (for [[cap-id cap] capabilities
                 mission-id (:minted-by cap)]
-            (mission-node mission-index cap-id cap mission-id)))))
+            (mission-node mission-index cap-id cap mission-id structural-hole-fn))))))
 
 (defn requires-edges [capabilities]
   (vec (for [[cap-id cap] capabilities
@@ -194,15 +330,18 @@
   "Build the WM-region graph. Optional opts: :ensemble-path, :pudding-path,
   :missions. Supplying :missions keeps tests and retries deterministic."
   ([] (build-graph {}))
-  ([{:keys [ensemble-path pudding-path missions]
+  ([{:keys [ensemble-path pudding-path missions structural-holes? structural-hole-fn]
      :or {ensemble-path default-ensemble-path
-          pudding-path default-pudding-registry-path}}]
+          pudding-path default-pudding-registry-path
+          structural-holes? true}}]
    (let [ensemble (read-edn-file ensemble-path)
          pudding-by-id (read-pudding-registry pudding-path)
          missions (or missions (:missions (mission-registry/load-missions)))
          mission-index (into {} (map (juxt :id identity) (clean-missions missions)))
          capabilities (capability-nodes ensemble pudding-by-id mission-index)
-         mission-map (mission-nodes missions capabilities)]
+         structural-hole-fn (when structural-holes?
+                              (or structural-hole-fn structural-hole-report))
+         mission-map (mission-nodes missions capabilities structural-hole-fn)]
      {:star-map/region :wm
       :star-map/source {:ensemble ensemble-path
                         :pudding-registry pudding-path
