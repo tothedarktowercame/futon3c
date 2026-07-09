@@ -4785,7 +4785,7 @@
   (let [evidence-store (evidence-store-for-config config)
         payload (or (parse-json-map (read-body request)) {})
         opts (cond-> {}
-               (:emit-evidence payload)
+               (contains? payload :emit-evidence)
                (assoc :emit-evidence? (boolean (:emit-evidence payload)))
                (:agenda-id payload)
                (assoc :agenda-id (:agenda-id payload))

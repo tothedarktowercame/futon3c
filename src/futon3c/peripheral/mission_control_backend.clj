@@ -37,6 +37,22 @@
 (def ^:private historical-turn-backfill-path
   "/home/joe/code/futon5a/data/turn-commit-mission-backfill.json")
 
+(defn- parse-long-env
+  [name default]
+  (try
+    (or (some-> (System/getenv name) Long/parseLong)
+        default)
+    (catch Exception _ default)))
+
+(def ^:private live-turn-query-limit
+  "Bound live chat-turn evidence scans. The old 50k all-coordination query
+   repeatedly timed out against XTDB on the live store."
+  (long (parse-long-env "FUTON3C_MC_LIVE_TURN_QUERY_LIMIT" 2000)))
+
+(def ^:private live-turn-window-days
+  "Recent window, in days, used for live mission turn telemetry."
+  (long (parse-long-env "FUTON3C_MC_LIVE_TURN_WINDOW_DAYS" 7)))
+
 ;; =============================================================================
 ;; Configuration — repo paths
 ;; =============================================================================
@@ -1055,10 +1071,13 @@
    ;; claim-types (question / observation / correction), so filtering on
    ;; :query/claim-type :question silently dropped most turns. Filter on type
    ;; only; chat-user-turn-entry? narrows to event=chat-turn + role=user.
-   (let [entries (try
+   (let [since (str (.minus (java.time.Instant/now)
+                            (java.time.Duration/ofDays live-turn-window-days)))
+         entries (try
                    (estore/query* evidence-store
                                   {:query/type :coordination
-                                   :query/limit 50000})
+                                   :query/since since
+                                   :query/limit live-turn-query-limit})
                    (catch Exception _ []))
          by-mission (reduce
                      (fn [acc entry]
@@ -1077,7 +1096,9 @@
                                      [mid {:live-turn-count (count turn-ids)}]))
                               by-mission)]
      {:source :live-evidence
-      :query-limit 50000
+      :query-limit live-turn-query-limit
+      :query-since since
+      :query-window-days live-turn-window-days
       :mission-counts mission-counts
       :total-live-turns (reduce + (map :live-turn-count (vals mission-counts)))})))
 
