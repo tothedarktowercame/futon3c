@@ -55,6 +55,11 @@
   "Face for message text."
   :group 'agent-chat)
 
+(defface agent-chat-buffer-face
+  '((t :background "#0b3d91" :foreground "#f8f8f2"))
+  "Face for the chat buffer background."
+  :group 'agent-chat)
+
 (defface agent-chat-prompt-face
   '((t :foreground "#ffb86c" :weight bold))
   "Face for input prompt."
@@ -1774,6 +1779,7 @@ CONFIG keys:
         (evidence-url (plist-get config :evidence-url))
         (evidence-timeout (plist-get config :evidence-timeout)))
     ;; Set buffer-local state
+    (face-remap-add-relative 'default 'agent-chat-buffer-face)
     (setq agent-chat--face-alist
           (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
     (setq agent-chat--agent-name agent-name)
