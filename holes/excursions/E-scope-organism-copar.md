@@ -1,8 +1,17 @@
-# E-scope-organism-copar — deferred: teaching the mission-CLean a domain copar
+# E-scope-organism-copar — CLOSED: the CLean renderer now emits a domain copar
 
 Date: 2026-07-09
-Status: DEFERRED (Joe, 2026-07-09). Parked while we focus on the mission→CLean
-emitter (`mission_clean.clj`) one thing at a time.
+Status: CLOSED (2026-07-09). `futon6/scripts/clean_to_lean.py` now emits a
+CLean-supplied domain copar structurally: `:clean/shape :readings [:scope
+:organism]` renders as `def readings : BV Reading := BV.copar (BV.atom
+Reading.scope) (BV.atom Reading.organism)` (+ a commutativity `example`), and
+`:clean/shape :co-app [[a b w]…]` (the cascade semilattice's meets) renders as
+`def meets : List (Stp × Stp)` with a `BV.copar` witness. When neither is
+declared the render is BYTE-IDENTICAL to the informal∥formal default, so the
+102-paper / fold corpus is unchanged (verified: 26 proofs, 0-sorry, diff-clean).
+Surfaced twice as load-bearing: the mission spec's scope∥organism reading AND
+the cascade-fold's `co_app` overlaps (see the semilattice-fold prototype).
+Originally: parked while we focused on `mission_clean.clj` one thing at a time.
 Owner: Joe + claude-1
 Relation: home for the copar gap surfaced while MAPping the outer-loop tracker
 (missions modelled as DarkTower specs, per `futon2/holes/ct-wiring-explainer.html`
