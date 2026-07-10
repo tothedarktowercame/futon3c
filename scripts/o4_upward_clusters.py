@@ -23,7 +23,7 @@ Dedup: one mission → one basin (first cluster wins), so the node-twins
 
 Usage: futon3a/.venv/bin/python futon3c/scripts/o4_upward_clusters.py
 """
-import json, re, sys, urllib.request, urllib.parse
+import json, os, re, sys, urllib.request, urllib.parse
 from collections import Counter
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering
@@ -34,7 +34,7 @@ EXC = f"{ROOT}/futon3c/holes/excursions"
 OUT_DRY = f"{EXC}/o4-upward-clusters.dryrun.edn"
 OUT_LAND = f"{EXC}/o4-land-payloads.edn"
 OUT_UNRES = f"{EXC}/o4-unresolved.edn"
-FUTON1A = "http://localhost:7071"
+FUTON1A = os.environ.get("FUTON1A_URL", "http://localhost:7071")
 N_CLUSTERS = 12
 GENERIC = {"the", "a", "of", "to", "and", "mission", "m", "for", "in", "on", "as"}
 

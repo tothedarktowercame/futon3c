@@ -10,7 +10,8 @@
   (:import [java.net URLEncoder]
            [java.nio.charset StandardCharsets]))
 
-(def ^:private default-futon1a-url "http://localhost:7071")
+(def ^:private default-futon1a-url
+  (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (defn- url-encode [s]
   (URLEncoder/encode (str s) (.name StandardCharsets/UTF_8)))

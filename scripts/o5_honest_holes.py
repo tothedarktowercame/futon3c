@@ -21,13 +21,13 @@ extractor. DRY-RUN writes an .edn artifact only; ZERO :7071 writes.
 
 Usage: python3 futon3c/scripts/o5_honest_holes.py
 """
-import json, re, urllib.request, urllib.parse
+import json, os, re, urllib.request, urllib.parse
 from collections import Counter
 
 ROOT = "/home/joe/code"
 BGE = f"{ROOT}/futon3a/resources/notions/bge_mission_embeddings.json"
 OUT = f"{ROOT}/futon3c/holes/excursions/o5-honest-holes.dryrun.edn"
-F = "http://localhost:7071"
+F = os.environ.get("FUTON1A_URL", "http://localhost:7071")
 
 
 def edges_on(ep):

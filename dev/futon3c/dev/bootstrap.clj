@@ -26,11 +26,23 @@
             [org.httpkit.server :as hk]
             [repl.http :as drawbridge]))
 
+(declare start-futon1a-enabled!)
+
 (defn start-futon1a!
-  "Start futon1a (XTDB + HTTP). Returns system map with :node, :store, :stop!, etc."
+  "Start futon1a (XTDB + HTTP). Returns system map with :node, :store, :stop!,
+   etc., or nil when disabled (FUTON1A_PORT=0 — the house (pos? port) gate;
+   E-futon1b-operational-switchover B3). Disabled means: no embedded XTDB 1
+   node, no :7071 API — the stack must get evidence from futon1b
+   (FUTON3C_EVIDENCE_BACKEND=futon1b) and substrate HTTP from FUTON1A_URL."
   [direct-xtdb?]
-  (let [port (config/env-int "FUTON1A_PORT" 7071)
-        data-dir (config/env "FUTON1A_DATA_DIR"
+  (let [port (config/env-int "FUTON1A_PORT" 7071)]
+    (if-not (pos? port)
+      (println "[dev] futon1a DISABLED (FUTON1A_PORT=0) — no embedded node/:7071 API")
+      (start-futon1a-enabled! direct-xtdb? port))))
+
+(defn- start-futon1a-enabled!
+  [direct-xtdb? port]
+  (let [data-dir (config/env "FUTON1A_DATA_DIR"
                              (str (System/getProperty "user.home")
                                   "/code/storage/futon1a/default"))
         static-dir (config/env "FUTON1A_STATIC_DIR" nil)
@@ -212,8 +224,11 @@
   (when (config/env-bool "FUTON3C_WEBARXANA_SERVER_AUTOSTART" true)
     (let [port (config/env-int "FUTON3C_WEBARXANA_PORT" 3100)
           futon1a-port (config/env-int "FUTON1A_PORT" 7071)
-          futon1a-url (config/env "FUTON4_BASE_URL"
-                                  (str "http://127.0.0.1:" futon1a-port))
+          ;; When futon1a is disabled (B3), FUTON1A_URL points WebArxana at
+          ;; the replacement substrate; FUTON4_BASE_URL still wins when set.
+          futon1a-url (or (config/env "FUTON4_BASE_URL" nil)
+                          (config/env "FUTON1A_URL" nil)
+                          (str "http://127.0.0.1:" futon1a-port))
           futon1a-url (str/replace futon1a-url #"/api/alpha/?$" "")
           emacs-socket (config/env "FUTON3C_EMACS_SOCKET" "server")
           start! (requiring-resolve 'webarxana.server.core/start!)
@@ -436,13 +451,14 @@
                                (.getName (class t)) ": " (.getMessage t)))))
         _ (mcs/configure! {:evidence-store evidence-store
                            :repos mcb/default-repo-roots})
-        _ (cyder/register!
-           {:id "futon1a"
-            :type :server
-            :stop-fn (:stop! f1-sys)
-            :state-fn #(let [s @!f1-sys]
-                         {:port (:http/port s)
-                          :direct-xtdb? direct-xtdb?})})
+        _ (when f1-sys
+            (cyder/register!
+             {:id "futon1a"
+              :type :server
+              :stop-fn (:stop! f1-sys)
+              :state-fn #(let [s @!f1-sys]
+                           {:port (:http/port s)
+                            :direct-xtdb? direct-xtdb?})}))
         ;; Multi-repo watcher (E-live-means-live Path B): in-JVM
         ;; replacement for the separate bb watcher process. Polls
         ;; the watched roots, dispatches per-file ingest into

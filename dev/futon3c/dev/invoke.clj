@@ -44,10 +44,18 @@
       (println (str "[dev] evidence backend: futon1b (" (:base-url b) ")"))
       b)
 
-    direct-xtdb?
+    (and direct-xtdb? (:node f1-sys))
     (do
       (println "[dev] direct XTDB path: ENABLED")
       (xb/make-xtdb-backend (:node f1-sys)))
+
+    direct-xtdb?
+    (do
+      (println (str "[dev] direct XTDB requested but futon1a is disabled "
+                    "(no node) — falling back to in-memory store; the "
+                    "I-evidence-per-turn boot check will fail loudly. "
+                    "Set FUTON3C_EVIDENCE_BACKEND=futon1b for a durable store."))
+      (atom {:entries {} :order []}))
 
     :else
     (do

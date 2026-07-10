@@ -7,7 +7,8 @@
            (java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers)
            (java.time Instant)))
 
-(def ^:private default-futon1a-url "http://localhost:7071")
+(def ^:private default-futon1a-url
+  (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"

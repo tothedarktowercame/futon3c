@@ -16,7 +16,8 @@
            (java.security MessageDigest)
            (java.time Instant)))
 
-(def ^:private default-futon1a-url "http://localhost:7071")
+(def ^:private default-futon1a-url
+  (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (defn invariant-endpoint
   [obligation]

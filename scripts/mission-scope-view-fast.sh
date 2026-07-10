@@ -21,7 +21,7 @@ expr="(do (when-not (find-ns 'futon3c.scripts.mission-scope-view)
         (load-file \"src/futon3c/scripts/mission_scope_view.clj\"))
       (let [client (java.net.http.HttpClient/newHttpClient)
             hxs (mapcat #(#'futon3c.scripts.mission-scope-view/hyperedges-by-type
-                          client \"http://localhost:7071\" %)
+                          client (or (System/getenv \"FUTON1A_URL\") \"http://localhost:7071\") %)
                         futon3c.scripts.mission-scope-view/structural-binders)]
         (cheshire.core/generate-string
          (futon3c.scripts.mission-scope-view/project-hyperedges \"$mission\" hxs))))"
