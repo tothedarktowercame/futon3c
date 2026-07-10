@@ -3,4 +3,8 @@
   {:linters {:unresolved-symbol {:level :off}}}
 
   futon3c.agency.federation-logic-test
+  {:linters {:unresolved-symbol {:level :off}}}
+
+  ;; sibling core.logic template CP-A mirrors — same pldb/db-rel pattern
+  futon3c.agents.tickle-logic
   {:linters {:unresolved-symbol {:level :off}}}}}
