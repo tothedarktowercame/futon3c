@@ -1,0 +1,5066 @@
+{
+  "agent_count": 4,
+  "coverage": {
+    "missing_denominator_papers": [],
+    "overall": {
+      "expository_sentences": 137791,
+      "pct": 34.72,
+      "proposals": 47843
+    },
+    "per_paper": {
+      "0705.0102": {
+        "expository_sentences": 36,
+        "pct": 102.78,
+        "proposals": 37
+      },
+      "0705.0452": {
+        "expository_sentences": 624,
+        "pct": 29.49,
+        "proposals": 184
+      },
+      "0706.1286": {
+        "expository_sentences": 556,
+        "pct": 26.98,
+        "proposals": 150
+      },
+      "0708.1921": {
+        "expository_sentences": 110,
+        "pct": 30.91,
+        "proposals": 34
+      },
+      "0708.2067": {
+        "expository_sentences": 542,
+        "pct": 9.78,
+        "proposals": 53
+      },
+      "0708.2185": {
+        "expository_sentences": 121,
+        "pct": 94.21,
+        "proposals": 114
+      },
+      "0708.3398": {
+        "expository_sentences": 5344,
+        "pct": 102.66,
+        "proposals": 5486
+      },
+      "0709.0248": {
+        "expository_sentences": 91,
+        "pct": 101.1,
+        "proposals": 92
+      },
+      "0711.0473": {
+        "expository_sentences": 1644,
+        "pct": 102.31,
+        "proposals": 1682
+      },
+      "0712.0724": {
+        "expository_sentences": 224,
+        "pct": 44.2,
+        "proposals": 99
+      },
+      "0801.0199": {
+        "expository_sentences": 225,
+        "pct": 22.67,
+        "proposals": 51
+      },
+      "0801.3843": {
+        "expository_sentences": 175,
+        "pct": 26.29,
+        "proposals": 46
+      },
+      "0806.1324": {
+        "expository_sentences": 933,
+        "pct": 89.71,
+        "proposals": 837
+      },
+      "0807.1704": {
+        "expository_sentences": 513,
+        "pct": 16.57,
+        "proposals": 85
+      },
+      "0808.1923": {
+        "expository_sentences": 1004,
+        "pct": 21.02,
+        "proposals": 211
+      },
+      "0809.3031": {
+        "expository_sentences": 336,
+        "pct": 24.7,
+        "proposals": 83
+      },
+      "0811.1480": {
+        "expository_sentences": 737,
+        "pct": 93.76,
+        "proposals": 691
+      },
+      "0811.2435": {
+        "expository_sentences": 893,
+        "pct": 18.37,
+        "proposals": 164
+      },
+      "0901.3602": {
+        "expository_sentences": 508,
+        "pct": 14.96,
+        "proposals": 76
+      },
+      "0902.1954": {
+        "expository_sentences": 234,
+        "pct": 105.98,
+        "proposals": 248
+      },
+      "0903.0340": {
+        "expository_sentences": 951,
+        "pct": 14.2,
+        "proposals": 135
+      },
+      "0904.1997": {
+        "expository_sentences": 466,
+        "pct": 84.98,
+        "proposals": 396
+      },
+      "0905.0459": {
+        "expository_sentences": 2378,
+        "pct": 17.2,
+        "proposals": 409
+      },
+      "0905.0462": {
+        "expository_sentences": 4832,
+        "pct": 11.32,
+        "proposals": 547
+      },
+      "0905.0465": {
+        "expository_sentences": 2486,
+        "pct": 21.32,
+        "proposals": 530
+      },
+      "0905.2621": {
+        "expository_sentences": 2234,
+        "pct": 29.19,
+        "proposals": 652
+      },
+      "0906.4725": {
+        "expository_sentences": 819,
+        "pct": 18.44,
+        "proposals": 151
+      },
+      "0906.4931": {
+        "expository_sentences": 171,
+        "pct": 106.43,
+        "proposals": 182
+      },
+      "0907.2460": {
+        "expository_sentences": 542,
+        "pct": 104.8,
+        "proposals": 568
+      },
+      "0908.1787": {
+        "expository_sentences": 765,
+        "pct": 85.75,
+        "proposals": 656
+      },
+      "0908.3347": {
+        "expository_sentences": 627,
+        "pct": 15.15,
+        "proposals": 95
+      },
+      "0908.4187": {
+        "expository_sentences": 348,
+        "pct": 31.9,
+        "proposals": 111
+      },
+      "0910.1306": {
+        "expository_sentences": 1,
+        "pct": 100.0,
+        "proposals": 1
+      },
+      "0910.2733": {
+        "expository_sentences": 655,
+        "pct": 22.6,
+        "proposals": 148
+      },
+      "0911.0469": {
+        "expository_sentences": 497,
+        "pct": 106.04,
+        "proposals": 527
+      },
+      "0911.4979": {
+        "expository_sentences": 570,
+        "pct": 12.81,
+        "proposals": 73
+      },
+      "1002.1372": {
+        "expository_sentences": 199,
+        "pct": 22.61,
+        "proposals": 45
+      },
+      "1003.1920": {
+        "expository_sentences": 530,
+        "pct": 18.11,
+        "proposals": 96
+      },
+      "1003.4394": {
+        "expository_sentences": 91,
+        "pct": 34.07,
+        "proposals": 31
+      },
+      "1004.0993": {
+        "expository_sentences": 108,
+        "pct": 26.85,
+        "proposals": 29
+      },
+      "1005.3248": {
+        "expository_sentences": 537,
+        "pct": 20.3,
+        "proposals": 109
+      },
+      "1005.3251": {
+        "expository_sentences": 187,
+        "pct": 21.93,
+        "proposals": 41
+      },
+      "1006.3930": {
+        "expository_sentences": 421,
+        "pct": 35.39,
+        "proposals": 149
+      },
+      "1009.2331": {
+        "expository_sentences": 113,
+        "pct": 37.17,
+        "proposals": 42
+      },
+      "1009.3370": {
+        "expository_sentences": 504,
+        "pct": 14.88,
+        "proposals": 75
+      },
+      "1011.1691": {
+        "expository_sentences": 265,
+        "pct": 21.89,
+        "proposals": 58
+      },
+      "1101.3064": {
+        "expository_sentences": 429,
+        "pct": 29.6,
+        "proposals": 127
+      },
+      "1102.0261": {
+        "expository_sentences": 1178,
+        "pct": 20.8,
+        "proposals": 245
+      },
+      "1104.5047": {
+        "expository_sentences": 70,
+        "pct": 47.14,
+        "proposals": 33
+      },
+      "1107.5511": {
+        "expository_sentences": 1010,
+        "pct": 9.5,
+        "proposals": 96
+      },
+      "1109.1004": {
+        "expository_sentences": 296,
+        "pct": 32.09,
+        "proposals": 95
+      },
+      "1110.0605": {
+        "expository_sentences": 228,
+        "pct": 25.0,
+        "proposals": 57
+      },
+      "1112.0040": {
+        "expository_sentences": 681,
+        "pct": 14.98,
+        "proposals": 102
+      },
+      "1112.3840": {
+        "expository_sentences": 888,
+        "pct": 22.86,
+        "proposals": 203
+      },
+      "1201.4981": {
+        "expository_sentences": 234,
+        "pct": 32.91,
+        "proposals": 77
+      },
+      "1202.2697": {
+        "expository_sentences": 2376,
+        "pct": 24.49,
+        "proposals": 582
+      },
+      "1203.3253": {
+        "expository_sentences": 570,
+        "pct": 21.4,
+        "proposals": 122
+      },
+      "1203.5657": {
+        "expository_sentences": 329,
+        "pct": 16.11,
+        "proposals": 53
+      },
+      "1204.2013": {
+        "expository_sentences": 154,
+        "pct": 38.31,
+        "proposals": 59
+      },
+      "1204.3607": {
+        "expository_sentences": 2445,
+        "pct": 11.57,
+        "proposals": 283
+      },
+      "1205.4473": {
+        "expository_sentences": 435,
+        "pct": 20.23,
+        "proposals": 88
+      },
+      "1205.6522": {
+        "expository_sentences": 41,
+        "pct": 112.2,
+        "proposals": 46
+      },
+      "1208.1749": {
+        "expository_sentences": 301,
+        "pct": 107.64,
+        "proposals": 324
+      },
+      "1210.1036": {
+        "expository_sentences": 555,
+        "pct": 13.51,
+        "proposals": 75
+      },
+      "1210.6363": {
+        "expository_sentences": 941,
+        "pct": 79.06,
+        "proposals": 744
+      },
+      "1211.0529": {
+        "expository_sentences": 1270,
+        "pct": 22.52,
+        "proposals": 286
+      },
+      "1212.3563": {
+        "expository_sentences": 3111,
+        "pct": 13.53,
+        "proposals": 421
+      },
+      "1212.6283": {
+        "expository_sentences": 56,
+        "pct": 5.36,
+        "proposals": 3
+      },
+      "1301.1053": {
+        "expository_sentences": 183,
+        "pct": 119.67,
+        "proposals": 219
+      },
+      "1301.3191": {
+        "expository_sentences": 773,
+        "pct": 17.21,
+        "proposals": 133
+      },
+      "1301.5206": {
+        "expository_sentences": 770,
+        "pct": 106.62,
+        "proposals": 821
+      },
+      "1302.5756": {
+        "expository_sentences": 373,
+        "pct": 92.76,
+        "proposals": 346
+      },
+      "1305.0086": {
+        "expository_sentences": 1491,
+        "pct": 14.22,
+        "proposals": 212
+      },
+      "1305.0297": {
+        "expository_sentences": 436,
+        "pct": 18.12,
+        "proposals": 79
+      },
+      "1308.0729": {
+        "expository_sentences": 4722,
+        "pct": 17.51,
+        "proposals": 827
+      },
+      "1308.1804": {
+        "expository_sentences": 394,
+        "pct": 28.17,
+        "proposals": 111
+      },
+      "1309.6952": {
+        "expository_sentences": 2595,
+        "pct": 12.99,
+        "proposals": 337
+      },
+      "1310.8279": {
+        "expository_sentences": 317,
+        "pct": 22.4,
+        "proposals": 71
+      },
+      "1312.1269": {
+        "expository_sentences": 3120,
+        "pct": 15.13,
+        "proposals": 472
+      },
+      "1404.0108": {
+        "expository_sentences": 410,
+        "pct": 94.88,
+        "proposals": 389
+      },
+      "1404.3886": {
+        "expository_sentences": 1350,
+        "pct": 7.63,
+        "proposals": 103
+      },
+      "1405.3221": {
+        "expository_sentences": 302,
+        "pct": 23.18,
+        "proposals": 70
+      },
+      "1405.6881": {
+        "expository_sentences": 718,
+        "pct": 8.08,
+        "proposals": 58
+      },
+      "1405.7805": {
+        "expository_sentences": 1100,
+        "pct": 13.09,
+        "proposals": 144
+      },
+      "1406.0058": {
+        "expository_sentences": 132,
+        "pct": 25.0,
+        "proposals": 33
+      },
+      "1406.4204": {
+        "expository_sentences": 289,
+        "pct": 23.18,
+        "proposals": 67
+      },
+      "1409.0837": {
+        "expository_sentences": 318,
+        "pct": 42.14,
+        "proposals": 134
+      },
+      "1409.2165": {
+        "expository_sentences": 90,
+        "pct": 103.33,
+        "proposals": 93
+      },
+      "1409.4219": {
+        "expository_sentences": 444,
+        "pct": 17.34,
+        "proposals": 77
+      },
+      "1410.6716": {
+        "expository_sentences": 4106,
+        "pct": 6.26,
+        "proposals": 257
+      },
+      "1411.6691": {
+        "expository_sentences": 3892,
+        "pct": 8.53,
+        "proposals": 332
+      },
+      "1412.1615": {
+        "expository_sentences": 463,
+        "pct": 107.34,
+        "proposals": 497
+      },
+      "1502.00872": {
+        "expository_sentences": 58,
+        "pct": 101.72,
+        "proposals": 59
+      },
+      "1502.06526": {
+        "expository_sentences": 297,
+        "pct": 102.02,
+        "proposals": 303
+      },
+      "1503.00991": {
+        "expository_sentences": 719,
+        "pct": 21.7,
+        "proposals": 156
+      },
+      "1503.05523": {
+        "expository_sentences": 809,
+        "pct": 20.4,
+        "proposals": 165
+      },
+      "1503.06720": {
+        "expository_sentences": 838,
+        "pct": 13.48,
+        "proposals": 113
+      },
+      "1509.00038": {
+        "expository_sentences": 900,
+        "pct": 16.78,
+        "proposals": 151
+      },
+      "1509.06811": {
+        "expository_sentences": 585,
+        "pct": 105.13,
+        "proposals": 615
+      },
+      "1512.07573": {
+        "expository_sentences": 263,
+        "pct": 32.7,
+        "proposals": 86
+      },
+      "1512.07577": {
+        "expository_sentences": 73,
+        "pct": 30.14,
+        "proposals": 22
+      },
+      "1512.08119": {
+        "expository_sentences": 187,
+        "pct": 108.02,
+        "proposals": 202
+      },
+      "1605.03934": {
+        "expository_sentences": 471,
+        "pct": 26.33,
+        "proposals": 124
+      },
+      "1609.05382": {
+        "expository_sentences": 2,
+        "pct": 100.0,
+        "proposals": 2
+      },
+      "1612.09225": {
+        "expository_sentences": 672,
+        "pct": 19.79,
+        "proposals": 133
+      },
+      "1702.00244": {
+        "expository_sentences": 488,
+        "pct": 2.66,
+        "proposals": 13
+      },
+      "1705.04960": {
+        "expository_sentences": 647,
+        "pct": 100.46,
+        "proposals": 650
+      },
+      "1705.07442": {
+        "expository_sentences": 975,
+        "pct": 22.87,
+        "proposals": 223
+      },
+      "1710.02230": {
+        "expository_sentences": 667,
+        "pct": 21.89,
+        "proposals": 146
+      },
+      "1801.02927": {
+        "expository_sentences": 564,
+        "pct": 34.22,
+        "proposals": 193
+      },
+      "1803.05316": {
+        "expository_sentences": 14,
+        "pct": 28.57,
+        "proposals": 4
+      },
+      "1804.02240": {
+        "expository_sentences": 216,
+        "pct": 20.37,
+        "proposals": 44
+      },
+      "1804.07538": {
+        "expository_sentences": 486,
+        "pct": 18.52,
+        "proposals": 90
+      },
+      "1805.03776": {
+        "expository_sentences": 631,
+        "pct": 17.59,
+        "proposals": 111
+      },
+      "1809.00738": {
+        "expository_sentences": 446,
+        "pct": 109.42,
+        "proposals": 488
+      },
+      "1809.10621": {
+        "expository_sentences": 583,
+        "pct": 19.38,
+        "proposals": 113
+      },
+      "1902.10863": {
+        "expository_sentences": 382,
+        "pct": 109.95,
+        "proposals": 420
+      },
+      "1905.04644": {
+        "expository_sentences": 174,
+        "pct": 100.57,
+        "proposals": 175
+      },
+      "1905.09566": {
+        "expository_sentences": 605,
+        "pct": 23.31,
+        "proposals": 141
+      },
+      "1908.02202": {
+        "expository_sentences": 52,
+        "pct": 13.46,
+        "proposals": 7
+      },
+      "1908.07021": {
+        "expository_sentences": 622,
+        "pct": 106.27,
+        "proposals": 661
+      },
+      "1910.09240": {
+        "expository_sentences": 1,
+        "pct": 100.0,
+        "proposals": 1
+      },
+      "1911.04630": {
+        "expository_sentences": 299,
+        "pct": 24.41,
+        "proposals": 73
+      },
+      "2002.06055": {
+        "expository_sentences": 4911,
+        "pct": 103.03,
+        "proposals": 5060
+      },
+      "2003.02254": {
+        "expository_sentences": 302,
+        "pct": 30.46,
+        "proposals": 92
+      },
+      "2003.06663": {
+        "expository_sentences": 480,
+        "pct": 24.58,
+        "proposals": 118
+      },
+      "2006.08022": {
+        "expository_sentences": 352,
+        "pct": 21.02,
+        "proposals": 74
+      },
+      "2011.08808": {
+        "expository_sentences": 586,
+        "pct": 25.26,
+        "proposals": 148
+      },
+      "2012.04537": {
+        "expository_sentences": 1134,
+        "pct": 17.64,
+        "proposals": 200
+      },
+      "2105.15167": {
+        "expository_sentences": 715,
+        "pct": 103.08,
+        "proposals": 737
+      },
+      "2208.05973": {
+        "expository_sentences": 731,
+        "pct": 21.07,
+        "proposals": 154
+      },
+      "2306.15958": {
+        "expository_sentences": 55,
+        "pct": 109.09,
+        "proposals": 60
+      },
+      "2311.00200": {
+        "expository_sentences": 326,
+        "pct": 102.15,
+        "proposals": 333
+      },
+      "2311.05789": {
+        "expository_sentences": 254,
+        "pct": 16.93,
+        "proposals": 43
+      },
+      "2401.14311": {
+        "expository_sentences": 473,
+        "pct": 19.87,
+        "proposals": 94
+      },
+      "math__0007070": {
+        "expository_sentences": 251,
+        "pct": 32.27,
+        "proposals": 81
+      },
+      "math__0101102": {
+        "expository_sentences": 403,
+        "pct": 23.33,
+        "proposals": 94
+      },
+      "math__0102087": {
+        "expository_sentences": 331,
+        "pct": 97.28,
+        "proposals": 322
+      },
+      "math__0106050": {
+        "expository_sentences": 133,
+        "pct": 32.33,
+        "proposals": 43
+      },
+      "math__0106083": {
+        "expository_sentences": 417,
+        "pct": 144.12,
+        "proposals": 601
+      },
+      "math__0107188": {
+        "expository_sentences": 457,
+        "pct": 21.88,
+        "proposals": 100
+      },
+      "math__0111139": {
+        "expository_sentences": 138,
+        "pct": 25.36,
+        "proposals": 35
+      },
+      "math__0111204": {
+        "expository_sentences": 940,
+        "pct": 7.98,
+        "proposals": 75
+      },
+      "math__0111205": {
+        "expository_sentences": 120,
+        "pct": 26.67,
+        "proposals": 32
+      },
+      "math__0201017": {
+        "expository_sentences": 151,
+        "pct": 15.89,
+        "proposals": 24
+      },
+      "math__0202130": {
+        "expository_sentences": 111,
+        "pct": 40.54,
+        "proposals": 45
+      },
+      "math__0203255": {
+        "expository_sentences": 78,
+        "pct": 37.18,
+        "proposals": 29
+      },
+      "math__0204218": {
+        "expository_sentences": 759,
+        "pct": 15.28,
+        "proposals": 116
+      },
+      "math__0207281": {
+        "expository_sentences": 36,
+        "pct": 86.11,
+        "proposals": 31
+      },
+      "math__0210047": {
+        "expository_sentences": 595,
+        "pct": 109.08,
+        "proposals": 649
+      },
+      "math__0210114": {
+        "expository_sentences": 864,
+        "pct": 17.01,
+        "proposals": 147
+      },
+      "math__0212065": {
+        "expository_sentences": 40,
+        "pct": 22.5,
+        "proposals": 9
+      },
+      "math__0212237": {
+        "expository_sentences": 249,
+        "pct": 23.69,
+        "proposals": 59
+      },
+      "math__0301027": {
+        "expository_sentences": 465,
+        "pct": 20.86,
+        "proposals": 97
+      },
+      "math__0302304": {
+        "expository_sentences": 577,
+        "pct": 16.81,
+        "proposals": 97
+      },
+      "math__0304277": {
+        "expository_sentences": 462,
+        "pct": 9.74,
+        "proposals": 45
+      },
+      "math__0307200": {
+        "expository_sentences": 468,
+        "pct": 14.96,
+        "proposals": 70
+      },
+      "math__0307263": {
+        "expository_sentences": 459,
+        "pct": 101.53,
+        "proposals": 466
+      },
+      "math__0308246": {
+        "expository_sentences": 4833,
+        "pct": 1.66,
+        "proposals": 80
+      },
+      "math__0310134": {
+        "expository_sentences": 998,
+        "pct": 9.02,
+        "proposals": 90
+      },
+      "math__0310337": {
+        "expository_sentences": 1668,
+        "pct": 3.12,
+        "proposals": 52
+      },
+      "math__0312088": {
+        "expository_sentences": 71,
+        "pct": 25.35,
+        "proposals": 18
+      },
+      "math__0406507": {
+        "expository_sentences": 129,
+        "pct": 23.26,
+        "proposals": 30
+      },
+      "math__0407275": {
+        "expository_sentences": 79,
+        "pct": 25.32,
+        "proposals": 20
+      },
+      "math__0409360": {
+        "expository_sentences": 235,
+        "pct": 17.45,
+        "proposals": 41
+      },
+      "math__0409473": {
+        "expository_sentences": 533,
+        "pct": 27.95,
+        "proposals": 149
+      },
+      "math__0409598": {
+        "expository_sentences": 133,
+        "pct": 7.52,
+        "proposals": 10
+      },
+      "math__0409602": {
+        "expository_sentences": 1639,
+        "pct": 18.43,
+        "proposals": 302
+      },
+      "math__0410328": {
+        "expository_sentences": 1000,
+        "pct": 94.9,
+        "proposals": 949
+      },
+      "math__0412512": {
+        "expository_sentences": 1,
+        "pct": 100.0,
+        "proposals": 1
+      },
+      "math__0501383": {
+        "expository_sentences": 201,
+        "pct": 32.84,
+        "proposals": 66
+      },
+      "math__0502155": {
+        "expository_sentences": 262,
+        "pct": 27.1,
+        "proposals": 71
+      },
+      "math__0502533": {
+        "expository_sentences": 68,
+        "pct": 13.24,
+        "proposals": 9
+      },
+      "math__0503632": {
+        "expository_sentences": 272,
+        "pct": 19.12,
+        "proposals": 52
+      },
+      "math__0504334": {
+        "expository_sentences": 543,
+        "pct": 25.6,
+        "proposals": 139
+      },
+      "math__0511710": {
+        "expository_sentences": 257,
+        "pct": 16.34,
+        "proposals": 42
+      },
+      "math__0512575": {
+        "expository_sentences": 527,
+        "pct": 33.78,
+        "proposals": 178
+      },
+      "math__0606241": {
+        "expository_sentences": 2319,
+        "pct": 10.22,
+        "proposals": 237
+      },
+      "math__0607271": {
+        "expository_sentences": 118,
+        "pct": 28.81,
+        "proposals": 34
+      },
+      "math__0607646": {
+        "expository_sentences": 272,
+        "pct": 29.78,
+        "proposals": 81
+      },
+      "math__0608228": {
+        "expository_sentences": 820,
+        "pct": 19.39,
+        "proposals": 159
+      },
+      "math__0608420": {
+        "expository_sentences": 825,
+        "pct": 14.67,
+        "proposals": 121
+      },
+      "math__0610194": {
+        "expository_sentences": 670,
+        "pct": 34.18,
+        "proposals": 229
+      },
+      "math__0610239": {
+        "expository_sentences": 120,
+        "pct": 36.67,
+        "proposals": 44
+      },
+      "math__0612139": {
+        "expository_sentences": 422,
+        "pct": 110.19,
+        "proposals": 465
+      },
+      "math__0701293": {
+        "expository_sentences": 55,
+        "pct": 30.91,
+        "proposals": 17
+      },
+      "math__0702535": {
+        "expository_sentences": 1143,
+        "pct": 90.46,
+        "proposals": 1034
+      },
+      "math__9810017": {
+        "expository_sentences": 94,
+        "pct": 70.21,
+        "proposals": 66
+      },
+      "math__9811037": {
+        "expository_sentences": 332,
+        "pct": 27.41,
+        "proposals": 91
+      },
+      "math__9812040": {
+        "expository_sentences": 469,
+        "pct": 20.9,
+        "proposals": 98
+      },
+      "math__9906038": {
+        "expository_sentences": 47,
+        "pct": 91.49,
+        "proposals": 43
+      },
+      "math__9911242": {
+        "expository_sentences": 1351,
+        "pct": 18.73,
+        "proposals": 253
+      },
+      "quant-ph__0402130": {
+        "expository_sentences": 203,
+        "pct": 111.33,
+        "proposals": 226
+      }
+    }
+  },
+  "discovery_curve": [
+    {
+      "n_minted": 0,
+      "paper": "math__0608040",
+      "paper_index": 1
+    },
+    {
+      "n_minted": 0,
+      "paper": "2311.05789",
+      "paper_index": 2
+    },
+    {
+      "n_minted": 0,
+      "paper": "1110.0605",
+      "paper_index": 3
+    },
+    {
+      "n_minted": 0,
+      "paper": "0811.1480",
+      "paper_index": 4
+    },
+    {
+      "n_minted": 0,
+      "paper": "1901.01453",
+      "paper_index": 5
+    },
+    {
+      "n_minted": 0,
+      "paper": "1308.0729",
+      "paper_index": 6
+    },
+    {
+      "n_minted": 0,
+      "paper": "math__9811037",
+      "paper_index": 7
+    },
+    {
+      "n_minted": 0,
+      "paper": "math__9810017",
+      "paper_index": 8
+    },
+    {
+      "n_minted": 0,
+      "paper": "0908.3347",
+      "paper_index": 9
+    },
+    {
+      "n_minted": 1,
+      "paper": "math__0111139",
+      "paper_index": 10
+    },
+    {
+      "n_minted": 1,
+      "paper": "0905.0465",
+      "paper_index": 11
+    },
+    {
+      "n_minted": 2,
+      "paper": "2002.06055",
+      "paper_index": 12
+    },
+    {
+      "n_minted": 2,
+      "paper": "math__0204218",
+      "paper_index": 13
+    },
+    {
+      "n_minted": 4,
+      "paper": "0905.0462",
+      "paper_index": 14
+    },
+    {
+      "n_minted": 4,
+      "paper": "math__0210114",
+      "paper_index": 15
+    },
+    {
+      "n_minted": 4,
+      "paper": "quant-ph__0402130",
+      "paper_index": 16
+    },
+    {
+      "n_minted": 4,
+      "paper": "math__0301027",
+      "paper_index": 17
+    },
+    {
+      "n_minted": 4,
+      "paper": "math__0307200",
+      "paper_index": 18
+    },
+    {
+      "n_minted": 4,
+      "paper": "math__0111205",
+      "paper_index": 19
+    },
+    {
+      "n_minted": 4,
+      "paper": "math__0307263",
+      "paper_index": 20
+    },
+    {
+      "n_minted": 4,
+      "paper": "1405.3221",
+      "paper_index": 21
+    },
+    {
+      "n_minted": 4,
+      "paper": "math__0310134",
+      "paper_index": 22
+    },
+    {
+      "n_minted": 4,
+      "paper": "0706.1286",
+      "paper_index": 23
+    },
+    {
+      "n_minted": 5,
+      "paper": "0806.1324",
+      "paper_index": 24
+    },
+    {
+      "n_minted": 5,
+      "paper": "1211.2851",
+      "paper_index": 25
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0406507",
+      "paper_index": 26
+    },
+    {
+      "n_minted": 5,
+      "paper": "1112.0040",
+      "paper_index": 27
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0702535",
+      "paper_index": 28
+    },
+    {
+      "n_minted": 5,
+      "paper": "1905.09566",
+      "paper_index": 29
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0310337",
+      "paper_index": 30
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0701293",
+      "paper_index": 31
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0102087",
+      "paper_index": 32
+    },
+    {
+      "n_minted": 5,
+      "paper": "1004.0993",
+      "paper_index": 33
+    },
+    {
+      "n_minted": 5,
+      "paper": "0905.2621",
+      "paper_index": 34
+    },
+    {
+      "n_minted": 5,
+      "paper": "1212.3563",
+      "paper_index": 35
+    },
+    {
+      "n_minted": 5,
+      "paper": "1902.10863",
+      "paper_index": 36
+    },
+    {
+      "n_minted": 5,
+      "paper": "1003.4394",
+      "paper_index": 37
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0212237",
+      "paper_index": 38
+    },
+    {
+      "n_minted": 5,
+      "paper": "1904.07004",
+      "paper_index": 39
+    },
+    {
+      "n_minted": 5,
+      "paper": "1908.07021",
+      "paper_index": 40
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0302304",
+      "paper_index": 41
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0504334",
+      "paper_index": 42
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0511710",
+      "paper_index": 43
+    },
+    {
+      "n_minted": 5,
+      "paper": "0708.3398",
+      "paper_index": 44
+    },
+    {
+      "n_minted": 5,
+      "paper": "1009.3370",
+      "paper_index": 45
+    },
+    {
+      "n_minted": 5,
+      "paper": "1305.0086",
+      "paper_index": 46
+    },
+    {
+      "n_minted": 5,
+      "paper": "1610.09640",
+      "paper_index": 47
+    },
+    {
+      "n_minted": 5,
+      "paper": "1702.00244",
+      "paper_index": 48
+    },
+    {
+      "n_minted": 5,
+      "paper": "1509.06811",
+      "paper_index": 49
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0107188",
+      "paper_index": 50
+    },
+    {
+      "n_minted": 5,
+      "paper": "0903.0340",
+      "paper_index": 51
+    },
+    {
+      "n_minted": 5,
+      "paper": "2401.14311",
+      "paper_index": 52
+    },
+    {
+      "n_minted": 5,
+      "paper": "0906.4931",
+      "paper_index": 53
+    },
+    {
+      "n_minted": 5,
+      "paper": "1406.4204",
+      "paper_index": 54
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0409360",
+      "paper_index": 55
+    },
+    {
+      "n_minted": 5,
+      "paper": "1205.4473",
+      "paper_index": 56
+    },
+    {
+      "n_minted": 5,
+      "paper": "1412.1615",
+      "paper_index": 57
+    },
+    {
+      "n_minted": 5,
+      "paper": "0809.3031",
+      "paper_index": 58
+    },
+    {
+      "n_minted": 5,
+      "paper": "1503.00991",
+      "paper_index": 59
+    },
+    {
+      "n_minted": 5,
+      "paper": "2003.06663",
+      "paper_index": 60
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0410328",
+      "paper_index": 61
+    },
+    {
+      "n_minted": 5,
+      "paper": "0908.4187",
+      "paper_index": 62
+    },
+    {
+      "n_minted": 5,
+      "paper": "1209.2995",
+      "paper_index": 63
+    },
+    {
+      "n_minted": 5,
+      "paper": "1102.0261",
+      "paper_index": 64
+    },
+    {
+      "n_minted": 5,
+      "paper": "1405.6881",
+      "paper_index": 65
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0612139",
+      "paper_index": 66
+    },
+    {
+      "n_minted": 5,
+      "paper": "0906.4725",
+      "paper_index": 67
+    },
+    {
+      "n_minted": 5,
+      "paper": "1104.5047",
+      "paper_index": 68
+    },
+    {
+      "n_minted": 5,
+      "paper": "1310.8279",
+      "paper_index": 69
+    },
+    {
+      "n_minted": 5,
+      "paper": "1512.08119",
+      "paper_index": 70
+    },
+    {
+      "n_minted": 5,
+      "paper": "1005.3248",
+      "paper_index": 71
+    },
+    {
+      "n_minted": 5,
+      "paper": "1009.2331",
+      "paper_index": 72
+    },
+    {
+      "n_minted": 5,
+      "paper": "1210.1036",
+      "paper_index": 73
+    },
+    {
+      "n_minted": 5,
+      "paper": "1609.05382",
+      "paper_index": 74
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0610194",
+      "paper_index": 75
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0610239",
+      "paper_index": 76
+    },
+    {
+      "n_minted": 5,
+      "paper": "0708.1921",
+      "paper_index": 77
+    },
+    {
+      "n_minted": 5,
+      "paper": "1301.1053",
+      "paper_index": 78
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0007070",
+      "paper_index": 79
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0201017",
+      "paper_index": 80
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0608228",
+      "paper_index": 81
+    },
+    {
+      "n_minted": 5,
+      "paper": "0709.0248",
+      "paper_index": 82
+    },
+    {
+      "n_minted": 5,
+      "paper": "0712.0724",
+      "paper_index": 83
+    },
+    {
+      "n_minted": 5,
+      "paper": "1305.0297",
+      "paper_index": 84
+    },
+    {
+      "n_minted": 5,
+      "paper": "1710.02230",
+      "paper_index": 85
+    },
+    {
+      "n_minted": 5,
+      "paper": "1809.00738",
+      "paper_index": 86
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0202130",
+      "paper_index": 87
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0502533",
+      "paper_index": 88
+    },
+    {
+      "n_minted": 5,
+      "paper": "0901.3602",
+      "paper_index": 89
+    },
+    {
+      "n_minted": 5,
+      "paper": "0902.1954",
+      "paper_index": 90
+    },
+    {
+      "n_minted": 5,
+      "paper": "1409.0837",
+      "paper_index": 91
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0512575",
+      "paper_index": 92
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0606241",
+      "paper_index": 93
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__9906038",
+      "paper_index": 94
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__9911242",
+      "paper_index": 95
+    },
+    {
+      "n_minted": 5,
+      "paper": "1003.1920",
+      "paper_index": 96
+    },
+    {
+      "n_minted": 5,
+      "paper": "1202.2697",
+      "paper_index": 97
+    },
+    {
+      "n_minted": 5,
+      "paper": "1301.5206",
+      "paper_index": 98
+    },
+    {
+      "n_minted": 5,
+      "paper": "1805.03776",
+      "paper_index": 99
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0101102",
+      "paper_index": 100
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0409598",
+      "paper_index": 101
+    },
+    {
+      "n_minted": 5,
+      "paper": "0705.0102",
+      "paper_index": 102
+    },
+    {
+      "n_minted": 5,
+      "paper": "1201.4981",
+      "paper_index": 103
+    },
+    {
+      "n_minted": 5,
+      "paper": "1203.3253",
+      "paper_index": 104
+    },
+    {
+      "n_minted": 5,
+      "paper": "1211.0529",
+      "paper_index": 105
+    },
+    {
+      "n_minted": 5,
+      "paper": "1502.00872",
+      "paper_index": 106
+    },
+    {
+      "n_minted": 5,
+      "paper": "1801.02927",
+      "paper_index": 107
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0501383",
+      "paper_index": 108
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0607271",
+      "paper_index": 109
+    },
+    {
+      "n_minted": 5,
+      "paper": "0708.2185",
+      "paper_index": 110
+    },
+    {
+      "n_minted": 5,
+      "paper": "0911.4979",
+      "paper_index": 111
+    },
+    {
+      "n_minted": 5,
+      "paper": "1804.07538",
+      "paper_index": 112
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0111204",
+      "paper_index": 113
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0207281",
+      "paper_index": 114
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0409602",
+      "paper_index": 115
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0503632",
+      "paper_index": 116
+    },
+    {
+      "n_minted": 5,
+      "paper": "0807.1704",
+      "paper_index": 117
+    },
+    {
+      "n_minted": 5,
+      "paper": "0908.1787",
+      "paper_index": 118
+    },
+    {
+      "n_minted": 5,
+      "paper": "1109.1004",
+      "paper_index": 119
+    },
+    {
+      "n_minted": 5,
+      "paper": "1301.3191",
+      "paper_index": 120
+    },
+    {
+      "n_minted": 5,
+      "paper": "1409.4219",
+      "paper_index": 121
+    },
+    {
+      "n_minted": 5,
+      "paper": "1502.06526",
+      "paper_index": 122
+    },
+    {
+      "n_minted": 5,
+      "paper": "1512.07573",
+      "paper_index": 123
+    },
+    {
+      "n_minted": 5,
+      "paper": "1803.05316",
+      "paper_index": 124
+    },
+    {
+      "n_minted": 5,
+      "paper": "2012.04537",
+      "paper_index": 125
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0106083",
+      "paper_index": 126
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0409473",
+      "paper_index": 127
+    },
+    {
+      "n_minted": 5,
+      "paper": "0705.0452",
+      "paper_index": 128
+    },
+    {
+      "n_minted": 5,
+      "paper": "1002.1372",
+      "paper_index": 129
+    },
+    {
+      "n_minted": 5,
+      "paper": "1302.5756",
+      "paper_index": 130
+    },
+    {
+      "n_minted": 5,
+      "paper": "1312.1269",
+      "paper_index": 131
+    },
+    {
+      "n_minted": 5,
+      "paper": "1410.6716",
+      "paper_index": 132
+    },
+    {
+      "n_minted": 5,
+      "paper": "2006.08022",
+      "paper_index": 133
+    },
+    {
+      "n_minted": 5,
+      "paper": "2311.00200",
+      "paper_index": 134
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0407275",
+      "paper_index": 135
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0412512",
+      "paper_index": 136
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0607646",
+      "paper_index": 137
+    },
+    {
+      "n_minted": 5,
+      "paper": "0904.1997",
+      "paper_index": 138
+    },
+    {
+      "n_minted": 5,
+      "paper": "0905.0459",
+      "paper_index": 139
+    },
+    {
+      "n_minted": 5,
+      "paper": "1101.3064",
+      "paper_index": 140
+    },
+    {
+      "n_minted": 5,
+      "paper": "1203.5657",
+      "paper_index": 141
+    },
+    {
+      "n_minted": 5,
+      "paper": "1208.1749",
+      "paper_index": 142
+    },
+    {
+      "n_minted": 5,
+      "paper": "1309.6952",
+      "paper_index": 143
+    },
+    {
+      "n_minted": 5,
+      "paper": "1406.0058",
+      "paper_index": 144
+    },
+    {
+      "n_minted": 5,
+      "paper": "1605.03934",
+      "paper_index": 145
+    },
+    {
+      "n_minted": 5,
+      "paper": "2105.15167",
+      "paper_index": 146
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0308246",
+      "paper_index": 147
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0312088",
+      "paper_index": 148
+    },
+    {
+      "n_minted": 5,
+      "paper": "0808.1923",
+      "paper_index": 149
+    },
+    {
+      "n_minted": 5,
+      "paper": "1210.6363",
+      "paper_index": 150
+    },
+    {
+      "n_minted": 5,
+      "paper": "1503.05523",
+      "paper_index": 151
+    },
+    {
+      "n_minted": 5,
+      "paper": "1509.00038",
+      "paper_index": 152
+    },
+    {
+      "n_minted": 5,
+      "paper": "1612.09225",
+      "paper_index": 153
+    },
+    {
+      "n_minted": 5,
+      "paper": "1905.04644",
+      "paper_index": 154
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0203255",
+      "paper_index": 155
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0502155",
+      "paper_index": 156
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0608420",
+      "paper_index": 157
+    },
+    {
+      "n_minted": 5,
+      "paper": "0907.2460",
+      "paper_index": 158
+    },
+    {
+      "n_minted": 5,
+      "paper": "0910.2733",
+      "paper_index": 159
+    },
+    {
+      "n_minted": 5,
+      "paper": "1011.1691",
+      "paper_index": 160
+    },
+    {
+      "n_minted": 5,
+      "paper": "1107.5511",
+      "paper_index": 161
+    },
+    {
+      "n_minted": 5,
+      "paper": "1409.2165",
+      "paper_index": 162
+    },
+    {
+      "n_minted": 5,
+      "paper": "1503.06720",
+      "paper_index": 163
+    },
+    {
+      "n_minted": 5,
+      "paper": "1705.07442",
+      "paper_index": 164
+    },
+    {
+      "n_minted": 5,
+      "paper": "1908.02202",
+      "paper_index": 165
+    },
+    {
+      "n_minted": 5,
+      "paper": "2306.15958",
+      "paper_index": 166
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0106050",
+      "paper_index": 167
+    },
+    {
+      "n_minted": 5,
+      "paper": "0801.3843",
+      "paper_index": 168
+    },
+    {
+      "n_minted": 5,
+      "paper": "0811.2435",
+      "paper_index": 169
+    },
+    {
+      "n_minted": 5,
+      "paper": "0911.0469",
+      "paper_index": 170
+    },
+    {
+      "n_minted": 5,
+      "paper": "1204.2013",
+      "paper_index": 171
+    },
+    {
+      "n_minted": 5,
+      "paper": "1204.3607",
+      "paper_index": 172
+    },
+    {
+      "n_minted": 5,
+      "paper": "1212.6283",
+      "paper_index": 173
+    },
+    {
+      "n_minted": 5,
+      "paper": "1404.0108",
+      "paper_index": 174
+    },
+    {
+      "n_minted": 5,
+      "paper": "1405.7805",
+      "paper_index": 175
+    },
+    {
+      "n_minted": 5,
+      "paper": "1411.6691",
+      "paper_index": 176
+    },
+    {
+      "n_minted": 5,
+      "paper": "1512.07577",
+      "paper_index": 177
+    },
+    {
+      "n_minted": 5,
+      "paper": "1705.04960",
+      "paper_index": 178
+    },
+    {
+      "n_minted": 5,
+      "paper": "1809.10621",
+      "paper_index": 179
+    },
+    {
+      "n_minted": 5,
+      "paper": "2011.08808",
+      "paper_index": 180
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0304277",
+      "paper_index": 181
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0702299",
+      "paper_index": 182
+    },
+    {
+      "n_minted": 5,
+      "paper": "0910.1306",
+      "paper_index": 183
+    },
+    {
+      "n_minted": 5,
+      "paper": "1005.3251",
+      "paper_index": 184
+    },
+    {
+      "n_minted": 5,
+      "paper": "1006.3930",
+      "paper_index": 185
+    },
+    {
+      "n_minted": 5,
+      "paper": "1112.3840",
+      "paper_index": 186
+    },
+    {
+      "n_minted": 5,
+      "paper": "1205.6522",
+      "paper_index": 187
+    },
+    {
+      "n_minted": 5,
+      "paper": "1308.1804",
+      "paper_index": 188
+    },
+    {
+      "n_minted": 5,
+      "paper": "1404.3886",
+      "paper_index": 189
+    },
+    {
+      "n_minted": 5,
+      "paper": "1804.02240",
+      "paper_index": 190
+    },
+    {
+      "n_minted": 5,
+      "paper": "1910.09240",
+      "paper_index": 191
+    },
+    {
+      "n_minted": 5,
+      "paper": "1911.04630",
+      "paper_index": 192
+    },
+    {
+      "n_minted": 5,
+      "paper": "2003.02254",
+      "paper_index": 193
+    },
+    {
+      "n_minted": 5,
+      "paper": "2208.05973",
+      "paper_index": 194
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0210047",
+      "paper_index": 195
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__0212065",
+      "paper_index": 196
+    },
+    {
+      "n_minted": 5,
+      "paper": "math__9812040",
+      "paper_index": 197
+    },
+    {
+      "n_minted": 5,
+      "paper": "0708.2067",
+      "paper_index": 198
+    },
+    {
+      "n_minted": 5,
+      "paper": "0711.0473",
+      "paper_index": 199
+    },
+    {
+      "n_minted": 5,
+      "paper": "0801.0199",
+      "paper_index": 200
+    }
+  ],
+  "fringe_resolved": [
+    {
+      "agents": [
+        "codex-4"
+      ],
+      "definition": "Links the current construction/result to an application domain or worked instance.",
+      "n_agents": 1,
+      "n_papers": 4,
+      "name": "connection/application",
+      "normalized_name": "connection/application",
+      "papers": [
+        "0911.4979",
+        "1309.6952",
+        "math__0302304",
+        "math__9911242"
+      ],
+      "parent": "connection",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "connection",
+      "sample_evidence": [
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:673",
+          "line": 2453,
+          "paper": "math__0302304",
+          "quote": "Homological algebra on a complete intersection, with an application to group representations Trans.",
+          "region_id": "math__0302304-leaf-0002"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:2190",
+          "line": 5316,
+          "paper": "math__9911242",
+          "quote": "begin{comment} In this section we give the application to the hereditary abelian categories of the form $qgr(R)$.",
+          "region_id": "math__9911242-inflight-0554"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:2207",
+          "line": 5635,
+          "paper": "math__9911242",
+          "quote": "end{comment} In this section we give the application to the hereditary abelian categories of the form $qgr(R)$.",
+          "region_id": "math__9911242-inflight-0599"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:2596",
+          "line": 103,
+          "paper": "0911.4979",
+          "quote": "As an immediate application we prove in S ref{DeEquiSect} a result relating de-equivariantization of tensor category $mc{C}$ to tensor product over $Rep(G)$, the category of finite dimensional representations of finite group $G$ in $Vec$.",
+          "region_id": "0911.4979-inflight-0003"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:4220",
+          "line": 664,
+          "paper": "1309.6952",
+          "quote": "Beside the application to the bar and cobar adjunction we were motivated by the following problems: begin{enumerate} item understand better the structure of the coalgebras $HOM(C,D)$ and ${A,B}$; item extract the classical constructions of $Beta A$ and $Omega C$ from ${mc,A}_bullet$ and $Crhd_bullet mc$; item and particularly understand the internal and external parts in the differential of $Beta A$ and $Omega C$ item as well as all the minus signs involved in their definitions and that of universal twisting cochains.",
+          "region_id": "1309.6952-inflight-0051"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 5,
+      "why": "Existing connection bins do not distinguish generic cross-structure links from application-oriented links."
+    },
+    {
+      "agents": [
+        "codex-2"
+      ],
+      "definition": "Identifies an example/source class for the theory under discussion.",
+      "n_agents": 1,
+      "n_papers": 16,
+      "name": "example/source",
+      "normalized_name": "example/source",
+      "papers": [
+        "0807.1704",
+        "0808.1923",
+        "0905.0465",
+        "1107.5511",
+        "1112.3840",
+        "1203.5657",
+        "1205.4473",
+        "1211.0529",
+        "1212.3563",
+        "1310.8279",
+        "1612.09225",
+        "1804.02240",
+        "2003.06663",
+        "2012.04537",
+        "math__0606241",
+        "math__0608228"
+      ],
+      "parent": "connection",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "connection",
+      "sample_evidence": [
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:312",
+          "line": 2010,
+          "paper": "0905.0465",
+          "quote": "In general, an $n$-fold simplicial object of $\\bfA$ consists of a collection of objects $X_{ k_1, \\ldots, k_n} \\in \\bfA$ indexed by $n$-tuples of nonnegative integers $k_1, \\ldots, k_n \\geq 0$, which are related by a variety of ``face'' and ``degeneracy'' maps.",
+          "region_id": "0905.0465-inflight-0315"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:396",
+          "line": 3370,
+          "paper": "0905.0465",
+          "quote": "As in Example slipper, we deduce that $| \\calD |$ is an infinite loop space: that is, there exists a sequence of pointed spaces $Y(0) = | \\calD|, Y(1), Y(2), \\ldots$ together with homotopy equivalences $Y(n) \\simeq \\Omega Y(n+1)$.",
+          "region_id": "0905.0465-inflight-0512"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:464",
+          "line": 4234,
+          "paper": "0905.0465",
+          "quote": "is a skeletal sequence, which we will call the {\\it canonical skeletal sequence} associated to $\\calB$.",
+          "region_id": "0905.0465-inflight-0642"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:1219",
+          "line": 5179,
+          "paper": "1212.3563",
+          "quote": "We start with an interpretation of the $2$-Segal space $\\on{Conf}^+$ from Example ex:conf-plus in terms of the decorated Teichm\\\"uller spaces of Penner [penner].",
+          "region_id": "1212.3563-inflight-0496"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:1342",
+          "line": 8912,
+          "paper": "1212.3563",
+          "quote": "In fact, $\\NCI(\\C)$ is expressed in terms of the categorified nerve $\\C_\\bullet$ from Example ex.1segclass, which is the complete $1$-Segal space corresponding to $\\C$.",
+          "region_id": "1212.3563-inflight-0971"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 24,
+      "why": "Example-source prose is a connection to a source class, but not necessarily a structural transfer."
+    },
+    {
+      "agents": [
+        "codex-1"
+      ],
+      "definition": "Records a local notational or naming convention for an object or construction.",
+      "n_agents": 1,
+      "n_papers": 41,
+      "name": "naming-convention",
+      "normalized_name": "naming-convention",
+      "papers": [
+        "0705.0452",
+        "0801.3843",
+        "0903.0340",
+        "0905.0462",
+        "0905.2621",
+        "1003.1920",
+        "1006.3930",
+        "1009.2331",
+        "1011.1691",
+        "1101.3064",
+        "1102.0261",
+        "1203.3253",
+        "1204.3607",
+        "1301.3191",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1404.3886",
+        "1406.0058",
+        "1410.6716",
+        "1411.6691",
+        "1503.00991",
+        "1509.00038",
+        "1705.07442",
+        "2003.02254",
+        "2011.08808",
+        "2311.05789",
+        "math__0101102",
+        "math__0201017",
+        "math__0212237",
+        "math__0307200",
+        "math__0310134",
+        "math__0406507",
+        "math__0409360",
+        "math__0501383",
+        "math__0502155",
+        "math__0503632",
+        "math__0504334",
+        "math__0512575",
+        "math__0610239",
+        "math__9812040"
+      ],
+      "parent": "connection/literature-gap",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "connection/literature-gap",
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:9",
+          "line": 117,
+          "paper": "2311.05789",
+          "quote": "For a functor $F:\\C\\to\\D$ we denote by $\\I m_f(F)$ the full subcategory of $\\D$ with objects of the form $F(X)$ for $X\\in\\C$ (the {\\em full image} of $F$) and by $\\I m(F)$ is the subcategory of $\\D$ with objects of the form $F(X)$ for $X\\in\\C$ and morphisms of the form $F(f)$ for $f$ a morphism in $\\C$ (the {\\em proper image} of $F$).",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:16",
+          "line": 459,
+          "paper": "2311.05789",
+          "quote": "Denote by $\\V(G)$ the category of vector spaces (over a field $k$) graded by $G$ with grading preserving linear maps as morphisms.",
+          "region_id": "2311.05789-leaf-0005"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:18",
+          "line": 467,
+          "paper": "2311.05789",
+          "quote": "Denote by $\\V(G,\\alpha)$ the category of $G$-vector spaces with the associator corresponding to a 3-cocycle $\\alpha\\in Z^3(G,k^\\times)$.",
+          "region_id": "2311.05789-leaf-0005"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:36",
+          "line": 497,
+          "paper": "2311.05789",
+          "quote": "Since $\\tilde\\xi$ is uniquely determined by $H$ we denote the commutative algebra $k[H,\\tilde\\xi]$ by $A(H)$.",
+          "region_id": "2311.05789-leaf-0005"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:57",
+          "line": 529,
+          "paper": "1308.0729",
+          "quote": "In view of \\autoref{thm:omg}\\ref{item:omg4}, we will often write $p\\ct q\\ct r$ for $(p\\ct q)\\ct r$, and similarly $p\\ct q\\ct r \\ct s$ for $((p\\ct q)\\ct r)\\ct s$ and so on.",
+          "region_id": "1308.0729-inflight-0095"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 449,
+      "why": "It is terminology-scoping, not a prior-literature gap."
+    },
+    {
+      "agents": [
+        "codex-3"
+      ],
+      "definition": "Provides background/context needed to situate the paper without a more specific expository role.",
+      "n_agents": 1,
+      "n_papers": 48,
+      "name": "context-setting",
+      "normalized_name": "context-setting",
+      "papers": [
+        "0705.0102",
+        "0708.2185",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0806.1324",
+        "0811.1480",
+        "0902.1954",
+        "0904.1997",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0910.1306",
+        "0911.0469",
+        "1205.6522",
+        "1208.1749",
+        "1210.6363",
+        "1301.1053",
+        "1301.5206",
+        "1302.5756",
+        "1404.0108",
+        "1409.2165",
+        "1412.1615",
+        "1502.00872",
+        "1502.06526",
+        "1509.06811",
+        "1512.08119",
+        "1609.05382",
+        "1705.04960",
+        "1809.00738",
+        "1902.10863",
+        "1905.04644",
+        "1908.07021",
+        "2002.06055",
+        "2105.15167",
+        "2306.15958",
+        "2311.00200",
+        "math__0102087",
+        "math__0106083",
+        "math__0207281",
+        "math__0210047",
+        "math__0307263",
+        "math__0410328",
+        "math__0612139",
+        "math__0702535",
+        "math__9810017",
+        "math__9906038",
+        "quant-ph__0402130"
+      ],
+      "parent": "rationale/telos",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "rationale/telos",
+      "sample_evidence": [
+        {
+          "agent": "codex-3",
+          "file": "codex-3.proposals.jsonl:1",
+          "line": 236,
+          "paper": "0811.1480",
+          "quote": "There are several notions of exact categories.",
+          "region_id": "0811.1480-leaf-0001"
+        },
+        {
+          "agent": "codex-3",
+          "file": "codex-3.proposals.jsonl:10",
+          "line": 268,
+          "paper": "0811.1480",
+          "quote": "There is a point in proving the fundamental diagram lemmas directly, and be it only to familiarize oneself with the axioms.",
+          "region_id": "0811.1480-leaf-0001"
+        },
+        {
+          "agent": "codex-3",
+          "file": "codex-3.proposals.jsonl:11",
+          "line": 270,
+          "paper": "0811.1480",
+          "quote": "A careful study of what is actually needed reveals that in most situations the axioms of exact categories are sufficient.",
+          "region_id": "0811.1480-leaf-0001"
+        },
+        {
+          "agent": "codex-3",
+          "file": "codex-3.proposals.jsonl:16",
+          "line": 289,
+          "paper": "0811.1480",
+          "quote": "The author is convinced that the embedding theorem should be used to transfer the intuition from abelian categories to exact categories rather than to prove (simple) theorems with it.",
+          "region_id": "0811.1480-leaf-0001"
+        },
+        {
+          "agent": "codex-3",
+          "file": "codex-3.proposals.jsonl:17",
+          "line": 292,
+          "paper": "0811.1480",
+          "quote": "A direct proof from the axioms provides much more insight than a reduction to abelian categories.",
+          "region_id": "0811.1480-leaf-0001"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 14324,
+      "why": "No seed kind precisely captures generic scene-setting; resolving to rationale/telos preserves coverage."
+    },
+    {
+      "agents": [
+        "codex-4"
+      ],
+      "definition": "Explains the paper's organization as a guide to how the argument will proceed.",
+      "n_agents": 1,
+      "n_papers": 19,
+      "name": "rationale/roadmap",
+      "normalized_name": "rationale/roadmap",
+      "papers": [
+        "0712.0724",
+        "0905.0459",
+        "0906.4725",
+        "0910.2733",
+        "1005.3248",
+        "1109.1004",
+        "1204.2013",
+        "1309.6952",
+        "1405.7805",
+        "1409.0837",
+        "1805.03776",
+        "1905.09566",
+        "math__0007070",
+        "math__0202130",
+        "math__0204218",
+        "math__0301027",
+        "math__0409602",
+        "math__0610194",
+        "math__9911242"
+      ],
+      "parent": "rationale/telos",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "rationale/telos",
+      "sample_evidence": [
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:118",
+          "line": 952,
+          "paper": "math__0204218",
+          "quote": "In this section we show with a simple counter example that Theorem ref{ref-1.5-4} is false if we only assume the existence of a generator (and not of a strong generator).",
+          "region_id": "math__0204218-inflight-0082"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:308",
+          "line": 1960,
+          "paper": "math__0301027",
+          "quote": "In this section we consider an example when $cC =Rep(H_l)$ where $H_l$ is Taft's Hopf algebra (see [cite]) defined as follows: choose a primitive $l-$th root of unity $zeta$ (thus we assume that $chara(k)$ does not divide $l$), then $$H_l=langle g,x | g^l=1, x^l=0, gxg^{-1}=zeta xrangle$$ $$Delta(g)=gotimes g, Delta(x)=xotimes 1+gotimes x,$$ $$eps(g)=1, eps(x)=0, S(g)=g^{-1}, S(x)=-g^{-1}x.$$ begin{example} The algebra $H_2$ is called the Sweedler's algebra.",
+          "region_id": "math__0301027-inflight-0163"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:515",
+          "line": 1927,
+          "paper": "1905.09566",
+          "quote": "An define{$cat{Ab}$-enriched $n$-category} is an $n$-category such that the sets of $n$-morphisms (recall from the start of Section ref{sec.Kar} that we work with \"weak $n$-\" rather than \"$(infty,n)$-\" categories, so that $n$-morphisms do form sets) are given the structure of abelian groups, and such that all compositions are multilinear on $n$-morphisms.",
+          "region_id": "1905.09566-inflight-0208"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:1246",
+          "line": 4916,
+          "paper": "0906.4725",
+          "quote": "While at first sight the three notions of commutation we have introduced in this section look very different, in fact, they boil down to the same thing in all of our example categories, as we shall see in Theorem ref{main:theorem} below.",
+          "region_id": "0906.4725-inflight-0290"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:1340",
+          "line": 1455,
+          "paper": "1005.3248",
+          "quote": "All through this section $G$ will be a Grothendieck category and we consider it as an exact category with the abelian exact structure, as in Example ref{expl:grothendieck category}.",
+          "region_id": "1005.3248-inflight-0177"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 33,
+      "why": "Roadmap prose has telos but its hole is organizational rather than mathematical motivation."
+    },
+    {
+      "agents": [
+        "codex-2"
+      ],
+      "definition": "Explains where later sections perform tasks or how the paper is organized.",
+      "n_agents": 1,
+      "n_papers": 14,
+      "name": "roadmap/organization",
+      "normalized_name": "roadmap/organization",
+      "papers": [
+        "0706.1286",
+        "0808.1923",
+        "0905.0465",
+        "1112.0040",
+        "1112.3840",
+        "1211.0529",
+        "1405.6881",
+        "1605.03934",
+        "1710.02230",
+        "2003.06663",
+        "2006.08022",
+        "2208.05973",
+        "math__0111205",
+        "math__0210114"
+      ],
+      "parent": "rationale/telos",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "rationale/telos",
+      "sample_evidence": [
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:662",
+          "line": 7114,
+          "paper": "0905.0465",
+          "quote": "Our goal in this section is to show that the converse is true as well: we can deduce the tangle hypothesis from the cobordism hypothesis, provided that the cobordism hypothesis is formulated in a sufficiently general form (namely, Theorem swisher12).",
+          "region_id": "0905.0465-inflight-1039"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:723",
+          "line": 1262,
+          "paper": "math__0210114",
+          "quote": "Finally, $\\Hom_{\\cA^{\\pretr}/\\cB}^n(X_i,X_2)$ is acyclic for all $n\\ge 1$ because the complex $\\Hom_{\\cA}(U,X_2)$, $U:=\\Cone (f:X_1\\to X_2)$, is contractible.",
+          "region_id": "math__0210114-leaf-0027"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:828",
+          "line": 442,
+          "paper": "math__0111205",
+          "quote": "(See Section sec-semisim for the definition.) In order to avoid confusion with another notion of center, we will write $\\2Z_1(\\2C)$ throughout.",
+          "region_id": "math__0111205-leaf-0001"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:1006",
+          "line": 5723,
+          "paper": "0706.1286",
+          "quote": "Finally, framed bicategories are much easier to work with than ordinary bicategories or equipments, because the vertical arrows form a strict 1-category rather than a weak bicategory.",
+          "region_id": "0706.1286-leaf-0001"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:1050",
+          "line": 1286,
+          "paper": "1112.0040",
+          "quote": "Finally, we now aim to prove that the pair $(\\cat_{(\\infty,n)},g)$ satisfies the final versality axiom.",
+          "region_id": "1112.0040-inflight-0193"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 19,
+      "why": "Roadmap sentences answer navigation/telos questions rather than mathematical motivation proper."
+    },
+    {
+      "agents": [
+        "codex-2"
+      ],
+      "definition": "Introduces a naming or notation convention for later use.",
+      "n_agents": 1,
+      "n_papers": 25,
+      "name": "terminology/convention",
+      "normalized_name": "terminology/convention",
+      "papers": [
+        "0706.1286",
+        "0708.1921",
+        "0708.2067",
+        "0807.1704",
+        "0808.1923",
+        "0901.3602",
+        "0905.0465",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1202.2697",
+        "1205.4473",
+        "1211.0529",
+        "1212.3563",
+        "1310.8279",
+        "1409.4219",
+        "1612.09225",
+        "1710.02230",
+        "2012.04537",
+        "2208.05973",
+        "math__0210114",
+        "math__0607271",
+        "math__0608228",
+        "math__0608420",
+        "math__9811037"
+      ],
+      "parent": "universal-property/characterizes",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "universal-property/characterizes",
+      "sample_evidence": [
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:24",
+          "line": 345,
+          "paper": "1110.0605",
+          "quote": "A set $\\cx$ of objects of a category $\\ck$ is called weakly initial if each object $K$ of $\\ck$ admits a morphism $X\\to K$ with $X\\in\\cx$.",
+          "region_id": "1110.0605-inflight-0019"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:25",
+          "line": 346,
+          "paper": "1110.0605",
+          "quote": "A category $\\ck$ is called approximately complete if, for each diagram $D:\\cd\\to\\ck$, the category of cones $K\\to D$ over $D$ has a weakly initial set.",
+          "region_id": "1110.0605-inflight-0019"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:28",
+          "line": 694,
+          "paper": "1110.0605",
+          "quote": "Finally, $\\Inj(\\cc)$ will denote the full subcategory of $\\ck$ consisting of all objects $K$ such that the unique morphism $K\\to 1$ to the terminal object of $\\ck$ belongs to $\\cc^\\square$.",
+          "region_id": "1110.0605-inflight-0033"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:30",
+          "line": 709,
+          "paper": "1110.0605",
+          "quote": "The pair $(\\cl,\\crr)$ is called a factorization system if condition (1) is replaced by \\item[(1')] $\\crr = \\cl^\\perp$, $\\cl = {}^\\perp \\crr$. {\\em A class $\\cc$ of morphisms of a category $\\ck$ is called cone-coreflective if, for each morphism $f$ in $\\ck$, the comma-category $\\cc\\downarrow f$ has a weakly terminal set.",
+          "region_id": "1110.0605-inflight-0036"
+        },
+        {
+          "agent": "codex-2",
+          "file": "codex-2.proposals.jsonl:39",
+          "line": 820,
+          "paper": "1110.0605",
+          "quote": "A full subcategory $\\cl$ of $\\ck$ is called weakly reflective in $\\ck$ if, for each $K$ in $\\ck$, the comma-category $K\\downarrow\\cl$ has a weakly initial object.",
+          "region_id": "1110.0605-inflight-0049"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 121,
+      "why": "Terminology conventions are characterizing enough to query, but are not universal properties."
+    },
+    {
+      "agents": [
+        "codex-4"
+      ],
+      "definition": "States a classification of objects by an explicit parameter set or invariant.",
+      "n_agents": 1,
+      "n_papers": 15,
+      "name": "universal-property/classifies",
+      "normalized_name": "universal-property/classifies",
+      "papers": [
+        "0809.3031",
+        "0905.0459",
+        "0911.4979",
+        "1309.6952",
+        "1312.1269",
+        "1409.0837",
+        "1503.05523",
+        "1801.02927",
+        "1905.09566",
+        "math__0106050",
+        "math__0202130",
+        "math__0203255",
+        "math__0301027",
+        "math__0409602",
+        "math__9911242"
+      ],
+      "parent": "universal-property/characterizes",
+      "resolution": "resolve-to-parent",
+      "resolved_kind": "universal-property/characterizes",
+      "sample_evidence": [
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:220",
+          "line": 231,
+          "paper": "math__0301027",
+          "quote": "The naive generalization does not give a good theory: for example, if $mC$ is the category of vector spaces and $A$ any finite dimensional algebra, then $mM=Rep(A)$ is a module category over $mC$, so there is no hope of explicit classification of module categories even over the simplest possible tensor category (the category of vector spaces).",
+          "region_id": "math__0301027-leaf-0001"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:229",
+          "line": 268,
+          "paper": "math__0301027",
+          "quote": "Finally, in Section 4 we classify exact module categories over three examples of finite tensor categories: 1) representations of a finite group in positive characteristic, 2) representations of a finite supergroup in characteristic $ne 2$, and 3) representations of the Taft Hopf algebra.",
+          "region_id": "math__0301027-leaf-0001"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:300",
+          "line": 1927,
+          "paper": "math__0301027",
+          "quote": "The exact module categories of both kinds are classified by a subspace $Ysubset W$ and a quadratic form $Bin S^2(Y^*)$; the module category is semisimple if and only if the form $B$ is nondegenerate.",
+          "region_id": "math__0301027-inflight-0157"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:301",
+          "line": 1932,
+          "paper": "math__0301027",
+          "quote": "Note that from Theorem ref{super}, one can obtain the classification of fiber functors on $Rep(Gltimes W,u)$, i.e. module categories which are equivalent to the category of vector spaces.",
+          "region_id": "math__0301027-inflight-0159"
+        },
+        {
+          "agent": "codex-4",
+          "file": "codex-4.proposals.jsonl:420",
+          "line": 409,
+          "paper": "1905.09566",
+          "quote": "The main example is: begin{example} Write $Vect_bC$ for the category of finite-dimensional vector spaces over $bC$; it is well-known that the objects of $Vect_bC$ precisely classify bosonic gapped topological $(0+1)$-dimensional phases.",
+          "region_id": "1905.09566-inflight-0034"
+        }
+      ],
+      "status": "fringe-resolved",
+      "votes": 46,
+      "why": "Classification is a characterizing property but common enough to deserve a subtype distinct from adjoint/unique universal properties."
+    }
+  ],
+  "inputs": {
+    "gh_order": "/home/joe/code/futon6/data/warp/gh200.txt",
+    "hierarchy": "/home/joe/code/futon3c/holes/excursions/close-reading/expository-scope-hierarchy.edn",
+    "proposals_dir": "/home/joe/code/futon3c/holes/excursions/close-reading/proposals"
+  },
+  "minted_hierarchy": {
+    "newly_minted": [
+      {
+        "agents": [
+          "codex-1",
+          "codex-3"
+        ],
+        "definition": "Links the paper's objects to an external application area or source domain.",
+        "kind": "connection/application-domain",
+        "n_agents": 2,
+        "n_papers": 68,
+        "name": "application-domain",
+        "normalized_name": "application-domain",
+        "papers": [
+          "0705.0452",
+          "0708.2185",
+          "0708.3398",
+          "0709.0248",
+          "0711.0473",
+          "0801.3843",
+          "0806.1324",
+          "0811.1480",
+          "0902.1954",
+          "0903.0340",
+          "0904.1997",
+          "0905.0462",
+          "0906.4931",
+          "0907.2460",
+          "0908.1787",
+          "0911.0469",
+          "1006.3930",
+          "1011.1691",
+          "1101.3064",
+          "1102.0261",
+          "1104.5047",
+          "1203.3253",
+          "1204.3607",
+          "1205.6522",
+          "1208.1749",
+          "1210.6363",
+          "1301.1053",
+          "1301.5206",
+          "1302.5756",
+          "1305.0086",
+          "1305.0297",
+          "1308.0729",
+          "1404.0108",
+          "1404.3886",
+          "1406.0058",
+          "1411.6691",
+          "1412.1615",
+          "1502.00872",
+          "1502.06526",
+          "1503.00991",
+          "1509.00038",
+          "1509.06811",
+          "1512.08119",
+          "1705.04960",
+          "1705.07442",
+          "1803.05316",
+          "1804.07538",
+          "1809.00738",
+          "1902.10863",
+          "1908.07021",
+          "2002.06055",
+          "2105.15167",
+          "2311.00200",
+          "2311.05789",
+          "math__0101102",
+          "math__0102087",
+          "math__0106083",
+          "math__0210047",
+          "math__0307200",
+          "math__0307263",
+          "math__0410328",
+          "math__0502155",
+          "math__0512575",
+          "math__0612139",
+          "math__0702535",
+          "math__9812040",
+          "math__9906038",
+          "quant-ph__0402130"
+        ],
+        "parent": "connection",
+        "sample_evidence": [
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:3",
+            "line": 106,
+            "paper": "2311.05789",
+            "quote": "Other (somewhat related) applications of monoidal categories include mathematical logic and theoretical computer science (see \\cite{bs}).",
+            "region_id": "2311.05789-leaf-0001"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:4",
+            "line": 109,
+            "paper": "2311.05789",
+            "quote": "The natural source of such categories is the representation theory of groups and other related structures (Lie algebras, Hopf algebras, etc.).",
+            "region_id": "2311.05789-leaf-0001"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:7",
+            "line": 112,
+            "paper": "2311.05789",
+            "quote": "Braided fusion categories appear as representation categories of chiral algebras in 2d conformal field theory or as values on the circle of corresponding 3d topological field theories.",
+            "region_id": "2311.05789-leaf-0001"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:38",
+            "line": 502,
+            "paper": "2311.05789",
+            "quote": "The development of the theory of tensor categories was driven by the applications in representation theory (resulting in a good understanding of Tannakian categories \\cite{dm}), high energy and condensed matter physics (bringing fusion categories to the centre of attension).",
+            "region_id": "2311.05789-leaf-0006"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:43",
+            "line": 575,
+            "paper": "2311.05789",
+            "quote": "(1989), Braided compact closed categories with applications to low dimensional topology, Adv. in Math. 77 , 156-182. % \\bibitem[Joyal and Street (1991a)]{js} Joyal A., Street R.",
+            "region_id": "2311.05789-leaf-0006"
+          }
+        ],
+        "status": "minted",
+        "votes": 1091,
+        "why": "Bare connection fits, but the recurring role is specifically application/domain linkage."
+      },
+      {
+        "agents": [
+          "codex-1",
+          "codex-3"
+        ],
+        "definition": "Introduces examples or source classes that instantiate the theory.",
+        "kind": "connection/example-source",
+        "n_agents": 2,
+        "n_papers": 77,
+        "name": "example-source",
+        "normalized_name": "example-source",
+        "papers": [
+          "0705.0102",
+          "0705.0452",
+          "0708.2185",
+          "0708.3398",
+          "0709.0248",
+          "0711.0473",
+          "0806.1324",
+          "0811.1480",
+          "0902.1954",
+          "0903.0340",
+          "0904.1997",
+          "0905.0462",
+          "0905.2621",
+          "0906.4931",
+          "0907.2460",
+          "0908.1787",
+          "0911.0469",
+          "1003.1920",
+          "1006.3930",
+          "1009.2331",
+          "1104.5047",
+          "1203.3253",
+          "1204.3607",
+          "1205.6522",
+          "1208.1749",
+          "1210.6363",
+          "1301.1053",
+          "1301.3191",
+          "1301.5206",
+          "1302.5756",
+          "1305.0086",
+          "1305.0297",
+          "1308.0729",
+          "1404.0108",
+          "1404.3886",
+          "1406.0058",
+          "1410.6716",
+          "1411.6691",
+          "1412.1615",
+          "1502.00872",
+          "1502.06526",
+          "1503.00991",
+          "1509.00038",
+          "1509.06811",
+          "1512.08119",
+          "1705.04960",
+          "1705.07442",
+          "1803.05316",
+          "1804.07538",
+          "1809.00738",
+          "1902.10863",
+          "1905.04644",
+          "1908.07021",
+          "2002.06055",
+          "2011.08808",
+          "2105.15167",
+          "2306.15958",
+          "2311.00200",
+          "2311.05789",
+          "math__0101102",
+          "math__0102087",
+          "math__0106083",
+          "math__0210047",
+          "math__0212237",
+          "math__0307200",
+          "math__0307263",
+          "math__0310134",
+          "math__0312088",
+          "math__0410328",
+          "math__0502533",
+          "math__0503632",
+          "math__0610239",
+          "math__0612139",
+          "math__0702535",
+          "math__9810017",
+          "math__9812040",
+          "quant-ph__0402130"
+        ],
+        "parent": "connection",
+        "sample_evidence": [
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:11",
+            "line": 400,
+            "paper": "2311.05789",
+            "quote": "For example in a monoidal linear category the tensor product on morphisms is given by bilinear maps $\\C(X,Y)\\ot_k\\C(Z,W)\\to\\C(X\\ot Z,Y\\ot W)$.",
+            "region_id": "2311.05789-leaf-0003"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:26",
+            "line": 482,
+            "paper": "2311.05789",
+            "quote": "For example, $\\E nd_{\\V(G,1)}(\\M(G/G,1))$ is the category $\\R ep(G)$ of representations of $G$.",
+            "region_id": "2311.05789-leaf-0005"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:27",
+            "line": 484,
+            "paper": "2311.05789",
+            "quote": "For example, the action internal end $[I(x),I(x)]$ for a simple object $I(x)\\in \\M(X,\\xi)$ is supported on the stabiliser $H=St_G(x)$ and coincides with the twisted group algebra $k[H,\\tilde\\xi]$.",
+            "region_id": "2311.05789-leaf-0005"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:34",
+            "line": 495,
+            "paper": "2311.05789",
+            "quote": "For example, the conjugate $\\overline{\\C(G,q)}$ is $\\C(G,q^{-1})$ and the symmetric centre $\\Z_{sym}(\\C(G,q)) = \\C(Ker(q),1)$, where $Ker(q)=\\{g\\in G|\\ q(fg)=q(f)\\ \\forall f\\in G\\}$ is the {\\em kernel} of the quadratic function $q$.",
+            "region_id": "2311.05789-leaf-0005"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:44",
+            "line": 220,
+            "paper": "1308.0729",
+            "quote": "When writing informally, we may express this with a phrase such as ``by induction, it suffices to assume\\dots''.",
+            "region_id": "1308.0729-inflight-0004"
+          }
+        ],
+        "status": "minted",
+        "votes": 937,
+        "why": "The sentence links structures, but specifically through examples rather than an abstract connection."
+      },
+      {
+        "agents": [
+          "codex-1",
+          "codex-3"
+        ],
+        "definition": "Records the source or naming origin of a concept or convention.",
+        "kind": "connection/literature-gap/terminology-origin",
+        "n_agents": 2,
+        "n_papers": 83,
+        "name": "terminology-origin",
+        "normalized_name": "terminology-origin",
+        "papers": [
+          "0705.0102",
+          "0705.0452",
+          "0708.2185",
+          "0708.3398",
+          "0709.0248",
+          "0711.0473",
+          "0801.3843",
+          "0806.1324",
+          "0811.1480",
+          "0902.1954",
+          "0903.0340",
+          "0904.1997",
+          "0905.0462",
+          "0905.2621",
+          "0906.4931",
+          "0907.2460",
+          "0908.1787",
+          "0911.0469",
+          "1003.1920",
+          "1006.3930",
+          "1009.2331",
+          "1011.1691",
+          "1101.3064",
+          "1102.0261",
+          "1104.5047",
+          "1203.3253",
+          "1204.3607",
+          "1205.6522",
+          "1208.1749",
+          "1210.6363",
+          "1301.1053",
+          "1301.3191",
+          "1301.5206",
+          "1302.5756",
+          "1305.0086",
+          "1305.0297",
+          "1308.0729",
+          "1404.0108",
+          "1404.3886",
+          "1410.6716",
+          "1411.6691",
+          "1412.1615",
+          "1502.06526",
+          "1503.00991",
+          "1509.00038",
+          "1509.06811",
+          "1512.08119",
+          "1705.04960",
+          "1705.07442",
+          "1804.07538",
+          "1809.00738",
+          "1902.10863",
+          "1908.07021",
+          "2002.06055",
+          "2003.02254",
+          "2011.08808",
+          "2105.15167",
+          "2311.00200",
+          "2311.05789",
+          "math__0101102",
+          "math__0102087",
+          "math__0106083",
+          "math__0111139",
+          "math__0210047",
+          "math__0212237",
+          "math__0307200",
+          "math__0307263",
+          "math__0310134",
+          "math__0406507",
+          "math__0409360",
+          "math__0410328",
+          "math__0501383",
+          "math__0502155",
+          "math__0503632",
+          "math__0504334",
+          "math__0512575",
+          "math__0610239",
+          "math__0612139",
+          "math__0702535",
+          "math__9810017",
+          "math__9812040",
+          "math__9906038",
+          "quant-ph__0402130"
+        ],
+        "parent": "connection/literature-gap",
+        "sample_evidence": [
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:1",
+            "line": 105,
+            "paper": "2311.05789",
+            "quote": "From philosophical point of view it is the result of applying the so-called {\\em categorification} (in the sense of e.g. \\cite{cf,bd}) to the notion of a monoid, i.e. the process of replacing sets with categories, functions with functors, and equations between functions by natural isomorphisms between functors, which in turn should satisfy certain equations of their own, called ``coherence laws\".",
+            "region_id": "2311.05789-leaf-0001"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:10",
+            "line": 275,
+            "paper": "2311.05789",
+            "quote": "A monoidal $\\C$ together with a structure of monoidal functor $\\C\\to\\C^{rev}$ on the identity functor $Id_\\C$ such that the composite $\\C\\to\\C^{rev}\\to \\C$ coincides with $Id_\\C$ as a monoidal functor was called {\\em coboundary} in \\cite{dr}.",
+            "region_id": "2311.05789-leaf-0002"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:15",
+            "line": 453,
+            "paper": "2311.05789",
+            "quote": "\\bex Equivalence classes of completely anisotropic non-degenerate braided fusion categories form a group, the so-called {\\em Witt group} \\cite{dmno}.",
+            "region_id": "2311.05789-leaf-0004"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:20",
+            "line": 470,
+            "paper": "2311.05789",
+            "quote": "For a (finite) group $G$ the subcategory $\\V_{fd}(G,\\alpha)$ of finite dimensional graded vector spaces is rigid and fusion (a so-called {\\em pointed fusion category}).",
+            "region_id": "2311.05789-leaf-0005"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:25",
+            "line": 481,
+            "paper": "2311.05789",
+            "quote": "Categories of module endofunctors $\\E nd_{\\V(G,\\alpha)}(\\M(G/H,\\xi))$ are called {\\em group-theoretical} (see \\cite{egno} and references therein).",
+            "region_id": "2311.05789-leaf-0005"
+          }
+        ],
+        "status": "minted",
+        "votes": 1261,
+        "why": "This is prior-literature positioning, but specifically about terminology rather than a theorem gap."
+      },
+      {
+        "agents": [
+          "codex-1",
+          "codex-3"
+        ],
+        "definition": "Tracks counterexample/no-go status or a condition whose failure blocks a construction.",
+        "kind": "obstruction/counterexample-status",
+        "n_agents": 2,
+        "n_papers": 39,
+        "name": "counterexample-status",
+        "normalized_name": "counterexample-status",
+        "papers": [
+          "0708.3398",
+          "0709.0248",
+          "0711.0473",
+          "0806.1324",
+          "0811.1480",
+          "0904.1997",
+          "0905.0462",
+          "0905.2621",
+          "0906.4931",
+          "0907.2460",
+          "0908.1787",
+          "1102.0261",
+          "1203.3253",
+          "1208.1749",
+          "1301.3191",
+          "1301.5206",
+          "1305.0086",
+          "1305.0297",
+          "1308.0729",
+          "1404.0108",
+          "1409.2165",
+          "1411.6691",
+          "1412.1615",
+          "1502.06526",
+          "1503.00991",
+          "1509.06811",
+          "1512.08119",
+          "1705.04960",
+          "1705.07442",
+          "1809.00738",
+          "1902.10863",
+          "1908.07021",
+          "2002.06055",
+          "2011.08808",
+          "2105.15167",
+          "math__0101102",
+          "math__0102087",
+          "math__0410328",
+          "math__0702535"
+        ],
+        "parent": "obstruction",
+        "sample_evidence": [
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:223",
+            "line": 3746,
+            "paper": "1308.0729",
+            "quote": "\\index{Galois!group}% Then there is a strict category whose objects are intermediate fields $F\\subseteq K\\subseteq E$, and whose morphisms are field homomorphisms\\index{homomorphism!field} which fix $F$ pointwise (but need not commute with the inclusions into $E$).",
+            "region_id": "1308.0729-inflight-0652"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:228",
+            "line": 3826,
+            "paper": "1308.0729",
+            "quote": "It follows from this that \\uhilb is a $\\dagger$-category, though it is not a category (not every linear isomorphism is unitary).",
+            "region_id": "1308.0729-inflight-0668"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:284",
+            "line": 4526,
+            "paper": "1308.0729",
+            "quote": "In this section we exhibit a specific counterexample.",
+            "region_id": "1308.0729-inflight-0838"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:293",
+            "line": 4625,
+            "paper": "1308.0729",
+            "quote": "More generally, \\autoref{lem:autohtpy} implies that any ``Eilenberg--Mac Lane space'' $K(G,1)$, where $G$ is a nontrivial abelian\\index{group!abelian} group, will provide a counterexample; see \\autoref{cha:homotopy}.",
+            "region_id": "1308.0729-inflight-0851"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:427",
+            "line": 7434,
+            "paper": "1308.0729",
+            "quote": "The circle also has the following interesting property, which is useful as a source of counterexamples.",
+            "region_id": "1308.0729-inflight-1375"
+          }
+        ],
+        "status": "minted",
+        "votes": 122,
+        "why": "The seed obstruction kind is close, but the sentence often reports counterexample status rather than naming an explicit obstruction."
+      },
+      {
+        "agents": [
+          "codex-1",
+          "codex-3"
+        ],
+        "definition": "Roadmaps the paper or explains the local role of sections/results.",
+        "kind": "rationale/telos/organization-roadmap",
+        "n_agents": 2,
+        "n_papers": 70,
+        "name": "organization-roadmap",
+        "normalized_name": "organization-roadmap",
+        "papers": [
+          "0705.0102",
+          "0705.0452",
+          "0708.3398",
+          "0709.0248",
+          "0711.0473",
+          "0801.3843",
+          "0806.1324",
+          "0811.1480",
+          "0903.0340",
+          "0904.1997",
+          "0905.0462",
+          "0906.4931",
+          "0908.1787",
+          "0911.0469",
+          "1003.1920",
+          "1006.3930",
+          "1009.2331",
+          "1011.1691",
+          "1101.3064",
+          "1102.0261",
+          "1203.3253",
+          "1204.3607",
+          "1205.6522",
+          "1208.1749",
+          "1210.6363",
+          "1301.1053",
+          "1301.3191",
+          "1301.5206",
+          "1302.5756",
+          "1305.0086",
+          "1305.0297",
+          "1308.0729",
+          "1404.0108",
+          "1404.3886",
+          "1406.0058",
+          "1410.6716",
+          "1411.6691",
+          "1412.1615",
+          "1502.00872",
+          "1502.06526",
+          "1503.00991",
+          "1509.00038",
+          "1509.06811",
+          "1512.08119",
+          "1705.04960",
+          "1705.07442",
+          "1804.07538",
+          "1809.00738",
+          "1902.10863",
+          "1908.07021",
+          "2002.06055",
+          "2011.08808",
+          "2105.15167",
+          "2311.00200",
+          "math__0101102",
+          "math__0106083",
+          "math__0111139",
+          "math__0201017",
+          "math__0210047",
+          "math__0307200",
+          "math__0307263",
+          "math__0409360",
+          "math__0410328",
+          "math__0501383",
+          "math__0502155",
+          "math__0504334",
+          "math__0512575",
+          "math__0612139",
+          "math__0702535",
+          "quant-ph__0402130"
+        ],
+        "parent": "rationale/telos",
+        "sample_evidence": [
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:329",
+            "line": 5162,
+            "paper": "1308.0729",
+            "quote": "We claim $\\psi_b$ is a retraction with section $\\varphi_b$ for all $b:B$, which is to say that for all $(a,p):\\hfib g b$ we have $\\psi_b(\\varphi_b({a,p}))= \\pairr{a,p}$.",
+            "region_id": "1308.0729-inflight-0949"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:440",
+            "line": 7761,
+            "paper": "1308.0729",
+            "quote": "Given $P:T^2\\to\\type$, for a section $\\prd{x:T^2} P(x)$ we require",
+            "region_id": "1308.0729-inflight-1465"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:445",
+            "line": 7819,
+            "paper": "1308.0729",
+            "quote": "\\end{itemize} The induction principle for this version of the torus says that given $P:T^2\\to\\type$, for a section $\\prd{x:T^2} P(x)$ we require",
+            "region_id": "1308.0729-inflight-1475"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:446",
+            "line": 7820,
+            "paper": "1308.0729",
+            "quote": "The induction principle for this version of the torus says that given $P:T^2\\to\\type$, for a section $\\prd{x:T^2} P(x)$ we require \\begin{itemize} \\item a point $b':P(b)$, \\item a path $p' : \\dpath P p b b$, \\item a path $q' : \\dpath P q b b$, \\item a point $h':P(h)$, and \\item for each $x:\\Sn^1$, a path $\\dpath {P}{s(x)}{g(x)}{h'}$, where $g:\\prd{x:\\Sn^1} P(f(x))$ is defined by $g(\\base)\\defeq b'$ and $\\apd g \\lloop \\defid p' \\ct q' \\ct \\opp{(p')} \\ct \\opp{(q')}$.",
+            "region_id": "1308.0729-inflight-1476"
+          },
+          {
+            "agent": "codex-1",
+            "file": "codex-1.proposals.jsonl:580",
+            "line": 9943,
+            "paper": "1308.0729",
+            "quote": "In this section we prove this for pushouts, which are the most important and nontrivial case of colimits.",
+            "region_id": "1308.0729-inflight-1938"
+          }
+        ],
+        "status": "minted",
+        "votes": 361,
+        "why": "It is telic prose, but specifically organizational rather than mathematical motivation."
+      }
+    ],
+    "seed_kinds": [
+      "computes-invariant/calculation",
+      "connection",
+      "connection/literature-gap",
+      "connection/transfer",
+      "obstruction",
+      "open-problem/status",
+      "rationale/telos",
+      "universal-property/characterizes"
+    ],
+    "sufficient_scope_set": [
+      "computes-invariant/calculation",
+      "connection",
+      "connection/application-domain",
+      "connection/example-source",
+      "connection/literature-gap",
+      "connection/literature-gap/terminology-origin",
+      "connection/transfer",
+      "obstruction",
+      "obstruction/counterexample-status",
+      "open-problem/status",
+      "rationale/telos",
+      "rationale/telos/organization-roadmap",
+      "universal-property/characterizes"
+    ]
+  },
+  "paper_count": 193,
+  "per_kind_votes": {
+    "computes-invariant/calculation": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "computes-invariant/calculation",
+      "n_agents": 4,
+      "n_papers": 166,
+      "papers": [
+        "0705.0452",
+        "0706.1286",
+        "0708.2067",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0712.0724",
+        "0801.3843",
+        "0806.1324",
+        "0807.1704",
+        "0808.1923",
+        "0809.3031",
+        "0811.1480",
+        "0811.2435",
+        "0901.3602",
+        "0902.1954",
+        "0903.0340",
+        "0904.1997",
+        "0905.0459",
+        "0905.0462",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0908.3347",
+        "0908.4187",
+        "0910.2733",
+        "0911.0469",
+        "0911.4979",
+        "1002.1372",
+        "1003.4394",
+        "1004.0993",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1011.1691",
+        "1101.3064",
+        "1102.0261",
+        "1104.5047",
+        "1107.5511",
+        "1109.1004",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1201.4981",
+        "1202.2697",
+        "1203.3253",
+        "1203.5657",
+        "1204.3607",
+        "1205.4473",
+        "1205.6522",
+        "1208.1749",
+        "1210.1036",
+        "1210.6363",
+        "1211.0529",
+        "1212.3563",
+        "1301.1053",
+        "1301.3191",
+        "1301.5206",
+        "1302.5756",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1308.1804",
+        "1309.6952",
+        "1310.8279",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.3221",
+        "1405.6881",
+        "1405.7805",
+        "1406.0058",
+        "1406.4204",
+        "1409.0837",
+        "1409.2165",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.06526",
+        "1503.00991",
+        "1503.05523",
+        "1503.06720",
+        "1509.00038",
+        "1509.06811",
+        "1512.07573",
+        "1512.07577",
+        "1512.08119",
+        "1605.03934",
+        "1612.09225",
+        "1702.00244",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1804.02240",
+        "1804.07538",
+        "1805.03776",
+        "1809.00738",
+        "1809.10621",
+        "1902.10863",
+        "1905.04644",
+        "1905.09566",
+        "1908.02202",
+        "1908.07021",
+        "1911.04630",
+        "2002.06055",
+        "2003.06663",
+        "2006.08022",
+        "2011.08808",
+        "2012.04537",
+        "2105.15167",
+        "2208.05973",
+        "2306.15958",
+        "2311.00200",
+        "2401.14311",
+        "math__0007070",
+        "math__0101102",
+        "math__0102087",
+        "math__0106050",
+        "math__0106083",
+        "math__0107188",
+        "math__0111139",
+        "math__0111204",
+        "math__0111205",
+        "math__0201017",
+        "math__0202130",
+        "math__0203255",
+        "math__0204218",
+        "math__0207281",
+        "math__0210047",
+        "math__0210114",
+        "math__0212237",
+        "math__0301027",
+        "math__0302304",
+        "math__0304277",
+        "math__0307200",
+        "math__0307263",
+        "math__0308246",
+        "math__0310134",
+        "math__0406507",
+        "math__0407275",
+        "math__0409473",
+        "math__0409602",
+        "math__0410328",
+        "math__0502533",
+        "math__0503632",
+        "math__0504334",
+        "math__0511710",
+        "math__0512575",
+        "math__0606241",
+        "math__0608228",
+        "math__0608420",
+        "math__0610194",
+        "math__0610239",
+        "math__0612139",
+        "math__0701293",
+        "math__0702535",
+        "math__9810017",
+        "math__9812040",
+        "math__9906038",
+        "math__9911242",
+        "quant-ph__0402130"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:46",
+          "line": 226,
+          "paper": "1308.0729",
+          "quote": "(This may seem so obvious as to not be worth saying, but if we view a definition by recursion as an algorithm\\index{algorithm} for calculating values of a sequence, then it is precisely the process of executing that algorithm.) The rule \\eqref{eq:Jconv} is analogous: it says that if we define an object $f(p)$ for all $p:x=y$ by specifying what the value should be when $p$ is $\\refl{x}:x=x$, then the value we specified is in fact the value of $f(\\refl{x})$.",
+          "region_id": "1308.0729-inflight-0005"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:85",
+          "line": 981,
+          "paper": "1308.0729",
+          "quote": "In \\autoref{sec:compute-pi,sec:compute-universe}, we will see that homotopy type theory allows us to identify these with instances of the identity type, but before we can do that we need to understand them in their own right.",
+          "region_id": "1308.0729-inflight-0197"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:87",
+          "line": 998,
+          "paper": "1308.0729",
+          "quote": "However, in \\autoref{sec:compute-pi} we will introduce an axiom making homotopies and identifications ``equivalent''.",
+          "region_id": "1308.0729-inflight-0199"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:95",
+          "line": 1164,
+          "paper": "1308.0729",
+          "quote": "Property \\ref{item:be3} above will ensure that if two equivalences are equal as functions (that is, the underlying elements of $A\\to B$ are equal), then they are also equal as equivalences (see \\autoref{sec:compute-sigma}).",
+          "region_id": "1308.0729-inflight-0235"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:141",
+          "line": 1860,
+          "paper": "1308.0729",
+          "quote": "Finally, as in \\autoref{sec:compute-pi}, for families of identity types there is another equivalent characterization of dependent paths.",
+          "region_id": "1308.0729-inflight-0368"
+        }
+      ],
+      "votes": 3106
+    },
+    "connection": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "connection",
+      "n_agents": 4,
+      "n_papers": 187,
+      "papers": [
+        "0705.0102",
+        "0705.0452",
+        "0706.1286",
+        "0708.1921",
+        "0708.2067",
+        "0708.2185",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0712.0724",
+        "0801.0199",
+        "0801.3843",
+        "0806.1324",
+        "0807.1704",
+        "0808.1923",
+        "0809.3031",
+        "0811.1480",
+        "0811.2435",
+        "0901.3602",
+        "0902.1954",
+        "0903.0340",
+        "0904.1997",
+        "0905.0459",
+        "0905.0462",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0908.3347",
+        "0908.4187",
+        "0910.2733",
+        "0911.0469",
+        "0911.4979",
+        "1002.1372",
+        "1003.1920",
+        "1003.4394",
+        "1004.0993",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1009.2331",
+        "1009.3370",
+        "1011.1691",
+        "1101.3064",
+        "1102.0261",
+        "1104.5047",
+        "1107.5511",
+        "1109.1004",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1201.4981",
+        "1202.2697",
+        "1203.3253",
+        "1203.5657",
+        "1204.2013",
+        "1204.3607",
+        "1205.4473",
+        "1205.6522",
+        "1208.1749",
+        "1210.1036",
+        "1210.6363",
+        "1211.0529",
+        "1212.3563",
+        "1301.1053",
+        "1301.3191",
+        "1301.5206",
+        "1302.5756",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1308.1804",
+        "1309.6952",
+        "1310.8279",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.3221",
+        "1405.6881",
+        "1405.7805",
+        "1406.0058",
+        "1406.4204",
+        "1409.0837",
+        "1409.2165",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.00872",
+        "1502.06526",
+        "1503.00991",
+        "1503.05523",
+        "1503.06720",
+        "1509.00038",
+        "1509.06811",
+        "1512.07573",
+        "1512.07577",
+        "1512.08119",
+        "1605.03934",
+        "1612.09225",
+        "1702.00244",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1803.05316",
+        "1804.02240",
+        "1804.07538",
+        "1805.03776",
+        "1809.00738",
+        "1809.10621",
+        "1902.10863",
+        "1905.04644",
+        "1905.09566",
+        "1908.07021",
+        "1910.09240",
+        "1911.04630",
+        "2002.06055",
+        "2003.02254",
+        "2003.06663",
+        "2006.08022",
+        "2011.08808",
+        "2012.04537",
+        "2105.15167",
+        "2208.05973",
+        "2306.15958",
+        "2311.00200",
+        "2311.05789",
+        "2401.14311",
+        "math__0007070",
+        "math__0101102",
+        "math__0102087",
+        "math__0106050",
+        "math__0106083",
+        "math__0107188",
+        "math__0111139",
+        "math__0111204",
+        "math__0111205",
+        "math__0201017",
+        "math__0202130",
+        "math__0203255",
+        "math__0204218",
+        "math__0207281",
+        "math__0210047",
+        "math__0210114",
+        "math__0212065",
+        "math__0212237",
+        "math__0301027",
+        "math__0302304",
+        "math__0307200",
+        "math__0307263",
+        "math__0308246",
+        "math__0310134",
+        "math__0310337",
+        "math__0312088",
+        "math__0406507",
+        "math__0407275",
+        "math__0409360",
+        "math__0409473",
+        "math__0409598",
+        "math__0409602",
+        "math__0410328",
+        "math__0412512",
+        "math__0501383",
+        "math__0502155",
+        "math__0502533",
+        "math__0503632",
+        "math__0504334",
+        "math__0511710",
+        "math__0512575",
+        "math__0606241",
+        "math__0607646",
+        "math__0608228",
+        "math__0608420",
+        "math__0610194",
+        "math__0610239",
+        "math__0612139",
+        "math__0701293",
+        "math__0702535",
+        "math__9810017",
+        "math__9811037",
+        "math__9812040",
+        "math__9906038",
+        "math__9911242",
+        "quant-ph__0402130"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:3",
+          "line": 106,
+          "paper": "2311.05789",
+          "quote": "Other (somewhat related) applications of monoidal categories include mathematical logic and theoretical computer science (see \\cite{bs}).",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:4",
+          "line": 109,
+          "paper": "2311.05789",
+          "quote": "The natural source of such categories is the representation theory of groups and other related structures (Lie algebras, Hopf algebras, etc.).",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:7",
+          "line": 112,
+          "paper": "2311.05789",
+          "quote": "Braided fusion categories appear as representation categories of chiral algebras in 2d conformal field theory or as values on the circle of corresponding 3d topological field theories.",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:11",
+          "line": 400,
+          "paper": "2311.05789",
+          "quote": "For example in a monoidal linear category the tensor product on morphisms is given by bilinear maps $\\C(X,Y)\\ot_k\\C(Z,W)\\to\\C(X\\ot Z,Y\\ot W)$.",
+          "region_id": "2311.05789-leaf-0003"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:14",
+          "line": 430,
+          "paper": "2311.05789",
+          "quote": "In particular, internal action homs for a finite module category exist.",
+          "region_id": "2311.05789-leaf-0004"
+        }
+      ],
+      "votes": 7454
+    },
+    "connection/literature-gap": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "connection/literature-gap",
+      "n_agents": 4,
+      "n_papers": 181,
+      "papers": [
+        "0705.0102",
+        "0705.0452",
+        "0706.1286",
+        "0708.1921",
+        "0708.2067",
+        "0708.2185",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0712.0724",
+        "0801.0199",
+        "0801.3843",
+        "0806.1324",
+        "0807.1704",
+        "0808.1923",
+        "0809.3031",
+        "0811.1480",
+        "0811.2435",
+        "0901.3602",
+        "0902.1954",
+        "0903.0340",
+        "0904.1997",
+        "0905.0459",
+        "0905.0462",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0908.3347",
+        "0908.4187",
+        "0910.2733",
+        "0911.0469",
+        "0911.4979",
+        "1002.1372",
+        "1003.1920",
+        "1003.4394",
+        "1004.0993",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1009.2331",
+        "1009.3370",
+        "1011.1691",
+        "1101.3064",
+        "1102.0261",
+        "1104.5047",
+        "1107.5511",
+        "1109.1004",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1201.4981",
+        "1202.2697",
+        "1203.3253",
+        "1203.5657",
+        "1204.2013",
+        "1204.3607",
+        "1205.4473",
+        "1205.6522",
+        "1208.1749",
+        "1210.1036",
+        "1210.6363",
+        "1211.0529",
+        "1212.3563",
+        "1301.1053",
+        "1301.3191",
+        "1301.5206",
+        "1302.5756",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1308.1804",
+        "1309.6952",
+        "1310.8279",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.3221",
+        "1405.6881",
+        "1405.7805",
+        "1406.0058",
+        "1406.4204",
+        "1409.0837",
+        "1409.2165",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.00872",
+        "1502.06526",
+        "1503.00991",
+        "1503.05523",
+        "1503.06720",
+        "1509.00038",
+        "1509.06811",
+        "1512.07573",
+        "1512.07577",
+        "1512.08119",
+        "1605.03934",
+        "1612.09225",
+        "1702.00244",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1804.02240",
+        "1804.07538",
+        "1805.03776",
+        "1809.00738",
+        "1809.10621",
+        "1902.10863",
+        "1905.04644",
+        "1905.09566",
+        "1908.02202",
+        "1908.07021",
+        "1911.04630",
+        "2002.06055",
+        "2003.02254",
+        "2003.06663",
+        "2006.08022",
+        "2011.08808",
+        "2012.04537",
+        "2105.15167",
+        "2208.05973",
+        "2306.15958",
+        "2311.00200",
+        "2311.05789",
+        "2401.14311",
+        "math__0007070",
+        "math__0101102",
+        "math__0102087",
+        "math__0106050",
+        "math__0106083",
+        "math__0107188",
+        "math__0111139",
+        "math__0111204",
+        "math__0111205",
+        "math__0201017",
+        "math__0202130",
+        "math__0203255",
+        "math__0204218",
+        "math__0210047",
+        "math__0210114",
+        "math__0212065",
+        "math__0212237",
+        "math__0301027",
+        "math__0302304",
+        "math__0304277",
+        "math__0307200",
+        "math__0307263",
+        "math__0310134",
+        "math__0406507",
+        "math__0407275",
+        "math__0409360",
+        "math__0409473",
+        "math__0409602",
+        "math__0410328",
+        "math__0501383",
+        "math__0502155",
+        "math__0503632",
+        "math__0504334",
+        "math__0511710",
+        "math__0512575",
+        "math__0606241",
+        "math__0607271",
+        "math__0607646",
+        "math__0608228",
+        "math__0608420",
+        "math__0610194",
+        "math__0610239",
+        "math__0612139",
+        "math__0701293",
+        "math__0702535",
+        "math__9810017",
+        "math__9811037",
+        "math__9812040",
+        "math__9906038",
+        "math__9911242",
+        "quant-ph__0402130"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:1",
+          "line": 105,
+          "paper": "2311.05789",
+          "quote": "From philosophical point of view it is the result of applying the so-called {\\em categorification} (in the sense of e.g. \\cite{cf,bd}) to the notion of a monoid, i.e. the process of replacing sets with categories, functions with functors, and equations between functions by natural isomorphisms between functors, which in turn should satisfy certain equations of their own, called ``coherence laws\".",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:9",
+          "line": 117,
+          "paper": "2311.05789",
+          "quote": "For a functor $F:\\C\\to\\D$ we denote by $\\I m_f(F)$ the full subcategory of $\\D$ with objects of the form $F(X)$ for $X\\in\\C$ (the {\\em full image} of $F$) and by $\\I m(F)$ is the subcategory of $\\D$ with objects of the form $F(X)$ for $X\\in\\C$ and morphisms of the form $F(f)$ for $f$ a morphism in $\\C$ (the {\\em proper image} of $F$).",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:10",
+          "line": 275,
+          "paper": "2311.05789",
+          "quote": "A monoidal $\\C$ together with a structure of monoidal functor $\\C\\to\\C^{rev}$ on the identity functor $Id_\\C$ such that the composite $\\C\\to\\C^{rev}\\to \\C$ coincides with $Id_\\C$ as a monoidal functor was called {\\em coboundary} in \\cite{dr}.",
+          "region_id": "2311.05789-leaf-0002"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:15",
+          "line": 453,
+          "paper": "2311.05789",
+          "quote": "\\bex Equivalence classes of completely anisotropic non-degenerate braided fusion categories form a group, the so-called {\\em Witt group} \\cite{dmno}.",
+          "region_id": "2311.05789-leaf-0004"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:16",
+          "line": 459,
+          "paper": "2311.05789",
+          "quote": "Denote by $\\V(G)$ the category of vector spaces (over a field $k$) graded by $G$ with grading preserving linear maps as morphisms.",
+          "region_id": "2311.05789-leaf-0005"
+        }
+      ],
+      "votes": 4227
+    },
+    "connection/transfer": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "connection/transfer",
+      "n_agents": 4,
+      "n_papers": 175,
+      "papers": [
+        "0705.0102",
+        "0705.0452",
+        "0706.1286",
+        "0708.1921",
+        "0708.2067",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0712.0724",
+        "0801.3843",
+        "0806.1324",
+        "0807.1704",
+        "0808.1923",
+        "0809.3031",
+        "0811.1480",
+        "0811.2435",
+        "0901.3602",
+        "0902.1954",
+        "0903.0340",
+        "0904.1997",
+        "0905.0459",
+        "0905.0462",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0908.3347",
+        "0910.2733",
+        "0911.0469",
+        "0911.4979",
+        "1002.1372",
+        "1003.1920",
+        "1003.4394",
+        "1004.0993",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1009.2331",
+        "1009.3370",
+        "1011.1691",
+        "1101.3064",
+        "1102.0261",
+        "1104.5047",
+        "1107.5511",
+        "1109.1004",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1201.4981",
+        "1202.2697",
+        "1203.3253",
+        "1203.5657",
+        "1204.2013",
+        "1204.3607",
+        "1205.4473",
+        "1208.1749",
+        "1210.1036",
+        "1210.6363",
+        "1211.0529",
+        "1212.3563",
+        "1301.1053",
+        "1301.3191",
+        "1301.5206",
+        "1302.5756",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1308.1804",
+        "1309.6952",
+        "1310.8279",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.3221",
+        "1405.6881",
+        "1405.7805",
+        "1406.0058",
+        "1406.4204",
+        "1409.0837",
+        "1409.2165",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.06526",
+        "1503.00991",
+        "1503.05523",
+        "1503.06720",
+        "1509.00038",
+        "1509.06811",
+        "1512.07573",
+        "1512.08119",
+        "1605.03934",
+        "1612.09225",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1804.02240",
+        "1804.07538",
+        "1805.03776",
+        "1809.00738",
+        "1809.10621",
+        "1902.10863",
+        "1905.04644",
+        "1905.09566",
+        "1908.07021",
+        "1911.04630",
+        "2002.06055",
+        "2003.02254",
+        "2003.06663",
+        "2006.08022",
+        "2011.08808",
+        "2012.04537",
+        "2105.15167",
+        "2208.05973",
+        "2311.00200",
+        "2311.05789",
+        "2401.14311",
+        "math__0007070",
+        "math__0101102",
+        "math__0102087",
+        "math__0106050",
+        "math__0106083",
+        "math__0107188",
+        "math__0111139",
+        "math__0111204",
+        "math__0201017",
+        "math__0202130",
+        "math__0203255",
+        "math__0204218",
+        "math__0207281",
+        "math__0210047",
+        "math__0210114",
+        "math__0212237",
+        "math__0301027",
+        "math__0302304",
+        "math__0304277",
+        "math__0307200",
+        "math__0307263",
+        "math__0308246",
+        "math__0310134",
+        "math__0310337",
+        "math__0312088",
+        "math__0406507",
+        "math__0407275",
+        "math__0409360",
+        "math__0409473",
+        "math__0409598",
+        "math__0409602",
+        "math__0410328",
+        "math__0501383",
+        "math__0502155",
+        "math__0502533",
+        "math__0503632",
+        "math__0504334",
+        "math__0511710",
+        "math__0512575",
+        "math__0606241",
+        "math__0607271",
+        "math__0607646",
+        "math__0608228",
+        "math__0608420",
+        "math__0610194",
+        "math__0610239",
+        "math__0612139",
+        "math__0701293",
+        "math__0702535",
+        "math__9810017",
+        "math__9811037",
+        "math__9812040",
+        "math__9911242",
+        "quant-ph__0402130"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:5",
+          "line": 109,
+          "paper": "2311.05789",
+          "quote": "An abelian monoidal (or {\\em tensor}) category can thus be seen as the category of all possible linear realisations of a certain symmetry.",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:6",
+          "line": 110,
+          "paper": "2311.05789",
+          "quote": "This point of view is beneficial in such areas as the theory of motives or Langlands correspondence and was driving the development of (symmetric) tensor categories \\cite{dm, de1}.",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:13",
+          "line": 429,
+          "paper": "2311.05789",
+          "quote": "As an abelian category a finite tensor category is equivalent to the category of finite dimensional modules over a finite dimensional algebra.",
+          "region_id": "2311.05789-leaf-0004"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:17",
+          "line": 466,
+          "paper": "2311.05789",
+          "quote": "The coherence \\eqref{ac} is equivalent to the function $\\alpha:G^{\\times 3}\\to k^\\times$ being a 3-cocycle of $G$ with coefficients in the trivial $G$-module $k^\\times$.",
+          "region_id": "2311.05789-leaf-0005"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:21",
+          "line": 473,
+          "paper": "2311.05789",
+          "quote": "The coherence \\eqref{fc} is equivalent to the coboundary condition $d(\\phi) = \\alpha^{-1}\\varphi^*(\\beta)$ in $C^*(G,k^\\times)$.",
+          "region_id": "2311.05789-leaf-0005"
+        }
+      ],
+      "votes": 4300
+    },
+    "obstruction": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "obstruction",
+      "n_agents": 4,
+      "n_papers": 124,
+      "papers": [
+        "0705.0452",
+        "0706.1286",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0712.0724",
+        "0806.1324",
+        "0807.1704",
+        "0808.1923",
+        "0809.3031",
+        "0811.1480",
+        "0811.2435",
+        "0902.1954",
+        "0903.0340",
+        "0904.1997",
+        "0905.0462",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0908.3347",
+        "0910.2733",
+        "1004.0993",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1009.3370",
+        "1101.3064",
+        "1102.0261",
+        "1104.5047",
+        "1107.5511",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1201.4981",
+        "1202.2697",
+        "1203.3253",
+        "1203.5657",
+        "1204.3607",
+        "1208.1749",
+        "1210.1036",
+        "1211.0529",
+        "1212.3563",
+        "1301.3191",
+        "1301.5206",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1309.6952",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.6881",
+        "1406.4204",
+        "1409.0837",
+        "1409.2165",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.06526",
+        "1503.00991",
+        "1503.06720",
+        "1509.00038",
+        "1509.06811",
+        "1512.07573",
+        "1512.07577",
+        "1512.08119",
+        "1605.03934",
+        "1612.09225",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1804.02240",
+        "1804.07538",
+        "1809.00738",
+        "1809.10621",
+        "1902.10863",
+        "1905.09566",
+        "1908.07021",
+        "2002.06055",
+        "2003.06663",
+        "2006.08022",
+        "2011.08808",
+        "2105.15167",
+        "2208.05973",
+        "2311.05789",
+        "2401.14311",
+        "math__0007070",
+        "math__0101102",
+        "math__0102087",
+        "math__0106083",
+        "math__0107188",
+        "math__0111139",
+        "math__0111204",
+        "math__0111205",
+        "math__0204218",
+        "math__0210047",
+        "math__0210114",
+        "math__0212065",
+        "math__0212237",
+        "math__0301027",
+        "math__0304277",
+        "math__0307200",
+        "math__0310337",
+        "math__0409602",
+        "math__0410328",
+        "math__0501383",
+        "math__0502155",
+        "math__0504334",
+        "math__0512575",
+        "math__0606241",
+        "math__0607646",
+        "math__0608228",
+        "math__0608420",
+        "math__0610194",
+        "math__0610239",
+        "math__0702535",
+        "math__9811037",
+        "math__9812040",
+        "math__9911242"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:40",
+          "line": 512,
+          "paper": "2311.05789",
+          "quote": "Progress in their study is impossible without better understanding of their partial decategorifications.",
+          "region_id": "2311.05789-leaf-0006"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:71",
+          "line": 767,
+          "paper": "1308.0729",
+          "quote": "However, this is not quite so simple to state, because if $f:\\prd{x:A} B(x)$ and $p:x=y$, then $f(x):B(x)$ and $f(y):B(y)$ are elements of distinct types, so that \\emph{a priori} we cannot even ask whether they are equal.",
+          "region_id": "1308.0729-inflight-0149"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:78",
+          "line": 822,
+          "paper": "1308.0729",
+          "quote": "This accords with the philosophy of constructive mathematics, according to which we cannot show that something exists except by exhibiting it.",
+          "region_id": "1308.0729-inflight-0158"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:108",
+          "line": 1382,
+          "paper": "1308.0729",
+          "quote": "However, we cannot directly ask whether $\\proj{2}(w)$ is identical to $\\proj{2}(w')$ since they don't have to be in the same type.",
+          "region_id": "1308.0729-inflight-0261"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:146",
+          "line": 1891,
+          "paper": "1308.0729",
+          "quote": "(Categorically speaking, a positive type has a ``mapping out'' universal property, while a negative type has a ``mapping in'' universal property.) Because computing with presentations is, in general, an uncomputable problem, for positive types we cannot always expect a straightforward characterization of the identity type.",
+          "region_id": "1308.0729-inflight-0374"
+        }
+      ],
+      "votes": 479
+    },
+    "open-problem/status": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "open-problem/status",
+      "n_agents": 4,
+      "n_papers": 87,
+      "papers": [
+        "0705.0452",
+        "0706.1286",
+        "0708.3398",
+        "0709.0248",
+        "0801.0199",
+        "0801.3843",
+        "0806.1324",
+        "0808.1923",
+        "0903.0340",
+        "0904.1997",
+        "0905.0459",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0908.1787",
+        "0908.4187",
+        "0910.2733",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1009.2331",
+        "1009.3370",
+        "1102.0261",
+        "1107.5511",
+        "1110.0605",
+        "1201.4981",
+        "1203.5657",
+        "1204.3607",
+        "1205.4473",
+        "1210.6363",
+        "1301.1053",
+        "1301.5206",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.6881",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.06526",
+        "1503.00991",
+        "1503.05523",
+        "1509.00038",
+        "1509.06811",
+        "1512.08119",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1804.02240",
+        "1804.07538",
+        "1805.03776",
+        "1809.00738",
+        "1905.09566",
+        "1908.07021",
+        "1911.04630",
+        "2003.06663",
+        "2105.15167",
+        "2311.00200",
+        "math__0007070",
+        "math__0106050",
+        "math__0111205",
+        "math__0202130",
+        "math__0204218",
+        "math__0210047",
+        "math__0210114",
+        "math__0212237",
+        "math__0302304",
+        "math__0310134",
+        "math__0310337",
+        "math__0409360",
+        "math__0409473",
+        "math__0502155",
+        "math__0502533",
+        "math__0503632",
+        "math__0511710",
+        "math__0512575",
+        "math__0606241",
+        "math__0607646",
+        "math__0612139",
+        "math__9811037",
+        "math__9812040",
+        "quant-ph__0402130"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:387",
+          "line": 6598,
+          "paper": "1308.0729",
+          "quote": "Figuring out which of these still hold when we add the features from \\autoref{sec:hott-features} quickly leads to open questions,\\index{open!problem} as discussed at the end of this section.",
+          "region_id": "1308.0729-inflight-1186"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:390",
+          "line": 6708,
+          "paper": "1308.0729",
+          "quote": "It is an open question\\index{open!problem} whether one can simplify applications of these constants in order to restore canonicity.",
+          "region_id": "1308.0729-inflight-1213"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:392",
+          "line": 6721,
+          "paper": "1308.0729",
+          "quote": "Other metatheoretic issues, and a summary of our current results, are discussed in greater length in the ``Constructivity'' and ``Open problems'' sections of the introduction to this book.",
+          "region_id": "1308.0729-inflight-1217"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:653",
+          "line": 10981,
+          "paper": "1308.0729",
+          "quote": "We do not know whether \\ref{item:modal4} follows from \\ref{item:modal1}--\\ref{item:modal3}.) However, the stronger-looking property of \\autoref{thm:modal-char}\\ref{item:mchr2} follows from \\autoref{defn:modality}\\ref{item:modal2} and \\ref{item:modal3}, since for any $C:\\modal A \\to \\modaltype$ we have $C(z) \\eqvsym \\modal C(z)$, and we can pass back across this equivalence.",
+          "region_id": "1308.0729-inflight-2122"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:788",
+          "line": 13089,
+          "paper": "1308.0729",
+          "quote": "It is traditionally stated for a topological space $X$ which is the union of two open subspaces $U$ and $V$, but in homotopy-theoretic terms this is just a convenient way of ensuring that $X$ is the pushout of $U$ and $V$ over their intersection.",
+          "region_id": "1308.0729-inflight-2516"
+        }
+      ],
+      "votes": 414
+    },
+    "rationale/telos": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "rationale/telos",
+      "n_agents": 4,
+      "n_papers": 188,
+      "papers": [
+        "0705.0102",
+        "0705.0452",
+        "0706.1286",
+        "0708.1921",
+        "0708.2067",
+        "0708.2185",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0712.0724",
+        "0801.0199",
+        "0801.3843",
+        "0806.1324",
+        "0807.1704",
+        "0808.1923",
+        "0809.3031",
+        "0811.1480",
+        "0811.2435",
+        "0901.3602",
+        "0902.1954",
+        "0903.0340",
+        "0904.1997",
+        "0905.0459",
+        "0905.0462",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0908.3347",
+        "0908.4187",
+        "0910.1306",
+        "0910.2733",
+        "0911.0469",
+        "0911.4979",
+        "1002.1372",
+        "1003.1920",
+        "1003.4394",
+        "1004.0993",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1009.2331",
+        "1009.3370",
+        "1011.1691",
+        "1101.3064",
+        "1102.0261",
+        "1104.5047",
+        "1107.5511",
+        "1109.1004",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1201.4981",
+        "1202.2697",
+        "1203.3253",
+        "1203.5657",
+        "1204.2013",
+        "1204.3607",
+        "1205.4473",
+        "1205.6522",
+        "1208.1749",
+        "1210.1036",
+        "1210.6363",
+        "1211.0529",
+        "1212.3563",
+        "1301.1053",
+        "1301.3191",
+        "1301.5206",
+        "1302.5756",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1308.1804",
+        "1309.6952",
+        "1310.8279",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.3221",
+        "1405.6881",
+        "1405.7805",
+        "1406.0058",
+        "1406.4204",
+        "1409.0837",
+        "1409.2165",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.00872",
+        "1502.06526",
+        "1503.00991",
+        "1503.05523",
+        "1503.06720",
+        "1509.00038",
+        "1509.06811",
+        "1512.07573",
+        "1512.07577",
+        "1512.08119",
+        "1605.03934",
+        "1609.05382",
+        "1612.09225",
+        "1702.00244",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1803.05316",
+        "1804.02240",
+        "1804.07538",
+        "1805.03776",
+        "1809.00738",
+        "1809.10621",
+        "1902.10863",
+        "1905.04644",
+        "1905.09566",
+        "1908.02202",
+        "1908.07021",
+        "1911.04630",
+        "2002.06055",
+        "2003.02254",
+        "2003.06663",
+        "2006.08022",
+        "2011.08808",
+        "2012.04537",
+        "2105.15167",
+        "2208.05973",
+        "2306.15958",
+        "2311.00200",
+        "2311.05789",
+        "2401.14311",
+        "math__0007070",
+        "math__0101102",
+        "math__0102087",
+        "math__0106050",
+        "math__0106083",
+        "math__0107188",
+        "math__0111139",
+        "math__0111204",
+        "math__0111205",
+        "math__0201017",
+        "math__0202130",
+        "math__0203255",
+        "math__0204218",
+        "math__0207281",
+        "math__0210047",
+        "math__0210114",
+        "math__0212065",
+        "math__0212237",
+        "math__0301027",
+        "math__0302304",
+        "math__0304277",
+        "math__0307200",
+        "math__0307263",
+        "math__0308246",
+        "math__0310134",
+        "math__0310337",
+        "math__0312088",
+        "math__0407275",
+        "math__0409360",
+        "math__0409473",
+        "math__0409602",
+        "math__0410328",
+        "math__0501383",
+        "math__0502155",
+        "math__0502533",
+        "math__0503632",
+        "math__0504334",
+        "math__0511710",
+        "math__0512575",
+        "math__0606241",
+        "math__0607271",
+        "math__0607646",
+        "math__0608228",
+        "math__0608420",
+        "math__0610194",
+        "math__0610239",
+        "math__0612139",
+        "math__0701293",
+        "math__0702535",
+        "math__9810017",
+        "math__9811037",
+        "math__9812040",
+        "math__9906038",
+        "math__9911242",
+        "quant-ph__0402130"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:2",
+          "line": 106,
+          "paper": "2311.05789",
+          "quote": "The pseudo-monoid nature of monoidal categories explains their appearance in low dimensional topology, through (extended) topological field theories \\cite{tu}.",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:12",
+          "line": 401,
+          "paper": "2311.05789",
+          "quote": "The addition operation on morphisms can be quite useful.",
+          "region_id": "2311.05789-leaf-0003"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:48",
+          "line": 296,
+          "paper": "1308.0729",
+          "quote": "Next we prove the transitivity of equality, or equivalently we ``concatenate paths''.",
+          "region_id": "1308.0729-inflight-0015"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:49",
+          "line": 319,
+          "paper": "1308.0729",
+          "quote": "Thus, in order to apply the induction principle for identity types to this $D$, we need a function of type",
+          "region_id": "1308.0729-inflight-0017"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:50",
+          "line": 356,
+          "paper": "1308.0729",
+          "quote": "\\index{mathematics!proof-relevant}% When we prove a lemma, we are defining an inhabitant of some type, and it can matter what \\emph{specific} element we defined in the course of the proof, not merely the type that that element inhabits (that is, the \\emph{statement} of the lemma).",
+          "region_id": "1308.0729-inflight-0029"
+        }
+      ],
+      "votes": 21588
+    },
+    "universal-property/characterizes": {
+      "agents": [
+        "codex-1",
+        "codex-2",
+        "codex-3",
+        "codex-4"
+      ],
+      "kind": "universal-property/characterizes",
+      "n_agents": 4,
+      "n_papers": 184,
+      "papers": [
+        "0705.0452",
+        "0706.1286",
+        "0708.1921",
+        "0708.2067",
+        "0708.2185",
+        "0708.3398",
+        "0709.0248",
+        "0711.0473",
+        "0712.0724",
+        "0801.0199",
+        "0801.3843",
+        "0806.1324",
+        "0807.1704",
+        "0808.1923",
+        "0809.3031",
+        "0811.1480",
+        "0811.2435",
+        "0901.3602",
+        "0902.1954",
+        "0903.0340",
+        "0904.1997",
+        "0905.0459",
+        "0905.0462",
+        "0905.0465",
+        "0905.2621",
+        "0906.4725",
+        "0906.4931",
+        "0907.2460",
+        "0908.1787",
+        "0908.3347",
+        "0908.4187",
+        "0910.2733",
+        "0911.0469",
+        "0911.4979",
+        "1002.1372",
+        "1003.1920",
+        "1003.4394",
+        "1004.0993",
+        "1005.3248",
+        "1005.3251",
+        "1006.3930",
+        "1009.2331",
+        "1009.3370",
+        "1011.1691",
+        "1101.3064",
+        "1102.0261",
+        "1104.5047",
+        "1107.5511",
+        "1109.1004",
+        "1110.0605",
+        "1112.0040",
+        "1112.3840",
+        "1201.4981",
+        "1202.2697",
+        "1203.3253",
+        "1203.5657",
+        "1204.2013",
+        "1204.3607",
+        "1205.4473",
+        "1205.6522",
+        "1208.1749",
+        "1210.1036",
+        "1210.6363",
+        "1211.0529",
+        "1212.3563",
+        "1212.6283",
+        "1301.1053",
+        "1301.3191",
+        "1301.5206",
+        "1302.5756",
+        "1305.0086",
+        "1305.0297",
+        "1308.0729",
+        "1308.1804",
+        "1309.6952",
+        "1310.8279",
+        "1312.1269",
+        "1404.0108",
+        "1404.3886",
+        "1405.3221",
+        "1405.6881",
+        "1405.7805",
+        "1406.0058",
+        "1406.4204",
+        "1409.0837",
+        "1409.2165",
+        "1409.4219",
+        "1410.6716",
+        "1411.6691",
+        "1412.1615",
+        "1502.06526",
+        "1503.00991",
+        "1503.05523",
+        "1503.06720",
+        "1509.00038",
+        "1509.06811",
+        "1512.07573",
+        "1512.07577",
+        "1512.08119",
+        "1605.03934",
+        "1612.09225",
+        "1702.00244",
+        "1705.04960",
+        "1705.07442",
+        "1710.02230",
+        "1801.02927",
+        "1804.02240",
+        "1804.07538",
+        "1805.03776",
+        "1809.00738",
+        "1809.10621",
+        "1902.10863",
+        "1905.04644",
+        "1905.09566",
+        "1908.02202",
+        "1908.07021",
+        "1911.04630",
+        "2002.06055",
+        "2003.02254",
+        "2003.06663",
+        "2006.08022",
+        "2011.08808",
+        "2012.04537",
+        "2105.15167",
+        "2208.05973",
+        "2306.15958",
+        "2311.00200",
+        "2311.05789",
+        "2401.14311",
+        "math__0007070",
+        "math__0101102",
+        "math__0102087",
+        "math__0106050",
+        "math__0106083",
+        "math__0107188",
+        "math__0111139",
+        "math__0111204",
+        "math__0111205",
+        "math__0201017",
+        "math__0202130",
+        "math__0203255",
+        "math__0204218",
+        "math__0207281",
+        "math__0210047",
+        "math__0210114",
+        "math__0212237",
+        "math__0301027",
+        "math__0302304",
+        "math__0304277",
+        "math__0307200",
+        "math__0307263",
+        "math__0308246",
+        "math__0310134",
+        "math__0310337",
+        "math__0406507",
+        "math__0407275",
+        "math__0409360",
+        "math__0409473",
+        "math__0409598",
+        "math__0409602",
+        "math__0410328",
+        "math__0501383",
+        "math__0502155",
+        "math__0502533",
+        "math__0503632",
+        "math__0504334",
+        "math__0511710",
+        "math__0512575",
+        "math__0606241",
+        "math__0607271",
+        "math__0607646",
+        "math__0608228",
+        "math__0608420",
+        "math__0610194",
+        "math__0610239",
+        "math__0612139",
+        "math__0701293",
+        "math__0702535",
+        "math__9810017",
+        "math__9811037",
+        "math__9812040",
+        "math__9906038",
+        "math__9911242",
+        "quant-ph__0402130"
+      ],
+      "sample_evidence": [
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:8",
+          "line": 114,
+          "paper": "2311.05789",
+          "quote": "For definitions and basic facts of category theory, such as adjoint functors, limits, ends see \\cite{mc}.",
+          "region_id": "2311.05789-leaf-0001"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:19",
+          "line": 470,
+          "paper": "2311.05789",
+          "quote": "A graded vector space $U$ is dualisable if and only if $U$ is finite dimensional and supported on invertible elements of $G$.",
+          "region_id": "2311.05789-leaf-0005"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:35",
+          "line": 495,
+          "paper": "2311.05789",
+          "quote": "\\nl The twisted group algebra $k[H,\\tilde\\xi]$ in $\\C(G,q)$ is commutative if and only if $H$ is an {\\em isotropic} subgroup, i.e. $q|_H=1$.",
+          "region_id": "2311.05789-leaf-0005"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:75",
+          "line": 795,
+          "paper": "1308.0729",
+          "quote": "Then the transportation lemma says that $P$ respects equality, in the sense that if $x$ is equal to $y$, then $P(x)$ holds if and only if $P(y)$ holds.",
+          "region_id": "1308.0729-inflight-0154"
+        },
+        {
+          "agent": "codex-1",
+          "file": "codex-1.proposals.jsonl:80",
+          "line": 860,
+          "paper": "1308.0729",
+          "quote": "Since there is a canonical path from $u:P(x)$ to $\\trans p u :P(y)$ which (at least intuitively) lies over $p$, any path from $u$ to $v:P(y)$ lying over $p$ should factor through this path, essentially uniquely, by a path from $\\trans p u$ to $v$ lying entirely in the fiber $P(y)$.",
+          "region_id": "1308.0729-inflight-0170"
+        }
+      ],
+      "votes": 6275
+    }
+  },
+  "policy": {
+    "fringe_resolution": "resolve-to-parent",
+    "mint_threshold": {
+      "min_agents": 2,
+      "min_papers": 5
+    }
+  },
+  "proposal_count": 47843
+}

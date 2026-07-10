@@ -17,6 +17,7 @@ Environment variables:
     IRC_COMMAND_OWNER_AGENT_MAP
                     (optional: #channel:agent-id,#channel2:agent-id)
     INVOKE_BASE     (default: http://127.0.0.1:7070)
+    EVIDENCE_BASE   (default: INVOKE_BASE)  — where IRC evidence is recorded
     BRIDGE_BOTS     (default: claude,codex)  - comma-separated bot nicks
     FUTON3C_MATRIX_REPLY_NO_LIMITS
                     (default: false)         — when enabled, Matrix-backed
@@ -217,6 +218,7 @@ IRC_CHANNELS = _dedupe_channels(
     ]
 )
 INVOKE_BASE, INVOKE_BASE_SOURCE = resolve_invoke_base()
+EVIDENCE_BASE = _normalize_base(os.environ.get("EVIDENCE_BASE")) or INVOKE_BASE
 PROGRESS_SEND_BASES = resolve_progress_send_bases(INVOKE_BASE)
 BRIDGE_BOTS = os.environ.get("BRIDGE_BOTS", "claude,claude-2,codex").split(",")
 IRC_COMMAND_OWNER_AGENT_MAP = _parse_channel_agent_map(
@@ -234,6 +236,7 @@ INVOKE_DELIVERY_URL = f"{INVOKE_BASE}/api/alpha/invoke-delivery"
 ARSE_ASK_URL = f"{INVOKE_BASE}/api/alpha/arse/ask"
 ARSE_ANSWER_URL = f"{INVOKE_BASE}/api/alpha/arse/answer"
 ARSE_UNANSWERED_URL = f"{INVOKE_BASE}/api/alpha/arse/unanswered"
+EVIDENCE_URL = f"{EVIDENCE_BASE}/api/alpha/evidence"
 PSR_URL = f"{INVOKE_BASE}/api/alpha/evidence/psr"
 PUR_URL = f"{INVOKE_BASE}/api/alpha/evidence/pur"
 PAR_URL = f"{INVOKE_BASE}/api/alpha/evidence/par"
@@ -437,6 +440,37 @@ def api_get(url, timeout=CMD_TIMEOUT):
             return {"ok": False, "error": f"HTTP {e.code}: {body_text[:200]}"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+def post_irc_evidence(channel, author, text, direction, via_nick=None):
+    """Record an IRC transcript turn without blocking the IRC loop."""
+    channel = (channel or IRC_CHANNEL).strip() or IRC_CHANNEL
+    author = (author or "unknown").strip() or "unknown"
+    text = text or ""
+    if not text.strip():
+        return
+    payload = {
+        "subject": {"ref/type": "thread", "ref/id": f"irc/{channel}"},
+        "type": "forum-post",
+        "claim-type": "observation",
+        "author": author,
+        "body": {
+            "text": text,
+            "transport": "irc",
+            "channel": channel,
+            "direction": direction,
+        },
+        "tags": ["irc", "turn"],
+    }
+    if via_nick:
+        payload["body"]["via"] = via_nick
+
+    def worker():
+        result = api_post(EVIDENCE_URL, payload, timeout=2)
+        if not result.get("ok"):
+            log("bridge", f"IRC evidence write failed: {result.get('err') or result.get('error')}")
+
+    threading.Thread(target=worker, name="irc-evidence", daemon=True).start()
 
 
 class IRCBot:
@@ -1455,6 +1489,10 @@ class IRCBot:
         and a truncation notice is appended."""
         thread_channel = getattr(self._thread_context, "reply_channel", None)
         channel = channel or thread_channel or self._reply_channel or self.channel
+        # Single-writer: only the channel's owner records evidence -- its
+        # own sends here (outbound), others' messages via the inbound path.
+        # Non-owner bots record nothing, so each turn => exactly one entry.
+        record_outbound = self._handles_bare_command(channel)
         text = self._sanitize_for_irc(text)
         try:
             limit = None if max_lines is None else int(max_lines)
@@ -1476,11 +1514,15 @@ class IRCBot:
         truncated = (not unlimited) and len(lines) > limit
         for line in send_lines:
             self._send(f"PRIVMSG {channel} :{line}")
+            if record_outbound:
+                post_irc_evidence(channel, self.nick, line, "outbound", via_nick=self.nick)
             time.sleep(0.1)  # gentle rate limit
         if truncated:
-            self._send(f"PRIVMSG {channel} :"
-                       f"[truncated {len(lines) - limit} more lines — "
-                       f"post details to mfuton gitlab issue instead]")
+            line = (f"[truncated {len(lines) - limit} more lines — "
+                    f"post details to mfuton gitlab issue instead]")
+            self._send(f"PRIVMSG {channel} :{line}")
+            if record_outbound:
+                post_irc_evidence(channel, self.nick, line, "outbound", via_nick=self.nick)
             time.sleep(0.1)
 
     def _multiline_result_for_irc(self, result_text):
@@ -2200,6 +2242,12 @@ class IRCBot:
                                 and sender.lower() != self.nick.lower()):
                             # Track which channel this message came from
                             self._reply_channel = target
+                            # Record inbound evidence at most once per channel:
+                            # only the room-owner bot writes. Otherwise every bot
+                            # joined to the channel records the same message =>
+                            # N duplicate forum-posts (via:codex, via:claude, ...).
+                            if self.handle_commands and self._handles_bare_command(target):
+                                post_irc_evidence(target, sender, text, "inbound", via_nick=self.nick)
 
                             # ! commands - room owner when configured,
                             # otherwise fallback to first bot.
@@ -2334,6 +2382,12 @@ def _make_say_handler(bots_by_nick):
 def _start_bridge_http(bots):
     """Start a tiny HTTP server on BRIDGE_HTTP_PORT for /say."""
     bots_by_nick = {b.nick: b for b in bots}
+    # Also route by agent id: harness-side senders (e.g. zai's irc_send)
+    # default `from` to their AGENT id, which need not equal the IRC nick.
+    for b in bots:
+        agent_id = getattr(b, "agent_id", None)
+        if agent_id and agent_id not in bots_by_nick:
+            bots_by_nick[agent_id] = b
     handler = _make_say_handler(bots_by_nick)
     try:
         server = http.server.HTTPServer(("127.0.0.1", BRIDGE_HTTP_PORT), handler)

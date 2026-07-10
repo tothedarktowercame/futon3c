@@ -39,10 +39,17 @@
        ":expected-outcome populated. Closure = a sibling :event "
        ":pipeline-tracer-closed entry referencing the same :track-id."))
 
+(def pipeline-prototype-path
+  "Historical prototype data that used to seed `default-tracers` at boot."
+  "holes/excursions/pipeline-prototype.edn")
+
 (def default-tracers
-  "Outstanding non-invariant tracks of M-invariant-queue-extend, registered
-   as pipeline-tracer items by default. Edit this list as new tracks open
-   or close.
+  "Boot-time pipeline tracer defaults.
+
+   This is intentionally empty. The old static six-track pipeline dataset
+   is unhooked from runtime and preserved in `pipeline-prototype-path`.
+   Live projections should call `emit-pipeline-tracers!` with explicit
+   generated tracer maps instead of relying on boot to seed historical data.
 
    Per-tracer keys:
      :track-id          — keyword identifier (also used as a tag)
@@ -51,74 +58,13 @@
      :target-date       — ISO date by which the apparatus expects movement
      :expected-outcome  — what 'closed' looks like
      :owner             — who is responsible (or nil for unassigned)"
-  [{:track-id :track-4-2-snapshot-as-evidence
-    :title "Snapshot-as-evidence convention (decide + implement)"
-    :mission :M-invariant-queue-extend
-    :target-date "2026-05-06"
-    :expected-outcome
-    "Either: extend `:family-fired` body with full inventory snapshot maps,
-     OR ship a separate `:event :inventory-snapshot` shape. Decision +
-     implementation lands as a checkpoint."
-    :owner nil}
-
-   {:track-id :track-4-3-arxana-view-columns
-    :title "Arxana operational-families view columns"
-    :mission :M-invariant-queue-extend
-    :target-date "2026-05-06"
-    :expected-outcome
-    "futon4/dev/arxana-browser-{core,lab}.el render `:last-fire-at`,
-     `:last-violation-at`, `:inactive-since` columns from the probe's
-     `:family-fired` evidence."
-    :owner nil}
-
-   {:track-id :track-3-write-class-scoping
-    :title "Write-class generalization sub-mission stubs"
-    :mission :M-invariant-queue-extend
-    :target-date "2026-05-06"
-    :expected-outcome
-    "Two new mission stubs opened (probably bell-receipts +
-     gate-traversals), each with IDENTIFY and a sketch of the boundary +
-     ratchet + canary triple."
-    :owner nil}
-
-   {:track-id :track-1-substrate-2-lift
-    :title "Substrate-2 phase-1 lift (≥3 of 6 families)"
-    :mission :M-invariant-queue-extend
-    :target-date "2026-05-06"
-    :expected-outcome
-    "≥3 of 6 substrate-2 phase-1 deferred-stubs converted from `:inactive`
-     to a real probe check-fn returning `:ok` or `:violation`. Source:
-     futon3/holes/labs/M-live-geometric-stack/tests/phase_1_invariants_test.clj.
-     Note: also tracered via the predecessor's `:substrate-2/*` deferred-
-     stubs in `probe-taps`; this entry is the bookkeeping surface."
-    :owner nil}
-
-   {:track-id :track-2-war-machine-aif-lift
-    :title "War-Machine AIF lift (≥2 of 6 OR documented deferral)"
-    :mission :M-invariant-queue-extend
-    :target-date "2026-05-06"
-    :expected-outcome
-    "Either ≥2 of 6 War-Machine AIF deferred-stubs converted to real
-     check-fns, OR a recorded decision to wait for M-war-machine with
-     criteria for revisit. Note: also tracered via `:war-machine/*`
-     deferred-stubs."
-    :owner nil}
-
-   {:track-id :track-5-vsatarcs
-    :title "VSATARCS narrative coherence (parked → re-park or register)"
-    :mission :M-invariant-queue-extend
-    :target-date "2026-05-06"
-    :expected-outcome
-    "Either re-park with current rationale, OR upgrade to a deferred-stub
-     registration if VSATARCS work has progressed enough to project a
-     stable contract."
-    :owner nil}])
+  [])
 
 (defn emit-tracer!
   "Emit one `:event :pipeline-tracer-item` evidence entry through the
    boundary. Returns the boundary's delivery-receipt-shaped result."
   [evidence-store {:keys [track-id title mission target-date
-                          expected-outcome owner] :as tracer}]
+                          expected-outcome owner]}]
   (boundary/append!
    evidence-store
    {:subject {:ref/type :mission
@@ -192,20 +138,20 @@
     (catch Throwable _ #{})))
 
 (defn ensure-default-tracers!
-  "Idempotent: emits any of `default-tracers` that don't already have a
+  "Idempotent: emits any explicit `default-tracers` that don't already have a
    `:pipeline-tracer-item` (or matching `:pipeline-tracer-closed`) entry
    in the durable store. Returns
    `{:already-present <count> :emitted <count> :failed [tracers]}`.
 
    Reachable-from-boot discipline (M-reachable-from-boot 2026-05-01):
-   tracer state is reconstructible-from-disk via this function, called
-   from `bootstrap.clj` at boot. Restart-equivalent. The
-   `default-tracers` data lives in this namespace (on-disk source); the
-   evidence emission is the projection of that data into the durable
-   store. Subsequent boots find the entries already-present and emit
-   nothing."
+   this remains a boot-safe projection point, but the static prototype
+   dataset has been unhooked from runtime. With `default-tracers` empty,
+   boot emits nothing. Pipeline experiments should feed explicit tracers
+   into `emit-pipeline-tracers!` from a live cascade/scan projection."
   [evidence-store]
-  (let [present (existing-tracer-track-ids evidence-store)
+  (let [default-ids (set (map :track-id default-tracers))
+        present (existing-tracer-track-ids evidence-store)
+        present-defaults (filter default-ids present)
         to-emit (remove #(contains? present (:track-id %)) default-tracers)
         emitted (mapv #(do (emit-tracer! evidence-store %) %) to-emit)
         ok-emitted (filter
@@ -219,7 +165,7 @@
                                   :query/tags [:pipeline-tracer :open tid]}))
                           (catch Throwable _ false))))
                     emitted)]
-    {:already-present (count present)
+    {:already-present (count present-defaults)
      :emitted (count ok-emitted)
      :attempted (count emitted)
      :failed (vec (remove (set ok-emitted) emitted))}))

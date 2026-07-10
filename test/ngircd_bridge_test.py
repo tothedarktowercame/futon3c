@@ -338,6 +338,45 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
 
 
 class NgircdBridgeSurfaceContractTest(unittest.TestCase):
+    def test_post_irc_evidence_posts_forum_turn_payload_async(self):
+        started = []
+
+        class ImmediateThread:
+            def __init__(self, target, name=None, daemon=None):
+                self.target = target
+                self.name = name
+                self.daemon = daemon
+
+            def start(self):
+                started.append((self.name, self.daemon))
+                self.target()
+
+        with mock.patch.object(bridge.threading, "Thread", ImmediateThread), \
+             mock.patch.object(bridge, "api_post", return_value={"ok": True}) as api_post:
+            bridge.post_irc_evidence("#math", "joe", "hello", "inbound", via_nick="claude")
+
+        self.assertEqual([("irc-evidence", True)], started)
+        api_post.assert_called_once()
+        url, payload = api_post.call_args.args[:2]
+        self.assertEqual(bridge.EVIDENCE_URL, url)
+        self.assertEqual("#math", payload["body"]["channel"])
+        self.assertEqual("hello", payload["body"]["text"])
+        self.assertEqual("irc", payload["body"]["transport"])
+        self.assertEqual("inbound", payload["body"]["direction"])
+        self.assertEqual({"ref/type": "thread", "ref/id": "irc/#math"}, payload["subject"])
+        self.assertEqual(["irc", "turn"], payload["tags"])
+
+    def test_say_records_outbound_irc_evidence(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        with mock.patch.object(bot, "_send") as send, \
+             mock.patch.object(bridge, "post_irc_evidence") as record, \
+             mock.patch.object(bridge.time, "sleep"):
+            bot._say("line1\nline2", max_lines=0, channel="#math")
+        self.assertEqual(2, send.call_count)
+        self.assertEqual(2, record.call_count)
+        record.assert_any_call("#math", "codex", "line1", "outbound", via_nick="codex")
+        record.assert_any_call("#math", "codex", "line2", "outbound", via_nick="codex")
+
     def test_local_math_mentor_nick_keeps_brief_surface_contract(self):
         bot = bridge.IRCBot("math-mentor", "claude-2", "#math", "localhost", 6667, "pw")
         text = bot._surface_context("joe", "", brief=False, multi_message=False, channel="#math")
@@ -360,7 +399,9 @@ class NgircdBridgeSurfaceContractTest(unittest.TestCase):
 
     def test_say_truncation_points_to_mfuton_gitlab_issue(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
-        with mock.patch.object(bot, "_send") as send, mock.patch.object(bridge.time, "sleep"):
+        with mock.patch.object(bot, "_send") as send, \
+             mock.patch.object(bridge, "post_irc_evidence"), \
+             mock.patch.object(bridge.time, "sleep"):
             bot._say("line1\nline2\nline3", max_lines=2, channel="#math")
         self.assertEqual(3, send.call_count)
         self.assertIn("post details to mfuton gitlab issue instead", send.call_args_list[2].args[0])
@@ -368,7 +409,9 @@ class NgircdBridgeSurfaceContractTest(unittest.TestCase):
 
     def test_say_zero_max_lines_disables_truncation_notice(self):
         bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
-        with mock.patch.object(bot, "_send") as send, mock.patch.object(bridge.time, "sleep"):
+        with mock.patch.object(bot, "_send") as send, \
+             mock.patch.object(bridge, "post_irc_evidence"), \
+             mock.patch.object(bridge.time, "sleep"):
             bot._say("line1\nline2\nline3", max_lines=0, channel="#math")
         self.assertEqual(3, send.call_count)
         self.assertEqual("PRIVMSG #math :line1", send.call_args_list[0].args[0])

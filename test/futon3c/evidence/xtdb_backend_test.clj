@@ -117,6 +117,23 @@
     (let [xs (backend/-query *backend* {:query/include-ephemeral? true})]
       (is (= 2 (count xs))))))
 
+(deftest count-filters-without-pulling-documents
+  (testing "-count applies filters and excludes ephemeral entries by default"
+    (append! (fix/make-evidence-entry {:evidence/id "e1"
+                                       :evidence/author "alice"
+                                       :evidence/tags [:foo]}))
+    (append! (fix/make-evidence-entry {:evidence/id "e2"
+                                       :evidence/author "bob"
+                                       :evidence/tags [:foo]}))
+    (append! (fix/make-evidence-entry {:evidence/id "e3"
+                                       :evidence/author "alice"
+                                       :evidence/tags [:foo]
+                                       :evidence/ephemeral? true}))
+    (is (= 2 (backend/-count *backend* {:query/tags [:foo]})))
+    (is (= 1 (backend/-count *backend* {:query/author "alice"})))
+    (is (= 2 (backend/-count *backend* {:query/author "alice"
+                                        :query/include-ephemeral? true})))))
+
 (deftest query-newest-first
   (testing "-query returns results newest first"
     (let [older (str (Instant/ofEpochMilli 1000))
@@ -168,6 +185,35 @@
                                         :query/limit 1})]
       (is (= ["new-match"] (mapv :evidence/id xs))))))
 
+(deftest query-with-limit-and-session-pattern-filters
+  (testing "session-id and pattern-id are backend filters, so limit cannot force a broad app-side scan"
+    (append! (fix/make-evidence-entry {:evidence/id "new-wrong-session"
+                                       :evidence/session-id "s2"
+                                       :evidence/pattern-id :agent/other
+                                       :evidence/at (str (Instant/ofEpochMilli 4000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "new-match"
+                                       :evidence/session-id "s1"
+                                       :evidence/pattern-id :agent/pause
+                                       :evidence/at (str (Instant/ofEpochMilli 3000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "old-match"
+                                       :evidence/session-id "s1"
+                                       :evidence/pattern-id :agent/pause
+                                       :evidence/at (str (Instant/ofEpochMilli 2000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "old-wrong-pattern"
+                                       :evidence/session-id "s1"
+                                       :evidence/pattern-id :agent/other
+                                       :evidence/at (str (Instant/ofEpochMilli 1000))}))
+    (let [session-xs (backend/-query *backend* {:query/session-id "s1"
+                                                :query/limit 1})
+          pattern-xs (backend/-query *backend* {:query/pattern-id :agent/pause
+                                                :query/limit 1})
+          both-xs (backend/-query *backend* {:query/session-id "s1"
+                                             :query/pattern-id :agent/pause
+                                             :query/limit 2})]
+      (is (= ["new-match"] (mapv :evidence/id session-xs)))
+      (is (= ["new-match"] (mapv :evidence/id pattern-xs)))
+      (is (= ["new-match" "old-match"] (mapv :evidence/id both-xs))))))
+
 (deftest query-filters-by-since
   (testing "-query filters by since timestamp"
     (append! (fix/make-evidence-entry {:evidence/id "e1" :evidence/at (str (Instant/ofEpochMilli 1000))}))
@@ -175,6 +221,15 @@
     (let [xs (backend/-query *backend* {:query/since (str (Instant/ofEpochMilli 2000))})]
       (is (= 1 (count xs)))
       (is (= "e2" (:evidence/id (first xs)))))))
+
+(deftest query-filters-by-before
+  (testing "-query filters strictly older than before timestamp"
+    (append! (fix/make-evidence-entry {:evidence/id "e1" :evidence/at (str (Instant/ofEpochMilli 1000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "e2" :evidence/at (str (Instant/ofEpochMilli 2000))}))
+    (append! (fix/make-evidence-entry {:evidence/id "e3" :evidence/at (str (Instant/ofEpochMilli 3000))}))
+    (let [xs (backend/-query *backend* {:query/before (str (Instant/ofEpochMilli 3000))
+                                        :query/limit 2})]
+      (is (= ["e2" "e1"] (mapv :evidence/id xs))))))
 
 (deftest forks-of
   (testing "-forks-of returns forked entries sorted by time"
@@ -249,14 +304,15 @@
       (is (= 96 (:evidence/window-hours (meta xs)))
           "1h/6h/24h rungs under-fill; the 96h rung holds all three"))))
 
-(deftest recency-fast-path-falls-back-when-ladder-never-fills
-  (testing "a store with fewer entries than limit returns them via the old path"
+(deftest recency-fast-path-returns-broadest-window-when-ladder-never-fills
+  (testing "a store with fewer recent entries than limit still returns quickly"
     (append! (fix/make-evidence-entry {:evidence/id "only-1" :evidence/at (hours-ago 1)}))
     (append! (fix/make-evidence-entry {:evidence/id "only-2" :evidence/at (hours-ago 2)}))
     (let [xs (backend/-query *backend* {:query/limit 5})]
       (is (= ["only-1" "only-2"] (mapv :evidence/id xs))
-          "fallback preserves exact unbounded-query semantics")
-      (is (nil? (:evidence/fast-path (meta xs)))))))
+          "broadest-window result avoids the unbounded scan")
+      (is (= :recency-window (:evidence/fast-path (meta xs))))
+      (is (= 17520 (:evidence/window-hours (meta xs)))))))
 
 (defn- bulk-load!
   "Batch-put minimal evidence docs straight into the node (bypassing

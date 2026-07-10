@@ -1,0 +1,80 @@
+{:paper/id "0905.0595"
+ :passage/id "0905.0595:th0.4:ar-counterexample:194-208"
+ :source {:lines [194 208] :kind :proof}
+ :nodes
+ [{:id :ar-category
+   :kind :ref
+   :citation "AR, Theorem 6.12"
+   :text "Under the negation of Vopenka's principle, AR 6.12 presents a complete bounded category A with the stated properties."
+   :source {:lines [194 197]}}
+  {:id :ar-1
+   :kind :ref
+   :label "(1)"
+   :text "For each regular cardinal lambda, D_lambda has only compatible cocones delta_lambda with codomain 1."
+   :source {:lines [198 199]}}
+  {:id :ar-2
+   :kind :ref
+   :label "(2)"
+   :text "For each regular cardinal lambda, id_1 does not factorize through any component of delta_lambda."
+   :source {:lines [200 200]}}
+  {:id :delta-colimit
+   :kind :claim
+   :text "Following (1), delta_lambda is a colimit cocone for each lambda."
+   :source {:lines [202 202]}}
+  {:id :not-presentable
+   :kind :claim
+   :text "1 is not lambda-presentable for any regular lambda."
+   :source {:lines [202 203]}}
+  {:id :ar-meta
+   :kind :meta
+   :text "Condition (2) is not stated explicitly in AR."
+   :source {:lines [203 203]}}
+  {:id :no-map-from-1
+   :kind :claim
+   :text "There is no morphism from 1 to a non-terminal object of A."
+   :source {:lines [203 204]}}
+  {:id :a-graphs
+   :kind :definition
+   :text "A is the full subcategory of Gra consisting of graphs A without any morphism B_i -> A."
+   :source {:lines [204 207]}}
+  {:id :loop-gives-constant-map
+   :kind :claim
+   :text "The existence of a morphism 1 -> A means the presence of a loop in A and consequently the existence of a constant morphism B_i -> A."
+   :source {:lines [207 208]}}]
+ :edges
+ [{:id :e-delta-colimit
+   :kind :infer
+   :relation :following
+   :premise :ar-1
+   :conclusion :delta-colimit
+   :source {:lines [198 202]}}
+  {:id :e-presentability
+   :kind :infer
+   :relation :implies
+   :given [:ar-category :delta-colimit]
+   :premise :ar-2
+   :warrant {:kind :missing-warrant
+             :text "If 1 were lambda-presentable, id_1 would factor through a component of the lambda-filtered colimit cocone."}
+   :conclusion :not-presentable
+   :source {:lines [202 203]}}
+  {:id :e-ar-2
+   :kind :infer
+   :relation :follows-from
+   :premise :no-map-from-1
+   :conclusion :ar-2
+   :meta [:ar-meta]
+   :source {:lines [203 204]}}
+  {:id :e-no-map
+   :kind :infer
+   :relation :contradiction
+   :given [:a-graphs]
+   :assume {:kind :claim
+            :text "There is a morphism 1 -> A for a non-terminal A in A."}
+   :premise :loop-gives-constant-map
+   :contradicts :a-graphs
+   :conclusion :no-map-from-1
+   :source {:lines [204 208]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-presentability
+   :wanted :presentability-factorization-rule}]}

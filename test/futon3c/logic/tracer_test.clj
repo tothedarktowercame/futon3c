@@ -3,13 +3,33 @@
 
    Mission: M-invariant-queue-extend (futon3c/holes/missions/), tracker
    reframe 2026-04-29."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [xtdb.api :as xtdb]
             [futon3c.evidence.store :as store]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.logic.tracer :as tracer]))
 
 (def ^:dynamic *xtdb-backend* nil)
+
+(def prototype-path "holes/excursions/pipeline-prototype.edn")
+
+(defn prototype []
+  (edn/read-string (slurp prototype-path)))
+
+(def test-tracers
+  [{:track-id :test-track-a
+    :title "test a"
+    :mission :M-invariant-queue-extend
+    :target-date "2026-05-06"
+    :expected-outcome "test outcome a"
+    :owner nil}
+   {:track-id :test-track-b
+    :title "test b"
+    :mission :M-invariant-queue-extend
+    :target-date "2026-05-07"
+    :expected-outcome "test outcome b"
+    :owner nil}])
 
 (use-fixtures
   :each
@@ -33,19 +53,19 @@
       (is (:ok receipt) (str "expected emit success, got " (pr-str receipt))))))
 
 (deftest emit-pipeline-tracers-emits-one-per-tracer
-  (testing "emit-pipeline-tracers! returns one receipt per tracer"
-    (let [receipts (tracer/emit-pipeline-tracers! *xtdb-backend*)]
-      (is (= (count tracer/default-tracers) (count receipts))
-          "one receipt per default tracer")
+  (testing "emit-pipeline-tracers! returns one receipt per explicit tracer"
+    (let [receipts (tracer/emit-pipeline-tracers! *xtdb-backend* test-tracers)]
+      (is (= (count test-tracers) (count receipts))
+          "one receipt per supplied tracer")
       (is (every? :ok receipts) "all emits succeeded"))))
 
 (deftest open-tracers-queryable-by-tag
   (testing "after emission, open tracers are queryable via :pipeline-tracer + :open"
-    (tracer/emit-pipeline-tracers! *xtdb-backend*)
+    (tracer/emit-pipeline-tracers! *xtdb-backend* test-tracers)
     (let [open (store/query* *xtdb-backend*
                              {:query/type :coordination
                               :query/tags [:pipeline-tracer :open]})]
-      (is (= (count tracer/default-tracers) (count open))
+      (is (= (count test-tracers) (count open))
           "tag query returns one entry per tracer"))))
 
 (deftest emit-tracer-closed-emits-resolution
@@ -73,24 +93,37 @@
 ;; -----------------------------------------------------------------------------
 
 (deftest ensure-default-tracers-emits-when-empty
-  (testing "first call emits all default tracers"
+  (testing "first call is inert when runtime defaults are unhooked"
     (let [r (tracer/ensure-default-tracers! *xtdb-backend*)]
       (is (= 0 (:already-present r)))
-      (is (= (count tracer/default-tracers) (:emitted r))))))
+      (is (= 0 (:emitted r)))
+      (is (= 0 (:attempted r))))))
 
 (deftest ensure-default-tracers-is-idempotent
   (testing "second call against the same store emits nothing"
     (tracer/ensure-default-tracers! *xtdb-backend*)
     (let [r (tracer/ensure-default-tracers! *xtdb-backend*)]
-      (is (= (count tracer/default-tracers) (:already-present r)))
-      (is (= 0 (:emitted r))))))
+      (is (= 0 (:already-present r)))
+      (is (= 0 (:emitted r)))
+      (is (= 0 (:attempted r))))))
 
-(deftest default-tracers-cover-all-outstanding-tracks
-  (testing "default-tracers covers each outstanding M-invariant-queue-extend track"
-    (let [track-ids (set (map :track-id tracer/default-tracers))]
+(deftest default-tracers-are-unhooked-from-runtime
+  (testing "historical prototype data is not boot-time tracer data"
+    (is (empty? tracer/default-tracers))
+    (is (= "holes/excursions/pipeline-prototype.edn"
+           tracer/pipeline-prototype-path))))
+
+(deftest pipeline-prototype-carries-unhooked-historical-tracks
+  (testing "pipeline-prototype.edn preserves the historical six tracks for scans"
+    (let [proto (prototype)
+          items (:prototype/items proto)
+          track-ids (set (map :track-id items))]
+      (is (= :unhooked (:prototype/status proto)))
+      (is (= 6 (count items)))
       (is (contains? track-ids :track-4-2-snapshot-as-evidence))
       (is (contains? track-ids :track-4-3-arxana-view-columns))
       (is (contains? track-ids :track-3-write-class-scoping))
       (is (contains? track-ids :track-1-substrate-2-lift))
       (is (contains? track-ids :track-2-war-machine-aif-lift))
-      (is (contains? track-ids :track-5-vsatarcs)))))
+      (is (contains? track-ids :track-5-vsatarcs))
+      (is (every? :target-date items)))))

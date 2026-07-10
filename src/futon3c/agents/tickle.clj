@@ -75,7 +75,8 @@
                                                          :or {self-id "tickle-1"}}]
   (let [threshold-seconds (long (or threshold-seconds 300))
         now (Instant/now)
-        entries (estore/query* evidence-store {})
+        entries (estore/query* evidence-store
+                               {:query/since (str (.minusSeconds now threshold-seconds))})
         latest-by-author (latest-activity-by-author entries)
         result (into {}
                      (map (fn [agent-id]

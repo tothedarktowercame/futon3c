@@ -332,6 +332,40 @@
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :scanned-repos]))))))
 
+(deftest mission-doc-disposition-bound-counts-missing-status-not-active-missions
+  (testing "many active lifecycle statuses are classified, not undecided"
+    (let [repo (temp-dir "mission-doc-active-statuses")
+          missions-dir (io/file repo "holes" "missions")]
+      (.mkdirs missions-dir)
+      (doseq [n (range 12)]
+        (spit (io/file missions-dir (str "M-active-" n ".md"))
+              (str "# Active " n "\n"
+                   "Status: IDENTIFY\n"
+                   "body\n")))
+      (let [check (arch/check-mission-doc-disposition [(.getPath repo)]
+                                                       {:undecided-bound 10})
+            r (check *xtdb-backend*)]
+        (is (= :ok (:outcome r)))
+        (is (= 0 (get-in r [:detail :violations 0 :undecided-count] 0)))))))
+
+(deftest mission-doc-disposition-violation-tells-operator-how-to-fix-it
+  (testing "missing Status lines produce explicit remediation instructions"
+    (let [repo (temp-dir "mission-doc-remediation")
+          missions-dir (io/file repo "holes" "missions")
+          mission-file (io/file missions-dir "M-missing.md")]
+      (.mkdirs missions-dir)
+      (spit mission-file "# Missing status\nbody\n")
+      (let [check (arch/check-mission-doc-disposition [(.getPath repo)]
+                                                       {:undecided-bound 0
+                                                        :old-days 60})
+            r (check *xtdb-backend*)
+            fix (get-in r [:detail :how-to-fix])
+            doc-fix (get-in r [:detail :violations 0 :missing-status-recent 0 :fix])]
+        (is (= :violation (:outcome r)))
+        (is (string? fix))
+        (is (re-find #"Status:" fix))
+        (is (= fix doc-fix))))))
+
 ;; -----------------------------------------------------------------------------
 ;; Canonical statement is grep-verifiable (subsumption-witness)
 ;; -----------------------------------------------------------------------------

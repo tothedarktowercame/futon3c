@@ -1,5 +1,7 @@
 # M-war-machine-first-outing — Expectations vs Actual (R-L)
 
+Status: complete
+
 **Date:** 2026-05-30. Authored *after* the run (the first outing happened
 in-session), so this is the §5 prediction scored against what occurred.
 

@@ -141,6 +141,24 @@
                                      {:query/type :coordination})))]
       (is (= [] result)))))
 
+(deftest count-builds-count-query-string-from-params
+  (testing "count sends supported filters to /api/alpha/evidence/count"
+    (let [captured (atom nil)
+          result (with-mock-server
+                   (fn [req]
+                     (reset! captured {:method (:request-method req)
+                                       :uri (:uri req)
+                                       :query-string (:query-string req)})
+                     (json-response 200 {:count 7}))
+                   (fn [base-url]
+                     (backend/-count (http-be/->HttpBackend base-url)
+                                     {:query/type :coordination
+                                      :query/author "codex"})))]
+      (is (= :get (:method @captured)))
+      (is (= "/api/alpha/evidence/count" (:uri @captured)))
+      (is (= "type=coordination&author=codex" (:query-string @captured)))
+      (is (= 7 result)))))
+
 (deftest all-returns-all-entries
   (testing "all reads /api/alpha/evidence and returns :entries"
     (let [entries [(fix/make-evidence-entry {:evidence/id "e-http-all-1"})

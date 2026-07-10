@@ -1,0 +1,605 @@
+{:source :pipeline-pipecleaner
+ :created "2026-06-16"
+ :purpose
+ "Map the scan-template classes induced by pipeline-prototype.edn onto existing futon3/library patterns. The goal is to characterize what each class is asking for before building any scan machinery."
+
+ :built-capabilities
+ [{:capability :self-describing-stack-docs
+   :label "self-describing stack documentation"
+   :status :exists-already
+   :source "futon7a/vsatarcs.html"
+   :stereolithography-source "futon5a/holes/missions/M-stack-stereolithography.md"
+   :warrant-patterns ["sidecar/per-id-audit-timeline-linkage"
+                      "futon-theory/retroactive-canonicalization"
+                      "futon-theory/single-source-of-truth"
+                      "agent/evidence-over-assertion"]
+   :supported-by [:ontology/narrative-registration]
+   :note
+   "VSATARCS already renders lifted devmaps, leaves, R-criteria, freshness badges, and source links; stereolithography wants this kind of narrative surface reconciled with capability status."}
+  {:capability :operator-visible-state
+   :label "operator-visible stack state"
+   :status :exists-already
+   :source "futon3c/holes/missions/M-war-machine.md"
+   :stereolithography-source "futon5a/holes/missions/M-stack-stereolithography.md"
+   :warrant-patterns ["peripherals/read-only-first-then-extend"
+                      "peripherals/pilot-plus-ground-control"
+                      "peripherals/inhabitation-feeds-evolution"
+                      "aif/structured-observation-vector"]
+   :supported-by [:operator-readout]
+   :note
+   "War Machine and Arxana-style readouts already answer part of 'what exists already?' for the operator; behaviour-readout remains a separate hole."}
+  {:capability :evidence-backed-claim-flow
+   :label "evidence-backed claim flow"
+   :status :emerging
+   :source "futon7/holes/C-pudding-prover.md"
+   :stereolithography-source "futon5a/holes/missions/M-stack-stereolithography.md"
+   :warrant-patterns ["agent/evidence-over-assertion"
+                      "futon-theory/curry-howard-operational"
+                      "invariant-coherence/state-snapshot-witness"
+                      "peripherals/canonical-typed-event-vs-side-channel"]
+   :supported-by [:witness/schema :boundary-generalization]
+   :note
+   "Pudding Prover, typed holes, and evidence boundaries show the capability is real in important cases, while mission-wide witness/schema coverage is still coming out of the bath."}
+  {:capability :capability-stereolithography
+   :label "capability stereolithography printout"
+   :status :declared
+   :source "futon5a/holes/missions/M-stack-stereolithography.md"
+   :warrant-patterns ["agent/evidence-over-assertion"
+                      "futon-theory/single-source-of-truth"
+                      "invariant-coherence/protocol-family-naming"
+                      "sidecar/per-id-audit-timeline-linkage"]
+   :supported-by [:witness/schema
+                  :operator-readout
+                  :boundary-generalization
+                  :ontology/narrative-registration
+                  :principled-deferral]
+   :note
+   "The mission explicitly asks for a semilattice-friendly printout over exists/emerging/declared capability states; this diagram is a hand-built slice of that future printer."}]
+
+ :feature-warrant-layer
+ [{:feature :self-describing-stack-docs
+   :warrants ["sidecar/per-id-audit-timeline-linkage"
+              "futon-theory/retroactive-canonicalization"
+              "futon-theory/single-source-of-truth"
+              "agent/evidence-over-assertion"]
+   :reads-as "VSATARCS is an attested feature because its narrative rows are linked, canonicalized, source-grounded, and evidence-bearing."}
+  {:feature :operator-visible-state
+   :warrants ["peripherals/read-only-first-then-extend"
+              "peripherals/pilot-plus-ground-control"
+              "peripherals/inhabitation-feeds-evolution"
+              "aif/structured-observation-vector"]
+   :reads-as "Operator state is attested because read-only surfaces, pilot/ground-control separation, inhabited usage, and observation-vector patterns already recur."}
+  {:feature :evidence-backed-claim-flow
+   :warrants ["agent/evidence-over-assertion"
+              "futon-theory/curry-howard-operational"
+              "invariant-coherence/state-snapshot-witness"
+              "peripherals/canonical-typed-event-vs-side-channel"]
+   :reads-as "Claim-flow is emerging because evidence, witness/proof, snapshot, and typed-event patterns have concrete apparatus but not yet mission-wide coverage."}
+  {:feature :capability-stereolithography
+   :warrants ["agent/evidence-over-assertion"
+              "futon-theory/single-source-of-truth"
+              "invariant-coherence/protocol-family-naming"
+              "sidecar/per-id-audit-timeline-linkage"]
+   :reads-as "The stereolithography printout is declared because its warrant vocabulary exists, but the reconciled generated printer is still the missing apparatus."}]
+
+ :forward-model-takes
+ [{:id :held-deferred-schema-story
+   :status :prospective
+   :anchored-under [:principled-deferral "general held/deferred schema"]
+   :attested-by-existing-patterns []
+   :seeded-by-nonexistent-patterns ["held-item-wake-trigger"
+                                    "deferral-ledger-as-operator-memory"
+                                    "deferred-work-reentry-protocol"]
+   :story
+   "If the held/deferred schema existed, every parked obligation would become a typed object with reason, owner, evidence condition, wake trigger, expiry/review rule, and downstream re-entry path."
+   :what-we-get
+   [{:gain :bounded-deferral-memory
+     :description "Held work stops being folklore; every pause has a durable record and a named wake condition."}
+    {:gain :operator-safe-reentry
+     :description "The operator can ask 'what should wake up now?' without scanning old mission prose by hand."}
+    {:gain :mission-pressure-signal
+     :description "Repeated held items become evidence for new missions, invariants, or pattern-library entries."}
+    {:gain :pattern-seeding-loop
+     :description "The forward model can mint candidate patterns from repeated reason/trigger/outcome shapes."}]
+   :candidate-patterns-to-seed
+   [{:pattern "agent/held-item-wake-trigger"
+     :definition "A held item is well formed only if it names the event, evidence, or date that wakes it back into work."}
+    {:pattern "agent/deferral-ledger-as-operator-memory"
+     :definition "Deferred obligations should live in a queryable ledger rather than in prose-only mission margins."}
+    {:pattern "mission/deferred-work-reentry-protocol"
+     :definition "When a held item wakes, it must re-enter through a declared mission phase or operator review gate rather than becoming an unscoped task."}]}]
+
+ :downward-forward-model-layer
+ [{:id :backlog-to-basin
+   :label "backlog → basin"
+   :source "futon7/holes/M-futon-forward-model.md §2.2 / §7"
+   :reads-as
+   "Unfinished missions should project onto shared code/feature basins rather than a flat roadmap."}
+  {:id :valuable-path
+   :label "valuable path"
+   :source "futon7/holes/M-futon-forward-model.md §4 / §7.2"
+   :reads-as
+   "The next path is selected by provenance credibility, not by churn or recency alone."}
+  {:id :market-interest
+   :label "market × interest"
+   :source "futon7/holes/M-futon-forward-model.md §7.3"
+   :reads-as
+   "Generated deliverables are compared on market pull and Joe-interest as separate axes."}
+  {:id :roi-cash-gate
+   :label "ROI / cash gate"
+   :source "futon7/holes/M-futon-forward-model.md §7.5"
+   :reads-as
+   "Deliverables clear or fail only after buyer-finding is modelled as a process."}
+  {:id :piano-roll-trace
+   :label "piano-roll trace"
+   :source "futon7/holes/M-futon-forward-model.md §7.5"
+   :reads-as
+   "A time projection is a view over the semilattice, not the ontology itself."}
+  {:id :selected-pipeline
+   :label "selected pipeline"
+   :source "E-pipeline-pipecleaner §2"
+   :reads-as
+   "A linear trace is emitted only for one selected path and carries a pointer back to its semilattice node and scan witness."}]
+
+ :downward-roadmap-staging
+ [{:id :k+story-as-service
+   :title "Story-as-service"
+   :warrant-status :strong
+   :warrant-patterns ["sidecar/per-id-audit-timeline-linkage"
+                      "futon-theory/retroactive-canonicalization"
+                      "futon-theory/single-source-of-truth"]}
+  {:id :m+proof-pipeline-saas
+   :title "Proof-pipeline SaaS"
+   :warrant-status :strong
+   :warrant-patterns ["futon-theory/curry-howard-operational"
+                      "math-informal/reduce-to-known-result"
+                      "math-informal/construct-an-explicit-witness"]}
+  {:id :d+living-docs
+   :title "Living docs"
+   :warrant-status :strong
+   :warrant-patterns ["futon-theory/single-source-of-truth"
+                      "peripherals/surface-earns-inhabitation"]}
+  {:id :e+repro-qa
+   :title "Repro / research QA"
+   :warrant-status :strong
+   :warrant-patterns ["system-coherence/argue-empirically-not-persuasively"]}
+  {:id :m+pattern-atlas-api
+   :title "Pattern atlas API"
+   :warrant-status :strong
+   :warrant-patterns ["pattern-discipline/patterns-as-categorical-objects"
+                      "math-informal/technique-landscape-map"]}
+  {:id :a+evidence-audit
+   :title "Evidence audit"
+   :warrant-status :strong
+   :warrant-patterns ["agent/evidence-over-assertion"
+                      "invariant-coherence/state-snapshot-witness"]}
+  {:id :a+orchestrator
+   :title "Agent orchestrator"
+   :warrant-status :strong
+   :warrant-patterns ["agency/single-routing-authority"
+                      "realtime/structured-events-only"]}
+  {:id :m+formalization-audit
+   :title "Formalization audit"
+   :warrant-status :partial
+   :warrant-patterns ["math-informal/reduce-to-known-result"
+                      "math-informal/construct-an-explicit-witness"]}
+  {:id :d+invariant-as-service
+   :title "Invariant-as-service"
+   :warrant-status :partial
+   :warrant-patterns ["invariant-coherence/reachable-from-boot"
+                      "invariant-coherence/state-snapshot-witness"]}
+  {:id :d+manifold-dashboard
+   :title "Manifold dashboard"
+   :warrant-status :partial
+   :warrant-patterns ["system-coherence/present-graph-topology-not-adjacency-lists"]}
+  {:id :k+audience-intel
+   :title "Audience intelligence"
+   :warrant-status :partial
+   :warrant-patterns ["correspondence-coherence/mission-unlocks-eoi"]}
+  {:id :a+mission-control
+   :title "Mission Control PM"
+   :warrant-status :partial
+   :warrant-patterns ["invariant-coherence/protocol-family-naming"]}
+  {:id :a+consent-autopen
+   :title "Consent autopen"
+   :warrant-status :partial
+   :warrant-patterns ["agency/single-routing-authority"
+                      "realtime/structured-events-only"]}
+  {:id :m+frontier-detector
+   :title "Frontier detector"
+   :warrant-status :partial
+   :warrant-patterns ["math-informal/numerical-scout"]}
+  {:id :k+living-kg
+   :title "Living KG"
+   :warrant-status :partial
+   :warrant-patterns ["exotic/live-sync-source-truth"
+                      "hdm/deep-storage-to-active-graph"]}
+  {:id :e+aif-eval-harness
+   :title "AIF eval harness"
+   :warrant-status :partial
+   :warrant-patterns ["aif/expected-free-energy-scorecard"
+                      "agent/sense-deliberate-act"]}
+  {:id :e+learning-diagnostic
+   :title "Learning diagnostic"
+   :warrant-status :partial
+   :warrant-patterns ["aif/expected-free-energy-scorecard"
+                      "system-coherence/argue-empirically-not-persuasively"]}
+  {:id :h+repl-cockpit
+   :title "REPL cockpit"
+   :warrant-status :partial
+   :warrant-patterns ["peripherals/read-only-first-then-extend"]}
+  {:id :h+cyborg-hud
+   :title "Cyborg HUD"
+   :warrant-status :missing
+   :warrant-patterns []}]
+
+ :forward-pressure-sources
+ [{:id :capability-star-unfilled
+   :title "Capability-star certification feed"
+   :source "futon0/holes/missions/M-capability-star-map.graph.edn"
+   :summary
+   "Capability-star nodes certify both realized semilattice cards and future pressure: :satisfied stars witness past/current capability, while :held/:active stars seed future cards."
+   :certifies {:realized [:satisfied]
+               :future [:held :active]}
+   :status-counts {:satisfied 23 :held 13 :active 1}
+   :items
+   [{:id :kit-outbox
+     :status :held
+     :title "Pudding-prover outbox — daily-scan → interest-network → EOI → staged outbox"}
+    {:id :distributed-proofreaders
+     :status :active
+     :title "Distributed-Proofreaders structure-first recognition and QA over the math corpus"}
+    {:id :cold-eoi-authored-outbox
+     :status :held
+     :title "Cold EOI can be authored into the outbox"}
+    {:id :cold-eoi-sent
+     :status :held
+     :title "Cold EOI gets sent to a real cold lead"}
+    {:id :cold-send-response
+     :status :held
+     :title "Cold send draws a response"}
+    {:id :cold-response-conversion
+     :status :held
+     :title "Cold response converts to a paid engagement"}
+    {:id :full-arxiv-mining
+     :status :held
+     :title "Full ArXiv mining with structure-based representation"}
+    {:id :symbol-grounding
+     :status :held
+     :title "Symbol-grounding / CT-vision"}
+    {:id :efe-trustworthy-over-starmap
+     :status :held
+     :title "EFE does real AIF over the star-map"}
+    {:id :ai-passes-prelims
+     :status :held
+     :title "AI passes UT-Austin prelims"}
+    {:id :hypergraph-operator
+     :status :held
+     :title "JSDQ hypergraph operator"}
+    {:id :wm-overnight-unsupervised
+     :status :held
+     :title "The WM runs overnight without supervision"}]}
+  {:id :pudding-unchecked-levels
+   :title "Pudding Prover certification feed"
+   :source "futon7/holes/pudding-prover-registry.edn"
+   :summary
+   "Pudding Prover states certify both realized proof levels and future cards: satisfied/observed entries witness what has cleared, while held/open entries name proof obligations and decision hooks."
+   :certifies {:realized [:satisfied :observed]
+               :future [:held :open]}
+   :status-counts {:satisfied 24 :held 22 :contract-released 1 :open-observables 7 :observed-observables 1}
+   :items
+   [{:id :T2.2
+     :status :held
+     :title "Cold EOI authored by the engine into the outbox"}
+    {:id :T2.3
+     :status :held
+     :title "Cold EOI sent to a real cold lead"}
+    {:id :T2.4
+     :status :held
+     :title "Cold send draws a response"}
+    {:id :T2.5
+     :status :held
+     :title "Cold response converts to a paid engagement"}
+    {:id :T3.3
+     :status :held
+     :title "Mine the ArXiv with the same structure-based representation"}
+    {:id :T3.4
+     :status :held
+     :title "AI system can pass mathematics prelims"}
+    {:id :T4.3
+     :status :held
+     :title "Governance of the self-improving system"}
+    {:id :T4.4
+     :status :held
+     :title "Anthropic hook for commodity-hardware self-improvement"}
+    {:id :T5.1
+     :status :held
+     :title "Represent code and reasoning as hypergraphs"}
+    {:id :T5.2
+     :status :held
+     :title "Language ↔ formal semantic representation as reasoning substrate"}
+    {:id :kit-cadence
+     :status :held
+     :title "Forward-model Beta posterior to base-case/capability cadence"}
+    {:id :kit-peradam-type
+     :status :held
+     :title "Orb/Parami typing of a certified peradam"}
+    {:id :kit-arrow-witness
+     :status :held
+     :title "G1 arrow-witness binding to live affect"}
+    {:id :O-cross-mission-unlocking
+     :status :open
+     :title "Observable decision: cross-mission unlocking"}
+    {:id :O-semilattice-rollout-reconciliation
+     :status :open
+     :title "Observable decision: semilattice rollout reconciliation"}
+    {:id :O-scheduled-cadence
+     :status :open
+     :title "Observable decision: scheduled cadence"}]}]
+
+ :semilattice-next-plan
+ {:status :not-yet-built
+  :observation
+  "The pattern library is a flat namespace of directories and flexiarg files; its cross-references give phylogeny and reuse history, but not by themselves the logical semilattice of stack capabilities."
+  :measured-sources
+  {:pattern-library {:path "futon3/library"
+                     :top-level-directories 74
+                     :flexiarg-files 1010}
+   :vsatarcs-stories {:path "futon5a/holes/stories"
+                      :aif-edn-files 52
+                      :markdown-files 101}}
+  :distinction
+  {:phylogeny
+   "Pattern-to-pattern cross-reference, reuse, and derivation: useful for lineage, but not enough to answer what capability depends on what."
+   :logical-semilattice
+   "Capability/support structure over stories, missions, invariants, patterns, and apparatus: enough to ask what is actually in the stack and what would change if a hole were filled."}
+  :candidate-node-types
+  [:capability :pattern :mission :story-claim :apparatus :hole :invariant :source-surface]
+  :candidate-edge-types
+  [:supports :instantiates :realized-by :warranted-by :pressured-by :closes
+   :generalises-shape-to :depends-on :exposes-hole :seeds-pattern]
+  :first-sources
+  [{:source "VSATARCS AIF stories"
+    :paths ["futon5a/holes/stories/*.aif.edn" "futon7a/vsatarcs.html"]
+    :role "Provides existing logical/story edges such as :supports, :closes, :instantiates, :generalises-shape-to, and load-bearing conflicts."}
+   {:source "pattern library"
+    :paths ["futon3/library/**/*.flexiarg"]
+    :role "Provides pattern vocabulary and cross-reference/lineage evidence; should become warrants, not the whole logical structure."}
+   {:source "stereolithography mission"
+    :paths ["futon5a/holes/missions/M-stack-stereolithography.md"]
+    :role "Provides the capability-status discipline: :exists-already, :emerging, :declared, with evidence-backed claims only."}
+   {:source "capability star map"
+    :paths ["futon0/holes/missions/M-capability-star-map.md"
+            "futon0/holes/missions/M-capability-star-map.graph.edn"
+            "futon0/holes/missions/M-capability-star-map.ensemble.edn"
+            "futon2/web/war-machine/resources/public/data/capability-star-map.graph.json"]
+    :role "Provides the existing structure-view over capabilities: nodes, prerequisites, minted-by missions, and scheduler-facing graph shape."}
+   {:source "invariant surfaces"
+    :paths ["futon3c/docs/structural-law-inventory.sexp"
+            "futon4/futon-stack-invariant-model.edn"]
+    :role "Provides a backbone for operational/candidate capability rows."}]
+  :related-mission-crossrefs
+  [{:mission "M-capability-star-map"
+    :path "futon0/holes/missions/M-capability-star-map.md"
+    :why
+    "Names the prior capability graph: intended capabilities, prerequisite edges, build order, and a granularity axis."}
+   {:artifact "M-capability-star-map.graph.edn"
+    :path "futon0/holes/missions/M-capability-star-map.graph.edn"
+    :why
+    "Concrete structure-view over capabilities, with satisfied/held status, grounding, minted-by missions, and scope/prerequisite edges."}
+   {:artifact "C-pudding-prover §8.2"
+    :path "futon7/holes/C-pudding-prover.md#8.2"
+    :why
+    "Records the split: Pudding Prover registry = status-view; M-capability-star-map = structure-view over the same capability set."}]
+  :embedding-clustering-plan
+  {:status :proposal
+   :pattern-only
+   "Pattern clustering can still help name warrant vocabularies and latent pattern families, but it is not required for the first upward cascade."
+   :mission-only
+   "Cluster mission embeddings independently to expose feature regions, because missions and capabilities are closer to the 'what is in the stack?' question than pattern-library lineage is."
+   :mission-to-pattern-crossrefs
+   "Use explicit mission→pattern references as direct warrants for each mission cluster. This concrete cited-pattern layer is stronger than both embedding proximity and pattern-cluster membership."
+   :combined-view
+   "A useful render should first show mission/feature clusters as capability basins and the concrete patterns actually cited inside each basin. Pattern clusters can then sit above those citations as optional warrant-constellation labels."
+   :risk
+   "A single joint embedding of missions and patterns may blur feature topology with method/warrant topology; run separate clusterings first, then join by explicit citations and high-confidence nearest neighbours."}
+  :first-derived-row-shape
+  {:id "capability:<stable-id>"
+   :label "human label"
+   :status "one of :exists-already/:emerging/:declared"
+   :source-surfaces []
+   :warrant-patterns []
+   :story-claims []
+   :apparatus []
+   :holes []
+   :edges []}
+  :next-bounded-build
+  "Derive a tiny semilattice EDN from 3-5 VSATARCS AIF stories plus their cited patterns, then render it with the same visual grammar as this prototype."}
+
+ :classes
+ {:witness/schema
+  {:status :partly-satisfied-but-broader-than-snapshots
+   :correction
+   "This class is attested by Pudding Prover and M-typed-holes as much as by state snapshots. The generic demand is not merely 'emit a snapshot'; it is 'turn mission claims into checkable witnesses/proofs'."
+   :library-patterns
+   [{:pattern "agent/evidence-over-assertion"
+     :fit :primary
+     :asks "What evidence anchors this claim, and how can a future agent verify it?"}
+    {:pattern "futon-theory/curry-howard-operational"
+     :fit :primary
+     :asks "What program/proof witnesses that the stated mission/spec can be inhabited?"}
+    {:pattern "invariant-coherence/state-snapshot-witness"
+     :fit :technical-subcase
+     :asks "For long-lived runtime state, what point-in-time projection should be durable queryable evidence?"}
+    {:pattern "peripherals/canonical-typed-event-vs-side-channel"
+     :fit :supporting
+     :asks "If the witness is an event, does it live in the canonical typed event taxonomy rather than a side channel?"}]
+   :outside-library-anchors
+   ["futon7/holes/C-pudding-prover.md"
+    "futon3c/holes/missions/M-typed-holes-*.md"]
+   :apparatus
+   [{:name "Pudding Prover status/witness guard"
+     :path "futon7/holes/C-pudding-prover.md"
+     :warrant-patterns ["agent/evidence-over-assertion"
+                        "futon-theory/curry-howard-operational"]}
+    {:name "M-typed-holes fill witnesses"
+     :path "futon3c/holes/missions/M-typed-holes-*.md"
+     :warrant-patterns ["futon-theory/curry-howard-operational"]}
+    {:name "state snapshot witnesses"
+     :path "futon3c/src/futon3c/logic/snapshot.clj"
+     :warrant-patterns ["invariant-coherence/state-snapshot-witness"]}]
+   :scan-question
+   "For each mission or claim, is there a witness object/proof path, what type does it inhabit, and is that witness durable enough for another agent to check?"}
+
+  :operator-readout
+  {:status :mostly-covered-in-current-surfaces
+   :correction
+   "The War Machine 'View: operator' pane and Arxana/HUD surfaces already cover several operator-readout cases. A readout of Joe's behaviour from logged turns is related but distinct: it is an inhabitation/behaviour-observation problem, not simply operator-readout."
+   :library-patterns
+   [{:pattern "peripherals/read-only-first-then-extend"
+     :fit :primary
+     :asks "What should first exist as a read-only observation surface before any write/envelope capability is granted?"}
+    {:pattern "peripherals/inhabitation-feeds-evolution"
+     :fit :primary-for-behaviour-readout
+     :asks "What structured usage data does the surface need to capture so behaviour can feed the next design loop?"}
+    {:pattern "aif/structured-observation-vector"
+     :fit :technical-subcase
+     :asks "Which observed facts should be normalized into a typed vector so policy/scoring can compare them over time?"}
+    {:pattern "peripherals/pilot-plus-ground-control"
+     :fit :role-separation
+     :asks "Which observations belong inside the operator/pilot surface, and which substrate checks belong to ground control?"}]
+   :apparatus
+   [{:name "War Machine View: operator"
+     :path "futon0/web/war-machine"
+     :warrant-patterns ["peripherals/read-only-first-then-extend"
+                        "peripherals/pilot-plus-ground-control"]}
+    {:name "Arxana/HUD operational readouts"
+     :path "futon4/dev/arxana-browser-lab.el"
+     :warrant-patterns ["peripherals/read-only-first-then-extend"]}
+    {:name "operator behaviour observation vector"
+     :path nil
+     :status :hole
+     :warrant-patterns ["peripherals/inhabitation-feeds-evolution"
+                        "aif/structured-observation-vector"]}]
+   :scan-question
+   "For each durable fact or behavioural trace, is there an inhabited read-only surface at the decision point, and is the readout feeding a learning loop rather than just displaying data?"}
+
+  :boundary-generalization
+  {:status :live-missing-feature-family
+   :library-patterns
+   [{:pattern "agency/single-routing-authority"
+     :fit :primary-analogy
+     :asks "For this identity/write class, what is the single authoritative route or owner?"}
+    {:pattern "invariant-coherence/protocol-family-naming"
+     :fit :inventory-shape
+     :asks "Is this one shape with multiple namespace-discriminated implementations rather than many ad hoc families?"}
+    {:pattern "peripherals/canonical-typed-event-vs-side-channel"
+     :fit :event-boundary
+     :asks "Does the write extend the canonical event taxonomy instead of opening a side channel?"}
+    {:pattern "invariant-coherence/state-snapshot-witness"
+     :fit :witness-side
+     :asks "After the write, what snapshot/read-back proves the new state?"}]
+   :apparatus
+   [{:name "evidence boundary"
+     :path "futon3c/src/futon3c/evidence/boundary.clj"
+     :warrant-patterns ["agency/single-routing-authority"
+                        "invariant-coherence/state-snapshot-witness"]}
+    {:name "canonical typed event taxonomy"
+     :path nil
+     :status :hole
+     :warrant-patterns ["peripherals/canonical-typed-event-vs-side-channel"]}
+    {:name "write-class scan"
+     :path nil
+     :status :hole
+     :warrant-patterns ["agency/single-routing-authority"
+                        "invariant-coherence/protocol-family-naming"]}]
+   :scan-question
+   "For each state-changing write class, is there one boundary, one typed shape, one no-bypass guard, one witness/read-back, and one operator-visible failure mode?"}
+
+  :deferred-stub-lift
+  {:status :specialist-instance-of-obsolescence-recognition
+   :correction
+   "This does not look like a general product feature. It is a specialist archaeology/control case: placeholder checks become obsolete when a stronger live check or principled deferral exists."
+   :library-patterns
+   [{:pattern "invariant-coherence/subsumption-witness"
+     :fit :primary
+     :asks "Is latent artifact A, such as a deferred-stub registration, subsumed by stronger canonical record P?"}
+    {:pattern "invariant-coherence/protocol-family-naming"
+     :fit :shape-discipline
+     :asks "Are deferred-stub siblings named as instances of a shared obsolescence-recognition shape?"}
+    {:pattern "code-coherence/dead-code-hygiene"
+     :fit :adjacent
+     :asks "Has the placeholder become dead code once the real mechanism exists?"}]
+   :apparatus
+   [{:name "register-deferred-taps!"
+     :path "futon3c/src/futon3c/logic/probe_taps.clj"
+     :warrant-patterns ["invariant-coherence/subsumption-witness"
+                        "invariant-coherence/protocol-family-naming"]}
+    {:name "archaeology deferred-stub check"
+     :path "futon3c/src/futon3c/logic/archaeology.clj"
+     :warrant-patterns ["invariant-coherence/subsumption-witness"]}
+    {:name "lift/retire classifier"
+     :path nil
+     :status :hole
+     :warrant-patterns ["invariant-coherence/subsumption-witness"]}]
+   :scan-question
+   "For each deferred stub, what canonical stronger record would retire it: a live check, a documented wait condition, or evidence that the family is no longer relevant?"}
+
+  :principled-deferral
+  {:status :live-missing-feature-family
+   :library-patterns
+   [{:pattern "agent/provisional-claims-ledger"
+     :fit :primary
+     :asks "What unresolved claim or obligation is being carried, who owns it, what evidence is needed, and when does it expire?"}
+    {:pattern "agent/pause-is-not-failure"
+     :fit :primary
+     :asks "When is holding/asking/pausing the correct action rather than a failure to progress?"}
+    {:pattern "correspondence-coherence/mission-unlocks-eoi"
+     :fit :gated-deferral-example
+     :asks "What concrete mission or artifact unlocks this deferred action?"}
+    {:pattern "contributing/stack-scan-logging-protocol"
+     :fit :revisit-protocol
+     :asks "What next-scan note records outstanding issues and their evidence path?"}]
+   :apparatus
+   [{:name "mission/EoI gated deferrals"
+     :path "futon3/library/correspondence-coherence/mission-unlocks-eoi.flexiarg"
+     :warrant-patterns ["correspondence-coherence/mission-unlocks-eoi"]}
+    {:name "general held/deferred schema"
+     :path nil
+     :status :hole
+     :warrant-patterns ["agent/provisional-claims-ledger"
+                        "agent/pause-is-not-failure"]}]
+   :scan-question
+   "For each held/deferred/parked item, does the record name reason, owner, required evidence, expiry or revisit trigger, and the event that wakes it back up?"}
+
+  :ontology/narrative-registration
+  {:status :live-missing-feature-family
+   :library-patterns
+   [{:pattern "sidecar/per-id-audit-timeline-linkage"
+     :fit :primary
+     :asks "Can a claim/object be read through a contiguous narrative timeline rather than isolated rows?"}
+    {:pattern "futon-theory/retroactive-canonicalization"
+     :fit :primary
+     :asks "When does an after-the-fact narrative become canonical rather than just retrospective prose?"}
+    {:pattern "futon-theory/single-source-of-truth"
+     :fit :truth-source
+     :asks "Which artifact is authoritative when narrative status and live substrate disagree?"}
+    {:pattern "agent/evidence-over-assertion"
+     :fit :grounding
+     :asks "Which claims in the narrative are evidence-backed rather than asserted?"}]
+   :apparatus
+   [{:name "VSATARCS feeder"
+     :path "futon3c/src/futon3c/vsatarcs/feeder.clj"
+     :warrant-patterns ["sidecar/per-id-audit-timeline-linkage"
+                        "futon-theory/single-source-of-truth"]}
+    {:name "VSATARCS doc-integrity lane"
+     :path "futon7/holes/vsatarcs-doc-integrity.md"
+     :warrant-patterns ["futon-theory/retroactive-canonicalization"
+                        "agent/evidence-over-assertion"]}
+    {:name "narrative freshness scan"
+     :path nil
+     :status :hole
+     :warrant-patterns ["futon-theory/single-source-of-truth"
+                        "sidecar/per-id-audit-timeline-linkage"]}]
+   :scan-question
+   "For each narrative/ontology artifact that claims stack state, what is its authoritative source, how does it detect drift, and does drift trigger regenerate, cross-link, schema-extension, or claim retirement?"}}}

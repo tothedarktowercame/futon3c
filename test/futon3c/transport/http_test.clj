@@ -1582,6 +1582,66 @@
       (is (= "codex" (:evidence/author (first entries))))
       (is (= "reflection" (:evidence/type (first entries)))))))
 
+(deftest evidence-author-filter-is-pushed-to-backend
+  (testing "GET /api/alpha/evidence pushes author into the backend query"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req-with-query handler "/api/alpha/evidence" "author=codex")]
+          (is (= 200 (:status response)))
+          (is (= "codex" (:query/author @seen-query))))))))
+
+(deftest evidence-limit-is-pushed-to-backend-without-app-filters
+  (testing "GET /api/alpha/evidence?limit=N pushes the limit when no app-only filters are present"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req-with-query handler "/api/alpha/evidence" "limit=5")]
+          (is (= 200 (:status response)))
+          (is (= 5 (:query/limit @seen-query))))))))
+
+(deftest evidence-session-and-pattern-filters-are-pushed-to-backend
+  (testing "session-id/pattern-id requests stay bounded instead of degrading to backend params={}"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req-with-query
+                        handler
+                        "/api/alpha/evidence"
+                        "session-id=sess-1&pattern-id=agent%2Fpause&limit=7")]
+          (is (= 200 (:status response)))
+          (is (= "sess-1" (:query/session-id @seen-query)))
+          (is (= :agent/pause (:query/pattern-id @seen-query)))
+          (is (= 7 (:query/limit @seen-query))))))))
+
+(deftest evidence-query-defaults-to-bounded-backend-page
+  (testing "GET /api/alpha/evidence without query params pushes a default page limit"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/query* (fn [_store query]
+                                    (reset! seen-query query)
+                                    [])]
+        (let [response (get-req handler "/api/alpha/evidence")]
+          (is (= 200 (:status response)))
+          (is (= 100 (:query/limit @seen-query))))))))
+
+(deftest evidence-count-author-filter-is-pushed-to-backend
+  (testing "GET /api/alpha/evidence/count pushes author into the backend count query"
+    (let [handler (make-handler)
+          seen-query (atom nil)]
+      (with-redefs [estore/count* (fn [_store query]
+                                    (reset! seen-query query)
+                                    0)]
+        (let [response (get-req-with-query handler "/api/alpha/evidence/count" "author=codex")]
+          (is (= 200 (:status response)))
+          (is (= "codex" (:query/author @seen-query))))))))
+
 (deftest evidence-get-by-id-and-chain
   (testing "GET /api/alpha/evidence/:id and /chain return expected payload"
     (let [root (-> (estore/append! {:subject {:ref/type :session :ref/id "sess-chain"}

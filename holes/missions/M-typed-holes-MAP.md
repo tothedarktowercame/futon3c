@@ -1,5 +1,7 @@
 # M-typed-holes — MAP (2026-06-14)
 
+Status: complete
+
 *Phase 2 per `futon4/holes/mission-lifecycle.md`: survey what exists; produce
 facts, not decisions. The detailed IDENTIFY is the charter + the four worked
 exemplars + the residue analysis + the mathlib audit. This MAP inventories the
@@ -85,6 +87,39 @@ golden-graphs, the scope detector, AND the MO processed corpus (`hx/type`,
   are not two theories.
 - **The grounding "Greek 18.2%" backlog was stale** — measure-first beats
   assume (relevant discipline for DERIVE).
+
+## 6. Query-substrate status — addendum (2026-07-04)
+
+Survey of the XTDB query layer under projection #5 (queries/scopes), added after
+MAP closed to feed the store-agnostic-query-layer question DERIVE inherits.
+Verified against source; file:line trail in-session.
+
+- **Engine version.** Every store is **XTDB 1.24.x / Datalog** (`futon1a`,
+  `futon3b`, `futon1/apps/*`); all query sites are `{:find … :where …}`. **XTQL
+  is XTDB 2.x** — absent from the tree, no usage, no migration note. So "adopt
+  XTQL" ≠ a query-layer tweak; it is a 1.x→2.x engine migration
+  (RocksDB/LMDB → columnar). The store-agnostic layer is the seam where a future
+  2.x on-ramp would live, if ever wanted.
+- **"Graph query ≫ read text" is already true for the cheap grain.** Measured on
+  the live store: bound-type count-pushdown (`/census`) and ids-only-index +
+  lazy-pull answer "how many / which X" over 100k+ rows in ~ms; the evidence
+  backend hits **~10 ms vs 15–20 s** on the *same* store purely by staying
+  index-bound. The primitive that justifies the ambition exists and is proven.
+
+**Answerable by one query today vs. needs work** (sharpens Q4 and the §3 MISSING column):
+
+| one graph query today | the query-layer gap |
+|---|---|
+| type population (`/census`); all-of-type (`?type=&limit=`); 1-hop `?end=` (exact); 1-hop ego; thread / reply-chain projection | server-side **multi-hop / prefix / join** — none exist |
+| ns→vars prefix sweep; code-structure `db-as-of(commit)` — **Drawbridge/REPL Datalog only** | those are **not HTTP-exposed**; the API's `?end=` is exact-match only |
+| — | **recursive rules absent** — "callers of / transitive deps of" has no `:rules`; multi-hop degrades to app-side **N+1 HTTP** (`enrich-file`) |
+| — | **time-travel over code *contents*** is an open defect (code graph is a HEAD mirror; `db-as-of` covers commits/evidence, not code text — `E-substrate-2-timetravel`) |
+
+**Net for DERIVE.** Stores + `hx/` schema are ready (as MAP found) and the cheap
+query grain is fast; the unbuilt piece the "answer-by-query" loop needs is
+**server-side traversal** (multi-hop, prefix, recursive rules, HTTP-exposed
+`db-as-of`) — today these live only in the REPL. That is the query-layer half of
+the ArSE↔ScopeQuery↔store proving loop MAP handed forward.
 
 ## Exit
 

@@ -1444,6 +1444,8 @@
                 evidence-type (assoc :query/type evidence-type)
                 claim-type (assoc :query/claim-type claim-type)
                 author (assoc :query/author author)
+                session-id (assoc :query/session-id session-id)
+                pattern-id (assoc :query/pattern-id pattern-id)
                 (or explicit-since broad-page?)
                 (assoc :query/since (or explicit-since (default-evidence-since)))
                 explicit-before
@@ -1452,9 +1454,7 @@
                 (assoc :query/include-ephemeral? include-ephemeral?)
                 (seq tags) (assoc :query/tags tags))
         backend-query (cond-> query
-                        (and (nil? session-id)
-                             (nil? pattern-id)
-                             (int? limit)
+                        (and (int? limit)
                              (pos? limit))
                         (assoc :query/limit limit))
         evidence-store (evidence-store-for-config config)
@@ -1493,23 +1493,14 @@
                 evidence-type (assoc :query/type evidence-type)
                 claim-type (assoc :query/claim-type claim-type)
                 author (assoc :query/author author)
+                session-id (assoc :query/session-id session-id)
+                pattern-id (assoc :query/pattern-id pattern-id)
                 (get params "since") (assoc :query/since (get params "since"))
                 (some? include-ephemeral?)
                 (assoc :query/include-ephemeral? include-ephemeral?)
                 (seq tags) (assoc :query/tags tags))
         evidence-store (evidence-store-for-config config)
-        count* (if (or session-id pattern-id)
-                 (->> (estore/query* evidence-store query)
-                      (filter (fn [entry]
-                                (and
-                                 (or (nil? author)
-                                     (= author (:evidence/author entry)))
-                                 (or (nil? session-id)
-                                     (= session-id (:evidence/session-id entry)))
-                                 (or (nil? pattern-id)
-                                     (= pattern-id (:evidence/pattern-id entry))))))
-                      clojure.core/count)
-                 (estore/count* evidence-store query))]
+        count* (estore/count* evidence-store query)]
     (json-response 200 {:ok true
                         :count count*})))
 

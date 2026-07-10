@@ -31,16 +31,20 @@ export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-false}"
 #     with lucy's protected id and be refused. ---
 export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
 export FUTON3C_REGISTER_CLAUDE2="${FUTON3C_REGISTER_CLAUDE2:-false}"
-export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
+export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-true}"
+export FUTON3C_REGISTER_VSCODE_CODEX="${FUTON3C_REGISTER_VSCODE_CODEX:-false}"
+export FUTON3C_CODEX_AGENT_ID="${FUTON3C_CODEX_AGENT_ID:-chi-codex-1}"
+export FUTON3C_CODEX_NICK="${FUTON3C_CODEX_NICK:-chi-codex}"
 # claude CLI lives in ~/.local/bin here, which isn't on the JVM's
 # non-interactive launch PATH — point CLAUDE_BIN at the absolute path so
 # chi-claude-1 is invocable.
 export CLAUDE_BIN="${CLAUDE_BIN:-/home/joe/.local/bin/claude}"
+export CODEX_BIN="${CODEX_BIN:-/home/joe/.local/bin/codex}"
 
 # --- Federation: peer with lucy (announce local agents; mirror lucy's) ---
 export FUTON3C_PEERS="${FUTON3C_PEERS:-http://172.236.28.208:7070}"
 
-# --- Codex settings (parity; no local codex execution here) ---
+# --- Codex settings ---
 export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
 export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"

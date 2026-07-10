@@ -24,7 +24,10 @@
   (-exists? [b id]
     "Return true if evidence-id exists in the store.")
   (-query [b params]
-    "Return [EvidenceEntry...] matching the query params. Newest-first.
+   "Return [EvidenceEntry...] matching the query params. Newest-first.
+     Excludes ephemeral by default.")
+  (-count [b params]
+    "Return count of EvidenceEntry docs matching query params.
      Excludes ephemeral by default.")
   (-forks-of [b id]
     "Return [EvidenceEntry...] where :evidence/fork-of = id, sorted by time.")
@@ -64,12 +67,17 @@
 (defn filter-and-sort-entries
   "Apply standard query filtering and sorting to a seq of entries.
    Shared logic used by both AtomBackend and XtdbBackend."
-  [entries {:query/keys [subject type claim-type author since limit include-ephemeral? tags]}]
+  [entries {:query/keys [subject type claim-type author session-id pattern-id
+                         since before limit include-ephemeral? tags]}]
   (let [include-ephemeral? (true? include-ephemeral?)
         since-inst (when since
                      (try (parse-instant since)
                           (catch DateTimeParseException _ nil)
                           (catch Exception _ nil)))
+        before-inst (when before
+                      (try (parse-instant before)
+                           (catch DateTimeParseException _ nil)
+                           (catch Exception _ nil)))
         entries (if include-ephemeral?
                   entries
                   (remove #(true? (:evidence/ephemeral? %)) entries))
@@ -77,6 +85,8 @@
         entries (if type (filter #(= type (:evidence/type %)) entries) entries)
         entries (if claim-type (filter #(= claim-type (:evidence/claim-type %)) entries) entries)
         entries (if author (filter #(= author (:evidence/author %)) entries) entries)
+        entries (if session-id (filter #(= session-id (:evidence/session-id %)) entries) entries)
+        entries (if pattern-id (filter #(= pattern-id (:evidence/pattern-id %)) entries) entries)
         entries (if (seq tags)
                   (filter #(let [et (set (:evidence/tags %))]
                              (every? et tags))
@@ -84,6 +94,9 @@
                   entries)
         entries (if since-inst
                   (filter #(not (.isBefore (entry-at %) since-inst)) entries)
+                  entries)
+        entries (if before-inst
+                  (filter #(.isBefore (entry-at %) before-inst) entries)
                   entries)
         entries (sort-by entry-at #(compare %2 %1) entries)
         entries (if (and (int? limit) (pos? limit)) (take limit entries) entries)]
@@ -135,6 +148,10 @@
   (-query [_ params]
     (let [entries (vals (:entries @!store))]
       (filter-and-sort-entries entries params)))
+
+  (-count [_ params]
+    (count (filter-and-sort-entries (vals (:entries @!store))
+                                    (dissoc params :query/limit))))
 
   (-forks-of [_ evidence-id]
     (let [entries (vals (:entries @!store))

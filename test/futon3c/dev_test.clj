@@ -542,6 +542,58 @@
           (is (= "cold-sid" (:session-id result)))
           (is (= "[no text or tool calls in this turn]" (:result result))))))))
 
+(deftest make-claude-invoke-fn-does-not-cold-fallback-after-warm-interrupt
+  (testing "An intentional warm-pouch interrupt cancels the turn instead of replaying it cold"
+    (let [feed-calls (atom 0)
+          evicted? (atom false)]
+      (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                    (constantly nil)
+                    turn-queue/enabled?
+                    (constantly false)
+                    agent-pouch/enabled?
+                    (constantly true)
+                    agent-pouch/feed-turn!
+                    (fn [& _]
+                      (swap! feed-calls inc)
+                      (let [deadline (+ (System/currentTimeMillis) 2000)]
+                        (while (and (not @evicted?)
+                                    (< (System/currentTimeMillis) deadline))
+                          (Thread/sleep 20)))
+                      (throw (java.io.IOException. "Stream closed")))
+                    agent-pouch/evict!
+                    (fn [_] (reset! evicted? true) true)
+                    dev/start-invoke-ticker!
+                    (fn [& _] (fn [] nil))
+                    dev/emit-invoke-evidence!
+                    (fn [& _] nil)
+                    dev/context-retrieval!
+                    (fn [& _] nil)
+                    futon3c.blackboard/blackboard!
+                    (fn [& _] nil)]
+        (let [claude-bin (doto (java.io.File/createTempFile "futon3c-claude-cold-unexpected-" ".sh")
+                           (.deleteOnExit))
+              _ (spit claude-bin
+                      (str "#!/usr/bin/env bash\n"
+                           "touch \"" (.getPath claude-bin) ".cold-ran\"\n"
+                           "printf '{\"type\":\"result\",\"session_id\":\"cold-sid\",\"is_error\":false}\\n'\n"))
+              _ (.setExecutable claude-bin true)
+              invoke-fn (dev/make-claude-invoke-fn {:agent-id "claude-interrupt"
+                                                    :claude-bin (.getPath claude-bin)
+                                                    :timeout-ms 5000})
+              result-f (future (invoke-fn "interrupt me" "warm-sid"))
+              deadline (+ (System/currentTimeMillis) 2000)]
+          (while (and (not (contains? @dev/!invoke-controls "claude-interrupt"))
+                      (< (System/currentTimeMillis) deadline))
+            (Thread/sleep 20))
+          (is (contains? @dev/!invoke-controls "claude-interrupt"))
+          (is (true? (:ok (dev/interrupt-agent-invoke! "claude-interrupt"))))
+          (let [result @result-f]
+            (is (= 1 @feed-calls))
+            (is (true? (:interrupted? result)))
+            (is (= "invoke interrupted" (:error result)))
+            (is (= "warm-sid" (:session-id result)))
+            (is (false? (.exists (io/file (str (.getPath claude-bin) ".cold-ran")))))))))))
+
 (deftest irc-invoke-prompt-mfuton-math-lane-pins-local-frontiermath-scope
   (testing "mfuton mode injects the n=3-only local contract on #math"
     (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]

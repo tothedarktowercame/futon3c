@@ -125,6 +125,14 @@
     []
     (backend/-query (resolve-backend store) evidence-query)))
 
+(defn count*
+  "Count entries in a specific store.
+   Excludes ephemeral entries by default."
+  [store evidence-query]
+  (if-not (shapes/valid? shapes/EvidenceQuery evidence-query)
+    0
+    (backend/-count (resolve-backend store) evidence-query)))
+
 (defn query
   "Query the default store. Returns [EvidenceEntry] (excludes ephemeral by default)."
   [evidence-query]

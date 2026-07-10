@@ -1,5 +1,7 @@
 # M-typed-holes — Lean wave 2 design note (T5 ScopeQuery, T6 BV)
 
+Status: complete
+
 *The two greenfield manifest concepts. The mathlib audit found NO prior
 formalisation for either (scope-as-query: Yoneda substrate only; bv: source
 literature only, no prover anywhere). They need a design pass before dispatch —

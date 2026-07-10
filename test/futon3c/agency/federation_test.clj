@@ -31,6 +31,12 @@
                      :self-url "http://me:7070"})
     (is (= ["http://host-a:7070" "http://host-b:7070"] (fed/peers)))))
 
+(deftest configure-normalizes-blank-self-url
+  (testing "configure! treats blank self-url as unset"
+    (fed/configure! {:peers ["http://host-a:7070"]
+                     :self-url "  "})
+    (is (nil? (fed/self-url)))))
+
 (deftest configure-nil-peers-defaults-to-empty
   (testing "configure! with nil peers defaults to []"
     (fed/configure! {:peers nil :self-url nil})

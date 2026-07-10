@@ -36,7 +36,8 @@
    self-url: this Agency's externally reachable base URL."
   [{:keys [peers self-url]}]
   (reset! !config {:peers (vec (remove str/blank? (or peers [])))
-                   :self-url self-url}))
+                   :self-url (when-not (str/blank? self-url)
+                               (str/trim self-url))}))
 
 (defn configure-from-env!
   "Configure federation from environment variables.

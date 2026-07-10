@@ -1,5 +1,7 @@
 # M-the-perfect-crime
 
+Status: HEAD
+
 **Type**: Mission
 **Lifecycle**: HEAD (drafted 2026-05-27) → first IDENTIFY artifact landed 2026-06-07 (corpus-audit pass; see §IDENTIFY). Operator HEAD-verify still pending.
 **Owner**: claude-1 (pending operator-direction)

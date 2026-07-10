@@ -1,0 +1,91 @@
+{:paper/id "0807.1872"
+ :passage/id "0807.1872:explicit-nonrepresentability:645-697"
+ :source {:lines [645 697] :kind :proof}
+ :nodes
+ [{:id :explicit-goal
+   :kind :claim
+   :text "the failure of Brown representability for Ac(A)^op can be displayed explicitly"
+   :source {:lines [645 648]}}
+  {:id :composite-functor
+   :kind :object
+   :text "the composite Ac(A)->K(A)->Ab via Hom_K(A)(Z,-)"
+   :source {:lines [649 657]}}
+  {:id :homological-products
+   :kind :claim
+   :text "the composite is a homological functor taking products to products"
+   :source {:lines [657 658]}}
+  {:id :not-representable
+   :kind :claim
+   :text "the composite is not representable by any object of Ac(A)"
+   :source {:lines [657 659]}}
+  {:id :representability-assumption
+   :kind :claim
+   :text "if representable, there is a universal map phi:Z->A through which all maps to acyclic complexes factor uniquely"
+   :source {:lines [661 664]}}
+  {:id :triangle-X
+   :kind :object
+   :text "complete phi to a triangle X->Z->A->TX in K(A)"
+   :source {:lines [665 670]}}
+  {:id :derived-morphism-pair
+   :kind :claim
+   :text "any morphism Z->TZ in D(A) can be realized as a pair of maps with beta a quasi-isomorphism"
+   :source {:lines [671 679]}}
+  {:id :triangle-B
+   :kind :object
+   :text "the quasi-isomorphism beta fits into a triangle Y->Z->B->TY with B acyclic"
+   :source {:lines [679 685]}}
+  {:id :psi-factors
+   :kind :claim
+   :text "psi factors through the universal map phi:Z->A"
+   :source {:lines [685 687]}}
+  {:id :fixed-X-represents-all
+   :kind :claim
+   :text "each morphism Z->TZ in D(A) is represented by some map X->TZ in K(A), where X is fixed"
+   :source {:lines [687 695]}}
+  {:id :small-maps-from-X
+   :kind :claim
+   :text "there is only a small set of maps X->TZ in K(A)"
+   :source {:lines [694 696]}}
+  {:id :proper-derived-hom
+   :kind :claim
+   :text "Corollary C1.4 gives a proper class of morphisms Z->TZ in D(A)"
+   :source {:lines [696 697]}}
+  {:id :contradiction
+   :kind :claim
+   :text "the representability assumption contradicts Corollary C1.4"
+   :source {:lines [694 697]}}]
+ :edges
+ [{:id :e-factorization
+   :kind :infer
+   :relation :hence
+   :given [:representability-assumption :triangle-B]
+   :premise :derived-morphism-pair
+   :conclusion :psi-factors
+   :source {:lines [671 687]}}
+  {:id :e-fixed-X
+   :kind :infer
+   :relation :therefore
+   :given :triangle-X
+   :premise :psi-factors
+   :warrant {:kind :missing-warrant
+             :text "factorization through phi identifies the roof with one whose left object is the fixed cone X"}
+   :conclusion :fixed-X-represents-all
+   :source {:lines [687 695]}}
+  {:id :e-contradiction
+   :kind :infer
+   :relation :contradiction
+   :assume :representability-assumption
+   :premise [:fixed-X-represents-all :small-maps-from-X]
+   :contradicts :proper-derived-hom
+   :conclusion :contradiction
+   :source {:lines [661 697]}}
+  {:id :e-not-representable
+   :kind :infer
+   :relation :therefore
+   :premise :contradiction
+   :conclusion :not-representable
+   :source {:lines [657 697]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-fixed-X
+   :wanted :roof-equivalence-after-factorization-through-universal-map}]}

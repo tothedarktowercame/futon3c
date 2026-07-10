@@ -1,5 +1,7 @@
 # M-substrate-metric R1 Report - E1 feeds-mu graph
 
+Status: complete
+
 **Date:** 2026-06-01  
 **Rung:** Campaign `C-substrate-completion` RUN/DELIVER R1  
 **Scope:** bounded, read-only E1 substrate graph extraction. No full entity corpus, code embedding, JAX, BGE, or Fisher-Rao run.

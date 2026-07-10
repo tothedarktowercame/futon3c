@@ -1774,6 +1774,13 @@ Optional HOOKS plist supports:
 Walkie-talkie commands (e.g. !par) are intercepted: the agent
 generates the content (same as /par on CLI), and the result is
 additionally posted to the evidence HTTP endpoint."
+  (unless (and (markerp agent-chat--input-start)
+               (marker-position agent-chat--input-start))
+    ;; The send key can dispatch outside an initialized REPL buffer (e.g. a
+    ;; binding reached while a minibuffer prompt is current) — without this
+    ;; guard that is a raw marker-position crash (seen live 2026-07-04,
+    ;; mid switch-to-buffer).
+    (user-error "No agent-chat prompt here — switch to an initialized REPL buffer"))
   (when (process-live-p agent-chat--pending-process)
     (user-error "%s is still responding; wait for current turn to finish"
                 (capitalize agent-name)))

@@ -9,6 +9,7 @@
    INSTANTIATE-4."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [xtdb.api :as xtdb]
+            [futon3c.evidence.store :as estore]
             [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.logic.probe :as probe]
             [futon3c.logic.probe-taps :as taps]))
@@ -60,6 +61,97 @@
       (is (= :ok (:outcome result)))
       (is (= #{:route-inconsistencies}
              (get-in result [:detail :checked-categories]))))))
+
+(deftest agency-tap-consumes-full-logic-state
+  (testing "agency tap wires richer AG-* snapshot facts, not only registry"
+    (let [state {:registry {}
+                 :connections [{:connection-id "codex-ws"
+                                :declared-state :connected
+                                :channel-state :dead}]}
+          check-fn (taps/make-agency-tap state :dead-connected-channels)
+          result (check-fn *xtdb-backend*)]
+      (is (= :violation (:outcome result)))
+      (is (= 1 (get-in result [:detail :total-violations])))
+      (is (= [{:connection-id "codex-ws"
+               :declared-state :connected
+               :channel-state :dead}]
+             (get-in result [:detail :violations :dead-connected-channels]))))))
+
+(deftest agency-tap-can-emit-backtrace-evidence-on-violation
+  (testing "backtrace payload is evidence, not an Agency-managed invoke"
+    (let [state {:registry {}
+                 :server-accept [{:server-id :london-7070
+                                  :listening? true
+                                  :accepting? false
+                                  :backlog 51
+                                  :backlog-limit 50
+                                  :accept-latency-ms 60000
+                                  :latency-bound-ms 1000}]}
+          check-fn (taps/make-agency-tap state :unaccepting-servers {:backtrace? true})
+          result (check-fn *xtdb-backend*)
+          eid (get-in result [:detail :backtrace-evidence/id])
+          entry (estore/get-entry* *xtdb-backend* eid)]
+      (is (= :violation (:outcome result)))
+      (is (true? (get-in result [:detail :backtrace-emitted?])))
+      (is (string? eid))
+      (is (= "agency-backtrace" (:evidence/author entry)))
+      (is (= :agency-invariant-backtrace
+             (get-in entry [:evidence/body :event])))
+      (is (= [:agency :agency-invariants :backtrace :violation]
+             (:evidence/tags entry))))))
+
+(deftest live-agency-state-source-projects-routing-and-pouches
+  (testing "live source maps registry-status + pouch snapshot into AG facts"
+    (let [registry (atom {"codex-1" {:agent/id {:id/value "codex-1" :id/type :continuity}
+                                     :agent/type :codex
+                                     :agent/session-id "sid-1"
+                                     :agent/status :idle
+                                     :agent/metadata {}}})
+          source (taps/make-live-agency-state-source
+                  {:registry registry
+                   :registry-status (fn []
+                                      {:agents {"codex-1" {:invoke-route :ws
+                                                           :invoke-ready? true
+                                                           :invoke-diagnostic "ws bridge connected"}}})
+                   :pouch-snapshot (fn []
+                                     {"codex-1" {:alive? true
+                                                 :session-id "sid-1"
+                                                 :pid 4242}})
+                   :local-point :laptop})
+          state (source)]
+      (is (= {:invoke-route :ws
+              :invoke-ready? true
+              :invoke-diagnostic "ws bridge connected"}
+             (get-in state [:routing "codex-1"])))
+      (is (= [{:agent-id "codex-1"
+               :session-id "sid-1"
+               :inhabitant-id 4242}]
+             (:live-writers state)))
+      (is (= :laptop (:local-point state))))))
+
+(deftest live-agency-state-source-accepts-probe-suppliers
+  (testing "external probe suppliers are carried into the Agency tap"
+    (let [registry (atom {})
+          source (taps/make-live-agency-state-source
+                  {:registry registry
+                   :registry-status (constantly {:agents {}})
+                   :pouch-snapshot (constantly {})
+                   :connections (constantly [{:connection-id "codex-ws"
+                                              :declared-state :connected
+                                              :channel-state :dead}])
+                   :server-accept [{:server-id :london-7070
+                                    :listening? true
+                                    :accepting? false
+                                    :backlog 51
+                                    :backlog-limit 50
+                                    :accept-latency-ms 60000
+                                    :latency-bound-ms 1000}]})
+          check-fn (taps/make-agency-tap source)
+          result (check-fn *xtdb-backend*)]
+      (is (= :violation (:outcome result)))
+      (is (= 2 (get-in result [:detail :total-violations])))
+      (is (seq (get-in result [:detail :violations :dead-connected-channels])))
+      (is (seq (get-in result [:detail :violations :unaccepting-servers]))))))
 
 (deftest agency-tap-converts-throw-to-violation
   (testing "throwing state source → :outcome :violation with exception detail"

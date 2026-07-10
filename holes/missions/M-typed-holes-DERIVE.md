@@ -1,5 +1,7 @@
 # M-typed-holes — DERIVE (2026-06-14)
 
+Status: complete
+
 *Phase 3 per `futon4/holes/mission-lifecycle.md`: design the solution. MAP's
 handoff: the datatype exists (Lean DarkTower, 9/10) — the design problem is the
 **single runtime `fill` operator** the six projections share, the

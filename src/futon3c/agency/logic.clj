@@ -32,13 +32,23 @@
 (pldb/db-rel typed-ido agent-id id-type)          ; :continuity | :transport | :protocol
 (pldb/db-rel proxyo agent-id origin-url)           ; present iff proxy agent
 (pldb/db-rel sessiono agent-id session-id)         ; current session-id (nil omitted)
+(pldb/db-rel live-writero agent-id session-id inhabitant-id)
+(pldb/db-rel home-pointo agent-id federation-point)
+(pldb/db-rel local-pointo federation-point)
 (pldb/db-rel ttlo agent-id ttl-ms)                 ; bounded lifecycle
 
 ;; --- Invoke routing facts ---
 (pldb/db-rel invoke-routeo agent-id route)         ; :local | :ws | :none
 (pldb/db-rel invoke-readyo agent-id)               ; agent is invocable
+(pldb/db-rel invoke-diagnostico agent-id diagnostic)
 (pldb/db-rel invoke-statuso agent-id status)       ; :idle | :invoking
 (pldb/db-rel has-invoke-fno agent-id)              ; has a local invoke-fn
+
+;; --- Federation/liveness probe facts ---
+(pldb/db-rel connection-stateo connection-id declared-state channel-state)
+(pldb/db-rel remote-healtho agent-id registered-ready? current-ready?)
+(pldb/db-rel session-capacityo agent-id session-id capacity-state)
+(pldb/db-rel server-accepto server-id listening? accepting? backlog backlog-limit accept-latency-ms latency-bound-ms)
 
 ;; --- Peripheral topology facts ---
 (pldb/db-rel peripheralo peripheral-id)
@@ -70,7 +80,13 @@
             has-fn? (fn? (:agent/invoke-fn agent))
             metadata (or (:agent/metadata agent) {})
             proxy? (:proxy? metadata)
-            origin (:origin-url metadata)]
+            origin (:origin-url metadata)
+            home-point (or (:home-point metadata)
+                           (:home-site metadata)
+                           (:site metadata)
+                           (get metadata "home-point")
+                           (get metadata "home-site")
+                           (get metadata "site"))]
         (cond-> (-> db'
                     (pldb/db-fact agento aid)
                     (pldb/db-fact agent-typeo aid agent-type)
@@ -85,6 +101,9 @@
           ;; TTL
           ttl
           (pldb/db-fact ttlo aid ttl)
+          ;; home federation point
+          home-point
+          (pldb/db-fact home-pointo aid home-point)
           ;; invoke-fn
           has-fn?
           (pldb/db-fact has-invoke-fno aid)
@@ -94,18 +113,83 @@
     db
     registry-snapshot))
 
+(defn- add-local-point-facts
+  [db local-point]
+  (if local-point
+    (pldb/db-fact db local-pointo local-point)
+    db))
+
 (defn- add-routing-facts
   "Add invoke routing facts.
    routing-info: {agent-id-value -> {:invoke-route :invoke-ready? ...}}"
   [db routing-info]
   (reduce-kv
     (fn [db' aid-val info]
-      (let [route (or (:invoke-route info) :none)]
+      (let [route (or (:invoke-route info) :none)
+            diagnostic (or (:invoke-diagnostic info)
+                           (:diagnostic info))]
         (cond-> (pldb/db-fact db' invoke-routeo aid-val route)
           (:invoke-ready? info)
-          (pldb/db-fact invoke-readyo aid-val))))
+          (pldb/db-fact invoke-readyo aid-val)
+          diagnostic
+          (pldb/db-fact invoke-diagnostico aid-val diagnostic))))
     db
     routing-info))
+
+(defn- add-connection-facts
+  "Add connection state facts.
+   connections: [{:connection-id id :declared-state :connected :channel-state :live} ...]"
+  [db connections]
+  (reduce
+    (fn [db' {:keys [connection-id declared-state channel-state]}]
+      (if (and connection-id declared-state channel-state)
+        (pldb/db-fact db' connection-stateo connection-id declared-state channel-state)
+        db'))
+    db
+    connections))
+
+(defn- add-remote-health-facts
+  "Add remote health facts.
+   remote-health: [{:agent-id aid :registered-ready? bool :current-ready? bool} ...]"
+  [db remote-health]
+  (reduce
+    (fn [db' {:keys [agent-id registered-ready? current-ready?]}]
+      (if agent-id
+        (pldb/db-fact db' remote-healtho agent-id (boolean registered-ready?) (boolean current-ready?))
+        db'))
+    db
+    remote-health))
+
+(defn- add-session-capacity-facts
+  "Add session capacity facts.
+   session-capacity: [{:agent-id aid :session-id sid :capacity-state :ok|:context-exhausted} ...]"
+  [db session-capacity]
+  (reduce
+    (fn [db' {:keys [agent-id session-id capacity-state]}]
+      (if (and agent-id session-id capacity-state)
+        (pldb/db-fact db' session-capacityo agent-id session-id capacity-state)
+        db'))
+    db
+    session-capacity))
+
+(defn- add-server-accept-facts
+  "Add HTTP/server accept-loop facts.
+   server-accept: [{:server-id id :listening? bool :accepting? bool
+                    :backlog n :backlog-limit n :accept-latency-ms n
+                    :latency-bound-ms n} ...]"
+  [db server-accept]
+  (reduce
+    (fn [db' {:keys [server-id listening? accepting? backlog backlog-limit
+                     accept-latency-ms latency-bound-ms]}]
+      (if server-id
+        (pldb/db-fact db' server-accepto server-id (boolean listening?) (boolean accepting?)
+                      (long (or backlog 0))
+                      (long (or backlog-limit Long/MAX_VALUE))
+                      (long (or accept-latency-ms 0))
+                      (long (or latency-bound-ms Long/MAX_VALUE)))
+        db'))
+    db
+    server-accept))
 
 (defn- add-peripheral-facts
   "Add peripheral topology from peripherals.edn spec.
@@ -134,18 +218,43 @@
     db
     hops))
 
+(defn- add-live-writer-facts
+  "Add live session writer facts.
+   live-writers: [{:agent-id aid :session-id sid :inhabitant-id pid-or-token} ...]"
+  [db live-writers]
+  (reduce
+    (fn [db' {:keys [agent-id session-id inhabitant-id]}]
+      (if (and agent-id session-id inhabitant-id)
+        (pldb/db-fact db' live-writero agent-id session-id inhabitant-id)
+        db'))
+    db
+    live-writers))
+
 (defn build-db
   "Build a logic database from agency state snapshots.
 
    Takes a map with:
      :registry       — {agent-id-value -> agent-record} (from @reg/!registry)
      :routing        — {agent-id-value -> routing-info} (optional)
+     :local-point    — current federation point/site id (optional)
+     :live-writers   — [{:agent-id :session-id :inhabitant-id}] (optional)
+     :connections    — [{:connection-id :declared-state :channel-state}] (optional)
+     :remote-health  — [{:agent-id :registered-ready? :current-ready?}] (optional)
+     :session-capacity — [{:agent-id :session-id :capacity-state}] (optional)
+     :server-accept  — [{:server-id :listening? :accepting? :backlog ...}] (optional)
      :peripherals    — peripheral specs from peripherals.edn (optional)
      :observed-hops  — [{:from :to :session-id}] (optional)"
-  [{:keys [registry routing peripherals observed-hops]}]
+  [{:keys [registry routing local-point live-writers connections remote-health
+           session-capacity server-accept peripherals observed-hops]}]
   (cond-> (pldb/db)
     registry       (add-agent-facts registry)
     routing        (add-routing-facts routing)
+    local-point    (add-local-point-facts local-point)
+    live-writers   (add-live-writer-facts live-writers)
+    connections    (add-connection-facts connections)
+    remote-health  (add-remote-health-facts remote-health)
+    session-capacity (add-session-capacity-facts session-capacity)
+    server-accept  (add-server-accept-facts server-accept)
     peripherals    (add-peripheral-facts peripherals)
     observed-hops  (add-hop-facts observed-hops)))
 
@@ -173,6 +282,17 @@
   [aid]
   (agento aid)
   (l/nafc agent-is-proxyo aid))
+
+(defn remote-homed-local-phantomo
+  "A remote-homed agent is being run as a non-proxy local agent."
+  [aid]
+  (l/fresh [home local]
+    (agento aid)
+    (agent-is-localo aid)
+    (home-pointo aid home)
+    (local-pointo local)
+    (l/!= home local)
+    (invoke-routeo aid :local)))
 
 ;; --- Invoke routing ---
 
@@ -239,6 +359,32 @@
           (l/== (neg? (compare (str a1) (str a2))) true))
         (l/== q [a1 a2 sid])))))
 
+(defn query-duplicate-live-writers
+  "Pairs of live inhabitants writing the same session-id.
+   Returns [[inhabitant1 inhabitant2 session-id] ...]."
+  [db]
+  (pldb/with-db db
+    (l/run* [q]
+      (l/fresh [a1 a2 sid w1 w2]
+        (live-writero a1 sid w1)
+        (live-writero a2 sid w2)
+        (l/!= w1 w2)
+        (l/project [w1 w2]
+          (l/== (neg? (compare (str w1) (str w2))) true))
+        (l/== q [w1 w2 sid])))))
+
+(defn query-remote-local-phantoms
+  "Remote-homed agents that are registered as non-proxy local invocations.
+   Returns [{:agent-id aid :home-point home :local-point local} ...]."
+  [db]
+  (pldb/with-db db
+    (l/run* [q]
+      (l/fresh [aid home local]
+        (remote-homed-local-phantomo aid)
+        (home-pointo aid home)
+        (local-pointo local)
+        (l/== q {:agent-id aid :home-point home :local-point local})))))
+
 (defn query-proxy-shadowing-local
   "Proxy agents that share an agent-id with a local agent.
    This should never happen — federation non-resurrection (I-I).
@@ -281,6 +427,66 @@
     (mapv (fn [[aid fn-status route]]
             {:agent-id aid :has-fn? (= fn-status :has-fn) :route route})
           (concat fn-not-local local-no-fn))))
+
+(defn query-dead-connected-channels
+  "AG-3: connections declared :connected whose underlying channel is not :live.
+   Returns [{:connection-id id :declared-state :connected :channel-state state} ...]."
+  [db]
+  (pldb/with-db db
+    (l/run* [q]
+      (l/fresh [cid channel-state]
+        (connection-stateo cid :connected channel-state)
+        (l/!= channel-state :live)
+        (l/== q {:connection-id cid
+                 :declared-state :connected
+                 :channel-state channel-state})))))
+
+(defn query-stale-remote-health
+  "AG-4: remote target was registered as reachable but is currently not reachable."
+  [db]
+  (pldb/with-db db
+    (l/run* [aid]
+      (remote-healtho aid true false))))
+
+(defn query-invoke-readiness-gaps
+  "AG-5: route :none must carry a diagnostic explaining why invoke is not ready."
+  [db]
+  (pldb/with-db db
+    (l/run* [aid]
+      (invoke-routeo aid :none)
+      (l/nafc (fn [a] (l/fresh [diagnostic] (invoke-diagnostico a diagnostic))) aid))))
+
+(defn query-exhausted-sessions
+  "AG-6: context-exhausted sessions must be reset to fresh continuity."
+  [db]
+  (pldb/with-db db
+    (l/run* [q]
+      (l/fresh [aid sid]
+        (session-capacityo aid sid :context-exhausted)
+        (l/== q {:agent-id aid :session-id sid :capacity-state :context-exhausted})))))
+
+(defn query-unaccepting-servers
+  "AG-7: a listening server must be accepting within bounds and not saturating backlog."
+  [db]
+  (let [rows (pldb/with-db db
+               (l/run* [q]
+                 (l/fresh [sid listening? accepting? backlog backlog-limit latency bound]
+                   (server-accepto sid listening? accepting? backlog backlog-limit latency bound)
+                   (l/== q {:server-id sid
+                            :listening? listening?
+                            :accepting? accepting?
+                            :backlog backlog
+                            :backlog-limit backlog-limit
+                            :accept-latency-ms latency
+                            :latency-bound-ms bound}))))]
+    (->> rows
+         (filter (fn [{:keys [listening? accepting? backlog backlog-limit
+                              accept-latency-ms latency-bound-ms]}]
+                   (and listening?
+                        (or (not accepting?)
+                            (>= backlog backlog-limit)
+                            (> accept-latency-ms latency-bound-ms)))))
+         vec)))
 
 (defn query-invoking-without-idle-path
   "Agents stuck in :invoking status (informational — needs timestamp
@@ -345,8 +551,15 @@
   [db]
   {:untyped-agents         (query-untyped-agents db)
    :duplicate-sessions     (query-duplicate-sessions db)
+   :duplicate-live-writers (query-duplicate-live-writers db)
+   :remote-local-phantoms  (query-remote-local-phantoms db)
    :proxy-agents           (query-proxy-shadowing-local db)
    :route-inconsistencies  (query-route-inconsistencies db)
+   :dead-connected-channels (query-dead-connected-channels db)
+   :stale-remote-health    (query-stale-remote-health db)
+   :invoke-readiness-gaps  (query-invoke-readiness-gaps db)
+   :exhausted-sessions     (query-exhausted-sessions db)
+   :unaccepting-servers    (query-unaccepting-servers db)
    :agents-invoking        (query-invoking-without-idle-path db)
    :dead-end-peripherals   (query-dead-end-peripherals db)
    :entry-exit-asymmetry   (query-entry-exit-asymmetry db)

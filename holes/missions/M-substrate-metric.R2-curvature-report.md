@@ -1,5 +1,7 @@
 # M-substrate-metric R2 Curvature Sample - E1 Propose Surface
 
+Status: complete
+
 **Date:** 2026-06-01  
 **Scope:** bounded on-box Ollivier-Ricci sample over the E1 `feeds-mu?` graph.  
 **Input graph:** canonical-filtered R1 graph; mission-adjacent report/sample artifacts excluded from O1 nodes.

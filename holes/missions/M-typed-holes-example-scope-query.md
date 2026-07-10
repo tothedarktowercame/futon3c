@@ -1,5 +1,7 @@
 # M-typed-holes — worked example (IDENTIFY): queries-as-scopes, dogfooded
 
+Status: complete
+
 *Third example genre (Joe, 2026-06-14): after a **mission** (E-mission-head) and
 a **paper** (PaperExample / M-first-flights), a live **query-as-scope** answered
 against real mined CT — so the IDENTIFY shows missions, papers, AND

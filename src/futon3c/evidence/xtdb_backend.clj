@@ -116,17 +116,18 @@
 (defn- query-state
   "Build the bounded XTDB query for -query.
 
-   Pushed into datalog: subject, type, claim-type, author, tag membership,
+   Pushed into datalog: subject, type, claim-type, author, session-id,
+   pattern-id, tag membership,
    order, positive limit, and a conservative
    `:evidence/at` lower bound (1s below `since`) so a `:query/since` no longer
    full-scans the whole store. Precise `since` filtering — and the malformed-
    `since` all-entries fallback — stays at the application level
    (`backend/filter-and-sort-entries`); the datalog bound can only OVER-include
-   near the boundary, never under-return. HTTP-only filters (session-id and pattern-id) are also
-   kept outside this backend; the HTTP handler already withholds :query/limit
-   from the backend and applies its limit after those filters, preventing the
-   classic push-limit-before-app-filter under-return."
-  [{:query/keys [subject type claim-type author tags limit since before]}]
+   near the boundary, never under-return. Session-id and pattern-id used to be
+   HTTP-only app filters; they are pushed here now so session lookups do not
+   degrade to an unbounded backend query."
+  [{:query/keys [subject type claim-type author session-id pattern-id
+                 tags limit since before]}]
   (let [base {;; NB: lead with :evidence/at (not :evidence/id) — the latter forces
               ;; a full ~64k scan that defeats the `since` range-seek below.
               ;; :evidence/at is present on every entry, so e is still fully bound.
@@ -141,7 +142,9 @@
                subject (add-eq-filter :evidence/subject subject)
                type (add-eq-filter :evidence/type type)
                claim-type (add-eq-filter :evidence/claim-type claim-type)
-               author (add-eq-filter :evidence/author author))
+               author (add-eq-filter :evidence/author author)
+               session-id (add-eq-filter :evidence/session-id session-id)
+               pattern-id (add-eq-filter :evidence/pattern-id pattern-id))
         base (reduce add-tag-filter base (seq tags))
         ;; Conservative :evidence/at lower bound (1s below `since`) pushed into
         ;; datalog to prune the scan — fixes the full-store-scan timeout (the

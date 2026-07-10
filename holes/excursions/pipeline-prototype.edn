@@ -1,0 +1,69 @@
+{:prototype/id :pipeline-prototype/invariant-queue-2026-04-29
+ :prototype/status :unhooked
+ :prototype/source "Former futon3c.logic.tracer/default-tracers runtime seed data."
+ :prototype/parent "futon3c/holes/excursions/E-pipeline-pipecleaner.md"
+ :prototype/purpose
+ "Historical pipeline-tracer items, retained as prototype scan material rather than boot-time data. Use these items to scan the real stack/backlog for missing-feature classes before deciding whether a linear pipeline view is still useful."
+ :prototype/items
+ [{:track-id :track-4-2-snapshot-as-evidence
+   :title "Snapshot-as-evidence convention (decide + implement)"
+   :mission :M-invariant-queue-extend
+   :target-date "2026-05-06"
+   :expected-outcome
+   "Either: extend `:family-fired` body with full inventory snapshot maps,
+    OR ship a separate `:event :inventory-snapshot` shape. Decision +
+    implementation lands as a checkpoint."
+   :owner nil}
+
+  {:track-id :track-4-3-arxana-view-columns
+   :title "Arxana operational-families view columns"
+   :mission :M-invariant-queue-extend
+   :target-date "2026-05-06"
+   :expected-outcome
+   "futon4/dev/arxana-browser-{core,lab}.el render `:last-fire-at`,
+    `:last-violation-at`, `:inactive-since` columns from the probe's
+    `:family-fired` evidence."
+   :owner nil}
+
+  {:track-id :track-3-write-class-scoping
+   :title "Write-class generalization sub-mission stubs"
+   :mission :M-invariant-queue-extend
+   :target-date "2026-05-06"
+   :expected-outcome
+   "Two new mission stubs opened (probably bell-receipts +
+    gate-traversals), each with IDENTIFY and a sketch of the boundary +
+    ratchet + canary triple."
+   :owner nil}
+
+  {:track-id :track-1-substrate-2-lift
+   :title "Substrate-2 phase-1 lift (>=3 of 6 families)"
+   :mission :M-invariant-queue-extend
+   :target-date "2026-05-06"
+   :expected-outcome
+   ">=3 of 6 substrate-2 phase-1 deferred-stubs converted from `:inactive`
+    to a real probe check-fn returning `:ok` or `:violation`. Source:
+    futon3/holes/labs/M-live-geometric-stack/tests/phase_1_invariants_test.clj.
+    Note: also tracered via the predecessor's `:substrate-2/*` deferred-
+    stubs in `probe-taps`; this entry is the bookkeeping surface."
+   :owner nil}
+
+  {:track-id :track-2-war-machine-aif-lift
+   :title "War-Machine AIF lift (>=2 of 6 OR documented deferral)"
+   :mission :M-invariant-queue-extend
+   :target-date "2026-05-06"
+   :expected-outcome
+   "Either >=2 of 6 War-Machine AIF deferred-stubs converted to real
+    check-fns, OR a recorded decision to wait for M-war-machine with
+    criteria for revisit. Note: also tracered via `:war-machine/*`
+    deferred-stubs."
+   :owner nil}
+
+  {:track-id :track-5-vsatarcs
+   :title "VSATARCS narrative coherence (parked -> re-park or register)"
+   :mission :M-invariant-queue-extend
+   :target-date "2026-05-06"
+   :expected-outcome
+   "Either re-park with current rationale, OR upgrade to a deferred-stub
+    registration if VSATARCS work has progressed enough to project a
+    stable contract."
+   :owner nil}]}

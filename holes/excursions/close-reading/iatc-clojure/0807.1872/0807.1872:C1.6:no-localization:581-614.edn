@@ -1,0 +1,77 @@
+{:paper/id "0807.1872"
+ :passage/id "0807.1872:C1.6:no-localization:581-614"
+ :source {:lines [581 614] :kind :proof}
+ :nodes
+ [{:id :bousfield-localization-def
+   :kind :definition
+   :text "a Bousfield localization for Ac(A) subset K(A) is a right adjoint of K(A) -> D(A)"
+   :source {:lines [581 583]}}
+  {:id :bousfield-colocalization-def
+   :kind :definition
+   :text "a Bousfield colocalization is a left adjoint of K(A) -> D(A)"
+   :source {:lines [581 583]}}
+  {:id :neeman-9-1-18
+   :kind :ref
+   :citation "Neeman99 Proposition 9.1.18"
+   :text "localization exists iff the inclusion i:Ac(A)->K(A) has a right adjoint; dually colocalization exists iff i has a left adjoint"
+   :source {:lines [584 591]}}
+  {:id :neeman-9-1-16
+   :kind :ref
+   :citation "Neeman99 Theorem 9.1.16"
+   :text "if a Bousfield localization exists then D(A) is equivalent to a full subcategory of K(A)"
+   :source {:lines [601 605]}}
+  {:id :full-subcategory-small-hom
+   :kind :claim
+   :text "the full subcategory of K(A) in question has small Hom-sets"
+   :source {:lines [604 610]}}
+  {:id :D-would-small
+   :kind :claim
+   :text "D(A) would have to have small Hom-sets"
+   :source {:lines [610 610]}}
+  {:id :D-not-small
+   :kind :claim
+   :text "D(A) does not have small Hom-sets by Corollary C1.4"
+   :source {:lines [611 611]}}
+  {:id :no-localization
+   :kind :claim
+   :text "a Bousfield localization cannot exist"
+   :source {:lines [611 612]}}
+  {:id :no-colocalization
+   :kind :claim
+   :text "dually, there can be no Bousfield colocalization"
+   :source {:lines [612 612]}}
+  {:id :no-adjoints
+   :kind :claim
+   :text "the inclusion Ac(A)->K(A) has neither a right adjoint nor a left adjoint"
+   :source {:lines [613 614]}}]
+ :edges
+ [{:id :e-small-if-localization
+   :kind :infer
+   :relation :by
+   :premise [:neeman-9-1-16 :full-subcategory-small-hom]
+   :conclusion :D-would-small
+   :source {:lines [601 610]}}
+  {:id :e-no-localization
+   :kind :infer
+   :relation :since
+   :premise [:D-would-small :D-not-small]
+   :conclusion :no-localization
+   :source {:lines [610 612]}}
+  {:id :e-no-colocalization
+   :kind :infer
+   :relation :dually
+   :premise :no-localization
+   :warrant {:kind :missing-warrant
+             :text "the localization argument dualizes to colocalization"}
+   :conclusion :no-colocalization
+   :source {:lines [612 612]}}
+  {:id :e-no-adjoints
+   :kind :infer
+   :relation :therefore
+   :premise [:neeman-9-1-18 :no-localization :no-colocalization]
+   :conclusion :no-adjoints
+   :source {:lines [613 614]}}]
+ :holes
+ [{:kind :missing-warrant
+   :edge :e-no-colocalization
+   :wanted :dualization-of-bousfield-localization-obstruction}]}

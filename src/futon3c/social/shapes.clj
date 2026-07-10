@@ -323,8 +323,11 @@
    [:query/claim-type {:optional true} ClaimType]
    [:query/author {:optional true} :string]
    [:query/since {:optional true} Timestamp]
+   [:query/before {:optional true} Timestamp]
    [:query/limit {:optional true} :int]
    [:query/include-ephemeral? {:optional true} :boolean]
+   [:query/pattern-id {:optional true} :keyword]
+   [:query/session-id {:optional true} :string]
    [:query/tags {:optional true} [:vector :keyword]]])
 
 ;; =============================================================================

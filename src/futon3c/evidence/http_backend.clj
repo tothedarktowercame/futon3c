@@ -89,6 +89,7 @@
                          (:query/claim-type params) (assoc "claim-type" (name (:query/claim-type params)))
                          (:query/author params) (assoc "author" (:query/author params))
                          (:query/since params) (assoc "since" (str (:query/since params)))
+                         (:query/before params) (assoc "before" (str (:query/before params)))
                          (:query/limit params) (assoc "limit" (str (:query/limit params)))
                          (seq (:query/tags params)) (assoc "tag" (str/join "," (map name (:query/tags params)))))
           qs (str/join "&" (map (fn [[k v]] (str k "=" v)) query-params))
@@ -97,6 +98,21 @@
           resp @(http/get url {:timeout 10000})
           parsed (parse-response resp)]
       (or (:entries parsed) [])))
+
+  (-count [_ params]
+    (let [query-params (cond-> {}
+                         (:query/type params) (assoc "type" (name (:query/type params)))
+                         (:query/claim-type params) (assoc "claim-type" (name (:query/claim-type params)))
+                         (:query/author params) (assoc "author" (:query/author params))
+                         (:query/since params) (assoc "since" (str (:query/since params)))
+                         (:query/before params) (assoc "before" (str (:query/before params)))
+                         (seq (:query/tags params)) (assoc "tag" (str/join "," (map name (:query/tags params)))))
+          qs (str/join "&" (map (fn [[k v]] (str k "=" v)) query-params))
+          url (str (api-url base-url "/api/alpha/evidence/count")
+                   (when (seq qs) (str "?" qs)))
+          resp @(http/get url {:timeout 10000})
+          parsed (parse-response resp)]
+      (long (or (:count parsed) 0))))
 
   (-forks-of [_ _evidence-id]
     ;; Not exposed via HTTP API — return empty for now

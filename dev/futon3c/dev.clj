@@ -987,7 +987,7 @@
                                          results))))
                            (rseq ctx))))]
       (bb/blackboard! "*context*" content
-                      (merge {:width 60 :slot 2 :no-display true} bb-opts)))
+                      (merge {:width 60 :slot 2 :no-display true :async? true} bb-opts)))
     (catch Throwable _ nil)))
 
 (defn- context-retrieval!
@@ -1790,7 +1790,8 @@ RESPOND WITH ONLY:
                                                "Reason: " reason "\n"
                                                "Time: " (Instant/now)
                                                (when auto-restart?
-                                                 "\nAction: restarting agent layer")))
+                                                 "\nAction: restarting agent layer"))
+                                          {:async? true})
                                          ;; 2. Emit escalation evidence
                                          (boundary/append! evidence-store
                                                          {:subject {:ref/type :agent
@@ -3088,7 +3089,7 @@ RESPOND WITH ONLY:
   (try
     (bb/blackboard! "*Codex Code*"
                     (format-codex-status-board @!codex-status)
-                    {:width 72 :slot 2 :no-display true})
+                    {:width 72 :slot 2 :no-display true :async? true})
     (catch Throwable _ nil)))
 
 (defn- update-codex-status!
@@ -3768,6 +3769,7 @@ RESPOND WITH ONLY:
                           aid-val (str agent-id)
                           invoke-trace-id (str "invoke-" (UUID/randomUUID))
                           control-token (str "claude-pouch-" (UUID/randomUUID))
+                          !warm-interrupted? (atom false)
                           warm-attempt
                           (do
                             (println (str "[invoke] " aid-val " warm pouch feed (session: "
@@ -3796,6 +3798,7 @@ RESPOND WITH ONLY:
                                aid-val control-token
                                {:interrupt!
                                 (fn []
+                                  (reset! !warm-interrupted? true)
                                   (agent-pouch/evict! aid-val)
                                   {:ok true
                                    :agent-id aid-val
@@ -3903,16 +3906,33 @@ RESPOND WITH ONLY:
                                       :bb-opts bb-opts}))
                                   (assoc warm-result :invoke-trace-id invoke-trace-id))
                                 (catch Throwable t
-                                  (println (str "[kangaroo] " agent-id
-                                                " warm pouch failed; falling back cold: "
-                                                (.getMessage t)))
-                                  (flush)
-                                  (emit-invoke-evidence! agent-id "invoke-error"
-                                                         {"warm" true
-                                                          "error" (str (.getMessage t))}
-                                                         :session-id warm-sid
-                                                         :tags ["invoke-error"])
-                                  ::pouch-failed)
+                                  (if @!warm-interrupted?
+                                    (do
+                                      (println (str "[kangaroo] " agent-id
+                                                    " warm pouch interrupted; not falling back cold"))
+                                      (flush)
+                                      (emit-invoke-evidence! agent-id "invoke-error"
+                                                             {"warm" true
+                                                              "interrupted" true
+                                                              "error" (str (.getMessage t))}
+                                                             :session-id warm-sid
+                                                             :tags ["invoke-error" "invoke-interrupted"])
+                                      {:result nil
+                                       :session-id warm-sid
+                                       :error "invoke interrupted"
+                                       :interrupted? true
+                                       :invoke-trace-id invoke-trace-id})
+                                    (do
+                                      (println (str "[kangaroo] " agent-id
+                                                    " warm pouch failed; falling back cold: "
+                                                    (.getMessage t)))
+                                      (flush)
+                                      (emit-invoke-evidence! agent-id "invoke-error"
+                                                             {"warm" true
+                                                              "error" (str (.getMessage t))}
+                                                             :session-id warm-sid
+                                                             :tags ["invoke-error"])
+                                      ::pouch-failed)))
                                 (finally
                                   (clear-invoke-control! aid-val control-token)
                                   (stop-ticker!)))))]
