@@ -79,10 +79,58 @@
    reviewed slice-1 pattern in futon3c.watcher.commit-ingest."
   nil)
 
+(defonce !futon1b-url
+  ;; When non-nil (e.g. "http://localhost:7073"), every hyperedge write is
+  ;; ALSO posted (EDN) to the futon1b XTDB2 server — the dual-write leg of
+  ;; the reindex-not-port migration (E-futon1a-to-futon1b, 2026-07-10).
+  ;; futon1a stays primary: futon1b failures are logged, never fatal.
+  ;; Enable live via Drawbridge:
+  ;;   (reset! futon3c.watcher.file-ingest/!futon1b-url "http://localhost:7073")
+  (atom (System/getenv "FUTON1B_URL")))
+
+(defn post-futon1b!
+  "Secondary EDN write to the futon1b server. No-op unless !futon1b-url is
+  set. Valid-time replays stay primary-only (futon1b v1 has no valid-time
+  support). Never throws."
+  [{:keys [id hx-type endpoints labels props op]}]
+  (when-let [base @!futon1b-url]
+    (when-not *valid-time-ms*
+      (try
+        (let [payload (cond-> {:hx/type hx-type :hx/endpoints endpoints}
+                        id (assoc :hx/id id)
+                        (seq labels) (assoc :hx/labels labels)
+                        props (assoc :hx/props props)
+                        op (assoc :hx/op op))
+              resp (http/post (str base "/api/alpha/hyperedge")
+                              {:headers {"Content-Type" "application/edn"}
+                               :body (pr-str payload)
+                               :throw false})]
+          (when (not= 200 (:status resp))
+            (println "[futon1b dual-write] non-200:" (:status resp)
+                     (subs (str (:body resp)) 0 (min 200 (count (str (:body resp))))))))
+        (catch Exception e
+          (println "[futon1b dual-write] failed:" (.getMessage e)))))))
+
+(def ^:private !last-posted
+  "Client-side no-op guard (2026-07-10, E-futon1a-to-futon1b F9): the watcher
+   used to re-POST unchanged hyperedges every pass (sampled live: 63 versions,
+   2 distinct contents on one code/v05/contains doc). Map of hx-key → hash of
+   the last successfully-posted payload; an identical re-post is skipped
+   before any HTTP. Keyed by (or id [type endpoints]) and storing the LATEST
+   hash so A→B→A still posts A. Bypassed for retracts and *valid-time-ms*
+   replays (temporal intent). Bounded: reset when it exceeds 500k entries —
+   the server-side no-op guard in futon1a catches whatever this misses."
+  (atom {}))
+
+(def ^:private last-posted-cap 500000)
+
+(declare post-hx-http*)
+
 (defn- post-hx*
   "Shared hyperedge write. ENDPOINTS are final (directed transform already
    applied). Honours *valid-time-ms* and an optional `op` (\"retract\" →
-   end-valid-time delete). Returns {:ok?}."
+   end-valid-time delete). Returns {:ok?} (with :no-op? true when the
+   client-side cache skipped an unchanged re-post)."
   [{:keys [id hx-type endpoints labels props op]}]
   (let [payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
                   id (assoc "hx/id" id)
@@ -90,7 +138,25 @@
                   props (assoc "hx/props" props)
                   *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*)
                   op (assoc "hx/op" op))
-        resp (try
+        cacheable? (and (nil? op) (nil? *valid-time-ms*))
+        hx-key (or id [hx-type endpoints])
+        payload-hash (hash payload)]
+    (if (and cacheable? (= payload-hash (get @!last-posted hx-key)))
+      {:ok? true :no-op? true}
+      (let [result (post-hx-http* payload)]
+        (when (and cacheable? (:ok? result))
+          (swap! !last-posted
+                 (fn [m] (assoc (if (> (count m) last-posted-cap) {} m)
+                                hx-key payload-hash))))
+        (when (:ok? result)
+          (post-futon1b! {:id id :hx-type hx-type :endpoints endpoints
+                          :labels labels :props props :op op}))
+        result))))
+
+(defn- post-hx-http*
+  "The actual HTTP write (extracted from post-hx* for the no-op cache)."
+  [payload]
+  (let [resp (try
                (http/post (str FUTON1A "/api/alpha/hyperedge")
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}

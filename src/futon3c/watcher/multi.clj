@@ -112,8 +112,14 @@
                             {:headers {"Content-Type" "application/json"
                                        "X-Penholder" PENHOLDER}
                              :body (json/generate-string payload)
-                             :throw false})]
-        {:ok? (= 200 (:status resp))})
+                             :throw false})
+            ok? (= 200 (:status resp))]
+        ;; dual-write leg (reindex-not-port): no-op unless
+        ;; file-ingest/!futon1b-url is set.
+        (when ok?
+          (file-ingest/post-futon1b! {:hx-type hx-type :endpoints endpoints
+                                      :labels labels :props props}))
+        {:ok? ok?})
       (catch Exception _ {:ok? false}))))
 
 (defn http-get-edn [url]
@@ -648,21 +654,35 @@
 ;; ---------- heartbeat / event hyperedges ----------
 
 (defn heartbeat!
+  "Emit the per-root heartbeat hyperedge — ONLY for cycles that changed
+  something, under a STABLE per-root id.
+
+  2026-07-10 (E-futon1a-to-futon1b F10): the original emitted every cycle
+  (idle included) with cycle-n baked into the ENDPOINTS, so the server
+  derived a fresh hx/id each time — 5.09M watcher-event docs, 88.5% of all
+  hyperedges in the store. The README's intent is observability of the
+  pipeline's health, not an unbounded event log: liveness is the
+  process-watchdog's job (CYDER + status fields), so the substrate now
+  keeps the LATEST non-idle cycle state, one doc per root (stable
+  endpoints → stable server-derived id → replace, and the write path's
+  no-op guards skip unchanged re-posts)."
   [{:keys [root label run-id cycle-n files-seen files-changed
            n-deleted n-renamed n-added n-cross-root-moves]}]
-  (let [evidence-id (str root "/run-" run-id "/heartbeat-" cycle-n)]
-    (post-hyperedge!
-     "code/v05/watcher-event"
-     [evidence-id (str cycle-n)]
-     ["v05" "phase-4.5" label "heartbeat"]
-     {"repo" label "phase" 4.5 "run-id" run-id "cycle" cycle-n
-      "ts" (System/currentTimeMillis) "files-seen" files-seen
-      "files-changed" files-changed
-      "n-deleted" (or n-deleted 0)
-      "n-renamed" (or n-renamed 0)
-      "n-added" (or n-added 0)
-      "n-cross-root-moves" (or n-cross-root-moves 0)
-      "source" "heartbeat"})))
+  (let [activity (+ (or files-changed 0) (or n-deleted 0) (or n-renamed 0)
+                    (or n-added 0) (or n-cross-root-moves 0))]
+    (when (pos? activity)
+      (post-hyperedge!
+       "code/v05/watcher-event"
+       [(str root "/heartbeat") label]
+       ["v05" "phase-4.5" label "heartbeat"]
+       {"repo" label "phase" 4.5 "run-id" run-id "cycle" cycle-n
+        "ts" (System/currentTimeMillis) "files-seen" files-seen
+        "files-changed" files-changed
+        "n-deleted" (or n-deleted 0)
+        "n-renamed" (or n-renamed 0)
+        "n-added" (or n-added 0)
+        "n-cross-root-moves" (or n-cross-root-moves 0)
+        "source" "heartbeat"}))))
 
 (defn deletion-event!
   [{:keys [path root label run-id event-n hash]}]
