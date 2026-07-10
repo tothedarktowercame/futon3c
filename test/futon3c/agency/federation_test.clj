@@ -228,6 +228,7 @@
             tickle (reg/get-agent "tickle-1")]
         (is (:ok result))
         (is (= 1 (:count result)))
+        (is (= :registered (get-in result [:results 0 :action])))
         (is (= :tickle (:agent/type tickle)))
         (is (= [:coordination/orchestrate] (:agent/capabilities tickle)))
         (is (= true (get-in tickle [:agent/metadata :proxy?])))

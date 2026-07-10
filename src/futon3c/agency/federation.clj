@@ -19,9 +19,13 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [cheshire.core :as json]
-            [org.httpkit.client :as http]))
+            [org.httpkit.client :as http])
+  (:import [java.time Instant]
+           [java.util.concurrent Executors ScheduledExecutorService TimeUnit]))
 
 (def ^:private default-proxy-timeout-ms 600000)
+(def ^:private default-sync-timeout-ms 5000)
+(def ^:private default-max-backoff-ms 60000)
 
 (declare parse-agent-id)
 
@@ -32,6 +36,17 @@
 (defonce ^{:doc "Federation config atom.
    {:peers [url ...], :self-url string, :peer-sites #{site-code ...}}"}
   !config (atom {:peers [] :self-url nil}))
+
+(defonce ^:private !sync-daemon
+  (atom {:executor nil
+         :started-at nil
+         :interval-ms 0
+         :tick-count 0
+         :last-tick-at nil
+         :last-results []}))
+
+(defonce ^:private !peer-liveness
+  (atom {}))
 
 (defn configure!
   "Configure federation with peer URLs and self URL.
@@ -91,6 +106,30 @@
   "Return this Agency's self URL."
   []
   (:self-url @!config))
+
+(defn- parse-long*
+  [x]
+  (try
+    (when (some? x)
+      (Long/parseLong (str/trim (str x))))
+    (catch Exception _ nil)))
+
+(defn sync-interval-ms
+  "Configured continuous federation sync interval.
+   Defaults to 0, which keeps the daemon disabled."
+  []
+  (long (or (parse-long* (System/getProperty "FUTON3C_FED_SYNC_INTERVAL_MS"))
+            (parse-long* (System/getenv "FUTON3C_FED_SYNC_INTERVAL_MS"))
+            0)))
+
+(defn- max-backoff-ms
+  []
+  (long (or (parse-long* (System/getProperty "FUTON3C_FED_SYNC_MAX_BACKOFF_MS"))
+            (parse-long* (System/getenv "FUTON3C_FED_SYNC_MAX_BACKOFF_MS"))
+            default-max-backoff-ms)))
+
+(defn- current-ms []
+  (System/currentTimeMillis))
 
 (defn peer-sites
   "Return configured peer site prefixes as lower-case strings."
@@ -401,40 +440,270 @@
            :error result}
           {:ok true :agent-id aid :action :registered})))))
 
+(defn- proxy-for-peer?
+  [peer-url agent]
+  (and (get-in agent [:agent/metadata :proxy?])
+       (= peer-url (get-in agent [:agent/metadata :origin-url]))))
+
+(defn- peer-proxy-ids
+  [peer-url]
+  (->> @reg/!registry
+       (keep (fn [[aid agent]]
+               (when (proxy-for-peer? peer-url agent)
+                 aid)))
+       set))
+
+(defn- update-proxy-liveness!
+  [peer-url reachable? extra]
+  (doseq [[aid agent] @reg/!registry
+          :when (proxy-for-peer? peer-url agent)]
+    (reg/update-agent!
+     aid
+     :agent/metadata
+     (merge (:agent/metadata agent)
+            {:federation/peer-url peer-url
+             :federation/reachable? reachable?
+             :federation/stale? (not reachable?)}
+            extra))))
+
+(defn- prune-departed-proxies!
+  [peer-url roster-ids]
+  (let [roster-set (set roster-ids)]
+    (->> (peer-proxy-ids peer-url)
+         (remove roster-set)
+         (mapv (fn [aid]
+                 (reg/unregister-agent! aid)
+                 {:agent-id aid :action :pruned})))))
+
+(defn- fetch-peer-roster!
+  [peer-url]
+  (let [resp @(http/get (str peer-url "/api/alpha/agents")
+                        {:headers {"Accept" "application/json"}
+                         :timeout default-sync-timeout-ms})
+        status (:status resp)
+        parsed (try
+                 (json/parse-string (or (:body resp) "{}") true)
+                 (catch Exception _
+                   {}))]
+    (if (and status (< status 400) (= true (:ok parsed)))
+      parsed
+      (throw (ex-info "peer-sync-failed"
+                      {:peer peer-url
+                       :status status
+                       :error (or (:error parsed)
+                                  (:message parsed)
+                                  "peer-sync-failed")})))))
+
+(defn- record-peer-success!
+  [peer-url now results pruned]
+  (swap! !peer-liveness
+         assoc
+         peer-url
+         {:peer peer-url
+          :reachable? true
+          :failure-count 0
+          :last-success-at-ms now
+          :last-attempt-at-ms now
+          :next-sync-at-ms now
+          :last-results results
+          :last-pruned pruned})
+  (update-proxy-liveness!
+   peer-url
+   true
+   {:federation/last-sync-at-ms now
+    :federation/last-sync-at (str (Instant/ofEpochMilli now))
+    :federation/last-error nil}))
+
+(defn- backoff-delay-ms
+  [interval-ms failure-count jitter-fn]
+  (let [base (max 1 (long (or interval-ms (sync-interval-ms) 1)))
+        multiplier (long (Math/pow 2 (max 0 (dec (long failure-count)))))
+        capped (min (max-backoff-ms) (* base multiplier))
+        jitter-bound (max 0 (long (/ capped 10)))
+        jitter (long (or (when (pos? jitter-bound)
+                           (jitter-fn jitter-bound))
+                         0))]
+    (+ capped jitter)))
+
+(defn- record-peer-failure!
+  [peer-url now interval-ms error jitter-fn]
+  (let [failure-count (inc (long (get-in @!peer-liveness [peer-url :failure-count] 0)))
+        delay (backoff-delay-ms interval-ms failure-count jitter-fn)
+        next-sync-at (+ now delay)
+        err-msg (or (:error (ex-data error))
+                    (.getMessage ^Throwable error)
+                    (str error))]
+    (swap! !peer-liveness
+           assoc
+           peer-url
+           {:peer peer-url
+            :reachable? false
+            :failure-count failure-count
+            :last-attempt-at-ms now
+            :last-error err-msg
+            :next-sync-at-ms next-sync-at
+            :backoff-ms delay})
+    (update-proxy-liveness!
+     peer-url
+     false
+     {:federation/last-error err-msg
+      :federation/last-failed-sync-at-ms now
+      :federation/last-failed-sync-at (str (Instant/ofEpochMilli now))})
+    {:peer peer-url
+     :ok false
+     :error err-msg
+     :failure-count failure-count
+     :backoff-ms delay
+     :next-sync-at-ms next-sync-at}))
+
 (defn sync-peer!
   "Fetch currently registered agents from PEER-URL and mirror them locally as proxies.
    Real local agents always win over imported proxy state."
-  [peer-url]
+  ([peer-url]
+   (sync-peer! peer-url {}))
+  ([peer-url {:keys [fetch-fn now-ms interval-ms jitter-fn]
+              :or {fetch-fn fetch-peer-roster!
+                   jitter-fn (fn [bound] (rand-int (inc (long bound))))}}]
   (try
-    (let [resp @(http/get (str peer-url "/api/alpha/agents")
-                          {:headers {"Accept" "application/json"}
-                           :timeout 5000})
-          status (:status resp)
-          parsed (try
-                   (json/parse-string (or (:body resp) "{}") true)
-                   (catch Exception _
-                     {}))]
-      (if (and status (< status 400) (= true (:ok parsed)))
-        (let [results (->> (:agents parsed)
-                           (map (fn [[agent-id agent-info]]
-                                  (register-proxy-agent! peer-url agent-id agent-info)))
-                           vec)]
-          {:ok true
-           :peer peer-url
-           :count (count results)
-           :results results})
-        {:ok false
-         :peer peer-url
-         :status status
-         :error (or (:error parsed)
-                    (:message parsed)
-                    "peer-sync-failed")}))
-    (catch Exception e
-      {:ok false
+    (let [now (long (or now-ms (current-ms)))
+          parsed (fetch-fn peer-url)
+          agents (or (:agents parsed) {})
+          roster-ids (set (keep parse-agent-id (keys agents)))
+          results (->> agents
+                       (map (fn [[agent-id agent-info]]
+                              (register-proxy-agent! peer-url agent-id agent-info)))
+                       vec)
+          pruned (prune-departed-proxies! peer-url roster-ids)]
+      (record-peer-success! peer-url now results pruned)
+      {:ok true
        :peer peer-url
-       :error (.getMessage e)})))
+       :count (count results)
+       :results results
+       :pruned pruned})
+    (catch Exception e
+      (record-peer-failure! peer-url (long (or now-ms (current-ms))) interval-ms e jitter-fn)))))
 
 (defn sync-peers!
   "Mirror currently registered agents from all configured peers into the local registry."
+  ([] (sync-peers! {}))
+  ([opts]
+   (if (seq opts)
+     (mapv #(sync-peer! % opts) (peers))
+     (mapv sync-peer! (peers)))))
+
+(defn sync-tick!
+  "Run one liveness-aware federation sync tick.
+   Tests pass :now-ms, :peers, :fetch-fn, and :jitter-fn to keep this deterministic."
+  [{:keys [now-ms peers interval-ms fetch-fn jitter-fn]
+    :or {jitter-fn (constantly 0)}}]
+  (let [now (long (or now-ms (current-ms)))
+        interval (long (or interval-ms (sync-interval-ms)))
+        configured-peers (vec (or peers (peers)))
+        results (mapv (fn [peer-url]
+                        (let [next-at (long (get-in @!peer-liveness [peer-url :next-sync-at-ms] 0))]
+                          (if (> next-at now)
+                            {:ok false
+                             :peer peer-url
+                             :skipped? true
+                             :reason :backoff
+                             :next-sync-at-ms next-at}
+                            (sync-peer! peer-url {:fetch-fn (or fetch-fn fetch-peer-roster!)
+                                                  :now-ms now
+                                                  :interval-ms interval
+                                                  :jitter-fn jitter-fn}))))
+                      configured-peers)]
+    (swap! !sync-daemon
+           (fn [s]
+             (-> s
+                 (update :tick-count (fnil inc 0))
+                 (assoc :last-tick-at (str (Instant/ofEpochMilli now))
+                        :last-results results))))
+    results))
+
+(declare stop-sync-daemon!)
+
+(defn sync-daemon-status
   []
-  (mapv sync-peer! (peers)))
+  (let [s @!sync-daemon
+        ex (:executor s)]
+    (-> s
+        (dissoc :executor)
+        (assoc :running? (and (some? ex)
+                              (not (.isShutdown ^ScheduledExecutorService ex)))
+               :enabled? (pos? (sync-interval-ms))
+               :peers @!peer-liveness))))
+
+(defn start-sync-daemon!
+  "Start continuous federation peer sync when FUTON3C_FED_SYNC_INTERVAL_MS > 0.
+   With the default 0 interval this is a no-op that preserves one-shot boot sync."
+  ([] (start-sync-daemon! {}))
+  ([{:keys [interval-ms]}]
+   (let [interval (long (or interval-ms (sync-interval-ms)))]
+     (if (not (pos? interval))
+       (do
+         (when (:executor @!sync-daemon)
+           (stop-sync-daemon!))
+         (sync-daemon-status))
+       (let [existing (:executor @!sync-daemon)]
+         (when (or (nil? existing)
+                   (.isShutdown ^ScheduledExecutorService existing))
+           (let [executor (Executors/newSingleThreadScheduledExecutor
+                           (reify java.util.concurrent.ThreadFactory
+                             (newThread [_ r]
+                               (doto (Thread. r "futon3c-federation-sync")
+                                 (.setDaemon true)))))
+                 task #(try
+                         (sync-tick! {:interval-ms interval})
+                         (catch Throwable t
+                           (binding [*out* *err*]
+                             (println "[federation] sync daemon uncaught:"
+                                      (.getMessage t)))))]
+             (.scheduleWithFixedDelay executor task interval interval TimeUnit/MILLISECONDS)
+             (swap! !sync-daemon assoc
+                    :executor executor
+                    :started-at (str (Instant/now))
+                    :interval-ms interval)))
+         (sync-daemon-status))))))
+
+(defn stop-sync-daemon!
+  []
+  (when-let [^ScheduledExecutorService ex (:executor @!sync-daemon)]
+    (.shutdownNow ex)
+    (.awaitTermination ex 2 TimeUnit/SECONDS))
+  (swap! !sync-daemon assoc :executor nil)
+  (sync-daemon-status))
+
+(defn reset-sync-state!
+  "Reset scheduler and peer liveness state. Intended for deterministic tests."
+  []
+  (stop-sync-daemon!)
+  (reset! !peer-liveness {})
+  (swap! !sync-daemon assoc
+         :started-at nil
+         :interval-ms 0
+         :tick-count 0
+         :last-tick-at nil
+         :last-results [])
+  nil)
+
+(defn remote-health-facts
+  "Facts consumed by CP-A logic: proxy readiness must reflect current peer reachability."
+  []
+  (->> @reg/!registry
+       (keep (fn [[aid agent]]
+               (when (get-in agent [:agent/metadata :proxy?])
+                 (let [metadata (:agent/metadata agent)
+                       reachable? (not (true? (:federation/stale? metadata)))]
+                   {:agent-id aid
+                    :registered-ready? true
+                    :current-ready? reachable?}))))
+       vec))
+
+(defn connection-facts
+  "Peer-level connection facts consumed by CP-A logic."
+  []
+  (->> @!peer-liveness
+       (mapv (fn [[peer-url {:keys [reachable?]}]]
+               {:connection-id peer-url
+                :declared-state :connected
+                :channel-state (if reachable? :live :dead)}))))

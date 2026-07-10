@@ -816,6 +816,8 @@
      :site (or self-url :local)
      :local-point (or self-url :local)
      :self-url self-url
+     :connections (federation/connection-facts)
+     :remote-health (federation/remote-health-facts)
      :peers (mapv (fn [peer]
                     (if (map? peer)
                       peer

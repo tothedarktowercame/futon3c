@@ -369,6 +369,45 @@ futon3c.agency.federation-logic-test` passed with 58 tests / 155 assertions.
 Deferred: B2 still owns WS transport/reconnection liveness; B3 still owns IRC bridge and
 Emacs proxy-binding UX. No server/JVM restart was performed.
 
+## Checkpoint CP-B slice 2 — 2026-07-10 (continuous, liveness-aware peer sync)
+
+Implemented the default-off continuous federation sync layer. The existing one-shot
+`sync-peers!` remains in bootstrap, and bootstrap now also calls
+`federation/start-sync-daemon!`; with the default `FUTON3C_FED_SYNC_INTERVAL_MS=0` this is
+a no-op, preserving current restart behavior. Joe can arm the daemon by setting
+`FUTON3C_FED_SYNC_INTERVAL_MS` to a positive millisecond interval; optional
+`FUTON3C_FED_SYNC_MAX_BACKOFF_MS` caps retry backoff.
+
+The daemon uses a single-thread daemon `ScheduledExecutorService`, mirroring the
+watcher/multi pattern. Its deterministic core is `sync-tick!`, which accepts injected
+`:now-ms`, `:fetch-fn`, and `:jitter-fn` for offline tests. Each tick reuses
+`sync-peer!` / `register-proxy-agent!`, imports newly appeared peer agents as proxies, and
+prunes departed proxies for that peer. Real local agents are never pruned because pruning
+only removes records still marked as proxies from the peer origin URL.
+
+AG-3/AG-4 liveness model: each peer has tracked reachability and per-peer backoff. A
+failed pull marks only that peer's proxies stale instead of deleting them; their registry
+readiness becomes `:invoke-route :none` with a federation-unreachable diagnostic, so they
+no longer read as live. CP-A live snapshots now include federation `connection-state` and
+`remote-health` facts via `federation/connection-facts` and
+`federation/remote-health-facts`, so `logic/find-unreachable-connected` flags stale peer
+proxies and clears when the peer recovers and the roster re-syncs.
+
+Tests: `test/futon3c/agency/federation_sync_test.clj` covers the frozen-roster fix
+(`claude-4` appears after the next tick), departure pruning, local-agent non-pruning,
+AG-3/AG-4 stale/recovery with backoff, and the default-off gate. Gates at checkpoint
+creation: `clj-kondo --lint src/futon3c/agency/federation.clj
+src/futon3c/agency/registry.clj src/futon3c/agency/logic.clj dev/futon3c/dev/bootstrap.clj
+test/futon3c/agency/federation_sync_test.clj test/futon3c/agency/federation_test.clj`
+clean; `futon4/dev/check-parens.sh` clean on the changed Clojure files; `clojure -M:test
+-n futon3c.agency.federation-sync-test -n futon3c.agency.federation-registration-test -n
+futon3c.agency.federation-test -n futon3c.agency.invariants-test -n
+futon3c.agency.logic-test -n futon3c.agency.federation-logic-test` passed with 62 tests /
+186 assertions.
+
+Deferred: no new WS transport or WS reverse-invoke work; no IRC bridge or roster-driven
+IRC bot changes. No server/JVM restart was performed.
+
 ## Cross-references
 
 - `M-agency-hardening.md` — the local/IRC layer (closed); the single-box predecessor.

@@ -565,6 +565,7 @@
             (when-let [agent-record (reg/get-agent typed-id)]
               (federation/announce! agent-record)))
         fed-sync-results (federation/sync-peers!)
+        fed-sync-daemon (federation/start-sync-daemon!)
         fed-peers (federation/peers)
         fed-self (federation/self-url)
         mission-count (cyder/register-missions!)
@@ -587,6 +588,9 @@
                   (:unreachable agent-summary) " unreachable)"
                   " | CYDER: " (count (cyder/list-processes)) " processes"
                   " (" mission-count " missions)"))
+    (when (:enabled? fed-sync-daemon)
+      (println (str "[dev] Federation continuous sync enabled interval-ms="
+                    (:interval-ms fed-sync-daemon))))
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")

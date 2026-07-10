@@ -120,20 +120,32 @@
   "Compute invoke routing readiness for an agent record.
    Exposes whether invoke will route via local fn, WS bridge, or fail."
   [aid-val agent]
-  (let [local? (fn? (:agent/invoke-fn agent))
+  (let [metadata (:agent/metadata agent)
+        stale-proxy? (and (:proxy? metadata)
+                          (:federation/stale? metadata))
+        local? (and (fn? (:agent/invoke-fn agent))
+                    (not stale-proxy?))
         ws-available? (ws-invoke/available? aid-val)
         route (cond
+                stale-proxy? :none
                 local? :local
                 ws-available? :ws
                 :else :none)
-        note (or (get-in agent [:agent/metadata :note])
-                 (get-in agent [:agent/metadata "note"]))
+        note (or (:note metadata)
+                 (get metadata "note"))
         agent-type (:agent/type agent)
         diagnostic (case route
                      :local "local invoke-fn registered"
                      :ws "ws bridge connected"
-                     (let [base (if (= :codex agent-type)
+                     (let [base (cond
+                                  stale-proxy?
+                                  (str "federation peer unreachable"
+                                       (when-let [err (:federation/last-error metadata)]
+                                         (str " — " err)))
+
+                                  (= :codex agent-type)
                                   "ws bridge not connected — start codex bridge on laptop"
+                                  :else
                                   "no local invoke-fn and no ws bridge")]
                        (if (and (string? note) (not (str/blank? note)))
                          (str base " (" note ")")
