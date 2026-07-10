@@ -7,4 +7,12 @@
 
   ;; sibling core.logic template CP-A mirrors — same pldb/db-rel pattern
   futon3c.agents.tickle-logic
-  {:linters {:unresolved-symbol {:level :off}}}}}
+  {:linters {:unresolved-symbol {:level :off}}}
+
+  futon3c.agency.federation
+  {:linters {:unresolved-var {:exclude [org.httpkit.client/get
+                                        org.httpkit.client/post]}}}
+
+  futon3c.agency.federation-test
+  {:linters {:unresolved-var {:exclude [org.httpkit.client/get
+                                        org.httpkit.client/post]}}}}}

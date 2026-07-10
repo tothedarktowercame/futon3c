@@ -2220,6 +2220,14 @@
 
       nil)))
 
+(defn- remote-home-refusal-response
+  [agent-id]
+  (json-response 409 {:ok false
+                      :err "remote-home-local-registration-refused"
+                      :message (str "Refusing to register remote-homed agent locally: "
+                                    agent-id)
+                      :agent-id agent-id}))
+
 (defn- handle-agents-register
   "POST /api/alpha/agents — register an agent via HTTP.
    Body: {\"agent-id\": \"codex-1\", \"type\": \"codex\",
@@ -2255,41 +2263,59 @@
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required (claude, codex, zai, tickle, mock)"})
 
+          (and proxy? (str/blank? (str origin-url)))
+          (json-response 400 {:ok false :err "missing-origin-url"
+                              :message "proxy registration requires origin-url"})
+
+          (and (not origin-url)
+               (federation/remote-homed-agent-id? agent-id))
+          (remote-home-refusal-response agent-id)
+
           :else
-          (let [invoke-fn (cond
-                            (and proxy? origin-url (not (str/blank? origin-url)))
-                            (federation/make-proxy-invoke-fn origin-url agent-id)
-
-                            ws-bridge?
-                            nil
-
-                            :else
-                            (fn [_prompt _session-id]
-                              {:result "registered-via-http" :session-id nil}))
-                result (reg/register-agent!
-                        {:agent-id {:id/value (str agent-id) :id/type :continuity}
-                         :type agent-type
-                         :invoke-fn invoke-fn
-                         :capabilities capabilities
-                         :metadata (cond-> {}
-                                     proxy? (assoc :proxy? true)
-                                     ws-bridge? (assoc :ws-bridge? true)
-                                     origin-url (assoc :origin-url origin-url))})]
-            (if (and (map? result) (= false (:ok result)))
-              (json-response 409 {:ok false
-                                  :err "duplicate-registration"
-                                  :message (str "Agent already registered: " agent-id)
-                                  :detail result})
-              (if (and (map? result) (:agent/id result))
-                (json-response 201 {:ok true
-                                    :agent-id (get-in result [:agent/id :id/value])
-                                    :type (name (:agent/type result))
-                                    :proxy proxy?
-                                    :ws-bridge ws-bridge?})
+          (if (and proxy? origin-url (not (str/blank? origin-url)))
+            (let [result (federation/register-proxy-agent!
+                          origin-url
+                          agent-id
+                          {:type agent-type
+                           :capabilities capabilities})]
+              (if (:ok result)
+                (json-response (if (= :registered (:action result)) 201 200)
+                               {:ok true
+                                :agent-id (:agent-id result)
+                                :type (name agent-type)
+                                :proxy true
+                                :origin-url origin-url
+                                :action (name (:action result))})
                 (json-response 409 {:ok false
-                                    :err "registration-failed"
-                                    :message (str "Could not register: " agent-id)
-                                    :detail result})))))))))
+                                    :err (name (or (:action result) :registration-failed))
+                                    :message (str "Could not register proxy: " agent-id)
+                                    :detail result})))
+            (let [invoke-fn (if ws-bridge?
+                              nil
+                              (fn [_prompt _session-id]
+                                {:result "registered-via-http" :session-id nil}))
+                  result (reg/register-agent!
+                          {:agent-id {:id/value (str agent-id) :id/type :continuity}
+                           :type agent-type
+                           :invoke-fn invoke-fn
+                           :capabilities capabilities
+                           :metadata (cond-> {}
+                                       ws-bridge? (assoc :ws-bridge? true))})]
+              (if (and (map? result) (= false (:ok result)))
+                (json-response 409 {:ok false
+                                    :err "duplicate-registration"
+                                    :message (str "Agent already registered: " agent-id)
+                                    :detail result})
+                (if (and (map? result) (:agent/id result))
+                  (json-response 201 {:ok true
+                                      :agent-id (get-in result [:agent/id :id/value])
+                                      :type (name (:agent/type result))
+                                      :proxy false
+                                      :ws-bridge ws-bridge?})
+                  (json-response 409 {:ok false
+                                      :err "registration-failed"
+                                      :message (str "Could not register: " agent-id)
+                                      :detail result}))))))))))
 
 (defn- handle-agents-auto-register
   "POST /api/alpha/agents/auto — allocate and register next available agent.
@@ -2299,114 +2325,113 @@
    Each call creates a new, independent agent (I-1: one agent = one identity)."
   [request config]
   (let [payload (parse-json-map (read-body request))]
-    (if (nil? payload)
+    (cond
+      (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"})
+
+      :else
       (let [agent-type-str (or (:type payload) (get payload "type"))
             agent-type (parse-keyword agent-type-str)]
         (if (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required"})
           (let [prefix (name agent-type)
-                ;; Ghost reclamation: reclaim the lowest-numbered idle,
-                ;; session-less, auto-registered agent of this type rather
-                ;; than allocating ever-increasing nicks.
-                agent-id (if-let [ghost (reg/find-reclaimable-agent agent-type)]
-                           (do
-                             ;; Clean up stale session file before unregistering
-                             (let [stale-sf (case agent-type
-                                             :claude (format "/tmp/futon-session-id-%s" ghost)
-                                             :codex (format "/tmp/futon-codex-session-id-%s" ghost)
-                                             :zai (format "/tmp/futon-zai-session-id-%s" ghost)
-                                             nil)]
-                               (when (and stale-sf (.exists (java.io.File. stale-sf)))
-                                 (.delete (java.io.File. stale-sf))))
-                             (reg/unregister-agent! ghost)
-                             ghost)
-                           (let [matching-ids (->> (reg/registered-agents)
-                                                   (map :id/value)
-                                                   (filter #(str/starts-with? (str %) (str prefix "-")))
-                                                   set)
-                                 next-n (loop [n 1]
-                                          (if (contains? matching-ids (str prefix "-" n))
-                                            (recur (inc n))
-                                            n))]
-                             (str prefix "-" next-n)))
-                initial-session-id (some-> (or (:session-id payload)
-                                               (get payload "session-id"))
-                                           str
-                                           str/trim
-                                           not-empty)
-                requested-cwd (some-> (or (:cwd payload)
-                                          (get payload "cwd"))
-                                      str
-                                      str/trim
-                                      not-empty)
-                campaign-id (some-> (or (:campaign-id payload)
-                                        (get payload "campaign-id"))
-                                    str
-                                    str/trim
-                                    not-empty)
-                mission-id (some-> (or (:mission-id payload)
-                                       (get payload "mission-id"))
-                                   str
-                                   str/trim
-                                   not-empty)
-                excursion-id (some-> (or (:excursion-id payload)
-                                         (get payload "excursion-id"))
-                                     str
-                                     str/trim
-                                     not-empty)
-                emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
-                session-file (default-session-file-for-agent agent-type agent-id)
-                ;; I-1: a fresh auto-register (no initial-session-id) must
-                ;; NOT silently inherit orphan session state from a prior
-                ;; incarnation of this agent-id. Delete stale file before
-                ;; seeding so Claude CLI mints a new session on first invoke.
-                _ (when (and session-file (nil? initial-session-id))
-                    (let [f (java.io.File. session-file)]
+                ghost (reg/find-reclaimable-agent agent-type)
+                agent-id (or ghost
+                             (let [matching-ids (->> (reg/registered-agents)
+                                                     (map :id/value)
+                                                     (filter #(str/starts-with? (str %) (str prefix "-")))
+                                                     set)
+                                   next-n (loop [n 1]
+                                            (if (contains? matching-ids (str prefix "-" n))
+                                              (recur (inc n))
+                                              n))]
+                               (str prefix "-" next-n)))]
+            (if (federation/remote-homed-agent-id? agent-id)
+              (remote-home-refusal-response agent-id)
+              (let [initial-session-id (some-> (or (:session-id payload)
+                                                   (get payload "session-id"))
+                                               str
+                                               str/trim
+                                               not-empty)
+                    requested-cwd (some-> (or (:cwd payload)
+                                              (get payload "cwd"))
+                                          str
+                                          str/trim
+                                          not-empty)
+                    campaign-id (some-> (or (:campaign-id payload)
+                                            (get payload "campaign-id"))
+                                        str
+                                        str/trim
+                                        not-empty)
+                    mission-id (some-> (or (:mission-id payload)
+                                           (get payload "mission-id"))
+                                       str
+                                       str/trim
+                                       not-empty)
+                    excursion-id (some-> (or (:excursion-id payload)
+                                             (get payload "excursion-id"))
+                                         str
+                                         str/trim
+                                         not-empty)
+                    emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
+                    session-file (default-session-file-for-agent agent-type agent-id)]
+                (when ghost
+                  (when-let [stale-sf (case agent-type
+                                        :claude (format "/tmp/futon-session-id-%s" ghost)
+                                        :codex (format "/tmp/futon-codex-session-id-%s" ghost)
+                                        :zai (format "/tmp/futon-zai-session-id-%s" ghost)
+                                        nil)]
+                    (let [f (java.io.File. stale-sf)]
                       (when (.exists f) (.delete f))))
-                sid-atom (make-session-id-atom initial-session-id session-file)
-                session-reset-fn (make-session-reset-fn session-file sid-atom)
-                invoke-fn (make-local-agent-invoke-fn
-                           agent-type
-                           {:agent-id agent-id
-                            :session-file session-file
-                            :initial-session-id initial-session-id
-                            :session-id-atom sid-atom
-                            :requested-cwd requested-cwd
-                            :emacs-socket emacs-socket
-                            :evidence-store (evidence-store-for-config config)
-                            :irc-send-fn (:irc-send-fn config)})
-                result (reg/register-agent!
-                        {:agent-id {:id/value agent-id :id/type :continuity}
-                         :type agent-type
-                         :invoke-fn invoke-fn
-                         :session-reset-fn session-reset-fn
-                         :capabilities (get default-capabilities agent-type [])
-                         :metadata (cond-> {:auto-registered? true}
-                                     (= agent-type :codex) (assoc :require-execution? true)
-                                     requested-cwd (assoc :cwd requested-cwd)
-                                     campaign-id (assoc :campaign-id campaign-id)
-                                     mission-id (assoc :mission-id mission-id)
-                                     excursion-id (assoc :excursion-id excursion-id)
-                                     emacs-socket (assoc :emacs-socket emacs-socket))})]
-            (when (and (map? result) (:agent/id result))
-              (when invoke-fn
-                (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
-              (when initial-session-id
-                (when session-file
-                  (spit session-file initial-session-id))
-                (reg/update-agent! agent-id :agent/session-id initial-session-id)))
-            (if (and (map? result) (:agent/id result))
-              (json-response 201 {:ok true
-                                  :agent-id agent-id
-                                  :type (name agent-type)
-                                  :session-id initial-session-id
+                  (reg/unregister-agent! ghost))
+                ;; I-1: a fresh auto-register (no initial-session-id) must not
+                ;; silently inherit orphan session state from a prior incarnation.
+                (when (and session-file (nil? initial-session-id))
+                  (let [f (java.io.File. session-file)]
+                    (when (.exists f) (.delete f))))
+                (let [sid-atom (make-session-id-atom initial-session-id session-file)
+                      session-reset-fn (make-session-reset-fn session-file sid-atom)
+                      invoke-fn (make-local-agent-invoke-fn
+                                 agent-type
+                                 {:agent-id agent-id
                                   :session-file session-file
-                                  :cwd requested-cwd})
-              (json-response 409 {:ok false
-                                  :err "registration-failed"
-                                  :message (str "Could not register: " agent-id)}))))))))
+                                  :initial-session-id initial-session-id
+                                  :session-id-atom sid-atom
+                                  :requested-cwd requested-cwd
+                                  :emacs-socket emacs-socket
+                                  :evidence-store (evidence-store-for-config config)
+                                  :irc-send-fn (:irc-send-fn config)})
+                      result (reg/register-agent!
+                              {:agent-id {:id/value agent-id :id/type :continuity}
+                               :type agent-type
+                               :invoke-fn invoke-fn
+                               :session-reset-fn session-reset-fn
+                               :capabilities (get default-capabilities agent-type [])
+                               :metadata (cond-> {:auto-registered? true}
+                                           (= agent-type :codex) (assoc :require-execution? true)
+                                           requested-cwd (assoc :cwd requested-cwd)
+                                           campaign-id (assoc :campaign-id campaign-id)
+                                           mission-id (assoc :mission-id mission-id)
+                                           excursion-id (assoc :excursion-id excursion-id)
+                                           emacs-socket (assoc :emacs-socket emacs-socket))})]
+                  (when (and (map? result) (:agent/id result))
+                    (when invoke-fn
+                      (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
+                    (when initial-session-id
+                      (when session-file
+                        (spit session-file initial-session-id))
+                      (reg/update-agent! agent-id :agent/session-id initial-session-id)))
+                  (if (and (map? result) (:agent/id result))
+                    (json-response 201 {:ok true
+                                        :agent-id agent-id
+                                        :type (name agent-type)
+                                        :session-id initial-session-id
+                                        :session-file session-file
+                                        :cwd requested-cwd})
+                    (json-response 409 {:ok false
+                                        :err "registration-failed"
+                                        :message (str "Could not register: " agent-id)})))))))))))
 
 (defn- handle-agent-restore
   "POST /api/alpha/agents/restore — rehydrate or refresh an exact agent identity.
@@ -2467,6 +2492,9 @@
           (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required"})
+
+          (federation/remote-homed-agent-id? agent-id)
+          (remote-home-refusal-response agent-id)
 
           :else
           (let [sid-atom (make-session-id-atom initial-session-id session-file)

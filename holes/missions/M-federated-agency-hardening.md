@@ -333,6 +333,42 @@ futon3c.agency.logic-test -n futon3c.agency.invariants-test -n
 futon3c.agency.federation-test` passed with 53 tests / 122 assertions. The checkpoint is
 standalone and changes no runtime behavior; no JVM/server restart was performed.
 
+## Checkpoint CP-B slice 1 — 2026-07-10 (AG-2 registration seam enforcement)
+
+Implemented the first model-driven enforcement slice for AG-2 on the server-side Clojure
+registration path. `/api/alpha/agents` registrations with `origin-url` now route through
+`futon3c.agency.federation/register-proxy-agent!`, so peer announces create or refresh a
+federation proxy with `:proxy? true`, `:remote? true`, `:origin-url`, inferred
+`:home-site`, and a `make-proxy-invoke-fn` back to the home Agency. Site-qualified local
+phantoms such as `lon-claude-1` are replaced by the proxy when a valid origin announce
+arrives, while unqualified protected local lanes remain protected.
+
+The local registration seams now refuse remote-home identities before they can mint a
+local invoke-fn. The guard recognizes existing proxies and configured peer site prefixes
+(`FUTON3C_PEER_SITES` / `:peer-sites`) for ids like `lon-claude-1` and `chi-claude-1`.
+Both `/api/alpha/agents` without `origin-url` and `/api/alpha/agents/restore` return
+`remote-home-local-registration-refused` for those ids, so the Emacs restore/attach path
+cannot strip proxy metadata and turn a remote agent into a local phantom. `/agents/auto`
+also checks the selected id before local session-file mutation.
+
+`announce!` still does not arm federation when peers/self-url are missing, but it no
+longer silently no-ops: it logs a structured skip reason such as `:no-peers` or
+`:no-self-url`. Valid announces continue to emit `origin-url` and `proxy=true`.
+
+Acceptance oracle: `test/futon3c/agency/federation_registration_test.clj` drives the real
+HTTP handlers, then builds a CP-A snapshot from `registry/!registry` and asserts
+`logic/find-phantoms` is empty. It also seeds the pre-fix local-phantom state and verifies
+CP-A flags it before a valid origin announce heals it. Gates at checkpoint creation:
+`clj-kondo --lint src/futon3c/agency/federation.clj src/futon3c/transport/http.clj
+test/futon3c/agency/federation_registration_test.clj test/futon3c/agency/federation_test.clj`
+clean; `futon4/dev/check-parens.sh` clean on the changed Clojure files; `clojure -M:test
+-n futon3c.agency.federation-registration-test -n futon3c.agency.federation-test -n
+futon3c.agency.invariants-test -n futon3c.agency.logic-test -n
+futon3c.agency.federation-logic-test` passed with 58 tests / 155 assertions.
+
+Deferred: B2 still owns WS transport/reconnection liveness; B3 still owns IRC bridge and
+Emacs proxy-binding UX. No server/JVM restart was performed.
+
 ## Cross-references
 
 - `M-agency-hardening.md` — the local/IRC layer (closed); the single-box predecessor.

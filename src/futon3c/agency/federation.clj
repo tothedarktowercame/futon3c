@@ -16,28 +16,49 @@
    The proxy invoke-fn POSTs to the origin Agency's /dispatch endpoint.
    The origin Agency has the real agent registered and dispatches normally."
   (:require [futon3c.agency.registry :as reg]
+            [clojure.set :as set]
             [clojure.string :as str]
             [cheshire.core :as json]
             [org.httpkit.client :as http]))
 
 (def ^:private default-proxy-timeout-ms 600000)
 
+(declare parse-agent-id)
+
 ;; =============================================================================
 ;; Configuration state
 ;; =============================================================================
 
 (defonce ^{:doc "Federation config atom.
-   {:peers [url ...], :self-url string}"}
+   {:peers [url ...], :self-url string, :peer-sites #{site-code ...}}"}
   !config (atom {:peers [] :self-url nil}))
 
 (defn configure!
   "Configure federation with peer URLs and self URL.
    peers: vector of peer Agency base URLs (no trailing slash).
-   self-url: this Agency's externally reachable base URL."
-  [{:keys [peers self-url]}]
-  (reset! !config {:peers (vec (remove str/blank? (or peers [])))
-                   :self-url (when-not (str/blank? self-url)
-                               (str/trim self-url))}))
+   self-url: this Agency's externally reachable base URL.
+   peer-sites: optional site codes whose qualified agent ids are remote here."
+  [{:keys [peers self-url peer-sites]}]
+  (let [peer-entries (or peers [])
+        peer-urls (->> peer-entries
+                       (map (fn [peer]
+                              (if (map? peer)
+                                (or (:url peer) (:peer-url peer))
+                                peer)))
+                       (remove str/blank?)
+                       vec)
+        sites-from-peers (keep (fn [peer]
+                                 (when (map? peer)
+                                   (or (:site peer) (:peer-site peer) (:id peer))))
+                               peer-entries)
+        normalized-sites (->> (concat peer-sites sites-from-peers)
+                              (map #(some-> % str str/trim str/lower-case))
+                              (remove str/blank?)
+                              set)]
+    (reset! !config {:peers peer-urls
+                     :self-url (when-not (str/blank? self-url)
+                                 (str/trim self-url))
+                     :peer-sites normalized-sites})))
 
 (defn configure-from-env!
   "Configure federation from environment variables.
@@ -46,13 +67,20 @@
   []
   (let [peers-str (System/getenv "FUTON3C_PEERS")
         self-url (System/getenv "FUTON3C_SELF_URL")
+        peer-sites-str (System/getenv "FUTON3C_PEER_SITES")
         peers (when (and peers-str (not (str/blank? peers-str)))
                 (->> (str/split peers-str #",")
                      (map str/trim)
                      (remove str/blank?)
-                     vec))]
+                     vec))
+        peer-sites (when (and peer-sites-str (not (str/blank? peer-sites-str)))
+                     (->> (str/split peer-sites-str #",")
+                          (map str/trim)
+                          (remove str/blank?)
+                          vec))]
     (configure! {:peers (or peers [])
-                 :self-url self-url})))
+                 :self-url self-url
+                 :peer-sites peer-sites})))
 
 (defn peers
   "Return configured peer URLs."
@@ -63,6 +91,65 @@
   "Return this Agency's self URL."
   []
   (:self-url @!config))
+
+(defn peer-sites
+  "Return configured peer site prefixes as lower-case strings."
+  []
+  (:peer-sites @!config))
+
+(defn site-prefix
+  "Return this Agency's site prefix, if configured."
+  []
+  (some-> (or (System/getProperty "FUTON3C_SITE")
+              (System/getenv "FUTON3C_SITE"))
+          str/trim
+          str/lower-case
+          not-empty))
+
+(defn agent-id-home-site
+  "Infer a site code from a site-qualified agent id like lon-claude-1."
+  [agent-id]
+  (when-let [[_ site] (re-matches #"(?i)^([a-z][a-z0-9]*)-(?:claude|codex|zai|tickle)-\d+$"
+                                  (str agent-id))]
+    (str/lower-case site)))
+
+(defn- known-remote-home-sites
+  []
+  (let [local-site (site-prefix)
+        proxy-sites (->> (vals @reg/!registry)
+                         (keep (fn [agent]
+                                 (let [aid (get-in agent [:agent/id :id/value])
+                                       metadata (:agent/metadata agent)]
+                                   (when (:proxy? metadata)
+                                     (or (some-> (:home-site metadata) str str/lower-case)
+                                         (agent-id-home-site aid))))))
+                         set)]
+    (cond-> (set/union (or (peer-sites) #{}) proxy-sites)
+      local-site (disj local-site))))
+
+(defn remote-homed-agent-id?
+  "True when AGENT-ID names a known remote home on this server.
+
+   This is the server-side AG-2 guard used by local registration seams. It
+   refuses site-qualified peer ids and existing proxy ids from being rebound
+   as local agents."
+  [agent-id]
+  (let [aid (parse-agent-id agent-id)
+        existing (when aid (reg/get-agent aid))
+        home-site (agent-id-home-site aid)]
+    (boolean
+     (or (get-in existing [:agent/metadata :proxy?])
+         (and home-site
+              (contains? (known-remote-home-sites) home-site))))))
+
+(defn- site-qualified-away-from-local?
+  [agent-id]
+  (let [home-site (agent-id-home-site agent-id)
+        local-site (site-prefix)]
+    (boolean
+     (and home-site
+          (or (nil? local-site)
+              (not= home-site local-site))))))
 
 (defn- parse-agent-type
   [x]
@@ -198,13 +285,22 @@
    Skips proxy agents (to prevent announcement loops).
    Returns vector of per-peer results."
   [agent-record]
-  (let [{:keys [peers self-url]} @!config]
-    (when (and (seq peers) self-url
-              ;; Don't re-announce proxy agents (prevents loops)
-              (not (get-in agent-record [:agent/metadata :proxy?]))
-              ;; Some local bridge agents intentionally connect directly to a
-              ;; remote Agency over WS and should not be mirrored as proxies.
-              (not (get-in agent-record [:agent/metadata :skip-federation-proxy?])))
+  (let [{:keys [peers self-url]} @!config
+        agent-id (get-in agent-record [:agent/id :id/value])
+        skip-reason (cond
+                      (empty? peers) :no-peers
+                      (str/blank? self-url) :no-self-url
+                      (get-in agent-record [:agent/metadata :proxy?]) :proxy-agent
+                      (get-in agent-record [:agent/metadata :skip-federation-proxy?])
+                      :skip-federation-proxy)]
+    (if skip-reason
+      (do
+        (println "[federation] announce skipped"
+                 {:agent-id agent-id
+                  :reason skip-reason
+                  :peers peers
+                  :self-url self-url})
+        nil)
       (mapv #(announce-to-peer! % agent-record self-url) peers))))
 
 ;; =============================================================================
@@ -227,12 +323,18 @@
 ;; =============================================================================
 
 (defn- proxy-metadata
-  [origin-url]
-  {:proxy? true
-   :remote? true
-   :origin-url origin-url})
+  [origin-url agent-id]
+  (cond-> {:proxy? true
+           :remote? true
+           :origin-url origin-url}
+    (agent-id-home-site agent-id)
+    (assoc :home-site (keyword (agent-id-home-site agent-id)))))
 
-(defn- upsert-proxy-agent!
+(defn register-proxy-agent!
+  "Create or refresh a federation proxy for a remote agent.
+
+   Existing real local agents are preserved unless the id itself proves the
+   local record is a remote-home phantom on this server."
   [origin-url agent-id agent-info]
   (let [aid (parse-agent-id agent-id)
         agent-type (parse-agent-type (:type agent-info))
@@ -259,8 +361,12 @@
           (reg/unregister-agent! aid))
         {:ok true :agent-id aid :action :skipped-protected-id})
 
-      ;; Never overwrite a real local agent with a proxy import.
-      (and existing (not (get-in existing [:agent/metadata :proxy?])))
+      ;; Never overwrite a real local agent with a proxy import unless the id
+      ;; is site-qualified to a known remote home. In that case the local record
+      ;; is exactly the AG-2 phantom this slice is meant to replace.
+      (and existing
+           (not (get-in existing [:agent/metadata :proxy?]))
+           (not (site-qualified-away-from-local? aid)))
       {:ok true :agent-id aid :action :skipped-local}
 
       ;; Existing proxy from another origin is a real conflict; keep the current one.
@@ -278,7 +384,7 @@
                            :agent/type agent-type
                            :agent/invoke-fn (make-proxy-invoke-fn origin-url aid)
                            :agent/capabilities capabilities
-                           :agent/metadata (proxy-metadata origin-url))
+                           :agent/metadata (proxy-metadata origin-url aid))
         {:ok true :agent-id aid :action :updated})
 
       :else
@@ -287,7 +393,7 @@
                      :type agent-type
                      :invoke-fn (make-proxy-invoke-fn origin-url aid)
                      :capabilities capabilities
-                     :metadata (proxy-metadata origin-url)})]
+                     :metadata (proxy-metadata origin-url aid)})]
         (if (and (map? result) (= false (:ok result)))
           {:ok false
            :agent-id aid
@@ -311,7 +417,7 @@
       (if (and status (< status 400) (= true (:ok parsed)))
         (let [results (->> (:agents parsed)
                            (map (fn [[agent-id agent-info]]
-                                  (upsert-proxy-agent! peer-url agent-id agent-info)))
+                                  (register-proxy-agent! peer-url agent-id agent-info)))
                            vec)]
           {:ok true
            :peer peer-url

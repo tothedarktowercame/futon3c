@@ -2,6 +2,7 @@
   "Federation unit tests — peer announcement, proxy invoke, hook wiring."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
+            [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as fed]
             [org.httpkit.client :as http]))
@@ -100,6 +101,18 @@
                         :agent/metadata {}}]
       (is (nil? (fed/announce! agent-record))))))
 
+(deftest announce-skip-is-observable
+  (testing "announce! logs a diagnostic when federation is configured too weakly to announce"
+    (fed/configure! {:peers ["http://host-a:7070"] :self-url nil})
+    (let [agent-record {:agent/id {:id/value "codex-1" :id/type :continuity}
+                        :agent/type :codex
+                        :agent/capabilities [:edit]
+                        :agent/metadata {}}
+          logged (with-out-str
+                   (is (nil? (fed/announce! agent-record))))]
+      (is (str/includes? logged "announce skipped"))
+      (is (str/includes? logged ":no-self-url")))))
+
 (deftest announce-skips-proxy-agents
   (testing "announce! skips agents marked as proxy (prevents loops)"
     (fed/configure! {:peers ["http://host-a:7070"] :self-url "http://me:7070"})
@@ -147,7 +160,9 @@
         (let [results (fed/announce! agent-record)
               payload (json/parse-string (get-in (first @calls) [:opts :body]) true)]
           (is (= 1 (count results)))
-          (is (= ["edit" "coordination/execute"] (:capabilities payload))))))))
+          (is (= ["edit" "coordination/execute"] (:capabilities payload)))
+          (is (= "http://me:7070" (:origin-url payload)))
+          (is (= true (:proxy payload))))))))
 
 ;; =============================================================================
 ;; Hook wiring
