@@ -408,6 +408,35 @@ futon3c.agency.logic-test -n futon3c.agency.federation-logic-test` passed with 6
 Deferred: no new WS transport or WS reverse-invoke work; no IRC bridge or roster-driven
 IRC bot changes. No server/JVM restart was performed.
 
+## Checkpoint CP-B slice 3 — 2026-07-10 (IRC bots from live Agency roster)
+
+Implemented the bridge-side IRC analogue of B2 in `scripts/ngircd_bridge.py`, default-off.
+The pure rule is `desired_bot_nicks(roster_json, type_allowlist)`: select agent ids from
+`GET /api/alpha/agents` whose type is in the allowlist (`claude,codex,zai` by default) and
+whose roster metadata is not proxy/remote. This enforces the mesh invariant that an
+agent's IRC bot is present only at its home bridge; imported federation proxies are
+excluded so remote agents do not get duplicate IRC nicks or relay loops.
+
+Runtime reconciliation is gated by `BRIDGE_BOTS_FROM_ROSTER=false` by default, preserving
+the existing static `BRIDGE_BOTS` behavior until armed. When Joe sets
+`BRIDGE_BOTS_FROM_ROSTER=true` and restarts the bridge unit, the bridge seeds bots from
+`BRIDGE_BOTS ∪ desired_bot_nicks(roster)` and periodically refreshes from
+`AGENTS_URL`. Newly registered local agents start an `IRCBot` thread and join the bridge's
+channels; departed roster agents are cleanly `PART`/`QUIT`ed and removed. Explicit
+`BRIDGE_BOTS` entries remain pinned. Roster fetch failures skip reconciliation rather than
+interpreting the roster as empty.
+
+Tests: `scripts/test_ngircd_bridge_roster.py` covers the pure selector for new local
+agents, proxy/remote exclusion, departure, type filtering, flag-off static behavior, and
+flag-on union with pinned bots. Gates at checkpoint creation:
+`python3 -m py_compile scripts/ngircd_bridge.py` clean; `python3 -m pytest
+scripts/test_ngircd_bridge_roster.py` passed with 6 tests. `ruff` and `pyflakes` were not
+installed in this environment.
+
+Deferred: no Agency/Clojure changes, no systemd unit edits, no live bridge restart, no
+WS reverse-invoke changes. Running bridges remain untouched until Joe arms the flag and
+restarts a bridge unit.
+
 ## Cross-references
 
 - `M-agency-hardening.md` — the local/IRC layer (closed); the single-box predecessor.
