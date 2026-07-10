@@ -299,6 +299,40 @@ These are candidates, not final — DERIVE should consolidate/rename and check f
 (e.g. AG-3 and AG-4 may be one liveness invariant). Next mission step: **MAP** the agency
 state into the logic-model fact schema, then **DERIVE** the AG-* relations.
 
+## Checkpoint CP-A — 2026-07-10 (Agency logic model MAP + DERIVE)
+
+Implemented the VERIFY artifact as a pure `core.logic`/`pldb` model in
+`src/futon3c/agency/logic.clj`, extending the existing Agency logic namespace rather than
+splitting a duplicate federation model. The MAP layer now includes explicit facts for
+agent identity/type/status, session ids and live writers, invoke route/readiness/diagnostic,
+home point/local point, proxy/origin-url, peer sites/URLs, self URL, local registrations,
+peer rosters, connection liveness, remote health, session capacity, and server
+accept-liveness. It accepts plain snapshots through `snapshot->db` for deterministic tests
+and can also build a read-only live snapshot from `registry/!registry`, `registry-status`,
+and `federation/!config` via `build-live-db`.
+
+DERIVE decision: AG-3 and AG-4 are one liveness-honesty invariant in the model. AG-3 is the
+transport half (`:connected` implies live channel); AG-4 is the remote-health half
+(registered-ready must reflect current reachability). The exported relation is
+`ag-3-4-unreachable-connectedo`, with the finder `find-unreachable-connected` preserving
+which half fired.
+
+CP-A finders are exported with the mission names:
+`find-phantoms`, `find-unpropagated`, `find-session-collisions`, and
+`find-unreachable-connected`. Deterministic fixtures in
+`test/futon3c/agency/federation_logic_test.clj` reproduce the two recorded violations:
+`claude-4` local on `:lon` missing from the `:laptop` roster, and `lon-claude-1` /
+`chi-claude-1` locally minted on `:laptop` as remote-home phantoms. A correctly federated
+proxy fixture has no non-informational violations. Each AG-1 through AG-7 relation has a
+passing and failing fixture.
+
+Gates at checkpoint creation: `clj-kondo --lint src/futon3c/agency/logic.clj
+test/futon3c/agency/federation_logic_test.clj` clean; `futon4/dev/check-parens.sh` clean
+on the changed Clojure files; `clojure -M:test -n futon3c.agency.federation-logic-test -n
+futon3c.agency.logic-test -n futon3c.agency.invariants-test -n
+futon3c.agency.federation-test` passed with 53 tests / 122 assertions. The checkpoint is
+standalone and changes no runtime behavior; no JVM/server restart was performed.
+
 ## Cross-references
 
 - `M-agency-hardening.md` — the local/IRC layer (closed); the single-box predecessor.

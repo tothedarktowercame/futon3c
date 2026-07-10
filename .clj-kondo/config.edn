@@ -1,0 +1,6 @@
+{:config-in-ns
+ {futon3c.agency.logic
+  {:linters {:unresolved-symbol {:level :off}}}
+
+  futon3c.agency.federation-logic-test
+  {:linters {:unresolved-symbol {:level :off}}}}}
