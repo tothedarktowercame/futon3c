@@ -10,6 +10,7 @@
    I-evidence-per-turn (M-invariant-queue-unstuck, INSTANTIATE-2)."
   (:require [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
@@ -30,14 +31,25 @@
   (config/env-bool "FUTON3C_DIRECT_XTDB" (:direct-xtdb? role-cfg false)))
 
 (defn make-evidence-store
-  "Build the evidence store based on direct-xtdb? flag.
-   When true, uses shared XTDB node (evidence persists to futon1a).
-   When false, uses in-memory atom (evidence lost on restart)."
+  "Build the evidence store.
+   FUTON3C_EVIDENCE_BACKEND=futon1b (+ FUTON1B_URL) selects the futon1b
+   HTTP/EDN backend (E-futon1b-operational-switchover B2) and wins over
+   direct-xtdb?. Otherwise: direct-xtdb? true -> shared XTDB node
+   (evidence persists to futon1a); false -> in-memory atom (lost on
+   restart, boot check fails loudly)."
   [f1-sys direct-xtdb?]
-  (if direct-xtdb?
+  (cond
+    (= "futon1b" (System/getenv "FUTON3C_EVIDENCE_BACKEND"))
+    (let [b (f1b/make-futon1b-backend)]
+      (println (str "[dev] evidence backend: futon1b (" (:base-url b) ")"))
+      b)
+
+    direct-xtdb?
     (do
       (println "[dev] direct XTDB path: ENABLED")
       (xb/make-xtdb-backend (:node f1-sys)))
+
+    :else
     (do
       (println "[dev] direct XTDB path: disabled (using in-memory evidence store)")
       (atom {:entries {} :order []}))))

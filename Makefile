@@ -9,6 +9,10 @@ NONSTARTER_DB?=$(HOME)/code/storage/nonstarter.db
 # `npx shadow-cljs` process. Both builds verified embedded 2026-05-30.
 FUTON3C_SHADOW_AUTOSTART ?= true
 FUTON3C_SHADOW_BUILDS ?= war-machine,webarxana
+# claude lives in ~/.local/bin, which is absent from PATH when make dev is
+# launched outside a login shell (systemd, desktop launcher). Absolute path
+# keeps agent-pouch spawns working regardless of the JVM's inherited PATH.
+CLAUDE_BIN ?= $(HOME)/.local/bin/claude
 FUTON3C_REPO_BASE_EFFECTIVE ?= $(if $(FUTON3C_REPO_BASE),$(FUTON3C_REPO_BASE),$(if $(FUTON_REPO_BASE),$(FUTON_REPO_BASE),$(HOME)/code))
 FUTON3C_REPOS ?= futon3c=$(FUTON3C_REPO_BASE_EFFECTIVE)/futon3c,futon3b=$(FUTON3C_REPO_BASE_EFFECTIVE)/futon3b,futon3a=$(FUTON3C_REPO_BASE_EFFECTIVE)/futon3a,futon5=$(FUTON3C_REPO_BASE_EFFECTIVE)/futon5,futon3=$(FUTON3C_REPO_BASE_EFFECTIVE)/futon3,futon4=$(FUTON3C_REPO_BASE_EFFECTIVE)/futon4,futon6=$(FUTON3C_REPO_BASE_EFFECTIVE)/futon6
 
@@ -16,6 +20,7 @@ export CODEX_SANDBOX
 export CODEX_APPROVAL
 export CODEX_APPROVAL_POLICY
 export NONSTARTER_DB
+export CLAUDE_BIN
 export FUTON3C_SHADOW_AUTOSTART
 export FUTON3C_SHADOW_BUILDS
 export FUTON3C_REPOS

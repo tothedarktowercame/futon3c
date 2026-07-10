@@ -16,9 +16,11 @@
 
    Grep for `I-evidence-per-turn` to enumerate enforcement sites."
   (:require [futon3c.evidence.backend :as backend]
-            [futon3c.evidence.xtdb-backend :as xb])
+            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.futon1b-backend :as f1b])
   (:import [futon3c.evidence.backend AtomBackend]
-           [futon3c.evidence.xtdb_backend XtdbBackend]))
+           [futon3c.evidence.xtdb_backend XtdbBackend]
+           [futon3c.evidence.futon1b_backend Futon1bBackend]))
 
 (def I-evidence-per-turn
   "Canonical definition of the invariant. String, intentionally."
@@ -33,6 +35,7 @@
   [store]
   (cond
     (instance? XtdbBackend store) :xtdb
+    (instance? Futon1bBackend store) :futon1b
     (instance? AtomBackend store) :atom-backend
     (instance? clojure.lang.IAtom store) :raw-atom
     (and store (satisfies? backend/EvidenceBackend store)) :unknown-backend
@@ -50,6 +53,21 @@
       :xtdb
       {:ok true :kind :xtdb
        :invariant I-evidence-per-turn}
+
+      ;; Durable iff the store JVM is actually reachable — a stronger boot
+      ;; check than the in-process kinds get (the server owns persistence).
+      :futon1b
+      (let [url (:base-url store)]
+        (if-let [h (f1b/health url)]
+          {:ok true :kind :futon1b
+           :invariant I-evidence-per-turn
+           :tables (:tables h)}
+          {:ok false :kind :futon1b
+           :invariant I-evidence-per-turn
+           :reason (str "futon1b server unreachable at " url
+                        " — start it (futon1b: clojure -M:node -m futon1b-server"
+                        " --store-dir <dir> --port <port>) or unset"
+                        " FUTON3C_EVIDENCE_BACKEND.")}))
 
       :atom-backend
       {:ok false :kind :atom-backend
