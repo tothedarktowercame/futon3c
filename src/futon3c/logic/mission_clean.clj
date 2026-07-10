@@ -69,20 +69,52 @@
   [phase]
   (if (= phase :document) :payoff :parse))
 
+(def ^:private requires-formal-witness
+  "Buildable phases whose discharge needs a FORMAL-leg WITNESS — the wiring
+   actually executed / a fold-turn built — not merely a substantive prose
+   section. INSTANTIATE first: its criterion is 'a live instance, not a paper
+   design', so a rich prose section describing the offramp wiring is NOT the
+   wiring running; only Stage-2 A3 execution earns it (V2 earned-closure). Prose
+   stays the informal copar leg; the formal leg must be realized to close."
+  #{:instantiate})
+
+(def ^:private offramp-wirings-dir
+  "/home/joe/code/futon3c/data/offramp-wirings")
+
+(defn instantiate-witness?
+  "True iff the mission's offramp wiring has been EXECUTED into substrate — the
+   INSTANTIATE formal witness. Stage-2 / A3 writes
+   data/offramp-wirings/<base>.executed.edn when it really builds the wiring."
+  [mission-id]
+  (let [base (re-find #"[^/]+$" (str mission-id))]
+    (.exists (io/file offramp-wirings-dir (str base ".executed.edn")))))
+
+(defn witnessed-phases
+  "The set of phases holding their formal-leg witness for MISSION-ID (impure —
+   reads the witness ledger). Passed into `build-mission-clean` so the pure
+   builder can gate buildable-phase discharge on real execution, not prose."
+  [mission-id]
+  (cond-> #{}
+    (instantiate-witness? mission-id) (conj :instantiate)))
+
 (defn- discharged?
-  "A phase is discharged (Empty, no hole) iff written. HEAD is auto-discharged on
-   entry — every admitted mission has a head/frame (E-mission-head), independent of
-   whether the doc carries an explicit HEAD frame."
-  [phase written-set]
+  "A phase is discharged (Empty, no hole) iff written AND — for phases that
+   `requires-formal-witness` — its formal witness is present. HEAD is
+   auto-discharged on entry (E-mission-head). Prose alone cannot close a
+   witness-gated phase: a rich INSTANTIATE section is a paper design, not a live
+   instance."
+  [phase written-set witnessed-set]
   (or (= phase :head)
-      (contains? written-set (name phase))))
+      (and (contains? written-set (name phase))
+           (or (not (contains? requires-formal-witness phase))
+               (contains? witnessed-set phase)))))
 
 (defn- phase-box
-  [phase idx written-set]
+  [phase idx written-set witnessed-set]
   (let [base (cond-> {:id phase :method phase :text (phase-text phase)}
                (pos? idx) (assoc :consumes [(phase-produces (nth phase-lifecycle (dec idx)))])
                true       (assoc :produces (phase-produces phase)))]
-    (if (discharged? phase written-set)
+    (if (discharged? phase written-set witnessed-set)
       base
       (assoc base :hole {:kind :sorry
                          :discharge :sorryProof
@@ -93,9 +125,10 @@
   "Pure. Given a mission-id and a `structural-hole-report` map (may be nil — then
    only HEAD is discharged, the freshly-entered baseline), return the CLean EDN map
    that passes clean_argcheck G1-G8 and renders 0-sorry via clean_to_lean.py."
-  [mission-id report]
+  ([mission-id report] (build-mission-clean mission-id report #{}))
+  ([mission-id report witnessed-set]
   (let [written-set (set (:phase/written report))
-        boxes (map-indexed (fn [idx phase] (phase-box phase idx written-set))
+        boxes (map-indexed (fn [idx phase] (phase-box phase idx written-set witnessed-set))
                            phase-lifecycle)
         wires (for [[a b] (partition 2 1 phase-lifecycle)]
                 {:from a :to b :carries (phase-produces a)})
@@ -115,7 +148,7 @@
                     ;; deferred domain copar (E-scope-organism-copar.md):
                     :readings [:scope :organism]
                     ;; held Open-questions tracked here, NOT as a spine box (G3):
-                    :open-questions (long (or (:loose/open-question-count report) 0))}}))
+                    :open-questions (long (or (:loose/open-question-count report) 0))}})))
 
 (defn mission-clean-edn-str
   "Pretty EDN with explicit :clean/* keys (matching the corpus), not the
@@ -141,7 +174,7 @@
        ((requiring-resolve 'futon3c.watcher.scope-reingest/reingest-now!) doc))
      (ext/invalidate-structural-cache! mission-id))
    (let [report (ext/structural-hole-report mission-id opts)
-         clean  (build-mission-clean mission-id report)]
+         clean  (build-mission-clean mission-id report (witnessed-phases mission-id))]
      (io/make-parents out-path)
      (spit out-path (str ";; AUTO-EMITTED mission CLean (outer-loop tracker) — futon3c.logic.mission-clean\n"
                          ";; Fill-state from structural-hole-report; regenerate on re-observe.\n"

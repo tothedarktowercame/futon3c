@@ -66,3 +66,21 @@
       (is (every? #(contains? (get boxes %) :hole)
                   [:identify :map :derive :argue :verify :instantiate :document]))
       (is (= 0 (get-in clean [:clean/shape :open-questions]))))))
+
+(deftest instantiate-needs-formal-witness
+  (testing "a WRITTEN instantiate section does NOT discharge without a formal
+            witness (V2 earned-closure: prose is a paper design, not a live
+            instance); the phase re-opens until Stage-2/A3 execution witnesses it."
+    (let [written {:phase/written ["identify" "map" "derive" "argue" "verify" "instantiate"]}
+          no-witness (mc/build-mission-clean :M-x written #{})
+          witnessed  (mc/build-mission-clean :M-x written #{:instantiate})
+          holes #(get-in % [:clean/shape :holes-at])]
+      (testing "written-but-unwitnessed -> :instantiate stays a hole"
+        (is (contains? (holes no-witness) :instantiate))
+        (is (contains? (holes no-witness) :document)))
+      (testing "witnessed -> :instantiate discharges (earned)"
+        (is (not (contains? (holes witnessed) :instantiate)))
+        (is (contains? (holes witnessed) :document)))
+      (testing "non-witness-gated phases still discharge on prose alone"
+        (is (not (contains? (holes no-witness) :derive)))
+        (is (not (contains? (holes no-witness) :verify)))))))
