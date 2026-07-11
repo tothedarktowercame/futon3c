@@ -698,6 +698,9 @@
   [rec]
   (let [agent (:agent rec)
         prompt (assemble-resume-prompt rec)]
+    ;; the *agents* pane shows parked lines (blackboard/parked-suffix) —
+    ;; re-project on resume so the line clears promptly.
+    (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
     (if (buffer-surface? (:surface rec))
       (do
         ;; Two delivery paths to the repl buffer: a WS push (instant, when the
@@ -3368,6 +3371,8 @@
                      :budget (or (:budget payload) (get payload "budget"))}
                     {:ledger-lookup parked-job-lookup :resume! parked-resume!
                      :now-ms (System/currentTimeMillis)})]
+        ;; show the new park in the *agents* pane immediately
+        (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
         (json-response 200 (assoc result :ok true))))))
 
 (defn- handle-bell

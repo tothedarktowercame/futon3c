@@ -816,6 +816,40 @@
         :else (str (quot secs 86400) "d ago")))
     (catch Exception _ nil)))
 
+(defn- parked-suffix
+  "Extra *agents* line(s) under an agent with outstanding parked
+   continuations (README-park): one '⧗ parked …' line per record, showing
+   age, outstanding/total deps, absolute-deadline countdown, and a payload
+   preview. Resolved dynamically (requiring-resolve) and never throws —
+   the roster must render even if the parked-on engine is absent. With the
+   flag off no parks exist, so this renders nothing."
+  [agent-name]
+  (try
+    (when-let [snap (requiring-resolve 'futon3c.agency.parked-on/snapshot)]
+      (let [recs (->> (vals (:records (snap)))
+                      (filter #(and (= (str (:agent %)) (str agent-name))
+                                    (not (:released? %)))))]
+        (when (seq recs)
+          (apply str
+                 (for [r recs]
+                   (let [now (System/currentTimeMillis)
+                         outstanding (remove (set (keys (:arrived r))) (:awaiting r))
+                         age (format-elapsed-secs
+                              (quot (- now (long (or (:parked-at-ms r) now))) 1000))
+                         deadline (when-let [d (:deadline-ms r)]
+                                    ;; absolute epoch ms (sweep-deadlines! compares to now)
+                                    (let [left (quot (- (long d) now) 1000)]
+                                      (if (pos? left)
+                                        (str ", deadline in " (format-elapsed-secs left))
+                                        ", deadline PASSED")))
+                         preview (let [p (str (or (:payload r) ""))]
+                                   (if (> (count p) 56) (str (subs p 0 56) "…") p))]
+                     (str "\n    ⧗ parked " age
+                          " on " (count outstanding) "/" (count (:awaiting r)) " dep(s)"
+                          deadline
+                          (when (seq preview) (str " — " preview)))))))))
+    (catch Throwable _ nil)))
+
 (defn format-agent-status
   "Format agent registry status for blackboard display.
    Takes the registry-status map from registry/registry-status."
@@ -915,7 +949,8 @@
                                         " — " readiness
                                         (when session-tag
                                           (str ", " session-tag)))
-                                   (name status)))))
+                                   (name status))
+                                 (parked-suffix (name aid)))))
                         (sort-by key agents)))
          (when (seq ws-unregistered)
            (str "\n\nWS Connected (Unregistered):\n"
