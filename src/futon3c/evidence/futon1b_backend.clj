@@ -30,7 +30,11 @@
   (:import [java.net URLEncoder]
            [java.time Instant]))
 
-(def default-url "http://localhost:7074")
+(def default-url
+  ;; 127.0.0.1, NOT localhost: the futon1b JVM runs preferIPv4Stack (XTDB
+  ;; pgwire needs it), so its HttpServer binds IPv4 only — a client JVM
+  ;; resolving localhost to ::1 gets "unreachable" (bit us at Gate 1).
+  "http://127.0.0.1:7074")
 
 (defn- penholder []
   (or (System/getenv "FUTON1B_PENHOLDER")
