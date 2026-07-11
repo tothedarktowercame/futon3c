@@ -32,6 +32,11 @@ export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
 export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-false}"
 export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-true}"
 
+# Parked-on continuations (README-park.md): agents park a turn on dispatched
+# work and self-resume when it lands. Enabled by default on lucy since
+# 2026-07-11 (Joe); was also switched on live via System/setProperty that day.
+export FUTON3C_PARKED_ON="${FUTON3C_PARKED_ON:-1}"
+
 # claude CLI lives in ~/.local/bin here, which isn't on the JVM's
 # non-interactive launch PATH — point CLAUDE_BIN at the absolute path so the
 # local claude agent (lon-claude-1) is invocable.
