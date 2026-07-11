@@ -82,6 +82,9 @@ curl -X POST localhost:7070/api/alpha/park -d '{
   "agent":"claude-1", "session":"<sid>", "surface":"emacs-repl",
   "awaiting":["<bell/job-id>", ...],
   "deadline-ms":<t>, "payload":"<what to do when the join completes>"}'
+# <t> is an ABSOLUTE epoch-ms timestamp (sweep-deadlines! compares it to now):
+#   deadline_ms=$(( ($(date +%s) + <seconds-from-now>) * 1000 ))
+# A relative duration like 1800000 reads as Jan 1970 and fires on the first sweep.
 ```
 
 The boot hook (`start-parked-on!`) runs `rehydrate!` + a 30s `sweep-deadlines!` daemon (NOT the
