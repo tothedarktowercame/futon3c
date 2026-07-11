@@ -6,13 +6,17 @@
    (keyword/namespace fidelity lost in translation). futon1b is EDN
    end-to-end, so entries round-trip byte-faithfully.
 
-   Correctness stance: the server pushes down exact-match filters
-   (type/claim-type/author/session-id/since/before/fork-of), and every
-   -query/-count re-applies backend/filter-and-sort-entries LOCALLY with
-   the full params — so protocol semantics (ephemeral default, subject
-   map equality, pattern-id, tag set membership, sort, limit) are exactly
-   the shared implementation's, regardless of server-side filter gaps.
-   Pushdown only narrows transfer; it never decides membership.
+   Correctness stance: every -query/-count re-applies
+   backend/filter-and-sort-entries LOCALLY with the full params — protocol
+   semantics are the shared implementation's. Pushdown scope depends on the
+   query: when every membership-deciding filter is one the server applies
+   IDENTICALLY (type/claim-type/author/session-id/since/before/fork-of +
+   the explicit ephemeral flag), `limit` passes through too and the server
+   windows (the unlimited author=joe fetch hydrated 8,882 docs/10MB for a
+   5-item recall and, cold, silently timed out zai-1's first live demo,
+   2026-07-11). When client-only filters are present (tags/subject/
+   pattern-id), the fetch stays ephemeral-inclusive and unlimited so the
+   local filter owns membership.
 
    -append preserves AtomBackend/XtdbBackend semantics: duplicate-id /
    reply-not-found / fork-not-found come back as SocialError maps (the
@@ -71,11 +75,22 @@
       (throw (ex-info "futon1b unreachable" {:url url} error)))
     {:status status :body (read-edn body)}))
 
+(defn- client-only-filters?
+  "Filters the server does not apply identically — membership must then be
+   decided locally over an ephemeral-inclusive, unlimited fetch."
+  [{:query/keys [tags subject pattern-id]}]
+  (boolean (or (seq tags) subject pattern-id)))
+
 (defn- query-string
-  "Pushdown params (narrowing only — membership is decided locally).
-   include-ephemeral=true so the LOCAL filter owns the ephemeral default."
-  [{:query/keys [type claim-type author session-id since before fork-of]}]
-  (let [pairs (cond-> [["include-ephemeral" "true"]]
+  "Pushdown params. See ns docstring for the two regimes."
+  [{:query/keys [type claim-type author session-id since before fork-of
+                 limit include-ephemeral?] :as params}]
+  (let [server-decidable? (not (client-only-filters? params))
+        pairs (cond-> [["include-ephemeral"
+                        (str (boolean (or include-ephemeral?
+                                          (not server-decidable?))))]]
+                (and server-decidable? (int? limit) (pos? limit))
+                (conj ["limit" (str limit)])
                 type (conj ["type" (name type)])
                 claim-type (conj ["claim-type" (name claim-type)])
                 author (conj ["author" (str author)])
@@ -146,10 +161,20 @@
 
   (-count [_ params]
     (let [params (dissoc params :query/limit)]
-      (count (backend/filter-and-sort-entries (fetch-entries base-url params) params))))
+      (if (client-only-filters? params)
+        (count (backend/filter-and-sort-entries (fetch-entries base-url params) params))
+        ;; fully server-decidable -> the server'\''s projected /count path
+        (let [url (str (api-url base-url "/api/alpha/evidence/count")
+                       "?" (query-string params))
+              {:keys [status body]} (get-edn url)]
+          (if (= 200 status)
+            (long (or (:count body) 0))
+            (throw (ex-info "futon1b count failed" {:status status :body body})))))))
 
   (-forks-of [_ evidence-id]
-    (->> (fetch-entries base-url {:query/fork-of evidence-id})
+    ;; include-ephemeral? true: -forks-of does not filter ephemeral (protocol)
+    (->> (fetch-entries base-url {:query/fork-of evidence-id
+                                  :query/include-ephemeral? true})
          (sort-by backend/entry-at)
          vec))
 
@@ -159,7 +184,7 @@
     {:compacted 0})
 
   (-all [_]
-    (fetch-entries base-url {})))
+    (fetch-entries base-url {:query/include-ephemeral? true})))
 
 (defn health
   "GET /health on the futon1b server. Returns the parsed body or nil when
