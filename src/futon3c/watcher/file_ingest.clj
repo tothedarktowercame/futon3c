@@ -88,13 +88,24 @@
   ;;   (reset! futon3c.watcher.file-ingest/!futon1b-url "http://localhost:7073")
   (atom (System/getenv "FUTON1B_URL")))
 
+(defn- self-dual-write?
+  "True when the primary substrate URL already IS the futon1b server —
+  post-cutover the hook would double-post every hyperedge to the same
+  store (second copy penholder-less -> 403 noise; observed live
+  2026-07-11). Dual-write only makes sense when the targets differ."
+  [base]
+  (letfn [(norm [u] (some-> u str (clojure.string/replace #"/+$" "")
+                            (clojure.string/replace "localhost" "127.0.0.1")))]
+    (= (norm base) (norm FUTON1A))))
+
 (defn post-futon1b!
   "Secondary EDN write to the futon1b server. No-op unless !futon1b-url is
-  set. Valid-time replays stay primary-only (futon1b v1 has no valid-time
-  support). Never throws."
+  set AND it differs from the primary (self-dual-write guard). Valid-time
+  replays stay primary-only (futon1b v1 has no valid-time support).
+  Never throws."
   [{:keys [id hx-type endpoints labels props op]}]
   (when-let [base @!futon1b-url]
-    (when-not *valid-time-ms*
+    (when-not (or *valid-time-ms* (self-dual-write? base))
       (try
         (let [payload (cond-> {:hx/type hx-type :hx/endpoints endpoints}
                         id (assoc :hx/id id)
@@ -102,7 +113,8 @@
                         props (assoc :hx/props props)
                         op (assoc :hx/op op))
               resp (http/post (str base "/api/alpha/hyperedge")
-                              {:headers {"Content-Type" "application/edn"}
+                              {:headers {"Content-Type" "application/edn"
+                                         "X-Penholder" PENHOLDER}
                                :body (pr-str payload)
                                :throw false})]
           (when (not= 200 (:status resp))

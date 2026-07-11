@@ -66,7 +66,7 @@
   "GET url, EDN-parse the body. Returns {:status n :body v}.
    Throws on transport-level failure (connection refused etc.)."
   [url]
-  (let [{:keys [status body error]} @(http/get url {:timeout 15000 :as :text})]
+  (let [{:keys [status body error]} @(http/get url {:timeout 30000 :as :text})]
     (when error
       (throw (ex-info "futon1b unreachable" {:url url} error)))
     {:status status :body (read-edn body)}))
@@ -111,7 +111,7 @@
         :else
         (let [{:keys [status body error]}
               @(http/post (api-url base-url "/api/alpha/evidence")
-                          {:timeout 15000
+                          {:timeout 30000
                            :as :text
                            :headers {"content-type" "application/edn"
                                      "x-penholder" (penholder)}
