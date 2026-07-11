@@ -1111,6 +1111,58 @@ _e_: clear Excursion       _n_: no mission           _q_: quit
         (agent-chat-clock-hydra/body))
     (call-interactively #'agent-chat-clock-in)))
 
+;; --- M-points-de-fuite marks: declare-don't-guess, minted at the keyboard ---
+;; v0 vocabulary (M-zaif-harness §Post-PZ1): ✘ correction · ✓ approval, plus
+;; 💡 idea-to-explore (provisional — Joe minted the type live, 2026-07-11:
+;; "here's an idea to explore that shouldn't be hard to code up"). Lowercase
+;; keys insert the bare glyph; uppercase insert the EDN long form
+;; (✘ :ref TARGET "why") with point placed at the ref. Roadsigns, revisable
+;; (Table-25 stance): grow this table from the operator-turn clustering
+;; probe, not a priori.
+
+(defun agent-chat--insert-mark (glyph &optional long?)
+  "Insert mark GLYPH at point; with LONG?, the EDN template form."
+  (if long?
+      (progn (insert "(" glyph " :ref ")
+             (save-excursion (insert " \"\")")))
+    (insert glyph " ")))
+
+(defun agent-chat-mark-correction () (interactive) (agent-chat--insert-mark "✘"))
+(defun agent-chat-mark-approval () (interactive) (agent-chat--insert-mark "✓"))
+(defun agent-chat-mark-idea () (interactive) (agent-chat--insert-mark "💡"))
+(defun agent-chat-mark-correction-long () (interactive) (agent-chat--insert-mark "✘" t))
+(defun agent-chat-mark-approval-long () (interactive) (agent-chat--insert-mark "✓" t))
+(defun agent-chat-mark-idea-long () (interactive) (agent-chat--insert-mark "💡" t))
+
+(defun agent-chat-mark-menu ()
+  "Show the points-de-fuite mark hydra (falls back to a char prompt)."
+  (interactive)
+  (if (and (or (fboundp 'defhydra)
+               (require 'hydra nil t))
+           (fboundp 'defhydra))
+      (progn
+        (eval
+         '(defhydra agent-chat-mark-hydra
+            (:hint nil :color blue)
+            "
+Marks (M-points-de-fuite; lowercase = glyph, UPPERCASE = (glyph :ref … \"…\"))
+
+_x_/_X_: ✘ correction   _v_/_V_: ✓ approval   _i_/_I_: 💡 idea-to-explore   _q_: quit
+"
+            ("x" agent-chat-mark-correction)
+            ("X" agent-chat-mark-correction-long)
+            ("v" agent-chat-mark-approval)
+            ("V" agent-chat-mark-approval-long)
+            ("i" agent-chat-mark-idea)
+            ("I" agent-chat-mark-idea-long)
+            ("q" nil)))
+        (agent-chat-mark-hydra/body))
+    (let ((c (read-char "mark: [x]✘ [v]✓ [i]💡 (upcase = long form)")))
+      (pcase c
+        (?x (agent-chat-mark-correction)) (?X (agent-chat-mark-correction-long))
+        (?v (agent-chat-mark-approval)) (?V (agent-chat-mark-approval-long))
+        (?i (agent-chat-mark-idea)) (?I (agent-chat-mark-idea-long))))))
+
 (defun agent-chat--git-root (&optional directory)
   "Return git root for DIRECTORY, or nil when DIRECTORY is not in a repo."
   (let ((default-directory (or directory default-directory)))
@@ -1941,7 +1993,7 @@ CONFIG keys:
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face)))
-    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock\n\n"
+    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock | C-c . ✘✓💡 marks\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers
     (setq agent-chat--prompt-marker (point-marker))

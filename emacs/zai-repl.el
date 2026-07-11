@@ -438,6 +438,7 @@ the id is display-only, so a failed read must never break buffer setup."
 (define-key zai-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
 (define-key zai-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key zai-repl-mode-map (kbd "C-c C-o") #'agent-chat-clock-menu)
+(define-key zai-repl-mode-map (kbd "C-c .") #'agent-chat-mark-menu)
 
 (defvar zai-repl--font-lock-keywords
   ;; Tool-use lines from both render paths: the direct-stream preview
