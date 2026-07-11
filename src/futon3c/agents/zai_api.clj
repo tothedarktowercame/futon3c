@@ -567,6 +567,81 @@
       (when-let [sink (get-sink (str agent-id))]
         (try (sink event) (catch Throwable _))))))
 
+;; --- U1: transcript persistence (M-zaif-harness) --------------------------
+;; sink! above feeds the invoke-jobs ring buffer: display-grade, in-memory,
+;; gone on JVM restart — which left an agent's claims about its own past
+;; tool calls unadjudicable (first live zaif demo, 2026-07-11). Persist each
+;; tool ROUND as a typed evidence entry instead: what the agent did becomes
+;; part of the record (R9 — narration is not evidence). These are semantic
+;; act records (tool + args + result digest), never raw transport envelopes
+;; (policy: transport/http.clj emit-invoke-evidence!). Volume is bounded by
+;; the round budget (~1-25 entries per turn); large tool RESULTS are stored
+;; as digest + preview only. The store is resolved dynamically so a
+;; namespace reload picks this up in already-registered invoke closures,
+;; and so a swapped backend (futon3c.dev/!evidence-store) is honoured.
+
+(def ^:private transcript-text-cap 4096)
+(def ^:private transcript-args-cap 2048)
+(def ^:private transcript-preview-cap 240)
+
+(defn- transcript-enabled? []
+  (not= "0" (getenv "FUTON3C_ZAI_TRANSCRIPT")))
+
+(defn- transcript-truncate [s cap]
+  (let [s (str s)]
+    (if (> (count s) cap)
+      (str (subs s 0 cap) "…[+" (- (count s) cap) " chars]")
+      s)))
+
+(defn- transcript-digest
+  "Digest a tool result for the record: enough to adjudicate against
+   (identity + size + head), without storing bulk content twice."
+  [content]
+  (let [s (str content)
+        md (java.security.MessageDigest/getInstance "SHA-256")
+        hex (apply str (map #(format "%02x" %) (take 8 (.digest md (.getBytes s "UTF-8")))))]
+    {:sha256-16 hex
+     :chars (count s)
+     :preview (transcript-truncate s transcript-preview-cap)}))
+
+(defn- persist-round!
+  "Append one turn-round transcript entry to the evidence store.
+   Fire-and-forget in a future: persistence failure must never affect the
+   turn (mirrors sink!). calls: [{:tool :args :result} ...]."
+  [{:keys [agent-id sid round text calls final?]}]
+  (when (transcript-enabled?)
+    (future
+      (try
+        (when-let [!store (try (requiring-resolve 'futon3c.dev/!evidence-store)
+                               (catch Throwable _ nil))]
+          (when-let [store (some-> !store deref deref)]
+            (let [append! (requiring-resolve 'futon3c.evidence.boundary/append!)]
+              (append! store
+                       {:evidence/id (str "e-" (UUID/randomUUID))
+                        :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
+                        :evidence/type :coordination
+                        :evidence/claim-type :step
+                        :evidence/author (str agent-id)
+                        :evidence/session-id (str sid)
+                        :evidence/at (str (java.time.Instant/now))
+                        :evidence/tags [:transcript :turn-round]
+                        :evidence/body {:event :turn-round
+                                        :round round
+                                        :final (boolean final?)
+                                        :text (transcript-truncate text transcript-text-cap)
+                                        :calls (vec calls)}}))))
+        (catch Throwable _)))))
+
+(defn- transcript-calls
+  "Zip tool-call details with their executed results into the persisted
+   call records: full tool name + (truncated) args, digest of the result."
+  [details executed]
+  (mapv (fn [detail ex]
+          {:tool (:name detail)
+           :args (transcript-truncate (pr-str (:input detail)) transcript-args-cap)
+           :result (transcript-digest (get-in ex [:message :content]))})
+        details executed))
+
 (def ^:private tool-round-budget
   ;; 24 rounds: the original 8 demonstrably binds - the first real handoff
   ;; (M-custom-harness slice 2, 2026-07-04) exhausted all 8 on spec/source
@@ -616,14 +691,15 @@
     (loop [remaining tool-round-budget
            final-text ""
            auto-continues 0
-           mid-work? false]
+           mid-work? false
+           round-n 1]
       (if (zero? remaining)
         (if (and mid-work? (< auto-continues auto-continue-max))
           (let [n (inc auto-continues)
                 text (auto-continue-message n auto-continue-max)]
             (swap! !messages conj {:role "user" :content text})
             (sink! agent-id {:type "text" :text (str "[auto-continue " n "/" auto-continue-max "]")})
-            (recur tool-round-budget final-text n false))
+            (recur tool-round-budget final-text n false round-n))
           (max-tool-rounds-result sid final-text))
         (let [resp (chat! client (assoc opts :api-key api-key) @!messages)
               err (:error resp)]
@@ -670,10 +746,17 @@
                                    :tool_details details})
                   (sink! agent-id {:type "tool_result"
                                    :results results})
+                  (persist-round! {:agent-id agent-id :sid sid :round round-n
+                                   :text text
+                                   :calls (transcript-calls details executed)})
                   (swap! !messages into (mapv :message executed))
-                  (recur (dec remaining) (str final-text text) auto-continues true))
-                {:result (if (str/blank? text) final-text text)
-                 :session-id sid}))))))))
+                  (recur (dec remaining) (str final-text text) auto-continues true (inc round-n)))
+                (do
+                  (persist-round! {:agent-id agent-id :sid sid :round round-n
+                                   :text (if (str/blank? text) final-text text)
+                                   :calls [] :final? true})
+                  {:result (if (str/blank? text) final-text text)
+                   :session-id sid})))))))))
 
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
