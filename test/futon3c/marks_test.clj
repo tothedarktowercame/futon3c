@@ -96,3 +96,19 @@
 (deftest mention-still-recognized-without-parens
   (is (= :mention (:verdict (first (marks/recognize-marks "you can add a ✓ for approval")))))
   (is (= :mention (:verdict (first (marks/recognize-marks "mark corrections with ✘"))))))
+
+(deftest second-string-glyphs-recognized
+  ;; The C-c , shadow tier (operator-named cluster types, 2026-07-12).
+  (let [decorated (marks/decorate-turn (entry "joe" "⚖ this is the decision point for the migration"))]
+    (is (= :event (get-in decorated [:evidence/body :marks 0 :verdict])))
+    (is (contains? (set (:evidence/tags decorated)) :hinge)))
+  (let [mark (first (marks/recognize-marks "(⚠ :ref M-marks-to-labels \"grain drift\")"))]
+    (is (= {:glyph "⚠" :verdict :event :type :concern :ref "M-marks-to-labels"
+            :payload "grain drift" :offset 0} mark)))
+  ;; mention rule applies uniformly: glyph as noun-phrase object
+  (is (= :mention (:verdict (first (marks/recognize-marks "you could tag facts with a 📌 here"))))))
+
+(deftest second-string-mints-no-core-tags
+  (let [decorated (marks/decorate-turn (entry "joe" "🧭 aim for the smallest diff"))]
+    (is (contains? (set (:evidence/tags decorated)) :guidance))
+    (is (not-any? #{:correction :approval :idea} (:evidence/tags decorated)))))

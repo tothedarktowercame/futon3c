@@ -1134,6 +1134,71 @@ _e_: clear Excursion       _n_: no mission           _q_: quit
 (defun agent-chat-mark-approval-long () (interactive) (agent-chat--insert-mark "✓" t))
 (defun agent-chat-mark-idea-long () (interactive) (agent-chat--insert-mark "💡" t))
 
+;; --- Second string (C-c ,): the operator-named cluster types, 2026-07-12 ---
+;; Shadow tier: tags-only (no labels, no γ events) — visible in the store so
+;; usage can argue promotion to the core hydra. Glyphs are claude-5's
+;; interpretation, Joe-ratified via "open to your interpretation":
+;; 🧭 guidance · ♟ tactics · ⚠ concern · 📌 fact · 👏 encouragement ·
+;; 🙏 request · 🌿 extension · 📋 procedural · ⚖ hinge
+
+(defun agent-chat-mark-guidance () (interactive) (agent-chat--insert-mark "🧭"))
+(defun agent-chat-mark-tactics () (interactive) (agent-chat--insert-mark "♟"))
+(defun agent-chat-mark-concern () (interactive) (agent-chat--insert-mark "⚠"))
+(defun agent-chat-mark-fact () (interactive) (agent-chat--insert-mark "📌"))
+(defun agent-chat-mark-encouragement () (interactive) (agent-chat--insert-mark "👏"))
+(defun agent-chat-mark-request () (interactive) (agent-chat--insert-mark "🙏"))
+(defun agent-chat-mark-extension () (interactive) (agent-chat--insert-mark "🌿"))
+(defun agent-chat-mark-procedural () (interactive) (agent-chat--insert-mark "📋"))
+(defun agent-chat-mark-hinge () (interactive) (agent-chat--insert-mark "⚖"))
+(defun agent-chat-mark-guidance-long () (interactive) (agent-chat--insert-mark "🧭" t))
+(defun agent-chat-mark-tactics-long () (interactive) (agent-chat--insert-mark "♟" t))
+(defun agent-chat-mark-concern-long () (interactive) (agent-chat--insert-mark "⚠" t))
+(defun agent-chat-mark-fact-long () (interactive) (agent-chat--insert-mark "📌" t))
+(defun agent-chat-mark-encouragement-long () (interactive) (agent-chat--insert-mark "👏" t))
+(defun agent-chat-mark-request-long () (interactive) (agent-chat--insert-mark "🙏" t))
+(defun agent-chat-mark-extension-long () (interactive) (agent-chat--insert-mark "🌿" t))
+(defun agent-chat-mark-procedural-long () (interactive) (agent-chat--insert-mark "📋" t))
+(defun agent-chat-mark-hinge-long () (interactive) (agent-chat--insert-mark "⚖" t))
+
+(defun agent-chat-mark-menu-2 ()
+  "Show the second-string mark hydra (falls back to a char prompt)."
+  (interactive)
+  (if (and (or (fboundp 'defhydra)
+               (require 'hydra nil t))
+           (fboundp 'defhydra))
+      (progn
+        (eval
+         '(defhydra agent-chat-mark-hydra-2
+            (:hint nil :color blue)
+            "
+Second string (shadow tier — usage argues promotion; lowercase = glyph, UPPERCASE = long form)
+
+_g_: 🧭 guidance  _t_: ♟ tactics  _c_: ⚠ concern  _f_: 📌 fact  _e_: 👏 encouragement
+_r_: 🙏 request   _x_: 🌿 extension  _p_: 📋 procedural  _h_: ⚖ hinge   _q_: quit
+"
+            ("g" agent-chat-mark-guidance) ("G" agent-chat-mark-guidance-long)
+            ("t" agent-chat-mark-tactics) ("T" agent-chat-mark-tactics-long)
+            ("c" agent-chat-mark-concern) ("C" agent-chat-mark-concern-long)
+            ("f" agent-chat-mark-fact) ("F" agent-chat-mark-fact-long)
+            ("e" agent-chat-mark-encouragement) ("E" agent-chat-mark-encouragement-long)
+            ("r" agent-chat-mark-request) ("R" agent-chat-mark-request-long)
+            ("x" agent-chat-mark-extension) ("X" agent-chat-mark-extension-long)
+            ("p" agent-chat-mark-procedural) ("P" agent-chat-mark-procedural-long)
+            ("h" agent-chat-mark-hinge) ("H" agent-chat-mark-hinge-long)
+            ("q" nil)))
+        (agent-chat-mark-hydra-2/body))
+    (let ((c (read-char "2nd string: [g]🧭 [t]♟ [c]⚠ [f]📌 [e]👏 [r]🙏 [x]🌿 [p]📋 [h]⚖ (upcase = long)")))
+      (pcase c
+        (?g (agent-chat-mark-guidance)) (?G (agent-chat-mark-guidance-long))
+        (?t (agent-chat-mark-tactics)) (?T (agent-chat-mark-tactics-long))
+        (?c (agent-chat-mark-concern)) (?C (agent-chat-mark-concern-long))
+        (?f (agent-chat-mark-fact)) (?F (agent-chat-mark-fact-long))
+        (?e (agent-chat-mark-encouragement)) (?E (agent-chat-mark-encouragement-long))
+        (?r (agent-chat-mark-request)) (?R (agent-chat-mark-request-long))
+        (?x (agent-chat-mark-extension)) (?X (agent-chat-mark-extension-long))
+        (?p (agent-chat-mark-procedural)) (?P (agent-chat-mark-procedural-long))
+        (?h (agent-chat-mark-hinge)) (?H (agent-chat-mark-hinge-long))))))
+
 (defun agent-chat-mark-menu ()
   "Show the points-de-fuite mark hydra (falls back to a char prompt)."
   (interactive)
@@ -1993,7 +2058,7 @@ CONFIG keys:
     (when modeline-fn
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face)))
-    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock | C-c . ✘✓💡 marks\n\n"
+    (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock | C-c . ✘✓💡 marks | C-c , 2nd-string\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers
     (setq agent-chat--prompt-marker (point-marker))

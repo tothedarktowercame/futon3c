@@ -11,12 +11,33 @@
             [clojure.string :as str]))
 
 (def registry
+  "Mark vocabulary. Core tier (✘ ✓ 💡) mints γ events and (✓/✘ only) reward
+   labels. The :second-string tier (2026-07-12, from the operator-named
+   clustering-probe types, C-c , hydra) is tags-only shadow vocabulary —
+   visible in the store so usage can argue promotion; mints no labels
+   (mark_labels.py maps ✓/✘ exclusively), no γ events (gamma-mark-glyphs
+   maps the core tier only). Absent :tier = core."
   {"✘" {:type :correction :tag :correction}
    "✓" {:type :approval :tag :approval}
-   "💡" {:type :idea :tag :idea}})
+   "💡" {:type :idea :tag :idea}
+   "🧭" {:type :guidance :tag :guidance :tier :second-string}
+   "♟" {:type :tactics :tag :tactics :tier :second-string}
+   "⚠" {:type :concern :tag :concern :tier :second-string}
+   "📌" {:type :fact :tag :fact :tier :second-string}
+   "👏" {:type :encouragement :tag :encouragement :tier :second-string}
+   "🙏" {:type :request :tag :request :tier :second-string}
+   "🌿" {:type :extension :tag :extension :tier :second-string}
+   "📋" {:type :procedural :tag :procedural :tier :second-string}
+   "⚖" {:type :hinge :tag :hinge :tier :second-string}})
 
 (def glyph-pattern
   (re-pattern (str/join "|" (map java.util.regex.Pattern/quote (keys registry)))))
+
+(def long-form-pattern
+  "Long-form EDN marks, e.g. (✘ :ref E-foo \"why\") — built from the registry
+   so second-string glyphs parse too (was hardcoded ✘|✓|💡)."
+  (re-pattern (str "\\((" (str/join "|" (map java.util.regex.Pattern/quote (keys registry)))
+                   ")(?:\\s+[^()]*)?\\)")))
 
 (defn enabled?
   []
@@ -104,7 +125,7 @@
       nil)))
 
 (defn- long-form-marks [text]
-  (let [matcher (re-matcher #"\((✘|✓|💡)(?:\s+[^()]*)?\)" text)]
+  (let [matcher (re-matcher long-form-pattern text)]
     (loop [out []]
       (if (.find matcher)
         (let [form-text (.group matcher)
