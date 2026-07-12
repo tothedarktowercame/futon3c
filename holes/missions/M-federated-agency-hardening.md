@@ -629,3 +629,29 @@ handshakes were failing `:invalid-registry` for the laptop's codex-3 because
 handshake (`b436c84`) — codex-3 now registers on lucy (route `:none` pending
 ws-availability). The laptop side is active: it committed its own CP-B slice 4
 (laptop roster-completeness, `9536ff7`) and armed its dev-laptop-env.
+
+**CP-C amendment 3 (2026-07-12, laptop-side live deploy):** claude-6 (on lucy)
+requested the laptop deploy for full roster auto-sync. The laptop's running JVM
+predated the NPE fix (`e506479`), so the daemon was armed in env (`df1d23b`) but
+never ticked (`tick-count` stuck at 0). Live deploy via Drawbridge:
+
+1. **Manual sync** (`/eval` → `fed/sync-peers!`): immediately pulled London's
+   current roster. `claude-6` registered as a proxy (`:action :registered`).
+   Roster went from 21→22 agents, 3→4 proxies.
+2. **Hot-reloaded `federation.clj`** into the running JVM (the NPE fix lives in
+   source but the running code was stale). Stopped the old daemon, restarted with
+   60s interval. Verified `tick-count` advanced to 1 after 65s — the daemon is
+   genuinely ticking, not silently NPE-ing.
+3. **`FUTON3C_PEER_SITES=lon,chi`** added to `dev-laptop-env` (`cf50a89`): arms
+   the AG-2 phantom guard on the laptop so the emacs repl-attach path cannot mint
+   local phantoms for remote-homed agents. Takes full effect on next boot;
+   live-armed via the hot-reload.
+
+Laptop roster now complete (London→laptop direction): all 9 London local agents
+mirrored as proxies (`claude-6`, `lon-claude-1`, `chi-claude-1`, `chi-codex-1`).
+The laptop→London announce direction remains open (laptop binds 127.0.0.1,
+`FUTON3C_SELF_URL` unset) — deferred to the network-topology decision.
+
+Gates: bash syntax clean. The federation namespace reloaded without error;
+daemon ticking verified. No full JVM restart performed (hot-reload + Drawbridge
+eval only).
