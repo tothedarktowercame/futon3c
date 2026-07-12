@@ -88,9 +88,10 @@ export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 # arms the AG-2 guard: chi-/oxf- qualified ids are remote-homed here and
 # cannot be minted as local phantoms.
 if [[ -z "${FUTON3C_PEERS:-}" ]]; then
-  FUTON3C_PEERS="http://172.236.108.82:7070"
+  # site=url form feeds the url→site home-site fallback for bare-id proxies
+  FUTON3C_PEERS="chi=http://172.236.108.82:7070"
   if [[ -n "${FUTON3C_LAPTOP_URL:-}" ]]; then
-    FUTON3C_PEERS="${FUTON3C_PEERS},${FUTON3C_LAPTOP_URL}"
+    FUTON3C_PEERS="${FUTON3C_PEERS},oxf=${FUTON3C_LAPTOP_URL}"
   fi
 fi
 export FUTON3C_PEERS

@@ -69,15 +69,34 @@
         normalized-sites (->> (concat peer-sites sites-from-peers)
                               (map #(some-> % str str/trim str/lower-case))
                               (remove str/blank?)
-                              set)]
+                              set)
+        ;; Retain the url→site association from map-shaped peers: it is the
+        ;; sync-side fallback for :home-site on imported proxies whose bare
+        ;; ids carry no site prefix (roster-completeness gap #1, 2026-07-12 —
+        ;; without it 7 of lucy's 8 proxies on Chicago grouped under nil).
+        site-by-url (into {}
+                          (keep (fn [peer]
+                                  (when (map? peer)
+                                    (let [url (or (:url peer) (:peer-url peer))
+                                          site (some-> (or (:site peer)
+                                                           (:peer-site peer)
+                                                           (:id peer))
+                                                       str str/trim str/lower-case
+                                                       not-empty)]
+                                      (when (and url site)
+                                        [url site])))))
+                          peer-entries)]
     (reset! !config {:peers peer-urls
                      :self-url (when-not (str/blank? self-url)
                                  (str/trim self-url))
-                     :peer-sites normalized-sites})))
+                     :peer-sites normalized-sites
+                     :peer-site-by-url site-by-url})))
 
 (defn configure-from-env!
   "Configure federation from environment variables.
-   FUTON3C_PEERS: comma-separated peer URLs.
+   FUTON3C_PEERS: comma-separated peer URLs; an entry may declare the peer's
+   site as site=url (e.g. chi=http://172.236.108.82:7070), which feeds the
+   url→site home-site fallback for bare-id proxy imports.
    FUTON3C_SELF_URL: this Agency's URL."
   []
   (let [peers-str (System/getenv "FUTON3C_PEERS")
@@ -87,7 +106,10 @@
                 (->> (str/split peers-str #",")
                      (map str/trim)
                      (remove str/blank?)
-                     vec))
+                     (mapv (fn [entry]
+                             (if-let [[_ site url] (re-matches #"([A-Za-z][A-Za-z0-9]*)=(.+)" entry)]
+                               {:site site :url url}
+                               entry)))))
         peer-sites (when (and peer-sites-str (not (str/blank? peer-sites-str)))
                      (->> (str/split peer-sites-str #",")
                           (map str/trim)
@@ -151,6 +173,11 @@
   (when-let [[_ site] (re-matches #"(?i)^([a-z][a-z0-9]*)-(?:claude|codex|zai|tickle)-\d+$"
                                   (str agent-id))]
     (str/lower-case site)))
+
+(defn- parse-home-site
+  [x]
+  (some-> (if (keyword? x) (name x) x)
+          str str/trim str/lower-case not-empty))
 
 (defn- known-remote-home-sites
   []
@@ -299,12 +326,16 @@
                                  (subs (str cap) 1)
                                  (str cap)))
                              (:agent/capabilities agent-record))
+          home-site (or (parse-home-site
+                         (get-in agent-record [:agent/metadata :home-site]))
+                        (site-prefix))
           body (json/generate-string
-                {"agent-id" agent-id
-                 "type" agent-type
-                 "capabilities" capabilities
-                 "origin-url" self-url
-                 "proxy" true})
+                (cond-> {"agent-id" agent-id
+                         "type" agent-type
+                         "capabilities" capabilities
+                         "origin-url" self-url
+                         "proxy" true}
+                  home-site (assoc "home-site" home-site)))
           resp @(http/post
                  (str peer-url "/api/alpha/agents")
                  {:headers {"Content-Type" "application/json"}
@@ -361,13 +392,24 @@
 ;; Peer import / sync
 ;; =============================================================================
 
+(defn proxy-home-site
+  "Home site for an imported proxy, best-source-first: the agent id's own
+   site prefix, then the origin's declaration (top-level :home-site in an
+   announce body, or :metadata :home-site in a synced roster entry), then
+   the configured url→site mapping for the origin peer."
+  [origin-url agent-id agent-info]
+  (or (agent-id-home-site agent-id)
+      (parse-home-site (:home-site agent-info))
+      (parse-home-site (get-in agent-info [:metadata :home-site]))
+      (get (:peer-site-by-url @!config) origin-url)))
+
 (defn- proxy-metadata
-  [origin-url agent-id]
+  [origin-url agent-id agent-info]
   (cond-> {:proxy? true
            :remote? true
            :origin-url origin-url}
-    (agent-id-home-site agent-id)
-    (assoc :home-site (keyword (agent-id-home-site agent-id)))))
+    (proxy-home-site origin-url agent-id agent-info)
+    (assoc :home-site (keyword (proxy-home-site origin-url agent-id agent-info)))))
 
 (defn register-proxy-agent!
   "Create or refresh a federation proxy for a remote agent.
@@ -423,7 +465,7 @@
                            :agent/type agent-type
                            :agent/invoke-fn (make-proxy-invoke-fn origin-url aid)
                            :agent/capabilities capabilities
-                           :agent/metadata (proxy-metadata origin-url aid))
+                           :agent/metadata (proxy-metadata origin-url aid agent-info))
         {:ok true :agent-id aid :action :updated})
 
       :else
@@ -432,7 +474,7 @@
                      :type agent-type
                      :invoke-fn (make-proxy-invoke-fn origin-url aid)
                      :capabilities capabilities
-                     :metadata (proxy-metadata origin-url aid)})]
+                     :metadata (proxy-metadata origin-url aid agent-info)})]
         (if (and (map? result) (= false (:ok result)))
           {:ok false
            :agent-id aid

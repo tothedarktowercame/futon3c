@@ -138,3 +138,31 @@
         (is (every? :ok results))
         (is (= true (get-in (reg/get-agent "claude-9")
                             [:agent/metadata :proxy?])))))))
+
+(deftest imported-proxy-gets-home-site-for-bare-ids
+  ;; Roster-completeness gap #1 (chi-claude-1's report, 2026-07-12): bare-id
+  ;; proxies (claude-3, codex-1, zai-1 …) imported with home-site nil, so the
+  ;; site-grouped *agents* renderer dumped 7 of 8 London proxies in an
+  ;; ungrouped bucket. home-site now resolves id-prefix → origin declaration
+  ;; (roster metadata / announce body) → configured url→site mapping.
+  (testing "metadata home-site in the synced roster entry wins for bare ids"
+    (let [peer "http://hub:7070"]
+      (fed/configure! {:peers [peer] :self-url "http://laptop:7070" :peer-sites ["lon"]})
+      (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                       :fetch-fn (fn [_] {:ok true
+                                          :agents {"claude-7" {:type "claude"
+                                                               :capabilities ["coordination/execute"]
+                                                               :metadata {:home-site "lon"}}}})})
+      (is (= :lon (get-in (reg/get-agent "claude-7") [:agent/metadata :home-site])))))
+  (testing "configured url→site mapping covers entries with no declaration"
+    (let [peer "http://hub:7070"]
+      (fed/configure! {:peers [{:url peer :site "lon"}] :self-url "http://laptop:7070"})
+      (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                       :fetch-fn (fn [_] (peer-roster "claude-8"))})
+      (is (= :lon (get-in (reg/get-agent "claude-8") [:agent/metadata :home-site])))))
+  (testing "a site-qualified id keeps its own prefix over any fallback"
+    (let [peer "http://hub:7070"]
+      (fed/configure! {:peers [{:url peer :site "lon"}] :self-url "http://laptop:7070"})
+      (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                       :fetch-fn (fn [_] (peer-roster "chi-claude-1"))})
+      (is (= :chi (get-in (reg/get-agent "chi-claude-1") [:agent/metadata :home-site]))))))

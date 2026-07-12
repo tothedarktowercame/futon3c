@@ -2280,7 +2280,11 @@
                           origin-url
                           agent-id
                           {:type agent-type
-                           :capabilities capabilities})]
+                           :capabilities capabilities
+                           ;; origin's declared site (announce-to-peer! sends it) —
+                           ;; the home-site source for bare, unqualified ids
+                           :home-site (or (:home-site payload)
+                                          (get payload "home-site"))})]
               (if (:ok result)
                 (json-response (if (= :registered (:action result)) 201 200)
                                {:ok true
