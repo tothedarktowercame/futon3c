@@ -45,6 +45,7 @@
   (:require [futon3c.evidence.backend :as backend]
             [futon3c.evidence.invariant :as invariant]
             [futon3c.evidence.store :as store]
+            [futon3c.marks :as marks]
             [futon3c.social.shapes :as shapes]
             [clojure.string :as str]))
 
@@ -253,7 +254,7 @@
    `dev/futon3c/dev/invoke.clj` and `src/futon3c/transport/http.clj`)."
   [evidence-store entry-or-args]
   (try
-    (let [coerced (coerce-input entry-or-args)
+    (let [coerced (marks/maybe-decorate-turn (coerce-input entry-or-args))
           ;; Resolve the backend ONCE so append* and verify-persisted
           ;; agree on which backend they're addressing. Without this, a
           ;; nil evidence-store causes append* to silently fall back to
