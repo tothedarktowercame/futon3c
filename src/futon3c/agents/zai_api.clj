@@ -6,6 +6,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.agents.zaif-controller :as zaif]
             [futon3c.peripheral.memory-backend :as memory-backend]
             [futon3c.peripheral.real-backend :as real-backend]
             [futon3c.peripheral.tools :as tools])
@@ -682,11 +683,36 @@
    :session-id sid
    :error "max-tool-rounds"})
 
+(defn- resolve-profile
+  [profile]
+  (zaif/env-profile (or profile (getenv "FUTON3C_ZAI_PROFILE"))))
+
+(defn- default-zaif-inputs
+  [{:keys [mission gamma observations task-belief c-belief]}]
+  {:task-belief (or task-belief {})
+   :c-belief (or c-belief {})
+   :gamma (or gamma {})
+   :mission mission
+   :observations (or observations {})})
+
+(defn- maybe-zaif-decision!
+  [{:keys [profile zaif-inputs-fn agent-id sid] :as ctx}]
+  (when (= :zaif (resolve-profile profile))
+    (let [inputs (if zaif-inputs-fn
+                   (zaif-inputs-fn ctx)
+                   (default-zaif-inputs ctx))
+          decision (zaif/decide inputs)]
+      (zaif/persist-decision! {:agent-id agent-id
+                               :sid sid
+                               :decision decision
+                               :inputs inputs})
+      decision)))
+
 (defn run-tool-rounds!
   "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
    update already-registered invoke closures."
   [{:keys [client opts api-key !messages backend tool-opts agent-id sid
-           !repeats auto-continue-max]}]
+           !repeats auto-continue-max] :as ctx}]
   (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
     (loop [remaining tool-round-budget
            final-text ""
@@ -701,7 +727,8 @@
             (sink! agent-id {:type "text" :text (str "[auto-continue " n "/" auto-continue-max "]")})
             (recur tool-round-budget final-text n false round-n))
           (max-tool-rounds-result sid final-text))
-        (let [resp (chat! client (assoc opts :api-key api-key) @!messages)
+        (let [_decision (maybe-zaif-decision! (assoc ctx :round round-n))
+              resp (chat! client (assoc opts :api-key api-key) @!messages)
               err (:error resp)]
           (if err
             {:result nil
@@ -762,7 +789,7 @@
   "Return an Agency invoke-fn backed by Z.AI tool calling."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
            api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn
-           memory-mode auto-continue-max]
+           memory-mode auto-continue-max profile zaif-inputs-fn]
     :or {agent-id "zai" timeout-ms 300000 memory-mode :full}}]
   (let [client (HttpClient/newHttpClient)
         key (or api-key (resolve-api-key))
@@ -803,6 +830,7 @@
               :temperature temperature
               :timeout-ms timeout-ms
               :memory-mode memory-mode}
+        profile* (resolve-profile profile)
         tool-opts {:irc-send-fn irc-send-fn
                    :irc-recent-fn irc-recent-fn
                    :agent-id agent-id
@@ -853,4 +881,6 @@
                            :agent-id agent-id
                            :sid sid
                            :!repeats !repeats
+                           :profile profile*
+                           :zaif-inputs-fn zaif-inputs-fn
                            :auto-continue-max auto-continue-max})))))))
