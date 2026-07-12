@@ -163,7 +163,10 @@ export WEBARXANA_DEV_NO_AUTH="${WEBARXANA_DEV_NO_AUTH:-1}"
 
 # --- Federation: peer with Linode unless explicitly disabled ---
 if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}" ]]; then
-  export FUTON3C_PEERS="${FUTON3C_LINODE_URL}"
+  # Use site=url form so the federation url→site mapping is populated at boot.
+  # This makes London's bare locals import as lon-* instead of colliding with
+  # laptop locals under the same bare names.
+  export FUTON3C_PEERS="lon=${FUTON3C_LINODE_URL}"
 fi
 
 # Roster-completeness (M-federated-agency-hardening): arm the continuous sync
