@@ -166,6 +166,25 @@ if [[ "${FUTON3C_DISABLE_AUTO_PEERS:-false}" != "true" && -z "${FUTON3C_PEERS:-}
   export FUTON3C_PEERS="${FUTON3C_LINODE_URL}"
 fi
 
+# Roster-completeness (M-federated-agency-hardening): arm the continuous sync
+# daemon so the laptop continuously pulls the peer's roster instead of relying
+# on the one-shot sync-peers! at boot. Without this, agents that appear on the
+# peer AFTER the laptop boots (e.g. claude-6 on London) never propagate — the
+# laptop's roster is frozen at boot time. Default 60000 ms (1 min); set 0 to
+# revert to boot-only sync. Peer fetch failures skip that tick rather than
+# pruning proxies (AG-3/AG-4 liveness model from CP-B slice 2).
+export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-60000}"
+# Cap retry backoff when a peer is unreachable (default 5 min).
+export FUTON3C_FED_SYNC_MAX_BACKOFF_MS="${FUTON3C_FED_SYNC_MAX_BACKOFF_MS:-300000}"
+
+# FUTON3C_SELF_URL: intentionally unset on the laptop. The laptop binds to
+# 127.0.0.1 (not reachable from remote boxes), so announce! cannot hand London
+# a valid origin-url — the laptop→London announce direction requires a
+# network-level path (tunnel or public bind). Until then, London learns about
+# laptop agents only if London peers with the laptop (FUTON3C_LAPTOP_URL on
+# London's side). The London→laptop direction works fine via sync-pull because
+# the laptop initiates the outbound connection.
+
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   export FUTON3C_EMACS_SOCKET="$(futon_preferred_emacs_socket || true)"
