@@ -88,11 +88,11 @@ export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 # arms the AG-2 guard: chi-/oxf- qualified ids are remote-homed here and
 # cannot be minted as local phantoms.
 if [[ -z "${FUTON3C_PEERS:-}" ]]; then
-  # site=url form feeds the url→site home-site fallback for bare-id proxies
-  FUTON3C_PEERS="chi=http://172.236.108.82:7070"
-  if [[ -n "${FUTON3C_LAPTOP_URL:-}" ]]; then
-    FUTON3C_PEERS="${FUTON3C_PEERS},oxf=${FUTON3C_LAPTOP_URL}"
-  fi
+  # site=url form feeds the url→site home-site fallback for bare-id proxies.
+  # oxf rides the laptop's autossh reverse tunnel (-R 17070:localhost:7070);
+  # when the tunnel is down the sync daemon marks the peer stale and backs
+  # off — honest absence, no boot failure.
+  FUTON3C_PEERS="chi=http://172.236.108.82:7070,oxf=${FUTON3C_LAPTOP_URL:-http://127.0.0.1:17070}"
 fi
 export FUTON3C_PEERS
 export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-chi,oxf}"
