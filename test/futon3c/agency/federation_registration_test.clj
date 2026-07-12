@@ -136,3 +136,25 @@
       (is (= true (get-in agent [:agent/metadata :proxy?])))
       (is (= "http://lon:7070" (get-in agent [:agent/metadata :origin-url])))
       (is (empty? (logic/find-phantoms (logic-db-from-registry)))))))
+
+(deftest local-ws-bridge-registration-declares-home-site
+  ;; codex-3 case (2026-07-12): a laptop-homed agent registering a ws-bridge
+  ;; presence on the hub arrived bare (no site prefix, no metadata), so the
+  ;; site-grouped roster filed it under the hub's own site instead of oxf.
+  ;; A local (non-proxy) registration may declare its home federation point.
+  (testing "home-site in the registration body lands in agent metadata"
+    (let [h (handler)
+          response (post-json h "/api/alpha/agents"
+                              {"agent-id" "codex-3"
+                               "type" "codex"
+                               "ws-bridge" true
+                               "home-site" "oxf"})
+          agent (reg/get-agent "codex-3")]
+      (is (= 201 (:status response)))
+      (is (= :oxf (get-in agent [:agent/metadata :home-site])))
+      (is (= true (get-in agent [:agent/metadata :ws-bridge?])))))
+  (testing "registration without home-site stays untagged (renderer falls back)"
+    (let [h (handler)
+          _ (post-json h "/api/alpha/agents"
+                       {"agent-id" "codex-9" "type" "codex" "ws-bridge" true})]
+      (is (nil? (get-in (reg/get-agent "codex-9") [:agent/metadata :home-site]))))))

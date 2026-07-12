@@ -2256,7 +2256,12 @@
             caps-raw (or (:capabilities payload) (get payload "capabilities"))
             capabilities (if (sequential? caps-raw)
                            (mapv keyword caps-raw)
-                           (get default-capabilities agent-type []))]
+                           (get default-capabilities agent-type []))
+            ;; the registrant's declared home federation point (e.g. the
+            ;; laptop's codex-3 ws-bridge presence on the hub declares "oxf")
+            ;; — drives site-grouping in the *agents* roster (AG-8 display)
+            home-site (some-> (or (:home-site payload) (get payload "home-site"))
+                              str str/trim str/lower-case not-empty)]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -2283,8 +2288,7 @@
                            :capabilities capabilities
                            ;; origin's declared site (announce-to-peer! sends it) —
                            ;; the home-site source for bare, unqualified ids
-                           :home-site (or (:home-site payload)
-                                          (get payload "home-site"))})]
+                           :home-site home-site})]
               (if (:ok result)
                 (json-response (if (= :registered (:action result)) 201 200)
                                {:ok true
@@ -2307,7 +2311,8 @@
                            :invoke-fn invoke-fn
                            :capabilities capabilities
                            :metadata (cond-> {}
-                                       ws-bridge? (assoc :ws-bridge? true))})]
+                                       ws-bridge? (assoc :ws-bridge? true)
+                                       home-site (assoc :home-site (keyword home-site)))})]
               (if (and (map? result) (= false (:ok result)))
                 (json-response 409 {:ok false
                                     :err "duplicate-registration"
