@@ -542,3 +542,16 @@ prerequisite); honest route labels for proxies in the roster (they currently ren
 `local` because the proxy invoke-fn is a local fn — should read `proxy → <origin>`);
 laptop reachability for reverse invokes (SSH -R tunnel or the B2 WS reverse-invoke);
 proxy invoke job lifecycle (first chi bell never emitted a result event).
+
+**CP-C amendment (same day, after Chicago's bellback):** the first chi bell was not
+lost — the job completed (state `done`) after a long turn; the "proxy invoke job
+lifecycle" concern softens to "long turns surface no intermediate events" (kin to
+Adjacent observation A). chi-claude-1's read-before-write reply exposed the real
+Chicago blocker: **version skew** — its checkout predates CP-B slice 2 (no
+`start-sync-daemon!`/`sync-tick!`, `configure!` without `:peer-sites`), so
+Drawbridge arming was impossible there by any eval. Resolution: CP-C rebased onto
+origin (which had gained the laptop's `df1d23b` "dev-laptop-env: arm federation
+sync daemon" — the laptop side acted on the IRC instructions) and pushed as
+`e506479`; Chicago belled to pull + reload + arm. Chicago's registry was already
+clean (zero phantoms, all 8 lucy agents mirrored as proxies). futon1b's :7074
+wedge cleared on restart (FTS caught up, text-search serving again).
