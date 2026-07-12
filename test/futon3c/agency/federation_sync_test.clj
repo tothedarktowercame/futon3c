@@ -244,3 +244,19 @@
                      :fetch-fn (fn [_] (peer-roster "zai-9"))})
     (is (nil? (reg/get-agent "zai-9")))
     (is (= true (get-in (reg/get-agent "oxf-zai-9") [:agent/metadata :proxy?])))))
+
+(deftest direct-presence-registration-suppresses-proxy-import
+  ;; codex-3 case: the agent maintains its own ws-bridge presence here (bare
+  ;; id, declared home-site), AND appears in its home peer's roster. Without
+  ;; dedup the sync import doubles it as oxf-codex-3.
+  (let [peer "http://laptop:17070"]
+    (fed/configure! {:peers [{:url peer :site "oxf"}] :self-url "http://lon:7070"})
+    (reg/register-agent! {:agent-id {:id/value "codex-3" :id/type :continuity}
+                          :type :codex
+                          :invoke-fn nil
+                          :capabilities [:coordination/execute]
+                          :metadata {:ws-bridge? true :home-site :oxf}})
+    (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                     :fetch-fn (fn [_] (peer-roster "codex-3"))})
+    (is (nil? (reg/get-agent "oxf-codex-3")))
+    (is (= true (get-in (reg/get-agent "codex-3") [:agent/metadata :ws-bridge?])))))

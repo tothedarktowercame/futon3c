@@ -470,6 +470,17 @@
       (own-site-reflection? remote-id agent-info)
       {:ok true :agent-id remote-id :action :skipped-own-site}
 
+      ;; A direct presence registration (e.g. codex-3's ws-bridge) already
+      ;; represents this remote agent here under its bare id with the same
+      ;; declared home-site — importing a proxy too would show the agent
+      ;; twice in the roster. The direct channel wins.
+      (and (not= remote-id aid)
+           (when-let [direct (reg/get-agent remote-id)]
+             (and (not (get-in direct [:agent/metadata :proxy?]))
+                  (= (some-> (get-in direct [:agent/metadata :home-site]) name)
+                     (proxy-home-site origin-url remote-id agent-info)))))
+      {:ok true :agent-id remote-id :action :skipped-direct-presence}
+
       ;; Never let a remote proxy occupy an operator-facing local continuity id.
       ;; `cr new` and similar local REPL flows assume these ids are either owned
       ;; by a real local agent or unbound, never silently rebound to a peer.
