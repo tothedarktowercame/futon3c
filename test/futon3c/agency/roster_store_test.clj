@@ -180,3 +180,25 @@
       (finally
         (when (.exists session-file)
           (.delete session-file))))))
+
+(deftest proxies-are-not-persisted
+  ;; AG-2 regression (M-federated-agency-hardening, 2026-07-12): restore-payload
+  ;; strips :proxy?/:origin-url, so a persisted federation proxy replayed on
+  ;; boot as a LOCAL phantom (the chi-claude-1/chi-codex-1 phantoms on lucy).
+  ;; Proxies must be absent from the durable snapshot; the sync daemon
+  ;; re-imports them from the live peer after boot.
+  (let [registry {"claude-1" {:agent/id {:id/value "claude-1" :id/type :continuity}
+                              :agent/type :claude
+                              :agent/session-id "sess-local"}
+                  "chi-claude-1" {:agent/id {:id/value "chi-claude-1" :id/type :continuity}
+                                  :agent/type :claude
+                                  :agent/session-id "sess-chi"
+                                  :agent/metadata {:proxy? true
+                                                   :remote? true
+                                                   :home-site :chi
+                                                   :origin-url "http://chi:7070"}}
+                  "oxf-zai-1" {:agent/id {:id/value "oxf-zai-1" :id/type :continuity}
+                               :agent/type :zai
+                               :agent/metadata {"remote-proxy?" true}}}
+        snapshot (roster/roster-snapshot registry)]
+    (is (= ["claude-1"] (mapv :agent-id (:agents snapshot))))))

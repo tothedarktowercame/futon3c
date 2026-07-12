@@ -120,3 +120,21 @@
           (if old
             (System/setProperty "FUTON3C_FED_SYNC_INTERVAL_MS" old)
             (System/clearProperty "FUTON3C_FED_SYNC_INTERVAL_MS")))))))
+
+(deftest sync-tick-uses-configured-peers-when-none-injected
+  ;; Regression (2026-07-12, found live on lucy): the destructured local
+  ;; `peers` shadowed the `peers` fn, so a daemon tick — which passes no
+  ;; :peers — called nil as a function and NPE'd on every tick. The daemon
+  ;; never synced anything while tests, which always inject :peers, stayed
+  ;; green. This tick exercises the daemon's actual call shape.
+  (testing "a tick without :peers falls back to the configured peer list"
+    (let [peer "http://hub:7070"]
+      (fed/configure! {:peers [peer] :self-url "http://laptop:7070" :peer-sites ["lon"]})
+      (let [results (fed/sync-tick! {:now-ms 1000
+                                     :interval-ms 1000
+                                     :jitter-fn (constantly 0)
+                                     :fetch-fn (fn [_] (peer-roster "claude-9"))})]
+        (is (= [peer] (mapv :peer results)))
+        (is (every? :ok results))
+        (is (= true (get-in (reg/get-agent "claude-9")
+                            [:agent/metadata :proxy?])))))))

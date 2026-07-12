@@ -452,3 +452,93 @@ restarts a bridge unit.
   per-box analogue of the per-point heal needed here.
 - Mesh topology: laptop (role `laptop`) ⇄ linode hub `172.236.28.208`; `lon-*` / `chi-*`
   are remote federation points.
+
+## Checkpoint CP-C — 2026-07-12 (roster completeness: AG-8, site-grouped *agents*, two live bugs fixed)
+
+**Directive (Joe):** the *agents* buffer on each box and the laptop "absolutely don't
+align". Desired shape: rows grouped by federation point (`chi | codex-2`, `lon |
+claude-1`, `oxf | zai-1`), agents addressable locally (`claude-6`) or globally
+(`oxf-claude-1`), backed by a completeness criterion: **the roster shows all agents
+across all peers at all times** (= AG-8).
+
+**Live diagnosis on lucy (before):** federation config `peers=[]`, `peer-sites=#{}` —
+nothing ever synced or announced from the hub, so each box's roster was just "what
+registered locally". 11 agents, every one `:invoke-route :local`, zero proxies:
+`chi-claude-1`/`chi-codex-1` were AG-2 local phantoms *on the hub*, and a bare
+`claude-1` duplicated `lon-claude-1`'s session `72c65a23` (AG-1 violation). Chicago,
+by contrast, already carried proper proxies for lucy's agents — the peering was
+half-armed in one direction only.
+
+**Two root-cause bugs found and fixed (both with regression tests):**
+
+1. **The phantom-minting machine** — `roster_store.clj/restore-payload` persisted
+   *proxy* records with `:proxy?`/`:origin-url`/`:remote?` stripped, so every boot
+   laundered legitimate federation proxies into local-looking records that
+   `restore-on-boot!` replayed as AG-2 phantoms. That is how chi-claude-1/chi-codex-1
+   phantoms got onto lucy. Fix: `roster-snapshot` now excludes proxy records (the sync
+   daemon re-imports live proxies from the peer after boot). Test:
+   `proxies-are-not-persisted` in `roster_store_test.clj`.
+2. **The sync daemon never worked** — in `federation.clj/sync-tick!` the destructured
+   local `peers` (nil on daemon ticks) shadowed the `peers` fn, so `(or peers (peers))`
+   called nil as a function: NPE on every scheduled tick, caught+printed by the daemon
+   wrapper, `tick-count` stuck at 0. CP-B slice 2's tests always injected `:peers`, so
+   they stayed green. Fix: fall back to `(:peers @!config)`. Test:
+   `sync-tick-uses-configured-peers-when-none-injected` in `federation_sync_test.clj`.
+
+**Live arming on lucy (Drawbridge, no JVM restart):** `configure!` with
+peers=[chicago], self-url, peer-sites #{chi oxf}; deregistered the three
+phantoms/dupes (+ removed their /tmp session files); `sync-peers!` re-imported
+chi-claude-1/chi-codex-1 as proper proxies (`:proxy? true :home-site :chi`);
+announced lucy's local agents to Chicago (201s; 409 for the two it already had);
+daemon armed at 30s and verified ticking (tick-count advancing) after the NPE fix
+was hot-reloaded. Persisted in `scripts/dev-linode-env`: default
+`FUTON3C_PEERS=http://172.236.108.82:7070` (merging with FUTON3C_LAPTOP_URL when
+set), `FUTON3C_PEER_SITES=chi,oxf`, `FUTON3C_FED_SYNC_INTERVAL_MS=30000`. The
+peer-sites config also arms the CP-B slice-1 AG-2 refusal guard on lucy, which was
+inert with `peer-sites=#{}` (that is why restore-on-boot resurrected the phantoms
+unopposed).
+
+**Site-grouped *agents* renderer:** `blackboard.clj/format-agent-status` now renders
+`site | name` rows grouped per federation point (blank line between blocks, sites
+sorted): site from proxy `:home-site` metadata, else the id's site prefix, else this
+box's FUTON3C_SITE, else `?`; the agent's own site prefix is stripped inside its
+block (`lon-claude-1` renders as `lon | claude-1`). Hot-reloaded live; lucy's buffer
+now shows a `chi` block (proxies, `remote`) above the `lon` block. Test:
+`format-agent-status-groups-by-site` (plus one stale assertion fixed:
+`ws-bridge` is metadata, not the route, per the code's own comment).
+
+**AG-8 named in the logic model:** `ag-8-roster-incompleteo` (relational core:
+existing `missing-from-peer-rostero`) + finder `find-roster-incomplete`
+(= `query-unpropagated-agents`); pass/fail fixtures in `federation_logic_test.clj`.
+The buffer *displays* the invariant; the sync daemon + announce path *enforce* it;
+the finder *checks* it.
+
+**Cross-box propagation of the fix:** Chicago belled via its (now-correct) proxy
+with arming instructions incl. the sync-tick! NPE fix (first bell's job ran >30min
+with no result event while Chicago sat idle — the proxy-invoke job lifecycle needs a
+look; re-belled compactly). Laptop reached over IRC (its bridge connects to lucy's
+ngircd from 161.73.4.62; `zai` is the laptop-bridge bot in #futon): sent
+FUTON3C_SITE=oxf + peering + hygiene instructions addressed to zai.
+
+**Side findings:** (a) futon1b :7074 was wedged active-but-not-serving (listening,
+established conns piling, HTTP timeouts — a live AG-7 instance on the store JVM;
+the bridge's "IRC evidence write failed: timed out" for 90+ min was this).
+Restarted per futon1b README remedy. (b) `zai-1` exists both in lucy's registry
+(lucy-homed, M-zaif-harness) and as the laptop's zai — a live name collision that
+only universal site-qualification resolves. (c) The registration-guard tests in
+`federation_registration_test.clj` are FUTON3C_SITE-sensitive: with lon exported
+(lucy shell default) they fail because lon-* ids read as local-homed; gates must run
+`env -u FUTON3C_SITE` on lucy until the tests pin their own site context.
+
+**Test state:** `clojure -M:test` over blackboard, roster-store, federation-logic,
+logic, invariants, federation, federation-sync, federation-registration:
+96 tests / 301 assertions / 0 failures (run with `env -u FUTON3C_SITE`, see (c));
+clj-kondo clean on all touched files; check-parens OK.
+
+**Deferred (next slices):** universal site-qualification at every local
+registration seam + a bare-id→local-site resolver at invoke/bell/attach (renames
+live agents, needs claude-repl.el cooperation — the laptop's `oxf` adoption is the
+prerequisite); honest route labels for proxies in the roster (they currently render
+`local` because the proxy invoke-fn is a local fn — should read `proxy → <origin>`);
+laptop reachability for reverse invokes (SSH -R tunnel or the B2 WS reverse-invoke);
+proxy invoke job lifecycle (first chi bell never emitted a result event).

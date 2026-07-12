@@ -80,10 +80,22 @@ export FUTON4_BASE_URL="${FUTON4_BASE_URL:-${FUTON1A_URL}/api/alpha}"
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 
-# --- Federation: auto-peer with laptop if URL provided ---
-if [[ -n "${FUTON3C_LAPTOP_URL:-}" && -z "${FUTON3C_PEERS:-}" ]]; then
-  export FUTON3C_PEERS="${FUTON3C_LAPTOP_URL}"
+# --- Federation ---
+# Roster completeness (M-federated-agency-hardening, 2026-07-12): lucy peers
+# with Chicago by default (plus the laptop when FUTON3C_LAPTOP_URL is set)
+# and runs the continuous liveness-aware sync daemon, so every box's
+# *agents* roster shows all agents across all federation points. peer-sites
+# arms the AG-2 guard: chi-/oxf- qualified ids are remote-homed here and
+# cannot be minted as local phantoms.
+if [[ -z "${FUTON3C_PEERS:-}" ]]; then
+  FUTON3C_PEERS="http://172.236.108.82:7070"
+  if [[ -n "${FUTON3C_LAPTOP_URL:-}" ]]; then
+    FUTON3C_PEERS="${FUTON3C_PEERS},${FUTON3C_LAPTOP_URL}"
+  fi
 fi
+export FUTON3C_PEERS
+export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-chi,oxf}"
+export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
 
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then

@@ -850,8 +850,49 @@
                           (when (seq preview) (str " — " preview)))))))))
     (catch Throwable _ nil)))
 
+(defn- local-site
+  "This box's site code (FUTON3C_SITE property or env), or nil when
+   undecorated."
+  []
+  (some-> (or (System/getProperty "FUTON3C_SITE")
+              (System/getenv "FUTON3C_SITE"))
+          str/trim
+          str/lower-case
+          not-empty))
+
+(defn- id-site-prefix
+  "Site code embedded in a qualified agent id (lon-claude-1 -> \"lon\")."
+  [aid]
+  (when-let [[_ site] (re-matches #"(?i)^([a-z][a-z0-9]*)-(?:claude|codex|zai|tickle)-\d+$"
+                                  (str aid))]
+    (str/lower-case site)))
+
+(defn agent-site
+  "Site an agent is homed at, for roster grouping: proxy :home-site metadata
+   first, then a site-qualified id prefix, then this box's site. \"?\" when
+   nothing is known (undecorated box, unqualified id)."
+  [aid info]
+  (or (some-> (get-in info [:metadata :home-site]) name str/lower-case not-empty)
+      (id-site-prefix (name aid))
+      (local-site)
+      "?"))
+
+(defn- site-local-name
+  "Agent id with its own site prefix stripped for display (lon-claude-1
+   shown as claude-1 inside the lon group)."
+  [aid site]
+  (let [aid (str aid)
+        prefix (str site "-")]
+    (if (and site (str/starts-with? aid prefix))
+      (subs aid (count prefix))
+      aid)))
+
 (defn format-agent-status
-  "Format agent registry status for blackboard display.
+  "Format agent registry status for blackboard display, grouped by home
+   site (roster completeness view, M-federated-agency-hardening): every
+   federation point's agents render as `site | name` rows, one block per
+   site; an agent is addressable by the bare name within its own site and
+   globally as site-name.
    Takes the registry-status map from registry/registry-status."
   [registry-status]
   (let [agents (:agents registry-status)
@@ -871,9 +912,9 @@
          (when (seq ws-connected)
            (str ", " (count ws-connected) " inbound-ws-connected"))
          ")\n"
-         (str/join "\n"
-                   (map (fn [[aid info]]
-                          (let [status (or (:status info) :idle)
+         (let [row (fn [[aid info]]
+                     (let [site (agent-site aid info)
+                           status (or (:status info) :idle)
                                 type-str (some-> (:type info) name)
                                 metadata (:metadata info)
                                 remote? (:remote? metadata)
@@ -911,7 +952,8 @@
                                               :else nil)
                                 last-active-str (format-relative-time
                                                   (:last-active info) now-ms)]
-                            (str "  " (name aid) " [" type-str
+                            (str "  " site " | " (site-local-name (name aid) site)
+                                 " [" type-str
                                  (when remote? " remote")
                                  ", " route-label
                                  ;; Annotate ws-bridge only when the agent is
@@ -950,8 +992,13 @@
                                         (when session-tag
                                           (str ", " session-tag)))
                                    (name status))
-                                 (parked-suffix (name aid)))))
-                        (sort-by key agents)))
+                                 (parked-suffix (name aid)))))]
+           (->> agents
+                (group-by (fn [[aid info]] (agent-site aid info)))
+                (sort-by key)
+                (map (fn [[_site entries]]
+                       (str/join "\n" (map row (sort-by key entries)))))
+                (str/join "\n\n")))
          (when (seq ws-unregistered)
            (str "\n\nWS Connected (Unregistered):\n"
                 (str/join "\n" (map #(str "  " %) ws-unregistered))))

@@ -41,7 +41,10 @@
                                       :invoke-ready? false
                                       :metadata {}}}})]
       (is (str/includes? result "Agents (3 registered, 2 invocable: 2 local, 0 ws, 1 unreachable)"))
-      (is (str/includes? result "codex-1 [codex, local, ws-bridge] idle"))
+      ;; ws-bridge? metadata documents the bridge; it is NOT the route, so a
+      ;; locally-invocable agent renders plain [codex, local] (blackboard.clj
+      ;; annotates ws-bridge only when the invoke actually flows via the bridge).
+      (is (str/includes? result "codex-1 [codex, local] idle"))
       (is (str/includes? result "— ready"))
       (is (str/includes? result "codex-vscode [codex, local, VS Code, lane=vscode] idle"))
       (is (str/includes? result "slot-1 [codex, unreachable] idle"))
@@ -378,3 +381,27 @@
         (is (= 1 (count @calls)))
         (is (= "*processes*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :async?])))))))
+
+(deftest format-agent-status-groups-by-site
+  (testing "roster groups agents under site | name rows (AG-8 roster-completeness display)"
+    (let [result (bb/format-agent-status
+                  {:count 3
+                   :agents {"lon-claude-1" {:type :claude :status :idle
+                                            :invoke-route :local
+                                            :metadata {}}
+                            "chi-claude-1" {:type :claude :status :idle
+                                            :invoke-route :none
+                                            :metadata {:proxy? true :remote? true
+                                                       :home-site :chi
+                                                       :origin-url "http://chi:7070"}}
+                            "chi-codex-1" {:type :codex :status :idle
+                                           :invoke-route :none
+                                           :metadata {:home-site "chi"}}}})]
+      ;; site prefix is stripped inside the agent's own site group
+      (is (str/includes? result "lon | claude-1 ["))
+      (is (str/includes? result "chi | claude-1 ["))
+      (is (str/includes? result "chi | codex-1 ["))
+      ;; groups are contiguous blocks, sites in sorted order
+      (is (< (long (str/index-of result "chi | claude-1"))
+             (long (str/index-of result "chi | codex-1"))
+             (long (str/index-of result "lon | claude-1")))))))

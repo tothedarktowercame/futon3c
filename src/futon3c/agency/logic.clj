@@ -457,6 +457,16 @@
   (l/fresh [backlog backlog-limit latency bound]
     (server-accepto server-id true false backlog backlog-limit latency bound)))
 
+(defn ag-8-roster-incompleteo
+  "AG-8 roster completeness (Joe, 2026-07-12): every federation point's
+   roster must show all agents across all peers at all times. A box-local
+   agent absent from a configured peer's roster is a violation. The
+   site-grouped *agents* rendering (blackboard/format-agent-status) displays
+   this invariant; the federation sync daemon + announce path enforce it.
+   Relational core: missing-from-peer-rostero."
+  [aid site peer-site]
+  (missing-from-peer-rostero aid site peer-site))
+
 ;; --- Invoke routing ---
 
 (defn route-consistento
@@ -768,6 +778,13 @@
              {:kind :stale-remote-health
               :agent-id agent-id})
            (query-stale-remote-health db)))))
+
+(defn find-roster-incomplete
+  "AG-8 finder: roster-completeness violations — box-local agents missing
+   from configured peer rosters. Same query as find-unpropagated, named for
+   the AG-8 invariant it checks."
+  [db]
+  (query-unpropagated-agents db))
 
 (def ^:private informational-keys
   "Keys that are informational, not violations.

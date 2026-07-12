@@ -598,7 +598,11 @@
     :or {jitter-fn (constantly 0)}}]
   (let [now (long (or now-ms (current-ms)))
         interval (long (or interval-ms (sync-interval-ms)))
-        configured-peers (vec (or peers (peers)))
+        ;; NB: the destructured local `peers` shadows the `peers` fn, so the
+        ;; original (or peers (peers)) called nil as a function on every
+        ;; daemon tick — the sync daemon NPE'd and never synced (found live
+        ;; on lucy 2026-07-12; tests always injected :peers, masking it).
+        configured-peers (vec (or peers (:peers @!config)))
         results (mapv (fn [peer-url]
                         (let [next-at (long (get-in @!peer-liveness [peer-url :next-sync-at-ms] 0))]
                           (if (> next-at now)

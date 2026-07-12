@@ -222,3 +222,30 @@
 (deftest live-snapshot-smoke
   (testing "live registry/federation snapshot can be mapped without requiring live peer boxes"
     (is (some? (logic/build-live-db)))))
+
+(deftest ag-8-roster-completeness
+  (testing "AG-8 holds: every box-local agent appears in every peer roster"
+    (let [db (logic/snapshot->db positive-snapshot)]
+      (is (empty? (logic/find-roster-incomplete db)))))
+  (testing "AG-8 violated: local agent missing from a configured peer roster"
+    (let [snapshot {:site :lon
+                    :local-point :lon
+                    :self-url "http://lon:7070"
+                    :peers [{:site :oxf :url "http://oxf:7070"}]
+                    :peer-rosters {:oxf #{"lon-claude-1"}}
+                    :registry {"lon-claude-1" (agent-record "lon-claude-1"
+                                                            {:invoke-fn (fn [_ _] {:ok true})
+                                                             :session-id "sess-lon-1"
+                                                             :home-site :lon})
+                               "lon-claude-2" (agent-record "lon-claude-2"
+                                                            {:invoke-fn (fn [_ _] {:ok true})
+                                                             :session-id "sess-lon-2"
+                                                             :home-site :lon})}
+                    :routing {"lon-claude-1" {:invoke-route :local :invoke-ready? true}
+                              "lon-claude-2" {:invoke-route :local :invoke-ready? true}}}
+          db (logic/snapshot->db snapshot)]
+      (is (= [{:agent-id "lon-claude-2"
+               :site :lon
+               :missing-peer :oxf
+               :peer-url "http://oxf:7070"}]
+             (logic/find-roster-incomplete db))))))

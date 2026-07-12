@@ -100,10 +100,23 @@
                                  :ws-bridge? "ws-bridge?"
                                  :note "note"))))))
 
+(defn- proxy-record?
+  "Federation proxies must NOT be persisted: their home is the peer box, and
+   restore-payload strips :proxy?/:origin-url, so a persisted proxy replays on
+   boot as a local phantom (AG-2 violation — the chi-claude-1/chi-codex-1
+   phantoms found on lucy 2026-07-12). The sync daemon re-imports live proxies
+   from the peer after boot; a dead peer's agents should be absent, not
+   phantom-local."
+  [agent]
+  (let [metadata (or (:agent/metadata agent) {})]
+    (boolean (or (metadata-value metadata :proxy?)
+                 (metadata-value metadata :remote-proxy?)))))
+
 (defn roster-snapshot [registry]
   {:version roster-version
    :generated-at (now)
    :agents (->> (vals registry)
+                (remove proxy-record?)
                 (keep restore-payload)
                 (sort-by :agent-id)
                 vec)})
