@@ -54,39 +54,28 @@
 (defn- span-overlaps? [[a b] [c d]]
   (and (< a d) (< c b)))
 
-(defn- paren-span-around [text idx]
-  (let [open (.lastIndexOf text "(" idx)
-        close (.indexOf text ")" idx)]
-    (when (and (not= -1 open) (not= -1 close) (< open idx close))
-      [open (inc close)])))
+(defn- word-before
+  "The word token immediately preceding idx, lowercased; nil at text start or
+   when the preceding token is not a word (punctuation, another glyph)."
+  [text idx]
+  (some-> (re-find #"([A-Za-z']+)[^A-Za-z']*$" (subs text 0 idx))
+          second
+          str/lower-case))
 
-(defn- local-context [text idx]
-  (if-let [[a b] (paren-span-around text idx)]
-    (subs text a b)
-    (let [start (max 0 (- idx 80))
-          end (min (count text) (+ idx 80))]
-      (subs text start end))))
+(defn- mention-after? [text idx glyph]
+  (let [after (subs text (min (count text) (+ idx (count glyph))))]
+    (boolean (re-find #"^\s*(?:for\s+(?:example|approval|correction|idea)s?|as\s+(?:an?\s+)?(?:approval|correction|idea)s?)\b"
+                      (str/lower-case after)))))
 
 (defn- mention? [text idx glyph]
-  (let [in-paren? (boolean (paren-span-around text idx))
-        ctx (local-context text idx)
-        rel (- idx (max 0 (- idx 80)))
-        ;; If local-context chose a parenthetical, recompute the glyph offset
-        ;; inside that context.
-        rel (or (str/index-of ctx glyph) rel)
-        before (subs ctx 0 rel)
-        after (subs ctx (min (count ctx) (+ rel (count glyph))))
-        before-l (str/lower-case before)
-        after-l (str/lower-case after)]
-    (boolean
-     (or
-      ;; "I could mark corrections with ✘ for example"
-      (re-find #"\b(mark|marks|marked|glyph|symbol|convention|add|use|using|enter|type|write|with)\b"
-               before-l)
-      ;; "(maybe we can add a ✓ for approval)"
-      (and in-paren?
-           (re-find #"\b(for example|for approval|for correction|for idea|as approval|as correction|as idea)\b"
-                    after-l))))))
+  ;; A mark is a MENTION only when the text talks ABOUT the glyph: the glyph
+  ;; as a noun-phrase object ("with ✘", "a ✓", "the 💡") or immediately named
+  ;; ("✘ for example", "✓ for approval"). Anything else is an EVENT. The
+  ;; earlier broad before-context regex (mark|add|use|type|write|... anywhere
+  ;; in 80 chars) misclassified real approvals like "I fixed the type error ✓"
+  ;; — recall loss on an operator-gold channel outranks mention precision.
+  (boolean (or (contains? #{"a" "an" "the" "with"} (word-before text idx))
+               (mention-after? text idx glyph))))
 
 (defn- parse-ref-token [x]
   (cond

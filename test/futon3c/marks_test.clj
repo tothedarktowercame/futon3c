@@ -83,3 +83,16 @@
     (is (:ok result))
     (is (contains? (set (get-in result [:entry :evidence/tags])) :approval))
     (is (= :event (get-in result [:entry :evidence/body :marks 0 :verdict])))))
+
+(deftest event-not-suppressed-by-distant-context-words
+  ;; Regression: the v1 mention heuristic matched broad words (type, write,
+  ;; marked, ...) anywhere in the preceding 80 chars, silently dropping real
+  ;; approval events. The rule is now immediate-token only.
+  (doseq [text ["I fixed the type error ✓"
+                "Marked it done, will write the docs later ✓"
+                "we should add tests for the parser ✓"]]
+    (is (= :event (:verdict (first (marks/recognize-marks text)))) text)))
+
+(deftest mention-still-recognized-without-parens
+  (is (= :mention (:verdict (first (marks/recognize-marks "you can add a ✓ for approval")))))
+  (is (= :mention (:verdict (first (marks/recognize-marks "mark corrections with ✘"))))))
