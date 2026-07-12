@@ -177,6 +177,19 @@ export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-60000}"
 # Cap retry backoff when a peer is unreachable (default 5 min).
 export FUTON3C_FED_SYNC_MAX_BACKOFF_MS="${FUTON3C_FED_SYNC_MAX_BACKOFF_MS:-300000}"
 
+# Peer sites (CP-B slice 1 AG-2 guard): lon-* and chi-* ids are remote-homed.
+# Setting this arms the registration-seam refusal guard so the emacs repl-attach
+# path cannot mint local phantoms for agents that belong on London or Chicago
+# (the root cause of the original lon-claude-1 / chi-claude-1 phantom bug).
+export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-lon,chi}"
+
+# FUTON3C_SITE: intentionally unset on the laptop for now. Setting it to "oxf"
+# would rename all locally-registered agents (claude-1 → oxf-claude-1, etc.) —
+# the universal site-qualification direction that CP-C deferred as needing
+# claude-repl.el cooperation and coordinated agent renames. The laptop is the
+# last box without a site code; adopting "oxf" is the prerequisite for full
+# universal site-qualification across the federation.
+
 # FUTON3C_SELF_URL: intentionally unset on the laptop. The laptop binds to
 # 127.0.0.1 (not reachable from remote boxes), so announce! cannot hand London
 # a valid origin-url — the laptop→London announce direction requires a
