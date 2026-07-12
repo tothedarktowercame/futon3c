@@ -665,12 +665,15 @@
           agents (or (:agents parsed) {})
           ;; prune compares against the ids proxies are REGISTERED under —
           ;; qualified via proxy-local-id, same as register-proxy-agent!.
-          ;; Side effect of the qualification migration: leftover bare-id
+          ;; Side effects that make migration self-healing: leftover bare-id
           ;; proxies from the pre-qualification code fall out of this set and
-          ;; are pruned on the first tick, replaced by their qualified twins.
+          ;; are pruned on the first tick, replaced by their qualified twins;
+          ;; own-site reflections are excluded, so loop-back proxies imported
+          ;; by pre-guard code get pruned rather than kept alive.
           roster-ids (set (keep (fn [[k info]]
                                   (when-let [rid (parse-agent-id k)]
-                                    (proxy-local-id peer-url rid info)))
+                                    (when-not (own-site-reflection? rid info)
+                                      (proxy-local-id peer-url rid info))))
                                 agents))
           results (->> agents
                        (map (fn [[agent-id agent-info]]

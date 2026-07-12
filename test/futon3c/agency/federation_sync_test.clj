@@ -260,3 +260,22 @@
                      :fetch-fn (fn [_] (peer-roster "codex-3"))})
     (is (nil? (reg/get-agent "oxf-codex-3")))
     (is (= true (get-in (reg/get-agent "codex-3") [:agent/metadata :ws-bridge?])))))
+
+(deftest leftover-loop-back-proxies-self-heal
+  ;; A loop-back proxy imported by pre-guard code (our own agent, proxied
+  ;; back at us through a peer) must be pruned once the guard is live, not
+  ;; kept alive by its presence in the peer's roster.
+  (let [peer "http://hub:7070"]
+    (fed/configure! {:peers [{:url peer :site "lon"}] :self-url "http://laptop:17070"})
+    (reg/register-agent! {:agent-id {:id/value "oxf-zai-2" :id/type :continuity}
+                          :type :zai
+                          :invoke-fn (fn [_ _] {:ok true})
+                          :capabilities [:coordination/execute]
+                          :metadata {:proxy? true :remote? true :origin-url peer}})
+    (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                     :fetch-fn (fn [_] {:ok true
+                                        :agents {"oxf-zai-2" {:type "zai"
+                                                              :capabilities ["coordination/execute"]
+                                                              :metadata {:proxy? true
+                                                                         :origin-url "http://laptop:17070"}}}})})
+    (is (nil? (reg/get-agent "oxf-zai-2")))))
