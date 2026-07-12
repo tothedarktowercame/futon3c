@@ -706,3 +706,61 @@ bell/invoke seams is only needed if we later want bare ids to fall through to a 
 remote match. Honest route labels for proxies (`proxy → origin` instead of `local`),
 codex-3 execution bridge (presence-only), laptop FUTON3C_SITE=oxf adoption (now purely
 cosmetic for its own display), tunnel durability (systemd unit / autossh on the laptop).
+
+## Checkpoint CP-E — 2026-07-13 (known needed extensions after CP-D)
+
+The mesh works: three sites, auto-join both directions, site-grouped rosters, import-seam
+qualification, "tell codex-1" localizes. What remains, in rough priority order — each is
+a candidate slice with its evidence already recorded above:
+
+1. **Honest proxy rows (AG-5 display).** Proxies render `[… local] … — ready` because the
+   proxy invoke-fn is a local fn. Rows should read the truth: `proxy → <site>` for the
+   route, and invocability distinct from presence (codex-3's presence-only registration
+   reads `ready` but refuses invokes by design; the `lane=presence-only` annotation is a
+   hand-set stopgap). Includes fixing last-active on the WS ready path (codex-3 read
+   "idle 11h ago" at the moment it connected).
+
+2. **Live state sync for proxies.** Roster sync carries identity/type/capabilities, not
+   live status: a proxy's `idle (3s ago)` reflects the last sync tick, not the remote
+   agent; INVOKING/parked/ws-connected states are invisible off-box. Extend the roster
+   payload (or a delta channel) so the *agents* view at any site shows remote agents'
+   real state. (Kin to Adjacent observation A — streaming — but at roster granularity.)
+
+3. **AG-8 run continuously.** `find-roster-incomplete` exists but nothing runs it; wire
+   it into the sync daemon (or the ticker) and surface violations in the *agents* header
+   — e.g. a per-site roster fingerprint so a diverged box is visible at a glance instead
+   of by eyeball diff (how this whole mission started).
+
+4. **Cross-site caller identity.** Bells/bellbacks and mesh edges record bare caller ids
+   ("zai-3" could be oxf's or a future lon local). Callers crossing sites should be
+   recorded site-qualified, reusing proxy-local-id semantics at the invoke/bell seams.
+
+5. **Tunnel durability (oxf).** The laptop's reverse tunnel is a plain backgrounded ssh —
+   dies on sleep/reboot. Wants a laptop-side systemd user unit or autossh. Lucy already
+   degrades honestly (peer stale + backoff) when it drops.
+
+6. **codex-3 execution bridge.** The direct WS registration is presence-only; invoking a
+   laptop codex for real needs the full Codex WS bridge started laptop-side (its helper's
+   own error message says as much).
+
+7. **Deploy debts.** lucy: http.clj changes (home-site POST passthrough, cf3d623/b436c84
+   shapes fix is loaded but http handler additions are not) land only at next JVM
+   boot/careful reload — until then inbound announces to lucy rely on the url→site
+   fallback rather than the declared home-site. Chicago: still running a 4-file surgical
+   checkout on master; owes a real branch merge (its own standing note). Laptop: verify
+   the post-bed535f tick imported lon-claude-2…5/lon-codex-1/lon-zai-1 and migrated its
+   stale bare claude-6 proxy (instructed, unverified).
+
+8. **Test-suite site hygiene.** federation-registration tests assume an undecorated box;
+   on lucy (FUTON3C_SITE=lon exported) they fail — gates must run `env -u FUTON3C_SITE`.
+   Fixtures should pin their own site context so the gate is env-independent.
+
+9. **Evidence-outage data loss.** During the futon1b :7074 wedge (AG-7 instance,
+   2026-07-12) the IRC bridge's evidence writes timed out and that window's channel
+   traffic is unrecoverable (FTS index-as-of confirms). If IRC evidence matters, the
+   bridge needs write buffering/retry across store outages — possibly futon1b-side
+   mission rather than this one.
+
+Deliberately NOT extensions (settled design): renaming agents at their home box (CP-D
+chose import-seam qualification instead — locals stay bare); literally-identical rosters
+(each box renders its own perspective; completeness is same-agents, checked by AG-8).
