@@ -116,15 +116,32 @@ export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
 export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
 export FUTON3C_HUD_TERMINAL="${FUTON3C_HUD_TERMINAL:-alacritty}"
 
-# --- Futon1a/Futon4 compatibility ---
-export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
+# --- futon1b switchover (E-futon1b-operational-switchover; laptop live 2026-07-12) ---
+# The stack runs futon1a-less: evidence and substrate HTTP both go to the
+# futon1b store JVM (systemd user unit futon1b-server.service, migration-store-21,
+# :7073 — the FULL corpus, data-first path; NOT the lucy :7074 switchover-store).
+# 127.0.0.1 is load-bearing (the store JVM binds IPv4-only; localhost can resolve
+# to ::1). Rollback: FUTON1A_PORT=7071 + unset the three below (boots futon1a).
+export FUTON1A_PORT="${FUTON1A_PORT:-0}"
+export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
+export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:7073}"
+export FUTON1A_URL="${FUTON1A_URL:-http://127.0.0.1:7073}"
+
+if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+  echo "[dev] futon1b-server: running (:7073, migration-store-21)"
+else
+  echo -e "[dev] \033[1;31m██ futon1b-server: DOWN — the I-evidence-per-turn boot check will fail ██\033[0m"
+  echo -e "[dev] \033[31m   start with: systemctl --user start futon1b-server\033[0m"
+fi
+
+# --- Futon1a/Futon4 compatibility (static dir unused while futon1a disabled) ---
 export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
 if [[ -z "${FUTON1A_ALLOWED_PENHOLDERS:-}" ]]; then
   export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_COMPAT_PENHOLDER}"
 elif [[ ",${FUTON1A_ALLOWED_PENHOLDERS}," != *",${FUTON1A_COMPAT_PENHOLDER},"* ]]; then
   export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_ALLOWED_PENHOLDERS},${FUTON1A_COMPAT_PENHOLDER}"
 fi
-export FUTON4_BASE_URL="${FUTON4_BASE_URL:-http://localhost:${FUTON1A_PORT}/api/alpha}"
+export FUTON4_BASE_URL="${FUTON4_BASE_URL:-${FUTON1A_URL}/api/alpha}"
 export FUTON4_PENHOLDER="${FUTON4_PENHOLDER:-${FUTON1A_COMPAT_PENHOLDER}}"
 export FUTON4_ENABLE_SYNC="${FUTON4_ENABLE_SYNC:-1}"
 export FUTON3C_MULTI_WATCHER_AUTOSTART="${FUTON3C_MULTI_WATCHER_AUTOSTART:-false}"
