@@ -612,3 +612,20 @@ sync daemon" — the laptop side acted on the IRC instructions) and pushed as
 `e506479`; Chicago belled to pull + reload + arm. Chicago's registry was already
 clean (zero phantoms, all 8 lucy agents mirrored as proxies). futon1b's :7074
 wedge cleared on restart (FTS caught up, text-search serving again).
+
+**CP-C amendment 2 (2026-07-12, after Chicago armed):** Chicago's daemon is live
+(tick-count advancing, surgical 4-file checkout onto its master — a full branch
+merge there is still owed through normal channels). Its field report surfaced two
+roster-completeness gaps: **(1) home-site nil for bare-id proxies** — fixed in
+`b9aa6cf`: home-site resolves id-prefix → origin declaration (announce body /
+roster metadata) → configured url→site map (`configure!` now retains
+`:peer-site-by-url`; `FUTON3C_PEERS` accepts `site=url` entries; lucy reconfigured
+live). **(2) `claude-2` import refused as `:skipped-protected-id`** — a London
+agent whose bare id collides with a Chicago-protected lane is silently absent from
+Chicago's roster; OPEN, deferred to the universal-site-qualification slice (the fix
+is renaming at the source, not import-side exceptions). Same-day adjacent fix: WS
+handshakes were failing `:invalid-registry` for the laptop's codex-3 because
+`AgentType` lacked `:zai` and S-presence validates the whole registry per
+handshake (`b436c84`) — codex-3 now registers on lucy (route `:none` pending
+ws-availability). The laptop side is active: it committed its own CP-B slice 4
+(laptop roster-completeness, `9536ff7`) and armed its dev-laptop-env.
