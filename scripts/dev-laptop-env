@@ -190,13 +190,17 @@ export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-lon,chi}"
 # last box without a site code; adopting "oxf" is the prerequisite for full
 # universal site-qualification across the federation.
 
-# FUTON3C_SELF_URL: intentionally unset on the laptop. The laptop binds to
-# 127.0.0.1 (not reachable from remote boxes), so announce! cannot hand London
-# a valid origin-url — the laptop→London announce direction requires a
-# network-level path (tunnel or public bind). Until then, London learns about
-# laptop agents only if London peers with the laptop (FUTON3C_LAPTOP_URL on
-# London's side). The London→laptop direction works fine via sync-pull because
-# the laptop initiates the outbound connection.
+# Reverse tunnel + self-url (CP-C amendment 3): the laptop binds 127.0.0.1, so
+# remote boxes can't reach it directly. A persistent reverse SSH tunnel makes
+# the laptop's :7070 reachable from lucy as 127.0.0.1:17070, and
+# FUTON3C_SELF_URL points there so announce! can hand peers a valid origin-url.
+# Key-based SSH auth to lucy (-p 2222) is already configured. autossh is not
+# installed; ssh with ServerAliveInterval provides keepalive. The tunnel is
+# established in a background screen/tmux or via systemd — this env block just
+# exports the URL. To start the tunnel manually:
+#   ssh -f -N -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+#     -R 17070:localhost:7070 -p 2222 joe@172.236.28.208
+export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://127.0.0.1:17070}"
 
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then

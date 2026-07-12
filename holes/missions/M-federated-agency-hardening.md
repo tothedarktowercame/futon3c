@@ -647,11 +647,22 @@ never ticked (`tick-count` stuck at 0). Live deploy via Drawbridge:
    local phantoms for remote-homed agents. Takes full effect on next boot;
    live-armed via the hot-reload.
 
-Laptop roster now complete (London→laptop direction): all 9 London local agents
-mirrored as proxies (`claude-6`, `lon-claude-1`, `chi-claude-1`, `chi-codex-1`).
-The laptop→London announce direction remains open (laptop binds 127.0.0.1,
-`FUTON3C_SELF_URL` unset) — deferred to the network-topology decision.
+Laptop roster now partially complete (London→laptop direction): 4 proxies
+(`claude-6`, `lon-claude-1`, `chi-claude-1`, `chi-codex-1`) — but this is only
+the non-colliding subset. London's `claude-2…5`, `codex-1`, `zai-1` were silently
+skipped (`:skipped-local` / protected-id) because the laptop has its own agents
+under those bare names. Under the bare-id regime, two sites that both grew
+`claude-2…5` can never fully see each other — this is the strongest evidence yet
+for the universal-site-qualification slice (the laptop's `oxf` adoption is the
+prerequisite). Same collision hole as Chicago's `claude-2` case (CP-C amendment 2).
+
+The laptop→London announce direction was deferred as "needs network path." A
+concrete answer (claude-6, in-thread): a persistent reverse SSH tunnel from the
+laptop — `ssh -f -N -R 17070:localhost:7070 -p 2222 joe@172.236.28.208` — then
+`FUTON3C_SELF_URL=http://127.0.0.1:17070`. The URL only needs to resolve from
+lucy; lucy relays onward. Independent of renaming, though the collision problem
+limits laptop→London mirroring equally until ids are site-qualified.
 
 Gates: bash syntax clean. The federation namespace reloaded without error;
 daemon ticking verified. No full JVM restart performed (hot-reload + Drawbridge
-eval only).
+eval only). Commits pushed to `origin/agency-fixes-2026-06-11` (`ba4f4a0`).
