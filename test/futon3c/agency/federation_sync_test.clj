@@ -153,16 +153,94 @@
                                           :agents {"claude-7" {:type "claude"
                                                                :capabilities ["coordination/execute"]
                                                                :metadata {:home-site "lon"}}}})})
-      (is (= :lon (get-in (reg/get-agent "claude-7") [:agent/metadata :home-site])))))
+      (is (= :lon (get-in (reg/get-agent "lon-claude-7") [:agent/metadata :home-site])))
+      (is (= "claude-7" (get-in (reg/get-agent "lon-claude-7") [:agent/metadata :remote-agent-id])))
+      (is (nil? (reg/get-agent "claude-7")))))
   (testing "configured url→site mapping covers entries with no declaration"
     (let [peer "http://hub:7070"]
       (fed/configure! {:peers [{:url peer :site "lon"}] :self-url "http://laptop:7070"})
       (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
                        :fetch-fn (fn [_] (peer-roster "claude-8"))})
-      (is (= :lon (get-in (reg/get-agent "claude-8") [:agent/metadata :home-site])))))
+      (is (= :lon (get-in (reg/get-agent "lon-claude-8") [:agent/metadata :home-site])))))
   (testing "a site-qualified id keeps its own prefix over any fallback"
     (let [peer "http://hub:7070"]
       (fed/configure! {:peers [{:url peer :site "lon"}] :self-url "http://laptop:7070"})
       (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
                        :fetch-fn (fn [_] (peer-roster "chi-claude-1"))})
       (is (= :chi (get-in (reg/get-agent "chi-claude-1") [:agent/metadata :home-site]))))))
+
+(deftest colliding-bare-ids-import-qualified-not-refused
+  ;; Joe's addressing contract (2026-07-12): locals stay bare ("tell codex-1"
+  ;; = this box's codex-1); imports get their home-site prefix. The laptop's
+  ;; codex-1 lands here as oxf-codex-1 instead of :skipped-local/-protected —
+  ;; the claude-2 / zai-1 collision gap closes at the import seam.
+  (testing "a peer agent whose bare id collides with a real local imports qualified"
+    (let [peer "http://laptop:17070"]
+      (fed/configure! {:peers [{:url peer :site "oxf"}] :self-url "http://lon:7070"})
+      (reg/register-agent! {:agent-id {:id/value "codex-1" :id/type :continuity}
+                            :type :codex
+                            :invoke-fn (fn [_ _] {:ok true})
+                            :capabilities [:coordination/execute]
+                            :metadata {}})
+      (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                       :fetch-fn (fn [_] (peer-roster "codex-1"))})
+      (let [local (reg/get-agent "codex-1")
+            imported (reg/get-agent "oxf-codex-1")]
+        (is (nil? (get-in local [:agent/metadata :proxy?])))
+        (is (= true (get-in imported [:agent/metadata :proxy?])))
+        (is (= :oxf (get-in imported [:agent/metadata :home-site])))
+        (is (= "codex-1" (get-in imported [:agent/metadata :remote-agent-id]))))))
+  (testing "departure prunes the qualified id"
+    (let [peer "http://laptop:17070"]
+      (fed/configure! {:peers [{:url peer :site "oxf"}] :self-url "http://lon:7070"})
+      (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                       :fetch-fn (fn [_] (peer-roster "zai-2"))})
+      (is (some? (reg/get-agent "oxf-zai-2")))
+      (fed/sync-tick! {:now-ms 3000 :interval-ms 1000 :jitter-fn (constantly 0)
+                       :fetch-fn (fn [_] (peer-roster))})
+      (is (nil? (reg/get-agent "oxf-zai-2"))))))
+
+(deftest own-site-reflections-are-not-imported
+  ;; When we pull a peer, its roster contains ITS proxies of OUR agents.
+  ;; Importing those would loop invokes to our own agent through the peer.
+  (testing "an entry whose home-site is our own site is skipped"
+    (let [peer "http://laptop:17070"]
+      (System/setProperty "FUTON3C_SITE" "lon")
+      (try
+        (fed/configure! {:peers [{:url peer :site "oxf"}] :self-url "http://lon:7070"})
+        (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                         :fetch-fn (fn [_] {:ok true
+                                            :agents {"claude-6" {:type "claude"
+                                                                 :capabilities ["coordination/execute"]
+                                                                 :metadata {:home-site "lon"
+                                                                            :proxy? true}}}})})
+        (is (nil? (reg/get-agent "lon-claude-6")))
+        (is (nil? (get-in (reg/get-agent "claude-6") [:agent/metadata :proxy?])))
+        (finally (System/clearProperty "FUTON3C_SITE")))))
+  (testing "an entry whose origin-url is our self-url is skipped (undecorated box)"
+    (let [peer "http://hub:7070"]
+      (fed/configure! {:peers [{:url peer :site "lon"}] :self-url "http://laptop:17070"})
+      (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                       :fetch-fn (fn [_] {:ok true
+                                          :agents {"zai-2" {:type "zai"
+                                                            :capabilities ["coordination/execute"]
+                                                            :metadata {:origin-url "http://laptop:17070"
+                                                                       :proxy? true}}}})})
+      (is (nil? (reg/get-agent "lon-zai-2")))
+      (is (nil? (reg/get-agent "zai-2"))))))
+
+(deftest bare-proxy-migrates-to-qualified-on-first-tick
+  ;; Pre-qualification proxies (bare zai-2 etc. imported before this slice)
+  ;; are replaced by their qualified twins in one tick: register creates
+  ;; oxf-zai-2, prune drops bare zai-2 (no longer in the qualified roster set).
+  (let [peer "http://laptop:17070"]
+    (fed/configure! {:peers [{:url peer :site "oxf"}] :self-url "http://lon:7070"})
+    (reg/register-agent! {:agent-id {:id/value "zai-9" :id/type :continuity}
+                          :type :zai
+                          :invoke-fn (fn [_ _] {:ok true})
+                          :capabilities [:coordination/execute]
+                          :metadata {:proxy? true :remote? true :origin-url peer}})
+    (fed/sync-tick! {:now-ms 1000 :interval-ms 1000 :jitter-fn (constantly 0)
+                     :fetch-fn (fn [_] (peer-roster "zai-9"))})
+    (is (nil? (reg/get-agent "zai-9")))
+    (is (= true (get-in (reg/get-agent "oxf-zai-9") [:agent/metadata :proxy?])))))

@@ -403,37 +403,79 @@
       (parse-home-site (get-in agent-info [:metadata :home-site]))
       (get (:peer-site-by-url @!config) origin-url)))
 
+(defn proxy-local-id
+  "Local registry id for an imported remote agent. Already-qualified ids are
+   kept; a bare id gets its resolved home site as a prefix (laptop codex-1 →
+   oxf-codex-1 here). Joe's addressing contract (2026-07-12): locals stay
+   bare — 'tell codex-1' resolves to THIS box's codex-1 — and imports carry
+   the site prefix, so same-named agents on different sites coexist instead
+   of the import being refused (the claude-2/zai-1 collision gap)."
+  [origin-url remote-id agent-info]
+  (if (agent-id-home-site remote-id)
+    remote-id
+    (if-let [hs (proxy-home-site origin-url remote-id agent-info)]
+      (str hs "-" remote-id)
+      remote-id)))
+
 (defn- proxy-metadata
-  [origin-url agent-id agent-info]
+  [origin-url remote-id local-id agent-info]
   (cond-> {:proxy? true
            :remote? true
            :origin-url origin-url}
-    (proxy-home-site origin-url agent-id agent-info)
-    (assoc :home-site (keyword (proxy-home-site origin-url agent-id agent-info)))))
+    (proxy-home-site origin-url remote-id agent-info)
+    (assoc :home-site (keyword (proxy-home-site origin-url remote-id agent-info)))
+    (not= remote-id local-id)
+    (assoc :remote-agent-id remote-id)))
+
+(defn- own-site-reflection?
+  "True when a peer's roster entry is really one of OUR agents reflected back
+   (the peer's proxy of us). Importing it would create a loop-back proxy that
+   routes our own agent through the peer. Detected by home-site = our site,
+   or the entry's own origin-url = our self-url."
+  [remote-id agent-info]
+  (let [home-site (proxy-home-site nil remote-id agent-info)
+        local-site (site-prefix)
+        entry-origin (get-in agent-info [:metadata :origin-url])
+        self (self-url)]
+    (boolean
+     (or (and home-site local-site (= home-site local-site))
+         (and self entry-origin (= entry-origin self))))))
 
 (defn register-proxy-agent!
   "Create or refresh a federation proxy for a remote agent.
 
+   The proxy registers under `proxy-local-id` (bare remote ids are qualified
+   with their home site) and forwards invokes using the REMOTE's own id.
    Existing real local agents are preserved unless the id itself proves the
    local record is a remote-home phantom on this server."
   [origin-url agent-id agent-info]
-  (let [aid (parse-agent-id agent-id)
+  (let [remote-id (parse-agent-id agent-id)
         agent-type (parse-agent-type (:type agent-info))
         capabilities (->> (:capabilities agent-info)
                           (keep parse-capability)
                           vec)
+        aid (when (seq remote-id)
+              (proxy-local-id origin-url remote-id agent-info))
         existing (when (seq aid) (reg/get-agent aid))]
     (cond
-      (str/blank? aid)
+      (str/blank? remote-id)
       {:ok false :action :invalid-agent-id}
 
       (nil? agent-type)
       {:ok false :agent-id aid :action :invalid-type}
 
+      ;; A peer's reflection of one of our own agents must not import: the
+      ;; real record lives here, and a proxy would loop invokes through the
+      ;; peer and back.
+      (own-site-reflection? remote-id agent-info)
+      {:ok true :agent-id remote-id :action :skipped-own-site}
+
       ;; Never let a remote proxy occupy an operator-facing local continuity id.
       ;; `cr new` and similar local REPL flows assume these ids are either owned
       ;; by a real local agent or unbound, never silently rebound to a peer.
       ;; If a protected id is already contaminated by proxy state, evict it.
+      ;; (Only reachable for bare ids with no resolvable home site — a known
+      ;; home site qualifies the id off the protected list.)
       (and (protected-local-agent-id? aid)
            (or (nil? existing)
                (get-in existing [:agent/metadata :proxy?])))
@@ -463,18 +505,18 @@
       (do
         (reg/update-agent! aid
                            :agent/type agent-type
-                           :agent/invoke-fn (make-proxy-invoke-fn origin-url aid)
+                           :agent/invoke-fn (make-proxy-invoke-fn origin-url remote-id)
                            :agent/capabilities capabilities
-                           :agent/metadata (proxy-metadata origin-url aid agent-info))
+                           :agent/metadata (proxy-metadata origin-url remote-id aid agent-info))
         {:ok true :agent-id aid :action :updated})
 
       :else
       (let [result (reg/register-agent!
                     {:agent-id {:id/value aid :id/type :continuity}
                      :type agent-type
-                     :invoke-fn (make-proxy-invoke-fn origin-url aid)
+                     :invoke-fn (make-proxy-invoke-fn origin-url remote-id)
                      :capabilities capabilities
-                     :metadata (proxy-metadata origin-url aid agent-info)})]
+                     :metadata (proxy-metadata origin-url remote-id aid agent-info)})]
         (if (and (map? result) (= false (:ok result)))
           {:ok false
            :agent-id aid
@@ -610,7 +652,15 @@
     (let [now (long (or now-ms (current-ms)))
           parsed (fetch-fn peer-url)
           agents (or (:agents parsed) {})
-          roster-ids (set (keep parse-agent-id (keys agents)))
+          ;; prune compares against the ids proxies are REGISTERED under —
+          ;; qualified via proxy-local-id, same as register-proxy-agent!.
+          ;; Side effect of the qualification migration: leftover bare-id
+          ;; proxies from the pre-qualification code fall out of this set and
+          ;; are pruned on the first tick, replaced by their qualified twins.
+          roster-ids (set (keep (fn [[k info]]
+                                  (when-let [rid (parse-agent-id k)]
+                                    (proxy-local-id peer-url rid info)))
+                                agents))
           results (->> agents
                        (map (fn [[agent-id agent-info]]
                               (register-proxy-agent! peer-url agent-id agent-info)))
