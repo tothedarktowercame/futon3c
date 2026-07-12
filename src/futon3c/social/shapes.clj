@@ -34,8 +34,14 @@
    [:id/type AgentIdType]])
 
 (def AgentType
-  "Agent type — what kind of agent this is."
-  [:enum :claude :codex :tickle :corpus :mock :peripheral])
+  "Agent type — what kind of agent this is.
+   NB: this enum gates EVERY registry validation — S-presence validates the
+   whole AgentRegistryShape per WS handshake, so one registered agent with a
+   type outside this enum rejects ALL handshakes with :invalid-registry
+   (live failure 2026-07-12: zai-1 [:type :zai] on the hub blocked the
+   laptop codex-3 WS connect). Registering a new agent type REQUIRES adding
+   it here first."
+  [:enum :claude :codex :zai :tickle :corpus :mock :peripheral])
 
 ;; =============================================================================
 ;; Pipeline input — agent connection event
