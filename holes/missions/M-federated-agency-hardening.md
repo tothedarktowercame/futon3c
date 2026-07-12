@@ -437,6 +437,63 @@ Deferred: no Agency/Clojure changes, no systemd unit edits, no live bridge resta
 WS reverse-invoke changes. Running bridges remain untouched until Joe arms the flag and
 restarts a bridge unit.
 
+## Checkpoint CP-B slice 4 — 2026-07-12 (laptop roster-completeness: arm sync daemon)
+
+**Trigger:** claude-6 (on lucy/London) relayed via IRC that the laptop's roster
+was incomplete — London's `claude-6` was missing from the laptop's roster.
+
+**Diagnosis (live, this session):** Compared rosters across all three boxes:
+
+| Agent | Home | Laptop | London | Chicago |
+|-------|------|--------|--------|---------|
+| claude-6 | London | **MISSING** | ✓ local | ✓ proxy |
+| claude-1 | laptop | ✓ local | MISSING | MISSING |
+| codex-2 | laptop | ✓ local | MISSING | MISSING |
+| zai-2..10 | laptop | ✓ local | MISSING (only zai-1) | MISSING (only zai-1) |
+
+**Root cause — two asymmetric gaps:**
+
+1. **London→laptop (sync-pull):** The laptop peers with London
+   (`FUTON3C_PEERS=http://172.236.28.208:7070`) and runs a one-shot
+   `sync-peers!` at boot. But `claude-6` appeared on London AFTER the laptop's
+   last boot, so it was never pulled. The continuous sync daemon
+   (`start-sync-daemon!`, implemented in CP-B slice 2) was default-off
+   (`FUTON3C_FED_SYNC_INTERVAL_MS=0`), so no subsequent tick caught it.
+
+2. **Laptop→London (announce):** The laptop has no `FUTON3C_SELF_URL`, so
+   `announce!` silently skips every registration with `:no-self-url` (confirmed
+   in test output). London never learns about laptop agents `claude-1`,
+   `codex-2`, `zai-2..10`. London can't sync-pull from the laptop either because
+   the laptop binds `127.0.0.1` (not reachable from remote boxes), and London's
+   env only peers with the laptop if `FUTON3C_LAPTOP_URL` is set (it isn't).
+
+**Fix applied (commit `df1d23b`):**
+
+- `scripts/dev-laptop-env`: armed the continuous sync daemon with
+  `FUTON3C_FED_SYNC_INTERVAL_MS=60000` (1 min) and
+  `FUTON3C_FED_SYNC_MAX_BACKOFF_MS=300000` (5 min backoff cap). This closes gap
+  #1 — on next laptop restart, `claude-6` and all future London agents propagate
+  within 1 minute of appearing on London. Peer fetch failures skip the tick
+  rather than pruning proxies (AG-3/AG-4 liveness model from CP-B slice 2).
+
+- Documented why `FUTON3C_SELF_URL` is intentionally unset on the laptop: it
+  binds `127.0.0.1`, so London can't reach it back. The laptop→London announce
+  direction (gap #2) requires a network-level path — Joe's topology decision
+  (tunnel, public bind, or London peering with the laptop via SSH-forwarded
+  port). Until then, London-side agents can't invoke laptop-only agents
+  (`claude-1`, `codex-2`, `zai-2..10`) by proxy.
+
+**Gates:** bash syntax check clean (`bash -n`). No Clojure changed (env script
+only). `clojure -M:test -n futon3c.agency.federation-sync-test -n
+futon3c.agency.federation-registration-test -n futon3c.agency.federation-test`
+passed 30 tests / 112 assertions. No JVM/server restart performed — the new env
+vars take effect on next `./scripts/dev-laptop-env` boot.
+
+**Deferred:** gap #2 (laptop→London) needs Joe's network decision. London should
+also arm its own `FUTON3C_FED_SYNC_INTERVAL_MS` for the London→Chicago and
+London→laptop directions (that's London-side work for claude-6). No live restart
+performed.
+
 ## Cross-references
 
 - `M-agency-hardening.md` — the local/IRC layer (closed); the single-box predecessor.
