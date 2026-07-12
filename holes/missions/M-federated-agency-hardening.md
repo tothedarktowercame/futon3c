@@ -666,3 +666,43 @@ limits laptop→London mirroring equally until ids are site-qualified.
 Gates: bash syntax clean. The federation namespace reloaded without error;
 daemon ticking verified. No full JVM restart performed (hot-reload + Drawbridge
 eval only). Commits pushed to `origin/agency-fixes-2026-06-11` (`ba4f4a0`).
+
+## Checkpoint CP-D — 2026-07-12 (import-seam site-qualification: locals bare, imports qualified)
+
+**Design (Joe):** rosters need not be literally identical — "I like being able to use
+the local short form; 'tell codex-1' should be automatically localized." So identity is
+(site, local-name) with the split at the IMPORT seam: local agents keep bare ids
+(bare addressing always resolves on-box), and imported proxies register site-qualified
+(`proxy-local-id`: laptop's codex-1 → oxf-codex-1 on lucy), forwarding invokes with the
+remote's own bare id (`:remote-agent-id`). Nothing is renamed at its home box — the
+disruptive "rename at the source" variant died here.
+
+**This dissolves the collision gap** (Chicago's claude-2, the 7 mutually-invisible
+laptop/London ids): same-named agents on different sites now coexist as qualified
+proxies. Guards added: `own-site-reflection?` (a peer's proxy of OUR agent is skipped,
+never imported as a loop-back; detected by home-site = our site or entry origin-url =
+our self-url) and direct-presence dedup (codex-3's ws-bridge row suppresses the proxy
+import of the same agent). Prune compares qualified ids and excludes reflections, which
+makes migration self-healing: pre-qualification bare proxies and pre-guard loop-backs
+are pruned on the first tick after upgrade.
+
+**Verified live on lucy:** one reload+tick took the roster from 21 to 31 agents with
+the full laptop contingent visible — `oxf | claude-1…5, codex-1…3, zai-1…12` — bare
+zai proxies migrated to qualified twins, codex-3 single-rowed. Earlier same evening the
+laptop had come fully online (zai-3's deploy: tunnel `ssh -R 17070:localhost:7070`,
+self-url, announce push — its agents auto-appeared on lucy within seconds of the
+announce, initially grouped lon until lucy's `oxf=tunnel` peer entry provided the
+url→site mapping; persisted in dev-linode-env `d0c6f33`).
+
+**Commits:** `fbe3376` (qualification + guards), dedup + prune-exclusion follow-ups
+(branch tip). Tests: federation sync/registration/logic suites green (38/139 on the
+sync+reg subset; run `env -u FUTON3C_SITE`). Chicago belled and laptop IRC'd to pull —
+the laptop urgently (its pre-guard code would import loop-backs of its own agents from
+lucy's now-qualified roster; self-heals once it upgrades).
+
+**Still open after CP-D:** bare-id resolution for OUTBOUND addressing is implicit
+(bare = local registry hit; qualified = proxy hit) — a dedicated resolver at the
+bell/invoke seams is only needed if we later want bare ids to fall through to a unique
+remote match. Honest route labels for proxies (`proxy → origin` instead of `local`),
+codex-3 execution bridge (presence-only), laptop FUTON3C_SITE=oxf adoption (now purely
+cosmetic for its own display), tunnel durability (systemd unit / autossh on the laptop).
