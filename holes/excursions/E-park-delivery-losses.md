@@ -123,6 +123,24 @@ choose ONE delivery path per resume (WS when connected, else inbox — with the
 inbox as fallback only after a WS delivery timeout), and the elisp should
 dedup by park-id regardless (zai-15's ack/dedup work covers the client half).
 
+## Finding 6 — the deadline backstop never woke anyone (FIXED 2026-07-13)
+
+`sweep-deadlines!` treated a past-deadline park as a RETRACTION: drop the
+record, print "deadline expired, retracted" to JVM stdout, deliver nothing.
+Only no-dep timer parks got `resume!`. The original VERIFY case 5 explicitly
+specified this ("expires WITHOUT resuming") — so the implementation was
+faithful to a spec that contradicted the README's own "deadline backstop"
+framing and every operational wake payload written against it. Both smoke
+tests proved it live: their deadline "wakes" were silent drops (smoke 1's
+silence was previously mis-attributed wholly to bugs 0/1).
+
+**Semantics changed deliberately:** expiry now calls `resume!` with
+`:deadline-expired? true`, and `assemble-resume-prompt` renders
+"DEADLINE EXPIRED with N of M dependencies complete — the awaited work did
+NOT finish". Case 5 rewritten to specify the wake. Commit `ec53990`,
+live-patched, parked-on tests 11/36 green. Smoke test 3 armed as the
+acceptance run of the repaired path.
+
 ## Ownership
 
 Fix 1 done (claude-6, review-fix carve-out). Bugs 2 and 3 + finding-0
