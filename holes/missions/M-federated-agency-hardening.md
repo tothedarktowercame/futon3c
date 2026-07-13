@@ -877,3 +877,16 @@ not a synchronous proxy wait — the CP-F uplink invoke path should carry the
 caller's timeout end-to-end rather than compounding fixed per-hop caps; (b)
 proxy `:invoking` should be leased/TTL'd or reconciled from the home box on
 sync, never left to a response that may never arrive.
+
+**Gate datapoint (2026-07-13, CP-F verification on lucy):** the full suite
+cannot currently go green on lucy for a reason UNRELATED to CP-F:
+`futon3c.agency.turn-queue-test` is nondeterministically broken here — in the
+full gate it wedged hard (thread dump: main parked at turn_queue_test.clj:39,
+`@started` never delivered, drainer never ran the first job; JVM CPU flat),
+and run SOLO it failed once and hung once. No recent commit touches
+turn-queue; this extends CP-E item 8 (test-suite hygiene) with a concurrency
+flake, not just an env-var dependency. The CP-F-relevant gate was run
+explicitly instead and is GREEN: fed-uplink + federation (sync, registration,
+logic, core) + transport (protocol, ws, ws-invoke) = 123 tests, 381
+assertions, 0 failures. Chicago's own full-gate run (per the dispatch bell)
+will provide the cross-box comparison when its watcher reports.
