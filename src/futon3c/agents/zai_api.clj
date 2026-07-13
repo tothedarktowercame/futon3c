@@ -7,6 +7,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agents.zaif-controller :as zaif]
+            [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-backend :as memory-backend]
             [futon3c.peripheral.real-backend :as real-backend]
             [futon3c.peripheral.tools :as tools])
@@ -308,7 +310,8 @@
 (declare emit-bug-records!)
 
 (defn- execute-tool
-  [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom]} tool-call]
+  [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom
+                   evidence-store turn-id profile]} tool-call]
   (let [name (get-in tool-call [:function :name])
         args (parse-arguments (get-in tool-call [:function :arguments]))
         fail (fn [msg] {:ok false :error msg})
@@ -501,7 +504,11 @@
                                               (:prediction_errors args)))
                                  (seq (:suggestions args)) (assoc :suggestions (vec (:suggestions args))))])]
             ;; ZU-4: session-end sweep — emit :bug/* records for tool failures.
-            (emit-bug-records! {:agent-id agent-id :sid (some-> session-id-atom deref str)})
+            (emit-bug-records! {:agent-id agent-id
+                                :sid (some-> session-id-atom deref str)
+                                :turn-id turn-id
+                                :profile profile
+                                :evidence-store evidence-store})
             par-result)
 
           "irc_send"
@@ -592,9 +599,6 @@
 (def ^:private transcript-args-cap 2048)
 (def ^:private transcript-preview-cap 240)
 
-(defn- transcript-enabled? []
-  (not= "0" (getenv "FUTON3C_ZAI_TRANSCRIPT")))
-
 (defn- transcript-truncate [s cap]
   (let [s (str s)]
     (if (> (count s) cap)
@@ -612,33 +616,83 @@
      :chars (count s)
      :preview (transcript-truncate s transcript-preview-cap)}))
 
+(defonce ^:private !transcript-persistence-status
+  (atom {:ok-count 0 :failure-count 0 :last-error nil :last-evidence-id nil}))
+
+(defn transcript-persistence-status
+  "Return loss-accounting counters for ZAI/ZAIF transcript writes."
+  []
+  @!transcript-persistence-status)
+
+(defn- persist-transcript-entry!
+  "Synchronously append ENTRY and fail the turn if durable evidence is lost."
+  [evidence-store entry]
+  (let [evidence-id (:evidence/id entry)]
+    (try
+      (when-not evidence-store
+        (throw (ex-info "ZAI transcript evidence store is unavailable"
+                        {:evidence-id evidence-id})))
+      (let [receipt (boundary/append! evidence-store entry)]
+        (when-not (:ok receipt)
+          (throw (ex-info "ZAI transcript persistence was rejected"
+                          {:evidence-id evidence-id :receipt receipt})))
+        (swap! !transcript-persistence-status
+               (fn [status]
+                 (-> status
+                     (update :ok-count (fnil inc 0))
+                     (assoc :last-error nil :last-evidence-id evidence-id))))
+        receipt)
+      (catch Throwable t
+        (swap! !transcript-persistence-status
+               (fn [status]
+                 (-> status
+                     (update :failure-count (fnil inc 0))
+                     (assoc :last-error (.getMessage t)
+                            :last-evidence-id evidence-id))))
+        (binding [*out* *err*]
+          (println (str "[zai-transcript] FATAL " evidence-id ": " (.getMessage t)))
+          (flush))
+        (throw t)))))
+
+(defn- transcript-entry
+  [{:keys [agent-id sid turn-id profile event body]}]
+  {:evidence/id (str "e-" (UUID/randomUUID))
+   :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
+   :evidence/type :coordination
+   :evidence/claim-type :step
+   :evidence/author (str agent-id)
+   :evidence/session-id (str sid)
+   :evidence/at (str (java.time.Instant/now))
+   :evidence/tags [:transcript event profile]
+   :evidence/body (merge {:event event
+                          :turn-id (str turn-id)
+                          :profile profile}
+                         body)})
+
+(defn- persist-turn-start!
+  "Persist the exact model-facing PROMPT before a ZAI/ZAIF turn begins."
+  [{:keys [evidence-store agent-id sid turn-id profile prompt]}]
+  (persist-transcript-entry!
+   evidence-store
+   (transcript-entry
+    {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+     :event :turn-start
+     :body {:prompt (str prompt)
+            :prompt-chars (count (str prompt))}})))
+
 (defn- persist-round!
-  "Append one turn-round transcript entry to the evidence store.
-   Fire-and-forget in a future: persistence failure must never affect the
-   turn (mirrors sink!). calls: [{:tool :args :result} ...]."
-  [{:keys [agent-id sid round text calls final?]}]
-  (when (transcript-enabled?)
-    (future
-      (try
-        (when-let [!store (try (requiring-resolve 'futon3c.dev/!evidence-store)
-                               (catch Throwable _ nil))]
-          (when-let [store (some-> !store deref deref)]
-            (let [append! (requiring-resolve 'futon3c.evidence.boundary/append!)]
-              (append! store
-                       {:evidence/id (str "e-" (UUID/randomUUID))
-                        :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
-                        :evidence/type :coordination
-                        :evidence/claim-type :step
-                        :evidence/author (str agent-id)
-                        :evidence/session-id (str sid)
-                        :evidence/at (str (java.time.Instant/now))
-                        :evidence/tags [:transcript :turn-round]
-                        :evidence/body {:event :turn-round
-                                        :round round
-                                        :final (boolean final?)
-                                        :text (transcript-truncate text transcript-text-cap)
-                                        :calls (vec calls)}}))))
-        (catch Throwable _)))))
+  "Append one durable, turn-addressable round record.
+CALLS contains maps of tool name, arguments, and result digest."
+  [{:keys [evidence-store agent-id sid turn-id profile round text calls final?]}]
+  (persist-transcript-entry!
+   evidence-store
+   (transcript-entry
+    {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+     :event :turn-round
+     :body {:round round
+            :final (boolean final?)
+            :text (transcript-truncate text transcript-text-cap)
+            :calls (vec calls)}})))
 
 (defn- sha256-8 [s]
   (let [md (java.security.MessageDigest/getInstance "SHA-256")]
@@ -648,51 +702,46 @@
   "ZU-4 CI-in-the-loop: sweep the session's transcript for tool-call failures
    and emit each as a typed :bug/* event into the evidence store. Called from
    the par_punctuate path (session-end sweep). Failures are deduplicated by
-   (tool, args-sha) with a count. Fire-and-forget: persistence failure must
-   never affect the turn."
-  [{:keys [agent-id sid]}]
-  (when (transcript-enabled?)
-    (future
-      (try
-        (when-let [!store (requiring-resolve 'futon3c.dev/!evidence-store)]
-          (when-let [store (some-> !store deref deref)]
-            (when-let [search-fn (requiring-resolve 'futon3c.evidence.store/query*)]
-              (when-let [append! (requiring-resolve 'futon3c.evidence.boundary/append!)]
-                (let [results (search-fn store {:query/author (str agent-id)
+   (tool, args-sha) with a count. Writes use the same fail-closed boundary as
+   the transcript they summarize."
+  [{:keys [agent-id sid turn-id profile evidence-store]}]
+  (let [results (estore/query* evidence-store {:query/author (str agent-id)
                                                 :query/session-id (str sid)
                                                 :query/tags [:transcript]
                                                 :query/limit 100})
-                      entries (if (map? results) (:items results) results)
-                      failed-calls (for [e entries
-                                         :let [calls (get-in e [:evidence/body :calls])]
-                                         call calls
-                                         :when (:error? call)]
-                                     call)
-                      grouped (reduce
-                               (fn [m call]
-                                 (let [k [(:tool call) (sha256-8 (:args call))]]
-                                   (update m k
-                                           (fn [v]
-                                             (-> (or v call)
-                                                 (assoc :count (inc (long (:count v 0)))))))))
-                               {} failed-calls)]
-                  (doseq [[[_tool _sha] bug] grouped]
-                    (append! store
-                             {:evidence/id (str "bug-" (UUID/randomUUID))
-                              :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
-                              :evidence/type :coordination
-                              :evidence/claim-type :step
-                              :evidence/author (str agent-id)
-                              :evidence/session-id (str sid)
-                              :evidence/at (str (java.time.Instant/now))
-                              :evidence/tags [:bug :tool-failure]
-                              :evidence/body {:event :bug
-                                              :tool (:tool bug)
-                                              :args-sha (sha256-8 (:args bug))
-                                              :error (:error-text bug "unknown")
-                                              :count (:count bug 1)
-                                              :session-id (str sid)}})))))))
-        (catch Throwable _)))))
+        entries (if (map? results) (:items results) results)
+        failed-calls (for [e entries
+                           :let [calls (get-in e [:evidence/body :calls])]
+                           call calls
+                           :when (:error? call)]
+                       call)
+        grouped (reduce
+                 (fn [m call]
+                   (let [k [(:tool call) (sha256-8 (:args call))]]
+                     (update m k
+                             (fn [v]
+                               (-> (or v call)
+                                   (assoc :count (inc (long (:count v 0)))))))))
+                 {} failed-calls)]
+    (doseq [[[_tool _sha] bug] grouped]
+      (persist-transcript-entry!
+       evidence-store
+       {:evidence/id (str "bug-" (UUID/randomUUID))
+        :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
+        :evidence/type :coordination
+        :evidence/claim-type :step
+        :evidence/author (str agent-id)
+        :evidence/session-id (str sid)
+        :evidence/at (str (java.time.Instant/now))
+        :evidence/tags [:bug :tool-failure profile]
+        :evidence/body {:event :bug
+                        :turn-id (some-> turn-id str)
+                        :profile profile
+                        :tool (:tool bug)
+                        :args-sha (sha256-8 (:args bug))
+                        :error (:error-text bug "unknown")
+                        :count (:count bug 1)
+                        :session-id (str sid)}}))))
 (defn- transcript-calls
   "Zip tool-call details with their executed results into the persisted
    call records: full tool name + (truncated) args, digest of the result.
@@ -763,7 +812,7 @@
    :observations (or observations {})})
 
 (defn- maybe-zaif-decision!
-  [{:keys [profile zaif-inputs-fn agent-id sid] :as ctx}]
+  [{:keys [profile zaif-inputs-fn agent-id sid evidence-store] :as ctx}]
   (when (= :zaif (resolve-profile profile))
     (let [inputs (if zaif-inputs-fn
                    (zaif-inputs-fn ctx)
@@ -771,6 +820,8 @@
           decision (zaif/decide inputs)]
       (zaif/persist-decision! {:agent-id agent-id
                                :sid sid
+                               :turn-id (:turn-id ctx)
+                               :evidence-store evidence-store
                                :decision decision
                                :inputs inputs})
       decision)))
@@ -815,7 +866,11 @@
                 (let [executed (mapv (fn [tc]
                                        (detect-stuck!
                                         !repeats tc
-                                        (try (execute-tool backend tool-opts tc)
+                                        (try (execute-tool backend
+                                                           (assoc tool-opts
+                                                                  :turn-id (:turn-id ctx)
+                                                                  :profile (:profile ctx))
+                                                           tc)
                                              (catch Throwable t
                                                (let [d (tool-call-detail
                                                         tc
@@ -851,13 +906,19 @@
                                                  (str (or (:error result) "unknown error"))
                                                  transcript-preview-cap)
                                                 "]")}))
-                  (persist-round! {:agent-id agent-id :sid sid :round round-n
+                  (persist-round! {:evidence-store (:evidence-store ctx)
+                                   :agent-id agent-id :sid sid
+                                   :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                   :round round-n
                                    :text text
                                    :calls (transcript-calls details executed)})
                   (swap! !messages into (mapv :message executed))
                   (recur (dec remaining) (str final-text text) auto-continues true (inc round-n)))
                 (do
-                  (persist-round! {:agent-id agent-id :sid sid :round round-n
+                  (persist-round! {:evidence-store (:evidence-store ctx)
+                                   :agent-id agent-id :sid sid
+                                   :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                   :round round-n
                                    :text (if (str/blank? text) final-text text)
                                    :calls [] :final? true})
                   {:result (if (str/blank? text) final-text text)
@@ -869,6 +930,9 @@
            api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn
            memory-mode auto-continue-max profile zaif-inputs-fn]
     :or {agent-id "zai" timeout-ms 300000 memory-mode :full}}]
+  (when-not evidence-store
+    (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
+                    {:agent-id agent-id})))
   (let [client (HttpClient/newHttpClient)
         key (or api-key (resolve-api-key))
         cwd* (or cwd (System/getProperty "user.dir"))
@@ -921,10 +985,12 @@
                    :irc-recent-fn irc-recent-fn
                    :agent-id agent-id
                    :cwd cwd*
+                   :evidence-store evidence-store
                    :session-id-atom !session-id}]
     (fn [prompt incoming-session-id]
       (let [key* (or key (resolve-api-key))
             sid (or incoming-session-id @!session-id sid0)
+            turn-id (str "zai-turn-" (UUID/randomUUID))
             ;; stuck-means-signal detector (mistakes-ledger §11): consecutive
             ;; identical tool calls with identical results get a warning
             ;; injected at 3 and a stop-and-bell instruction at 5. Fresh per
@@ -957,6 +1023,12 @@
                 (when-not (str/blank? rehydration)
                   (swap! !messages update-in [0 :content] str "\n\n" rehydration)))
               (catch Throwable _))))
+        (persist-turn-start! {:evidence-store evidence-store
+                              :agent-id agent-id
+                              :sid sid
+                              :turn-id turn-id
+                              :profile profile*
+                              :prompt prompt})
         (swap! !messages conj {:role "user" :content (str prompt)})
         (run-tool-rounds! {:client client
                            :opts opts
@@ -966,6 +1038,8 @@
                            :tool-opts tool-opts
                            :agent-id agent-id
                            :sid sid
+                           :turn-id turn-id
+                           :evidence-store evidence-store
                            :!repeats !repeats
                            :profile profile*
                            :zaif-inputs-fn zaif-inputs-fn

@@ -3,7 +3,8 @@
 
    The model never sees these terms. The runner may use the selected arm around
    the model and records the decision as evidence for later scoring."
-  (:require [clojure.string :as str])
+  (:require [clojure.string :as str]
+            [futon3c.evidence.boundary :as boundary])
   (:import [java.security MessageDigest]
            [java.util UUID]))
 
@@ -131,7 +132,7 @@
    :chars (count (pr-str inputs))})
 
 (defn decision-evidence-entry
-  [{:keys [agent-id sid decision inputs]}]
+  [{:keys [agent-id sid turn-id decision inputs]}]
   {:evidence/id (str "e-" (UUID/randomUUID))
    :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
    :evidence/type :coordination
@@ -141,6 +142,7 @@
    :evidence/at (str (java.time.Instant/now))
    :evidence/tags [:zaif :arm-choice]
    :evidence/body {:event :zaif-arm-choice
+                   :turn-id (some-> turn-id str)
                    :arm (:arm decision)
                    :g-terms (:g-terms decision)
                    :gamma-used (:gamma-used decision)
@@ -148,18 +150,44 @@
                    :why (:why decision)
                    :inputs-digest (inputs-digest inputs)}})
 
+(defonce ^:private !persistence-status
+  (atom {:ok-count 0 :failure-count 0 :last-error nil :last-evidence-id nil}))
+
+(defn persistence-status
+  "Return loss-accounting counters for ZAIF arm-decision writes."
+  []
+  @!persistence-status)
+
 (defn persist-decision!
-  "Fire-and-forget persistence. Store lookup is dynamic so a live-loaded runner
-   picks up the current dev evidence store; failures never affect the turn."
-  [ctx]
-  (future
+  "Synchronously persist a ZAIF arm decision through the durable boundary."
+  [{:keys [evidence-store] :as ctx}]
+  (let [entry (decision-evidence-entry ctx)
+        evidence-id (:evidence/id entry)]
     (try
-      (when-let [!store (try (requiring-resolve 'futon3c.dev/!evidence-store)
-                             (catch Throwable _ nil))]
-        (when-let [store (some-> !store deref deref)]
-          (let [append! (requiring-resolve 'futon3c.evidence.boundary/append!)]
-            (append! store (decision-evidence-entry ctx)))))
-      (catch Throwable _ nil))))
+      (when-not evidence-store
+        (throw (ex-info "ZAIF decision evidence store is unavailable"
+                        {:agent-id (:agent-id ctx) :turn-id (:turn-id ctx)})))
+      (let [receipt (boundary/append! evidence-store entry)]
+        (when-not (:ok receipt)
+          (throw (ex-info "ZAIF decision persistence was rejected"
+                          {:evidence-id evidence-id :receipt receipt})))
+        (swap! !persistence-status
+               (fn [status]
+                 (-> status
+                     (update :ok-count (fnil inc 0))
+                     (assoc :last-error nil :last-evidence-id evidence-id))))
+        receipt)
+      (catch Throwable t
+        (swap! !persistence-status
+               (fn [status]
+                 (-> status
+                     (update :failure-count (fnil inc 0))
+                     (assoc :last-error (.getMessage t)
+                            :last-evidence-id evidence-id))))
+        (binding [*out* *err*]
+          (println (str "[zaif-evidence] FATAL " evidence-id ": " (.getMessage t)))
+          (flush))
+        (throw t)))))
 
 (defn env-profile
   [s]

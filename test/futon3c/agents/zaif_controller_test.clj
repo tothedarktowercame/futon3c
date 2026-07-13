@@ -73,6 +73,19 @@
         (is (= :act (get-in @persisted [:decision :arm])))
         (is (= "M-z" (get-in @persisted [:inputs :mission])))))))
 
+(deftest zaif-persistence-failure-is-counted-and-raised
+  (let [before (:failure-count (zaif/persistence-status))]
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (zaif/persist-decision!
+                  {:agent-id "zai-test"
+                   :sid "sid"
+                   :turn-id "turn-test"
+                   :decision {:arm :yield :g-terms {}}
+                   :inputs {}})))
+    (let [status (zaif/persistence-status)]
+      (is (= (inc before) (:failure-count status)))
+      (is (string? (:last-error status))))))
+
 (deftest calibration-ask-arm-unreachable-at-shipped-cost
   (testing "ZU-2 calibration: at cost=0.65, :ask cannot win against realistic act-value"
     ;; The :ask value = c-uncertainty - 0.65. Even at c-uncertainty=0.7
