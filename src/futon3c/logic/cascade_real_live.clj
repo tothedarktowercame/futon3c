@@ -27,8 +27,13 @@
             [futon3c.logic.cascade-real :as cr])
   (:import [java.net URLEncoder]))
 
-(def ^:private FUTON1A (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def ^:private substrate-url
+  "Substrate-2 hyperedge API. Do not read FUTON1A_URL here: this JVM may bind
+   that env var to the futon1b evidence store (:7073), whose API has no
+   /hyperedges route and can make the live cascade page appear dead."
+  (or (System/getenv "FUTON1A_HYPEREDGE_URL") "http://127.0.0.1:7071"))
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
+(def ^:private fetch-timeout-ms 5000)
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)
@@ -38,8 +43,10 @@
    seq of hyperedge maps, or [] on any error (the gate degrades to 'no live rows
    for this dimension', never throws)."
   [hx-type]
-  (let [url  (str FUTON1A "/api/alpha/hyperedges?type=" (URLEncoder/encode hx-type "UTF-8"))
-        resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
+  (let [url  (str substrate-url "/api/alpha/hyperedges?type=" (URLEncoder/encode hx-type "UTF-8"))
+        resp (try (http/get url {:headers {"Accept" "application/edn"}
+                                 :throw false
+                                 :timeout fetch-timeout-ms})
                   (catch Exception _ nil))]
     (or (when (and resp (= 200 (:status resp)) (string? (:body resp)))
           (try (:hyperedges (edn/read-string (:body resp))) (catch Exception _ nil)))
@@ -191,6 +198,33 @@
 (defn- mission-nodes [extract]
   (set (map #(nth % 2) (filter #(= :mission (nth % 3)) (extract)))))
 
+(defn- claims-consistent?
+  "Fast UI consistency check: a shared real node may not be claimed with two
+   different types. The full STANDARD-VERIFY gate remains `verify-live`; the
+   live HTML summary should not run core.logic on every poll."
+  [claims]
+  (not-any? (fn [[_ types]] (> (count types) 1))
+            (reduce (fn [acc [_rel _dim node type]]
+                      (update acc node (fnil conj #{}) type))
+                    {}
+                    claims)))
+
+(defn- summary-edge-map
+  []
+  {"clock/clocked-on" (fetch-edges "clock/clocked-on")
+   "mine/meme" (fetch-edges "mine/meme")
+   "code/v05/mined-move" (fetch-edges "code/v05/mined-move")
+   "cascade/cluster-member" (fetch-edges "cascade/cluster-member")
+   "cascade/hole-target" (fetch-edges "cascade/hole-target")})
+
+(defn- summary-claims
+  [edges]
+  {:O3 (o3-claims-from (get edges "clock/clocked-on"))
+   :O2 (o2-meme-claims-from (get edges "mine/meme"))
+   :O1 (o1-mined-move-claims-from (get edges "code/v05/mined-move"))
+   :O4 (o4-cluster-claims-from (get edges "cascade/cluster-member"))
+   :O5 (o5-hole-claims-from (get edges "cascade/hole-target"))})
+
 (defn cascade-real-summary
   "A live snapshot of the COMPOSING cascade for the operator view: per-dimension
    claim counts, the cross-dimension shared-mission-node overlaps (the composition
@@ -199,20 +233,22 @@
    substrate-2 extractors — this is the 'real data' the pipeline-pattern-cascade
    sketch is made of."
   []
-  (let [v   (verify-live)
-        o1  (mission-nodes #(o1-mined-move-claims-from (fetch-edges "code/v05/mined-move")))
-        o3  (mission-nodes #(o3-claims-from (fetch-edges "clock/clocked-on")))
-        o4  (mission-nodes #(o4-cluster-claims-from (fetch-edges "cascade/cluster-member")))
-        o5  (mission-nodes #(o5-hole-claims-from (fetch-edges "cascade/hole-target")))
+  (let [edges (summary-edge-map)
+        claims-by-dim (summary-claims edges)
+        claims (mapcat identity (vals claims-by-dim))
+        o1  (mission-nodes #(get claims-by-dim :O1))
+        o3  (mission-nodes #(get claims-by-dim :O3))
+        o4  (mission-nodes #(get claims-by-dim :O4))
+        o5  (mission-nodes #(get claims-by-dim :O5))
         n   (fn [a b] (count (set/intersection a b)))]
     {:as-of-ms     (System/currentTimeMillis)
-     :consistent?  (:consistent? v)
-     :dimensions   (:live-dimensions v)
+     :consistent?  (claims-consistent? claims)
+     :dimensions   (into {} (map (fn [[dim xs]] [dim (count xs)]) claims-by-dim))
      :spine        {:canonical-mission-nodes (count (set/union o1 o3 o4 o5))
                     :O1-missions (count o1) :O4-missions (count o4)}
      :composition  {:O1xO4 (n o1 o4) :O5xO1 (n o5 o1) :O4xO3 (n o4 o3) :O1xO3 (n o1 o3)}
      :holes        (frequencies (keep #(prop (:hx/props %) :hole-kind)
-                                      (fetch-edges "cascade/hole-target")))
+                                      (get edges "cascade/hole-target")))
      :standards    {:s1-regenerates true :s2-evidence true :s3-reconstitution true
                     :s4-honest-holes (boolean (seq o5)) :s5-composed (pos? (n o1 o4))}
      :owners       {:O1 "claude-2" :O3 "claude-4" :O4 "claude-10"

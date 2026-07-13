@@ -109,6 +109,25 @@
       (is (some #{"mission:M-x"} (:composition-violations v)))
       (is (false? (:consistent? v))))))
 
+(deftest cascade-summary-uses-fast-claim-consistency
+  (testing "the UI summary computes dimensions and composition without running the full logic gate"
+    (let [edges {"clock/clocked-on" sample-clock-edges
+                 "mine/meme" [{:hx/endpoints ["meme:ask-abc123"]}]
+                 "code/v05/mined-move" [{:hx/endpoints ["futon3c-d/mission/autoclock-in"
+                                                        "futon3c-d/mission/autoclock-in-head"]}]
+                 "cascade/cluster-member" [{:hx/endpoints ["cascade/cluster/x"
+                                                           "futon3c-d/mission/autoclock-in"]}]
+                 "cascade/hole-target" [{:hx/endpoints ["cascade/hole/x"
+                                                        "futon3c-d/mission/autoclock-in"]
+                                         :hx/props {:hole-kind "gap"}}]}]
+      (with-redefs [live/fetch-edges (fn [hx-type] (get edges hx-type []))
+                    live/verify-live (fn [] (throw (ex-info "should-not-run" {})))]
+        (let [summary (live/cascade-real-summary)]
+          (is (true? (:consistent? summary)))
+          (is (= {:O3 4 :O2 1 :O1 1 :O4 2 :O5 2} (:dimensions summary)))
+          (is (= 1 (get-in summary [:composition :O1xO4])))
+          (is (= {"gap" 1} (:holes summary))))))))
+
 ;; --- §7 DISSOLUTION Checklist B: the per-section BODY structure -------------
 
 (deftest lineage-section-agent-to-target

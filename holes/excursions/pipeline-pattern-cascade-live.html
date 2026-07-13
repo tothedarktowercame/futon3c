@@ -116,6 +116,7 @@
   var EP_SUMMARY=BASE+"/api/alpha/cascade-real";
   var EP_GRAPH=BASE+"/api/alpha/cascade-real/graph";
   var EP_FORWARD=BASE+"/api/alpha/forward-model";
+  var FETCH_TIMEOUT_MS=20000;
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
     futon3a:"#4a9a7d",futon3b:"#2f9f6f",futon3c:"#12b98f",futon4:"#d05a7a",futon5:"#6d6ad0",
@@ -128,6 +129,7 @@
   function truncate(s,n){s=String(s);return s.length>n?s.slice(0,n-1)+"…":s;}
   function el(id){return document.getElementById(id);}
   var loading=false;
+  var hasRendered=false;
 
   function ago(ms){
     var delta=Math.max(0,Date.now()-Number(ms||0));
@@ -153,7 +155,43 @@
     ["basins-count","cascade-count","holes-count","held-count","lineage-count","forward-src","tickets-count"].forEach(function(id){safe(id,function(n){n.textContent="";});});
     safe("cascade",function(n){n.innerHTML="";});
     safe("offline",function(n){n.style.display="none";});
-    el("offline").innerHTML="Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.";
+    setOfflineText("Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.");
+  }
+
+  function setOfflineText(html){
+    var n=el("offline");
+    if(n) n.innerHTML=html;
+  }
+
+  function showOffline(html){
+    setOfflineText(html);
+    var n=el("offline");
+    if(n) n.style.display="block";
+  }
+
+  function requestJSON(name,url,optional){
+    var controller=(typeof AbortController!=="undefined")?new AbortController():null;
+    var timer=controller?setTimeout(function(){controller.abort();},FETCH_TIMEOUT_MS):null;
+    var opts={cache:"no-store"};
+    if(controller) opts.signal=controller.signal;
+    return fetch(url,opts).then(function(r){
+      if(!r.ok) throw new Error(name+" HTTP "+r.status);
+      return r.text().then(function(text){
+        try{
+          return JSON.parse(text);
+        }catch(e){
+          throw new Error(name+" returned non-JSON ("+text.slice(0,120)+")");
+        }
+      });
+    }).catch(function(err){
+      if(optional) return null;
+      var msg=(err&&err.name==="AbortError")
+        ? name+" timed out after "+Math.round(FETCH_TIMEOUT_MS/1000)+"s"
+        : name+": "+(err&&err.message||err);
+      throw new Error(msg);
+    }).finally(function(){
+      if(timer) clearTimeout(timer);
+    });
   }
 
   function renderHeader(s){
@@ -409,11 +447,16 @@
   function loadAll(){
     if(loading) return;
     loading=true;
-    Promise.all([
-      fetch(EP_SUMMARY,{cache:"no-store"}).then(function(r){return r.json();}),
-      fetch(EP_GRAPH,{cache:"no-store"}).then(function(r){return r.json();}),
-      fetch(EP_FORWARD,{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return null;})
-    ]).then(function(res){
+    if(!hasRendered){
+      showOffline("Loading live cascade from <code>localhost:7070</code>…");
+    }
+    requestJSON("cascade summary",EP_SUMMARY).then(function(summary){
+      return requestJSON("cascade graph",EP_GRAPH).then(function(graph){
+        return requestJSON("forward model",EP_FORWARD,true).then(function(forward){
+          return [summary,graph,forward];
+        });
+      });
+    }).then(function(res){
       clearPanels();
       var s=res[0], g=res[1];
       renderHeader(s);
@@ -426,10 +469,15 @@
       renderLineage(g);
       renderForward(res[2]);
       renderTickets(g);
+      hasRendered=true;
     }).catch(function(err){
-      clearPanels();
-      el("offline").style.display="block";
-      el("offline").innerHTML+="<br><span class='muted'>"+esc(err&&err.message||err)+"</span>";
+      if(!hasRendered){
+        clearPanels();
+      }
+      showOffline((hasRendered
+        ? "Live refresh failed; keeping the last successful render."
+        : "Can't regenerate the live cascade from <code>localhost:7070</code>.")
+        +"<br><span class='muted'>"+esc(err&&err.message||err)+"</span>");
     }).finally(function(){
       loading=false;
     });
