@@ -238,6 +238,74 @@
     (string? x) (when-not (str/blank? x) (str/trim x))
     :else nil))
 
+(defn- present-entry
+  [m k]
+  (or (find m k)
+      (find m (name k))))
+
+(defn- present?
+  [m k]
+  (boolean (present-entry m k)))
+
+(defn- field-value
+  [m k]
+  (val (present-entry m k)))
+
+(defn- parse-status
+  [x]
+  (cond
+    (keyword? x) x
+    (string? x) (when-not (str/blank? x) (keyword x))
+    :else nil))
+
+(defn- parse-optional-string
+  [x]
+  (cond
+    (nil? x) nil
+    (string? x) (not-empty x)
+    :else (not-empty (str x))))
+
+(defn- parse-optional-instant
+  [x]
+  (cond
+    (nil? x) nil
+    (instance? Instant x) x
+    (string? x) (try
+                  (Instant/parse x)
+                  (catch Exception _ nil))
+    :else nil))
+
+(def ^:private proxy-runtime-fields
+  [[:status :agent/status parse-status]
+   [:session-id :agent/session-id parse-optional-string]
+   [:invoke-started-at :agent/invoke-started-at parse-optional-instant]
+   [:invoke-prompt-preview :agent/invoke-prompt-preview parse-optional-string]
+   [:invoke-activity :agent/invoke-activity parse-optional-string]])
+
+(def ^:private proxy-metadata-runtime-fields
+  [:campaign-id :mission-id :excursion-id])
+
+(defn- proxy-runtime-updates
+  [agent-info]
+  (into {}
+        (keep (fn [[public-k registry-k parse-fn]]
+                (when (present? agent-info public-k)
+                  [registry-k (parse-fn (field-value agent-info public-k))])))
+        proxy-runtime-fields))
+
+(defn- proxy-runtime-metadata
+  [agent-info]
+  (into {}
+        (keep (fn [k]
+                (when (present? agent-info k)
+                  [k (field-value agent-info k)])))
+        proxy-metadata-runtime-fields))
+
+(defn- apply-agent-updates!
+  [aid updates]
+  (when (seq updates)
+    (apply reg/update-agent! aid (mapcat identity updates))))
+
 (defn- env-list
   [k]
   (when-let [raw (System/getenv k)]
@@ -335,6 +403,27 @@
                          "capabilities" capabilities
                          "origin-url" self-url
                          "proxy" true}
+                  (present? agent-record :agent/status)
+                  (assoc "status" (some-> (:agent/status agent-record) name))
+                  (present? agent-record :agent/session-id)
+                  (assoc "session-id" (:agent/session-id agent-record))
+                  (present? agent-record :agent/invoke-started-at)
+                  (assoc "invoke-started-at"
+                         (some-> (:agent/invoke-started-at agent-record) str))
+                  (present? agent-record :agent/invoke-prompt-preview)
+                  (assoc "invoke-prompt-preview"
+                         (:agent/invoke-prompt-preview agent-record))
+                  (present? agent-record :agent/invoke-activity)
+                  (assoc "invoke-activity" (:agent/invoke-activity agent-record))
+                  (get-in agent-record [:agent/metadata :campaign-id])
+                  (assoc "campaign-id"
+                         (get-in agent-record [:agent/metadata :campaign-id]))
+                  (get-in agent-record [:agent/metadata :mission-id])
+                  (assoc "mission-id"
+                         (get-in agent-record [:agent/metadata :mission-id]))
+                  (get-in agent-record [:agent/metadata :excursion-id])
+                  (assoc "excursion-id"
+                         (get-in agent-record [:agent/metadata :excursion-id]))
                   home-site (assoc "home-site" home-site)))
           resp @(http/post
                  (str peer-url "/api/alpha/agents")
@@ -419,19 +508,21 @@
 
 (defn- proxy-metadata
   [origin-url remote-id local-id agent-info]
-  (cond-> {:proxy? true
-           :remote? true
-           :origin-url origin-url}
-    (:federation/transport agent-info)
-    (assoc :federation/transport (:federation/transport agent-info))
-    (:federation/stale? agent-info)
-    (assoc :federation/stale? (:federation/stale? agent-info))
-    (:federation/uplink-site agent-info)
-    (assoc :federation/uplink-site (:federation/uplink-site agent-info))
-    (proxy-home-site origin-url remote-id agent-info)
-    (assoc :home-site (keyword (proxy-home-site origin-url remote-id agent-info)))
-    (not= remote-id local-id)
-    (assoc :remote-agent-id remote-id)))
+  (merge
+   (cond-> {:proxy? true
+            :remote? true
+            :origin-url origin-url}
+     (:federation/transport agent-info)
+     (assoc :federation/transport (:federation/transport agent-info))
+     (:federation/stale? agent-info)
+     (assoc :federation/stale? (:federation/stale? agent-info))
+     (:federation/uplink-site agent-info)
+     (assoc :federation/uplink-site (:federation/uplink-site agent-info))
+     (proxy-home-site origin-url remote-id agent-info)
+     (assoc :home-site (keyword (proxy-home-site origin-url remote-id agent-info)))
+     (not= remote-id local-id)
+     (assoc :remote-agent-id remote-id))
+   (proxy-runtime-metadata agent-info)))
 
 (defn- own-site-reflection?
   "True when a peer's roster entry is really one of OUR agents reflected back
@@ -522,26 +613,32 @@
 
       existing
       (do
-        (reg/update-agent! aid
-                           :agent/type agent-type
-                           :agent/invoke-fn invoke-fn
-                           :agent/capabilities capabilities
-                           :agent/metadata (proxy-metadata origin-url remote-id aid agent-info))
+        (apply-agent-updates!
+         aid
+         (merge {:agent/type agent-type
+                 :agent/invoke-fn invoke-fn
+                 :agent/capabilities capabilities
+                 :agent/metadata (proxy-metadata origin-url remote-id aid agent-info)}
+                (proxy-runtime-updates agent-info)))
         {:ok true :agent-id aid :action :updated})
 
       :else
-      (let [result (reg/register-agent!
+      (let [runtime-updates (proxy-runtime-updates agent-info)
+            result (reg/register-agent!
                     {:agent-id {:id/value aid :id/type :continuity}
                      :type agent-type
                      :invoke-fn invoke-fn
                      :capabilities capabilities
+                     :session-id (:agent/session-id runtime-updates)
                      :metadata (proxy-metadata origin-url remote-id aid agent-info)})]
         (if (and (map? result) (= false (:ok result)))
           {:ok false
            :agent-id aid
            :action :register-failed
            :error result}
-          {:ok true :agent-id aid :action :registered})))))
+          (do
+            (apply-agent-updates! aid runtime-updates)
+            {:ok true :agent-id aid :action :registered}))))))
 
 (defn- capability-wire-name
   [cap]

@@ -65,6 +65,59 @@
       (is (fn? (:agent/invoke-fn agent)))
       (is (empty? (logic/find-phantoms (logic-db-from-registry)))))))
 
+(deftest remote-announce-syncs-proxy-runtime-status
+  (testing "origin-url proxy registrations preserve operator-visible runtime fields"
+    (fed/configure! {:peers [] :self-url "http://laptop:7070" :peer-sites ["lon"]})
+    (let [h (handler)
+          started-at "2026-07-13T09:30:00Z"
+          response (post-json h
+                              "/api/alpha/agents"
+                              {"agent-id" "lon-claude-9"
+                               "type" "claude"
+                               "capabilities" ["coordination/execute"]
+                               "origin-url" "http://lon:7070"
+                               "proxy" true
+                               "status" "invoking"
+                               "session-id" "sess-lon-9"
+                               "campaign-id" "camp-1"
+                               "mission-id" "mission-1"
+                               "excursion-id" "excursion-1"
+                               "invoke-started-at" started-at
+                               "invoke-prompt-preview" "prove pudding status"
+                               "invoke-activity" "proving"})
+          agent (reg/get-agent "lon-claude-9")
+          projected (get-in (reg/registry-status) [:agents "lon-claude-9"])]
+      (is (= 201 (:status response)))
+      (is (= :invoking (:agent/status agent)))
+      (is (= "sess-lon-9" (:agent/session-id agent)))
+      (is (= started-at (str (:agent/invoke-started-at agent))))
+      (is (= "prove pudding status" (:agent/invoke-prompt-preview agent)))
+      (is (= "proving" (:agent/invoke-activity agent)))
+      (is (= "camp-1" (get-in agent [:agent/metadata :campaign-id])))
+      (is (= "mission-1" (get-in agent [:agent/metadata :mission-id])))
+      (is (= "excursion-1" (get-in agent [:agent/metadata :excursion-id])))
+      (is (= :invoking (:status projected)))
+      (is (= "sess-lon-9" (:session-id projected)))
+      (is (= "proving" (:invoke-activity projected)))
+      (let [update-response (post-json h
+                                       "/api/alpha/agents"
+                                       {"agent-id" "lon-claude-9"
+                                        "type" "claude"
+                                        "origin-url" "http://lon:7070"
+                                        "proxy" true
+                                        "status" "idle"
+                                        "session-id" nil
+                                        "invoke-started-at" nil
+                                        "invoke-prompt-preview" nil
+                                        "invoke-activity" nil})
+            updated (reg/get-agent "lon-claude-9")]
+        (is (= 200 (:status update-response)))
+        (is (= :idle (:agent/status updated)))
+        (is (nil? (:agent/session-id updated)))
+        (is (nil? (:agent/invoke-started-at updated)))
+        (is (nil? (:agent/invoke-prompt-preview updated)))
+        (is (nil? (:agent/invoke-activity updated)))))))
+
 (deftest remote-announce-replaces-existing-local-phantom
   (testing "an origin-url announce heals an existing site-qualified local phantom"
     (fed/configure! {:peers [] :self-url "http://laptop:7070" :peer-sites ["lon"]})

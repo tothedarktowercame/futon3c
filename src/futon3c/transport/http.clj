@@ -2284,11 +2284,21 @@
             (let [result (federation/register-proxy-agent!
                           origin-url
                           agent-id
-                          {:type agent-type
-                           :capabilities capabilities
-                           ;; origin's declared site (announce-to-peer! sends it) —
-                           ;; the home-site source for bare, unqualified ids
-                           :home-site home-site})]
+                          (merge
+                           {:type agent-type
+                            :capabilities capabilities
+                            ;; origin's declared site (announce-to-peer! sends it) —
+                            ;; the home-site source for bare, unqualified ids
+                            :home-site home-site}
+                           (select-keys payload
+                                        [:status
+                                         :session-id
+                                         :campaign-id
+                                         :mission-id
+                                         :excursion-id
+                                         :invoke-started-at
+                                         :invoke-prompt-preview
+                                         :invoke-activity])))]
               (if (:ok result)
                 (json-response (if (= :registered (:action result)) 201 200)
                                {:ok true
