@@ -93,11 +93,14 @@
 ;; -----------------------------------------------------------------------------
 
 (deftest ensure-default-tracers-emits-when-empty
-  (testing "first call is inert when runtime defaults are unhooked"
-    (let [r (tracer/ensure-default-tracers! *xtdb-backend*)]
-      (is (= 0 (:already-present r)))
-      (is (= 0 (:emitted r)))
-      (is (= 0 (:attempted r))))))
+  (testing "an empty runtime projection returns without touching storage"
+    (with-redefs [store/query* (fn [& _]
+                                 (throw (ex-info "storage must stay dark" {})))]
+      (is (= {:already-present 0
+              :emitted 0
+              :attempted 0
+              :failed []}
+             (tracer/ensure-default-tracers! *xtdb-backend*))))))
 
 (deftest ensure-default-tracers-is-idempotent
   (testing "second call against the same store emits nothing"

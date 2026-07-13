@@ -455,11 +455,16 @@
                       :skip-federation-proxy)]
     (if skip-reason
       (do
-        (println "[federation] announce skipped"
-                 {:agent-id agent-id
-                  :reason skip-reason
-                  :peers peers
-                  :self-url self-url})
+        ;; Proxy skips are the normal loop-prevention path during peer sync;
+        ;; logging every imported agent makes healthy federation look broken.
+        ;; Keep configuration gaps observable because those suppress local
+        ;; announcements unexpectedly.
+        (when (#{:no-peers :no-self-url} skip-reason)
+          (println "[federation] announce skipped"
+                   {:agent-id agent-id
+                    :reason skip-reason
+                    :peers peers
+                    :self-url self-url}))
         nil)
       (mapv #(announce-to-peer! % agent-record self-url) peers))))
 

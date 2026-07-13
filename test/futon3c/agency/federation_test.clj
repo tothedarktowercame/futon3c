@@ -120,7 +120,8 @@
                         :agent/type :codex
                         :agent/capabilities [:edit]
                         :agent/metadata {:proxy? true}}]
-      (is (nil? (fed/announce! agent-record))))))
+      (is (= "" (with-out-str
+                    (is (nil? (fed/announce! agent-record)))))))))
 
 (deftest announce-skips-ws-remote-bridge-agents
   (testing "announce! skips agents marked to avoid proxy federation"
@@ -129,7 +130,8 @@
                         :agent/type :codex
                         :agent/capabilities [:edit]
                         :agent/metadata {:skip-federation-proxy? true}}]
-      (is (nil? (fed/announce! agent-record))))))
+      (is (= "" (with-out-str
+                    (is (nil? (fed/announce! agent-record)))))))))
 
 (deftest announce-attempts-post-to-each-peer
   (testing "announce! attempts POST to each configured peer"

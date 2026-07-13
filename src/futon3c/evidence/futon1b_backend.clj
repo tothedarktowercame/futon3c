@@ -15,8 +15,9 @@
    windows (the unlimited author=joe fetch hydrated 8,882 docs/10MB for a
    5-item recall and, cold, silently timed out zai-1's first live demo,
    2026-07-11). When client-only filters are present (tags/subject/
-   pattern-id), the fetch stays ephemeral-inclusive and unlimited so the
-   local filter owns membership.
+   pattern-id), those filters are also sent as narrowing hints, while the
+   fetch stays ephemeral-inclusive and unlimited so the local filter still
+   owns membership.
 
    -append preserves AtomBackend/XtdbBackend semantics: duplicate-id /
    reply-not-found / fork-not-found come back as SocialError maps (the
@@ -92,7 +93,7 @@
 (defn- query-string
   "Pushdown params. See ns docstring for the two regimes."
   [{:query/keys [type claim-type author session-id since before fork-of
-                 limit include-ephemeral?] :as params}]
+                 tags subject pattern-id limit include-ephemeral?] :as params}]
   (let [server-decidable? (not (client-only-filters? params))
         pairs (cond-> [["include-ephemeral"
                         (str (boolean (or include-ephemeral?
@@ -105,7 +106,11 @@
                 session-id (conj ["session-id" (str session-id)])
                 since (conj ["since" (str since)])
                 before (conj ["before" (str before)])
-                fork-of (conj ["fork-of" (str fork-of)]))]
+                fork-of (conj ["fork-of" (str fork-of)])
+                (seq tags) (conj ["tags" (str/join "," (map name tags))])
+                subject (conj ["subject-type" (name (:ref/type subject))]
+                              ["subject-id" (str (:ref/id subject))])
+                pattern-id (conj ["pattern-id" (name pattern-id)]))]
     (str/join "&" (map (fn [[k v]] (str k "=" (enc v))) pairs))))
 
 (defn- fetch-entries [base-url params]

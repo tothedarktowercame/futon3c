@@ -149,23 +149,25 @@
    boot emits nothing. Pipeline experiments should feed explicit tracers
    into `emit-pipeline-tracers!` from a live cascade/scan projection."
   [evidence-store]
-  (let [default-ids (set (map :track-id default-tracers))
-        present (existing-tracer-track-ids evidence-store)
-        present-defaults (filter default-ids present)
-        to-emit (remove #(contains? present (:track-id %)) default-tracers)
-        emitted (mapv #(do (emit-tracer! evidence-store %) %) to-emit)
-        ok-emitted (filter
-                    (fn [t]
-                      (let [tid (:track-id t)]
-                        (try
-                          (some #(= tid (get-in % [:evidence/body :track-id]))
-                                (store/query*
-                                 evidence-store
-                                 {:query/type :coordination
-                                  :query/tags [:pipeline-tracer :open tid]}))
-                          (catch Throwable _ false))))
-                    emitted)]
-    {:already-present (count present-defaults)
-     :emitted (count ok-emitted)
-     :attempted (count emitted)
-     :failed (vec (remove (set ok-emitted) emitted))}))
+  (if (empty? default-tracers)
+    {:already-present 0 :emitted 0 :attempted 0 :failed []}
+    (let [default-ids (set (map :track-id default-tracers))
+          present (existing-tracer-track-ids evidence-store)
+          present-defaults (filter default-ids present)
+          to-emit (remove #(contains? present (:track-id %)) default-tracers)
+          emitted (mapv #(do (emit-tracer! evidence-store %) %) to-emit)
+          ok-emitted (filter
+                      (fn [t]
+                        (let [tid (:track-id t)]
+                          (try
+                            (some #(= tid (get-in % [:evidence/body :track-id]))
+                                  (store/query*
+                                   evidence-store
+                                   {:query/type :coordination
+                                    :query/tags [:pipeline-tracer :open tid]}))
+                            (catch Throwable _ false))))
+                      emitted)]
+      {:already-present (count present-defaults)
+       :emitted (count ok-emitted)
+       :attempted (count emitted)
+       :failed (vec (remove (set ok-emitted) emitted))})))

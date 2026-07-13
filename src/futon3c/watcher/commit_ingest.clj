@@ -185,17 +185,17 @@
   (atom {}))
 
 (defn last-indexed-commit-sha-from-store
-  "Queries futon1a for the SHA of the most-recently-indexed commit-vertex
+  "Queries the graph store for the SHA of the most-recently-indexed commit-vertex
    for repo-label. Returns nil if no commits indexed.
 
-   Uses the :timestamp prop to determine 'most recent' — bitemporal
-   reasoning is XTDB's job, this is just `(max-by :timestamp)`. NOTE
-   ties on timestamp resolve arbitrarily; prefer `last-indexed-commit-sha`
-   which checks the in-memory pointer first."
+   The XTDB 2 endpoint orders its denormalized timestamp column and returns
+   one document, avoiding a cold-start download of the repository's full
+   commit history. Prefer `last-indexed-commit-sha`, which checks the
+   in-memory pointer first."
   [repo-label]
   (try
     (let [resp (http/get (str FUTON1A "/api/alpha/hyperedges?type=code/v05/commit"
-                              "&repo=" repo-label)
+                              "&repo=" repo-label "&latest=true&limit=1")
                          {:throw false
                           :timeout 5000})
           body (when (= 200 (:status resp)) (:body resp))
@@ -203,9 +203,7 @@
                    (edn/read-string {:default (fn [_t v] v)} body))
           edges (:hyperedges parsed)]
       (when (seq edges)
-        (let [latest (apply max-key (fn [e] (or (-> e :hx/props :timestamp) 0))
-                            edges)
-              hx-id (:hx/id latest)]
+        (let [hx-id (:hx/id (first edges))]
           (when (string? hx-id)
             (last (str/split hx-id #":"))))))
     (catch Exception e

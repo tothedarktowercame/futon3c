@@ -15,7 +15,6 @@
             [futon3c.logic.locus :as locus]
             [futon3c.logic.ratchet :as ratchet]
             [futon3c.logic.snapshot :as snapshot]
-            [futon3c.logic.tracer :as tracer]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.http :as http]
@@ -334,15 +333,9 @@
                (catch Throwable t
                  (println (str "[dev] archaeology/deferred-stub load-time check threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        ;; Pipeline-tracer is PIPE-CLEANED / ROADMAP-DEFERRED: its watched set is
-        ;; frozen historical sediment pending a live-projection redesign (see
-        ;; holes/excursions/E-pipeline-pipecleaner.md "Current Resolution").
-        ;; Keep recording the evidence, but silence the boot WARNING banner until
-        ;; a live pipe exists -- re-enable by dropping {:print? false}.
-        _ (try (archaeology/check-pipeline-tracer-on-load! evidence-store {:print? false})
-               (catch Throwable t
-                 (println (str "[dev] archaeology/pipeline-tracer load-time check threw: "
-                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; Pipeline-tracer history is intentionally NOT scanned here. The check
+        ;; remains registered below as an explicit probe capability, but boot
+        ;; readiness must not require materializing the evidence corpus.
         _ (try (archaeology/check-stash-disposition-on-load! evidence-store)
                (catch Throwable t
                  (println (str "[dev] archaeology/stash-disposition load-time check threw: "
@@ -407,18 +400,8 @@
                (catch Throwable t
                  (println (str "[dev] register substrate-2-commit-freshness threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        ;; Keep the pipeline-tracer projection hook boot-safe. The old
-        ;; static prototype data is intentionally unhooked from boot and
-        ;; retained in holes/excursions/pipeline-prototype.edn; this emits
-        ;; only if a future runtime projection supplies explicit defaults.
-        _ (try (let [r (tracer/ensure-default-tracers! evidence-store)]
-                 (println (str "[dev] tracer/ensure-default-tracers!: "
-                               "present=" (:already-present r)
-                               " emitted=" (:emitted r)
-                               " attempted=" (:attempted r))))
-               (catch Throwable t
-                 (println (str "[dev] tracer/ensure-default-tracers! threw: "
-                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; Pipeline tracers enter through explicit live projections. Historical
+        ;; defaults are unhooked, so boot does not query or seed tracer state.
         ;; State-snapshot-witness/inventory: emit one :inventory-snapshot
         ;; evidence entry per JVM boot, projecting the structural-law
         ;; inventory to a flat snapshot record. Mission:
