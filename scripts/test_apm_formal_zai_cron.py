@@ -98,5 +98,45 @@ class CandidateTests(unittest.TestCase):
                 self.assertEqual(["a00J01"], cron.candidate_problem_ids())
 
 
+class ProgressTests(unittest.TestCase):
+    def test_progress_snapshot_counts_clean_partial_and_unattempted_bundles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            apm = Path(tmp)
+            source = apm / "apm"
+            source.mkdir()
+            for pid in ("a00J01", "a00J02", "a00J03"):
+                (source / f"{pid}.tex").write_text("problem\n")
+                (apm / "problems" / pid).mkdir(parents=True)
+            (apm / "problems/a00J01/informal-solution.md").write_text("proof\n" * 30)
+            (apm / "problems/a00J01/lean").mkdir()
+            (apm / "problems/a00J01/lean/Main.lean").write_text(
+                "example : True := by trivial\n"
+            )
+            (apm / "problems/a00J02/lean").mkdir()
+            (apm / "problems/a00J02/lean/Main.lean").write_text(
+                "example : True := by\n  sorry\n"
+            )
+            with mock.patch.object(cron, "APM_LEAN_DIR", apm):
+                snapshot = cron.proof_progress_snapshot()
+            self.assertEqual(3, snapshot["total"])
+            self.assertEqual(1, snapshot["informal"])
+            self.assertEqual(2, snapshot["lean_total"])
+            self.assertEqual(1, snapshot["lean_with_sorry"])
+            self.assertEqual(1, snapshot["lean_clean"])
+            self.assertEqual(1, snapshot["sorries"])
+            self.assertEqual(2, snapshot["remaining"])
+
+    def test_append_progress_snapshot_writes_jsonl(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            progress_path = Path(tmp) / "formal-progress.jsonl"
+            snapshot = {"schema": "apm-formal-progress.v1", "lean_clean": 7}
+            with (
+                mock.patch.object(cron, "PROGRESS_PATH", progress_path),
+                mock.patch.object(cron, "proof_progress_snapshot", return_value=snapshot),
+            ):
+                self.assertIs(snapshot, cron.append_progress_snapshot())
+            self.assertEqual(snapshot, cron.json.loads(progress_path.read_text()))
+
+
 if __name__ == "__main__":
     unittest.main()
