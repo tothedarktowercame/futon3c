@@ -764,3 +764,101 @@ a candidate slice with its evidence already recorded above:
 Deliberately NOT extensions (settled design): renaming agents at their home box (CP-D
 chose import-seam qualification instead — locals stay bare); literally-identical rosters
 (each box renders its own perspective; completeness is same-agents, checked by AG-8).
+
+## Checkpoint CP-F — 2026-07-13 (SPEC: WS federation uplink — NAT-transparent per-point sync)
+
+**Status: ready to build. Scope-bounded handoff (R11); target builder: chi-codex-1 on
+the Chicago box, branch `agency-fixes-2026-06-11`.**
+
+**Motivation (Joe, 2026-07-13):** "I don't want to have to think about tunnels." The oxf
+reverse SSH tunnel (CP-E item 5) died with a lucy reboot and needed a human to notice.
+The durable form of "an autoconnecting line that triggers tunnel recreation" is to make
+the line itself the transport: a NAT'd box federates by dialing OUT one WebSocket to a
+hub peer; roster announce and invoke forwarding ride that socket; the client's reconnect
+loop IS the per-point healing. This supersedes CP-E item 5 long-term (the systemd tunnel
+unit `scripts/oxf-lucy-tunnel.service` is the stopgap until CP-F ships).
+
+**What already exists (reuse, do not reinvent — I-4):**
+- WS invoke routing: `futon3c.transport.ws.invoke` (`register!`/`invoke!`, per-agent
+  pending map keyed by invoke-id) and registry fallback at `registry.clj` ~782.
+- Import-seam site-qualification (CP-D): `federation/register-proxy-agent!` with
+  `proxy-local-id`, `own-site-reflection?` guard, direct-presence dedup, prune rules.
+- Proxy invoke pattern: `federation/make-proxy-invoke-fn` (HTTP form) — CP-F adds the
+  WS-uplink analog, same shape.
+- Reconnect/backoff pattern: `federation/backoff-delay-ms`, `record-peer-failure!`.
+- WS server frame loop: `transport/ws.clj` (`:ready` handshake ~line 195); frame parsing
+  in `transport/protocol.clj` `parse-ws-message` (case over `type`).
+
+**Design:**
+
+1. **Client (NAT'd box, e.g. laptop/oxf)** — new ns `futon3c.agency.fed-uplink`
+   (`src/futon3c/agency/fed_uplink.clj`), running inside that box's futon3c JVM:
+   - `(start-uplink!)` reads `FUTON3C_FED_UPLINK` (`<site>=<ws-url>`, e.g.
+     `lon=ws://172.236.28.208:7070/<existing ws mount>`) + `FUTON3C_FED_TOKEN`;
+     connects with JDK built-in `java.net.http.HttpClient/newWebSocketBuilder`
+     (JDK 21 on all boxes; NO new dependency).
+   - On connect: send `:fed-announce` (shape below) with the full local roster;
+     re-announce every `FUTON3C_FED_SYNC_INTERVAL_MS` (30s default, idempotent
+     full-state, same semantics as the HTTP sync daemon).
+   - On disconnect/error: reconnect loop with the federation backoff pattern,
+     re-announce on reconnect. `(stop-uplink!)`, `(uplink-status)` for ops.
+   - Handles inbound `:fed-invoke` → dispatch `registry/invoke-agent!` with the BARE
+     local agent-id on an executor (never the WS read thread) → reply
+     `:fed-invoke-result` correlated by `:invoke-id`.
+   - Handles inbound `:fed-roster` (hub's push-down) → import each entry through
+     `register-proxy-agent!` (same CP-D seam and guards) so the NAT'd box sees
+     `lon-*`/`chi-*` without being reachable.
+
+2. **Server (hub, lucy)** — extend `transport/ws.clj` frame loop + `protocol.clj`:
+   - New frame `:fed-announce {:site "oxf" :token "…" :roster [{:agent-id "codex-1"
+     :type "codex" :capabilities […]} …]}`. Token must equal hub's
+     `FUTON3C_FED_TOKEN`; mismatch → error frame + close, register nothing.
+   - On valid announce: import each roster entry via `register-proxy-agent!`
+     (qualified ids, `own-site-reflection?` guard, dedup — all as in HTTP sync),
+     metadata `:federation/transport :ws-uplink`; register/refresh an uplink
+     invoke-fn per imported agent: `make-uplink-invoke-fn` sends `:fed-invoke`
+     `{:invoke-id (UUID) :agent-id <bare remote id> :prompt … :timeout-ms …}` down
+     the uplink socket and parks on a promise in a per-connection pending map,
+     resolved by `:fed-invoke-result` (mirror of `make-proxy-invoke-fn`, transport
+     swapped). Timeout → typed SocialError, consistent with ws-invoke's.
+   - Reply to each announce with `:fed-roster` (hub's exportable roster: locals +
+     other-site proxies, minus the announcing site's own agents — reflection rule).
+   - On socket close: mark that site's uplink proxies `:federation/stale? true`
+     (do NOT prune immediately); prune after 3 missed announce intervals, reusing
+     existing prune semantics. Re-announce clears stale.
+   - Relay falls out: other HTTP peers (chi) sync lucy's roster and see oxf-*
+     entries with peer-url = lucy, so their invokes chain through the hub's uplink
+     invoke-fn. Verify opportunistically; not a blocking criterion for this slice.
+
+**Frame shapes (add to `protocol.clj` `parse-ws-message` + renderers):**
+`:fed-announce` (site, token, roster), `:fed-roster` (site, roster),
+`:fed-invoke` (invoke-id, agent-id, prompt, timeout-ms),
+`:fed-invoke-result` (invoke-id, ok, result, session-id, error).
+
+**Files — :in (read first, minimal diff):** `src/futon3c/agency/federation.clj`,
+`src/futon3c/agency/registry.clj`, `src/futon3c/transport/ws.clj`,
+`src/futon3c/transport/ws/invoke.clj`, `src/futon3c/transport/protocol.clj`.
+**:out:** `src/futon3c/agency/fed_uplink.clj` (new), edits to `transport/ws.clj` +
+`transport/protocol.clj` (frames), `scripts/dev-laptop-env` + `scripts/dev-linode-env`
+(FUTON3C_FED_UPLINK / FUTON3C_FED_TOKEN blocks, commented default off),
+`test/futon3c/agency/fed_uplink_test.clj` (new).
+
+**Test expectations (in-process, fake channels as in existing transport tests):**
+1. Valid `:fed-announce` → qualified proxies registered (`oxf-codex-1` from bare
+   `codex-1`), `:federation/transport :ws-uplink`; announce containing the hub's own
+   agents → `:skipped-own-site` (reflection guard holds over uplink).
+2. Invoke on an uplink proxy emits `:fed-invoke` with the BARE remote id; a
+   `:fed-invoke-result` resolves it; no result within timeout → typed invoke-error.
+3. Socket close → proxies stale, not pruned; re-announce → stale cleared; 3 missed
+   intervals → pruned.
+4. Bad/missing token → closed, nothing registered.
+5. Gate: `env -u FUTON3C_SITE clojure -X:test` green (CP-E item 8 hygiene).
+
+**Criteria checklist:**
+- [ ] Laptop federates with the tunnel OFF (no 17070 listener anywhere).
+- [ ] Rebooting either box requires zero human action: uplink reconnects within
+      backoff, roster reappears on the next announce.
+- [ ] `oxf=http://127.0.0.1:17070` peer entry removable from dev-linode-env once
+      the uplink is live (leave the removal itself to a verified deploy step).
+- [ ] Invariants hold: uplink routes to agents that already exist (I-2); no
+      subprocess spawning in transport code (grep gate); locals stay bare (CP-D).

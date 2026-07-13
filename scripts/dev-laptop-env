@@ -201,7 +201,9 @@ export FUTON3C_SITE="${FUTON3C_SITE:-oxf}"
 # Key-based SSH auth to lucy (-p 2222) is already configured. autossh is not
 # installed; ssh with ServerAliveInterval provides keepalive. The tunnel is
 # established in a background screen/tmux or via systemd — this env block just
-# exports the URL. To start the tunnel manually:
+# exports the URL. Prefer the systemd unit (survives lucy reboots, which the
+# manual form does not — bit us 2026-07-13): see scripts/oxf-lucy-tunnel.service
+# for install steps. To start the tunnel manually instead:
 #   ssh -f -N -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
 #     -R 17070:localhost:7070 -p 2222 joe@172.236.28.208
 export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://127.0.0.1:17070}"
