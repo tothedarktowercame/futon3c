@@ -72,7 +72,7 @@ emacsclient -e '(progn
   (load "/home/joe/code/futon3c/emacs/agent-chat.el" nil t)
   (load "/home/joe/code/futon3c/emacs/zai-repl.el" nil t)
   (load "/home/joe/code/futon3c/emacs/agent-follow-mode.el" nil t)
-  (zai-repl-for-agent "zai-3")
+  (zai-repl-attach-agent "zai-3")
   (with-current-buffer "*zai-repl:zai-3*" (agent-follow-mode 1)))'
 ```
 

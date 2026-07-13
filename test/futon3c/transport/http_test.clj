@@ -593,7 +593,7 @@
 
 (deftest zai-auto-register-seeds-session-id
   (testing "POST /api/alpha/agents/auto creates a fresh zai lane with its own session file"
-    (let [handler (make-handler)
+    (let [handler (make-handler {:evidence-store (atom {:entries {} :order []})})
           session-file (io/file "/tmp/futon-zai-session-id-zai-1")
           backup (when (.exists session-file) (slurp session-file))
           sid "sess-auto-zai-register"

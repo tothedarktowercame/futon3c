@@ -2481,19 +2481,20 @@
                                   :emacs-socket emacs-socket
                                   :evidence-store (evidence-store-for-config config)
                                   :irc-send-fn (:irc-send-fn config)})
-                      result (reg/register-agent!
-                              {:agent-id {:id/value agent-id :id/type :continuity}
-                               :type agent-type
-                               :invoke-fn invoke-fn
-                               :session-reset-fn session-reset-fn
-                               :capabilities (get default-capabilities agent-type [])
-                               :metadata (cond-> {:auto-registered? true}
-                                           (= agent-type :codex) (assoc :require-execution? true)
-                                           requested-cwd (assoc :cwd requested-cwd)
-                                           campaign-id (assoc :campaign-id campaign-id)
-                                           mission-id (assoc :mission-id mission-id)
-                                           excursion-id (assoc :excursion-id excursion-id)
-                                           emacs-socket (assoc :emacs-socket emacs-socket))})]
+                      result (when invoke-fn
+                               (reg/register-agent!
+                                {:agent-id {:id/value agent-id :id/type :continuity}
+                                 :type agent-type
+                                 :invoke-fn invoke-fn
+                                 :session-reset-fn session-reset-fn
+                                 :capabilities (get default-capabilities agent-type [])
+                                 :metadata (cond-> {:auto-registered? true}
+                                             (= agent-type :codex) (assoc :require-execution? true)
+                                             requested-cwd (assoc :cwd requested-cwd)
+                                             campaign-id (assoc :campaign-id campaign-id)
+                                             mission-id (assoc :mission-id mission-id)
+                                             excursion-id (assoc :excursion-id excursion-id)
+                                             emacs-socket (assoc :emacs-socket emacs-socket))}))]
                   (when (and (map? result) (:agent/id result))
                     (when invoke-fn
                       (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
@@ -2602,7 +2603,7 @@
                            (seq raw-contracts) (assoc :agency/contracts raw-contracts)
                            restored-detached? (assoc :restore/state :restored/detached
                                                      :restore/restored-at (str (java.time.Instant/now))))]
-            (if (and (nil? invoke-fn) (not= :zai agent-type))
+            (if (nil? invoke-fn)
               (json-response 500 {:ok false
                                   :err "restore-failed"
                                   :message (str "Could not build invoke-fn for " agent-id)})
