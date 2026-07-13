@@ -104,6 +104,60 @@
           (should (string-match-p "wake reply" buf))
           (should (string-match-p "operator reply" buf)))))))
 
+(ert-deftest agent-chat-unsolicited-queues-behind-operator-turn ()
+  "The mirror race: an unsolicited resume arriving while an OPERATOR turn is in
+flight must QUEUE (and drain after), never signal — the park delivery path has
+already recorded the park-id, so refusing here would destroy the resume."
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (let ((live-proc nil)
+          calls
+          operator-callback)
+      (cl-letf (((symbol-function 'agent-chat-start-turn-commit-window!)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-finish-turn-commits)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'agent-chat-scroll-to-bottom)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'redisplay)
+                 (lambda (&rest _) nil))
+                ((symbol-function 'process-live-p)
+                 (lambda (proc) (and proc (eq proc live-proc)))))
+        (insert "operator question")
+        (agent-chat-send-input
+         (lambda (text cb)
+           (push (list :text text :origin agent-chat--pending-turn-origin) calls)
+           (setq operator-callback cb)
+           (setq live-proc 'operator-proc)
+           'operator-proc)
+         "agent")
+        (should (eq agent-chat--pending-turn-origin 'operator))
+        ;; The resume lands mid-turn: must queue without signalling.
+        (agent-chat-send-unsolicited-input
+         (lambda (text cb)
+           (push (list :text text :origin agent-chat--pending-turn-origin) calls)
+           (setq live-proc 'unsolicited-proc)
+           (funcall cb "wake reply")
+           'unsolicited-proc)
+         "agent"
+         "background wake"
+         "continuation")
+        (should (= 1 (length calls)))
+        (should (= 1 (length agent-chat--queued-operator-turns)))
+        (setq live-proc nil)
+        (funcall operator-callback "operator reply")
+        (should (= 2 (length calls)))
+        (should-not agent-chat--queued-operator-turns)
+        (let ((ordered (reverse calls)))
+          (should (equal "operator question" (plist-get (car ordered) :text)))
+          (should (eq 'operator (plist-get (car ordered) :origin)))
+          (should (equal "background wake" (plist-get (cadr ordered) :text)))
+          (should (eq 'unsolicited (plist-get (cadr ordered) :origin))))
+        (let ((buf (buffer-string)))
+          (should (string-match-p "continuation:" buf))
+          (should (string-match-p "wake reply" buf))
+          (should (string-match-p "operator reply" buf)))))))
+
 (ert-deftest agent-chat-affect-live-runner-builds-command ()
   (let ((agent-chat-affect-live-enabled t)
         (agent-chat-affect-live-directory "/tmp")

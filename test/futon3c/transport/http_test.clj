@@ -79,8 +79,8 @@
             :uri uri
             :query-string query-string}))
 
-(deftest parked-resume-buffer-surface-chooses-one-delivery-path
-  (testing "accepted targeted WS delivery does not also enqueue inbox fallback"
+(deftest parked-resume-buffer-surface-inbox-is-authoritative-ws-is-poke
+  (testing "the inbox push always happens; an accepted WS frame is only a poke"
     (let [sent (atom [])
           pushed (atom [])]
       (with-redefs [ws-invoke/send-frame! (fn [agent frame]
@@ -88,14 +88,19 @@
                                             true)
                     http/parked-ready-push! (fn [& args]
                                                (swap! pushed conj args))]
-        (is (= "park-ready-ws:pk-1"
+        (is (= "park-ready-inbox+poke:pk-1"
                ((var-get #'http/parked-resume!)
                 {:id "pk-1" :agent "claude-1" :session "sid"
                  :surface "emacs-repl" :payload "wake" :arrived {}
                  :awaiting #{} :mode :background})))
         (is (= 1 (count @sent)))
-        (is (= [] @pushed)))))
-  (testing "missing targeted WS sender enqueues exactly one inbox fallback"
+        (is (nil? (:prompt (second (first @sent))))
+            "the poke frame carries no authoritative payload")
+        (is (= [["claude-1" "sid" "pk-1"
+                 "wake\n\n--- resumed: parked dependencies complete (0) ---\n"
+                 :background]]
+               @pushed)))))
+  (testing "missing targeted WS sender still enqueues exactly one inbox item"
     (let [sent (atom [])
           pushed (atom [])]
       (with-redefs [ws-invoke/send-frame! (fn [agent frame]

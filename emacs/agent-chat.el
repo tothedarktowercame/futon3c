@@ -1906,11 +1906,25 @@ not mis-attributed to the human operator.")
   "Origin of the currently pending turn: `operator' or `unsolicited'.")
 
 (defvar-local agent-chat--queued-operator-turns nil
-  "FIFO of operator turns captured while an unsolicited turn is in flight.")
+  "FIFO of turns captured while another turn is in flight.
+Operator turns queue here behind an in-flight unsolicited turn, and unsolicited
+turns queue here behind an in-flight operator turn — each entry keeps its own
+:speaker and :origin so nothing is mis-attributed when it drains.")
 
 (defun agent-chat--operator-speaker-p (speaker)
   "Non-nil when SPEAKER should be treated as the human operator."
   (equal (or speaker "joe") "joe"))
+
+(defun agent-chat--queue-turn (call-async-fn agent-name hooks text speaker origin)
+  "Queue TEXT as a SPEAKER/ORIGIN turn behind the in-flight turn."
+  (setq agent-chat--queued-operator-turns
+        (append agent-chat--queued-operator-turns
+                (list (list :text text
+                            :call-async-fn call-async-fn
+                            :agent-name agent-name
+                            :hooks hooks
+                            :speaker speaker
+                            :origin origin)))))
 
 (defun agent-chat--queue-operator-turn (call-async-fn agent-name hooks)
   "Queue current input as an operator turn behind an in-flight unsolicited turn."
@@ -1919,30 +1933,28 @@ not mis-attributed to the human operator.")
                (point-max))))
     (unless (string-empty-p (string-trim text))
       (delete-region (marker-position agent-chat--input-start) (point-max))
-      (setq agent-chat--queued-operator-turns
-            (append agent-chat--queued-operator-turns
-                    (list (list :text (string-trim text)
-                                :call-async-fn call-async-fn
-                                :agent-name agent-name
-                                :hooks hooks))))
+      (agent-chat--queue-turn call-async-fn agent-name hooks
+                              (string-trim text) "joe" 'operator)
       (message "%s queued until the background turn finishes"
                (capitalize agent-name)))))
 
 (defun agent-chat--drain-queued-operator-turns ()
-  "Start the next operator turn queued behind an unsolicited turn, if any."
+  "Start the next queued turn (operator or unsolicited), if any."
   (when (and (not (process-live-p agent-chat--pending-process))
              agent-chat--queued-operator-turns)
     (let* ((entry (car agent-chat--queued-operator-turns))
            (text (plist-get entry :text))
            (call-async-fn (plist-get entry :call-async-fn))
            (agent-name (plist-get entry :agent-name))
-           (hooks (plist-get entry :hooks)))
+           (hooks (plist-get entry :hooks))
+           (speaker (or (plist-get entry :speaker) "joe"))
+           (origin (or (plist-get entry :origin) 'operator)))
       (setq agent-chat--queued-operator-turns
             (cdr agent-chat--queued-operator-turns))
-      (agent-chat--start-turn call-async-fn agent-name hooks text "joe" 'operator))))
+      (agent-chat--start-turn call-async-fn agent-name hooks text speaker origin))))
 
 (defun agent-chat--finish-pending-turn ()
-  "Clear pending-turn metadata and drain any queued operator turn."
+  "Clear pending-turn metadata and drain any queued turn."
   (setq agent-chat--pending-turn-origin nil)
   (agent-chat--drain-queued-operator-turns))
 
@@ -2019,12 +2031,17 @@ operator input arriving while they run is queued for the next turn."
     (call-async-fn agent-name text &optional speaker hooks)
   "Start an unsolicited continuation/notification turn with TEXT.
 The turn is attributed to SPEAKER (default \"continuation\") and will never
-consume the reply slot of a later operator message."
-  (when (process-live-p agent-chat--pending-process)
-    (user-error "%s is still responding; background turn withheld"
-                (capitalize agent-name)))
-  (agent-chat--start-turn call-async-fn agent-name hooks text
-                          (or speaker "continuation") 'unsolicited))
+consume the reply slot of a later operator message. If another turn is already
+in flight, the unsolicited turn is QUEUED and drains when the current turn
+finishes — never signal an error here: the caller (e.g. the park delivery
+path) may already have recorded the delivery, so refusing would lose it."
+  (if (process-live-p agent-chat--pending-process)
+      (progn
+        (agent-chat--queue-turn call-async-fn agent-name hooks text
+                                (or speaker "continuation") 'unsolicited)
+        (message "[%s] background turn queued behind the current turn" agent-name))
+    (agent-chat--start-turn call-async-fn agent-name hooks text
+                            (or speaker "continuation") 'unsolicited)))
 
 (defun agent-chat-send-input (call-async-fn agent-name &optional hooks)
   "Generic send: extract input, display it, call CALL-ASYNC-FN.

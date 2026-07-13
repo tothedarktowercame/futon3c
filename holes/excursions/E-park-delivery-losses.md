@@ -117,9 +117,16 @@ resume and the operator-visible stall.
 
 Mitigation applied live: WS `park-ready` handler unsubscribed in the running
 Emacs (poll path is sufficient); stale 614s accum-elapsed cleared in
-`*claude-repl:claude-6*`. Fix applied: the server chooses ONE path per resume:
-targeted WS when accepted by the agent's sender, otherwise exactly one inbox
-fallback. The Elisp side also dedups by park-id.
+`*claude-repl:claude-6*`. Fix applied (revised at review, 2026-07-13): the
+durable ready-inbox is the ONLY delivery path — every resume flows through
+lease → deliver → ACK, so the busy gate, redelivery, and dedup always apply —
+and the targeted WS `park-ready` frame is demoted to a wake-up POKE that makes
+the buffer poll immediately instead of waiting out the interval. The frame
+carries no payload; losing it costs one poll tick of latency, never the resume.
+(The first cut of this fix made an accepted WS send REPLACE the inbox push —
+fire-and-forget delivery with no lease behind it, so a frame consumed by a dead
+buffer, a crashed Emacs, or the busy-collision below was a permanent loss. The
+poke pattern keeps the WS speed without giving it custody of anything.)
 
 ## One-slot shift — unsolicited turns corrupt operator reply pairing (FIXED 2026-07-13)
 
@@ -131,6 +138,18 @@ Fix applied: unsolicited resumes are launched through a distinct
 turn, and never inserted into the operator input area. If the operator sends
 while an unsolicited turn is in flight, the operator text is queued and launched
 as its own `joe:` turn after the continuation finishes.
+
+Review finding (claude-5, 2026-07-13): the MIRROR race was a loss path. A
+resume arriving while an OPERATOR turn was in flight hit a `user-error` in
+`agent-chat-send-unsolicited-input` — but `resume-in-buffer` had already added
+the park-id to the dedup ring, so the lease-expiry redelivery was skipped AND
+ACKed: the resume was silently destroyed (bug 3's failure mode, reintroduced
+through the side door). Fix: unsolicited turns now QUEUE behind an in-flight
+turn exactly as operator turns queue behind unsolicited ones (the queue entries
+carry their own speaker/origin), and the send path never signals. Remaining
+accepted blast radius: an ACKed resume queued in a buffer that dies before
+draining is lost with the Emacs — same custody semantics as one that dies
+mid-send.
 
 ## Finding 6 — the deadline backstop never woke anyone (FIXED 2026-07-13)
 

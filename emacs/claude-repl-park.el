@@ -1,13 +1,14 @@
 ;;; claude-repl-park.el --- Buffer-side parked-on continuations -*- lexical-binding: t; -*-
 
 ;; E-repl-continuations Car 2 (Emacs side / model B): when an agent parks its
-;; REPL turn on dispatched work and the join completes, the futon3c backend makes
-;; the assembled resume prompt available two ways — a `park-ready' WS push (instant,
-;; when the agency WS is connected) and a ready-inbox the buffer POLLS
-;; (GET /api/alpha/parked/ready, works today without the WS). Either way this
-;; RESUMES THE TURN IN PLACE: it injects the resume prompt as input and sends it
-;; through the normal turn machinery, so the continuation streams into the buffer
-;; natively — no manual wake. Closes the "I'll get back to you" -> silence gap.
+;; REPL turn on dispatched work and the join completes, the futon3c backend puts
+;; the assembled resume prompt in a durable ready-inbox that the buffer POLLS
+;; (GET /api/alpha/parked/ready — lease → deliver → ACK), and sends a `park-ready'
+;; WS frame as a wake-up POKE so the poll happens immediately rather than on the
+;; next tick. The resume launches as its own unsolicited `continuation:' turn
+;; (never via the operator input area), so the continuation streams into the
+;; buffer natively — no manual wake, and no stolen operator reply slot. Closes
+;; the "I'll get back to you" -> silence gap.
 
 ;;; Code:
 
@@ -123,11 +124,15 @@ reply slot."
            (claude-repl-find-buffer-by-agent-id agent))))
 
 (defun claude-repl-park--on-ready (frame)
-  "Handle a `park-ready' WS FRAME (alist: agent/session/park-id/prompt)."
-  (claude-repl-park--resume-in-buffer
-   (claude-repl-park--target-buffer (alist-get 'agent frame) (alist-get 'session frame))
-   (alist-get 'prompt frame)
-   (alist-get 'park-id frame)))
+  "Handle a `park-ready' WS FRAME as a wake-up POKE: poll the inbox now.
+The frame is not an authoritative delivery — the resume lives in the durable
+ready-inbox and is fetched through the ordinary lease → deliver → ACK path, so
+the server busy gate, lease redelivery, and park-id dedup all apply. A lost or
+misrouted frame costs one poll interval of latency, never the resume."
+  (let ((buf (claude-repl-park--target-buffer (alist-get 'agent frame)
+                                              (alist-get 'session frame))))
+    (when (buffer-live-p buf)
+      (claude-repl-park--poll-buffer-async buf))))
 
 ;;;; Poll path (primary — works without the WS) -------------------------------
 

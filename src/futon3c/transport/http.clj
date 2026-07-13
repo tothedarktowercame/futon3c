@@ -717,10 +717,14 @@
   (and surface (str/starts-with? (str surface) "emacs")))
 
 (defn- parked-resume!
-  "Resume a parked agent. For a BUFFER-surfaced park, deliver exactly once: try a
-   targeted `park-ready` WS frame when the agent has a sender, otherwise enqueue
-   one poll-inbox item. For a headless/bell-surfaced park, enqueue a fresh turn
-   on the agent's OWN drainer lane (mirrors enqueue-auto-bellback!'s I-1 routing)."
+  "Resume a parked agent. For a BUFFER-surfaced park, the durable ready-inbox is
+   the ONLY delivery path (every resume flows through lease → deliver → ACK, so
+   the busy gate, redelivery, and dedup all apply); a targeted `park-ready` WS
+   frame is then sent as a wake-up POKE that makes the buffer poll immediately
+   instead of waiting out the poll interval. The frame carries no authoritative
+   payload — losing it costs latency, never the resume. For a headless/
+   bell-surfaced park, enqueue a fresh turn on the agent's OWN drainer lane
+   (mirrors enqueue-auto-bellback!'s I-1 routing)."
   [rec]
   (let [agent (:agent rec)
         prompt (assemble-resume-prompt rec)]
@@ -728,19 +732,17 @@
     ;; re-project on resume so the line clears promptly.
     (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
     (if (buffer-surface? (:surface rec))
-      (let [frame {:type "park-ready"
-                   :agent (str agent)
-                   :session (str (:session rec))
-                   :park-id (:id rec)
-                   :surface (str (:surface rec))
-                   :mode (name (or (:mode rec) :within-turn))
-                   :prompt prompt}]
-        (if (ws-invoke/send-frame! (str agent) frame)
-          (str "park-ready-ws:" (:id rec))
-          (do
-            (parked-ready-push! agent (:session rec) (:id rec) prompt
-                                (or (:mode rec) :within-turn))
-            (str "park-ready-inbox:" (:id rec)))))
+      (do
+        (parked-ready-push! agent (:session rec) (:id rec) prompt
+                            (or (:mode rec) :within-turn))
+        (let [poked? (ws-invoke/send-frame! (str agent)
+                                            {:type "park-ready"
+                                             :agent (str agent)
+                                             :session (str (:session rec))
+                                             :park-id (:id rec)
+                                             :surface (str (:surface rec))
+                                             :mode (name (or (:mode rec) :within-turn))})]
+          (str "park-ready-inbox" (when poked? "+poke") ":" (:id rec))))
       (let [job-id (create-invoke-job! {:agent-id agent :prompt prompt
                                         :caller parked-resume-caller :surface parked-resume-caller})
             run-job (fn [] (run-invoke-job! {:job-id job-id :agent-id agent :prompt prompt
