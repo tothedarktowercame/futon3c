@@ -58,6 +58,14 @@
     (when-let [http-ns (find-ns 'futon3c.transport.http)]
       (ns-resolve http-ns 'active-invoke-job-counts))))
 
+(def ^:dynamic *resolve-uplink-announce*
+  "Best-effort resolver for futon3c.agency.fed-uplink/announce!.
+   Returns a 0-arity fn or nil. Kept dynamic to avoid a registry -> uplink
+   namespace dependency cycle."
+  (fn []
+    (when-let [uplink-ns (find-ns 'futon3c.agency.fed-uplink)]
+      (ns-resolve uplink-ns 'announce!))))
+
 (defonce ^{:doc "Registry of agents.
 
    Structure: {agent-id-value -> agent-record}
@@ -214,6 +222,16 @@
           "count" (:count status)}))
       (catch Throwable _ nil))))
 
+(defn- announce-uplink-roster!
+  []
+  (when-let [announce-fn (try
+                           (*resolve-uplink-announce*)
+                           (catch Throwable _ nil))]
+    (future
+      (try
+        (announce-fn)
+        (catch Throwable _ nil)))))
+
 (defn publish-agents-status!
   "Publish the current agent status snapshot to local and WS agent HUDs.
    Use this after multi-agent registry updates that do not flow through
@@ -222,6 +240,7 @@
   (let [status (registry-status)]
     (bb/project-agents! status)
     (broadcast-agents-ws!)
+    (announce-uplink-roster!)
     {:ok true
      :count (:count status)}))
 
@@ -962,8 +981,7 @@
                                 (assoc :agent/session-id (some-> (:session-id state) str str/trim)))]
                    (assoc m aid-val agent*))
                  m)))
-      (bb/project-agents! (registry-status))
-      (broadcast-agents-ws!))
+      (publish-agents-status!))
     {:ok true
      :agent-id aid-val
      :source source-key

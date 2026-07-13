@@ -347,6 +347,26 @@
       (reg/clear-external-invoke! "codex-repl" "emacs-codex-repl")
       (is (= :idle (get-in (reg/registry-status) [:agents "codex-repl" :status]))))))
 
+(deftest external-invoke-heartbeat-announces-uplink-roster
+  (testing "externally driven REPL invokes publish to the federation uplink promptly"
+    (reg/register-agent!
+     {:agent-id (fix/make-agent-id "codex-uplink")
+      :type :codex
+      :invoke-fn nil
+      :capabilities [:edit]})
+    (let [announced (promise)]
+      (with-redefs [reg/running-codex-session-ids (constantly #{})
+                    futon3c.transport.ws.invoke/connected-agent-ids (constantly [])
+                    futon3c.blackboard/project-agents! (fn [_] nil)]
+        (binding [reg/*resolve-uplink-announce*
+                  (fn [] (fn [] (deliver announced :announced)))]
+          (reg/report-external-invoke!
+           "codex-uplink"
+           "emacs-codex-repl"
+           {:status :invoking
+            :prompt-preview "active prompt"})))
+      (is (= :announced (deref announced 1000 :timeout))))))
+
 (deftest agents-status-broadcast-advertises-invoke-pattern
   (testing "WS agents_status carries the same invoke preview fields as registry-status"
     (let [sent (promise)]
