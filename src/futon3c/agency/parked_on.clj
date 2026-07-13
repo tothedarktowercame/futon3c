@@ -33,11 +33,21 @@
 
 (defn- store-path [] (or (config/env "FUTON3C_PARKED_ON_PATH") default-store))
 
-;; state = {:records {rid record} :index {dep-id #{rid}}}, where :index maps each
-;; still-awaited dep-id to the records waiting on it (the reverse join index).
+;; state = {:records {rid record} :index {dep-id #{rid}}
+;;          :ready-inbox {[agent session] [{:park-id :prompt} ...]}
+;;          :leased {park-id {:agent :session :prompt :lease-deadline-ms}}}
+;; where :index maps each still-awaited dep-id to the records waiting on it
+;; (the reverse join index); :ready-inbox is the per-[agent session] FIFO queue
+;; of assembled resume prompts whose join completed, waiting for the repl buffer
+;; to poll; :leased holds items that were popped but not yet acked (lease/ack
+;; redelivery, E-park-delivery-losses bug 3).
 (defonce ^:private !parked (atom nil))
 
-(defn- empty-state [] {:records {} :index {}})
+(defn- empty-state [] {:records {} :index {} :ready-inbox {} :leased {}})
+
+;; Default lease duration for a popped ready item (ms). After this without an
+;; ACK, the sweep returns the item to the front of its queue for redelivery.
+(def ^:private default-lease-ms 90000)
 
 ;; Non-terminal ledger states (mirrors recover-inflight-jobs' "in-flight" set); any
 ;; other non-nil state counts as terminal (a dep that has finished, success or fail).
@@ -71,6 +81,123 @@
   (persist! (empty-state)))
 
 (defn snapshot [] (ensure!) (dissoc @!parked :just-released))
+
+;; ---------------------------------------------------------------------------;;
+;; Ready-inbox + lease/ack (E-park-delivery-losses bugs 2-3)
+;;
+;; The ready-inbox is part of the DURABLE state (survives JVM restart). A popped
+;; item becomes LEASED (not consumed) until the repl buffer ACKs it; expired
+;; unacked leases are returned to the FRONT of their queue by sweep-leased!.
+;; ---------------------------------------------------------------------------;;
+
+(defn ready-push!
+  "Push an assembled resume prompt for [AGENT SESSION] into the durable
+   ready-inbox (FIFO). Called when a buffer-surfaced park's join completes."
+  [agent session park-id prompt]
+  (ensure!)
+  (swap! !parked (fn [st]
+                   (-> st
+                       (update :ready-inbox
+                               (fn [ib]
+                                 (let [k [(str agent) (str session)]]
+                                   (assoc ib k (conj (get ib k [])
+                                                     {:park-id park-id :prompt prompt}))))))))
+  (persist! @!parked))
+
+(defn- ready-key [agent session] [(str agent) (str session)])
+
+(defn ready-lease-one!
+  "Atomically pop ONE ready item for [AGENT SESSION] from the FRONT of its FIFO
+   queue and mark it LEASED with an absolute lease-deadline (now + lease-ms).
+   Returns the leased item {:park-id :prompt :lease-deadline-ms} or nil if the
+   queue is empty. The item stays in :leased until ready-ack! confirms delivery
+   (sweep-leased! returns expired unacked leases for redelivery)."
+  ([agent session] (ready-lease-one! agent session (System/currentTimeMillis) default-lease-ms))
+  ([agent session now-ms lease-ms]
+   (ensure!)
+   (let [k (ready-key agent session)
+         leased-item (atom nil)]
+     (swap! !parked
+            (fn [st]
+              (let [items (get-in st [:ready-inbox k])]
+                (if (seq items)
+                  (let [item (first items)
+                        deadline (+ now-ms lease-ms)
+                        leased-entry {:agent (str agent) :session (str session)
+                                      :park-id (:park-id item) :prompt (:prompt item)
+                                      :lease-deadline-ms deadline}]
+                    (reset! leased-item (assoc item :lease-deadline-ms deadline))
+                    (-> st
+                        (assoc-in [:leased (:park-id item)] leased-entry)
+                        (assoc-in [:ready-inbox k] (subvec items 1))))
+                  st))))
+     (persist! @!parked)
+     @leased-item)))
+
+(defn ready-ack!
+  "Confirm delivery of a leased ready item (clear its lease). Returns true if the
+   item was found and cleared, false if unknown (already acked or expired+requeued)."
+  [park-id]
+  (ensure!)
+  (let [found? (atom false)]
+    (swap! !parked
+           (fn [st]
+             (if (contains? (:leased st) park-id)
+               (do (reset! found? true)
+                   (update st :leased dissoc park-id))
+               st)))
+    (persist! @!parked)
+    @found?))
+
+(defn sweep-leased!
+  "Return expired unacked leases to the FRONT of their ready-inbox queue for
+   redelivery. ON-EXPIRE (optional) is called per expired item for observability.
+   Returns {:requeued [park-id ...]}."
+  ([{:keys [now-ms on-expire] :or {now-ms (System/currentTimeMillis)}}]
+   (ensure!)
+   (let [expired (atom [])]
+     (swap! !parked
+            (fn [st]
+              (let [expired-entries (for [[_pid entry] (:leased st)
+                                          :when (>= now-ms (:lease-deadline-ms entry))]
+                                      entry)]
+                (when (seq expired-entries)
+                  (reset! expired (mapv :park-id expired-entries)))
+                (as-> st s
+                  ;; Process in REVERSE so the first-expired item ends up at the
+                  ;; FRONT of the queue (FIFO redelivery: pk-1 leased before pk-2,
+                  ;; so pk-1 should be redelivered first).
+                  (reduce (fn [s' entry]
+                            (let [k [(str (:agent entry)) (str (:session entry))]
+                                  item {:park-id (:park-id entry) :prompt (:prompt entry)}]
+                              (-> s'
+                                  (assoc-in [:ready-inbox k]
+                                            (into [item] (get-in s' [:ready-inbox k])))
+                                  (update :leased dissoc (:park-id entry)))))
+                          s
+                          (reverse expired-entries))
+                  ;; If any queue became empty, clean up the key.
+                  (reduce (fn [s' [_agent _session :as k]]
+                            (if (empty? (get-in s' [:ready-inbox k]))
+                              (update s' :ready-inbox dissoc k)
+                              s'))
+                          s
+                          (for [e expired-entries] [(:agent e) (:session e)]))))))
+     (persist! @!parked)
+     (doseq [pid @expired]
+       (when on-expire (on-expire pid)))
+     {:requeued (vec @expired)})))
+
+(defn ready-inbox-pending?
+  "True when [AGENT SESSION] has ready items OR leased items pending (for the
+   more-pending check — a leased resume is still 'coming' until acked)."
+  [agent session]
+  (ensure!)
+  (let [k (ready-key agent session)]
+    (or (seq (get-in @!parked [:ready-inbox k]))
+        (some (fn [[_ e]] (and (= (:agent e) (str agent))
+                               (= (:session e) (str session))))
+              (:leased @!parked)))))
 
 ;; ---------------------------------------------------------------------------
 ;; index helpers
@@ -193,20 +320,42 @@
   "On boot: reload persisted records and reconcile each awaited dep against the
    (already recovered) ledger — fold now-terminal deps in (a dep marked failed by
    recover-inflight-jobs counts as arrived, not a hang), releasing any join that
-   completed during downtime. Returns {:loaded n :released [...]}."
+   completed during downtime. Also returns any stale leased ready items to their
+   ready-inbox queue for redelivery (the JVM restart invalidated the leases — the
+   buffer that was supposed to ACK them no longer exists). Old files without
+   :leased / :ready-inbox keys are tolerated (merge with empty-state). Returns
+   {:loaded n :released [...] :requeued-leases n}."
   [{:keys [ledger-lookup resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (reset! !parked (load-state))
-  (let [recs (vals (:records @!parked))
-        released (atom [])]
-    (doseq [rec recs
-            dep (vec (:awaiting rec))]
-      (when ledger-lookup
-        (let [j (ledger-lookup dep)]
-          (when (and j (terminal-state? (:state j)))
-            (let [r (note-completion! dep (:result-summary j)
-                                      {:resume! resume! :now-ms now-ms})]
-              (swap! released into (:released r)))))))
-    {:loaded (count recs) :released @released}))
+  ;; Return stale leased items to the FRONT of their ready-inbox for redelivery.
+  (let [stale-leased (-> @!parked :leased vals vec)
+        requeued (atom 0)]
+    (when (seq stale-leased)
+      (swap! !parked
+             (fn [st]
+               ;; Reverse to preserve FIFO order (first leased → front of queue).
+               (reduce (fn [s entry]
+                         (let [k [(:agent entry) (:session entry)]
+                               item {:park-id (:park-id entry) :prompt (:prompt entry)}]
+                           (-> s
+                               (assoc-in [:ready-inbox k]
+                                         (into [item] (get-in s [:ready-inbox k])))
+                               (update :leased dissoc (:park-id entry)))))
+                       (assoc st :leased {})
+                       (reverse stale-leased))))
+      (reset! requeued (count stale-leased))
+      (persist! @!parked))
+    (let [recs (vals (:records @!parked))
+          released (atom [])]
+      (doseq [rec recs
+              dep (vec (:awaiting rec))]
+        (when ledger-lookup
+          (let [j (ledger-lookup dep)]
+            (when (and j (terminal-state? (:state j)))
+              (let [r (note-completion! dep (:result-summary j)
+                                        {:resume! resume! :now-ms now-ms})]
+                (swap! released into (:released r)))))))
+      {:loaded (count recs) :released @released :requeued-leases @requeued})))
 
 (defn sweep-deadlines!
   "Force-terminate records past :deadline-ms (the liveness backstop) and fire due

@@ -85,3 +85,64 @@
                      {:ledger-lookup (constantly nil) :resume! (resume-into fired) :now-ms 1000})]
       (is (= :released-immediately (:status r)))
       (is (= [(:id r)] @fired)))))
+
+;; ---------------------------------------------------------------------------;;
+;; E-park-delivery-losses bugs 2-3: lease / ack / redelivery + busy-withhold
+;; ---------------------------------------------------------------------------;;
+
+(deftest ready-push-then-lease-one
+  (testing "ready-push! enqueues FIFO; ready-lease-one! pops one and marks it leased"
+    (p/ready-push! "a1" "s1" "pk-1" "prompt-1")
+    (p/ready-push! "a1" "s1" "pk-2" "prompt-2")
+    (is (p/ready-inbox-pending? "a1" "s1"))
+    (let [item (p/ready-lease-one! "a1" "s1" 1000 90000)]
+      (is (= "pk-1" (:park-id item)) "FIFO: first pushed is first leased")
+      (is (= "prompt-1" (:prompt item)))
+      (is (= 91000 (:lease-deadline-ms item)) "deadline = now + lease-ms")
+      (is (p/ready-inbox-pending? "a1" "s1") "still pending: pk-2 in queue + pk-1 leased"))))
+
+(deftest lease-then-ack-clears-lease
+  (testing "ready-ack! confirms delivery and removes the lease"
+    (p/ready-push! "a1" "s1" "pk-1" "prompt-1")
+    (let [item (p/ready-lease-one! "a1" "s1" 1000 90000)]
+      (is (some? item))
+      (is (p/ready-inbox-pending? "a1" "s1") "leased item counts as pending")
+      (is (true? (p/ready-ack! "pk-1")) "ack returns true for a known lease")
+      (is (false? (p/ready-ack! "pk-1")) "double-ack returns false")
+      (is (not (p/ready-inbox-pending? "a1" "s1")) "after ack, nothing pending"))))
+
+(deftest lease-then-no-ack-then-sweep-redelivers
+  (testing "an unacked expired lease is returned to the FRONT of the queue for redelivery"
+    (p/ready-push! "a1" "s1" "pk-1" "prompt-1")
+    (p/ready-push! "a1" "s1" "pk-2" "prompt-2")
+    ;; Lease pk-1 (FIFO front), do NOT ack
+    (let [first-pop (p/ready-lease-one! "a1" "s1" 1000 90000)]
+      (is (= "pk-1" (:park-id first-pop))))
+    ;; Lease pk-2
+    (let [second-pop (p/ready-lease-one! "a1" "s1" 1000 90000)]
+      (is (= "pk-2" (:park-id second-pop))))
+    ;; Queue is now empty, both leased, neither acked. Sweep at 200000 (past deadline 91000).
+    (let [r (p/sweep-leased! {:now-ms 200000})]
+      (is (= 2 (count (:requeued r))) "both expired leases requeued"))
+    ;; Redelivery: pk-1 should be at the FRONT (it was leased first, redelivered to front)
+    (let [redelivered (p/ready-lease-one! "a1" "s1" 200000 90000)]
+      (is (= "pk-1" (:park-id redelivered)) "pk-1 redelivered first (front of queue)"))))
+
+(deftest old-file-rehydrate-tolerates-missing-new-keys
+  (testing "rehydrate! tolerates an old persisted shape without :ready-inbox / :leased"
+    ;; Simulate an old file by writing EDN without the new keys, then rehydrating.
+    ;; The clear! + park! writes a current-shape file; we overwrite with old shape.
+    (p/park! {:agent "claude-1" :awaiting ["b1"] :payload "P"}
+             {:ledger-lookup (constantly nil) :resume! (constantly nil) :now-ms 1000})
+    ;; Overwrite the store with an OLD-shape file (no :ready-inbox, no :leased).
+    (spit "/tmp/futon3c-parked-on.edn"
+          (pr-str {:records {"old-park" {:id "old-park" :agent "claude-1" :awaiting #{"b1"}
+                                          :arrived {} :payload "old" :budget {:resumes-left 1}}}
+                   :index {"b1" #{"old-park"}}}))
+    (let [res (p/rehydrate! {:ledger-lookup (constantly {:state "failed" :result-summary "gone"})
+                             :resume! (constantly nil) :now-ms 2000})]
+      (is (= 1 (:loaded res)) "loaded the old-shape record")
+      (is (= 0 (:requeued-leases res)) "no stale leases in old file")
+      ;; The new keys should be present in the snapshot (merge tolerance).
+      (is (map? (:ready-inbox (p/snapshot))))
+      (is (map? (:leased (p/snapshot)))))))

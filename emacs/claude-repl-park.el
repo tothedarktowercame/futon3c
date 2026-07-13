@@ -29,40 +29,92 @@
 (defvar claude-repl-park--poll-timer nil)
 (defvar claude-repl-park--last nil "Most recent ready item handled, for debugging.")
 
+;; Bug 3: dedup ring of recently-handled park-ids. The server redelivers an
+;; unacked lease after its deadline; this ring lets the buffer skip a duplicate
+;; (and ACK it so the lease clears). Sized generously vs. the 3s poll interval.
+(defvar claude-repl-park--seen-ids (make-ring 32)
+  "Ring of park-ids recently handled by this Emacs, for idempotent redelivery.")
+
+(defun claude-repl-park--seen-p (park-id)
+  "Non-nil when PARK-ID was recently handled (in the dedup ring)."
+  (and (stringp park-id)
+       (let (found)
+         (ring-map (lambda (id) (when (equal id park-id) (setq found t)))
+                   claude-repl-park--seen-ids)
+         found)))
+
+(defun claude-repl-park--remember! (park-id)
+  "Add PARK-ID to the dedup ring."
+  (when (stringp park-id)
+    (ring-insert claude-repl-park--seen-ids park-id)))
+
+(cl-defun claude-repl-park--ack (park-id)
+  "POST /api/alpha/parked/ready/ack for PARK-ID (confirm delivery, clear lease).
+Best-effort: failure means the server will redeliver after the lease deadline,
+and the dedup ring will skip the duplicate, so correctness is preserved even
+when the ACK is lost."
+  (ignore-errors
+    (let ((url (format "%s/api/alpha/parked/ready/ack"
+                       (string-remove-suffix "/" claude-repl-api-url)))
+          (url-request-method "POST")
+          (url-request-extra-headers '(("Content-Type" . "application/json")))
+          (url-request-data (format "{\"park-id\":\"%s\"}" park-id)))
+      (url-retrieve url (lambda (_status)
+                          (let ((buf (current-buffer)))
+                            (unwind-protect
+                                (ignore)
+                              (when (buffer-live-p buf) (kill-buffer buf)))))
+                    nil t t))))
+
 (defun claude-repl-park--resume-in-buffer (buf prompt park-id)
   "Resume the parked turn in BUF by injecting PROMPT and sending it in place.
-Note: this buffer is driven by the server-side pouch, so we do NOT gate on the
-buffer's `agent-chat--streaming-started' flag (it never resets here); the backend
-pops each ready item exactly once, so a resume is delivered once."
+Bug 2 (E-park-delivery-losses): the busy gate is now SERVER-SIDE —
+handle-parked-ready checks the registry's :invoking status before leasing, so a
+mid-turn agent never receives a resume. This buffer does NOT gate on
+agent-chat--streaming-started (it was unreliable in pouch-driven buffers).
+Bug 3: idempotent delivery — if PARK-ID was recently handled (dedup ring), skip
+it and ACK so the stale lease clears. After a successful send, ACK to confirm."
   (when (and (buffer-live-p buf) (stringp prompt) (not (string-empty-p prompt)))
-    (with-current-buffer buf
-      (setq claude-repl-park--last (list :park-id park-id :buffer (buffer-name buf)))
-      (when (fboundp 'agent-chat--ensure-prompt-markers!)
-        (agent-chat--ensure-prompt-markers!))
-      ;; The parked segment DEFERRED its finalization (no flair/evidence emitted;
-      ;; its elapsed + output were banked in finish-turn / the done-handler), so
-      ;; there is nothing to absorb here.  Safety: clear any flair that a raced
-      ;; segment might nonetheless have rendered, before injecting the continuation.
-      (when (fboundp 'agent-chat--delete-existing-turn-flair-before-prompt)
-        (agent-chat--delete-existing-turn-flair-before-prompt))
-      ;; Insert at the MANAGED input position, re-derived after the flair removal,
-      ;; so the prompt markers stay consistent and the next flair lands correctly.
-      (if (and (fboundp 'agent-chat--ensure-prompt-markers!)
-               (agent-chat--ensure-prompt-markers!)
-               (markerp agent-chat--input-start))
-          (progn (goto-char (marker-position agent-chat--input-start))
-                 (delete-region (point) (point-max)))
-        (goto-char (point-max)))
-      ;; The assembled prompt self-describes (it carries the joined dep results),
-      ;; so sending it drives the ordinary turn flow → the continuation streams in.
-      (insert prompt)
-      (if claude-repl-park-auto-send
-          (progn (message "[park] resuming %s in place (park %s)"
-                          (buffer-name buf) park-id)
-                 ;; attribute the injected turn to "continuation", not the operator
-                 (let ((agent-chat-user-speaker "continuation"))
-                   (claude-repl-send-input)))
-        (message "[park] resume staged in %s — RET to send" (buffer-name buf))))))
+    (cond
+     ((and (stringp park-id) (claude-repl-park--seen-p park-id))
+      (message "[park] skipping duplicate park %s in %s (already handled)"
+               park-id (buffer-name buf))
+      (claude-repl-park--ack park-id))            ; clear the stale lease
+     (t
+      (with-current-buffer buf
+        (setq claude-repl-park--last (list :park-id park-id :buffer (buffer-name buf)))
+        (when (fboundp 'agent-chat--ensure-prompt-markers!)
+          (agent-chat--ensure-prompt-markers!))
+        ;; The parked segment DEFERRED its finalization (no flair/evidence emitted;
+        ;; its elapsed + output were banked in finish-turn / the done-handler), so
+        ;; there is nothing to absorb here.  Safety: clear any flair that a raced
+        ;; segment might nonetheless have rendered, before injecting the continuation.
+        (when (fboundp 'agent-chat--delete-existing-turn-flair-before-prompt)
+          (agent-chat--delete-existing-turn-flair-before-prompt))
+        ;; Insert at the MANAGED input position, re-derived after the flair removal,
+        ;; so the prompt markers stay consistent and the next flair lands correctly.
+        (if (and (fboundp 'agent-chat--ensure-prompt-markers!)
+                 (agent-chat--ensure-prompt-markers!)
+                 (markerp agent-chat--input-start))
+            (progn (goto-char (marker-position agent-chat--input-start))
+                   (delete-region (point) (point-max)))
+          (goto-char (point-max)))
+        ;; Bug 3: remember this park-id BEFORE sending, so a fast redelivery is
+        ;; deduped even before the ACK round-trips.
+        (claude-repl-park--remember! park-id)
+        ;; The assembled prompt self-describes (it carries the joined dep results),
+        ;; so sending it drives the ordinary turn flow — the continuation streams in.
+        (insert prompt)
+        (if claude-repl-park-auto-send
+            (progn (message "[park] resuming %s in place (park %s)"
+                            (buffer-name buf) park-id)
+                   ;; attribute the injected turn to "continuation", not the operator
+                   (let ((agent-chat-user-speaker "continuation"))
+                     (claude-repl-send-input))
+                   ;; Bug 3: ACK delivery after send returns without error. If the
+                   ;; ACK is lost, the server redelivers; the dedup ring skips it.
+                   (claude-repl-park--ack park-id))
+          (message "[park] resume staged in %s — RET to send" (buffer-name buf))))))))
 
 ;;;; WS path (bonus — instant when the agency WS is connected) -----------------
 
@@ -108,7 +160,7 @@ synchronous GET is what made you reach for C-g)."
                  (unless (plist-get status :error)
                    (goto-char (point-min))
                    (when (search-forward "\n\n" nil t)
-                     ;; evidence JSON parses as a PLIST (keyword keys); items too.
+                     ;; JSON parses as a PLIST (keyword keys); items too.
                      (let* ((body (buffer-substring-no-properties (point) (point-max)))
                             (json (ignore-errors
                                     (json-parse-string body :object-type 'plist
@@ -122,15 +174,15 @@ synchronous GET is what made you reach for C-g)."
          nil t t)))))
 
 (defun claude-repl-park--poll-once ()
-  "Async-poll the ready-inbox for every live, idle Claude REPL buffer (non-blocking)."
+  "Async-poll the ready-inbox for every live Claude REPL buffer (non-blocking).
+Bug 2: the mid-turn busy gate is now SERVER-SIDE (handle-parked-ready checks the
+registry :invoking status). The old agent-chat--streaming-started gate here was
+unreliable in pouch-driven buffers, so it has been REMOVED — the server withholds
+items from busy agents, so the buffer polls unconditionally and trusts the gate."
   (dolist (buf (buffer-list))
     (when (buffer-live-p buf)
       (with-current-buffer buf
-        ;; Gate BEFORE the GET: a mid-turn buffer retains its item (GET pops), so
-        ;; a resume is never sent while a turn is streaming — it fires next idle poll.
-        (when (and (eq major-mode 'claude-repl-mode)
-                   (not (and (boundp 'agent-chat--streaming-started)
-                             agent-chat--streaming-started)))
+        (when (eq major-mode 'claude-repl-mode)
           (claude-repl-park--poll-buffer-async buf))))))
 
 ;;;; Enable / disable ---------------------------------------------------------

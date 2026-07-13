@@ -662,21 +662,23 @@
     (boolean (#{"1" "true" "on" "yes"} (some-> prop str/trim str/lower-case)))))
 
 ;; Ready-inbox: a buffer-surfaced park whose join completed parks its assembled
-;; resume prompt here for the repl buffer to POLL (GET /api/alpha/parked/ready),
-;; alongside the WS push. Keyed [agent session]; pop-on-read so each fires once.
-(defonce ^:private !parked-ready-inbox (atom {}))
+;; resume prompt for the repl buffer to POLL (GET /api/alpha/parked/ready),
+;; alongside the WS push. Now DURABLE — lives in parked_on.clj's disk-backed
+;; atom (survives JVM restart). Delivery is LEASE-BASED: a pop marks the item
+;; leased (not consumed); the repl buffer ACKs after successful injection, and
+;; expired unacked leases are returned to the queue front for redelivery
+;; (E-park-delivery-losses bugs 2-3, 2026-07-13).
 
 (defn- parked-ready-push! [agent session park-id prompt]
-  (swap! !parked-ready-inbox update [(str agent) (str session)]
-         (fnil conj []) {:park-id park-id :prompt prompt}))
+  (parked-on/ready-push! agent session park-id prompt))
 
 (defn parked-ready-pop!
-  "Return AND clear the ready resumes for AGENT/SESSION (poll-and-consume)."
+  "Lease ONE ready resume for AGENT/SESSION (FIFO, pop-one per call). Returns the
+   leased item {:park-id :prompt :lease-deadline-ms} or nil. The item stays leased
+   until the buffer ACKs via POST /api/alpha/parked/ready/ack; the 30s sweep
+   returns expired unacked leases for redelivery."
   [agent session]
-  (let [k [(str agent) (str session)]
-        items (get @!parked-ready-inbox k [])]
-    (when (seq items) (swap! !parked-ready-inbox dissoc k))
-    items))
+  (parked-on/ready-lease-one! agent session))
 
 (defn- assemble-resume-prompt [rec]
   (str (:payload rec)
@@ -754,6 +756,10 @@
      {:now-ms (System/currentTimeMillis)
       :resume! parked-resume!
       :on-expire (fn [rec] (println (str "[parked-on] deadline expired, retracted: " (:id rec))))})
+    ;; Bug 3: return expired unacked ready-leases to their queue front for redelivery.
+    (parked-on/sweep-leased!
+     {:now-ms (System/currentTimeMillis)
+      :on-expire (fn [park-id] (println (str "[parked-on] lease expired, requeued: " park-id)))})
     (catch Throwable t (println (str "[parked-on] sweep failed: " (.getMessage t))))))
 
 ;; defonce so a Drawbridge reload of this ns never orphans the daemon thread.
@@ -3329,16 +3335,56 @@
             second
             (java.net.URLDecoder/decode "UTF-8"))))
 
+(defn- agent-in-flight-turn?
+  "True when AGENT currently has an in-flight turn (the authoritative busy signal).
+   Source of truth: registry-status computes :invoking from ALL turn paths —
+   server-side warm-pouch invoke, cold fallback, bell-drained turns, REPL-streamed
+   turns, and external codex surfaces. This is the reliable idle signal the elisp
+   poller's agent-chat--streaming-started flag was not (E-park-delivery-losses bug 2)."
+  [agent]
+  (try
+    (= :invoking (get-in (reg/registry-status) [:agents (str agent) :status]))
+    (catch Throwable _ false)))
+
 (defn- handle-parked-ready
-  "GET /api/alpha/parked/ready?agent=&session= — poll-and-consume the ready resume
-   prompts for a repl buffer (E-repl-continuations Car 2b, polling path)."
+  "GET /api/alpha/parked/ready?agent=&session= — poll-and-lease the ready resume
+   prompts for a repl buffer (E-park-continuations Car 2b, polling path).
+
+   Bug 2 fix (server-side busy gate): if the agent has an in-flight turn, WITHHOLD
+   all ready items (return empty :ready with :withheld true) WITHOUT popping — the
+   items are retained and delivered on a later poll when idle. This is the robust
+   idle signal: the registry knows whether the session is mid-turn across ALL paths.
+   Bug 3 fix (lease): pop is non-destructive — the item is leased until ACKed."
   [request _config]
   (let [agent (req-query-param request "agent")
-        session (req-query-param request "session")
-        ready (if (and (parked-on-enabled?) agent)
-                (parked-ready-pop! agent (or session ""))
-                [])]
-    (json-response 200 {:ok true :ready (vec ready)})))
+        session (req-query-param request "session")]
+    (if (and (parked-on-enabled?) agent (agent-in-flight-turn? agent))
+      ;; Bug 2: agent is mid-turn — withhold items, don't pop. They'll be
+      ;; delivered on a later poll when the agent is idle.
+      (json-response 200 {:ok true :ready [] :withheld true})
+      (let [leased (if (and (parked-on-enabled?) agent)
+                     (parked-ready-pop! agent (or session ""))
+                     nil)]
+        (json-response 200 {:ok true
+                            :ready (if leased [leased] [])
+                            :leased (some? leased)})))))
+
+(defn- handle-parked-ready-ack
+  "POST /api/alpha/parked/ready/ack — confirm delivery of a leased ready resume
+   (clear its lease so it is not redelivered). Body: {\"park-id\":\"...\"} or query
+   param ?park-id=. Returns {:ok true :acked bool}."
+  [request _config]
+  (let [body (parse-json-map (read-body request))
+        park-id (or (:park-id body) (get body "park-id")
+                    (req-query-param request "park-id"))]
+    (cond
+      (not (parked-on-enabled?))
+      (json-response 503 {:ok false :error "parked-on-disabled"})
+      (str/blank? (str park-id))
+      (json-response 400 {:ok false :error "park-id-required"})
+      :else
+      (let [acked (parked-on/ready-ack! park-id)]
+        (json-response 200 {:ok true :acked acked})))))
 
 (defn- handle-parked
   "GET /api/alpha/parked?agent=&session= — outstanding (unreleased) parks for a repl
@@ -3357,8 +3403,7 @@
         ;; A ready resume already in the inbox (dep completed, poller not yet fired)
         ;; also means "more is coming" — so the check is race-free even for a fast dep.
         inbox-pending (and (parked-on-enabled?) agent
-                           (boolean (seq (get @!parked-ready-inbox
-                                              [(str agent) (str (or session ""))]))))]
+                           (parked-on/ready-inbox-pending? agent (or session "")))]
     (json-response 200 {:ok true :parked (vec (or recs []))
                         :more-pending (boolean (or (seq recs) inbox-pending))})))
 
@@ -5800,6 +5845,10 @@
       ;; E-repl-continuations Car 2b: repl buffer polls for ready resumes.
       (and (= :get method) (= "/api/alpha/parked/ready" uri))
       (handle-parked-ready request config)
+
+      ;; E-park-delivery-losses bug 3: ACK a leased ready resume (confirm delivery).
+      (and (= :post method) (= "/api/alpha/parked/ready/ack" uri))
+      (handle-parked-ready-ack request config)
 
       ;; E-repl-continuations: outstanding parks (within-turn unification).
       (and (= :get method) (= "/api/alpha/parked" uri))
