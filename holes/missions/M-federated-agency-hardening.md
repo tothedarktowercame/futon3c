@@ -862,3 +862,31 @@ unit `scripts/oxf-lucy-tunnel.service` is the stopgap until CP-F ships).
       the uplink is live (leave the removal itself to a verified deploy step).
 - [ ] Invariants hold: uplink routes to agents that already exist (I-2); no
       subprocess spawning in transport code (grep gate); locals stay bare (CP-D).
+
+**CP-F build-dispatch datapoint (2026-07-13, while the build ran):** the first
+cross-site build dispatch surfaced a hardening gap of its own. The bell to
+`chi-codex-1` traversed lucy's HTTP proxy invoke-fn; BOTH hops (lucy→chi proxy
+call, chi's local invoke job) timed out at exactly 600s while the codex process
+kept working underneath (verified on-box by chi-claude-1: JVM-parented PID
+alive, CPU advancing, CP-F files landing in a worktree). Fallout: the job
+reported `failed`, and lucy's proxy row wedged at `:invoking` (cleared by hand
+via Drawbridge; the remote registry had it `:idle` — a CP-E item 2 instance,
+proxy state diverging from home-box truth). Lessons for this mission: (a) any
+cross-site dispatch expected to exceed ~10min needs a completion-bell contract,
+not a synchronous proxy wait — the CP-F uplink invoke path should carry the
+caller's timeout end-to-end rather than compounding fixed per-hop caps; (b)
+proxy `:invoking` should be leased/TTL'd or reconciled from the home box on
+sync, never left to a response that may never arrive.
+
+**Gate datapoint (2026-07-13, CP-F verification on lucy):** the full suite
+cannot currently go green on lucy for a reason UNRELATED to CP-F:
+`futon3c.agency.turn-queue-test` is nondeterministically broken here — in the
+full gate it wedged hard (thread dump: main parked at turn_queue_test.clj:39,
+`@started` never delivered, drainer never ran the first job; JVM CPU flat),
+and run SOLO it failed once and hung once. No recent commit touches
+turn-queue; this extends CP-E item 8 (test-suite hygiene) with a concurrency
+flake, not just an env-var dependency. The CP-F-relevant gate was run
+explicitly instead and is GREEN: fed-uplink + federation (sync, registration,
+logic, core) + transport (protocol, ws, ws-invoke) = 123 tests, 381
+assertions, 0 failures. Chicago's own full-gate run (per the dispatch bell)
+will provide the cross-box comparison when its watcher reports.
