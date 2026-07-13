@@ -72,3 +72,29 @@
         (is (= :act (:arm decision)))
         (is (= :act (get-in @persisted [:decision :arm])))
         (is (= "M-z" (get-in @persisted [:inputs :mission])))))))
+
+(deftest calibration-ask-arm-unreachable-at-shipped-cost
+  (testing "ZU-2 calibration: at cost=0.65, :ask cannot win against realistic act-value"
+    ;; The :ask value = c-uncertainty - 0.65. Even at c-uncertainty=0.7
+    ;; (high), ask-value = 0.05 — below any gamma-weighted act-value.
+    (let [d (zaif/decide {:mission "M-z"
+                          :c-belief {:operator-c-uncertainty 0.7}
+                          :task-belief {:act-value 0.0}
+                          :observations {}})
+          ask-val (-> d :g-terms :ask)]
+      (is (< ask-val 0.1)
+          "ask-value at c-uncertainty=0.7 is < 0.1 — below typical act-values"))
+    ;; At low cost (0.15 — the calibration sweep's clean-separation value),
+    ;; :ask would win on high C-uncertainty. But that constant is NOT shipped.
+    ;; This test documents the gap: the shipped constant makes :ask unreachable.
+    (let [d (zaif/decide {:mission "M-z"
+                          :c-belief {:operator-c-uncertainty 0.5}
+                          :task-belief {:act-value 0.3}
+                          :observations {}})]
+      (is (= :act (:arm d))
+          "With typical beliefs, the shipped constants always pick :act")))
+  (testing "non-correction sessions correctly pick :act"
+    (is (= :act (:arm (zaif/decide {:mission "M-z"
+                                     :task-belief {:act-value 0.5}
+                                     :c-belief {:operator-c-uncertainty 0.2}
+                                     :observations {}}))))))
