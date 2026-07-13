@@ -260,6 +260,46 @@
             (System/setProperty "FUTON3C_SITE" old-site)
             (System/clearProperty "FUTON3C_SITE")))))))
 
+(deftest uplink-roster-replaces-stale-origin-proxy
+  (testing "a live WS-uplink proxy can heal a stale HTTP-sync proxy for the same remote agent"
+    (let [old-site (System/getProperty "FUTON3C_SITE")]
+      (try
+        (System/setProperty "FUTON3C_SITE" "lon")
+        (reg/register-agent!
+         {:agent-id {:id/value "oxf-codex-5" :id/type :continuity}
+          :type :codex
+          :invoke-fn (fn [_ _] {:ok true})
+          :capabilities [:coordination/execute]
+          :metadata {:proxy? true
+                     :remote? true
+                     :home-site :oxf
+                     :remote-agent-id "codex-5"
+                     :origin-url "http://127.0.0.1:17070"
+                     :federation/stale? true
+                     :federation/reachable? false}})
+        (with-redefs [reg/publish-agents-status! (fn [] {:ok true})]
+          (let [[result] (fed/import-uplink-roster!
+                          "ws-uplink://oxf"
+                          [{:agent-id "codex-5"
+                            :type "codex"
+                            :capabilities ["coordination/execute"]
+                            :home-site "oxf"
+                            :status :invoking
+                            :invoke-activity "preparing response"}]
+                          {:transport :ws-uplink
+                           :uplink-site "oxf"})]
+            (is (= :updated (:action result)))))
+        (let [proxy (reg/get-agent "oxf-codex-5")
+              projected (get-in (reg/registry-status) [:agents "oxf-codex-5"])]
+          (is (= "ws-uplink://oxf" (get-in proxy [:agent/metadata :origin-url])))
+          (is (= :ws-uplink (get-in proxy [:agent/metadata :federation/transport])))
+          (is (= :invoking (:status projected)))
+          (is (= "preparing response" (:invoke-activity projected))))
+        (finally
+          (if old-site
+            (System/setProperty "FUTON3C_SITE" old-site)
+            (System/clearProperty "FUTON3C_SITE")))))))
+
 (deftest own-site-reflections-are-not-imported
   ;; When we pull a peer, its roster contains ITS proxies of OUR agents.
   ;; Importing those would loop invokes to our own agent through the peer.

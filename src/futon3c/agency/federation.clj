@@ -603,10 +603,14 @@
            (not (site-qualified-away-from-local? aid)))
       {:ok true :agent-id aid :action :skipped-local}
 
-      ;; Existing proxy from another origin is a real conflict; keep the current one.
+      ;; Existing live proxy from another origin is a real conflict; keep the
+      ;; current one. A stale/unreachable proxy may be replaced by a fresh
+      ;; origin for the same remote identity, which lets WS-uplink heal
+      ;; failed HTTP-sync proxies without leaving split-brain stale status.
       (and existing
            (get-in existing [:agent/metadata :proxy?])
-           (not= origin-url (get-in existing [:agent/metadata :origin-url])))
+           (not= origin-url (get-in existing [:agent/metadata :origin-url]))
+           (not (true? (get-in existing [:agent/metadata :federation/stale?]))))
       {:ok false
        :agent-id aid
        :action :origin-conflict
