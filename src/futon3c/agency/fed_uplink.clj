@@ -192,31 +192,41 @@
        (* 1000 (long (Math/pow 2 (max 0 (dec failure-count)))))))
 
 (defn- run-loop!
-  [{:keys [site url]} executor]
+  [{:keys [url]} executor]
   (let [client (HttpClient/newHttpClient)]
     (loop [failures 0
            last-announce 0]
       (when (:running? @!state)
-        (try
-          (when-not (:connected? @!state)
-            (-> client
-                (.newWebSocketBuilder)
-                (.buildAsync (URI/create url) (listener executor))
-                (.join))
-            (recur 0 (System/currentTimeMillis)))
-          (let [now (System/currentTimeMillis)
-                interval (interval-ms)]
-            (when (>= (- now last-announce) interval)
-              (announce!))
-            (Thread/sleep (min interval 1000))
-            (recur 0 now))
-          (catch Throwable t
-            (swap! !state assoc
-                   :connected? false
-                   :socket nil
-                   :last-error (.getMessage t))
-            (Thread/sleep (backoff-delay-ms (inc failures)))
-            (recur (inc failures) last-announce)))))))
+        (let [{:keys [failures* last-announce*]}
+              (try
+                (if-not (:connected? @!state)
+                  (do
+                    (-> client
+                        (.newWebSocketBuilder)
+                        (.buildAsync (URI/create url) (listener executor))
+                        (.join))
+                    {:failures* 0
+                     :last-announce* (System/currentTimeMillis)})
+                  (let [now (System/currentTimeMillis)
+                        interval (interval-ms)]
+                    (when (>= (- now last-announce) interval)
+                      (announce!))
+                    (Thread/sleep (min interval 1000))
+                    {:failures* 0
+                     :last-announce* (if (>= (- now last-announce) interval)
+                                       now
+                                       last-announce)}))
+                (catch Throwable t
+                  (let [failures' (inc failures)]
+                    (swap! !state assoc
+                           :connected? false
+                           :socket nil
+                           :last-error (.getMessage t)
+                           :failure-count failures')
+                    (Thread/sleep (backoff-delay-ms failures'))
+                    {:failures* failures'
+                     :last-announce* last-announce})))]
+          (recur failures* last-announce*))))))
 
 (defn start-uplink!
   "Start the outbound federation uplink from FUTON3C_FED_UPLINK.
