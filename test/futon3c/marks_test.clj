@@ -112,3 +112,58 @@
   (let [decorated (marks/decorate-turn (entry "joe" "🧭 aim for the smallest diff"))]
     (is (contains? (set (:evidence/tags decorated)) :guidance))
     (is (not-any? #{:correction :approval :idea} (:evidence/tags decorated)))))
+
+;; --- agent self-mark channel (zai/zaif turn-rounds, M-points-de-fuite) -----
+
+(defn- round-entry
+  [author text]
+  {:evidence/id (str "e-test-" (hash [author text :round]))
+   :evidence/subject {:ref/type :agent :ref/id author}
+   :evidence/type :coordination
+   :evidence/claim-type :step
+   :evidence/author author
+   :evidence/session-id "zai-test"
+   :evidence/at "2026-07-13T00:00:00Z"
+   :evidence/body {:event :turn-round :round 2 :final false :text text :calls []}
+   :evidence/tags [:transcript :turn-round]})
+
+(deftest agent-round-self-correction-event
+  (let [text "✘ read_file on the wrong path — the spec lives in holes/, retrying there."
+        decorated (marks/decorate-agent-round (round-entry "zai-1" text))]
+    (is (= :event (get-in decorated [:evidence/body :marks 0 :verdict])))
+    (is (contains? (set (:evidence/tags decorated)) :self-correction))
+    (is (not-any? #{:correction} (:evidence/tags decorated)))))
+
+(deftest agent-round-long-form-and-idea
+  (let [text "(✘ :ref M-custom-harness \"assumed 8-round budget, it is 24\") 💡 the budget could be adaptive"
+        decorated (marks/decorate-agent-round (round-entry "zai-1" text))
+        marks (get-in decorated [:evidence/body :marks])]
+    (is (= [:correction :idea] (mapv :type marks)))
+    (is (= "M-custom-harness" (:ref (first marks))))
+    (is (= [:self-correction :self-idea]
+           (filterv #{:self-correction :self-idea} (:evidence/tags decorated))))))
+
+(deftest agent-round-decoration-idempotent
+  (let [once (marks/decorate-agent-round (round-entry "zai-1" "✘ wrong branch"))
+        twice (marks/decorate-agent-round once)]
+    (is (= once twice))
+    (is (= 1 (count (filter #{:self-correction} (:evidence/tags twice)))))))
+
+(deftest agent-chat-turn-still-untouched
+  ;; Self-marks apply to :turn-round transcripts only; agent chat-turns stay
+  ;; out of both channels (the existing non-operator-turn-untouched contract).
+  (let [e (entry "zai-1" "✘ scratch that")]
+    (is (= e (marks/maybe-decorate-turn e)))))
+
+(deftest operator-turn-round-not-self-marked
+  ;; Defensive: a joe-authored turn-round (should not exist) must not mint
+  ;; self-tags.
+  (let [e (round-entry "joe" "✘ wrong")]
+    (is (not-any? #{:self-correction} (:evidence/tags (marks/maybe-decorate-turn e))))))
+
+(deftest boundary-append-decorates-agent-round
+  (let [store (atom {:entries {} :order []})
+        result (boundary/append! store (round-entry "zai-1" "✘ the edit hit the wrong seam, reverting"))]
+    (is (:ok result))
+    (is (contains? (set (get-in result [:entry :evidence/tags])) :self-correction))
+    (is (= :event (get-in result [:entry :evidence/body :marks 0 :verdict])))))

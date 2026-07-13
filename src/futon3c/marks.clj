@@ -1,12 +1,20 @@
 (ns futon3c.marks
-  "Operator mark recognizer for chat-turn evidence.
+  "Mark recognizer for chat-turn and turn-round evidence.
 
    Vocabulary v0:
      ✘ correction, ✓ approval, 💡 idea
 
+   Two channels, one vocabulary (M-points-de-fuite author-invariance):
+   - operator chat-turns mint the core tags (:correction :approval :idea) —
+     the gold channel with γ/label semantics;
+   - agent turn-rounds (the zai/zaif per-round narration) mint self-prefixed
+     tags (:self-correction :self-idea ...) — declared self-talk acts, kept
+     out of the gold channel by construction, promotion earned by usage.
+
    Marks are queryable through evidence tags, because text indexing strips the
    glyphs.  The recognizer is pure and the boundary wiring is kill-switchable
-   with FUTON3C_MARK_RECOGNIZER=false."
+   with FUTON3C_MARK_RECOGNIZER=false (both channels) and
+   FUTON3C_SELF_MARKS=false (agent channel only)."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]))
 
@@ -46,6 +54,13 @@
                 str/lower-case
                 str/trim))))
 
+(defn self-marks-enabled?
+  []
+  (not (#{"0" "false" "no" "off"}
+        (some-> (System/getenv "FUTON3C_SELF_MARKS")
+                str/lower-case
+                str/trim))))
+
 (defn- body-key [entry]
   (if (contains? entry :evidence/body) :evidence/body :body))
 
@@ -65,6 +80,14 @@
 
 (defn- operator-turn? [entry]
   (= "joe" (str/lower-case (str (author-of entry)))))
+
+(defn- agent-turn-round?
+  "A zai/zaif per-round transcript entry (zai-api persist-round!), agent-
+   authored. The narration text in these rounds is the agent's self-talk;
+   glyphs there are declared self-marks, not operator marks."
+  [entry]
+  (and (= "turn-round" (some-> (:event (body-of entry)) name))
+       (not (operator-turn? entry))))
 
 (defn- turn-text [entry]
   (or (:text (body-of entry))
@@ -178,6 +201,13 @@
        distinct
        vec))
 
+(defn self-event-tags
+  "Event tags for the agent self-mark channel: same vocabulary, self-prefixed
+   (:correction → :self-correction), so agent marks never collide with the
+   operator gold channel that mark_labels.py / gamma-mark-glyphs key on."
+  [marks]
+  (mapv #(keyword (str "self-" (name %))) (event-tags marks)))
+
 (defn decorate-turn
   "Decorate an operator chat-turn evidence entry with parsed marks.
 
@@ -197,7 +227,29 @@
         (seq tags)
         (assoc tkey tags)))))
 
+(defn decorate-agent-round
+  "Decorate an agent turn-round evidence entry with parsed self-marks.
+
+   Same recognizer, self-prefixed tags (:self-correction, :self-idea, ...).
+   Idempotent: recomputes the same :marks vector and de-duplicates tags."
+  [entry]
+  (if-not (and (map? entry) (agent-turn-round? entry))
+    entry
+    (let [marks (recognize-marks (turn-text entry))
+          bkey (body-key entry)
+          tkey (tags-key entry)
+          tags (vec (distinct (concat (or (get entry tkey) [])
+                                      (self-event-tags marks))))]
+      (cond-> entry
+        (seq marks)
+        (assoc-in [bkey :marks] marks)
+
+        (seq tags)
+        (assoc tkey tags)))))
+
 (defn maybe-decorate-turn [entry]
-  (if (enabled?)
-    (decorate-turn entry)
-    entry))
+  (cond
+    (not (enabled?)) entry
+    (and (map? entry) (agent-turn-round? entry))
+    (if (self-marks-enabled?) (decorate-agent-round entry) entry)
+    :else (decorate-turn entry)))

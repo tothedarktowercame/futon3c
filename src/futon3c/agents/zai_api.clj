@@ -900,7 +900,15 @@
                                         "'Announced' is not 'sent'. "
                                         "Symmetrically: instructions that arrive in the reply/auto-bellback "
                                         "to YOUR OWN bell are operative dispatches — act on them in that turn; "
-                                        "never park 'holding for a bell' that the reply already was.")}])
+                                        "never park 'holding for a bell' that the reply already was. "
+                                        "Self-marking (M-points-de-fuite): when you genuinely reverse course — "
+                                        "an approach abandoned, a wrong assumption caught — put ✘ in your narration "
+                                        "at the point of reversal; long form (✘ :ref <target> \"why\") when the "
+                                        "referent matters. When you mint an idea worth exploring later but out of "
+                                        "scope now, mark it 💡. These glyphs are parsed from your narration into "
+                                        "the evidence record. Mark real events only, at most a few per turn: an "
+                                        "unmarked correction is better than a marked non-correction, and marks "
+                                        "emitted to look thorough poison the record.")}])
         !booted (atom false)
         opts {:base-url (or base-url (getenv "ZAI_BASE_URL") default-base-url)
               :model (or model (getenv "ZAI_MODEL") default-model)
