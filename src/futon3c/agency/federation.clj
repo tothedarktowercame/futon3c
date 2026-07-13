@@ -659,11 +659,11 @@
   ([] (export-roster {}))
   ([{:keys [exclude-site include-proxies?]
      :or {include-proxies? true}}]
-   (let [excluded (parse-home-site exclude-site)]
+   (let [excluded (parse-home-site exclude-site)
+         status-by-id (:agents (reg/registry-status))]
      (vec
-      (for [agent (vals @reg/!registry)
-            :let [metadata (:agent/metadata agent)
-                  aid (get-in agent [:agent/id :id/value])
+      (for [[aid info] status-by-id
+            :let [metadata (:metadata info)
                   home-site (or (parse-home-site (:home-site metadata))
                                 (agent-id-home-site aid)
                                 (site-prefix))]
@@ -672,10 +672,15 @@
                            (not (:proxy? metadata)))
                        (not= excluded home-site))]
         {:agent-id aid
-         :type (some-> (:agent/type agent) name)
+         :type (some-> (:type info) name)
          :capabilities (mapv capability-wire-name
-                             (:agent/capabilities agent))
-         :last-active (some-> (:agent/last-active agent) str)
+                             (:capabilities info))
+         :status (:status info)
+         :last-active (:last-active info)
+         :session-id (:session-id info)
+         :invoke-started-at (:invoke-started-at info)
+         :invoke-prompt-preview (:invoke-prompt-preview info)
+         :invoke-activity (:invoke-activity info)
          :metadata (cond-> {}
                      home-site (assoc :home-site home-site)
                      (:proxy? metadata) (assoc :proxy? true)
@@ -749,6 +754,18 @@
                                          :home-site (or (:home-site entry)
                                                         (get-in entry [:metadata :home-site])
                                                         uplink-site)}
+                                  (present? entry :status)
+                                  (assoc :status (field-value entry :status))
+                                  (present? entry :last-active)
+                                  (assoc :last-active (field-value entry :last-active))
+                                  (present? entry :session-id)
+                                  (assoc :session-id (field-value entry :session-id))
+                                  (present? entry :invoke-started-at)
+                                  (assoc :invoke-started-at (field-value entry :invoke-started-at))
+                                  (present? entry :invoke-prompt-preview)
+                                  (assoc :invoke-prompt-preview (field-value entry :invoke-prompt-preview))
+                                  (present? entry :invoke-activity)
+                                  (assoc :invoke-activity (field-value entry :invoke-activity))
                                   transport (assoc :federation/transport transport)
                                   uplink-site (assoc :federation/uplink-site uplink-site)
                                   invoke-fn (assoc :invoke-fn invoke-fn))]

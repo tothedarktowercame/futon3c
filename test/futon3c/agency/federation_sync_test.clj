@@ -1,4 +1,5 @@
 (ns futon3c.agency.federation-sync-test
+  (:import [java.time Instant])
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.federation :as fed]
             [futon3c.agency.logic :as logic]
@@ -199,6 +200,61 @@
       (fed/sync-tick! {:now-ms 3000 :interval-ms 1000 :jitter-fn (constantly 0)
                        :fetch-fn (fn [_] (peer-roster))})
       (is (nil? (reg/get-agent "oxf-zai-2"))))))
+
+(deftest uplink-roster-preserves-runtime-status
+  (testing "WS-uplink roster export/import carries invoking previews and clears them on idle"
+    (let [origin "ws-uplink:oxf"
+          old-site (System/getProperty "FUTON3C_SITE")
+          started-at (Instant/parse "2026-07-13T10:00:00Z")]
+      (try
+        (System/setProperty "FUTON3C_SITE" "oxf")
+        (reg/register-agent!
+         {:agent-id {:id/value "codex-7" :id/type :continuity}
+          :type :codex
+          :invoke-fn (fn [_ _] {:ok true})
+          :capabilities [:coordination/execute]})
+        (reg/update-agent!
+         "codex-7"
+         :agent/status :invoking
+         :agent/invoke-started-at started-at
+         :agent/invoke-prompt-preview "--- CURRENT TURN ---\nSurface: bell"
+         :agent/invoke-activity "using bash")
+        (let [entry (->> (fed/export-roster)
+                         (filter #(= "codex-7" (:agent-id %)))
+                         first)]
+          (is (= :invoking (:status entry)))
+          (is (= (str started-at) (:invoke-started-at entry)))
+          (is (= "--- CURRENT TURN ---\nSurface: bell"
+                 (:invoke-prompt-preview entry)))
+          (reg/reset-registry!)
+          (System/setProperty "FUTON3C_SITE" "lon")
+          (fed/import-uplink-roster! origin [entry] {:uplink-site "oxf"})
+          (let [proxy (get-in (reg/registry-status) [:agents "oxf-codex-7"])]
+            (is (= :invoking (:status proxy)))
+            (is (= (str started-at) (:invoke-started-at proxy)))
+            (is (= "using bash" (:invoke-activity proxy)))
+            (is (= "--- CURRENT TURN ---\nSurface: bell"
+                   (:invoke-prompt-preview proxy)))))
+        (fed/import-uplink-roster!
+         origin
+         [{:agent-id "codex-7"
+           :type "codex"
+           :capabilities ["coordination/execute"]
+           :home-site "oxf"
+           :status :idle
+           :invoke-started-at nil
+           :invoke-prompt-preview nil
+           :invoke-activity nil}]
+         {:uplink-site "oxf"})
+        (let [proxy (get-in (reg/registry-status) [:agents "oxf-codex-7"])]
+          (is (= :idle (:status proxy)))
+          (is (nil? (:invoke-started-at proxy)))
+          (is (nil? (:invoke-activity proxy)))
+          (is (nil? (:invoke-prompt-preview proxy))))
+        (finally
+          (if old-site
+            (System/setProperty "FUTON3C_SITE" old-site)
+            (System/clearProperty "FUTON3C_SITE")))))))
 
 (deftest own-site-reflections-are-not-imported
   ;; When we pull a peer, its roster contains ITS proxies of OUR agents.
