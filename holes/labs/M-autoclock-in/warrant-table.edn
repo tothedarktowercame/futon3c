@@ -1,0 +1,38 @@
+{:warrant-table
+ {:source "futon3c/emacs/agent-chat.el (landed elisp, read-only) + M-autoclock-in.md INSTANTIATE notes"
+  :author "zai-3"
+  :deposit "ft-autoclock-in-003 (run-13 finding: surface the hidden forks)"
+  :thresholds-documentation "UNCALIBRATED v0 — agent-chat-edit-activity-clock-threshold=3, agent-chat-edit-activity-clock-window-seconds=600 (per mission doc INSTANTIATE-3)"
+  :rules
+  [{:id "explicit-resolved-target"
+    :elisp-ref "agent-chat.el lines 677-727 (detector), 825-880 (maybe-auto-clock-from-turn, floor-only branch)"
+    :condition
+    "agent-chat--explicit-clock-target-tokens regex-extracts C-/M-/E- tokens from the user turn text; agent-chat--resolve-auto-clock-token resolves each by exact ID against agent-chat--clock-target-candidates (filesystem-backed); all tokens must resolve (no unresolved); at most one per level (campaign/mission/excursion — multiple at same level = ambiguous = no promote); the buffer must be at the NO-TARGET FLOOR (campaign-id, mission-id, AND excursion-id all nil); the resolved target must differ from current clock"
+    :warrant
+    "the operator named an exact target token that resolves to a real filesystem-backed mission/campaign/excursion — this is the operator's OWN rule (principle #8: explicit-not-fuzzy) firing at the no-target floor. The warrant is the exact-ID resolution: the token is not a fuzzy guess, it is a verified target. The floor-only guard (INSTANTIATE-1.1, claude-3 review fix) ensures the rule never switches the operator off active work — a mention while clocked is mention-graph data, not a clock change"
+    :success-witness
+    "agent-chat--last-auto-clock-witness alist: (rule . \"explicit-resolved-target\") (source . \"user-turn-explicit-token\") (tokens . [\"M-foo\"]) (old-target . \"no mission\") (new-target . \"M-foo\"); system line: [auto-clock: no mission -> M-foo via M-foo]"
+    :silent-fork
+    "if the turn contains tokens that resolve but the buffer is NOT at the floor (already clocked on something), the bare-mention path produces NO witness, NO system line, NO signal — the operator never learns their mention was recognized-but-not-promoted. The system TRIED (detector ran, tokens resolved) and silently DECLINED (floor guard blocked). This is the hidden fork from run-13: the operator's own rule fired, could not decide (floor guard), and swallowed the attempt. Additionally, if tokens are found but one does NOT resolve (unresolved), the entire promotion is blocked with no signal — the operator does not know a token was unrecognized"}
+    {:id "creation-clock"
+    :elisp-ref "agent-chat.el lines 736-805 (normalize, exists-p, creation-clock-mission!, watch-creation-clock-mission!)"
+    :condition
+    "agent-chat--normalize-creation-mission-id normalizes the slug to M-<slug>; agent-chat--mission-clock-target-exists-p checks the mission ID resolves against filesystem-backed mission candidates; if it exists, agent-chat-set-clock! switches the clock (NO floor requirement — creation-clock may switch an already-active clock because mission creation is explicit operator intent); the watcher (agent-chat-watch-creation-clock-mission!) polls every interval-seconds (default 5) up to timeout-seconds (default 7200) waiting for M-<slug>.md to appear on disk"
+    :warrant
+    "the operator invoked eoi-new head <slug> (or any mission-creating flow) — this is unambiguous explicit intent to START the just-created mission, not a passing mention. The warrant is the creation act itself: creating a mission and then not clocking it would leave the operator's own new mission unattributed. The switch-not-floor decision (per INSTANTIATE-2) is warranted because creation is a higher grade of intent than mention"
+    :success-witness
+    "agent-chat--last-auto-clock-witness alist: (rule . \"creation-clock\") (source . \"mission-created\" or \"eoi-new-head\") (tokens . [\"M-foo\"]) (old-target . \"M-bar\") (new-target . \"M-foo\"); system line: [creation-clock: M-bar -> M-foo via M-foo]"
+    :silent-fork
+    "if M-<slug>.md never appears on disk within the watcher timeout (7200s = 2 hours), the watcher timer is silently cancelled (agent-chat--cancel-creation-clock-watch!) with NO witness, NO system line, NO signal. The operator who ran eoi-new head X and walked away never learns the creation-clock did not fire. Additionally, if agent-chat-creation-clock-mission! is called directly (interactive) with a mission that does not exist on disk, it returns nil silently — no error, no witness"}
+    {:id "edit-activity"
+    :elisp-ref "agent-chat.el lines 209-223 (defcustoms), 882-968 (file-target, prune, counts, dominant-p, maybe-reclock)"
+    :condition
+    "agent-chat--edit-activity-file-target matches saved files against holes/**/{C,M,E}-*.md; basename must resolve exactly through agent-chat--clock-target-candidates; save events tracked per target-id in agent-chat--edit-activity-save-events hash table; agent-chat--edit-activity-prune-events drops events outside agent-chat-edit-activity-clock-window-seconds (600s); agent-chat--edit-activity-dominant-p checks: target-count >= agent-chat-edit-activity-clock-threshold (3) AND target-count >= next-count + margin (margin = max(1, threshold-1) = 2); agent-chat--maybe-edit-activity-reclock switches if: not already clocked on target AND not equal to agent-chat--edit-activity-last-reclock-target (debounce)"
+    :warrant
+    "sustained repeated editing of a mission doc IS unambiguous operator intent — the file IS the target (resolves by path), and repeated saves within a window are strictly stronger evidence than a prose mention. The warrant is the threshold + dominance: a single stray edit never flips the clock (N=3 required), and alternating edits do not thrash (dominance margin = 2). The switch-not-floor decision is warranted because sustained editing is the same grade of intent as creating the file (INSTANTIATE-3)"
+    :success-witness
+    "agent-chat--last-auto-clock-witness alist: (rule . \"edit-activity\") (source . \"repeated-file-edits\") (file . \".../holes/M-foo.md\") (edit-count . 3) (window-seconds . 600) (old-target . \"M-bar\") (new-target . \"M-foo\"); system line: [edit-activity-clock: M-bar -> M-foo via .../holes/M-foo.md]"
+    :silent-fork
+    "if a target reaches the save threshold (3 saves) but FAILS the dominance test (another target is close), the attempt is swallowed — NO witness, NO system line. The operator edited M-foo 3 times but M-bar also has 2 saves, the dominance margin (2) is not met, and the system declines silently. The operator does not know their sustained editing was recognized-but-not-dominant. Additionally, the debounce (agent-chat--edit-activity-last-reclock-target) silently suppresses re-firing for the same target — if the operator was manually overridden (hydra) away from M-foo, continued edits to M-foo will NOT re-trigger the reclock (last-reclock-target still holds M-foo), and the operator is not told the debounce is active"}]
+  :additional-rules-noted
+  "The elisp contains a FOURTH auto-clock rule not named in the mission doc's INSTANTIATE logs: explicit-switch-arrow (lines 818-857). A →-decorated token (→ M-foo) SWITCHES the clock even when already active — the escape hatch over the floor-only mention rule. Source: M-points-de-fuite §1's explicit-override primitive. Witness: (rule . \"explicit-switch-arrow\") (source . \"user-turn-arrow-override\"). This rule has its own silent fork: if the → token does NOT resolve, the switch silently fails (the cond falls through to the bare-mention branch, which is floor-gated). Recorded as a finding; not included in the 3-rule warrant table per the flight scope."}}
