@@ -192,6 +192,22 @@
     (is (= :ok (:outcome r)))
     (is (= 0 (get-in r [:detail :total-artifacts])))))
 
+(deftest artifact-live-copy-traversal-is-bounded-to-supported-glob-roots
+  (let [repo (make-temp-repo! "artifact-bounded-roots-")
+        _ (write-file! repo "library/example.flexiarg" "! conclusion: example\n")
+        _ (write-file! repo "scripts/example.clj" "(println :example)\n")
+        _ (write-file! repo "unrelated/large-tree/file.txt" "not an artifact\n")
+        traversed-roots (atom [])]
+    (with-redefs [clojure.core/file-seq
+                  (fn [root]
+                    (swap! traversed-roots conj (.getCanonicalPath root))
+                    [])]
+      (let [check (locus/check-artifact-live-copy-locus [(.getPath repo)])]
+        (check *xtdb-backend*)))
+    (is (= #{(.getCanonicalPath (io/file repo "library"))
+             (.getCanonicalPath (io/file repo "scripts"))}
+           (set @traversed-roots)))))
+
 (deftest artifact-live-copy-detects-multi-repo-path
   (testing "same relative-path in two repos without canonical marker → violation"
     (let [repo-a (make-temp-repo! "artifact-repo-a-")

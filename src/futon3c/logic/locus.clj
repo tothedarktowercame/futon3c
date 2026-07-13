@@ -15,7 +15,7 @@
      - `single-locus/agent-routing` — for each agent-id, ensure the
        registry plus any in-flight registration buffer exposes at most
        one simultaneously-active routing record.
-     - `single-locus/artifact-live-copy` — for each artifact basename
+     - `single-locus/artifact-live-copy` — for each artifact relative path
        under `library/` or `scripts/`, ensure multi-repo copies carry an
        explicit `canonical-repo:` marker on one matching file.
 
@@ -147,23 +147,38 @@
        (not (str/ends-with? relative-path ".pyc"))
        (not (str/starts-with? (last (str/split relative-path #"/")) "."))))
 
+(defn- artifact-scan-roots
+  "Return the smallest directory roots that can contain matches for GLOBS."
+  [repo-path globs]
+  (->> globs
+       (keep (fn [glob]
+               (case glob
+                 "library/**/*.flexiarg" (io/file repo-path "library")
+                 "scripts/**" (io/file repo-path "scripts")
+                 nil)))
+       (filter #(.exists ^java.io.File %))
+       (distinct)))
+
 (defn- list-artifact-files
   "Return artifact records for files under REPO-PATH matching GLOBS."
   [repo-path globs]
   (let [repo-name (str/lower-case (repo-basename repo-path))]
-    (->> (file-seq (io/file repo-path))
+    (->> (artifact-scan-roots repo-path globs)
+         (mapcat file-seq)
          (filter #(.isFile ^java.io.File %))
          (map (fn [^java.io.File f]
-                (let [path (.getPath f)
-                      relative-path (relativize-path repo-path path)]
-                  {:repo repo-name
-                   :path path
-                   :relative-path relative-path
-                   :basename (.getName f)
-                   :canonical-repo (parse-canonical-repo-marker path)})))
+                {:file f
+                 :relative-path (relativize-path repo-path (.getPath f))}))
          (filter (fn [{:keys [relative-path]}]
                    (and (artifact-file-interesting? relative-path)
                         (some #(artifact-glob-match? relative-path %) globs))))
+         (map (fn [{:keys [^java.io.File file relative-path]}]
+                (let [path (.getPath file)]
+                  {:repo repo-name
+                   :path path
+                   :relative-path relative-path
+                   :basename (.getName file)
+                   :canonical-repo (parse-canonical-repo-marker path)})))
          (vec))))
 
 (defn- normalize-agent-id
