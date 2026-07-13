@@ -54,7 +54,20 @@ export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
 export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
 
 # --- Futon1a / Futon4 compatibility ---
-export FUTON1A_PORT="${FUTON1A_PORT:-7071}"
+# --- futon1b switchover (chicago, 2026-07-13; mirrors lucy's 2026-07-11 block) ---
+# Chicago is a PROCESSING node: thin FRESH futon1b store (chicago-store, :7074),
+# no content port from the old embedded futon1a (Joe's call — history not needed
+# here; the old store gets archived to LenovoBackup).
+# Rollback: FUTON1A_PORT=7071 + unset the three below.
+export FUTON1A_PORT="${FUTON1A_PORT:-0}"
+export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
+export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:7074}"
+export FUTON1A_URL="${FUTON1A_URL:-http://127.0.0.1:7074}"
+if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+  echo "[dev] futon1b-server: running"
+else
+  echo -e "[dev] \033[1;31m██ futon1b-server: DOWN — start with: systemctl --user start futon1b-server ██\033[0m"
+fi
 export FUTON1A_STATIC_DIR="${FUTON1A_STATIC_DIR:-${HOME}/code/futon4/dev/web}"
 export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
 export FUTON1A_ALLOWED_PENHOLDERS="${FUTON1A_ALLOWED_PENHOLDERS:-${FUTON1A_COMPAT_PENHOLDER}}"
