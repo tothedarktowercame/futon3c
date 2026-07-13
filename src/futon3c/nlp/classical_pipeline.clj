@@ -264,9 +264,12 @@
     (re-find #"(?i)\bhappy\b" text) "joy"
     :else "-"))
 
+(defn- detect-affect [text]
+  (#'affect/detect-affect text))
+
 (defn affect-row [entry]
   (let [text (text-of entry)
-        detected (affect/detect-affect text)]
+        detected (detect-affect text)]
     {:id (id-of entry)
      :before (legacy-affect-label text)
      :after (or (some-> detected :type name) "-")
@@ -348,7 +351,7 @@
         backend (http-backend/make-http-backend (:base-url opts))
         affect-rows (mapv affect-row turns)
         detections (keep (fn [entry]
-                           (when-let [detected (affect/detect-affect (text-of entry))]
+                           (when-let [detected (detect-affect (text-of entry))]
                              [entry (affect-json-row entry detected)]))
                          turns)
         resolutions (keep (fn [entry]

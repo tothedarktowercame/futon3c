@@ -22,6 +22,7 @@
    - realtime/structured-events-only (R9): typed JSON frames only"
   (:require [futon3c.transport.protocol :as proto]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.federation :as federation]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -57,6 +58,24 @@
    :error/code code
    :error/message message
    :error/at (now-str)})
+
+(defn- fed-token []
+  (some-> (or (System/getProperty "FUTON3C_FED_TOKEN")
+              (System/getenv "FUTON3C_FED_TOKEN"))
+          str
+          clojure.string/trim
+          not-empty))
+
+(defn- fed-token-valid?
+  [token]
+  (let [expected (fed-token)]
+    (and (some? expected)
+         (string? token)
+         (= expected token))))
+
+(defn- logical-uplink-origin
+  [site]
+  (str "ws-uplink://" site))
 
 (defn- resolve-peripheral-id
   "Resolve which peripheral to start for a connection.
@@ -429,6 +448,56 @@
                            (send-fn ch (proto/render-evidence-ack
                                         (:evidence/id raw-entry))))))))
 
+                 ;; --- Federation uplink: client announces its local roster ---
+                 :fed-announce
+                 (if-not (fed-token-valid? (:fed/token parsed))
+                   (do
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :invalid-token
+                                                   "Invalid federation token")))
+                     (close-fn ch))
+                   (let [site (:fed/site parsed)
+                         pending (or (get-in conn [:fed-uplink :pending])
+                                     (atom {}))
+                         send-frame! (fn [frame]
+                                       (send-fn ch (proto/render-fed-invoke frame)))
+                         results (federation/import-uplink-roster!
+                                  (logical-uplink-origin site)
+                                  (:fed/roster parsed)
+                                  {:transport :ws-uplink
+                                   :uplink-site site
+                                   :invoke-fn-fn
+                                   (fn [remote-id]
+                                     (federation/make-uplink-invoke-fn
+                                      send-frame! pending remote-id))})
+                         export (federation/export-roster {:exclude-site site})]
+                     (swap! !connections assoc ch
+                            (assoc conn
+                                   :connected? true
+                                   :fed-uplink {:site site
+                                                :pending pending
+                                                :last-announce-at (now-str)
+                                                :last-results results}))
+                     (send-fn ch (proto/render-fed-roster
+                                  (or (federation/site-prefix) "hub")
+                                  export))))
+
+                 ;; --- Federation uplink: result for a hub-originated invoke ---
+                 :fed-invoke-result
+                 (let [pending (get-in conn [:fed-uplink :pending])
+                       resolved? (and pending
+                                      (federation/resolve-uplink-invoke!
+                                       pending
+                                       (:fed/invoke-id parsed)
+                                       {:ok (:fed/ok parsed)
+                                        :result (:fed/result parsed)
+                                        :session-id (:fed/session-id parsed)
+                                        :error (:fed/error parsed)}))]
+                   (when-not resolved?
+                     (send-fn ch (proto/render-ws-frame
+                                  (transport-error :unknown-invoke
+                                                   "No pending federation invoke")))))
+
                  ;; --- Unknown frame type ---
                  (send-fn ch (proto/render-ws-frame
                               (transport-error :invalid-frame
@@ -448,6 +517,8 @@
            (stop-peripheral! !connections ch conn "connection-closed"))
          ;; L2: only clean up if truly connected (handshake completed)
          (when (and conn (:connected? conn))
+           (when-let [site (get-in conn [:fed-uplink :site])]
+             (federation/mark-uplink-site-stale! site "uplink-closed"))
            (when-let [agent-id (:agent-id conn)]
              (when (and (ws-invoke/unregister-current! agent-id ch)
                         on-disconnect-hook)

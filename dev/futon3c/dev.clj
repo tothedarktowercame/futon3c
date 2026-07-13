@@ -1125,6 +1125,10 @@
   [agent-id session-id invoke-trace-id result-text]
   (dev-invoke/invoke-trace-response-block agent-id session-id invoke-trace-id result-text))
 
+(defn- format-delivery-receipt-line
+  [invoke-trace-id receipt]
+  (dev-invoke/format-delivery-receipt-line invoke-trace-id receipt))
+
 (defn record-invoke-delivery!
   "Record where an invoke reply was actually delivered.
    Appends/updates a delivery receipt line in *invoke: <agent>* trace buffer."

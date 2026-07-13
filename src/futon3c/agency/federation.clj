@@ -422,6 +422,12 @@
   (cond-> {:proxy? true
            :remote? true
            :origin-url origin-url}
+    (:federation/transport agent-info)
+    (assoc :federation/transport (:federation/transport agent-info))
+    (:federation/stale? agent-info)
+    (assoc :federation/stale? (:federation/stale? agent-info))
+    (:federation/uplink-site agent-info)
+    (assoc :federation/uplink-site (:federation/uplink-site agent-info))
     (proxy-home-site origin-url remote-id agent-info)
     (assoc :home-site (keyword (proxy-home-site origin-url remote-id agent-info)))
     (not= remote-id local-id)
@@ -456,7 +462,9 @@
                           vec)
         aid (when (seq remote-id)
               (proxy-local-id origin-url remote-id agent-info))
-        existing (when (seq aid) (reg/get-agent aid))]
+        existing (when (seq aid) (reg/get-agent aid))
+        invoke-fn (or (:invoke-fn agent-info)
+                      (make-proxy-invoke-fn origin-url remote-id))]
     (cond
       (str/blank? remote-id)
       {:ok false :action :invalid-agent-id}
@@ -516,7 +524,7 @@
       (do
         (reg/update-agent! aid
                            :agent/type agent-type
-                           :agent/invoke-fn (make-proxy-invoke-fn origin-url remote-id)
+                           :agent/invoke-fn invoke-fn
                            :agent/capabilities capabilities
                            :agent/metadata (proxy-metadata origin-url remote-id aid agent-info))
         {:ok true :agent-id aid :action :updated})
@@ -525,7 +533,7 @@
       (let [result (reg/register-agent!
                     {:agent-id {:id/value aid :id/type :continuity}
                      :type agent-type
-                     :invoke-fn (make-proxy-invoke-fn origin-url remote-id)
+                     :invoke-fn invoke-fn
                      :capabilities capabilities
                      :metadata (proxy-metadata origin-url remote-id aid agent-info)})]
         (if (and (map? result) (= false (:ok result)))
@@ -534,6 +542,163 @@
            :action :register-failed
            :error result}
           {:ok true :agent-id aid :action :registered})))))
+
+(defn- capability-wire-name
+  [cap]
+  (cond
+    (keyword? cap) (subs (str cap) 1)
+    (string? cap) cap
+    :else (str cap)))
+
+(defn export-roster
+  "Return exportable roster entries from the local registry.
+
+   Options:
+   - :exclude-site omits agents whose home-site is that site. Used by a hub
+     replying to an uplink announce so the client does not import itself.
+   - :include-proxies? defaults true so hubs can push local + other-site
+     proxies back down the uplink."
+  ([] (export-roster {}))
+  ([{:keys [exclude-site include-proxies?]
+     :or {include-proxies? true}}]
+   (let [excluded (parse-home-site exclude-site)]
+     (vec
+      (for [agent (vals @reg/!registry)
+            :let [metadata (:agent/metadata agent)
+                  aid (get-in agent [:agent/id :id/value])
+                  home-site (or (parse-home-site (:home-site metadata))
+                                (agent-id-home-site aid)
+                                (site-prefix))]
+            :when (and aid
+                       (or include-proxies?
+                           (not (:proxy? metadata)))
+                       (not= excluded home-site))]
+        {:agent-id aid
+         :type (some-> (:agent/type agent) name)
+         :capabilities (mapv capability-wire-name
+                             (:agent/capabilities agent))
+         :metadata (cond-> {}
+                     home-site (assoc :home-site home-site)
+                     (:proxy? metadata) (assoc :proxy? true)
+                     (:remote-agent-id metadata)
+                     (assoc :remote-agent-id (:remote-agent-id metadata))
+                     (:origin-url metadata)
+                     (assoc :origin-url (:origin-url metadata)))})))))
+
+(def ^:private uplink-timeout-sentinel ::uplink-timeout)
+
+(defn make-uplink-invoke-fn
+  "Create a proxy invoke-fn that sends :fed-invoke frames over an existing
+   uplink socket. SEND-FRAME! accepts a Clojure frame map. PENDING is an atom
+   of invoke-id -> promise, resolved by resolve-uplink-invoke!."
+  [send-frame! pending remote-agent-id]
+  (fn [prompt session-id]
+    (let [invoke-id (str (java.util.UUID/randomUUID))
+          p (promise)
+          timeout-ms default-proxy-timeout-ms]
+      (swap! pending assoc invoke-id p)
+      (try
+        (send-frame! {:type "fed_invoke"
+                      :invoke-id invoke-id
+                      :agent-id remote-agent-id
+                      :prompt prompt
+                      :timeout-ms timeout-ms})
+        (let [result (deref p timeout-ms uplink-timeout-sentinel)]
+          (swap! pending dissoc invoke-id)
+          (if (= uplink-timeout-sentinel result)
+            {:error (str "Uplink invoke timed out: " remote-agent-id)
+             :exit-code -1
+             :error/code :invoke-timeout}
+            (if (:ok result)
+              {:result (:result result)
+               :session-id (or (:session-id result) session-id)}
+              {:error (or (:error result)
+                          (str "Uplink invoke failed: " remote-agent-id))
+               :exit-code -1
+               :error/code :invoke-failed})))
+        (catch Exception e
+          (swap! pending dissoc invoke-id)
+          {:error (str "Uplink invoke exception: " (.getMessage e))
+           :exit-code -1
+           :error/code :invoke-failed})))))
+
+(defn resolve-uplink-invoke!
+  "Resolve an invoke pending on a fed-uplink connection."
+  [pending invoke-id result]
+  (if-let [p (get @pending invoke-id)]
+    (do
+      (swap! pending dissoc invoke-id)
+      (deliver p result)
+      true)
+    false))
+
+(defn import-uplink-roster!
+  "Import ROSTER entries through the existing proxy seam using WS-uplink
+   metadata and optional per-entry invoke functions.
+
+   ORIGIN-URL is a logical origin string for conflict detection. INVOKE-FN-FN,
+   when supplied, receives the bare remote id and returns an invoke-fn."
+  [origin-url roster {:keys [transport uplink-site invoke-fn-fn]}]
+  (->> roster
+       (mapv (fn [entry]
+               (let [agent-id (or (:agent-id entry) (:agent_id entry))
+                     invoke-fn (when invoke-fn-fn
+                                 (invoke-fn-fn agent-id))
+                     agent-info (cond-> {:type (or (:type entry) (:agent/type entry))
+                                         :capabilities (:capabilities entry)
+                                         :metadata (:metadata entry)
+                                         :home-site (or (:home-site entry)
+                                                        (get-in entry [:metadata :home-site])
+                                                        uplink-site)}
+                                  transport (assoc :federation/transport transport)
+                                  uplink-site (assoc :federation/uplink-site uplink-site)
+                                  invoke-fn (assoc :invoke-fn invoke-fn))]
+                 (register-proxy-agent! origin-url agent-id agent-info))))))
+
+(defn- uplink-proxy-for-site?
+  [site agent]
+  (let [metadata (:agent/metadata agent)
+        home (parse-home-site (:home-site metadata))]
+    (and (:proxy? metadata)
+         (= :ws-uplink (:federation/transport metadata))
+         (= (parse-home-site site)
+            (or home (parse-home-site (:federation/uplink-site metadata)))))))
+
+(defn mark-uplink-site-stale!
+  "Mark WS-uplink proxies for SITE stale, without pruning."
+  [site error]
+  (let [site* (parse-home-site site)
+        now-ms (current-ms)]
+    (->> @reg/!registry
+         (keep (fn [[aid agent]]
+                 (when (uplink-proxy-for-site? site* agent)
+                   (reg/update-agent!
+                    aid
+                    :agent/metadata
+                    (-> (:agent/metadata agent)
+                        (assoc :federation/stale? true
+                               :federation/reachable? false
+                               :federation/last-error error
+                               :federation/last-failed-sync-at-ms now-ms)
+                        (update :federation/missed-announces (fnil inc 0))))
+                   aid)))
+         vec)))
+
+(defn prune-stale-uplink-site!
+  "Prune SITE's WS-uplink proxies after MISSED-LIMIT missed announces."
+  ([site] (prune-stale-uplink-site! site 3))
+  ([site missed-limit]
+   (let [site* (parse-home-site site)]
+     (->> @reg/!registry
+          (keep (fn [[aid agent]]
+                  (let [missed (long (or (get-in agent [:agent/metadata :federation/missed-announces])
+                                         0))]
+                    (when (and (uplink-proxy-for-site? site* agent)
+                               (true? (get-in agent [:agent/metadata :federation/stale?]))
+                               (>= missed missed-limit))
+                      (reg/unregister-agent! aid)
+                      {:agent-id aid :action :pruned}))))
+          vec))))
 
 (defn- proxy-for-peer?
   [peer-url agent]

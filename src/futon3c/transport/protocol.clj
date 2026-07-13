@@ -317,6 +317,68 @@
                        :invoke/session-id session-id}
                 (map? invoke-meta) (assoc :invoke/meta invoke-meta))))
 
+          (= "fed_announce" (str frame-type))
+          (let [site (:site parsed)
+                token (:token parsed)
+                roster (:roster parsed)]
+            (cond
+              (or (nil? site) (not (string? site)) (str/blank? site))
+              (transport-error :invalid-frame "fed_announce frame missing 'site'")
+
+              (or (nil? roster) (not (sequential? roster)))
+              (transport-error :invalid-frame "fed_announce frame missing 'roster' array")
+
+              :else
+              {:ws/type :fed-announce
+               :fed/site site
+               :fed/token token
+               :fed/roster (vec roster)}))
+
+          (= "fed_roster" (str frame-type))
+          (let [site (:site parsed)
+                roster (:roster parsed)]
+            (cond
+              (or (nil? site) (not (string? site)) (str/blank? site))
+              (transport-error :invalid-frame "fed_roster frame missing 'site'")
+
+              (or (nil? roster) (not (sequential? roster)))
+              (transport-error :invalid-frame "fed_roster frame missing 'roster' array")
+
+              :else
+              {:ws/type :fed-roster
+               :fed/site site
+               :fed/roster (vec roster)}))
+
+          (= "fed_invoke" (str frame-type))
+          (let [invoke-id (or (:invoke_id parsed) (:invoke-id parsed))
+                agent-id (or (:agent_id parsed) (:agent-id parsed))
+                prompt (:prompt parsed)
+                timeout-ms (or (:timeout_ms parsed) (:timeout-ms parsed))]
+            (cond
+              (or (nil? invoke-id) (not (string? invoke-id)))
+              (transport-error :invalid-frame "fed_invoke frame missing invoke_id")
+
+              (or (nil? agent-id) (not (string? agent-id)))
+              (transport-error :invalid-frame "fed_invoke frame missing agent_id")
+
+              :else
+              (cond-> {:ws/type :fed-invoke
+                       :fed/invoke-id invoke-id
+                       :fed/agent-id agent-id
+                       :fed/prompt prompt}
+                timeout-ms (assoc :fed/timeout-ms timeout-ms))))
+
+          (= "fed_invoke_result" (str frame-type))
+          (let [invoke-id (or (:invoke_id parsed) (:invoke-id parsed))]
+            (if (or (nil? invoke-id) (not (string? invoke-id)))
+              (transport-error :invalid-frame "fed_invoke_result frame missing invoke_id")
+              {:ws/type :fed-invoke-result
+               :fed/invoke-id invoke-id
+               :fed/ok (boolean (:ok parsed))
+               :fed/result (:result parsed)
+               :fed/session-id (or (:session_id parsed) (:session-id parsed))
+               :fed/error (:error parsed)}))
+
           ;; --- Peripheral session frames (Seam 4) ---
           (= "peripheral_start" (str frame-type))
           (let [pid-raw (or (:peripheral_id parsed) (:peripheral-id parsed))]
@@ -492,6 +554,38 @@
                           "from" from
                           "text" text
                           "transport" "irc"}))
+
+(defn render-fed-announce
+  [site token roster]
+  (json/generate-string {"type" "fed_announce"
+                         "site" site
+                         "token" token
+                         "roster" roster}))
+
+(defn render-fed-roster
+  [site roster]
+  (json/generate-string {"type" "fed_roster"
+                         "site" site
+                         "roster" roster}))
+
+(defn render-fed-invoke
+  [{:keys [invoke-id agent-id prompt timeout-ms]}]
+  (json/generate-string
+   (cond-> {"type" "fed_invoke"
+            "invoke_id" invoke-id
+            "agent_id" agent-id
+            "prompt" prompt}
+     timeout-ms (assoc "timeout_ms" timeout-ms))))
+
+(defn render-fed-invoke-result
+  [{:keys [invoke-id ok result session-id error]}]
+  (json/generate-string
+   (cond-> {"type" "fed_invoke_result"
+            "invoke_id" invoke-id
+            "ok" (boolean ok)}
+     (some? result) (assoc "result" result)
+     session-id (assoc "session_id" session-id)
+     error (assoc "error" error))))
 
 ;; =============================================================================
 ;; Peripheral session frames (Seam 4: WS ↔ peripheral lifecycle)

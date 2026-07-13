@@ -98,6 +98,10 @@ export FUTON3C_PEERS
 export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-chi,oxf}"
 export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
 
+# WS federation uplink hub token (CP-F, default OFF).
+# Set the same value on NAT'd clients using FUTON3C_FED_UPLINK.
+# export FUTON3C_FED_TOKEN="${FUTON3C_FED_TOKEN:-change-me}"
+
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
   export FUTON3C_EMACS_SOCKET="$(futon_preferred_emacs_socket || true)"
