@@ -63,20 +63,24 @@
         (is (= 1 (:loaded res)))
         (is (= 1 (count @fired)) "join completed during downtime -> one resume on boot")))))
 
-(deftest case5-deadline-expires-and-timer-fires
-  (testing "a past-deadline record expires WITHOUT resuming; a due no-dep timer park resumes"
-    (let [fired (collector)
+(deftest case5-deadline-expiry-wakes-with-flag-and-timer-fires
+  (testing "a past-deadline record RESUMES with :deadline-expired? true (backstop
+wake, E-park-delivery-losses finding 6 — previously it expired silently); a due
+no-dep timer park resumes plainly"
+    (let [resumed (atom [])
           expired (collector)
+          resume! (fn [r] (swap! resumed conj [(:id r) (boolean (:deadline-expired? r))]))
           dl (p/park! {:agent "claude-1" :awaiting ["b1"] :payload "P" :deadline-ms 500}
-                      {:ledger-lookup (constantly nil) :resume! (resume-into fired) :now-ms 1000})
+                      {:ledger-lookup (constantly nil) :resume! resume! :now-ms 1000})
           tm (p/park! {:agent "claude-1" :awaiting [] :payload "T" :timer-due-ms 400}
-                      {:ledger-lookup (constantly nil) :resume! (resume-into fired) :now-ms 1000})
-          r (p/sweep-deadlines! {:now-ms 1000 :resume! (resume-into fired)
+                      {:ledger-lookup (constantly nil) :resume! resume! :now-ms 1000})
+          r (p/sweep-deadlines! {:now-ms 1000 :resume! resume!
                                  :on-expire (resume-into expired)})]
       (is (= [(:id dl)] (:expired r)) "past-deadline record expired")
       (is (= [(:id tm)] (:timer-fired r)) "due timer park fired")
       (is (= [(:id dl)] @expired) "on-expire called for the deadline record")
-      (is (= [(:id tm)] @fired) "only the timer park resumed; the expired one did NOT"))))
+      (is (= [[(:id dl) true] [(:id tm) false]] @resumed)
+          "expired park resumed WITH the deadline flag; timer park resumed without"))))
 
 (deftest no-deps-no-timer-resumes-immediately
   (testing "parking on an empty join with no timer is a degenerate immediate resume"

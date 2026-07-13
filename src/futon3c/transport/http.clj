@@ -682,7 +682,12 @@
 
 (defn- assemble-resume-prompt [rec]
   (str (:payload rec)
-       "\n\n--- resumed: parked dependencies complete (" (count (:arrived rec)) ") ---\n"
+       (if (:deadline-expired? rec)
+         (str "\n\n--- resumed: DEADLINE EXPIRED with " (count (:arrived rec))
+              " of " (+ (count (:arrived rec)) (count (:awaiting rec)))
+              " dependencies complete — the awaited work did NOT finish ---\n")
+         (str "\n\n--- resumed: parked dependencies complete ("
+              (count (:arrived rec)) ") ---\n"))
        (str/join "\n" (for [[dep summ] (:arrived rec)]
                         (str "• " dep ": " (or summ "(no summary)"))))))
 

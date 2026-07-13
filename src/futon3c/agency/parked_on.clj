@@ -374,6 +374,14 @@
                        (reduce (fn [s r] (drop-record s (:id r)))
                                st (concat expired timers))))
       (persist! @!parked))
-    (doseq [r expired] (when on-expire (on-expire r)))
+    (doseq [r expired]
+      (when on-expire (on-expire r))
+      ;; Deadline BACKSTOP semantics (E-park-delivery-losses finding 6): expiry
+      ;; WAKES the parked agent with its payload, marked :deadline-expired? so
+      ;; the resume prompt says the deps did NOT complete. The original VERIFY
+      ;; case 5 specified expire-without-resume ("force-terminate"), but a
+      ;; backstop that terminates silently reproduces the exact silent-wait
+      ;; failure the protocol exists to close — semantics changed 2026-07-13.
+      (when resume! (resume! (assoc r :deadline-expired? true))))
     (doseq [r timers] (when resume! (resume! r)))
     {:expired (mapv :id expired) :timer-fired (mapv :id timers)}))
