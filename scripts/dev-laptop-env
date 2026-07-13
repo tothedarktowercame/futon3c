@@ -82,7 +82,7 @@ export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
 # --- Federation uplink (CP-F, default OFF) ---
 # Uncomment to let this NAT'd box dial a hub over WebSocket instead of relying
 # on a reverse SSH tunnel. Shape is <site>=<ws-url>.
-# export FUTON3C_FED_UPLINK="${FUTON3C_FED_UPLINK:-lon=ws://172.236.28.208:7070/ws}"
+# export FUTON3C_FED_UPLINK="${FUTON3C_FED_UPLINK:-lon=ws://172.236.28.208:7070/agency/ws}"
 # export FUTON3C_FED_TOKEN="${FUTON3C_FED_TOKEN:-change-me}"
 # export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
@@ -592,3 +592,8 @@ start_web_sidecars
 start_multi_watcher
 
 exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"
+
+# CP-F uplink token (client side): read from untracked .fedtoken (must match hub's).
+if [[ -f "${script_dir:-$(dirname "$0")}/../.fedtoken" ]]; then
+  export FUTON3C_FED_TOKEN="${FUTON3C_FED_TOKEN:-$(cat "${script_dir:-$(dirname "$0")}/../.fedtoken")}"
+fi
