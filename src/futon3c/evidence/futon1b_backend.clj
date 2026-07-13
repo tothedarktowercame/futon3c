@@ -45,6 +45,14 @@
       (System/getenv "FUTON1A_PENHOLDER")
       "api"))
 
+(def ^:private timeout-ms
+  ;; 120s, not 30s: a server-decidable limit=1000 scan takes ~19s on lucy
+  ;; (4G box, both JVMs, swap-pressured) and crossed 30s whenever the
+  ;; ingest daemons overlapped — every read surfaced as "futon1b
+  ;; unreachable" (2026-07-13).
+  (or (some-> (System/getenv "FUTON1B_TIMEOUT_MS") parse-long)
+      120000))
+
 (defn- api-url [base-url path]
   (str (str/replace base-url #"/$" "") path))
 
@@ -70,7 +78,7 @@
   "GET url, EDN-parse the body. Returns {:status n :body v}.
    Throws on transport-level failure (connection refused etc.)."
   [url]
-  (let [{:keys [status body error]} @(http/get url {:timeout 30000 :as :text})]
+  (let [{:keys [status body error]} @(http/get url {:timeout timeout-ms :as :text})]
     (when error
       (throw (ex-info "futon1b unreachable" {:url url} error)))
     {:status status :body (read-edn body)}))
@@ -126,7 +134,7 @@
         :else
         (let [{:keys [status body error]}
               @(http/post (api-url base-url "/api/alpha/evidence")
-                          {:timeout 30000
+                          {:timeout timeout-ms
                            :as :text
                            :headers {"content-type" "application/edn"
                                      "x-penholder" (penholder)}
