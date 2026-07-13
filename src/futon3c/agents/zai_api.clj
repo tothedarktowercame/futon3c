@@ -305,6 +305,8 @@
    :name (get-in tool-call [:function :name])
    :input args})
 
+(declare emit-bug-records!)
+
 (defn- execute-tool
   [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom]} tool-call]
   (let [name (get-in tool-call [:function :name])
@@ -488,7 +490,7 @@
                                  (:prediction_error args) (assoc :prediction-error (:prediction_error args)))])
 
           "par_punctuate"
-          (tools/execute-tool backend :par-punctuate
+          (let [par-result (tools/execute-tool backend :par-punctuate
                               [(cond-> {:session-ref (some-> session-id-atom deref)}
                                  (:what_worked args) (assoc :what-worked (:what_worked args))
                                  (:what_didnt args) (assoc :what-didnt (:what_didnt args))
@@ -497,7 +499,10 @@
                                  (assoc :prediction-errors
                                         (mapv #(if (map? %) % {:description (str %)})
                                               (:prediction_errors args)))
-                                 (seq (:suggestions args)) (assoc :suggestions (vec (:suggestions args))))])
+                                 (seq (:suggestions args)) (assoc :suggestions (vec (:suggestions args))))])]
+            ;; ZU-4: session-end sweep — emit :bug/* records for tool failures.
+            (emit-bug-records! {:agent-id agent-id :sid (some-> session-id-atom deref str)})
+            par-result)
 
           "irc_send"
           (if irc-send-fn
@@ -511,12 +516,14 @@
             (fail "IRC sender is not configured"))
 
           (fail (str "Unknown tool: " name))))]
+
     {:detail (tool-call-detail tool-call args)
      :message {:role "tool"
                :tool_call_id (:id tool-call)
                :name name
                :content (result-string result)}
-     :result result}))
+     :result result
+     :error? (and (map? result) (false? (:ok result)))}))
 
 (defn- assistant-text [message]
   (let [content (:content message)
@@ -633,14 +640,74 @@
                                         :calls (vec calls)}}))))
         (catch Throwable _)))))
 
+(defn- sha256-8 [s]
+  (let [md (java.security.MessageDigest/getInstance "SHA-256")]
+    (apply str (map #(format "%02x" %) (take 8 (.digest md (.getBytes s "UTF-8")))))))
+
+(defn- emit-bug-records!
+  "ZU-4 CI-in-the-loop: sweep the session's transcript for tool-call failures
+   and emit each as a typed :bug/* event into the evidence store. Called from
+   the par_punctuate path (session-end sweep). Failures are deduplicated by
+   (tool, args-sha) with a count. Fire-and-forget: persistence failure must
+   never affect the turn."
+  [{:keys [agent-id sid]}]
+  (when (transcript-enabled?)
+    (future
+      (try
+        (when-let [!store (requiring-resolve 'futon3c.dev/!evidence-store)]
+          (when-let [store (some-> !store deref deref)]
+            (when-let [search-fn (requiring-resolve 'futon3c.evidence.store/query*)]
+              (when-let [append! (requiring-resolve 'futon3c.evidence.boundary/append!)]
+                (let [results (search-fn store {:query/author (str agent-id)
+                                                :query/session-id (str sid)
+                                                :query/tags [:transcript]
+                                                :query/limit 100})
+                      entries (if (map? results) (:items results) results)
+                      failed-calls (for [e entries
+                                         :let [calls (get-in e [:evidence/body :calls])]
+                                         call calls
+                                         :when (:error? call)]
+                                     call)
+                      grouped (reduce
+                               (fn [m call]
+                                 (let [k [(:tool call) (sha256-8 (:args call))]]
+                                   (update m k
+                                           (fn [v]
+                                             (-> (or v call)
+                                                 (assoc :count (inc (long (:count v 0)))))))))
+                               {} failed-calls)]
+                  (doseq [[[_tool _sha] bug] grouped]
+                    (append! store
+                             {:evidence/id (str "bug-" (UUID/randomUUID))
+                              :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
+                              :evidence/type :coordination
+                              :evidence/claim-type :step
+                              :evidence/author (str agent-id)
+                              :evidence/session-id (str sid)
+                              :evidence/at (str (java.time.Instant/now))
+                              :evidence/tags [:bug :tool-failure]
+                              :evidence/body {:event :bug
+                                              :tool (:tool bug)
+                                              :args-sha (sha256-8 (:args bug))
+                                              :error (:error-text bug "unknown")
+                                              :count (:count bug 1)
+                                              :session-id (str sid)}})))))))
+        (catch Throwable _)))))
 (defn- transcript-calls
   "Zip tool-call details with their executed results into the persisted
-   call records: full tool name + (truncated) args, digest of the result."
+   call records: full tool name + (truncated) args, digest of the result.
+   ZU-4: failed calls carry :error? true and the verbatim error text."
   [details executed]
   (mapv (fn [detail ex]
-          {:tool (:name detail)
-           :args (transcript-truncate (pr-str (:input detail)) transcript-args-cap)
-           :result (transcript-digest (get-in ex [:message :content]))})
+          (let [error? (:error? ex)
+                result-map (:result ex)]
+            (cond-> {:tool (:name detail)
+                     :args (transcript-truncate (pr-str (:input detail)) transcript-args-cap)
+                     :result (transcript-digest (get-in ex [:message :content]))}
+              error? (assoc :error? true
+                            :error-text (transcript-truncate
+                                         (str (or (:error result-map) "unknown error"))
+                                         transcript-preview-cap)))))
         details executed))
 
 (def ^:private tool-round-budget
@@ -755,6 +822,8 @@
                                                         (parse-arguments
                                                          (get-in tc [:function :arguments])))]
                                                  {:detail d
+                                                  :error? true
+                                                  :result {:ok false :error (.getMessage t)}
                                                   :message {:role "tool"
                                                             :tool_call_id (:id tc)
                                                             :name (get-in tc [:function :name])
@@ -773,6 +842,15 @@
                                    :tool_details details})
                   (sink! agent-id {:type "tool_result"
                                    :results results})
+                  ;; ZU-4: surface tool errors verbatim in follow-mode display
+                  (doseq [{:keys [detail error? result]} executed
+                          :when error?]
+                    (sink! agent-id {:type "text"
+                                     :text (str "[" (:name detail) " \u2717 "
+                                                (transcript-truncate
+                                                 (str (or (:error result) "unknown error"))
+                                                 transcript-preview-cap)
+                                                "]")}))
                   (persist-round! {:agent-id agent-id :sid sid :round round-n
                                    :text text
                                    :calls (transcript-calls details executed)})
