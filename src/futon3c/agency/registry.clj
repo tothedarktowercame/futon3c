@@ -214,6 +214,17 @@
           "count" (:count status)}))
       (catch Throwable _ nil))))
 
+(defn publish-agents-status!
+  "Publish the current agent status snapshot to local and WS agent HUDs.
+   Use this after multi-agent registry updates that do not flow through
+   register-agent! or invoke-agent!."
+  []
+  (let [status (registry-status)]
+    (bb/project-agents! status)
+    (broadcast-agents-ws!)
+    {:ok true
+     :count (:count status)}))
+
 (def ^:private bell-file "/tmp/futon-bell.edn")
 
 (defn ring-bell-file!

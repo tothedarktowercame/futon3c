@@ -743,33 +743,36 @@
    ORIGIN-URL is a logical origin string for conflict detection. INVOKE-FN-FN,
    when supplied, receives the bare remote id and returns an invoke-fn."
   [origin-url roster {:keys [transport uplink-site invoke-fn-fn]}]
-  (->> roster
-       (mapv (fn [entry]
-               (let [agent-id (or (:agent-id entry) (:agent_id entry))
-                     invoke-fn (when invoke-fn-fn
-                                 (invoke-fn-fn agent-id))
-                     agent-info (cond-> {:type (or (:type entry) (:agent/type entry))
-                                         :capabilities (:capabilities entry)
-                                         :metadata (:metadata entry)
-                                         :home-site (or (:home-site entry)
-                                                        (get-in entry [:metadata :home-site])
-                                                        uplink-site)}
-                                  (present? entry :status)
-                                  (assoc :status (field-value entry :status))
-                                  (present? entry :last-active)
-                                  (assoc :last-active (field-value entry :last-active))
-                                  (present? entry :session-id)
-                                  (assoc :session-id (field-value entry :session-id))
-                                  (present? entry :invoke-started-at)
-                                  (assoc :invoke-started-at (field-value entry :invoke-started-at))
-                                  (present? entry :invoke-prompt-preview)
-                                  (assoc :invoke-prompt-preview (field-value entry :invoke-prompt-preview))
-                                  (present? entry :invoke-activity)
-                                  (assoc :invoke-activity (field-value entry :invoke-activity))
-                                  transport (assoc :federation/transport transport)
-                                  uplink-site (assoc :federation/uplink-site uplink-site)
-                                  invoke-fn (assoc :invoke-fn invoke-fn))]
-                 (register-proxy-agent! origin-url agent-id agent-info))))))
+  (let [results
+        (->> roster
+             (mapv (fn [entry]
+                     (let [agent-id (or (:agent-id entry) (:agent_id entry))
+                           invoke-fn (when invoke-fn-fn
+                                       (invoke-fn-fn agent-id))
+                           agent-info (cond-> {:type (or (:type entry) (:agent/type entry))
+                                               :capabilities (:capabilities entry)
+                                               :metadata (:metadata entry)
+                                               :home-site (or (:home-site entry)
+                                                              (get-in entry [:metadata :home-site])
+                                                              uplink-site)}
+                                        (present? entry :status)
+                                        (assoc :status (field-value entry :status))
+                                        (present? entry :last-active)
+                                        (assoc :last-active (field-value entry :last-active))
+                                        (present? entry :session-id)
+                                        (assoc :session-id (field-value entry :session-id))
+                                        (present? entry :invoke-started-at)
+                                        (assoc :invoke-started-at (field-value entry :invoke-started-at))
+                                        (present? entry :invoke-prompt-preview)
+                                        (assoc :invoke-prompt-preview (field-value entry :invoke-prompt-preview))
+                                        (present? entry :invoke-activity)
+                                        (assoc :invoke-activity (field-value entry :invoke-activity))
+                                        transport (assoc :federation/transport transport)
+                                        uplink-site (assoc :federation/uplink-site uplink-site)
+                                        invoke-fn (assoc :invoke-fn invoke-fn))]
+                       (register-proxy-agent! origin-url agent-id agent-info)))))]
+    (reg/publish-agents-status!)
+    results))
 
 (defn- uplink-proxy-for-site?
   [site agent]

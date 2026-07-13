@@ -219,7 +219,8 @@
          :agent/invoke-started-at started-at
          :agent/invoke-prompt-preview "--- CURRENT TURN ---\nSurface: bell"
          :agent/invoke-activity "using bash")
-        (let [entry (->> (fed/export-roster)
+        (let [published (atom 0)
+              entry (->> (fed/export-roster)
                          (filter #(= "codex-7" (:agent-id %)))
                          first)]
           (is (= :invoking (:status entry)))
@@ -228,29 +229,32 @@
                  (:invoke-prompt-preview entry)))
           (reg/reset-registry!)
           (System/setProperty "FUTON3C_SITE" "lon")
-          (fed/import-uplink-roster! origin [entry] {:uplink-site "oxf"})
+          (with-redefs [reg/publish-agents-status! (fn [] (swap! published inc))]
+            (fed/import-uplink-roster! origin [entry] {:uplink-site "oxf"}))
           (let [proxy (get-in (reg/registry-status) [:agents "oxf-codex-7"])]
             (is (= :invoking (:status proxy)))
             (is (= (str started-at) (:invoke-started-at proxy)))
             (is (= "using bash" (:invoke-activity proxy)))
             (is (= "--- CURRENT TURN ---\nSurface: bell"
-                   (:invoke-prompt-preview proxy)))))
-        (fed/import-uplink-roster!
-         origin
-         [{:agent-id "codex-7"
-           :type "codex"
-           :capabilities ["coordination/execute"]
-           :home-site "oxf"
-           :status :idle
-           :invoke-started-at nil
-           :invoke-prompt-preview nil
-           :invoke-activity nil}]
-         {:uplink-site "oxf"})
-        (let [proxy (get-in (reg/registry-status) [:agents "oxf-codex-7"])]
-          (is (= :idle (:status proxy)))
-          (is (nil? (:invoke-started-at proxy)))
-          (is (nil? (:invoke-activity proxy)))
-          (is (nil? (:invoke-prompt-preview proxy))))
+                   (:invoke-prompt-preview proxy))))
+          (with-redefs [reg/publish-agents-status! (fn [] (swap! published inc))]
+            (fed/import-uplink-roster!
+             origin
+             [{:agent-id "codex-7"
+               :type "codex"
+               :capabilities ["coordination/execute"]
+               :home-site "oxf"
+               :status :idle
+               :invoke-started-at nil
+               :invoke-prompt-preview nil
+               :invoke-activity nil}]
+             {:uplink-site "oxf"}))
+          (let [proxy (get-in (reg/registry-status) [:agents "oxf-codex-7"])]
+            (is (= :idle (:status proxy)))
+            (is (nil? (:invoke-started-at proxy)))
+            (is (nil? (:invoke-activity proxy)))
+            (is (nil? (:invoke-prompt-preview proxy))))
+          (is (= 2 @published)))
         (finally
           (if old-site
             (System/setProperty "FUTON3C_SITE" old-site)
