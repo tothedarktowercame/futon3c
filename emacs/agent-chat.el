@@ -1160,6 +1160,27 @@ _e_: clear Excursion       _n_: no mission           _q_: quit
 (defun agent-chat-mark-procedural-long () (interactive) (agent-chat--insert-mark "📋" t))
 (defun agent-chat-mark-hinge-long () (interactive) (agent-chat--insert-mark "⚖" t))
 
+(defvar agent-chat-marks-quota-script
+  "/home/joe/code/futon2/holes/labs/M-zaif-harness/marks_quota.clj"
+  "The store-truth quota reconciler (targets = real gate constants only).")
+
+(defun agent-chat-marks-quota ()
+  "Show mark-quota progress (async; store truth via marks_quota.clj).
+Targets trace to real gate constants — 20 = the L3 preregistration,
+5 = γ burn-in — never invented points (the gamification guard)."
+  (interactive)
+  (message "marks quota: querying the store…")
+  (let ((buf (generate-new-buffer " *marks-quota*")))
+    (make-process
+     :name "marks-quota" :buffer buf
+     :command (list "bb" agent-chat-marks-quota-script)
+     :sentinel (lambda (proc _event)
+                 (when (memq (process-status proc) '(exit signal))
+                   (let ((out (with-current-buffer (process-buffer proc)
+                                (string-trim (buffer-string)))))
+                     (kill-buffer (process-buffer proc))
+                     (message "%s" out)))))))
+
 (defun agent-chat-mark-menu-2 ()
   "Show the second-string mark hydra (falls back to a char prompt)."
   (interactive)
@@ -1174,7 +1195,7 @@ _e_: clear Excursion       _n_: no mission           _q_: quit
 Second string (shadow tier — usage argues promotion; lowercase = glyph, UPPERCASE = long form)
 
 _g_: 🧭 guidance  _t_: ♟ tactics  _c_: ⚠ concern  _f_: 📌 fact  _e_: 👏 encouragement
-_r_: 🙏 request   _x_: 🌿 extension  _p_: 📋 procedural  _h_: ⚖ hinge   _q_: quit
+_r_: 🙏 request   _x_: 🌿 extension  _p_: 📋 procedural  _h_: ⚖ hinge   _?_: quota  _q_: quit
 "
             ("g" agent-chat-mark-guidance) ("G" agent-chat-mark-guidance-long)
             ("t" agent-chat-mark-tactics) ("T" agent-chat-mark-tactics-long)
@@ -1185,6 +1206,7 @@ _r_: 🙏 request   _x_: 🌿 extension  _p_: 📋 procedural  _h_: ⚖ hinge   
             ("x" agent-chat-mark-extension) ("X" agent-chat-mark-extension-long)
             ("p" agent-chat-mark-procedural) ("P" agent-chat-mark-procedural-long)
             ("h" agent-chat-mark-hinge) ("H" agent-chat-mark-hinge-long)
+            ("?" agent-chat-marks-quota)
             ("q" nil)))
         (agent-chat-mark-hydra-2/body))
     (let ((c (read-char "2nd string: [g]🧭 [t]♟ [c]⚠ [f]📌 [e]👏 [r]🙏 [x]🌿 [p]📋 [h]⚖ (upcase = long)")))
@@ -1212,7 +1234,7 @@ _r_: 🙏 request   _x_: 🌿 extension  _p_: 📋 procedural  _h_: ⚖ hinge   
             "
 Marks (M-points-de-fuite; lowercase = glyph, UPPERCASE = (glyph :ref … \"…\"))
 
-_x_/_X_: ✘ correction   _v_/_V_: ✓ approval   _i_/_I_: 💡 idea-to-explore   _q_: quit
+_x_/_X_: ✘ correction   _v_/_V_: ✓ approval   _i_/_I_: 💡 idea-to-explore   _?_: quota   _q_: quit
 "
             ("x" agent-chat-mark-correction)
             ("X" agent-chat-mark-correction-long)
@@ -1220,6 +1242,7 @@ _x_/_X_: ✘ correction   _v_/_V_: ✓ approval   _i_/_I_: 💡 idea-to-explore 
             ("V" agent-chat-mark-approval-long)
             ("i" agent-chat-mark-idea)
             ("I" agent-chat-mark-idea-long)
+            ("?" agent-chat-marks-quota)
             ("q" nil)))
         (agent-chat-mark-hydra/body))
     (let ((c (read-char "mark: [x]✘ [v]✓ [i]💡 (upcase = long form)")))
