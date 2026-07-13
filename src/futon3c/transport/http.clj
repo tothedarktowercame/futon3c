@@ -524,17 +524,34 @@
    bell completed but no completion bell routed back to the caller)."
   #{:codex :claude :zai})
 
+(defn- same-agent-id?
+  [a b]
+  (= (some-> a str str/trim) (some-> b str str/trim)))
+
+(defn- auto-bellback-suppressing-park
+  [job released-park-records]
+  (let [caller (:caller job)]
+    (some #(when (same-agent-id? caller (:agent %)) %) released-park-records)))
+
+(defn- log-auto-bellback-suppressed!
+  [job park]
+  (println (str "[parked-on] auto-bellback suppressed for " (:job-id job)
+                ": park " (:id park) " will wake " (:agent park))))
+
 (defn should-auto-bellback?
   "Pure auto-bellback decision predicate. Recipient type and caller registration
    are passed in so tests and future recipient widening stay local."
-  [job recipient-type caller-registered? enabled?]
-  (boolean
-   (and enabled?
-        (terminal-invoke-state? (:state job))
-        (contains? auto-bellback-recipient-types recipient-type)
-        (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
-        (not (auto-bellback-job? job))
-        (not (true? (get-in job [:auto-bellback :sent?]))))))
+  ([job recipient-type caller-registered? enabled?]
+   (should-auto-bellback? job recipient-type caller-registered? enabled? nil))
+  ([job recipient-type caller-registered? enabled? released-park-records]
+   (boolean
+    (and enabled?
+         (terminal-invoke-state? (:state job))
+         (contains? auto-bellback-recipient-types recipient-type)
+         (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
+         (not (auto-bellback-job? job))
+         (nil? (:auto-bellback job))
+         (not (auto-bellback-suppressing-park job released-park-records))))))
 
 (defn- auto-bellback-recipient-type
   [agent-id]
@@ -582,14 +599,16 @@
            "\nDetails: /api/alpha/invoke/jobs/" job-id))))
 
 (defn- auto-bellback-request
-  [job]
+  ([job] (auto-bellback-request job nil))
+  ([job released-park-records]
   (let [recipient-type (auto-bellback-recipient-type (:agent-id job))
         caller-registered? (auto-bellback-caller-registered? (:caller job))]
-    (when (should-auto-bellback? job recipient-type caller-registered? (auto-bellback-enabled?))
+    (when (should-auto-bellback? job recipient-type caller-registered?
+                                 (auto-bellback-enabled?) released-park-records)
       {:caller (str/trim (str (:caller job)))
        :bell-job-id (str "auto-bellback-" (:job-id job))
        :reply-to (str (:job-id job))   ;; the original bell this answers (bell-router)
-       :prompt (auto-bellback-prompt job)})))
+       :prompt (auto-bellback-prompt job)}))))
 
 (declare create-invoke-job!)
 (declare run-invoke-job!)
@@ -742,20 +761,20 @@
     {:state (:state job) :result-summary (:result-summary job)}))
 
 (defn parked-on-notify!
-  "Hot-path hook (flag-gated, async on invoke-executor): job JOB-ID reached terminal
-   state -> fold it into any parked-on join awaiting it. Never throws into finalize."
+  "Hot-path hook (flag-gated): job JOB-ID reached terminal state -> fold it into
+   any parked-on join awaiting it. Returns the records that actually released so
+   finalize can suppress the duplicate auto-bellback only after a resume was
+   enqueued. Never throws into finalize."
   [job-id summary]
   (when (parked-on-enabled?)
-    (.submit invoke-executor
-             ^Runnable
-             (fn []
-               (try
-                 (parked-on/note-completion! job-id summary
-                                             {:resume! parked-resume!
-                                              :now-ms (System/currentTimeMillis)})
-                 (catch Throwable t
-                   (println (str "[parked-on] notify failed for " job-id ": "
-                                 (.getMessage t)))))))))
+    (try
+      (parked-on/note-completion! job-id summary
+                                  {:resume! parked-resume!
+                                   :now-ms (System/currentTimeMillis)})
+      (catch Throwable t
+        (println (str "[parked-on] notify failed for " job-id ": "
+                      (.getMessage t)))
+        {:released [] :released-records []}))))
 (defn- parked-on-sweep-tick []
   (try
     (parked-on/sweep-deadlines!
@@ -974,7 +993,7 @@
         summary (when result-text (summarize-result-text result-text))
         artifact-ref (or (first-artifact-ref result-text)
                          (first-artifact-ref summary))
-        bellback-request (atom nil)]
+        updated-terminal-job (atom nil)]
     (update-invoke-jobs-ledger!
      (fn [ledger]
        (if-let [job (get-in ledger [:jobs job-id])]
@@ -992,28 +1011,52 @@
                                       :execution execution)
                                (append-job-event terminal-state
                                                  {:code terminal-code
-                                                  :message terminal-message}))
-               request (auto-bellback-request updated-job)
-               updated-job (if request
-                             (do
-                               (reset! bellback-request request)
-                               (assoc updated-job
-                                      :auto-bellback {:sent? true
-                                                      :bell-job-id (:bell-job-id request)
-                                                      :at finished-at}))
-                             updated-job)]
+                                                  :message terminal-message}))]
+           (reset! updated-terminal-job updated-job)
            (cond-> (assoc-in ledger [:jobs job-id] updated-job)
              (and (string? trace-id) (not (str/blank? trace-id)))
              (assoc-in [:trace->job trace-id] job-id)))
          ledger)))
-    (when-let [request @bellback-request]
-      (try
-        (*enqueue-auto-bellback!* request)
-        (catch Throwable t
-          (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
-                        (.getMessage t)))
-          (flush))))
-    (parked-on-notify! job-id summary)))
+    (let [released-park-records (:released-records (parked-on-notify! job-id summary))]
+      (when @updated-terminal-job
+        (let [bellback-request (atom nil)]
+          (update-invoke-jobs-ledger!
+           (fn [ledger]
+             (if-let [job (get-in ledger [:jobs job-id])]
+               (let [finished-at (or (:finished-at job) (str (Instant/now)))
+                     recipient-type (auto-bellback-recipient-type (:agent-id job))
+                     caller-registered? (auto-bellback-caller-registered? (:caller job))
+                     suppressing-park (auto-bellback-suppressing-park job released-park-records)]
+                 (cond
+                   (and suppressing-park
+                        (should-auto-bellback? job recipient-type caller-registered?
+                                               (auto-bellback-enabled?)))
+                   (do
+                     (log-auto-bellback-suppressed! job suppressing-park)
+                     (assoc-in ledger [:jobs job-id :auto-bellback]
+                               {:suppressed? true
+                                :reason :parked-on
+                                :park-id (:id suppressing-park)
+                                :at finished-at}))
+
+                   :else
+                   (if-let [request (auto-bellback-request job)]
+                     (do
+                       (reset! bellback-request request)
+                       (assoc-in ledger [:jobs job-id :auto-bellback]
+                                 {:sent? true
+                                  :bell-job-id (:bell-job-id request)
+                                  :at finished-at}))
+                     ledger)))
+               ledger)))
+          (when-let [request @bellback-request]
+            (try
+              (*enqueue-auto-bellback!* request)
+              (catch Throwable t
+                (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
+                              (.getMessage t)))
+                (flush)))))))
+    nil))
 
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]

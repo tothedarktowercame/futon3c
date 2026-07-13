@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agency.parked-on :as parked-on]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.transport.http :as http]))
@@ -58,11 +59,13 @@
         (with-redefs-fn {#'http/invoke-jobs-store-path (fn [] *ledger-file*)}
           (fn []
             (reg/reset-registry!)
+            (parked-on/clear!)
             (http/reset-invoke-jobs!)
             (try
               (f)
               (finally
                 (reg/reset-registry!)
+                (parked-on/clear!)
                 (http/reset-invoke-jobs!)
                 (io/delete-file tmp true)))))))))
 
@@ -221,6 +224,57 @@
     (is (empty? @enqueued))
     (is (nil? (:auto-bellback (job "job-4"))))))
 
+(deftest parked-caller-resume-suppresses-server-auto-bellback
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-park-1" :agent-id "codex-1" :caller "claude-6"})
+  (let [park (parked-on/park! {:agent "claude-6"
+                               :session "session-1"
+                               :surface "emacs-codex-repl"
+                               :awaiting ["job-park-1"]
+                               :payload "resume checklist"}
+                              {:ledger-lookup (constantly nil)
+                               :now-ms 1000})
+        enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                    #'http/parked-on-enabled? (constantly true)
+                    #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(finalize! "job-park-1"))
+    (is (empty? @enqueued) "server auto-bellback is skipped")
+    (let [resume (http/parked-ready-pop! "claude-6" "session-1")]
+      (is (= (:id park) (:park-id resume)) "park resume was pushed instead")
+      (is (str/includes? (:prompt resume) "resume checklist")))
+    (is (= {:suppressed? true
+            :reason :parked-on
+            :park-id (:id park)}
+           (select-keys (:auto-bellback (job "job-park-1"))
+                        [:suppressed? :reason :park-id])))))
+
+(deftest no-park-still-auto-bellbacks
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-no-park-1" :agent-id "codex-1" :caller "claude-6"})
+  (let [enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                    #'http/parked-on-enabled? (constantly true)
+                    #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(finalize! "job-no-park-1"))
+    (is (= 1 (count @enqueued)) "no awaiting park preserves the bellback path")
+    (is (= "claude-6" (:caller (first @enqueued))))))
+
+(deftest parked-notify-failure-does-not-suppress-auto-bellback
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-park-fail-1" :agent-id "codex-1" :caller "claude-6"})
+  (let [enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                    #'http/parked-on-enabled? (constantly true)
+                    #'parked-on/note-completion! (fn [& _] (throw (ex-info "boom" {})))
+                    #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(finalize! "job-park-fail-1"))
+    (is (= 1 (count @enqueued))
+        "suppression depends on a successful released-records result; release failure leaves bellback live")))
+
 (deftest pure-decision-predicate-covers-gates
   (let [base {:job-id "job-5" :agent-id "codex-1" :caller "claude-6" :state "done"}]
     (is (true? (http/should-auto-bellback? base :codex true true)))
@@ -231,6 +285,14 @@
         "unregistered/ineligible recipient type never bells")
     (is (false? (http/should-auto-bellback? (assoc base :caller nil) :codex true true)))
     (is (false? (http/should-auto-bellback? (assoc base :auto-bellback {:sent? true}) :codex true true)))
+    (is (false? (http/should-auto-bellback? (assoc base :auto-bellback {:suppressed? true})
+                                            :codex true true)))
+    (is (false? (http/should-auto-bellback? base :codex true true
+                                            [{:id "park-1" :agent "claude-6"}]))
+        "a released park for the caller suppresses the duplicate server wake")
+    (is (true? (http/should-auto-bellback? base :codex true true
+                                           [{:id "park-2" :agent "other-agent"}]))
+        "a released park for another agent does not suppress this caller")
     (is (false? (http/should-auto-bellback? base :codex true false)))))
 
 ;; --- Bell router (E-crossed-bells): explicit, self-describing bellback replies ---
