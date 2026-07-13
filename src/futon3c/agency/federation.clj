@@ -902,13 +902,23 @@
 (defn- backoff-delay-ms
   [interval-ms failure-count jitter-fn]
   (let [base (max 1 (long (or interval-ms (sync-interval-ms) 1)))
-        multiplier (long (Math/pow 2 (max 0 (dec (long failure-count)))))
-        capped (min (max-backoff-ms) (* base multiplier))
+        cap (max 1 (max-backoff-ms))
+        doublings (max 0 (dec (long failure-count)))
+        ;; Stop multiplying as soon as the configured cap is reached. Apart
+        ;; from avoiding needless work for large failure counts, this keeps a
+        ;; long peer outage from overflowing checked long multiplication before
+        ;; `min` gets a chance to apply the cap.
+        capped (loop [delay (min base cap)
+                      remaining doublings]
+                 (if (or (zero? remaining) (>= delay cap))
+                   delay
+                   (recur (long (min cap (*' delay 2)))
+                          (dec remaining))))
         jitter-bound (max 0 (long (/ capped 10)))
         jitter (long (or (when (pos? jitter-bound)
                            (jitter-fn jitter-bound))
                          0))]
-    (+ capped jitter)))
+    (long (min Long/MAX_VALUE (+' capped jitter)))))
 
 (defn- record-peer-failure!
   [peer-url now interval-ms error jitter-fn]

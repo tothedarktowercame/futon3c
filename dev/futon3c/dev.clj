@@ -1012,12 +1012,12 @@
           (println (str "[context] " cert " retrieved: "
                         (str/join ", " (map :id results))))
           (flush)
-          ;; Desktop notification
-          (-> (ProcessBuilder. ["notify-send" "--urgency" "low"
-                                (str "futon3a \u00b7 " cert)
-                                body])
-              .start
-              (.waitFor 2000 java.util.concurrent.TimeUnit/MILLISECONDS))
+          ;; Desktop notification is optional. Its failure must not suppress
+          ;; the context ring-buffer and HUD projection below.
+          (process-watchdog/default-notify!
+           {:urgency "low"
+            :title (str "futon3a \u00b7 " cert)
+            :body body})
           ;; Accumulate in ring buffer and project to HUD
           (swap! !recent-context
                  (fn [buf]

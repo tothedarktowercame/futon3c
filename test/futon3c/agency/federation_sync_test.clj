@@ -109,6 +109,35 @@
         (is (= :local (:invoke-route (route-info "claude-4"))))
         (is (empty? (logic/find-unreachable-connected (logic/build-live-db))))))))
 
+(deftest long-peer-outage-saturates-backoff-without-overflow
+  (testing "backoff remains capped after more doublings than fit in a long"
+    (let [peer "http://hub:7070"
+          unavailable (fn [_]
+                        (throw (ex-info "hub unavailable"
+                                        {:error "hub unavailable"})))
+          old-cap (System/getProperty "FUTON3C_FED_SYNC_MAX_BACKOFF_MS")]
+      (try
+        (System/setProperty "FUTON3C_FED_SYNC_MAX_BACKOFF_MS" "300000")
+        (fed/configure! {:peers [peer]
+                         :self-url "http://laptop:7070"
+                         :peer-sites ["lon"]})
+        (let [results (mapv (fn [attempt]
+                              (first
+                               (fed/sync-tick!
+                                {:peers [peer]
+                                 :now-ms (* attempt 300001)
+                                 :interval-ms 30000
+                                 :jitter-fn (constantly 0)
+                                 :fetch-fn unavailable})))
+                            (range 1 81))]
+          (is (= 80 (:failure-count (last results))))
+          (is (= 300000 (:backoff-ms (last results))))
+          (is (every? #(<= (:backoff-ms %) 300000) results)))
+        (finally
+          (if old-cap
+            (System/setProperty "FUTON3C_FED_SYNC_MAX_BACKOFF_MS" old-cap)
+            (System/clearProperty "FUTON3C_FED_SYNC_MAX_BACKOFF_MS")))))))
+
 (deftest continuous-sync-daemon-defaults-off
   (testing "unset/zero interval preserves one-shot boot behavior by not starting a daemon"
     (let [old (System/getProperty "FUTON3C_FED_SYNC_INTERVAL_MS")]
