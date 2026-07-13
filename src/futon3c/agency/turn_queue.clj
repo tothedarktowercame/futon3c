@@ -49,6 +49,7 @@
   (atom {}))
 
 (declare run-finalizer!)
+(declare stop-all-drainers!)
 
 (defn- load-state []
   (let [f (io/file (queue-store-path))]
@@ -87,6 +88,8 @@
 (defn clear!
   "Reset queue state. Intended for tests/dev only."
   []
+  (when (bound? #'stop-all-drainers!)
+    (stop-all-drainers!))
   (clojure.core/reset! !waiters {})
   (clojure.core/reset! !processors {})
   (persist! (clojure.core/reset! !queue (empty-state))))
@@ -255,31 +258,38 @@
   [agent-id process-fn]
   (let [aid (clean-str agent-id)]
     (when (acquire-drain! aid)
-      (try
-        (loop [processed []]
-          (if-let [entry (pop-next! aid)]
-            (let [frontier (get-in (snapshot) [:drained-frontier aid] 0)
-                  stale? (and (:seq entry) (< (:seq entry) frontier))
-                  entry-process-fn (or (get @!processors (:id entry)) process-fn)
-                  result (if stale?
-                           {:result "[stale turn reconciled]"
-                            :turn-queue/status :stale}
-                           (try
-                             (entry-process-fn entry)
-                             (catch Throwable t
-                               {:error (.getMessage t)
-                                :exception-class (.getName (class t))})))
-                  status (cond
-                           stale? :stale
-                           (:error result) :failed
-                           :else :processed)
-                  entry* (mark-terminal! entry status result)]
-              (swap! !processors dissoc (:id entry))
-              (run-finalizer! (:id entry) result)        ;; no-op unless a v2 finalizer is registered
-              (recur (conj processed entry*)))
-            processed))
-        (finally
-          (release-drain! aid))))))
+      (loop [processed-total []]
+        (let [processed-batch
+              (try
+                (loop [processed []]
+                  (if-let [entry (pop-next! aid)]
+                    (let [frontier (get-in (snapshot) [:drained-frontier aid] 0)
+                          stale? (and (:seq entry) (< (:seq entry) frontier))
+                          entry-process-fn (or (get @!processors (:id entry)) process-fn)
+                          result (if stale?
+                                   {:result "[stale turn reconciled]"
+                                    :turn-queue/status :stale}
+                                   (try
+                                     (entry-process-fn entry)
+                                     (catch Throwable t
+                                       {:error (.getMessage t)
+                                        :exception-class (.getName (class t))})))
+                          status (cond
+                                   stale? :stale
+                                   (:error result) :failed
+                                   :else :processed)
+                          entry* (mark-terminal! entry status result)]
+                      (swap! !processors dissoc (:id entry))
+                      (run-finalizer! (:id entry) result)        ;; no-op unless a v2 finalizer is registered
+                      (recur (conj processed entry*)))
+                    processed))
+                (finally
+                  (release-drain! aid)))
+              processed* (into processed-total processed-batch)]
+          (if (and (seq (get-in (snapshot) [:queues aid]))
+                   (acquire-drain! aid))
+            (recur processed*)
+            processed*))))))
 
 (defn accept-and-drain!
   "Accept ENTRY, drain its recipient queue, and return this turn's terminal

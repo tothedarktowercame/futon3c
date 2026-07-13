@@ -16,7 +16,7 @@
             :surface "bell" :kind :invoke :accepted-at "2026-06-10T10:00:00Z"
             :terminal-at "2026-06-10T10:01:00Z" :terminal-state "succeeded"
             :delivered? true :delivery-surface "job-status" :session-id "s-codex"
-            :ok? true :bellback-of nil}
+            :ok? true :bellback-of nil :type nil :ref nil}
            (dissoc edge :raw)))))
 
 (deftest coordination-events-coalesce-invoke-and-result

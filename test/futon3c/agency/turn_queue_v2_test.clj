@@ -8,7 +8,10 @@
   (:import [java.util.concurrent CountDownLatch TimeUnit]))
 
 (defn- with-temp-v2 [f]
-  (let [path (.getPath (java.io.File/createTempFile "futon3c-drainer-v2-" ".edn"))]
+  (let [dir (doto (java.io.File. "target/test-queues")
+              (.mkdirs))
+        file (java.io.File/createTempFile "futon3c-drainer-v2-" ".edn" dir)
+        path (.getPath file)]
     (with-redefs [turn-queue/queue-store-path (constantly path)]
       (turn-queue/clear!)
       (turn-queue/stop-all-drainers!)
@@ -17,11 +20,17 @@
         (finally
           (turn-queue/stop-all-drainers!)
           (turn-queue/clear!)
-          (.delete (java.io.File. path)))))))
+          (.delete file))))))
 
-(deftest v2-defaults-off
-  (testing "load-dark: flag and dynamic bypass default off"
-    (is (false? (turn-queue/drainer-v2-enabled?)))
+(deftest v2-defaults-on
+  (testing "drainer v2 defaults on unless explicitly disabled"
+    (is (true? (turn-queue/drainer-v2-enabled?)))
+    (System/setProperty "FUTON3C_DRAINER_V2" "false")
+    (try
+      (is (false? (turn-queue/drainer-v2-enabled?)))
+      (finally
+        (System/clearProperty "FUTON3C_DRAINER_V2"))))
+  (testing "dynamic bypass defaults off"
     (is (false? turn-queue/*drained-by-outer*))))
 
 (deftest dedicated-drainer-fifo-no-drop-and-finalizes
