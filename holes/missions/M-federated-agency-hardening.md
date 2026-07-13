@@ -862,3 +862,18 @@ unit `scripts/oxf-lucy-tunnel.service` is the stopgap until CP-F ships).
       the uplink is live (leave the removal itself to a verified deploy step).
 - [ ] Invariants hold: uplink routes to agents that already exist (I-2); no
       subprocess spawning in transport code (grep gate); locals stay bare (CP-D).
+
+**CP-F build-dispatch datapoint (2026-07-13, while the build ran):** the first
+cross-site build dispatch surfaced a hardening gap of its own. The bell to
+`chi-codex-1` traversed lucy's HTTP proxy invoke-fn; BOTH hops (lucy→chi proxy
+call, chi's local invoke job) timed out at exactly 600s while the codex process
+kept working underneath (verified on-box by chi-claude-1: JVM-parented PID
+alive, CPU advancing, CP-F files landing in a worktree). Fallout: the job
+reported `failed`, and lucy's proxy row wedged at `:invoking` (cleared by hand
+via Drawbridge; the remote registry had it `:idle` — a CP-E item 2 instance,
+proxy state diverging from home-box truth). Lessons for this mission: (a) any
+cross-site dispatch expected to exceed ~10min needs a completion-bell contract,
+not a synchronous proxy wait — the CP-F uplink invoke path should carry the
+caller's timeout end-to-end rather than compounding fixed per-hop caps; (b)
+proxy `:invoking` should be leased/TTL'd or reconciled from the home box on
+sync, never left to a response that may never arrive.
