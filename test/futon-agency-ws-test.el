@@ -61,5 +61,25 @@
       (futon-agency-completion--show "fable-2")
       (should (equal '("fable-2 done — what next?") messages)))))
 
+(ert-deftest futon-agency-hud-renders-invoke-preview-for-busy-agents ()
+  (let ((futon-agency-hud-buffer-name " *futon-agency-hud-test* ")
+        (futon-agency-hud--render-count 0))
+    (unwind-protect
+        (progn
+          (futon-agency-hud--render
+           '((type . "agents_status")
+             (count . 1)
+             (agents . ((codex-4 . ((status . "invoking")
+                                    (type . "codex")
+                                    (invoke-activity . "using bash")
+                                    (invoke-prompt-preview . "--- CURRENT TURN ---\nSurface: emacs-repl\nCaller: joe")))))))
+          (with-current-buffer futon-agency-hud-buffer-name
+            (let ((text (buffer-substring-no-properties (point-min) (point-max))))
+              (should (string-match-p "codex-4" text))
+              (should (string-match-p "using bash" text))
+              (should (string-match-p "--- CURRENT TURN ---" text)))))
+      (when (get-buffer futon-agency-hud-buffer-name)
+        (kill-buffer futon-agency-hud-buffer-name)))))
+
 (provide 'futon-agency-ws-test)
 ;;; futon-agency-ws-test.el ends here

@@ -6,6 +6,7 @@
    invoke-missing → SocialError (R4), bounded-lifecycle/TTL (R5),
    typed-identifiers (R6)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [cheshire.core :as json]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard]
             [futon3c.social.shapes :as shapes]
@@ -345,6 +346,35 @@
         (is (= "Command Execution" (:invoke-activity info))))
       (reg/clear-external-invoke! "codex-repl" "emacs-codex-repl")
       (is (= :idle (get-in (reg/registry-status) [:agents "codex-repl" :status]))))))
+
+(deftest agents-status-broadcast-advertises-invoke-pattern
+  (testing "WS agents_status carries the same invoke preview fields as registry-status"
+    (let [sent (promise)]
+      (try
+        (reg/register-agent!
+         {:agent-id (fix/make-agent-id "codex-broadcast")
+          :type :codex
+          :invoke-fn nil
+          :capabilities [:edit]})
+        (ws-invoke/register! "registry-test-hud" #(deliver sent %) {:observer? true})
+        (with-redefs [reg/running-codex-session-ids (constantly #{})
+                      futon3c.blackboard/project-agents! (fn [_] nil)]
+          (reg/report-external-invoke!
+           "codex-broadcast"
+           "emacs-codex-repl"
+           {:status :invoking
+            :prompt-preview "--- CURRENT TURN ---\nSurface: emacs-repl\nCaller: joe"
+            :activity "using bash"}))
+        (let [frame (json/parse-string (deref sent 1000 "{}") true)
+              agent (get-in frame [:agents :codex-broadcast])]
+          (is (= "agents_status" (:type frame)))
+          (is (= "invoking" (:status agent)))
+          (is (= "using bash" (:invoke-activity agent)))
+          (is (= "--- CURRENT TURN ---\nSurface: emacs-repl\nCaller: joe"
+                 (:invoke-prompt-preview agent)))
+          (is (string? (:invoke-started-at agent))))
+        (finally
+          (ws-invoke/unregister! "registry-test-hud"))))))
 
 (deftest registry-status-treats-heartbeating-codex-as-idle-when-clear
   (testing "codex agent stays idle after clear even if resume process is running"

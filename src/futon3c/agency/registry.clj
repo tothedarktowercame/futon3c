@@ -204,6 +204,8 @@
                           (map (fn [[aid info]]
                                  [aid {:status (:status info)
                                        :type (:type info)
+                                       :invoke-started-at (:invoke-started-at info)
+                                       :invoke-prompt-preview (:invoke-prompt-preview info)
                                        :invoke-activity (:invoke-activity info)}]))
                           (:agents status))]
         (ws-invoke/broadcast-frame!
