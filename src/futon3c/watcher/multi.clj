@@ -34,7 +34,8 @@
            [java.util.concurrent
             Executors ScheduledExecutorService TimeUnit]))
 
-(def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def FUTON1A   (or (System/getenv "FUTON_SUBSTRATE_URL")
+                   (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 
 (def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "md"})

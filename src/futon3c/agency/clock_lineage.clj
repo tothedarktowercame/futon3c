@@ -24,7 +24,8 @@
             [futon3c.agency.clock-store :as clock-store])
   (:import [java.net URLEncoder]))
 
-(def ^:private FUTON1A (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def ^:private FUTON1A (or (System/getenv "FUTON_SUBSTRATE_URL")
+                           (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def ^:private PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 (def clock-type "clock/clocked-on")
 

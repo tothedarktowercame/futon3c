@@ -64,7 +64,8 @@ export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
 export FUTON1A_PORT="${FUTON1A_PORT:-0}"
 export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
 export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:7074}"
-export FUTON1A_URL="${FUTON1A_URL:-http://127.0.0.1:7074}"
+export FUTON_SUBSTRATE_URL="${FUTON_SUBSTRATE_URL:-${FUTON1A_URL:-http://127.0.0.1:7074}}"
+export FUTON1A_URL="${FUTON1A_URL:-${FUTON_SUBSTRATE_URL}}"
 if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
   echo "[dev] futon1b-server: running"
 else

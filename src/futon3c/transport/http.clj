@@ -4777,7 +4777,8 @@
     (if (or (nil? path) (str/blank? (str path)))
       (json-response 400 {:ok false :error "missing-path"
                            :message "path query parameter is required"})
-      (let [futon1a-url (or (System/getenv "FUTON1A_URL") "http://localhost:7071")
+      (let [futon1a-url (or (System/getenv "FUTON_SUBSTRATE_URL")
+                            (System/getenv "FUTON1A_URL") "http://localhost:7071")
             result (enrich/enrich-file (str path) {:futon1a-url futon1a-url})]
         (json-response 200 (assoc result :ok true))))))
 

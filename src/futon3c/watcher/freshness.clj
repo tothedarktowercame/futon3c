@@ -19,7 +19,8 @@
             [babashka.http-client :as http])
   (:import [java.util.concurrent TimeUnit]))
 
-(def ^:private FUTON1A (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def ^:private FUTON1A (or (System/getenv "FUTON_SUBSTRATE_URL")
+                           (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def stale-threshold-ms
   "A repo counts as stale only when its newest non-merge HEAD commit is older

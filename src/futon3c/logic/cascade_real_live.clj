@@ -17,21 +17,14 @@
 
    The dimension/owner/held-on/coverage SCAFFOLD stays from the contract (it is the
    campaign's own structure, not landed data); only `claims-typeo` becomes live."
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str]
-            [babashka.http-client :as http]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.registry :as registry]
-            [futon3c.logic.cascade-real :as cr])
-  (:import [java.net URLEncoder]))
+            [futon3c.logic.cascade-real :as cr]
+            [futon3c.substrate.client :as substrate]))
 
-(def ^:private substrate-url
-  "Substrate-2 hyperedge API. Do not read FUTON1A_URL here: this JVM may bind
-   that env var to the futon1b evidence store (:7073), whose API has no
-   /hyperedges route and can make the live cascade page appear dead."
-  (or (System/getenv "FUTON1A_HYPEREDGE_URL") "http://127.0.0.1:7071"))
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
 (def ^:private fetch-timeout-ms 5000)
 
@@ -39,18 +32,10 @@
 (def ^:private claims-typeo-rel cr/claims-typeo)
 
 (defn fetch-edges
-  "GET currently-valid substrate-2 hyperedges of HX-TYPE (db-as-of now). Returns a
-   seq of hyperedge maps, or [] on any error (the gate degrades to 'no live rows
-   for this dimension', never throws)."
+  "GET currently-valid authoritative substrate hyperedges of HX-TYPE. A
+  transport failure is loud; [] means the authoritative query was empty."
   [hx-type]
-  (let [url  (str substrate-url "/api/alpha/hyperedges?type=" (URLEncoder/encode hx-type "UTF-8"))
-        resp (try (http/get url {:headers {"Accept" "application/edn"}
-                                 :throw false
-                                 :timeout fetch-timeout-ms})
-                  (catch Exception _ nil))]
-    (or (when (and resp (= 200 (:status resp)) (string? (:body resp)))
-          (try (:hyperedges (edn/read-string (:body resp))) (catch Exception _ nil)))
-        [])))
+  (substrate/hyperedges-by-type hx-type {:timeout-ms fetch-timeout-ms}))
 
 (defn- prop [props k] (or (get props k) (get props (name k))))
 

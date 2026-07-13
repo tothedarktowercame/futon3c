@@ -17,7 +17,8 @@
            (java.time Instant)))
 
 (def ^:private default-futon1a-url
-  (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (defn invariant-endpoint
   [obligation]

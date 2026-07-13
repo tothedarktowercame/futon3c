@@ -5,7 +5,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.java.io :as io]
             [futon3c.logic.cascade-real :as cr]
-            [futon3c.logic.cascade-real-live :as live]))
+            [futon3c.logic.cascade-real-live :as live]
+            [futon3c.substrate.client :as substrate]))
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)
@@ -86,6 +87,14 @@
   (testing "a dimension with no live rows contributes nothing (honest non-landing)"
     (is (= [] (vec (live/o3-claims-from []))))
     (is (= [] (vec (live/o2-meme-claims-from []))))))
+
+(deftest fetch-edges-uses-canonical-substrate-client
+  (with-redefs [substrate/hyperedges-by-type
+                (fn [type opts]
+                  (is (= "clock/clocked-on" type))
+                  (is (pos? (:timeout-ms opts)))
+                  sample-clock-edges)]
+    (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
 
 (deftest o2-extractor-maps-memes
   (testing "mine/meme edges → claims-typeo :O2 meme:ask-* :meme (only meme: endpoints)"
