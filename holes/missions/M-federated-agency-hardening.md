@@ -890,3 +890,41 @@ explicitly instead and is GREEN: fed-uplink + federation (sync, registration,
 logic, core) + transport (protocol, ws, ws-invoke) = 123 tests, 381
 assertions, 0 failures. Chicago's own full-gate run (per the dispatch bell)
 will provide the cross-box comparison when its watcher reports.
+
+## Checkpoint CP-F-verify — 2026-07-13 (WS uplink LIVE end-to-end; tunnel-free federation achieved)
+
+**Verified live on lucy, with the reverse SSH tunnel DEAD (second tunnel death
+of the day — the laptop net bounce that motivated CP-F in the morning):**
+
+- Lucy serving JVM restarted by joe (~16:16Z) on the branch (562eb54+); the
+  new ws handler answers a valid `fed_announce` with a `fed_roster` reply
+  (probed in-JVM via JDK WebSocket client against ws://127.0.0.1:7070/agency/ws).
+- Within one laptop reconnect cycle, **13 oxf agents imported with
+  `:federation/transport :ws-uplink`** (claude-2/5/6, codex-1/2/3,
+  zai-3/4/11/12/13/14/15).
+- **Invoke round-trip over the socket confirmed**: POST /api/alpha/invoke →
+  oxf-codex-3 → "uplink-pong" (job invoke-1783960316834-17-01c56302).
+- NAT-transparency proven: laptop dials OUT to the hub's public IP; no
+  listener, no tunnel, no port on the laptop side.
+
+**Debugging notes (what cost time, for the record):**
+1. WIRE FORMAT: the implementation uses underscore frame types
+   (`fed_announce`/`fed_roster`), the CP-F spec text said `:fed-announce`.
+   The first post-restart probe used hyphens and wrongly concluded the
+   handler was still old. Spec text amended mentally; frames are
+   underscore-typed on the wire, keywordized (`:fed-announce`) after parse.
+2. TOKEN ARMING: the restarted JVM had neither FUTON3C_FED_TOKEN property
+   nor env — joe's launcher did not source the updated dev-linode-env
+   .fedtoken block. Armed live by property (twice today; an earlier arming
+   also vanished pre-restart, cause unknown). FOLLOW-UP: confirm the launcher
+   sources scripts/dev-linode-env so boots arm automatically.
+
+**Open follow-ups:**
+- fed_uplink client backoff is uncapped exponential (2^(n-1) s) — cap it
+  (~60s, matching federation's max-backoff) or reconnects after long outages
+  take arbitrarily long.
+- Tunnel retirement: criteria met. Keep the oxf HTTP peer entry as dual-run
+  through a short soak, then remove `oxf=http://127.0.0.1:17070` from
+  dev-linode-env (the checklist's final box; removal is a deploy step).
+- CP-E item 2 (live state sync) now has its channel: the uplink socket is the
+  natural carrier for status deltas.
