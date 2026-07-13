@@ -1902,6 +1902,130 @@ to assess the outcome, and posts the result as evidence."
 Bind to e.g. \"continuation\" when an auto-resume is injected, so the turn is
 not mis-attributed to the human operator.")
 
+(defvar-local agent-chat--pending-turn-origin nil
+  "Origin of the currently pending turn: `operator' or `unsolicited'.")
+
+(defvar-local agent-chat--queued-operator-turns nil
+  "FIFO of operator turns captured while an unsolicited turn is in flight.")
+
+(defun agent-chat--operator-speaker-p (speaker)
+  "Non-nil when SPEAKER should be treated as the human operator."
+  (equal (or speaker "joe") "joe"))
+
+(defun agent-chat--queue-operator-turn (call-async-fn agent-name hooks)
+  "Queue current input as an operator turn behind an in-flight unsolicited turn."
+  (let ((text (buffer-substring-no-properties
+               (marker-position agent-chat--input-start)
+               (point-max))))
+    (unless (string-empty-p (string-trim text))
+      (delete-region (marker-position agent-chat--input-start) (point-max))
+      (setq agent-chat--queued-operator-turns
+            (append agent-chat--queued-operator-turns
+                    (list (list :text (string-trim text)
+                                :call-async-fn call-async-fn
+                                :agent-name agent-name
+                                :hooks hooks))))
+      (message "%s queued until the background turn finishes"
+               (capitalize agent-name)))))
+
+(defun agent-chat--drain-queued-operator-turns ()
+  "Start the next operator turn queued behind an unsolicited turn, if any."
+  (when (and (not (process-live-p agent-chat--pending-process))
+             agent-chat--queued-operator-turns)
+    (let* ((entry (car agent-chat--queued-operator-turns))
+           (text (plist-get entry :text))
+           (call-async-fn (plist-get entry :call-async-fn))
+           (agent-name (plist-get entry :agent-name))
+           (hooks (plist-get entry :hooks)))
+      (setq agent-chat--queued-operator-turns
+            (cdr agent-chat--queued-operator-turns))
+      (agent-chat--start-turn call-async-fn agent-name hooks text "joe" 'operator))))
+
+(defun agent-chat--finish-pending-turn ()
+  "Clear pending-turn metadata and drain any queued operator turn."
+  (setq agent-chat--pending-turn-origin nil)
+  (agent-chat--drain-queued-operator-turns))
+
+(defun agent-chat--start-turn
+    (call-async-fn agent-name hooks text speaker origin)
+  "Start one chat turn using TEXT attributed to SPEAKER and ORIGIN.
+ORIGIN is `operator' for ordinary user turns and `unsolicited' for background
+continuations/notifications. Unsolicited turns have their own reply slot and any
+operator input arriving while they run is queued for the next turn."
+  (let* ((trimmed (string-trim text))
+         (walkie (and (agent-chat--operator-speaker-p speaker)
+                      (agent-chat--walkie-command-p trimmed)))
+         (chat-buffer (current-buffer))
+         (before-send (plist-get hooks :before-send))
+         (on-response (plist-get hooks :on-response))
+         (on-launch-error (plist-get hooks :on-launch-error)))
+    (agent-chat-insert-message speaker trimmed)
+    (when (agent-chat--operator-speaker-p speaker)
+      (agent-chat--maybe-auto-clock-from-turn trimmed))
+    (when (functionp before-send)
+      (funcall before-send trimmed))
+    (setq agent-chat--last-auto-clock-witness nil)
+    (agent-chat-insert-thinking)
+    (cl-incf agent-chat--turn-counter)
+    (setq agent-chat--current-turn-id
+          (format "%s-turn-%d"
+                  (or agent-chat--agent-id agent-name "agent")
+                  agent-chat--turn-counter))
+    (agent-chat-start-turn-commit-window!)
+    (setq agent-chat--turn-start-time (float-time))
+    (setq agent-chat--pending-turn-origin origin)
+    (redisplay)
+    (condition-case err
+        (pcase (car walkie)
+          ("par"
+           (agent-chat--handle-par call-async-fn agent-name
+                                   (cdr walkie) chat-buffer hooks))
+          ("psr"
+           (agent-chat--handle-psr call-async-fn agent-name
+                                   (cdr walkie) chat-buffer hooks))
+          ("pur"
+           (agent-chat--handle-pur call-async-fn agent-name
+                                   (cdr walkie) chat-buffer hooks))
+          (_
+           (setq agent-chat--pending-process
+                 (funcall call-async-fn
+                          trimmed
+                          (lambda (response)
+                            (when (buffer-live-p chat-buffer)
+                              (with-current-buffer chat-buffer
+                                (setq agent-chat--pending-process nil)
+                                (agent-chat-remove-thinking)
+                                (agent-chat-insert-message agent-name response)
+                                (when (functionp on-response)
+                                  (funcall on-response response))
+                                ;; Turn timing, invariants, and transcript flair.
+                                (agent-chat-finish-turn!)
+                                (agent-chat-scroll-to-bottom)
+                                (agent-chat--finish-pending-turn))))))))
+      (error
+       (setq agent-chat--pending-process nil)
+       (setq agent-chat--pending-turn-origin nil)
+       (setq agent-chat--turn-git-heads nil)
+       (agent-chat-remove-thinking)
+       (let ((msg (format "[Error launching %s process: %s]"
+                          agent-name
+                          (error-message-string err))))
+         (agent-chat-insert-message agent-name msg)
+         (when (functionp on-launch-error)
+           (funcall on-launch-error msg)))
+       (agent-chat--drain-queued-operator-turns)))))
+
+(defun agent-chat-send-unsolicited-input
+    (call-async-fn agent-name text &optional speaker hooks)
+  "Start an unsolicited continuation/notification turn with TEXT.
+The turn is attributed to SPEAKER (default \"continuation\") and will never
+consume the reply slot of a later operator message."
+  (when (process-live-p agent-chat--pending-process)
+    (user-error "%s is still responding; background turn withheld"
+                (capitalize agent-name)))
+  (agent-chat--start-turn call-async-fn agent-name hooks text
+                          (or speaker "continuation") 'unsolicited))
+
 (defun agent-chat-send-input (call-async-fn agent-name &optional hooks)
   "Generic send: extract input, display it, call CALL-ASYNC-FN.
 CALL-ASYNC-FN: (text callback) -> process.
@@ -1921,69 +2045,18 @@ additionally posted to the evidence HTTP endpoint."
     ;; guard that is a raw marker-position crash (seen live 2026-07-04,
     ;; mid switch-to-buffer).
     (user-error "No agent-chat prompt here — switch to an initialized REPL buffer"))
-  (when (process-live-p agent-chat--pending-process)
-    (user-error "%s is still responding; wait for current turn to finish"
-                (capitalize agent-name)))
-  (let ((text (buffer-substring-no-properties
-               (marker-position agent-chat--input-start)
-               (point-max))))
-    (when (not (string-empty-p (string-trim text)))
-      (let* ((trimmed (string-trim text))
-             (walkie (agent-chat--walkie-command-p trimmed))
-             (chat-buffer (current-buffer))
-             (before-send (plist-get hooks :before-send))
-             (on-response (plist-get hooks :on-response))
-             (on-launch-error (plist-get hooks :on-launch-error)))
+  (if (process-live-p agent-chat--pending-process)
+      (if (eq agent-chat--pending-turn-origin 'unsolicited)
+          (agent-chat--queue-operator-turn call-async-fn agent-name hooks)
+        (user-error "%s is still responding; wait for current turn to finish"
+                    (capitalize agent-name)))
+    (let ((text (buffer-substring-no-properties
+                 (marker-position agent-chat--input-start)
+                 (point-max))))
+      (when (not (string-empty-p (string-trim text)))
         (delete-region (marker-position agent-chat--input-start) (point-max))
-        (agent-chat-insert-message agent-chat-user-speaker trimmed)
-        (agent-chat--maybe-auto-clock-from-turn trimmed)
-        (when (functionp before-send)
-          (funcall before-send trimmed))
-        (setq agent-chat--last-auto-clock-witness nil)
-        (agent-chat-insert-thinking)
-        (cl-incf agent-chat--turn-counter)
-        (setq agent-chat--current-turn-id
-              (format "%s-turn-%d"
-                      (or agent-chat--agent-id agent-name "agent")
-                      agent-chat--turn-counter))
-        (agent-chat-start-turn-commit-window!)
-        (setq agent-chat--turn-start-time (float-time))
-        (redisplay)
-        (condition-case err
-            (pcase (car walkie)
-              ("par"
-               (agent-chat--handle-par call-async-fn agent-name
-                                       (cdr walkie) chat-buffer hooks))
-              ("psr"
-               (agent-chat--handle-psr call-async-fn agent-name
-                                       (cdr walkie) chat-buffer hooks))
-              ("pur"
-               (agent-chat--handle-pur call-async-fn agent-name
-                                       (cdr walkie) chat-buffer hooks))
-              (_
-               (setq agent-chat--pending-process
-                     (funcall call-async-fn
-                              trimmed
-                              (lambda (response)
-                                (when (buffer-live-p chat-buffer)
-                                  (with-current-buffer chat-buffer
-                                    (agent-chat-remove-thinking)
-                                    (agent-chat-insert-message agent-name response)
-                                    (when (functionp on-response)
-                                      (funcall on-response response))
-                                    ;; Turn timing, invariants, and transcript flair.
-                                    (agent-chat-finish-turn!)
-                                    (agent-chat-scroll-to-bottom))))))))
-          (error
-           (setq agent-chat--pending-process nil)
-           (setq agent-chat--turn-git-heads nil)
-           (agent-chat-remove-thinking)
-           (let ((msg (format "[Error launching %s process: %s]"
-                              agent-name
-                              (error-message-string err))))
-             (agent-chat-insert-message agent-name msg)
-             (when (functionp on-launch-error)
-               (funcall on-launch-error msg)))))))))
+        (agent-chat--start-turn call-async-fn agent-name hooks text
+                                agent-chat-user-speaker 'operator)))))
 
 (defun agent-chat--handle-par (call-async-fn agent-name hint chat-buffer hooks)
   "Handle !par walkie-talkie command.

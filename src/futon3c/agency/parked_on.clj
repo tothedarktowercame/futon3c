@@ -93,16 +93,19 @@
 (defn ready-push!
   "Push an assembled resume prompt for [AGENT SESSION] into the durable
    ready-inbox (FIFO). Called when a buffer-surfaced park's join completes."
-  [agent session park-id prompt]
-  (ensure!)
-  (swap! !parked (fn [st]
-                   (-> st
-                       (update :ready-inbox
-                               (fn [ib]
-                                 (let [k [(str agent) (str session)]]
-                                   (assoc ib k (conj (get ib k [])
-                                                     {:park-id park-id :prompt prompt}))))))))
-  (persist! @!parked))
+  ([agent session park-id prompt]
+   (ready-push! agent session park-id prompt :within-turn))
+  ([agent session park-id prompt mode]
+   (ensure!)
+   (swap! !parked (fn [st]
+                    (-> st
+                        (update :ready-inbox
+                                (fn [ib]
+                                  (let [k [(str agent) (str session)]]
+                                    (assoc ib k (conj (get ib k [])
+                                                      {:park-id park-id :prompt prompt
+                                                       :mode (or mode :within-turn)}))))))))
+   (persist! @!parked)))
 
 (defn- ready-key [agent session] [(str agent) (str session)])
 
@@ -125,6 +128,7 @@
                         deadline (+ now-ms lease-ms)
                         leased-entry {:agent (str agent) :session (str session)
                                       :park-id (:park-id item) :prompt (:prompt item)
+                                      :mode (or (:mode item) :within-turn)
                                       :lease-deadline-ms deadline}]
                     (reset! leased-item (assoc item :lease-deadline-ms deadline))
                     (-> st
@@ -169,7 +173,8 @@
                   ;; so pk-1 should be redelivered first).
                   (reduce (fn [s' entry]
                             (let [k [(str (:agent entry)) (str (:session entry))]
-                                  item {:park-id (:park-id entry) :prompt (:prompt entry)}]
+                                  item {:park-id (:park-id entry) :prompt (:prompt entry)
+                                        :mode (or (:mode entry) :within-turn)}]
                               (-> s'
                                   (assoc-in [:ready-inbox k]
                                             (into [item] (get-in s' [:ready-inbox k])))
@@ -191,13 +196,17 @@
 (defn ready-inbox-pending?
   "True when [AGENT SESSION] has ready items OR leased items pending (for the
    more-pending check — a leased resume is still 'coming' until acked)."
-  [agent session]
-  (ensure!)
-  (let [k (ready-key agent session)]
-    (or (seq (get-in @!parked [:ready-inbox k]))
-        (some (fn [[_ e]] (and (= (:agent e) (str agent))
-                               (= (:session e) (str session))))
-              (:leased @!parked)))))
+  ([agent session] (ready-inbox-pending? agent session nil))
+  ([agent session mode]
+   (ensure!)
+   (let [k (ready-key agent session)
+         match-mode? (fn [e] (or (nil? mode)
+                                 (= (or (:mode e) :within-turn) mode)))]
+     (or (seq (filter match-mode? (get-in @!parked [:ready-inbox k])))
+         (some (fn [[_ e]] (and (= (:agent e) (str agent))
+                                (= (:session e) (str session))
+                                (match-mode? e)))
+               (:leased @!parked))))))
 
 ;; ---------------------------------------------------------------------------
 ;; index helpers
@@ -258,18 +267,19 @@
   "Fold dep DEP-ID (terminal, carrying RESULT-SUMMARY) into every record awaiting it.
    Fires RESUME! exactly once for each record whose join just completed (budget
    permitting); budget-exhausted records are retracted silently. Returns
-   {:released [rid ...]}."
+   {:released [rid ...] :released-records [rec ...]}."
   [dep-id result-summary {:keys [resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
   (if-not (contains? (:index @!parked) dep-id)
-    {:released []}                ; nothing parked on this dep — cheap no-op, no swap/disk write
+    {:released [] :released-records []} ; nothing parked on this dep — cheap no-op, no swap/disk write
     (let [[_ new] (swap-vals! !parked #(apply-completion % dep-id result-summary now-ms))
           fired (:just-released new)]
       (when (seq fired)
         (swap! !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
       (persist! @!parked)
       (doseq [rec fired] (when resume! (resume! rec)))
-      {:released (mapv :id fired)})))
+      {:released (mapv :id fired)
+       :released-records (mapv #(dissoc % :just-released) fired)})))
 
 ;; ---------------------------------------------------------------------------
 ;; park! — register a continuation (§3.2) + reconcile-on-park (case 1)
@@ -281,16 +291,17 @@
    deps via LEDGER-LOOKUP at park time (closes the lost-wakeup race). With no deps:
    resumes immediately unless a :timer-due-ms is set (then it waits for the sweep).
    Returns {:id rid :status :parked|:released|:released-immediately}."
-  [{:keys [agent session surface awaiting payload timer-due-ms deadline-ms budget]}
+  [{:keys [agent session surface awaiting payload timer-due-ms deadline-ms budget mode]}
    {:keys [ledger-lookup resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
   (let [rid (str "park-" (UUID/randomUUID))
         awaiting (set awaiting)
         budget (merge {:resumes-left 1 :max-depth 8} budget)
+        mode (or mode :within-turn)
         rec {:id rid :agent agent :session session :surface surface
              :awaiting awaiting :arrived {}
              :payload payload :timer-due-ms timer-due-ms :deadline-ms deadline-ms
-             :budget budget :parked-at-ms now-ms :released? false}]
+             :budget budget :parked-at-ms now-ms :released? false :mode mode}]
     (cond
       (and (empty? awaiting) (not timer-due-ms))
       (do (when resume! (resume! rec)) {:id rid :status :released-immediately})
@@ -336,7 +347,8 @@
                ;; Reverse to preserve FIFO order (first leased → front of queue).
                (reduce (fn [s entry]
                          (let [k [(:agent entry) (:session entry)]
-                               item {:park-id (:park-id entry) :prompt (:prompt entry)}]
+                               item {:park-id (:park-id entry) :prompt (:prompt entry)
+                                     :mode (or (:mode entry) :within-turn)}]
                            (-> s
                                (assoc-in [:ready-inbox k]
                                          (into [item] (get-in s [:ready-inbox k])))

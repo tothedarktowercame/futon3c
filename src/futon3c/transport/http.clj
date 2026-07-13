@@ -669,8 +669,8 @@
 ;; expired unacked leases are returned to the queue front for redelivery
 ;; (E-park-delivery-losses bugs 2-3, 2026-07-13).
 
-(defn- parked-ready-push! [agent session park-id prompt]
-  (parked-on/ready-push! agent session park-id prompt))
+(defn- parked-ready-push! [agent session park-id prompt mode]
+  (parked-on/ready-push! agent session park-id prompt mode))
 
 (defn parked-ready-pop!
   "Lease ONE ready resume for AGENT/SESSION (FIFO, pop-one per call). Returns the
@@ -698,10 +698,10 @@
   (and surface (str/starts-with? (str surface) "emacs")))
 
 (defn- parked-resume!
-  "Resume a parked agent. For a BUFFER-surfaced park, broadcast `park-ready` over the
-   agency WS (the repl buffer reruns it natively, streamed in place — E-repl-continuations
-   model B). For a headless/bell-surfaced park, enqueue a fresh turn on the agent's OWN
-   drainer lane (mirrors enqueue-auto-bellback!'s I-1 single-flight routing)."
+  "Resume a parked agent. For a BUFFER-surfaced park, deliver exactly once: try a
+   targeted `park-ready` WS frame when the agent has a sender, otherwise enqueue
+   one poll-inbox item. For a headless/bell-surfaced park, enqueue a fresh turn
+   on the agent's OWN drainer lane (mirrors enqueue-auto-bellback!'s I-1 routing)."
   [rec]
   (let [agent (:agent rec)
         prompt (assemble-resume-prompt rec)]
@@ -709,18 +709,19 @@
     ;; re-project on resume so the line clears promptly.
     (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
     (if (buffer-surface? (:surface rec))
-      (do
-        ;; Two delivery paths to the repl buffer: a WS push (instant, when the
-        ;; agency WS is connected) AND a ready-inbox the buffer can POLL (works
-        ;; today without the WS). Whichever the buffer consumes first fires once.
-        (ws-invoke/broadcast-frame! {:type "park-ready"
-                                     :agent (str agent)
-                                     :session (str (:session rec))
-                                     :park-id (:id rec)
-                                     :surface (str (:surface rec))
-                                     :prompt prompt})
-        (parked-ready-push! agent (:session rec) (:id rec) prompt)
-        (str "park-ready:" (:id rec)))
+      (let [frame {:type "park-ready"
+                   :agent (str agent)
+                   :session (str (:session rec))
+                   :park-id (:id rec)
+                   :surface (str (:surface rec))
+                   :mode (name (or (:mode rec) :within-turn))
+                   :prompt prompt}]
+        (if (ws-invoke/send-frame! (str agent) frame)
+          (str "park-ready-ws:" (:id rec))
+          (do
+            (parked-ready-push! agent (:session rec) (:id rec) prompt
+                                (or (:mode rec) :within-turn))
+            (str "park-ready-inbox:" (:id rec)))))
       (let [job-id (create-invoke-job! {:agent-id agent :prompt prompt
                                         :caller parked-resume-caller :surface parked-resume-caller})
             run-job (fn [] (run-invoke-job! {:job-id job-id :agent-id agent :prompt prompt
@@ -3402,13 +3403,15 @@
                     (filter (fn [r] (and (= (str (:agent r)) (str agent))
                                          (or (str/blank? (str session))
                                              (= (str (:session r)) (str session)))
-                                         (not (:released? r)))))
+                                         (not (:released? r))
+                                         (= (or (:mode r) :within-turn) :within-turn))))
                     (mapv (fn [r] {:id (:id r) :awaiting (vec (:awaiting r))
                                    :deadline-ms (:deadline-ms r)}))))
         ;; A ready resume already in the inbox (dep completed, poller not yet fired)
         ;; also means "more is coming" — so the check is race-free even for a fast dep.
         inbox-pending (and (parked-on-enabled?) agent
-                           (parked-on/ready-inbox-pending? agent (or session "")))]
+                           (parked-on/ready-inbox-pending? agent (or session "")
+                                                           :within-turn))]
     (json-response 200 {:ok true :parked (vec (or recs []))
                         :more-pending (boolean (or (seq recs) inbox-pending))})))
 
@@ -3435,6 +3438,8 @@
                      :surface (or (:surface payload) (get payload "surface"))
                      :awaiting (or (:awaiting payload) (get payload "awaiting") [])
                      :payload (or (:payload payload) (get payload "payload"))
+                     :mode (or (parse-keyword (or (:mode payload) (get payload "mode")))
+                               :within-turn)
                      :timer-due-ms (or (:timer-due-ms payload) (get payload "timer-due-ms"))
                      :deadline-ms (or (:deadline-ms payload) (get payload "deadline-ms"))
                      :budget (or (:budget payload) (get payload "budget"))}

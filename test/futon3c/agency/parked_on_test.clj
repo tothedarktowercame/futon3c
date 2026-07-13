@@ -105,6 +105,17 @@ no-dep timer park resumes plainly"
       (is (= 91000 (:lease-deadline-ms item)) "deadline = now + lease-ms")
       (is (p/ready-inbox-pending? "a1" "s1") "still pending: pk-2 in queue + pk-1 leased"))))
 
+(deftest background-ready-items-do-not-count-as-within-turn-pending
+  (testing "background parks resume from the inbox but do not defer turn finalization"
+    (p/ready-push! "a1" "s1" "pk-bg" "prompt-bg" :background)
+    (is (p/ready-inbox-pending? "a1" "s1") "generic pending still sees background work")
+    (is (not (p/ready-inbox-pending? "a1" "s1" :within-turn))
+        "within-turn more-pending ignores background ready items")
+    (let [item (p/ready-lease-one! "a1" "s1" 1000 90000)]
+      (is (= :background (:mode item)))
+      (is (not (p/ready-inbox-pending? "a1" "s1" :within-turn))
+          "within-turn more-pending also ignores leased background items"))))
+
 (deftest lease-then-ack-clears-lease
   (testing "ready-ack! confirms delivery and removes the lease"
     (p/ready-push! "a1" "s1" "pk-1" "prompt-1")

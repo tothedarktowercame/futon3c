@@ -10,6 +10,7 @@
             [futon3c.transport.http :as http]
             [futon3c.transport.peripheral-events]
             [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.agency.parked-on :as parked-on]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.portfolio.perceive :as perceive]
             [futon3c.transport.encyclopedia :as enc]
@@ -77,6 +78,77 @@
   (handler {:request-method :get
             :uri uri
             :query-string query-string}))
+
+(deftest parked-resume-buffer-surface-chooses-one-delivery-path
+  (testing "accepted targeted WS delivery does not also enqueue inbox fallback"
+    (let [sent (atom [])
+          pushed (atom [])]
+      (with-redefs [ws-invoke/send-frame! (fn [agent frame]
+                                            (swap! sent conj [agent frame])
+                                            true)
+                    http/parked-ready-push! (fn [& args]
+                                               (swap! pushed conj args))]
+        (is (= "park-ready-ws:pk-1"
+               ((var-get #'http/parked-resume!)
+                {:id "pk-1" :agent "claude-1" :session "sid"
+                 :surface "emacs-repl" :payload "wake" :arrived {}
+                 :awaiting #{} :mode :background})))
+        (is (= 1 (count @sent)))
+        (is (= [] @pushed)))))
+  (testing "missing targeted WS sender enqueues exactly one inbox fallback"
+    (let [sent (atom [])
+          pushed (atom [])]
+      (with-redefs [ws-invoke/send-frame! (fn [agent frame]
+                                            (swap! sent conj [agent frame])
+                                            false)
+                    http/parked-ready-push! (fn [& args]
+                                               (swap! pushed conj args))]
+        (is (= "park-ready-inbox:pk-2"
+               ((var-get #'http/parked-resume!)
+                {:id "pk-2" :agent "claude-1" :session "sid"
+                 :surface "emacs-repl" :payload "wake" :arrived {}
+                 :awaiting #{} :mode :background})))
+        (is (= 1 (count @sent)))
+        (is (= [["claude-1" "sid" "pk-2"
+                 "wake\n\n--- resumed: parked dependencies complete (0) ---\n"
+                 :background]]
+               @pushed))))))
+
+(deftest parked-ready-withholds-while-agent-busy
+  (testing "server-side busy gate withholds ready items without leasing"
+    (let [popped? (atom false)
+          response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 http/agent-in-flight-turn? (constantly true)
+                                 http/parked-ready-pop! (fn [& _]
+                                                          (reset! popped? true)
+                                                          {:park-id "bad"})]
+                     ((var-get #'http/handle-parked-ready)
+                      {:query-string "agent=claude-1&session=sid"} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 200 (:status response)))
+      (is (= [] (:ready body)))
+      (is (true? (:withheld body)))
+      (is (false? @popped?)))))
+
+(deftest parked-background-record-does-not-defer-within-turn-finalization
+  (testing "background parks are excluded from /parked more-pending"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot (fn []
+                                                      {:records
+                                                       {"bg" {:id "bg"
+                                                              :agent "claude-1"
+                                                              :session "sid"
+                                                              :awaiting #{"job-1"}
+                                                              :deadline-ms 123
+                                                              :mode :background
+                                                              :released? false}}})
+                                 parked-on/ready-inbox-pending? (constantly false)]
+                     ((var-get #'http/handle-parked)
+                      {:query-string "agent=claude-1&session=sid"} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 200 (:status response)))
+      (is (= [] (:parked body)))
+      (is (false? (:more-pending body))))))
 
 (defn- parse-body
   "Parse the JSON body string from a Ring response."

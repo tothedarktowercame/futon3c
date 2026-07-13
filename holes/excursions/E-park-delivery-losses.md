@@ -33,22 +33,21 @@ FIFO via `swap-vals!`, file + live JVM patched via Drawbridge (single-defn
 redefinition, no serving-ns reload), self-tested in-process (pk-1/pk-2/empty).
 "Extras next tick" is now actually true.
 
-**2. Mid-turn injection race (OPEN).** `claude-repl-park--poll-once` gates on
+**2. Mid-turn injection race (FIXED 2026-07-13).** `claude-repl-park--poll-once` gated on
 `agent-chat--streaming-started` as the buffer-idle signal, but in pouch-driven
 buffers that flag is not a reliable turn-activity indicator
 (`--resume-in-buffer`'s own comment says it "never resets here" — and we
 observed a resume injected+sent seconds into an active turn, where it was
-swallowed). → Candidate fixes: (a) a real busy predicate exposed by
-agent-chat/claude-repl; (b) server-side gating — the kangaroo layer KNOWS
-whether a session has an in-flight turn, so `handle-parked-ready` could simply
-withhold items while the session is busy (most robust: one source of truth).
+swallowed). **Fix applied:** `handle-parked-ready` uses the registry
+`:invoking` status as the single source of truth and returns `:withheld true`
+without leasing while the agent is busy; the Elisp poller no longer attempts to
+infer activity from streaming flags.
 
-**3. At-most-once delivery, no ack (OPEN, narrowed by fix 1).** The pop is
-destructive before delivery is confirmed; an injection that fails (bug 2, dead
-buffer, Emacs crash) loses the payload permanently. Pop-one caps the blast
-radius at a single resume, but a real fix is an ack step
-(`POST /parked/ready/ack?park-id=`) or redelivery-with-dedup (re-push on
-missing ack within T, `:park-id` idempotency on the elisp side).
+**3. At-most-once delivery, no ack (FIXED 2026-07-13).** The pop was destructive
+before delivery was confirmed; an injection that failed (bug 2, dead buffer,
+Emacs crash) lost the payload permanently. **Fix applied:** ready delivery is
+lease/ack based (`POST /api/alpha/parked/ready/ack`), expired leases are
+redelivered, and the Emacs side dedups by park-id.
 
 ## What was lost in the incident
 
@@ -65,12 +64,16 @@ missing ack within T, `:park-id` idempotency on the elisp side).
 
 First successful end-to-end park resume delivered into `*claude-repl:claude-6*`
 after the pop-one fix (the codex-2 slice-2 park) — the delivery path works.
-It also demonstrated a benign redundancy: a `--park`ed bell produces TWO wakes
-for one completion (auto-bellback + park resume). Refinement candidate:
-`finalize-invoke-job!` could skip the auto-bellback when a park is awaiting
-that job-id, making the park resume the single wake. Low priority — the
-duplicate is idempotent if agents treat resumes as "check state, then act,"
-which the wake-payload-as-checklist convention already encourages.
+It also demonstrated a redundancy that later proved operator-visible as three
+wakes for one `--park`ed bell completion: the recipient agent's explicit
+completion bell, the harness auto-bellback, and the park resume. The server
+duplicate is fixed: `finalize-invoke-job!` now runs the parked-on completion
+hook before deciding the auto-bellback, and suppresses the auto-bellback only
+when `note-completion!` successfully returns a released park for the same
+caller. The job ledger records the suppression under `:auto-bellback` so a
+repeat finalization cannot later turn the suppressed event into a bellback.
+The recipient agent's own explicit completion bell is intentionally unchanged;
+that is agent behavior, not server-generated delivery.
 
 Also observed on that first delivery: the resume's surface header read
 `From: joe / Origin: operator` instead of the designed `continuation:`
@@ -81,7 +84,7 @@ resume that presents as operator input can be mistaken for a fresh operator
 instruction (cf. transcript-operator-provenance discipline). Add to the
 hardening review scope.
 
-## Bug 4 — within-turn deferral vs background parks (OPEN; operator-visible)
+## Bug 4 — within-turn deferral vs background parks (FIXED 2026-07-13)
 
 The finalize-once model installs `agent-chat-turn-continued-fn` =
 `turn-parked-p`, which defers a turn's finalization (no flair, **no prompt
@@ -92,17 +95,13 @@ almost always — Joe's buffer stopped returning its input prompt, injected
 resume text stranded in the input area, and his next RET sent the stale
 resume + his typed message as one operator turn.
 
-Fix direction: **two park modes.** `POST /park` takes `:mode :within-turn`
+Fix applied: **two park modes.** `POST /park` takes `:mode :within-turn`
 (default, current semantics) vs `:mode :background` (what `agency_send.py
---park` should send). Background parks are EXCLUDED from `more-pending` /
+--park` sends). Background parks are EXCLUDED from `more-pending` /
 `turn-parked-p`, and their resumes arrive as fresh turns attributed
-`continuation:` — no deferral, no unified-flair machinery. Interim mitigation
-applied live (2026-07-13): `agent-chat-turn-continued-fn` set to nil
-buffer-locally in `*claude-repl:claude-6*`; genuine within-turn unification is
-disabled there until the mode split exists. Add to the hardening review scope
-alongside bugs 2-3 and the attribution finding.
+`continuation:` — no deferral, no prompt-stranding, no unified-flair machinery.
 
-## Bug 5 — WS + poll double delivery (OPEN; mitigated live)
+## Bug 5 — WS + poll double delivery (FIXED 2026-07-13)
 
 `parked-resume!` pushes every buffer-surface resume BOTH over the agency WS
 (`park-ready` frame) AND into the poll inbox; `claude-repl-park.el` subscribes
@@ -118,10 +117,20 @@ resume and the operator-visible stall.
 
 Mitigation applied live: WS `park-ready` handler unsubscribed in the running
 Emacs (poll path is sufficient); stale 614s accum-elapsed cleared in
-`*claude-repl:claude-6*`. Real fix for the hardening round: the server should
-choose ONE delivery path per resume (WS when connected, else inbox — with the
-inbox as fallback only after a WS delivery timeout), and the elisp should
-dedup by park-id regardless (zai-15's ack/dedup work covers the client half).
+`*claude-repl:claude-6*`. Fix applied: the server chooses ONE path per resume:
+targeted WS when accepted by the agent's sender, otherwise exactly one inbox
+fallback. The Elisp side also dedups by park-id.
+
+## One-slot shift — unsolicited turns corrupt operator reply pairing (FIXED 2026-07-13)
+
+A background-task completion woke claude-5 in an unsolicited turn; Joe sent a
+fresh operator message while it was in flight. The buffer paired Joe's message
+with the wake turn's output, and the genuine reply to Joe's message disappeared.
+Fix applied: unsolicited resumes are launched through a distinct
+`agent-chat-send-unsolicited-input` path, rendered as their own `continuation:`
+turn, and never inserted into the operator input area. If the operator sends
+while an unsolicited turn is in flight, the operator text is queued and launched
+as its own `joe:` turn after the continuation finishes.
 
 ## Finding 6 — the deadline backstop never woke anyone (FIXED 2026-07-13)
 

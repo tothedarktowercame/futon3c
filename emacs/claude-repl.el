@@ -1085,7 +1085,9 @@ CALLBACK is called with the final response text on completion."
                                      (claude-repl--close-frame "done")
                                      (agent-chat-finish-turn! nil continued)
                                      (goto-char (point-max))
-                                     (agent-chat-scroll-to-bottom))
+                                     (agent-chat-scroll-to-bottom)
+                                     (when (fboundp 'agent-chat--finish-pending-turn)
+                                       (agent-chat--finish-pending-turn)))
                                  ;; No streaming happened — use callback for full insert
                                  (funcall callback result))))
                             ;; Error done event — check for agent-not-found

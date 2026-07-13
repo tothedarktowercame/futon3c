@@ -13,6 +13,7 @@
 
 (require 'claude-repl)
 (require 'futon-agency-ws)
+(require 'ring)
 
 (defgroup claude-repl-park nil
   "Buffer-side parked-on continuations for the Claude REPL."
@@ -66,13 +67,17 @@ when the ACK is lost."
                     nil t t))))
 
 (defun claude-repl-park--resume-in-buffer (buf prompt park-id)
-  "Resume the parked turn in BUF by injecting PROMPT and sending it in place.
+  "Resume the parked turn in BUF as its own unsolicited continuation turn.
 Bug 2 (E-park-delivery-losses): the busy gate is now SERVER-SIDE —
 handle-parked-ready checks the registry's :invoking status before leasing, so a
 mid-turn agent never receives a resume. This buffer does NOT gate on
 agent-chat--streaming-started (it was unreliable in pouch-driven buffers).
 Bug 3: idempotent delivery — if PARK-ID was recently handled (dedup ring), skip
-it and ACK so the stale lease clears. After a successful send, ACK to confirm."
+it and ACK so the stale lease clears. After a successful send, ACK to confirm.
+One-slot-shift fix: the prompt is never inserted into the operator input area;
+it is launched through `agent-chat-send-unsolicited-input' as `continuation:',
+so any operator input typed while it streams queues behind it and gets its own
+reply slot."
   (when (and (buffer-live-p buf) (stringp prompt) (not (string-empty-p prompt)))
     (cond
      ((and (stringp park-id) (claude-repl-park--seen-p park-id))
@@ -84,36 +89,30 @@ it and ACK so the stale lease clears. After a successful send, ACK to confirm."
         (setq claude-repl-park--last (list :park-id park-id :buffer (buffer-name buf)))
         (when (fboundp 'agent-chat--ensure-prompt-markers!)
           (agent-chat--ensure-prompt-markers!))
-        ;; The parked segment DEFERRED its finalization (no flair/evidence emitted;
-        ;; its elapsed + output were banked in finish-turn / the done-handler), so
-        ;; there is nothing to absorb here.  Safety: clear any flair that a raced
-        ;; segment might nonetheless have rendered, before injecting the continuation.
-        (when (fboundp 'agent-chat--delete-existing-turn-flair-before-prompt)
-          (agent-chat--delete-existing-turn-flair-before-prompt))
-        ;; Insert at the MANAGED input position, re-derived after the flair removal,
-        ;; so the prompt markers stay consistent and the next flair lands correctly.
-        (if (and (fboundp 'agent-chat--ensure-prompt-markers!)
-                 (agent-chat--ensure-prompt-markers!)
-                 (markerp agent-chat--input-start))
-            (progn (goto-char (marker-position agent-chat--input-start))
-                   (delete-region (point) (point-max)))
-          (goto-char (point-max)))
         ;; Bug 3: remember this park-id BEFORE sending, so a fast redelivery is
         ;; deduped even before the ACK round-trips.
         (claude-repl-park--remember! park-id)
-        ;; The assembled prompt self-describes (it carries the joined dep results),
-        ;; so sending it drives the ordinary turn flow — the continuation streams in.
-        (insert prompt)
         (if claude-repl-park-auto-send
             (progn (message "[park] resuming %s in place (park %s)"
                             (buffer-name buf) park-id)
-                   ;; attribute the injected turn to "continuation", not the operator
-                   (let ((agent-chat-user-speaker "continuation"))
-                     (claude-repl-send-input))
+                   (agent-chat-send-unsolicited-input
+                    #'claude-repl--call-claude-streaming
+                    "claude"
+                    prompt
+                    "continuation"
+                    (list :before-send (lambda (text)
+                                         (claude-repl--emit-user-turn-evidence! text)
+                                         (claude-repl--store-upsert-session)
+                                         (claude-repl--open-frame text))
+                          :on-response (lambda (text)
+                                         (claude-repl--emit-assistant-turn-evidence! text)
+                                         (claude-repl--emit-turn-commits-evidence!)
+                                         (claude-repl--close-frame "done"))))
                    ;; Bug 3: ACK delivery after send returns without error. If the
                    ;; ACK is lost, the server redelivers; the dedup ring skips it.
                    (claude-repl-park--ack park-id))
-          (message "[park] resume staged in %s — RET to send" (buffer-name buf))))))))
+          (message "[park] resume available in %s, but auto-send is disabled"
+                   (buffer-name buf))))))))
 
 ;;;; WS path (bonus — instant when the agency WS is connected) -----------------
 

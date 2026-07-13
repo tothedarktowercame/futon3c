@@ -108,6 +108,7 @@ def park_body_for(job_id, session_id):
         "agent": a.frm,
         "session": session_id,
         "surface": a.surface,
+        "mode": "background",
         "awaiting": [job_id],
         "deadline-ms": deadline_ms,
         "payload": a.park_payload or
