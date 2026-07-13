@@ -42,7 +42,9 @@ export CLAUDE_BIN="${CLAUDE_BIN:-/home/joe/.local/bin/claude}"
 export CODEX_BIN="${CODEX_BIN:-/home/joe/.local/bin/codex}"
 
 # --- Federation: peer with lucy (announce local agents; mirror lucy's) ---
-export FUTON3C_PEERS="${FUTON3C_PEERS:-http://172.236.28.208:7070}"
+export FUTON3C_PEERS="${FUTON3C_PEERS:-lon=http://172.236.28.208:7070}"
+export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-lon}"
+export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
 
 # --- Codex settings ---
 export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
