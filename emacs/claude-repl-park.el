@@ -37,11 +37,10 @@
 
 (defun claude-repl-park--seen-p (park-id)
   "Non-nil when PARK-ID was recently handled (in the dedup ring)."
+  ;; ring.el has no `ring-map' (void-function in every process filter,
+  ;; 2026-07-13); `ring-member' is the built-in membership test.
   (and (stringp park-id)
-       (let (found)
-         (ring-map (lambda (id) (when (equal id park-id) (setq found t)))
-                   claude-repl-park--seen-ids)
-         found)))
+       (ring-member claude-repl-park--seen-ids park-id)))
 
 (defun claude-repl-park--remember! (park-id)
   "Add PARK-ID to the dedup ring."
