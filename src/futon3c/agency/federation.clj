@@ -277,6 +277,7 @@
 
 (def ^:private proxy-runtime-fields
   [[:status :agent/status parse-status]
+   [:last-active :agent/last-active parse-optional-instant]
    [:session-id :agent/session-id parse-optional-string]
    [:invoke-started-at :agent/invoke-started-at parse-optional-instant]
    [:invoke-prompt-preview :agent/invoke-prompt-preview parse-optional-string]
@@ -674,6 +675,7 @@
          :type (some-> (:agent/type agent) name)
          :capabilities (mapv capability-wire-name
                              (:agent/capabilities agent))
+         :last-active (some-> (:agent/last-active agent) str)
          :metadata (cond-> {}
                      home-site (assoc :home-site home-site)
                      (:proxy? metadata) (assoc :proxy? true)
@@ -816,6 +818,8 @@
           :when (proxy-for-peer? peer-url agent)]
     (reg/update-agent!
      aid
+     ;; keep the mirrored idle time: a liveness stamp is not agent activity
+     :agent/last-active (:agent/last-active agent)
      :agent/metadata
      (merge (:agent/metadata agent)
             {:federation/peer-url peer-url

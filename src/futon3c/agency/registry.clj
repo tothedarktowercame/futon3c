@@ -361,7 +361,10 @@
     (swap! !registry
            (fn [m]
              (if-let [agent (get m aid-val)]
-               (let [updated (merge agent updates {:agent/last-active (now)})]
+               ;; Auto-touch unless the caller supplies :agent/last-active
+               ;; explicitly (federation proxies mirror the REMOTE'S value —
+               ;; stamping sync time made every proxy reset to idle-0 each cycle).
+               (let [updated (merge agent {:agent/last-active (now)} updates)]
                  (reset! result updated)
                  (assoc m aid-val updated))
                (do (reset! result
