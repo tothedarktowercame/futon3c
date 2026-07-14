@@ -9,7 +9,6 @@
    the single routing authority that binds I-single-boundary +
    I-evidence-per-turn (M-invariant-queue-unstuck, INSTANTIATE-2)."
   (:require [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
             [futon3c.agency.registry :as reg]
@@ -33,21 +32,17 @@
 (defn make-evidence-store
   "Build the evidence store.
    FUTON3C_EVIDENCE_BACKEND=futon1b (+ FUTON1B_URL) selects the futon1b
-   HTTP/EDN backend (E-futon1b-operational-switchover B2) and wins over
-   direct-xtdb?. Otherwise: direct-xtdb? true -> shared XTDB node
-   (evidence persists to futon1a); false -> in-memory atom (lost on
-   restart, boot check fails loudly)."
-  [f1-sys direct-xtdb?]
+   HTTP/EDN backend (E-futon1b-operational-switchover B2). The in-process
+   XTDB 1 direct path was retired in the I-0 unification (2026-07-14) — the
+   substrate is now futon1b/XTDB 2 (embedded in this JVM or over HTTP).
+   direct-xtdb? with no futon1b backend -> in-memory atom (lost on restart,
+   boot check fails loudly). f1-sys is retained for signature compatibility."
+  [_f1-sys direct-xtdb?]
   (cond
     (= "futon1b" (System/getenv "FUTON3C_EVIDENCE_BACKEND"))
     (let [b (f1b/make-futon1b-backend)]
       (println (str "[dev] evidence backend: futon1b (" (:base-url b) ")"))
       b)
-
-    (and direct-xtdb? (:node f1-sys))
-    (do
-      (println "[dev] direct XTDB path: ENABLED")
-      (xb/make-xtdb-backend (:node f1-sys)))
 
     direct-xtdb?
     (do

@@ -16,8 +16,14 @@
   ;; futon3b gate pipeline — social loop submits tasks through gates
   futon3b/futon3b           {:local/root "../futon3b"}
 
-  ;; futon1a durable store — XTDB persistence for evidence landscape
-  futon1a/futon1a           {:local/root "../futon1a"}
+  ;; futon1b XTDB2 store — the substrate store (I-0 unification, 2026-07-14).
+  ;; Brings XTDB 2.1.0 + the futon1b_server HTTP surface onto this classpath.
+  ;; Replaces the retired futon1a/XTDB1 dep; futon3b's vestigial XTDB1 deps
+  ;; were dropped in the same change so XTDB 1 and 2 (same Maven coordinate,
+  ;; different major) don't collide. Served by the futon1b-server systemd unit
+  ;; by default; embedded in-process when FUTON1B_EMBED=1 (see
+  ;; dev/futon3c/dev/bootstrap.clj → start-futon1b-embedded!).
+  futon1b/futon1b           {:local/root "../futon1b"}
 
   ;; futon0 — remaining shared tooling still consumed from futon3c.
   futon0/futon0             {:local/root "../futon0"}
@@ -26,7 +32,17 @@
   futon2/futon2             {:local/root "../futon2"}
 
   ;; futon3a — pattern retrieval + canonical flexiarg enrichment.
-  futon3a/futon3a           {:local/root "../futon3a"}}
+  ;; Exclusions (2026-07-14, I-0 unification): futon3a pulls graph-memory
+  ;; (via nlp-interface) which uses XTDB **1.24.4** (xtdb-lmdb/-core/-rocksdb).
+  ;; futon3c requires no futon3a namespace in-process (it's used out-of-process
+  ;; via FUTON3A_ROOT), so graph-memory never loads in this JVM — but its
+  ;; XTDB1 jars would otherwise sit on the classpath and clash with the
+  ;; embedded futon1b XTDB **2** node (same com.xtdb/xtdb-core coordinate).
+  ;; Excluding them keeps this JVM's classpath single-major (XTDB 2 only).
+  futon3a/futon3a           {:local/root "../futon3a"
+                             :exclusions [com.xtdb/xtdb-core
+                                          com.xtdb/xtdb-lmdb
+                                          com.xtdb/xtdb-rocksdb]}}
 
  :aliases
  {:test {:extra-paths ["test" "dev"]
@@ -38,6 +54,15 @@
          :exec-args {:dirs ["test"]}}
 
   :dev {:extra-paths ["dev"]
+        ;; JVM opts for the one serving JVM (I-0). The Arrow --add-opens +
+        ;; netty/pgwire flags are required for the embedded futon1b XTDB 2
+        ;; node (FUTON1B_EMBED=1); harmless when it isn't embedded. Heap
+        ;; sized 2026-07-14 for the 3.8G box to hold futon3c's working set
+        ;; + futon1b's ~850M XTDB2 live set; 768m direct is Arrow off-heap.
+        :jvm-opts ["--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED"
+                   "-Dio.netty.tryReflectionSetAccessible=true"
+                   "-Djava.net.preferIPv4Stack=true"
+                   "-Xmx2g" "-XX:MaxDirectMemorySize=768m"]
         :extra-deps {futon5/futon5 {:local/root "../futon5"}
                      webarxana/webarxana {:local/root "../futon4/dev/web/webarxana"}
                      ;; war-machine CLJS source must be on the JVM classpath

@@ -51,22 +51,36 @@ export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-1}"
 export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
 
-# --- futon1b switchover (E-futon1b-operational-switchover; lucy live 2026-07-11) ---
+# --- futon1b switchover + I-0 unification (lucy live 2026-07-11; unified 2026-07-14) ---
 # The stack runs futon1a-less: evidence and substrate HTTP both go to the
-# futon1b store JVM (systemd user unit futon1b-server.service, :7074).
-# 127.0.0.1 is load-bearing (the store JVM binds IPv4-only; localhost can
-# resolve to ::1). Rollback: FUTON1A_PORT=7071 + unset the three below.
+# futon1b XTDB2 store on :7074. As of the I-0 unification that store runs
+# IN-PROCESS inside this futon3c JVM (FUTON1B_EMBED=1) instead of the separate
+# futon1b-server systemd unit — one serving JVM (I-0). 127.0.0.1 is load-bearing
+# (the store binds IPv4-only; localhost can resolve to ::1).
+# Rollback to the two-JVM setup: FUTON1B_EMBED=0 here, then
+#   systemctl --user start futon1b-server   (unit installed but disabled)
 export FUTON1A_PORT="${FUTON1A_PORT:-0}"
 export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
 export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:7074}"
 export FUTON_SUBSTRATE_URL="${FUTON_SUBSTRATE_URL:-${FUTON1A_URL:-http://127.0.0.1:7074}}"
 export FUTON1A_URL="${FUTON1A_URL:-${FUTON_SUBSTRATE_URL}}"
+# I-0 unification: host the futon1b XTDB2 node + HTTP inside this JVM.
+# XTDB2 stores are single-process — the futon1b-server unit must stay stopped.
+# (chicago uses chicago-store; see dev-linode2-env when unifying there.)
+export FUTON1B_EMBED="${FUTON1B_EMBED:-1}"
+export FUTON1B_STORE_DIR="${FUTON1B_STORE_DIR:-${HOME}/code/futon1b/switchover-store}"
 
-if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
-  echo "[dev] futon1b-server: running"
+if [[ "${FUTON1B_EMBED}" == "1" ]]; then
+  if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+    echo -e "[dev] \033[1;31m██ I-0 VIOLATION: embedded Futon1b and futon1b-server are both enabled ██\033[0m"
+    return 1 2>/dev/null || exit 1
+  fi
+  echo "[dev] futon1b: embedded in futon3c (${FUTON1B_STORE_DIR})"
+elif systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+  echo "[dev] futon1b-server: running (external mode)"
 else
-  echo -e "[dev] \033[1;31m██ futon1b-server: DOWN — the I-evidence-per-turn boot check will fail ██\033[0m"
-  echo -e "[dev] \033[31m   start with: systemctl --user start futon1b-server\033[0m"
+  echo -e "[dev] \033[1;31m██ futon1b unavailable: embedding disabled and service down ██\033[0m"
+  return 1 2>/dev/null || exit 1
 fi
 
 # --- Futon1a/Futon4 compatibility (static dir unused while futon1a disabled) ---
