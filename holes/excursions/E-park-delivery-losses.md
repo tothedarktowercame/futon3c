@@ -264,3 +264,13 @@ one namespace across a day produced an untestable mixed image. Standard
 candidate: after any live patch, run an end-to-end behavioral probe (like
 this one), not just a defn-metadata check — zai-2's "all fns LIVE" audit
 passed while the composition was broken.
+
+**Finding 7 addendum (2026-07-14):** the R1a.2 park (job invoke-...388,
+completed ~23:0x) RELEASED via completion and its resume delivered (very
+late — hours of delivery lag, but a completion release, not a deadline).
+Release history is therefore INTERMITTENT, not cleanly broken-after-a-patch:
+-358 ✓, -379 ✗, -388 ✓, -393 ✗, probe -424 ✗ (deterministic, current). So the
+mechanism may be a race or lane-dependence in the finalize→notify path rather
+than a wholesale dead hook — but the probe pins the current live state as
+failing, and the conclusion stands: behavioral probes + restart in the quiet
+window; treat the timeline above as the diagnostic starting point.
