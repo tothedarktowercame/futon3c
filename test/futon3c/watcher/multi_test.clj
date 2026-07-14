@@ -53,6 +53,19 @@
     (is (false? (sut/watched? "/home/joe/npt/missions/M-ukrns-wp.md")))
     (is (false? (sut/watched? "/home/joe/code/futon7/holes/missions/notes.md")))))
 
+(deftest walk-root-prunes-noise-before-descending
+  (let [root (doto (java.io.File/createTempFile "watch-prune-" "")
+               (.delete)
+               (.mkdirs))
+        source (io/file root "src" "demo.clj")
+        git-file (io/file root ".git" "objects" "ignored.clj")
+        module-file (io/file root "node_modules" "pkg" "ignored.clj")]
+    (doseq [f [source git-file module-file]]
+      (.mkdirs (.getParentFile f))
+      (spit f "(ns demo)\n"))
+    (is (= #{(.getPath source)}
+           (set (keys (sut/walk-root (.getPath root))))))))
+
 (deftest scope-lane-flag-off-does-not-queue
   (testing "load-dark default leaves mission-scope lane with no pending work"
     (let [pending (private-var '!pending-missions)
