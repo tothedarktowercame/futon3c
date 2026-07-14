@@ -46,9 +46,12 @@
     (catch Exception _ default)))
 
 (def ^:private live-turn-query-limit
-  "Bound live chat-turn evidence scans. The old 50k all-coordination query
-   repeatedly timed out against XTDB on the live store."
-  (long (parse-long-env "FUTON3C_MC_LIVE_TURN_QUERY_LIMIT" 2000)))
+  "Bound live chat-turn evidence scans. This is ancillary telemetry, so even
+   an operator override cannot turn mission inventory into a corpus query."
+  (-> (parse-long-env "FUTON3C_MC_LIVE_TURN_QUERY_LIMIT" 200)
+      (max 1)
+      (min 500)
+      long))
 
 (def ^:private live-turn-window-days
   "Recent window, in days, used for live mission turn telemetry."

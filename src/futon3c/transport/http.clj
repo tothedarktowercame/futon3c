@@ -4589,14 +4589,23 @@
 
 (defn- handle-missions
   "GET /api/alpha/missions — cross-repo mission inventory with per-mission
-  turn-count telemetry. Telemetry is computed once over the live runtime store
-  and both attached per-mission and surfaced top-level."
-  [_request config]
-  (let [turn-counts (mcb/mission-turn-count-telemetry (evidence-store-for-config config))
-        missions (mcb/attach-turn-counts (mcb/build-inventory) turn-counts)]
+  turn-count telemetry. Pass include-turn-counts=false when the caller needs
+  only the strategic inventory; telemetry is ancillary and can be expensive."
+  [request config]
+  (let [include-turn-counts? (not= "false"
+                                   (get (parse-query-params request)
+                                        "include-turn-counts"))
+        inventory (mcb/build-inventory)
+        turn-counts (when include-turn-counts?
+                      (mcb/mission-turn-count-telemetry
+                       (evidence-store-for-config config)))
+        missions (if turn-counts
+                   (mcb/attach-turn-counts inventory turn-counts)
+                   inventory)]
     (json-response 200 {:ok true
                         :missions missions
                         :count (count missions)
+                        :turn-counts-included? include-turn-counts?
                         :turn-counts turn-counts})))
 
 (defn- handle-mission-detail

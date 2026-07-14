@@ -13,6 +13,7 @@
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.portfolio.perceive :as perceive]
+            [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
             [futon3c.social.test-fixtures :as fix]
@@ -192,6 +193,20 @@
   "Parse the JSON body string from a Ring response."
   [response]
   (json/parse-string (:body response) true))
+
+(deftest missions-can-skip-ancillary-turn-count-scan
+  (testing "inventory-only callers do not query live coordination evidence"
+    (with-redefs [mcb/build-inventory (fn [] [{:mission/id "M-test"}])
+                  mcb/mission-turn-count-telemetry
+                  (fn [& _] (throw (ex-info "must not run" {})))]
+      (let [response (get-req-with-query (make-handler)
+                                         "/api/alpha/missions"
+                                         "include-turn-counts=false")
+            body (parse-body response)]
+        (is (= 200 (:status response)))
+        (is (= [{:mission/id "M-test"}] (:missions body)))
+        (is (false? (:turn-counts-included? body)))
+        (is (nil? (:turn-counts body)))))))
 
 (defn- with-system-properties
   [settings f]
