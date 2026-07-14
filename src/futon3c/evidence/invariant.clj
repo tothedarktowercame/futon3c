@@ -5,7 +5,8 @@
    that is readable back from XTDB (not just accepted by a volatile in-memory
    atom). The invariant has two components:
 
-     (a) Store-backing: the configured evidence-store is an XtdbBackend.
+     (a) Store-backing: the configured evidence-store is a durable backend
+         (Futon1bBackend — XTDB 2 over HTTP/EDN).
      (b) Per-turn persistence: after a turn writes an entry, reading that
          entry's id back through the same backend returns the entry.
 
@@ -16,10 +17,8 @@
 
    Grep for `I-evidence-per-turn` to enumerate enforcement sites."
   (:require [futon3c.evidence.backend :as backend]
-            [futon3c.evidence.xtdb-backend :as xb]
             [futon3c.evidence.futon1b-backend :as f1b])
   (:import [futon3c.evidence.backend AtomBackend]
-           [futon3c.evidence.xtdb_backend XtdbBackend]
            [futon3c.evidence.futon1b_backend Futon1bBackend]))
 
 (def I-evidence-per-turn
@@ -34,7 +33,6 @@
    time, but is not durable on its own."
   [store]
   (cond
-    (instance? XtdbBackend store) :xtdb
     (instance? Futon1bBackend store) :futon1b
     (instance? AtomBackend store) :atom-backend
     (instance? clojure.lang.IAtom store) :raw-atom
@@ -50,10 +48,6 @@
   [store]
   (let [kind (classify-store store)]
     (case kind
-      :xtdb
-      {:ok true :kind :xtdb
-       :invariant I-evidence-per-turn}
-
       ;; Durable iff the store JVM is actually reachable — a stronger boot
       ;; check than the in-process kinds get (the server owns persistence).
       :futon1b
@@ -86,7 +80,7 @@
       :unknown-backend
       {:ok false :kind :unknown-backend
        :invariant I-evidence-per-turn
-       :reason "Evidence store satisfies EvidenceBackend but is not XtdbBackend."}
+       :reason "Evidence store satisfies EvidenceBackend but is not the durable Futon1bBackend."}
 
       :unknown
       {:ok false :kind :unknown
@@ -100,10 +94,10 @@
    Returns {:ok true :kind <k> :evidence/id id} when readable, or
    {:ok false :kind <k> :reason <string> :evidence/id id} when not.
 
-   Intended to run synchronously after emit-invoke-evidence! writes. For
-   XtdbBackend the preceding put-and-sync! has already awaited indexing,
-   so this should be a hit. A miss indicates either a non-durable backend
-   or a silent append failure."
+   Intended to run synchronously after emit-invoke-evidence! writes. For the
+   durable Futon1bBackend the server has already indexed the write before
+   returning, so this should be a hit. A miss indicates either a non-durable
+   backend or a silent append failure."
   [store evidence-id]
   (let [kind (classify-store store)
         resolved (cond
@@ -124,9 +118,8 @@
        :evidence/id evidence-id
        :reason (str "Append returned success but entry is not readable back "
                     "from the " (name kind) " backend. "
-                    (if (= kind :xtdb)
-                      "XTDB indexing may have failed silently."
-                      "Backend is not durable."))}
+                    "Backend is not durable (server did not persist / index "
+                    "the entry, or the append silently failed).")}
 
       :else
       {:ok true :kind kind

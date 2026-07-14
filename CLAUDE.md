@@ -94,8 +94,10 @@ these invariants, stop and rethink.
 ### I-0: One JVM Is Plenty
 
 **There is exactly one serving JVM on this machine: the futon3c JVM.** It
-hosts the futon3c API (port 7070), the futon1a / substrate-2 hyperedge
-store (7071), the WebArxana app (3100), the War Machine API endpoints
+hosts the futon3c API (port 7070), the futon1b XTDB 2 substrate/evidence
+store (7074, embedded in-process via `FUTON1B_EMBED` — the I-0 unification,
+2026-07-14; the retired futon1a XTDB 1 store on 7071 is gone), the WebArxana
+app (3100), the War Machine API endpoints
 (`/api/alpha/war-machine`, `/api/alpha/aif-stack/live`, etc., all on 7070),
 and the Drawbridge nREPL-over-HTTP (6768). Everything serves out of this
 one process.

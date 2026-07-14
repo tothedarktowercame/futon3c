@@ -1,7 +1,7 @@
 (ns futon3c.dev.bootstrap
   "Bootstrap helpers and top-level startup orchestration for futon3c.dev."
   (:require [cheshire.core :as json]
-            [futon1a.system :as f1]
+            [futon1b-server :as f1b]
             [futon3c.agency.fed-uplink :as fed-uplink]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.invariants :as agency-invariants]
@@ -26,43 +26,63 @@
             [org.httpkit.server :as hk]
             [repl.http :as drawbridge]))
 
-(declare start-futon1a-enabled!)
-
+;; futon1a (XTDB 1) is retired (I-0 unification, 2026-07-14). The substrate
+;; store is now futon1b (XTDB 2), reached over HTTP (FUTON1A_URL/FUTON1B_URL
+;; → :7074). start-futon1a! is kept as a no-op so the injected call site in
+;; run-main! is unchanged; it always returns nil, so futon3c boots nodeless —
+;; exactly as it already did under FUTON1A_PORT=0. The XTDB2 node/HTTP is
+;; served either by the futon1b-server systemd unit or, when FUTON1B_EMBED=1,
+;; in-process by start-futon1b-embedded! below.
 (defn start-futon1a!
-  "Start futon1a (XTDB + HTTP). Returns system map with :node, :store, :stop!,
-   etc., or nil when disabled (FUTON1A_PORT=0 — the house (pos? port) gate;
-   E-futon1b-operational-switchover B3). Disabled means: no embedded XTDB 1
-   node, no :7071 API — the stack must get evidence from futon1b
-   (FUTON3C_EVIDENCE_BACKEND=futon1b) and substrate HTTP from FUTON1A_URL."
-  [direct-xtdb?]
-  (let [port (config/env-int "FUTON1A_PORT" 7071)]
-    (if-not (pos? port)
-      (println "[dev] futon1a DISABLED (FUTON1A_PORT=0) — no embedded node/:7071 API")
-      (start-futon1a-enabled! direct-xtdb? port))))
+  "Retired: futon1a's embedded XTDB 1 node is gone. Always returns nil; the
+   stack gets substrate/evidence over HTTP from futon1b (:7074)."
+  [_direct-xtdb?]
+  (println "[dev] futon1a retired — substrate is futon1b/XTDB2 over HTTP (:7074)")
+  nil)
 
-(defn- start-futon1a-enabled!
-  [direct-xtdb? port]
-  (let [data-dir (config/env "FUTON1A_DATA_DIR"
-                             (str (System/getProperty "user.home")
-                                  "/code/storage/futon1a/default"))
-        static-dir (config/env "FUTON1A_STATIC_DIR" nil)
-        allowed-penholders (->> (config/env-list "FUTON1A_ALLOWED_PENHOLDERS" ["api" "joe"])
-                                (remove str/blank?)
-                                set)]
-    (println (str "[dev] Starting futon1a (XTDB: " data-dir ")..."))
-    (let [sys (f1/start! (cond-> {:data-dir data-dir
-                                  :port port
-                                  :allowed-penholders allowed-penholders
-                                  :expose-internals? direct-xtdb?}
-                           static-dir (assoc :static-dir static-dir)))]
-      (println (str "[dev] futon1a: http://localhost:" (:http/port sys)))
-      (println (str "[dev] futon1a allowed penholders: "
-                    (if (seq allowed-penholders)
-                      (str/join "," (sort allowed-penholders))
-                      "<none>")))
-      (when static-dir
-        (println (str "[dev] futon1a static: " static-dir)))
-      sys)))
+;; --- Embedded futon1b XTDB2 node (I-0 unification) ------------------------
+;; When FUTON1B_EMBED=1, run futon1b's XTDB2 node + HTTP server INSIDE this
+;; JVM instead of as the separate futon1b-server systemd process. futon3c
+;; keeps talking to :7074 over loopback — no call-site changes. Default OFF,
+;; so a plain `make dev` boots identically to the two-JVM setup.
+;;
+;; CUTOVER (operator, manual — XTDB2 stores are single-process, so the
+;; systemd node and an embedded node must NOT both open the same store):
+;;   systemctl --user stop futon1b-server      # unit stays installed = rollback
+;;   FUTON1B_EMBED=1 make dev
+;; FUTON1B_STORE_DIR must be ABSOLUTE (futon3c's CWD != futon1b's): default
+;; ~/code/futon1b/switchover-store; chicago sets ~/code/futon1b/chicago-store.
+(defonce ^:private !f1b-embedded (atom nil))
+
+(defn start-futon1b-embedded!
+  "Start futon1b's XTDB2 node + HTTP server in-process when FUTON1B_EMBED is
+   truthy. Returns the HttpServer, or nil (no-op) by default."
+  []
+  (when (config/env-bool "FUTON1B_EMBED" false)
+    (let [store-dir (config/env "FUTON1B_STORE_DIR"
+                                (str (System/getProperty "user.home")
+                                     "/code/futon1b/switchover-store"))
+          port (config/env-int "FUTON1B_PORT" 7074)]
+      (println (format "[dev] EMBEDDING futon1b XTDB2 node in-process (store %s, :%d) — the futon1b-server systemd unit MUST be stopped first"
+                       store-dir port))
+      (let [server (f1b/start-server! {:store-dir store-dir :port port})]
+        (reset! !f1b-embedded server)
+        server))))
+
+(defn stop-futon1b-embedded!
+  "Stop the in-process futon1b server + close its XTDB2 node (releases the
+   single-process store lock). Safe to call when nothing is embedded."
+  []
+  (when-let [server @!f1b-embedded]
+    (try (.stop server 0) (catch Throwable _))
+    (reset! !f1b-embedded nil)
+    ;; best-effort node close via runtime resolve (avoids compile coupling)
+    (try
+      (when-let [nvar (resolve 'futon1b-server/!node)]
+        (when-let [node (deref (deref nvar))]
+          (.close node)))
+      (catch Throwable _))
+    (println "[dev] embedded futon1b stopped")))
 
 (defn start-futon5!
   "Start futon5 nonstarter heartbeat API. Returns system map or nil if disabled."
@@ -296,6 +316,9 @@
                                 (constantly (fn [] found)))
                 (println (str "  meme.db → " found " (auto-detected)")))))
         direct-xtdb? (direct-xtdb-enabled? role-cfg)
+        ;; I-0 unification: bring up the in-process XTDB2 node/HTTP first when
+        ;; FUTON1B_EMBED=1, so :7074 is serving before evidence-store uses it.
+        _ (start-futon1b-embedded!)
         f1-sys (start-futon1a! direct-xtdb?)
         evidence-store (make-evidence-store f1-sys direct-xtdb?)
         _ (reset! !f1-sys f1-sys)
@@ -721,5 +744,6 @@
             (stop! f5-sys)))
         (when-let [f1 @!f1-sys]
           ((:stop! f1)))
+        (stop-futon1b-embedded!)
         (println "[dev] Stopped."))))
     @(promise)))
