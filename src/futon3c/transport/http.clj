@@ -1105,7 +1105,7 @@
                     :terminal-code :terminal-message
                     :session-id :trace-id
                     :result-summary :artifact-ref
-                    :execution :delivery :events]))
+                    :execution :auto-bellback :delivery :events]))
 
 (defn- get-invoke-job
   [job-id]
@@ -3439,27 +3439,36 @@
         (json-response 200 {:ok true :acked acked})))))
 
 (defn- handle-parked
-  "GET /api/alpha/parked?agent=&session= — outstanding (unreleased) parks for a repl
-   buffer, so a turn can tell it parked (E-repl-continuations within-turn model)."
+  "GET /api/alpha/parked?agent=&session=&mode= — outstanding (unreleased) parks.
+
+   The default view remains :within-turn because this endpoint also supplies the
+   turn-finalization :more-pending signal.  mode=all is the operator visibility
+   view and includes background parks, without letting them defer finalization."
   [request _config]
   (let [agent (req-query-param request "agent")
         session (req-query-param request "session")
+        mode (req-query-param request "mode")
+        all-modes? (= "all" (some-> mode str/trim str/lower-case))
         recs (when (and (parked-on-enabled?) agent)
                (->> (vals (:records (parked-on/snapshot)))
                     (filter (fn [r] (and (= (str (:agent r)) (str agent))
                                          (or (str/blank? (str session))
                                              (= (str (:session r)) (str session)))
                                          (not (:released? r))
-                                         (= (or (:mode r) :within-turn) :within-turn))))
+                                         (or all-modes?
+                                             (= (or (:mode r) :within-turn)
+                                                :within-turn)))))
                     (mapv (fn [r] {:id (:id r) :awaiting (vec (:awaiting r))
-                                   :deadline-ms (:deadline-ms r)}))))
+                                   :deadline-ms (:deadline-ms r)
+                                   :mode (or (:mode r) :within-turn)}))))
         ;; A ready resume already in the inbox (dep completed, poller not yet fired)
         ;; also means "more is coming" — so the check is race-free even for a fast dep.
         inbox-pending (and (parked-on-enabled?) agent
                            (parked-on/ready-inbox-pending? agent (or session "")
-                                                           :within-turn))]
+                                                           :within-turn))
+        within-turn-pending (some #(= (:mode %) :within-turn) recs)]
     (json-response 200 {:ok true :parked (vec (or recs []))
-                        :more-pending (boolean (or (seq recs) inbox-pending))})))
+                        :more-pending (boolean (or within-turn-pending inbox-pending))})))
 
 (defn- handle-park
   "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):

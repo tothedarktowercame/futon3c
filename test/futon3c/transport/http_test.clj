@@ -155,6 +155,39 @@
       (is (= [] (:parked body)))
       (is (false? (:more-pending body))))))
 
+(deftest parked-all-mode-shows-background-without-deferring-finalization
+  (testing "mode=all is an operator view, not a change to more-pending semantics"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot (fn []
+                                                      {:records
+                                                       {"bg" {:id "bg"
+                                                              :agent "claude-1"
+                                                              :session "sid"
+                                                              :awaiting #{"job-1"}
+                                                              :deadline-ms 123
+                                                              :mode :background
+                                                              :released? false}}})
+                                 parked-on/ready-inbox-pending? (constantly false)]
+                     ((var-get #'http/handle-parked)
+                      {:query-string "agent=claude-1&session=sid&mode=all"} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= [{:id "bg"
+               :awaiting ["job-1"]
+               :deadline-ms 123
+               :mode "background"}]
+             (:parked body)))
+      (is (false? (:more-pending body))))))
+
+(deftest invoke-job-public-view-exposes-auto-bellback-decision
+  (let [decision {:suppressed? true
+                  :reason :parked-on
+                  :park-id "park-1"}
+        view ((var-get #'http/invoke-job-public-view)
+              {:job-id "job-1" :state "done" :auto-bellback decision
+               :result-text "private full response"})]
+    (is (= decision (:auto-bellback view)))
+    (is (not (contains? view :result-text)))))
+
 (defn- parse-body
   "Parse the JSON body string from a Ring response."
   [response]
